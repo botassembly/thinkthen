@@ -52,3 +52,14 @@ Two facts follow. The same request returns the same number, so a repeated trial 
 ## Consequences
 
 ADR 0008 and ADR 0009 are Accepted in part, and their status lines say which parts. `segment.md` and `report.md` move to the roadmap. Demo 11 is held with `segment`. Demos 13 and 14 are rewritten over `jq` recipes. `backends.md` and `config.md` change for the two variables. The plan drops three slices and gains the live script, the live probe, and the recipes.
+
+## Clarification, 2026-09-19: other backends will come
+
+Ian restated that the tool will not serve one vendor alone. Competing decider services and local models are expected, and each will need an adapter. This matches ruling 1 and changes nothing already built. The seam exists: `backends.md` defines an adapter as two pure functions, one that turns a neutral plan into a request and one that turns a response into neutral answers. `systemone` is the one adapter compiled today. A recording names its adapter, and the recording key includes that name. Outside `crates/thinkthen-core/src/systemone/`, the vendor's field names appear only in tests, fixtures, and the default address.
+
+What ADR 0010 held is the second adapter and the option that selects one. Both return with the first second backend that a user can call, and `roadmap.md` holds them until then. Three rules keep the seam clean meanwhile, and ticket 0017 turns the first into a check:
+
+- A vendor's field name lives inside its adapter's module, its fixtures, and its tests, and nowhere else in the code. `sdlc/scripts/lint` checks it.
+- Every new setting enters the neutral plan under the tool's own word. The texts for what true and false mean are `--true` and `--false` in the plan, and the `systemone` adapter alone knows they travel as `criteria`.
+- The libraries that the design study proposes keep the same seam, and no library depends on one vendor's client outside its default adapter.
+
