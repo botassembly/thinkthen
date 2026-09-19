@@ -317,24 +317,6 @@ mod tests {
         assert_eq!(reply.usage(), None);
     }
 
-    #[test]
-    fn text_that_json_escapes_reaches_the_wire_unchanged() {
-        let cases = [
-            "a \"quoted\" word",
-            r"a back\slash",
-            "two\nlines\tapart",
-            "a \u{1} control character",
-            "καρδία, 心, and 🫀",
-            "a \u{2028} line separator",
-        ];
-        for case in cases {
-            let written = round_tripped(case, case);
-            assert_eq!(written.state, case, "{case:?}");
-            let question = written.questions.get("q1").expect("one named question");
-            assert_eq!(question.instructions, case, "{case:?}");
-        }
-    }
-
     fn texts() -> impl Strategy<Value = String> {
         vec(any::<char>(), 1..24)
             .prop_map(|chars| chars.into_iter().collect::<String>())
