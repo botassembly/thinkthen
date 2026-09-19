@@ -1,6 +1,6 @@
 # ADR 0010: One wire shape, two variables, and a smaller version one
 
-- Status: Accepted by Ian on 2026-09-19, except the section marked Proposed
+- Status: Accepted by Ian on 2026-09-19. He accepted the configuration section the same day, after the rest
 - Date: 2026-09-19
 
 Ian read `open-concerns.md` and ruled. His goal stands over every line: the simplest grammar for intelligent control inside a Bash script, the most value out of the three question types, and primitives for processing data on one machine.
@@ -32,13 +32,15 @@ Ian can overturn each of these cheaply.
 - The `chat-logprobs` adapter leaves version one. Ruling 1 makes a second wire format inside the binary unnecessary. A local model is reached by a small server that presents the System One shape, and that server is a separate project.
 - The recipes live in `recipes/` as `.jq` files, each with one example of its use. Demos 13 and 14 use them.
 
-## Proposed, and waiting on Ian
+## The configuration file leaves version one
+
+Ian accepted this section on 2026-09-19. Ticket 0007 carries it.
 
 **The configuration file, profiles, and the `config` command leave version one.** ADR 0007 accepted them when a profile held an address, an adapter, a model, and the name of a key variable. Under rulings 1 and 2 a profile holds nothing that two variables and `--model` do not already say. The options `--profile`, `--adapter`, `--key-env`, and `--config` would go with them, and `--url` would stay as a hidden option for tests. Version one would then be six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`, with `find` waiting on its measurement.
 
 The cost is small. A user with two endpoints sets a variable in front of the command, as every shell user already does. The file can return later without breaking anything.
 
-Until Ian answers, the configuration slice sits last in the plan and nothing depends on it.
+Three details follow, and Ian can overturn each cheaply. The result object's `meta` loses `profile` and `adapter` and keeps `url`, `model`, `usage`, and `replayed`. The plan that `--dry-run` prints loses `profile`. The key in `THINKTHEN_API_KEY` goes to the address the user named, because naming the address is the user's own act.
 
 ## The first live answers
 
