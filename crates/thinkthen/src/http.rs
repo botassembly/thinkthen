@@ -9,6 +9,13 @@ use ureq::Agent;
 use crate::edge::Key;
 use crate::failure::Failure;
 
+/// The most of one response body an attempt reads before it gives up.
+///
+/// A judgment answers in well under a kilobyte, so a megabyte is generous by a
+/// thousandfold. The bound is here so a server that never stops writing cannot
+/// fill this process's memory.
+const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
+
 /// The statuses a backend is asked again after.
 const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
 
@@ -96,6 +103,8 @@ fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
     }
     response
         .body_mut()
+        .with_config()
+        .limit(MAX_RESPONSE_BYTES)
         .read_to_vec()
         .map_err(|error| Failure::Transport(error.to_string()))
 }
