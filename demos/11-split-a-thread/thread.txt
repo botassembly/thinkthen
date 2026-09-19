@@ -1,0 +1,10 @@
+Hi, the invoice for March shows two line items for the same seat.
+Can you take one off and send a corrected copy?
+Also, while I have you.
+We are adding four people in April.
+What is the cheapest way to do that, a new plan or extra seats on this one?
+One more thing.
+The login page rejects my password manager.
+It pastes the password and the field clears itself straight away.
+Firefox 128 on Ubuntu, if that helps.
+Thanks.
