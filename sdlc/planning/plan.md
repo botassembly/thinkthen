@@ -29,7 +29,7 @@ A slice is done when its how-tos in `documentation-plan.md` are green, the four 
 | 9 | `annotate`, with several pointers on `on` and provenance in `meta`. The flagship triage demo lands here with its policy recipe | `annotate.md`, `result.md` | 07, 08, 16, 22, 23, 29, 31, 32 | |
 | 10a | Metric recipes as folders under `recipes/`, tried on live `decide --details` rows: counts, accuracy, precision, recall, and F1 at a cut, a sweep of cuts, accuracy at coverage, a comparison of two runs by case id, and the cost of a run | | 13, 24, 25, 28, 38 | Ticket 0008 is ready. Running |
 | 10b | The policy recipe, the monitors, the grouped sweep, and the check of the judge against human labels. The slice ends with a verdict on Ian's five outcomes for `report` and on ADR 0012 | | 14, 16, 26, 30, 34, 35, 36, 37 | After slice 9 |
-| 10c | The how-to form for green demos, the check that enforces it, and two how-tos that need only `decide` | | 01, 19, 27 | Ticket 0010 is ready. Running |
+| 10c | The how-to form for green demos, the check that enforces it, and two how-tos that need only `decide` | | 01, 19, 27 | Done. Ticket 0010 landed on 2026-09-19 after an independent review. Three how-tos are green |
 | 11 | `find`, if a live run shows that it picks as well as `rank --top 1` | `find.md` | 15 | Draft. Waits on the measurement |
 | 12 | Remove profiles, the configuration file, `config`, `--profile`, `--adapter`, and `--key-env`. Ian accepted this part of ADR 0010 on 2026-09-19 | `backends.md`, `result.md`, `channels.md` | 10 left | Done. Ticket 0007 landed on 2026-09-19. The source ceiling fell from 4,520 to 4,193 lines |
 | 13 | The release pass: every help text, a manual page, the license, and the public switch | | all, 18 | Waits on Ian's release ruling |
@@ -48,8 +48,9 @@ Ian set the limit at $20 on 2026-09-19. The vendor charges $0.042 for a million 
 | --- | --- | --- |
 | 2026-09-19 | Four `decide` calls by hand through the ticket 0005 binary. ADR 0010 holds the answers | 1,185 |
 | 2026-09-19 | Two `decide` calls through `sdlc/scripts/live`, recording demo 01 | 626 |
+| 2026-09-19 | Ticket 0010: the recordings of how-tos 19 and 27 | 961 |
 
-Spent so far: 1,811 tokens, which is less than one cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
+Spent so far: 2,772 tokens, which is less than one cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
 
 ## Levers left open
 
