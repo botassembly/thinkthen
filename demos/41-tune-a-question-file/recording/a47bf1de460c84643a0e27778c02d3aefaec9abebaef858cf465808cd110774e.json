@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I registered for the industry conference and the ticket price was fifty five pounds, which I paid myself ahead of the event.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This expense claim needs a receipt attached before it can be paid."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.68}},"usage":{"input_tokens":303,"output_tokens":21}}
+}

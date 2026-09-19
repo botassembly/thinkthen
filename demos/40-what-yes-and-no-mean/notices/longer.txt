@@ -1,0 +1,6 @@
+Planned upgrade of the booking service, Saturday night.
+
+The window was set at four hours. Work on the storage layer has taken longer
+than we expected in rehearsal, so the window now runs to six hours. Bookings
+will not be taken while the window is open. The desk will post an update when
+the service is back.

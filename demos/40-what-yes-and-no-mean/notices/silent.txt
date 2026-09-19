@@ -1,0 +1,5 @@
+Planned upgrade of the booking service, Saturday night.
+
+The upgrade replaces the storage layer and moves the search index onto the new
+cluster. Bookings will not be taken while the window is open. Saved searches
+are kept. The desk will post an update when the service is back.
