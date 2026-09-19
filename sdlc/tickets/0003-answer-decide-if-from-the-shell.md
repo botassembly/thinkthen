@@ -6,7 +6,7 @@ opens: crates/thinkthen spec Cargo.toml Cargo.lock sdlc/ratchet.json sdlc/script
 
 # 0003: Answer `decide if` from the shell
 
-Status: ready
+Status: landed
 
 ## Outcome
 
