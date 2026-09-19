@@ -18,7 +18,7 @@ Two green pages left with their folders, and two lists and one script now hold t
 
 20's warning that a confident answer says nothing about facts the model never saw joined 40's bullet on reading 0.81 as a measurement. 40's closing list gained a link to how-to 02, which is the pick that names silence as its own label. How-to 02 lost its two links to 20: the inline one became the plain sentence that `--details` prints a probability for every option in the order they were sent, and the closing one now points at 40. 40 measures 98 lines and 889 words against the limits of 120 and 900.
 
-**How-to 24, "compare two runs", into how-to 41.** 41 already ran `compare.jq` over the two tuning runs and already asserted `paired`, `same`, `flips`, and `mismatched_label`. Three of 24's lessons were not on 41 and are now traps on it: `changed` names the model and the cut as well as the question, and two moving at once means rerunning with one held still; `paired`, `only_in_before`, `only_in_after`, `repeated_ids`, and the two mismatch lists say the runs measured the same cases, so a run that stopped early is listed rather than passed off as a smaller run; and folding unresolved into no makes a case that moved into the band read as a regression. The header of `transforms/compare/compare.jq` states every one of those rules in full, and 41's trap names it as the fuller home.
+**How-to 24, "compare two runs", into how-to 41.** 41 already ran `compare.jq` over the two tuning runs and already asserted `paired`, `same`, `flips`, and `mismatched_label`. Three of 24's lessons were not on 41 and are now traps on it: `changed` names the model and the cut as well as the question, and two moving at once means rerunning with one held still; `paired`, `only_in_before`, `only_in_after`, `repeated_ids`, and the two mismatch lists say the runs measured the same cases, so a run that stopped early is listed rather than passed off as a smaller run; and folding unresolved into no makes a case that moved into the band read as a regression. The header of `transforms/compare/compare.jq` states every one of those rules in full, and 41's trap names it.
 
 24 was the only page that ran `transforms/compare/example.sh`. That line moved into 41's step 3 block, so the file is still run by a rung. `transforms/README.md` points the `compare/` row at 41.
 
@@ -39,15 +39,18 @@ No other red folder sits outside the twenty, so nothing else was deleted.
 
 `sdlc/scripts/pages` reads the tables of `demos/README.md` and `documentation-plan.md` whose header is `| # | How to |` and refuses:
 
+- either list holding no such table at all, which is how a renamed column would otherwise silence every check below,
 - a number in one list and not in the other,
-- a title or a state that differs between them,
-- a state that is neither green nor coming,
+- a title that differs between them, or a state cell that differs by one word,
+- a state whose first word is not green, coming, or leaving,
 - a green row whose folder is missing, whose page does not say `Status: green`, or whose own title is not "How to " and the row's title,
 - a coming row whose folder exists and does not say `Status: red`,
-- a folder under `demos/` that `demos/README.md` never names,
+- a leaving row whose page has no line starting "Absorbed by",
+- a folder under `demos/` that no row of `demos/README.md` links,
+- a README front window that is not ADR 0018's seven numbers in ADR 0018's order, under the titles the list carries, with a link for a green page and the word coming for a red one,
 - any relative link in the README, either list, or any demo page that resolves to nothing.
 
-`sdlc/scripts/pages-self-test` builds eleven small trees under `target/`, each breaking one check, runs the real script over each, and pins the exit code and the whole sentence. Both run from the `lint` rung, the cheapest one, before the ratchet and cargo.
+`sdlc/scripts/pages-self-test` builds sixteen small trees under `target/`, each breaking one check, runs the real script over each, and pins the exit code and the whole sentence. Both run from the `lint` rung, the cheapest one, before the ratchet and cargo.
 
 ## The review
 
