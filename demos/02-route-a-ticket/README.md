@@ -18,7 +18,7 @@ thinkthen choose 'Which team owns this request?' billing shipping account other 
 
 `ticket.txt` is one message about a renewal charge that bounced, and `inbox/` holds five short meeting notes for the closing section. `recording/` holds the six live exchanges this page replays, and `record.sh` made them once through `sdlc/scripts/live`.
 
-The fourth option is typed by hand: nothing adds a catch-all, and the sent list is the list on the command line. Option order moves the odds. Without `--raw` the answer is the JSON string `"billing"`, which no `case` matches.
+The fourth option is typed by hand: nothing adds a catch-all, and the sent list is the list on the command line. Without `--raw` the answer is the JSON string `"billing"`, which no `case` matches.
 
 ## Step 1: act on the label
 
@@ -50,11 +50,11 @@ esac
 printf 'queue=%s\n' "$queue" | mustmatch "queue=payments"
 ```
 
-`--raw` prints nothing when the answer is unresolved, and an empty string is no label. Only the exit code tells an unresolved pick from a crash, which is why the first `case` reads `$rc`. `--details` prints a probability for every option instead, in the order they were sent; [how to tell "not stated" from "false"](../20-not-stated-or-false/) reads those odds.
+`--raw` prints nothing when the answer is unresolved, and an empty string is no label. Only the exit code tells an unresolved pick from a crash, which is why the first `case` reads `$rc`. `--details` prints a probability for every option instead; [how to tell "not stated" from "false"](../20-not-stated-or-false/) reads those odds.
 
 ## Step 2: run the same shape over a whole folder
 
-The loop is the block above with the queue replaced by a folder. `find` produces NUL-delimited paths, because a filename may hold a newline, and they go to a file first so that a failing `find` stops the run.
+The loop is the block above with the queue replaced by a folder. `find` produces NUL-delimited paths, because a filename may hold a newline, and they go to a file first so a failing `find` stops the run.
 
 ```bash
 set -euo pipefail
@@ -101,7 +101,7 @@ Two notes name a broken thing plainly, and the model put every point of probabil
 - Under `set -e` an unresolved answer ends the script. Capture the code with `&& rc=0 || rc=$?`.
 - An empty file is a usage error, not a label, and a real inbox holds one. A loop needs a branch for exit 2 or a `find -size +0` filter.
 - `mv` over an existing name overwrites it, so two notes sharing a basename collide. Use `mv -n`.
-- Nothing here runs the queue the model named. The `case` is code, and the model only moved a string.
+- Nothing here runs the queue the model named. The `case` is code, and the model moved a string.
 
 ## Related how-tos
 

@@ -20,7 +20,7 @@ A demo starts **red**. Only `decide`, `choose`, and `score` are built, so every 
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. When it turns green it takes the how-to form and the argument leaves the page. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. It refuses a green page out of form, a green page this index does not list, and a green page that names a `--replay` folder it does not hold.
 
-It also holds every green page to the standard of ADR 0016: at most 120 lines and 900 words, the first block by line 20 with nothing set up before it, at most six blocks and every block asserting, one command unless the title names the contrast, at most four steps, no design argument, and at most four closing links. A failure names the page, the rule, and the measured number. `sdlc/scripts/demos-self-test` proves each check against a page that breaks it.
+It also holds every green page to the standard of ADR 0016: at most 120 lines and 900 words, the first asserting block by line 20 with nothing set up before it, at most six of them and every `bash` block asserting, one command unless the title names the contrast, at most four steps, no design argument, and at most four closing links. A failure names the page, the rule, and the measured number. `sdlc/scripts/demos-self-test` proves each check against a page that breaks it.
 
 The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and demo 10 left with the configuration file under the same ADR. Demos 05 and 38 left under ADR 0016, into 02 and 25. `specification/roadmap.md` says what each retired number held.
 
@@ -79,7 +79,7 @@ An eval is a reproducible workflow over the same commands as everything else. Th
 | 30 | Mix exact checks in `jq` with judged checks | `annotate` | coming, slice 10b |
 | 23 | Keep a run that can be traced and replayed | `annotate` | coming, slice 9 |
 | 13 | [Pick a threshold from labeled cases](13-pick-a-threshold/) | `decide` | green |
-| 24 | [Compare two runs of the same cases](24-compare-two-runs/) | `decide` | green |
+| 24 | [Compare two runs](24-compare-two-runs/) | `decide` | green |
 | 25 | [Check the judge against human labels](25-check-the-judge/) | `decide` | green |
 | 37 | Test the judge with hard and hostile cases | `annotate` | coming, slice 10b |
 | 28 | [Know what a run cost](28-what-a-run-cost/) | `decide` | green |
@@ -88,4 +88,4 @@ Demos 13, 24, 25, and 28 read the `jq` transforms in `transforms/` over the comm
 
 ## Folders that are still red and leave
 
-Demos 08 and 09 hold arguments that pages 39 and 03 absorb. Each folder stays until its absorbing page turns green, and each says so on its first line.
+[08 Release checklist](08-release-checklist/) and [09 What leaves the machine](09-what-leaves-the-machine/) hold arguments that pages 39 and 03 absorb. Each folder stays until its absorbing page turns green, and each says so on its first line.

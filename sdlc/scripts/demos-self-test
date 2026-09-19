@@ -60,7 +60,7 @@ tail_of_a_page() {
 	printf '## Related how-tos\n\n- [How to read the standard](../page/)\n'
 }
 
-ok='printf '\''ok\n'\'' | mustmatch "ok"'
+ok='jq -rn '\''"ok"'\'' | mustmatch "ok"'
 
 # Rule 1: at most 120 lines and 900 words.
 {
@@ -86,7 +86,7 @@ expect rule1-lines 1 'demos: page/README.md breaks rule 1 of ADR 0016: 141 lines
 	printf '\n'
 	tail_of_a_page
 } | fixture rule1-words
-expect rule1-words 1 'demos: page/README.md breaks rule 1 of ADR 0016: 1073 words, and the limit is 900'
+expect rule1-words 1 'demos: page/README.md breaks rule 1 of ADR 0016: 1074 words, and the limit is 900'
 
 # Rule 2: the first block starts by line 20, its first thinkthen line sits
 # within five lines of the block, and nothing is set up before the result.
@@ -100,7 +100,7 @@ expect rule1-words 1 'demos: page/README.md breaks rule 1 of ADR 0016: 1073 word
 	block "$ok"
 	tail_of_a_page
 } | fixture rule2-late
-expect rule2-late 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first block starts on line 25, and the limit is 20'
+expect rule2-late 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first block that asserts starts on line 25, and the limit is 20'
 
 {
 	head_of_a_page 'put the command out of reach'
@@ -115,6 +115,30 @@ expect rule2-far 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first t
 	tail_of_a_page
 } | fixture rule2-setup
 expect rule2-setup 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first block sets up on line 2, and nothing is set up before the first result'
+
+# An eval page runs no thinkthen at all, and jq over saved rows is its
+# command. The clause binds it the same way.
+{
+	head_of_a_page 'bury the jq line on an eval page'
+	printf '```bash\nset -euo pipefail\nrows=rows.jsonl\nspare=unused\nunread=unused\nlonger=unused\n\njq -n %s | mustmatch "ok"\n```\n\n' "'\"ok\"'"
+	tail_of_a_page
+} | fixture rule2-working
+expect rule2-working 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first command line is 7 lines into the first block, and the limit is 5'
+
+# A block a reader types by hand once is not a result. The page below shows
+# one inside the first twenty lines and asserts nothing until line 24.
+{
+	head_of_a_page 'open with a listing nobody runs'
+	printf '```sh\nthinkthen decide QUESTION --record recording/ <evidence.txt\n```\n\n'
+	i=0
+	while [ "$i" -lt 5 ]; do
+		printf 'A paragraph about the listing above.\n\n'
+		i=$((i + 1))
+	done
+	block "$ok"
+	tail_of_a_page
+} | fixture rule2-listing
+expect rule2-listing 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first block that asserts starts on line 23, and the limit is 20'
 
 # Rule 3: at most six blocks that assert, and every bash block asserts.
 {
@@ -135,6 +159,17 @@ expect rule3-count 1 'demos: page/README.md breaks rule 3 of ADR 0016: 7 blocks 
 	tail_of_a_page
 } | fixture rule3-silent
 expect rule3-silent 1 'demos: page/README.md breaks rule 3 of ADR 0016: the bash block on line 15 asserts nothing'
+
+# A block fenced for another language asserts nothing and is not counted,
+# because a page has to be able to show a command nobody runs in a gate.
+{
+	head_of_a_page 'show a command nobody runs'
+	printf '```sh\nthinkthen decide QUESTION --record recording/ <evidence.txt\n```\n\n'
+	block "$ok"
+	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
+	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
+} | fixture rule3-other-language
+expect rule3-other-language 0 'demos: 1 green, 0 red'
 
 # Rule 4: one command, unless the title names the contrast.
 {
@@ -203,4 +238,4 @@ if [ "$failures" -ne 0 ]; then
 	printf 'demos-self-test: %s cases failed\n' "$failures" >&2
 	exit 1
 fi
-printf 'demos-self-test: 13 cases pass\n'
+printf 'demos-self-test: 16 cases pass\n'

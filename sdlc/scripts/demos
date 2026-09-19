@@ -77,6 +77,25 @@ for page in */README.md; do
 			sub(/[ \t]+$/, "", text)
 			return text
 		}
+		# The first block a reader meets is the first one that proves
+		# something. A listing nobody runs is not a result, so the whole of
+		# rule 2 is measured on the first asserting block and not the first
+		# fence. Its lines are buffered, because a block is known to assert
+		# only once it has closed.
+		function measure(   i, line, offset) {
+			first = opened
+			for (i = 1; i <= held; i++) {
+				line = buffer[i]
+				if (!reached && line ~ /thinkthen [a-z]/) reached = i
+				# A blank line, a shell option, and a name given a value
+				# are not a result. The first line that runs something is.
+				if (!working && line !~ /^[ \t]*$/ && line !~ /^[ \t]*set([ \t]|$)/ &&
+					line !~ /^[ \t]*[A-Za-z_][A-Za-z0-9_]*=/)
+					working = i
+				if (!prepared && (line ~ /mktemp/ || line ~ /(^|[ \t;])trap[ \t]/ || index(line, "<<")))
+					prepared = i
+			}
+		}
 		{ words += NF }
 		/^```/ {
 			if (fenced) {
@@ -85,14 +104,15 @@ for page in */README.md; do
 					if (asserts) asserting++
 					else if (!silent) silent = opened
 				}
+				if (asserts && !first) measure()
 				next
 			}
 			fenced = 1
 			asserts = 0
+			held = 0
 			opened = NR
 			kind = substr($0, 4)
 			sub(/[ \t]+$/, "", kind)
-			if (!first) first = NR
 			next
 		}
 		{
@@ -104,11 +124,7 @@ for page in */README.md; do
 		}
 		fenced {
 			if (index($0, "mustmatch")) asserts = 1
-			if (opened == first) {
-				if (!reached && $0 ~ /thinkthen [a-z]/) reached = NR - first
-				if (!prepared && ($0 ~ /mktemp/ || $0 ~ /(^|[ \t;])trap[ \t]/ || index($0, "<<")))
-					prepared = NR - first
-			}
+			buffer[++held] = $0
 			next
 		}
 		/^# / && !title { title = substr($0, 3) }
@@ -129,9 +145,10 @@ for page in */README.md; do
 		END {
 			if (NR > 120) fail(1, NR " lines, and the limit is 120")
 			if (words > 900) fail(1, words " words, and the limit is 900")
-			if (!first) fail(2, "no fenced block at all, so a reader sees no result")
+			if (!first) fail(2, "no block that asserts anything, so a reader sees no result")
 			else {
-				if (first > 20) fail(2, "the first block starts on line " first ", and the limit is 20")
+				if (first > 20) fail(2, "the first block that asserts starts on line " first ", and the limit is 20")
+				if (working > 5) fail(2, "the first command line is " working " lines into the first block, and the limit is 5")
 				if (reached > 5) fail(2, "the first thinkthen line is " reached " lines into the first block, and the limit is 5")
 				if (prepared) fail(2, "the first block sets up on line " prepared ", and nothing is set up before the first result")
 			}
