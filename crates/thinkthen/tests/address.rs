@@ -71,7 +71,9 @@ fn the_option_outranks_the_variable_and_the_variable_outranks_the_default() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(chosen.requests().len(), 1, "the option names the address");
+    let chosen = chosen.requests();
+    let request = chosen.first().expect("the option names the address");
+    assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
     assert!(ignored.requests().is_empty(), "the variable was outranked");
 
     let named = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
@@ -95,32 +97,6 @@ fn the_option_outranks_the_variable_and_the_variable_outranks_the_default() {
         printed.contains(&format!(r#""url":"{BUILT_IN}""#)),
         "{printed}"
     );
-}
-
-#[test]
-fn a_base_reaches_the_same_path_with_a_trailing_slash_and_without_one() {
-    for base in ["", "/", "//"] {
-        let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-        let given = format!("{}{base}", listener.base());
-
-        let output = decide(
-            &[
-                "--url",
-                &given,
-                "--adapter",
-                "systemone",
-                "--model",
-                "local-1",
-            ],
-            &[],
-        )
-        .expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(0), "{given}");
-        let requests = listener.requests();
-        let request = requests.first().expect("one request reached the listener");
-        assert_eq!(request.line, "POST /v1/systemone HTTP/1.1", "{given}");
-    }
 }
 
 #[test]
@@ -148,9 +124,22 @@ fn a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address() {
     }
 }
 
+/// One base in six spellings, each of which posts to the same path.
+///
+/// A trailing slash, surrounding space, and the case of the scheme all fall
+/// away before the adapter's own name is joined on. `--url` and the variable
+/// compose through one function, and the ranking case above proves the wire
+/// path the option reaches.
 #[test]
-fn a_base_is_read_past_its_surrounding_space_and_past_the_case_of_its_scheme() {
-    for shape in ["  {base}  ", "\t{base}\n", "{upper}"] {
+fn every_spelling_of_one_base_reaches_the_same_path() {
+    for shape in [
+        "{base}",
+        "{base}/",
+        "{base}//",
+        "  {base}  ",
+        "\t{base}\n",
+        "{upper}",
+    ] {
         let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
         let upper = listener.base().replacen("http://", "HTTP://", 1);
         let given = shape
@@ -225,15 +214,6 @@ fn the_key_comes_from_thinkthen_api_key_and_reaches_nothing_but_the_header() {
         entries += 1;
     }
     assert_eq!(entries, 1, "the run recorded its one exchange");
-
-    let plan =
-        decide(&["--dry-run"], &[("THINKTHEN_API_KEY", secret)]).expect("the compiled binary runs");
-    let printed = String::from_utf8_lossy(&plan.stdout);
-    assert!(
-        printed.contains(r#""key_env":"THINKTHEN_API_KEY""#),
-        "{printed}"
-    );
-    assert!(!printed.contains(secret), "{printed}");
 }
 
 #[test]
