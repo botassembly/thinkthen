@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"query\":\"Why is signing in slow or failing?\",\"passage\":\"Session cookies are issued for 12 hours. A timeout at sign-in usually means the token service is refusing new tokens, so check the token service first.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The passage answers the query."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.83}},"usage":{"input_tokens":320,"output_tokens":21}}
+}

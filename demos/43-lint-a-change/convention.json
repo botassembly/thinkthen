@@ -1,0 +1,7 @@
+{
+  "decide": "Does the changed code break the house rule?",
+  "true": "The change holds an amount of money in a floating-point number: a float, a double, a decimal literal used as money, or arithmetic on money that yields one.",
+  "false": "The change holds no amount of money at all, or it holds money only as a whole number of pence in an integer.",
+  "threshold": 0.7,
+  "on": "/hunk"
+}

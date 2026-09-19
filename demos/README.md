@@ -55,8 +55,9 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
-| 03 | [Keep only the records that match a meaning](03-grep-for-meaning/) | `filter` | red |
-| 06 | [Put the best matches first](06-top-search-hits/) | `rank`, `filter` | red |
+| 03 | [Keep only the records that match a meaning](03-grep-for-meaning/) | `filter` | green |
+| 43 | [Lint a change by meaning and fail the build](43-lint-a-change/) | `filter` | green |
+| 06 | [Put the best matches first](06-top-search-hits/) | `rank` | green |
 | 12 | [Resume a long run that stopped](12-keep-going/) | `decide` | green |
 | 15 | [Find the one line that answers a question](15-find-the-line/) | `find` | red |
 | 42 | Serve a loop from one long-lived process | `decide` | coming, slice 8 |
@@ -88,4 +89,4 @@ Demos 13, 24, 25, and 28 read the `jq` transforms in `transforms/` over the comm
 
 ## Folders that are still red and leave
 
-[08 Release checklist](08-release-checklist/) and [09 What leaves the machine](09-what-leaves-the-machine/) hold arguments that pages 39 and 03 absorb. Each folder stays until its absorbing page turns green, and each says so on its first line.
+[08 Release checklist](08-release-checklist/) holds an argument that page 39 absorbs. The folder stays until 39 turns green, and it says so on its first line. Demo 09 left when 03 turned green, and 03 now carries its `--dry-run` proof of what leaves the machine.

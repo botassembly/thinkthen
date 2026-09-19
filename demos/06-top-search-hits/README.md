@@ -1,112 +1,80 @@
-# 06 Top search hits
+# How to put the best matches first
 
-Status: red
+Status: green
 
-Verbs: `rank`, `filter`
+Verbs: `rank`
 
-A keyword search over an internal wiki returns six pages and an engineer wants the three worth opening first. The search engine ranked by words. `rank` reorders by whether a page holds something that helps with the problem in hand, and the cut to three happens after the order exists.
-
-Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
-
-## Input
-
-`hits.jsonl` holds six search hits with `id`, `path`, and `body`.
-
-## Order and cut
-
-`rank` asks one yes/no question of each record and sorts by the probability of yes. It never compares two records in one question.
+A keyword search brings back six wiki pages and an engineer has time for three. The search engine ordered them by words. `rank` orders them by whether the page answers the question in hand, and the cut to three happens after the order exists.
 
 ```bash
 set -euo pipefail
 
-thinkthen rank 'Does the page name a cause of a slow or failing sign-in?' \
-  --jsonl --field /body --top 3 --input hits.jsonl --replay recording/ \
+jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
+  | thinkthen rank 'The passage answers the query.' \
+      --jsonl --field /query --field /passage --top 3 --replay recording/ \
   | jq -r '.path' \
-  | mustmatch "notes/2025-11-outage.md
-runbooks/database.md
+  | mustmatch "runbooks/database.md
+notes/2025-11-outage.md
 runbooks/login.md"
 ```
 
-`--top 3` printed three rows and paid for six. Every record was judged, because an order needs the whole set.
+The page about replica lag came first, ahead of the runbook whose name is `login.md`. Words alone would have reversed those two.
 
-The records come out as they arrived. The reordering is the only thing `rank` does to the stream.
+## Input
 
-```bash
-set -euo pipefail
+`hits.jsonl` holds six made-up wiki hits, one JSON object each, with `id`, `path`, and `body`. `recording/` holds the six live exchanges the page replays, and `record.sh` made them through `sdlc/scripts/live`.
 
-thinkthen rank 'Does the page name a cause of a slow or failing sign-in?' \
-  --jsonl --field /body --top 1 --input hits.jsonl --replay recording/ \
-  | mustmatch '{"id":"H3","path":"notes/2025-11-outage.md","body":"Sign-in hung for twenty minutes. The token service had exhausted its connection pool. Raising the pool size cleared it and we added an alert on pool waits."}'
-```
+## Step 1: put the query in every record
 
-## A floor before the order
-
-`rank` selects nothing and takes no threshold, so an irrelevant hit still gets a place in the order. A floor is a separate verb in front of it.
-
-```bash
-set -euo pipefail
-set -o pipefail
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
-
-thinkthen filter 'Is the page about signing in?' \
-  --jsonl --field /body --threshold 0.9 --input hits.jsonl --replay recording/ \
-  | thinkthen rank 'Does the page name a cause of a slow or failing sign-in?' \
-      --jsonl --field /body --top 3 --replay recording/ \
-  > "$work/reading-list.jsonl"
-
-wc -l < "$work/reading-list.jsonl" | tr -d ' ' | mustmatch "3"
-jq -r '.path' "$work/reading-list.jsonl" | head -1 | mustmatch "notes/2025-11-outage.md"
-```
-
-Two policies run and the pipeline says so: one about eligibility, one about reading order. A threshold inside `rank` would have hidden the first inside the second.
-
-## The order carries no claim
-
-`--details` shows the number the order came from. The page that sorts last still has a probability, and nothing in the run says it answers the question.
+The question is fixed for a run, so a query that changes per run belongs in the record. `jq` builds one record carrying both, and `--field` given twice sends an object of the two, keyed by the last part of each pointer.
 
 ```bash
 set -euo pipefail
 
-thinkthen rank 'Does the page name a cause of a slow or failing sign-in?' \
-  --jsonl --field /body --details --input hits.jsonl --replay recording/ \
-  | jq -r '.threshold | tostring' \
-  | sort -u \
-  | mustmatch "null"
+jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
+  | env -u THINKTHEN_API_KEY thinkthen rank 'The passage answers the query.' \
+      --jsonl --field /query --field /passage --dry-run \
+  | jq -c '.input, {state: (.request.state | .[0:36])}' \
+  | mustmatch '{"framing":"jsonl","field":["/query","/passage"]}
+{"state":"{\"query\":\"Why is signing in slow or "}'
 ```
 
-`threshold` is `null` on every row, because `rank` takes none. That is the honest reading of a ranked list: it is a suggestion about reading order and not a claim about any page.
+`path` is in every record and in no request, because no pointer names it. The question stays the same for all six, so one run is one measurement.
 
-## Publish the finished list
+## Step 2: read the order and what it does not claim
 
-A ranked stream is not a dataset until the pipeline has finished. The temporary file becomes the real one only when every stage exited zero.
+`rank` asks one yes/no question of each record and sorts by the probability of yes. It never compares two records in one question, and it never runs a tournament. `--details` shows the number the order came from.
 
 ```bash
 set -euo pipefail
-set -o pipefail
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
 
-if thinkthen filter 'Is the page about signing in?' \
-     --jsonl --field /body --threshold 0.9 --input hits.jsonl --replay recording/ \
-   | thinkthen rank 'Does the page name a cause of a slow or failing sign-in?' \
-       --jsonl --field /body --top 3 --replay recording/ \
-       > "$work/reading-list.tmp"
-then
-  mv -- "$work/reading-list.tmp" "$work/reading-list.jsonl"
-  printf 'published\n'
-else
-  printf 'stage statuses: %s\n' "${PIPESTATUS[*]}" >&2
-  exit 1
-fi | mustmatch "published"
+jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
+  | thinkthen rank 'The passage answers the query.' \
+      --jsonl --field /query --field /passage --details --replay recording/ \
+  | jq -c '{path: .input.path, p: .answer.probability, threshold}' \
+  | mustmatch '{"path":"runbooks/database.md","p":0.91,"threshold":null}
+{"path":"notes/2025-11-outage.md","p":0.87,"threshold":null}
+{"path":"runbooks/login.md","p":0.83,"threshold":null}
+{"path":"notes/onboarding.md","p":0.38,"threshold":null}
+{"path":"runbooks/deploy.md","p":0.04,"threshold":null}
+{"path":"runbooks/backup.md","p":0.02,"threshold":null}'
 ```
 
-The recording under `recording/` does not exist yet.
+`threshold` is `null` on every row, because `rank` takes none. A ranked list is a suggestion about reading order and not a claim about any page. The backup runbook still has a place in the order, and nothing in the run says it answers anything.
 
-## What this demo decides
+`rank` orders and never selects, so a floor is a separate command in front of it. [How-to 03](../03-grep-for-meaning/) is that command.
 
-- **The demo confirms `rank` with no rubric.** One plain question orders six pages, and `rank QUESTION` needs no second file and no levels. Composing with `filter` reads well and keeps the two policies apart.
-- **`rank` buffers the whole stream and nothing says so.** An order needs every record, so `rank` cannot print a row until the last request returns. `filter` streams and `rank` does not, and the two look identical on the command line. The demo asks for one line in the `rank` help.
-- **The demo could not bound a ranked run.** `rank` makes one request per record, `--top N` limits only what prints, and a run that finishes prints nothing on standard error. So `rank` over a million-line file makes a million requests with no lever and no count. The demo asks that the `--top` row in the help say what it does not limit, and that a finished run print the requests it made on standard error.
-- **`--details` on `rank` keeps the record in `input` and stays flat.** The old surface wrapped, and the next stage had to unwrap. Nothing here needs the change.
-- **`threshold: null` on a ranked row is the right answer.** The field exists on every result object and a ranked row has no rule to report. The demo confirms the ADR's reading.
+## What can go wrong
+
+- **It holds the whole stream.** An order needs every record, so `rank` prints nothing until the last answer is in. A run that stops prints nothing at all, and its line on standard error says so. An endless stream is cut into windows upstream.
+- **`--top` saves no request.** Every record is judged before anything is sorted, so `--top 3` over a million-line file is a million paid requests. Cut the file before `rank`, not after.
+- **`--top 0`.** A run that prints none of its order is a usage error, because a run that pays for six answers and shows none of them is a mistake in the pipeline.
+- **A ranked stream is not a dataset.** Write it to a temporary file and move it into place only when every stage of the pipeline exited 0.
+- **A query left out of the records.** Put it in the question instead and the question moves with the query, so two runs are two measurements and no digest ties them.
+
+## Related how-tos
+
+- [How to keep only the records that match a meaning](../03-grep-for-meaning/) is the floor that goes in front.
+- [How to resume a long run that stopped](../12-keep-going/) pays once for a file that did not finish.
+- [How to know what a run cost](../28-what-a-run-cost/) reads the same rows for tokens.
+- [How to test a script with no network](../27-test-with-no-network/) is how this page runs in a gate.

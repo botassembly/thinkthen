@@ -1,0 +1,3 @@
+{"file":"billing/invoice.rs","hunk":"@@ -12,3 +12,4 @@ use std::fmt;\n+use std::collections::BTreeMap;"}
+{"file":"checkout/cart.ts","hunk":"@@ -3,2 +3,3 @@ import { Cart } from \"./types\";\n+import { formatMoney } from \"./money\";"}
+{"file":"reports/weekly.py","hunk":"@@ -25,4 +25,6 @@ def rows(orders):\n+    late = sum(1 for order in orders if order.days_late > 0)\n+    return {\"orders\": len(orders), \"late\": late}"}

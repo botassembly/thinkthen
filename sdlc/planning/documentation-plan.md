@@ -35,8 +35,9 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 
 | How to | Demo | Slice | State |
 | --- | --- | --- | --- |
-| Keep only the records that match a meaning | 03 | 8 | Red. It absorbs 09, and one sentence names transcript compaction as the same command |
-| Put the best matches first | 06 | 8 | Red |
+| Keep only the records that match a meaning | 03 | 8 | Green. Landed with ticket 0014, and it absorbed 09 |
+| Lint a change by meaning and fail the build | 43 | 8 | Green. Landed with ticket 0014. New under ADR 0018 |
+| Put the best matches first | 06 | 8 | Green. Landed with ticket 0014 |
 | Resume a long run that stopped, with `--cache` and `--jobs` | 12 | 7 | Green. It owns `--cache` |
 | Find the one line that answers a question | 15 | 11 | Red. Slice 11 measures the longer documents first |
 | Serve a loop from one long-lived process | 42 | 8 | Red. New under ADR 0016: record mode through a Bash `coproc`, and no `serve` command |
@@ -81,7 +82,7 @@ Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An 
 | --- | --- |
 | 05 | 02, as the closing section that files a folder |
 | 08 | 39 |
-| 09 | 03 |
+| 09 | 03, whose `--dry-run` block proves what leaves the machine |
 | 10, 11 | Left with the configuration file and `segment` under ADR 0010 |
 | 22, 34 | 07 |
 | 26, 35, 38 | 25 |

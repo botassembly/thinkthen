@@ -52,8 +52,8 @@ These seven pages show every command and all three question types, from the simp
 | --- | --- | --- |
 | Gate a script step on a yes/no answer | A support desk sends the messages that ask for money back to the refunds queue | [01](demos/01-refund-gate/) |
 | Branch on a label with `choose` and `case` | A ticket goes to one of four teams, and a folder of notes is filed the same way | [02](demos/02-route-a-ticket/) |
-| Keep only the records that match a meaning | An issue export is cut down to the bugs somebody can reproduce | 03, coming |
-| Put the best matches first | A search brings back fifty passages and the best five go to the reader | 06, coming |
+| Lint a change by meaning and fail the build | A house rule no linter can check is asked of every changed hunk, and the build fails on the ones that break it | [43](demos/43-lint-a-change/) |
+| Put the best matches first | A search brings back six wiki pages and the best three go to the reader | [06](demos/06-top-search-hits/) |
 | Find the line that answers a question | One line of a long document answers it, or nothing fits and the tool says so | 15, coming |
 | Build a triage pipeline that drafts, blocks, or asks a person | One request answers several questions at once, and a `jq` policy names the action | 16, coming |
 | Pick a threshold from labeled cases | A cut you can defend, chosen on cases a person already answered | [13](demos/13-pick-a-threshold/) |

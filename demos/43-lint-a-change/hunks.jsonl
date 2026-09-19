@@ -1,0 +1,5 @@
+{"file":"billing/invoice.rs","hunk":"@@ -41,6 +41,9 @@ impl Invoice {\n+    pub fn total(&self) -> f64 {\n+        self.lines.iter().map(|line| line.price * line.quantity as f64).sum()\n+    }"}
+{"file":"billing/invoice.rs","hunk":"@@ -12,3 +12,4 @@ use std::fmt;\n+use std::collections::BTreeMap;"}
+{"file":"checkout/cart.ts","hunk":"@@ -88,5 +88,7 @@ export function summary(cart: Cart) {\n-  const due = cart.duePence;\n+  const due = cart.duePence / 100;\n+  return `You owe ${due.toFixed(2)}`;"}
+{"file":"checkout/cart.ts","hunk":"@@ -3,2 +3,3 @@ import { Cart } from \"./types\";\n+import { formatMoney } from \"./money\";"}
+{"file":"reports/weekly.py","hunk":"@@ -25,4 +25,6 @@ def rows(orders):\n+    late = sum(1 for order in orders if order.days_late > 0)\n+    return {\"orders\": len(orders), \"late\": late}"}
