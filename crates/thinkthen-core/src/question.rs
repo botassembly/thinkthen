@@ -76,7 +76,7 @@ impl Labels {
     /// A description that is blank is no description, so a list of names, a map
     /// whose values are `null`, and a map whose values are white space all name
     /// the same question. `question-file.md` writes that rule out.
-    pub fn described(values: Vec<(String, Option<String>)>) -> Result<Self, LabelsError> {
+    pub(crate) fn described(values: Vec<(String, Option<String>)>) -> Result<Self, LabelsError> {
         let labels = values
             .into_iter()
             .map(|(name, description)| Label {

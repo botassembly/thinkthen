@@ -47,8 +47,6 @@ pub(crate) enum Failure {
     OptionWithList,
     /// An `--option` entry carries no `=`, so it names no description.
     OptionWithoutSign,
-    /// A rule was given to a verb that has none.
-    RuleOnScore,
     /// The framing and the pointers cannot act together.
     Reading(ReadingError),
     /// A pointer is not a JSON Pointer, and the message names the one typed.
@@ -197,9 +195,6 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
         Failure::QuietWithDetails => "--quiet prints nothing, so it does not take --details",
         Failure::RawWithAnotherView => {
             "--raw prints a bare label, so it does not take --details or --quiet"
-        }
-        Failure::RuleOnScore => {
-            "--threshold: `score` takes no rule, so cut on the number with `jq -e`"
         }
         Failure::TwoFolders => {
             "--record and --replay name two different folders, and one run keeps one"

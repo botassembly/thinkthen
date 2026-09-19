@@ -276,8 +276,14 @@ def check_seam() -> None:
         allowed = SEAM_ALLOWED.get(relative, frozenset())
         unused.discard(relative)
         held = set()
-        for number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
-            if line.startswith("#[cfg(test)]"):
+        lines = source.read_text(encoding="utf-8").splitlines()
+        # The code ends where the module's test module begins. A bare
+        # `#[cfg(test)]` on anything else, such as a use line, stops nothing,
+        # so the attribute alone is not the end.
+        for number, line in enumerate(lines, 1):
+            if line.startswith("#[cfg(test)]") and lines[number : number + 1] and (
+                lines[number].startswith("mod tests")
+            ):
                 break
             for word in VENDOR_WORDS:
                 if word in line.lower() and word not in allowed:

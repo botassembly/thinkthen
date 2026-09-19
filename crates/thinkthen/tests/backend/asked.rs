@@ -44,7 +44,11 @@ fn sent(arguments: &[&str], answer: &str) -> Option<Vec<u8>> {
     // secrecy case over the paths the question file opened.
     assert!(!printed.contains("sk-test-value"), "{printed}");
     assert!(!said.contains("sk-test-value"), "{said}");
-    listener.requests().into_iter().next().map(|one| one.body)
+    let body = listener.requests().into_iter().next().map(|one| one.body);
+    // Two cases that both reached no listener would compare equal, so a miss
+    // fails here instead of passing as an agreement.
+    assert!(body.is_some(), "no request reached the listener");
+    body
 }
 
 /// Read a request body back as text, and say so when no request arrived.

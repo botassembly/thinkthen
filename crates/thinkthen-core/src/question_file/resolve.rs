@@ -324,11 +324,15 @@ fn threshold_of(
             _ => (None, Source::Default),
         },
     };
-    if verb == Verb::Choose
-        && let Some(rule) = rule
-        && !rule.is_cut()
-    {
-        return Err(QuestionFileError::BandOnChoose(source));
+    if let Some(rule) = rule {
+        // `score` answers with a number and no rule cuts it. `choose` cuts on
+        // one winning probability, which a band has no second side for.
+        if verb == Verb::Score {
+            return Err(QuestionFileError::RuleOnScore(source));
+        }
+        if verb == Verb::Choose && !rule.is_cut() {
+            return Err(QuestionFileError::BandOnChoose(source));
+        }
     }
     Ok((rule, source))
 }

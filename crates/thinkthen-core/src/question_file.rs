@@ -167,6 +167,9 @@ pub enum QuestionFileError {
     /// A band reached a verb that cuts on one winning probability.
     #[error("{}`choose` takes a single cut and never a band", named(*.0, "threshold"))]
     BandOnChoose(Source),
+    /// A rule reached the verb that answers with a number and no rule.
+    #[error("{}`score` takes no rule, so cut on the number with `jq -e`", named(*.0, "threshold"))]
+    RuleOnScore(Source),
     /// The options or the levels are not a list the verb takes.
     #[error("{}{error}", named(*.origin, .key))]
     Labels {
@@ -229,7 +232,8 @@ impl QuestionFileError {
             | Self::Threshold { origin, .. }
             | Self::Labels { origin, .. }
             | Self::Pointer { origin, .. }
-            | Self::BandOnChoose(origin) => *origin,
+            | Self::BandOnChoose(origin)
+            | Self::RuleOnScore(origin) => *origin,
             // The file is a good question file and the command asked for
             // another verb, so the line to fix is the one the user typed.
             Self::VerbMismatch { .. } => Source::CommandLine,

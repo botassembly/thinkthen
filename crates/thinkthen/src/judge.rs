@@ -191,9 +191,6 @@ pub(crate) fn score(
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    if arguments.threshold.is_some() {
-        return Err(Failure::RuleOnScore);
-    }
     let settled = asked::score(arguments)?;
     let view = View {
         quiet: false,

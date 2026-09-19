@@ -102,6 +102,9 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
 pub(crate) fn score(arguments: &ScoreArguments) -> Result<Resolved, Failure> {
     let file = read(&arguments.question)?;
     let typed = Typed {
+        // `score` takes no rule, and the core writes that refusal, so the
+        // value reaches it rather than being refused twice.
+        threshold: arguments.threshold.clone(),
         labels: (!arguments.levels.is_empty()).then(|| {
             arguments
                 .levels
