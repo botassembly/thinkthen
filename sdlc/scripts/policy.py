@@ -269,7 +269,9 @@ def check_seam() -> None:
     unused = set(SEAM_ALLOWED)
     for source in sorted((REPO / "crates").rglob("*.rs")):
         relative = source.relative_to(REPO).as_posix()
-        if relative.startswith(ADAPTER) or "/tests/" in relative:
+        # A file named tests.rs is one module's `#[cfg(test)] mod tests`, and
+        # a file under tests/ is an integration test. Both are tests.
+        if relative.startswith(ADAPTER) or "/tests/" in relative or relative.endswith("/tests.rs"):
             continue
         allowed = SEAM_ALLOWED.get(relative, frozenset())
         unused.discard(relative)

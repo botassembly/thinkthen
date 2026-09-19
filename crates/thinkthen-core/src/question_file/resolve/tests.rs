@@ -1,9 +1,16 @@
 //! The precedence rule, over a file, over a command line, and over both.
 
-use super::{Typed, resolve};
+use proptest::prelude::Strategy;
+use proptest::{prop_assert_eq, proptest};
+use serde::Serialize;
+
+use super::{Resolved, Typed, resolve};
+use crate::plan::Plan;
 use crate::question::{LabelsError, Question};
 use crate::question_file::{Described, QuestionFile, QuestionFileError as Refused, Source, Verb};
 use crate::render::json_line;
+use crate::systemone::encode;
+use crate::text::Evidence;
 
 fn file(text: &str) -> QuestionFile {
     QuestionFile::parse(text).expect("a question file")
@@ -277,4 +284,68 @@ fn a_typed_question_and_the_same_question_in_a_file_ask_one_thing() {
     assert_eq!(from_file.question(), from_line.question());
     assert_eq!(from_file.text(), from_line.text());
     assert_eq!(from_file.threshold(), from_line.threshold());
+}
+
+/// One question file with the three text settings `decide` reads.
+#[derive(Serialize)]
+struct Written<'a> {
+    decide: &'a str,
+    #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
+    yes: Option<&'a str>,
+    #[serde(rename = "false", skip_serializing_if = "Option::is_none")]
+    no: Option<&'a str>,
+}
+
+/// The request body this resolved question asks over one fixed evidence.
+fn request(settled: &Resolved) -> Vec<u8> {
+    let question = settled.question().expect("a question").clone();
+    let plan = Plan::new(
+        Evidence::new("Refund me please.").expect("not blank"),
+        settled.model().clone(),
+        vec![question],
+    )
+    .expect("one question is a plan");
+    encode(&plan).expect("a plan is writable")
+}
+
+/// Text that is not blank and holds no control character.
+fn saying() -> impl Strategy<Value = String> {
+    "[^\\p{Cc}]{1,24}".prop_filter("not blank", |text| !text.trim().is_empty())
+}
+
+proptest! {
+    /// The two homes are one question, whatever the texts hold.
+    ///
+    /// The file is written by the same JSON writer the tool prints with, so a
+    /// quotation mark, a backslash, and every letter outside ASCII make the
+    /// round trip that a hand-written fixture would miss.
+    #[test]
+    fn a_question_typed_and_the_same_question_in_a_file_send_one_request(
+        text in saying(),
+        yes in proptest::option::of(saying()),
+        no in proptest::option::of(saying()),
+    ) {
+        let written = json_line(&Written {
+            decide: &text,
+            yes: yes.as_deref(),
+            no: no.as_deref(),
+        })
+        .expect("a question file is writable");
+        let held = QuestionFile::parse(&written).expect("a question file");
+        let from_file = resolve(Verb::Decide, None, Some(&held), &Typed::default())
+            .expect("a resolved question");
+        let from_line = resolve(
+            Verb::Decide,
+            Some(&text),
+            None,
+            &Typed {
+                yes: yes.clone(),
+                no: no.clone(),
+                ..Typed::default()
+            },
+        )
+        .expect("a resolved question");
+
+        prop_assert_eq!(request(&from_file), request(&from_line));
+    }
 }

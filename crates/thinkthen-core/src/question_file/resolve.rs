@@ -348,14 +348,10 @@ fn labels_of(
     let (listed, source) = match (typed.labels.clone(), from_file) {
         (Some(typed), _) => (typed, Source::CommandLine),
         (None, Some(held)) => (held, Source::File),
-        (None, None) => (
-            Vec::new(),
-            if file.is_some() {
-                Source::File
-            } else {
-                Source::CommandLine
-            },
-        ),
+        // Neither home holds a list, so neither one is at fault and the
+        // message names no source. The verb needs a list, and that is all a
+        // reader can act on.
+        (None, None) => (Vec::new(), Source::Default),
     };
     let built = match verb {
         Verb::Choose => Labels::described(listed),

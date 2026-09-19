@@ -230,6 +230,9 @@ impl QuestionFileError {
             | Self::Labels { origin, .. }
             | Self::Pointer { origin, .. }
             | Self::BandOnChoose(origin) => *origin,
+            // The file is a good question file and the command asked for
+            // another verb, so the line to fix is the one the user typed.
+            Self::VerbMismatch { .. } => Source::CommandLine,
             _ => Source::File,
         }
     }

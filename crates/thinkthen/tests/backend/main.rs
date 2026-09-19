@@ -8,6 +8,7 @@
 mod harness;
 
 mod address;
+mod asked;
 mod choosing;
 mod exchange;
 mod from_record;
