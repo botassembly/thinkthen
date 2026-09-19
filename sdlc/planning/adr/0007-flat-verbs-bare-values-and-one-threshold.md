@@ -157,6 +157,17 @@ Writing the specification pages found gaps in the text above. None changes a rul
 - The `question` object of a `choose` result also carries `options`, and a `score` result carries `levels`. The `annotate` details object carries `schema` like every other result.
 - `config check` exits 5 on a file it refuses.
 
+Rewriting the demos found more. None changes a ruling.
+
+- Under `--lines` or `--jsonl`, `choose --raw` prints an empty line for an unresolved answer, so one line still stands for one record. A blank option label is a usage error, so an empty line is never a label.
+- A name collision in `annotate` exits 2, like a pointer that finds nothing.
+- An `annotate` file may carry one top-level `threshold`. It applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`.
+- A record run that stops early prints one line on standard error: the record it stopped at, how many records it finished, and how many of those came from a recording. A run that finishes prints nothing there.
+- In record mode the `--dry-run` plan shows the request for the first record. It also carries an `input` object naming the framing and the pointers. It reads no further than that record.
+- `config path` prints the file that `--config` or `THINKTHEN_CONFIG` names when either is given. `config show` prints one JSON object with the file's own key names and every default filled in.
+- In `annotate --details`, `meta.usage` is the sum over the record's requests. How `meta` reports a record whose requests were answered by different model versions is an open point in `result.md`.
+- `report` treats rows from `decide`, `choose`, or `score` as one check named after the verb. Rows that carry more than one question text are listed in the report as a warning.
+
 ## What this replaces
 
 - ADR 0003: the grammar `thinkthen decide VERB`. The rest of ADR 0003 stands.
