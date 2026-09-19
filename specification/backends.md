@@ -13,11 +13,11 @@ A backend is a URL and an adapter. Nothing in `thinkthen` is tied to one vendor.
 | Model | The model name sent in the request | `--model` | `THINKTHEN_MODEL` |
 | Key variable | The name of the environment variable that holds the key | `--key-env` | `THINKTHEN_KEY_ENV` |
 
-A value that is empty or holds only white space is a usage error for every one of these.
+A flag value that is empty or holds only white space is a usage error. An environment variable that is set to the empty string counts as unset, the way most Unix tools read one. An environment variable that holds only white space is a usage error.
 
 `--backend NAME` or `THINKTHEN_BACKEND` picks a named profile. A flag beats an environment variable, and an environment variable beats the profile.
 
-An ad-hoc backend is a URL, an adapter, and a model given together. A URL names a server, an adapter names the language it speaks, and a model names what answers, so a new URL with a borrowed adapter or model is a guess. A URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model, which is how a user pins a version. An ad-hoc backend has no name, and results report its `backend` as `null`. Named profiles come from a configuration file in a later version. One profile is built in:
+An ad-hoc backend is a URL, an adapter, and a model given together. A URL names a server, an adapter names the language it speaks, and a model names what answers, so a new URL with a borrowed adapter or model is a guess. A URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model, which is how a user pins a version. An ad-hoc backend has no name, and results report its `backend` as `null`. Naming a profile with `--backend` beside a URL is a usage error, because the profile would do nothing. Named profiles come from a configuration file in a later version. One profile is built in:
 
 | Name | URL | Adapter | Model | Key variable |
 | --- | --- | --- | --- | --- |
@@ -29,12 +29,12 @@ The built-in profile is a row of data. It is the default when nothing else is na
 
 - The key is read from the environment variable the profile names. No flag takes a key value.
 - A key never crosses hosts. An ad-hoc backend takes nothing from a profile, its key variable included. The user names one with `--key-env` for the new host, or the request goes out with no key, which suits a local server.
-- A missing key for a profile that names one is exit code 4. The message names the variable and never a value.
+- A key variable that is named and holds no value is exit code 4, for a profile and for an ad-hoc backend alike. The message names the variable and never a value.
 - No key appears in a plan, a result, a recording, a log line, or an error.
 
 ## The request
 
-Every version-one adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`. `--timeout SECONDS` defaults to 30 and covers the whole exchange. `--max-retries N` defaults to 2. A retry happens after a transport failure or a status of 429, 500, 502, 503, 504, or 529. The wait doubles from one second. Any other error status fails at once. A failure after the last retry is exit code 4.
+Every version-one adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`. `--timeout SECONDS` defaults to 30 and covers one attempt from connect to the last byte. `--max-retries N` defaults to 2. A retry happens after a transport failure or a status of 429, 500, 502, 503, 504, or 529. The wait doubles from one second, and no wait follows the last attempt. Any other error status fails at once. A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error.
 
 ## The adapter contract
 

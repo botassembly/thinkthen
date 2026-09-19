@@ -47,7 +47,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 ## Dependencies
 
 - Few, and each one argued. The starting set: `serde` and `serde_json` for the wire format, `thiserror` for errors, `clap` with derive for the command line, `ureq` for blocking HTTP. Parallel requests use threads and a bounded channel. No async runtime enters until a measurement asks for one.
-- Every dependency resolves from crates.io with a checksum, under MIT, Apache-2.0, Unicode-3.0, or Unlicense. Enforced by: `lint` reads `cargo metadata` and `Cargo.lock`.
+- Every dependency resolves from crates.io with a checksum, under MIT, Apache-2.0, Unicode-3.0, or Unlicense. HTTPS forced three more: ISC, BSD-3-Clause, and CDLA-Permissive-2.0, each tied in `policy.py` to the crates that need it. No TLS stack exists in Rust without them. Enforced by: `lint` reads `cargo metadata` and `Cargo.lock`.
 - Adding a dependency takes a second reviewing agent and a line in the commit message saying why the standard library would not do.
 
 ## Tests
@@ -58,6 +58,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 - No gate touches the network. Tests replay recorded responses from a fixture directory. One test helper serves canned responses from a loopback listener to prove the request bytes. It uses the standard library only.
 - Property tests cover every parser and round trip: JSON Pointer, the question file, record framing, the wire format. Property tests also cover any total function over a numeric range, such as the pass mark. `proptest` is a development dependency of the core.
 - `spec/*.md` files are executable examples of the command line, run by `mustmatch`. They are the top rung, and they double as the user documentation.
+- The binary reads one hidden, test-only variable, `THINKTHEN_TEST_RETRY_WAIT_MS`, so a retry test never sleeps for real seconds. Help never shows it.
 - Live calls to a paid backend sit outside the ladder in `sdlc/scripts/live`. They run by hand, under a token cap, with Ian's authorization.
 
 ## The ladder
