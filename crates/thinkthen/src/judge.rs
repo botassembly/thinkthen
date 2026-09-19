@@ -183,6 +183,9 @@ fn run(
         view,
     } = asked;
     let view = view.checked()?;
+    if common.dry_run && (common.record.is_some() || common.replay.is_some()) {
+        return Err(Failure::DryRunWithRecording);
+    }
     let backend = Backend::resolve(
         common.url.as_deref(),
         environment.base_url(),
@@ -195,9 +198,6 @@ fn run(
     );
 
     if common.dry_run {
-        if common.record.is_some() || common.replay.is_some() {
-            return Err(Failure::DryRunWithRecording);
-        }
         return plan(
             &backend,
             &reading,
