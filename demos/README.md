@@ -16,9 +16,9 @@ Every page closes with "What this demo decides". That section names the open cho
 
 A demo starts **red**. Nothing under `demos/` runs today, because only `decide if` is specified as settled and no verb is built. A red demo is a plan.
 
-A demo turns **green** when the `spec` rung runs it against a recording and it passes. A green demo is a regression test and a page of documentation at once. The `spec` rung runs every green demo and skips every red one.
+A demo turns **green** when the `spec` rung runs it against a recording and it passes. A green demo is a regression test and a page of documentation at once. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. A green page that names a `--replay` folder it does not hold stops the run.
 
-Each page carries `--replay recording/` on every `thinkthen` command, so a gate touches no network. No recording exists yet, and `--replay` is not in the specification yet either. That is the first finding in `FINDINGS.md`.
+Each page carries `--replay recording/` on every `thinkthen` command, so a gate touches no network. `specification/recording.md` defines the flag, and ticket 0004 built it. No recording exists yet, so every page is still red.
 
 ## What a demo never asks
 

@@ -64,11 +64,11 @@ jq -r '.question.verb' "$work/result.json" | mustmatch "if"
 
 Nothing in this demo acts on the model's word. The `case` is code, and the model only moved the exit code.
 
-The recording under `recording/` does not exist yet. Every `thinkthen` line above carries `--replay recording/` so the page can run in a gate with no network.
+The recording under `recording/` does not exist yet, so this page is red. Every `thinkthen` line above carries `--replay recording/`, so the page runs in a gate with no network and reads no key. `record.sh` runs the two judged exchanges once against the live backend with `--record recording/`. It is run by hand, and no gate calls it.
 
 ## What this demo decides
 
 - **Exit code 3 cannot mean `unassessed` under `--status`.** channels.md gives code 3 to "unsure or unassessed", and decide.md says `--status` needs `--min-prob`. A run with a pass mark is never `unassessed`, so under `--status` code 3 means unsure and nothing else. Smallest fix: channels.md says code 3 means the accepted answer is unsure, and drops `unassessed` from that row. This touches a settled page.
 - **`--status` printing the result is right, and the cost is `> /dev/null` on every condition.** The alternative, a quiet `--status`, would throw away a paid answer by default. The demo keeps the current rule and shows the redirect once and the saved file once.
 - **An unsure `if` carries no reason.** result.md gives `assessment.reason` to `which` with four named values. An unsure `if` has one possible reason and no field to put it in. Smallest fix: `if` carries `reason: "below_min_prob"` when it is unsure, so one `jq` path reads the reason across verbs.
-- **`--replay` is not in the specification.** ADR 0005 requires every demo to replay a recording, and no document defines the flag, its argument, or what happens on a miss. This demo assumes `--replay DIR`, no network, and a hard failure on a miss.
+- **`--replay` is in the specification now.** This demo asked for the flag, and `specification/recording.md` answers it: `--replay DIR` opens no connection, reads no key, and a miss is a local failure at exit 5 naming the entry the folder lacks. Ticket 0004 built it, and the three blocks above run unchanged against a recording.
