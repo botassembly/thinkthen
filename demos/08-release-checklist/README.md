@@ -4,13 +4,13 @@ Status: red
 
 Verbs: `annotate`
 
-A team publishes release notes and has four things the notes must say. The checks live in a file the team owns and edits, not in a shell script, and the same file runs before every release. Each check asks about a fact that is printed in the notes or absent from them.
+A team publishes release notes and has four things the notes must say. The checks live in a file the team owns and edits. A shell script would hide them. The same file runs before every release. Each check asks about a fact that is printed in the notes or absent from them.
 
 Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
 
 ## Input
 
-`release-notes.txt` is one set of release notes. `checklist.json` is the saved question file: four named questions, three `decide` and one `choose`, each with its own threshold.
+`release-notes.txt` is one set of release notes. `checklist.json` is the saved question file: one top-level `threshold` and four named questions, three `decide` and one `choose`. The band is written once. The `choose` question overrides it with a single cut, because a four-way pick is not a two-sided decision.
 
 ## Check the file before the release
 
@@ -101,7 +101,7 @@ The recording under `recording/` does not exist yet.
 ## What this demo decides
 
 - **The demo confirms JSON for the saved file.** One format for the configuration, the questions, and the results means `jq` edits all three and no second parser enters the build. The old Markdown proposal needed a grammar of frontmatter, headings, and fenced blocks, and this file needs none.
-- **The demo could not write a default threshold.** Three `decide` questions repeat `"0.1:0.9"` three times, and a real checklist of twenty repeats it twenty times. ADR 0007 gives the file `version` and `questions` and makes any other key an error, so a user cannot add a default and the command line has no `--threshold` for `annotate` either. The demo asks for one optional top-level `threshold` that a question overrides.
+- **The top-level `threshold` earns its line and it reaches too little.** One band covers three `decide` questions, and a checklist of twenty would write it once. It does not reach the `choose` question, which writes its own cut. A file of twenty picks at one cut repeats that cut twenty times. The demo asks that the top-level key apply to every question that names none, whatever its verb.
 - **The demo could not tell a failed check from an unresolved one in one pass.** A bare answer is the value, so `false` and `null` are two `jq` tests and a `choose` answer needs a third. The nine-line checklist program above is what every user of `annotate` will write. The demo asks that it sit in the `annotate` help as the worked example.
 - **The exit code says nothing about the answers, and that is right.** `annotate` finishes at 0 whatever the checks said. The gate is `jq -e`. That is code, and the surface never lets the model set the build's exit code.
 - **No question in the file asks whether the notes are good.** Each one names something a reader can point at. That rule belongs in the `annotate` help next to the file grammar, because a saved file is exactly where a bad question gets written once and run forever.

@@ -26,14 +26,15 @@ env -u TYPESAFE_API_KEY thinkthen filter 'Does the customer ask for money back?'
   --input orders.jsonl > "$work/plan.json"
 
 jq -S -c 'keys' "$work/plan.json" \
-  | mustmatch '["adapter","key_env","model","profile","request","url"]'
+  | mustmatch '["adapter","input","key_env","model","profile","request","url"]'
+jq -c '.input' "$work/plan.json" | mustmatch '{"framing":"jsonl","field":"/note"}'
 jq -r '.adapter' "$work/plan.json" | mustmatch "systemone"
 jq -r '.key_env' "$work/plan.json" | mustmatch "TYPESAFE_API_KEY"
 jq -r '.request.state' "$work/plan.json" \
   | mustmatch "The blender arrived with a cracked jug. Please put the money back on my card."
 ```
 
-The plan names the key variable and never holds a key. Six fields, always present, and `key_env` is `null` when no key variable applies.
+The plan names the key variable and never holds a key. `key_env` is `null` when no key variable applies. In record mode the plan gains `input`, naming the framing and the pointer that decide what every other record will send.
 
 ## The pointer is the boundary
 
@@ -92,7 +93,8 @@ The recording under `recording/` does not exist yet. `--dry-run` needs none, bec
 ## What this demo decides
 
 - **The demo confirms `--field` as the boundary and `--dry-run` as the proof.** Two blocks, one showing what goes and one showing what does not, and the third block shows the field coming back on the kept record. A JSON Pointer is a thing a reviewer can read.
-- **The plan for a record run shows one request and hides the run.** Six fields describe one request. The record flag, the pointer, and the threshold decide what the other records will send, and none of them is in the plan. A reviewer comparing two saved plans cannot see that `--field /note` became `--field /` unless the first record happens to differ. The demo asks that the plan carry an `input` object holding the record mode, the pointer, and the threshold.
-- **The demo could not prove the plan is complete for a run.** `--dry-run` reads the first record and stops, so a pointer that is missing on record two is invisible to the reviewer. The demo does not ask for a whole-file dry run. It asks that the plan say which record it came from.
+- **The `input` object closes the hole the old plan had.** A reviewer comparing two saved plans now sees that `--field /note` became `--field /` even when the first record reads the same. The demo confirms the two members it needed and never reached for a third.
+- **The demo could not prove the plan is complete for a run.** `--dry-run` reads the first record and stops, so a pointer that is missing on record two is invisible to the reviewer. The demo does not ask for a whole-file dry run. It asks that the plan name the record it came from, because `input` says which pointer was asked for and not which record answered.
+- **The plan has no threshold and the demo did not miss one.** A threshold changes no request and no byte on the wire. A reviewer of what leaves the machine has no use for it. That is the line the plan should hold.
 - **A plan holds the evidence, so a plan deserves the care a request deserves.** The first block writes it into a scratch directory under `trap`. A plan redirected to a shared file leaks what the request would have leaked. One sentence in the `--dry-run` help closes it.
 - **`--dry-run` with no key in the environment has to work, and the demo depends on it.** `env -u` is how a reviewer proves the command sent nothing. The surface says `--dry-run` needs no key, and this page makes it a test rather than a promise.

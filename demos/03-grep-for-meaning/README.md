@@ -60,9 +60,10 @@ thinkthen filter 'Does the report give steps that would reproduce a defect?' \
 
 printf 'rc=%s\n' "$rc" | mustmatch "rc=0"
 wc -l < "$work/kept.jsonl" | tr -d ' ' | mustmatch "2"
+wc -c < "$work/err.txt" | tr -d ' ' | mustmatch "0"
 ```
 
-To see the three that went, judge every record and split in `jq`. Demo 04 does exactly that, and the cost is two more commands in the pipeline.
+A run that finishes prints nothing on standard error, so two lines out of five and two lines out of two look the same. To see the three that went, judge every record and split in `jq`. Demo 04 does exactly that, and the cost is two more commands in the pipeline.
 
 ## A pointer that finds nothing
 
@@ -85,7 +86,7 @@ The recording under `recording/` does not exist yet.
 ## What this demo decides
 
 - **The demo confirms `filter` and `--field`.** Three words in front of the question replaced four, and `--field` carries the whole boundary story: the body goes out, the rest stays. The record flags read well beside `jq` on either side.
-- **The demo could not say how many records were dropped.** The old surface printed a dropped count on standard error. ADR 0007 drops that line and says nothing in its place, so a pipeline that keeps two of five lines looks the same as a pipeline that kept two of two. The demo asks for the count back on standard error at the end of a `filter` run.
-- **A per-record input error at exit 2 contradicts the exit table.** The table says code 2 means a usage error and that nothing was sent. The block above sends nothing, so it is honest. A file where record forty lacks the pointer is not: thirty-nine requests are paid for, thirty-nine records print, and the run still exits 2. The surface needs a code for a run that started and then hit a bad record.
+- **The demo could not say how many records were dropped.** A run that stops early now prints a line on standard error, and a run that finishes prints nothing. A `filter` that keeps two of five is a run that finished, so it stays silent about the three. The demo asks that a finished `filter` run print the records read and the records dropped on standard error, in the same line the stopped run already uses.
+- **Exit 2 for a bad record is settled and the demo confirms it reads right.** Code 2 covers a usage error and an input error alike, and the failing record sent nothing either way. The block above is a whole file of bad records. Demo 12 shows the case where earlier records were already answered, and the line on standard error is what separates the two.
 - **`filter` with a band is refused, and the demo agrees.** A third pile needs a flag to steer it, and `jq` already steers piles. Demo 04 shows the shape.
 - **Parallelism left the command line.** The old page passed `--jobs 2`. ADR 0007 keeps `jobs` in the configuration file only, so a user with a rate limit and a large file edits a JSON file to change one number for one run. The demo does not ask for the flag back. It asks that the `filter` help name the configuration key, because nothing on the command line points at it.

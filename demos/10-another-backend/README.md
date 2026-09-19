@@ -44,7 +44,11 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 thinkthen config check --config site.json && printf 'config ok\n' | mustmatch "config ok"
-thinkthen config path --config site.json | mustmatch like "site.json"
+thinkthen config path --config site.json | mustmatch "site.json"
+
+printf '%s\n' '{"version":1,"profiles":{}}' > "$work/broken.json"
+thinkthen config check --config "$work/broken.json" >/dev/null 2>&1 && bad=0 || bad=$?
+printf 'bad=%s\n' "$bad" | mustmatch "bad=5"
 
 TYPESAFE_API_KEY=not-a-real-key thinkthen decide 'Does the note say a pallet has not been scanned in?' \
   --config site.json --profile site --dry-run --input note.txt > "$work/plan.json"
@@ -56,13 +60,14 @@ mustmatch not like "not-a-real-key" < "$work/plan.json"
 
 `key_env` is `null` in the file and `null` in the plan. The file never holds a key and the profile never borrows one.
 
-`config show` prints the settings a run would use, and it sends nothing.
+`config show` prints one JSON object with the file's own key names and every default filled in. It sends nothing.
 
 ```bash
 set -euo pipefail
 
 env -u TYPESAFE_API_KEY thinkthen config show --config site.json \
-  | jq -r '.profile' | mustmatch "site"
+  | jq -c '{profile, jobs, timeout_seconds, key_env: .profiles.site.key_env}' \
+  | mustmatch '{"profile":"site","jobs":4,"timeout_seconds":30,"key_env":null}'
 ```
 
 ## The answer says which model gave it
@@ -89,7 +94,7 @@ thinkthen decide 'Does the note say a pallet has not been scanned in?' \
   | jq -r '.meta.profile | tostring' | mustmatch "null"
 ```
 
-A threshold does not travel with a command. A mark measured for one model is an old number pointed at a new one, and nothing on the command line says so. The result names the model. That is enough to catch it afterwards.
+A threshold does not travel with a command. A mark measured for one model is an old number pointed at a new one. The result names the model, and that is enough to catch it afterwards.
 
 The recording under `recording/` does not exist yet.
 
@@ -97,6 +102,6 @@ The recording under `recording/` does not exist yet.
 
 - **The demo confirms the profile and `meta.profile`.** One word replaces three flags, the file holds no key, and a saved result says which profile answered. `meta.url` is what makes two saved results comparable, and the old surface lacked it.
 - **The demo could not say whether `--url` alone is allowed.** ADR 0007 keeps the ad-hoc flags "as advanced options" and points at ADR 0004 for their rules. The old page found that `--url` without `--adapter` leaves the hosted adapter pointed at a server that may not speak it, and the first sign is a refused reply at exit 4. This page passes all three every time and does not test the pair. The surface should restate the rule in one line rather than leaving it in a replaced ADR.
-- **The demo could not say what `config path` prints under `--config`.** The block above asserts that the given file appears in the output. ADR 0007 says `config path` prints "the path in use" and never says whether `--config` changes it. The surface should say.
-- **The demo could not say what `config show` prints.** ADR 0007 says "the effective settings" and fixes no shape. The block above reads `.profile` and assumes a JSON object with the file's own key names. The surface should fix the shape, because a settings dump is exactly the thing people grep in a support thread.
+- **`config check`, `path`, and `show` are now a usable triple, and the demo confirms all three.** A lint job runs `check` and reads exit 5. A support thread pastes `show`, and the defaults are filled in, so a reader never has to know which values came from the file.
+- **`config show` and a run can disagree and nothing says so.** The block above reads the file alone. A run with `--profile` or `THINKTHEN_PROFILE` on the command line selects something else, and `show` never saw those. The demo asks that `config show` take the same selection flags a run takes, or that its help say it reports the file and not the next run.
 - **The two spellings of a backend should not both be everyday.** Both work here and the profile reads better. The demo confirms keeping the ad-hoc flags out of the short help.

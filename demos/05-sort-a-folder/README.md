@@ -36,10 +36,6 @@ while IFS= read -r -d '' path; do
     3) dest=review ;;
     *) printf 'choose failed on %s: %d\n' "$path" "$rc" >&2; exit "$rc" ;;
   esac
-  case $dest in
-    defect|process|other|review) ;;
-    *) printf 'unknown label %s for %s\n' "$label" "$path" >&2; exit 2 ;;
-  esac
   mv -- "$path" "$work/$dest/"
 done < "$work/paths.nul"
 
@@ -53,9 +49,9 @@ review=1"
 
 The note with no example, no query, and nothing written down is the one in `review`. That is the answer a person would give too.
 
-## The same job in parallel
+## The careful version, in parallel
 
-`xargs -0 -P` runs several judgments at once and keeps the NUL boundary. The per-file work moves into a small script, because `xargs` runs a command and not a shell function.
+`process` and `other` are neighbours, and a note about a budget can sit between them. `--details` carries a probability for every option, so a note whose winner barely beat the runner-up goes to `review` as well. `xargs -0 -P` runs several judgments at once and keeps the NUL boundary. The per-file work moves into a small script, because `xargs` runs a command and not a shell function.
 
 ```bash
 set -euo pipefail
@@ -70,15 +66,18 @@ cat > "$work/file-one" <<'SH'
 set -euo pipefail
 root=$1
 path=$2
-label=$(
+judgment=$(
   thinkthen choose 'What kind of work does this note record?' defect process other \
-    --raw --threshold 0.8 --input "$path" --replay recording/
+    --details --threshold 0.8 --input "$path" --replay recording/
 ) && rc=0 || rc=$?
 case $rc in
-  0) dest=$label ;;
-  3) dest=review ;;
+  0|3) ;;
   *) exit "$rc" ;;
 esac
+dest=$(printf '%s' "$judgment" | jq -r '
+  (.answer.probabilities | to_entries | sort_by(-.value)) as $p
+  | if .value == null or ($p[0].value - $p[1].value) < 0.2 then "review" else .value end
+')
 mv -- "$path" "$root/$dest/"
 SH
 chmod +x "$work/file-one"
@@ -89,7 +88,7 @@ find "$work/inbox" -type f -name '*.txt' -print0 \
 find "$work/review" -type f -print0 | xargs -0 -n 1 basename | mustmatch "2026-03-06-note.txt"
 ```
 
-Four hundred notes are four hundred runs. Nothing in ADR 0007 bounds that. `jobs` in the configuration file bounds the requests inside one run, and a per-file loop makes one request per run, so the setting never applies. A loop that must not spend more than a hundred requests counts them itself.
+Four hundred notes are four hundred runs. `jobs` bounds the requests inside one run, and a per-file loop makes one request per run, so the setting never applies. A loop with a budget counts its own calls.
 
 The recording under `recording/` does not exist yet.
 
@@ -97,6 +96,7 @@ The recording under `recording/` does not exist yet.
 
 - **The demo confirms `--raw` in a loop and the exit code beside it.** Demo 02 found the two-`case` shape and this page reuses it without change. The exit code is the only thing that separates an unresolved pick from an empty label, and in a per-file loop the exit code is right there.
 - **A per-file loop sits outside every request budget in the surface.** No flag caps a job made of many runs, and `jobs` in the configuration file bounds only the inside of one run. The demo asks for no new flag. It asks that the help for the record flags say plainly that a per-file loop is outside the budget, and show `find -print0 | xargs -0 -n 1 -P 4` next to the `jobs` setting.
-- **The demo could not read the margin between two neighbouring options.** `process` and `other` are neighbours, and a note about a budget sits between them. The old page used `--min-gap` to send such a note to `review`. With no per-option probabilities in the result, neither the tool nor the script can see the margin now, so the vague note lands in `review` only if the winner itself falls under 0.8. That is a weaker rule than the job wants.
+- **The margin test belongs in `jq` and the demo proves it.** `answer.probabilities` gives the gap in one line, and the two blocks show the price. The quick loop reads one word with `--raw` and two exit codes. The careful loop reads a whole object and pays for `jq` on every file. Both are honest, and no option is needed for either.
+- **The careful loop reads the exit code and then ignores it.** Exit 3 and exit 0 both carry a usable object, so the `case` exists only to let a real failure through. That reads badly. The demo asks that the `choose` help show this shape, because anybody who wants the distribution will hit it.
 - **Reading files stays out of the tool, and the demo confirms it.** `find` selects, `sort -z` orders, `xargs -0 -P` parallelises. Putting file reading inside the judge would buy one flag and cost a size policy, a binary-file policy, and a non-UTF-8 path policy.
 - **`xargs` interleaves standard error with nothing tying a line to a file.** Nothing in the surface is wrong. A script that needs per-file diagnostics writes them itself, inside `file-one`.
