@@ -129,3 +129,57 @@ The ceiling was 3010 and is 3964. It rose in four steps, each in the commit that
 - **A profile name beside a URL from the environment.** `backends.md` now settles the flag case and the environment-only case. The mixed case of a flag name beside an environment URL is still not written on the page. This ticket makes it a usage error, on the reading that the `--backend` flag beside a URL is refused whichever source offered the URL.
 - **`EntryError::Unwritable` cannot fire**, the way `EncodeError` cannot. It stays for the same reason: the alternative is a suppression of the `unwrap` ban.
 - **The live recording of demo 01 still waits on vendor credits.** Record 0003's live call ended at status 402 for every attempt, and the organization has no available credits. `record.sh` is the one step that turns demo 01 green once Ian adds them. Nothing else in this ticket depends on it.
+
+## Review
+
+A second agent reviewed the branch on 2026-09-19, against `AGENTS.md`, `specification/{recording,channels,result,backends}.md`, ADR 0005 and 0006, `sdlc/planning/rust-standards.md`, the Rust ideal state, the ticket, and the Review sections of records 0001 to 0003. The verdict is that the work is good enough to land after the six fixes below. Ian or the steering agent can overturn any of them.
+
+### Privacy
+
+Every entry, temporary file, diagnostic, `Debug` line, and plan was read for a key or a header. `Exchange` and `Entry` withhold their bodies in `Debug`, `Key` prints a fixed placeholder, `failure.rs` writes every message itself and quotes no response body, and the core unit test and the integration test both search a written entry for `authorization`, `Bearer`, and the key value. No message carries evidence text. `EntryError::Malformed` carries a `serde_json` message, which names a line and a column and quotes no input.
+
+The file modes were the one real finding. Under the machine's umask of 002 the tool wrote entries at 0664 and created the folder at 0775, and under the common umask of 022 they would be 0644 and 0755. A recording holds the evidence, so any account on the machine could read private input. Owner-only is the smaller safe rule, and the fix is a mode on the open and a mode on the folder creation. The folder the tool creates is now 0700, every entry is 0600, a `DIR` that already exists keeps the mode it has, and on a system that is not Unix the umask alone still decides. `specification/recording.md` says so in one sentence, and an integration test reads both modes back.
+
+### Durability
+
+The temporary name is a leading dot, the process identifier, and the entry name, all inside `DIR`, so a rename is on one filesystem and is atomic. A reader looks up one exact `DIGEST.json` and reads nothing else, so a stray temporary file, an unrelated file, and a folder of anything else are all invisible to replay. The digest input was recomputed outside the program with `sha256sum` and is exactly the adapter name, a newline, the URL, a newline, and the request bytes, with no trailing newline; the pinned literal test holds it, and the fixture entry's name was recomputed the same way and matches. The schema string is compared on every read and an unknown one gets its own message. An entry whose adapter, URL, or request bytes differ from the exchange being replayed is exit 5 with the damaged-or-hand-edited message. The entry layout is byte for byte stable, which the pinned `FILE` constant holds, so a re-record of an identical response writes an identical file.
+
+Forty processes, twenty at a time under `xargs -P`, recorded the same request into one folder against a local listener. One valid entry came out, no file was torn, no temporary file was left, and every process exited 0. Distinct process identifiers give distinct temporary names, and the last rename wins.
+
+A failed rename left its temporary file behind, and that file holds the evidence. The write path now removes the temporary file whenever the write or the rename fails, and it clears a leftover from an earlier crash before it writes. A test drives a rename onto a name a directory already holds and reads the folder back.
+
+### Conformance
+
+Record, replay, and cache were each run and each matches the page. `recorder.replayed` is called before `backend.key_env().map(edge::key)`, so replay reads no key variable at all rather than ignoring its value; moving the key read one line earlier turns the built-in-profile replay test red at exit 4. Replay opens no connection, which the closed-port test and the listener request count hold. Two folders exit 2, only a decoded exchange is recorded, and `meta.replayed` is always present. The `--plan` decision now stands on `channels.md` and `recording.md`, which are the pages a reader consults. `backends.md` now states the two mixed pairings the resolver refuses. The six fixed phrases match the table.
+
+### The rungs and the demos
+
+`sdlc/scripts/demos` was run with zero green demos, with a folder name holding a space, with a missing recording folder, and with a missing root. It exits 0 on zero green, it quotes every path it passes, its status match is the anchored `^Status: green$`, it runs no red page, and `set -eu` fails the rung on a failing green page. The `test` rung's new need for `mustmatch` is acceptable, because a runner that is not exercised is not a gate. The `install` rung now names `cargo`, `python3`, `node`, and `mustmatch` before any build goes looking for one, and `sdlc/scripts/README.md` says so.
+
+`demos/01-refund-gate/record.sh` refuses to start without the key variable, names the variable and never a value, writes only into that demo's `recording/`, and is reachable from no gate, because the runner reads only `README.md`. Its three judged commands are the page's own.
+
+### Tests broken and restored
+
+Four tests were broken at the code and watched failing for the right reason. Dropping the newline between the adapter and the URL failed the pinned digest with `left: "4ce638ea…"`. Reading the key before the recording failed the built-in-profile replay with `left: Some(4), right: Some(0)`. Widening the entry mode to 0666 failed the new privacy test with `left: 436, right: 384`. Dropping the cleanup failed the new leftover test with the temporary file it left, `.2375499.9ba0f37c….json`.
+
+### What the review changed
+
+- Write a recording for its owner alone and leave no partial file.
+- Tell a missing entry from an entry that cannot be read. Every read failure was reported as a replay miss, so a folder whose entry could not be read told the user to record what was already recorded.
+- Check every tool the later rungs need from the install rung.
+- Read a value's source from the values themselves. The resolver threaded a boolean out of one helper through five call sites and discarded it at three.
+- State on the settled pages that a plan takes neither recording option.
+- Write down the mixed name and url cases the resolver settles.
+
+The ceiling was 3964 before the review and is 4080 after it.
+
+### Left for the steering agent
+
+- The live recording of demo 01 waits on vendor credits, so demo 01 is still red and the `spec` rung still runs zero green demos. The ticket already excuses this.
+- `record.sh` runs under `/bin/sh` with `set -eu` rather than `set -euo pipefail`. It holds no pipeline, so `pipefail` would change nothing, and `pipefail` is absent from `dash`. Adopting it means depending on `bash` for a script that is run by hand.
+- The demo runner word-splits the folder names it harvests from `--replay`, so a demo page naming a folder with a space would be checked under the wrong name. No demo names one.
+- `EntryError::Unwritable` cannot fire, as the record says. Deleting it means an `unwrap` the lint table bans, so it stays on the precedent `EncodeError` set.
+- `crates/thinkthen/tests/record_and_replay.rs` is 391 non-blank lines, and five of its tests repeat the same record-into-a-folder call. A helper would shrink it before the file nears the 500-line ceiling.
+- `EntryError::Schema` prints the schema string it read out of a file, so a hand-edited entry can put arbitrary text in a diagnostic. It is the user's own file and it holds no key.
+- `crates/thinkthen-core/src/backend.rs` is the largest file at 411 non-blank lines, and its first documentation line joins three sources with "and". It predates this ticket.
+- `crates/thinkthen/tests/fixtures/demos-wrong/` copies the whole `demos/01-replay-gate/` page to change one expected exit code. Fixture text costs no ratchet lines and does cost a reader.
