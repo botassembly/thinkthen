@@ -17,7 +17,7 @@ A flag value that is empty or holds only white space is a usage error. An enviro
 
 `--backend NAME` or `THINKTHEN_BACKEND` picks a named profile. A flag beats an environment variable, and an environment variable beats the profile.
 
-An ad-hoc backend is a URL, an adapter, and a model given together. A URL names a server, an adapter names the language it speaks, and a model names what answers, so a new URL with a borrowed adapter or model is a guess. A URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model, which is how a user pins a version. An ad-hoc backend has no name, and results report its `backend` as `null`. Naming a profile with `--backend` beside a URL is a usage error, because the profile would do nothing. Named profiles come from a configuration file in a later version. One profile is built in:
+An ad-hoc backend is a URL, an adapter, and a model given together. A URL names a server, an adapter names the language it speaks, and a model names what answers, so a new URL with a borrowed adapter or model is a guess. A URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model, which is how a user pins a version. An ad-hoc backend has no name, and results report its `backend` as `null`. Naming a profile with the `--backend` flag beside a URL is a usage error, because the profile would do nothing. A profile named only by `THINKTHEN_BACKEND` yields to an ad-hoc backend given by flags, because a flag beats an environment variable. Named profiles come from a configuration file in a later version. One profile is built in:
 
 | Name | URL | Adapter | Model | Key variable |
 | --- | --- | --- | --- | --- |
@@ -34,7 +34,16 @@ The built-in profile is a row of data. It is the default when nothing else is na
 
 ## The request
 
-Every version-one adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`. `--timeout SECONDS` defaults to 30 and covers one attempt from connect to the last byte. `--max-retries N` defaults to 2. A retry happens after a transport failure or a status of 429, 500, 502, 503, 504, or 529. The wait doubles from one second, and no wait follows the last attempt. Any other error status fails at once. A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error.
+Every version-one adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`. `--timeout SECONDS` defaults to 30 and covers one attempt from connect to the last byte. `--max-retries N` defaults to 2. A retry happens after a transport failure or a status of 429, 500, 502, 503, 504, or 529. The wait doubles from one second, and no wait follows the last attempt. Any other error status fails at once. A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code for the common failures:
+
+| Status | Phrase |
+| --- | --- |
+| 401 | the key was refused |
+| 402 | the account has no credit |
+| 403 | the key may not use this model or address |
+| 404 | nothing answers at this address |
+| 422 | the backend refused the request as malformed or too large |
+| 429 | the backend's rate limit was reached |
 
 ## The adapter contract
 

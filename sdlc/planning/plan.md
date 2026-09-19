@@ -35,7 +35,7 @@ In order: the utility families `eval`, `record`, `backend`, `config`. Then `patc
 
 ## Live testing budget
 
-Ian granted more budget for paid calls on 2026-09-18. The cap for this repository is 20,000,000 input tokens. Spent so far: 0. Every live call adds its tokens here.
+Ian granted more budget for paid calls on 2026-09-18. The cap for this repository is 20,000,000 input tokens. Spent so far: 0. Every live call adds its tokens here. The first live calls on 2026-09-19 returned a billing error, because the vendor account has no credits, and they spent nothing.
 
 ## Levers left open
 
