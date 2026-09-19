@@ -1,0 +1,7 @@
+#!/bin/sh
+# Compare two runs over the same cases.
+# The page is demos/24-compare-two-runs/README.md.
+set -eu
+cd -- "$(dirname -- "$0")"
+
+jq -n --slurpfile before ../rows/runs/run-a.jsonl -f compare.jq ../rows/runs/run-b.jsonl
