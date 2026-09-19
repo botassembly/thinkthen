@@ -5,7 +5,7 @@ Status: **Draft**, from Proposed ADR 0009. `find` is planned after `rank` and is
 Picks the unit that best answers a question, out of a set the model sees all at once.
 
 ```text
-thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--top N] [--details] [BACKEND]
+thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--details] [BACKEND]
 ```
 
 ## What it reads
@@ -22,13 +22,14 @@ The answer is relative. `find` picks the best unit present, and `filter` judges 
 
 ## What it prints
 
-The chosen unit as it arrived, byte for byte. `--top N` prints the `N` most likely units, best first. `--details` prints the object in [result.md](result.md), with the probability of every unit under `answer`.
+The chosen unit as it arrived, byte for byte, the way [filter.md](filter.md) prints a kept record. Under `--jsonl` that is the whole record. `find` prints one unit and never a list.
+
+`--details` prints the object in [result.md](result.md). The answer kind is an open point below, because no kind in `result.md` carries a pick over units.
 
 ## Options
 
 | Option | Meaning | Default |
 | --- | --- | --- |
-| `--top N` | Prints the `N` most likely units, best first | 1 |
 | `--lines` or `--jsonl` | The framing | `--lines` |
 | `--field POINTER` | The part of each record the model sees | The whole record |
 | `--details` | Prints the full result object | Off |
@@ -38,7 +39,7 @@ The chosen unit as it arrived, byte for byte. `--top N` prints the `N` most like
 
 ## Exit codes
 
-0 when a unit was chosen, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty input exits 0 with no output and no request.
+0 when a unit was chosen, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty input exits 0 with no output and no request. Whether `find` ever exits 3 rides on the first open point below.
 
 ## Examples
 
@@ -47,9 +48,11 @@ thinkthen find 'This passage explains the login timeout.' --lines < passages.txt
 ```
 
 ```sh
-thinkthen find 'This ticket should be worked next.' --jsonl --field /body --top 3 < queue.jsonl
+thinkthen find 'This ticket should be worked next.' --jsonl --field /body < queue.jsonl
 ```
 
-## Open point
+## Open points
 
-- How does `find` say that nothing fits? Three shapes are open: a second yes/no question asked of the winner, a `none` option among the units, and a cut on the backend's confidence. Each costs something different, and a measurement settles it. Until then `find` always names a winner.
+- How does `find` say that nothing fits? Three shapes are open: a second yes/no question asked of the winner, a `none` option among the units, and a cut on the backend's confidence. Each costs something different, and a measurement settles it. Proposed ADR 0009 item 3 names demo 15's argument for the `none` option, which spells the outcome the way `choose` does: `null`, nothing on standard output, and exit 3.
+- Which answer kind does `find` print under `--details`? `yes_no` carries one probability and `choice` carries one per option, and neither names a unit that arrived on standard input. Recommendation: a kind that names the chosen unit's id and carries a probability per unit.
+- Does `find` print more than one unit? Demo 15 wanted the three best lines and found the option free, because one request already answered the whole page. No ADR names such an option, so `find` prints one unit until one does.

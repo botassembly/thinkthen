@@ -41,7 +41,9 @@ Draft, from Proposed ADR 0009. `answer` carries the probability of every option 
 
 ## Three answer kinds
 
-**`yes_no`**, from `decide`, `filter`, `rank`, `segment`, and `find`. It carries `probability`, the probability of yes.
+**`yes_no`**, from `decide`, `filter`, `rank`, and `segment`. It carries `probability`, the probability of yes.
+
+`find` fits none of the three kinds, and [find.md](find.md) holds that open point.
 
 **`choice`**, from `choose`.
 
