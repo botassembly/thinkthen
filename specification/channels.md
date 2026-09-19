@@ -35,7 +35,7 @@ Advanced options appear in the long help alone: `--url`, `--adapter`, `--model`,
 
 Standard output holds a bare JSON value. `true`, `"bug"`, and `1.6` are whole outputs. [result.md](result.md) gives the value for each command and the object that `--details` prints in its place.
 
-`--quiet` suppresses standard output on `decide` and `choose`. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error.
+`--quiet` suppresses standard output on `decide` and `choose`. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error. `--dry-run` may be added to any command line that is valid without it, and it prints the plan whatever view option stands beside it.
 
 `--raw` prints a `choose` label without its quotation marks and prints nothing for `null`. No other command takes it.
 

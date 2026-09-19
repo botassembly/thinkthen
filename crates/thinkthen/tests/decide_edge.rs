@@ -184,6 +184,19 @@ fn every_option_the_old_surface_carried_is_a_usage_error() {
 }
 
 #[test]
+fn a_dry_run_prints_the_plan_whichever_view_option_stands_beside_it() {
+    let plan = decide(&["--dry-run"]).expect("the compiled binary runs");
+    let plan = String::from_utf8_lossy(&plan.stdout).into_owned();
+
+    for view in ["--quiet", "--details"] {
+        let output = decide(&["--dry-run", view]).expect("the compiled binary runs");
+
+        assert_eq!(String::from_utf8_lossy(&output.stdout), plan, "{view}");
+        assert_eq!(output.status.code(), Some(0), "{view}");
+    }
+}
+
+#[test]
 fn quiet_beside_details_is_a_usage_error() {
     let output = decide(&["--quiet", "--details"]).expect("the compiled binary runs");
 

@@ -81,6 +81,7 @@ The rest still wait, and none of them is in this ticket's path.
 - **What refuses an empty side.** `threshold.md` names an empty side as a usage error and does not say which error. `--threshold 0.1:` and `--threshold :0.9` both fail as "a threshold is a decimal fraction, or two of them as LOW:HIGH", because an empty side is not a number. `--threshold 0.1:0.5:0.9` fails the same way.
 - **What a band's own bounds are.** ADR 0007 gives `0 ≤ LOW < HIGH ≤ 1` and gives the cut `0 < T ≤ 1`. A cut of 0 is therefore refused and a band low of 0 is accepted, which reads odd side by side and is what the table says. Both are implemented as written.
 - **Where the short help ends and the long help begins.** `channels.md` names the two sets and does not say which flag shows which. `-h` prints the everyday set and `--help` prints everything, which is clap's own convention.
+- **`--dry-run` beside a view option.** No page said what happens. The steering agent ruled on 2026-09-19 that `--dry-run` may be added to any command line that is valid without it, and that it prints the plan whatever view option stands beside it. `specification/channels.md` says so beside the `--quiet` rule, and `a_dry_run_prints_the_plan_whichever_view_option_stands_beside_it` holds it. Ian can overturn this.
 - **The `--quiet` and `--details` message.** ADR 0007 makes the pair a usage error and gives no message. It is `--quiet prints nothing, so it does not take --details`.
 - **`meta.tool` and `confidence` are Draft** and are not built, as the ticket says.
 
