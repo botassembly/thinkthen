@@ -61,6 +61,39 @@ fn a_green_page_whose_title_is_not_a_task_stops_the_run() {
 }
 
 #[test]
+fn a_green_page_titled_how_to_and_nothing_else_stops_the_run() {
+    let output =
+        demos("crates/thinkthen/tests/fixtures/demos-bare-title").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("title does not start with"), "{said}");
+    assert!(!said.contains("running"), "{said}");
+}
+
+#[test]
+fn a_green_page_that_shows_the_traps_heading_in_a_block_stops_the_run() {
+    let output =
+        demos("crates/thinkthen/tests/fixtures/demos-shown-traps").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("What can go wrong"), "{said}");
+    assert!(!said.contains("running"), "{said}");
+}
+
+#[test]
+fn a_red_page_that_shows_a_green_status_line_is_still_red() {
+    let output =
+        demos("crates/thinkthen/tests/fixtures/demos-shown-status").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(0), "{said}");
+    assert!(said.contains("demos: 0 green, 1 red"), "{said}");
+    assert!(!said.contains("running"), "{said}");
+}
+
+#[test]
 fn a_green_page_with_no_traps_section_stops_the_run() {
     let output = demos("crates/thinkthen/tests/fixtures/demos-traps").expect("the runner runs");
 
