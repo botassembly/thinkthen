@@ -100,6 +100,79 @@ fn a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address() {
     }
 }
 
+/// A plain `http://` base to anywhere but this machine sends nothing at all.
+///
+/// The listener counts the requests, so the case proves no key crossed the
+/// network rather than only that the exit code was 2. Each base is a spelling a
+/// reader might expect to pass: a name that ends in `localhost`, a trailing
+/// dot, the short form of the loopback address, the wildcard address, and an
+/// IPv4-mapped IPv6 address.
+#[test]
+fn a_plain_http_base_that_is_not_loopback_is_refused_before_any_request() {
+    let listener = Listener::serving(Vec::new()).expect("a loopback listener");
+    let refused = [
+        "http://example.com/v1",
+        "http://localhost.example.com/v1",
+        "http://localhost./v1",
+        "http://127.1/v1",
+        "http://0.0.0.0/v1",
+        "http://10.0.0.5:8080/v1",
+        "http://[::ffff:127.0.0.1]/v1",
+        "HTTP://example.com/v1",
+    ];
+
+    for base in refused {
+        for arguments in [vec![], vec!["--dry-run"]] {
+            let by_option = [arguments.clone(), vec!["--url", base]].concat();
+            for (given, environment) in [
+                (by_option, vec![("THINKTHEN_API_KEY", "sk-test-value")]),
+                (
+                    arguments.clone(),
+                    vec![
+                        ("THINKTHEN_BASE_URL", base),
+                        ("THINKTHEN_API_KEY", "sk-test-value"),
+                    ],
+                ),
+            ] {
+                let output = decide(&given, &environment).expect("the compiled binary runs");
+
+                assert_eq!(output.status.code(), Some(2), "{base} {given:?}");
+                assert!(output.stdout.is_empty(), "{base} {given:?}");
+                assert_eq!(
+                    String::from_utf8_lossy(&output.stderr),
+                    "thinkthen: `http://` sends the key across the network in clear text, \
+                     so it reaches localhost, 127.0.0.1, and [::1] alone\n",
+                    "{base} {given:?}"
+                );
+            }
+        }
+    }
+
+    assert!(
+        listener.requests().is_empty(),
+        "a refused address opens no connection"
+    );
+    assert_eq!(listener.connections(), 0);
+}
+
+/// Every loopback spelling is taken, and `https://` to anywhere is untouched.
+#[test]
+fn loopback_over_plain_http_is_taken_and_https_reaches_any_host() {
+    for base in [
+        "http://localhost:1/v1",
+        "http://LOCALHOST:1/v1",
+        "http://127.0.0.1:1/v1",
+        "http://[::1]:1/v1",
+        "https://example.com/v1",
+        "https://10.0.0.5/v1",
+    ] {
+        let output = decide(&["--dry-run", "--url", base], &[]).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(0), "{base}");
+        assert!(output.stderr.is_empty(), "{base}");
+    }
+}
+
 /// One base in six spellings, each of which posts to the same path.
 ///
 /// A trailing slash, surrounding space, and the case of the scheme all fall

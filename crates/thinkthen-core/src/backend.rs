@@ -36,7 +36,25 @@ pub enum BackendError {
     /// may carry a secret.
     #[error("a base address begins with `http://` or `https://` and carries no user information")]
     NotAnAddress,
+    /// The base names a host under `http://` that is not proven to be loopback.
+    ///
+    /// The message shows no address, for the reason [`Self::NotAnAddress`]
+    /// gives. No option overrides the rule: a backend on another machine is
+    /// reached over `https://`, or over a tunnel that ends on loopback.
+    #[error(
+        "`http://` sends the key across the network in clear text, \
+         so it reaches localhost, 127.0.0.1, and [::1] alone"
+    )]
+    KeyInClear,
 }
+
+/// The three host spellings `http://` may carry.
+///
+/// Each one names this machine and nothing else, so the key never leaves it.
+/// Every other spelling is refused, including one that would resolve to
+/// loopback, because this rule reads text and resolves no name. `localhost.`,
+/// `127.1`, `0.0.0.0`, and `[::ffff:127.0.0.1]` are therefore all refused.
+const LOOPBACK: [&str; 3] = ["localhost", "127.0.0.1", "[::1]"];
 
 impl Backend {
     /// Resolve the backend from the option, the environment, and the default.
@@ -49,8 +67,9 @@ impl Backend {
     ///
     /// # Errors
     ///
-    /// Returns [`BackendError`] when the base or the model is blank, or when
-    /// the base names no `http` or `https` address.
+    /// Returns [`BackendError`] when the base or the model is blank, when the
+    /// base names no `http` or `https` address, and when a plain `http://` base
+    /// names a host this rule cannot prove is loopback.
     pub fn resolve(
         url: Option<&str>,
         base: Option<&str>,
@@ -95,7 +114,35 @@ fn address(base: &str) -> Result<Url, BackendError> {
     if authority.contains('@') || rest.contains(['?', '#']) {
         return Err(BackendError::NotAnAddress);
     }
+    let host = host_of(authority).ok_or(BackendError::NotAnAddress)?;
+    if scheme == "http://" && !LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)) {
+        return Err(BackendError::KeyInClear);
+    }
     Ok(Url::new(format!("{scheme}{rest}/{}", systemone::NAME))?)
+}
+
+/// The host inside an authority, with the port dropped, or `None` when it holds none.
+///
+/// An address in brackets is an IPv6 literal, and its colons belong to the
+/// address rather than to a port, so the brackets are kept and only what
+/// follows them may be a port.
+fn host_of(authority: &str) -> Option<&str> {
+    let end = match authority.strip_prefix('[') {
+        Some(inside) => inside.find(']')? + 2,
+        None => authority.find(':').unwrap_or(authority.len()),
+    };
+    let (host, port) = authority.split_at_checked(end)?;
+    if host.is_empty() {
+        return None;
+    }
+    match port.strip_prefix(':') {
+        // A second colon means the authority holds an address the brackets
+        // should have held, and nothing here guesses where the host ended.
+        Some(number) if number.contains(':') => None,
+        Some(_) => Some(host),
+        None if port.is_empty() => Some(host),
+        None => None,
+    }
 }
 
 /// The scheme in lower case and what follows it, or `None` when it is neither.
@@ -170,13 +217,14 @@ mod tests {
     #[test]
     fn a_base_is_read_to_one_address_or_refused_without_showing_itself() {
         let taken = [
-            ("http://host/v1", "http://host/v1/systemone"),
-            ("http://host/v1/", "http://host/v1/systemone"),
-            ("http://host/v1///", "http://host/v1/systemone"),
-            ("  http://host/v1\n", "http://host/v1/systemone"),
+            ("http://localhost/v1", "http://localhost/v1/systemone"),
+            ("http://localhost/v1/", "http://localhost/v1/systemone"),
+            ("http://localhost/v1///", "http://localhost/v1/systemone"),
+            ("  http://localhost/v1\n", "http://localhost/v1/systemone"),
             ("HTTPS://host/v1", "https://host/v1/systemone"),
             ("HtTpS://host/v1", "https://host/v1/systemone"),
-            ("http://host", "http://host/systemone"),
+            ("HTTP://127.0.0.1/v1", "http://127.0.0.1/v1/systemone"),
+            ("http://localhost", "http://localhost/systemone"),
         ];
         for (base, expected) in taken {
             let backend = resolve(None, Some(base)).expect("a base names an address");
@@ -197,6 +245,55 @@ mod tests {
                 resolve(None, Some(base)).expect_err("a base that names no address is refused");
             assert_eq!(error, BackendError::NotAnAddress, "{base}");
             assert!(!error.to_string().contains("host"), "{error}");
+        }
+    }
+
+    #[test]
+    fn plain_http_reaches_loopback_alone_and_every_other_host_is_refused() {
+        let loopback = [
+            "http://localhost/v1",
+            "http://LocalHost:8080/v1",
+            "http://127.0.0.1/v1",
+            "http://127.0.0.1:8721/v1",
+            "http://[::1]/v1",
+            "http://[::1]:9/v1",
+        ];
+        for base in loopback {
+            resolve(None, Some(base)).expect("a loopback base is taken");
+        }
+
+        let refused = [
+            "http://host/v1",
+            "http://example.com/v1",
+            "http://localhost.example.com/v1",
+            "http://localhost./v1",
+            "http://127.0.0.1./v1",
+            "http://127.1/v1",
+            "http://0.0.0.0/v1",
+            "http://10.0.0.5/v1",
+            "http://192.168.1.4:8080/v1",
+            "http://[::ffff:127.0.0.1]/v1",
+            "http://[::ffff:7f00:1]/v1",
+            "http://[0:0:0:0:0:0:0:1]/v1",
+            "HTTP://host/v1",
+            "http://2130706433/v1",
+        ];
+        for base in refused {
+            let error = resolve(None, Some(base)).expect_err("a plain http base is refused");
+            assert_eq!(error, BackendError::KeyInClear, "{base}");
+            assert_eq!(
+                error.to_string(),
+                "`http://` sends the key across the network in clear text, \
+                 so it reaches localhost, 127.0.0.1, and [::1] alone"
+            );
+        }
+
+        for base in [
+            "https://host/v1",
+            "HTTPS://example.com/v1",
+            "https://[::1]/v1",
+        ] {
+            resolve(None, Some(base)).expect("every https base is untouched");
         }
     }
 
