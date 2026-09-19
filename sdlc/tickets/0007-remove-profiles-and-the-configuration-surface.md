@@ -6,7 +6,7 @@ opens: crates spec specification demos sdlc/ratchet.json README.md
 
 # 0007: Remove profiles and the configuration surface
 
-Status: ready
+Status: in progress
 
 ## Outcome
 

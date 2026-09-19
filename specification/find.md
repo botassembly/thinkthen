@@ -35,7 +35,7 @@ The chosen unit as it arrived, byte for byte, the way [filter.md](filter.md) pri
 | `--details` | Prints the full result object | Off |
 | `--input FILE` | Reads the units from a file | Standard input |
 | `--dry-run` | Prints the plan and sends nothing | Off |
-| Backend options | `--profile` and the advanced flags | The selected profile |
+| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 ## Exit codes
 

@@ -50,7 +50,6 @@ Measurement of the first decider model showed answers inside an unresolved band 
 | `score` | no | no | |
 | `rank` | no | no | |
 | `annotate` | no | no | |
-| `config` | no | no | |
 
 `--threshold` on a command that takes none is a usage error. A question inside an `annotate` file carries its own threshold, and [annotate.md](annotate.md) gives the rule there.
 

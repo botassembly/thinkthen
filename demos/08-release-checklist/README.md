@@ -100,7 +100,7 @@ The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **The demo confirms JSON for the saved file.** One format for the configuration, the questions, and the results means `jq` edits all three and no second parser enters the build. The old Markdown proposal needed a grammar of frontmatter, headings, and fenced blocks, and this file needs none.
+- **The demo confirms JSON for the saved file.** One format for the questions and the results means `jq` edits both and no second parser enters the build. The old Markdown proposal needed a grammar of frontmatter, headings, and fenced blocks, and this file needs none.
 - **The top-level `threshold` earns its line and it reaches too little.** One band covers three `decide` questions, and a checklist of twenty would write it once. It does not reach the `choose` question, which writes its own cut. A file of twenty picks at one cut repeats that cut twenty times. The demo asks that the top-level key apply to every question that names none, whatever its verb.
 - **The demo could not tell a failed check from an unresolved one in one pass.** A bare answer is the value, so `false` and `null` are two `jq` tests and a `choose` answer needs a third. The nine-line checklist program above is what every user of `annotate` will write. The demo asks that it sit in the `annotate` help as the worked example.
 - **The exit code says nothing about the answers, and that is right.** `annotate` finishes at 0 whatever the checks said. The gate is `jq -e`. That is code, and the surface never lets the model set the build's exit code.

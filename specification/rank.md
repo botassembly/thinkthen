@@ -30,7 +30,7 @@ Each record as it arrived, most likely yes first. Ties keep input order. `--deta
 | `--details` | Prints one result object per record | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
-| Backend options | `--profile` and the advanced flags | The selected profile |
+| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `rank` takes no `--threshold`, no `--quiet`, and no `--raw`.
 

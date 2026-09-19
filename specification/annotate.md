@@ -61,7 +61,7 @@ An unresolved answer is `null`. A backend failure is never `null`, because a fai
 | `--details` | Prints the full result object per record | Off |
 | `--input FILE` | Reads the evidence from a file | Standard input |
 | `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
-| Backend options | `--profile` and the advanced flags | The selected profile |
+| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `annotate` takes no `--threshold`, no `--quiet`, and no `--raw`. A question carries its own threshold.
 

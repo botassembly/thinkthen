@@ -16,13 +16,13 @@ Every page closes with "What this demo decides". That section says what the demo
 
 ## Red and green
 
-A demo starts **red**. Nothing under `demos/` runs today, because no verb in ADR 0007 is built. A red demo is a plan.
+A demo starts **red**. Only `decide` is built, so every page that needs another verb is still a plan.
 
-The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and 11 stays an empty number.
+The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and demo 10 left with the configuration file under the same ADR. Both stay empty numbers, and `specification/roadmap.md` says what each one held.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. A green demo is a regression test and a page of documentation at once. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. A green page that names a `--replay` folder it does not hold stops the run.
 
-Each page carries `--replay recording/` on every `thinkthen` command that would otherwise reach a backend, so a gate touches no network. `specification/recording.md` defines the flag. A `--dry-run` block needs no recording, because it sends nothing. No recording exists yet, so every page is still red.
+Each page carries `--replay recording/` on every `thinkthen` command that would otherwise reach a backend, so a gate touches no network. `specification/recording.md` defines the flag. A `--dry-run` block needs no recording, because it sends nothing. Demo 01 holds the only recording so far, and it is the only green page.
 
 ## What a demo never asks
 
@@ -34,7 +34,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 
 | # | Name | Verbs | Status |
 | --- | --- | --- | --- |
-| 01 | [Refund gate](01-refund-gate/) | `decide` | red |
+| 01 | [Refund gate](01-refund-gate/) | `decide` | green |
 | 02 | [Route a ticket](02-route-a-ticket/) | `choose` | red |
 | 03 | [Grep for meaning](03-grep-for-meaning/) | `filter` | red |
 | 04 | [Review queue](04-review-queue/) | `decide` | red |
@@ -43,10 +43,9 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 07 | [Judged columns](07-judged-columns/) | `annotate`, `filter` | red |
 | 08 | [Release checklist](08-release-checklist/) | `annotate` | red |
 | 09 | [What leaves the machine](09-what-leaves-the-machine/) | `filter`, `--dry-run` | red |
-| 10 | [Another backend](10-another-backend/) | `decide`, `config` | red |
 | 12 | [Keep going](12-keep-going/) | `decide` | red |
 | 13 | [Pick a threshold](13-pick-a-threshold/) | `decide`, `report` | red |
 | 14 | [Grade a batch](14-grade-a-batch/) | `annotate`, `report` | red |
 | 15 | [Find the line](15-find-the-line/) | `find` | red |
 
-Demos 13 and 14 name `report`, which left the plan under ADR 0010. They are rewritten over the `jq` recipes of the plan's recipes slice. Demo 11 left with `segment`, and the numbers after it keep the numbers they had.
+Demos 13 and 14 name `report`, which left the plan under ADR 0010. They are rewritten over the `jq` recipes of the plan's recipes slice. Demos 10 and 11 left under the same ADR, and no page is renumbered.

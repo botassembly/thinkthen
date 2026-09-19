@@ -1,18 +1,20 @@
 # Backends
 
-Status: **Settled** for the wire shape, the key, the address, the request, and the `systemone` adapter. **Draft** for profiles and the ad-hoc flags. **Draft** for the two adapter rows that wait on their fixtures.
+Status: **Settled** for the wire shape, the key, the address, the request, and the `systemone` adapter. **Draft** for the two adapter rows that wait on their fixtures.
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
+
+A backend is two values: the address and the model. `THINKTHEN_BASE_URL` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. ADR 0010 took the configuration file, profiles, and the options `--profile`, `--adapter`, `--key-env`, and `--config` out of version one. [roadmap.md](roadmap.md) says what the file held and what would bring it back.
 
 ## The key
 
 Settled by ADR 0010.
 
-The key is read from `THINKTHEN_API_KEY` unless the hidden `--key-env` names another variable.
+The key is read from `THINKTHEN_API_KEY`. No option names another variable.
 
 - A key variable that is absent or empty is exit code 4. An empty variable counts as absent. The message names the variable and never a value.
 - No key appears in a plan, a result, a recording, a log line, or an error.
-- A key never crosses hosts. A run pointed at another address sends the key of the variable it was told to read, and nothing else.
+- **The key goes to the address the user named.** That is the whole rule. Naming an address is the user's own act, so a run pointed at another address carries the key of `THINKTHEN_API_KEY` and nothing else.
 
 ## The address
 
@@ -20,25 +22,21 @@ Settled by ADR 0010.
 
 The address comes from the hidden `--url`, then `THINKTHEN_BASE_URL`, then the default base `https://api.typesafe.ai/v1`. The tool posts to `BASE/systemone`. A base with a trailing slash is accepted. A base that is not an `http` or `https` address is a usage error before any request. An empty variable counts as absent.
 
-Space around a base is dropped. A scheme is read without regard to case and written back in lower case, so one exchange keeps one recording digest whatever case the caller typed. A base carrying user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a recording. The refusal message names the rule and never the base it refused. `--url` names a base like the other two sources, and an ad-hoc backend still needs an adapter and a model beside it.
+`--url` names a base and takes no companion option. It is the command-line spelling of `THINKTHEN_BASE_URL`, it outranks the variable, and the key rule above does not change when it is given. It stays hidden from the short help, because a variable in front of the command is the everyday way to point a run somewhere else.
+
+Space around a base is dropped. A scheme is read without regard to case and written back in lower case, so one exchange keeps one recording digest whatever case the caller typed. A base carrying user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a recording. The refusal message names the rule and never the base it refused. A base that is empty or holds only white space is a usage error too.
 
 `--dry-run` shows the address the run would use, and it reads no key.
 
-## Profiles and ad-hoc backends
+## The model
 
-Draft. ADR 0010 proposes that the configuration file, profiles, `--profile`, `--adapter`, `--key-env`, and `--config` leave version one, because two variables and `--model` already say everything a profile held. [config.md](config.md) waits on Ian's answer, and nothing here is built until he gives it.
-
-A backend profile is four values: the URL, the adapter, the model, and the name of the key variable. `--profile NAME` picks a named profile out of the configuration file. One profile is built in, and it holds the default address, the `systemone` adapter, the model `jev-latest`, and `THINKTHEN_API_KEY`.
-
-An ad-hoc backend is a URL, an adapter, and a model given together on the command line. A new URL with a borrowed adapter or model is a guess, so a URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model. That is how a user pins a version.
-
-An ad-hoc backend has no name, and a result reports its `meta.profile` as `null`. `--profile` beside `--url` is a usage error, because the profile would do nothing. A flag value that is empty or holds only white space is a usage error.
+`--model NAME` names the model the request carries, and it defaults to `jev-latest`. That is how a run is pinned to one version. A model name that is empty or holds only white space is a usage error.
 
 ## The request
 
 The adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`.
 
-`--timeout SECONDS` covers one attempt from connect to the last byte. `--max-retries N` bounds the retries after the first attempt. The configuration file sets the default for each one, and `timeout_seconds` of 30 and `max_retries` of 2 apply when the file names neither.
+`--timeout SECONDS` covers one attempt from connect to the last byte, and it defaults to 30. `--max-retries N` bounds the retries after the first attempt, and it defaults to 2.
 
 A retry happens after a transport failure or a status of 429, 500, 502, 503, 504, or 529. The wait doubles from one second, and no wait follows the last attempt. Any other error status fails at once.
 
@@ -60,7 +58,7 @@ An adapter is two pure functions.
 - **encode** takes a plan and returns the request body as bytes. A plan holds the evidence, the model name, and an ordered list of named questions.
 - **decode** takes the response body as bytes and returns the model that answered, one answer per named question, and the usage the backend reported.
 
-An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Version one compiles one adapter, `systemone`.
+An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Version one compiles one adapter, `systemone`, and nothing selects it. Ruling 1 of ADR 0010 left one wire shape, so there is nothing to choose between. A recording entry still names `systemone`, so an entry written today says which shape it recorded.
 
 Decode refuses a reply that lacks an answer for a planned question, carries an answer of the wrong kind, or holds a probability outside zero to one. A refused reply is exit code 4. An adapter that cannot supply a probability per option or per level refuses the reply. It never invents one.
 

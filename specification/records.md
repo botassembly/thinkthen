@@ -21,7 +21,6 @@ The tool never guesses the framing. It never repairs invalid JSON, never truncat
 | `decide`, `choose`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
 | `filter`, `rank` | One of `--lines` or `--jsonl` is required. One document is not a stream |
 | `annotate` | One document by default. Both flags are accepted |
-| `config` | Neither flag applies |
 
 ## `--field POINTER`
 
@@ -63,7 +62,7 @@ Settled by ADR 0008, accepted in ADR 0010. One request carries one piece of evid
 | `decide`, `choose`, `score`, `filter`, `rank` over N records | N |
 | `annotate` over N records | N times the number of distinct `on` sets |
 | `find` | 1 |
-| `config`, `--dry-run`, `--replay` | 0 |
+| `--dry-run`, `--replay` | 0 |
 
 `rank` sorts locally and makes no pairwise calls. Every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept.
 
@@ -93,9 +92,7 @@ A first run that stops at record 400 leaves 399 entries. The same command run ag
 
 ## `jobs`
 
-`jobs` is a configuration setting and never a flag. It bounds how many requests are in flight at once. [config.md](config.md) holds it.
-
-Draft: the default is 4. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight, so 4 is safe everywhere and a measured run can raise it.
+`jobs` bounds how many requests are in flight at once. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. Draft: the setting has no home on the command line yet, and the default is 4. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight, so 4 is safe everywhere and a measured run can raise it.
 
 Output order never depends on `jobs`. The tool holds finished rows in a bounded buffer until the rows before them are written.
 

@@ -27,7 +27,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--field`. See [records.md](records.md) | One document |
-| Backend options | `--profile` and the advanced flags. See [backends.md](backends.md) | The selected profile |
+| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 ## Exit codes
 

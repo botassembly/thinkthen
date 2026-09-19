@@ -1,8 +1,8 @@
 # What the demos found
 
-Every design finding from the demo pages, strongest argument first. Pages 01 to 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, which ADR 0010 accepted in part. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
+Every design finding from the demo pages, strongest argument first. Pages 01 to 09 and 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, which ADR 0010 accepted in part. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
 
-ADR 0010 took `segment` and `report` out of version one. The findings that belonged to them left this page with demo 11 and with `report.md`, and the git history keeps them. Two of those questions carry to the `jq` recipes of the plan's recipes slice: how a check made by a bare verb is named, and how a truth label stays off the wire.
+ADR 0010 took `segment`, `report`, and the configuration file out of version one. The findings that belonged to them left this page with demo 11, demo 10, and `report.md`, and the git history keeps them. Two of those questions carry to the `jq` recipes of the plan's recipes slice: how a check made by a bare verb is named, and how a truth label stays off the wire.
 
 ## Against ADR 0008 and ADR 0009
 
@@ -21,15 +21,14 @@ ADR 0010 took `segment` and `report` out of version one. The findings that belon
 | --- | --- | --- | --- | --- |
 | Nothing counts what a finished record run did. A stopped run prints a line on standard error naming the record, the records finished, and the records replayed. A run that finishes prints nothing, so a `filter` that kept two of five is silent and a clean run over ten thousand records leaves no number to size the next run with | 03, 06, 12 | Records; the clarifications | Print the same line at the end of every record run, with the records dropped added for `filter` | strong |
 | A top-level `threshold` in an `annotate` file reaches `decide` questions only. A file of twenty `choose` questions at one cut repeats that cut twenty times | 08 | The `annotate` file | The top-level key applies to every question that names none, whatever its verb | strong |
-| `config show` reports the file and a run reports the run. `--profile` and `THINKTHEN_PROFILE` change what a run selects and never reach `show` | 10 | Configuration | `config show` takes the same selection flags a run takes, or its help says it reports the file | medium |
 | A record run's `--dry-run` reads the first record and stops. A pointer missing on record two is invisible, and `input` names the pointer asked for and not the record that answered | 09, 14 | The clarifications | The plan names the record it came from | medium |
 | One code for two repairs is still a cost. Exit 2 covers a mistyped flag and a bad record alike, and a `case` branch has to read the message to tell them apart | 03, 07, 12 | Exit codes | No change. The stopped-run line leads with the record, because that word is what a reader greps for | medium |
 | A `choose --raw` run prints an empty line for an unresolved record. A pipeline that strips blank lines drops the record and shifts every later row | 02 | The clarifications | The `--raw` help says the blank line is a record | medium |
 | `decide --jsonl` without `--details` prints `true`, `false`, and `null` with nothing tying a line to a record. Zipping with `paste` is a trap, because a stopped run prints a short file and the zip shifts | 04 | Records | The `--jsonl` help says a record-mode script that needs the record uses `--details` | medium |
 | A careful `choose` script reads the exit code and then ignores it, because exit 0 and exit 3 both carry a usable `--details` object. The `case` exists only to let a real failure through | 05 | Commands, `choose` | The `choose` help shows the shape. Anybody who wants the distribution will hit it | medium |
-| No request budget exists anywhere. A per-file loop is many runs and `jobs` bounds only the inside of one run. A ranked run over a million-line file makes a million requests with no lever | 05, 06 | Records; Configuration | No new flag. The record-flag help says a per-file loop is outside every budget, and shows `find -print0 \| xargs -0 -n 1 -P 4` next to the `jobs` setting | medium |
+| No request budget exists anywhere. A per-file loop is many runs and `jobs` bounds only the inside of one run. A ranked run over a million-line file makes a million requests with no lever | 05, 06 | Records | No new flag. The record-flag help says a per-file loop is outside every budget, and shows `find -print0 \| xargs -0 -n 1 -P 4` next to the `jobs` setting | medium |
 | `meta.usage` is the sum over a record's requests, so a file with one pointer and a file with two print the same shape. No page can prove the saving without asserting a token count | 07, 14 | The clarifications | No change. The help names the request count per record instead | medium |
-| Parallelism left the command line. A user with a rate limit edits a JSON file to change one number for one run, and nothing on the command line points at the file | 03 | Configuration | No new flag. The record-flag help names the `jobs` key and the configuration path | medium |
+| Parallelism left the command line. A user with a rate limit edits a JSON file to change one number for one run, and nothing on the command line points at the file | 03 | Records | No new flag. The record-flag help names the `jobs` setting | medium |
 | `rank` buffers the whole stream, because an order needs every record. `filter` streams. The two read identically on the command line | 06 | Output, `rank` | One line in the `rank` help | medium |
 | `annotate --dry-run` checks the question file and not the records, so it passes a file that fails on the first record because of a name collision | 07 | The `annotate` file | One line in the help saying what `--dry-run` does and does not check | weak |
 | An unresolved answer is `null` everywhere. That is right in JSON and empty in CSV. A spreadsheet cell reading nothing and a listing that says nothing become the same cell | 07 | The `annotate` file | One line in the `annotate` help about the `jq -r '@csv'` step | weak |
@@ -54,30 +53,26 @@ Earlier pages raised these, and the ADR answered them. They are listed once and 
 - The result has one shape with a bare value in front of it, and `--status`, `unassessed`, and the symmetric `--min-prob` are gone.
 - `answer` carries a probability for every option on `choose` and every level on `score`, and `question` carries `options` and `levels`. A margin test is one `jq` line, so `--min-gap` is not missed.
 - Under `--lines` or `--jsonl`, `choose --raw` prints an empty line for an unresolved answer, so one line still stands for one record.
-- Exit 2 covers a usage error and an input error alike. A name collision in `annotate` exits 2. `config check` exits 5 on a file it refuses.
+- Exit 2 covers a usage error and an input error alike. A name collision in `annotate` exits 2.
 - A record run that stops early prints one line on standard error naming the record, the records finished, and the records replayed.
 - An `annotate` file may carry one top-level `threshold`.
 - A record-mode `--dry-run` plan carries an `input` object naming the framing and the pointers.
-- `config path` prints the file `--config` or `THINKTHEN_CONFIG` names. `config show` prints one JSON object with the file's own key names and every default filled in.
 - `--quiet` exists on `decide` and `choose` only, and `--quiet` beside `--details` is a usage error.
 - Judged columns are flat top-level fields on the record, so a chain of judgments never nests. `--as`, `--emit`, and `--id` are gone with the problem.
 - `decide how` is gone. `rank` orders by the probability of yes and takes no rubric.
 - The saved question file is JSON, so the proposed Markdown grammar is dead.
-- `key_env` is always present in the plan and `null` when no key applies. `meta` carries `url` and `meta.profile` is `null` for an ad-hoc backend.
-- `--plan` is `--dry-run`, `--backend` is `--profile`, and the five backend environment variables are gone.
+- `key_env` is always present in the plan, and `meta` carries the `url` that answered. Under ADR 0010 there is one key variable and one address, so neither field is ever `null`.
+- `--plan` is `--dry-run`, and the five backend environment variables are gone. `--backend` became `--profile`, which left with ADR 0010.
 - `--none`, `--invert`, `--abstain-on`, `--from`, `--order`, `--on-error`, `--max-requests`, and `--min-gap` are all gone.
 
 ## Draft features no demo needed
 
-Fifteen jobs were written before the code. These parts of the three ADRs were never reached for.
+Fifteen jobs were written before the code, and thirteen pages hold what is left of them. These parts of the three ADRs were never reached for.
 
 - `score`, its two-to-ten levels, and a `score` question inside an `annotate` file. No job wanted a level, and the measurement says the tool is weakest here.
 - `--lines` outside `find`. Every record job had a file of JSON lines.
-- `--key-env`. The one demo with a second backend gave it a profile whose `key_env` is `null`.
 - `--` as the end of option parsing. No demo had a question or a label that begins with a dash.
-- `THINKTHEN_CONFIG` and `THINKTHEN_PROFILE`. Demo 10 used flags, because a demo page has to show what it selects.
-- `timeout_seconds` and `max_retries` from the configuration file. Demos 10 and 12 set them on the command line.
-- A file profile named `jev` replacing the built-in one.
+- `timeout_seconds` and `max_retries` from the configuration file. Demo 12 set them on the command line.
 - `options` as a plain list of labels in an `annotate` file. Demo 08 used the map form.
 - A structured question or option description. ADR 0010 struck it from version one, and every question on these pages is one sentence.
 - `--options POINTER` on `choose`, from ADR 0009 item 4. No demo had a candidate list that changes per record.

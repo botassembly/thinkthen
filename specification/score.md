@@ -31,7 +31,7 @@ The number is a position on the levels the user named. It is not a probability t
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--field` | One document |
-| Backend options | `--profile` and the advanced flags | The selected profile |
+| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `score` takes no `--threshold`, no `--quiet`, and no `--raw`.
 

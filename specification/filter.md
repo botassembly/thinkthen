@@ -30,7 +30,7 @@ Each kept record, byte for byte as it arrived, in input order. A record that did
 | `--details` | Prints one result object per record in place of the kept records | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
-| Backend options | `--profile` and the advanced flags | The selected profile |
+| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `filter` takes no `--quiet` and no `--raw`.
 

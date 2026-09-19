@@ -14,16 +14,16 @@ Every number in an expected output on this page is illustrative until a recordin
 
 ## The backend is down
 
-Under `set -e` a bare command ends the script, so the exit code is captured and read. `--max-retries 0` makes the failure arrive once. A health check wants exactly that. The three ad-hoc flags travel together, because a new URL with a borrowed adapter or model is a guess and the surface refuses it at exit 2.
+Under `set -e` a bare command ends the script, so the exit code is captured and read. `--max-retries 0` makes the failure arrive once. A health check wants exactly that. `--url` names the base the run posts under, and the tool adds `/systemone` to it.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide 'Does the message report a payment failure?' \
+THINKTHEN_API_KEY=not-a-real-key thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --details --input queue.jsonl \
-  --url http://127.0.0.1:9/v1/systemone --adapter systemone --model local-decider-3 \
+  --url http://127.0.0.1:9/v1 --model local-decider-3 \
   --timeout 2 --max-retries 0 \
   > "$work/out.jsonl" 2> "$work/err.txt" && rc=0 || rc=$?
 

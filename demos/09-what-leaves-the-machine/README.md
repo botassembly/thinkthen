@@ -26,15 +26,15 @@ env -u THINKTHEN_API_KEY thinkthen filter 'Does the customer ask for money back?
   --input orders.jsonl > "$work/plan.json"
 
 jq -S -c 'keys' "$work/plan.json" \
-  | mustmatch '["adapter","input","key_env","model","profile","request","url"]'
+  | mustmatch '["input","key_env","model","request","url"]'
 jq -c '.input' "$work/plan.json" | mustmatch '{"framing":"jsonl","field":["/note"]}'
-jq -r '.adapter' "$work/plan.json" | mustmatch "systemone"
+jq -r '.url' "$work/plan.json" | mustmatch "https://api.typesafe.ai/v1/systemone"
 jq -r '.key_env' "$work/plan.json" | mustmatch "THINKTHEN_API_KEY"
 jq -r '.request.state' "$work/plan.json" \
   | mustmatch "The blender arrived with a cracked jug. Please put the money back on my card."
 ```
 
-The plan names the key variable and never holds a key. `key_env` is `null` when no key variable applies. In record mode the plan gains `input`, naming the framing and the pointers that decide what every other record will send. `field` is a list, because a check may name several pointers.
+The plan names the key variable and never holds a key. In record mode the plan gains `input`, naming the framing and the pointers that decide what every other record will send. `field` is a list, because a check may name several pointers.
 
 ## The pointer is the boundary
 

@@ -27,9 +27,9 @@ The grammar is the verb, then the question, then what the verb needs. No verb ha
 
 An unknown option is a usage error. So is a repeated single-value option, and so is an option that cannot act in the chosen mode. Every one of them exits 2 before any request goes out.
 
-Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--field POINTER`, `--top N`, `--dry-run`, and `--profile NAME`. Each verb's page says which of them it takes.
+Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--field POINTER`, `--top N`, and `--dry-run`. Each verb's page says which of them it takes.
 
-Advanced options appear in the long help alone: `--url`, `--adapter`, `--model`, `--key-env`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, and `--config FILE`.
+Advanced options appear in the long help alone: `--url`, `--model`, `--timeout`, `--max-retries`, `--record DIR`, and `--replay DIR`.
 
 ## Standard output
 
@@ -50,7 +50,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 2 | A usage error or an input error. The failing record sent nothing |
 | 3 | Single-input `decide` and `choose` only: the answer is unresolved |
 | 4 | The backend failed or sent a reply the adapter refused |
-| 5 | A local failure: a file, a recording, the configuration |
+| 5 | A local failure: a file or a recording |
 | 70 | A defect in the tool |
 
 Codes 6, 7, and 8 stay reserved. One function maps every error to its exit code.
@@ -73,21 +73,21 @@ A script that must tell a no from an unresolved reads `$?` with `case`.
 
 `--dry-run` prints what the command would send and then stops. It calls no backend and needs no key. It sends nothing, so `--record` or `--replay` beside it is a usage error.
 
-The plan is one compact JSON document on standard output with six fields that are always present.
+The plan is one compact JSON document on standard output with four fields that are always present.
 
 ```json
-{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
+{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
 ```
 
-`request` is the body the adapter would send, as a JSON value and never as a string. `profile` is `null` for an ad-hoc backend. `key_env` is the name of the key variable, or `null` when no key would be sent, so a script can prove that a key stays home.
+`request` is the body the adapter would send, as a JSON value and never as a string. `key_env` names the variable a key would be read from, so a script can prove that a key stays home. The plan never holds the value.
 
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
-In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a seventh field, `input`, naming the framing and the pointers.
+In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers.
 
 ```json
-{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
+{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
 ```
 
-`annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both. `config` sends nothing at any time, and `--dry-run` beside it is a usage error.
+`annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
 

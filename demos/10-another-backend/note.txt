@@ -1,4 +1,0 @@
-Shift handover, bay 3.
-
-Line stopped twice for a jammed label feed. Cleared both times without a
-tool. The 14:00 pallet is still on the dock and has not been scanned in.

@@ -74,6 +74,16 @@ An idea for that fifth outcome: the cheapest form is a command that prints a nam
 
 The earlier `specification/report.md` holds what the command knew about accuracy at coverage and about the fixed JSON shape of a report. It stays in the git history.
 
+### The configuration file, profiles, and the `config` command
+
+The file lived at `$XDG_CONFIG_HOME/thinkthen/config.json`. It held a map of named profiles, a default profile name, and three run settings: `timeout_seconds`, `max_retries`, and `jobs`. A profile held four values: the URL, the adapter, the model, and the name of the key variable. It never held a key. `config path`, `config show`, and `config check` read it and printed it, and the tool never wrote it. The options `--profile`, `--adapter`, `--key-env`, and `--config` and the variables `THINKTHEN_PROFILE` and `THINKTHEN_CONFIG` selected against it.
+
+Ian took all of it out of version one on 2026-09-19, in the configuration section of ADR 0010. Rulings 1 and 2 emptied a profile out. One wire shape leaves nothing for an adapter to name, and `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `--model` already say the other three values. A profile was then a second spelling of what a shell user writes in front of the command, and two spellings of one thing cost more than they return.
+
+A user with several endpoints for whom a variable in front of the command is not enough would bring the file back. The shape to return to is the one above, minus the adapter: named profiles over an address, a model, and a key variable. Nothing in the tool blocks it, because the file was always read at the edge and never reached the pure core.
+
+`specification/config.md` and demo 10, `demos/10-another-backend/`, stay in the git history. Ticket 0007 removed both, and 10 stays an empty number.
+
 ### The `chat-logprobs` adapter
 
 The adapter asked any server that speaks the common chat-completions format for one constrained token and read the token probabilities. It would have made a local model a backend with no hosted service at all.
