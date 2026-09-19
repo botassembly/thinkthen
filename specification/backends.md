@@ -4,7 +4,7 @@ Status: **Settled** for the wire shape, the key, the address, the request, and t
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
 
-A backend is two values: the address and the model. `THINKTHEN_BASE_URL` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. ADR 0010 took the configuration file, profiles, and the options `--profile`, `--adapter`, `--key-env`, and `--config` out of version one. [roadmap.md](roadmap.md) says what the file held and what would bring it back.
+A backend is two values: the address and the model. `THINKTHEN_BASE_URL` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. ADR 0010 took the configuration file and the four options that served it out of version one. [roadmap.md](roadmap.md) names each one, says what the file held, and says what would bring it back.
 
 ## The key
 

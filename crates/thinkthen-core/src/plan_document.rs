@@ -3,44 +3,36 @@
 use serde::Serialize;
 use serde_json::value::RawValue;
 
-use crate::adapter::Adapter;
-use crate::backend::Backend;
+use crate::backend::{Backend, KEY_VAR};
 use crate::plan::Plan;
 use crate::systemone::{self, EncodeError};
-use crate::text::{KeyVar, ModelName, ProfileName, Url};
+use crate::text::{ModelName, Url};
 
-/// What the command would send, in the six fields `channels.md` fixes.
+/// What the command would send, in the four fields `channels.md` fixes.
 ///
-/// `profile` is `null` for an ad-hoc backend, and `key_env` is `null` when no
-/// key would be sent, so a script can prove that a key stays home. The document
-/// carries the request body, and the request body carries the evidence.
+/// `key_env` names the variable a key would be read from, so a script can
+/// prove that a key stays home. The document carries the request body, and the
+/// request body carries the evidence.
 #[derive(Debug, Serialize)]
 pub struct PlanDocument<'a> {
-    profile: Option<&'a ProfileName>,
     url: &'a Url,
-    adapter: Adapter,
     model: &'a ModelName,
-    key_env: Option<&'a KeyVar>,
+    key_env: &'static str,
     request: Box<RawValue>,
 }
 
 impl<'a> PlanDocument<'a> {
-    /// Show the request this backend's adapter would send.
+    /// Show the request this backend would send.
     ///
     /// # Errors
     ///
     /// Returns [`EncodeError`] when the request cannot be written as JSON.
     pub fn of(backend: &'a Backend, plan: &Plan) -> Result<Self, EncodeError> {
-        let request = match backend.adapter() {
-            Adapter::SystemOne => systemone::encode_raw(plan)?,
-        };
         Ok(Self {
-            profile: backend.profile(),
             url: backend.url(),
-            adapter: backend.adapter(),
             model: backend.model(),
-            key_env: backend.key_env(),
-            request,
+            key_env: KEY_VAR,
+            request: systemone::encode_raw(plan)?,
         })
     }
 }
@@ -48,7 +40,7 @@ impl<'a> PlanDocument<'a> {
 #[cfg(test)]
 mod tests {
     use super::PlanDocument;
-    use crate::backend::{BackendValues, resolve_backend};
+    use crate::backend::{Backend, DEFAULT_MODEL};
     use crate::plan::Plan;
     use crate::question::Question;
     use crate::render::json_line;
@@ -66,16 +58,16 @@ mod tests {
     }
 
     #[test]
-    fn a_plan_document_carries_six_fields_in_the_order_the_specification_fixes() {
+    fn a_plan_document_carries_four_fields_in_the_order_the_specification_fixes() {
         let backend =
-            resolve_backend(BackendValues::default()).expect("the built-in profile resolves");
+            Backend::resolve(None, None, DEFAULT_MODEL).expect("the default base resolves");
         let document = PlanDocument::of(&backend, &plan()).expect("the plan encodes");
 
         assert_eq!(
             json_line(&document).expect("a plan document serializes"),
             concat!(
-                r#"{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
-                r#""adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","#,
+                r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","#,
+                r#""key_env":"THINKTHEN_API_KEY","#,
                 r#""request":{"state":"Help!","model":"jev-latest","#,
                 r#""questions":{"q1":{"type":"noul","instructions":"is urgent"}}}}"#,
             )
@@ -83,19 +75,17 @@ mod tests {
     }
 
     #[test]
-    fn an_ad_hoc_backend_prints_a_null_profile_and_a_null_key_variable() {
-        let values = BackendValues::new(
-            None,
-            Some("http://127.0.0.1:1/v1"),
-            Some("systemone"),
-            Some("local-1"),
-            None,
-        );
-        let backend = resolve_backend(values).expect("an ad-hoc backend resolves");
-        let document = PlanDocument::of(&backend, &plan()).expect("the plan encodes");
+    fn a_plan_names_the_key_variable_wherever_the_request_would_go() {
+        let backend = Backend::resolve(Some("http://127.0.0.1:1/v1"), None, "local-1")
+            .expect("a named address resolves");
+        let rendered = json_line(&PlanDocument::of(&backend, &plan()).expect("the plan encodes"))
+            .expect("a plan document serializes");
 
-        let rendered = json_line(&document).expect("a plan document serializes");
-        assert!(rendered.starts_with(r#"{"profile":null,"#), "{rendered}");
-        assert!(rendered.contains(r#""key_env":null,"#), "{rendered}");
+        assert!(
+            rendered.starts_with(
+                r#"{"url":"http://127.0.0.1:1/v1/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","#
+            ),
+            "{rendered}"
+        );
     }
 }

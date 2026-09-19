@@ -14,6 +14,12 @@ use crate::reply::Reply;
 use crate::result::Usage;
 use crate::text::ModelName;
 
+/// The name this wire shape answers to, in an address and in a recording entry.
+///
+/// Ruling 1 of ADR 0010 leaves one wire shape, so nothing chooses between
+/// shapes and this is the only name there is.
+pub const NAME: &str = "systemone";
+
 /// Why a plan could not be written as a request body.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 #[error("the plan could not be written as JSON: {0}")]

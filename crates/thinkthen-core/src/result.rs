@@ -2,10 +2,9 @@
 
 use serde::Serialize;
 
-use crate::adapter::Adapter;
 use crate::answer::Answer;
 use crate::question::Question;
-use crate::text::{ModelName, ProfileName, Url};
+use crate::text::{ModelName, Url};
 use crate::threshold::{Outcome, Threshold};
 
 /// The schema string a version one result carries.
@@ -32,9 +31,7 @@ impl Usage {
 /// Who answered, how, at what cost, from a backend or from a recording.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Meta {
-    profile: Option<ProfileName>,
     url: Url,
-    adapter: Adapter,
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
@@ -42,24 +39,14 @@ pub struct Meta {
 }
 
 impl Meta {
-    /// Name who answered, how, at what cost, and whether a recording answered.
+    /// Name who answered, at what cost, and whether a recording answered.
     ///
-    /// `profile` is `None` for an ad-hoc backend, and the field is then `null`.
     /// `usage` is `None` when the backend reported none, and the field is then
     /// absent from the JSON. `replayed` is always present.
     #[must_use]
-    pub const fn new(
-        profile: Option<ProfileName>,
-        url: Url,
-        adapter: Adapter,
-        model: ModelName,
-        usage: Option<Usage>,
-        replayed: bool,
-    ) -> Self {
+    pub const fn new(url: Url, model: ModelName, usage: Option<Usage>, replayed: bool) -> Self {
         Self {
-            profile,
             url,
-            adapter,
             model,
             usage,
             replayed,
@@ -105,11 +92,10 @@ impl DecisionResult {
 #[cfg(test)]
 mod tests {
     use super::{DecisionResult, Meta, SCHEMA, Usage};
-    use crate::adapter::Adapter;
     use crate::answer::Answer;
     use crate::probability::Probability;
     use crate::question::Question;
-    use crate::text::{ModelName, ProfileName, QuestionText, Url};
+    use crate::text::{ModelName, QuestionText, Url};
     use crate::threshold::Threshold;
 
     /// The example in `specification/result.md`, on the one line it prints on.
@@ -117,8 +103,8 @@ mod tests {
         r#"{"schema":"thinkthen.result/1","value":true,"#,
         r#""question":{"verb":"decide","text":"Does this ask for a refund?"},"#,
         r#""answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"#,
-        r#""meta":{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
-        r#""adapter":"systemone","model":"jev-1.13.0","#,
+        r#""meta":{"url":"https://api.typesafe.ai/v1/systemone","#,
+        r#""model":"jev-1.13.0","#,
         r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}"#,
     );
 
@@ -133,9 +119,7 @@ mod tests {
             answer,
             threshold,
             Meta::new(
-                Some(ProfileName::new("jev").expect("not empty")),
                 Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
-                Adapter::SystemOne,
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
                 false,
@@ -160,11 +144,9 @@ mod tests {
     }
 
     #[test]
-    fn usage_is_absent_and_an_ad_hoc_backend_is_null() {
+    fn meta_holds_four_fields_and_drops_the_usage_a_backend_never_reported() {
         let meta = Meta::new(
-            None,
-            Url::new("http://127.0.0.1:8080/v1").expect("not empty"),
-            Adapter::SystemOne,
+            Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
             ModelName::new("local-1").expect("not empty"),
             None,
             true,
@@ -172,7 +154,7 @@ mod tests {
         let rendered = serde_json::to_string(&meta).expect("meta serializes");
         assert_eq!(
             rendered,
-            r#"{"profile":null,"url":"http://127.0.0.1:8080/v1","adapter":"systemone","model":"local-1","replayed":true}"#
+            r#"{"url":"http://127.0.0.1:8080/v1/systemone","model":"local-1","replayed":true}"#
         );
     }
 
@@ -187,9 +169,7 @@ mod tests {
             answer,
             threshold,
             Meta::new(
-                None,
-                Url::new("http://127.0.0.1:8080/v1").expect("not empty"),
-                Adapter::SystemOne,
+                Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
                 false,

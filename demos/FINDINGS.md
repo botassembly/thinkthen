@@ -62,7 +62,7 @@ Earlier pages raised these, and the ADR answered them. They are listed once and 
 - `decide how` is gone. `rank` orders by the probability of yes and takes no rubric.
 - The saved question file is JSON, so the proposed Markdown grammar is dead.
 - `key_env` is always present in the plan, and `meta` carries the `url` that answered. Under ADR 0010 there is one key variable and one address, so neither field is ever `null`.
-- `--plan` is `--dry-run`, and the five backend environment variables are gone. `--backend` became `--profile`, which left with ADR 0010.
+- `--plan` is `--dry-run`, and the five backend environment variables are gone. `--backend` was renamed once and then left with ADR 0010, and `roadmap.md` says so.
 - `--none`, `--invert`, `--abstain-on`, `--from`, `--order`, `--on-error`, `--max-requests`, and `--min-gap` are all gone.
 
 ## Draft features no demo needed

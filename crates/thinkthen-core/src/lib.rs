@@ -9,7 +9,6 @@
 #![forbid(clippy::disallowed_macros, clippy::indexing_slicing)]
 #![forbid(clippy::allow_attributes_without_reason)]
 
-mod adapter;
 mod answer;
 mod backend;
 mod plan;
@@ -24,18 +23,15 @@ pub mod systemone;
 mod text;
 mod threshold;
 
-pub use crate::adapter::{Adapter, UnknownAdapterError};
 pub use crate::answer::Answer;
-pub use crate::backend::{Backend, BackendError, BackendValues, resolve_backend};
+pub use crate::backend::{Backend, BackendError, DEFAULT_MODEL, KEY_VAR};
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::plan_document::PlanDocument;
 pub use crate::question::Question;
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
 pub use crate::result::{DecisionResult, Meta, Usage};
-pub use crate::text::{
-    BlankTextError, Evidence, KeyVar, ModelName, ProfileName, QuestionText, Url,
-};
+pub use crate::text::{BlankTextError, Evidence, ModelName, QuestionText, Url};
 pub use crate::threshold::{Outcome, Threshold, ThresholdError};
 
 /// The name the tool answers to on the command line and in its own output.

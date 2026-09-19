@@ -9,7 +9,7 @@ use std::process::{Command, Output, Stdio};
 
 use harness::{Canned, Listener};
 use thinkthen_core::recording::{Entry, Exchange};
-use thinkthen_core::{Adapter, Evidence, ModelName, Plan, Question, QuestionText, Url, systemone};
+use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url, systemone};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -53,30 +53,25 @@ fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     child.wait_with_output()
 }
 
-/// Run `decide` against one ad-hoc URL, asking one question.
+/// Run `decide` against one named base, asking one question.
+///
+/// `key` is the value `THINKTHEN_API_KEY` holds, or `None` for a run with the
+/// variable unset. A replay reads no key, and every other case names one.
 fn judge(question: &str, base: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
-    let ad_hoc = [
-        "decide",
-        question,
-        "--url",
-        base,
-        "--adapter",
-        "systemone",
-        "--model",
-        "local-1",
-    ];
-    let named: [&str; 2] = ["--key-env", "LOCAL_KEY"];
-    let given = if key.is_some() { &named[..] } else { &[][..] };
+    let asked = ["decide", question, "--url", base, "--model", "local-1"];
     run(
-        &[&ad_hoc[..], arguments, given].concat(),
-        &key.map_or_else(Vec::new, |value| vec![("LOCAL_KEY", value)]),
+        &[&asked[..], arguments].concat(),
+        &key.map_or_else(Vec::new, |value| vec![("THINKTHEN_API_KEY", value)]),
     )
 }
 
-/// Run `decide` against one ad-hoc URL, asking the refund question.
+/// Run `decide` against one named base, asking the refund question.
 fn decide(base: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
     judge("asks for a refund", base, arguments, key)
 }
+
+/// The key a case sends when the case is not about the key itself.
+const KEY: Option<&str> = Some("sk-test-value");
 
 /// Record one answered exchange into the folder and give the entry it wrote.
 ///
@@ -88,7 +83,7 @@ fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
     let output = decide(
         listener.base(),
         &["--record", &folder.to_string_lossy()],
-        None,
+        KEY,
     )?;
     if output.status.code() != Some(0) {
         return Err(io::Error::other("the recording run answered"));
@@ -97,7 +92,7 @@ fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
     Ok((listener, name, written))
 }
 
-/// Write the entry the built-in profile would record for this response.
+/// Write the entry the default address would record for this response.
 fn plant(folder: &Path, response: &str) -> Option<String> {
     let plan = Plan::new(
         Evidence::new(EVIDENCE).ok()?,
@@ -109,7 +104,7 @@ fn plant(folder: &Path, response: &str) -> Option<String> {
     .ok()?;
     let request = systemone::encode(&plan).ok()?;
     let url = Url::new("https://api.typesafe.ai/v1/systemone").ok()?;
-    let exchange = Exchange::new(Adapter::SystemOne, &url, &request);
+    let exchange = Exchange::new(&url, &request);
     let name = exchange.digest().file_name();
     let written = Entry::of(&exchange, response.as_bytes())
         .ok()?
@@ -197,13 +192,13 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
 }
 
 #[test]
-fn a_replay_under_the_built_in_profile_reads_no_key_and_opens_no_connection() {
+fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
     let folder = folder("no-key");
-    let name = plant(&folder, ANSWERED).expect("an entry for the built-in profile");
+    let name = plant(&folder, ANSWERED).expect("an entry the default address answers");
     let asked: [&str; 2] = ["decide", "asks for a refund"];
 
-    // The built-in profile names THINKTHEN_API_KEY, which env_clear leaves unset.
-    // Without a recording that is exit 4, and no connection opens.
+    // The run reads THINKTHEN_API_KEY, which env_clear leaves unset. Without a
+    // recording that is exit 4, and no connection opens.
     let output = run(&asked, &[]).expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(4));
     let message = String::from_utf8_lossy(&output.stderr);
@@ -223,9 +218,43 @@ fn a_replay_under_the_built_in_profile_reads_no_key_and_opens_no_connection() {
     assert!(output.stderr.is_empty());
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(printed.contains(r#""replayed":true"#), "{printed}");
-    assert!(printed.contains(r#""profile":"jev""#), "{printed}");
+    assert!(
+        printed.contains(r#""url":"https://api.typesafe.ai/v1/systemone""#),
+        "{printed}"
+    );
     assert!(printed.contains(r#""model":"jev-1.13.0""#), "{printed}");
     assert!(name.ends_with(".json"), "{name}");
+}
+
+/// `meta`, pinned field by field in the order it prints them.
+#[test]
+fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
+    let folder = folder("meta");
+    let name = plant(&folder, ANSWERED).expect("an entry the default address answers");
+    assert!(name.ends_with(".json"), "{name}");
+
+    let output = run(
+        &[
+            "decide",
+            "asks for a refund",
+            "--details",
+            "--replay",
+            &folder.to_string_lossy(),
+        ],
+        &[],
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        printed.contains(concat!(
+            r#""meta":{"url":"https://api.typesafe.ai/v1/systemone","#,
+            r#""model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"#,
+            r#""replayed":true}}"#,
+        )),
+        "{printed}"
+    );
 }
 
 #[test]
@@ -306,7 +335,7 @@ fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
     ];
 
     for run in 0..2 {
-        let output = decide(listener.base(), &both, None).expect("the compiled binary runs");
+        let output = decide(listener.base(), &both, KEY).expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(0), "run {run}");
         let printed = String::from_utf8_lossy(&output.stdout);
         let replayed = format!(r#""replayed":{}"#, run == 1);
@@ -365,7 +394,7 @@ fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
     let output = decide(
         listener.base(),
         &["--record", &blocked.to_string_lossy()],
-        None,
+        KEY,
     )
     .expect("the compiled binary runs");
 
@@ -418,7 +447,7 @@ fn a_failed_exchange_is_never_recorded() {
         let output = decide(
             listener.base(),
             &["--record", &folder.to_string_lossy(), "--max-retries", "0"],
-            None,
+            KEY,
         )
         .expect("the compiled binary runs");
 

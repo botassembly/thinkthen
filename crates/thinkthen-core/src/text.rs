@@ -12,18 +12,12 @@ pub enum BlankTextError {
     /// Evidence is what a judgment reads, so it carries text.
     #[error("evidence is text, not white space")]
     Evidence,
-    /// A profile name picks a backend, so it carries text.
-    #[error("a profile name is text, not white space")]
-    ProfileName,
     /// A model name reports what answered, so it carries text.
     #[error("a model name is text, not white space")]
     ModelName,
     /// A URL names where the request is posted, so it carries text.
     #[error("a URL is text, not white space")]
     Url,
-    /// A key variable names an environment variable, so it carries text.
-    #[error("a key variable name is text, not white space")]
-    KeyVar,
 }
 
 /// Declare one text value that is not blank, its accessor, and its conversions.
@@ -66,14 +60,12 @@ macro_rules! text_value {
 
 text_value!(QuestionText, QuestionText, "question a judgment asks");
 text_value!(Evidence, Evidence, "evidence a judgment reads");
-text_value!(ProfileName, ProfileName, "profile that answered");
 text_value!(ModelName, ModelName, "model that answered");
 text_value!(Url, Url, "URL a request is posted to");
-text_value!(KeyVar, KeyVar, "environment variable that holds the key");
 
 #[cfg(test)]
 mod tests {
-    use super::{BlankTextError, Evidence, KeyVar, ModelName, ProfileName, QuestionText, Url};
+    use super::{BlankTextError, Evidence, ModelName, QuestionText, Url};
 
     #[test]
     fn new_keeps_the_text_it_was_given() {
@@ -81,8 +73,6 @@ mod tests {
         assert_eq!(question.as_str(), "asks for a refund");
         let evidence = Evidence::new(" leading space is kept ").expect("not blank");
         assert_eq!(evidence.as_str(), " leading space is kept ");
-        let profile = ProfileName::new("jev").expect("not blank");
-        assert_eq!(profile.as_str(), "jev");
         let model = ModelName::new("jev-1.13.0").expect("not blank");
         assert_eq!(model.as_str(), "jev-1.13.0");
     }
@@ -90,9 +80,8 @@ mod tests {
     #[test]
     fn new_refuses_text_that_is_empty_or_only_white_space() {
         type Make = fn(&str) -> Result<(), BlankTextError>;
-        let makers: [(Make, BlankTextError); 6] = [
+        let makers: [(Make, BlankTextError); 4] = [
             (|text| Url::new(text).map(|_| ()), BlankTextError::Url),
-            (|text| KeyVar::new(text).map(|_| ()), BlankTextError::KeyVar),
             (
                 |text| QuestionText::new(text).map(|_| ()),
                 BlankTextError::QuestionText,
@@ -100,10 +89,6 @@ mod tests {
             (
                 |text| Evidence::new(text).map(|_| ()),
                 BlankTextError::Evidence,
-            ),
-            (
-                |text| ProfileName::new(text).map(|_| ()),
-                BlankTextError::ProfileName,
             ),
             (
                 |text| ModelName::new(text).map(|_| ()),

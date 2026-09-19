@@ -58,15 +58,11 @@ fn the_option_outranks_the_variable_and_the_variable_outranks_the_default() {
     let ignored = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output = decide(
+        &["--url", chosen.base(), "--model", "local-1"],
         &[
-            "--url",
-            chosen.base(),
-            "--adapter",
-            "systemone",
-            "--model",
-            "local-1",
+            ("THINKTHEN_BASE_URL", ignored.base()),
+            ("THINKTHEN_API_KEY", "sk-test-value"),
         ],
-        &[("THINKTHEN_BASE_URL", ignored.base())],
     )
     .expect("the compiled binary runs");
 
@@ -127,7 +123,7 @@ fn a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address() {
 /// One base in six spellings, each of which posts to the same path.
 ///
 /// A trailing slash, surrounding space, and the case of the scheme all fall
-/// away before the adapter's own name is joined on. `--url` and the variable
+/// away before the wire shape's own name is joined on. `--url` and the variable
 /// compose through one function, and the ranking case above proves the wire
 /// path the option reaches.
 #[test]
@@ -156,6 +152,25 @@ fn every_spelling_of_one_base_reaches_the_same_path() {
         let requests = listener.requests();
         let request = requests.first().expect("one request reached the listener");
         assert_eq!(request.line, "POST /v1/systemone HTTP/1.1", "{given:?}");
+    }
+}
+
+/// A base given as white space is blank, and the message says so.
+///
+/// The variable holding nothing counts as absent, and the case below proves
+/// that. `--url` was written on purpose, so it is refused instead.
+#[test]
+fn a_base_the_option_names_as_white_space_is_refused_as_a_blank_address() {
+    for blank in ["", " ", "\t"] {
+        let output = decide(&["--url", blank], &[]).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{blank:?}");
+        assert!(output.stdout.is_empty(), "{blank:?}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            "thinkthen: a URL is text, not white space\n",
+            "{blank:?}"
+        );
     }
 }
 

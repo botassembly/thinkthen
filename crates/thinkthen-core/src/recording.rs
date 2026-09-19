@@ -7,7 +7,7 @@ use serde_json::value::RawValue;
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
-use crate::adapter::Adapter;
+use crate::systemone;
 use crate::text::Url;
 
 /// The schema string a version one recording entry carries.
@@ -42,9 +42,8 @@ impl Digest {
     }
 }
 
-/// What one exchange is: where it goes, in what language, carrying what.
+/// What one exchange is: where it goes and what it carries.
 pub struct Exchange<'a> {
-    adapter: Adapter,
     url: &'a Url,
     request: &'a [u8],
 }
@@ -54,7 +53,6 @@ impl fmt::Debug for Exchange<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Exchange")
-            .field("adapter", &self.adapter)
             .field("url", &self.url)
             .field(
                 "request",
@@ -67,22 +65,20 @@ impl fmt::Debug for Exchange<'_> {
 impl<'a> Exchange<'a> {
     /// Name the exchange one request body makes to one backend.
     #[must_use]
-    pub const fn new(adapter: Adapter, url: &'a Url, request: &'a [u8]) -> Self {
-        Self {
-            adapter,
-            url,
-            request,
-        }
+    pub const fn new(url: &'a Url, request: &'a [u8]) -> Self {
+        Self { url, request }
     }
 
-    /// Take the digest of the adapter, the URL, and the request bytes.
+    /// Take the digest of the wire shape, the URL, and the request bytes.
     ///
-    /// An adapter writes the same plan to the same bytes every time, so the same
-    /// command reaches the same entry.
+    /// The adapter writes the same plan to the same bytes every time, so the
+    /// same command reaches the same entry. The wire shape's name leads the
+    /// digest, as it has since ticket 0004, so an entry recorded then is found
+    /// now.
     #[must_use]
     pub fn digest(&self) -> Digest {
         let mut hasher = Sha256::new();
-        hasher.update(self.adapter.as_str().as_bytes());
+        hasher.update(systemone::NAME.as_bytes());
         hasher.update(b"\n");
         hasher.update(self.url.as_str().as_bytes());
         hasher.update(b"\n");
@@ -95,7 +91,7 @@ impl<'a> Exchange<'a> {
 #[derive(Deserialize, Serialize)]
 pub struct Entry {
     schema: String,
-    adapter: Adapter,
+    adapter: String,
     url: String,
     request: Box<RawValue>,
     response: Box<RawValue>,
@@ -124,7 +120,7 @@ impl Entry {
     pub fn of(exchange: &Exchange<'_>, response: &[u8]) -> Result<Self, EntryError> {
         Ok(Self {
             schema: SCHEMA.to_owned(),
-            adapter: exchange.adapter,
+            adapter: systemone::NAME.to_owned(),
             url: exchange.url.as_str().to_owned(),
             request: json(exchange.request)?,
             response: json(response)?,
@@ -158,7 +154,7 @@ impl Entry {
         if entry.schema != SCHEMA {
             return Err(EntryError::Schema(entry.schema));
         }
-        if entry.adapter != exchange.adapter
+        if entry.adapter != systemone::NAME
             || entry.url != exchange.url.as_str()
             || entry.request.get().as_bytes() != exchange.request
         {
@@ -194,7 +190,6 @@ fn nibble(value: u8) -> char {
 #[cfg(test)]
 mod tests {
     use super::{Entry, EntryError, Exchange};
-    use crate::adapter::Adapter;
     use crate::plan::Plan;
     use crate::question::Question;
     use crate::systemone;
@@ -204,7 +199,8 @@ mod tests {
     ///
     /// The value is the SHA-256 of `systemone`, a newline, the URL, a newline,
     /// and the request bytes, taken outside this program. Pinning it holds the
-    /// file name still, so a recording made today is found tomorrow.
+    /// file name still, so a recording made today is found tomorrow. Ticket
+    /// 0007 removed the adapter type and left the digest untouched.
     const PINNED: &str = "bd370a64f0a785a6ee73bab801eb4e1ae01ebbda8aacc51bc288ef400b2a4a78.json";
 
     /// One response as a backend sends it, on the one line it crossed the wire on.
@@ -248,7 +244,7 @@ mod tests {
     fn the_digest_of_the_fixture_request_is_the_name_the_entry_keeps() {
         let url = url();
         let request = request();
-        let exchange = Exchange::new(Adapter::SystemOne, &url, &request);
+        let exchange = Exchange::new(&url, &request);
         assert_eq!(exchange.digest().file_name(), PINNED);
     }
 
@@ -256,7 +252,7 @@ mod tests {
     fn an_entry_carries_the_two_bodies_and_nothing_a_request_header_held() {
         let url = url();
         let request = request();
-        let exchange = Exchange::new(Adapter::SystemOne, &url, &request);
+        let exchange = Exchange::new(&url, &request);
         let entry = Entry::of(&exchange, RESPONSE.as_bytes()).expect("both bodies are JSON");
         let written = entry.written().expect("an entry is writable");
 
@@ -280,7 +276,7 @@ mod tests {
     fn an_entry_that_records_another_exchange_is_refused() {
         let url = url();
         let request = request();
-        let exchange = Exchange::new(Adapter::SystemOne, &url, &request);
+        let exchange = Exchange::new(&url, &request);
         let written = Entry::of(&exchange, RESPONSE.as_bytes())
             .expect("both bodies are JSON")
             .written()
@@ -288,18 +284,12 @@ mod tests {
 
         let elsewhere = Url::new("http://127.0.0.1:1/v1").expect("not blank");
         assert_eq!(
-            Entry::replayed(
-                written.as_bytes(),
-                &Exchange::new(Adapter::SystemOne, &elsewhere, &request)
-            ),
+            Entry::replayed(written.as_bytes(), &Exchange::new(&elsewhere, &request)),
             Err(EntryError::Mismatched)
         );
         let other = br#"{"state":"something else"}"#;
         assert_eq!(
-            Entry::replayed(
-                written.as_bytes(),
-                &Exchange::new(Adapter::SystemOne, &url, other)
-            ),
+            Entry::replayed(written.as_bytes(), &Exchange::new(&url, other)),
             Err(EntryError::Mismatched)
         );
 

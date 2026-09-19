@@ -30,29 +30,26 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
     systemone::encode(&plan).ok()
 }
 
+/// The key a case sends when the case is not about the key itself.
+const KEY: Option<&str> = Some("sk-test-value");
+
 /// Run `decide` against one URL, with no environment but what the case names.
+///
+/// `key` is the value `THINKTHEN_API_KEY` holds, or `None` for a run with the
+/// variable unset.
 fn decide(base: &str, arguments: &[&str], key: Option<&str>, evidence: &str) -> io::Result<Output> {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         .args(["decide", "asks for a refund"])
-        .args([
-            "--url",
-            base,
-            "--adapter",
-            "systemone",
-            "--model",
-            "local-1",
-        ])
+        .args(["--url", base, "--model", "local-1"])
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     if let Some(key) = key {
-        command
-            .env("LOCAL_KEY", key)
-            .args(["--key-env", "LOCAL_KEY"]);
+        command.env("THINKTHEN_API_KEY", key);
     }
     let mut child = command.spawn()?;
     let mut input = child
@@ -65,17 +62,16 @@ fn decide(base: &str, arguments: &[&str], key: Option<&str>, evidence: &str) -> 
 }
 
 #[test]
-fn the_request_carries_the_encoded_plan_the_content_type_and_no_key() {
+fn the_request_carries_the_encoded_plan_and_the_content_type() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output =
-        decide(listener.base(), &[], None, "Refund me please.").expect("the compiled binary runs");
+        decide(listener.base(), &[], KEY, "Refund me please.").expect("the compiled binary runs");
 
     let requests = listener.requests();
     let request = requests.first().expect("one request reached the listener");
     assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
     assert_eq!(request.header("content-type"), Some("application/json"));
-    assert_eq!(request.header("authorization"), None);
     let written = encoded("Refund me please.", "asks for a refund").expect("the plan encodes");
     assert_eq!(
         String::from_utf8_lossy(&request.body),
@@ -86,7 +82,7 @@ fn the_request_carries_the_encoded_plan_the_content_type_and_no_key() {
 }
 
 #[test]
-fn a_named_key_variable_is_sent_as_a_bearer_token_and_never_printed() {
+fn the_key_is_sent_as_a_bearer_token_and_never_printed() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output = decide(listener.base(), &[], Some("sk-secret-value"), "Refund me.")
@@ -121,7 +117,7 @@ fn every_answer_prints_its_bare_value_and_earns_its_own_exit_code() {
         let output = decide(
             listener.base(),
             &["--threshold", "0.1:0.9"],
-            None,
+            KEY,
             "Refund me.",
         )
         .expect("the compiled binary runs");
@@ -139,7 +135,7 @@ fn a_single_cut_answers_yes_or_no_and_never_leaves_a_run_unresolved() {
         let listener = Listener::serving(vec![Canned::ok(&answered(probability))])
             .expect("a loopback listener");
 
-        let output = decide(listener.base(), &["--threshold", "0.9"], None, "Refund me.")
+        let output = decide(listener.base(), &["--threshold", "0.9"], KEY, "Refund me.")
             .expect("the compiled binary runs");
 
         assert_eq!(String::from_utf8_lossy(&output.stdout), printed);
@@ -156,7 +152,7 @@ fn quiet_prints_nothing_and_keeps_the_exit_code_the_answer_earned() {
         let output = decide(
             listener.base(),
             &["--threshold", "0.1:0.9", "--quiet"],
-            None,
+            KEY,
             "Refund me.",
         )
         .expect("the compiled binary runs");
@@ -172,8 +168,8 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     let bare = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
     let detailed = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-    decide(bare.base(), &[], None, "Refund me.").expect("the compiled binary runs");
-    let output = decide(detailed.base(), &["--details"], None, "Refund me.")
+    decide(bare.base(), &[], KEY, "Refund me.").expect("the compiled binary runs");
+    let output = decide(detailed.base(), &["--details"], KEY, "Refund me.")
         .expect("the compiled binary runs");
 
     let sent = bare.requests();
@@ -189,7 +185,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#"{{"schema":"thinkthen.result/1","value":true,"#,
                 r#""question":{{"verb":"decide","text":"asks for a refund"}},"#,
                 r#""answer":{{"kind":"yes_no","probability":0.92}},"threshold":0.5,"#,
-                r#""meta":{{"profile":null,"url":"{url}","adapter":"systemone","#,
+                r#""meta":{{"url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
                 r#""replayed":false}}}}"#,
                 "\n",
@@ -207,7 +203,7 @@ fn a_details_run_carries_the_rule_it_was_judged_under() {
     let output = decide(
         listener.base(),
         &["--details", "--threshold", "0.1:0.9"],
-        None,
+        KEY,
         "Refund me.",
     )
     .expect("the compiled binary runs");
@@ -222,7 +218,7 @@ fn a_details_run_carries_the_rule_it_was_judged_under() {
 fn a_dry_run_prints_the_plan_and_opens_no_connection() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-    let output = decide(listener.base(), &["--dry-run"], None, "Refund me.")
+    let output = decide(listener.base(), &["--dry-run"], KEY, "Refund me.")
         .expect("the compiled binary runs");
 
     assert!(listener.requests().is_empty(), "a plan opens no connection");
@@ -239,7 +235,7 @@ fn a_threshold_that_is_refused_stops_before_any_request_goes_out() {
     for bad in ["90", "0", "0.9:0.1", "0.1:", ":0.9", "inf", "NaN", "half"] {
         let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-        let output = decide(listener.base(), &["--threshold", bad], None, "Refund me.")
+        let output = decide(listener.base(), &["--threshold", bad], KEY, "Refund me.")
             .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{bad}");
@@ -256,8 +252,7 @@ fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
     ])
     .expect("a loopback listener");
 
-    let output =
-        decide(listener.base(), &[], None, "Refund me.").expect("the compiled binary runs");
+    let output = decide(listener.base(), &[], KEY, "Refund me.").expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 2);
     assert_eq!(output.status.code(), Some(0));
@@ -272,7 +267,7 @@ fn retries_run_out_and_the_backend_failure_is_exit_four() {
     ])
     .expect("a loopback listener");
 
-    let output = decide(listener.base(), &["--max-retries", "2"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "2"], KEY, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 3);
@@ -329,7 +324,7 @@ fn a_response_body_past_the_bound_is_exit_four_and_never_fills_memory() {
     let body = ANSWERED.replace(r#""usage""#, &format!(r#""padding":"{padding}","usage""#));
     let listener = Listener::serving(vec![Canned::ok(&body)]).expect("a loopback listener");
 
-    let output = decide(listener.base(), &["--max-retries", "0"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "0"], KEY, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
@@ -348,7 +343,7 @@ fn a_reply_the_adapter_refuses_is_exit_four() {
         let listener = Listener::serving(vec![Canned::ok(body)]).expect("a loopback listener");
 
         let output =
-            decide(listener.base(), &[], None, "Refund me.").expect("the compiled binary runs");
+            decide(listener.base(), &[], KEY, "Refund me.").expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(4), "{body}");
         assert!(output.stdout.is_empty(), "{body}");
@@ -360,7 +355,7 @@ fn a_reply_the_adapter_refuses_is_exit_four() {
 fn a_body_the_backend_cut_short_is_exit_four() {
     let listener = Listener::serving(vec![Canned::cut_short()]).expect("a loopback listener");
 
-    let output = decide(listener.base(), &["--max-retries", "0"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "0"], KEY, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
@@ -371,7 +366,7 @@ fn a_body_the_backend_cut_short_is_exit_four() {
 fn a_backend_that_answers_nothing_is_exit_four() {
     let listener = Listener::serving(Vec::new()).expect("a loopback listener");
 
-    let output = decide(listener.base(), &["--max-retries", "0"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "0"], KEY, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
@@ -382,16 +377,13 @@ fn a_backend_that_answers_nothing_is_exit_four() {
 fn a_key_variable_that_is_unset_or_blank_is_exit_four_and_never_shows_a_value() {
     let listener = Listener::serving(Vec::new()).expect("a loopback listener");
 
-    let cases: [(&[&str], Option<&str>); 2] =
-        [(&["--key-env", "LOCAL_KEY"], None), (&[], Some("   "))];
-
-    for (arguments, key) in cases {
+    for key in [None, Some(""), Some("   ")] {
         let output =
-            decide(listener.base(), arguments, key, "Refund.").expect("the compiled binary runs");
+            decide(listener.base(), &[], key, "Refund.").expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(4), "{key:?}");
         assert!(listener.requests().is_empty(), "{key:?}");
         let message = String::from_utf8_lossy(&output.stderr);
-        assert!(message.contains("LOCAL_KEY"), "{message}");
+        assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
     }
 }

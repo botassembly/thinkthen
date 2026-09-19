@@ -5,7 +5,7 @@ use std::fmt;
 use std::io::{ErrorKind, Read, Write};
 use std::time::Duration;
 
-use thinkthen_core::{Evidence, KeyVar};
+use thinkthen_core::{Evidence, KEY_VAR};
 
 use crate::failure::Failure;
 
@@ -87,16 +87,16 @@ impl fmt::Debug for Key {
     }
 }
 
-/// Read the key the backend's variable names.
+/// Read the key from the one variable that holds it.
 ///
 /// # Errors
 ///
 /// Returns [`Failure::NoKey`] when the variable is unset or blank. The message
 /// names the variable and never a value.
-pub(crate) fn key(variable: &KeyVar) -> Result<Key, Failure> {
-    let value = read(variable.as_str()).unwrap_or_default();
+pub(crate) fn key() -> Result<Key, Failure> {
+    let value = read(KEY_VAR).unwrap_or_default();
     if value.trim().is_empty() {
-        return Err(Failure::NoKey(variable.as_str().to_owned()));
+        return Err(Failure::NoKey(KEY_VAR.to_owned()));
     }
     Ok(Key(value))
 }

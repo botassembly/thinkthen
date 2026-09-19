@@ -25,8 +25,8 @@ pub(crate) struct Exchange<'a> {
     pub(crate) url: &'a str,
     /// The request body the adapter wrote, which carries the evidence.
     pub(crate) body: &'a [u8],
-    /// The key, when the backend names a variable that holds one.
-    pub(crate) key: Option<&'a Key>,
+    /// The key the one authorization header carries.
+    pub(crate) key: &'a Key,
     /// How long one attempt may take, from connect to the last byte.
     pub(crate) timeout: Duration,
     /// How many times a retried failure is sent again.
@@ -45,7 +45,7 @@ impl fmt::Debug for Exchange<'_> {
                 "body",
                 &format_args!("<{} bytes withheld>", self.body.len()),
             )
-            .field("key", &self.key.map(|_| "<withheld>"))
+            .field("key", &self.key)
             .field("timeout", &self.timeout)
             .field("max_retries", &self.max_retries)
             .field("retry_wait", &self.retry_wait)
@@ -88,12 +88,13 @@ pub(crate) fn post(exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
 
 /// Post the request once.
 fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
-    let mut request = agent
+    let request = agent
         .post(exchange.url)
-        .header("content-type", "application/json");
-    if let Some(key) = exchange.key {
-        request = request.header("authorization", &format!("Bearer {}", key.as_str()));
-    }
+        .header("content-type", "application/json")
+        .header(
+            "authorization",
+            &format!("Bearer {}", exchange.key.as_str()),
+        );
     let mut response = request
         .send(exchange.body)
         .map_err(|error| Failure::Transport(error.to_string()))?;
@@ -130,7 +131,7 @@ mod tests {
         let exchange = Exchange {
             url: "http://127.0.0.1:1/v1",
             body: br#"{"state":"something private"}"#,
-            key: Some(&key),
+            key: &key,
             timeout: Duration::from_secs(30),
             max_retries: 2,
             retry_wait: Duration::from_secs(1),

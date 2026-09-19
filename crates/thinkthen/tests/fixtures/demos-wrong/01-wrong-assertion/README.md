@@ -10,7 +10,7 @@ This page is the fixture a failing demo is tested against. It holds one block, a
 set -euo pipefail
 
 thinkthen decide 'the customer asks for money back' \
-  --url http://127.0.0.1:8721/v1 --adapter systemone --model local-1 \
+  --url http://127.0.0.1:8721/v1 --model local-1 \
   --threshold 0.1:0.9 --quiet --replay recording/ \
   < message.txt && rc=0 || rc=$?
 printf 'rc=%s\n' "$rc" | mustmatch "rc=1"

@@ -7,8 +7,8 @@ use std::time::Duration;
 use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::systemone;
 use thinkthen_core::{
-    Adapter, Backend, DecisionResult, Meta, Outcome, Plan, PlanDocument, Question, QuestionText,
-    Reply, Threshold, json_line, resolve_backend,
+    Backend, DecisionResult, Meta, Outcome, Plan, PlanDocument, Question, QuestionText, Reply,
+    Threshold, json_line,
 };
 
 use crate::args::DecideArguments;
@@ -33,7 +33,11 @@ pub(crate) fn decide(
         return Err(Failure::QuietWithDetails);
     }
     let threshold = threshold_of(arguments.threshold.as_deref())?;
-    let backend = resolve_backend(arguments.backend_values().with_base(environment.base_url()))?;
+    let backend = Backend::resolve(
+        arguments.url.as_deref(),
+        environment.base_url(),
+        arguments.model.as_str(),
+    )?;
     let text = QuestionText::new(arguments.question.as_str())?;
     let plan = Plan::new(
         edge::evidence(input)?,
@@ -66,9 +70,7 @@ pub(crate) fn decide(
             answer,
             threshold,
             Meta::new(
-                backend.profile().cloned(),
                 backend.url().clone(),
-                backend.adapter(),
                 reply.model().clone(),
                 reply.usage(),
                 replayed,
@@ -100,33 +102,24 @@ fn ask(
     environment: &Environment,
     recorder: &Recorder,
 ) -> Result<(Reply, bool), Failure> {
-    let body = match backend.adapter() {
-        Adapter::SystemOne => systemone::encode(plan),
-    }
-    .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-    let recorded = Recorded::new(backend.adapter(), backend.url(), &body);
+    let body = systemone::encode(plan)
+        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+    let recorded = Recorded::new(backend.url(), &body);
     if let Some(response) = recorder.replayed(&recorded)? {
-        return Ok((read(backend, plan, &response)?, true));
+        return Ok((systemone::decode(plan, &response)?, true));
     }
-    let key = backend.key_env().map(edge::key).transpose()?;
+    let key = edge::key()?;
     let answered = http::post(&Exchange {
         url: backend.url().as_str(),
         body: &body,
-        key: key.as_ref(),
+        key: &key,
         timeout: Duration::from_secs(arguments.timeout),
         max_retries: arguments.max_retries,
         retry_wait: environment.retry_wait(),
     })?;
-    let reply = read(backend, plan, &answered)?;
+    let reply = systemone::decode(plan, &answered)?;
     recorder.record(&recorded, &answered)?;
     Ok((reply, false))
-}
-
-/// Read one response body in the language the backend speaks.
-fn read(backend: &Backend, plan: &Plan, body: &[u8]) -> Result<Reply, Failure> {
-    match backend.adapter() {
-        Adapter::SystemOne => Ok(systemone::decode(plan, body)?),
-    }
 }
 
 /// Turn the outcome into the exit code `specification/channels.md` fixes.

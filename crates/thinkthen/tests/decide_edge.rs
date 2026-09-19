@@ -37,24 +37,17 @@ fn decide(arguments: &[&str]) -> io::Result<Output> {
     )
 }
 
+/// `--url` names a base and takes no companion option, and the key rule holds.
 #[test]
-fn the_plan_of_an_ad_hoc_backend_prints_six_fields() {
-    let output = decide(&[
-        "--dry-run",
-        "--url",
-        CLOSED,
-        "--adapter",
-        "systemone",
-        "--model",
-        "local-1",
-    ])
-    .expect("the compiled binary runs");
+fn a_url_alone_names_the_base_and_the_key_variable_does_not_change() {
+    let output = decide(&["--dry-run", "--url", CLOSED, "--model", "local-1"])
+        .expect("the compiled binary runs");
 
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
         concat!(
-            r#"{"profile":null,"url":"http://127.0.0.1:1/v1/systemone","adapter":"systemone","#,
-            r#""model":"local-1","key_env":null,"#,
+            r#"{"url":"http://127.0.0.1:1/v1/systemone","model":"local-1","#,
+            r#""key_env":"THINKTHEN_API_KEY","#,
             r#""request":{"state":"Refund me please.","model":"local-1","#,
             r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}"#,
             "\n",
@@ -64,23 +57,26 @@ fn the_plan_of_an_ad_hoc_backend_prints_six_fields() {
     assert_eq!(output.status.code(), Some(0));
 }
 
+/// The plan document, pinned field by field in the order it prints them.
 #[test]
-fn the_plan_of_a_named_profile_names_its_key_variable_and_needs_no_key() {
+fn the_plan_holds_four_fields_and_names_the_key_variable_without_reading_it() {
     let output = decide(&["--dry-run"]).expect("the compiled binary runs");
 
-    let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        printed.starts_with(concat!(
-            r#"{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
-            r#""adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","#,
-        )),
-        "{printed}"
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        concat!(
+            r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","#,
+            r#""key_env":"THINKTHEN_API_KEY","#,
+            r#""request":{"state":"Refund me please.","model":"jev-latest","#,
+            r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}"#,
+            "\n",
+        )
     );
     assert_eq!(output.status.code(), Some(0));
 }
 
 #[test]
-fn the_backend_environment_variables_are_gone_and_change_no_plan() {
+fn the_five_backend_environment_variables_are_gone_and_change_no_plan() {
     let output = run(
         &["decide", "asks for a refund", "--dry-run"],
         &[
@@ -95,7 +91,10 @@ fn the_backend_environment_variables_are_gone_and_change_no_plan() {
     .expect("the compiled binary runs");
 
     let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(printed.contains(r#""profile":"jev""#), "{printed}");
+    assert!(
+        printed.contains(r#""url":"https://api.typesafe.ai/v1/systemone""#),
+        "{printed}"
+    );
     assert!(printed.contains(r#""model":"jev-latest""#), "{printed}");
     assert!(
         printed.contains(r#""key_env":"THINKTHEN_API_KEY""#),
@@ -106,7 +105,7 @@ fn the_backend_environment_variables_are_gone_and_change_no_plan() {
 }
 
 #[test]
-fn a_model_flag_alone_replaces_the_profile_model() {
+fn a_model_flag_replaces_the_default_model() {
     let output = decide(&["--dry-run", "--model", "jev-1.13.0"]).expect("the compiled binary runs");
 
     let printed = String::from_utf8_lossy(&output.stdout);
@@ -116,32 +115,12 @@ fn a_model_flag_alone_replaces_the_profile_model() {
 
 #[test]
 fn each_way_of_naming_no_backend_and_no_threshold_is_a_usage_error() {
-    let cases: [(&[&str], &str); 9] = [
-        (&["--url", CLOSED], "a url with no adapter and no model"),
-        (
-            &["--url", CLOSED, "--adapter", "systemone"],
-            "a url with no model",
-        ),
-        (&["--adapter", "systemone"], "an adapter with no url"),
-        (&["--profile", "nowhere"], "a profile that does not exist"),
-        (
-            &["--url", CLOSED, "--adapter", "rest", "--model", "m"],
-            "an adapter that does not exist",
-        ),
-        (
-            &[
-                "--profile",
-                "jev",
-                "--url",
-                CLOSED,
-                "--adapter",
-                "systemone",
-                "--model",
-                "m",
-            ],
-            "a named profile beside a url",
-        ),
+    let cases: [(&[&str], &str); 7] = [
+        (&["--url", ""], "a blank base"),
+        (&["--url", "   "], "a base of white space"),
+        (&["--url", "ftp://127.0.0.1/v1"], "a base of another scheme"),
         (&["--model", ""], "a blank model"),
+        (&["--model", " "], "a model of white space"),
         (&["--threshold", "90"], "a percent"),
         (&["--threshold", "0.9:0.1"], "a reversed band"),
     ];
@@ -181,6 +160,29 @@ fn every_option_the_old_surface_carried_is_a_usage_error() {
     )
     .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
+fn every_option_the_configuration_surface_carried_is_a_usage_error() {
+    let cases: [&[&str]; 8] = [
+        &["--profile", "jev"],
+        &["--profile", "site"],
+        &["--adapter", "systemone"],
+        &["--adapter", "chat-logprobs"],
+        &["--key-env", "LOCAL_KEY"],
+        &["--config", "site.json"],
+        &["--url", CLOSED, "--adapter", "systemone", "--model", "m"],
+        &["--dry-run", "--profile", "jev"],
+    ];
+
+    for arguments in cases {
+        let output = decide(arguments).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+        assert!(output.stdout.is_empty(), "{arguments:?}");
+        let message = String::from_utf8_lossy(&output.stderr);
+        assert!(message.contains("unexpected argument"), "{message}");
+    }
 }
 
 #[test]
@@ -259,15 +261,8 @@ fn no_diagnostic_ever_carries_the_key_or_the_evidence() {
     let secret = "sk-never-printed";
     let evidence = "The customer wrote something private.";
     let output = run(
-        &[
-            "decide",
-            "asks for a refund",
-            "--key-env",
-            "LOCAL_KEY",
-            "--profile",
-            "nowhere",
-        ],
-        &[("LOCAL_KEY", secret)],
+        &["decide", "asks for a refund", "--url", "ftp://127.0.0.1/v1"],
+        &[("THINKTHEN_API_KEY", secret)],
         evidence.as_bytes(),
     )
     .expect("the compiled binary runs");
@@ -284,16 +279,10 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     let long = run(&["decide", "--help"], &[], b"").expect("the compiled binary runs");
 
     let short = String::from_utf8_lossy(&short.stdout);
-    for option in [
-        "--threshold",
-        "--quiet",
-        "--details",
-        "--dry-run",
-        "--profile",
-    ] {
+    for option in ["--threshold", "--quiet", "--details", "--dry-run"] {
         assert!(short.contains(option), "{option} is missing from {short}");
     }
-    for option in ["--url", "--adapter", "--model", "--key-env", "--record"] {
+    for option in ["--url", "--model", "--record", "--timeout"] {
         assert!(!short.contains(option), "{option} is in the short help");
     }
 
@@ -303,17 +292,17 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
         "--quiet",
         "--details",
         "--dry-run",
-        "--profile",
         "--url",
-        "--adapter",
         "--model",
-        "--key-env",
         "--record",
         "--replay",
         "--timeout",
         "--max-retries",
     ] {
         assert!(long.contains(option), "{option} is missing from {long}");
+    }
+    for gone in ["--profile", "--adapter", "--key-env", "--config"] {
+        assert!(!long.contains(gone), "{gone} is still in {long}");
     }
     assert!(!long.contains("THINKTHEN_TEST_RETRY_WAIT_MS"), "{long}");
     assert!(long.contains("set -e"), "the help warns about set -e");

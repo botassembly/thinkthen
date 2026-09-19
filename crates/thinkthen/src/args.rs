@@ -3,7 +3,6 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
-use thinkthen_core::BackendValues;
 
 /// Put a decider model in the shell.
 #[derive(Debug, Parser)]
@@ -61,25 +60,18 @@ pub(crate) struct DecideArguments {
     #[arg(long)]
     pub(crate) dry_run: bool,
 
-    /// The named backend profile to use.
-    #[arg(long, value_name = "NAME")]
-    pub(crate) profile: Option<String>,
-
-    /// Where the request is posted, with an adapter and a model.
+    /// The base the request is posted under, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL", hide_short_help = true)]
     pub(crate) url: Option<String>,
 
-    /// The wire format the server speaks.
-    #[arg(long, value_name = "NAME", hide_short_help = true)]
-    pub(crate) adapter: Option<String>,
-
     /// The model named in the request.
-    #[arg(long, value_name = "NAME", hide_short_help = true)]
-    pub(crate) model: Option<String>,
-
-    /// The environment variable that holds the key.
-    #[arg(long, value_name = "NAME", hide_short_help = true)]
-    pub(crate) key_env: Option<String>,
+    #[arg(
+        long,
+        value_name = "NAME",
+        default_value = thinkthen_core::DEFAULT_MODEL,
+        hide_short_help = true
+    )]
+    pub(crate) model: String,
 
     /// Call the backend, then write the exchange into DIR. DIR is created when absent.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
@@ -101,17 +93,4 @@ pub(crate) struct DecideArguments {
     /// How many times a transport failure or a retried status is sent again.
     #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
     pub(crate) max_retries: u32,
-}
-
-impl DecideArguments {
-    /// The five backend values the flags offered.
-    pub(crate) fn backend_values(&self) -> BackendValues<'_> {
-        BackendValues::new(
-            self.profile.as_deref(),
-            self.url.as_deref(),
-            self.adapter.as_deref(),
-            self.model.as_deref(),
-            self.key_env.as_deref(),
-        )
-    }
 }
