@@ -72,7 +72,8 @@ Ian can overturn each of these cheaply.
 - **The tokens are counted from the recording**, by reading `input_tokens` out of every entry the job wrote. The ticket allows the recording or a `--details` result, and demo 01 records with `--quiet`, so the recording is the only source a job has to offer.
 - **The ledger is `sdlc/live-tokens`**, two rows of a name and a whole number, with the comments above them kept when the script rewrites the spend. A shell script reads it with `awk` and needs no other tool.
 - **The ledger path is overridable** through `THINKTHEN_LIVE_LEDGER`, which is how the refusal test gives the script a ledger at its limit without touching the committed one.
-- **The refusals exit 1 and a mistake in the call exits 2.** A limit reached and a blank key are the script refusing to spend. A missing job name, a job that is not a file, and a ledger holding no whole numbers are the caller getting the command wrong.
+- **The refusals exit 1 and a mistake in the call exits 2.** A limit reached and a blank key are the script refusing to spend. A missing job name, a job that is not a file, a ledger that is not a file, and a ledger holding no whole numbers are the caller getting the command wrong.
+- **A job that fails still spends.** The ledger is written whatever the job's exit code was, and the run then carries that code out, because a job that stopped partway may already have paid for a call.
 
 ## The ladder
 

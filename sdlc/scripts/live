@@ -25,6 +25,11 @@ if [ ! -f "$job" ]; then
 fi
 shift
 
+if [ ! -f "$LEDGER" ]; then
+	printf 'live: %s is not a file, so the spend cannot be read\n' "$LEDGER" >&2
+	exit 2
+fi
+
 field() {
 	awk -v want="$1" '$1 == want { print $2 }' "$LEDGER"
 }
@@ -59,8 +64,10 @@ export PATH
 stamp=$(mktemp)
 trap 'rm -f -- "$stamp"' EXIT
 
+# A job that fails partway may already have paid for a call, so the ledger is
+# written either way and the job's own status is the status of this run.
 cd -- "$REPO"
-sh -- "$job" "$@"
+sh -- "$job" "$@" && ran=0 || ran=$?
 
 tokens=$(
 	find "$REPO" -path "$REPO/target" -prune -o -type f -name '*.json' -newer "$stamp" \
@@ -74,3 +81,4 @@ mv -- "$LEDGER.new" "$LEDGER"
 
 printf 'live: %s spent %s input tokens, and %s of %s tokens are spent now\n' \
 	"$job" "$tokens" "$total" "$limit"
+exit "$ran"
