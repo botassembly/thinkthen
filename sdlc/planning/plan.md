@@ -15,6 +15,8 @@ A slice is done when its how-tos in `documentation-plan.md` are green, the four 
 
 ## Slices
 
+A row records what its slice delivered on the day. A later slice that removed something says so in its own row.
+
 | Slice | Delivers | Pages | Demos | State |
 | --- | --- | --- | --- | --- |
 | 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version` | | | Done |
@@ -28,7 +30,7 @@ A slice is done when its how-tos in `documentation-plan.md` are green, the four 
 | 8 | `filter`, then `rank` (ticket 0014) | `filter.md`, `rank.md` | 03, 06, 09 | Ticket 0014 is written and waits on ticket 0013 |
 | 9 | `annotate`, with several pointers on `on` and provenance in `meta`. The flagship triage demo lands here with its policy transform | `annotate.md`, `result.md` | 07, 08, 16, 22, 23, 29, 31, 32 | Ticket 0015 builds the command with how-tos 07 and 08 and waits on ticket 0014. A later ticket then writes the flagship and the first eval how-tos with no further code |
 | 10a | Metric transforms as folders under `transforms/`, tried on live `decide --details` rows: counts, accuracy, precision, recall, and F1 at a cut, a sweep of cuts, accuracy at coverage, calibration bands, a comparison of two runs by case id, and the cost of a run | | 13, 24, 25, 28, 38 | Done. Ticket 0008 landed on 2026-09-19 after an independent review that recomputed every number. The judge scored accuracy 0.9744 and F1 0.9744 over 39 labeled cases at the default cut. Six transforms are fine as files. The comparison of two runs is the clumsy one |
-| 10b | The policy transform, the monitors, the grouped sweep, and the check of the judge against human labels. The slice ends with a verdict on Ian's five outcomes for `report` | | 14, 16, 26, 30, 34, 35, 36, 37 | After slice 9 |
+| 10b | First `compare` and `sweep` learn to read any `value`, so one transform serves all three verbs, as ADR 0014 item 6 rules. Then the policy transform, the monitors, the grouped sweep, and the check of the judge against human labels. The slice ends with a verdict on Ian's five outcomes for `report` | | 14, 16, 26, 30, 34, 35, 36, 37 | After slice 9 |
 | 10c | The how-to form for green demos, the check that enforces it, and two how-tos that need only `decide` | | 01, 19, 27 | Done. Ticket 0010 landed on 2026-09-19 after an independent review. Three how-tos are green |
 | 11 | `find`, with a `none` option. Its ticket first repeats the comparison with `rank --top 1` on documents of 100 to 250 lines | `find.md` | 15 | Accepted by ADR 0014 and by Ian in ADR 0015. `find.md` is Settled. The probe held on documents of 11 to 14 lines |
 | 12 | Remove profiles, the configuration file, `config`, `--profile`, `--adapter`, and `--key-env`. Ian accepted this part of ADR 0010 on 2026-09-19 | `backends.md`, `result.md`, `channels.md` | 10 left | Done. Ticket 0007 landed on 2026-09-19. The source ceiling fell from 4,520 to 4,193 lines |

@@ -18,7 +18,7 @@ Ticket 0012 built record mode with one request in flight. `records.md` gives `jo
 
 ## Scope
 
-- `--jobs N` takes a whole number from 1 to 32 and defaults to 4. It appears in the long help alone. `--jobs` outside record mode is a usage error. `records.md` loses the Draft mark on `jobs`, and `channels.md` lists the option.
+- `--jobs N` takes a whole number from 1 to 32 and defaults to 4. It appears in the long help alone. `--jobs` outside record mode is a usage error. `records.md` loses the Draft mark on `jobs`, and `channels.md` lists `--jobs N` and `--cache DIR` among the advanced options.
 - Standard threads and a bounded buffer carry the work. No asynchronous runtime and no new dependency enter for this. The buffer holds at most `N` finished rows ahead of the next row to print, so memory stays flat on a long run.
 - Output never depends on `--jobs`. A run with any `N` prints the bytes that `--jobs 1` prints, on standard output and on standard error.
 - A failed record stops the run as ticket 0012 built it. The rows before the failed record print, and no row after it prints. The line on standard error names the earliest failed record. A request that finished after the failed record is still written under `--record`, because it was billed and a resume should not pay twice. No new request starts after the first failure is seen.

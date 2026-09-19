@@ -27,7 +27,7 @@ The grammar is the verb, then the question, then what the verb needs. No verb ha
 
 An unknown option is a usage error. So is a repeated single-value option, and so is an option that cannot act in the chosen mode. Every one of them exits 2 before any request goes out.
 
-Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--field POINTER`, `--top N`, and `--dry-run`. Each verb's page says which of them it takes.
+Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
 
 Advanced options appear in the long help alone: `--url`, `--model`, `--timeout`, `--max-retries`, `--record DIR`, and `--replay DIR`.
 
