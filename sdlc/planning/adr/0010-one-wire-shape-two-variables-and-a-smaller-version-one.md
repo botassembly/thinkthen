@@ -31,6 +31,7 @@ Ian can overturn each of these cheaply.
 - The order of sources for the address is: the hidden `--url` option, then `THINKTHEN_BASE_URL`, then the default. The key is read from `THINKTHEN_API_KEY`. Ticket 0006 still allowed a hidden `--key-env`, and ticket 0007 removes it.
 - The `chat-logprobs` adapter leaves version one. Ruling 1 makes a second wire format inside the binary unnecessary. A local model is reached by a small server that presents the System One shape, and that server is a separate project.
 - The recipes live in `recipes/` as `.jq` files, each with one example of its use. Demos 13 and 14 use them.
+- `--jobs N` sets how many requests are in flight at once. The default is 4, and it is an advanced option. The configuration file held this setting before it left version one.
 
 ## The configuration file leaves version one
 
