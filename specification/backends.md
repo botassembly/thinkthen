@@ -10,7 +10,7 @@ Settled by ADR 0010.
 
 The key is read from `THINKTHEN_API_KEY` unless the hidden `--key-env` names another variable.
 
-- A key variable that is named and holds no value is exit code 4. The message names the variable and never a value.
+- A key variable that is absent or empty is exit code 4. An empty variable counts as absent. The message names the variable and never a value.
 - No key appears in a plan, a result, a recording, a log line, or an error.
 - A key never crosses hosts. A run pointed at another address sends the key of the variable it was told to read, and nothing else.
 
