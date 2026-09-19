@@ -192,7 +192,7 @@ mod tests {
         let cases = [
             (Failure::NotUtf8, 5, "not valid UTF-8"),
             (Failure::Status(503), 4, "status 503"),
-            (Failure::NoKey("TYPESAFE_API_KEY".to_owned()), 4, "unset"),
+            (Failure::NoKey("THINKTHEN_API_KEY".to_owned()), 4, "unset"),
             (Failure::Defect("a plan asks nothing"), 70, "defect"),
         ];
 
