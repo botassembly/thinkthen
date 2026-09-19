@@ -10,7 +10,7 @@ Status: waiting on ticket 0014
 
 ## Outcome
 
-`annotate FILE` asks a saved question set about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 07 and 08 are green. Ticket 0016 then writes the flagship triage how-to and the first eval how-tos over this command with no further code.
+`annotate FILE` asks a saved question set about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 07 and 08 are green. A later ticket then writes the flagship triage how-to and the first eval how-tos over this command with no further code.
 
 ## Current Facts
 
