@@ -6,6 +6,22 @@ use std::process::ExitCode;
 use thinkthen_core::systemone::DecodeError;
 use thinkthen_core::{BackendError, BlankTextError, PassMarkError, RenderError};
 
+/// The phrase `specification/backends.md` fixes for each common failure status.
+///
+/// The phrases are fixed text written here. A backend can quote the evidence
+/// back in an error body, so nothing a backend sent ever reaches a message.
+const PHRASES: [(u16, &str); 6] = [
+    (401, "the key was refused"),
+    (402, "the account has no credit"),
+    (403, "the key may not use this model or address"),
+    (404, "nothing answers at this address"),
+    (
+        422,
+        "the backend refused the request as malformed or too large",
+    ),
+    (429, "the backend's rate limit was reached"),
+];
+
 /// What stopped the command.
 #[derive(Debug)]
 pub(crate) enum Failure {
@@ -38,8 +54,9 @@ pub(crate) enum Failure {
 /// Say what failed and give the exit code `specification/channels.md` fixes.
 ///
 /// Every message a user reads is written here. No message carries a key or any
-/// evidence text, and a backend that answers with an error status is named by
-/// that status alone, because a server may quote the evidence back in its body.
+/// evidence text. A backend that answers with an error status is named by that
+/// status and by the fixed phrase its status carries, never by its body,
+/// because a server may quote the evidence back in one.
 pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
     let (code, message): (u8, String) = match failure {
         Failure::Backend(error) => (2, error.to_string()),
@@ -50,7 +67,7 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
         ),
         Failure::Transport(what) => (4, format!("the backend could not be reached: {what}")),
-        Failure::Status(status) => (4, format!("the backend answered with status {status}")),
+        Failure::Status(status) => (4, said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
         Failure::NotUtf8 => (5, "the evidence is not valid UTF-8".to_owned()),
@@ -61,6 +78,15 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
     // A diagnostic that cannot be written changes neither the failure nor its code.
     let _unwritten = writeln!(writer, "{}: {message}", thinkthen_core::NAME);
     ExitCode::from(code)
+}
+
+/// Name the status the backend answered with, plus its fixed phrase when it has one.
+fn said(status: u16) -> String {
+    let answered = format!("the backend answered with status {status}");
+    match PHRASES.iter().find(|(code, _)| *code == status) {
+        Some((_, phrase)) => format!("{answered}: {phrase}"),
+        None => answered,
+    }
 }
 
 impl From<BackendError> for Failure {
@@ -97,6 +123,36 @@ impl From<RenderError> for Failure {
 mod tests {
     use super::{Failure, report};
     use std::process::ExitCode;
+
+    #[test]
+    fn a_common_failure_status_carries_the_phrase_the_specification_fixes() {
+        let cases = [
+            (401, "the key was refused"),
+            (402, "the account has no credit"),
+            (403, "the key may not use this model or address"),
+            (404, "nothing answers at this address"),
+            (
+                422,
+                "the backend refused the request as malformed or too large",
+            ),
+            (429, "the backend's rate limit was reached"),
+        ];
+
+        for (status, phrase) in cases {
+            let mut written = Vec::new();
+            report(&Failure::Status(status), &mut written);
+            let message = String::from_utf8(written).expect("a diagnostic is text");
+            assert_eq!(
+                message,
+                format!("thinkthen: the backend answered with status {status}: {phrase}\n")
+            );
+        }
+
+        let mut written = Vec::new();
+        report(&Failure::Status(418), &mut written);
+        let message = String::from_utf8(written).expect("a diagnostic is text");
+        assert_eq!(message, "thinkthen: the backend answered with status 418\n");
+    }
 
     #[test]
     fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
