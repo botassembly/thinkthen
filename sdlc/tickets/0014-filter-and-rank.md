@@ -6,7 +6,7 @@ opens: crates spec specification/filter.md specification/rank.md specification/f
 
 # 0014: `filter` and `rank`
 
-Status: waiting on ticket 0013
+Status: waiting on ticket 0017
 
 ## Outcome
 
@@ -20,6 +20,7 @@ Status: waiting on ticket 0013
 
 - `filter QUESTION (--lines|--jsonl)` prints each kept record byte for byte as it arrived, in input order. `--threshold T` is a single cut and defaults to 0.5. The band form is a usage error with a message that names `decide --details` and `jq` for three piles. An unresolved record cannot occur under a single cut. `--details` prints one result object per record, kept or not.
 - `rank QUESTION (--lines|--jsonl)` prints each record byte for byte, highest probability of yes first, and exact ties keep input order. `--top N` prints the first `N` and saves no request. `--top 0` and a negative `N` are usage errors. `--details` prints the result objects of the printed records in the printed order.
+- Both take the question as text or as `@FILE` holding a `decide` question, and both take `--true TEXT` and `--false TEXT`, exactly as ticket 0017 built them for `decide`. A file that holds a band is refused by both, because neither takes one.
 - A missing framing is a usage error for both. `--quiet` and `--raw` are refused by both, and `rank` refuses `--threshold`. Each refusal names the command to use instead.
 - Both honor `--field`, `--input`, `--jobs`, `--record`, `--replay`, `--cache`, and `--dry-run` as record mode built them. A failed record stops the run. `filter` has then printed a prefix of its output. `rank` has printed nothing, and its line on standard error says so.
 - "Byte for byte" covers a JSON record with odd spacing and a text line with trailing spaces. The record's line ending is written as a line feed.
