@@ -55,6 +55,7 @@ The evidence object is not a string, so it goes out as compact JSON by the rule 
 - A JSON record that holds two members under one name is refused, because no reader can say which of the two a pointer means.
 - A JSON record holding `NaN`, `Infinity`, or a number too large to be finite is refused, because none of the three is a JSON number.
 - A record whose bytes are not valid UTF-8 is refused at exit 5, because bytes that are not text are a local failure rather than a record the tool read.
+- A record over 16 MiB is refused at exit 2 for that record, before any request. The line that ended the record is not part of it. The number is fixed and no option sets it, because the vendor's token budget refuses evidence far smaller than that.
 
 ## Order and requests
 

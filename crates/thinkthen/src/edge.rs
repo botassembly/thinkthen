@@ -14,6 +14,13 @@ use crate::failure::Failure;
 /// The wait before the first retry, which only a test shortens.
 const RETRY_WAIT: Duration = Duration::from_secs(1);
 
+/// The most bytes one record is read from the input.
+///
+/// A record at the limit is taken, and one byte past it is refused, so reading
+/// one byte past the limit settles it. A stream may end a record with `\r\n`,
+/// and neither byte is part of the record, so the bound allows both.
+const BOUND: u64 = thinkthen_core::MAX_RECORD_BYTES as u64 + 2;
+
 /// The environment the command reads, read once.
 ///
 /// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
@@ -101,11 +108,15 @@ impl<R: BufRead> Iterator for Chunks<R> {
             return None;
         }
         let mut bytes = Vec::new();
+        // The core refuses a record past the limit, so nothing beyond the two
+        // bytes that may end one is worth reading. A stream with no line feed
+        // in it would otherwise be read into memory whole.
+        let mut reader = (&mut self.reader).take(BOUND);
         let read = if self.streams {
-            self.reader.read_until(b'\n', &mut bytes)
+            reader.read_until(b'\n', &mut bytes)
         } else {
             self.spent = true;
-            self.reader.read_to_end(&mut bytes)
+            reader.read_to_end(&mut bytes)
         };
         match read {
             Err(error) => {
@@ -176,7 +187,7 @@ pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<bool, Fai
 mod tests {
     use super::{Chunks, write_line};
     use crate::failure::Failure;
-    use std::io::{Error, ErrorKind, Write};
+    use std::io::{Error, ErrorKind, Read as _, Write};
 
     /// A writer that fails every write with the kind the case names.
     struct Failing(ErrorKind);
@@ -201,6 +212,38 @@ mod tests {
             write_line(Failing(ErrorKind::PermissionDenied), "{}"),
             Err(Failure::Output(_))
         ));
+    }
+
+    /// A record with no end in sight is read no further than the refusal needs.
+    ///
+    /// The core refuses anything past the limit, so two bytes past it are
+    /// enough: a record of exactly the limit may still arrive with `\r\n` after
+    /// it. Without the bound a stream with no line feed would be read into
+    /// memory whole, however long it ran.
+    #[test]
+    fn a_record_is_read_no_further_than_two_bytes_past_the_limit() {
+        let endless = thinkthen_core::MAX_RECORD_BYTES * 4;
+        for streams in [true, false] {
+            let reader = std::io::BufReader::new(std::io::repeat(b'x').take(endless as u64));
+            let mut chunks = Chunks::new(reader, streams);
+            let first = chunks.next().expect("one record").expect("bytes");
+
+            assert_eq!(first.len(), thinkthen_core::MAX_RECORD_BYTES + 2);
+        }
+    }
+
+    /// A record of exactly the limit still arrives whole, however it was ended.
+    #[test]
+    fn a_record_of_exactly_the_limit_arrives_whole_with_its_ending() {
+        let limit = thinkthen_core::MAX_RECORD_BYTES;
+        for (ending, expected) in [("", limit), ("\n", limit + 1), ("\r\n", limit + 2)] {
+            let mut bytes = vec![b'x'; limit];
+            bytes.extend_from_slice(ending.as_bytes());
+            let mut chunks = Chunks::new(bytes.as_slice(), true);
+            let first = chunks.next().expect("one record").expect("bytes");
+
+            assert_eq!(first.len(), expected, "{ending:?}");
+        }
     }
 
     #[test]
