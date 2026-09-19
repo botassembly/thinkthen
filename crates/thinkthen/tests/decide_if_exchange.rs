@@ -228,6 +228,28 @@ fn an_error_status_that_is_not_retried_fails_at_once() {
 }
 
 #[test]
+fn a_redirect_is_refused_so_no_key_and_no_evidence_reach_another_host() {
+    let elsewhere = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+    let listener =
+        Listener::serving(vec![Canned::redirect(elsewhere.url())]).expect("a loopback listener");
+
+    let output = decide(
+        listener.url(),
+        &["--max-retries", "0"],
+        Some("sk-secret-value"),
+        "Refund me please.",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(listener.requests().len(), 1);
+    assert!(elsewhere.requests().is_empty());
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    let message = String::from_utf8_lossy(&output.stderr);
+    assert!(message.contains("302"), "{message}");
+}
+
+#[test]
 fn a_reply_the_adapter_refuses_is_exit_four() {
     let listener = Listener::serving(vec![Canned::ok(
         r#"{"model":"jev-1.13.0","answers":{"q2":{"type":"noul","noul":0.9}}}"#,

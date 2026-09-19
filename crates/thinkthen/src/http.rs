@@ -48,6 +48,10 @@ impl fmt::Debug for Exchange<'_> {
 
 /// Post the request and hand back the response body the backend answered with.
 ///
+/// No redirect is followed. A key and the evidence go to the resolved URL and
+/// nowhere else, so a redirect comes back as the status it carries and fails
+/// like any other error status.
+///
 /// # Errors
 ///
 /// Returns [`Failure`] when the backend cannot be reached, when it answers with
@@ -56,6 +60,7 @@ pub(crate) fn post(exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
     let agent: Agent = Agent::config_builder()
         .timeout_global(Some(exchange.timeout))
         .http_status_as_error(false)
+        .max_redirects(0)
         .build()
         .into();
     let mut wait = exchange.retry_wait;

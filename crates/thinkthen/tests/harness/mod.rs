@@ -18,6 +18,15 @@ impl Canned {
         Self::status(200, body)
     }
 
+    /// Answer with a permanent redirect to somewhere else.
+    pub(crate) fn redirect(url: &str) -> Self {
+        Self {
+            status: 302,
+            body: String::new(),
+            location: Some(url.to_owned()),
+        }
+    }
+
     /// Answer with this status and this body.
     pub(crate) fn status(status: u16, body: &str) -> Self {
         Self {
