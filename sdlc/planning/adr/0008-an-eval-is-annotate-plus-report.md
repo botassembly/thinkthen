@@ -23,7 +23,7 @@ thinkthen report [RUN] [--truth LEFT=POINTER]... [--threshold NAME=RULE]... [--b
 ```
 
 - With no option it prints, for each check, the counts of yes, no, and unresolved, the label counts, and the score summary. It also prints the run's facts: the models that answered, the definition digests, the tool versions, and how many rows were replayed. A run that mixes two model versions says so.
-- `--truth NAME=POINTER` compares a judged check with a trusted label inside the case. A yes/no check gets the four counts, accuracy, precision, recall, and F1. Unresolved rows are counted apart and are never scored as right or wrong. The same table is printed for each cut in a sweep, and a calibration table sets each probability band beside the share of cases that were truly yes. A `choose` check gets precision, recall, and F1 for each label, and the macro average.
+- `--truth LEFT=POINTER` compares LEFT with a trusted label inside the case. LEFT is a check's name, or a pointer into the case when it starts with `/`. With a check's name it scores the judge. A yes/no check gets the four counts, accuracy, precision, recall, and F1. Unresolved rows are counted apart and are never scored as right or wrong. The same table is printed for each cut in a sweep, and a calibration table sets each probability band beside the share of cases that were truly yes. A `choose` check gets precision, recall, and F1 for each label, and the macro average.
 - `--truth /POINTER=/POINTER` compares two fields of the case exactly. No judgment is involved. This covers a benchmark where the candidate's label meets a gold label.
 - `--threshold NAME=RULE` applies another rule to the stored probabilities. No request is made.
 - `--baseline RUN` matches cases by `--id`, which defaults to `/id`. It prints the change in every metric, the cases that flipped in each direction, and the cases present in only one run. Rows that share an id inside one run are repeated trials. A metric averages within a case first, so a case tried five times weighs the same as a case tried once.
@@ -44,13 +44,10 @@ One request carries one piece of evidence and every question asked of it. The ba
 | `annotate` on one document | 1 for each distinct `on` | Every question with the same evidence rides together |
 | `decide`, `choose`, `score`, `filter`, `rank` over N records | N | One evidence per record. `rank` sorts locally and makes no pairwise calls |
 | `annotate` over N records | N times the distinct `on` sets | As above |
-| `segment`, whole document | 1 | One evidence, one question per gap |
-| `segment`, windowed | one for each gap | Each gap has its own small evidence |
+| `segment` | 1 | One evidence, one question per gap. ADR 0009 drops the windowed form |
 | `report`, `config`, `--dry-run`, `--replay` | 0 | |
 
 Every request inside one command is independent of every other, so a command is one round, and the round runs in parallel up to the `jobs` setting with output order kept. The vendor's rate limit is the real ceiling. No version-one command needs an earlier answer to form a later request. The held verbs `reduce`, `state`, and `patch` do, and that is one more reason they are held.
-
-`segment` stays Draft on this point. The whole-document form is one request and sends the text once. The windowed form asks the narrow kind of question that has been measured. A measurement picks the default.
 
 ## Consequences
 
