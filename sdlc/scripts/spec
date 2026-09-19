@@ -1,5 +1,5 @@
 #!/bin/sh
-# Rung 3: the compiled binary against the executable pages in spec/.
+# Rung 3: the compiled binary against the executable pages in spec/ and every green demo.
 set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -11,4 +11,8 @@ if ! command -v mustmatch >/dev/null 2>&1; then
 fi
 
 cargo build --locked --quiet --package thinkthen
-exec env PATH="$REPO/target/debug:$PATH" mustmatch test spec
+PATH="$REPO/target/debug:$PATH"
+export PATH
+
+mustmatch test spec
+exec sh -- "$REPO/sdlc/scripts/demos"

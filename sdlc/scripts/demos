@@ -1,0 +1,38 @@
+#!/bin/sh
+# Run every demo page marked green, from its own folder, against the binary on PATH.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+ROOT=${1:-demos}
+
+if ! command -v mustmatch >/dev/null 2>&1; then
+	printf 'demos: mustmatch is not on PATH\n' >&2
+	exit 1
+fi
+
+cd -- "$REPO/$ROOT"
+
+green=0
+red=0
+for page in */README.md; do
+	[ -f "$page" ] || continue
+	folder=$(dirname -- "$page")
+	if ! grep -q '^Status: green$' "$page"; then
+		red=$((red + 1))
+		continue
+	fi
+	# A green page replays a recording. A folder it names and does not hold
+	# would send the page to a backend, so the run stops here instead.
+	for named in $(sed -n 's/.*--replay \([^ ]*\).*/\1/p' "$page" | sort -u); do
+		if [ ! -d "$folder/$named" ]; then
+			printf 'demos: %s is green, and it names no folder %s\n' "$page" "$named" >&2
+			exit 1
+		fi
+	done
+	# mustmatch runs a block from the folder of the page it came from, so the
+	# relative paths a demo reads its own input files by are the demo's own.
+	printf 'demos: running %s\n' "$page"
+	mustmatch test "$page"
+	green=$((green + 1))
+done
+printf 'demos: %s green, %s red\n' "$green" "$red"
