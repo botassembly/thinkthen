@@ -138,15 +138,15 @@ pub fn resolve_backend(
     flags: BackendValues<'_>,
     environment: BackendValues<'_>,
 ) -> Result<Backend, BackendError> {
-    let name = given(flags.backend, environment.backend, |text: &str| {
+    let (name, name_from_flag) = given(flags.backend, environment.backend, |text: &str| {
         BackendName::new(text)
     })?;
-    let url = given(flags.url, environment.url, |text: &str| Url::new(text))?;
-    let adapter = given(flags.adapter, environment.adapter, Adapter::from_str)?;
-    let model = given(flags.model, environment.model, |text: &str| {
+    let (url, url_from_flag) = given(flags.url, environment.url, |text: &str| Url::new(text))?;
+    let (adapter, _) = given(flags.adapter, environment.adapter, Adapter::from_str)?;
+    let (model, _) = given(flags.model, environment.model, |text: &str| {
         ModelName::new(text)
     })?;
-    let key_env = given(flags.key_env, environment.key_env, |text: &str| {
+    let (key_env, _) = given(flags.key_env, environment.key_env, |text: &str| {
         KeyVar::new(text)
     })?;
 
@@ -156,7 +156,7 @@ pub fn resolve_backend(
         }
         return from_profile(name, model, key_env);
     };
-    if name.is_some() {
+    if name.is_some() && (name_from_flag || !url_from_flag) {
         return Err(BackendError::NameWithUrl);
     }
     let (Some(adapter), Some(model)) = (adapter, model) else {
@@ -171,19 +171,20 @@ pub fn resolve_backend(
     })
 }
 
-/// Take the flag when it is there, the environment variable otherwise, and read it.
+/// Read the flag when it is there, the environment variable otherwise.
+///
+/// The second value of the pair says whether a flag offered it, which is what
+/// settles a profile name standing beside a URL.
 fn given<T, E>(
     flag: Option<&str>,
     environment: Option<&str>,
     read: impl Fn(&str) -> Result<T, E>,
-) -> Result<Option<T>, BackendError>
+) -> Result<(Option<T>, bool), BackendError>
 where
     BackendError: From<E>,
 {
-    flag.or(environment)
-        .map(read)
-        .transpose()
-        .map_err(Into::into)
+    let value = flag.or(environment).map(read).transpose()?;
+    Ok((value, flag.is_some()))
 }
 
 /// Fill a named profile in, letting a model and a key variable replace its own.
@@ -275,6 +276,50 @@ mod tests {
                 "jev-latest",
                 Some("OTHER_KEY"),
             )
+        );
+    }
+
+    #[test]
+    fn a_name_beside_a_url_is_read_from_the_source_each_one_came_from() {
+        let url = "http://127.0.0.1:8080/v1";
+        let named = |backend| BackendValues::new(backend, None, None, None, None);
+        let ad_hoc = |backend| {
+            BackendValues::new(backend, Some(url), Some("systemone"), Some("local-1"), None)
+        };
+        let nothing = BackendValues::default();
+
+        // A flag naming a profile beside a URL is the usage error the page fixes,
+        // whichever source the URL came from. Two environment variables that
+        // disagree are the same usage error. Only an environment name beside a
+        // URL given by flags yields, because a flag beats an environment variable.
+        assert_eq!(
+            resolve(ad_hoc(Some("jev")), nothing),
+            Err(BackendError::NameWithUrl)
+        );
+        assert_eq!(
+            resolve(named(Some("jev")), ad_hoc(None)),
+            Err(BackendError::NameWithUrl)
+        );
+        assert_eq!(
+            resolve(nothing, ad_hoc(Some("jev"))),
+            Err(BackendError::NameWithUrl)
+        );
+
+        let backend = resolve(ad_hoc(None), named(Some("jev")))
+            .expect("an environment name yields to an ad-hoc backend given by flags");
+        assert_eq!(
+            flat(&backend),
+            (None, url, Adapter::SystemOne, "local-1", None)
+        );
+
+        // The yielded name changes nothing else. A URL from flags that is not a
+        // whole ad-hoc backend is still incomplete.
+        assert_eq!(
+            resolve(
+                BackendValues::new(None, Some(url), None, None, None),
+                named(Some("jev"))
+            ),
+            Err(BackendError::IncompleteAdHoc)
         );
     }
 

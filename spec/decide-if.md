@@ -40,6 +40,15 @@ env THINKTHEN_MODEL=' ' sh -c "printf 'Refund me please.' | thinkthen decide if 
 echo "$status" | mustmatch like "2"
 ```
 
+A profile named only by `THINKTHEN_BACKEND` yields to an ad-hoc backend given by flags, because a flag beats an environment variable. The `--backend` flag beside a URL is a usage error, and so are a name and a URL that both come from the environment.
+
+```bash
+env THINKTHEN_BACKEND=jev sh -c "printf 'x' | thinkthen decide if 'asks for a refund' --plan --url http://127.0.0.1:1/v1 --adapter systemone --model local-1" | grep -c '"backend":null' | mustmatch like "1"
+status=0
+env THINKTHEN_BACKEND=jev THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 sh -c "printf 'x' | thinkthen decide if 'asks for a refund' --plan" >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+```
+
 A model alone replaces the profile's model, which is how a run is pinned to one version.
 
 ```bash

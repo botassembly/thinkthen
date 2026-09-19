@@ -119,6 +119,53 @@ fn environment_variables_name_a_backend_and_a_flag_beats_them() {
 }
 
 #[test]
+fn a_profile_named_only_by_the_environment_yields_to_an_ad_hoc_backend() {
+    let ad_hoc = &[
+        "decide",
+        "if",
+        "asks for a refund",
+        "--plan",
+        "--url",
+        CLOSED,
+        "--adapter",
+        "systemone",
+        "--model",
+        "local-1",
+    ];
+
+    let output = run(
+        ad_hoc,
+        &[("THINKTHEN_BACKEND", "jev")],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(printed.starts_with(r#"{"backend":null,"#), "{printed}");
+    assert_eq!(output.status.code(), Some(0));
+
+    let output = run(
+        &[ad_hoc, &["--backend", "jev"][..]].concat(),
+        &[],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2));
+
+    let output = run(
+        &["decide", "if", "asks for a refund", "--plan"],
+        &[
+            ("THINKTHEN_BACKEND", "jev"),
+            ("THINKTHEN_URL", CLOSED),
+            ("THINKTHEN_ADAPTER", "systemone"),
+            ("THINKTHEN_MODEL", "local-1"),
+        ],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
 fn an_empty_environment_variable_is_unset_and_white_space_is_still_refused() {
     let output = run(
         &["decide", "if", "asks for a refund", "--plan"],
