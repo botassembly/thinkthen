@@ -1,6 +1,6 @@
 //! The JSON document one judgment prints.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::answer::Answer;
 use crate::assessment::Assessment;
@@ -10,16 +10,8 @@ use crate::text::{BackendName, ModelName};
 /// The schema string a version one result carries.
 pub const SCHEMA: &str = "thinkthen.result/1";
 
-/// Which schema the document follows. Version one is the only one.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-enum Schema {
-    /// The shape `specification/result.md` settles for `decide if`.
-    #[serde(rename = "thinkthen.result/1")]
-    V1,
-}
-
 /// The wire formats an adapter speaks. Version one speaks one of them.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Adapter {
     /// The `systemone` request and response format.
@@ -27,8 +19,7 @@ pub enum Adapter {
 }
 
 /// What the backend reported it spent on the judgment.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub struct Usage {
     input_tokens: u64,
     output_tokens: u64,
@@ -58,8 +49,7 @@ impl Usage {
 }
 
 /// Who answered, how, and at what cost.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Meta {
     backend: BackendName,
     adapter: Adapter,
@@ -114,10 +104,9 @@ impl Meta {
 }
 
 /// One judgment, in the shape `specification/result.md` prints.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct DecisionResult {
-    schema: Schema,
+    schema: &'static str,
     question: Question,
     answer: Answer,
     assessment: Assessment,
@@ -134,7 +123,7 @@ impl DecisionResult {
         meta: Meta,
     ) -> Self {
         Self {
-            schema: Schema::V1,
+            schema: SCHEMA,
             question,
             answer,
             assessment,
@@ -178,20 +167,7 @@ mod tests {
     use crate::question::Question;
     use crate::text::{BackendName, Condition, ModelName};
 
-    /// The example in `specification/result.md`, copied word for word.
-    const EXAMPLE: &str = r#"{
-  "schema": "thinkthen.result/1",
-  "question": { "verb": "if", "condition": "asks for a refund" },
-  "answer": { "kind": "yes_no", "probability": 0.92 },
-  "assessment": { "status": "accepted", "value": true, "min_prob": 0.9 },
-  "meta": {
-    "backend": "jev",
-    "adapter": "systemone",
-    "model": "jev-1.13.0",
-    "usage": { "input_tokens": 312, "output_tokens": 48 }
-  }
-}"#;
-
+    /// The example in `specification/result.md`, on the one line it prints on.
     const COMPACT: &str = concat!(
         r#"{"schema":"thinkthen.result/1","#,
         r#""question":{"verb":"if","condition":"asks for a refund"},"#,
@@ -235,12 +211,6 @@ mod tests {
     }
 
     #[test]
-    fn the_example_in_the_specification_parses_to_the_same_value() {
-        let parsed: DecisionResult = serde_json::from_str(EXAMPLE).expect("the example parses");
-        assert_eq!(parsed, example());
-    }
-
-    #[test]
     fn usage_is_absent_when_the_backend_reports_none() {
         let meta = Meta::new(
             BackendName::new("jev").expect("not empty"),
@@ -265,12 +235,5 @@ mod tests {
             rendered,
             r#"{"status":"unassessed","value":null,"min_prob":null}"#
         );
-    }
-
-    #[test]
-    fn a_document_under_another_schema_is_refused() {
-        let wrong = EXAMPLE.replace("thinkthen.result/1", "thinkthen.result/2");
-        let parsed = serde_json::from_str::<DecisionResult>(&wrong);
-        assert!(parsed.is_err(), "another schema is not this schema");
     }
 }

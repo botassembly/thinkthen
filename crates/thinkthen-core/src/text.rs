@@ -1,6 +1,6 @@
 //! The text values a judgment carries: the condition, the backend, and the model.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use thiserror::Error;
 
 /// Which text value arrived empty.
@@ -21,8 +21,8 @@ pub enum EmptyTextError {
 macro_rules! non_empty_text {
     ($name:ident, $variant:ident, $what:literal) => {
         #[doc = concat!("The ", $what, ", as text that is not empty.")]
-        #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-        #[serde(into = "String", try_from = "String")]
+        #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+        #[serde(into = "String")]
         pub struct $name(String);
 
         impl $name {
@@ -43,14 +43,6 @@ macro_rules! non_empty_text {
             #[must_use]
             pub fn as_str(&self) -> &str {
                 &self.0
-            }
-        }
-
-        impl TryFrom<String> for $name {
-            type Error = EmptyTextError;
-
-            fn try_from(text: String) -> Result<Self, EmptyTextError> {
-                Self::new(text)
             }
         }
 

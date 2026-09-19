@@ -1,14 +1,13 @@
 //! What local policy made of an answer: accepted, unsure, or unassessed.
 
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
+use serde::Serialize;
 
 use crate::answer::Answer;
 use crate::pass_mark::PassMark;
 use crate::policy::Policy;
 
 /// How far local policy got with the answer.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AssessmentStatus {
     /// The answer reached the pass mark, and `value` says which way.
@@ -19,59 +18,12 @@ pub enum AssessmentStatus {
     Unassessed,
 }
 
-/// Why three fields do not make an assessment.
-#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
-#[error("an assessment status must agree with its value and its pass mark")]
-pub struct AssessmentShapeError;
-
 /// What local policy made of the answer.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(try_from = "Fields")]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Assessment {
     status: AssessmentStatus,
     value: Option<bool>,
     min_prob: Option<PassMark>,
-}
-
-/// The three fields as a document offers them, before the shape is checked.
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Fields {
-    status: AssessmentStatus,
-    value: Option<bool>,
-    min_prob: Option<PassMark>,
-}
-
-/// Say whether one status agrees with the value and the mark beside it.
-///
-/// A yes and a no both carry a value and the mark they passed. An unsure
-/// carries the mark it missed. An unassessed carries neither.
-const fn consistent(
-    status: AssessmentStatus,
-    value: Option<bool>,
-    min_prob: Option<PassMark>,
-) -> bool {
-    matches!(
-        (status, value, min_prob),
-        (AssessmentStatus::Accepted, Some(_), Some(_))
-            | (AssessmentStatus::Unsure, None, Some(_))
-            | (AssessmentStatus::Unassessed, None, None)
-    )
-}
-
-impl TryFrom<Fields> for Assessment {
-    type Error = AssessmentShapeError;
-
-    fn try_from(fields: Fields) -> Result<Self, AssessmentShapeError> {
-        if !consistent(fields.status, fields.value, fields.min_prob) {
-            return Err(AssessmentShapeError);
-        }
-        Ok(Self {
-            status: fields.status,
-            value: fields.value,
-            min_prob: fields.min_prob,
-        })
-    }
 }
 
 impl Assessment {
@@ -130,7 +82,7 @@ pub fn assess(answer: Answer, policy: Policy) -> Assessment {
 
 #[cfg(test)]
 mod tests {
-    use super::{Assessment, AssessmentStatus, assess, consistent};
+    use super::{Assessment, AssessmentStatus, assess};
     use crate::answer::Answer;
     use crate::pass_mark::PassMark;
     use crate::policy::Policy;
@@ -190,25 +142,6 @@ mod tests {
         assert_eq!(unassessed.min_prob(), None);
     }
 
-    #[test]
-    fn a_document_whose_status_contradicts_its_fields_is_refused() {
-        let refused = [
-            r#"{"status":"accepted","value":null,"min_prob":0.9}"#,
-            r#"{"status":"accepted","value":true,"min_prob":null}"#,
-            r#"{"status":"unsure","value":true,"min_prob":0.9}"#,
-            r#"{"status":"unsure","value":null,"min_prob":null}"#,
-            r#"{"status":"unassessed","value":false,"min_prob":null}"#,
-            r#"{"status":"unassessed","value":null,"min_prob":0.9}"#,
-        ];
-        for document in refused {
-            let parsed = serde_json::from_str::<Assessment>(document);
-            assert!(parsed.is_err(), "{document}");
-        }
-        let accepted = r#"{"status":"accepted","value":true,"min_prob":0.9}"#;
-        let parsed: Assessment = serde_json::from_str(accepted).expect("a shaped assessment");
-        assert_eq!(parsed.status(), AssessmentStatus::Accepted);
-    }
-
     fn probabilities() -> impl Strategy<Value = f64> {
         0.0_f64..=1.0
     }
@@ -218,11 +151,19 @@ mod tests {
     }
 
     /// One status, and the fields that status allows. Nothing else is legal.
+    ///
+    /// A yes and a no both carry a value and the mark they passed. An unsure
+    /// carries the mark it missed. An unassessed carries neither.
     fn shaped(assessment: &Assessment) -> bool {
-        consistent(
-            assessment.status(),
-            assessment.value(),
-            assessment.min_prob(),
+        matches!(
+            (
+                assessment.status(),
+                assessment.value(),
+                assessment.min_prob()
+            ),
+            (AssessmentStatus::Accepted, Some(_), Some(_))
+                | (AssessmentStatus::Unsure, None, Some(_))
+                | (AssessmentStatus::Unassessed, None, None)
         )
     }
 

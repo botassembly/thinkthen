@@ -1,11 +1,11 @@
 //! The question a judgment asks: one verb and what it asks about.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::text::Condition;
 
 /// The verbs `decide` knows. Version one judges a condition and nothing else.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Verb {
     /// Ask whether a condition holds for the evidence.
@@ -13,8 +13,7 @@ pub enum Verb {
 }
 
 /// What the judgment was asked.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Question {
     verb: Verb,
     condition: Condition,

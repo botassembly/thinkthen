@@ -1,6 +1,6 @@
 //! A pass mark: the symmetric probability a judgment must reach to be accepted.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use thiserror::Error;
 
 /// Why a number is not a pass mark.
@@ -18,8 +18,8 @@ pub enum PassMarkError {
 }
 
 /// The probability a judgment must reach before local policy accepts it.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
-#[serde(into = "f64", try_from = "f64")]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(into = "f64")]
 pub struct PassMark(f64);
 
 impl PassMark {
@@ -46,14 +46,6 @@ impl PassMark {
     #[must_use]
     pub const fn as_f64(self) -> f64 {
         self.0
-    }
-}
-
-impl TryFrom<f64> for PassMark {
-    type Error = PassMarkError;
-
-    fn try_from(value: f64) -> Result<Self, PassMarkError> {
-        Self::new(value)
     }
 }
 

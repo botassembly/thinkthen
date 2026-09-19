@@ -1,11 +1,11 @@
 //! The answer a backend gave, in thinkthen's own words.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::probability::Probability;
 
 /// The shapes of answer `decide` knows. Version one reads a yes/no answer.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AnswerKind {
     /// A probability that the condition holds.
@@ -13,8 +13,7 @@ pub enum AnswerKind {
 }
 
 /// What the backend said, carrying no vendor field name.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Answer {
     kind: AnswerKind,
     probability: Probability,

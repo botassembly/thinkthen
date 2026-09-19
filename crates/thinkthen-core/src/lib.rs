@@ -19,7 +19,7 @@ mod result;
 mod text;
 
 pub use crate::answer::{Answer, AnswerKind};
-pub use crate::assessment::{Assessment, AssessmentShapeError, AssessmentStatus, assess};
+pub use crate::assessment::{Assessment, AssessmentStatus, assess};
 pub use crate::pass_mark::{PassMark, PassMarkError};
 pub use crate::policy::Policy;
 pub use crate::probability::{Probability, ProbabilityError};
