@@ -1,6 +1,6 @@
 # `choose`
 
-Status: **Settled** for version one, by ADR 0007. **Draft** for `--options POINTER`.
+Status: **Settled** for version one, by ADR 0007 and ADR 0010.
 
 Picks one label from a fixed list.
 
@@ -26,7 +26,7 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 | --- | --- | --- |
 | `--threshold T` | A single cut on the winning option's probability. The band form is a usage error. See [threshold.md](threshold.md) | None. The winning label is returned |
 | `--raw` | Prints the label without quotation marks | Off |
-| `--options POINTER` | Draft. Takes the options from each record. See below | None. The options come from the arguments |
+| `--options POINTER` | Takes the options from each record. See below | None. The options come from the arguments |
 | `--quiet` | Prints nothing on standard output | Off |
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
@@ -35,7 +35,7 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 
 ## Options from the record
 
-Draft, from Proposed ADR 0009. `--options POINTER` names a list of labels, or a map from label to description, inside each record. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error, and `--options` outside `--lines` or `--jsonl` is a usage error.
+Settled by ADR 0009 item 4, accepted in ADR 0010. `--options POINTER` names a list of labels, or a map from label to description, inside each record. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error, and `--options` outside `--lines` or `--jsonl` is a usage error.
 
 ```sh
 thinkthen choose 'Which of these codes fits the note?' --jsonl --field /note --options /codes < notes.jsonl

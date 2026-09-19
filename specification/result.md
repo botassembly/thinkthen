@@ -1,6 +1,6 @@
 # The result
 
-Status: **Settled** for the bare value, the object, and the three answer kinds. **Draft** for `confidence`, `meta.tool`, and the two `annotate` digests.
+Status: **Settled** for the bare value, the object, the three answer kinds, the full distribution with `confidence`, and the two `annotate` digests. ADR 0010 accepted the last three. One open point is left at the foot of the page.
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
@@ -33,7 +33,7 @@ Every value is compact and sits on one line, so one answer is also one record fo
 
 ## A detailed result keeps everything
 
-Draft, from Proposed ADR 0009. `answer` carries the probability of every option or every level, and it carries the backend's own `confidence` when the backend reports one. A saved run can then be swept at another rule with no second request.
+Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probability of every option or every level, and it carries the backend's own `confidence` when the backend reports one. A saved run can then be swept at another rule with no second request.
 
 `confidence` is present only when the backend sends it. No cut is taken on it. [backends.md](backends.md) says why.
 
@@ -65,7 +65,7 @@ Draft, from Proposed ADR 0009. `answer` carries the probability of every option 
 
 | Field | Holds |
 | --- | --- |
-| `tool` | Draft, from Proposed ADR 0008. The name and version of the binary that made the row |
+| `tool` | The name and version of the binary that made the row |
 | `profile` | The backend profile's name, or `null` for an ad-hoc backend |
 | `url` | The URL that answered |
 | `adapter` | The adapter name, from [backends.md](backends.md) |
@@ -91,7 +91,7 @@ In record mode the object also carries `input`, the original record. `input` hol
 
 Each entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints.
 
-Draft, from Proposed ADR 0008. `meta.questions_sha256` is the digest of the definition file, so a saved row names the definition that made it. Each answer carries `request`, the digest that also names the recording entry, so a row can be traced to the exchange that produced it. Two answers that rode in one request carry the same digest.
+Settled by ADR 0008 item 3, accepted in ADR 0010. `meta.questions_sha256` is the digest of the definition file, so a saved row names the definition that made it. Each answer carries `request`, the digest that also names the recording entry, so a row can be traced to the exchange that produced it. Two answers that rode in one request carry the same digest.
 
 `meta.usage` is the sum over the record's requests.
 

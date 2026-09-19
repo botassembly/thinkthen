@@ -1,6 +1,6 @@
 # Records
 
-Status: **Settled** for version one, by ADR 0007. **Draft** for several pointers on `--field`, for the request table, and for the default of `jobs`.
+Status: **Settled** for version one, by ADR 0007 and ADR 0010. **Draft** for the default of `jobs`.
 
 The default input is one text document. A record stream turns a command into a map over records. [channels.md](channels.md) governs the five channels, and [result.md](result.md) governs the shape of one result.
 
@@ -38,7 +38,7 @@ The tool never guesses the framing. It never repairs invalid JSON, never truncat
 
 ### Several pointers
 
-Draft, from Proposed ADR 0008. `--field` takes one pointer or several. Several pointers build an evidence object, each member keyed by the last part of its pointer. Two members that would share one key are a usage error.
+Settled by ADR 0008 item 2, accepted in ADR 0010. `--field` takes one pointer or several. Several pointers build an evidence object, each member keyed by the last part of its pointer. Two members that would share one key are a usage error.
 
 ```sh
 thinkthen decide 'The output answers the input correctly.' --jsonl --field /input --field /output < cases.jsonl
@@ -54,7 +54,7 @@ Records never share model context, and no answer reaches another record's questi
 
 ### How many requests each command makes
 
-One request carries one piece of evidence and every question asked of it. Two pieces of evidence never share a request, because records must not see each other and a check must not see a field outside its pointers.
+Settled by ADR 0008, accepted in ADR 0010. One request carries one piece of evidence and every question asked of it. Two pieces of evidence never share a request, because records must not see each other and a check must not see a field outside its pointers.
 
 | Command | Requests |
 | --- | --- |
@@ -73,7 +73,7 @@ An empty record stream succeeds with no output and no request. An empty document
 
 ## Failure
 
-A run stops at the first failed record. Rows already printed stay printed, and the run ends with the code the failure earns: 4 for a backend failure, 5 for a local failure, 2 for a record the tool refused before sending it. No failure ever becomes `false`, `null`, a label, or a zero.
+Settled by ADR 0008 item 5, accepted in ADR 0010. A run stops at the first failed record. Rows already printed stay printed, and the run ends with the code the failure earns: 4 for a backend failure, 5 for a local failure, 2 for a record the tool refused before sending it. No failure ever becomes `false`, `null`, a label, or a zero.
 
 A run that stops early prints one line on standard error: the record it stopped at, how many records it finished, and how many of those came from a recording. A run that finishes prints nothing there. Printed output after a failure is a prefix of the input. It is not a finished dataset.
 
@@ -82,6 +82,8 @@ An unresolved answer is never retried. In record mode the exit code reports the 
 ## Resume
 
 A rerun with `--record DIR --replay DIR` on one folder answers the finished records from disk and pays only for the rest. [recording.md](recording.md) gives the folder and the entry.
+
+`--cache DIR` means `--record DIR --replay DIR`, by ADR 0010. It is Settled. `--cache` beside either of the two options it stands for is a usage error.
 
 ```sh
 thinkthen decide 'This reports a payment failure.' --jsonl --field /body --record runs/tickets --replay runs/tickets < tickets.jsonl

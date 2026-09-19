@@ -57,6 +57,22 @@ fi
 thinkthen decide 'Does this report a payment failure?' --jsonl --field /body --details < tickets.jsonl
 ```
 
+## Reading the exit code
+
+The help shows a `case $?` block. It separates a no from an unresolved answer and from a failure, and a script that acts on the answer reads all four outcomes.
+
+```sh
+thinkthen decide 'The customer explicitly requests a refund.' --threshold 0.1:0.9 --quiet < message.txt
+case $? in
+  0) route refunds ;;
+  1) route support ;;
+  3) route triage ;;
+  *) printf 'the judge failed\n' >&2; exit 4 ;;
+esac
+```
+
+The help shows one piece of advice beside that block. Word the question in the form where yes permits the action. A failure then never permits anything, because every outcome other than 0 leaves the action undone.
+
 ## Cautions
 
 `decide` exits 1 on a no and 3 on an unresolved answer. Under `set -e` or `set -o pipefail` that ends a script. Put the command in an `if`, a `case`, or a `||` list. [channels.md](channels.md) says more.

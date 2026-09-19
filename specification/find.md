@@ -1,6 +1,6 @@
 # `find`
 
-Status: **Draft**, from Proposed ADR 0009. `find` is planned after `rank` and is not part of version one until the owner accepts that ADR.
+Status: **Draft**. ADR 0010 keeps `find` out of version one. Nothing is built from this page until a live run compares `find` with `rank --top 1` on the same units. If `find` picks as well, it enters. If it picks worse, it moves to the roadmap.
 
 Picks the unit that best answers a question, out of a set the model sees all at once.
 

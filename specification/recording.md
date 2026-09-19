@@ -37,6 +37,8 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
 - A `DIR` the tool creates is readable by its owner alone, and so is every entry the tool writes, because a recording holds the evidence. On Unix that is mode `0700` for the folder and `0600` for each file, whatever the umask says. A `DIR` that already exists keeps the mode it has.
 - Recording the same request again replaces the entry. A decider model can answer differently on another day, and the newest answer wins.
 
+The first live answers on 2026-09-19 returned the same probability for two identical requests. ADR 0010 holds the measurement. A repeated trial therefore means something only when the candidate's output changes.
+
 ## What replay changes in a result
 
 `meta.replayed` is `true` when the answer came from a recording and `false` when a backend answered. It is always present. Everything else in the result is what the recorded response yields, the usage included. A later token ledger counts only answers that a backend gave.

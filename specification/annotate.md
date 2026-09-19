@@ -1,6 +1,6 @@
 # `annotate`
 
-Status: **Settled** for the file grammar and the output. **Draft** for several pointers on `on` and for structured question values.
+Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one.
 
 Asks a saved file of questions about each record and adds one field per question.
 
@@ -28,21 +28,17 @@ thinkthen annotate FILE [--lines|--jsonl] [--field POINTER] [--details] [--dry-r
 
 A question has exactly one of `decide`, `choose`, or `score`, and its value is the question text. `options` is a list of labels or a map from label to description. `levels` is a list, lowest first. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name uses lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error.
 
-The top-level `threshold` applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`. The file holds questions and nothing else. It holds no profile, no output path, and no format.
+The top-level `threshold` applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`. The file holds questions and nothing else. It holds no profile, no output path, and no format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 
 `on` is a JSON Pointer inside the evidence that `--field` selected. It can never reach outside that evidence. A table asks different questions of different columns, and no question should see a column it does not need.
 
 ### Several pointers on `on`
 
-Draft, from Proposed ADR 0008. `on` takes one pointer or several. Several pointers build an evidence object, each member keyed by the last part of its pointer, and two members that would share one key are an error in the file. A correctness check names `/input`, `/gold`, and `/output`. A grounding check beside it names `/context` and `/output` and never sees the gold answer.
+Settled by ADR 0008 item 2, accepted in ADR 0010. `on` takes one pointer or several. Several pointers build an evidence object, each member keyed by the last part of its pointer, and two members that would share one key are an error in the file. A correctness check names `/input`, `/gold`, and `/output`. A grounding check beside it names `/context` and `/output` and never sees the gold answer.
 
 ```json
 {"grounded": {"decide": "Is every claim in the output supported by the context?", "on": ["/context", "/output"]}}
 ```
-
-### Structured questions
-
-Draft, from Proposed ADR 0009. A question text, and each option or level description, may be any JSON value. The tool passes it through unchanged. Two options that people confuse are easier to separate when each one carries a small object of its own conditions. The command line keeps plain strings.
 
 ## What it prints
 

@@ -65,4 +65,17 @@ thinkthen score 'How much disruption does this report?' 'None.' 'Work continues 
   jq -e '. >= 2' > /dev/null && page oncall
 ```
 
+`score` takes no threshold at all, and no option on it sets an exit code. ADR 0010 settles that.
+
+The Bash way to branch on levels is `choose` with the levels as ordered labels. The help shows it beside the `jq` line.
+
+```sh
+case "$(thinkthen choose 'How much disruption does this report?' none workaround blocked --raw < ticket.txt)" in
+  blocked) page oncall ;;
+  workaround) queue review ;;
+  none) : ;;
+  "") queue review ;;
+esac
+```
+
 A script that compares two runs over different level lists divides each number by K−1 first. The two scales are otherwise different.

@@ -37,6 +37,7 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | A two-pass `find` beyond 255 units | One request holds 255 units. A second pass over the winners would need a merge rule and a second measurement | A job whose candidate set cannot be cut to 255 upstream |
 | `config set` | An editor changes a JSON file. A writer would be the first thing in this tool that writes a file the user did not name | A demand strong enough to change that rule |
 | A subprocess adapter | It is the escape hatch for a vendor whose shape is not System One. Dynamic plugin libraries stay refused | A vendor worth supporting that no small server can put behind the System One shape |
+| A structured question or option description | ADR 0010 strikes it from version one. Every question on the demo pages is one sentence, and no demo reached for a JSON value | A demo whose two options cannot be told apart in one sentence |
 | `--none` on `choose` | The old `which` added an option meaning that no other option fits. A user adds `other` to the list and gets the same answer | A demo where the list is generated and cannot take an extra label |
 
 ## Held by ADR 0010
