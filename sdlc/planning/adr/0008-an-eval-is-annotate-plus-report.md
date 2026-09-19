@@ -1,6 +1,6 @@
 # ADR 0008: An eval is `annotate` plus `report`
 
-- Status: Proposed
+- Status: Accepted in part by Ian on 2026-09-19. Items 1, 2, 3, 5, 6, and 7 are Accepted. Item 4, the `report` command, is set aside by ADR 0010: `jq` recipes come first, and the command returns only if the recipes prove too clumsy
 - Date: 2026-09-19
 
 An agent proposal in answer to Ian's six requirements for evals. It becomes Accepted on his word. He can strike any line cheaply, because no code depends on it yet.

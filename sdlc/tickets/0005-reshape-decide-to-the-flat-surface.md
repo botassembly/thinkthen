@@ -6,7 +6,7 @@ opens: crates spec specification/fixtures sdlc/ratchet.json demos/01-refund-gate
 
 # 0005: Reshape `decide` to the flat surface
 
-Status: in progress
+Status: landed
 
 ## Outcome
 

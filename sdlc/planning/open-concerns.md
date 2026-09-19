@@ -1,5 +1,7 @@
 # Open concerns
 
+**Ruled by Ian on 2026-09-19. ADR 0010 records the rulings.** He accepted every recommendation below with two changes: `segment` leaves the plan, and `jq` recipes come before any `report` command. The text below is kept as it was written.
+
 Written 2026-09-19 at Ian's request. He asked for the most contested points across every ADR and the plan, with options, a recommendation, and the reason. Nothing here is decided. Each item names the record it would change.
 
 The test for every item is Ian's goal: the simplest grammar for intelligent control inside a Bash script, the most value out of the backend's three question types, and primitives for processing data on one machine.
