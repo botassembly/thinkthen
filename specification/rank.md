@@ -1,0 +1,58 @@
+# `rank`
+
+Status: **Settled** for version one, by ADR 0007.
+
+Prints the records in order of the probability of yes.
+
+```text
+thinkthen rank QUESTION (--lines|--jsonl) [--top N] [--field POINTER] [--details] [BACKEND]
+```
+
+## What it reads
+
+A stream of records. `rank` requires `--lines` or `--jsonl`. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing and the pointer rules.
+
+`QUESTION` is one argument. The tool asks it of each record as a yes/no question.
+
+## What it prints
+
+Each record as it arrived, most likely yes first. Ties keep input order. `--details` prints the object in [result.md](result.md) for the same records in the same order.
+
+`rank` holds every record until the input ends, because a final order needs the whole set. An endless stream has to be cut into windows upstream.
+
+## Options
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `--top N` | Prints the first `N` records of the order. It saves no requests, because every record is judged before anything is sorted | All records |
+| `--lines` or `--jsonl` | The framing. One of the two is required | None. Its absence is a usage error |
+| `--field POINTER` | The part of each record the model sees | The whole record |
+| `--details` | Prints one result object per record | Off |
+| `--input FILE` | Reads the records from a file | Standard input |
+| `--dry-run` | Prints the plan for the first record and sends nothing | Off |
+| Backend options | `--profile` and the advanced flags | The selected profile |
+
+`rank` takes no `--threshold`, no `--quiet`, and no `--raw`.
+
+## Exit codes
+
+0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty record stream exits 0 with no output and no request.
+
+## Examples
+
+```sh
+thinkthen rank 'This helps diagnose the login timeout.' --jsonl --field /body --top 5 < passages.jsonl
+```
+
+```sh
+thinkthen filter 'This describes a reproducible bug.' --jsonl --field /body < issues.jsonl |
+  thinkthen rank 'This affects many users.' --jsonl --field /body --top 10
+```
+
+## Cautions
+
+The method is fixed and printed in the help. The tool asks one yes/no question of each record, sorts the records by the probability of yes, and breaks exact ties by input order. It never compares two records in one question, and it never runs a tournament.
+
+`rank` takes no rubric. Rating is the weakest thing a decider model does, and ordering by the probability of yes follows the vendor's own reranking recipe.
+
+`rank` orders and never selects. A user who wants a floor runs `filter` first, as the second example shows.
