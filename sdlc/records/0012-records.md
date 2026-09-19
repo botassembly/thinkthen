@@ -89,14 +89,14 @@ A second agent reviewed the widened public surface and the raised ceiling. Its f
 | --- | --- | --- |
 | 0 | `sdlc/scripts/install` | exit 0 |
 | 1 | `sdlc/scripts/lint` | exit 0 |
-| 2 | `sdlc/scripts/test` | exit 0, 101 tests |
+| 2 | `sdlc/scripts/test` | exit 0, 181 tests, the documentation test included |
 | 3 | `sdlc/scripts/spec` | exit 0, 13 green demos and 8 red |
 
 The largest file is `crates/thinkthen/tests/backend/streaming.rs` at 474 lines, under the 500-line ceiling.
 
 ## The ratchet
 
-5862 to 7406, in three commits that each say what grew. The core's three new modules and their tests are 800 lines, `meta.tool` and `input` are 46, and the binary's record path with its seventeen cases is 698. Duplication was looked for in `judge.rs`, where the single-document run now calls the same `Judging::one` the stream calls, so the request, the recording, the answer, and all three views are written once; in `edge.rs`, where the chunk reader replaced `evidence` rather than joining it; in `text.rs` and `render.rs`, whose blank-text values and compact writer the new code reuses; in `question.rs`, whose `Labels::checked` holds a repeat check over a list of owned strings that shares no type with the check over pointer keys; and in `tests/backend/harness`, whose `spawn` and `Listener` the new page reuses.
+5862 to 7407, in four commits that each say what grew. The core's three new modules and their tests are 800 lines, `meta.tool` and `input` are 46, the binary's record path with its seventeen cases is 698, and the demo runner's own count is 1. Duplication was looked for in `judge.rs`, where the single-document run now calls the same `Judging::one` the stream calls, so the request, the recording, the answer, and all three views are written once; in `edge.rs`, where the chunk reader replaced `evidence` rather than joining it; in `text.rs` and `render.rs`, whose blank-text values and compact writer the new code reuses; in `question.rs`, whose `Labels::checked` holds a repeat check over a list of owned strings that shares no type with the check over pointer keys; and in `tests/backend/harness`, whose `spawn` and `Listener` the new page reuses.
 
 ## Dependencies
 
