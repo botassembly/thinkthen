@@ -27,7 +27,7 @@ A slice is done when its how-tos in `documentation-plan.md` are green, the four 
 | 7 | Records: `--input`, `--lines`, `--jsonl`, `--field` with one pointer or several, `choose --options POINTER`, and `--cache DIR`. Order kept, stop at the first failure, bounded parallel requests | `records.md`, `choose.md` | 04, 12, 21 | |
 | 8 | `filter`, then `rank` | `filter.md`, `rank.md` | 03, 06, 09 | |
 | 9 | `annotate`, with several pointers on `on` and provenance in `meta`. The flagship triage demo lands here with its policy recipe | `annotate.md`, `result.md` | 07, 08, 16, 22, 23, 29, 31, 32 | |
-| 10a | Metric recipes as folders under `recipes/`, tried on live `decide --details` rows: counts, accuracy, precision, recall, and F1 at a cut, a sweep of cuts, accuracy at coverage, a comparison of two runs by case id, and the cost of a run | | 13, 24, 25, 28, 38 | Ticket 0008 is ready. Running |
+| 10a | Metric recipes as folders under `recipes/`, tried on live `decide --details` rows: counts, accuracy, precision, recall, and F1 at a cut, a sweep of cuts, accuracy at coverage, calibration bands, a comparison of two runs by case id, and the cost of a run | | 13, 24, 25, 28, 38 | Done. Ticket 0008 landed on 2026-09-19 after an independent review that recomputed every number. The judge scored accuracy 0.9744 and F1 0.9744 over 39 labeled cases at the default cut. Six recipes are fine as files. The comparison of two runs is the clumsy one |
 | 10b | The policy recipe, the monitors, the grouped sweep, and the check of the judge against human labels. The slice ends with a verdict on Ian's five outcomes for `report` and on ADR 0012 | | 14, 16, 26, 30, 34, 35, 36, 37 | After slice 9 |
 | 10c | The how-to form for green demos, the check that enforces it, and two how-tos that need only `decide` | | 01, 19, 27 | Done. Ticket 0010 landed on 2026-09-19 after an independent review. Three how-tos are green |
 | 11 | `find`, if a live run shows that it picks as well as `rank --top 1` | `find.md` | 15 | Draft. Waits on the measurement |
@@ -49,11 +49,13 @@ Ian set the limit at $20 on 2026-09-19. The vendor charges $0.042 for a million 
 | 2026-09-19 | Four `decide` calls by hand through the ticket 0005 binary. ADR 0010 holds the answers | 1,185 |
 | 2026-09-19 | Two `decide` calls through `sdlc/scripts/live`, recording demo 01 | 626 |
 | 2026-09-19 | Ticket 0010: the recordings of how-tos 19 and 27 | 961 |
+| 2026-09-19 | Ticket 0008: forty labeled cases judged twice, 80 calls | 23,848 |
 
-Spent so far: 2,772 tokens, which is less than one cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
+Spent so far: 26,620 tokens, which is about a tenth of a cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
 
 ## Levers left open
 
+- **The first verdict on `report`.** Ticket 0008's record judges six recipes fine as files. The builder judged the comparison of two runs clumsy enough to earn a command. The reviewer agreed it is the clumsiest and judged that showing built-in recipes, option B of ADR 0012, fixes it far more cheaply. The second verdict comes with slice 10b.
 - **ADR 0012.** Proposed. A recipe is a folder, the tool at most lists and shows built-in recipes, and it never runs them. Ian rules after the recipes have been tried as files.
 
 - **The public release.** Ian rules on the timing, the license, and whether to talk to the vendor first. That is question 10 of `design-study.md`.
