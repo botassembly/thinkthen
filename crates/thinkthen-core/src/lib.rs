@@ -11,11 +11,14 @@
 
 mod answer;
 mod backend;
+mod json;
 mod plan;
 mod plan_document;
+mod pointer;
 mod probability;
 mod question;
 pub mod recording;
+mod records;
 mod render;
 mod reply;
 mod result;
@@ -25,9 +28,12 @@ mod threshold;
 
 pub use crate::answer::{Answer, Value};
 pub use crate::backend::{Backend, BackendError, DEFAULT_MODEL, KEY_VAR};
+pub use crate::json::JsonError;
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::plan_document::PlanDocument;
+pub use crate::pointer::{Pointer, PointerError};
 pub use crate::question::{Labels, LabelsError, Question};
+pub use crate::records::{Framing, Reading, ReadingError, Record, RecordError};
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
 pub use crate::result::{DecisionResult, Meta, Usage};
