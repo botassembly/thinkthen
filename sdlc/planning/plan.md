@@ -57,6 +57,7 @@ Spent so far: 32,842 tokens, which is about a tenth of a cent. `sdlc/live-tokens
 ## Levers left open
 
 - **The first verdict on `report`.** Ticket 0008's record judges six recipes fine as files. The builder judged the comparison of two runs clumsy enough to earn a command. The reviewer agreed it is the clumsiest and judged that showing built-in recipes, option B of ADR 0012, fixes it far more cheaply. The second verdict comes with slice 10b.
+- **ADR 0013.** Proposed. The question file is the one file the tool runs directly, a runtime such as botassembly lowers its stages to it, JSON stays the only format, and a closed block of rules in that file is tested by writing the triage demo twice.
 - **ADR 0012.** Proposed. A recipe is a folder, the tool at most lists and shows built-in recipes, and it never runs them. Ian rules after the recipes have been tried as files.
 
 - **The public release.** Ian rules on the timing, the license, and whether to talk to the vendor first. That is question 10 of `design-study.md`.
