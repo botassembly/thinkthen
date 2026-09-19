@@ -26,7 +26,7 @@ jobs:
         run: rustup show active-toolchain || rustup toolchain install
 
       - name: Cache the cargo registry and the build directory
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index
