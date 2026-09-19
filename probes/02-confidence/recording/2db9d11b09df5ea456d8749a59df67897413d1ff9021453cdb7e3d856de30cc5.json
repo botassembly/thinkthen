@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Is there parking at the back of the shop, or only the street?","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which subject does this message concern?","criteria":{"billing":null,"delivery":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"other","confidence":0.95,"probabilities":{"product":0.0,"other":0.96,"billing":0.0,"account":0.0,"delivery":0.04}}},"usage":{"input_tokens":322,"output_tokens":53}}
+}
