@@ -138,15 +138,15 @@ pub fn resolve_backend(
     flags: BackendValues<'_>,
     environment: BackendValues<'_>,
 ) -> Result<Backend, BackendError> {
-    let (name, name_from_flag) = given(flags.backend, environment.backend, |text: &str| {
+    let name = given(flags.backend, environment.backend, |text: &str| {
         BackendName::new(text)
     })?;
-    let (url, url_from_flag) = given(flags.url, environment.url, |text: &str| Url::new(text))?;
-    let (adapter, _) = given(flags.adapter, environment.adapter, Adapter::from_str)?;
-    let (model, _) = given(flags.model, environment.model, |text: &str| {
+    let url = given(flags.url, environment.url, |text: &str| Url::new(text))?;
+    let adapter = given(flags.adapter, environment.adapter, Adapter::from_str)?;
+    let model = given(flags.model, environment.model, |text: &str| {
         ModelName::new(text)
     })?;
-    let (key_env, _) = given(flags.key_env, environment.key_env, |text: &str| {
+    let key_env = given(flags.key_env, environment.key_env, |text: &str| {
         KeyVar::new(text)
     })?;
 
@@ -156,7 +156,10 @@ pub fn resolve_backend(
         }
         return from_profile(name, model, key_env);
     };
-    if name.is_some() && (name_from_flag || !url_from_flag) {
+    // A flag beats an environment variable, so a name from the environment alone
+    // yields to a URL given by flags. Any other pairing is the usage error the
+    // page fixes, because an ad-hoc backend has no name.
+    if name.is_some() && (flags.backend.is_some() || flags.url.is_none()) {
         return Err(BackendError::NameWithUrl);
     }
     let (Some(adapter), Some(model)) = (adapter, model) else {
@@ -172,19 +175,15 @@ pub fn resolve_backend(
 }
 
 /// Read the flag when it is there, the environment variable otherwise.
-///
-/// The second value of the pair says whether a flag offered it, which is what
-/// settles a profile name standing beside a URL.
 fn given<T, E>(
     flag: Option<&str>,
     environment: Option<&str>,
     read: impl Fn(&str) -> Result<T, E>,
-) -> Result<(Option<T>, bool), BackendError>
+) -> Result<Option<T>, BackendError>
 where
     BackendError: From<E>,
 {
-    let value = flag.or(environment).map(read).transpose()?;
-    Ok((value, flag.is_some()))
+    Ok(flag.or(environment).map(read).transpose()?)
 }
 
 /// Fill a named profile in, letting a model and a key variable replace its own.
