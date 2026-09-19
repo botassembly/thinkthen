@@ -98,6 +98,17 @@ case $? in
 esac | mustmatch "hold: the judge did not answer"
 ```
 
+The `*` branch caught the miss, and it catches exit 4 and exit 70 too. Read the code itself to see which failure it was.
+
+```bash
+set +e
+set -uo pipefail
+
+thinkthen decide 'Was the change reviewed by a second person?' \
+  --threshold 0.1:0.9 --quiet --replay recording/ < note.txt 2>/dev/null
+printf 'rc=%s\n' "$?" | mustmatch "rc=5"
+```
+
 The same failure through an `if` with an `else` comes out as the no branch, and nothing in the output says a request failed.
 
 ```bash

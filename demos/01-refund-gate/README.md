@@ -106,4 +106,4 @@ printf 'bad=%s\n' "$bad" | mustmatch "bad=2"
 ## Related how-tos
 
 - [How to tell "no" from "could not ask"](../19-no-or-could-not-ask/) reads the failure codes in full.
-- [How to test a script with no network](../27-test-with-no-network/) makes the recording this page replays.
+- [How to test a script with no network](../27-test-with-no-network/) makes a recording like the one this page replays.

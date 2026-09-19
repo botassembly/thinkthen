@@ -1,6 +1,6 @@
 # How-tos
 
-Every page here is one shell job written so that it runs. A green page is the how-to, the demo, and the test at once, and `sdlc/scripts/spec` runs every block on it against a committed recording. ADR 0011 rules that nobody writes a second copy.
+Every page here is one shell job written so that it runs. A green page is the how-to, the demo, and the test at once, and `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy.
 
 `sdlc/planning/documentation-plan.md` holds the full list, the groups below, and the demo number reserved for each task. A number here is a folder under `demos/`.
 
@@ -8,7 +8,7 @@ Every page here is one shell job written so that it runs. A green page is the ho
 
 Each page opens with a status line and the verbs it uses. A green page then takes the how-to form: a title that starts with "How to", one paragraph on when to use it, the input files, the steps with their commands and real outputs, a section named "What can go wrong" with the exit codes and the traps, and a closing list of related how-tos.
 
-`mustmatch test demos/` runs a block when the block pipes into `mustmatch`, so the shown commands are the tests. The blocks assert on exit codes, bare values, field names, row counts, and the records that came back. No block asserts on a probability, and every page says once that its numbers are illustrative until a recording exists. A page that pinned a probability would be testing the vendor instead of the tool.
+`mustmatch test demos/` runs a block when the block pipes into `mustmatch` and skips a block that asserts nothing, so a shown command is a test only when it ends in an assertion. The blocks assert on exit codes, bare values, field names, row counts, and the records that came back. No block asserts on a probability, and every page says once that its numbers are illustrative until a recording exists. A page that pinned a probability would be testing the vendor instead of the tool.
 
 Every `thinkthen` command that would otherwise reach a backend carries `--replay recording/`, so a gate touches no network and reads no key. `specification/recording.md` defines the flag.
 
