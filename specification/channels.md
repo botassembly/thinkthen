@@ -48,7 +48,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 0 | The command finished. On single-input `decide`, the answer is yes |
 | 1 | Single-input `decide` only: the answer is no |
 | 2 | A usage error or an input error. The failing record sent nothing |
-| 3 | Single-input `decide` and `choose` only: the answer is unresolved |
+| 3 | Single-input `decide` and `choose`: the answer is unresolved. `find --none`: nothing fits |
 | 4 | The backend failed or sent a reply the adapter refused |
 | 5 | A local failure: a file or a recording |
 | 70 | A defect in the tool |

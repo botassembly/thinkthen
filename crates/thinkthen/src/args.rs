@@ -35,6 +35,16 @@ pub(crate) enum Command {
     /// A single cut answers no when the probability did not reach the mark. It
     /// never says the model is sure of no. A three-way gate takes a band, as
     /// `--threshold 0.1:0.9` writes one.
+    ///
+    /// A script that acts on the answer reads all four outcomes:
+    ///
+    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt
+    ///
+    /// case $? in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
+    ///
+    /// Word the question in the form where yes permits the action. A failure
+    /// then never permits anything, because every outcome other than 0 leaves
+    /// the action undone.
     Decide(DecideArguments),
 
     /// Pick one label from a fixed list and print it.
