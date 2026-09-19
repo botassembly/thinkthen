@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
+use thinkthen_core::DEFAULT_MODEL;
 
 /// Put a decider model in the shell.
 #[derive(Debug, Parser)]
@@ -155,10 +156,19 @@ pub(crate) struct Common {
     #[arg(long, value_name = "URL", hide_short_help = true)]
     pub(crate) url: Option<String>,
 
-    /// The model named in the request. [default: jev-latest]
-    ///
-    /// It outranks a `model` key in a question file.
-    #[arg(long, value_name = "NAME", hide_short_help = true)]
+    // The default is the adapter's, so the sentence is built from the constant
+    // rather than written again here. A doc comment cannot read a constant, so
+    // clap is given the two texts as expressions instead.
+    #[arg(
+        long,
+        value_name = "NAME",
+        hide_short_help = true,
+        help = format!("The model named in the request. [default: {DEFAULT_MODEL}]"),
+        long_help = format!(
+            "The model named in the request. [default: {DEFAULT_MODEL}]\n\n\
+             It outranks a `model` key in a question file."
+        )
+    )]
     pub(crate) model: Option<String>,
 
     /// Call the backend, then write the exchange into DIR. DIR is created when absent.

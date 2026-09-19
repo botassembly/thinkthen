@@ -45,13 +45,13 @@ INHERITED = {"workspace": True}
 # ADR 0010's clarification of 2026-09-19: other backends will come, so the
 # vendor's words live behind one adapter. These are the words that name the
 # vendor rather than the judgment: its question type, its field for what an
-# option means, its module, and its host.
-VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe")
+# option means, its module, its host, and the stem of its model names.
+VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe", "jev")
 # The adapters folder, where every vendor word belongs. `adapters.rs` names the
 # modules it holds and says which one this build uses, and each adapter's own
 # module owns its name, its default address, its default model, and its
 # endpoint path.
-ADAPTER = ("crates/thinkthen-core/src/adapters.rs", "crates/thinkthen-core/src/adapters/")
+ADAPTERS = "crates/thinkthen-core/src/adapters.rs"
 # Ticket 0020 moved the last of them, so no file outside the adapters folder
 # holds a vendor word and the allowance is empty. A file added here would need
 # a ticket saying why a vendor word cannot live behind the adapter.
@@ -266,14 +266,30 @@ def check_sources() -> None:
             fail("size", f"{relative} has {lines} non-blank lines and the ceiling is {MAX_FILE_LINES}")
 
 
+def adapter_paths() -> tuple[str, ...]:
+    """The files a vendor word may live in: `adapters.rs` and each module it declares.
+
+    The folder itself is not the permission. A file dropped beside the adapters
+    without a `pub mod` line naming it is read like any other source, so the
+    exemption cannot be taken by moving a file.
+    """
+    declared = re.findall(r"^pub mod (\w+);", (REPO / ADAPTERS).read_text(encoding="utf-8"), re.M)
+    if not declared:
+        fail("seam", f"{ADAPTERS} declares no adapter module, so the seam has no home")
+    folder = ADAPTERS.removesuffix(".rs")
+    return (ADAPTERS, *(f"{folder}/{name}.rs" for name in declared),
+            *(f"{folder}/{name}/" for name in declared))
+
+
 def check_seam() -> None:
     """Hold the vendor's words inside the adapter, the fixtures, and the tests."""
+    adapter = adapter_paths()
     unused = set(SEAM_ALLOWED)
     for source in sorted((REPO / "crates").rglob("*.rs")):
         relative = source.relative_to(REPO).as_posix()
         # A file named tests.rs is one module's `#[cfg(test)] mod tests`, and
         # a file under tests/ is an integration test. Both are tests.
-        if relative.startswith(ADAPTER) or "/tests/" in relative or relative.endswith("/tests.rs"):
+        if relative.startswith(adapter) or "/tests/" in relative or relative.endswith("/tests.rs"):
             continue
         allowed = SEAM_ALLOWED.get(relative, frozenset())
         unused.discard(relative)

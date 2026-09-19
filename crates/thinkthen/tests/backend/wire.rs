@@ -9,8 +9,17 @@
 
 use crate::harness::{Canned, Listener, spawn};
 
-/// The evidence every case sends, as one line with no escape in it.
+/// The evidence the first three cases send, as one line with no escape in it.
 const EVIDENCE: &str = "Refund me please.";
+
+/// Evidence that makes the JSON writer work.
+///
+/// It carries a quote, a line feed, a tab, a control byte, a letter with an
+/// accent, and a dash outside ASCII. ADR 0017 calls the escaping the hardest
+/// rule to hold still, because one language's JSON writer escapes every
+/// character outside ASCII and another leaves it as it is. A digest is taken
+/// over these bytes, so a recording is found again only while they stay put.
+const HOSTILE: &str = "He said \"no\".\nCafé — 3 days.\t\u{1}";
 
 /// The model every case names, so no default reaches the pinned bytes.
 const MODEL: &str = "local-1";
@@ -55,6 +64,17 @@ const PLACED_BODY: &str = concat!(
     r#""instructions":"how urgent","criteria":["low","medium","high"]}}}"#,
 );
 
+/// The body the hostile evidence sends, escape for escape.
+///
+/// The quote, the line feed, and the tab travel as two characters each and the
+/// control byte as six. The accented letter and the dash travel as the bytes
+/// they are, with no escape at all, which is the half of the rule a writer is
+/// most likely to change.
+const HOSTILE_BODY: &str = concat!(
+    r#"{"state":"He said \"no\".\nCafé — 3 days.\t\u0001","model":"local-1","#,
+    r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}"#,
+);
+
 #[test]
 fn each_question_type_sends_the_bytes_it_sent_before_the_adapter_owned_its_defaults() {
     let cases = [
@@ -67,29 +87,38 @@ fn each_question_type_sends_the_bytes_it_sent_before_the_adapter_owned_its_defau
                 "--false",
                 "Anything else.",
             ][..],
+            EVIDENCE,
             ANSWERED,
             DECIDED_BODY,
         ),
         (
             &["choose", "what kind", "defect", "process", "other"][..],
+            EVIDENCE,
             PICKED,
             PICKED_BODY,
         ),
         (
             &["score", "how urgent", "low", "medium", "high"][..],
+            EVIDENCE,
             PLACED,
             PLACED_BODY,
         ),
+        (
+            &["decide", "asks for a refund"][..],
+            HOSTILE,
+            ANSWERED,
+            HOSTILE_BODY,
+        ),
     ];
 
-    for (asked, response, expected) in cases {
+    for (asked, evidence, response, expected) in cases {
         let listener = Listener::serving(vec![Canned::ok(response)]).expect("a loopback listener");
         let named = ["--url", listener.base(), "--model", MODEL];
 
         let output = spawn(
             &[asked, &named[..]].concat(),
             &[("THINKTHEN_API_KEY", "sk-test-value")],
-            EVIDENCE.as_bytes(),
+            evidence.as_bytes(),
         )
         .expect("the compiled binary runs");
 
