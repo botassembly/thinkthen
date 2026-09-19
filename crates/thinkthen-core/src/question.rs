@@ -1,31 +1,31 @@
-//! The question a judgment asks, as one verb over what it names.
+//! The question a judgment asks, as one verb over the text it was given.
 
 use serde::Serialize;
 
-use crate::text::Condition;
+use crate::text::QuestionText;
 
-/// The verbs `decide` knows. Version one judges a condition and nothing else.
+/// The verbs that judge. Version one asks a yes/no question and nothing else.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Verb {
-    /// Ask whether a condition holds for the evidence.
-    If,
+    /// Ask whether the question holds for the evidence.
+    Decide,
 }
 
 /// What the judgment was asked.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Question {
     verb: Verb,
-    condition: Condition,
+    text: QuestionText,
 }
 
 impl Question {
-    /// Ask whether a condition holds for the evidence.
+    /// Ask whether the question holds for the evidence.
     #[must_use]
-    pub const fn new_if(condition: Condition) -> Self {
+    pub const fn new_decide(text: QuestionText) -> Self {
         Self {
-            verb: Verb::If,
-            condition,
+            verb: Verb::Decide,
+            text,
         }
     }
 
@@ -34,22 +34,22 @@ impl Question {
         self.verb
     }
 
-    /// Read the condition back.
-    pub(crate) const fn condition(&self) -> &Condition {
-        &self.condition
+    /// Read the question text back.
+    pub(crate) const fn text(&self) -> &QuestionText {
+        &self.text
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Question, Verb};
-    use crate::text::Condition;
+    use crate::text::QuestionText;
 
     #[test]
-    fn a_question_keeps_its_verb_and_its_condition() {
-        let condition = Condition::new("asks for a refund").expect("not empty");
-        let question = Question::new_if(condition.clone());
-        assert_eq!(question.verb(), Verb::If);
-        assert_eq!(question.condition(), &condition);
+    fn a_question_keeps_its_verb_and_its_text() {
+        let text = QuestionText::new("asks for a refund").expect("not empty");
+        let question = Question::new_decide(text.clone());
+        assert_eq!(question.verb(), Verb::Decide);
+        assert_eq!(question.text(), &text);
     }
 }

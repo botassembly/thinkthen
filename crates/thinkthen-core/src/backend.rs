@@ -1,11 +1,11 @@
-//! The backend a request goes to, resolved from flags, the environment, and the built-in profile.
+//! The backend a request goes to.
 
 use std::str::FromStr;
 
 use thiserror::Error;
 
 use crate::adapter::{Adapter, UnknownAdapterError};
-use crate::text::{BackendName, BlankTextError, KeyVar, ModelName, Url};
+use crate::text::{BlankTextError, KeyVar, ModelName, ProfileName, Url};
 
 /// A named profile, as one row of data.
 #[derive(Clone, Copy, Debug)]
@@ -29,10 +29,10 @@ const JEV: Profile = Profile {
 /// The profiles version one is born with.
 const PROFILES: [Profile; 1] = [JEV];
 
-/// The five backend values one source offers, each absent when it was not given.
+/// The five backend values the flags offer, each absent when it was not given.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct BackendValues<'a> {
-    backend: Option<&'a str>,
+    profile: Option<&'a str>,
     url: Option<&'a str>,
     adapter: Option<&'a str>,
     model: Option<&'a str>,
@@ -40,17 +40,17 @@ pub struct BackendValues<'a> {
 }
 
 impl<'a> BackendValues<'a> {
-    /// Gather what one source offers, in the order `specification/backends.md` lists it.
+    /// Gather what the flags offer, in the order `specification/backends.md` lists it.
     #[must_use]
     pub const fn new(
-        backend: Option<&'a str>,
+        profile: Option<&'a str>,
         url: Option<&'a str>,
         adapter: Option<&'a str>,
         model: Option<&'a str>,
         key_env: Option<&'a str>,
     ) -> Self {
         Self {
-            backend,
+            profile,
             url,
             adapter,
             model,
@@ -62,7 +62,7 @@ impl<'a> BackendValues<'a> {
 /// Where one request goes, in what language, to which model, under which key.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Backend {
-    name: Option<BackendName>,
+    profile: Option<ProfileName>,
     url: Url,
     adapter: Adapter,
     model: ModelName,
@@ -72,8 +72,8 @@ pub struct Backend {
 impl Backend {
     /// Read the profile name back, or `None` for an ad-hoc backend.
     #[must_use]
-    pub const fn name(&self) -> Option<&BackendName> {
-        self.name.as_ref()
+    pub const fn profile(&self) -> Option<&ProfileName> {
+        self.profile.as_ref()
     }
 
     /// Read the URL the request is posted to.
@@ -110,7 +110,7 @@ pub enum BackendError {
     /// The adapter name belongs to no adapter.
     #[error(transparent)]
     UnknownAdapter(#[from] UnknownAdapterError),
-    /// The backend name belongs to no profile.
+    /// The profile name belongs to no profile.
     #[error("no backend profile is named `{0}`")]
     UnknownProfile(String),
     /// A URL arrived without both the adapter and the model that go with it.
@@ -124,31 +124,22 @@ pub enum BackendError {
     NameWithUrl,
 }
 
-/// Resolve the backend from the flags, the environment, and the built-in profile.
+/// Resolve the backend from the flags and the built-in profile.
 ///
-/// A flag beats an environment variable, and an environment variable beats the
-/// profile. A URL, an adapter, and a model given together make an ad-hoc
-/// backend, which has no name and takes no key variable from any profile.
+/// A URL, an adapter, and a model given together make an ad-hoc backend, which
+/// has no name and takes no key variable from any profile. A model alone
+/// replaces the profile's model, which is how a run is pinned to one version.
 ///
 /// # Errors
 ///
 /// Returns [`BackendError`] when a value is blank, when a name belongs to no
 /// profile or adapter, or when the values do not make one backend.
-pub fn resolve_backend(
-    flags: BackendValues<'_>,
-    environment: BackendValues<'_>,
-) -> Result<Backend, BackendError> {
-    let name = given(flags.backend, environment.backend, |text: &str| {
-        BackendName::new(text)
-    })?;
-    let url = given(flags.url, environment.url, |text: &str| Url::new(text))?;
-    let adapter = given(flags.adapter, environment.adapter, Adapter::from_str)?;
-    let model = given(flags.model, environment.model, |text: &str| {
-        ModelName::new(text)
-    })?;
-    let key_env = given(flags.key_env, environment.key_env, |text: &str| {
-        KeyVar::new(text)
-    })?;
+pub fn resolve_backend(flags: BackendValues<'_>) -> Result<Backend, BackendError> {
+    let name = given(flags.profile, |text: &str| ProfileName::new(text))?;
+    let url = given(flags.url, |text: &str| Url::new(text))?;
+    let adapter = given(flags.adapter, Adapter::from_str)?;
+    let model = given(flags.model, |text: &str| ModelName::new(text))?;
+    let key_env = given(flags.key_env, |text: &str| KeyVar::new(text))?;
 
     let Some(url) = url else {
         if adapter.is_some() {
@@ -156,17 +147,14 @@ pub fn resolve_backend(
         }
         return from_profile(name, model, key_env);
     };
-    // A flag beats an environment variable, so a name from the environment alone
-    // yields to a URL given by flags. Any other pairing is the usage error the
-    // page fixes, because an ad-hoc backend has no name.
-    if name.is_some() && (flags.backend.is_some() || flags.url.is_none()) {
+    if name.is_some() {
         return Err(BackendError::NameWithUrl);
     }
     let (Some(adapter), Some(model)) = (adapter, model) else {
         return Err(BackendError::IncompleteAdHoc);
     };
     Ok(Backend {
-        name: None,
+        profile: None,
         url,
         adapter,
         model,
@@ -174,31 +162,24 @@ pub fn resolve_backend(
     })
 }
 
-/// Read the flag when it is there, the environment variable otherwise.
-fn given<T, E>(
-    flag: Option<&str>,
-    environment: Option<&str>,
-    read: impl Fn(&str) -> Result<T, E>,
-) -> Result<Option<T>, BackendError>
-where
-    BackendError: From<E>,
-{
-    Ok(flag.or(environment).map(read).transpose()?)
+/// Read one flag value into the type that holds it.
+fn given<T, E>(flag: Option<&str>, read: impl Fn(&str) -> Result<T, E>) -> Result<Option<T>, E> {
+    flag.map(read).transpose()
 }
 
 /// Fill a named profile in, letting a model and a key variable replace its own.
 fn from_profile(
-    name: Option<BackendName>,
+    name: Option<ProfileName>,
     model: Option<ModelName>,
     key_env: Option<KeyVar>,
 ) -> Result<Backend, BackendError> {
-    let wanted = name.as_ref().map_or(JEV.name, BackendName::as_str);
+    let wanted = name.as_ref().map_or(JEV.name, ProfileName::as_str);
     let profile = PROFILES
         .iter()
         .find(|profile| profile.name == wanted)
         .ok_or_else(|| BackendError::UnknownProfile(wanted.to_owned()))?;
     Ok(Backend {
-        name: Some(BackendName::new(profile.name)?),
+        profile: Some(ProfileName::new(profile.name)?),
         url: Url::new(profile.url)?,
         adapter: profile.adapter,
         model: match model {
@@ -216,12 +197,12 @@ fn from_profile(
 mod tests {
     use super::{Backend, BackendError, BackendValues, JEV, resolve_backend as resolve};
     use crate::adapter::Adapter;
-    use crate::text::{BackendName, BlankTextError, KeyVar};
+    use crate::text::{BlankTextError, KeyVar, ProfileName};
 
     /// The values a resolved backend is compared against, as plain text.
     fn flat(backend: &Backend) -> (Option<&str>, &str, Adapter, &str, Option<&str>) {
         (
-            backend.name().map(BackendName::as_str),
+            backend.profile().map(ProfileName::as_str),
             backend.url().as_str(),
             backend.adapter(),
             backend.model().as_str(),
@@ -236,8 +217,7 @@ mod tests {
 
     #[test]
     fn nothing_named_resolves_the_built_in_profile() {
-        let backend = resolve(BackendValues::default(), BackendValues::default())
-            .expect("the built-in profile resolves");
+        let backend = resolve(BackendValues::default()).expect("the built-in profile resolves");
 
         assert_eq!(
             flat(&backend),
@@ -252,19 +232,18 @@ mod tests {
     }
 
     #[test]
-    fn a_flag_beats_an_environment_variable_and_both_beat_the_profile() {
-        let backend = resolve(model_only("jev-1.13.0"), model_only("jev-1.12.0"))
-            .expect("a model alone replaces the profile model");
+    fn a_flag_replaces_the_profile_value_it_names() {
+        let backend =
+            resolve(model_only("jev-1.13.0")).expect("a model alone replaces the profile model");
         assert_eq!(backend.model().as_str(), "jev-1.13.0");
 
-        let backend = resolve(BackendValues::default(), model_only("jev-1.12.0"))
-            .expect("a model alone replaces the profile model");
-        assert_eq!(backend.model().as_str(), "jev-1.12.0");
-
-        let backend = resolve(
-            BackendValues::new(None, None, None, None, Some("OTHER_KEY")),
-            BackendValues::new(Some("jev"), None, None, None, Some("ENV_KEY")),
-        )
+        let backend = resolve(BackendValues::new(
+            Some("jev"),
+            None,
+            None,
+            None,
+            Some("OTHER_KEY"),
+        ))
         .expect("a named profile resolves");
         assert_eq!(
             flat(&backend),
@@ -279,50 +258,6 @@ mod tests {
     }
 
     #[test]
-    fn a_name_beside_a_url_is_read_from_the_source_each_one_came_from() {
-        let url = "http://127.0.0.1:8080/v1";
-        let named = |backend| BackendValues::new(backend, None, None, None, None);
-        let ad_hoc = |backend| {
-            BackendValues::new(backend, Some(url), Some("systemone"), Some("local-1"), None)
-        };
-        let nothing = BackendValues::default();
-
-        // A flag naming a profile beside a URL is the usage error the page fixes,
-        // whichever source the URL came from. Two environment variables that
-        // disagree are the same usage error. Only an environment name beside a
-        // URL given by flags yields, because a flag beats an environment variable.
-        assert_eq!(
-            resolve(ad_hoc(Some("jev")), nothing),
-            Err(BackendError::NameWithUrl)
-        );
-        assert_eq!(
-            resolve(named(Some("jev")), ad_hoc(None)),
-            Err(BackendError::NameWithUrl)
-        );
-        assert_eq!(
-            resolve(nothing, ad_hoc(Some("jev"))),
-            Err(BackendError::NameWithUrl)
-        );
-
-        let backend = resolve(ad_hoc(None), named(Some("jev")))
-            .expect("an environment name yields to an ad-hoc backend given by flags");
-        assert_eq!(
-            flat(&backend),
-            (None, url, Adapter::SystemOne, "local-1", None)
-        );
-
-        // The yielded name changes nothing else. A URL from flags that is not a
-        // whole ad-hoc backend is still incomplete.
-        assert_eq!(
-            resolve(
-                BackendValues::new(None, Some(url), None, None, None),
-                named(Some("jev"))
-            ),
-            Err(BackendError::IncompleteAdHoc)
-        );
-    }
-
-    #[test]
     fn an_ad_hoc_backend_has_no_name_and_no_borrowed_key_variable() {
         let values = BackendValues::new(
             None,
@@ -331,8 +266,7 @@ mod tests {
             Some("local-1"),
             None,
         );
-        let backend =
-            resolve(values, BackendValues::default()).expect("an ad-hoc backend resolves");
+        let backend = resolve(values).expect("an ad-hoc backend resolves");
 
         assert_eq!(
             flat(&backend),
@@ -355,11 +289,10 @@ mod tests {
             Some("local-1"),
             Some("LOCAL_KEY"),
         );
-        let backend =
-            resolve(values, BackendValues::default()).expect("an ad-hoc backend resolves");
+        let backend = resolve(values).expect("an ad-hoc backend resolves");
 
         assert_eq!(backend.key_env().map(KeyVar::as_str), Some("LOCAL_KEY"));
-        assert_eq!(backend.name(), None);
+        assert_eq!(backend.profile(), None);
     }
 
     #[test]
@@ -406,7 +339,7 @@ mod tests {
 
         for (values, expected) in cases {
             assert_eq!(
-                resolve(values, BackendValues::default()),
+                resolve(values),
                 Err(expected.clone()),
                 "{values:?} names {expected}"
             );
@@ -414,11 +347,11 @@ mod tests {
     }
 
     #[test]
-    fn a_blank_value_is_refused_whichever_source_offered_it() {
+    fn a_blank_flag_value_is_refused() {
         let cases: [(BackendValues<'_>, BlankTextError); 4] = [
             (
                 BackendValues::new(Some(""), None, None, None, None),
-                BlankTextError::BackendName,
+                BlankTextError::ProfileName,
             ),
             (
                 BackendValues::new(None, None, None, Some("\t"), None),
@@ -436,14 +369,9 @@ mod tests {
 
         for (values, expected) in cases {
             assert_eq!(
-                resolve(values, BackendValues::default()),
+                resolve(values),
                 Err(BackendError::Blank(expected)),
                 "a flag offering {values:?}"
-            );
-            assert_eq!(
-                resolve(BackendValues::default(), values),
-                Err(BackendError::Blank(expected)),
-                "an environment variable offering {values:?}"
             );
         }
     }

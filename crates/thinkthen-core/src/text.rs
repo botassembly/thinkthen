@@ -6,15 +6,15 @@ use thiserror::Error;
 /// Which text value arrived blank.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum BlankTextError {
-    /// A condition states a fact about the evidence, so it carries text.
-    #[error("a condition is text, not white space")]
-    Condition,
+    /// A question states a fact about the evidence, so it carries text.
+    #[error("a question is text, not white space")]
+    QuestionText,
     /// Evidence is what a judgment reads, so it carries text.
     #[error("evidence is text, not white space")]
     Evidence,
-    /// A backend name picks a profile, so it carries text.
-    #[error("a backend name is text, not white space")]
-    BackendName,
+    /// A profile name picks a backend, so it carries text.
+    #[error("a profile name is text, not white space")]
+    ProfileName,
     /// A model name reports what answered, so it carries text.
     #[error("a model name is text, not white space")]
     ModelName,
@@ -64,25 +64,25 @@ macro_rules! text_value {
     };
 }
 
-text_value!(Condition, Condition, "condition a question asks about");
+text_value!(QuestionText, QuestionText, "question a judgment asks");
 text_value!(Evidence, Evidence, "evidence a judgment reads");
-text_value!(BackendName, BackendName, "backend that answered");
+text_value!(ProfileName, ProfileName, "profile that answered");
 text_value!(ModelName, ModelName, "model that answered");
 text_value!(Url, Url, "URL a request is posted to");
 text_value!(KeyVar, KeyVar, "environment variable that holds the key");
 
 #[cfg(test)]
 mod tests {
-    use super::{BackendName, BlankTextError, Condition, Evidence, KeyVar, ModelName, Url};
+    use super::{BlankTextError, Evidence, KeyVar, ModelName, ProfileName, QuestionText, Url};
 
     #[test]
     fn new_keeps_the_text_it_was_given() {
-        let condition = Condition::new("asks for a refund").expect("not blank");
-        assert_eq!(condition.as_str(), "asks for a refund");
+        let question = QuestionText::new("asks for a refund").expect("not blank");
+        assert_eq!(question.as_str(), "asks for a refund");
         let evidence = Evidence::new(" leading space is kept ").expect("not blank");
         assert_eq!(evidence.as_str(), " leading space is kept ");
-        let backend = BackendName::new("jev").expect("not blank");
-        assert_eq!(backend.as_str(), "jev");
+        let profile = ProfileName::new("jev").expect("not blank");
+        assert_eq!(profile.as_str(), "jev");
         let model = ModelName::new("jev-1.13.0").expect("not blank");
         assert_eq!(model.as_str(), "jev-1.13.0");
     }
@@ -94,16 +94,16 @@ mod tests {
             (|text| Url::new(text).map(|_| ()), BlankTextError::Url),
             (|text| KeyVar::new(text).map(|_| ()), BlankTextError::KeyVar),
             (
-                |text| Condition::new(text).map(|_| ()),
-                BlankTextError::Condition,
+                |text| QuestionText::new(text).map(|_| ()),
+                BlankTextError::QuestionText,
             ),
             (
                 |text| Evidence::new(text).map(|_| ()),
                 BlankTextError::Evidence,
             ),
             (
-                |text| BackendName::new(text).map(|_| ()),
-                BlankTextError::BackendName,
+                |text| ProfileName::new(text).map(|_| ()),
+                BlankTextError::ProfileName,
             ),
             (
                 |text| ModelName::new(text).map(|_| ()),

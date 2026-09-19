@@ -25,15 +25,15 @@ pub enum DecodeError {
     /// The bytes are not a `systemone` response.
     #[error("the response is not a systemone response: {0}")]
     Malformed(String),
-    /// The response answered every question but this one.
-    #[error("the response carries no answer for question `{0}`")]
-    MissingAnswer(String),
+    /// The response answered every question but the one in this place.
+    #[error("the response carries no answer for question `{}`", wire_name(*.0))]
+    MissingAnswer(usize),
     /// The answer holds a shape this question did not ask for.
-    #[error("the answer to question `{0}` is not a yes/no answer")]
-    WrongKind(String),
+    #[error("the answer to question `{}` is not a yes/no answer", wire_name(*.0))]
+    WrongKind(usize),
     /// The answer holds a number that is not a probability.
-    #[error("the answer to question `{0}` holds a probability outside zero to one")]
-    ProbabilityOutOfRange(String),
+    #[error("the answer to question `{}` holds a probability outside zero to one", wire_name(*.0))]
+    ProbabilityOutOfRange(usize),
 }
 
 /// The body one request carries.
@@ -131,13 +131,13 @@ pub fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
     for place in 0..plan.questions().len() {
         let name = wire_name(place);
         let Some(answer) = response.answers.get(&name) else {
-            return Err(DecodeError::MissingAnswer(name));
+            return Err(DecodeError::MissingAnswer(place));
         };
         let ResponseAnswer::Noul { noul } = *answer else {
-            return Err(DecodeError::WrongKind(name));
+            return Err(DecodeError::WrongKind(place));
         };
         let probability =
-            Probability::new(noul).map_err(|_| DecodeError::ProbabilityOutOfRange(name))?;
+            Probability::new(noul).map_err(|_| DecodeError::ProbabilityOutOfRange(place))?;
         answers.push(Answer::new_yes_no(probability));
     }
     let usage = response
@@ -155,9 +155,9 @@ impl RequestQuestion {
     /// Write one question in the shape its verb asks for.
     fn asking(question: &Question) -> Self {
         match question.verb() {
-            Verb::If => Self {
+            Verb::Decide => Self {
                 kind: QuestionKind::Noul,
-                instructions: question.condition().as_str().to_owned(),
+                instructions: question.text().as_str().to_owned(),
             },
         }
     }
@@ -169,15 +169,15 @@ mod tests {
     use crate::plan::Plan;
     use crate::question::Question;
     use crate::result::Usage;
-    use crate::text::{Condition, Evidence, ModelName};
+    use crate::text::{Evidence, ModelName, QuestionText};
     use proptest::collection::vec;
     use proptest::prelude::{Strategy, any};
     use proptest::{prop_assert_eq, proptest};
 
     const REQUEST: &str =
-        include_str!("../../../specification/fixtures/systemone/if-urgent.request.json");
+        include_str!("../../../specification/fixtures/systemone/decide-urgent.request.json");
     const RESPONSE: &str =
-        include_str!("../../../specification/fixtures/systemone/if-urgent.response.json");
+        include_str!("../../../specification/fixtures/systemone/decide-urgent.response.json");
     const MISSING: &str = include_str!(
         "../../../specification/fixtures/systemone/refused-missing-answer.response.json"
     );
@@ -187,13 +187,13 @@ mod tests {
         "../../../specification/fixtures/systemone/refused-probability-out-of-range.response.json"
     );
 
-    fn plan_for(state: &str, conditions: &[&str]) -> Plan {
+    fn plan_for(state: &str, questions: &[&str]) -> Plan {
         Plan::new(
             Evidence::new(state).expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
-            conditions
+            questions
                 .iter()
-                .map(|condition| Question::new_if(Condition::new(*condition).expect("not blank")))
+                .map(|text| Question::new_decide(QuestionText::new(*text).expect("not blank")))
                 .collect(),
         )
         .expect("a question is asked")
@@ -206,7 +206,7 @@ mod tests {
         )
     }
 
-    /// Encode one condition over one evidence and read the bytes back.
+    /// Encode one question over one evidence and read the bytes back.
     fn round_tripped(state: &str, instructions: &str) -> Request {
         let bytes = encode(&plan_for(state, &[instructions])).expect("a plan is writable");
         serde_json::from_slice(&bytes).expect("a systemone request")
@@ -234,14 +234,12 @@ mod tests {
     #[test]
     fn each_refused_response_names_its_own_cause() {
         let cases = [
-            (MISSING, DecodeError::MissingAnswer("q1".to_owned())),
-            (WRONG_KIND, DecodeError::WrongKind("q1".to_owned())),
-            (
-                OUT_OF_RANGE,
-                DecodeError::ProbabilityOutOfRange("q1".to_owned()),
-            ),
+            (MISSING, DecodeError::MissingAnswer(0)),
+            (WRONG_KIND, DecodeError::WrongKind(0)),
+            (OUT_OF_RANGE, DecodeError::ProbabilityOutOfRange(0)),
         ];
         for (body, expected) in cases {
+            assert!(expected.to_string().contains("`q1`"), "{expected}");
             assert_eq!(
                 decode(&urgency_plan(), body.as_bytes()),
                 Err(expected.clone()),
@@ -331,7 +329,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn any_evidence_and_condition_reach_the_wire_unchanged(state in texts(), instructions in texts()) {
+        fn any_evidence_and_question_reach_the_wire_unchanged(state in texts(), instructions in texts()) {
             let written = round_tripped(&state, &instructions);
             prop_assert_eq!(&written.state, &state);
             let question = written.questions.get("q1").expect("one named question");

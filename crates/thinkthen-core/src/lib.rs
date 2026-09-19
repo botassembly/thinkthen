@@ -11,12 +11,9 @@
 
 mod adapter;
 mod answer;
-mod assessment;
 mod backend;
-mod pass_mark;
 mod plan;
 mod plan_document;
-mod policy;
 mod probability;
 mod question;
 pub mod recording;
@@ -25,20 +22,21 @@ mod reply;
 mod result;
 pub mod systemone;
 mod text;
+mod threshold;
 
 pub use crate::adapter::{Adapter, UnknownAdapterError};
 pub use crate::answer::Answer;
-pub use crate::assessment::{Assessment, AssessmentStatus, assess};
 pub use crate::backend::{Backend, BackendError, BackendValues, resolve_backend};
-pub use crate::pass_mark::{PassMark, PassMarkError};
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::plan_document::PlanDocument;
-pub use crate::policy::Policy;
 pub use crate::question::Question;
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
 pub use crate::result::{DecisionResult, Meta, Usage};
-pub use crate::text::{BackendName, BlankTextError, Condition, Evidence, KeyVar, ModelName, Url};
+pub use crate::text::{
+    BlankTextError, Evidence, KeyVar, ModelName, ProfileName, QuestionText, Url,
+};
+pub use crate::threshold::{Outcome, Threshold, ThresholdError};
 
 /// The name the tool answers to on the command line and in its own output.
 pub const NAME: &str = "thinkthen";

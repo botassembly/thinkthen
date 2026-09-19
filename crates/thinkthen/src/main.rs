@@ -18,7 +18,7 @@ use std::process::ExitCode;
 
 use clap::Parser;
 
-use crate::args::{Cli, Command, Decide};
+use crate::args::{Cli, Command};
 use crate::edge::Environment;
 use crate::failure::Failure;
 
@@ -40,8 +40,8 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
         return Ok(ExitCode::SUCCESS);
     }
     match &cli.command {
-        Some(Command::Decide(Decide::If(arguments))) => {
-            decide::decide_if(arguments, &Environment::read(), io::stdin().lock(), writer)
+        Some(Command::Decide(arguments)) => {
+            decide::decide(arguments, &Environment::read(), io::stdin().lock(), writer)
         }
         None => Err(Failure::Defect("no command and no version was parsed")),
     }

@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use std::process::ExitCode;
 
 use thinkthen_core::systemone::DecodeError;
-use thinkthen_core::{BackendError, BlankTextError, PassMarkError, RenderError};
+use thinkthen_core::{BackendError, BlankTextError, RenderError, ThresholdError};
 
 /// The phrase `specification/backends.md` fixes for each common failure status.
 ///
@@ -27,10 +27,12 @@ const PHRASES: [(u16, &str); 6] = [
 pub(crate) enum Failure {
     /// The flags and the environment name no backend.
     Backend(BackendError),
-    /// The condition or the evidence arrived blank.
+    /// The question or the evidence arrived blank.
     Blank(BlankTextError),
-    /// The pass mark is not a pass mark.
-    Mark(PassMarkError),
+    /// The threshold is not a threshold.
+    Threshold(ThresholdError),
+    /// Two views of one answer were asked for at once.
+    QuietWithDetails,
     /// Standard input could not be read.
     Input(io::Error),
     /// Standard input held bytes that are not text.
@@ -48,7 +50,7 @@ pub(crate) enum Failure {
     /// The two recording options named two different folders.
     TwoFolders,
     /// A plan sends nothing, so it has nothing to record or to replay.
-    PlanWithRecording,
+    DryRunWithRecording,
     /// The replay folder holds no entry for the request being made.
     ReplayMiss(String),
     /// The entry the digest names cannot answer the request being made.
@@ -71,7 +73,11 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
     let (code, message): (u8, String) = match failure {
         Failure::Backend(error) => (2, error.to_string()),
         Failure::Blank(error) => (2, error.to_string()),
-        Failure::Mark(error) => (2, format!("--min-prob: {error}")),
+        Failure::Threshold(error) => (2, format!("--threshold: {error}")),
+        Failure::QuietWithDetails => (
+            2,
+            "--quiet prints nothing, so it does not take --details".to_owned(),
+        ),
         Failure::NoKey(variable) => (
             4,
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
@@ -83,9 +89,9 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
             2,
             "--record and --replay name two different folders, and one run keeps one".to_owned(),
         ),
-        Failure::PlanWithRecording => (
+        Failure::DryRunWithRecording => (
             2,
-            "--plan sends nothing, so it takes neither --record nor --replay".to_owned(),
+            "--dry-run sends nothing, so it takes neither --record nor --replay".to_owned(),
         ),
         Failure::ReplayMiss(name) => (
             5,
@@ -128,9 +134,9 @@ impl From<BlankTextError> for Failure {
     }
 }
 
-impl From<PassMarkError> for Failure {
-    fn from(error: PassMarkError) -> Self {
-        Self::Mark(error)
+impl From<ThresholdError> for Failure {
+    fn from(error: ThresholdError) -> Self {
+        Self::Threshold(error)
     }
 }
 

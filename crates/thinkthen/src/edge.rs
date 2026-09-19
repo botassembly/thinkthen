@@ -5,46 +5,28 @@ use std::fmt;
 use std::io::{ErrorKind, Read, Write};
 use std::time::Duration;
 
-use thinkthen_core::{BackendValues, Evidence, KeyVar};
+use thinkthen_core::{Evidence, KeyVar};
 
 use crate::failure::Failure;
 
 /// The wait before the first retry, which only a test shortens.
 const RETRY_WAIT: Duration = Duration::from_secs(1);
 
-/// Every environment variable the command reads, read once.
+/// The environment the command reads, read once.
+///
+/// A backend comes from the flags and the configuration file alone. The one
+/// variable here shortens the retry wait, and only a test sets it.
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
-    backend: Option<String>,
-    url: Option<String>,
-    adapter: Option<String>,
-    model: Option<String>,
-    key_env: Option<String>,
     retry_wait_ms: Option<u64>,
 }
 
 impl Environment {
-    /// Read the five backend variables and the hidden test wait.
+    /// Read the hidden test wait, which help never shows.
     pub(crate) fn read() -> Self {
         Self {
-            backend: read("THINKTHEN_BACKEND"),
-            url: read("THINKTHEN_URL"),
-            adapter: read("THINKTHEN_ADAPTER"),
-            model: read("THINKTHEN_MODEL"),
-            key_env: read("THINKTHEN_KEY_ENV"),
             retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
         }
-    }
-
-    /// The five backend values the environment offered.
-    pub(crate) fn backend_values(&self) -> BackendValues<'_> {
-        BackendValues::new(
-            self.backend.as_deref(),
-            self.url.as_deref(),
-            self.adapter.as_deref(),
-            self.model.as_deref(),
-            self.key_env.as_deref(),
-        )
     }
 
     /// How long the first retry waits before the wait doubles.
@@ -56,8 +38,7 @@ impl Environment {
 /// Read one variable, or `None` when it holds nothing at all.
 ///
 /// A variable set to the empty string counts as unset, the way most Unix tools
-/// read one. A variable holding white space is given as it stands, so the value
-/// it offers is refused as blank further in.
+/// read one.
 fn read(name: &str) -> Option<String> {
     env::var(name).ok().filter(|value| !value.is_empty())
 }

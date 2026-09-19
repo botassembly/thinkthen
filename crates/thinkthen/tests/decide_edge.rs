@@ -28,10 +28,10 @@ fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io:
     child.wait_with_output()
 }
 
-/// Run `decide if` over one line of evidence.
+/// Run `decide` over one line of evidence.
 fn decide(arguments: &[&str]) -> io::Result<Output> {
     run(
-        &[&["decide", "if", "asks for a refund"], arguments].concat(),
+        &[&["decide", "asks for a refund"], arguments].concat(),
         &[],
         b"Refund me please.",
     )
@@ -40,7 +40,7 @@ fn decide(arguments: &[&str]) -> io::Result<Output> {
 #[test]
 fn the_plan_prints_six_fields_and_opens_no_connection() {
     let output = decide(&[
-        "--plan",
+        "--dry-run",
         "--url",
         CLOSED,
         "--adapter",
@@ -53,7 +53,7 @@ fn the_plan_prints_six_fields_and_opens_no_connection() {
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
         concat!(
-            r#"{"backend":null,"url":"http://127.0.0.1:1/v1/systemone","adapter":"systemone","#,
+            r#"{"profile":null,"url":"http://127.0.0.1:1/v1/systemone","adapter":"systemone","#,
             r#""model":"local-1","key_env":null,"#,
             r#""request":{"state":"Refund me please.","model":"local-1","#,
             r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}"#,
@@ -66,12 +66,12 @@ fn the_plan_prints_six_fields_and_opens_no_connection() {
 
 #[test]
 fn the_plan_of_a_named_profile_names_its_key_variable_and_needs_no_key() {
-    let output = decide(&["--plan"]).expect("the compiled binary runs");
+    let output = decide(&["--dry-run"]).expect("the compiled binary runs");
 
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(
         printed.starts_with(concat!(
-            r#"{"backend":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
+            r#"{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
             r#""adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","#,
         )),
         "{printed}"
@@ -80,130 +80,57 @@ fn the_plan_of_a_named_profile_names_its_key_variable_and_needs_no_key() {
 }
 
 #[test]
-fn environment_variables_name_a_backend_and_a_flag_beats_them() {
+fn the_backend_environment_variables_are_gone_and_change_no_plan() {
     let output = run(
-        &["decide", "if", "asks for a refund", "--plan"],
+        &["decide", "asks for a refund", "--dry-run"],
         &[
+            ("THINKTHEN_BACKEND", "nowhere"),
             ("THINKTHEN_URL", CLOSED),
             ("THINKTHEN_ADAPTER", "systemone"),
             ("THINKTHEN_MODEL", "from-the-environment"),
+            ("THINKTHEN_KEY_ENV", "FROM_THE_ENVIRONMENT"),
         ],
         b"Refund me please.",
     )
     .expect("the compiled binary runs");
+
     let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(printed.contains(r#""profile":"jev""#), "{printed}");
+    assert!(printed.contains(r#""model":"jev-latest""#), "{printed}");
     assert!(
-        printed.contains(r#""model":"from-the-environment""#),
+        printed.contains(r#""key_env":"TYPESAFE_API_KEY""#),
         "{printed}"
     );
-
-    let output = run(
-        &[
-            "decide",
-            "if",
-            "asks for a refund",
-            "--plan",
-            "--model",
-            "from-the-flag",
-        ],
-        &[
-            ("THINKTHEN_URL", CLOSED),
-            ("THINKTHEN_ADAPTER", "systemone"),
-            ("THINKTHEN_MODEL", "from-the-environment"),
-        ],
-        b"Refund me please.",
-    )
-    .expect("the compiled binary runs");
-    let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(printed.contains(r#""model":"from-the-flag""#), "{printed}");
-}
-
-#[test]
-fn a_profile_named_only_by_the_environment_yields_to_an_ad_hoc_backend() {
-    let ad_hoc = &[
-        "decide",
-        "if",
-        "asks for a refund",
-        "--plan",
-        "--url",
-        CLOSED,
-        "--adapter",
-        "systemone",
-        "--model",
-        "local-1",
-    ];
-
-    let output = run(
-        ad_hoc,
-        &[("THINKTHEN_BACKEND", "jev")],
-        b"Refund me please.",
-    )
-    .expect("the compiled binary runs");
-    let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(printed.starts_with(r#"{"backend":null,"#), "{printed}");
+    assert!(!printed.contains("from-the-environment"), "{printed}");
     assert_eq!(output.status.code(), Some(0));
-
-    let output = run(
-        &[ad_hoc, &["--backend", "jev"][..]].concat(),
-        &[],
-        b"Refund me please.",
-    )
-    .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(2));
-
-    let output = run(
-        &["decide", "if", "asks for a refund", "--plan"],
-        &[
-            ("THINKTHEN_BACKEND", "jev"),
-            ("THINKTHEN_URL", CLOSED),
-            ("THINKTHEN_ADAPTER", "systemone"),
-            ("THINKTHEN_MODEL", "local-1"),
-        ],
-        b"Refund me please.",
-    )
-    .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(2));
 }
 
 #[test]
-fn an_empty_environment_variable_is_unset_and_white_space_is_still_refused() {
-    let output = run(
-        &["decide", "if", "asks for a refund", "--plan"],
-        &[("THINKTHEN_BACKEND", ""), ("THINKTHEN_MODEL", "")],
-        b"Refund me please.",
-    )
-    .expect("the compiled binary runs");
+fn a_model_flag_alone_replaces_the_profile_model() {
+    let output = decide(&["--dry-run", "--model", "jev-1.13.0"]).expect("the compiled binary runs");
+
     let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(printed.contains(r#""backend":"jev""#), "{printed}");
-    assert!(printed.contains(r#""model":"jev-latest""#), "{printed}");
+    assert!(printed.contains(r#""model":"jev-1.13.0""#), "{printed}");
     assert_eq!(output.status.code(), Some(0));
-
-    let output = run(
-        &["decide", "if", "asks for a refund", "--plan"],
-        &[("THINKTHEN_MODEL", " ")],
-        b"Refund me please.",
-    )
-    .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(2));
 }
 
 #[test]
-fn each_way_of_naming_no_backend_and_no_mark_is_a_usage_error() {
-    let cases: [(&[&str], &str); 8] = [
+fn each_way_of_naming_no_backend_and_no_threshold_is_a_usage_error() {
+    let cases: [(&[&str], &str); 9] = [
         (&["--url", CLOSED], "a url with no adapter and no model"),
         (
             &["--url", CLOSED, "--adapter", "systemone"],
             "a url with no model",
         ),
         (&["--adapter", "systemone"], "an adapter with no url"),
-        (&["--backend", "nowhere"], "a profile that does not exist"),
+        (&["--profile", "nowhere"], "a profile that does not exist"),
         (
             &["--url", CLOSED, "--adapter", "rest", "--model", "m"],
             "an adapter that does not exist",
         ),
         (
             &[
-                "--backend",
+                "--profile",
                 "jev",
                 "--url",
                 CLOSED,
@@ -215,7 +142,8 @@ fn each_way_of_naming_no_backend_and_no_mark_is_a_usage_error() {
             "a named profile beside a url",
         ),
         (&["--model", ""], "a blank model"),
-        (&["--min-prob", "0.5"], "a pass mark a coin would pass"),
+        (&["--threshold", "90"], "a percent"),
+        (&["--threshold", "0.9:0.1"], "a reversed band"),
     ];
 
     for (arguments, what) in cases {
@@ -228,12 +156,58 @@ fn each_way_of_naming_no_backend_and_no_mark_is_a_usage_error() {
 }
 
 #[test]
-fn the_status_flag_without_a_pass_mark_is_a_usage_error() {
-    let output = decide(&["--status"]).expect("the compiled binary runs");
+fn every_option_the_old_surface_carried_is_a_usage_error() {
+    let cases: [&[&str]; 6] = [
+        &["--status"],
+        &["--min-prob", "0.9"],
+        &["--plan"],
+        &["--backend", "jev"],
+        &["--threshold", "0.9", "--status"],
+        &["--dry-run", "--min-prob", "0.9"],
+    ];
+
+    for arguments in cases {
+        let output = decide(arguments).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+        assert!(output.stdout.is_empty(), "{arguments:?}");
+    }
+
+    // The old grammar named the verb after the command, and it is gone too.
+    let output = run(
+        &["decide", "if", "asks for a refund", "--dry-run"],
+        &[],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
+fn quiet_beside_details_is_a_usage_error() {
+    let output = decide(&["--quiet", "--details"]).expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(2));
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("--min-prob"), "{message}");
+    assert!(message.contains("--quiet"), "{message}");
+    assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn an_option_may_sit_before_the_question_and_a_dash_ends_the_options() {
+    let output = run(
+        &["decide", "--dry-run", "--", "--asks for a refund"],
+        &[],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        printed.contains(r#""instructions":"--asks for a refund""#),
+        "{printed}"
+    );
+    assert_eq!(output.status.code(), Some(0));
 }
 
 #[test]
@@ -246,12 +220,8 @@ fn evidence_that_is_blank_or_not_utf_eight_stops_the_command() {
     ];
 
     for (evidence, code) in cases {
-        let output = run(
-            &["decide", "if", "asks for a refund", "--plan"],
-            &[],
-            evidence,
-        )
-        .expect("the compiled binary runs");
+        let output = run(&["decide", "asks for a refund", "--dry-run"], &[], evidence)
+            .expect("the compiled binary runs");
 
         assert_eq!(
             output.status.code(),
@@ -264,8 +234,8 @@ fn evidence_that_is_blank_or_not_utf_eight_stops_the_command() {
 }
 
 #[test]
-fn a_blank_condition_is_a_usage_error() {
-    let output = run(&["decide", "if", "  ", "--plan"], &[], b"Refund me please.")
+fn a_blank_question_is_a_usage_error() {
+    let output = run(&["decide", "  ", "--dry-run"], &[], b"Refund me please.")
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(2));
@@ -278,12 +248,13 @@ fn no_diagnostic_ever_carries_the_key_or_the_evidence() {
     let output = run(
         &[
             "decide",
-            "if",
             "asks for a refund",
             "--key-env",
             "LOCAL_KEY",
+            "--profile",
+            "nowhere",
         ],
-        &[("LOCAL_KEY", secret), ("THINKTHEN_BACKEND", "nowhere")],
+        &[("LOCAL_KEY", secret)],
         evidence.as_bytes(),
     )
     .expect("the compiled binary runs");
@@ -295,15 +266,31 @@ fn no_diagnostic_ever_carries_the_key_or_the_evidence() {
 }
 
 #[test]
-fn the_help_for_decide_if_names_the_condition_and_every_option() {
-    let output = run(&["decide", "if", "--help"], &[], b"").expect("the compiled binary runs");
+fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
+    let short = run(&["decide", "-h"], &[], b"").expect("the compiled binary runs");
+    let long = run(&["decide", "--help"], &[], b"").expect("the compiled binary runs");
 
-    let help = String::from_utf8_lossy(&output.stdout);
+    let short = String::from_utf8_lossy(&short.stdout);
     for option in [
-        "--min-prob",
-        "--status",
-        "--plan",
-        "--backend",
+        "--threshold",
+        "--quiet",
+        "--details",
+        "--dry-run",
+        "--profile",
+    ] {
+        assert!(short.contains(option), "{option} is missing from {short}");
+    }
+    for option in ["--url", "--adapter", "--model", "--key-env", "--record"] {
+        assert!(!short.contains(option), "{option} is in the short help");
+    }
+
+    let long = String::from_utf8_lossy(&long.stdout);
+    for option in [
+        "--threshold",
+        "--quiet",
+        "--details",
+        "--dry-run",
+        "--profile",
         "--url",
         "--adapter",
         "--model",
@@ -313,18 +300,18 @@ fn the_help_for_decide_if_names_the_condition_and_every_option() {
         "--timeout",
         "--max-retries",
     ] {
-        assert!(help.contains(option), "{option} is missing from {help}");
+        assert!(long.contains(option), "{option} is missing from {long}");
     }
-    assert!(!help.contains("THINKTHEN_TEST_RETRY_WAIT_MS"), "{help}");
-    assert_eq!(output.status.code(), Some(0));
+    assert!(!long.contains("THINKTHEN_TEST_RETRY_WAIT_MS"), "{long}");
+    assert!(long.contains("set -e"), "the help warns about set -e");
 }
 
 #[test]
 fn an_unknown_word_is_a_usage_error_and_never_an_instruction() {
     for arguments in [
-        &["decide", "sideways", "something"][..],
-        &["decide", "if", "a", "b"][..],
+        &["decide", "a", "b"][..],
         &["think", "about", "it"][..],
+        &["decide"][..],
     ] {
         let output = run(arguments, &[], b"Refund me please.").expect("the compiled binary runs");
 

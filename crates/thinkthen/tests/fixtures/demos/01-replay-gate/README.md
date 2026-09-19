@@ -2,7 +2,7 @@
 
 Status: green
 
-Verbs: `decide if`
+Verbs: `decide`
 
 This page is not a demo. It is the fixture the demo runner is tested against, written the way a real demo page is written, so `sdlc/scripts/demos` is proved before the first real demo turns green.
 
@@ -13,10 +13,10 @@ The recording under `recording/` holds one exchange. Its file name is the digest
 ```bash
 set -euo pipefail
 
-thinkthen decide if 'the customer asks for money back' \
+thinkthen decide 'the customer asks for money back' \
   --url http://127.0.0.1:8721/v1/systemone --adapter systemone --model local-1 \
-  --min-prob 0.9 --status --replay recording/ \
-  < message.txt > /dev/null && rc=0 || rc=$?
+  --threshold 0.1:0.9 --quiet --replay recording/ \
+  < message.txt && rc=0 || rc=$?
 printf 'rc=%s\n' "$rc" | mustmatch "rc=0"
 ```
 
@@ -25,10 +25,10 @@ The result says a recording answered, and it names the model the recorded respon
 ```bash
 set -euo pipefail
 
-thinkthen decide if 'the customer asks for money back' \
+thinkthen decide 'the customer asks for money back' \
   --url http://127.0.0.1:8721/v1/systemone --adapter systemone --model local-1 \
-  --min-prob 0.9 --replay recording/ \
+  --threshold 0.1:0.9 --details --replay recording/ \
   < message.txt \
-  | jq -c '{replayed: .meta.replayed, model: .meta.model, status: .assessment.status}' \
-  | mustmatch '{"replayed":true,"model":"local-1","status":"accepted"}'
+  | jq -c '{replayed: .meta.replayed, model: .meta.model, value: .value}' \
+  | mustmatch '{"replayed":true,"model":"local-1","value":true}'
 ```

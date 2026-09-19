@@ -59,7 +59,7 @@ impl Plan {
 mod tests {
     use super::{EmptyPlanError, Plan};
     use crate::question::Question;
-    use crate::text::{Condition, Evidence, ModelName};
+    use crate::text::{Evidence, ModelName, QuestionText};
 
     fn evidence() -> Evidence {
         Evidence::new("Help! My payouts have been failing for 3 days.").expect("not blank")
@@ -69,8 +69,8 @@ mod tests {
         ModelName::new("jev-latest").expect("not blank")
     }
 
-    fn question(condition: &str) -> Question {
-        Question::new_if(Condition::new(condition).expect("not blank"))
+    fn question(text: &str) -> Question {
+        Question::new_decide(QuestionText::new(text).expect("not blank"))
     }
 
     #[test]

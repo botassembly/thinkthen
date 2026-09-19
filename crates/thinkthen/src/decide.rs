@@ -1,4 +1,4 @@
-//! The `decide if` flow, from what was asked to what is printed.
+//! The `decide` flow, from what was asked to what is printed.
 
 use std::io::{Read, Write};
 use std::process::ExitCode;
@@ -7,41 +7,44 @@ use std::time::Duration;
 use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::systemone;
 use thinkthen_core::{
-    Adapter, Assessment, AssessmentStatus, Backend, Condition, DecisionResult, Meta, PassMark,
-    Plan, PlanDocument, Policy, Question, Reply, assess, json_line, resolve_backend,
+    Adapter, Backend, DecisionResult, Meta, Outcome, Plan, PlanDocument, Question, QuestionText,
+    Reply, Threshold, json_line, resolve_backend,
 };
 
-use crate::args::IfArguments;
+use crate::args::DecideArguments;
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::{self, Exchange};
 use crate::recorder::Recorder;
 
-/// Judge whether the condition holds for the evidence, and say so on one line.
+/// Answer the question about the evidence, and set the exit code from the answer.
 ///
 /// # Errors
 ///
 /// Returns [`Failure`] for every outcome `specification/channels.md` gives an
 /// exit code other than 0, 1, and 3.
-pub(crate) fn decide_if(
-    arguments: &IfArguments,
+pub(crate) fn decide(
+    arguments: &DecideArguments,
     environment: &Environment,
     input: impl Read,
-    writer: impl Write,
+    mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let policy = policy_of(arguments.min_prob)?;
-    let backend = resolve_backend(arguments.backend_values(), environment.backend_values())?;
-    let condition = Condition::new(arguments.condition.as_str())?;
+    if arguments.quiet && arguments.details {
+        return Err(Failure::QuietWithDetails);
+    }
+    let threshold = threshold_of(arguments.threshold.as_deref())?;
+    let backend = resolve_backend(arguments.backend_values())?;
+    let text = QuestionText::new(arguments.question.as_str())?;
     let plan = Plan::new(
         edge::evidence(input)?,
         backend.model().clone(),
-        vec![Question::new_if(condition.clone())],
+        vec![Question::new_decide(text.clone())],
     )
     .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
 
-    if arguments.plan {
+    if arguments.dry_run {
         if arguments.record.is_some() || arguments.replay.is_some() {
-            return Err(Failure::PlanWithRecording);
+            return Err(Failure::DryRunWithRecording);
         }
         let document = PlanDocument::of(&backend, &plan)
             .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
@@ -55,29 +58,34 @@ pub(crate) fn decide_if(
         .answers()
         .first()
         .ok_or(Failure::Defect("the adapter answered no question"))?;
-    let assessment = assess(answer, policy);
-    let result = DecisionResult::new(
-        Question::new_if(condition),
-        answer,
-        assessment,
-        Meta::new(
-            backend.name().cloned(),
-            backend.url().clone(),
-            backend.adapter(),
-            reply.model().clone(),
-            reply.usage(),
-            replayed,
-        ),
-    );
-    edge::write_line(writer, &json_line(&result)?)?;
-    Ok(exit_code(arguments.status, assessment))
+    let outcome = threshold.judge(answer);
+    if arguments.details {
+        let result = DecisionResult::new(
+            outcome,
+            Question::new_decide(text),
+            answer,
+            threshold,
+            Meta::new(
+                backend.profile().cloned(),
+                backend.url().clone(),
+                backend.adapter(),
+                reply.model().clone(),
+                reply.usage(),
+                replayed,
+            ),
+        );
+        edge::write_line(&mut writer, &json_line(&result)?)?;
+    } else if !arguments.quiet {
+        edge::write_line(&mut writer, &json_line(&outcome.value())?)?;
+    }
+    Ok(exit_code(outcome))
 }
 
-/// Take the pass mark the user named, or accept nothing.
-fn policy_of(min_prob: Option<f64>) -> Result<Policy, Failure> {
-    match min_prob {
-        Some(value) => Ok(Policy::Symmetric(PassMark::new(value)?)),
-        None => Ok(Policy::Unassessed),
+/// Take the rule the user named, or the cut of one half that stands for none.
+fn threshold_of(given: Option<&str>) -> Result<Threshold, Failure> {
+    match given {
+        Some(text) => Ok(text.parse()?),
+        None => Ok(Threshold::default()),
     }
 }
 
@@ -88,7 +96,7 @@ fn policy_of(min_prob: Option<f64>) -> Result<Policy, Failure> {
 fn ask(
     backend: &Backend,
     plan: &Plan,
-    arguments: &IfArguments,
+    arguments: &DecideArguments,
     environment: &Environment,
     recorder: &Recorder,
 ) -> Result<(Reply, bool), Failure> {
@@ -121,14 +129,11 @@ fn read(backend: &Backend, plan: &Plan, body: &[u8]) -> Result<Reply, Failure> {
     }
 }
 
-/// Turn the assessment into the exit code `--status` asks for.
-fn exit_code(status: bool, assessment: Assessment) -> ExitCode {
-    if !status {
-        return ExitCode::SUCCESS;
-    }
-    match (assessment.status(), assessment.value()) {
-        (AssessmentStatus::Accepted, Some(true)) => ExitCode::from(0),
-        (AssessmentStatus::Accepted, Some(false)) => ExitCode::from(1),
-        _ => ExitCode::from(3),
+/// Turn the outcome into the exit code `specification/channels.md` fixes.
+fn exit_code(outcome: Outcome) -> ExitCode {
+    match outcome {
+        Outcome::Yes => ExitCode::from(0),
+        Outcome::No => ExitCode::from(1),
+        Outcome::Unresolved => ExitCode::from(3),
     }
 }

@@ -198,9 +198,9 @@ mod tests {
     use crate::plan::Plan;
     use crate::question::Question;
     use crate::systemone;
-    use crate::text::{Condition, Evidence, ModelName, Url};
+    use crate::text::{Evidence, ModelName, QuestionText, Url};
 
-    /// The digest of the `if-urgent` fixture request against the built-in URL.
+    /// The digest of the `decide-urgent` fixture request against the built-in URL.
     ///
     /// The value is the SHA-256 of `systemone`, a newline, the URL, a newline,
     /// and the request bytes, taken outside this program. Pinning it holds the
@@ -233,8 +233,8 @@ mod tests {
         Plan::new(
             Evidence::new("Help! My payouts have been failing for 3 days.").expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
-            vec![Question::new_if(
-                Condition::new("Does this convey urgency?").expect("not blank"),
+            vec![Question::new_decide(
+                QuestionText::new("Does this convey urgency?").expect("not blank"),
             )],
         )
         .expect("a plan of one question")

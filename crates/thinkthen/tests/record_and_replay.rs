@@ -9,7 +9,7 @@ use std::process::{Command, Output, Stdio};
 
 use harness::{Canned, Listener};
 use thinkthen_core::recording::{Entry, Exchange};
-use thinkthen_core::{Adapter, Condition, Evidence, ModelName, Plan, Question, Url, systemone};
+use thinkthen_core::{Adapter, Evidence, ModelName, Plan, Question, QuestionText, Url, systemone};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -53,12 +53,11 @@ fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     child.wait_with_output()
 }
 
-/// Run `decide if` against one ad-hoc URL, judging one condition.
-fn judge(condition: &str, url: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
+/// Run `decide` against one ad-hoc URL, asking one question.
+fn judge(question: &str, url: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
     let ad_hoc = [
         "decide",
-        "if",
-        condition,
+        question,
         "--url",
         url,
         "--adapter",
@@ -74,9 +73,28 @@ fn judge(condition: &str, url: &str, arguments: &[&str], key: Option<&str>) -> i
     )
 }
 
-/// Run `decide if` against one ad-hoc URL, judging the refund condition.
+/// Run `decide` against one ad-hoc URL, asking the refund question.
 fn decide(url: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
     judge("asks for a refund", url, arguments, key)
+}
+
+/// Record one answered exchange into the folder and give the entry it wrote.
+///
+/// Every case below starts from a folder holding one entry. The listener is
+/// given back at the URL the entry's digest was taken over, and it holds a
+/// second answer for the case that asks it something more.
+fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(ANSWERED)])?;
+    let output = decide(
+        listener.url(),
+        &["--record", &folder.to_string_lossy()],
+        None,
+    )?;
+    if output.status.code() != Some(0) {
+        return Err(io::Error::other("the recording run answered"));
+    }
+    let (name, written) = only_entry(folder)?;
+    Ok((listener, name, written))
 }
 
 /// Write the entry the built-in profile would record for this response.
@@ -84,7 +102,9 @@ fn plant(folder: &Path, response: &str) -> Option<String> {
     let plan = Plan::new(
         Evidence::new(EVIDENCE).ok()?,
         ModelName::new("jev-latest").ok()?,
-        vec![Question::new_if(Condition::new("asks for a refund").ok()?)],
+        vec![Question::new_decide(
+            QuestionText::new("asks for a refund").ok()?,
+        )],
     )
     .ok()?;
     let request = systemone::encode(&plan).ok()?;
@@ -126,7 +146,7 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
         let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
         let output = decide(
             listener.url(),
-            &["--min-prob", "0.9", "--record", &folder.to_string_lossy()],
+            &["--details", "--record", &folder.to_string_lossy()],
             Some("sk-secret-value"),
         )
         .expect("the compiled binary runs");
@@ -161,7 +181,7 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
     // variable is set for the command to read.
     let output = decide(
         &recorded.0,
-        &["--min-prob", "0.9", "--replay", &folder.to_string_lossy()],
+        &["--details", "--replay", &folder.to_string_lossy()],
         None,
     )
     .expect("the compiled binary runs");
@@ -180,7 +200,7 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
 fn a_replay_under_the_built_in_profile_reads_no_key_and_opens_no_connection() {
     let folder = folder("no-key");
     let name = plant(&folder, ANSWERED).expect("an entry for the built-in profile");
-    let asked: [&str; 3] = ["decide", "if", "asks for a refund"];
+    let asked: [&str; 2] = ["decide", "asks for a refund"];
 
     // The built-in profile names TYPESAFE_API_KEY, which env_clear leaves unset.
     // Without a recording that is exit 4, and no connection opens.
@@ -190,7 +210,11 @@ fn a_replay_under_the_built_in_profile_reads_no_key_and_opens_no_connection() {
     assert!(message.contains("TYPESAFE_API_KEY"), "{message}");
 
     let output = run(
-        &[&asked[..], &["--replay", &folder.to_string_lossy()]].concat(),
+        &[
+            &asked[..],
+            &["--details", "--replay", &folder.to_string_lossy()],
+        ]
+        .concat(),
         &[],
     )
     .expect("the compiled binary runs");
@@ -199,7 +223,7 @@ fn a_replay_under_the_built_in_profile_reads_no_key_and_opens_no_connection() {
     assert!(output.stderr.is_empty());
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(printed.contains(r#""replayed":true"#), "{printed}");
-    assert!(printed.contains(r#""backend":"jev""#), "{printed}");
+    assert!(printed.contains(r#""profile":"jev""#), "{printed}");
     assert!(printed.contains(r#""model":"jev-1.13.0""#), "{printed}");
     assert!(name.ends_with(".json"), "{name}");
 }
@@ -207,21 +231,14 @@ fn a_replay_under_the_built_in_profile_reads_no_key_and_opens_no_connection() {
 #[test]
 fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
     let folder = folder("missed");
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-    decide(
-        listener.url(),
-        &["--record", &folder.to_string_lossy()],
-        None,
-    )
-    .expect("the compiled binary runs");
-    let (name, _) = only_entry(&folder).expect("one recorded entry");
+    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
     assert_eq!(
         listener.requests().len(),
         1,
         "the recording run called once"
     );
 
-    // Another condition makes other request bytes, so the digest names a file
+    // Another question makes other request bytes, so the digest names a file
     // this folder does not hold.
     let output = judge(
         "asks for something else",
@@ -244,15 +261,7 @@ fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
 #[test]
 fn an_entry_that_records_another_exchange_is_refused_by_name() {
     let folder = folder("damaged");
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-    decide(
-        listener.url(),
-        &["--record", &folder.to_string_lossy()],
-        None,
-    )
-    .expect("the compiled binary runs");
-
-    let (name, written) = only_entry(&folder).expect("one recorded entry");
+    let (listener, name, written) = recorded(&folder).expect("one recorded entry");
     let edited = written.replace(
         r#""state":"Refund me please.""#,
         r#""state":"Something else.""#,
@@ -288,7 +297,8 @@ fn an_entry_that_records_another_exchange_is_refused_by_name() {
 fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
     let folder = folder("cached");
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-    let both: [&str; 4] = [
+    let both: [&str; 5] = [
+        "--details",
         "--record",
         &folder.to_string_lossy(),
         "--replay",
@@ -307,13 +317,13 @@ fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
 }
 
 #[test]
-fn two_different_folders_and_a_plan_that_records_are_usage_errors() {
+fn two_different_folders_and_a_dry_run_that_records_are_usage_errors() {
     let folder = folder("two");
     let cases: [&[&str]; 4] = [
         &["--record", "one", "--replay", "another"],
-        &["--plan", "--record", "one"],
-        &["--plan", "--replay", "one"],
-        &["--plan", "--record", "one", "--replay", "another"],
+        &["--dry-run", "--record", "one"],
+        &["--dry-run", "--replay", "one"],
+        &["--dry-run", "--record", "one", "--replay", "another"],
     ];
 
     for arguments in cases {
@@ -337,19 +347,10 @@ fn mode(path: &Path) -> io::Result<u32> {
 #[test]
 fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
     let folder = folder("private");
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(ANSWERED)])
-        .expect("a loopback listener");
-    let output = decide(
-        listener.url(),
-        &["--record", &folder.to_string_lossy()],
-        None,
-    )
-    .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(0));
+    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
 
     // A recording holds the evidence, so neither the folder the tool made nor
     // the entry inside it is readable by anybody else, whatever the umask says.
-    let (name, _) = only_entry(&folder).expect("one recorded entry");
     assert_eq!(mode(&folder).expect("the folder is there"), 0o700);
     assert_eq!(
         mode(&folder.join(&name)).expect("the entry is there"),
@@ -380,14 +381,7 @@ fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
 #[test]
 fn an_entry_that_cannot_be_read_is_not_reported_as_a_miss() {
     let folder = folder("unreadable");
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-    decide(
-        listener.url(),
-        &["--record", &folder.to_string_lossy()],
-        None,
-    )
-    .expect("the compiled binary runs");
-    let (name, _) = only_entry(&folder).expect("one recorded entry");
+    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
 
     // A directory standing where the entry stood is there and cannot be read.
     // Calling that a miss would tell the user to record what was already recorded.

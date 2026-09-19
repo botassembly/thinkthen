@@ -23,12 +23,13 @@ for page in */README.md; do
 	fi
 	# A green page replays a recording. A folder it names and does not hold
 	# would send the page to a backend, so the run stops here instead.
-	for named in $(sed -n 's/.*--replay \([^ ]*\).*/\1/p' "$page" | sort -u); do
+	sed -n 's/.*--replay \([^ ]*\).*/\1/p' "$page" | sort -u | while IFS= read -r named; do
+		[ -n "$named" ] || continue
 		if [ ! -d "$folder/$named" ]; then
 			printf 'demos: %s is green, and it names no folder %s\n' "$page" "$named" >&2
 			exit 1
 		fi
-	done
+	done || exit 1
 	# mustmatch runs a block from the folder of the page it came from, so the
 	# relative paths a demo reads its own input files by are the demo's own.
 	printf 'demos: running %s\n' "$page"
