@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I shared my login with a family member temporarily last year and never got around to changing my password afterward, and now I am worried about who else might still have access, so I want everything reset securely.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"account","confidence":0.99,"probabilities":{"product":0.0,"other":0.01,"account":0.99,"billing":0.0,"shipping":0.0}}},"usage":{"input_tokens":347,"output_tokens":53}}
+}

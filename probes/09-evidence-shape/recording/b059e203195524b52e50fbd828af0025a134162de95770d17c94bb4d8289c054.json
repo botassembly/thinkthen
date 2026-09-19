@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Copier still jamming as I write this\",\"body\":\"The second floor copier stopped mid job and the paper is stuck inside the tray. Two of us have tried opening the panels without success. We have a report due this afternoon and need a working machine or a workaround as soon as someone is free.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":345,"output_tokens":21}}
+}

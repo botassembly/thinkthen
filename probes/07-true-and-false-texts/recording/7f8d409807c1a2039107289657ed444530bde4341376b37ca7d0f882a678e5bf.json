@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Only one of the three shelves I ordered was damaged in transit, the others are undamaged and already installed. I would like a partial refund covering just the damaged shelf rather than dealing with a full replacement order.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.93}},"usage":{"input_tokens":317,"output_tokens":21}}
+}

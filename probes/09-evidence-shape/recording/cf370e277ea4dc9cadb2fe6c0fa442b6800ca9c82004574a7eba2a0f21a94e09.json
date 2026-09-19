@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Clarifying the overtime approval process\",\"body\":\"I want to confirm the current steps for getting overtime approved before a shift starts. Does the request need to go through the shift lead first or straight to payroll? This is just for my own understanding, everything on our end has been running smoothly this week.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.05}},"usage":{"input_tokens":343,"output_tokens":21}}
+}

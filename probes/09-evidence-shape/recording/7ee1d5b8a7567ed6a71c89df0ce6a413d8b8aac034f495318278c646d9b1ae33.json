@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Elevator outage planned for next Tuesday\",\"body\":\"Maintenance will take the north elevator out of service for scheduled inspection. The lobby elevator will remain available the whole time. Please use the stairs or the other elevator if you are heading to the upper floors during that window and let your team know in advance.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03}},"usage":{"input_tokens":342,"output_tokens":21}}
+}

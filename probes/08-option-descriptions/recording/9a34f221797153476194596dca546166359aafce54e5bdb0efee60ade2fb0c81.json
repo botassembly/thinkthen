@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"My card was declined during renewal even though there are plenty of funds available, and now I have received a notice saying my plan lapsed, so I need the payment retried and my subscription reinstated without losing my settings.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.99,"probabilities":{"billing":0.99,"account":0.01,"product":0.0,"shipping":0.0,"other":0.0}}},"usage":{"input_tokens":352,"output_tokens":53}}
+}

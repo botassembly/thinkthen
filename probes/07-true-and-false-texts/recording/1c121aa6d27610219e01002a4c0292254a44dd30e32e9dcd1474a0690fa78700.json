@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The wheel on the suitcase has started sticking and no longer turns smoothly on hard floors, which is annoying when I am rushing through an airport. Do you have a repair service for this, or spare wheels I could fit myself.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.01}},"usage":{"input_tokens":319,"output_tokens":21}}
+}

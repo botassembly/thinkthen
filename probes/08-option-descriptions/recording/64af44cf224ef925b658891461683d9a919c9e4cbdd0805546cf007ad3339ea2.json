@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The battery indicator shows a full charge, but the device shuts off unexpectedly after only a short time of use, which suggests the battery inside may not be holding its charge the way it is supposed to anymore.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"product","confidence":0.66,"probabilities":{"shipping":0.0,"billing":0.0,"product":0.74,"other":0.26,"account":0.0}}},"usage":{"input_tokens":347,"output_tokens":53}}
+}

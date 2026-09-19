@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Suggestion for the supply request form\",\"body\":\"Would it be possible to add a dropdown for common supply requests instead of the open text box we use now? This is just a suggestion to save time filling it out, not a complaint about anything being broken. Happy to sketch out what the fields could look like.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.08}},"usage":{"input_tokens":346,"output_tokens":21}}
+}

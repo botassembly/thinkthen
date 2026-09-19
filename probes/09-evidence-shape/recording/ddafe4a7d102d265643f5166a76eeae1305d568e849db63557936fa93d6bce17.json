@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Storage room reorganization request\",\"body\":\"Could we get approval to rearrange the shelving in the supply storage room? Nothing is broken, we just think a different layout would make it easier to find seasonal items. Let me know if there is a form to fill out or if I can start this weekend.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.13}},"usage":{"input_tokens":347,"output_tokens":21}}
+}

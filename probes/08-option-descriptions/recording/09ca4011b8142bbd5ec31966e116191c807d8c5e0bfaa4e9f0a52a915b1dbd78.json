@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The colour of the item I received looks noticeably different from the photos shown during checkout, more of a dull grey than the bright blue that was advertised, and I want to know if this is a manufacturing inconsistency.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"product","confidence":0.94,"probabilities":{"product":0.95,"other":0.04,"billing":0.0,"account":0.0,"shipping":0.01}}},"usage":{"input_tokens":351,"output_tokens":53}}
+}

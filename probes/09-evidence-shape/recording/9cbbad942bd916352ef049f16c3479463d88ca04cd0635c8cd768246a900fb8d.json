@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Scanner errors continuing all morning\",\"body\":\"The barcode scanners at check in keep throwing an error every few scans and it is still happening as of this message. We have tried three different units and all of them show the same fault. Staff are writing numbers down by hand to keep the line moving.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":341,"output_tokens":21}}
+}

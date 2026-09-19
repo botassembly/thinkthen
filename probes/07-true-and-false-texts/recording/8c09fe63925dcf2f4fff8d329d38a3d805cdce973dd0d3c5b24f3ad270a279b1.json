@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I noticed the packaging mentions a satisfaction guarantee but does not explain exactly how that works in practice. Could you walk me through what steps I would need to take if I ever wanted to make use of that guarantee.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.06}},"usage":{"input_tokens":316,"output_tokens":21}}
+}

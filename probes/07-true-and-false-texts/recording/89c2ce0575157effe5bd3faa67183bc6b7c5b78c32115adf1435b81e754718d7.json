@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Before I decide what to do about the chair that wobbles, could you tell me what your return and refund policy actually covers, and how many days I have to make a claim after delivery.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.17}},"usage":{"input_tokens":314,"output_tokens":21}}
+}

@@ -18,7 +18,9 @@ mode=${1:-record}
 out=${OUT:-runs}
 rec=${REC:-recording}
 case "$mode" in
-record) folder="--record $rec/" ;;
+# Recording and replaying one folder pays for a case once. A case the
+# folder already holds is answered from it, and only a new case is sent.
+record) folder="--record $rec/ --replay $rec/" ;;
 --replay) folder="--replay $rec/" ;;
 *)
 	printf 'job: the one argument is --replay\n' >&2
@@ -36,12 +38,16 @@ judge() {
 	while IFS= read -r case; do
 		printf '%s' "$(printf '%s\n' "$case" | jq -r .text)" |
 			thinkthen choose "$@" --details $folder >row.json && exit=0 || exit=$?
-		# `choose` takes no cut here, so 0 is the only answer that can arrive.
-		if [ "$exit" != 0 ]; then
+		# 0 is a label. 3 is unresolved, which `choose` gives on an exact tie
+		# of the top two options, with or without a cut. Anything else stops.
+		case "$exit" in
+		0 | 3) ;;
+		*)
 			printf 'job: %s stopped with exit %s\n' \
 				"$(printf '%s\n' "$case" | jq -r .id)" "$exit" >&2
 			exit "$exit"
-		fi
+			;;
+		esac
 		jq -c --argjson case "$case" \
 			'{schema, value, input: $case, question, answer, threshold, meta}' \
 			row.json >>"$target"

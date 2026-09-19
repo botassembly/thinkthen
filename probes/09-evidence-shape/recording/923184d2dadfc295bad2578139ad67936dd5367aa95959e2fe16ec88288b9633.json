@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Still broken: badge reader at the side door\",\"body\":\"The badge reader by the side entrance has not accepted a single card since the shift began, so everyone is having to come through the main lobby instead. We reported this same reader last month and it worked fine after that fix, but it has failed again today.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":346,"output_tokens":21}}
+}

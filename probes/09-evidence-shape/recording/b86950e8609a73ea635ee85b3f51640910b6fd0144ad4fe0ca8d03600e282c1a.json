@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"No longer an issue: hallway light flicker\",\"body\":\"The flickering light in the third floor hallway that people mentioned last week has stopped since the bulb was swapped out on Tuesday. It has stayed steady every time I have walked past since then. Letting the team know so we can mark the complaint as closed.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":348,"output_tokens":21}}
+}

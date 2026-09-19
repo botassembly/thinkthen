@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The stitching along one seam of the item began unravelling after just a few uses, and now there is a small hole forming, which seems unusual for something advertised as durable and meant for everyday use like this.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"product","confidence":0.93,"probabilities":{"account":0.0,"billing":0.0,"other":0.05,"shipping":0.0,"product":0.95}}},"usage":{"input_tokens":350,"output_tokens":53}}
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Payment gateway rejecting every transaction\",\"body\":\"The payment gateway is rejecting every transaction we send it right now, no matter the card or amount. This has been going on since the store opened and customers are backing up at the register. We have not found any workaround yet and need this looked at urgently.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":342,"output_tokens":21}}
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The security questions I set up years ago no longer match what I remember entering, and now I am locked out of recovery options entirely, so I need a way to verify who I am and reset things properly.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"account","confidence":0.99,"probabilities":{"account":0.99,"other":0.01,"shipping":0.0,"product":0.0,"billing":0.0}}},"usage":{"input_tokens":348,"output_tokens":53}}
+}

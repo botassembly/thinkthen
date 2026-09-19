@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I recently graduated with a degree in logistics and am very interested in joining your operations team, so I wanted to ask where I might find current openings and whether there is a general contact for early career applicants.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"other","confidence":0.97,"probabilities":{"account":0.01,"other":0.97,"product":0.0,"billing":0.0,"shipping":0.02}}},"usage":{"input_tokens":347,"output_tokens":53}}
+}

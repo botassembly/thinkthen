@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I noticed my payment method on file expired last month, yet a charge still went through successfully afterward, which does not make sense to me, so I would like clarification on which card was actually used for that transaction.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":"Money the customer pays or is owed: invoices, charges, payment methods, refunds, and the price of a subscription.","shipping":"The parcel itself: addresses, delivery dates, a delivery that is late, lost, or damaged, and a return in transit.","account":"Getting into the account and who may use it: signing in, passwords, the email address on the account, permissions, and closing an account.","product":"The thing the customer bought: how it works, a fault in it, a missing part, and the instructions.","other":"Anything that fits none of the four above."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":1.0,"probabilities":{"shipping":0.0,"billing":1.0,"product":0.0,"other":0.0,"account":0.0}}},"usage":{"input_tokens":491,"output_tokens":53}}
+}

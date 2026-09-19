@@ -16,7 +16,9 @@ mode=${1:-record}
 out=${OUT:-runs}
 rec=${REC:-recording}
 case "$mode" in
-record) folder="--record $rec/" ;;
+# Recording and replaying one folder pays for a case once. A case the
+# folder already holds is answered from it, and only a new case is sent.
+record) folder="--record $rec/ --replay $rec/" ;;
 --replay) folder="--replay $rec/" ;;
 *)
 	printf 'job: the one argument is --replay\n' >&2

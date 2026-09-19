@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Ongoing leak near the loading bay\",\"body\":\"Water is still pooling near loading bay three and has been since the overnight shift noticed it. It keeps spreading a little more each hour and none of the mats we put down have kept up with it. We have cordoned off the area for now.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":343,"output_tokens":21}}
+}
