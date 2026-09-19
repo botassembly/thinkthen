@@ -82,3 +82,16 @@ Searching the committed recordings for `apikey_`, for `authorization`, and for `
 ## Left for the reviewer
 
 `demos/README.md` holds two sentences that this ticket did not touch, because the ticket limits its edits there to the rows of demos 02, 05, 17, and 20. "Demo 01 holds the only recording so far, and it is the only green page" is now false. "Every page closes with 'What this demo decides'" is false for the four pages in the ADR 0011 form, which close with "What can go wrong". Both sentences belong to whoever reconciles the shared files.
+
+## The review pass
+
+The independent review asked for six changes, and each landed as one commit.
+
+- The one secrecy test covered `decide` alone. It now covers all three verbs on both failure paths, asserts on standard output as well as standard error, and is joined by a core test pinning the `Debug` of a pick and a placement. The widened test was green on the landed code.
+- `assert!(choose.contains("3"))` passed on any help text. It now pins the sentence "Exit 0 is a label and exit 3 is unresolved." and the clause "never exits 1".
+- The list refusals were named "before any request" and every case passed `--dry-run`, which sends nothing. All nine, plus the band on `choose` and the rule on `score`, moved into the backend binary and now run against a loopback listener that reads no request.
+- `specification/score.md` says that the tool computes the number itself and never reads the vendor's score field.
+- The four backend test files each held the same twenty lines of process spawning. `harness::spawn` holds them once, and the callers shed 93 lines and gained 71.
+- `score --threshold 0.5` drew a parser tip naming `--record` and a usage line reading as if `--record` were required. `score` now takes `--threshold` as a hidden argument and refuses it in one line of its own. `--quiet` and `--raw` keep the parser's message, which already reads correctly.
+
+The ceiling moved from 5742 to 5862 across the pass. The growth is the two widened tests and the hidden argument with its refusal.
