@@ -120,17 +120,26 @@ fn a_band_on_a_pick_is_a_usage_error_and_a_cut_is_not() {
 
 #[test]
 fn a_rule_on_a_placement_is_a_usage_error_because_score_takes_none() {
-    for arguments in [
-        &["--threshold", "0.8"][..],
-        &["--threshold", "0.1:0.9"][..],
-        &["--quiet"][..],
-        &["--raw"][..],
-    ] {
+    for arguments in [&["--quiet"][..], &["--raw"][..]] {
         let output = verb("score", &LEVELS, arguments).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
         let message = String::from_utf8_lossy(&output.stderr);
         assert!(message.contains("unexpected argument"), "{message}");
+    }
+
+    // `--threshold` is taken and then refused by the tool, because clap
+    // answered it with a tip about `--record` and a usage line that read as
+    // if `--record` were required.
+    for arguments in [&["--threshold", "0.8"][..], &["--threshold", "0.1:0.9"][..]] {
+        let output = verb("score", &LEVELS, arguments).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+        let message = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(
+            message,
+            "thinkthen: --threshold: `score` takes no rule, so cut on the number with `jq -e`\n"
+        );
     }
 }
 

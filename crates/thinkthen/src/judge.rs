@@ -135,14 +135,18 @@ pub(crate) fn choose(
 ///
 /// # Errors
 ///
-/// Returns [`Failure`] for a list of levels the verb does not take, and for
-/// every outcome `channels.md` gives a code above 3.
+/// Returns [`Failure`] for a rule, which `score` has none of, for a list of
+/// levels the verb does not take, and for every outcome `channels.md` gives a
+/// code above 3.
 pub(crate) fn score(
     arguments: &ScoreArguments,
     environment: &Environment,
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    if arguments.threshold.is_some() {
+        return Err(Failure::RuleOnScore);
+    }
     let question = Question::Score {
         text: QuestionText::new(arguments.question.as_str())?,
         levels: Labels::levels(arguments.levels.clone())?,

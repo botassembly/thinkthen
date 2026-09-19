@@ -187,6 +187,13 @@ pub(crate) struct ScoreArguments {
     /// The levels, 2 to 10 of them, lowest first.
     pub(crate) levels: Vec<String>,
 
+    /// Taken so that the tool refuses it in its own words. `score` has no rule.
+    ///
+    /// Left to the parser, `--threshold` drew a tip naming `--record` and a
+    /// usage line that read as if `--record` were required.
+    #[arg(long, value_name = "T", hide = true)]
+    pub(crate) threshold: Option<String>,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,

@@ -39,6 +39,8 @@ pub(crate) enum Failure {
     Labels(LabelsError),
     /// A band was given to a verb that cuts on one winning probability.
     BandOnChoose,
+    /// A rule was given to a verb that has none.
+    RuleOnScore,
     /// Standard input could not be read.
     Input(io::Error),
     /// Standard input held bytes that are not text.
@@ -92,6 +94,10 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
         Failure::BandOnChoose => (
             2,
             "--threshold: `choose` takes a single cut and never a band".to_owned(),
+        ),
+        Failure::RuleOnScore => (
+            2,
+            "--threshold: `score` takes no rule, so cut on the number with `jq -e`".to_owned(),
         ),
         Failure::NoKey(variable) => (
             4,
