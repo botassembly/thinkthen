@@ -61,13 +61,13 @@ Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An 
 | Keep a run that can be traced and replayed: cases, definition, rows, model version, recording | 23 | 9 | |
 | Turn results into a spreadsheet and leave the source unchanged | 34 | 10b | |
 | Report accuracy and F1 for every check with no new request | 35 | 10b | |
-| Pick a threshold from labeled cases, and change it later without asking again | 13 | 10a, ticket 0008 | Red. Starts now on `decide --details` rows |
-| Compare two runs: improvements, regressions, missing cases, and why a value changed | 24 | 10a, ticket 0008 | |
+| Pick a threshold from labeled cases, and change it later without asking again | 13 | 10a, ticket 0008 | Green. `sweep.jq`, `score.jq`, and `band.jq` over committed rows |
+| Compare two runs: improvements, regressions, missing cases, and why a value changed | 24 | 10a, ticket 0008 | Green. `compare.jq` over two committed runs |
 | Account for repeated trials and unsure answers | 36 | 10b | |
-| Check the judge against human labels | 25 | 10a, ticket 0008 | |
-| See whether a probability means what it says | 38 | 10a, ticket 0008 | |
+| Check the judge against human labels | 25 | 10a, ticket 0008 | Green. `counts.jq` and `score.jq` over committed rows |
+| See whether a probability means what it says | 38 | 10a, ticket 0008 | Green. `calibration.jq` over committed rows |
 | Test the judge with hard and hostile cases | 37 | 10b | The live probe measures the hostile case first |
-| Know what a run cost | 28 | 10a, ticket 0008 | |
+| Know what a run cost | 28 | 10a, ticket 0008 | Green. `cost.jq` over committed rows and a replayed row |
 
 ### Ian's six capabilities, and the how-tos that teach each
 

@@ -10,7 +10,7 @@ Each page opens with a status line and the verbs it uses. A green page then take
 
 `mustmatch test demos/` runs a block when the block pipes into `mustmatch` and skips a block that asserts nothing, so a shown command is a test only when it ends in an assertion. The blocks assert on exit codes, bare values, field names, row counts, and the records that came back. No block asserts on a probability, and every page says once that its numbers are illustrative until a recording exists. A page that pinned a probability would be testing the vendor instead of the tool.
 
-Every `thinkthen` command that would otherwise reach a backend carries `--replay recording/`, so a gate touches no network and reads no key. `specification/recording.md` defines the flag.
+Every `thinkthen` command that would otherwise reach a backend carries `--replay` and a recording folder, so a gate touches no network and reads no key. `specification/recording.md` defines the flag.
 
 ## Red and green
 
@@ -65,7 +65,11 @@ An eval is a reproducible workflow over the same commands as everything else. Th
 
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
+| 13 | [Pick a threshold from labeled cases](13-pick-a-threshold/) | `decide` | green |
+| 24 | [Compare two runs of the same cases](24-compare-two-runs/) | `decide` | green |
+| 25 | [Check the judge against human labels](25-check-the-judge/) | `decide` | green |
+| 28 | [Know what a run cost](28-what-a-run-cost/) | `decide` | green |
+| 38 | [See whether a probability means what it says](38-what-a-probability-means/) | `decide` | green |
 | 14 | [Grade a batch with a reusable definition](14-grade-a-batch/) | `annotate`, `report` | red |
-| 13 | [Pick a threshold from labeled cases](13-pick-a-threshold/) | `decide`, `report` | red |
 
-Demos 13 and 14 name `report`, which left the plan under ADR 0010. They are rewritten over the `jq` recipes of the plan's recipes slice.
+Demos 13, 24, 25, 28, and 38 read the `jq` recipes in `recipes/` over the committed rows of one live run, which is what `report` would have done inside the tool. Demo 14 still names `report`, which left the plan under ADR 0010, and it is rewritten when `annotate` lands.

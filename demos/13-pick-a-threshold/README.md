@@ -1,116 +1,127 @@
-# 13 Pick a threshold
+# How to pick a threshold from labeled cases
 
-Status: red
+Status: green
 
-`report` left the plan under ADR 0010. This demo is rewritten over the `jq` recipes of the plan's recipes slice, and it stays red until they exist.
+Verbs: `decide`
 
-Verbs: `decide`, `report`
-
-Every other demo types a threshold. Nobody has said where the number comes from. A team with a few labelled examples judges them once, asks what each cut would have done against the labels, picks one, and then checks the pick on a second file it never tuned against. `report` reads the saved rows and calls no model, so every step after the first is free.
-
-Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
+Every other page types a threshold. This one says where the number comes from. Use it when you have cases a person has already answered, you have judged them once, and you want a cut you can defend. Every step after the judging reads the saved probabilities, so trying another cut costs nothing and asks the model nothing.
 
 ## Input
 
-`labeled.jsonl` holds eight support messages with `id`, `body`, and `label`. `holdout.jsonl` holds six more, kept back. `label` is what a person answered.
+`../../recipes/rows/runs/run-a.jsonl` holds forty judged cases, one row per case. Each row is the `decide --details` object with `input` holding the whole case: the `id`, the `body` that was sent, and the `label` a person gave. `../../recipes/rows/cases.jsonl` is the case file the run was made from, and `../../recipes/rows/record.sh` is the loop that made it.
 
-## Judge the tuning file once
+The recipes are `../../recipes/sweep/sweep.jq`, `../../recipes/score/score.jq`, and `../../recipes/band/band.jq`. Each one states its policies in its header.
 
-The labels never leave the machine. `--field /body` sends the body, and `--details` in record mode keeps the whole record in `input`, the label with it.
+## Split the run in two
 
-```bash
-set -euo pipefail
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
-
-thinkthen decide 'Does the message report a payment failure?' \
-  --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
-  > "$work/tune.jsonl"
-
-wc -l < "$work/tune.jsonl" | tr -d ' ' | mustmatch "8"
-jq -r '.input.label | tostring' "$work/tune.jsonl" | sort | uniq -c | tr -s ' ' \
-  | mustmatch " 4 false
- 4 true"
-```
-
-## Read the run, then score it
-
-`report` takes the run as an argument. With no option it prints the counts and the run's own facts. A run made by a bare verb is one check named after the verb, so this one is called `decide`.
+A sweep over a file flatters that file. Tune on one half and check on the other. The rows are already judged, so the split is a `jq` filter and not a second run.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
+rows=../../recipes/rows/runs/run-a.jsonl
 
-thinkthen decide 'Does the message report a payment failure?' \
-  --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
-  > "$work/tune.jsonl"
+jq -c 'select(.input.id <= "C-24")' "$rows" > "$work/tune.jsonl"
+jq -c 'select(.input.id > "C-24")' "$rows" > "$work/holdout.jsonl"
 
-env -u THINKTHEN_API_KEY thinkthen report "$work/tune.jsonl" \
-  | jq -c '{rows, models, replayed, warnings, counts: (.checks.decide | {yes, no, unresolved})}' \
-  | mustmatch '{"rows":8,"models":["jev-1.13.0"],"replayed":8,"warnings":[],"counts":{"yes":4,"no":4,"unresolved":0}}'
+wc -l < "$work/tune.jsonl" | tr -d ' ' | mustmatch "24"
+wc -l < "$work/holdout.jsonl" | tr -d ' ' | mustmatch "16"
 ```
 
-Four yes and four no is what a perfect run looks like and also what a coin looks like. `--truth NAME=POINTER` compares the check with the trusted label and says which one this is.
+## Ask every cut what it would have done
+
+`sweep.jq` scores the tuning file at the 19 cuts from 0.05 to 0.95 and picks one. The pick is the highest F1, and the middle cut of the cuts that tie, because that one sits farthest from both edges of the gap. The rule travels in the output, so nobody has to remember it.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
+rows=../../recipes/rows/runs/run-a.jsonl
 
-thinkthen decide 'Does the message report a payment failure?' \
-  --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
-  > "$work/tune.jsonl"
+jq -c 'select(.input.id <= "C-24")' "$rows" > "$work/tune.jsonl"
+jq -n -f ../../recipes/sweep/sweep.jq "$work/tune.jsonl" > "$work/sweep.json"
 
-thinkthen report "$work/tune.jsonl" --truth decide=/label > "$work/sweep.json"
-
-jq -c '.checks.decide | keys' "$work/sweep.json" \
-  | mustmatch '["accuracy_resolved","accuracy_unresolved","calibration","coverage","f1","false_negative","false_positive","kind","no","precision","recall","sweep","true_negative","true_positive","unresolved","yes"]'
-jq -r '.checks.decide.sweep | length' "$work/sweep.json" | mustmatch "19"
-jq -c '.checks.decide.sweep[0] | keys' "$work/sweep.json" \
-  | mustmatch '["accuracy_resolved","accuracy_unresolved","coverage","f1","precision","recall","threshold"]'
-jq -r '.checks.decide.calibration | length' "$work/sweep.json" | mustmatch "10"
+jq -c '{rows, labeled, unlabeled}' "$work/sweep.json" \
+  | mustmatch '{"rows":24,"labeled":23,"unlabeled":["C-12"]}'
+jq -c '.pick' "$work/sweep.json" \
+  | mustmatch '{"cut":0.7,"accuracy":1,"f1":1,"tied_cuts":[0.55,0.6,0.65,0.7,0.75,0.8],"rule":"the highest F1, and the middle cut of the cuts that tie"}'
+jq -c '.sweep[] | select(.cut == 0.5 or .cut == 0.7 or .cut == 0.9)' "$work/sweep.json" \
+  | mustmatch '{"cut":0.5,"coverage":1,"unresolved":0,"accuracy":0.9565,"precision":0.9167,"recall":1,"f1":0.9565}
+{"cut":0.7,"coverage":1,"unresolved":0,"accuracy":1,"precision":1,"recall":1,"f1":1}
+{"cut":0.9,"coverage":1,"unresolved":0,"accuracy":0.8696,"precision":1,"recall":0.7273,"f1":0.8421}'
 ```
 
-`coverage` leads: the share of rows that resolved, the accuracy among them, and the accuracy among the rest. A cut that resolves three rows out of eight at 100 percent is not better than one that resolves eight at 90 percent, and only the pair of numbers says so.
+Twenty-four rows, twenty-three of them labeled. `C-12` carries no label, so the sweep lists it and scores it nowhere. The default cut of 0.5 calls one message a payment failure that a person called something else. Six cuts between 0.55 and 0.8 get every labeled row right, and 0.9 starts missing real failures.
 
-## Pick the cut, then check it on the other file
-
-The sweep is over the file it was tuned on, so its best number flatters itself. The pick goes onto a file that was never swept.
+## Take the number onto the file you never swept
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
+rows=../../recipes/rows/runs/run-a.jsonl
 
-thinkthen decide 'Does the message report a payment failure?' \
-  --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
-  > "$work/tune.jsonl"
+jq -c 'select(.input.id <= "C-24")' "$rows" > "$work/tune.jsonl"
+jq -c 'select(.input.id > "C-24")' "$rows" > "$work/holdout.jsonl"
 
-cut=$(
-  thinkthen report "$work/tune.jsonl" --truth decide=/label \
-    | jq -r '.checks.decide.sweep | map(select(.coverage == 1)) | max_by(.accuracy_resolved) | .threshold'
-)
+cut=$(jq -n -f ../../recipes/sweep/sweep.jq "$work/tune.jsonl" | jq -r '.pick.cut')
+printf '%s\n' "$cut" | mustmatch "0.7"
 
-thinkthen decide 'Does the message report a payment failure?' \
-  --jsonl --field /body --details --input holdout.jsonl --replay recording/ \
-  > "$work/holdout.jsonl"
-
-thinkthen report "$work/holdout.jsonl" --truth decide=/label --threshold "decide=$cut" \
-  | jq -c '.checks.decide | {coverage, accuracy_resolved}' \
-  | mustmatch '{"coverage":1,"accuracy_resolved":1}'
+jq -n --argjson cut "$cut" -f ../../recipes/score/score.jq "$work/holdout.jsonl" \
+  | jq -c '{cut, labeled, unlabeled, accuracy, precision, recall, f1}' \
+  | mustmatch '{"cut":0.7,"labeled":16,"unlabeled":[],"accuracy":1,"precision":1,"recall":1,"f1":1}'
 ```
 
-The run holds one check, so `decide=` may be left out of both options. The page writes the name to show what it is.
+The holdout agrees with the pick. Sixteen rows are weak evidence, and the honest report is that nothing contradicted the cut rather than that the cut is proven.
 
-`--threshold NAME=RULE` reapplies a rule to the stored probabilities and makes no request. The same rows can be read at any cut for as long as the file is kept.
+## Use a band when a wrong answer costs more than a delay
 
-The recording under `recording/` does not exist yet.
+A single cut answers every row, and `unresolved` is zero at every line of the sweep. A band refuses the middle instead. `band.jq` prints what that bought and what it cost, over the whole run.
 
-## What this demo decides
+```bash
+set -euo pipefail
+rows=../../recipes/rows/runs/run-a.jsonl
 
-- **The two-file procedure is the whole answer and it needs no option.** Sweep one file, take a number, report the other file at that number. ADR 0009 item 7 asks for exactly this, and the shell already has it. No held-out split flag is wanted.
-- **Accuracy at coverage is the right headline.** A single accuracy number hides a band that refused half the file. Two numbers beside `coverage` say what the cut bought and what it cost.
-- **Naming a check after the verb makes `--threshold decide=0.82` read badly.** The user never wrote the word `decide` as a name. Leaving `decide=` out works here, because the run holds one check, so the word is only forced on a file that holds two. Worse, two runs of two different questions concatenate into one check called `decide`, and the only sign is the `warnings` list. The demo asks that a bare-verb run be named after its question text, or that `report` refuse a file whose rows carry two texts.
-- **The shape is fixed and the demo reads it.** `report.md` now names every key, so the `jq` paths on this page are assertions and no longer proposals. That was the one change the page could not be written without.
-- **The demo could not fill the calibration table.** `report.md` fixes ten bands of 0.1 and says an empty band reports `null`. Eight rows leave most of them empty, so the page asserts the band count and nothing about the numbers inside.
+jq -n --argjson band '[0.2,0.8]' -f ../../recipes/band/band.jq "$rows" \
+  | jq -c '{labeled, resolved, unresolved, coverage, accuracy_resolved, accuracy_unresolved}' \
+  | mustmatch '{"labeled":39,"resolved":36,"unresolved":3,"coverage":0.9231,"accuracy_resolved":1,"accuracy_unresolved":0.6667}'
+
+jq -n --argjson band '[0.2,0.8]' -f ../../recipes/band/band.jq "$rows" \
+  | jq -c '.refused' \
+  | mustmatch '[{"id":"C-12","label":null,"probability":0.58},{"id":"C-15","label":false,"probability":0.51},{"id":"C-16","label":false,"probability":0.34},{"id":"C-29","label":true,"probability":0.79}]'
+```
+
+The band gets every row it answers right, and it pays with four rows a person now reads. Three of those four carry a label, and at a plain cut of 0.5 the model would have got two of the three right. That is the trade, in two numbers.
+
+Note what is counted where. The three labeled refusals are `unresolved`, counted apart and scored neither right nor wrong. The unlabeled `C-12` is in `refused` because somebody must read it, and it is in no rate at all.
+
+## The same lines, kept as files
+
+Each recipe folder holds the pipeline line, so a reader of `recipes/` runs one command and sees the shape of the output. These two read the whole run rather than the split.
+
+```bash
+set -euo pipefail
+
+sh ../../recipes/sweep/example.sh | jq -c '.pick | {cut, f1}' | mustmatch '{"cut":0.65,"f1":1}'
+sh ../../recipes/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
+  | mustmatch '{"coverage":0.9231,"accuracy_resolved":1}'
+```
+
+## What can go wrong
+
+- **`jq` is missing.** The `install` rung names it, because every recipe here is `jq`.
+- **A recipe stops with exit 5.** `jq` exits 5 both for a row it cannot parse and for an error a recipe raises itself, such as a row that carries no `value`. The message names the file and the line.
+- **`.value // false` quietly turns unresolved into no.** Every recipe here tests the three answers explicitly, and `band.jq` keeps the refused rows in their own group. A recipe of your own that reaches for `//` is scoring an unresolved row as a wrong no.
+- **Sweeping and reporting on one file.** The best cut on the file that chose it is not a measurement. Split first.
+- **A cut does not travel.** It belongs to one question text and one model version. Change either and sweep again. The rows carry both under `question.text` and `meta.model`, and `compare.jq` reads them.
+- **Forty cases are few.** Every rate here moves by a whole case at a time. A cut chosen on this much evidence is a starting point, not a finding.
+- **An unlabeled case is not a no.** `C-12` is in no rate. A recipe that scored it as a no would report a precision that no person ever agreed with.
+
+## Related how-tos
+
+- [How to check the judge against human labels](../25-check-the-judge/)
+- [How to see whether a probability means what it says](../38-what-a-probability-means/)
+- [How to compare two runs](../24-compare-two-runs/)
+- [How to know what a run cost](../28-what-a-run-cost/)
+- [How to gate a script step on a yes/no answer](../01-refund-gate/)
