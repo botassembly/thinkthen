@@ -19,3 +19,4 @@ mod refusals;
 mod secrecy;
 mod streaming;
 mod terminal;
+mod wire;

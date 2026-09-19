@@ -6,7 +6,7 @@ opens: crates specification/backends.md sdlc/ratchet.json
 
 # 0020: The adapter owns its name, its address, and its model
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
