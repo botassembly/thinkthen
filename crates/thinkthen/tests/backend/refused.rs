@@ -11,6 +11,7 @@ use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::keeping::{RECORDS, answered, code, printed, said};
+use crate::secrecy::{KEY, nothing_leaked};
 
 /// The question both commands ask of each record.
 const QUESTION: &str = "Does this report a payment failure?";
@@ -121,10 +122,12 @@ fn rank_refuses_a_rule_from_either_home_and_names_the_command_that_cuts() -> io:
         "/body",
     ])?;
     assert_eq!(code(&output), 5);
-    assert!(
-        said(&output).contains("`rank` orders and never selects"),
-        "{}",
-        said(&output)
+    assert_eq!(
+        said(&output),
+        concat!(
+            "thinkthen: the question file's `threshold`: `rank` orders and never ",
+            "selects, so put a cut in `filter --threshold`\n",
+        )
     );
     Ok(())
 }
@@ -269,7 +272,7 @@ fn a_recording_made_by_decide_replays_under_both_commands_with_no_request_sent()
 
 #[test]
 fn no_message_from_either_command_ever_carries_the_key_or_a_record() -> io::Result<()> {
-    let key = "sk-secret-value";
+    let key = KEY;
     let file = written(
         "refused-question.json",
         r#"{"decide":"Does this report a payment failure?","threshold":"0.1:0.9"}"#,
@@ -316,7 +319,15 @@ fn no_message_from_either_command_ever_carries_the_key_or_a_record() -> io::Resu
         vec![
             "rank", QUESTION, "--jsonl", "--field", "/body", "--url", CLOSED,
         ],
+        vec![
+            "rank", QUESTION, "--jsonl", "--field", "/body", "--top", "0",
+        ],
+        vec![
+            "rank", QUESTION, "--jsonl", "--field", "/body", "--top", "half",
+        ],
     ];
+    let into = folder("refused-runs");
+    fs::create_dir_all(&into)?;
     for arguments in cases {
         let output = spawn(
             &arguments,
@@ -324,6 +335,9 @@ fn no_message_from_either_command_ever_carries_the_key_or_a_record() -> io::Resu
             RECORDS.as_bytes(),
         )?;
         assert_ne!(code(&output), 0, "{arguments:?} was not refused");
+        // The reader `secrecy.rs` owns checks both channels and every file the
+        // run wrote, so a refusal here is held to the sweep's whole claim.
+        nothing_leaked(&format!("{arguments:?}"), &output, &into);
         let both = format!("{}{}", printed(&output), said(&output));
         for secret in [
             key,

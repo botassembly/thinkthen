@@ -28,7 +28,7 @@ The refusals went in the core too, because the sentence table, the `named()` pre
 
 `judge.rs` reached 627 non-blank lines and the ceiling is 500. The split is `judge.rs` (which verb, what it keeps, what view) and `asking.rs` (one record to one request, one reply to one row). The seam allowance in `sdlc/scripts/policy.py` moved with the vendor words.
 
-The ratchet went from 11563 to 12953 on the branch, and to 14545 after main was merged. What grew: `order.rs` and its properties, the two verbs and their argument groups, the sink, the four refusal sentences, and about 700 lines of integration tests, which are the larger half. Duplication was looked for first in three places and deleted in two. `Record::as_it_arrived` is now one method, and `record()` calls it instead of repeating the line-ending rule. `yes_no` in `asked.rs` is one settler for all three verbs. `over_kept` is one path for `filter` and `rank`, which earned an `#[expect(clippy::too_many_arguments)]` with a reason, because splitting the call would split the flow.
+The ratchet went from 11563 to 12953 on the branch, and to 14823 after main was merged twice and the review was answered. What grew: `order.rs` and its properties, the two verbs and their argument groups, the sink, the four refusal sentences, and about 700 lines of integration tests, which are the larger half. Duplication was looked for first in three places and deleted in two. `Record::as_it_arrived` is now one method, and `record()` calls it instead of repeating the line-ending rule. `yes_no` in `asked.rs` is one settler for all three verbs. `over_kept` is one path for `filter` and `rank`, which earned an `#[expect(clippy::too_many_arguments)]` with a reason, because splitting the call would split the flow.
 
 ## Red then green
 
@@ -87,3 +87,24 @@ Four live runs through `sdlc/scripts/live`: 1525 for page 03's first cut, 337 fo
 
 ## The review
 
+A second agent with fresh context read the ticket, the whole diff against `origin/main`, and "What reviewers keep finding". Its verdict was **not ready**, with nine blocking findings and six nits. Every one is answered below. Eight of the fifteen changed code or a page.
+
+| Finding | What happened |
+| --- | --- |
+| The worktree sat in an unresolved merge | Finished. Main landed tickets 0019, 0020, and 0021 while this branch ran, and both merges are now in. |
+| The ceiling is neither side of the conflict | Measured on the merged tree, twice. It is 14823. |
+| `refusals.rs` collides with main's file and checks less | Partly stands. See the choice below. The file is `refused.rs` now, and it calls `nothing_leaked`, the reader main's sweep owns, so it reads the files a refused run wrote and both header names. |
+| `rank --details` printed a `value` from a cut nobody named | Fixed. A ranked row carries `"value": null` beside `"threshold": null`. `specification/rank.md`, page 06, and the test all pin it. |
+| Nothing rendered the new `Debug` lines | Fixed. `Output::Ordered` holding a row goes through `no_debug_line_shows_the_key_or_the_evidence`, and the five new `Failure` variants through `no_diagnostic_holds_the_key_or_the_evidence`. |
+| `rank -h` did not state the method | Fixed. The first line of the help is now the method, so `-h` carries it. |
+| Page 43 named a pathspec that is not on the page | Fixed. The one-liner cuts with `-- '*.rs' '*.ts'` and the bullet quotes it. |
+| A test named "sends nothing" proved it with `--dry-run` | Fixed. It points at a listener, counts zero requests and zero connections, and is named for what it proves. |
+| The README window is not ADR 0018's | Answered by the merge. Ticket 0021 rewrote the window, and this ticket moved only the rows of pages 43 and 06 inside it. |
+| One case checked a substring | Fixed. It pins the whole line. |
+| `specification/rank.md` contradicted itself on `--details` under `--top` | Fixed. The row reads "for each record it prints". |
+| The `--details` test only counted lines | Fixed. It pins all four records, their order, each `value`, and the cut. |
+| `--top 0` was outside the secrecy sweep | Fixed. `--top 0` and `--top half` are rows in it. |
+| The two verbs ordered their refusals differently | Fixed. Both refuse a view that prints no record first, before a question file is opened. |
+| Page 03 conflated two kinds of narrowing | Fixed. The bullet now says to cut the file before `filter` and drops the back-reference. |
+
+The reviewer also read page 43 cold for thirty seconds. It understood the page: a rule no linter can express, asked of each changed hunk, with the breaking hunks kept and the build failed. It saw the result, a beat late, because the result is the argument to `mustmatch` rather than printed output, and the sentence under the block carried it. It wanted three things the page does not say: what `thinkthen` is, what `mustmatch` is, and whether running the page costs money. The third is now one clause in the Input section. The first two are the same on all twenty pages, so they belong to `demos/README.md` and not to one page.

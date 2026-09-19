@@ -69,7 +69,7 @@ A filter that reprinted its records through a JSON encoder would reorder the key
 - **Three records went and nothing said so.** A single cut keeps or drops, and a run that finished says nothing on standard error, so two kept out of five and two out of two read alike. To see what went, ask `decide --jsonl --details` and split in `jq`, which is the shape [how-to 04](../04-review-queue/) uses.
 - **A band.** `filter` takes one cut. A third pile needs a flag to steer it, and `jq` already steers piles, so a band is a usage error that names `decide --details`.
 - **A pointer that finds nothing.** A record with no `/body` is an input error for that record at exit 2, before any request for it, and the run stops there with a prefix already printed.
-- **A paid request for every record.** `filter` judges each record, so narrow the file with `jq` first, as the pipeline above narrows it with `--field`.
+- **A paid request for every record.** `filter` judges each record, whether it keeps it or not, so a file of a million lines is a million paid requests. Cut the file with `grep` or `jq` before `filter`, and leave `filter` the records a word cannot separate.
 - **A cut nobody measured.** `0.9` here was read off five made-up reports. Tune one on cases a person judged, the way [how-to 13](../13-pick-a-threshold/) does.
 
 ## Related how-tos

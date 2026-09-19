@@ -19,14 +19,14 @@ Two of the five hunks break the rule. The other three add an import, add an impo
 
 ## Input
 
-`hunks.jsonl` holds five made-up changed hunks, one JSON record each, with `file` and `hunk`. `clean.jsonl` holds the three that pass. `convention.json` is the house rule as a question file, and `recording/` holds the five live exchanges the page replays, made by `record.sh` through `sdlc/scripts/live`.
+`hunks.jsonl` holds five made-up changed hunks, one JSON record each, with `file` and `hunk`. `clean.jsonl` holds the three that pass. `convention.json` is the house rule as a question file, and `recording/` holds the five live exchanges the page replays, made by `record.sh` through `sdlc/scripts/live`. `--replay` answers from those files, so every command here reads no key and costs nothing.
 
 The made-up house rule: money is held as a whole number of pence in an integer, never in a floating-point number.
 
 One line cuts the fixture out of a real branch, one record per hunk:
 
 ```sh
-git diff -U0 origin/main |
+git diff -U0 origin/main -- '*.rs' '*.ts' |
   awk '/^\+\+\+ /{f=substr($2,3)} /^@@/{print "\f" f "\t" $0; next} /^[+-][^+-]/{print}' |
   jq -Rsc 'split("\f")[1:][] | split("\t") as [$f, $rest] | {file: $f, hunk: ($rest | rtrimstr("\n"))}'
 ```
@@ -76,7 +76,7 @@ A clean change prints nothing and exits 0, which is what a build step is for.
 
 ## What can go wrong
 
-- **A paid request for every hunk.** A branch with three hundred hunks is three hundred requests. Cut the diff to the files the rule is about first, as the line above does with `-- '*.rs'`.
+- **A paid request for every hunk.** A branch with three hundred hunks is three hundred requests. Cut the diff to the files the rule is about first, as the line above does with `-- '*.rs' '*.ts'`.
 - **A cut nobody measured.** `0.7` here was read off five made-up hunks. Tune it on hunks a person judged before a build fails on it.
 - **A rule the model cannot see.** The hunk is all that leaves the machine, so a rule about the file it sits in, or about a function two hundred lines above, cannot be answered from it.
 - **A run that stops.** A failed hunk ends the run at exit 4 or 5 and prints a prefix, so a build that reads an empty report as a clean change would pass a branch nobody judged. `lint.sh` exits on the first failure, because `set -e` is on.

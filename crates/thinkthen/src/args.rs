@@ -113,11 +113,10 @@ pub(crate) enum Command {
     /// out of five and two out of two look alike on the way out.
     Filter(FilterArguments),
 
-    /// Print the records with the most likely yes first.
+    /// Print the records with the most likely yes first: one yes/no question
+    /// of each record, a local sort, and no comparison of two records.
     ///
-    /// The method is one yes/no question of each record, a local sort by the
-    /// probability of yes, and input order for an exact tie. `rank` never
-    /// compares two records in one question and never runs a tournament.
+    /// An exact tie keeps input order. `rank` never runs a tournament.
     ///
     /// It holds every record until the input ends, because a final order needs
     /// the whole set, so an endless stream is cut into windows upstream.

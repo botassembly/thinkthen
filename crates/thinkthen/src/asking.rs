@@ -13,7 +13,8 @@ use thinkthen_core::adapters::built_in;
 use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::{
     Backend, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, Reply, Resolved, Sources, Threshold, json_line, question_sha256,
+    QuestionText, Reading, Record, Reply, Resolved, Sources, Threshold, Value, json_line,
+    question_sha256,
 };
 
 use crate::args::Common;
@@ -309,7 +310,14 @@ impl Judging<'_> {
                 reply.usage(),
                 replayed,
             );
-            let row = DecisionResult::new(value, sending.question, answer, self.threshold, meta);
+            // `rank` orders and never selects, so a ranked row carries no
+            // value. A value here would be a cut at 0.5 that nobody named.
+            let shown = if self.keeping == Keeping::Ordered {
+                Value::YesNo(None)
+            } else {
+                value
+            };
+            let row = DecisionResult::new(shown, sending.question, answer, self.threshold, meta);
             let row = if self.streams {
                 row.with_input(sending.record)
             } else {

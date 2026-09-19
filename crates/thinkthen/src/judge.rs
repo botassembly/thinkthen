@@ -128,10 +128,10 @@ pub(crate) fn filter(
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    views(&arguments.refused, Keeping::Passing)?;
     let settled = asked::filter(arguments)?;
     over_kept(
         Keeping::Passing,
-        &arguments.refused,
         &arguments.common,
         &settled,
         None,
@@ -154,13 +154,13 @@ pub(crate) fn rank(
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    views(&arguments.refused, Keeping::Ordered)?;
     if arguments.top == Some(0) {
         return Err(Failure::TopIsZero);
     }
     let settled = asked::rank(arguments)?;
     over_kept(
         Keeping::Ordered,
-        &arguments.refused,
         &arguments.common,
         &settled,
         arguments.top,
@@ -170,6 +170,20 @@ pub(crate) fn rank(
     )
 }
 
+/// Refuse a view that prints no record, before anything else is read.
+///
+/// Both record verbs call this first, so a command line holding two mistakes
+/// is refused for the same one whichever verb was typed.
+fn views(refused: &Refused, keeping: Keeping) -> Result<(), Failure> {
+    if refused.quiet {
+        return Err(Failure::QuietOverKept(keeping.verb()));
+    }
+    if refused.raw {
+        return Err(Failure::RawOverKept(keeping.verb()));
+    }
+    Ok(())
+}
+
 /// The one flow both record verbs take, which prints records and not answers.
 #[expect(
     clippy::too_many_arguments,
@@ -177,7 +191,6 @@ pub(crate) fn rank(
 )]
 fn over_kept(
     keeping: Keeping,
-    refused: &Refused,
     common: &Common,
     settled: &Resolved,
     top: Option<usize>,
@@ -185,12 +198,6 @@ fn over_kept(
     input: impl Read,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    if refused.quiet {
-        return Err(Failure::QuietOverKept(keeping.verb()));
-    }
-    if refused.raw {
-        return Err(Failure::RawOverKept(keeping.verb()));
-    }
     let writer: &mut dyn Write = &mut writer;
     let mut output = match keeping {
         Keeping::Ordered => Output::Ordered {

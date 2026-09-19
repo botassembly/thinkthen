@@ -19,6 +19,17 @@ pub(crate) const RECORDS: &str = concat!(
     "{\"id\":\"R-4\",\"body\":\"The refund never arrived.\"}\n",
 );
 
+/// Each record of [`RECORDS`] as `--details` prints it back under `input`.
+///
+/// A row writes the record through a JSON encoder, so the second record's odd
+/// spacing is gone here. A kept record keeps the bytes that arrived.
+pub(crate) const RECORDS_AS_SENT: [&str; 4] = [
+    "{\"id\":\"R-1\",\"body\":\"The payout failed again.\"}",
+    "{\"id\":\"R-2\",\"body\":\"Thanks for the quick fix.\"}",
+    "{\"id\":\"R-3\",\"body\":\"The card was refused at checkout.\"}",
+    "{\"id\":\"R-4\",\"body\":\"The refund never arrived.\"}",
+];
+
 /// The response a backend gives, with the probability the case names.
 pub(crate) fn answered(probability: &str) -> String {
     format!(
@@ -254,11 +265,29 @@ fn details_prints_one_row_per_record_for_filter_and_the_printed_ones_for_rank() 
         RECORDS,
     )?;
     assert_eq!(code(&output), 0, "{}", said(&output));
+    let rows: Vec<(String, String)> = printed(&output)
+        .lines()
+        .filter_map(|line| {
+            let (_, rest) = line.split_once("\"input\":")?;
+            let (record, _) = rest.split_once(",\"question\":")?;
+            let (value, _) = line.split_once("\"value\":")?.1.split_once(',')?;
+            Some((record.to_owned(), value.to_owned()))
+        })
+        .collect();
     assert_eq!(
-        printed(&output).lines().count(),
-        4,
-        "filter --details prints a row per record, kept or not"
+        rows,
+        [
+            (RECORDS_AS_SENT[0].to_owned(), "true".to_owned()),
+            (RECORDS_AS_SENT[1].to_owned(), "false".to_owned()),
+            (RECORDS_AS_SENT[2].to_owned(), "true".to_owned()),
+            (RECORDS_AS_SENT[3].to_owned(), "true".to_owned()),
+        ],
+        "filter --details prints a row per record, kept or not, in input order"
     );
+    let named = printed(&output)
+        .lines()
+        .all(|l| l.contains("\"threshold\":0.5"));
+    assert!(named, "filter --details names the cut it made");
 
     let listener = serving(&["0.55", "0.02", "0.91", "0.77"])?;
     let output = over(
@@ -295,8 +324,8 @@ fn details_prints_one_row_per_record_for_filter_and_the_printed_ones_for_rank() 
     assert!(
         printed(&output)
             .lines()
-            .all(|line| line.contains("\"threshold\":null")),
-        "a ranked row carries no rule"
+            .all(|line| line.contains("\"value\":null,") && line.contains("\"threshold\":null")),
+        "a ranked row carries no rule and makes no selection"
     );
     Ok(())
 }
@@ -382,10 +411,21 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
 }
 
 #[test]
-fn the_plan_under_dry_run_shows_the_first_record_and_sends_nothing() -> io::Result<()> {
+fn the_plan_under_dry_run_shows_the_first_record_and_opens_no_connection() -> io::Result<()> {
+    // The plan names the listener, so a run that started asking is counted.
+    let listener = serving(&["0.91", "0.02", "0.77", "0.55"])?;
     for verb in ["filter", "rank"] {
         let output = spawn(
-            &[verb, QUESTION, "--jsonl", "--field", "/body", "--dry-run"],
+            &[
+                verb,
+                QUESTION,
+                "--jsonl",
+                "--field",
+                "/body",
+                "--dry-run",
+                "--url",
+                listener.base(),
+            ],
             &[],
             RECORDS.as_bytes(),
         )?;
@@ -398,7 +438,9 @@ fn the_plan_under_dry_run_shows_the_first_record_and_sends_nothing() -> io::Resu
         );
         assert!(plan.contains("The payout failed again."), "{verb}: {plan}");
         assert!(!plan.contains("quick fix"), "{verb}: {plan}");
+        assert_eq!(listener.requests().len(), 0, "{verb} sent a request");
     }
+    assert_eq!(listener.connections(), 0, "a plan opens no connection");
     Ok(())
 }
 

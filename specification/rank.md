@@ -27,7 +27,7 @@ Each record as it arrived, most likely yes first. Ties keep input order. `--deta
 | `--top N` | Prints the first `N` records of the order. It saves no requests, because every record is judged before anything is sorted | All records |
 | `--lines` or `--jsonl` | The framing. One of the two is required | None. Its absence is a usage error |
 | `--field POINTER` | The part of each record the model sees | The whole record |
-| `--details` | Prints one result object per record | Off |
+| `--details` | Prints one result object for each record it prints | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
@@ -40,7 +40,7 @@ Each record as it arrived, most likely yes first. Ties keep input order. `--deta
 
 A record is written back as it arrived: nothing is parsed, nothing is re-encoded, and the line ending is written as a line feed. A run that stops at a failed record has printed nothing at all, and the line on standard error says so.
 
-The request, the result object, and the recording entry are those of `decide`, so a recording made by `decide` over the same records replays here. Every ranked row carries `threshold: null`, because `rank` reads no rule.
+The request, the result object, and the recording entry are those of `decide`, so a recording made by `decide` over the same records replays here. Every ranked row carries `threshold: null` and `value: null`, because `rank` reads no rule and makes no selection. The probability the order came from is under `answer`.
 
 ## Exit codes
 

@@ -347,10 +347,23 @@ mod tests {
             replayed: false,
         };
         let client = crate::http::Client::new(Duration::from_secs(1), false);
+        // `rank` holds every record in memory until the input ends, so the
+        // sink that holds them is the one new place a whole record could leak.
+        let mut written = Vec::new();
+        let ordered = crate::schedule::Output::Ordered {
+            held: vec![crate::schedule::Judged {
+                printed: Some(body.clone()),
+                outcome: thinkthen_core::Outcome::Yes,
+                probability: Some(0.91),
+                replayed: false,
+            }],
+            top: Some(2),
+            writer: &mut written,
+        };
 
         let shown = format!(
             "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {:?} {:?}",
+             {ordered:?} {:?} {:?}",
             Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
             Failure::Status(401),
         );
@@ -393,6 +406,7 @@ mod tests {
             Failure::RawOverKept("rank"),
             Failure::NoFraming("filter"),
             Failure::TopIsZero,
+            Failure::Defect("a ranked row carries no probability"),
         ];
 
         for failure in cases {
