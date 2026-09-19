@@ -212,6 +212,36 @@ fn a_details_run_carries_the_rule_it_was_judged_under() {
 }
 
 #[test]
+fn a_dry_run_prints_the_plan_and_opens_no_connection() {
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+
+    let output = decide(listener.url(), &["--dry-run"], None, "Refund me.")
+        .expect("the compiled binary runs");
+
+    assert!(listener.requests().is_empty(), "a plan opens no connection");
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        printed.contains(r#""request":{"state":"Refund me.""#),
+        "{printed}"
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn a_threshold_that_is_refused_stops_before_any_request_goes_out() {
+    for bad in ["90", "0", "0.9:0.1", "0.1:", ":0.9", "inf", "NaN", "half"] {
+        let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+
+        let output = decide(listener.url(), &["--threshold", bad], None, "Refund me.")
+            .expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{bad}");
+        assert!(listener.requests().is_empty(), "{bad} reached the listener");
+        assert!(output.stdout.is_empty(), "{bad}");
+    }
+}
+
+#[test]
 fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
     let listener = Listener::serving(vec![
         Canned::status(429, r#"{"error":"slow down"}"#),

@@ -38,7 +38,7 @@ fn decide(arguments: &[&str]) -> io::Result<Output> {
 }
 
 #[test]
-fn the_plan_prints_six_fields_and_opens_no_connection() {
+fn the_plan_of_an_ad_hoc_backend_prints_six_fields() {
     let output = decide(&[
         "--dry-run",
         "--url",
