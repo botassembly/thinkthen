@@ -261,7 +261,12 @@ mod tests {
         let written = entry.written().expect("an entry is writable");
 
         assert_eq!(written, FILE);
-        for shown in ["authorization", "Authorization", "Bearer", "THINKTHEN_API_KEY"] {
+        for shown in [
+            "authorization",
+            "Authorization",
+            "Bearer",
+            "THINKTHEN_API_KEY",
+        ] {
             assert!(!written.contains(shown), "{written}");
         }
 

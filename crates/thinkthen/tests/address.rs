@@ -124,9 +124,7 @@ fn a_base_reaches_the_same_path_with_a_trailing_slash_and_without_one() {
 }
 
 #[test]
-fn a_base_that_is_not_an_http_address_is_a_usage_error_before_any_request() {
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-
+fn a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address() {
     for bad in [
         "ftp://127.0.0.1/v1",
         "127.0.0.1:8080/v1",
@@ -134,14 +132,42 @@ fn a_base_that_is_not_an_http_address_is_a_usage_error_before_any_request() {
         "http:/127.0.0.1/v1",
         "https//127.0.0.1/v1",
         "/v1",
+        "https://someone:sk-in-the-address@127.0.0.1/v1",
     ] {
         let output = decide(&[], &[("THINKTHEN_BASE_URL", bad)]).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{bad}");
         assert!(output.stdout.is_empty(), "{bad}");
-        assert!(!output.stderr.is_empty(), "{bad}");
+        let message = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            message.starts_with("thinkthen: a base address"),
+            "{message}"
+        );
+        assert!(!message.contains("127.0.0.1"), "{message}");
+        assert!(!message.contains("sk-in-the-address"), "{message}");
     }
-    assert!(listener.requests().is_empty(), "no request went out");
+}
+
+#[test]
+fn a_base_is_read_past_its_surrounding_space_and_past_the_case_of_its_scheme() {
+    for shape in ["  {base}  ", "\t{base}\n", "{upper}"] {
+        let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+        let upper = listener.base().replacen("http://", "HTTP://", 1);
+        let given = shape
+            .replace("{base}", listener.base())
+            .replace("{upper}", &upper);
+
+        let output = decide(
+            &[],
+            &[("THINKTHEN_BASE_URL", &given), ("THINKTHEN_API_KEY", "sk")],
+        )
+        .expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(0), "{given:?}");
+        let requests = listener.requests();
+        let request = requests.first().expect("one request reached the listener");
+        assert_eq!(request.line, "POST /v1/systemone HTTP/1.1", "{given:?}");
+    }
 }
 
 #[test]
@@ -189,14 +215,16 @@ fn the_key_comes_from_thinkthen_api_key_and_reaches_nothing_but_the_header() {
     );
     assert!(!printed.contains(secret), "{printed}");
 
-    let entries = fs::read_dir(&folder).expect("the recording folder is there");
-    for entry in entries {
+    let mut entries = 0;
+    for entry in fs::read_dir(&folder).expect("the recording folder is there") {
         let path = entry.expect("an entry").path();
         let written = fs::read_to_string(&path).expect("an entry is text");
         for shown in [secret, "authorization", "Authorization", "Bearer"] {
             assert!(!written.contains(shown), "{written}");
         }
+        entries += 1;
     }
+    assert_eq!(entries, 1, "the run recorded its one exchange");
 
     let plan =
         decide(&["--dry-run"], &[("THINKTHEN_API_KEY", secret)]).expect("the compiled binary runs");
@@ -227,13 +255,8 @@ fn a_key_that_is_unset_or_empty_is_exit_four_and_names_the_variable_it_read() {
         assert_eq!(output.status.code(), Some(4), "{environment:?}");
         let message = String::from_utf8_lossy(&output.stderr);
         assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
+        assert!(output.stdout.is_empty(), "{environment:?}");
     }
 
-    let output =
-        decide(&[], &[("THINKTHEN_BASE_URL", listener.base())]).expect("the compiled binary runs");
-
-    assert_eq!(output.status.code(), Some(4));
-    assert!(listener.requests().is_empty());
-    let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
+    assert!(listener.requests().is_empty(), "no key, no request");
 }

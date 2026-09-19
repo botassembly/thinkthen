@@ -29,7 +29,7 @@ const JEV: Profile = Profile {
 /// The profiles version one is born with.
 const PROFILES: [Profile; 1] = [JEV];
 
-/// The five backend values the flags offer, each absent when it was not given.
+/// What the flags offer a backend, each value absent when it was not given.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct BackendValues<'a> {
     profile: Option<&'a str>,
@@ -41,7 +41,7 @@ pub struct BackendValues<'a> {
 }
 
 impl<'a> BackendValues<'a> {
-    /// Gather what the flags offer, in the order `specification/backends.md` lists it.
+    /// Gather the five flag values, in the order `specification/backends.md` lists them.
     #[must_use]
     pub const fn new(
         profile: Option<&'a str>,
@@ -133,11 +133,11 @@ pub enum BackendError {
     /// A profile name arrived beside a URL, and an ad-hoc backend has no name.
     #[error("an ad-hoc backend has no name, so a url cannot join a named profile")]
     NameWithUrl,
-    /// The base address names no scheme the tool speaks.
+    /// The base names no scheme the tool speaks, or it carries user information.
     ///
-    /// The message shows no address, because a base can carry a secret in its
-    /// user information.
-    #[error("a base address begins with `http://` or `https://`")]
+    /// The message shows no address, because the refused base is the one that
+    /// may carry a secret.
+    #[error("a base address begins with `http://` or `https://` and carries no user information")]
     NotAnAddress,
 }
 
@@ -182,17 +182,35 @@ pub fn resolve_backend(flags: BackendValues<'_>) -> Result<Backend, BackendError
 
 /// The address one request is posted to: the base, then the adapter's path.
 ///
-/// A base that ends in slashes is the same base, so the slashes are dropped
-/// before the path is added.
+/// Space around the base is not part of it, and neither are the slashes it
+/// ends in, so both are dropped before the path is added. A scheme is matched
+/// without regard to case, as every reader of an address matches one.
 fn address(base: &str, adapter: Adapter) -> Result<Url, BackendError> {
-    if base.trim().is_empty() {
+    let base = base.trim();
+    if base.is_empty() {
         return Err(BackendError::Blank(BlankTextError::Url));
     }
     let base = base.trim_end_matches('/');
-    if !(base.starts_with("http://") || base.starts_with("https://")) {
+    let rest = after_scheme(base).ok_or(BackendError::NotAnAddress)?;
+    // The address is printed in a plan and kept in a recording, so a base that
+    // carries user information would write a password into both.
+    let authority = rest.split('/').next().unwrap_or(rest);
+    if authority.contains('@') {
         return Err(BackendError::NotAnAddress);
     }
     Ok(Url::new(format!("{base}/{}", adapter.as_str()))?)
+}
+
+/// What follows a scheme the tool speaks, or `None` when it speaks none of them.
+fn after_scheme(base: &str) -> Option<&str> {
+    for scheme in ["http://", "https://"] {
+        if let Some((found, rest)) = base.split_at_checked(scheme.len())
+            && found.eq_ignore_ascii_case(scheme)
+        {
+            return Some(rest);
+        }
+    }
+    None
 }
 
 /// Read one flag value into the type that holds it.
@@ -381,6 +399,37 @@ mod tests {
                 Err(expected.clone()),
                 "{values:?} names {expected}"
             );
+        }
+    }
+
+    #[test]
+    fn a_base_is_read_to_one_address_or_refused_without_showing_itself() {
+        let taken = [
+            ("http://host/v1", "http://host/v1/systemone"),
+            ("http://host/v1/", "http://host/v1/systemone"),
+            ("http://host/v1///", "http://host/v1/systemone"),
+            ("  http://host/v1\n", "http://host/v1/systemone"),
+            ("HTTPS://host/v1", "HTTPS://host/v1/systemone"),
+            ("http://host", "http://host/systemone"),
+        ];
+        for (base, expected) in taken {
+            let values = BackendValues::default().with_base(Some(base));
+            let backend = resolve(values).expect("a base names an address");
+            assert_eq!(backend.url().as_str(), expected, "{base:?}");
+        }
+
+        let refused = [
+            "ftp://host/v1",
+            "host/v1",
+            "http:/host/v1",
+            "https://someone:sk-in-the-address@host/v1",
+            "http://someone@host/v1",
+        ];
+        for base in refused {
+            let error = resolve(BackendValues::default().with_base(Some(base)))
+                .expect_err("a base that names no address is refused");
+            assert_eq!(error, BackendError::NotAnAddress, "{base}");
+            assert!(!error.to_string().contains("host"), "{error}");
         }
     }
 

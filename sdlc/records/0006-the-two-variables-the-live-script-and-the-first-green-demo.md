@@ -10,7 +10,7 @@
 
 The core changed in one module.
 
-- `backend.rs`: the built-in profile row holds a `base` of `https://api.typesafe.ai/v1` and a key variable of `THINKTHEN_API_KEY`. `BackendValues::with_base` takes the base the environment offers, so the binary reads the variable at its edge and the core still reads none. `address` is one private function over the base and the adapter: it refuses a blank base, drops trailing slashes, refuses anything that does not begin with `http://` or `https://`, and joins the adapter's own name as the path. Both the profile path and the ad-hoc path call it, so `BASE/systemone` is written once. `BackendError::NotAnAddress` is the new refusal, and its message shows no address.
+- `backend.rs`: the built-in profile row holds a `base` of `https://api.typesafe.ai/v1` and a key variable of `THINKTHEN_API_KEY`. `BackendValues::with_base` takes the base the environment offers, so the binary reads the variable at its edge and the core still reads none. `address` is one private function over the base and the adapter: it refuses a blank base, drops trailing slashes, refuses anything that does not begin with `http://` or `https://`, refuses a base carrying user information, and joins the adapter's own name as the path. Both the profile path and the ad-hoc path call it, so `BASE/systemone` is written once. `BackendError::NotAnAddress` is the new refusal, and its message shows no address.
 
 The binary changed at two edges.
 
@@ -27,7 +27,7 @@ Each rule was watched failing at the code before the code was right.
 
 - `address::a_base_reaches_the_same_path_with_a_trailing_slash_and_without_one` failed with `left: "POST /v1 HTTP/1.1"` against `right: "POST /v1/systemone HTTP/1.1"`, because the tool posted to the base itself.
 - `address::the_option_outranks_the_variable_and_the_variable_outranks_the_default` and `the_key_comes_from_thinkthen_api_key_and_reaches_nothing_but_the_header` failed with `left: Some(4)` against `right: Some(0)`: the variable named no address and the key was read from `TYPESAFE_API_KEY`.
-- `address::a_base_that_is_not_an_http_address_is_a_usage_error_before_any_request` failed with `left: Some(4)` against `right: Some(2)`, because `ftp://127.0.0.1/v1` went out as a request.
+- `address::a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address` failed with `left: Some(4)` against `right: Some(2)`, because `ftp://127.0.0.1/v1` went out as a request.
 - The three cases in `live_script.rs` failed with `sh: 0: cannot open .../sdlc/scripts/live: No such file`, then with `left: Some(2)` against `right: Some(1)` while the script's blank-key pattern broke under `dash`.
 - `demo_runner::the_recorded_demo_runs_and_every_demo_still_red_is_skipped` failed against the landed runner with `demos: 0 green`.
 
@@ -37,7 +37,7 @@ Each rule was watched failing at the code before the code was right.
 | --- | --- |
 | The order of the three address sources | `address::the_option_outranks_the_variable_and_the_variable_outranks_the_default` |
 | The path `BASE/systemone` with and without a trailing slash | `address::a_base_reaches_the_same_path_with_a_trailing_slash_and_without_one`, `spec/decide.md` |
-| A bad base is refused with zero requests | `address::a_base_that_is_not_an_http_address_is_a_usage_error_before_any_request` |
+| A bad base is refused with zero requests | `address::a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address`, `backend::tests::a_base_is_read_to_one_address_or_refused_without_showing_itself` |
 | An empty variable counts as absent | `address::a_variable_that_holds_nothing_counts_as_absent`, `address::a_key_that_is_unset_or_empty_is_exit_four_and_names_the_variable_it_read` |
 | The key is read from `THINKTHEN_API_KEY`, and no error, plan, recording, or `Debug` line carries it | `address::the_key_comes_from_thinkthen_api_key_and_reaches_nothing_but_the_header`, `decide_edge::no_diagnostic_ever_carries_the_key_or_the_evidence`, `record_and_replay::a_recorded_exchange_replays_with_no_listener_and_no_key` |
 | The pinned recording digest from ticket 0004 still holds | `recording::tests::the_digest_of_the_fixture_request_is_the_name_the_entry_keeps` |
@@ -65,7 +65,8 @@ Ian can overturn each of these cheaply.
 
 - **`--url` names a base, like the other two sources.** The ticket lists the option as the first of three address sources and says the tool posts to `BASE/systemone`, so the option takes the same kind of value the variable takes. A caller that passed a whole URL before now passes the base. The test fixtures and `spec/decide.md` changed with it, and the digest of the pinned fixture recording is unchanged because the composed address is the same.
 - **The ad-hoc rules survive untouched.** A URL still needs an adapter and a model beside it, an adapter still needs a URL, and a profile name beside a URL is still a usage error. The ticket excludes the removal of `--profile`, `--adapter`, and `--key-env`, and an ad-hoc backend is what lets a test reach a local server with no key at all. Only the composition of the address changed.
-- **The refusal message shows no address.** A base can carry a secret in its user information, so `a base address begins with http:// or https://` names the rule and never the value.
+- **The refusal message shows no address, and a base carrying user information is refused.** The address is printed in a plan and kept in a recording, so a password inside one would be written to disk and committed. The message names the rule and never the value.
+- **Space around a base is not part of it, and a scheme is matched without regard to case.**
 - **A blank variable is an absent variable, for both variables.** `THINKTHEN_BASE_URL` holding nothing or only white space falls through to the default base. `THINKTHEN_API_KEY` holding nothing or only white space is the absent key it already was, which is exit code 4 with the message naming the variable. No new exit code was invented.
 - **A blank base is refused before the scheme is read**, so `--url " "` keeps the message "a URL is text, not white space" that the blank rule gives every other text value. The core test for a blank `--url` now passes an adapter and a model beside it, because with neither of them the incomplete ad-hoc rule answers first.
 - **The live script takes the path of a job**, rather than a name from a registry. One path names one job and nothing has to be kept in step.
@@ -74,6 +75,19 @@ Ian can overturn each of these cheaply.
 - **The ledger path is overridable** through `THINKTHEN_LIVE_LEDGER`, which is how the refusal test gives the script a ledger at its limit without touching the committed one.
 - **The refusals exit 1 and a mistake in the call exits 2.** A limit reached and a blank key are the script refusing to spend. A missing job name, a job that is not a file, a ledger that is not a file, and a ledger holding no whole numbers are the caller getting the command wrong.
 - **A job that fails still spends.** The ledger is written whatever the job's exit code was, and the run then carries that code out, because a job that stopped partway may already have paid for a call.
+
+## The second agent's review
+
+A second agent read the whole branch, built the binary, probed the composition rule by hand, and ran the suite offline. It checked the public surface against the crate's style, the paths a key could leak along, the composition rule, and what each new test really asserts. Four findings changed the code.
+
+1. **Space around a base was not dropped before the address was composed.** `THINKTHEN_BASE_URL` ending in a newline, which is what `$(cat file)` and a `.env` line give, composed to an address with a newline inside it and failed later as a transport error. The base is trimmed now, by the same rule that decides absence.
+2. **The scheme was matched with regard to case.** `HTTP://host/v1` is a legal address and was refused. `after_scheme` matches without regard to case.
+3. **A base carrying user information wrote a password into a plan and a recording.** The error message hid the address for that very reason while the success path published it, and a recording is committed. A base whose authority holds `@` is refused now, so no user information reaches a plan, a recording, or a digest.
+4. **Four assertions claimed more than they held.** The bad-base cases now assert that the message names no address, the key case counts the entry it recorded, and the unset-key case no longer repeats itself.
+
+Two findings were left as they are. `BackendValues::new` still takes the five flag values and `with_base` still adds the environment's, which keeps the two sources apart at the type level. The rule that an empty variable counts as absent still lives in the binary, because the core reads no environment.
+
+The review also named the failure of a live job as a lost spend. That was fixed before the review landed: the ledger is written whatever the job's exit code was.
 
 ## The ladder
 
@@ -84,11 +98,11 @@ Ian can overturn each of these cheaply.
 | 2 | `sdlc/scripts/test` | 0 |
 | 3 | `sdlc/scripts/spec` | 0 |
 
-One hundred and two tests, one documentation test, twenty-one spec examples, and the demo runner over one green demo and fourteen red ones pass. Rung 3 was run with `env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL`.
+One hundred and four tests, one documentation test, twenty-one spec examples, and the demo runner over one green demo and fourteen red ones pass. Rung 3 was run with `env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL`.
 
 ## The ratchet
 
-The ceiling was 4094 and is 4458. `tests/address.rs` holds the six cases the two variables need and `tests/live_script.rs` holds the three refusals, which is the whole growth; the source itself moved by a few lines, because the address rule replaced a stored URL with one function both paths call. Duplication was looked for in `backend.rs`, `edge.rs`, and the three listener test files before a line was added. The one shared shape across the test files is the process runner, and each file writes the environment its own cases need, so folding them would cost more in arguments than it saves in lines.
+The ceiling was 4094 and is 4531. `tests/address.rs` holds the six cases the two variables need and `tests/live_script.rs` holds the three refusals, which is the whole growth; the source itself moved by a few lines, because the address rule replaced a stored URL with one function both paths call. Duplication was looked for in `backend.rs`, `edge.rs`, and the three listener test files before a line was added. The one shared shape across the test files is the process runner, and each file writes the environment its own cases need, so folding them would cost more in arguments than it saves in lines.
 
 ## Dependencies
 

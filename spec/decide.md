@@ -44,13 +44,17 @@ printf 'x' | env THINKTHEN_BASE_URL= thinkthen decide 'asks for a refund' --dry-
 printf 'x' | env THINKTHEN_BASE_URL=http://127.0.0.1:1/v2 thinkthen decide 'asks for a refund' --dry-run --url http://127.0.0.1:1/v3 --adapter systemone --model local-1 | grep -c '"url":"http://127.0.0.1:1/v3/systemone"' | mustmatch like "1"
 ```
 
-A base that is not an `http` or `https` address is a usage error, and the message shows no address, because a base can carry a secret in its user information.
+A base that is not an `http` or `https` address is a usage error, and so is a base carrying user information, because the address is printed in a plan and kept in a recording. Neither message shows the address it refused.
 
 ```bash
 status=0
 printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch like "2"
-printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\`"
+printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\` and carries no user information"
+status=0
+printf 'x' | env THINKTHEN_BASE_URL=https://someone:secret@127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+printf 'x' | env THINKTHEN_BASE_URL=https://someone:secret@127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run 2>&1 >/dev/null | grep -c secret | mustmatch like "0"
 ```
 
 The five `THINKTHEN_*` backend variables of ADR 0004 are gone. None of them changes the plan.
