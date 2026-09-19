@@ -295,6 +295,31 @@ def license_allowed(expression: str) -> bool:
     return value is True and position == len(tokens)
 
 
+LICENSE_GRAMMAR_CASES = (
+    ("MIT", True),
+    ("GPL-3.0", False),
+    ("MIT OR GPL-3.0", True),
+    ("MIT AND GPL-3.0", False),
+    ("Apache-2.0 / MIT", True),
+    ("(MIT OR Apache-2.0) AND Unicode-3.0", True),
+    ("(MIT OR GPL-3.0) AND GPL-2.0", False),
+    ("Apache-2.0 WITH LLVM-exception", False),
+    ("Apache-2.0 WITH LLVM-exception OR MIT", True),
+    ("", False),
+    ("MIT OR", False),
+    ("MIT MIT", False),
+    ("(MIT", False),
+    ("AND MIT", False),
+)
+
+
+def check_license_grammar() -> None:
+    """Hold the SPDX reader to its table, since a widened reader passes quietly."""
+    for expression, expected in LICENSE_GRAMMAR_CASES:
+        if license_allowed(expression) is not expected:
+            fail("dependencies", f"the SPDX reader answers {expected} for {expression!r}")
+
+
 def check_dependencies() -> None:
     result = subprocess.run(
         ["cargo", "metadata", "--locked", "--format-version", "1"],
@@ -342,6 +367,7 @@ def main() -> int:
     check_clippy_configs()
     check_crate_roots()
     check_sources()
+    check_license_grammar()
     check_dependencies()
     for failure in FAILURES:
         print(failure, file=sys.stderr)
