@@ -166,6 +166,7 @@ Rewriting the demos found more. None changes a ruling.
 - In record mode the `--dry-run` plan shows the request for the first record. It also carries an `input` object naming the framing and the pointers. It reads no further than that record.
 - `config path` prints the file that `--config` or `THINKTHEN_CONFIG` names when either is given. `config show` prints one JSON object with the file's own key names and every default filled in.
 - In `annotate --details`, `meta.usage` is the sum over the record's requests. How `meta` reports a record whose requests were answered by different model versions is an open point in `result.md`.
+- For `annotate`, the record-mode plan shows the first record's first request, taking the `on` sets in file order. A second plan shape for one verb is not worth its cost.
 - `report` treats rows from `decide`, `choose`, or `score` as one check named after the verb. Rows that carry more than one question text are listed in the report as a warning.
 
 ## What this replaces

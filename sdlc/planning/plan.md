@@ -20,7 +20,7 @@ A slice is done when its demos are green, the four rungs pass on main, and this 
 | 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version` | | | Done |
 | 1 | `decide if` on the first surface: the types, the result, the `systemone` adapter, exit codes, the plan document | | | Done. Tickets 0001 to 0003. Slice 3 reshapes it |
 | 2 | `--record` and `--replay` over one content-addressed folder | `recording.md` | | Done. Ticket 0004 |
-| 3 | The flat surface on the landed code: `decide QUESTION`, the bare value, `--details`, `--threshold`, exit 0, 1, and 3 without a flag, `--quiet`, `--dry-run`, `--profile`, and the end of the five backend variables | `channels.md`, `threshold.md`, `result.md`, `decide.md` | 01, 09 | Ticket 0005 is written |
+| 3 | The flat surface on the landed code: `decide QUESTION`, the bare value, `--details`, `--threshold`, exit 0, 1, and 3 without a flag, `--quiet`, `--dry-run`, `--profile`, and the end of the five backend variables | `channels.md`, `threshold.md`, `result.md`, `decide.md` | 01, 09 | Ticket 0005 is ready. The specification and fifteen demos for the whole surface landed on 2026-09-19 after an independent cross-check |
 | 4 | `choose` with `--raw`, then `score`. The adapter keeps every option's probability and the vendor's `confidence` (ADR 0009) | `choose.md`, `score.md`, `result.md` | 02, 05 | Next |
 | 5 | The `chat-logprobs` adapter against a local server, and the first live judgments. It needs no vendor credits | `backends.md` | 10 | Its section needs settling first |
 | 6 | The configuration file, profiles from the file, `THINKTHEN_PROFILE`, `THINKTHEN_CONFIG`, and `config path`, `show`, `check` | `config.md` | 10 | |

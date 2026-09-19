@@ -28,7 +28,7 @@ Tickets 0001 to 0004 landed `thinkthen decide if CONDITION` with a full result o
 - `spec/decide-if.md` becomes `spec/decide.md`. The fixtures named `if-urgent.*` become `decide-urgent.*`, with their README.
 - Each leftover in the review issue is fixed, or the ticket's record says why it no longer applies.
 
-Excluded: the configuration file, `THINKTHEN_PROFILE`, records, and every other command.
+Excluded: the configuration file, `THINKTHEN_PROFILE`, records, and every other command. Build Settled sections only. Anything a page marks Draft waits, such as `meta.tool` from ADR 0008.
 
 ## Acceptance
 
