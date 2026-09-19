@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"My order was refunded but the amount is short by the price of the postage. I was told the whole thing would come back.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which subject does this message concern?","criteria":{"billing":null,"delivery":null,"account":null,"product":null,"other":null,"weather":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.97,"probabilities":{"product":0.0,"weather":0.0,"delivery":0.01,"other":0.0,"account":0.0,"billing":0.99}}},"usage":{"input_tokens":339,"output_tokens":60}}
+}

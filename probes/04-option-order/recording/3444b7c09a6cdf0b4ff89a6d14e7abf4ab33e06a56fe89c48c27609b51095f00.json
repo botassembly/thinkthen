@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I cancelled the order before it shipped and the money still has not come back after three weeks. The order page says cancelled.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which subject does this message concern?","criteria":{"other":null,"product":null,"account":null,"delivery":null,"billing":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.99,"probabilities":{"delivery":0.0,"billing":1.0,"product":0.0,"other":0.0,"account":0.0}}},"usage":{"input_tokens":332,"output_tokens":53}}
+}

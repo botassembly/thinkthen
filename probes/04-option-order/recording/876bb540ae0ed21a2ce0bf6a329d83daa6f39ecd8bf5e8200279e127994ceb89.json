@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"My parcel arrived a week late and I would like the postage refunded. I do not want to send the goods back, only the delivery charge returned.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which subject does this message concern?","criteria":{"other":null,"product":null,"account":null,"delivery":null,"billing":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"delivery","confidence":0.99,"probabilities":{"other":0.0,"billing":0.01,"account":0.0,"product":0.0,"delivery":0.99}}},"usage":{"input_tokens":337,"output_tokens":53}}
+}

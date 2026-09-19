@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Please move the monthly payment date from the first to the fifteenth. The first is awkward for me.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which subject does this message concern?","criteria":{"billing":null,"delivery":null,"account":null,"product":null,"other":null,"weather":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.98,"probabilities":{"other":0.0,"product":0.0,"delivery":0.0,"account":0.02,"billing":0.98,"weather":0.0}}},"usage":{"input_tokens":335,"output_tokens":60}}
+}

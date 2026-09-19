@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"My saved addresses have all disappeared since the site changed last week. The orders are still there.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which subject does this message concern?","criteria":{"billing":null,"delivery":null,"account":null,"product":null,"other":null,"weather":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"account","confidence":0.78,"probabilities":{"billing":0.01,"product":0.0,"delivery":0.16,"account":0.82,"other":0.01,"weather":0.0}}},"usage":{"input_tokens":332,"output_tokens":60}}
+}

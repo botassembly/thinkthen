@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Please close my account and remove my details from your list. I do not want any more messages.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which subject does this message concern?","criteria":{"account":null,"other":null,"billing":null,"product":null,"delivery":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"account","confidence":1.0,"probabilities":{"billing":0.0,"account":1.0,"other":0.0,"product":0.0,"delivery":0.0}}},"usage":{"input_tokens":327,"output_tokens":53}}
+}

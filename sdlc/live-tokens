@@ -3,4 +3,4 @@
 # the limit is 476,000,000 tokens. sdlc/scripts/live reads both rows, refuses
 # to start at the limit, and adds what each call spent.
 limit_tokens 476000000
-spent_tokens 215484
+spent_tokens 247839
