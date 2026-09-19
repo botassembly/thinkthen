@@ -1,4 +1,4 @@
-//! Every way the command fails, with the one map to an exit code and a message.
+//! Every way the command fails, mapped once to what the user is told.
 
 use std::io::{self, Write};
 use std::process::ExitCode;

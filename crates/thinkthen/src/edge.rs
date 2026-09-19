@@ -1,4 +1,4 @@
-//! The process edge: the environment, standard input, and standard output.
+//! The process boundary, which every value from outside crosses once.
 
 use std::env;
 use std::fmt;
