@@ -18,6 +18,7 @@
 #     they still carry a probability, so they stay in the band.
 #   - A band with no labeled row yields null for both rates. A small run
 #     leaves most bands empty, and an empty band is not evidence.
+#   - A row with no probability stops the recipe, and the message names the row.
 #   - Counts are exact. Every rate is rounded to four decimals.
 
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
@@ -33,6 +34,7 @@ reduce inputs as $row (
   .rows += 1
   | ($row.input.id // "with no id") as $id
   | $row.answer.probability as $p
+  | if ($p | type) != "number" then error("row \($id) carries no probability") else . end
   | $row.input.label as $label
   | slot($p) as $i
   | .bands[$i].rows += 1

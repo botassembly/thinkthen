@@ -20,6 +20,8 @@
 #     `unlabeled` and is scored in nothing. It still appears in `refused` when
 #     the band refused it, because a refused row is a row a person must read.
 #   - A zero denominator yields null.
+#   - A row with no probability stops the recipe. jq reads a missing number as
+#     below the low side, so an unguarded band would score it a no.
 #   - Counts are exact. Every rate is rounded to four decimals.
 
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
@@ -32,6 +34,7 @@ reduce inputs as $row (
   .rows += 1
   | ($row.input.id // "with no id") as $id
   | $row.answer.probability as $p
+  | if ($p | type) != "number" then error("row \($id) carries no probability") else . end
   | $row.input.label as $label
   | verdict($p) as $said
   | (if $said == "unresolved" then .refused += [{id: $id, label: $label, probability: $p}] else . end)

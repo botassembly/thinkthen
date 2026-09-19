@@ -15,9 +15,13 @@
 #     the grid. The column stays, because the same arithmetic under a band
 #     fills it, and band.jq reads a band.
 #   - A zero denominator yields null, and a null F1 never wins the pick.
+#   - A row with no probability stops the recipe. jq reads a missing number as
+#     below every cut, so an unguarded sweep would score it a no and print a
+#     rate nobody could tell from a real one.
 #   - `pick` is the cut with the highest F1. When several cuts tie, the pick is
 #     the middle one of the tied run, because it sits farthest from both edges
-#     of the gap. `pick.rule` says so in the output.
+#     of the gap. An even number of ties has two middles, and the pick is the
+#     higher of the two. `pick.rule` says so in the output.
 #   - Counts are exact. Every rate is rounded to four decimals.
 #   - The verdict and the arithmetic are copied from score.jq. jq shares code
 #     only through `include` and a search path, and two short copies read
@@ -37,6 +41,7 @@ def metrics($rows; $cut):
     {unlabeled: [], unresolved: 0, tp: 0, fp: 0, tn: 0, fn: 0};
     ($row.input.id // "with no id") as $id
     | $row.answer.probability as $p
+    | if ($p | type) != "number" then error("row \($id) carries no probability") else . end
     | $row.input.label as $label
     | if $label != true and $label != false then .unlabeled += [$id]
       else
