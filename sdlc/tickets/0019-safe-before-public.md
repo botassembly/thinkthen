@@ -6,7 +6,7 @@ opens: crates spec specification README.md Cargo.toml .github sdlc/scripts sdlc/
 
 # 0019: Safe before public
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
