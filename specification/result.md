@@ -1,132 +1,92 @@
 # The result
 
-Status: **Settled** for `decide if`. **Draft** for the other verbs.
+Status: **Settled** for the bare value, the object, and the yes/no answer. **Draft** for the `question` object of `choose` and `score` and for the `annotate` shape.
 
-A single judgment prints one JSON document and a newline. The document is compact and sits on one line, so a result is also one record for `jq`, `grep`, and `wc -l`. The example below is spread out for reading. Every field in the example is always present. An empty field holds `null`, and only `usage` may be absent. Token counts are whole numbers of zero or more. `meta.adapter` is an adapter name from [backends.md](backends.md).
+One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
-```json
-{
-  "schema": "thinkthen.result/1",
-  "question": { "verb": "if", "condition": "asks for a refund" },
-  "answer": { "kind": "yes_no", "probability": 0.92 },
-  "assessment": { "status": "accepted", "value": true, "min_prob": 0.9 },
-  "meta": {
-    "backend": "jev",
-    "url": "https://api.typesafe.ai/v1/systemone",
-    "adapter": "systemone",
-    "model": "jev-1.13.0",
-    "usage": { "input_tokens": 312, "output_tokens": 48 },
-    "replayed": false
-  }
-}
-```
+## The bare value
 
-## Three layers
-
-- **answer** is what the backend said, in thinkthen's own words. No vendor field name appears in it.
-- **assessment** is what local policy made of the answer.
-- **meta** names the backend profile, the URL that answered, the adapter, the model that answered as the backend reported it, and the usage the backend reported. `backend` is `null` for an ad-hoc backend. `usage` is absent when the backend reports none. `replayed` says whether a recording answered rather than the backend, as [recording.md](recording.md) describes.
-
-## Four outcomes
-
-| Outcome | How it shows |
+| Command | Default standard output |
 | --- | --- |
-| Yes | `status` is `accepted` and `value` is `true` |
-| No | `status` is `accepted` and `value` is `false` |
-| Unsure | `status` is `unsure` and `value` is `null` |
-| Error | No result prints. Standard error explains, and the exit code is 4, 5, or 70 |
+| `decide` | `true`, `false`, or `null` |
+| `choose` | a JSON string, or `null`. `--raw` prints the label without quotation marks and prints nothing for `null` |
+| `score` | a JSON number |
+| `filter` | each kept record, byte for byte as it arrived, in input order |
+| `rank` | each record as it arrived, most likely yes first |
+| `segment` | one JSON object per segment with `start_line`, `end_line`, `start_unit`, `end_unit`, and `text` |
+| `annotate` | one JSON object per record |
+| `report` | one JSON object |
 
-A fifth status, `unassessed`, means the user gave no pass mark. `value` is `null`, `min_prob` is `null`, and nothing is accepted. A yes, a no, an unsure, and an error never share a representation.
+Every value is compact and sits on one line, so one answer is also one record for `jq`, `grep`, and `wc -l`.
 
-## The pass mark
+## `--details`
 
-`--min-prob P` sets a symmetric pass mark. `P` is above 0.5 and at most 1.
-
-- The answer is yes when the probability is at or above `P`.
-- The answer is no when one minus the probability is at or above `P`.
-- Anything else is unsure.
-
-A probability exactly on the mark is accepted. `--min-prob 0.9` accepts 0.9 as yes and 0.1 as no.
-
-No pass mark is built in. A pass mark is a measurement for one model, and a default would be a guess. A backend profile may carry a measured mark in a later version. An asymmetric pair of marks is a later option.
-
-## A pick-one answer
-
-Status: **Draft**. `decide which` prints this shape.
+`--details` prints this object in place of the bare value.
 
 ```json
-{
-  "schema": "thinkthen.result/1",
-  "question": { "verb": "which", "by": "the primary purpose of this issue", "options": ["bug", "feature", "question", "other"] },
-  "answer": {
-    "kind": "choice",
-    "pick": "bug",
-    "probabilities": { "bug": 0.94, "feature": 0.03, "question": 0.02, "other": 0.01 }
-  },
-  "assessment": { "status": "accepted", "value": "bug", "min_prob": 0.8, "min_gap": 0.3 },
-  "meta": {
-    "backend": "jev",
-    "url": "https://api.typesafe.ai/v1/systemone",
-    "adapter": "systemone",
-    "model": "jev-1.13.0",
-    "usage": { "input_tokens": 312, "output_tokens": 48 },
-    "replayed": false
-  }
-}
+{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Does this ask for a refund?"},"answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"meta":{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}
 ```
 
-- `answer.pick` is the option with the highest probability. It is what the backend said, before any policy.
-- `answer.probabilities` holds one entry per option sent, in the order the options were sent. `--none` appears here as `none`.
-- `assessment.value` is the accepted option name, or `null`.
-- `min_prob` and `min_gap` are the marks the user set. Each is `null` when the user set none.
+- `value` is the bare value the command would have printed.
+- `question` names the verb and the text the model received.
+- `answer` is what the backend said, in thinkthen's own words. No vendor field name appears in it.
+- `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. [threshold.md](threshold.md) gives the rule.
+- `meta` carries the run. Every field is always present, and `usage` alone may be absent.
 
-The pass mark for a pick is not symmetric. `--min-prob P` applies to the winning option's probability alone, and `P` may sit below 0.5, because a four-way choice is not a two-sided decision.
+## Three answer kinds
 
-| Outcome | How it shows |
+**`yes_no`**, from `decide`, `filter`, `rank`, and `segment`. It carries `probability`, the probability of yes.
+
+**`choice`**, from `choose`.
+
+```json
+{"schema":"thinkthen.result/1","value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8,"meta":{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}
+```
+
+`answer.pick` is the option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the label that cleared the cut, or `null`. A script reads `value` and never `pick`.
+
+**`score`**, from `score`.
+
+```json
+{"schema":"thinkthen.result/1","value":1.6,"question":{"verb":"score","text":"How much disruption does this report?","levels":["None.","Work continues with a workaround.","Work is blocked."]},"answer":{"kind":"score","level":"Work is blocked.","probabilities":{"None.":0.05,"Work continues with a workaround.":0.30,"Work is blocked.":0.65}},"threshold":null,"meta":{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"replayed":false}}
+```
+
+`answer.level` is the level with the highest probability. `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first. `value` is the weighted position on those levels, and [score.md](score.md) gives the arithmetic.
+
+## `meta`
+
+| Field | Holds |
 | --- | --- |
-| A pick was accepted | `status` is `accepted` and `value` is the option name |
-| Unsure | `status` is `unsure` and `value` is `null` |
-| No mark was set | `status` is `unassessed` and `value` is `null` |
+| `profile` | The backend profile's name, or `null` for an ad-hoc backend |
+| `url` | The URL that answered |
+| `adapter` | The adapter name, from [backends.md](backends.md) |
+| `model` | The model that answered, as the backend reported it |
+| `usage` | The token counts the backend reported. Absent when the backend reports none |
+| `replayed` | `true` when a recording answered rather than a backend |
 
-The answer is unsure when the winning probability falls under `min_prob`, when the winner's lead over the runner-up falls under `min_gap`, when the top two tie exactly, or when the winner is an option the user named with `--abstain-on`. The reason appears as `assessment.reason` with one of `below_min_prob`, `below_min_gap`, `tie`, or `abstain_option`.
+## Record rows
 
-A pick of `none` is an accepted answer. It says no option fits. It is not an unsure answer.
-
-## A rating answer
-
-Status: **Draft**. `decide how` prints this shape.
+In record mode the object also carries `input`, the original record. `input` holds the whole record, including parts that were never sent. On `filter` and `rank`, `--details` prints these objects for the same records in the same order that the bare values would have taken.
 
 ```json
-{
-  "schema": "thinkthen.result/1",
-  "question": { "verb": "how", "property": "handoff completeness", "levels": ["missing essentials", "usable with follow-up", "ready for review"] },
-  "answer": {
-    "kind": "rating",
-    "level": "usable with follow-up",
-    "probabilities": { "missing essentials": 0.15, "usable with follow-up": 0.62, "ready for review": 0.23 },
-    "value": 0.54
-  },
-  "assessment": { "status": "unsure", "value": null, "min_prob": 0.8 },
-  "meta": {
-    "backend": "jev",
-    "url": "https://api.typesafe.ai/v1/systemone",
-    "adapter": "systemone",
-    "model": "jev-1.13.0",
-    "usage": { "input_tokens": 208, "output_tokens": 32 },
-    "replayed": false
-  }
-}
+{"schema":"thinkthen.result/1","value":true,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this report a payment failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":0.5,"meta":{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"replayed":false}}
 ```
 
-- `answer.level` is the level with the highest probability.
-- `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first.
-- `answer.value` is the weighted position of the levels, from 0 at the lowest level to 1 at the highest. With `K` levels, it is the sum of each level's probability times its zero-based index, divided by `K` minus one. The example gives `(0 × 0.15 + 1 × 0.62 + 2 × 0.23) / 2`. That is 0.54.
-- `assessment.value` is the accepted level name, or `null`.
+## `annotate`
 
-`answer.value` is a position on the levels the user named. It is not a probability that the property holds, and it is not a confidence in the answer. A script that compares it across two different rubrics is comparing two different scales.
+Draft. `annotate --details` prints `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`.
 
-The answer is unsure when the winning level's probability falls under `min_prob`. `answer.value` still prints, because it is what the backend said.
+```json
+{"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":{"unresolved":true,"kind":"bug"},"answers":{"unresolved":{"value":true,"question":{"verb":"decide","text":"Is this still unresolved?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":"0.1:0.9"},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8}},"meta":{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"replayed":false}}
+```
+
+Each entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints. `meta` sits once at the top, because the questions went to one backend.
 
 ## What a high probability does not mean
 
-A decider model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. The only test of a question is a measurement against labeled cases.
+A decider model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
+
+## Open points
+
+- Does the `annotate` object carry `schema`? ADR 0007 names four fields and leaves `schema` out. Recommendation: carry `"schema":"thinkthen.result/1"` so that every object the tool prints names its shape.
+- Does `question` carry `options` for `choose` and `levels` for `score`? ADR 0007 shows only the `decide` form. Recommendation: carry them, because a saved result has to say what was offered.
