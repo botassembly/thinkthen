@@ -6,7 +6,7 @@ opens: crates spec specification/fixtures sdlc/scripts sdlc/ratchet.json demos/0
 
 # 0006: The two variables, the live script, and the first green demo
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
