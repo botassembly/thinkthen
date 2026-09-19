@@ -1,6 +1,6 @@
 # Recording and replay
 
-Status: **Settled** for version one, by an agent under ADR 0005. Ian has not read it, and he can overturn it cheaply until demos depend on it.
+Status: **Settled** for version one, by an agent under ADR 0005. Ian has not read it, and he can overturn it cheaply until demos depend on it. Every token count and probability in an example here is illustrative.
 
 A recording is a folder of backend exchanges. It lets a command run again with no network, no key, and the same answer. Demos and tests replay recordings, so no gate ever reaches a backend.
 
@@ -12,7 +12,9 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 | `--replay DIR` | Answer from `DIR` alone. Open no connection and read no key. A request that `DIR` lacks is a local failure, exit code 5, and the message names the missing entry |
 | Both, with the same `DIR` | A cache. An entry that exists is replayed. A request that is absent goes to the backend and is recorded |
 
-Giving both options with two different folders is a usage error. So is giving either option beside `--plan`, because a plan sends nothing and reads nothing.
+Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads nothing.
+
+Both options on one folder are also the resume for a record run. [records.md](records.md) shows it.
 
 ## An entry
 

@@ -1,127 +1,90 @@
 # Records
 
-Status: **Draft**.
+Status: **Settled** for version one, by ADR 0007. **Draft** for the default of `jobs`.
 
-Some verbs judge one document. Others judge a stream of records. `where`, `rank`, `match`, and `run` read a stream, and this document fixes what they share. [channels.md](channels.md) still governs the five channels, and [result.md](result.md) still governs the shape of one result.
+The default input is one text document. A record stream turns a command into a map over records. [channels.md](channels.md) governs the five channels, and [result.md](result.md) governs the shape of one result.
 
-A record is one unit of evidence with its own result. A row is one line that a stream verb prints.
+## Where the input comes from
 
-## Framing
+`--input FILE` reads a file. Without it the tool reads standard input. `--input` names a path and never a framing.
 
-`--input KIND` says how standard input divides into records.
-
-| Kind | What it means |
+| Flag | What one record is |
 | --- | --- |
-| `text` | The whole input is one document and one record. This is the default for `if`, `which`, `how`, `segment`, and `run` |
-| `json` | The whole input is one JSON value and one record. An array is one record. It is never a batch |
-| `jsonl` | Each line is one JSON value and one record. No blank lines |
-| `lines` | Each line is one text record. A trailing newline ends the last record |
-
-`where`, `rank`, and `match` reject `--input text`, because one document is not a stream.
+| none | The whole input is one text document and one record |
+| `--lines` | Each line is one text record. A trailing newline ends the last record |
+| `--jsonl` | Each line is one JSON value and one record. No blank lines |
 
 The tool never guesses the framing. It never repairs invalid JSON, never truncates an oversized record, and never opens a file because a string looks like a path.
 
-CSV and TSV are later additions. They arrive with `--as NAME`, which appends the judgment to each row as a new column beside a status column. That work needs a column-collision rule, a quoting dialect, and a null convention, so it lands in its own document.
-
-## Pointers
-
-`--on POINTER` names the value inside a JSON record that becomes the evidence. `--id POINTER` names the value that identifies the record in the result.
-
-Both take a JSON Pointer as RFC 6901 defines it. `/body` reads the `body` member. `/a/text` reads `text` inside `a`. A pointer that hits nothing is an error for that record.
-
-**The pointer is the disclosure boundary.** Only the pointed value leaves the machine. Every other field of the record stays local and is still available for output.
-
-Without `--on`, a `jsonl` record is serialized as compact JSON and the whole record becomes the evidence. Without `--id`, the result identifies the record by its zero-based input position.
-
-## What prints
-
-`--emit MODE` picks what each row holds.
-
-| Mode | What one row holds |
+| Command | Framing |
 | --- | --- |
-| `result` | The judgment for that record |
-| `input` | The original record, unchanged |
-| `annotated` | `{"input": ..., "result": ...}` |
+| `decide`, `choose`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
+| `filter`, `rank` | One of `--lines` or `--jsonl` is required. One document is not a stream |
+| `annotate` | One document by default. Both flags are accepted |
+| `segment` | One document only. Either flag is a usage error |
+| `report`, `config` | Neither flag applies |
 
-Defaults: `result` for `match` and `run`, `input` for `where` and `rank`.
+## `--field POINTER`
 
-Preserving a record means preserving its values and its field names. It does not promise the same whitespace.
+`--field` is a JSON Pointer as RFC 6901 defines it. It names the part of each record the model sees. `/body` reads the `body` member. `/a/text` reads `text` inside `a`.
 
-## The row guarantee
+**The pointer is the disclosure boundary.** Only the pointed value leaves the machine. The rest of the record stays on the machine, and `--details` still carries the whole record in `input`.
 
-Under `--emit result` and `--emit annotated`, these hold for every stream verb.
+- `--field` with `--jsonl` reads the pointer in each line's record.
+- `--field` without `--jsonl` reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists.
+- `--field` with `--lines` is a usage error. A text line has no members.
+- A pointer that finds nothing is an input error for that record at exit 2, before any request for it.
+- A pointed value that is not a string is serialized as compact JSON and sent as text.
 
-- One output row per input record.
-- Input order is kept, except that `rank` prints its own order.
-- No row is dropped for being unsure.
-- No failure becomes `false`, `other`, zero, or an empty success.
+Without `--field`, a `--jsonl` record is serialized as compact JSON and the whole record becomes the evidence.
 
-`where --emit input` is the one place where records leave the output, because selecting is what a filter does. The count of records that the filter left out prints on standard error. A pipeline that must keep every record uses `--emit annotated`.
+## Order and requests
 
-## Unsure records
+Each record is its own request. Records never share model context, and no answer reaches another record's question.
 
-`where` takes `--unknown drop|keep|error`. The verb's own section gives the default.
+Output keeps input order on every command but `rank`, which prints its own order and holds every record until the input ends. One value prints per record. No record is dropped for being unresolved, except that `filter` prints only what it keeps.
 
-| Value | What an unsure record does |
-| --- | --- |
-| `drop` | It is left out of `--emit input`, and the count prints on standard error |
-| `keep` | It is selected |
-| `error` | The run ends at that record with exit code 8 |
+Preserving a record means preserving its values and its field names. It does not promise the same whitespace. `filter` prints a kept record byte for byte as it arrived.
 
-`--unknown keep` needs no result-bearing mode, because the record still prints under every mode.
+## Empty input
 
-Measurement of the first decider model showed answers inside the unsure band flipping between identical runs 5% to 14% of the time. An unsure record is a record to look at again. It is not a record the model called false.
+An empty record stream succeeds with no output and no request. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
 
-## Order and parallelism
+## Failure
 
-`--jobs N` bounds how many requests are in flight at once. The default is 4.
+A run stops at the first failed record. Rows already printed stay printed, and the run ends with the code the failure earns: 4 for a backend failure, 5 for a local failure, 2 for a record the tool refused before sending it. No failure ever becomes `false`, `null`, a label, or a zero.
 
-Output order never depends on `--jobs`. The tool holds finished rows in a bounded buffer until the rows before them are written. A faster later record never attaches itself to an earlier one.
+Printed output after a failure is a prefix of the input. It is not a finished dataset.
 
-The first decider model accepts about 1,200 requests per minute. A run over that rate gets a 429, and [backends.md](backends.md) fixes the retry. `--jobs` is the lever that keeps a run under the rate.
+An unresolved answer is never retried. Asking again until the answer is acceptable is not a policy.
+
+In record mode the exit code reports the run, and no record's answer sets it. Codes 6, 7, and 8 stay reserved and no command uses them.
+
+## Resume
+
+A rerun with `--record DIR --replay DIR` on one folder answers the finished records from disk and pays only for the rest. That pairing is the resume. [recording.md](recording.md) gives the folder and the entry.
+
+```sh
+thinkthen decide 'This reports a payment failure.' --jsonl --field /body --record runs/tickets --replay runs/tickets < tickets.jsonl
+```
+
+A first run that stops at record 400 leaves 399 entries in the folder. The same command run again replays those 399 and sends the rest.
+
+## `jobs`
+
+Draft. `jobs` is a configuration setting and never a flag. It bounds how many requests are in flight at once. [config.md](config.md) holds it.
+
+Output order never depends on `jobs`. The tool holds finished rows in a bounded buffer until the rows before them are written. A faster later record never attaches itself to an earlier one.
+
+The first decider model accepts about 1,200 requests per minute. A run over that rate gets a 429, and [backends.md](backends.md) fixes the retry. `jobs` is the lever that keeps a run under the rate.
 
 When the program downstream closes the pipe, the tool stops reading and stops scheduling. Requests already sent may still be processed and billed.
 
-## Limits
+## A loop over files has no budget
 
-| Option | Meaning | Default |
-| --- | --- | --- |
-| `--jobs N` | Requests in flight at once | 4 |
-| `--max-requests N` | The cap on requests for the whole run, counting retries | None |
-| `--max-record-bytes N` | The cap on one record's evidence | 262144 |
+A per-record judgment is a paid request, and a run has no request cap. A loop over a folder of files sits outside even that, because each file is its own run. The help for every record-reading command shows `find -print0 | xargs -0 -n 1 -P 4` next to the cost warning.
 
-A record over `--max-record-bytes` fails. The tool never truncates it. Under `--on-error stop` the run ends with exit code 5, and under `continue` the record gets an error row.
+## Open points
 
-Reaching `--max-requests` ends the run with exit code 7. Printed output is a prefix of the input, and it is not a finished dataset.
-
-The backend has its own limits. The first decider model takes about 32k tokens per question and about 65k per request. Evidence past that is refused by the backend, and the exit code is 4.
-
-## Failures
-
-`--on-error stop|continue` says what one record's failure does. The default is `stop`.
-
-`stop` ends the run at the first failure. The exit code is the one the failure earns from [channels.md](channels.md): 4 for a backend failure, 5 for a local failure.
-
-`continue` carries every record to the end. A failed record gets a row with an error status and a stable code, and the run exits 6. `continue` needs `--emit result` or `--emit annotated`, because an error has nowhere to go in `--emit input`.
-
-An unsure answer is never retried. Asking again until the answer is acceptable is not a policy.
-
-## Exit codes 6, 7, and 8
-
-[channels.md](channels.md) reserves these for stream commands. This document assigns them.
-
-| Code | Meaning |
-| --- | --- |
-| 6 | The run reached the last record under `--on-error continue`, and at least one record failed. Every record has a row |
-| 7 | The run ended before the last record because a declared limit was reached. Printed output is a prefix |
-| 8 | The run ended because a declared requirement was not met. `where --unknown error` met an unsure record, and `segment --unknown error` met an unsure boundary |
-
-When more than one applies, 8 wins over 7, and 7 wins over 6. The most specific cause is the one worth reporting.
-
-A run with no pass mark still exits 0. Codes 1 and 3 belong to `--status`, and no stream verb offers `--status`.
-
-**Questions for Ian**
-
-- Should `--max-requests` carry a default? A default of 1,000 protects a wallet from a large file. No default lets a complete job finish instead of turning into exit 7 partway. Recommendation: no default, and the help names the flag next to the cost warning.
-- Should `--jobs` default to 4? Four is safe under every rate limit and leaves a hosted backend idle. A higher default finishes a large file sooner and risks more 429s. Recommendation: 4, and revisit it once a run has been measured.
-- Should `--on-error continue` be allowed to change `--emit` on its own? Changing it saves the user a flag. Refusing keeps the printed shape a thing the user chose. Recommendation: refuse, and say in the error message which mode to pass.
+- What does `jobs` default to? Recommendation: 4, the value ADR 0007's configuration example shows. Four is safe under the measured rate limit, and a measured run can raise it.
+- Is a record whose pointer finds nothing really exit 2? ADR 0007 says so, and it also says that exit 2 means nothing was sent. The two disagree once earlier records have been judged. Recommendation: keep exit 2 for the pointer miss and soften the exit 2 row to say that the failing record sent nothing.
