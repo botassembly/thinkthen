@@ -12,6 +12,7 @@ mod asked;
 mod choosing;
 mod exchange;
 mod from_record;
+mod keeping;
 mod parallel;
 mod recordings;
 mod streaming;

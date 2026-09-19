@@ -58,8 +58,8 @@ SEAM_ALLOWED = {
     "crates/thinkthen-core/src/lib.rs": {"systemone"},
     "crates/thinkthen-core/src/plan_document.rs": {"systemone"},
     "crates/thinkthen-core/src/recording.rs": {"systemone"},
+    "crates/thinkthen/src/asking.rs": {"systemone"},
     "crates/thinkthen/src/failure.rs": {"systemone"},
-    "crates/thinkthen/src/judge.rs": {"systemone"},
 }
 
 ACCEPTED_RUST_LINTS = {

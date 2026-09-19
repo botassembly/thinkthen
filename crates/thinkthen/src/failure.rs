@@ -69,6 +69,8 @@ pub(crate) enum Failure {
         finished: usize,
         /// How many of those a recording answered.
         replayed: usize,
+        /// True when the run held every row back and printed none.
+        held: bool,
         /// What stopped the record, which sets the exit code.
         cause: Box<Failure>,
     },
@@ -92,6 +94,12 @@ pub(crate) enum Failure {
     CacheWithRecording,
     /// `--jobs` was given to a run that sends one request.
     JobsOutsideRecords,
+    /// `--quiet` was given to a verb whose answer is the records it prints.
+    QuietOverKept(&'static str),
+    /// `--raw` was given where no label is ever printed.
+    RawOverKept(&'static str),
+    /// A verb that maps over records was given no framing to read them by.
+    NoFraming(&'static str),
     /// The replay folder holds no entry for the request being made.
     ReplayMiss(String),
     /// The entry the digest names cannot answer the request being made.
@@ -124,15 +132,21 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         at,
         finished,
         replayed,
+        held,
         cause,
     } = failure
     {
         let code = say(cause, writer);
         // The line names the record by its number and never by its content,
         // because a record is evidence and a diagnostic is read by a person.
+        let withheld = if *held {
+            ", and nothing was printed because an order needs every record"
+        } else {
+            ""
+        };
         let _unwritten = writeln!(
             writer,
-            "{}: stopped at record {at}; {finished} records finished, {replayed} from a recording",
+            "{}: stopped at record {at}; {finished} records finished, {replayed} from a recording{withheld}",
             thinkthen_core::NAME
         );
         return code;
@@ -176,6 +190,24 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::OpenInput(error) => (5, format!("--input could not be opened: {error}")),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
         Failure::Output(error) => (5, format!("standard output could not be written: {error}")),
+        Failure::QuietOverKept(verb) => (
+            2,
+            format!(
+                "--quiet prints nothing, and `{verb}` answers with the records it prints; \
+                 `decide --quiet` carries one answer in the exit code"
+            ),
+        ),
+        Failure::RawOverKept(verb) => (
+            2,
+            format!(
+                "--raw prints a bare label, and `{verb}` prints records; \
+                 `choose --raw` prints a label"
+            ),
+        ),
+        Failure::NoFraming(verb) => (
+            2,
+            format!("`{verb}` maps over a stream, so it takes --lines or --jsonl"),
+        ),
         Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
         Failure::Defect(what) => (70, format!("defect: {what}")),
         Failure::Render(error) => (70, format!("defect: {error}")),

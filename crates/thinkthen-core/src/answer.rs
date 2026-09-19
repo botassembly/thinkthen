@@ -201,6 +201,18 @@ impl Answer {
         }
     }
 
+    /// The probability that the answer to a yes/no question is yes.
+    ///
+    /// `rank` sorts on it. A pick and a placement carry none, because neither
+    /// answers a yes/no question and neither is a thing `rank` orders.
+    #[must_use]
+    pub fn yes(&self) -> Option<f64> {
+        match &self.0 {
+            Shape::YesNo { probability } => Some(probability.as_f64()),
+            Shape::Choice { .. } | Shape::Score { .. } => None,
+        }
+    }
+
     /// The odds of every label, or `None` for a yes/no answer.
     #[cfg(test)]
     pub(crate) fn distribution(&self) -> Option<&Distribution> {
@@ -365,6 +377,16 @@ mod tests {
             serde_json::to_string(&answer).expect("an answer serializes"),
             r#"{"kind":"score","level":"high","probabilities":{"low":0.4,"high":0.6}}"#
         );
+    }
+
+    #[test]
+    fn only_a_yes_no_answer_carries_the_probability_that_rank_orders_by() {
+        let probability = Probability::new(0.82).expect("a probability");
+        assert_eq!(Answer::new_yes_no(probability).yes(), Some(0.82));
+        assert_eq!(choice(&[("bug", 0.94), ("feature", 0.06)]).yes(), None);
+        let placed = Answer::new_score(odds(&[("low", 0.4), ("high", 0.6)]), None)
+            .expect("one level carries odds");
+        assert_eq!(placed.yes(), None);
     }
 
     #[test]

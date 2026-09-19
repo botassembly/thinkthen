@@ -8,6 +8,7 @@
 
 mod args;
 mod asked;
+mod asking;
 mod edge;
 mod failure;
 mod http;
@@ -47,6 +48,8 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
         Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),
         Some(Command::Choose(arguments)) => judge::choose(arguments, &environment, input, writer),
         Some(Command::Score(arguments)) => judge::score(arguments, &environment, input, writer),
+        Some(Command::Filter(arguments)) => judge::filter(arguments, &environment, input, writer),
+        Some(Command::Rank(arguments)) => judge::rank(arguments, &environment, input, writer),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

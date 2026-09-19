@@ -95,6 +95,35 @@ pub(crate) enum Command {
     /// to hold belongs in `decide` or `choose`, and the Bash way to branch on
     /// levels is `choose` with the levels as ordered labels.
     Score(ScoreArguments),
+
+    /// Keep the records that reach the mark and print them unchanged.
+    ///
+    /// `filter` asks one yes/no question of each record and prints the records
+    /// that reach `--threshold`, byte for byte as they arrived and in input
+    /// order. It needs --lines or --jsonl, because one document is not a
+    /// stream, and it makes one paid request for every record.
+    ///
+    /// A single cut keeps or drops, and there is no third pile. A run that
+    /// wants one asks `decide --details` and splits with `jq`:
+    ///
+    /// thinkthen decide 'The report is reproducible.' --jsonl --field /body --details < i.jsonl | jq -c 'select(.answer.probability >= 0.9)'
+    ///
+    /// A finished run prints nothing on standard error, so two kept records
+    /// out of five and two out of two look alike on the way out.
+    Filter(FilterArguments),
+
+    /// Print the records with the most likely yes first.
+    ///
+    /// The method is one yes/no question of each record, a local sort by the
+    /// probability of yes, and input order for an exact tie. `rank` never
+    /// compares two records in one question and never runs a tournament.
+    ///
+    /// It holds every record until the input ends, because a final order needs
+    /// the whole set, so an endless stream is cut into windows upstream.
+    /// `--top N` prints the first N of the order and saves no request.
+    ///
+    /// `rank` orders and never selects. A floor is `filter` in front of it.
+    Rank(RankArguments),
 }
 
 /// The options every judging verb takes.
@@ -204,13 +233,9 @@ pub(crate) struct DecideArguments {
     /// written in a file.
     pub(crate) question: String,
 
-    /// One sentence saying what a yes means, sent beside the question.
-    #[arg(long = "true", value_name = "TEXT")]
-    pub(crate) yes: Option<String>,
-
-    /// One sentence saying what a no means, sent beside the question.
-    #[arg(long = "false", value_name = "TEXT")]
-    pub(crate) no: Option<String>,
+    /// What a yes and a no mean.
+    #[command(flatten)]
+    pub(crate) meanings: Meanings,
 
     /// The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved.
     #[arg(long, value_name = "T|LOW:HIGH")]
@@ -219,6 +244,96 @@ pub(crate) struct DecideArguments {
     /// Print nothing on standard output. The exit code still carries the answer.
     #[arg(long)]
     pub(crate) quiet: bool,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
+/// The two texts that say what a yes and a no mean, which every yes/no verb takes.
+#[derive(Args, Debug)]
+pub(crate) struct Meanings {
+    /// One sentence saying what a yes means, sent beside the question.
+    #[arg(long = "true", value_name = "TEXT")]
+    pub(crate) yes: Option<String>,
+
+    /// One sentence saying what a no means, sent beside the question.
+    #[arg(long = "false", value_name = "TEXT")]
+    pub(crate) no: Option<String>,
+}
+
+/// The two views `filter` and `rank` take so they can refuse them in their own words.
+///
+/// Left to the parser, `--quiet` drew "unexpected argument" and a tip about
+/// another option. The tool says which command carries the view instead.
+#[derive(Args, Debug)]
+pub(crate) struct Refused {
+    /// Taken so that the tool refuses it in its own words.
+    #[arg(long, hide = true)]
+    pub(crate) quiet: bool,
+
+    /// Taken so that the tool refuses it in its own words.
+    #[arg(long, hide = true)]
+    pub(crate) raw: bool,
+}
+
+/// Everything `filter` was asked, before any of it is read.
+#[derive(Args, Debug)]
+pub(crate) struct FilterArguments {
+    /// The question asked of each record, or `@` and the path of a question file.
+    ///
+    /// As `@FILE` it is a question file holding one `decide` question, and a
+    /// value typed beside it replaces the file's value.
+    pub(crate) question: String,
+
+    /// One cut T on the probability of yes. A band is a usage error.
+    #[arg(long, value_name = "T")]
+    pub(crate) threshold: Option<String>,
+
+    /// What a yes and a no mean.
+    #[command(flatten)]
+    pub(crate) meanings: Meanings,
+
+    /// The two views `filter` refuses in its own words.
+    #[command(flatten)]
+    pub(crate) refused: Refused,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
+/// Everything `rank` was asked, before any of it is read.
+#[derive(Args, Debug)]
+pub(crate) struct RankArguments {
+    /// The question asked of each record, or `@` and the path of a question file.
+    ///
+    /// As `@FILE` it is a question file holding one `decide` question, and a
+    /// value typed beside it replaces the file's value.
+    pub(crate) question: String,
+
+    /// Print the first N records of the order, from 1 upward.
+    ///
+    /// It saves no request, because every record is judged before anything is
+    /// sorted.
+    #[arg(
+        long,
+        value_name = "N",
+        value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..)
+    )]
+    pub(crate) top: Option<usize>,
+
+    /// Taken so that the tool refuses it in its own words. `rank` has no rule.
+    #[arg(long, value_name = "T", hide = true)]
+    pub(crate) threshold: Option<String>,
+
+    /// What a yes and a no mean.
+    #[command(flatten)]
+    pub(crate) meanings: Meanings,
+
+    /// The two views `rank` refuses in its own words.
+    #[command(flatten)]
+    pub(crate) refused: Refused,
 
     /// The options every judging verb takes.
     #[command(flatten)]

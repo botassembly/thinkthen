@@ -6,9 +6,12 @@
 
 use std::fs;
 
-use thinkthen_core::{QuestionFile, Resolved, Typed, Verb, resolve};
+use thinkthen_core::{Cutting, QuestionFile, Resolved, Typed, Verb, resolve};
 
-use crate::args::{ChooseArguments, Common, DecideArguments, ScoreArguments};
+use crate::args::{
+    ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, RankArguments,
+    ScoreArguments,
+};
 use crate::failure::Failure;
 
 /// The path the first argument names, when it is `@` and a path.
@@ -35,23 +38,67 @@ fn fields(common: &Common) -> Option<Vec<String>> {
     (!common.field.is_empty()).then(|| common.field.clone())
 }
 
-/// Settle everything `decide` was asked.
-pub(crate) fn decide(arguments: &DecideArguments) -> Result<Resolved, Failure> {
-    let file = read(&arguments.question)?;
+/// Settle one yes/no question, which is what all three record verbs ask.
+///
+/// `decide`, `filter`, and `rank` send the same request and read the same
+/// question file. They differ in the rule each one can act on, which
+/// [`Cutting`] carries, and in what each one prints.
+fn yes_no(
+    question: &str,
+    meanings: &Meanings,
+    threshold: Option<&String>,
+    cutting: Cutting,
+    common: &Common,
+) -> Result<Resolved, Failure> {
+    let file = read(question)?;
     let typed = Typed {
-        threshold: arguments.threshold.clone(),
-        yes: arguments.yes.clone(),
-        no: arguments.no.clone(),
-        model: arguments.common.model.clone(),
-        on: fields(&arguments.common),
+        threshold: threshold.cloned(),
+        yes: meanings.yes.clone(),
+        no: meanings.no.clone(),
+        model: common.model.clone(),
+        on: fields(common),
+        cutting,
         ..Typed::default()
     };
     Ok(resolve(
         Verb::Decide,
-        typed_text(&arguments.question, file.is_some()),
+        typed_text(question, file.is_some()),
         file.as_ref(),
         &typed,
     )?)
+}
+
+/// Settle everything `decide` was asked.
+pub(crate) fn decide(arguments: &DecideArguments) -> Result<Resolved, Failure> {
+    yes_no(
+        &arguments.question,
+        &arguments.meanings,
+        arguments.threshold.as_ref(),
+        Cutting::AsTheVerbAllows,
+        &arguments.common,
+    )
+}
+
+/// Settle everything `filter` was asked, which takes a single cut alone.
+pub(crate) fn filter(arguments: &FilterArguments) -> Result<Resolved, Failure> {
+    yes_no(
+        &arguments.question,
+        &arguments.meanings,
+        arguments.threshold.as_ref(),
+        Cutting::OneCut,
+        &arguments.common,
+    )
+}
+
+/// Settle everything `rank` was asked, which reads no rule at all.
+pub(crate) fn rank(arguments: &RankArguments) -> Result<Resolved, Failure> {
+    yes_no(
+        &arguments.question,
+        &arguments.meanings,
+        arguments.threshold.as_ref(),
+        Cutting::NoRule,
+        &arguments.common,
+    )
 }
 
 /// Settle everything `choose` was asked.

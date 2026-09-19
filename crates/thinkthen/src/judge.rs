@@ -1,79 +1,70 @@
-//! The one flow every judging verb takes, from what was asked to what is printed.
+//! Which verb was typed, what it keeps, and the view it prints in.
+//!
+//! Each verb settles its question, says what a run does with each answered
+//! record, and hands both to `asking.rs`, which owns the request and the row.
 
 use std::io::{Read, Write};
-use std::path::Path;
 use std::process::ExitCode;
-use std::time::Duration;
 
-use thinkthen_core::recording::Exchange as Recorded;
-use thinkthen_core::systemone;
-use thinkthen_core::{
-    Backend, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, Reply, Resolved, Sources, Threshold, json_line, question_sha256,
+use thinkthen_core::{Pointer, Resolved};
+
+use crate::args::{
+    ChooseArguments, Common, DecideArguments, FilterArguments, RankArguments, Refused,
+    ScoreArguments,
 };
-
-use crate::args::{ChooseArguments, Common, DecideArguments, ScoreArguments};
 use crate::asked;
-use crate::edge::{self, Environment};
+use crate::asking::{Asks, fixed, run};
+use crate::edge::Environment;
 use crate::failure::Failure;
-use crate::http::{Client, Exchange};
-use crate::recorder::Recorder;
-use crate::schedule::{self, Judged};
+use crate::schedule::Output;
 
 /// One question, its rule, and the view its answer prints in.
 #[derive(Debug)]
-struct Asked<'a> {
-    common: &'a Common,
-    asks: Asks,
-    settled: &'a Resolved,
-    view: View,
+pub(crate) struct Asked<'a> {
+    pub(crate) common: &'a Common,
+    pub(crate) asks: Asks,
+    pub(crate) settled: &'a Resolved,
+    pub(crate) view: View,
+    pub(crate) keeping: Keeping,
 }
 
-/// Where one record's question comes from.
+/// What a run does with each answered record.
 ///
-/// Every verb but `choose --options` asks the same question of every record.
-/// `--options` names a pointer, and each record holds its own candidate list
-/// there, so the question is built again for each one.
-#[derive(Debug)]
-enum Asks {
-    /// One question, asked of every record.
-    Fixed(Question),
-    /// A pick whose options each record carries at this pointer.
-    FromRecord {
-        /// The question the model receives.
-        text: QuestionText,
-        /// Where in the record the candidate list sits.
-        pointer: Pointer,
-    },
+/// `decide`, `choose`, and `score` print what the model said. `filter` and
+/// `rank` print the records themselves, so the answer decides which record is
+/// printed and in what order rather than what the line holds.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Keeping {
+    /// Print the bare value or the result row, as the three judging verbs do.
+    Answers,
+    /// Print the record itself when its answer reached the mark.
+    Passing,
+    /// Hold every record, and print them by the probability of yes.
+    Ordered,
 }
 
-impl Asks {
-    /// Build the question this record is asked.
-    fn of(&self, record: &Record) -> Result<Question, Failure> {
+impl Keeping {
+    /// The verb this way of keeping belongs to, which a refusal names.
+    pub(crate) const fn verb(self) -> &'static str {
         match self {
-            Self::Fixed(question) => Ok(question.clone()),
-            Self::FromRecord { text, pointer } => Ok(Question::Choose {
-                text: text.clone(),
-                options: record.choices(pointer)?,
-            }),
+            Self::Answers => "decide",
+            Self::Passing => "filter",
+            Self::Ordered => "rank",
         }
     }
-}
 
-/// One record, the question it was asked, and the request that carries both.
-#[derive(Debug)]
-struct Sending {
-    record: Record,
-    question: Question,
-    plan: Plan,
+    /// True when one document is no input at all, as both record verbs read it.
+    pub(crate) const fn streams_only(self) -> bool {
+        !matches!(self, Self::Answers)
+    }
 }
 
 /// Which of the three views of one answer the command line asked for.
 #[derive(Clone, Copy, Debug)]
-struct View {
-    quiet: bool,
-    raw: bool,
-    details: bool,
+pub(crate) struct View {
+    pub(crate) quiet: bool,
+    pub(crate) raw: bool,
+    pub(crate) details: bool,
 }
 
 impl View {
@@ -81,7 +72,7 @@ impl View {
     ///
     /// `channels.md` makes an option that cannot act in the chosen mode a usage
     /// error. `--raw` prints a bare label, so it acts in neither other view.
-    const fn checked(self) -> Result<Self, Failure> {
+    pub(crate) const fn checked(self) -> Result<Self, Failure> {
         if self.quiet && self.details {
             return Err(Failure::QuietWithDetails);
         }
@@ -110,12 +101,13 @@ pub(crate) fn decide(
         raw: false,
         details: arguments.common.details,
     };
-    run(
+    judging(
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,
             settled: &settled,
             view,
+            keeping: Keeping::Answers,
         },
         environment,
         input,
@@ -123,15 +115,115 @@ pub(crate) fn decide(
     )
 }
 
-/// The one question every record is asked, which every verb but one has.
-fn fixed(settled: &Resolved) -> Result<Asks, Failure> {
-    settled
-        .question()
-        .cloned()
-        .map(Asks::Fixed)
-        .ok_or(Failure::Defect(
-            "a verb with no list left its question open",
-        ))
+/// Keep the records that reach the mark, and print each one as it arrived.
+///
+/// # Errors
+///
+/// Returns [`Failure`] for a band in either home, for a view that prints no
+/// record, for a missing framing, and for every outcome `channels.md` gives a
+/// code above 3.
+pub(crate) fn filter(
+    arguments: &FilterArguments,
+    environment: &Environment,
+    input: impl Read,
+    writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    let settled = asked::filter(arguments)?;
+    over_kept(
+        Keeping::Passing,
+        &arguments.refused,
+        &arguments.common,
+        &settled,
+        None,
+        environment,
+        input,
+        writer,
+    )
+}
+
+/// Print every record, with the most likely yes first.
+///
+/// # Errors
+///
+/// Returns [`Failure`] for a rule in either home, for a view that prints no
+/// record, for a missing framing, and for every outcome `channels.md` gives a
+/// code above 3.
+pub(crate) fn rank(
+    arguments: &RankArguments,
+    environment: &Environment,
+    input: impl Read,
+    writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    let settled = asked::rank(arguments)?;
+    over_kept(
+        Keeping::Ordered,
+        &arguments.refused,
+        &arguments.common,
+        &settled,
+        arguments.top,
+        environment,
+        input,
+        writer,
+    )
+}
+
+/// The one flow both record verbs take, which prints records and not answers.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the two verbs share every step, and splitting the call would split the flow"
+)]
+fn over_kept(
+    keeping: Keeping,
+    refused: &Refused,
+    common: &Common,
+    settled: &Resolved,
+    top: Option<usize>,
+    environment: &Environment,
+    input: impl Read,
+    mut writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    if refused.quiet {
+        return Err(Failure::QuietOverKept(keeping.verb()));
+    }
+    if refused.raw {
+        return Err(Failure::RawOverKept(keeping.verb()));
+    }
+    let writer: &mut dyn Write = &mut writer;
+    let mut output = match keeping {
+        Keeping::Ordered => Output::Ordered {
+            held: Vec::new(),
+            top,
+            writer,
+        },
+        _ => Output::Streaming(writer),
+    };
+    run(
+        Asked {
+            common,
+            asks: fixed(settled)?,
+            settled,
+            view: View {
+                quiet: false,
+                raw: false,
+                details: common.details,
+            },
+            keeping,
+        },
+        environment,
+        input,
+        &mut output,
+    )
+}
+
+/// Run one judging verb, whose rows print as their places come.
+fn judging(
+    asked: Asked<'_>,
+    environment: &Environment,
+    input: impl Read,
+    mut writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    let writer: &mut dyn Write = &mut writer;
+    run(asked, environment, input, &mut Output::Streaming(writer))
 }
 
 /// Pick one label from the options, and set the exit code from the answer.
@@ -165,12 +257,13 @@ pub(crate) fn choose(
         raw: arguments.raw,
         details: arguments.common.details,
     };
-    run(
+    judging(
         Asked {
             common: &arguments.common,
             asks,
             settled: &settled,
             view,
+            keeping: Keeping::Answers,
         },
         environment,
         input,
@@ -197,302 +290,16 @@ pub(crate) fn score(
         raw: false,
         details: arguments.common.details,
     };
-    run(
+    judging(
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,
             settled: &settled,
             view,
+            keeping: Keeping::Answers,
         },
         environment,
         input,
         writer,
     )
-}
-
-/// Send the question over every record, and print one answer for each.
-fn run(
-    asked: Asked<'_>,
-    environment: &Environment,
-    input: impl Read,
-    mut writer: impl Write,
-) -> Result<ExitCode, Failure> {
-    let Asked {
-        common,
-        asks,
-        settled,
-        view,
-    } = asked;
-    let threshold = settled.threshold();
-    let view = view.checked()?;
-    let folders = Folders::of(common)?;
-    if common.dry_run && folders.named() {
-        return Err(Failure::DryRunWithRecording);
-    }
-    let backend = Backend::resolve(
-        common.url.as_deref(),
-        environment.base_url(),
-        settled.model().as_str(),
-    )?;
-    let reading = read_by(common, settled)?;
-    if view.quiet && reading.streams() {
-        return Err(Failure::QuietOverRecords);
-    }
-    let mut chunks = edge::Chunks::new(
-        edge::source(common.input.as_deref(), input)?,
-        reading.streams(),
-    );
-
-    if common.dry_run {
-        return plan(
-            &backend,
-            &reading,
-            &Planning {
-                asks: &asks,
-                sources: settled.sources().from_file().then(|| *settled.sources()),
-            },
-            chunks.next().transpose()?,
-            writer,
-        );
-    }
-
-    let jobs = schedule::jobs_of(common.jobs, reading.streams())?;
-    let judging = Judging {
-        common,
-        environment,
-        client: Client::new(Duration::from_secs(common.timeout)),
-        recorder: Recorder::of(folders.record, folders.replay)?,
-        backend,
-        asks,
-        threshold,
-        view,
-        streams: reading.streams(),
-    };
-    if !judging.streams {
-        let bytes = chunks.next().transpose()?.unwrap_or_default();
-        let judged = judging.row(&reading, &bytes)?;
-        if let Some(line) = judged.printed {
-            edge::write_line(&mut writer, &line)?;
-        }
-        return Ok(exit_code(judged.outcome));
-    }
-    schedule::over_records(
-        &|bytes| judging.row(&reading, bytes),
-        &mut chunks,
-        jobs,
-        &mut writer,
-    )
-}
-
-/// The folders `--record`, `--replay`, and `--cache` name between them.
-#[derive(Debug)]
-struct Folders<'a> {
-    record: Option<&'a Path>,
-    replay: Option<&'a Path>,
-}
-
-impl<'a> Folders<'a> {
-    /// Read the two folders, with `--cache` standing for both at once.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Failure::CacheWithRecording`] when `--cache` is given beside
-    /// one of the two options it stands for.
-    fn of(common: &'a Common) -> Result<Self, Failure> {
-        let Some(cached) = common.cache.as_deref() else {
-            return Ok(Self {
-                record: common.record.as_deref(),
-                replay: common.replay.as_deref(),
-            });
-        };
-        if common.record.is_some() || common.replay.is_some() {
-            return Err(Failure::CacheWithRecording);
-        }
-        Ok(Self {
-            record: Some(cached),
-            replay: Some(cached),
-        })
-    }
-
-    /// True when a folder is named at all, which a plan may not name.
-    const fn named(&self) -> bool {
-        self.record.is_some() || self.replay.is_some()
-    }
-}
-
-/// Read the framing the command line asked for, over the settled pointers.
-fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
-    let framing = match (common.lines, common.jsonl) {
-        (true, _) => Framing::Lines,
-        (_, true) => Framing::Jsonl,
-        _ => Framing::Document,
-    };
-    Ok(Reading::new(framing, settled.on().to_vec())?)
-}
-
-/// What a plan shows beyond the request: the question and where it came from.
-struct Planning<'a> {
-    asks: &'a Asks,
-    sources: Option<Sources>,
-}
-
-/// Print the plan for the first record, and read no further than that record.
-fn plan(
-    backend: &Backend,
-    reading: &Reading,
-    planning: &Planning<'_>,
-    first: Option<Vec<u8>>,
-    writer: impl Write,
-) -> Result<ExitCode, Failure> {
-    let Some(bytes) = first else {
-        return Ok(ExitCode::SUCCESS);
-    };
-    let sending = asked_of(reading, &bytes, backend, planning.asks)?;
-    let document = PlanDocument::of(backend, &sending.plan)
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-    let document = if reading.streams() {
-        document.reading(reading)
-    } else {
-        document
-    };
-    let document = match planning.sources {
-        Some(sources) => document.from(sources),
-        None => document,
-    };
-    edge::write_line(writer, &json_line(&document)?)?;
-    Ok(ExitCode::SUCCESS)
-}
-
-/// Read one record and build the one request it asks, which both paths do.
-fn asked_of(
-    reading: &Reading,
-    bytes: &[u8],
-    backend: &Backend,
-    asks: &Asks,
-) -> Result<Sending, Failure> {
-    let record = reading.record(bytes)?;
-    let question = asks.of(&record)?;
-    let plan = Plan::new(
-        reading.evidence(&record)?,
-        backend.model().clone(),
-        vec![question.clone()],
-    )
-    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
-    Ok(Sending {
-        record,
-        question,
-        plan,
-    })
-}
-
-/// One question over one backend, asked of every record in turn.
-#[derive(Debug)]
-struct Judging<'a> {
-    common: &'a Common,
-    environment: &'a Environment,
-    recorder: Recorder,
-    backend: Backend,
-    client: Client,
-    asks: Asks,
-    threshold: Option<Threshold>,
-    view: View,
-    streams: bool,
-}
-
-impl Judging<'_> {
-    /// Ask one record and build the line its answer prints.
-    ///
-    /// Nothing here touches the writer, so a worker thread may call it and the
-    /// one thread that owns standard output prints the lines in input order.
-    fn row(&self, reading: &Reading, bytes: &[u8]) -> Result<Judged, Failure> {
-        let sending = asked_of(reading, bytes, &self.backend, &self.asks)?;
-        let (reply, replayed) = ask(
-            &self.backend,
-            &sending.plan,
-            self.common,
-            self.environment,
-            &self.recorder,
-            &self.client,
-        )?;
-        let answer = reply
-            .answers()
-            .first()
-            .ok_or(Failure::Defect("the adapter answered no question"))?
-            .clone();
-        let (value, outcome) = answer.read(self.threshold);
-        let printed = if self.view.details {
-            let meta = Meta::new(
-                env!("CARGO_PKG_VERSION"),
-                question_sha256(&sending.question, self.threshold)?,
-                self.backend.url().clone(),
-                reply.model().clone(),
-                reply.usage(),
-                replayed,
-            );
-            let row = DecisionResult::new(value, sending.question, answer, self.threshold, meta);
-            let row = if self.streams {
-                row.with_input(sending.record)
-            } else {
-                row
-            };
-            Some(json_line(&row)?)
-        } else if self.view.raw {
-            // One line stands for one record, so an unresolved record prints
-            // an empty line. On one document it prints nothing at all.
-            match value.label() {
-                Some(label) => Some(label.to_owned()),
-                None if self.streams => Some(String::new()),
-                None => None,
-            }
-        } else if self.view.quiet {
-            None
-        } else {
-            Some(json_line(&value)?)
-        };
-        Ok(Judged {
-            printed,
-            outcome,
-            replayed,
-        })
-    }
-}
-
-/// Answer the plan from the recording folder, or from the backend itself.
-///
-/// The recording is read before a key is, so a replay opens no connection and
-/// needs no key. Only an exchange the adapter read is recorded.
-fn ask(
-    backend: &Backend,
-    plan: &Plan,
-    common: &Common,
-    environment: &Environment,
-    recorder: &Recorder,
-    client: &Client,
-) -> Result<(Reply, bool), Failure> {
-    let body = systemone::encode(plan)
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-    let recorded = Recorded::new(backend.url(), &body);
-    if let Some(response) = recorder.replayed(&recorded)? {
-        return Ok((systemone::decode(plan, &response)?, true));
-    }
-    let key = edge::key()?;
-    let answered = client.post(&Exchange {
-        url: backend.url().as_str(),
-        body: &body,
-        key: &key,
-        max_retries: common.max_retries,
-        retry_wait: environment.retry_wait(),
-    })?;
-    let reply = systemone::decode(plan, &answered)?;
-    recorder.record(&recorded, &answered)?;
-    Ok((reply, false))
-}
-
-/// Turn the outcome into the exit code `specification/channels.md` fixes.
-fn exit_code(outcome: Outcome) -> ExitCode {
-    match outcome {
-        Outcome::Yes => ExitCode::from(0),
-        Outcome::No => ExitCode::from(1),
-        Outcome::Unresolved => ExitCode::from(3),
-    }
 }

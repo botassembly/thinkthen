@@ -170,6 +170,15 @@ pub enum QuestionFileError {
     /// A rule reached the verb that answers with a number and no rule.
     #[error("{}`score` takes no rule, so cut on the number with `jq -e`", named(*.0, "threshold"))]
     RuleOnScore(Source),
+    /// A band reached a caller that keeps or drops each record.
+    #[error(
+        "{}`filter` takes a single cut, so ask `decide --details` and split the three piles with `jq`",
+        named(*.0, "threshold")
+    )]
+    BandOnFilter(Source),
+    /// A rule reached the caller that orders records and selects none.
+    #[error("{}`rank` orders and never selects, so put a cut in `filter --threshold`", named(*.0, "threshold"))]
+    RuleOnRank(Source),
     /// The options or the levels are not a list the verb takes.
     #[error("{}{error}", named(*.origin, .key))]
     Labels {
@@ -233,7 +242,9 @@ impl QuestionFileError {
             | Self::Labels { origin, .. }
             | Self::Pointer { origin, .. }
             | Self::BandOnChoose(origin)
-            | Self::RuleOnScore(origin) => *origin,
+            | Self::RuleOnScore(origin)
+            | Self::BandOnFilter(origin)
+            | Self::RuleOnRank(origin) => *origin,
             // The file is a good question file and the command asked for
             // another verb, so the line to fix is the one the user typed.
             Self::VerbMismatch { .. } => Source::CommandLine,
@@ -460,7 +471,7 @@ pub(crate) fn pointers(
 
 mod resolve;
 
-pub use crate::question_file::resolve::{Resolved, Sources, Typed, resolve};
+pub use crate::question_file::resolve::{Cutting, Resolved, Sources, Typed, resolve};
 
 #[cfg(test)]
 mod tests;

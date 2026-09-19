@@ -175,6 +175,26 @@ impl Reading {
         }
     }
 
+    /// The record's own bytes as text, with the line ending taken off.
+    ///
+    /// `filter` and `rank` print a record back exactly as it arrived, so this
+    /// parses nothing and writes nothing through a JSON encoder. Odd spacing
+    /// and a trailing space survive, and a carriage return before the line
+    /// feed goes with it, so the line ending is written back as a line feed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError::NotUtf8`] when the bytes are not text.
+    pub fn as_it_arrived<'a>(&self, bytes: &'a [u8]) -> Result<&'a str, RecordError> {
+        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
+        if !self.streams() {
+            return Ok(text);
+        }
+        Ok(text
+            .strip_suffix('\n')
+            .map_or(text, |line| line.strip_suffix('\r').unwrap_or(line)))
+    }
+
     /// Read one record from the bytes the binary handed over.
     ///
     /// A line arrives with the line feed that ended it, and a carriage return
@@ -185,13 +205,7 @@ impl Reading {
     /// Returns [`RecordError`] when the bytes are not text, and when a JSON
     /// record is not JSON this tool will read.
     pub fn record(&self, bytes: &[u8]) -> Result<Record, RecordError> {
-        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
-        let text = if self.streams() {
-            text.strip_suffix('\n')
-                .map_or(text, |line| line.strip_suffix('\r').unwrap_or(line))
-        } else {
-            text
-        };
+        let text = self.as_it_arrived(bytes)?;
         if self.framing == Framing::Jsonl || !self.fields.is_empty() {
             return Ok(Record(Held::Json(Json::parse(text)?)));
         }

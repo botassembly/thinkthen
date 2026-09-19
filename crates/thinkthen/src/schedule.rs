@@ -12,7 +12,7 @@ use std::sync::Mutex;
 use std::sync::mpsc::{self, Receiver, Sender, SyncSender};
 use std::thread;
 
-use thinkthen_core::Outcome;
+use thinkthen_core::{Outcome, ranking};
 
 use crate::edge;
 use crate::failure::Failure;
@@ -41,6 +41,8 @@ pub(crate) struct Judged {
     pub(crate) outcome: Outcome,
     /// True when a recording answered rather than a backend.
     pub(crate) replayed: bool,
+    /// The probability of yes, which `rank` sorts on and no other verb reads.
+    pub(crate) probability: Option<f64>,
 }
 
 impl fmt::Debug for Judged {
@@ -60,7 +62,100 @@ impl fmt::Debug for Judged {
             )
             .field("outcome", &self.outcome)
             .field("replayed", &self.replayed)
+            .field("probability", &self.probability)
             .finish()
+    }
+}
+
+/// Where the finished rows go, in input order.
+///
+/// Every verb but one prints a row as its place comes. `rank` holds every row
+/// until the input ends, because a final order needs the whole set, and then
+/// prints the order [`ranking`] gives.
+pub(crate) enum Output<'a> {
+    /// Each row prints as its place comes.
+    Streaming(&'a mut dyn Write),
+    /// Every row is held, and the order prints once the run has finished.
+    Ordered {
+        /// The rows so far, in input order.
+        held: Vec<Judged>,
+        /// How many places of the order print, or every one.
+        top: Option<usize>,
+        /// Where the order goes once the input has ended.
+        writer: &'a mut dyn Write,
+    },
+}
+
+impl fmt::Debug for Output<'_> {
+    /// Show how many rows are held and never a row, which holds the evidence.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Streaming(_) => formatter.write_str("Streaming"),
+            Self::Ordered { held, top, .. } => formatter
+                .debug_struct("Ordered")
+                .field("held", &format_args!("<{} rows withheld>", held.len()))
+                .field("top", top)
+                .finish_non_exhaustive(),
+        }
+    }
+}
+
+impl Output<'_> {
+    /// Take one finished row, whose place in the input order has come.
+    ///
+    /// Returns false when the reader downstream has closed the pipe.
+    pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
+        match self {
+            Self::Streaming(writer) => match judged.printed.as_deref() {
+                Some(line) => edge::write_line(&mut **writer, line),
+                None => Ok(true),
+            },
+            Self::Ordered { held, .. } => {
+                held.push(judged);
+                Ok(true)
+            }
+        }
+    }
+
+    /// Write whatever was held back, once the whole run has finished.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Failure::Defect`] when a held row carries no probability to
+    /// sort on, which no `rank` row can reach this point without.
+    pub(crate) fn ended(&mut self) -> Result<(), Failure> {
+        let Self::Ordered { held, top, writer } = self else {
+            return Ok(());
+        };
+        let odds = held
+            .iter()
+            .map(|judged| {
+                judged
+                    .probability
+                    .ok_or(Failure::Defect("a ranked row carries no probability"))
+            })
+            .collect::<Result<Vec<f64>, Failure>>()?;
+        for place in ranking(&odds, *top) {
+            let Some(line) = held.get(place).and_then(|judged| judged.printed.as_deref()) else {
+                continue;
+            };
+            if !edge::write_line(&mut **writer, line)? {
+                return Ok(());
+            }
+        }
+        Ok(())
+    }
+
+    /// The writer standard output goes through, which a plan writes one line to.
+    pub(crate) fn writer(&mut self) -> &mut dyn Write {
+        match self {
+            Self::Streaming(writer) | Self::Ordered { writer, .. } => *writer,
+        }
+    }
+
+    /// True when nothing has printed yet, which the line about a stop reports.
+    const fn holds(&self) -> bool {
+        matches!(*self, Self::Ordered { .. })
     }
 }
 
@@ -88,7 +183,7 @@ pub(crate) fn over_records(
     row: &Asking<'_>,
     chunks: &mut dyn Iterator<Item = Result<Vec<u8>, Failure>>,
     jobs: usize,
-    writer: &mut dyn Write,
+    output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let (hand, queue) = mpsc::sync_channel::<Work>(jobs);
     let queue = Mutex::new(queue);
@@ -103,7 +198,7 @@ pub(crate) fn over_records(
         let mut run = Run::new();
         loop {
             run.dispatch(chunks, &hand, jobs);
-            run.drain(writer)?;
+            run.drain(output)?;
             if run.in_flight == 0 {
                 break;
             }
@@ -117,7 +212,7 @@ pub(crate) fn over_records(
             run.pending.insert(place, judged);
         }
         drop(hand);
-        run.finished()
+        run.finished(output)
     })
 }
 
@@ -209,7 +304,7 @@ impl Run {
     ///
     /// A reader that closed the pipe ends the printing and the scheduling with
     /// it, and the run keeps the exit code it had earned.
-    fn drain(&mut self, writer: &mut dyn Write) -> Result<(), Failure> {
+    fn drain(&mut self, output: &mut Output<'_>) -> Result<(), Failure> {
         while self.printing {
             let Some(judged) = self.pending.remove(&self.next) else {
                 return Ok(());
@@ -219,20 +314,16 @@ impl Run {
                     self.stop = Some((self.next, cause));
                     self.stopped();
                 }
-                Ok(judged) => self.print(judged, writer)?,
+                Ok(judged) => self.print(judged, output)?,
             }
         }
         Ok(())
     }
 
     /// Print one row, and stop when the reader has closed the pipe.
-    fn print(&mut self, judged: Judged, writer: &mut dyn Write) -> Result<(), Failure> {
+    fn print(&mut self, judged: Judged, output: &mut Output<'_>) -> Result<(), Failure> {
         self.replayed += usize::from(judged.replayed);
-        let open = match judged.printed {
-            Some(line) => edge::write_line(writer, &line)?,
-            None => true,
-        };
-        if !open {
+        if !output.take(judged)? {
             self.stopped();
         }
         self.next += 1;
@@ -251,15 +342,19 @@ impl Run {
     ///
     /// Returns [`Failure::Stopped`] when a record failed, carrying the cause
     /// that sets the exit code.
-    fn finished(self) -> Result<ExitCode, Failure> {
+    fn finished(self, output: &mut Output<'_>) -> Result<ExitCode, Failure> {
         match self.stop {
             Some((place, cause)) => Err(Failure::Stopped {
                 at: place + 1,
                 finished: place,
                 replayed: self.replayed,
+                held: output.holds(),
                 cause: Box::new(cause),
             }),
-            None => Ok(ExitCode::SUCCESS),
+            None => {
+                output.ended()?;
+                Ok(ExitCode::SUCCESS)
+            }
         }
     }
 }

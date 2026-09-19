@@ -15,12 +15,31 @@ use crate::question_file::{Described, QuestionFile, QuestionFileError, Source, V
 use crate::text::{Meaning, ModelName, QuestionText};
 use crate::threshold::Threshold;
 
+/// What rule the caller acts on, where the verb alone does not say.
+///
+/// `filter` and `rank` ask the `decide` question of every record, so the verb
+/// in the question file is `decide` for all three. `decide` takes a cut or a
+/// band, `filter` keeps or drops and so takes a single cut, and `rank` orders
+/// and selects nothing and so takes no rule at all.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Cutting {
+    /// Whatever the verb's own page allows.
+    #[default]
+    AsTheVerbAllows,
+    /// One cut and never a band.
+    OneCut,
+    /// No rule in either home.
+    NoRule,
+}
+
 /// What a caller typed beside the question, each value absent when untyped.
 ///
 /// A caller with no command line leaves every field `None` and passes the
 /// file alone.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Typed {
+    /// What rule the caller acts on, where the verb alone does not say.
+    pub cutting: Cutting,
     /// `--threshold`, as it was written.
     pub threshold: Option<String>,
     /// `--true`, the text that says what a yes means.
@@ -324,6 +343,11 @@ fn threshold_of(
             _ => (None, Source::Default),
         },
     };
+    // `rank` reads no rule, so the cut `decide` defaults to is not its cut
+    // either. A rule anybody named is refused below.
+    if typed.cutting == Cutting::NoRule && source == Source::Default {
+        return Ok((None, source));
+    }
     if let Some(rule) = rule {
         // `score` answers with a number and no rule cuts it. `choose` cuts on
         // one winning probability, which a band has no second side for.
@@ -332,6 +356,14 @@ fn threshold_of(
         }
         if verb == Verb::Choose && !rule.is_cut() {
             return Err(QuestionFileError::BandOnChoose(source));
+        }
+        match typed.cutting {
+            Cutting::AsTheVerbAllows => {}
+            Cutting::OneCut if !rule.is_cut() => {
+                return Err(QuestionFileError::BandOnFilter(source));
+            }
+            Cutting::OneCut => {}
+            Cutting::NoRule => return Err(QuestionFileError::RuleOnRank(source)),
         }
     }
     Ok((rule, source))
