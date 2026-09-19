@@ -21,7 +21,7 @@ pub enum Adapter {
 impl Adapter {
     /// Read the lowercase name this adapter is known by.
     #[must_use]
-    pub const fn as_str(self) -> &'static str {
+    pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::SystemOne => "systemone",
         }
