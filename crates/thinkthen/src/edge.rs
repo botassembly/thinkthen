@@ -2,10 +2,12 @@
 
 use std::env;
 use std::fmt;
-use std::io::{ErrorKind, Read, Write};
+use std::fs::File;
+use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
+use std::path::Path;
 use std::time::Duration;
 
-use thinkthen_core::{Evidence, KEY_VAR};
+use thinkthen_core::KEY_VAR;
 
 use crate::failure::Failure;
 
@@ -51,17 +53,69 @@ fn read(name: &str) -> Option<String> {
     env::var(name).ok().filter(|value| !value.trim().is_empty())
 }
 
-/// Read standard input to its end and take it as the evidence.
+/// Open the file the user named, or take the reader the process was given.
 ///
 /// # Errors
 ///
-/// Returns [`Failure`] when the bytes cannot be read, are not valid UTF-8, or
-/// hold nothing but white space.
-pub(crate) fn evidence(mut reader: impl Read) -> Result<Evidence, Failure> {
-    let mut bytes = Vec::new();
-    reader.read_to_end(&mut bytes).map_err(Failure::Input)?;
-    let text = String::from_utf8(bytes).map_err(|_| Failure::NotUtf8)?;
-    Ok(Evidence::new(text)?)
+/// Returns [`Failure::OpenInput`] when the path names no file this user reads.
+pub(crate) fn source<'a>(
+    path: Option<&Path>,
+    reader: impl Read + 'a,
+) -> Result<Box<dyn BufRead + 'a>, Failure> {
+    match path {
+        Some(path) => Ok(Box::new(BufReader::new(
+            File::open(path).map_err(Failure::OpenInput)?,
+        ))),
+        None => Ok(Box::new(BufReader::new(reader))),
+    }
+}
+
+/// The bytes of one record at a time, read no further than the caller asks.
+///
+/// A stream yields one line at a time, with the line feed that ended it, so a
+/// plan over the first record reads that record alone. One document yields
+/// every byte once and then nothing.
+#[derive(Debug)]
+pub(crate) struct Chunks<R> {
+    reader: R,
+    streams: bool,
+    spent: bool,
+}
+
+impl<R: BufRead> Chunks<R> {
+    /// Read records of this shape from this reader.
+    pub(crate) const fn new(reader: R, streams: bool) -> Self {
+        Self {
+            reader,
+            streams,
+            spent: false,
+        }
+    }
+}
+
+impl<R: BufRead> Iterator for Chunks<R> {
+    type Item = Result<Vec<u8>, Failure>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.spent {
+            return None;
+        }
+        let mut bytes = Vec::new();
+        let read = if self.streams {
+            self.reader.read_until(b'\n', &mut bytes)
+        } else {
+            self.spent = true;
+            self.reader.read_to_end(&mut bytes)
+        };
+        match read {
+            Err(error) => {
+                self.spent = true;
+                Some(Err(Failure::Input(error)))
+            }
+            Ok(0) if self.streams => None,
+            Ok(_) => Some(Ok(bytes)),
+        }
+    }
 }
 
 /// The key one request carries, which no diagnostic and no `Debug` line shows.
@@ -119,7 +173,7 @@ pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<(), Failu
 
 #[cfg(test)]
 mod tests {
-    use super::{evidence, write_line};
+    use super::{Chunks, write_line};
     use crate::failure::Failure;
     use std::io::{Error, ErrorKind, Write};
 
@@ -149,9 +203,16 @@ mod tests {
     }
 
     #[test]
-    fn evidence_is_refused_when_it_is_not_text_or_holds_only_white_space() {
-        assert!(matches!(evidence(&b"\xff\xfe"[..]), Err(Failure::NotUtf8)));
-        assert!(matches!(evidence(&b"  \n"[..]), Err(Failure::Blank(_))));
-        assert!(evidence(&b" kept "[..]).is_ok());
+    fn a_stream_yields_one_line_at_a_time_and_a_document_yields_every_byte_once() {
+        let read = |bytes: &[u8], streams: bool| {
+            Chunks::new(bytes, streams)
+                .map(|chunk| String::from_utf8_lossy(&chunk.expect("bytes")).into_owned())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(read(b"a\nb\n", true), ["a\n", "b\n"]);
+        assert_eq!(read(b"a\nb", true), ["a\n", "b"]);
+        assert_eq!(read(b"", true), [""; 0]);
+        assert_eq!(read(b"a\nb\n", false), ["a\nb\n"]);
+        assert_eq!(read(b"", false), [""]);
     }
 }

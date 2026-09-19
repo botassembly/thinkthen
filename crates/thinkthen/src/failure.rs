@@ -4,7 +4,10 @@ use std::io::{self, Write};
 use std::process::ExitCode;
 
 use thinkthen_core::systemone::DecodeError;
-use thinkthen_core::{BackendError, BlankTextError, LabelsError, RenderError, ThresholdError};
+use thinkthen_core::{
+    BackendError, BlankTextError, LabelsError, PointerError, ReadingError, RecordError,
+    RenderError, ThresholdError,
+};
 
 /// The phrase `specification/backends.md` fixes for each common failure status.
 ///
@@ -21,6 +24,9 @@ const PHRASES: [(u16, &str); 6] = [
     ),
     (429, "the backend's rate limit was reached"),
 ];
+
+/// What a run that read bytes which are not text is told.
+const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
 /// What stopped the command.
 #[derive(Debug)]
@@ -41,10 +47,27 @@ pub(crate) enum Failure {
     BandOnChoose,
     /// A rule was given to a verb that has none.
     RuleOnScore,
+    /// The framing and the pointers cannot act together.
+    Reading(ReadingError),
+    /// A pointer is not a JSON Pointer.
+    Pointer(PointerError),
+    /// One record could not become the evidence of one request.
+    Record(RecordError),
+    /// The file the records were to be read from could not be opened.
+    OpenInput(io::Error),
+    /// A record failed, and the run stopped there.
+    Stopped {
+        /// The record the run stopped at, counted from one.
+        at: usize,
+        /// How many records finished before it.
+        finished: usize,
+        /// How many of those a recording answered.
+        replayed: usize,
+        /// What stopped the record, which sets the exit code.
+        cause: Box<Failure>,
+    },
     /// Standard input could not be read.
     Input(io::Error),
-    /// Standard input held bytes that are not text.
-    NotUtf8,
     /// Standard output could not be written.
     Output(io::Error),
     /// The key variable the backend names holds nothing.
@@ -78,6 +101,32 @@ pub(crate) enum Failure {
 /// status and by the fixed phrase its status carries, never by its body,
 /// because a server may quote the evidence back in one.
 pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
+    ExitCode::from(say(failure, &mut writer))
+}
+
+/// Write the diagnostic and give back the exit code, over one boxed writer.
+///
+/// A stopped run reports its cause and then says where it stopped, so this
+/// calls itself once. The writer is a trait object, because a generic call
+/// into itself has no end.
+fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
+    if let Failure::Stopped {
+        at,
+        finished,
+        replayed,
+        cause,
+    } = failure
+    {
+        let code = say(cause, writer);
+        // The line names the record by its number and never by its content,
+        // because a record is evidence and a diagnostic is read by a person.
+        let _unwritten = writeln!(
+            writer,
+            "{}: stopped at record {at}; {finished} records finished, {replayed} from a recording",
+            thinkthen_core::NAME
+        );
+        return code;
+    }
     let (code, message): (u8, String) = match failure {
         Failure::Backend(error) => (2, error.to_string()),
         Failure::Blank(error) => (2, error.to_string()),
@@ -123,15 +172,21 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
             5,
             format!("the recording folder could not be read or written: {error}"),
         ),
+        Failure::Reading(error) => (2, error.to_string()),
+        Failure::Pointer(error) => (2, format!("--field: {error}")),
+        Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
+        Failure::Record(RecordError::Render(error)) => (70, format!("defect: {error}")),
+        Failure::Record(error) => (2, error.to_string()),
+        Failure::OpenInput(error) => (5, format!("--input could not be opened: {error}")),
+        Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
-        Failure::NotUtf8 => (5, "the evidence is not valid UTF-8".to_owned()),
         Failure::Output(error) => (5, format!("standard output could not be written: {error}")),
         Failure::Defect(what) => (70, format!("defect: {what}")),
         Failure::Render(error) => (70, format!("defect: {error}")),
     };
     // A diagnostic that cannot be written changes neither the failure nor its code.
     let _unwritten = writeln!(writer, "{}: {message}", thinkthen_core::NAME);
-    ExitCode::from(code)
+    code
 }
 
 /// Name the status the backend answered with, plus its fixed phrase when it has one.
@@ -173,6 +228,24 @@ impl From<DecodeError> for Failure {
     }
 }
 
+impl From<ReadingError> for Failure {
+    fn from(error: ReadingError) -> Self {
+        Self::Reading(error)
+    }
+}
+
+impl From<PointerError> for Failure {
+    fn from(error: PointerError) -> Self {
+        Self::Pointer(error)
+    }
+}
+
+impl From<RecordError> for Failure {
+    fn from(error: RecordError) -> Self {
+        Self::Record(error)
+    }
+}
+
 impl From<RenderError> for Failure {
     fn from(error: RenderError) -> Self {
         Self::Render(error)
@@ -183,6 +256,7 @@ impl From<RenderError> for Failure {
 mod tests {
     use super::{Failure, report};
     use std::process::ExitCode;
+    use thinkthen_core::RecordError;
 
     #[test]
     fn a_common_failure_status_carries_the_phrase_the_specification_fixes() {
@@ -217,7 +291,7 @@ mod tests {
     #[test]
     fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
         let cases = [
-            (Failure::NotUtf8, 5, "not valid UTF-8"),
+            (Failure::Record(RecordError::NotUtf8), 5, "not valid UTF-8"),
             (Failure::Status(503), 4, "status 503"),
             (Failure::NoKey("THINKTHEN_API_KEY".to_owned()), 4, "unset"),
             (Failure::Defect("a plan asks nothing"), 70, "defect"),

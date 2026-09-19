@@ -161,14 +161,10 @@ fn two_views_of_one_answer_are_a_usage_error() {
 }
 
 #[test]
-fn every_option_out_of_scope_for_one_document_is_a_usage_error() {
-    let cases: [&[&str]; 5] = [
-        &["--lines"],
-        &["--jsonl"],
-        &["--field", "/body"],
-        &["--options", "/codes"],
-        &["--input", "ticket.txt"],
-    ];
+fn every_option_that_is_not_built_yet_is_a_usage_error() {
+    // The record options arrived with ticket 0012. `--options` waits for
+    // ticket 0013, so the parser still refuses it by name.
+    let cases: [&[&str]; 1] = [&["--options", "/codes"]];
 
     for arguments in cases {
         let output = verb("choose", &TEAMS, arguments).expect("the compiled binary runs");

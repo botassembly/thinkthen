@@ -16,6 +16,8 @@ The default input is one text document. A record stream turns a command into a m
 
 The tool never guesses the framing. It never repairs invalid JSON, never truncates a record, and never opens a file because a string looks like a path.
 
+Under `--lines` a carriage return before the line feed is stripped with it, and a carriage return anywhere else in the line is kept.
+
 | Command | Framing |
 | --- | --- |
 | `decide`, `choose`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
@@ -32,6 +34,7 @@ The tool never guesses the framing. It never repairs invalid JSON, never truncat
 - `--field` without `--jsonl` reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists.
 - `--field` with `--lines` is a usage error. A text line has no members.
 - A pointer that finds nothing is an input error for that record at exit 2, before any request for it.
+- `$.body`, `#/id`, a wildcard, and a negative index are refused with a message that names RFC 6901, because the tool never guesses a pointer language.
 - A pointed value that is not a string is serialized as compact JSON and sent as text.
 - Without `--field`, a `--jsonl` record is serialized as compact JSON and the whole record becomes the evidence.
 
@@ -46,6 +49,12 @@ thinkthen decide 'The output answers the input correctly.' --jsonl --field /inpu
 The evidence is then `{"input":"...","output":"..."}`. A check that must not see the gold answer names only the pointers it needs.
 
 The evidence object is not a string, so it goes out as compact JSON by the rule above. [backends.md](backends.md) carries it in one field, the way a single pointer's value travels.
+
+## What a record may not hold
+
+- A JSON record that holds two members under one name is refused, because no reader can say which of the two a pointer means.
+- A JSON record holding `NaN`, `Infinity`, or a number too large to be finite is refused, because none of the three is a JSON number.
+- A record whose bytes are not valid UTF-8 is refused at exit 5, because bytes that are not text are a local failure rather than a record the tool read.
 
 ## Order and requests
 
@@ -92,7 +101,7 @@ A first run that stops at record 400 leaves 399 entries. The same command run ag
 
 ## `jobs`
 
-`jobs` bounds how many requests are in flight at once. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. Draft: the setting has no home on the command line yet, and the default is 4. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight, so 4 is safe everywhere and a measured run can raise it.
+`jobs` bounds how many requests are in flight at once. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. ADR 0010 gives it the advanced option `--jobs N` with a default of 4, and the sequential form landed first. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight, so 4 is safe everywhere and a measured run can raise it.
 
 Output order never depends on `jobs`. The tool holds finished rows in a bounded buffer until the rows before them are written.
 

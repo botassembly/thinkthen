@@ -7,8 +7,8 @@ use std::time::Duration;
 use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::systemone;
 use thinkthen_core::{
-    Backend, DecisionResult, Labels, Meta, Outcome, Plan, PlanDocument, Question, QuestionText,
-    Reply, Threshold, json_line,
+    Backend, DecisionResult, Framing, Labels, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
+    QuestionText, Reading, Reply, Threshold, json_line,
 };
 
 use crate::args::{ChooseArguments, Common, DecideArguments, ScoreArguments};
@@ -169,7 +169,7 @@ pub(crate) fn score(
     )
 }
 
-/// Send one question over one document, and print the answer in the chosen view.
+/// Send the question over every record, and print one answer for each.
 fn run(
     asked: Asked<'_>,
     environment: &Environment,
@@ -188,54 +188,169 @@ fn run(
         environment.base_url(),
         common.model.as_str(),
     )?;
-    let plan = Plan::new(
-        edge::evidence(input)?,
-        backend.model().clone(),
-        vec![question.clone()],
-    )
-    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+    let reading = read_by(common)?;
+    let mut chunks = edge::Chunks::new(
+        edge::source(common.input.as_deref(), input)?,
+        reading.streams(),
+    );
 
     if common.dry_run {
         if common.record.is_some() || common.replay.is_some() {
             return Err(Failure::DryRunWithRecording);
         }
-        let document = PlanDocument::of(&backend, &plan)
-            .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-        edge::write_line(writer, &json_line(&document)?)?;
-        return Ok(ExitCode::SUCCESS);
+        return plan(
+            &backend,
+            &reading,
+            &question,
+            chunks.next().transpose()?,
+            writer,
+        );
     }
 
-    let recorder = Recorder::of(common.record.as_deref(), common.replay.as_deref())?;
-    let (reply, replayed) = ask(&backend, &plan, common, environment, &recorder)?;
-    let answer = reply
-        .answers()
-        .first()
-        .ok_or(Failure::Defect("the adapter answered no question"))?
-        .clone();
-    let (value, outcome) = answer.read(threshold);
-    if view.details {
-        let result = DecisionResult::new(
-            value,
-            question,
-            answer,
-            threshold,
-            Meta::new(
+    let judging = Judging {
+        common,
+        environment,
+        recorder: Recorder::of(common.record.as_deref(), common.replay.as_deref())?,
+        backend,
+        question,
+        threshold,
+        view,
+        streams: reading.streams(),
+    };
+    if !judging.streams {
+        let bytes = chunks.next().transpose()?.unwrap_or_default();
+        let (outcome, _) = judging.one(&reading, &bytes, &mut writer)?;
+        return Ok(exit_code(outcome));
+    }
+    // Every record before this one finished, so its place is that count.
+    let mut replayed = 0;
+    for (finished, chunk) in chunks.enumerate() {
+        let stop = |cause| Failure::Stopped {
+            at: finished + 1,
+            finished,
+            replayed,
+            cause: Box::new(cause),
+        };
+        let bytes = chunk.map_err(&stop)?;
+        let (_, from_recording) = judging.one(&reading, &bytes, &mut writer).map_err(stop)?;
+        replayed += usize::from(from_recording);
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// Read the framing and the pointers the command line asked for.
+fn read_by(common: &Common) -> Result<Reading, Failure> {
+    let framing = match (common.lines, common.jsonl) {
+        (true, _) => Framing::Lines,
+        (_, true) => Framing::Jsonl,
+        _ => Framing::Document,
+    };
+    let mut fields = Vec::with_capacity(common.field.len());
+    for pointer in &common.field {
+        fields.push(Pointer::new(pointer.as_str())?);
+    }
+    Ok(Reading::new(framing, fields)?)
+}
+
+/// Print the plan for the first record, and read no further than that record.
+fn plan(
+    backend: &Backend,
+    reading: &Reading,
+    question: &Question,
+    first: Option<Vec<u8>>,
+    writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    let Some(bytes) = first else {
+        return Ok(ExitCode::SUCCESS);
+    };
+    let record = reading.record(&bytes)?;
+    let plan = Plan::new(
+        reading.evidence(&record)?,
+        backend.model().clone(),
+        vec![question.clone()],
+    )
+    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+    let document = PlanDocument::of(backend, &plan)
+        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+    let document = if reading.streams() {
+        document.reading(reading)
+    } else {
+        document
+    };
+    edge::write_line(writer, &json_line(&document)?)?;
+    Ok(ExitCode::SUCCESS)
+}
+
+/// One question over one backend, asked of every record in turn.
+#[derive(Debug)]
+struct Judging<'a> {
+    common: &'a Common,
+    environment: &'a Environment,
+    recorder: Recorder,
+    backend: Backend,
+    question: Question,
+    threshold: Option<Threshold>,
+    view: View,
+    streams: bool,
+}
+
+impl Judging<'_> {
+    /// Ask one record, print its answer, and say whether a recording answered.
+    fn one(
+        &self,
+        reading: &Reading,
+        bytes: &[u8],
+        mut writer: impl Write,
+    ) -> Result<(Outcome, bool), Failure> {
+        let record = reading.record(bytes)?;
+        let plan = Plan::new(
+            reading.evidence(&record)?,
+            self.backend.model().clone(),
+            vec![self.question.clone()],
+        )
+        .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+        let (reply, replayed) = ask(
+            &self.backend,
+            &plan,
+            self.common,
+            self.environment,
+            &self.recorder,
+        )?;
+        let answer = reply
+            .answers()
+            .first()
+            .ok_or(Failure::Defect("the adapter answered no question"))?
+            .clone();
+        let (value, outcome) = answer.read(self.threshold);
+        if self.view.details {
+            let meta = Meta::new(
                 env!("CARGO_PKG_VERSION"),
-                backend.url().clone(),
+                self.backend.url().clone(),
                 reply.model().clone(),
                 reply.usage(),
                 replayed,
-            ),
-        );
-        edge::write_line(&mut writer, &json_line(&result)?)?;
-    } else if view.raw {
-        if let Some(label) = value.label() {
-            edge::write_line(&mut writer, label)?;
+            );
+            let row =
+                DecisionResult::new(value, self.question.clone(), answer, self.threshold, meta);
+            let row = if self.streams {
+                row.with_input(record)
+            } else {
+                row
+            };
+            edge::write_line(&mut writer, &json_line(&row)?)?;
+        } else if self.view.raw {
+            // One line stands for one record, so an unresolved record prints
+            // an empty line. On one document it prints nothing at all.
+            match value.label() {
+                Some(label) => edge::write_line(&mut writer, label)?,
+                None if self.streams => edge::write_line(&mut writer, "")?,
+                None => {}
+            }
+        } else if !self.view.quiet {
+            edge::write_line(&mut writer, &json_line(&value)?)?;
         }
-    } else if !view.quiet {
-        edge::write_line(&mut writer, &json_line(&value)?)?;
+        Ok((outcome, replayed))
     }
-    Ok(exit_code(outcome))
 }
 
 /// Answer the plan from the recording folder, or from the backend itself.

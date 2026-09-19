@@ -5,6 +5,7 @@ use serde_json::value::RawValue;
 
 use crate::backend::{Backend, KEY_VAR};
 use crate::plan::Plan;
+use crate::records::{Reading, ReadingPlan};
 use crate::systemone::{self, EncodeError};
 use crate::text::{ModelName, Url};
 
@@ -18,6 +19,8 @@ pub struct PlanDocument<'a> {
     url: &'a Url,
     model: &'a ModelName,
     key_env: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input: Option<ReadingPlan<'a>>,
     request: Box<RawValue>,
 }
 
@@ -32,8 +35,20 @@ impl<'a> PlanDocument<'a> {
             url: backend.url(),
             model: backend.model(),
             key_env: KEY_VAR,
+            input: None,
             request: systemone::encode_raw(plan)?,
         })
+    }
+
+    /// Name the framing and the pointers, as a record-mode plan does.
+    ///
+    /// A plan over one document carries four fields. A plan over a record
+    /// stream carries this fifth one, so a reader sees which record the
+    /// request was built from.
+    #[must_use]
+    pub fn reading(mut self, reading: &'a Reading) -> Self {
+        self.input = Some(reading.plan());
+        self
     }
 }
 

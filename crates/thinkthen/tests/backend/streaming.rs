@@ -1,0 +1,474 @@
+//! The compiled binary over many records: the framing, the order, and the stop.
+
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::process::Output;
+
+use crate::harness::{Canned, Listener, spawn};
+
+/// The question every case on this page asks.
+const QUESTION: &str = "Does this report a payment failure?";
+
+/// Three JSON records, each with an id no request ever carries.
+const RECORDS: &str = concat!(
+    "{\"id\":\"R-1\",\"body\":\"The payout failed again.\"}\n",
+    "{\"id\":\"R-2\",\"body\":\"Thanks for the quick fix.\"}\n",
+    "{\"id\":\"R-3\",\"body\":\"The card was refused at checkout.\"}\n",
+);
+
+/// The response a backend gives, with the probability the case names.
+fn answered(probability: &str) -> String {
+    format!(
+        concat!(
+            r#"{{"model":"jev-1.13.0","answers":{{"q1":{{"type":"noul","noul":{probability}}}}},"#,
+            r#""usage":{{"input_tokens":88,"output_tokens":12}}}}"#,
+        ),
+        probability = probability
+    )
+}
+
+/// A listener that answers each of these probabilities, one per request.
+fn serving(probabilities: &[&str]) -> io::Result<Listener> {
+    Listener::serving(
+        probabilities
+            .iter()
+            .map(|p| Canned::ok(&answered(p)))
+            .collect(),
+    )
+}
+
+/// Run `decide` against one URL over the records on standard input.
+fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
+    let asked = ["decide", QUESTION, "--url", base, "--model", "local-1"];
+    spawn(
+        &[&asked[..], arguments].concat(),
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        input.as_bytes(),
+    )
+}
+
+/// Run `decide` with no address at all, which a plan needs none of.
+fn planned(arguments: &[&str], input: &str) -> io::Result<Output> {
+    let asked = ["decide", QUESTION, "--dry-run"];
+    spawn(&[&asked[..], arguments].concat(), &[], input.as_bytes())
+}
+
+/// The `state` each request carried, in the order the listener read them.
+fn states(listener: &Listener) -> Vec<String> {
+    listener
+        .requests()
+        .iter()
+        .filter_map(|request| {
+            let body = String::from_utf8_lossy(&request.body).into_owned();
+            let (_, rest) = body.split_once(r#"{"state":"#)?;
+            let (state, _) = rest.split_once(r#","model""#)?;
+            Some(state.to_owned())
+        })
+        .collect()
+}
+
+/// What the run printed on standard output.
+fn printed(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+/// What the run said on standard error.
+fn said(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).into_owned()
+}
+
+/// A file under the test's own temporary folder, holding this text.
+fn written(name: &str, text: &str) -> io::Result<PathBuf> {
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    fs::write(&path, text)?;
+    Ok(path)
+}
+
+#[test]
+fn each_framing_prints_one_value_per_record_in_input_order() {
+    let listener = serving(&["0.97", "0.02", "0.80"]).expect("a loopback listener");
+    let output = decide(listener.base(), &["--jsonl", "--field", "/body"], RECORDS)
+        .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(printed(&output), "true\nfalse\ntrue\n");
+    assert_eq!(
+        states(&listener),
+        [
+            r#""The payout failed again.""#,
+            r#""Thanks for the quick fix.""#,
+            r#""The card was refused at checkout.""#,
+        ]
+    );
+
+    let listener = serving(&["0.97", "0.02"]).expect("a loopback listener");
+    let output = decide(listener.base(), &["--lines"], "first line\nsecond line\n")
+        .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(printed(&output), "true\nfalse\n");
+    assert_eq!(states(&listener), [r#""first line""#, r#""second line""#]);
+}
+
+#[test]
+fn one_pointer_sends_the_value_and_several_send_an_object_keyed_by_the_last_part() {
+    let listener = serving(&["0.97"]).expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &["--jsonl", "--field", "/body", "--field", "/id"],
+        "{\"id\":\"R-1\",\"body\":\"The payout failed again.\"}\n",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(
+        states(&listener),
+        [r#""{\"body\":\"The payout failed again.\",\"id\":\"R-1\"}""#]
+    );
+}
+
+#[test]
+fn a_record_whose_framing_and_pointers_cannot_act_together_sends_nothing() {
+    let cases: [(&[&str], &str); 2] = [
+        (&["--lines", "--field", "/body"], "has no members"),
+        (
+            &["--jsonl", "--field", "/a/text", "--field", "/b/text"],
+            "two pointers end in `text`",
+        ),
+    ];
+
+    for (arguments, said_part) in cases {
+        let listener = serving(&["0.97"]).expect("a loopback listener");
+        let output = decide(listener.base(), arguments, RECORDS).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+        assert!(printed(&output).is_empty(), "{arguments:?}");
+        assert!(said(&output).contains(said_part), "{}", said(&output));
+        assert!(listener.requests().is_empty(), "{arguments:?}");
+    }
+}
+
+#[test]
+fn a_pointer_in_another_language_is_refused_by_name_before_any_request() {
+    let cases = ["$.body", "#/id", "/*", "/a/*", "/list/-1"];
+
+    for pointer in cases {
+        let listener = serving(&["0.97"]).expect("a loopback listener");
+        let output = decide(listener.base(), &["--jsonl", "--field", pointer], RECORDS)
+            .expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{pointer}");
+        assert!(printed(&output).is_empty(), "{pointer}");
+        assert!(said(&output).contains("RFC 6901"), "{}", said(&output));
+        assert!(listener.requests().is_empty(), "{pointer}");
+    }
+}
+
+#[test]
+fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
+    let good = "{\"id\":\"R-1\",\"body\":\"The payout failed again.\"}\n";
+    let cases: [(&str, &str); 5] = [
+        ("{\"id\":1,\"id\":2}\n", "each member name once"),
+        ("{\"body\":1e999}\n", "`NaN` and `Infinity`"),
+        ("not json\n", "not valid JSON"),
+        ("{\"other\":\"x\"}\n", "holds nothing at `/body`"),
+        ("{\"body\":\"   \"}\n", "evidence is text"),
+    ];
+
+    for (bad, said_part) in cases {
+        let listener = serving(&["0.97", "0.97"]).expect("a loopback listener");
+        let input = format!("{good}{bad}");
+        let output = decide(listener.base(), &["--jsonl", "--field", "/body"], &input)
+            .expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{bad}");
+        assert_eq!(printed(&output), "true\n", "{bad}");
+        assert_eq!(listener.requests().len(), 1, "{bad}");
+        let message = said(&output);
+        assert!(message.contains(said_part), "{message}");
+        assert!(
+            message.contains("stopped at record 2; 1 records finished, 0 from a recording"),
+            "{message}"
+        );
+        assert!(!message.contains("payout"), "{message}");
+    }
+}
+
+#[test]
+fn a_record_that_is_not_text_stops_the_run_at_exit_five() {
+    let listener = serving(&["0.97", "0.97"]).expect("a loopback listener");
+    let mut input = b"{\"body\":\"The payout failed again.\"}\n{\"body\":\"".to_vec();
+    input.extend_from_slice(&[0xff, 0xfe]);
+    input.extend_from_slice(b"\"}\n");
+    let output = spawn(
+        &[
+            "decide",
+            QUESTION,
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--jsonl",
+            "--field",
+            "/body",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        &input,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(printed(&output), "true\n");
+    assert_eq!(listener.requests().len(), 1);
+    let message = said(&output);
+    assert!(message.contains("not valid UTF-8"), "{message}");
+    assert!(
+        message.contains("stopped at record 2; 1 records finished, 0 from a recording"),
+        "{message}"
+    );
+}
+
+#[test]
+fn a_backend_failure_stops_the_run_and_the_rows_before_it_stay_printed() {
+    let listener = Listener::serving(vec![
+        Canned::ok(&answered("0.97")),
+        Canned::status(500, "{}"),
+    ])
+    .expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &["--jsonl", "--field", "/body", "--max-retries", "0"],
+        RECORDS,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(4));
+    assert_eq!(printed(&output), "true\n");
+    let message = said(&output);
+    assert!(message.contains("status 500"), "{message}");
+    assert!(
+        message.contains("stopped at record 2; 1 records finished, 0 from a recording"),
+        "{message}"
+    );
+}
+
+#[test]
+fn an_empty_input_succeeds_with_no_output_and_no_request() {
+    for arguments in [["--lines"], ["--jsonl"]] {
+        let listener = serving(&["0.97"]).expect("a loopback listener");
+        let output = decide(listener.base(), &arguments, "").expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(0), "{arguments:?}");
+        assert!(printed(&output).is_empty(), "{arguments:?}");
+        assert!(said(&output).is_empty(), "{arguments:?}");
+        assert!(listener.requests().is_empty(), "{arguments:?}");
+    }
+}
+
+#[test]
+fn no_records_answer_sets_the_exit_code() {
+    let listener = serving(&["0.02", "0.02", "0.02"]).expect("a loopback listener");
+    let output = decide(listener.base(), &["--jsonl", "--field", "/body"], RECORDS)
+        .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(printed(&output), "false\nfalse\nfalse\n");
+}
+
+#[test]
+fn a_record_row_carries_the_whole_record_under_input() {
+    let listener = serving(&["0.97"]).expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &["--jsonl", "--field", "/body", "--details"],
+        "{\"id\":\"R-1\",\"body\":\"The payout failed again.\",\"seen\":false}\n",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    let row = printed(&output);
+    assert!(
+        row.starts_with(concat!(
+            r#"{"schema":"thinkthen.result/1","value":true,"#,
+            r#""input":{"id":"R-1","body":"The payout failed again.","seen":false},"#,
+            r#""question":{"verb":"decide","text":"Does this report a payment failure?"},"#,
+        )),
+        "{row}"
+    );
+    assert!(row.contains(r#""tool":"thinkthen 0.0.1""#), "{row}");
+    // Only the pointed value left the machine.
+    assert_eq!(states(&listener), [r#""The payout failed again.""#]);
+}
+
+#[test]
+fn a_document_row_carries_no_input_because_one_document_is_no_stream() {
+    let listener = serving(&["0.97"]).expect("a loopback listener");
+    let output = decide(listener.base(), &["--details"], "The payout failed again.")
+        .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert!(
+        !printed(&output).contains(r#""input""#),
+        "{}",
+        printed(&output)
+    );
+}
+
+#[test]
+fn the_record_mode_plan_shows_the_first_record_and_names_the_framing() {
+    let output =
+        planned(&["--jsonl", "--field", "/body"], RECORDS).expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(
+        printed(&output),
+        concat!(
+            r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","#,
+            r#""key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"#,
+            r#""request":{"state":"The payout failed again.","model":"jev-latest","#,
+            r#""questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}"#,
+            "\n",
+        )
+    );
+
+    let output =
+        planned(&["--lines"], "first line\nsecond line\n").expect("the compiled binary runs");
+    assert!(
+        printed(&output).contains(r#""input":{"framing":"lines","field":[]},"#),
+        "{}",
+        printed(&output)
+    );
+    // A plan over one document carries four fields and names no framing.
+    let output = planned(&[], "one whole document").expect("the compiled binary runs");
+    assert!(
+        !printed(&output).contains(r#""input""#),
+        "{}",
+        printed(&output)
+    );
+}
+
+#[test]
+fn the_plan_reads_no_further_than_the_first_record() {
+    // The second record would be refused, and a plan that read it would say so.
+    let output = planned(
+        &["--jsonl", "--field", "/body"],
+        "{\"body\":\"The payout failed again.\"}\nnot json\n",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert!(said(&output).is_empty(), "{}", said(&output));
+}
+
+#[test]
+fn input_reads_the_records_from_the_file_it_names() {
+    let path = written("streaming-records.jsonl", RECORDS).expect("a file of records");
+    let listener = serving(&["0.97", "0.02", "0.80"]).expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &[
+            "--jsonl",
+            "--field",
+            "/body",
+            "--input",
+            &path.to_string_lossy(),
+        ],
+        "",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(printed(&output), "true\nfalse\ntrue\n");
+
+    let missing = Path::new(env!("CARGO_TARGET_TMPDIR")).join("streaming-absent.jsonl");
+    let output = decide(
+        listener.base(),
+        &["--jsonl", "--input", &missing.to_string_lossy()],
+        "",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(5));
+    assert!(said(&output).contains("--input"), "{}", said(&output));
+}
+
+#[test]
+fn a_pointer_without_jsonl_reads_the_whole_input_as_one_json_value() {
+    let listener = serving(&["0.97"]).expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &["--field", "/a/text"],
+        "{\n  \"a\": {\"text\": \"The payout failed again.\"}\n}\n",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(states(&listener), [r#""The payout failed again.""#]);
+}
+
+#[test]
+fn choose_raw_prints_an_empty_line_for_an_unresolved_record() {
+    const PICKED: &str = concat!(
+        r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","#,
+        r#""probabilities":{"billing":0.9,"shipping":0.1}}}}"#,
+    );
+    const CLOSE: &str = concat!(
+        r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","#,
+        r#""probabilities":{"billing":0.55,"shipping":0.45}}}}"#,
+    );
+    let listener =
+        Listener::serving(vec![Canned::ok(PICKED), Canned::ok(CLOSE)]).expect("a listener");
+    let output = spawn(
+        &[
+            "choose",
+            "Which team owns this?",
+            "billing",
+            "shipping",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--threshold",
+            "0.8",
+            "--raw",
+            "--lines",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"first line\nsecond line\n",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(printed(&output), "billing\n\n");
+}
+
+#[test]
+fn the_row_count_equals_the_record_count_for_every_run_that_finishes() {
+    // The property the whole record surface rests on: one row per record, in
+    // input order, whatever the view and whatever the answers.
+    for count in 0..9_usize {
+        let probabilities: Vec<&str> = (0..count)
+            .map(|place| if place % 2 == 0 { "0.97" } else { "0.02" })
+            .collect();
+        let input: String = (0..count)
+            .map(|place| format!("{{\"body\":\"record {place}\"}}\n"))
+            .collect();
+
+        for view in [
+            &["--field", "/body"][..],
+            &["--field", "/body", "--details"],
+        ] {
+            let listener = serving(&probabilities).expect("a loopback listener");
+            let arguments = [&["--jsonl"][..], view].concat();
+            let output =
+                decide(listener.base(), &arguments, &input).expect("the compiled binary runs");
+
+            assert_eq!(output.status.code(), Some(0), "{count} records, {view:?}");
+            assert_eq!(
+                printed(&output).lines().count(),
+                count,
+                "{count} records, {view:?}"
+            );
+        }
+    }
+}

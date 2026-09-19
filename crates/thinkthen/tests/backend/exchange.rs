@@ -177,7 +177,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#"{{"schema":"thinkthen.result/1","value":true,"#,
                 r#""question":{{"verb":"decide","text":"asks for a refund"}},"#,
                 r#""answer":{{"kind":"yes_no","probability":0.92}},"threshold":0.5,"#,
-                r#""meta":{{"url":"{url}","#,
+                r#""meta":{{"tool":"thinkthen 0.0.1","url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
                 r#""replayed":false}}}}"#,
                 "\n",

@@ -229,7 +229,8 @@ fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(
         printed.contains(concat!(
-            r#""meta":{"url":"https://api.typesafe.ai/v1/systemone","#,
+            r#""meta":{"tool":"thinkthen 0.0.1","#,
+            r#""url":"https://api.typesafe.ai/v1/systemone","#,
             r#""model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"#,
             r#""replayed":true}}"#,
         )),

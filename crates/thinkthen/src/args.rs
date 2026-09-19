@@ -91,8 +91,40 @@ pub(crate) enum Command {
 #[derive(Args, Debug)]
 pub(crate) struct Common {
     /// Print the full result object in place of the bare value.
+    ///
+    /// In record mode the object also carries `input`, the whole record as it
+    /// arrived, so a row names the record it answered. `input` repeats every
+    /// record in the output, and a run over large records pays for that on
+    /// every row.
     #[arg(long)]
     pub(crate) details: bool,
+
+    /// Read the records from FILE instead of from standard input.
+    #[arg(long, value_name = "FILE")]
+    pub(crate) input: Option<PathBuf>,
+
+    /// Take each line as one text record.
+    ///
+    /// One value prints per record, in input order. The bare values alone tie
+    /// no line to a record, so a script that names records reads --details.
+    #[arg(long, conflicts_with = "jsonl")]
+    pub(crate) lines: bool,
+
+    /// Take each line as one JSON record.
+    ///
+    /// One value prints per record, in input order. The bare values alone tie
+    /// no line to a record, so a script that names records reads --details.
+    #[arg(long)]
+    pub(crate) jsonl: bool,
+
+    /// Send only the part of each record this RFC 6901 pointer names.
+    ///
+    /// Give it more than once to send an object of the named parts, keyed by
+    /// the last part of each pointer. Without --jsonl it reads the whole input
+    /// as one JSON value. The pointer is the disclosure boundary: only the
+    /// pointed value leaves the machine.
+    #[arg(long, value_name = "POINTER")]
+    pub(crate) field: Vec<String>,
 
     /// Print what would be sent and stop. No key is read and no connection opens.
     #[arg(long)]
