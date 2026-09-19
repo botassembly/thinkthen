@@ -35,7 +35,7 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-env -u TYPESAFE_API_KEY thinkthen find 'When does a refund reach the customer?' \
+env -u THINKTHEN_API_KEY thinkthen find 'When does a refund reach the customer?' \
   --lines --dry-run --input policy.txt > "$work/plan.json"
 
 jq -r '.request.questions | length' "$work/plan.json" | mustmatch "1"

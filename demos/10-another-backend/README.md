@@ -21,7 +21,7 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-TYPESAFE_API_KEY=not-a-real-key thinkthen decide 'Does the note say a pallet has not been scanned in?' \
+THINKTHEN_API_KEY=not-a-real-key thinkthen decide 'Does the note say a pallet has not been scanned in?' \
   --url http://decider.internal:8099/v1/systemone --adapter systemone \
   --model local-decider-3 --dry-run --input note.txt > "$work/plan.json"
 
@@ -51,7 +51,7 @@ printf '%s\n' '{"version":1,"profiles":{"site":{"url":"http://decider.internal:8
 thinkthen config check --config "$work/broken.json" >/dev/null 2>&1 && bad=0 || bad=$?
 printf 'bad=%s\n' "$bad" | mustmatch "bad=5"
 
-TYPESAFE_API_KEY=not-a-real-key thinkthen decide 'Does the note say a pallet has not been scanned in?' \
+THINKTHEN_API_KEY=not-a-real-key thinkthen decide 'Does the note say a pallet has not been scanned in?' \
   --config site.json --profile site --dry-run --input note.txt > "$work/plan.json"
 
 jq -c '{profile, url, model, key_env}' "$work/plan.json" \
@@ -68,7 +68,7 @@ The refused file names a profile with no `model`. A profile is complete or it is
 ```bash
 set -euo pipefail
 
-env -u TYPESAFE_API_KEY thinkthen config show --config site.json \
+env -u THINKTHEN_API_KEY thinkthen config show --config site.json \
   | jq -c '{profile, jobs, timeout_seconds, key_env: .profiles.site.key_env}' \
   | mustmatch '{"profile":"site","jobs":4,"timeout_seconds":30,"key_env":null}'
 ```

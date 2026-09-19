@@ -82,4 +82,3 @@ Fifteen jobs were written before the code. These parts of the three ADRs were ne
 - A structured question or option description, from ADR 0009 item 5. Every question on these pages is one sentence.
 - `--options POINTER` on `choose`, from ADR 0009 item 4. No demo had a candidate list that changes per record.
 - Exit codes 5 and 70. Demos 12 and 15 name codes in `case` branches and no page produces either.
-- The `chat-logprobs` adapter.

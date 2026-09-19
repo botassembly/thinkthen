@@ -23,7 +23,7 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-env -u TYPESAFE_API_KEY thinkthen annotate checks.json --jsonl --dry-run \
+env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --dry-run \
   --input cases.jsonl > "$work/plan.json"
 
 jq -S -c '.request.state | fromjson | keys' "$work/plan.json" \
@@ -90,7 +90,7 @@ cp -R recording "$work/cache"
 thinkthen annotate checks.json --jsonl --details --input cases.jsonl \
   --record "$work/cache" --replay "$work/cache" > "$work/run-a.jsonl"
 
-env -u TYPESAFE_API_KEY thinkthen report "$work/run-a.jsonl" \
+env -u THINKTHEN_API_KEY thinkthen report "$work/run-a.jsonl" \
   | jq -c '{rows, tool, checks: (.checks | keys)}' \
   | mustmatch '{"rows":6,"tool":["thinkthen 0.1.0"],"checks":["correct","grounded"]}'
 

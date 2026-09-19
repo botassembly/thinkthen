@@ -36,7 +36,7 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | Packing many records into one request | Each record is sent once either way, so packing saves no tokens. It saves round trips, and those already run in parallel. It costs isolation, and accuracy falls as the evidence fills with unrelated content | Nothing measured so far |
 | A two-pass `find` beyond 255 units | One request holds 255 units. A second pass over the winners would need a merge rule and a second measurement | A job whose candidate set cannot be cut to 255 upstream |
 | `config set` | An editor changes a JSON file. A writer would be the first thing in this tool that writes a file the user did not name | A demand strong enough to change that rule |
-| A subprocess adapter | It is the escape hatch for a vendor whose shape fits neither built-in adapter. Dynamic plugin libraries stay refused | A vendor worth supporting that serves neither `systemone` nor chat completions |
+| A subprocess adapter | It is the escape hatch for a vendor whose shape is not System One. Dynamic plugin libraries stay refused | A vendor worth supporting that no small server can put behind the System One shape |
 | `--none` on `choose` | The old `which` added an option meaning that no other option fits. A user adds `other` to the list and gets the same answer | A demo where the list is generated and cannot take an extra label |
 
 ## Held by ADR 0010
@@ -72,3 +72,11 @@ The fifth outcome carries a rule of its own. It enters only when several recipes
 An idea for that fifth outcome: the cheapest form is a command that prints a named recipe on standard output for `jq -f`, and it adds no dependency.
 
 The earlier `specification/report.md` holds what the command knew about accuracy at coverage and about the fixed JSON shape of a report. It stays in the git history.
+
+### The `chat-logprobs` adapter
+
+The adapter asked any server that speaks the common chat-completions format for one constrained token and read the token probabilities. It would have made a local model a backend with no hosted service at all.
+
+Ruling 1 of ADR 0010 holds it. The tool speaks one wire shape, and a second wire format inside the binary buys nothing. A local model is reached by a small separate server that presents the System One shape, and that server is its own project.
+
+A vendor worth supporting whose shape is neither System One nor a server in front of it would bring a second adapter back.

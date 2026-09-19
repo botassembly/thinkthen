@@ -21,7 +21,7 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-env -u TYPESAFE_API_KEY thinkthen filter 'Does the customer ask for money back?' \
+env -u THINKTHEN_API_KEY thinkthen filter 'Does the customer ask for money back?' \
   --jsonl --field /note --threshold 0.9 --dry-run \
   --input orders.jsonl > "$work/plan.json"
 
@@ -29,7 +29,7 @@ jq -S -c 'keys' "$work/plan.json" \
   | mustmatch '["adapter","input","key_env","model","profile","request","url"]'
 jq -c '.input' "$work/plan.json" | mustmatch '{"framing":"jsonl","field":["/note"]}'
 jq -r '.adapter' "$work/plan.json" | mustmatch "systemone"
-jq -r '.key_env' "$work/plan.json" | mustmatch "TYPESAFE_API_KEY"
+jq -r '.key_env' "$work/plan.json" | mustmatch "THINKTHEN_API_KEY"
 jq -r '.request.state' "$work/plan.json" \
   | mustmatch "The blender arrived with a cracked jug. Please put the money back on my card."
 ```
@@ -43,7 +43,7 @@ Only the value at `/note` reaches the backend. The email address and the card di
 ```bash
 set -euo pipefail
 
-env -u TYPESAFE_API_KEY thinkthen filter 'Does the customer ask for money back?' \
+env -u THINKTHEN_API_KEY thinkthen filter 'Does the customer ask for money back?' \
   --jsonl --field /note --threshold 0.9 --dry-run --input orders.jsonl \
   | mustmatch not like "example.net"
 ```
@@ -53,7 +53,7 @@ Drop `--field` and the whole record becomes the evidence. The plan shows that to
 ```bash
 set -euo pipefail
 
-env -u TYPESAFE_API_KEY thinkthen filter 'Does the customer ask for money back?' \
+env -u THINKTHEN_API_KEY thinkthen filter 'Does the customer ask for money back?' \
   --jsonl --threshold 0.9 --dry-run --input orders.jsonl \
   | mustmatch like "card_last4"
 ```
@@ -78,7 +78,7 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-env -u TYPESAFE_API_KEY thinkthen filter 'Does the customer ask for money back?' \
+env -u THINKTHEN_API_KEY thinkthen filter 'Does the customer ask for money back?' \
   --jsonl --field /note --threshold 0.9 --dry-run \
   --input orders.jsonl > "$work/plan.tmp"
 mv -- "$work/plan.tmp" "$work/plan.json"

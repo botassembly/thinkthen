@@ -1,6 +1,8 @@
 # Configuration
 
-Status: **Settled** for version one, by ADR 0007.
+Status: **Draft**. Every section below is Draft.
+
+ADR 0010 proposes that the file, profiles, the `config` command, `--profile`, `--adapter`, `--key-env`, and `--config` leave version one. Under one wire shape and two variables a profile holds nothing that `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `--model` do not already say. This page waits on Ian's answer, and nothing here is built until he gives it. [backends.md](backends.md) holds the two variables, and they are Settled.
 
 A configuration file holds profiles and run settings. The tool never writes it.
 
@@ -21,7 +23,7 @@ The file is `$XDG_CONFIG_HOME/thinkthen/config.json`, or `~/.config/thinkthen/co
   "version": 1,
   "profile": "local",
   "profiles": {
-    "local": {"url": "http://127.0.0.1:8080/v1/chat/completions", "adapter": "chat-logprobs", "model": "some-local-model", "key_env": null}
+    "local": {"url": "http://127.0.0.1:8080/v1/systemone", "adapter": "systemone", "model": "some-local-model", "key_env": null}
   },
   "timeout_seconds": 30,
   "max_retries": 3,

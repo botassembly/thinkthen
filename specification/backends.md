@@ -1,48 +1,40 @@
 # Backends
 
-Status: **Settled** for profiles, keys, and the `systemone` adapter. **Draft** for `chat-logprobs`.
+Status: **Settled** for the wire shape, the key, the address, the request, and the `systemone` adapter. **Draft** for profiles and the ad-hoc flags. **Draft** for the two adapter rows that wait on their fixtures.
 
-A backend is a URL and an adapter. Nothing in `thinkthen` is tied to one vendor. Every token count and probability in an example here is illustrative.
+`thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
 
-## A profile
+## The key
 
-A backend profile is four values.
+Settled by ADR 0010.
 
-| Value | Meaning | Flag |
-| --- | --- | --- |
-| URL | Where the request is posted | `--url` |
-| Adapter | The wire format the server speaks | `--adapter` |
-| Model | The model name sent in the request | `--model` |
-| Key variable | The name of the environment variable that holds the key | `--key-env` |
+The key is read from `THINKTHEN_API_KEY` unless the hidden `--key-env` names another variable.
 
-`--profile NAME` picks a named profile. Profiles come from the configuration file, and [config.md](config.md) gives the file, the selection order, and the two environment variables the tool reads. The five `THINKTHEN_*` backend variables of ADR 0004 are gone.
+- A key variable that is named and holds no value is exit code 4. The message names the variable and never a value.
+- No key appears in a plan, a result, a recording, a log line, or an error.
+- A key never crosses hosts. A run pointed at another address sends the key of the variable it was told to read, and nothing else.
 
-A flag value that is empty or holds only white space is a usage error.
+## The address
 
-One profile is built in.
+Settled by ADR 0010.
 
-| Name | URL | Adapter | Model | Key variable |
-| --- | --- | --- | --- | --- |
-| `jev` | `https://api.typesafe.ai/v1/systemone` | `systemone` | `jev-latest` | `TYPESAFE_API_KEY` |
+The address comes from the hidden `--url`, then `THINKTHEN_BASE_URL`, then the default base `https://api.typesafe.ai/v1`. The tool posts to `BASE/systemone`. A base with a trailing slash is accepted. A base that is not an `http` or `https` address is a usage error before any request. An empty variable counts as absent.
 
-The built-in profile is a row of data. It answers when nothing else is named, and a file profile named `jev` replaces it. A user who wants repeatable answers names an exact model version, and the result always reports the model that answered.
+`--dry-run` shows the address the run would use, and it reads no key.
 
-## An ad-hoc backend
+## Profiles and ad-hoc backends
+
+Draft. ADR 0010 proposes that the configuration file, profiles, `--profile`, `--adapter`, `--key-env`, and `--config` leave version one, because two variables and `--model` already say everything a profile held. [config.md](config.md) waits on Ian's answer, and nothing here is built until he gives it.
+
+A backend profile is four values: the URL, the adapter, the model, and the name of the key variable. `--profile NAME` picks a named profile out of the configuration file. One profile is built in, and it holds the default address, the `systemone` adapter, the model `jev-latest`, and `THINKTHEN_API_KEY`.
 
 An ad-hoc backend is a URL, an adapter, and a model given together on the command line. A new URL with a borrowed adapter or model is a guess, so a URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model. That is how a user pins a version.
 
-An ad-hoc backend has no name, and a result reports its `meta.profile` as `null`. `--profile` beside `--url` is a usage error, because the profile would do nothing.
-
-## Keys
-
-- The key is read from the environment variable the profile names. No flag takes a key value.
-- A key never crosses hosts. An ad-hoc backend takes nothing from a profile, its key variable included. The user names one with `--key-env` for the new host, or the request goes out with no key. No key suits a local server.
-- A key variable that is named and holds no value is exit code 4, for a profile and for an ad-hoc backend alike. The message names the variable and never a value.
-- No key appears in a plan, a result, a recording, a log line, or an error. The configuration file never holds a key.
+An ad-hoc backend has no name, and a result reports its `meta.profile` as `null`. `--profile` beside `--url` is a usage error, because the profile would do nothing. A flag value that is empty or holds only white space is a usage error.
 
 ## The request
 
-Every version-one adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`.
+The adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`.
 
 `--timeout SECONDS` covers one attempt from connect to the last byte. `--max-retries N` bounds the retries after the first attempt. The configuration file sets the default for each one, and `timeout_seconds` of 30 and `max_retries` of 2 apply when the file names neither.
 
@@ -66,7 +58,7 @@ An adapter is two pure functions.
 - **encode** takes a plan and returns the request body as bytes. A plan holds the evidence, the model name, and an ordered list of named questions.
 - **decode** takes the response body as bytes and returns the model that answered, one answer per named question, and the usage the backend reported.
 
-An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. The set of adapters is an enum compiled into the binary.
+An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Version one compiles one adapter, `systemone`.
 
 Decode refuses a reply that lacks an answer for a planned question, carries an answer of the wrong kind, or holds a probability outside zero to one. A refused reply is exit code 4. An adapter that cannot supply a probability per option or per level refuses the reply. It never invents one.
 
@@ -105,21 +97,6 @@ The two Draft rows name what the adapter must produce for `choose` and `score`. 
 
 ### What the adapter keeps
 
-Draft, from Proposed ADR 0009. The adapter keeps the full distribution and the vendor's `confidence` field. Both reach `answer` in the result, as [result.md](result.md) describes. A saved run can then be swept at another rule with no second request.
+Settled by ADR 0009 item 2, accepted in ADR 0010. The adapter keeps the full distribution and the vendor's `confidence` field. Both reach `answer` in the result, as [result.md](result.md) describes. A saved run can then be swept at another rule with no second request.
 
-The cut on `choose` stays on the winning option's probability. That number exists on every backend, and a reader can say what it means. Most of the vendor's own pages cut on `confidence` instead, and the formula behind `confidence` is unpublished. `report` sweeps both against labels, and the rule is looked at again once that has been measured.
-
-## The `chat-logprobs` adapter
-
-Draft. It asks any server that speaks the common chat-completions format for one constrained token and reads the token probabilities. It makes a local model a backend, and it lets a user run with no hosted service at all. It costs no vendor credits, so it moves ahead of the record verbs in the plan.
-
-A yes/no question sends the question as the user message, asks for one token, and requests the top token probabilities. The probability of yes is the mass on the yes token, normalized over the yes token and the no token alone.
-
-A choice sends the options as a numbered list and constrains the answer to one digit per option. The probability per option is the mass on that option's digit, normalized over the digits offered. A score sends the levels as a numbered list and reads them the same way. No free text is parsed.
-
-### Open points
-
-- Does a choice read digits, or the first character of each label? Digits work for any label and stay one token. Labels that share a first letter break the other reading. Recommendation: digits.
-- What happens when a constrained token is missing from the returned probabilities? Recommendation: treat the missing mass as zero and refuse the reply when every offered token is missing.
-- How does one request carry several questions, given that a chat completion answers one? Recommendation: one request per question, and the tool sums the usage. `annotate` therefore costs more against this adapter than against `systemone`.
-- Which fields name the probabilities? They land with the fixtures under `fixtures/chat-logprobs/`.
+The cut on `choose` stays on the winning option's probability. That number exists on every backend, and a reader can say what it means. Most of the vendor's own pages cut on `confidence` instead, and the formula behind `confidence` is unpublished. A live sweep of both against labels settles whether the rule changes.

@@ -46,7 +46,7 @@ thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
   > "$work/tune.jsonl"
 
-env -u TYPESAFE_API_KEY thinkthen report "$work/tune.jsonl" \
+env -u THINKTHEN_API_KEY thinkthen report "$work/tune.jsonl" \
   | jq -c '{rows, models, replayed, warnings, counts: (.checks.decide | {yes, no, unresolved})}' \
   | mustmatch '{"rows":8,"models":["jev-1.13.0"],"replayed":8,"warnings":[],"counts":{"yes":4,"no":4,"unresolved":0}}'
 ```

@@ -19,7 +19,7 @@ Every number in an expected output on this page is illustrative until a recordin
 ```bash
 set -euo pipefail
 
-env -u TYPESAFE_API_KEY thinkthen annotate checklist.json --dry-run \
+env -u THINKTHEN_API_KEY thinkthen annotate checklist.json --dry-run \
   --input release-notes.txt > /dev/null && printf 'checklist ok\n' | mustmatch "checklist ok"
 ```
 

@@ -76,7 +76,7 @@ A script that must tell a no from an unresolved reads `$?` with `case`.
 The plan is one compact JSON document on standard output with six fields that are always present.
 
 ```json
-{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
+{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
 ```
 
 `request` is the body the adapter would send, as a JSON value and never as a string. `profile` is `null` for an ad-hoc backend. `key_env` is the name of the key variable, or `null` when no key would be sent, so a script can prove that a key stays home.
@@ -86,7 +86,7 @@ The plan carries the evidence, because the evidence is what leaves the machine. 
 In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a seventh field, `input`, naming the framing and the pointers.
 
 ```json
-{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
+{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
 ```
 
 `annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both. `config` sends nothing at any time, and `--dry-run` beside it is a usage error.
