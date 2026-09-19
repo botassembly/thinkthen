@@ -39,12 +39,13 @@ The order can change. Slice 5 sits early on purpose. No live judgment has come b
 
 ## Live testing budget
 
-Ian granted more budget for paid calls on 2026-09-18. The cap for this repository is 20,000,000 input tokens. Spent so far: 0. Every live call adds its tokens here. The first live calls on 2026-09-19 returned a billing error, because the vendor account has no credits, and they spent nothing.
+Ian set the limit at $20 on 2026-09-19. The vendor charges $0.042 for a million input tokens, so the limit is about 476 million tokens. Spent so far: $0. Every live call adds its tokens here. Every live attempt on 2026-09-19 returned status 402 with the vendor's message "Your organization has no available TypeSafe API credits", and none spent anything. The last attempt used the key in `~/.zshenv.local`, which equals the key the session already held.
 
 ## Levers left open
 
 - **ADR 0008 and ADR 0009.** Both are Proposed and wait on Ian's word. Their specification sections stay Draft until then.
-- **Vendor credits.** Ian adds them at the vendor's billing page. Then `demos/01-refund-gate/record.sh` records demo 01 against the hosted model.
+- **Open concerns.** `open-concerns.md` ranks the contested points across the ADRs and this plan, with options and a recommendation for each. It waits on Ian.
+- **Vendor credits.** The account still answers 402. Ian adds credits or turns on auto-reload at the vendor's billing page. Then a live probe runs first, as `open-concerns.md` lists, and `demos/01-refund-gate/record.sh` records demo 01 against the hosted model.
 - **The public release.** Ian rules on the timing, the license, and whether to talk to the vendor first. That is question 10 of `design-study.md`. Questions 6 and 7 of the study are settled by ADR 0007: saved questions are JSON, and a threshold lives on the command line or in the saved file.
 - **The review leftovers** in `sdlc/issues/2026-09-19-review-leftovers-from-the-core-tickets.md`. Slice 3 rewrites much of the code they touch, so the ticket checks each one.
 - Registration with Factory 2, and the five `sdlc/project/` scripts that come with it.
