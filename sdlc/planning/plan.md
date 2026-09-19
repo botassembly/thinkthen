@@ -22,7 +22,7 @@ A slice is done when its how-tos in `documentation-plan.md` are green, the four 
 | 2 | `--record` and `--replay` over one content-addressed folder | `recording.md` | | Done. Ticket 0004 |
 | 3 | The flat surface on the landed code: `decide QUESTION`, the bare value, `--details`, `--threshold`, exit 0, 1, and 3 on every run, `--quiet`, `--dry-run`, `--profile` | `channels.md`, `threshold.md`, `result.md`, `decide.md` | 01, 09 | Done. Ticket 0005 landed on 2026-09-19 after an independent review. The first live answers came through its binary |
 | 4 | The two variables, `sdlc/scripts/live` with the spend limit inside it, and demo 01 recorded live and turned green | `backends.md` | 01 | Done. Ticket 0006 landed on 2026-09-19 after an independent review. Demo 01 is the first green demo |
-| 5 | `choose` with `--raw`, then `score`. The adapter keeps every option's probability and the vendor's `confidence` | `choose.md`, `score.md`, `result.md` | 02, 05, 17, 20 | Ticket 0009 is ready. Running |
+| 5 | `choose` with `--raw`, then `score`. The adapter keeps every option's probability and the vendor's `confidence` | `choose.md`, `score.md`, `result.md` | 02, 05, 17, 20 | Done. Ticket 0009 landed on 2026-09-19 after an independent review. All three question types are in the shell. The source ceiling is 5,862 lines, and the review judged the rise earned |
 | 6 | The live probe: the real shape of all three answers, the cap on questions in one request, `confidence` against the winning probability, `score` against its measured weakness, whether option order or an added irrelevant option moves a `choose` answer, and whether hostile text inside the evidence moves a judgment | | | After slice 5, through the live script |
 | 7 | Records: `--input`, `--lines`, `--jsonl`, `--field` with one pointer or several, `choose --options POINTER`, and `--cache DIR`. Order kept, stop at the first failure, bounded parallel requests | `records.md`, `choose.md` | 04, 12, 21 | |
 | 8 | `filter`, then `rank` | `filter.md`, `rank.md` | 03, 06, 09 | |
@@ -50,8 +50,9 @@ Ian set the limit at $20 on 2026-09-19. The vendor charges $0.042 for a million 
 | 2026-09-19 | Two `decide` calls through `sdlc/scripts/live`, recording demo 01 | 626 |
 | 2026-09-19 | Ticket 0010: the recordings of how-tos 19 and 27 | 961 |
 | 2026-09-19 | Ticket 0008: forty labeled cases judged twice, 80 calls | 23,848 |
+| 2026-09-19 | Ticket 0009: one probe of each new type and the recordings of how-tos 02, 05, 17, and 20 | 6,222 |
 
-Spent so far: 26,620 tokens, which is about a tenth of a cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
+Spent so far: 32,842 tokens, which is about a tenth of a cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
 
 ## Levers left open
 
@@ -60,5 +61,6 @@ Spent so far: 26,620 tokens, which is about a tenth of a cent. `sdlc/live-tokens
 
 - **The public release.** Ian rules on the timing, the license, and whether to talk to the vendor first. That is question 10 of `design-study.md`.
 - **Ideas carried from the design captures.** `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md` lists advice, recipe material, and small input rules, each with the slice that picks it up.
+- **`meta.tool`.** `result.md` says it is always present, and the binary does not write it. Adding it changes the shown output on many green pages, so it gets its own small ticket before the records slice.
 - **The review leftovers** in `sdlc/issues/2026-09-19-review-leftovers-from-the-core-tickets.md`. Seven still wait, with reasons in `sdlc/records/0005-reshape-decide-to-the-flat-surface.md`.
 - Registration with Factory 2, and the five `sdlc/project/` scripts that come with it.
