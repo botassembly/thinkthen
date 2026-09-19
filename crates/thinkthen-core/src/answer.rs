@@ -22,7 +22,7 @@ pub struct Answer {
 impl Answer {
     /// Take a probability as the answer to a yes/no question.
     #[must_use]
-    pub const fn new_yes_no(probability: Probability) -> Self {
+    pub(crate) const fn new_yes_no(probability: Probability) -> Self {
         Self {
             kind: AnswerKind::YesNo,
             probability,
@@ -31,7 +31,7 @@ impl Answer {
 
     /// Read the probability back.
     #[must_use]
-    pub const fn probability(&self) -> Probability {
+    pub(crate) const fn probability(&self) -> Probability {
         self.probability
     }
 }

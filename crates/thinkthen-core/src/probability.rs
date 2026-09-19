@@ -5,7 +5,7 @@ use thiserror::Error;
 
 /// Why a number is not a probability.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
-pub enum ProbabilityError {
+pub(crate) enum ProbabilityError {
     /// The number is not-a-number or an infinity.
     #[error("a probability is a finite number")]
     NotFinite,
@@ -17,7 +17,7 @@ pub enum ProbabilityError {
 /// How likely the backend judged the condition to hold.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(into = "f64")]
-pub struct Probability(f64);
+pub(crate) struct Probability(f64);
 
 impl Probability {
     /// Take a finite number from zero to one as a probability.
@@ -26,7 +26,7 @@ impl Probability {
     ///
     /// Returns [`ProbabilityError`] when the number is not finite or falls
     /// outside zero to one.
-    pub fn new(value: f64) -> Result<Self, ProbabilityError> {
+    pub(crate) fn new(value: f64) -> Result<Self, ProbabilityError> {
         if !value.is_finite() {
             return Err(ProbabilityError::NotFinite);
         }
@@ -38,7 +38,7 @@ impl Probability {
 
     /// Read the probability back as a number.
     #[must_use]
-    pub const fn as_f64(self) -> f64 {
+    pub(crate) const fn as_f64(self) -> f64 {
         self.0
     }
 }

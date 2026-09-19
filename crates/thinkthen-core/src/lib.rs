@@ -33,11 +33,10 @@ pub use crate::pass_mark::{PassMark, PassMarkError};
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::plan_document::PlanDocument;
 pub use crate::policy::Policy;
-pub use crate::probability::{Probability, ProbabilityError};
 pub use crate::question::Question;
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
-pub use crate::result::{DecisionResult, Meta, SCHEMA, Usage};
+pub use crate::result::{DecisionResult, Meta, Usage};
 pub use crate::text::{BackendName, BlankTextError, Condition, Evidence, KeyVar, ModelName, Url};
 
 /// The name the tool answers to on the command line and in its own output.

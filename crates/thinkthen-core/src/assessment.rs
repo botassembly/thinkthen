@@ -38,12 +38,6 @@ impl Assessment {
     pub const fn value(&self) -> Option<bool> {
         self.value
     }
-
-    /// Read the pass mark back, or `None` when the user named none.
-    #[must_use]
-    pub const fn min_prob(&self) -> Option<PassMark> {
-        self.min_prob
-    }
 }
 
 /// Judge one answer under one policy.
@@ -137,9 +131,9 @@ mod tests {
     fn an_assessment_reports_the_mark_its_policy_carried() {
         let nine = mark(0.9);
         let accepted = assess(answer(0.92), Policy::Symmetric(nine));
-        assert_eq!(accepted.min_prob(), Some(nine));
+        assert_eq!(accepted.min_prob, Some(nine));
         let unassessed = assess(answer(0.92), Policy::Unassessed);
-        assert_eq!(unassessed.min_prob(), None);
+        assert_eq!(unassessed.min_prob, None);
     }
 
     fn probabilities() -> impl Strategy<Value = f64> {
@@ -156,11 +150,7 @@ mod tests {
     /// carries the mark it missed. An unassessed carries neither.
     fn shaped(assessment: &Assessment) -> bool {
         matches!(
-            (
-                assessment.status(),
-                assessment.value(),
-                assessment.min_prob()
-            ),
+            (assessment.status(), assessment.value(), assessment.min_prob),
             (AssessmentStatus::Accepted, Some(_), Some(_))
                 | (AssessmentStatus::Unsure, None, Some(_))
                 | (AssessmentStatus::Unassessed, None, None)

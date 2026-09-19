@@ -9,7 +9,7 @@ use crate::question::Question;
 use crate::text::{BackendName, ModelName, Url};
 
 /// The schema string a version one result carries.
-pub const SCHEMA: &str = "thinkthen.result/1";
+pub(crate) const SCHEMA: &str = "thinkthen.result/1";
 
 /// What the backend reported it spent on the judgment.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -21,7 +21,7 @@ pub struct Usage {
 impl Usage {
     /// Take the token counts the backend reported.
     #[must_use]
-    pub const fn new(input_tokens: u64, output_tokens: u64) -> Self {
+    pub(crate) const fn new(input_tokens: u64, output_tokens: u64) -> Self {
         Self {
             input_tokens,
             output_tokens,
