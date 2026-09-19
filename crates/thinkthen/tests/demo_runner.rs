@@ -47,7 +47,37 @@ fn a_green_page_runs_against_its_own_files_and_passes() {
     let said = printed(&output);
     assert_eq!(output.status.code(), Some(0), "{said}");
     assert!(said.contains("running 01-replay-gate/README.md"), "{said}");
-    assert!(said.contains("demos: 1 green, 0 red"), "{said}");
+    assert!(said.contains("demos: 1 green, 1 red"), "{said}");
+}
+
+#[test]
+fn a_green_page_whose_title_is_not_a_task_stops_the_run() {
+    let output = demos("crates/thinkthen/tests/fixtures/demos-title").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("title does not start with"), "{said}");
+    assert!(!said.contains("running"), "{said}");
+}
+
+#[test]
+fn a_green_page_with_no_traps_section_stops_the_run() {
+    let output = demos("crates/thinkthen/tests/fixtures/demos-traps").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("What can go wrong"), "{said}");
+    assert!(!said.contains("running"), "{said}");
+}
+
+#[test]
+fn a_green_page_the_index_leaves_out_stops_the_run() {
+    let output = demos("crates/thinkthen/tests/fixtures/demos-unlisted").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("README.md lists no"), "{said}");
+    assert!(!said.contains("running"), "{said}");
 }
 
 #[test]

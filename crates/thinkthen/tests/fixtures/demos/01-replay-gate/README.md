@@ -1,12 +1,14 @@
-# 01 Replay gate
+# How to gate a step on a recorded answer
 
 Status: green
 
 Verbs: `decide`
 
-This page is not a demo. It is the fixture the demo runner is tested against, written the way a real demo page is written, so `sdlc/scripts/demos` is proved before the first real demo turns green.
+This page is not a demo. It is the fixture the demo runner is tested against, written the way a real how-to page is written, so `sdlc/scripts/demos` is proved before the first real demo turns green.
 
-The recording under `recording/` holds one exchange. Its file name is the digest of the wire shape, the URL, and the request bytes, so the command below finds it with no network. Nothing listens on port 8721, which is how the page shows that a replay opens no connection.
+## Input
+
+`message.txt` is one customer message. The recording under `recording/` holds one exchange. Its file name is the digest of the wire shape, the URL, and the request bytes, so the command below finds it with no network. Nothing listens on port 8721, which is how the page shows that a replay opens no connection.
 
 ## The gate
 
@@ -32,3 +34,11 @@ thinkthen decide 'the customer asks for money back' \
   | jq -c '{replayed: .meta.replayed, model: .meta.model, value: .value}' \
   | mustmatch '{"replayed":true,"model":"local-1","value":true}'
 ```
+
+## What can go wrong
+
+A request the recording lacks is a local failure, exit 5. Exit 4 is a backend failure, and neither code is an answer.
+
+## Related
+
+The real pages live under `demos/`.

@@ -1,20 +1,20 @@
-# 01 Refund gate
+# How to gate a script step on a yes/no answer
 
 Status: green
 
 Verbs: `decide`
 
-A support desk wants one branch in a script. A message that plainly asks for money back goes to the refunds queue, a message that plainly does not goes back to the normal queue, and anything in between waits for a person. The question names one fact that is printed in the message, so the model is being asked what it is good at.
-
-The recording under `recording/` holds the two live exchanges this page replays. The model answered 0.99 on the refund message and 0.02 on the product question, and no block asserts on a probability.
+Use this when a script has to take one branch or another and the thing that decides is the meaning of some text. A support desk reads customer messages and wants the ones that ask for money back to go to the refunds queue. `decide` answers the question and sets the exit code, so the branch is an ordinary shell `if` or `case`.
 
 ## Input
 
 `message.txt` is one customer message that asks for a refund in plain words. `question.txt` is one customer message that asks a product question and mentions no money.
 
-## The gate
+`recording/` holds the two exchanges this page replays, so every command here runs with no network and no key. `record.sh` made them once through `sdlc/scripts/live`. Every probability on this page is illustrative.
 
-`decide` is a shell test. `--quiet` drops the answer from standard output, so the command reads like `test` and needs no redirect.
+## Step 1: read the answer as a shell test
+
+`--quiet` drops the answer from standard output, so the command reads like `test` and needs no redirect.
 
 ```bash
 set -euo pipefail
@@ -42,11 +42,9 @@ else
 fi | mustmatch "normal"
 ```
 
-That `if` is a two-way branch and the desk wants three. With no threshold the cut is 0.5 and nothing is ever unresolved, so a borderline message lands in one of the two queues with no sign that it was close.
+## Step 2: add a third branch for the messages that are not clear
 
-## Three codes, three branches
-
-A band threshold adds the third answer. Exit 0 is yes, 1 is no, and 3 is unresolved. `&& rc=0 || rc=$?` is what captures a non-zero code under `set -e`.
+An `if` gives two branches. With no threshold the cut is 0.5 and nothing is ever unresolved, so a borderline message lands in one of the two queues with no sign that it was close. A band adds the third answer. Exit 0 is yes, 1 is no, and 3 is unresolved. `&& rc=0 || rc=$?` is what captures a non-zero code under `set -e`.
 
 ```bash
 set -euo pipefail
@@ -65,11 +63,9 @@ case $rc in
 esac | mustmatch "refunds"
 ```
 
-The `*` branch matters. Exit 4 is a backend failure and exit 5 is a local one, and neither is an answer about a customer.
+## Step 3: keep the answer for the audit
 
-## Keeping the answer you paid for
-
-The gate above throws the judgment away. A desk that wants to audit its own routing drops `--quiet`, saves the result, and reads the exit code from the same run.
+The gate above throws the judgment away. Drop `--quiet`, save the result, and read the exit code from the same run.
 
 ```bash
 set -euo pipefail
@@ -85,6 +81,18 @@ jq -c '{value, threshold}' "$work/result.json" \
   | mustmatch '{"value":true,"threshold":"0.1:0.9"}'
 jq -r '.question.verb' "$work/result.json" | mustmatch "decide"
 jq -r '.answer.probability | type' "$work/result.json" | mustmatch "number"
+```
+
+`threshold` comes back as the string `0.1:0.9`, and that string works again on the command line. `answer.probability` is how far the message came, which is what a desk reads when it wants the margin behind a no.
+
+## What can go wrong
+
+- **Exit 1 is a no and exit 3 is unresolved.** Under `set -e` a bare `thinkthen decide ...` ends the script on either one. Put the command in an `if`, a `case`, or a `&& rc=0 || rc=$?` list.
+- **Exit 4 is a backend failure and exit 5 is a local one.** Neither is an answer about a customer. The `*` branch of the `case` exists for them. A `case` that only handles 0, 1, and 3 treats a failed request as a normal queue.
+- **Exit 2 is a usage error, and it goes out before any request.** `--quiet` beside `--details` is one, because the gate wants no output and the audit wants the object.
+
+```bash
+set -euo pipefail
 
 thinkthen decide 'Does the customer ask for money back?' \
   --quiet --details --replay recording/ < message.txt \
@@ -92,16 +100,10 @@ thinkthen decide 'Does the customer ask for money back?' \
 printf 'bad=%s\n' "$bad" | mustmatch "bad=2"
 ```
 
-`threshold` comes back as the string `0.1:0.9`, and that string works again on the command line. The saved result says which rule ran.
+- **The model's word never runs anything.** The `case` is code. `decide` moved the exit code and nothing else.
+- **A single cut never says the model is sure.** Exit 1 means the answer did not reach the mark, and a probability of 0.48 and one of 0.02 both come back as a no.
 
-Nothing here acts on the model's word. The `case` is code, and the model only moved the exit code.
+## Related how-tos
 
-Every `thinkthen` line carries `--replay recording/`, so a gate touches no network and reads no key. `record.sh` made the two exchanges once, through `sdlc/scripts/live`.
-
-## What this demo decides
-
-- **The demo confirms the shell test.** `if thinkthen decide ...` with `--quiet` reads the way `grep -q` reads, and it needs no `> /dev/null`. The three codes are a `case` a shell user already knows how to write.
-- **`--quiet` beside `--details` is a usage error, and the demo confirms the rule reads right.** The gate wants no output and the audit wants the object. Asking for both is a mistake the shell should hear about at once.
-- **The default threshold of 0.5 gives the two-way gate a silent failure mode.** The first block routes a borderline message with no sign that it was close, because nothing is unresolved under a single cut. That is the documented rule and the demo does not ask to change it. It asks that the `decide` help say in one line that a three-way gate needs a band, next to the warning about `set -e`.
-- **The page reads its evidence by redirect.** `--input FILE` arrives with the records slice, and every command here redirects standard input until it does. The argument for `--input` over a redirect belongs with that slice.
-- **A single cut has no way to report how close a record came.** Exit 1 means the answer did not reach the mark, and the desk that wants the margin has to drop `--quiet` and read `answer.probability`. The demo does that in the last block. The cost is one saved file per judgment. That is the right price.
+- [How to tell "no" from "could not ask"](../19-no-or-could-not-ask/) reads the failure codes in full.
+- [How to test a script with no network](../27-test-with-no-network/) makes the recording this page replays.

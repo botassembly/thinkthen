@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Title: the export button does nothing\n\nI opened a saved view, clicked Export, and picked CSV. The dialog closed and\nno file arrived. It happened on all three tries this morning.\n","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report say what the person did before the problem appeared?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":318,"output_tokens":21}}
+}

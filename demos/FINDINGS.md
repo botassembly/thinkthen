@@ -35,6 +35,7 @@ ADR 0010 took `segment`, `report`, and the configuration file out of version one
 | `--details` carries `input`, the whole record including what was never sent. A user with megabyte records pays for it on every row to read one probability | 04 | Output, `--details` | No change. The help names the cost | weak |
 | A threshold is measured for one model and nothing on the command line says so | 10, 13 | The threshold | The `--threshold` help says the mark belongs to a model | weak |
 | Under the default cut of 0.5 nothing is ever unresolved, so a two-way `if` routes a borderline message with no sign that it was close | 01 | The threshold | The `decide` help says a three-way gate needs a band, next to the warning about `set -e` | weak |
+| Every page reads its evidence by redirect, because `--input FILE` arrives with the records slice. Whether an option beats a redirect for a single document is still open | 01 | Records | No change now. The records slice answers it | weak |
 
 ## Settled by the specification pages
 

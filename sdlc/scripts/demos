@@ -24,6 +24,24 @@ for page in */README.md; do
 		red=$((red + 1))
 		continue
 	fi
+	# A green page is a how-to, as ADR 0011 rules. The form is the title, the
+	# traps section, and a line in the index, and a red page is never checked.
+	title=$(sed -n 's/^# //p' "$page" | head -1)
+	case "$title" in
+	'How to'*) ;;
+	*)
+		printf 'demos: %s is green, and its title does not start with "How to"\n' "$page" >&2
+		exit 1
+		;;
+	esac
+	if ! grep -q '^## What can go wrong$' "$page"; then
+		printf 'demos: %s is green, and it has no "What can go wrong" section\n' "$page" >&2
+		exit 1
+	fi
+	if ! grep -q -- "$folder/" README.md; then
+		printf 'demos: %s is green, and README.md lists no %s\n' "$page" "$folder" >&2
+		exit 1
+	fi
 	# A green page replays a recording. A folder it names and does not hold
 	# would send the page to a backend, so the run stops here instead.
 	# A page names the folder in its blocks and in its prose, where a backtick

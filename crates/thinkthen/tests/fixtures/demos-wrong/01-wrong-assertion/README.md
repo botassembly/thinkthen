@@ -1,10 +1,12 @@
-# 01 Wrong assertion
+# How to assert the wrong exit code
 
 Status: green
 
 Verbs: `decide`
 
 This page is the fixture a failing demo is tested against. It holds one block, and that block expects the wrong exit code, so the runner has to report it.
+
+## The gate
 
 ```bash
 set -euo pipefail
@@ -15,3 +17,7 @@ thinkthen decide 'the customer asks for money back' \
   < message.txt && rc=0 || rc=$?
 printf 'rc=%s\n' "$rc" | mustmatch "rc=1"
 ```
+
+## What can go wrong
+
+The block asserts `rc=1` and the answer is yes, so `mustmatch` reports one failure.
