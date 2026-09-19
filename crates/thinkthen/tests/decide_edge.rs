@@ -256,21 +256,98 @@ fn a_blank_question_is_a_usage_error() {
     assert_eq!(output.status.code(), Some(2));
 }
 
-#[test]
-fn no_diagnostic_ever_carries_the_key_or_the_evidence() {
-    let secret = "sk-never-printed";
-    let evidence = "The customer wrote something private.";
-    let output = run(
-        &["decide", "asks for a refund", "--url", "ftp://127.0.0.1/v1"],
-        &[("THINKTHEN_API_KEY", secret)],
-        evidence.as_bytes(),
-    )
-    .expect("the compiled binary runs");
+/// The key a secrecy case sets, which no channel may ever repeat.
+const SECRET: &str = "sk-never-printed";
 
-    let message = String::from_utf8_lossy(&output.stderr);
-    assert!(!message.contains(secret), "{message}");
-    assert!(!message.contains(evidence), "{message}");
-    assert_eq!(output.status.code(), Some(2));
+/// The evidence a secrecy case sends, which no channel may ever repeat.
+const PRIVATE: &str = "The customer wrote something private.";
+
+/// Every verb asked over the private evidence, once refused and once failing.
+///
+/// A bad address is refused before a request. A closed port fails after one.
+/// The two together walk the usage path and the backend path of each verb.
+fn secrecy_cases() -> [(&'static str, Vec<&'static str>); 6] {
+    let refused = "ftp://127.0.0.1/v1";
+    [
+        (
+            "decide",
+            vec!["decide", "asks for a refund", "--url", refused],
+        ),
+        (
+            "decide",
+            vec!["decide", "asks for a refund", "--url", CLOSED],
+        ),
+        (
+            "choose",
+            vec![
+                "choose",
+                "which team owns this",
+                "billing",
+                "other",
+                "--url",
+                refused,
+            ],
+        ),
+        (
+            "choose",
+            vec![
+                "choose",
+                "which team owns this",
+                "billing",
+                "other",
+                "--url",
+                CLOSED,
+            ],
+        ),
+        (
+            "score",
+            vec![
+                "score",
+                "how much disruption",
+                "none",
+                "blocked",
+                "--url",
+                refused,
+            ],
+        ),
+        (
+            "score",
+            vec![
+                "score",
+                "how much disruption",
+                "none",
+                "blocked",
+                "--url",
+                CLOSED,
+            ],
+        ),
+    ]
+}
+
+#[test]
+fn no_diagnostic_of_any_verb_ever_carries_the_key_or_the_evidence() {
+    for (verb, arguments) in secrecy_cases() {
+        let output = run(
+            &arguments,
+            &[
+                ("THINKTHEN_API_KEY", SECRET),
+                ("THINKTHEN_TEST_RETRY_WAIT_MS", "1"),
+            ],
+            PRIVATE.as_bytes(),
+        )
+        .expect("the compiled binary runs");
+
+        for channel in [&output.stderr, &output.stdout] {
+            let said = String::from_utf8_lossy(channel);
+            assert!(!said.contains(SECRET), "{verb}: {said}");
+            assert!(!said.contains(PRIVATE), "{verb}: {said}");
+        }
+        assert!(
+            matches!(output.status.code(), Some(2 | 4)),
+            "{verb}: {:?}",
+            output.status.code()
+        );
+    }
 }
 
 #[test]
