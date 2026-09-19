@@ -91,5 +91,5 @@ true"
 ## Related how-tos
 
 - [How to tune a question file and use the same file in the gate](../41-tune-a-question-file/) measures a wording against labeled cases.
-- [How to tell "not stated" from "false"](../20-not-stated-or-false/) gives the third answer its own label instead.
+- [How to pick a threshold from labeled cases](../13-pick-a-threshold/) tunes the cut instead of the wording.
 - [How to gate a script step on a yes/no answer](../01-refund-gate/) is the plain form with no texts.
