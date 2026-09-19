@@ -25,6 +25,8 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
         ModelName::new("local-1").ok()?,
         vec![Question::Decide {
             text: QuestionText::new(question).ok()?,
+            yes: None,
+            no: None,
         }],
     )
     .ok()?;
@@ -178,7 +180,9 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#"{{"schema":"thinkthen.result/1","value":true,"#,
                 r#""question":{{"verb":"decide","text":"asks for a refund"}},"#,
                 r#""answer":{{"kind":"yes_no","probability":0.92}},"threshold":0.5,"#,
-                r#""meta":{{"tool":"thinkthen 0.0.1","url":"{url}","#,
+                r#""meta":{{"tool":"thinkthen 0.0.1","#,
+                r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
+                r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
                 r#""replayed":false}}}}"#,
                 "\n",

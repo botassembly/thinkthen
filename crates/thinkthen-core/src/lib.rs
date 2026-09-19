@@ -36,7 +36,7 @@ pub use crate::plan_document::PlanDocument;
 pub use crate::pointer::{Pointer, PointerError};
 pub use crate::question::{Labels, LabelsError, Question};
 pub use crate::question_file::{
-    QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, resolve,
+    Described, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, resolve,
 };
 pub use crate::records::{Framing, Reading, ReadingError, Record, RecordError};
 pub use crate::render::{RenderError, json_line};

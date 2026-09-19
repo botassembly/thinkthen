@@ -56,6 +56,9 @@ impl fmt::Display for Verb {
     }
 }
 
+/// A list of labels, each with the description that rides beside it or none.
+pub type Described = Vec<(String, Option<String>)>;
+
 /// Every key any question file may hold, so an unknown one is told apart.
 const EVERY_KEY: [&str; 9] = [
     "decide",
@@ -144,7 +147,7 @@ pub enum QuestionFileError {
         wanted: &'static str,
     },
     /// A text value arrived blank.
-    #[error("{}{error}", named(*.origin, *.key))]
+    #[error("{}{error}", named(*.origin, .key))]
     Blank {
         /// Where the value came from.
         origin: Source,
@@ -165,7 +168,7 @@ pub enum QuestionFileError {
     #[error("{}`choose` takes a single cut and never a band", named(*.0, "threshold"))]
     BandOnChoose(Source),
     /// The options or the levels are not a list the verb takes.
-    #[error("{}{error}", named(*.origin, *.key))]
+    #[error("{}{error}", named(*.origin, .key))]
     Labels {
         /// Where the list came from.
         origin: Source,
@@ -175,7 +178,7 @@ pub enum QuestionFileError {
         error: LabelsError,
     },
     /// A pointer is not a JSON Pointer.
-    #[error("{}`{typed}`: {error}", named(*.origin, *.key))]
+    #[error("{}`{typed}`: {error}", pointed(*.origin, .key))]
     Pointer {
         /// Where the pointer came from.
         origin: Source,
@@ -205,6 +208,18 @@ fn named(source: Source, key: &str) -> String {
     }
 }
 
+/// Name the source and the key a pointer is under, or say nothing.
+///
+/// A pointer sits inside its own backquotes in the message, so the option
+/// alone leads the line and no colon stands between the two.
+fn pointed(source: Source, key: &str) -> String {
+    match source {
+        Source::CommandLine => format!("--{key} "),
+        Source::File => format!("the question file's `{key}` "),
+        Source::Default => String::new(),
+    }
+}
+
 impl QuestionFileError {
     /// Where the value at fault came from, which fixes the exit code.
     #[must_use]
@@ -227,7 +242,7 @@ pub struct QuestionFile {
     text: QuestionText,
     yes: Option<Meaning>,
     no: Option<Meaning>,
-    labels: Option<Vec<(String, Option<String>)>>,
+    labels: Option<Described>,
     threshold: Option<Threshold>,
     on: Option<Vec<Pointer>>,
     model: Option<ModelName>,
@@ -339,10 +354,7 @@ fn model_in(value: &Json) -> Result<Option<ModelName>, QuestionFileError> {
 }
 
 /// The options or the levels the file holds, in the order it holds them.
-fn labels_in(
-    value: &Json,
-    verb: Verb,
-) -> Result<Option<Vec<(String, Option<String>)>>, QuestionFileError> {
+fn labels_in(value: &Json, verb: Verb) -> Result<Option<Described>, QuestionFileError> {
     let (key, wanted) = match verb {
         Verb::Decide => return Ok(None),
         Verb::Choose => (
@@ -444,96 +456,4 @@ mod resolve;
 pub use crate::question_file::resolve::{Resolved, Sources, Typed, resolve};
 
 #[cfg(test)]
-mod tests {
-    use super::{QuestionFile, QuestionFileError as Refused, Source, Verb};
-    use crate::json::JsonError;
-    use crate::text::BlankTextError;
-    use crate::threshold::ThresholdError;
-
-    fn refused(text: &str) -> Refused {
-        QuestionFile::parse(text).expect_err("a refused question file")
-    }
-
-    #[test]
-    fn every_refusal_of_the_grammar_names_the_key_at_fault() {
-        let cases: [(&str, Refused, &str); 12] = [
-            ("not json", Refused::NotJson(JsonError::Syntax), "not JSON"),
-            ("[1,2]", Refused::NotAnObject, "one JSON object"),
-            (r#"{"model":"m"}"#, Refused::NoVerb, "`decide`"),
-            (
-                r#"{"decide":"a","choose":"b"}"#,
-                Refused::TwoVerbs("decide", "choose"),
-                "`decide` and `choose`",
-            ),
-            (
-                r#"{"decide":"a","nonsense":1}"#,
-                Refused::UnknownKey("nonsense".to_owned()),
-                "nonsense",
-            ),
-            (
-                r#"{"choose":"a","options":["x","y"],"true":"t"}"#,
-                Refused::KeyNotForVerb {
-                    key: "true".to_owned(),
-                    verb: Verb::Choose,
-                },
-                "takes no key `true`",
-            ),
-            (
-                r#"{"score":"a","levels":["x","y"],"threshold":0.5}"#,
-                Refused::KeyNotForVerb {
-                    key: "threshold".to_owned(),
-                    verb: Verb::Score,
-                },
-                "takes no key `threshold`",
-            ),
-            (
-                r#"{"decide":7}"#,
-                Refused::Shape {
-                    key: "decide",
-                    wanted: "is text",
-                },
-                "`decide` in the question file is text",
-            ),
-            (
-                r#"{"decide":"  "}"#,
-                Refused::Blank {
-                    origin: Source::File,
-                    key: "decide",
-                    error: BlankTextError::QuestionText,
-                },
-                "the question file's `decide`",
-            ),
-            (
-                r#"{"choose":"a","options":"x"}"#,
-                Refused::Shape {
-                    key: "options",
-                    wanted: "is a list of labels, or a map from each label to its description",
-                },
-                "map from each label",
-            ),
-            (
-                r#"{"decide":"a","threshold":90}"#,
-                Refused::Threshold {
-                    origin: Source::File,
-                    error: ThresholdError::CutOutOfRange,
-                },
-                "the question file's `threshold`",
-            ),
-            (
-                r#"{"decide":"a","on":"body"}"#,
-                Refused::Pointer {
-                    origin: Source::File,
-                    key: "on",
-                    typed: "body".to_owned(),
-                    error: crate::pointer::PointerError::NotAPointer,
-                },
-                "the question file's `on`",
-            ),
-        ];
-        for (text, expected, said) in cases {
-            let refusal = refused(text);
-            assert_eq!(refusal, expected, "{text}");
-            assert!(refusal.to_string().contains(said), "{refusal} :: {text}");
-        }
-    }
-}
+mod tests;
