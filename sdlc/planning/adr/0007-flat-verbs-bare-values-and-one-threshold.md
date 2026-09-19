@@ -177,6 +177,12 @@ Building and reviewing ticket 0005 found more. None changes a ruling.
 - `-h` prints the short help, and `--help` prints the long help with the advanced options.
 - Demo 01 reads its evidence by redirecting standard input. `--input FILE` arrives with `--lines`, `--jsonl`, and `--field` in the records slice, because those four settle each other.
 
+Building and reviewing ticket 0009 found more. None changes a ruling.
+
+- The tool computes the bare value of `score` itself: the sum of each level's probability times its position, from the probabilities the backend returned. It never reads the vendor's own score field. The first live answer showed why: the vendor printed 1.86 beside probabilities that sum to 1.87. A number that agrees with the printed probabilities is the one a user can check. The sum is rounded at twelve decimals, because float addition printed `1.9000000000000001`. Ian can overturn this cheaply.
+- The vendor returns the probabilities of a choice keyed by option name in no fixed order, and the probabilities of a score keyed by the level's position as a string from "0". The adapter rebuilds both in the order the user gave.
+- `--raw` beside `--details` or `--quiet` is a usage error. `score` refuses `--threshold`, `--quiet`, and `--raw`. A `choose` with no cut prints `"threshold": null`.
+
 ## What this replaces
 
 - ADR 0003: the grammar `thinkthen decide VERB`. The rest of ADR 0003 stands.
