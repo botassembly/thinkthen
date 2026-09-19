@@ -109,10 +109,10 @@ Record the missing case and the test passes again. A recording is grown one case
 - **Any change to the request makes a new entry.** The digest covers the question text, the evidence bytes, the model name, and the address. Change a word in the question or add a line to the input file and the old entry no longer answers. `--threshold`, `--quiet`, and `--details` change nothing that is sent, so they never cost a new entry.
 - **A recording holds the evidence.** The request body carries whatever the script read. Record only text that may be kept, and keep a recording of private input out of version control.
 - **A failed request is never recorded.** Only an exchange that came back and decoded is written, so a folder never grows an entry that replays an error.
-- **`--record` and `--replay` on the same folder is a cache.** An entry that exists is replayed and one that is absent goes to the backend. That is useful while a recording is being grown, and it is the wrong thing for a gate, because a gate must never reach a backend.
 - **`--dry-run` beside either option is a usage error, exit 2.** A plan sends nothing and reads nothing.
 
 ## Related how-tos
 
 - [How to gate a script step on a yes/no answer](../01-refund-gate/) is the shape of the script being tested.
-- [How to tell "no" from "could not ask"](../19-no-or-could-not-ask/) reads exit 5 and the other failures in full.
+- [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) reads exit 5 and the other failures in full.
+- [How to resume a long run that stopped](../12-keep-going/) points `--record` and `--replay` at one folder and pays for the rest alone.
