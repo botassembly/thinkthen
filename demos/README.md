@@ -16,7 +16,7 @@ Every page closes with "What this demo decides". That section says what the demo
 
 ## Red and green
 
-A demo starts **red**. Nothing under `demos/` runs today, because no verb in ADR 0007 is built and `find` is not yet designed. A red demo is a plan.
+A demo starts **red**. Nothing under `demos/` runs today, because no verb in ADR 0007 is built. A red demo is a plan.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. A green demo is a regression test and a page of documentation at once. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. A green page that names a `--replay` folder it does not hold stops the run.
 
