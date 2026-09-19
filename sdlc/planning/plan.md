@@ -58,13 +58,12 @@ Spent so far: 249,292 tokens, which is about one cent. `sdlc/live-tokens` holds 
 
 ## Levers left open
 
-- **Hold.** Ian said on 2026-09-19 to start no new ticket once the running work finishes. Ticket 0012 lands. Tickets 0013, 0014, and 0015 are written and wait for his word, and so does the pass over the specification pages that ADR 0014 names.
-- **ADR 0014.** The agent decided six items from the live probe, and Ian can overturn each: `find` is built with a `none` option, the cut stays on the winning probability, `score` loses its warning about rating, option order stays fixed once a cut is tuned, the pages say that a planted claim moves the judge, and the recipes learn to read a pick before `report` is judged again.
+- **Hold.** Ian said on 2026-09-19 to start no new feature ticket. Tickets 0013, 0014, and 0015 are written and wait for his word. He then approved one pass over the pages, which is ticket 0016, and a reading of the whole repository for coherence after it.
+- **ADR 0014.** Ian accepted item 1, `find`. The agent decided the other five items from the live probe, and Ian can overturn each: the cut stays on the winning probability, `score` loses its warning about rating, option order stays fixed once a cut is tuned, the pages say that a planted claim moves the judge, and the transforms learn to read a pick before `report` is judged again.
 - **The first verdict on `report`.** Ticket 0008's record judges six recipes fine as files. The builder judged the comparison of two runs clumsy enough to earn a command. The reviewer agreed it is the clumsiest and judged that showing built-in recipes, option B of ADR 0012, fixes it far more cheaply. The second verdict comes with slice 10b.
-- **ADR 0013.** Proposed. The question file is the one file the tool runs directly, a runtime such as botassembly lowers its stages to it, JSON stays the only format, and a closed block of rules in that file is tested by writing the triage demo twice.
-- **ADR 0012.** Proposed. A recipe is a folder, the tool at most lists and shows built-in recipes, and it never runs them. Ian rules after the recipes have been tried as files.
-
-- **The public release.** Ian rules on the timing, the license, and whether to talk to the vendor first. That is question 10 of `design-study.md`.
+- **ADR 0013.** Proposed, and Ian has two things to rule on. The first is whether a closed block of rules in the question file is tested by writing the triage how-to twice. The second is the amendment: every verb reads one named question from a question file with `--from FILE --name NAME`, so an eval and a gate share one file. The rest of the ADR changes nothing: the question file is the one file the tool runs directly, a runtime lowers its stages to it, and JSON stays the only format.
+- **ADR 0012.** Accepted as amended by ADR 0015. Transforms are files now. `transform list` and `transform show` enter when three families of transform exist.
+- **The public release.** Ian ruled MIT and ruled that no talk with the vendor is owed. The timing is still his.
 - **Ideas carried from the design captures.** `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md` lists advice, recipe material, and small input rules, each with the slice that picks it up.
 - **The review leftovers** in `sdlc/issues/2026-09-19-review-leftovers-from-the-core-tickets.md`. Seven still wait, with reasons in `sdlc/records/0005-reshape-decide-to-the-flat-surface.md`.
 - Registration with Factory 2, and the five `sdlc/project/` scripts that come with it.

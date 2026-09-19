@@ -1,6 +1,6 @@
 # ADR 0012: A recipe is a folder, and the tool at most shows it
 
-- Status: Proposed
+- Status: Accepted as amended by Ian on 2026-09-19. ADR 0015 item 2 records the amendment: the thing is called a transform, the later commands are `transform list` and `transform show`, and the tool never starts `jq`. The text below keeps the word "recipe" as it was written
 - Date: 2026-09-19
 
 An agent proposal in answer to two questions from Ian. Can a recipe mix configuration (the questions, the options, the thresholds) with `jq` steps? Is a command with subcommands for managing and viewing recipes a good idea? It becomes Accepted on his word, after the recipes have been tried as files, as ADR 0010 requires.

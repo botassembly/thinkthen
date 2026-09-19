@@ -1,6 +1,6 @@
 # ADR 0013: The question file is the one direct file
 
-- Status: Proposed
+- Status: Proposed. Ian had not read it when he ruled on the others, and the agent explained it on 2026-09-19. The amendment at the end adds his own question about reuse. The text keeps the word "recipe" as it was written, and ADR 0015 renames it
 - Date: 2026-09-19
 
 An agent proposal in answer to three questions from Ian. Can the tool run a recipe file directly? Would that be the way an assembly runtime such as botassembly uses the tool? Which format should such a file take: JSON, TOML, or Markdown with frontmatter? It becomes Accepted on his word. Nothing is built from it until then.
@@ -33,3 +33,26 @@ Three facts bear on the answer.
 ## Consequences
 
 Nothing changes now. The roadmap gains the rules block as a held idea with this test. The triage demo's ticket writes both forms. A note for the assembly runtime goes to its own repository when Ian takes up that work.
+
+## Amendment, 2026-09-19: a verb reads one named question from the file
+
+Ian asked how a user keeps a set pattern for `decide` or `choose`, with its options and its cut, and uses it again and again. He asked whether the answer is a Bash script.
+
+Today the answer is a Bash function or a script. That works, and it has one weakness. How-to 13 tunes a cut on labeled cases. The user then types the question and the cut into a script by hand, and an eval cannot read a Bash function. The eval and the gate can drift apart, and nothing fails when they do.
+
+Proposed, as item 6 of this decision: **every verb that takes a question can read one from a question file.**
+
+```sh
+thinkthen decide --from checks.json --name refund_request < message.txt
+thinkthen annotate checks.json --jsonl < labeled-cases.jsonl
+```
+
+- `--from FILE` names the question file, and `--name NAME` picks one question in it. A file with one question needs no `--name`.
+- The verb must match the question's type. `filter` and `rank` take a `decide` question.
+- The question's options, levels, cut, and `on` apply as they do under `annotate`. The output and the exit code are the verb's own.
+- A question typed on the command line beside `--from` is a usage error, and so is `--threshold` beside `--from`. A user changes the cut in the file with `jq`, and the file's digest changes with it.
+
+The file is then the one saved form for every verb. The eval runs `annotate` over labeled cases, the gate runs `decide --from` on the same file, and the measurement applies to the gate because both read the same words and the same cut. The parser exists once `annotate` lands, so the cost is two options on five commands. A how-to proves the need: tune a cut in an eval, then ship the same file in the gate.
+
+The agent recommends it. It waits for Ian's word, and it would land after ticket 0015.
+

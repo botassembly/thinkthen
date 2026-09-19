@@ -1,6 +1,6 @@
 # ADR 0014: What the live probe changed
 
-- Status: Decided by the agent on 2026-09-19 under the rulings of ADR 0010. Ian can overturn each item cheaply, because no item has code behind it yet
+- Status: Decided by the agent on 2026-09-19 under the rulings of ADR 0010. Ian accepted item 1, `find`, the same day, and ADR 0015 records it. Ian can overturn each item cheaply, because no item has code behind it yet
 - Date: 2026-09-19
 
 ADR 0010 ruled that a live probe runs before more of the design is trusted, and that `find` stays Draft until a live run compares it with `rank --top 1`. Ticket 0011 ran six probes through `sdlc/scripts/live`. `sdlc/records/0011-the-live-probe.md` holds every number, and an independent reviewer recomputed each one from the committed rows. Every case is made up, and every count is small. The probes spent 214,997 input tokens, and the ledger stands at 247,839 of 476,000,000.
