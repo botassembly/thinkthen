@@ -13,6 +13,8 @@ A backend is a URL and an adapter. Nothing in `thinkthen` is tied to one vendor.
 | Model | The model name sent in the request | `--model` | `THINKTHEN_MODEL` |
 | Key variable | The name of the environment variable that holds the key | `--key-env` | `THINKTHEN_KEY_ENV` |
 
+A value that is empty or holds only white space is a usage error for every one of these.
+
 `--backend NAME` or `THINKTHEN_BACKEND` picks a named profile. A flag beats an environment variable, and an environment variable beats the profile.
 
 An ad-hoc backend is a URL, an adapter, and a model given together. A URL names a server, an adapter names the language it speaks, and a model names what answers, so a new URL with a borrowed adapter or model is a guess. A URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model, which is how a user pins a version. An ad-hoc backend has no name, and results report its `backend` as `null`. Named profiles come from a configuration file in a later version. One profile is built in:
@@ -80,6 +82,8 @@ The response body:
 | Several questions over one evidence | One `questions` map with one entry per question. One request, one `state` |
 
 Question names are `q1`, `q2`, and onward in plan order. The vendor does not show names to the model.
+
+The names carry the order. The order of keys inside the `questions` object and the `answers` object carries no meaning. Decode ignores an answer whose name the plan lacks, and it ignores any field it does not use, such as the vendor's `confidence`. Decode refuses a response whose `model` is absent or blank, because a result must name the model that answered.
 
 The four Draft rows above name what an adapter must produce for `decide which` and `decide how`. The exact response field names for a `choice` answer and a `score` answer land with their fixtures under `fixtures/systemone/`, and this table stops being Draft then. An adapter that cannot supply a probability per option or per level refuses the reply, and the exit code is 4. It never invents one.
 
