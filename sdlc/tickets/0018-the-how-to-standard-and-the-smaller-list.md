@@ -6,7 +6,7 @@ opens: demos README.md sdlc/scripts/demos sdlc/planning/documentation-plan.md sd
 
 # 0018: The how-to standard and the smaller list
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
