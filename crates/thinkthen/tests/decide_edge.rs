@@ -3,6 +3,8 @@
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
+use thinkthen_core::adapters::built_in::DEFAULT_MODEL;
+
 /// A port nothing listens on, so a connection would be refused at once.
 const CLOSED: &str = "http://127.0.0.1:1/v1";
 
@@ -381,6 +383,13 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     for gone in ["--profile", "--adapter", "--key-env", "--config"] {
         assert!(!long.contains(gone), "{gone} is still in {long}");
     }
+    // The help states the model a run defaults to, and the adapter owns that
+    // value. Reading it from the constant fails this case if the copy in the
+    // help rots, which is the one place the default model is written twice.
+    assert!(
+        long.contains(&format!("[default: {DEFAULT_MODEL}]")),
+        "the long help does not name the default model {DEFAULT_MODEL}: {long}"
+    );
     assert!(!long.contains("THINKTHEN_TEST_RETRY_WAIT_MS"), "{long}");
     assert!(long.contains("set -e"), "the help warns about set -e");
 }
