@@ -6,7 +6,7 @@ opens: recipes transforms demos probes spec specification README.md AGENTS.md LI
 
 # 0016: Names, pages, the license, and the push check
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
