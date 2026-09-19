@@ -37,12 +37,13 @@ fn sent(arguments: &[&str], answer: &str) -> Option<Vec<u8>> {
         b"Refund me please.",
     )
     .ok()?;
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    let printed = String::from_utf8_lossy(&output.stdout).into_owned();
+    let said = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert_eq!(output.status.code(), Some(0), "{said}");
+    // Every case on this page runs with a key set, so each one is also a
+    // secrecy case over the paths the question file opened.
+    assert!(!printed.contains("sk-test-value"), "{printed}");
+    assert!(!said.contains("sk-test-value"), "{said}");
     listener.requests().into_iter().next().map(|one| one.body)
 }
 
