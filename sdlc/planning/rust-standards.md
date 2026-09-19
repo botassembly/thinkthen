@@ -60,6 +60,9 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 - `spec/*.md` files are executable examples of the command line, run by `mustmatch`. They are the top rung, and they double as the user documentation.
 - The binary reads one hidden, test-only variable, `THINKTHEN_TEST_RETRY_WAIT_MS`, so a retry test never sleeps for real seconds. Help never shows it.
 - Live calls to a paid backend sit outside the ladder in `sdlc/scripts/live`. They run by hand, under a token cap, with Ian's authorization.
+- A claim of secrecy is tested over every command, on the path that succeeds and on each path that fails, and it reads every `Debug` line. One command does not stand for the rest.
+- A test that claims nothing was sent counts the requests on the loopback listener. An exit code and a `--dry-run` prove nothing about a live path.
+- A script that checks something runs from a rung. `probes/replay-check.sh` rotted for a day because no rung ran it, and `spec` runs it now.
 
 ## The ladder
 
