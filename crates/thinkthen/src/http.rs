@@ -129,13 +129,19 @@ impl From<Failure> for Attempt {
     }
 }
 
-/// The wait a `Retry-After` header asks for, in the delta-seconds form.
+/// The wait the two retry headers ask for, capped at [`MAX_RETRY_WAIT`].
 ///
-/// `specification/backends.md` takes the seconds form alone. The HTTP-date
-/// form needs a clock and a date reader, and neither belongs here.
-fn honored(header: Option<&str>) -> Option<Duration> {
-    let seconds: u64 = header?.trim().parse().ok()?;
-    Some(Duration::from_secs(seconds).min(MAX_RETRY_WAIT))
+/// The backend sends `retry-after-ms` in whole milliseconds beside the standard
+/// `retry-after` in whole seconds, and the finer one is read first.
+/// `specification/backends.md` takes those two forms alone. The HTTP-date form
+/// of `retry-after` needs a clock and a date reader, and neither belongs here.
+fn honored(millis: Option<&str>, seconds: Option<&str>) -> Option<Duration> {
+    let asked = |header: Option<&str>| header?.trim().parse::<u64>().ok();
+    let wait = match asked(millis) {
+        Some(number) => Duration::from_millis(number),
+        None => Duration::from_secs(asked(seconds)?),
+    };
+    Some(wait.min(MAX_RETRY_WAIT))
 }
 
 /// Post the request once.
@@ -152,11 +158,13 @@ fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Attempt> {
         .map_err(|error| Attempt::from(Failure::Transport(error.to_string())))?;
     let status = response.status().as_u16();
     if !(200..300).contains(&status) {
-        let asked = response
-            .headers()
-            .get("retry-after")
-            .and_then(|value| value.to_str().ok())
-            .and_then(|value| honored(Some(value)));
+        let header = |name: &str| {
+            response
+                .headers()
+                .get(name)
+                .and_then(|value| value.to_str().ok())
+        };
+        let asked = honored(header("retry-after-ms"), header("retry-after"));
         return Err(Attempt {
             failure: Failure::Status(status),
             asked,
@@ -215,7 +223,24 @@ mod tests {
             (None, None),
         ];
         for (header, expected) in cases {
-            assert_eq!(honored(header), expected, "{header:?}");
+            assert_eq!(honored(None, header), expected, "{header:?}");
+        }
+    }
+
+    #[test]
+    fn the_milliseconds_header_is_read_first_and_the_seconds_header_follows_it() {
+        let cases = [
+            (Some("250"), None, Some(Duration::from_millis(250))),
+            (Some("1500"), Some("9"), Some(Duration::from_millis(1500))),
+            (Some("600000"), None, Some(Duration::from_secs(60))),
+            // A milliseconds header nobody can read leaves the seconds one.
+            (Some("soon"), Some("3"), Some(Duration::from_secs(3))),
+            (Some(""), Some("3"), Some(Duration::from_secs(3))),
+            (Some("-5"), None, None),
+            (None, None, None),
+        ];
+        for (millis, seconds, expected) in cases {
+            assert_eq!(honored(millis, seconds), expected, "{millis:?} {seconds:?}");
         }
     }
 }

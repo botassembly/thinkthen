@@ -147,16 +147,21 @@ fn every_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
     let output = demos("demos").expect("the runner runs");
 
     let said = printed(&output);
+    // The counts move with every ticket that turns a page green, so the run
+    // names the pages instead. A page that failed would leave a non-zero code.
     assert_eq!(output.status.code(), Some(0), "{said}");
-    assert!(said.contains("demos: 13 green, "), "{said}");
-    assert!(said.contains("running 01-refund-gate/README.md"), "{said}");
-    assert!(said.contains("running 04-review-queue/README.md"), "{said}");
-    assert!(
-        said.contains("running 19-no-or-could-not-ask/README.md"),
-        "{said}"
-    );
-    assert!(
-        said.contains("running 27-test-with-no-network/README.md"),
-        "{said}"
-    );
+    assert!(said.contains(" green, "), "{said}");
+    for page in [
+        "01-refund-gate",
+        "04-review-queue",
+        "12-keep-going",
+        "19-no-or-could-not-ask",
+        "21-options-from-the-record",
+        "27-test-with-no-network",
+    ] {
+        assert!(
+            said.contains(&format!("running {page}/README.md")),
+            "{said}"
+        );
+    }
 }
