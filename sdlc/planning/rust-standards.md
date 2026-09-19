@@ -1,4 +1,4 @@
-# Rust standards for thinkn
+# Rust standards for thinkthen
 
 Written 2026-09-18 from a survey of the ten Rust repositories in Ian's workspace and from his Rust ideal state. Ian writes no Rust and cannot review it. Gates judge the code. Every rule below names the tool that enforces it. A rule with no tool is listed under "Not yet enforced" and counts as a gap.
 
@@ -9,14 +9,14 @@ Written 2026-09-18 from a survey of the ten Rust repositories in Ian's workspace
 - The others share a weaker copied lint block. Several call the size ratchet and never declared a ceiling, so it passes quietly. Denying `unwrap` alone moved the panics into `expect`.
 - No repository uses property tests, snapshot tests, or a mock HTTP crate. The Rust ideal state asks for property tests on parsers.
 
-`thinkn` starts from the strict repository's posture on the first commit. Adopting strictness later costs more than starting with it.
+`thinkthen` starts from the strict repository's posture on the first commit. Adopting strictness later costs more than starting with it.
 
 ## Layout
 
 - One Cargo workspace, resolver 3, edition 2024, an exact `rust-version`. The lint table sits at the workspace root and every crate inherits it. Enforced by: `lint` verifies that each crate sets `lints.workspace = true`.
 - Two crates, split on a real dependency direction.
-  - `crates/thinkn-core` is a pure library. It holds the question types, the wire format, the plan, the acceptance policy, the framing parsers, and the question-file grammar. It touches no file, no environment variable, no socket, no clock, and no process. Enforced by: a `clippy.toml` in that crate bans those methods and types, and the crate root forbids the two lints.
-  - `crates/thinkn` is the binary. It owns arguments, files, the environment, HTTP, time, and exit codes. It parses at the edge and hands typed values inward.
+  - `crates/thinkthen-core` is a pure library. It holds the question types, the wire format, the plan, the acceptance policy, the framing parsers, and the question-file grammar. It touches no file, no environment variable, no socket, no clock, and no process. Enforced by: a `clippy.toml` in that crate bans those methods and types, and the crate root forbids the two lints.
+  - `crates/thinkthen` is the binary. It owns arguments, files, the environment, HTTP, time, and exit codes. It parses at the edge and hands typed values inward.
 - `rust-toolchain.toml` pins one exact release with the `minimal` profile and exactly `clippy` and `rustfmt`. Enforced by: `lint` parses the file.
 - `rustfmt.toml` holds `style_edition = "2024"` and nothing else.
 
@@ -54,7 +54,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 
 - Red first. A test fails for the stated reason before the code exists.
 - Unit tests sit beside pure code in the core and are table-driven.
-- Integration tests under `crates/thinkn/tests/` run the compiled binary and see only arguments, standard input, standard output, standard error, and the exit code.
+- Integration tests under `crates/thinkthen/tests/` run the compiled binary and see only arguments, standard input, standard output, standard error, and the exit code.
 - No gate touches the network. Tests replay recorded responses from a fixture directory. One test helper serves canned responses from a loopback listener to prove the request bytes. It uses the standard library only.
 - Property tests cover every parser and round trip: JSON Pointer, the question file, record framing, the wire format. `proptest` arrives as a development dependency with the first parser.
 - `spec/*.md` files are executable examples of the command line, run by `mustmatch`. They are the top rung, and they double as the user documentation.

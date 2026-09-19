@@ -1,14 +1,14 @@
-# thinkn design study
+# thinkthen design study
 
 **A study. Nothing here is ruled.** Written 2026-09-18 from seven design captures Ian made in chats with an AI, from a survey of the Rust repositories in his workspace, and from three measurements of a decider model taken the same day. Section 9 lists what Ian has to rule on. Decisions an agent already made are ADRs under `adr/`.
 
-## 1. What thinkn is
+## 1. What thinkthen is
 
-`thinkn` puts a decider model in the shell. A decider model never writes text. It reads a state, answers a typed question, and returns probabilities. The question types are yes/no, pick one from a list, and rate on a scale. TypeSafe's Jev is the first decider model. Others will follow, hosted and local.
+`thinkthen` puts a decider model in the shell. A decider model never writes text. It reads a state, answers a typed question, and returns probabilities. The question types are yes/no, pick one from a list, and rate on a scale. TypeSafe's Jev is the first decider model. Others will follow, hosted and local.
 
-The division of labor is fixed. The shell sequences programs and acts on files. `jq` reshapes data by rule. `thinkn` judges meaning and does nothing else. It never runs a command, never edits a file it was not asked to write, and never interprets free text as an instruction.
+The division of labor is fixed. The shell sequences programs and acts on files. `jq` reshapes data by rule. `thinkthen` judges meaning and does nothing else. It never runs a command, never edits a file it was not asked to write, and never interprets free text as an instruction.
 
-The name reads as "think 'n decide". Families of commands sit under the name: `thinkn decide` first, `thinkn resolve` and others later if they earn a place.
+A command reads as a sentence: think, then decide. Families of commands sit under the name: `thinkthen decide` first, `thinkthen resolve` and others later if they earn a place.
 
 ## 2. How the design grew
 
@@ -46,7 +46,7 @@ These hold across the captures and this study keeps them.
 
 | Question | The captures say | This study proposes |
 | --- | --- | --- |
-| The name | `decide`, then `sem`, then Ian's `thinkn` | `thinkn`. The name `think` is taken on crates.io. `thinkn` is free there and in the organization |
+| The name | `decide`, then `sem` | `thinkthen`, ruled by Ian on 2026-09-18. It is free on crates.io and in the organization |
 | The result shape | A flat object in one capture. A nested three-layer object in two | The nested object, with a schema version |
 | Output selection | `--annotate` and `--details` in one capture. `--emit` with named values in two | `--emit` |
 | Input kinds | `text`, `json`, `jsonl`, `lines`. CSV and TSV appear only in the enrichment capture | One enum that includes CSV and TSV when enrichment lands |
@@ -76,12 +76,12 @@ One family, six verbs, and the machinery that makes a pass mark honest.
 
 | Slice | What it delivers |
 | --- | --- |
-| 1 | `thinkn decide if CONDITION` over text on standard input. One backend. The three-layer JSON result. `--min-prob`, `--status`, the exit-code table, `--plan` |
-| 2 | `thinkn decide which OPTION...` and `--from FILE`. An abstain option and a minimum gap |
+| 1 | `thinkthen decide if CONDITION` over text on standard input. One backend. The three-layer JSON result. `--min-prob`, `--status`, the exit-code table, `--plan` |
+| 2 | `thinkthen decide which OPTION...` and `--from FILE`. An abstain option and a minimum gap |
 | 3 | `--record DIR` and `--replay DIR`. One content-addressed directory serves as recording, replay source, and cache. The test suite replays fixtures and needs no network |
 | 4 | JSONL and lines framing, `--on`, `--id`, and `where`. Bounded parallel requests with input order kept. A request cap, a rate limit, and a token ledger |
-| 5 | `thinkn decide run FILE`. A saved question file holds several questions over one state and sends them in one request |
-| 6 | `thinkn eval FILE --cases FILE`. It reports wrong accepts and wrong rejects at each pass mark for one backend and model version |
+| 5 | `thinkthen decide run FILE`. A saved question file holds several questions over one state and sends them in one request |
+| 6 | `thinkthen eval FILE --cases FILE`. It reports wrong accepts and wrong rejects at each pass mark for one backend and model version |
 | 7 | `rank` and `how` |
 | 8 | `--as NAME` enrichment for JSONL, then CSV and TSV |
 
@@ -104,11 +104,11 @@ On speed. A hosted decider answers in one to two tenths of a second and caps req
 
 ## 8. How it fits
 
-- **Botassembly.** A botassembly `gate` is a program that judges a stage's output. A proposed `decide` program would answer a `CHOOSE` or a `LOOP`. Each becomes a two-line script that calls `thinkn`. The option list in a saved question file has the same shape as the body of a `CHOOSE.md`, so `--from CHOOSE.md` can work with neither project knowing the other. If the runtime later gains a decider setting, it can run `thinkn` and carry no backend code of its own.
-- **Bench.** A checker is an executable that prints a score. A checker that wraps `thinkn decide if` adds a judged check that abstains when unsure.
+- **Botassembly.** A botassembly `gate` is a program that judges a stage's output. A proposed `decide` program would answer a `CHOOSE` or a `LOOP`. Each becomes a two-line script that calls `thinkthen`. The option list in a saved question file has the same shape as the body of a `CHOOSE.md`, so `--from CHOOSE.md` can work with neither project knowing the other. If the runtime later gains a decider setting, it can run `thinkthen` and carry no backend code of its own.
+- **Bench.** A checker is an executable that prints a score. A checker that wraps `thinkthen decide if` adds a judged check that abstains when unsure.
 - **Small tools.** A prose lint, an inbox sweep, and a Markdown fixer become shell scripts over `where` and `which`. None needs its own program.
 - **Spreadsheet enrichment.** A consumer that classifies rows gets `--as` columns with a status column beside each value.
-- **The experiment harness.** It stays the place where a decider model is measured. `thinkn eval` takes over the pass-mark sweep once it exists.
+- **The experiment harness.** It stays the place where a decider model is measured. `thinkthen eval` takes over the pass-mark sweep once it exists.
 - **The platform.** Ian named a larger platform this tool will join. This study could not find it in his notes. See question 2.
 
 ## 9. Open for ruling
@@ -116,10 +116,10 @@ On speed. A hosted decider answers in one to two tenths of a second and caps req
 1. **First user.** Ian and his agents, or outside developers. The answer sets when the repository goes public and how much polish version one carries. Recommendation: Ian and botassembly first, private until slice 6 works, then public under the MIT license that botassembly's public siblings use.
 2. **The platform.** What it is, and what it needs from this tool on day one.
 3. **Scope of version one.** Section 6, or a wider first release that includes a second family. Recommendation: section 6. Cost: the "semantic shell" story waits.
-4. **Grammar depth.** `thinkn decide if` or the shorter `thinkn if`. Recommendation: keep the family word. The name is a pun that needs it, and later families arrive with no renaming. Cost: one extra word on every command line.
+4. **Grammar depth.** `thinkthen decide if` or the shorter `thinkthen if`. Recommendation: keep the family word. The name is half a sentence that the family word finishes, and later families arrive with no renaming. Cost: one extra word on every command line.
 5. **How other backends plug in.** One wire format with a URL override, compiled-in adapters per vendor, or subprocess adapters. Recommendation: one wire format, published with fixtures. Cost: a vendor with another shape needs a translating server.
 6. **Saved question files.** Markdown, JSON, or both. Recommendation: Markdown as the authored form, JSON as the printed plan.
 7. **Where pass marks live.** The question file, the backend profile, or a flag. Recommendation: the profile holds defaults per model, the file may mark a question as essential or advisory, and a flag overrides both.
-8. **Botassembly's decider.** Whether the runtime should run `thinkn` when it gains a decider setting. Recommendation: yes. Cost: a decider in botassembly then needs this binary installed.
+8. **Botassembly's decider.** Whether the runtime should run `thinkthen` when it gains a decider setting. Recommendation: yes. Cost: a decider in botassembly then needs this binary installed.
 9. **The first real job.** The job version one must do well before anything else is built. Candidates: a shadow gate on botassembly stages, an inbox sweep of Ian's notes, a prose lint for his writing rules, spreadsheet enrichment. Recommendation: the shadow gate. It already has measured numbers to beat.
 10. **Relations with the first vendor.** Whether to tell TypeSafe about the tool and the published wire format before it goes public. Only Ian can weigh that.

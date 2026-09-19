@@ -1,6 +1,6 @@
-# Agent instructions for thinkn
+# Agent instructions for thinkthen
 
-The binary is `thinkn`. The crates are `thinkn-core` and `thinkn`. Read `README.md` first, then `sdlc/planning/design-study.md`, then `sdlc/planning/rust-standards.md`.
+The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read `README.md` first, then `sdlc/planning/design-study.md`, then `sdlc/planning/rust-standards.md`.
 
 ## Building
 
@@ -14,11 +14,11 @@ The binary is `thinkn`. The crates are `thinkn-core` and `thinkn`. Read `README.
 
 ## The pure core
 
-`thinkn-core` touches no file, no environment variable, no socket, no clock, and no process. Its `clippy.toml` bans them. The binary parses at the edge and hands typed values inward. Do not weaken either lint table. `lint` compares them against the accepted copies.
+`thinkthen-core` touches no file, no environment variable, no socket, no clock, and no process. Its `clippy.toml` bans them. The binary parses at the edge and hands typed values inward. Do not weaken either lint table. `lint` compares them against the accepted copies.
 
 ## The tool judges and never acts
 
-`thinkn` never runs a command, never treats free text as an instruction, and never writes a file the user did not name. A ticket that asks for any of those is wrong and stops.
+`thinkthen` never runs a command, never treats free text as an instruction, and never writes a file the user did not name. A ticket that asks for any of those is wrong and stops.
 
 ## No network in a gate
 

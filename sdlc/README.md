@@ -1,6 +1,6 @@
 # sdlc/
 
-The system of record for thinkn. Nothing outside this repository is authoritative.
+The system of record for thinkthen. Nothing outside this repository is authoritative.
 
 | Folder | What it is |
 | --- | --- |
@@ -11,4 +11,4 @@ The system of record for thinkn. Nothing outside this repository is authoritativ
 | [scripts/](scripts/) | The gate ladder: `install`, `lint`, `test`, `spec` |
 | ratchet.json | The source size ceiling. `sdlc/scripts/lint` reads it |
 
-The destination this repository serves lives outside it, at `notes/ideal-state/thinkn.md` in the workspace. The five factory scripts under `project/` are absent until this repository registers with Factory 2.
+The destination this repository serves lives outside it, at `notes/ideal-state/thinkthen.md` in the workspace. The five factory scripts under `project/` are absent until this repository registers with Factory 2.

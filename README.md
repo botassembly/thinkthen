@@ -1,18 +1,18 @@
-# thinkn
+# thinkthen
 
-`thinkn` puts a decider model in the shell. A decider model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, a pick from a list, or a rating on a scale. The name reads as "think 'n decide".
+`thinkthen` puts a decider model in the shell. A decider model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, a pick from a list, or a rating on a scale. A command reads as a sentence: think, then decide.
 
 ```sh
-thinkn decide if 'the customer explicitly requests a refund' < message.txt
-thinkn decide which bug feature question other < issue.txt
-thinkn decide where 'describes a reproducible bug' --jsonl --on /body < issues.jsonl
+thinkthen decide if 'the customer explicitly requests a refund' < message.txt
+thinkthen decide which bug feature question other < issue.txt
+thinkthen decide where 'describes a reproducible bug' --jsonl --on /body < issues.jsonl
 ```
 
 Those commands are the design. Nothing above is built yet. The repository holds the plan, the standards, and a scaffold with its gates.
 
 ## What it will and will not do
 
-- The shell sequences programs. `jq` reshapes data. `thinkn` judges meaning and does nothing else.
+- The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the condition, the options, and the evidence.
 - A yes, a no, an unsure, and an error stay four different outcomes in the output and in the exit code.
 - The backend is a setting. TypeSafe's Jev is the first decider model. Any server that speaks the same small wire format can replace it, hosted or local.

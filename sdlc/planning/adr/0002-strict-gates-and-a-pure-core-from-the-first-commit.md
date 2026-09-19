@@ -15,7 +15,7 @@ Ian writes no Rust and cannot review it. Gates stand in for him. A survey of ten
 
 **The size ceiling is declared from the first commit** and equals the measured total. No file passes 500 non-blank lines.
 
-**The workspace has two crates.** `thinkn-core` is pure and its `clippy.toml` bans files, the environment, sockets, clocks, processes, and dynamic JSON. `thinkn` is the binary and owns every edge. The split follows a real dependency direction.
+**The workspace has two crates.** `thinkthen-core` is pure and its `clippy.toml` bans files, the environment, sockets, clocks, processes, and dynamic JSON. `thinkthen` is the binary and owns every edge. The split follows a real dependency direction.
 
 **The starting dependencies are `serde`, `serde_json`, `thiserror`, `clap`, and `ureq`.** Requests run in parallel on threads. No async runtime enters without a measurement.
 
