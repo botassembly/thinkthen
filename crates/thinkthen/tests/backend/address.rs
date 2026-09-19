@@ -257,3 +257,37 @@ fn a_key_that_is_unset_or_empty_is_exit_four_and_names_the_variable_it_read() {
 
     assert!(listener.requests().is_empty(), "no key, no request");
 }
+
+/// A proxy variable never carries a plain `http://` request off this machine.
+///
+/// The address rule refuses `http://` to anywhere but loopback, and a proxy
+/// would undo it: the request would go to the proxy's host in clear text with
+/// the key and the evidence in it. The proxy listener counts the connections,
+/// so the case proves nothing reached it rather than only that the run passed.
+#[test]
+fn a_proxy_variable_carries_no_plain_http_request() {
+    let proxy = Listener::answering(|_| Canned::ok(ANSWERED)).expect("a loopback listener");
+    let backend = Listener::answering(|_| Canned::ok(ANSWERED)).expect("a loopback listener");
+    let address = proxy
+        .base()
+        .strip_suffix("/v1")
+        .expect("the listener base ends in the path it was built with")
+        .to_owned();
+
+    for variable in ["HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"] {
+        let output = decide(
+            &["--url", backend.base()],
+            &[
+                (variable, address.as_str()),
+                ("THINKTHEN_API_KEY", "sk-test-value"),
+            ],
+        )
+        .expect("the compiled binary runs");
+
+        assert_eq!(proxy.connections(), 0, "{variable} reached the proxy");
+        assert_eq!(output.status.code(), Some(0), "{variable}");
+    }
+
+    let requests = backend.requests();
+    assert_eq!(requests.len(), 4, "every run reached the backend itself");
+}

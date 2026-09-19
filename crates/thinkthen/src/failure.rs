@@ -315,7 +315,7 @@ mod tests {
             outcome: thinkthen_core::Outcome::Yes,
             replayed: false,
         };
-        let client = crate::http::Client::new(Duration::from_secs(1));
+        let client = crate::http::Client::new(Duration::from_secs(1), false);
 
         let shown = format!(
             "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \

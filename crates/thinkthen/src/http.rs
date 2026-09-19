@@ -42,15 +42,22 @@ impl fmt::Debug for Client {
 
 impl Client {
     /// Build the one pool this process posts through.
-    pub(crate) fn new(timeout: Duration) -> Self {
-        Self(
-            Agent::config_builder()
-                .timeout_global(Some(timeout))
-                .http_status_as_error(false)
-                .max_redirects(0)
-                .build()
-                .into(),
-        )
+    ///
+    /// `secure` says whether the resolved address is an `https://` one. A
+    /// plain `http://` address is a loopback one, because the address rule
+    /// refuses every other host under it, so no proxy carries that request:
+    /// a proxy would send the key and the evidence to another machine in
+    /// clear text. `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and
+    /// `NO_PROXY` on its own, and `proxy(None)` cancels all four.
+    pub(crate) fn new(timeout: Duration, secure: bool) -> Self {
+        let mut config = Agent::config_builder()
+            .timeout_global(Some(timeout))
+            .http_status_as_error(false)
+            .max_redirects(0);
+        if !secure {
+            config = config.proxy(None);
+        }
+        Self(config.build().into())
     }
 
     /// Post the request and hand back the response body the backend answered with.

@@ -92,6 +92,18 @@ impl Backend {
     pub const fn model(&self) -> &ModelName {
         &self.model
     }
+
+    /// Say whether the request travels under TLS.
+    ///
+    /// A `false` here means the address is a loopback one, because [`address`]
+    /// refuses every other host under `http://`. The binary reads this to
+    /// cancel any proxy for such a request: a proxy would carry it off this
+    /// machine in clear text and undo the rule. Under `https://` a proxy sees
+    /// the host alone, so it is left in place.
+    #[must_use]
+    pub fn is_secure(&self) -> bool {
+        self.url.as_str().starts_with("https://")
+    }
 }
 
 /// The address one request is posted to: the base, then the wire shape's name.
@@ -298,6 +310,19 @@ mod tests {
             "https://[::1]/v1",
         ] {
             resolve(None, Some(base)).expect("every https base is untouched");
+        }
+    }
+
+    #[test]
+    fn an_address_is_secure_under_https_and_never_under_plain_http() {
+        for base in ["https://host/v1", "HTTPS://host/v1", "https://[::1]/v1"] {
+            let backend = resolve(None, Some(base)).expect("a base names an address");
+            assert!(backend.is_secure(), "{base}");
+        }
+
+        for base in ["http://localhost/v1", "HTTP://127.0.0.1/v1", "http://[::1]"] {
+            let backend = resolve(None, Some(base)).expect("a base names an address");
+            assert!(!backend.is_secure(), "{base}");
         }
     }
 
