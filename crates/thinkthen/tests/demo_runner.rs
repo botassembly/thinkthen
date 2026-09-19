@@ -143,12 +143,12 @@ fn a_green_page_that_names_the_folder_in_backticks_stops_the_run() {
 }
 
 #[test]
-fn the_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
+fn every_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
     let output = demos("demos").expect("the runner runs");
 
     let said = printed(&output);
     assert_eq!(output.status.code(), Some(0), "{said}");
-    assert!(said.contains("demos: 8 green, "), "{said}");
+    assert!(said.contains("demos: 12 green, "), "{said}");
     assert!(said.contains("running 01-refund-gate/README.md"), "{said}");
     assert!(
         said.contains("running 19-no-or-could-not-ask/README.md"),

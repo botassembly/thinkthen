@@ -1,6 +1,6 @@
 # Backends
 
-Status: **Settled** for the wire shape, the key, the address, the request, and the `systemone` adapter. **Draft** for the two adapter rows that wait on their fixtures.
+Status: **Settled** for the wire shape, the key, the address, the request, the `systemone` adapter, and every adapter row.
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
 
@@ -83,8 +83,8 @@ The response body:
 | A yes/no answer's probability | `noul` |
 | Pick one from a list | `type` `choice`, with the options as the keys of `criteria` and each description as the value, or `null` |
 | Place on named levels | `type` `score`, with the levels as the `criteria` array |
-| A choice answer's probability per option | Draft. One probability per option name, under the `choice` answer |
-| A score answer's probability per level | Draft. One probability per level, in level order, under the `score` answer |
+| A choice answer's probability per option | `probabilities` under the `choice` answer, keyed by option name. The key order carries no meaning, and the adapter rebuilds the distribution in the order the options were sent |
+| A score answer's probability per level | `probabilities` under the `score` answer, keyed by the level's position as a string, counting from `"0"`. The adapter maps each key back to the level text it sent |
 | The backend's own confidence | `confidence`, kept and never cut on |
 | A score's number | Computed locally from the level probabilities. Nothing is read from the wire |
 | Several questions over one evidence | One `questions` map with one entry per question. One request, one `state` |
@@ -93,7 +93,7 @@ Question names are `q1`, `q2`, and onward in plan order. The vendor does not sho
 
 The names carry the order. The order of keys inside the `questions` object and the `answers` object carries no meaning. Decode ignores an answer whose name the plan lacks. Decode refuses a response whose `model` is absent or blank, because a result must name the model that answered.
 
-The two Draft rows name what the adapter must produce for `choose` and `score`. The exact response field names land with their fixtures under `fixtures/systemone/`, and those rows stop being Draft then.
+The vendor also sends `choice`, `score`, and `legend` beside the probabilities. Each one is derivable from the distribution and the question that was asked, so the adapter computes them and reads none of them. The fixtures under `fixtures/systemone/` hold a real response of each kind.
 
 ### What the adapter keeps
 

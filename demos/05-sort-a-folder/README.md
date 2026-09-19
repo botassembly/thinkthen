@@ -1,20 +1,20 @@
-# 05 Sort a folder
+# How to sort files into folders by label
 
-Status: red
+Status: green
 
 Verbs: `choose`
 
-A folder fills up with meeting notes and nobody files them. The job is to move each note into `defect`, `process`, or `other`, and to leave a note the tool could not place in `review` for a person. One file, one judgment, and the `mv` is written by the shell.
+Use this when a folder fills up with short documents and nobody files them. The job is to move each one into a folder named after its label, and to leave the ones the tool could not place where a person will see them. One file, one judgment, and the `mv` is written by the shell.
 
-Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
+The recording under `recording/` holds the five live exchanges this page replays, one per note. No block asserts on a probability.
 
 ## Input
 
-`inbox/` holds five short notes. The demo copies them into a scratch directory first, so the page can run twice and the repository stays clean.
+`inbox/` holds five short meeting notes. The page copies them into a scratch directory first, so it can run twice and the repository stays clean.
 
-## The loop
+## The quick loop
 
-`find` produces NUL-delimited paths, because a filename may contain a newline. The paths are written to a file first, so `find` failing is a reason to stop rather than an empty loop that looks like success.
+`find` produces NUL-delimited paths, because a filename may contain a newline. The paths go to a file first, so `find` failing is a reason to stop rather than an empty loop that looks like success.
 
 ```bash
 set -euo pipefail
@@ -29,7 +29,7 @@ find "$work/inbox" -type f -name '*.txt' -print0 | LC_ALL=C sort -z > "$work/pat
 while IFS= read -r -d '' path; do
   label=$(
     thinkthen choose 'What kind of work does this note record?' defect process other \
-      --raw --threshold 0.8 --input "$path" --replay recording/
+      --raw --replay recording/ < "$path"
   ) && rc=0 || rc=$?
   case $rc in
     0) dest=$label ;;
@@ -43,15 +43,52 @@ for dir in defect process other review; do
   printf '%s=%d\n' "$dir" "$(find "$work/$dir" -type f | wc -l)"
 done | mustmatch "defect=2
 process=2
-other=0
-review=1"
+other=1
+review=0"
 ```
 
-The note with no example, no query, and nothing written down is the one in `review`. That is the answer a person would give too.
+With no threshold every note takes the label that led, and `review` stays empty. Nothing in that output says which notes were close.
+
+## The mark decides how much a person sees
+
+The same loop with `--threshold 0.8` sends every note whose winner fell under the mark to `review`.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+cp -R inbox "$work/inbox"
+mkdir -p "$work/defect" "$work/process" "$work/other" "$work/review"
+
+find "$work/inbox" -type f -name '*.txt' -print0 | LC_ALL=C sort -z > "$work/paths.nul"
+
+while IFS= read -r -d '' path; do
+  label=$(
+    thinkthen choose 'What kind of work does this note record?' defect process other \
+      --raw --threshold 0.8 --replay recording/ < "$path"
+  ) && rc=0 || rc=$?
+  case $rc in
+    0) dest=$label ;;
+    3) dest=review ;;
+    *) printf 'choose failed on %s: %d\n' "$path" "$rc" >&2; exit "$rc" ;;
+  esac
+  mv -- "$path" "$work/$dest/"
+done < "$work/paths.nul"
+
+for dir in defect process other review; do
+  printf '%s=%d\n' "$dir" "$(find "$work/$dir" -type f | wc -l)"
+done | mustmatch "defect=2
+process=0
+other=0
+review=3"
+```
+
+Two notes name a broken thing plainly, and the model put every point of probability on `defect` for both. The other three are a warehouse call, a budget review, and a hallway chat, and none of them reached 0.8. A strict mark on a three-option list sends most of a mixed folder to a person, and that is the cost the desk is choosing.
 
 ## The careful version, in parallel
 
-`process` and `other` are neighbours, and a note about a budget can sit between them. `--details` carries a probability for every option, so a note whose winner barely beat the runner-up goes to `review` as well. `xargs -0 -P` runs several judgments at once and keeps the NUL boundary. The per-file work moves into a small script, because `xargs` runs a command and not a shell function.
+`process` and `other` are neighbours, and a note about a budget can sit between them. `--details` carries a probability for every option, so a note whose winner barely beat the runner-up goes to `review` even when it won. `xargs -0 -P` runs several judgments at once and keeps the NUL boundary. The per-file work moves into a small script, because `xargs` runs a command and not a shell function.
 
 ```bash
 set -euo pipefail
@@ -68,7 +105,7 @@ root=$1
 path=$2
 judgment=$(
   thinkthen choose 'What kind of work does this note record?' defect process other \
-    --details --threshold 0.8 --input "$path" --replay recording/
+    --details --replay recording/ < "$path"
 ) && rc=0 || rc=$?
 case $rc in
   0|3) ;;
@@ -85,18 +122,41 @@ chmod +x "$work/file-one"
 find "$work/inbox" -type f -name '*.txt' -print0 \
   | xargs -0 -n 1 -P 4 "$work/file-one" "$work"
 
-find "$work/review" -type f -print0 | xargs -0 -n 1 basename | mustmatch "2026-03-06-note.txt"
+for dir in defect process other review; do
+  printf '%s=%d\n' "$dir" "$(find "$work/$dir" -type f | wc -l)"
+done | mustmatch "defect=2
+process=1
+other=0
+review=2"
+
+find "$work/review" -type f -print0 | xargs -0 -n 1 basename | LC_ALL=C sort | mustmatch "2026-03-04-note.txt
+2026-03-06-note.txt"
 ```
 
-Four hundred notes are four hundred runs. `jobs` bounds the requests inside one run, and a per-file loop makes one request per run, so the setting never applies. A loop with a budget counts its own calls.
+The margin rule and the mark disagree, and both are honest. The warehouse note won `process` by a margin of 0.5 and still fell under 0.8, so the margin rule files it and the mark does not. The budget note and the hallway chat land in `review` either way. A desk picks one rule, writes it down, and measures it against labelled notes.
 
-The recording under `recording/` does not exist yet.
+Four hundred notes are four hundred runs. A per-file loop makes one request per run, so nothing inside the tool bounds the whole job. A loop with a budget counts its own calls.
 
-## What this demo decides
+Every `thinkthen` line carries `--replay recording/`, so the page touches no network and reads no key. `record.sh` made the five exchanges once, through `sdlc/scripts/live`.
 
-- **The demo confirms `--raw` in a loop and the exit code beside it.** Demo 02 found the two-`case` shape and this page reuses it without change. The exit code is the only thing that separates an unresolved pick from an empty label, and in a per-file loop the exit code is right there.
-- **A per-file loop sits outside every request budget in the surface.** No flag caps a job made of many runs, and `jobs` bounds only the inside of one run. The demo asks for no new flag. It asks that the help for the record flags say plainly that a per-file loop is outside the budget, and show `find -print0 | xargs -0 -n 1 -P 4` next to the `jobs` setting.
-- **The margin test belongs in `jq` and the demo proves it.** `answer.probabilities` gives the gap in one line, and the two blocks show the price. The quick loop reads one word with `--raw` and two exit codes. The careful loop reads a whole object and pays for `jq` on every file. Both are honest, and no option is needed for either.
-- **The careful loop reads the exit code and then ignores it.** Exit 3 and exit 0 both carry a usable object, so the `case` exists only to let a real failure through. That reads badly. The demo asks that the `choose` help show this shape, because anybody who wants the distribution will hit it.
-- **Reading files stays out of the tool, and the demo confirms it.** `find` selects, `sort -z` orders, `xargs -0 -P` parallelises. Putting file reading inside the judge would buy one flag and cost a size policy, a binary-file policy, and a non-UTF-8 path policy.
-- **`xargs` interleaves standard error with nothing tying a line to a file.** Nothing in the surface is wrong. A script that needs per-file diagnostics writes them itself, inside `file-one`.
+## What can go wrong
+
+| Exit code | What happened | What to do |
+| --- | --- | --- |
+| 0 | A label was returned | Move the file |
+| 2 | A usage error, or evidence that is empty | Fix the command line or skip the empty file |
+| 3 | The winner fell under the mark, or the top two tied exactly | Move the file to `review` |
+| 4 | The backend failed, or the adapter refused the reply | Stop the loop. The file has not moved |
+| 5 | A local failure: the recording folder, the file | Stop the loop |
+
+- An empty file is a usage error, not a label. `find` in a real inbox will meet one, so the loop needs a branch for exit 2 or a `find -size +0` filter.
+- `--raw` prints nothing for an unresolved pick, so `label` is empty and `mv -- "$path" "$work//"` would fail. Read `$rc` before reading `$label`, as both loops do.
+- `xargs` interleaves standard error and ties no line to a file. A loop that needs per-file diagnostics writes them inside `file-one`.
+- `mv` over an existing name overwrites it. Two notes with the same basename in different subfolders will collide, and `mv -n` or a per-run folder is the answer.
+- Under `set -e` a single unresolved answer ends the loop. Capture the code with `&& rc=0 || rc=$?`.
+
+## Related how-tos
+
+- [How to branch on a label with `choose` and `case`](../02-route-a-ticket/) is one file and the shape this loop repeats.
+- [How to rate on a scale, sort by it, and test it with `jq -e`](../17-rate-and-sort/) orders a folder instead of filing it.
+- [Refund gate](../01-refund-gate/) is the two-sided form.

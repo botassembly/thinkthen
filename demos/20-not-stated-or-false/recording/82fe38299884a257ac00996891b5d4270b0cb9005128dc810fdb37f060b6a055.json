@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Maintenance notice\n\nThe upgrade window opens on Sunday at 01:00. The work finished early in\nthe rehearsal, so the window now closes at 02:00 instead of 03:00. No\npart of it runs longer than the original plan.\n","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How does this notice treat the claim that the upgrade window runs longer than the original plan?","criteria":{"supported":null,"contradicted":null,"not_stated":null,"ambiguous":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"contradicted","confidence":1.0,"probabilities":{"contradicted":1.0,"supported":0.0,"not_stated":0.0,"ambiguous":0.0}}},"usage":{"input_tokens":378,"output_tokens":56}}
+}

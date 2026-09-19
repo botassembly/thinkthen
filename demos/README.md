@@ -39,8 +39,10 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
 | 04 | [Act only when the answer is sure](04-review-queue/) | `decide` | red |
-| 02 | [Branch on a label](02-route-a-ticket/) | `choose` | red |
-| 05 | [Sort files into folders by label](05-sort-a-folder/) | `choose` | red |
+| 02 | [Branch on a label with `choose` and `case`](02-route-a-ticket/) | `choose` | green |
+| 20 | [Tell "not stated" from "false"](20-not-stated-or-false/) | `choose`, `decide` | green |
+| 17 | [Rate on a scale, sort by it, and test it with `jq -e`](17-rate-and-sort/) | `score` | green |
+| 05 | [Sort files into folders by label](05-sort-a-folder/) | `choose` | green |
 
 ## Many records
 

@@ -1,0 +1,5 @@
+Maintenance notice
+
+The upgrade window opens on Sunday at 01:00. We now expect it to run
+past the original two hours, and we have booked the window through to
+05:00. Sign-in will be unavailable for the whole window.

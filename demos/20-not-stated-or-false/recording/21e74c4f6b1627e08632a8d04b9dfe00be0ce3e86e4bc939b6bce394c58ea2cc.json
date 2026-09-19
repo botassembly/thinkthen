@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Maintenance notice\n\nThe upgrade window opens on Sunday at 01:00. Reports and exports will\nbe queued and delivered once the upgrade finishes. Nothing else about\nthe schedule has changed.\n","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this notice say that the upgrade window runs longer than the original plan?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":321,"output_tokens":21}}
+}

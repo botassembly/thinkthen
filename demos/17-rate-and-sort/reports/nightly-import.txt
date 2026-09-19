@@ -1,0 +1,3 @@
+The nightly import stopped at 02:14 again. It halts on the first row
+with an empty postcode and nothing after that row is loaded. No other
+route puts the day's orders into the warehouse.

@@ -1,0 +1,5 @@
+Maintenance notice
+
+The upgrade window opens on Sunday at 01:00. Reports and exports will
+be queued and delivered once the upgrade finishes. Nothing else about
+the schedule has changed.
