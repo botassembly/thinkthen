@@ -14,7 +14,7 @@ Every structural option that the vendor's interface gives a yes/no question, a p
 
 ## Current Facts
 
-Ian ruled on 2026-09-19 that every structural option has an equal home in both places, and ADR 0013's amendment holds the ruling, the question file, and the `@` form. `sdlc/planning/interface-audit.md` compared the vendor's published client and documentation with the tool, row by row. It found that `decide` never sends the texts for what true and false mean, that the wire code writes `null` for every option description, that evidence built from several pointers goes out as JSON text where the vendor also accepts a JSON object, and that `result.md` shows a `confidence` on a yes/no answer the vendor never sends. `sdlc/planning/ten-use-cases.md` holds the verdicts on the ideas ten use cases raised. `filter` and `rank` are not built, and ticket 0014 builds them after this ticket with the same options.
+Ian ruled on 2026-09-19 that every structural option has an equal home in both places, and ADR 0013 holds the ruling, the question file, and the `@` form as items 1 to 6. `sdlc/planning/interface-audit.md` compared the vendor's published client and documentation with the tool, row by row. It found that `decide` never sends the texts for what true and false mean, that the wire code writes `null` for every option description, that evidence built from several pointers goes out as JSON text where the vendor also accepts a JSON object, and that `result.md` shows a `confidence` on a yes/no answer the vendor never sends. `sdlc/planning/ten-use-cases.md` holds the verdicts on the ideas ten use cases raised. `filter` and `rank` are not built, and ticket 0014 builds them after this ticket with the same options.
 
 ## Scope
 
