@@ -4,7 +4,7 @@ A demo is a small, real shell job written as an executable page. It lives at `de
 
 ADR 0005 puts the demos in front of the code. Writing a demo is the first test of the design. Where a command line reads badly, needs an option that is absent, or fights a Unix habit, the demo says so and the specification changes.
 
-Every page on this branch is written to ADR 0007: flat verbs, a bare JSON value on standard output, and one `--threshold` option. No page reaches for a command, an option, a field, or an exit code that ADR 0007 does not name. Where a job could not be written cleanly inside that surface, the page writes it as well as the surface allows and records the gap.
+Every page on this branch is written to ADR 0007 and its clarifications: flat verbs, a bare JSON value on standard output, and one `--threshold` option. Demos 13, 14, and 15 also drive ADR 0008 and ADR 0009, which are Proposed. No page reaches for a command, an option, a field, or an exit code that one of the three does not name. Where a job could not be written cleanly inside that surface, the page writes it as well as the surface allows and records the gap.
 
 ## How to read one
 
@@ -12,11 +12,11 @@ Each page opens with a status line, the verbs it uses, and the story of the job.
 
 The blocks assert on exit codes, bare values, field names, row counts, and the records that came back. No block asserts on a probability, and every page says once that its numbers are illustrative until a recording exists. A page that pinned a probability would be testing the vendor instead of the tool.
 
-Every page closes with "What this demo decides". That section says what the demo confirms, what it could not say cleanly, and what it argues should change. `FINDINGS.md` gathers those across all thirteen pages.
+Every page closes with "What this demo decides". That section says what the demo confirms, what it could not say cleanly, and what it argues should change. `FINDINGS.md` gathers those across all fifteen pages.
 
 ## Red and green
 
-A demo starts **red**. Nothing under `demos/` runs today, because no verb in ADR 0007 is built. A red demo is a plan.
+A demo starts **red**. Nothing under `demos/` runs today, because no verb in ADR 0007 is built and `find` is not yet designed. A red demo is a plan.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. A green demo is a regression test and a page of documentation at once. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. A green page that names a `--replay` folder it does not hold stops the run.
 
@@ -45,3 +45,5 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 11 | [Split a thread](11-split-a-thread/) | `segment` | red |
 | 12 | [Keep going](12-keep-going/) | `decide` | red |
 | 13 | [Pick a threshold](13-pick-a-threshold/) | `decide`, `report` | red |
+| 14 | [Grade a batch](14-grade-a-batch/) | `annotate`, `report` | red |
+| 15 | [Find the line](15-find-the-line/) | `find` | red |
