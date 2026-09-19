@@ -144,4 +144,4 @@ Every `thinkthen` line on this page carries `--replay recording/`, so the page t
 
 - [How to sort files into folders by label](../05-sort-a-folder/) runs this loop over a whole folder.
 - [How to tell "not stated" from "false"](../20-not-stated-or-false/) picks labels that a yes/no question cannot tell apart.
-- [Refund gate](../01-refund-gate/) is the two-sided decision `choose` is not.
+- [How to gate a script step on a yes/no answer](../01-refund-gate/) is the two-sided decision `choose` is not.

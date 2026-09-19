@@ -146,4 +146,4 @@ Every `thinkthen` line carries `--replay recording/`, so the page touches no net
 
 - [How to branch on a label with `choose` and `case`](../02-route-a-ticket/) is the way to branch on a level rather than sort by it.
 - [How to sort files into folders by label](../05-sort-a-folder/) files a folder instead of ordering it.
-- [Refund gate](../01-refund-gate/) is the gate that `score` is not.
+- [How to gate a script step on a yes/no answer](../01-refund-gate/) is the gate that `score` is not.

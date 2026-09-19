@@ -170,5 +170,5 @@ Every `thinkthen` line carries `--replay recording/`, so the page touches no net
 ## Related how-tos
 
 - [How to branch on a label with `choose` and `case`](../02-route-a-ticket/) is the same two-`case` shape on a routing question.
-- [Refund gate](../01-refund-gate/) is the yes/no form, with a band for the middle.
+- [How to gate a script step on a yes/no answer](../01-refund-gate/) is the yes/no form, with a band for the middle.
 - [How to sort files into folders by label](../05-sort-a-folder/) runs a pick over a whole folder.

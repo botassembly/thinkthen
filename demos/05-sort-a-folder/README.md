@@ -159,4 +159,4 @@ Every `thinkthen` line carries `--replay recording/`, so the page touches no net
 
 - [How to branch on a label with `choose` and `case`](../02-route-a-ticket/) is one file and the shape this loop repeats.
 - [How to rate on a scale, sort by it, and test it with `jq -e`](../17-rate-and-sort/) orders a folder instead of filing it.
-- [Refund gate](../01-refund-gate/) is the two-sided form.
+- [How to gate a script step on a yes/no answer](../01-refund-gate/) is the two-sided form.
