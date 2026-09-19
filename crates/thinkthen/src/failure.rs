@@ -88,6 +88,8 @@ pub(crate) enum Failure {
     TwoFolders,
     /// A plan sends nothing, so it has nothing to record or to replay.
     DryRunWithRecording,
+    /// `--cache` was given beside one of the two options it stands for.
+    CacheWithRecording,
     /// The replay folder holds no entry for the request being made.
     ReplayMiss(String),
     /// The entry the digest names cannot answer the request being made.
@@ -168,6 +170,11 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::DryRunWithRecording => (
             2,
             "--dry-run sends nothing, so it takes neither --record nor --replay".to_owned(),
+        ),
+        Failure::CacheWithRecording => (
+            2,
+            "--cache is --record and --replay on one folder, so it stands beside neither"
+                .to_owned(),
         ),
         Failure::ReplayMiss(name) => (
             5,

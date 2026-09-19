@@ -439,3 +439,43 @@ fn a_failed_exchange_is_never_recorded() {
         );
     }
 }
+
+#[test]
+fn cache_is_the_two_options_on_one_folder_and_stands_beside_neither() {
+    let folder = folder("cache-option");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+    let named = folder.to_string_lossy().into_owned();
+
+    // The first run pays and writes the entry, and the second reads it back
+    // with the listener spent and no key in the environment.
+    let output = decide(listener.base(), &["--cache", &named], KEY).expect("the binary runs");
+    assert_eq!(output.status.code(), Some(0));
+    let (_, written) = only_entry(&folder).expect("one recorded entry");
+    assert!(written.contains(r#""adapter": "systemone""#), "{written}");
+    assert_eq!(listener.requests().len(), 1, "the first run paid once");
+
+    let output =
+        decide(listener.base(), &["--cache", &named, "--details"], None).expect("the binary runs");
+    assert_eq!(output.status.code(), Some(0));
+    let row = String::from_utf8_lossy(&output.stdout);
+    assert!(row.contains(r#""replayed":true"#), "{row}");
+    assert!(listener.requests().is_empty(), "a cached run asks nothing");
+
+    for beside in [["--record", &named], ["--replay", &named]] {
+        let output = decide(
+            listener.base(),
+            &[&["--cache", &named][..], &beside].concat(),
+            KEY,
+        )
+        .expect("the binary runs");
+        assert_eq!(output.status.code(), Some(2), "{beside:?}");
+        let message = String::from_utf8_lossy(&output.stderr);
+        assert!(message.contains("--cache"), "{message}");
+    }
+
+    let output =
+        decide(listener.base(), &["--cache", &named, "--dry-run"], KEY).expect("the binary runs");
+    assert_eq!(output.status.code(), Some(2));
+    let message = String::from_utf8_lossy(&output.stderr);
+    assert!(message.contains("--dry-run"), "{message}");
+}

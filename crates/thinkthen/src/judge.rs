@@ -1,6 +1,7 @@
 //! The one flow every judging verb takes, from what was asked to what is printed.
 
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::ExitCode;
 use std::time::Duration;
 
@@ -238,7 +239,8 @@ fn run(
         view,
     } = asked;
     let view = view.checked()?;
-    if common.dry_run && (common.record.is_some() || common.replay.is_some()) {
+    let folders = Folders::of(common)?;
+    if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
     let backend = Backend::resolve(
@@ -268,7 +270,7 @@ fn run(
     let judging = Judging {
         common,
         environment,
-        recorder: Recorder::of(common.record.as_deref(), common.replay.as_deref())?,
+        recorder: Recorder::of(folders.record, folders.replay)?,
         backend,
         asks,
         threshold,
@@ -294,6 +296,42 @@ fn run(
         replayed += usize::from(from_recording);
     }
     Ok(ExitCode::SUCCESS)
+}
+
+/// The folders `--record`, `--replay`, and `--cache` name between them.
+#[derive(Debug)]
+struct Folders<'a> {
+    record: Option<&'a Path>,
+    replay: Option<&'a Path>,
+}
+
+impl<'a> Folders<'a> {
+    /// Read the two folders, with `--cache` standing for both at once.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Failure::CacheWithRecording`] when `--cache` is given beside
+    /// one of the two options it stands for.
+    fn of(common: &'a Common) -> Result<Self, Failure> {
+        let Some(cached) = common.cache.as_deref() else {
+            return Ok(Self {
+                record: common.record.as_deref(),
+                replay: common.replay.as_deref(),
+            });
+        };
+        if common.record.is_some() || common.replay.is_some() {
+            return Err(Failure::CacheWithRecording);
+        }
+        Ok(Self {
+            record: Some(cached),
+            replay: Some(cached),
+        })
+    }
+
+    /// True when a folder is named at all, which a plan may not name.
+    const fn named(&self) -> bool {
+        self.record.is_some() || self.replay.is_some()
+    }
 }
 
 /// Read the framing and the pointers the command line asked for.

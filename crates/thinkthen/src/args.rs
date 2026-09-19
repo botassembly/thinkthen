@@ -161,6 +161,14 @@ pub(crate) struct Common {
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) replay: Option<PathBuf>,
 
+    /// Replay DIR and record into it, which resumes a run that stopped.
+    ///
+    /// It is --record DIR and --replay DIR together, so it stands beside
+    /// neither of them. A finished record is answered from disk, and only the
+    /// rest goes to the backend.
+    #[arg(long, value_name = "DIR", hide_short_help = true)]
+    pub(crate) cache: Option<PathBuf>,
+
     /// Seconds one attempt may take, from connect to the last byte.
     #[arg(
         long,
