@@ -28,7 +28,7 @@ DSK-07	false	false
 LMP-14	true	false"
 ```
 
-`LMP-11` says "ships flat packed" and never says whether anything has to be screwed together. Its band put it at `null`. That is the right place for it. Nothing turned an unsure answer into `false`.
+`LMP-11` says "ships flat packed" and never says whether anything has to be screwed together. Its band put it at `null`. That is the right place for it. Nothing turned an unresolved answer into `false`.
 
 The record keeps every field it arrived with, and the new fields sit beside them.
 
@@ -110,7 +110,7 @@ The recording under `recording/` does not exist yet.
 ## What this demo decides
 
 - **The demo confirms flat fields.** Two judgments in a row leave the record at one level, and every `jq` on this page reads `.sku`. The old wrapper nested on every pass and made the third read `.input.input.sku`.
-- **The demo could not see which answers were unsure without reading the values twice.** The old surface put a status field beside each column. ADR 0007 spells unresolved as `null`, so a spreadsheet cell reading `null` and a listing that genuinely says nothing are the same cell. In this page that is correct and legible. In CSV it is an empty field. The demo accepts `null` and asks that the `annotate` help warn about the CSV step.
+- **The demo could not see which answers were unresolved without reading the values twice.** The old surface put a status field beside each column. ADR 0007 spells unresolved as `null`, so a spreadsheet cell reading `null` and a listing that genuinely says nothing are the same cell. In this page that is correct and legible. In CSV it is an empty field. The demo accepts `null` and asks that the `annotate` help warn about the CSV step.
 - **One `on`, one request, and the demo cannot see the count.** `meta.usage` is the sum over a record's requests, so a file with one pointer and a file with two pointers print the same shape and differ only in the numbers. A page that wanted to prove the saving would have to assert a token count, and no page asserts a number a vendor chose. Demo 14 makes the same claim over two pointers and can prove it no better.
 - **The collision exits 2 before any request, and the demo confirms the rule.** Code 2 covers a usage error and an input error alike. Every record collides here, so the whole run sends nothing.
 - **`annotate --dry-run` checks the file and not the records, and the demo shows why that is a limit.** The dry run above passes a file that fails on the first record. One line in the help closes it.

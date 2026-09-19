@@ -42,7 +42,7 @@ else
 fi | mustmatch "normal"
 ```
 
-That `if` is a two-way branch and the desk wants three. With no threshold the cut is 0.5 and nothing is ever unresolved, so a message the model is unsure about lands in one of the two queues with no sign that it was close.
+That `if` is a two-way branch and the desk wants three. With no threshold the cut is 0.5 and nothing is ever unresolved, so a borderline message lands in one of the two queues with no sign that it was close.
 
 ## Three codes, three branches
 
@@ -102,6 +102,6 @@ The recording under `recording/` does not exist yet, so this page is red. Every 
 
 - **The demo confirms the shell test.** `if thinkthen decide ...` with `--quiet` reads the way `grep -q` reads, and it needs no `> /dev/null`. The three codes are a `case` a shell user already knows how to write.
 - **`--quiet` beside `--details` is a usage error, and the demo confirms the rule reads right.** The gate wants no output and the audit wants the object. Asking for both is a mistake the shell should hear about at once.
-- **The default threshold of 0.5 gives the two-way gate a silent failure mode.** The first block routes an unsure message with no sign that it was close, because nothing is unresolved under a single cut. That is the documented rule and the demo does not ask to change it. It asks that the `decide` help say in one line that a three-way gate needs a band, next to the warning about `set -e`.
+- **The default threshold of 0.5 gives the two-way gate a silent failure mode.** The first block routes a borderline message with no sign that it was close, because nothing is unresolved under a single cut. That is the documented rule and the demo does not ask to change it. It asks that the `decide` help say in one line that a three-way gate needs a band, next to the warning about `set -e`.
 - **`--input FILE` earns its place over a redirect.** The function above takes a path, and `< "$1"` inside a function body would have worked too. `--input` keeps the whole command on one line and puts the file next to the question it is judged against.
 - **A single cut has no way to report how close a record came.** Exit 1 means the answer did not reach the mark, and the desk that wants the margin has to drop `--quiet` and read `answer.probability`. The demo does that in the last block. The cost is one saved file per judgment. That is the right price.

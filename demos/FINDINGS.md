@@ -43,7 +43,7 @@ Every design finding from the fifteen demo pages, strongest argument first. Page
 | An unresolved answer is `null` everywhere. That is right in JSON and empty in CSV. A spreadsheet cell reading nothing and a listing that says nothing become the same cell | 07 | The `annotate` file | One line in the `annotate` help about the `jq -r '@csv'` step | weak |
 | `--details` carries `input`, the whole record including what was never sent. A user with megabyte records pays for it on every row to read one probability | 04 | Output, `--details` | No change. The help names the cost | weak |
 | A threshold is measured for one model and nothing on the command line says so | 10, 13 | The threshold | The `--threshold` help says the mark belongs to a model | weak |
-| Under the default cut of 0.5 nothing is ever unresolved, so a two-way `if` routes a message the model was unsure about with no sign that it was close | 01 | The threshold | The `decide` help says a three-way gate needs a band, next to the warning about `set -e` | weak |
+| Under the default cut of 0.5 nothing is ever unresolved, so a two-way `if` routes a borderline message with no sign that it was close | 01 | The threshold | The `decide` help says a three-way gate needs a band, next to the warning about `set -e` | weak |
 | A truth pointer names a field that `--field` and `on` are what keep off the wire. A user who forgets them sends the answer with the question and poisons the measurement | 13, 14 | `report`; Records | One line in the `report` help | weak |
 
 ## Settled by ADR 0007 and its clarifications

@@ -4,7 +4,7 @@ Status: red
 
 Verbs: `decide`
 
-A team acts on cancellation messages automatically and cannot afford a wrong guess. The sure rows flow on to the job that acts, and the unsure rows go to a file a person reads. Measurement says answers inside the unresolved band flip between identical runs, so a row that landed there is a row to look at again.
+A team acts on cancellation messages automatically and cannot afford a wrong guess. The rows that resolved flow on to the job that acts, and the rows that landed in the band go to a file a person reads. Measurement says answers inside the unresolved band flip between identical runs, so a row that landed there is a row to look at again.
 
 Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
 
