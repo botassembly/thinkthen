@@ -27,3 +27,9 @@ No recording changed. A recording is keyed by its request, and no request change
 3. Leave it, and treat `replay-check.sh` as a check that ran once.
 
 Lever 1 is the cheap one and keeps the record's rows untouched. Ticket 0016 did not take it, because that ticket changes words, pages, a license file, and a workflow, and it changes no check.
+
+## Closed on 2026-09-19
+
+The coherence pass took lever 1. `replay-check.sh` drops `meta.tool` from both rows before it compares them, and `probes/README.md` says so. Setting the field to a constant was not enough, because a committed row holds no `meta.tool` and jq appends the key at the end of `meta` while a replayed row carries it first. Dropping the key from both rows removes both the value and the position.
+
+All six probes reproduce every row with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset: 639 rows across 18 run files. A full run of all six takes about 6 seconds on the Linux box, so `sdlc/scripts/spec` now runs the check over every probe folder before the demos. No committed row and no recording changed.

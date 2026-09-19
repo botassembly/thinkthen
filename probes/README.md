@@ -21,7 +21,7 @@ A job records through the one door for a paid call.
 sdlc/scripts/live probes/01-find-vs-rank/job.sh
 ```
 
-A job replays from its own recording with no network and no key. `probes/replay-check.sh` does that and compares every row against the committed one, setting `meta.replayed` and `meta.tool` aside. Ticket 0012 added `meta.tool` after these rows were written, so a row older than the field is compared without it.
+A job replays from its own recording with no network and no key. `probes/replay-check.sh` does that and compares every row against the committed one, setting `meta.replayed` and `meta.tool` aside. Ticket 0012 added `meta.tool` after these rows were written, so the field is dropped from both rows and a row older than it still compares. The `spec` rung runs the check over all six probes, so it cannot rot again.
 
 ```sh
 sh probes/replay-check.sh probes/01-find-vs-rank
