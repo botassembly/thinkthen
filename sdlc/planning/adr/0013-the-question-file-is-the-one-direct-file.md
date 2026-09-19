@@ -34,25 +34,20 @@ Three facts bear on the answer.
 
 Nothing changes now. The roadmap gains the rules block as a held idea with this test. The triage demo's ticket writes both forms. A note for the assembly runtime goes to its own repository when Ian takes up that work.
 
-## Amendment, 2026-09-19: a verb reads one named question from the file
+## Amendment, 2026-09-19: a question file holds one question, and a question set holds several
 
-Ian asked how a user keeps a set pattern for `decide` or `choose`, with its options and its cut, and uses it again and again. He asked whether the answer is a Bash script.
+Ian asked how a user keeps a set pattern for `decide` or `choose`, with its options and its cut, and uses it again and again. The agent first proposed that a verb pick one named question out of the `annotate` file with `--from FILE --name NAME`. Ian called that janky, and he was right. It solved a rare case and made the common case harder. His form is simpler, and the agent withdraws the first proposal.
 
-Today the answer is a Bash function or a script. That works, and it has one weakness. How-to 13 tunes a cut on labeled cases. The user then types the question and the cut into a script by hand, and an eval cannot read a Bash function. The eval and the gate can drift apart, and nothing fails when they do.
+Proposed, as item 6 of this decision:
 
-Proposed, as item 6 of this decision: **every verb that takes a question can read one from a question file.**
+- **A question file holds one question.** It has the shape that one entry of the `annotate` file already has.
 
-```sh
-thinkthen decide --from checks.json --name refund_request < message.txt
-thinkthen annotate checks.json --jsonl < labeled-cases.jsonl
-```
+  ```json
+  {"decide": "Does this message ask for a refund?", "threshold": "0.2:0.8"}
+  ```
 
-- `--from FILE` names the question file, and `--name NAME` picks one question in it. A file with one question needs no `--name`.
-- The verb must match the question's type. `filter` and `rank` take a `decide` question.
-- The question's options, levels, cut, and `on` apply as they do under `annotate`. The output and the exit code are the verb's own.
-- A question typed on the command line beside `--from` is a usage error, and so is `--threshold` beside `--from`. A user changes the cut in the file with `jq`, and the file's digest changes with it.
+- **Every verb that takes a question can read it from a question file.** `thinkthen decide --from refund.json < message.txt` prints what `decide` prints and exits as `decide` exits. The verb must match the file. A question or a `--threshold` typed beside `--from` is a usage error, and a user changes the cut in the file.
+- **The eval and the gate are the same command.** `thinkthen decide --from refund.json --jsonl --details < labeled-cases.jsonl` is the eval. Both read one file, so the question and the cut cannot drift apart.
+- **The `annotate` file is a question set.** It holds several named questions, and each entry has exactly the shape of a question file. `jq` lifts one question out of a set, and `jq` builds a set from question files. No `--name` option exists.
 
-The file is then the one saved form for every verb. The eval runs `annotate` over labeled cases, the gate runs `decide --from` on the same file, and the measurement applies to the gate because both read the same words and the same cut. The parser exists once `annotate` lands, so the cost is two options on five commands. A how-to proves the need: tune a cut in an eval, then ship the same file in the gate.
-
-The agent recommends it. It waits for Ian's word, and it would land after ticket 0015.
-
+The parser exists once `annotate` lands, so the cost is one option on five commands. A how-to proves the need: tune a cut in an eval, then ship the same file in the gate. It waits for Ian's word, and it would land after ticket 0015.
