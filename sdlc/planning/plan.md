@@ -61,8 +61,9 @@ Ian set the limit at $20 on 2026-09-19. The vendor charges $0.042 for a million 
 | 2026-09-19 | Ticket 0017: three live checks on made-up labeled cases and the recordings of how-tos 40 and 41 | 127,295 |
 | 2026-09-19 | The token budget check of ticket 0017, one request | 33,663 |
 | 2026-09-19 | Ticket 0014: the recordings of how-tos 03, 06, and 43, four runs | 5,744 |
+| 2026-09-19 | End-of-day live smoke test: one small call per built command, 27 requests. The script counted 4,178 from the detailed rows, and the coordinator added 3,207 by hand for the runs that printed no usage, because the job did not use `--record` | 7,385 |
 
-Spent so far: 421,733 tokens, which is under two cents. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
+Spent so far: 429,118 tokens, which is under two cents. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
 
 ## Levers left open
 
