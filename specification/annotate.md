@@ -19,14 +19,14 @@ thinkthen annotate FILE [--lines|--jsonl] [--field POINTER] [--details] [--dry-r
   "version": 1,
   "threshold": "0.1:0.9",
   "questions": {
-    "unresolved": {"decide": "Does this report a failure that is still unresolved?", "threshold": "0.1:0.9", "on": "/body"},
+    "unresolved": {"decide": "Does this report a failure that is still unresolved?", "true": "The report names a failure that is still happening.", "false": "Anything else.", "threshold": "0.1:0.9", "on": "/body"},
     "kind": {"choose": "Which kind of request is this?", "options": {"bug": "Reports broken behavior.", "feature": "Asks for new behavior.", "other": "Neither fits."}, "threshold": 0.8},
     "impact": {"score": "How much disruption does this report?", "levels": ["None.", "Work continues with a workaround.", "Work is blocked."]}
   }
 }
 ```
 
-A question has exactly one of `decide`, `choose`, or `score`, and its value is the question text. `options` is a list of labels or a map from label to description. `levels` is a list, lowest first. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name uses lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error.
+Each entry has the shape of one question file, and [question-file.md](question-file.md) holds that grammar once. A question has exactly one of `decide`, `choose`, or `score`, and its value is the question text. A `decide` question takes `true` and `false`, the two texts that say what each side means. `options` is a list of labels or a map from label to description. `levels` is a list, lowest first. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name uses lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error.
 
 The top-level `threshold` applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`. The set holds questions and nothing else. It holds no backend, no output path, and no format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 

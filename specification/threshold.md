@@ -22,6 +22,8 @@ A cut of 0 is refused because every probability would reach it and every answer 
 
 A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. `--threshold 0.5` and no threshold at all name the same rule.
 
+The rule has a second home. A question file holds it under `threshold`, and a `--threshold` typed beside `@FILE` replaces it. [question-file.md](question-file.md) gives the precedence and what each source is named in a message.
+
 ## Worked boundaries
 
 | p | none given | `--threshold 0.9` | `--threshold 0.1:0.9` |

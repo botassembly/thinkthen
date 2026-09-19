@@ -20,6 +20,13 @@ Those commands are the design. `specification/` is the contract, and code follow
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first decider model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - A run can be recorded and replayed with no network. A threshold is measured against labeled cases before anyone trusts it.
 
+## What it is not for
+
+- **A loop that needs many decisions a second.** One measured call took over 300 ms, and a shell tool adds a process start on top of that. No pipeline of separate processes reaches that rate. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
+- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. The honest answer there is a library over the same pure core, and `specification/roadmap.md` holds it for after version one.
+
+`sdlc/planning/ten-use-cases.md` measured both against ten real uses.
+
 ## Four names
 
 These four words name the four things a user writes or runs. ADR 0015 fixed them, and every other page links here.

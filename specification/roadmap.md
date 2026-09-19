@@ -37,8 +37,11 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | A two-pass `find` beyond 255 units | One request holds 255 units. A second pass over the winners would need a merge rule and a second measurement | A job whose candidate set cannot be cut to 255 upstream |
 | `config set` | An editor changes a JSON file. A writer would be the first thing in this tool that writes a file the user did not name | A demand strong enough to change that rule |
 | A subprocess adapter | It is the escape hatch for a vendor whose shape is not System One. Dynamic plugin libraries stay refused | A vendor worth supporting that no small server can put behind the System One shape |
-| A structured question or option description | ADR 0010 strikes it from version one. Every question on the demo pages is one sentence, and no demo reached for a JSON value | A demo whose two options cannot be told apart in one sentence |
+| A structured question value | ADR 0010 strikes it from version one. Every question on the demo pages is one sentence, and no demo reached for a JSON value. A description for an option is text and it landed in ticket 0017, as `--option LABEL=DESCRIPTION` | A demo whose question cannot be written as one sentence |
 | `--none` on `choose` | The old `which` added an option meaning that no other option fits. A user adds `other` to the list and gets the same answer | A demo where the list is generated and cannot take an extra label |
+| A library over the core | It is the honest answer to calling the judge from inside a program written in another language, which is use cases 1, 2, 7, and 8 in `sdlc/planning/ten-use-cases.md`. It is a second product, not an option on this one | Version one shipping, and a decision on which language the first binding serves |
+| A `models` listing | The vendor's `GET /v1/models` lists the models with a name, a description, and a release date. A listing reads no evidence and judges nothing, so it earns none of the surface this tool spends on judging | A demo that cannot pin a model without asking the backend which ones exist |
+| A `serve` command or a daemon | Declined by `sdlc/planning/ten-use-cases.md`. A process that waits for work is a service, and this tool is a command that ends. Record mode through a `coproc` already serves a loop from one long-lived process, and a how-to shows it | Nothing. A service is a different program |
 
 ## Held by ADR 0010
 
