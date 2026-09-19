@@ -57,6 +57,7 @@ Spent so far: 247,839 tokens, which is about one cent. `sdlc/live-tokens` holds 
 
 ## Levers left open
 
+- **Hold.** Ian said on 2026-09-19 to start no new ticket once the running work finishes. Ticket 0012 lands. Tickets 0013, 0014, and 0015 are written and wait for his word, and so does the pass over the specification pages that ADR 0014 names.
 - **ADR 0014.** The agent decided six items from the live probe, and Ian can overturn each: `find` is built with a `none` option, the cut stays on the winning probability, `score` loses its warning about rating, option order stays fixed once a cut is tuned, the pages say that a planted claim moves the judge, and the recipes learn to read a pick before `report` is judged again.
 - **The first verdict on `report`.** Ticket 0008's record judges six recipes fine as files. The builder judged the comparison of two runs clumsy enough to earn a command. The reviewer agreed it is the clumsiest and judged that showing built-in recipes, option B of ADR 0012, fixes it far more cheaply. The second verdict comes with slice 10b.
 - **ADR 0013.** Proposed. The question file is the one file the tool runs directly, a runtime such as botassembly lowers its stages to it, JSON stays the only format, and a closed block of rules in that file is tested by writing the triage demo twice.
