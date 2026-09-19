@@ -13,7 +13,9 @@ A backend is a URL and an adapter. Nothing in `thinkthen` is tied to one vendor.
 | Model | The model name sent in the request | `--model` | `THINKTHEN_MODEL` |
 | Key variable | The name of the environment variable that holds the key | `--key-env` | `THINKTHEN_KEY_ENV` |
 
-`--backend NAME` or `THINKTHEN_BACKEND` picks a named profile. A flag beats an environment variable, and an environment variable beats the profile. Named profiles come from a configuration file in a later version. One profile is built in:
+`--backend NAME` or `THINKTHEN_BACKEND` picks a named profile. A flag beats an environment variable, and an environment variable beats the profile.
+
+An ad-hoc backend is a URL, an adapter, and a model given together. A URL names a server, an adapter names the language it speaks, and a model names what answers, so a new URL with a borrowed adapter or model is a guess. A URL without both of the others is a usage error, and so is an adapter without a URL. A model alone may replace a profile's model, which is how a user pins a version. An ad-hoc backend has no name, and results report its `backend` as `null`. Named profiles come from a configuration file in a later version. One profile is built in:
 
 | Name | URL | Adapter | Model | Key variable |
 | --- | --- | --- | --- | --- |
@@ -24,7 +26,7 @@ The built-in profile is a row of data. It is the default when nothing else is na
 ## Keys
 
 - The key is read from the environment variable the profile names. No flag takes a key value.
-- A key never crosses hosts. When `--url` or `THINKTHEN_URL` replaces a profile's URL, the profile's key variable is dropped. The user names one with `--key-env` for the new host, or the request goes out with no key, which suits a local server.
+- A key never crosses hosts. An ad-hoc backend takes nothing from a profile, its key variable included. The user names one with `--key-env` for the new host, or the request goes out with no key, which suits a local server.
 - A missing key for a profile that names one is exit code 4. The message names the variable and never a value.
 - No key appears in a plan, a result, a recording, a log line, or an error.
 

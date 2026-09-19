@@ -28,7 +28,7 @@ Status: **Settled** for version one.
 | 0 | The command ran. Under `--status`, the accepted answer is yes |
 | 1 | Under `--status` only: the accepted answer is no |
 | 2 | Bad usage: an unknown option, a missing argument, or options that conflict |
-| 3 | Under `--status` only: the answer is unsure or unassessed |
+| 3 | Under `--status` only: the answer is unsure |
 | 4 | The backend failed: no key, a refused key, a timeout, an error status, or a reply the adapter cannot read |
 | 5 | A local failure: input that cannot be read or is not valid UTF-8, or output that cannot be written |
 | 70 | A defect inside `thinkthen` |
@@ -39,7 +39,7 @@ One function maps every error to its exit code.
 
 ## `--plan`
 
-`--plan` prints what the command would send and then stops. It calls no backend and needs no key. The plan is JSON on standard output: the backend name, the adapter, the URL, the model, the name of the key variable, and the request body. It never holds the key.
+`--plan` prints what the command would send and then stops. It calls no backend and needs no key. The plan is one compact JSON document on standard output with five fields that are always present: `backend`, `url`, `adapter`, `model`, `key_env`, and then `request`, the body the adapter would send. `backend` is `null` for an ad-hoc backend. `key_env` is the name of the key variable, or `null` when no key would be sent, so a script can prove that a key stays home. The request body carries the evidence, because the evidence is what leaves the machine. The plan never holds a key.
 
 ## `--status`
 
