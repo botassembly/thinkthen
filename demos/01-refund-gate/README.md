@@ -20,7 +20,7 @@ Every number in an expected output on this page is illustrative until a recordin
 set -euo pipefail
 
 if thinkthen decide 'Does the customer ask for money back?' \
-     --input message.txt --quiet --replay recording/
+     --quiet --replay recording/ < message.txt
 then
   printf 'refunds\n'
 else
@@ -34,7 +34,7 @@ The product question takes the other branch.
 set -euo pipefail
 
 if thinkthen decide 'Does the customer ask for money back?' \
-     --input question.txt --quiet --replay recording/
+     --quiet --replay recording/ < question.txt
 then
   printf 'refunds\n'
 else
@@ -53,7 +53,7 @@ set -euo pipefail
 
 route() {
   thinkthen decide 'Does the customer ask for money back?' \
-    --input "$1" --threshold 0.1:0.9 --quiet --replay recording/
+    --threshold 0.1:0.9 --quiet --replay recording/ < "$1"
 }
 
 route message.txt && rc=0 || rc=$?
@@ -77,7 +77,7 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 thinkthen decide 'Does the customer ask for money back?' \
-  --input message.txt --threshold 0.1:0.9 --details --replay recording/ \
+  --threshold 0.1:0.9 --details --replay recording/ < message.txt \
   > "$work/result.json" && rc=0 || rc=$?
 
 printf 'rc=%s\n' "$rc" | mustmatch "rc=0"
@@ -87,7 +87,7 @@ jq -r '.question.verb' "$work/result.json" | mustmatch "decide"
 jq -r '.answer.probability | type' "$work/result.json" | mustmatch "number"
 
 thinkthen decide 'Does the customer ask for money back?' \
-  --input message.txt --quiet --details --replay recording/ \
+  --quiet --details --replay recording/ < message.txt \
   >/dev/null 2>&1 && bad=0 || bad=$?
 printf 'bad=%s\n' "$bad" | mustmatch "bad=2"
 ```
@@ -103,5 +103,5 @@ The recording under `recording/` does not exist yet, so this page is red. Every 
 - **The demo confirms the shell test.** `if thinkthen decide ...` with `--quiet` reads the way `grep -q` reads, and it needs no `> /dev/null`. The three codes are a `case` a shell user already knows how to write.
 - **`--quiet` beside `--details` is a usage error, and the demo confirms the rule reads right.** The gate wants no output and the audit wants the object. Asking for both is a mistake the shell should hear about at once.
 - **The default threshold of 0.5 gives the two-way gate a silent failure mode.** The first block routes a borderline message with no sign that it was close, because nothing is unresolved under a single cut. That is the documented rule and the demo does not ask to change it. It asks that the `decide` help say in one line that a three-way gate needs a band, next to the warning about `set -e`.
-- **`--input FILE` earns its place over a redirect.** The function above takes a path, and `< "$1"` inside a function body would have worked too. `--input` keeps the whole command on one line and puts the file next to the question it is judged against.
+- **The page reads its evidence by redirect.** `--input FILE` arrives with the records slice, and every command here redirects standard input until it does. The argument for `--input` over a redirect belongs with that slice.
 - **A single cut has no way to report how close a record came.** Exit 1 means the answer did not reach the mark, and the desk that wants the margin has to drop `--quiet` and read `answer.probability`. The demo does that in the last block. The cost is one saved file per judgment. That is the right price.

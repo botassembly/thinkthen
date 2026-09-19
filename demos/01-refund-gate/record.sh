@@ -11,7 +11,7 @@ cd -- "$(dirname -- "$0")"
 # --details change no digest and the blocks share these entries.
 for evidence in message.txt question.txt; do
 	thinkthen decide 'Does the customer ask for money back?' \
-		--input "$evidence" --quiet --record recording/ && exit=0 || exit=$?
+		--quiet --record recording/ < "$evidence" && exit=0 || exit=$?
 	printf 'recorded %s, exit %s\n' "$evidence" "$exit"
 done
 
