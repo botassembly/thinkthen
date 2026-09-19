@@ -53,6 +53,6 @@ thinkthen find 'This ticket should be worked next.' --jsonl --field /body < queu
 
 ## Open points
 
-- How does `find` say that nothing fits? Three shapes are open: a second yes/no question asked of the winner, a `none` option among the units, and a cut on the backend's confidence. Each costs something different, and a measurement settles it. Proposed ADR 0009 item 3 names demo 15's argument for the `none` option, which spells the outcome the way `choose` does: `null`, nothing on standard output, and exit 3.
+- How does `find` say that nothing fits? Three shapes are open: a second yes/no question asked of the winner, a `none` option among the units, and a cut on the backend's confidence. Each costs something different, and a measurement settles it. ADR 0009 item 3 names demo 15's argument for the `none` option, which spells the outcome the way `choose` does: `null`, nothing on standard output, and exit 3.
 - Which answer kind does `find` print under `--details`? `yes_no` carries one probability and `choice` carries one per option, and neither names a unit that arrived on standard input. Recommendation: a kind that names the chosen unit's id and carries a probability per unit.
 - Does `find` print more than one unit? Demo 15 wanted the three best lines and found the option free, because one request already answered the whole page. No ADR names such an option, so `find` prints one unit until one does.

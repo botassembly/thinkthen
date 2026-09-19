@@ -17,7 +17,7 @@ Those commands are the design. `specification/` is the contract, and code follow
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the question, the options, and the evidence.
 - A yes, a no, an unresolved answer, and an error stay four different outcomes in the output and in the exit code.
-- A backend is a URL and an adapter. TypeSafe's Jev is the first decider model. Nothing is tied to one vendor, and a local model can serve.
+- A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first decider model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - A run can be recorded and replayed with no network. A threshold is measured against labeled cases before anyone trusts it.
 
 ## Where to read

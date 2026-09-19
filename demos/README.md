@@ -4,7 +4,7 @@ A demo is a small, real shell job written as an executable page. It lives at `de
 
 ADR 0005 puts the demos in front of the code. Writing a demo is the first test of the design. Where a command line reads badly, needs an option that is absent, or fights a Unix habit, the demo says so and the specification changes.
 
-Every page on this branch is written to ADR 0007 and its clarifications: flat verbs, a bare JSON value on standard output, and one `--threshold` option. Demos 13, 14, and 15 also drive ADR 0008 and ADR 0009, which are Proposed. No page reaches for a command, an option, a field, or an exit code that one of the three does not name. Where a job could not be written cleanly inside that surface, the page writes it as well as the surface allows and records the gap.
+Every page on this branch is written to ADR 0007 and its clarifications: flat verbs, a bare JSON value on standard output, and one `--threshold` option. Demos 13, 14, and 15 also drive ADR 0008 and ADR 0009, which ADR 0010 accepted in part. No page reaches for a command, an option, a field, or an exit code that one of the three does not name. Where a job could not be written cleanly inside that surface, the page writes it as well as the surface allows and records the gap.
 
 ## How to read one
 
@@ -17,6 +17,8 @@ Every page closes with "What this demo decides". That section says what the demo
 ## Red and green
 
 A demo starts **red**. Nothing under `demos/` runs today, because no verb in ADR 0007 is built. A red demo is a plan.
+
+The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and 11 stays an empty number.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. A green demo is a regression test and a page of documentation at once. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. A green page that names a `--replay` folder it does not hold stops the run.
 

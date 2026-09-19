@@ -1,6 +1,6 @@
 # What the demos found
 
-Every design finding from the demo pages, strongest argument first. Pages 01 to 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, both Proposed. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
+Every design finding from the demo pages, strongest argument first. Pages 01 to 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, which ADR 0010 accepted in part. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
 
 ADR 0010 took `segment` and `report` out of version one. The findings that belonged to them left this page with demo 11 and with `report.md`, and the git history keeps them. Two of those questions carry to the `jq` recipes of the plan's recipes slice: how a check made by a bare verb is named, and how a truth label stays off the wire.
 
@@ -79,6 +79,6 @@ Fifteen jobs were written before the code. These parts of the three ADRs were ne
 - `timeout_seconds` and `max_retries` from the configuration file. Demos 10 and 12 set them on the command line.
 - A file profile named `jev` replacing the built-in one.
 - `options` as a plain list of labels in an `annotate` file. Demo 08 used the map form.
-- A structured question or option description, from ADR 0009 item 5. Every question on these pages is one sentence.
+- A structured question or option description. ADR 0010 struck it from version one, and every question on these pages is one sentence.
 - `--options POINTER` on `choose`, from ADR 0009 item 4. No demo had a candidate list that changes per record.
 - Exit codes 5 and 70. Demos 12 and 15 name codes in `case` branches and no page produces either.
