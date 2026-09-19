@@ -21,7 +21,7 @@ The title starts with "How to" and names a task. One paragraph says when to use 
 
 | How to | Demo | Slice | State |
 | --- | --- | --- | --- |
-| Act only when the answer is sure, and send the rest to a person | 04 | 7 | Red |
+| Act only when the answer is sure, and send the rest to a person | 04 | 7 | Green, in the how-to form |
 | Branch on a label with `choose` and `case` | 02 | 5 | Green |
 | Tell "not stated" from "false" | 20 | 5 | Green |
 | Rate on a scale, sort by it, and test it with `jq -e` | 17 | 5 | Green |

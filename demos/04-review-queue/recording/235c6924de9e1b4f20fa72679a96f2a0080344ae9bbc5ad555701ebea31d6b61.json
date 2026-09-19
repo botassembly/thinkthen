@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I am thinking about whether to keep this going. Money is tight and I am not using it much.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the customer ask to end their subscription?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.28}},"usage":{"input_tokens":296,"output_tokens":21}}
+}
