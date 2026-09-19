@@ -2,19 +2,18 @@
 
 Every design finding from the demo pages, strongest argument first. Pages 01 to 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, both Proposed. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
 
+ADR 0010 took `segment` and `report` out of version one. The findings that belonged to them left this page with demo 11 and with `report.md`, and the git history keeps them. Two of those questions carry to the `jq` recipes of the plan's recipes slice: how a check made by a bare verb is named, and how a truth label stays off the wire.
+
 ## Against ADR 0008 and ADR 0009
 
 | Finding | Demos | Section | Proposed change | Strength |
 | --- | --- | --- | --- | --- |
-| An exact check is keyed by a pointer and not by a name the user chose. ADR 0008 keys it by the left pointer, so demo 14 reads `/gold_code`. That key moves the moment somebody renames the field, and a saved dashboard breaks with it | 14 | ADR 0008 item 4 | `--truth NAME=/A=/B`. A metric a script charts needs a key a script can write | medium |
-| A run made by a bare verb is one check named after the verb, so `--threshold decide=0.82` names a word the user never typed. Two runs of two different questions concatenate into one check called `decide`, and the only warning is a list of question texts | 13 | ADR 0007 clarifications; ADR 0008 item 4 | Name a bare-verb check after its question text, or make `report` refuse a file whose rows carry two texts | strong |
 | How `find` says that nothing fits is open. Demo 15 argues for a `none` option: it costs no second request, and the tool already spells the outcome as an empty standard output and exit 3, exactly as `choose` does. A second yes/no question doubles the request and can disagree with the pick it guards. A cut on `confidence` rests on a formula ADR 0009 item 2 calls unpublished | 15 | ADR 0009 item 3 | `find` inherits `--threshold`, `null`, and exit 3 from `choose`, with a `none` option carried in the one request | strong |
 | `find` has no answer kind. `yes_no` carries one probability and `choice` carries one per option, and neither names a unit that arrived on standard input. `find.md` now fixes what `find` prints and leaves `--details` open | 15 | ADR 0009 item 3 | A fourth answer kind that names the chosen unit and carries a probability per unit | strong |
 | `find` sends the whole input in one request and nothing narrows it. `--field` narrows a record, and no option narrows a page | 15 | ADR 0009 item 3 | The `find` help leads with the fact. It is the one verb where all of the input leaves at once | medium |
 | `answer` carries the vendor's `confidence` when one exists, and ADR 0009 calls its formula unpublished. A demo cannot assert on a field that may be absent and cannot explain one whose meaning nobody knows | 02, 05 | ADR 0009 item 2 | Keep `confidence` out of every example and every default rule until a measurement says what it is for | medium |
 | The demo could not show a resumed run resuming. Every entry exists in a committed recording, so a rerun replays everything and the saving is asserted in prose. ADR 0008 item 5 leans on the resume for its claim that a completed run holds a judgment for every case | 12, 14 | ADR 0008 item 5 | No change. The claim belongs to a live check and not to a gate | medium |
 | `find` prints one unit and cannot be asked for three. One request already answered the whole page, so more units would cost nothing. No ADR names the option, so `find.md` holds it open rather than inventing a flag | 15 | ADR 0009 item 3 | A demo that needs a short list from one request brings the option in | weak |
-| The two-file procedure needs no option, and demos 13 and 14 confirm it. Sweep one file, take a number, report the other file at that number | 13 | ADR 0009 item 7 | No change. The demos back the refusal of a held-out split flag | weak |
 
 ## Against ADR 0007
 
@@ -37,16 +36,11 @@ Every design finding from the demo pages, strongest argument first. Pages 01 to 
 | `--details` carries `input`, the whole record including what was never sent. A user with megabyte records pays for it on every row to read one probability | 04 | Output, `--details` | No change. The help names the cost | weak |
 | A threshold is measured for one model and nothing on the command line says so | 10, 13 | The threshold | The `--threshold` help says the mark belongs to a model | weak |
 | Under the default cut of 0.5 nothing is ever unresolved, so a two-way `if` routes a borderline message with no sign that it was close | 01 | The threshold | The `decide` help says a three-way gate needs a band, next to the warning about `set -e` | weak |
-| A truth pointer names a field that `--field` and `on` are what keep off the wire. A user who forgets them sends the answer with the question and poisons the measurement | 13, 14 | `report`; Records | One line in the `report` help | weak |
 
 ## Settled by the specification pages
 
 Earlier drafts of these pages raised the following, and `specification/` now answers each one. They are listed once and not repeated above.
 
-- `report.md` fixes the whole report object: the run's facts, one entry per check, the sweep row, the ten calibration bands, the exact check keyed by its left pointer, and the `baseline` object. Every `jq` path in demos 13 and 14 is an assertion now.
-- A band with no rows in the calibration table reports `"rows":0` and `"truly_yes":null`.
-- `--baseline` says only that a case is missing from one file, and the page warns against reading that as a result.
-- `NAME=` may be left out of `--truth` and `--threshold` on a run that holds one check.
 - `find.md` fixes what `find` prints: the chosen unit byte for byte, the record under `--jsonl`, and one unit rather than a list. More than 255 units is a usage error before any request.
 - `annotate --dry-run` prints the plan as well as checking the file. The plan shows the first record's first `on` set, and its `input` object names every question's pointers.
 - The three ad-hoc backend flags travel together. A URL without an adapter and a model is a usage error, so no adapter is ever left pointed at a server that may not speak it.
@@ -87,7 +81,5 @@ Fifteen jobs were written before the code. These parts of the three ADRs were ne
 - `options` as a plain list of labels in an `annotate` file. Demo 08 used the map form.
 - A structured question or option description, from ADR 0009 item 5. Every question on these pages is one sentence.
 - `--options POINTER` on `choose`, from ADR 0009 item 4. No demo had a candidate list that changes per record.
-- `--id POINTER` on `report`. Demo 14's cases carry `/id`, and that is the default.
-- A `choose` check scored against a truth label. Demo 14's two checks are both `decide`, so `labels_scored` and `macro` in `report.md` are unexercised.
 - Exit codes 5 and 70. Demos 12 and 15 name codes in `case` branches and no page produces either.
 - The `chat-logprobs` adapter.

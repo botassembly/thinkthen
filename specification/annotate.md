@@ -111,13 +111,15 @@ Records never share a request. A question never sees another question's answer. 
 
 The questions and the evidence together can pass the backend's token limit for one request. The backend refuses, and the exit code is 4. Fewer questions per file is the answer.
 
-## An eval is `annotate` plus `report`
+## An eval is `annotate` and a saved run
 
-Draft, from Proposed ADR 0008. A case is one flat JSON object with any field names. A definition is an `annotate` file. A run is the file of `--details` rows. `report` interprets the run and calls no model. The whole workflow is two commands with one file between them, and no eval engine enters this tool.
+Settled by ADR 0008 item 1. A case is one flat JSON object with any field names. A definition is an `annotate` file. A run is the file of `--details` rows. `jq` reads the run and counts it. No eval engine enters this tool.
 
 ```sh
 thinkthen annotate checks.json --jsonl --record runs/v1 --replay runs/v1 < cases.jsonl > run-v1.jsonl
-thinkthen report run-v1.jsonl --truth correct=/gold
+jq -s '[.[] | select(.value.correct)] | length' run-v1.jsonl
 ```
+
+ADR 0010 holds the `report` command out of version one and puts the `jq` recipes first. `specification/roadmap.md` records the five outcomes and the test between them.
 
 A missing field and a failed request stop the run, so a completed run holds a judgment for every case. A rerun on the same recording folder answers the finished cases from disk.

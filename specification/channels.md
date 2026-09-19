@@ -89,5 +89,5 @@ In record mode `--dry-run` prints the plan for the first record and stops. It re
 {"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
 ```
 
-`annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both. `report` and `config` send nothing at any time, so `--dry-run` beside either is a usage error.
+`annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both. `config` sends nothing at any time, and `--dry-run` beside it is a usage error.
 

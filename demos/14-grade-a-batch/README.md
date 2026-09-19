@@ -2,6 +2,8 @@
 
 Status: red
 
+`report` left the plan under ADR 0010. This demo is rewritten over the `jq` recipes of the plan's recipes slice, and it stays red until they exist.
+
 Verbs: `annotate`, `report`
 
 A team has an answering assistant and six saved cases. Each case holds the question asked, the source text, a reference answer a person wrote, the assistant's answer, and a human verdict. The team wants two numbers for every release: how often the assistant is correct, and how often it says something the source text does not support. It also wants to know whether the judge agrees with the humans, because a judge nobody checked is a number nobody should trust.

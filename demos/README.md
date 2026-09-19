@@ -46,3 +46,5 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 13 | [Pick a threshold](13-pick-a-threshold/) | `decide`, `report` | red |
 | 14 | [Grade a batch](14-grade-a-batch/) | `annotate`, `report` | red |
 | 15 | [Find the line](15-find-the-line/) | `find` | red |
+
+Demos 13 and 14 name `report`, which left the plan under ADR 0010. They are rewritten over the `jq` recipes of the plan's recipes slice. Demo 11 left with `segment`, and the numbers after it keep the numbers they had.

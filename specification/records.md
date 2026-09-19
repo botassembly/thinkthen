@@ -21,7 +21,7 @@ The tool never guesses the framing. It never repairs invalid JSON, never truncat
 | `decide`, `choose`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
 | `filter`, `rank` | One of `--lines` or `--jsonl` is required. One document is not a stream |
 | `annotate` | One document by default. Both flags are accepted |
-| `report`, `config` | Neither flag applies |
+| `config` | Neither flag applies |
 
 ## `--field POINTER`
 
@@ -63,7 +63,7 @@ One request carries one piece of evidence and every question asked of it. Two pi
 | `decide`, `choose`, `score`, `filter`, `rank` over N records | N |
 | `annotate` over N records | N times the number of distinct `on` sets |
 | `find` | 1 |
-| `report`, `config`, `--dry-run`, `--replay` | 0 |
+| `config`, `--dry-run`, `--replay` | 0 |
 
 `rank` sorts locally and makes no pairwise calls. Every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept.
 

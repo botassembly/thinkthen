@@ -19,7 +19,6 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 | [rank.md](rank.md) | `rank` | Settled |
 | [annotate.md](annotate.md) | `annotate` and the saved question file | Settled, with Draft sections |
 | [find.md](find.md) | `find`, proposed after `rank` | Draft |
-| [report.md](report.md) | `report` | Draft |
 | [config.md](config.md) | The configuration file and the `config` command | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
@@ -39,6 +38,5 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `filter QUESTION` | Keeps the records that reach the mark and prints them unchanged |
 | `rank QUESTION` | Prints the records in order of the probability of yes |
 | `annotate FILE` | Asks a saved file of questions and adds one field per question |
-| `report` | Interprets a saved run of `--details` rows and calls no model |
 | `config path\|show\|check` | Prints the configuration path, the effective settings, or a verdict |
 | `find QUESTION` | Proposed. Picks the unit that best answers a question, out of a set the model sees at once |

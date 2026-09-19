@@ -2,6 +2,8 @@
 
 Status: red
 
+`report` left the plan under ADR 0010. This demo is rewritten over the `jq` recipes of the plan's recipes slice, and it stays red until they exist.
+
 Verbs: `decide`, `report`
 
 Every other demo types a threshold. Nobody has said where the number comes from. A team with a few labelled examples judges them once, asks what each cut would have done against the labels, picks one, and then checks the pick on a second file it never tuned against. `report` reads the saved rows and calls no model, so every step after the first is free.

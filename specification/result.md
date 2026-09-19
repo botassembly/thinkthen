@@ -14,7 +14,6 @@ One internal result model feeds both views. The view never changes the request o
 | `filter` | each kept record, byte for byte as it arrived, in input order |
 | `rank` | each record as it arrived, most likely yes first |
 | `annotate` | one JSON object per record |
-| `report` | one JSON object |
 
 Every value is compact and sits on one line, so one answer is also one record for `jq`, `grep`, and `wc -l`.
 
@@ -102,4 +101,4 @@ A decider model judges only the evidence it was shown. A probability of 0.98 say
 
 ## Open points
 
-- How does `meta` report an `annotate` record whose requests were answered by different model versions? A run that mixes versions is two measurements. Recommendation: `meta.model` becomes the list of distinct versions when more than one answered, and `report` names such a run.
+- How does `meta` name an `annotate` record whose requests were answered by different model versions? A run that mixes versions is two measurements. Recommendation: `meta.model` becomes the list of distinct versions when more than one answered.
