@@ -14,5 +14,7 @@ mod from_record;
 mod limits;
 mod parallel;
 mod recordings;
+mod refusals;
+mod secrecy;
 mod streaming;
 mod terminal;

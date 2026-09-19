@@ -279,7 +279,89 @@ impl From<RenderError> for Failure {
 mod tests {
     use super::{Failure, report};
     use std::process::ExitCode;
-    use thinkthen_core::RecordError;
+    use std::time::Duration;
+    use thinkthen_core::recording::{Entry, Exchange as Recorded};
+    use thinkthen_core::{RecordError, Url};
+
+    /// The key and the evidence every case here is built from.
+    ///
+    /// They are the same two markers `crates/thinkthen/tests/backend/secrecy.rs`
+    /// sweeps the compiled binary with. That sweep reads what a run writes, and
+    /// this one reads the `Debug` lines a message could be built from.
+    const KEY: &str = "sk-marker-2f9d41c6";
+    const EVIDENCE: &str = "marker-evidence-7b3ac5";
+
+    /// Every `Debug` line that could hold the key or the evidence holds neither.
+    ///
+    /// A `{:?}` is how a key reaches a log by accident, so every type that
+    /// carries one is rendered here and read. A new type that holds either goes
+    /// in this list.
+    #[test]
+    fn no_debug_line_shows_the_key_or_the_evidence() {
+        let key = crate::edge::Key::of(KEY);
+        let body = format!(r#"{{"state":"{EVIDENCE}"}}"#);
+        let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("an address");
+        let recorded = Recorded::new(&url, body.as_bytes());
+        let entry = Entry::of(&recorded, body.as_bytes()).expect("both bodies are JSON");
+        let exchange = crate::http::Exchange {
+            url: url.as_str(),
+            body: body.as_bytes(),
+            key: &key,
+            max_retries: 2,
+            retry_wait: Duration::from_secs(1),
+        };
+        let judged = crate::schedule::Judged {
+            printed: Some(body.clone()),
+            outcome: thinkthen_core::Outcome::Yes,
+            replayed: false,
+        };
+        let client = crate::http::Client::new(Duration::from_secs(1));
+
+        let shown = format!(
+            "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
+             {:?} {:?}",
+            Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
+            Failure::Status(401),
+        );
+
+        assert!(!shown.contains(KEY), "{shown}");
+        assert!(!shown.contains(EVIDENCE), "{shown}");
+        assert!(shown.contains("withheld"), "{shown}");
+    }
+
+    /// No message a user reads holds the key or the evidence.
+    ///
+    /// Every variant is reported, so a variant added later that quotes either
+    /// one fails here.
+    #[test]
+    fn no_diagnostic_holds_the_key_or_the_evidence() {
+        let body = format!(r#"{{"state":"{EVIDENCE}"}}"#);
+        let cases = [
+            Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
+            Failure::Status(401),
+            Failure::Transport("connection refused".to_owned()),
+            Failure::Record(RecordError::NotUtf8),
+            Failure::Record(RecordError::TooLarge),
+            Failure::ReplayMiss("abc.json".to_owned()),
+            Failure::Entry("abc.json".to_owned(), "it records another".to_owned()),
+            Failure::Stopped {
+                at: 2,
+                finished: 1,
+                replayed: 0,
+                cause: Box::new(Failure::Record(RecordError::TooLarge)),
+            },
+        ];
+
+        for failure in cases {
+            let mut written = Vec::new();
+            report(&failure, &mut written);
+            let said = String::from_utf8(written).expect("a diagnostic is text");
+
+            assert!(!said.contains(KEY), "{said}");
+            assert!(!said.contains(EVIDENCE), "{said}");
+            assert!(!said.contains(&body), "{said}");
+        }
+    }
 
     #[test]
     fn a_common_failure_status_carries_the_phrase_the_specification_fixes() {

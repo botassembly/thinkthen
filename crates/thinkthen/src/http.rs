@@ -189,26 +189,8 @@ fn is_retried(failure: &Failure) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{Exchange, honored};
-    use crate::edge::Key;
+    use super::honored;
     use std::time::Duration;
-
-    #[test]
-    fn an_exchange_shows_neither_the_key_nor_the_evidence_it_carries() {
-        let key = Key::of("sk-secret-value");
-        let exchange = Exchange {
-            url: "http://127.0.0.1:1/v1",
-            body: br#"{"state":"something private"}"#,
-            key: &key,
-            max_retries: 2,
-            retry_wait: Duration::from_secs(1),
-        };
-
-        let shown = format!("{exchange:?} {key:?}");
-        assert!(!shown.contains("sk-secret-value"), "{shown}");
-        assert!(!shown.contains("something private"), "{shown}");
-        assert!(shown.contains("withheld"), "{shown}");
-    }
 
     #[test]
     fn a_retry_after_header_is_read_in_seconds_and_stops_at_the_ceiling() {

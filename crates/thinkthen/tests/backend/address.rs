@@ -1,8 +1,6 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
-use std::fs;
 use std::io;
-use std::path::PathBuf;
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
@@ -23,13 +21,6 @@ const BUILT_IN: &str = "https://api.typesafe.ai/v1/systemone";
 fn decide(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     let asked = ["decide", "asks for a refund"];
     spawn(&[&asked[..], arguments].concat(), environment, EVIDENCE)
-}
-
-/// A folder this test owns, removed and remade so each run starts empty.
-fn folder(name: &str) -> PathBuf {
-    let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
 }
 
 #[test]
@@ -240,48 +231,6 @@ fn a_variable_that_holds_nothing_counts_as_absent() {
             "{printed}"
         );
     }
-}
-
-#[test]
-fn the_key_comes_from_thinkthen_api_key_and_reaches_nothing_but_the_header() {
-    let secret = "sk-never-printed";
-    let folder = folder("key");
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-
-    let output = decide(
-        &["--details", "--record", &folder.to_string_lossy()],
-        &[
-            ("THINKTHEN_BASE_URL", listener.base()),
-            ("THINKTHEN_API_KEY", secret),
-        ],
-    )
-    .expect("the compiled binary runs");
-
-    assert_eq!(output.status.code(), Some(0));
-    let requests = listener.requests();
-    let request = requests.first().expect("one request reached the listener");
-    assert_eq!(
-        request.header("authorization"),
-        Some("Bearer sk-never-printed")
-    );
-
-    let printed = format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(!printed.contains(secret), "{printed}");
-
-    let mut entries = 0;
-    for entry in fs::read_dir(&folder).expect("the recording folder is there") {
-        let path = entry.expect("an entry").path();
-        let written = fs::read_to_string(&path).expect("an entry is text");
-        for shown in [secret, "authorization", "Authorization", "Bearer"] {
-            assert!(!written.contains(shown), "{written}");
-        }
-        entries += 1;
-    }
-    assert_eq!(entries, 1, "the run recorded its one exchange");
 }
 
 #[test]
