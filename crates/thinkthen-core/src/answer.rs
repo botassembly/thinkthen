@@ -7,7 +7,7 @@ use crate::probability::Probability;
 /// The shapes of answer `decide` knows. Version one reads a yes/no answer.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum AnswerKind {
+pub(crate) enum AnswerKind {
     /// A probability that the condition holds.
     YesNo,
 }
@@ -29,12 +29,6 @@ impl Answer {
         }
     }
 
-    /// Read the kind back.
-    #[must_use]
-    pub const fn kind(&self) -> AnswerKind {
-        self.kind
-    }
-
     /// Read the probability back.
     #[must_use]
     pub const fn probability(&self) -> Probability {
@@ -44,14 +38,12 @@ impl Answer {
 
 #[cfg(test)]
 mod tests {
-    use super::{Answer, AnswerKind};
+    use super::Answer;
     use crate::probability::Probability;
 
     #[test]
-    fn an_answer_keeps_its_kind_and_its_probability() {
+    fn an_answer_keeps_the_probability_it_was_given() {
         let probability = Probability::new(0.92).expect("inside the range");
-        let answer = Answer::new_yes_no(probability);
-        assert_eq!(answer.kind(), AnswerKind::YesNo);
-        assert_eq!(answer.probability(), probability);
+        assert_eq!(Answer::new_yes_no(probability).probability(), probability);
     }
 }

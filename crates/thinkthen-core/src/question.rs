@@ -7,7 +7,7 @@ use crate::text::Condition;
 /// The verbs `decide` knows. Version one judges a condition and nothing else.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Verb {
+pub(crate) enum Verb {
     /// Ask whether a condition holds for the evidence.
     If,
 }
@@ -30,14 +30,12 @@ impl Question {
     }
 
     /// Read the verb back.
-    #[must_use]
-    pub const fn verb(&self) -> Verb {
+    pub(crate) const fn verb(&self) -> Verb {
         self.verb
     }
 
     /// Read the condition back.
-    #[must_use]
-    pub const fn condition(&self) -> &Condition {
+    pub(crate) const fn condition(&self) -> &Condition {
         &self.condition
     }
 }

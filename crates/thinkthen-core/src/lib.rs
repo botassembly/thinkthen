@@ -23,13 +23,13 @@ pub mod systemone;
 mod text;
 
 pub use crate::adapter::{Adapter, UnknownAdapterError};
-pub use crate::answer::{Answer, AnswerKind};
+pub use crate::answer::Answer;
 pub use crate::assessment::{Assessment, AssessmentStatus, assess};
 pub use crate::pass_mark::{PassMark, PassMarkError};
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::policy::Policy;
 pub use crate::probability::{Probability, ProbabilityError};
-pub use crate::question::{Question, Verb};
+pub use crate::question::Question;
 pub use crate::reply::Reply;
 pub use crate::result::{DecisionResult, Meta, SCHEMA, Usage};
 pub use crate::text::{BackendName, BlankTextError, Condition, Evidence, ModelName};
