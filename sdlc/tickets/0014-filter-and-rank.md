@@ -6,7 +6,7 @@ opens: crates spec specification/filter.md specification/rank.md specification/f
 
 # 0014: `filter` and `rank`
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
