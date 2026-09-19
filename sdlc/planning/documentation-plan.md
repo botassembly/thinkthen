@@ -12,16 +12,16 @@ The title starts with "How to" and names a task. One paragraph says when to use 
 
 | How to | Demo | Slice | State |
 | --- | --- | --- | --- |
-| Gate a script step on a yes/no answer | 01 | 4 | Green, in the how-to form |
-| Tell "no" from "could not ask" in a script, with `case $?` and under `set -e` | 19 | Ticket 0010 | Green, in the how-to form |
-| Test a script with no network, with `--record` and `--replay` | 27 | Ticket 0010 | Green, in the how-to form |
+| Gate a script step on a yes/no answer | 01 | 4 | Green |
+| Tell "no" from "could not ask" in a script, with `case $?` and under `set -e` | 19 | Ticket 0010 | Green |
+| Test a script with no network, with `--record` and `--replay` | 27 | Ticket 0010 | Green |
 | Point the tool at another server with `THINKTHEN_BASE_URL` | 18 | 13 | |
 
 ## Gates and branches
 
 | How to | Demo | Slice | State |
 | --- | --- | --- | --- |
-| Act only when the answer is sure, and send the rest to a person | 04 | 7 | Green, in the how-to form |
+| Act only when the answer is sure, and send the rest to a person | 04 | 7 | Green |
 | Branch on a label with `choose` and `case` | 02 | 5 | Green |
 | Tell "not stated" from "false" | 20 | 5 | Green |
 | Rate on a scale, sort by it, and test it with `jq -e` | 17 | 5 | Green |
@@ -36,7 +36,7 @@ The title starts with "How to" and names a task. One paragraph says when to use 
 | Choose from a list that differs for every record | 21 | 7 | |
 | Control what leaves the machine, and prove it with `--dry-run` | 09 | 8 | Red |
 | Resume a long run that stopped | 12 | 7 | Red |
-| Find the one line that answers a question | 15 | 11 | Red. Draft until the measurement |
+| Find the one line that answers a question | 15 | 11 | Red. Slice 11 measures the longer documents first |
 
 ## Many questions at once
 

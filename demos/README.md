@@ -16,7 +16,7 @@ Every `thinkthen` command that would otherwise reach a backend carries `--replay
 
 ## Red and green
 
-A demo starts **red**. Only `decide` is built, so every page that needs another verb is still a plan. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
+A demo starts **red**. Only `decide`, `choose`, and `score` are built, so every page that needs another verb is still a plan. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. When it turns green it takes the how-to form and the argument leaves the page. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. It refuses a green page whose title does not start with "How to", that has no "What can go wrong" section, or that this index does not list. A green page that names a `--replay` folder it does not hold stops the run.
 

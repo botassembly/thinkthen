@@ -6,7 +6,7 @@ Verbs: `find`
 
 A desk keeps a one-page policy and answers customers from it. Somebody asks when the money comes back. The answer is one line of the policy, and a person reads the whole page to find it. `find` reads the page once and points at the line.
 
-`find` is Draft. ADR 0009 item 3 plans it and leaves one question open, and this page argues that question.
+`find.md` is Settled. ADR 0014 accepted `find` with a `none` option on the live comparison, and ADR 0015 records the acceptance. Slice 11 repeats the comparison on longer documents and turns this page green.
 
 Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
 
@@ -46,7 +46,7 @@ One question, twelve units, one request. The evidence travels as one string, so 
 
 ## When the page does not answer
 
-The policy says nothing about warranties. A tool that always returns its best line would hand the desk a wrong answer with no warning. ADR 0009 item 3 leaves this open and names this demo's argument, so the two blocks below assert the proposal rather than a settled rule.
+The policy says nothing about warranties. A tool that always returns its best line would hand the desk a wrong answer with no warning. `--none` offers the model a `none` option, and `find` then exits 3 and prints nothing.
 
 ```bash
 set -euo pipefail
@@ -54,7 +54,7 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 thinkthen find 'How long is the manufacturer warranty?' \
-  --lines --input policy.txt --replay recording/ \
+  --lines --none --input policy.txt --replay recording/ \
   > "$work/hit.txt" && rc=0 || rc=$?
 
 printf 'rc=%s\n' "$rc" | mustmatch "rc=3"
@@ -67,7 +67,7 @@ Nothing on standard output and exit 3. A desk reads the code and falls back to a
 set -euo pipefail
 
 if answer=$(thinkthen find 'How long is the manufacturer warranty?' \
-              --lines --input policy.txt --replay recording/)
+              --lines --none --input policy.txt --replay recording/)
 then
   printf 'quote: %s\n' "$answer"
 else
@@ -79,7 +79,7 @@ The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **Nothing fits should be a "none" option, and the demo is written that way.** ADR 0009 leaves three choices open. A `none` option costs no second request, and the tool already has a word for the outcome: the answer is unresolved, standard output is empty, and the exit code is 3, exactly as `choose` behaves. A second yes/no question doubles the request and asks about the set rather than about a unit, and it can disagree with the pick it is meant to guard. A cut on the vendor's `confidence` rests on a formula ADR 0009 item 2 calls unpublished, so nobody could say what the number meant. The demo argues for the `none` option and asks that `find` inherit `--threshold` and exit 3 from `choose` rather than growing a rule of its own.
+- **Nothing fits is a "none" option, and the demo is written that way.** ADR 0009 left three choices open, and the live comparison of ticket 0011 settled them. A `none` option costs no second request, and the tool already has a word for the outcome: the answer is unresolved, standard output is empty, and the exit code is 3, exactly as `choose` behaves. A second yes/no question doubles the request and asks about the set rather than about a unit, and it can disagree with the pick it is meant to guard. A cut on the vendor's `confidence` rests on a formula ADR 0009 item 2 calls unpublished, so nobody could say what the number meant. The demo argued for the `none` option, and `find.md` now spells it `--none` and exits 3. `find` takes no `--threshold`, so the demo's second ask went unanswered.
 - **What `find` prints is fixed and the answer kind is not.** `find.md` now says the chosen unit comes back byte for byte, as `filter` prints a record, and the page asserts it. `--details` still has no answer kind: `yes_no` carries one probability and `choice` carries one per option, and neither names a unit that arrived on standard input. The demo asks for a kind that names the chosen unit and carries a probability per unit.
 - **The demo wanted the three best lines and could not ask for them.** One request already answered the whole page, so printing three lines would cost nothing more than printing one. No ADR names such an option, and `find.md` holds it as an open point rather than inventing a flag. The page drops the block and says what it lost.
 - **`find` sends the whole page and the plan is the only warning.** `--field` narrows a record and nothing narrows a page. A user who runs `find` over a private document sends all of it in one request. The demo asks that the `find` help lead with that fact, because the verb is the one place in the surface where the whole input leaves in one go.
