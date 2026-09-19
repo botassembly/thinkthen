@@ -50,6 +50,8 @@ The evidence is then `{"input":"...","output":"..."}`. A check that must not see
 
 The evidence object is not a string, so it goes out as compact JSON by the rule above. [backends.md](backends.md) carries it in one field, the way a single pointer's value travels.
 
+The vendor also accepts that field as a real JSON object rather than as text holding one. `probes/09-evidence-shape/` measured both on forty made-up labeled cases on 2026-09-19. Both shapes answered 40 of 40 correctly, no answer differed, the probability moved by 0.0045 on average and by 0.05 at most, and the object shape cost 13,954 input tokens against the string shape's 13,714. The check separated nothing, so the string stays. A measurement on cases the model finds hard could overturn it.
+
 ## What a record may not hold
 
 - A JSON record that holds two members under one name is refused, because no reader can say which of the two a pointer means.
