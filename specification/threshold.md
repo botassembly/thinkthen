@@ -18,6 +18,8 @@ Let p be the probability of yes.
 
 Boundaries are inclusive. A value meets its mark when it reaches it.
 
+A cut of 0 is refused because every probability would reach it and every answer would be yes. A band low of 0 is accepted because the low side is inclusive, so a probability of exactly 0 is still a no.
+
 A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. `--threshold 0.5` and no threshold at all name the same rule.
 
 ## Worked boundaries

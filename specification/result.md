@@ -30,7 +30,7 @@ Every value is compact and sits on one line, so one answer is also one record fo
 - `value` is the bare value the command would have printed.
 - `question` names the verb and the text the model received.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
-- `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. [threshold.md](threshold.md) gives the rule.
+- `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
 - `meta` carries the run. Every field is always present, and `usage` alone may be absent.
 
 ## A detailed result keeps everything
