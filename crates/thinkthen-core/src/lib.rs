@@ -25,7 +25,7 @@ pub use crate::policy::Policy;
 pub use crate::probability::{Probability, ProbabilityError};
 pub use crate::question::{Question, Verb};
 pub use crate::result::{Adapter, DecisionResult, Meta, SCHEMA, Usage};
-pub use crate::text::{BackendName, Condition, EmptyTextError, ModelName};
+pub use crate::text::{BackendName, BlankTextError, Condition, Evidence, ModelName};
 
 /// The name the tool answers to on the command line and in its own output.
 pub const NAME: &str = "thinkthen";
