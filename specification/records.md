@@ -47,6 +47,8 @@ thinkthen decide 'The output answers the input correctly.' --jsonl --field /inpu
 
 The evidence is then `{"input":"...","output":"..."}`. A check that must not see the gold answer names only the pointers it needs.
 
+The evidence object is not a string, so it goes out as compact JSON by the rule above. [backends.md](backends.md) carries it in one field, the way a single pointer's value travels.
+
 ## Order and requests
 
 Records never share model context, and no answer reaches another record's question. One value prints per record, and output keeps input order everywhere but `rank`. No record is dropped for being unresolved, except that `filter` prints only what it keeps. `filter` prints a kept record byte for byte as it arrived.

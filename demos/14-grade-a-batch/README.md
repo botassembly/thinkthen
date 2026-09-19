@@ -24,13 +24,13 @@ trap 'rm -rf -- "$work"' EXIT
 env -u TYPESAFE_API_KEY thinkthen annotate checks.json --jsonl --dry-run \
   --input cases.jsonl > "$work/plan.json"
 
-jq -S -c '.request.state | keys' "$work/plan.json" \
+jq -S -c '.request.state | fromjson | keys' "$work/plan.json" \
   | mustmatch '["gold","input","output"]'
 jq -c '.input' "$work/plan.json" \
   | mustmatch '{"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}'
 ```
 
-Two distinct `on` sets means two requests for every case. Twelve requests for six cases, and the plan shows one of them.
+The evidence object is not a string, so it travels as compact JSON in one field and `fromjson` reads it back. Two distinct `on` sets means two requests for every case. Twelve requests for six cases, and the plan shows the first: `correct`, because it comes first in the file. The `input` object names the pointers of both checks, so the grounding check's blindness to `/gold` is visible without a second plan.
 
 ## Run it and keep everything
 

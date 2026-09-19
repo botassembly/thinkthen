@@ -64,7 +64,7 @@ An unresolved answer is `null`. A backend failure is never `null`, because a fai
 | `--field POINTER` | The part of each record the questions see. An `on` pointer works inside it | The whole record |
 | `--details` | Prints the full result object per record | Off |
 | `--input FILE` | Reads the evidence from a file | Standard input |
-| `--dry-run` | Checks the file and sends nothing | Off |
+| `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
 | Backend options | `--profile` and the advanced flags | The selected profile |
 
 `annotate` takes no `--threshold`, no `--quiet`, and no `--raw`. A question carries its own threshold.
@@ -86,6 +86,18 @@ thinkthen annotate triage.json --jsonl --field /body < issues.jsonl | jq -c 'sel
 ```sh
 thinkthen annotate triage.json --dry-run
 ```
+
+## `--dry-run`
+
+`--dry-run` validates the file, prints the plan that [channels.md](channels.md) fixes, and sends nothing. It needs no key, so a lint job runs it with the key variable removed.
+
+One record makes one request per distinct `on`, and the plan shows one request. It is the first record's first `on` set, taking the questions in file order. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
+
+```json
+{"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}
+```
+
+`--dry-run` reads the question file and the first record. A name that collides with a field on record two is invisible to it, as [demo 07](../demos/07-judged-columns/) shows.
 
 ## Requests
 
