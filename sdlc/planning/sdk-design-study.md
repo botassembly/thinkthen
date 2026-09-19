@@ -1,5 +1,7 @@
 # thinkthen libraries: a design study
 
+A second agent wrote this study on 2026-09-19. ADR 0017 takes its grammar, its backend seam, and its constraints on the core. ADR 0017 departs from section 3: it binds one core into every language, and it keeps the ports of this study as the fallback.
+
 Four of the ten circulating use cases live inside a program: the next action in an agent loop, stuck checks, skill selection, per-turn guardrails. A shell tool is the wrong shape for those. One library per language, over the same rules and the same backend seam.
 
 ## 1. The grammar
