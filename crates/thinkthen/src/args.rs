@@ -74,7 +74,7 @@ pub(crate) struct IfArguments {
     #[arg(long, value_name = "NAME")]
     pub(crate) key_env: Option<String>,
 
-    /// Seconds the whole exchange may take.
+    /// Seconds one attempt may take, from connect to the last byte.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
 
