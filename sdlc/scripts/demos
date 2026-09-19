@@ -5,6 +5,9 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 ROOT=${1:-demos}
 
+# A demo replays a recording, so neither variable may reach one.
+unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+
 if ! command -v mustmatch >/dev/null 2>&1; then
 	printf 'demos: mustmatch is not on PATH\n' >&2
 	exit 1

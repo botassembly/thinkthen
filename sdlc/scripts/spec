@@ -5,6 +5,10 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
+# The pages name the address they expect and the demos replay recordings, so a
+# rung that read either variable would answer to the shell that called it.
+unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+
 if ! command -v mustmatch >/dev/null 2>&1; then
 	printf '%s\n' 'spec: mustmatch is not on PATH' >&2
 	exit 1
