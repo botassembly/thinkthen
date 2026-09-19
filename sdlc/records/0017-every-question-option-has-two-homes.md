@@ -61,7 +61,7 @@ Each of these is Ian's to overturn.
 - **The tool keeps sending the evidence as a string**, as check 3 above explains.
 - **`probes/token-budget/` carries no leading number**, so the `spec` rung's replay check passes it by. It posts three questions in one request, which the tool never does, so there is no exchange to record.
 
-**How-to 40 shares how-to 20's scenario on purpose.** ADR 0016 rule 6 lets no two pages share a scenario unless one is the sequel of the other. 40 is written so that 20 can be deleted with nothing lost, which is the coordinator's instruction, and the rule is met the moment 20 goes. 40 links to 20 until then. Deleting 20 is not this ticket's work.
+**How-to 40 shares how-to 20's scenario on purpose.** ADR 0016 rule 6 lets no two pages share a scenario unless one is the sequel of the other. 40 is written so that 20 can be deleted with nothing lost, which is the coordinator's instruction, and ADR 0018 on main rules that 20 leaves once 40 is green. The rule is met the moment 20 goes, and 40 links nowhere that 20's departure breaks. Deleting 20 is not this ticket's work.
 
 ## One issue opened
 
@@ -69,4 +69,17 @@ Each of these is Ian's to overturn.
 
 ## The review
 
-The reviewer's findings and their disposition are recorded below.
+A second agent with fresh context read the ticket, the diff against `origin/main`, and the "What reviewers keep finding" section of `AGENTS.md`. Its verdict was **not ready**, with four must-change findings and four suggestions. It checked the three pinned digests by computing them outside the crate, the seven canonical rules against `digest.rs`, both how-tos against their recordings, the purity of the core, and key handling in the four probe jobs. It did not run the rungs.
+
+1. **`resolve(Verb::Score, ...)` accepted a rule.** `question_sha256` could then digest a `score` canonical form carrying a `threshold`, which rule 2 of `question-file.md` forbids, and `Sources::serialize` dropped it from `from` without a word. The command line was safe only because `judge.rs` refused first. **Fixed.** `threshold_of` now refuses it as `RuleOnScore`, the binary's duplicate `Failure::RuleOnScore` and its table row are deleted, and `asked.rs` forwards the typed rule so the core writes the one sentence. A test pins the file form and the typed form.
+2. **The secrecy case was vacuous.** `run()` calls `.env_clear()`, so no key was ever set and the assertion could not fail. **Fixed.** `no_message_from_either_home_ever_carries_the_key_or_the_evidence` sets a real key and sends real evidence over all twenty grammar refusals plus the unopenable file, the wrong verb, both `--option` refusals, and a good file against a closed port. It reads both channels for the key, the evidence, and `bearer`.
+3. **How-to 40 shares how-to 20's scenario.** The reviewer asked for Ian's ruling. **Resolved without him.** ADR 0018, already on main, cuts the how-to list to twenty and says 20 leaves once 40 is green, so the ruling exists. 40's closing link was repointed away from 20 so nothing breaks when it goes.
+4. **Commit `c648f47` raised the ceiling without saying so.** True. The history is pushed, and a rewrite would cost more than it returns, so the rationale is here instead: that commit added the question-file grammar, the precedence function, and the digest. Every later ceiling change says what grew.
+5. **`check_seam` stopped at the first `#[cfg(test)]`.** A `#[cfg(test)] use ...` near the top would have silenced the rest of a file. **Fixed.** It now ends a file's code only at a `#[cfg(test)]` immediately followed by `mod tests`, and it skips `*/tests.rs`.
+6. **`Labels::described` was widened to `pub` with no caller outside the core.** **Fixed.** Narrowed back to `pub(crate)`.
+7. **A clap sentence was checked with `contains`.** **Fixed.** The test pins the whole four-line sentence. The two cases it named as untested, a control character in a `score` level from a file and a `threshold` in a `score` file, are now both tested.
+8. **`sent()` swallowed a listener miss into `None`,** so a pair that both reached no listener would have compared equal. **Fixed.** It asserts a request arrived.
+
+Splitting out of the reviewer's work: the test binary passed the 500-line ceiling once findings 2 and 7 landed, so `tests/question_file.rs` became `tests/question_file/` with a shared harness and three pages, the way `tests/backend/` already is. The ceiling rose to the measured total in the same commit.
+
+**Live check 4 was not run.** It was designed and its cases were sized, and the budget left after the first three checks did not cover it. Today's behavior stands unchanged, which is what the ticket says to do when a check does not settle.
