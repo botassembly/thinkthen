@@ -3,10 +3,11 @@
 # row per case. Run through sdlc/scripts/live, which holds the key check and the
 # spend ledger.
 #
-# Record mode is not built, so the loop is the shell's. Each row is shaped the
-# way specification/result.md gives for a record row: the result object with
-# `input` holding the whole case, the trusted label included. The label never
-# leaves the machine, because only the body goes to standard input.
+# Record mode arrived after these rows were written, so the loop is the shell's.
+# Each row is shaped the way specification/result.md gives for a record row:
+# the result object with `input` holding the whole case, the trusted label
+# included. The label never leaves the machine, because only the body goes to
+# standard input.
 set -eu
 
 cd -- "$(dirname -- "$0")"

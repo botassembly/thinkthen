@@ -8,7 +8,7 @@ A recipe is a folder, as ADR 0012 proposes. It holds a `.jq` file with a header 
 
 `rows/` holds the run these recipes were written against. `cases.jsonl` is forty made-up support messages with a stable `id`, a `body`, and a trusted `label` a person gave. One case carries no label on purpose, because a real case file has one.
 
-`record.sh` judged every case twice through `sdlc/scripts/live`, once with the question in `question.txt` and once with the reworded question in `question-b.txt`, and wrote `runs/run-a.jsonl` and `runs/run-b.jsonl`. Record mode is not built, so the loop is the shell's. Each row is the result object of `decide --details` with `input` holding the whole case, which is the record row of `specification/result.md`. The recipes therefore keep working when record mode lands.
+`record.sh` judged every case twice through `sdlc/scripts/live`, once with the question in `question.txt` and once with the reworded question in `question-b.txt`, and wrote `runs/run-a.jsonl` and `runs/run-b.jsonl`. Record mode arrived with ticket 0012, after these rows were written, so the loop is the shell's. Each row is the result object of `decide --details` with `input` holding the whole case, which is the record row of `specification/result.md`. The recipes therefore read a record-mode run unchanged, which how-to 04 shows.
 
 `recording/` holds the eighty exchanges. A recording holds request bodies and never headers, so no key reaches it.
 
