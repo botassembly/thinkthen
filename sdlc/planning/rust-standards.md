@@ -41,7 +41,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 ## Errors and types
 
 - The core crate defines its own error enums with `thiserror`. No public signature returns a string error or a boxed unknown error. The binary adds context at the top and maps each error to one exit code in one place.
-- A fixed set of choices is an enum. A validated value gets its own type: a probability, a pass mark, a JSON Pointer, an option name, a model name. A constructor that can fail returns a result.
+- A fixed set of choices is an enum. A validated value gets its own type: a probability, a threshold, a JSON Pointer, an option name, a model name. A constructor that can fail returns a result.
 - No dynamic JSON inside the core. Wire bodies decode into typed structs. Enforced by: the core's `clippy.toml` bans `serde_json::Value`, `serde_json::Map`, the `Value` access methods, `to_value`, `from_value`, and the `json!` macro. Ticket 0001 planted each kind and watched `lint` refuse it.
 
 ## Dependencies
@@ -56,7 +56,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 - Unit tests sit beside pure code in the core and are table-driven.
 - Integration tests under `crates/thinkthen/tests/` run the compiled binary and see only arguments, standard input, standard output, standard error, and the exit code.
 - No gate touches the network. Tests replay recorded responses from a fixture directory. One test helper serves canned responses from a loopback listener to prove the request bytes. It uses the standard library only.
-- Property tests cover every parser and round trip: JSON Pointer, the question file, record framing, the wire format. Property tests also cover any total function over a numeric range, such as the pass mark. `proptest` is a development dependency of the core.
+- Property tests cover every parser and round trip: JSON Pointer, the question file, record framing, the wire format. Property tests also cover any total function over a numeric range, such as the threshold rule. `proptest` is a development dependency of the core.
 - `spec/*.md` files are executable examples of the command line, run by `mustmatch`. They are the top rung, and they double as the user documentation.
 - The binary reads one hidden, test-only variable, `THINKTHEN_TEST_RETRY_WAIT_MS`, so a retry test never sleeps for real seconds. Help never shows it.
 - Live calls to a paid backend sit outside the ladder in `sdlc/scripts/live`. They run by hand, under a token cap, with Ian's authorization.

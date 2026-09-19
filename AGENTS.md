@@ -5,7 +5,7 @@ The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read
 ## Building
 
 - Red-green test-driven development. Write the failing test, watch it fail for the stated reason, make it pass, then clean up.
-- Build the simplest thing that works. YAGNI, DRY, locality of behavior, separation of concerns. A command family enters only with a real use behind it.
+- Build the simplest thing that works. YAGNI, DRY, locality of behavior, separation of concerns. A command or an option enters only when a demo cannot be written without it.
 - The gate ladder is `sdlc/scripts/{install,lint,test,spec}`. Run the cheapest rung first and the whole ladder before handing back.
 - `sdlc/ratchet.json` holds the source size ceiling. The ceiling equals the measured total. The commit that raises it says what grew, why it earns its lines, and where you looked for duplication to delete first.
 - A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency. The review names what it checked.
