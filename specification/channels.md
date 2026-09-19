@@ -35,7 +35,7 @@ Advanced options appear in the long help alone: `--url`, `--adapter`, `--model`,
 
 Standard output holds a bare JSON value. `true`, `"bug"`, and `1.6` are whole outputs. [result.md](result.md) gives the value for each command and the object that `--details` prints in its place.
 
-`--quiet` suppresses standard output on `decide` and `choose`. The exit code still reports the answer, and standard error still reports a failure. Draft: `--quiet` beside `--details` is a usage error, because one option asks for the object and the other throws it away.
+`--quiet` suppresses standard output on `decide` and `choose`. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error.
 
 `--raw` prints a `choose` label without its quotation marks and prints nothing for `null`. No other command takes it.
 
@@ -47,7 +47,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | --- | --- |
 | 0 | The command finished. On single-input `decide`, the answer is yes |
 | 1 | Single-input `decide` only: the answer is no |
-| 2 | Usage error. Nothing was sent |
+| 2 | A usage error or an input error. The failing record sent nothing |
 | 3 | Single-input `decide` and `choose` only: the answer is unresolved |
 | 4 | The backend failed or sent a reply the adapter refused |
 | 5 | A local failure: a file, a recording, the configuration |
@@ -83,11 +83,11 @@ The plan is one compact JSON document on standard output with six fields that ar
 
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
-In record mode `--dry-run` prints the plan for the first record and stops. `annotate --dry-run` checks the saved file and sends nothing, as [annotate.md](annotate.md) describes. Draft: `report` and `config` send nothing at any time, so `--dry-run` beside either is a usage error.
+In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a seventh field, `input`, naming the framing and the pointers.
 
-## Open points
+```json
+{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
+```
 
-- Is `--quiet` beside `--details` a usage error, or does `--quiet` simply win? A usage error names the conflict. Recommendation: a usage error.
-- Which commands take `--quiet`? ADR 0007 shows it on `decide` and `choose` alone. Recommendation: those two, because no other command carries its answer in the exit code.
-- Is `--dry-run` a usage error on `report` and `config`? Recommendation: yes, because neither ever sends a request.
+`annotate --dry-run` checks the saved file and sends nothing, as [annotate.md](annotate.md) describes. `report` and `config` send nothing at any time, so `--dry-run` beside either is a usage error.
 

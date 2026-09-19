@@ -1,6 +1,6 @@
 # `score`
 
-Status: **Settled** for the grammar, the limits, and the warning. **Draft** for the arithmetic of the number.
+Status: **Settled** for version one, by ADR 0007.
 
 Places the evidence on named levels and prints a number.
 
@@ -20,7 +20,7 @@ A JSON number. The score runs from 0 at the lowest level to the number of levels
 
 ## The number
 
-Draft. The number is the weighted position of the levels. With K levels, it is the sum of each level's probability times its zero-based index. Three levels with probabilities 0.05, 0.30, and 0.65 give `0 × 0.05 + 1 × 0.30 + 2 × 0.65`, which is 1.6. Every probability here is illustrative.
+The number is the backend's probability-weighted position on the levels. With K levels, it is the sum of each level's probability times its zero-based index. Three levels with probabilities 0.05, 0.30, and 0.65 give `0 × 0.05 + 1 × 0.30 + 2 × 0.65`. That is 1.6. Every probability here is illustrative.
 
 The number is a position on the levels the user named. It is not a probability that anything holds, and it is not a confidence in the answer. A script that compares two runs over different level lists is comparing two different scales.
 
@@ -56,7 +56,13 @@ Rating is the weakest thing a decider model does. Measurement of the first decid
 
 No other command depends on `score`. A gate that has to hold belongs in `decide` or `choose`. A number from `score` belongs in a review queue that a person reads.
 
-## Open points
+## Cutting on a score
 
-- Is the number the weighted position, or the zero-based index of the most likely level? The weighted form carries the spread and matches the bare value `1.6` that the review names as a `score` output. The index form matches the level a person would name. Recommendation: the weighted position.
-- Does the number run from 0 to K−1, or from 0 to 1? ADR 0007 fixes 0 to K−1. Recommendation: keep it, and note that a script divides by K−1 to compare two rubrics of different lengths.
+`score` takes no threshold. `jq -e` cuts on the number in one line and sets the exit code.
+
+```sh
+thinkthen score 'How much disruption does this report?' 'None.' 'Work continues with a workaround.' 'Work is blocked.' < ticket.txt |
+  jq -e '. >= 2' > /dev/null && page oncall
+```
+
+A script that compares two runs over different level lists divides each number by K−1 first. The two scales are otherwise different.

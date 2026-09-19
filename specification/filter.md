@@ -16,7 +16,7 @@ A stream of records. `filter` requires `--lines` or `--jsonl`, because one docum
 
 ## What it prints
 
-Each kept record, byte for byte as it arrived, in input order. A record that did not reach the mark prints nothing. The count of records left out prints on standard error at the end of the run.
+Each kept record, byte for byte as it arrived, in input order. A record that did not reach the mark prints nothing.
 
 `--details` prints the object in [result.md](result.md) for every record, kept or not, in input order. A pipeline that must keep every record uses `--details` and splits with `jq`.
 

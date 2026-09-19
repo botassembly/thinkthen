@@ -49,6 +49,17 @@ thinkthen filter 'This describes a reproducible bug.' --jsonl --field /body < is
   thinkthen rank 'This affects many users.' --jsonl --field /body --top 10
 ```
 
+## Ranking against a query
+
+The question is fixed for the run, so a query that changes per run belongs in the record. `jq` builds one record per passage carrying both the query and the passage, and `--field` names both. [records.md](records.md) gives the several-pointer form.
+
+```sh
+jq -c --arg q "$QUERY" '{query: $q, passage: .}' passages.jsonl |
+  thinkthen rank 'The passage answers the query.' --jsonl --field /query --field /passage --top 5
+```
+
+The question stays the same for every record, so one run is one measurement.
+
 ## Cautions
 
 The method is fixed and printed in the help. The tool asks one yes/no question of each record, sorts the records by the probability of yes, and breaks exact ties by input order. It never compares two records in one question, and it never runs a tournament.

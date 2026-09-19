@@ -1,18 +1,26 @@
 # `segment`
 
-Status: **Settled** for the grammar, the threshold, and the output. **Draft** for `--window`.
+Status: **Settled** for version one, by ADR 0007. **Draft** for the single-request form, from Proposed ADR 0009.
 
 Cuts one document into segments at the boundaries a question finds.
 
 ```text
-thinkthen segment QUESTION [--threshold T] [--units lines|paragraphs] [--window N] [--details] [BACKEND]
+thinkthen segment QUESTION [--threshold T] [--units lines|paragraphs] [--details] [BACKEND]
 ```
 
 ## What it reads
 
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. An empty document is a usage error. `segment` reads no record stream, so `--lines` and `--jsonl` are usage errors.
 
-The tool splits the document into units and asks one yes/no question at each gap between two units. `QUESTION` states what makes a unit the start of a new part. The model never computes an offset, and the tool counts the lines itself.
+The tool splits the document into units and gives every unit an id. `QUESTION` states what makes a unit the start of a new part. The model never computes an offset, and the tool counts the lines itself.
+
+## One request
+
+Draft, from Proposed ADR 0009. The whole document travels once, with the unit ids marked in it, and one yes/no question per gap rides in that same request. This is the vendor's own measured recipe. The evidence is billed once, and the questions of one request are answered independently.
+
+The tool appends the two unit ids to the user's question, so each question names the gap it asks about. `--dry-run` shows the exact text of every question, and a user who dislikes the wording reads it before paying for it.
+
+A document too large for one request is refused before any request goes out, at exit 2. The message names the token limit in [records.md](records.md). Splitting the document upstream is the answer.
 
 ## What it prints
 
@@ -34,10 +42,9 @@ Line and unit numbers are one-based and inclusive. Line numbers are present for 
 | --- | --- | --- |
 | `--threshold T` | A single cut. A gap is a boundary when the probability reaches the cut. The band form is a usage error | `0.5` |
 | `--units lines\|paragraphs` | What counts as one unit. A paragraph ends at a blank line | `lines` |
-| `--window N` | Draft. How many units of context travel on each side of the gap. `0` sends the whole document | `0` |
 | `--details` | Prints one result object per boundary question | Off |
 | `--input FILE` | Reads the document from a file | Standard input |
-| `--dry-run` | Prints the plan and sends nothing | Off |
+| `--dry-run` | Prints the plan, with every boundary question as it would be sent | Off |
 | Backend options | `--profile` and the advanced flags | The selected profile |
 
 ## Exit codes
@@ -51,17 +58,15 @@ thinkthen segment 'A new request begins at this line.' --units lines < thread.tx
 ```
 
 ```sh
-thinkthen segment 'A new topic begins at this paragraph.' --units paragraphs --threshold 0.9 --window 1 < transcript.txt
+thinkthen segment 'A new topic begins at this paragraph.' --units paragraphs --threshold 0.9 < transcript.txt
+```
+
+```sh
+thinkthen segment 'A new request begins at this line.' --dry-run < thread.txt | jq '.request.questions'
 ```
 
 ## Cautions
 
 A single cut never says the model is sure of a join. A gap under the cut is a gap that did not reach the mark. [threshold.md](threshold.md) says more.
 
-A document over the backend's token limit for one request is refused, and the exit code is 4. A window smaller than the document is the answer.
-
-## Open points
-
-- What does `--window N` send? Recommendation: at `0` the whole document travels once and every boundary question rides in that one request. At `N` above zero, each boundary question travels with the `N` units before the gap and the `N` units after it, and questions that share identical evidence still ride in one request.
-- What is the default? Recommendation: `0`, which costs the fewest requests. The help says to raise it when a document is too large for one request.
-- Do the line numbers of a `--window` run still count from the whole document? Recommendation: yes. The window changes what the model sees and never what the tool reports.
+Every unit sees every other unit, because the whole document rides in one request. A job that must judge each unit alone uses `filter` over `--lines`.

@@ -56,8 +56,8 @@ The five `THINKTHEN_*` backend variables of ADR 0004 are gone. `THINKTHEN_PROFIL
 
 | Subcommand | Prints |
 | --- | --- |
-| `config path` | The path of the file in use, whether or not it exists |
-| `config show` | The effective settings as one JSON object, with every profile and every run setting resolved |
+| `config path` | The path of the file in use, whether or not it exists. It prints the file that `--config` or `THINKTHEN_CONFIG` names when either is given |
+| `config show` | One JSON object with the file's own key names and every default filled in. The built-in `jev` profile appears among the profiles |
 | `config check` | A verdict on the file |
 
 None of the three sends a request, and none of them writes the file. An editor changes the configuration.
@@ -70,7 +70,7 @@ None of the three sends a request, and none of them writes the file. An editor c
 | --- | --- |
 | 0 | `path` and `show` finished. `check` found the file valid |
 | 2 | Usage error: an unknown subcommand or a missing one |
-| 5 | The file is missing where one was named, unreadable, or invalid. `check` reports the first problem with its JSON Pointer |
+| 5 | The file is missing where one was named, unreadable, or refused. `check` reports the first problem with its JSON Pointer |
 | 70 | A defect in the tool |
 
 ## Examples
@@ -87,7 +87,6 @@ thinkthen config check && thinkthen config show | jq '.profiles | keys'
 thinkthen decide 'The customer asks for a refund.' --profile local < message.txt
 ```
 
-## Open points
+## Open point
 
-- Does `config check` exit 5 or a code of its own when the file is invalid? Recommendation: 5, because an invalid configuration is a local failure everywhere else in the tool.
-- Does `config show` print the built-in `jev` profile among the profiles? Recommendation: yes, so that `show` names every profile a command could select.
+- What does `jobs` default to? Draft: 4. [records.md](records.md) gives the reason.

@@ -8,28 +8,29 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 | --- | --- | --- |
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--dry-run`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
-| [result.md](result.md) | The bare value, the `--details` object, and the three answer kinds | Settled |
-| [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume | Settled |
+| [result.md](result.md) | The bare value, the `--details` object, and the three answer kinds | Settled, with Draft sections |
+| [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume | Settled, with Draft sections |
 | [backends.md](backends.md) | Profiles, adapters, the `systemone` wire format, keys, timeouts, retries | Settled, with a Draft section |
 | [recording.md](recording.md) | `--record` and `--replay`: a folder of exchanges that runs again with no network | Settled |
 | [decide.md](decide.md) | `decide` | Settled |
-| [choose.md](choose.md) | `choose` | Settled |
-| [score.md](score.md) | `score` | Settled, with a Draft section |
+| [choose.md](choose.md) | `choose` | Settled, with a Draft section |
+| [score.md](score.md) | `score` | Settled |
 | [filter.md](filter.md) | `filter` | Settled |
 | [rank.md](rank.md) | `rank` | Settled |
 | [segment.md](segment.md) | `segment` | Settled, with a Draft section |
-| [annotate.md](annotate.md) | `annotate` and the saved question file | Settled, with a Draft section |
+| [annotate.md](annotate.md) | `annotate` and the saved question file | Settled, with Draft sections |
+| [find.md](find.md) | `find`, proposed after `rank` | Draft |
 | [report.md](report.md) | `report` | Draft |
 | [config.md](config.md) | The configuration file and the `config` command | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
-[roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract, so it carries no status word.
+[roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
 
 ## Status words
 
 Each section carries one of three words. **Settled** means code may be built against it. **Draft** means the shape is proposed and Ian has not read it. **Open** means a question in it waits on a ruling.
 
-## The nine commands
+## The commands
 
 | Command | One line |
 | --- | --- |
@@ -40,5 +41,6 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `rank QUESTION` | Prints the records in order of the probability of yes |
 | `segment QUESTION` | Cuts one document into segments at the boundaries a question finds |
 | `annotate FILE` | Asks a saved file of questions and adds one field per question |
-| `report` | Counts answers from `--details` rows and calls no model |
+| `report` | Interprets a saved run of `--details` rows and calls no model |
 | `config path\|show\|check` | Prints the configuration path, the effective settings, or a verdict |
+| `find QUESTION` | Proposed. Picks the unit that best answers a question, out of a set the model sees at once |

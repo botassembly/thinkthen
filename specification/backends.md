@@ -48,7 +48,7 @@ Every version-one adapter sends one `POST` with `Content-Type: application/json`
 
 A retry happens after a transport failure or a status of 429, 500, 502, 503, 504, or 529. The wait doubles from one second, and no wait follows the last attempt. Any other error status fails at once.
 
-A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code for the common failures.
+A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code.
 
 | Status | Phrase |
 | --- | --- |
@@ -64,7 +64,7 @@ A failure after the last retry is exit code 4. The message gives the status code
 An adapter is two pure functions.
 
 - **encode** takes a plan and returns the request body as bytes. A plan holds the evidence, the model name, and an ordered list of named questions.
-- **decode** takes the response body as bytes and returns the model that answered, one answer per named question, and the usage if the backend reports it.
+- **decode** takes the response body as bytes and returns the model that answered, one answer per named question, and the usage the backend reported.
 
 An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. The set of adapters is an enum compiled into the binary.
 
@@ -93,14 +93,21 @@ The response body:
 | Place on named levels | `type` `score`, with the levels as the `criteria` array |
 | A choice answer's probability per option | Draft. One probability per option name, under the `choice` answer |
 | A score answer's probability per level | Draft. One probability per level, in level order, under the `score` answer |
+| The backend's own confidence | `confidence`, kept and never cut on |
 | A score's number | Computed locally from the level probabilities. Nothing is read from the wire |
 | Several questions over one evidence | One `questions` map with one entry per question. One request, one `state` |
 
 Question names are `q1`, `q2`, and onward in plan order. The vendor does not show names to the model.
 
-The names carry the order. The order of keys inside the `questions` object and the `answers` object carries no meaning. Decode ignores an answer whose name the plan lacks, and it ignores any field it does not use. Decode refuses a response whose `model` is absent or blank, because a result must name the model that answered.
+The names carry the order. The order of keys inside the `questions` object and the `answers` object carries no meaning. Decode ignores an answer whose name the plan lacks. Decode refuses a response whose `model` is absent or blank, because a result must name the model that answered.
 
 The two Draft rows name what the adapter must produce for `choose` and `score`. The exact response field names land with their fixtures under `fixtures/systemone/`, and those rows stop being Draft then.
+
+### What the adapter keeps
+
+Draft, from Proposed ADR 0009. The adapter keeps the full distribution and the vendor's `confidence` field. Both reach `answer` in the result, as [result.md](result.md) describes. A saved run can then be swept at another rule with no second request.
+
+The cut on `choose` stays on the winning option's probability. That number exists on every backend, and a reader can say what it means. Most of the vendor's own pages cut on `confidence` instead, and the formula behind `confidence` is unpublished. `report` sweeps both against labels, and the rule is looked at again once that has been measured.
 
 ## The `chat-logprobs` adapter
 
@@ -108,9 +115,7 @@ Draft. It asks any server that speaks the common chat-completions format for one
 
 A yes/no question sends the question as the user message, asks for one token, and requests the top token probabilities. The probability of yes is the mass on the yes token, normalized over the yes token and the no token alone.
 
-A choice sends the options as a numbered list and constrains the answer to one digit per option. The probability per option is the mass on that option's digit, normalized over the digits offered.
-
-A score sends the levels as a numbered list and reads them the same way. Nothing else is read from the reply, and no free text is parsed.
+A choice sends the options as a numbered list and constrains the answer to one digit per option. The probability per option is the mass on that option's digit, normalized over the digits offered. A score sends the levels as a numbered list and reads them the same way. No free text is parsed.
 
 ### Open points
 
