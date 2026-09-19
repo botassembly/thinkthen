@@ -4,7 +4,7 @@ How thinkthen installs itself and judges its own work. Edit these freely. Nothin
 
 | Script | Contract |
 | --- | --- |
-| `install` | Rung 0. Checks that `cargo`, `python3`, `node`, and `mustmatch` are on PATH, then fetches the dependency closure recorded in `Cargo.lock`. Exit 0 when every tool the later rungs need is there and every crate is on disk |
+| `install` | Rung 0. Checks that `cargo`, `python3`, `node`, `mustmatch`, and `jq` are on PATH, then fetches the dependency closure recorded in `Cargo.lock`. Exit 0 when every tool the later rungs need is there and every crate is on disk |
 | `lint` | Rung 1. The policy checker, the ratchet, `cargo fmt --check`, clippy with warnings denied, and `cargo doc` with warnings denied. Exit 0 when the code is clean |
 | `test` | Rung 2. `cargo test` across every target, every feature, and the documentation examples. It needs `mustmatch` on PATH, because the demo runner's own tests run the real runner. Exit 0 when the tests pass |
 | `spec` | Rung 3. Builds the binary, runs the Markdown pages in `spec/` through `mustmatch`, then calls `demos`. Exit 0 when the tool behaves as the pages say |

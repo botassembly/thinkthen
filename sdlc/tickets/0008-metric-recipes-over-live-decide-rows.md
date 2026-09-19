@@ -6,7 +6,7 @@ opens: recipes demos/13-pick-a-threshold demos/24-compare-two-runs demos/25-chec
 
 # 0008: Metric recipes over live `decide` rows
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
