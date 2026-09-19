@@ -143,6 +143,20 @@ The file is `$XDG_CONFIG_HOME/thinkthen/config.json`, or `~/.config/thinkthen/co
 
 A profile is complete: `url`, `adapter`, and `model` are required, and `key_env` names the key's environment variable or is `null`. The file never holds a key. The built-in profile `jev` always exists, and a file profile named `jev` replaces it. Selection order is the `--profile` flag, `THINKTHEN_PROFILE`, the file's `profile`, then `jev`. The ad-hoc flags keep the rules of ADR 0004 and ADR 0006. The five `THINKTHEN_*` backend variables of ADR 0004 are gone. The file never holds a threshold, a context, an output path, or an output format. `config path` prints the path in use. `config show` prints the effective settings. `config check` validates the file. None of the three sends a request, and the tool never writes the file.
 
+## Clarifications of 2026-09-19
+
+Writing the specification pages found gaps in the text above. None changes a ruling.
+
+- The bare value of `score` is the backend's probability-weighted position on the levels, so `1.6` is a valid score on three levels.
+- Exit 2 covers a usage error and an input error. In record mode earlier records may already have been answered, and the failing record sent nothing.
+- `annotate` makes one request per record for each distinct `on`. Every other record command makes one request per record.
+- `--quiet` exists on `decide` and `choose` only. `--quiet` beside `--details` is a usage error. `--dry-run` on `report` or `config` is a usage error.
+- `segment` reads one document. `--lines` and `--jsonl` are usage errors on it.
+- `--input FILE` names a path. The earlier draft used the same word for a framing.
+- The configuration example shows one user's values. The defaults for `timeout_seconds` and `max_retries` are the ones in `specification/backends.md`. The default for `jobs` is Draft.
+- The `question` object of a `choose` result also carries `options`, and a `score` result carries `levels`. The `annotate` details object carries `schema` like every other result.
+- `config check` exits 5 on a file it refuses.
+
 ## What this replaces
 
 - ADR 0003: the grammar `thinkthen decide VERB`. The rest of ADR 0003 stands.
