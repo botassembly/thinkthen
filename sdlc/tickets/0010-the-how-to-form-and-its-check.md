@@ -6,7 +6,7 @@ opens: demos/01-refund-gate demos/19-no-or-could-not-ask demos/27-test-with-no-n
 
 # 0010: The how-to form and its check
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
