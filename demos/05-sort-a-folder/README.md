@@ -2,9 +2,11 @@
 
 Status: red
 
-Verbs: `decide which`
+Verbs: `choose`
 
 A folder fills up with meeting notes and nobody files them. The job is to move each note into `defect`, `process`, or `other`, and to leave a note the tool could not place in `review` for a person. One file, one judgment, and the `mv` is written by the shell.
+
+Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
 
 ## Input
 
@@ -26,14 +28,16 @@ find "$work/inbox" -type f -name '*.txt' -print0 | LC_ALL=C sort -z > "$work/pat
 
 while IFS= read -r -d '' path; do
   label=$(
-    thinkthen decide which defect process other \
-      --by 'the kind of work this note records' \
-      --min-prob 0.8 --min-gap 0.2 --replay recording/ \
-      < "$path" | jq -r '.assessment.value // "unsure"'
-  )
-  case $label in
-    defect|process|other) dest=$label ;;
-    unsure)               dest=review ;;
+    thinkthen choose 'What kind of work does this note record?' defect process other \
+      --raw --threshold 0.8 --input "$path" --replay recording/
+  ) && rc=0 || rc=$?
+  case $rc in
+    0) dest=$label ;;
+    3) dest=review ;;
+    *) printf 'choose failed on %s: %d\n' "$path" "$rc" >&2; exit "$rc" ;;
+  esac
+  case $dest in
+    defect|process|other|review) ;;
     *) printf 'unknown label %s for %s\n' "$label" "$path" >&2; exit 2 ;;
   esac
   mv -- "$path" "$work/$dest/"
@@ -67,15 +71,13 @@ set -euo pipefail
 root=$1
 path=$2
 label=$(
-  thinkthen decide which defect process other \
-    --by 'the kind of work this note records' \
-    --min-prob 0.8 --min-gap 0.2 --replay recording/ \
-    < "$path" | jq -r '.assessment.value // "unsure"'
-)
-case $label in
-  defect|process|other) dest=$label ;;
-  unsure)               dest=review ;;
-  *) printf 'unknown label %s\n' "$label" >&2; exit 2 ;;
+  thinkthen choose 'What kind of work does this note record?' defect process other \
+    --raw --threshold 0.8 --input "$path" --replay recording/
+) && rc=0 || rc=$?
+case $rc in
+  0) dest=$label ;;
+  3) dest=review ;;
+  *) exit "$rc" ;;
 esac
 mv -- "$path" "$root/$dest/"
 SH
@@ -87,12 +89,14 @@ find "$work/inbox" -type f -name '*.txt' -print0 \
 find "$work/review" -type f -print0 | xargs -0 -n 1 basename | mustmatch "2026-03-06-note.txt"
 ```
 
+Four hundred notes are four hundred runs. Nothing in ADR 0007 bounds that. `jobs` in the configuration file bounds the requests inside one run, and a per-file loop makes one request per run, so the setting never applies. A loop that must not spend more than a hundred requests counts them itself.
+
 The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **The dropped `--files0-from` is not missed, and dropping it was right.** `find` already selects files, `sort -z` already orders them, and `xargs -0 -P` already runs them four at a time. Putting file reading inside the judge would have bought one flag and turned a judging tool into a reading tool, with a size policy, a binary-file policy, and a non-UTF-8 path policy to write. The loop is shorter than that list.
-- **What is missed is a budget, and the loop has no lever for one.** `--max-requests` bounds one run of one stream command. A folder of four hundred notes is four hundred runs, and no flag caps the whole job. The loop can count its own calls, which is honest but means every user writes the same counter. Smallest fix: no new flag in the tool, and the help for the stream verbs says plainly that a per-file loop is outside every limit in records.md. This is the one place where a stream verb would have paid for itself.
-- **`--jobs` is unreachable from a loop, and `xargs -0 -P` replaces it.** The parallel block gets the same effect with a tool people already have. Smallest fix: the help shows the `find -print0 | xargs -0 -n 1 -P 4` line next to `--jobs`, so a user who has files rather than records knows the shape.
-- **`--min-gap` mattered more than `--min-prob` here.** `process` and `other` are neighbours, and a note about a budget can sit between them. The gap is what sent the vague note to `review`.
-- **`xargs` interleaves standard error.** Four parallel judgments write diagnostics into one stream with nothing to tie a line to a file. Nothing in the specification is wrong; the demo notes that a script that needs per-file diagnostics writes them itself, inside `file-one`.
+- **The demo confirms `--raw` in a loop and the exit code beside it.** Demo 02 found the two-`case` shape and this page reuses it without change. The exit code is the only thing that separates an unresolved pick from an empty label, and in a per-file loop the exit code is right there.
+- **A per-file loop sits outside every request budget in the surface.** No flag caps a job made of many runs, and `jobs` in the configuration file bounds only the inside of one run. The demo asks for no new flag. It asks that the help for the record flags say plainly that a per-file loop is outside the budget, and show `find -print0 | xargs -0 -n 1 -P 4` next to the `jobs` setting.
+- **The demo could not read the margin between two neighbouring options.** `process` and `other` are neighbours, and a note about a budget sits between them. The old page used `--min-gap` to send such a note to `review`. With no per-option probabilities in the result, neither the tool nor the script can see the margin now, so the vague note lands in `review` only if the winner itself falls under 0.8. That is a weaker rule than the job wants.
+- **Reading files stays out of the tool, and the demo confirms it.** `find` selects, `sort -z` orders, `xargs -0 -P` parallelises. Putting file reading inside the judge would buy one flag and cost a size policy, a binary-file policy, and a non-UTF-8 path policy.
+- **`xargs` interleaves standard error with nothing tying a line to a file.** Nothing in the surface is wrong. A script that needs per-file diagnostics writes them itself, inside `file-one`.
