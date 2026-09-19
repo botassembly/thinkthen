@@ -45,8 +45,9 @@ Ian set the limit at $20 on 2026-09-19. The vendor charges $0.042 for a million 
 | Date | What | Input tokens |
 | --- | --- | --- |
 | 2026-09-19 | Four `decide` calls by hand through the ticket 0005 binary. ADR 0010 holds the answers | 1,185 |
+| 2026-09-19 | Two `decide` calls through `sdlc/scripts/live`, recording demo 01 | 626 |
 
-Spent so far: 1,185 tokens, which is less than one cent.
+Spent so far: 1,811 tokens, which is less than one cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
 
 ## Levers left open
 

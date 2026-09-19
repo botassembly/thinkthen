@@ -70,11 +70,11 @@ fn a_green_page_that_names_no_recording_folder_stops_the_run() {
 }
 
 #[test]
-fn every_demo_in_the_repository_is_red_and_none_of_them_runs() {
+fn the_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
     let output = demos("demos").expect("the runner runs");
 
     let said = printed(&output);
     assert_eq!(output.status.code(), Some(0), "{said}");
-    assert!(said.contains("demos: 0 green, "), "{said}");
-    assert!(!said.contains("running"), "{said}");
+    assert!(said.contains("demos: 1 green, "), "{said}");
+    assert!(said.contains("running 01-refund-gate/README.md"), "{said}");
 }

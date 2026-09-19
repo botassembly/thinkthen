@@ -1,12 +1,12 @@
 # 01 Refund gate
 
-Status: red
+Status: green
 
 Verbs: `decide`
 
 A support desk wants one branch in a script. A message that plainly asks for money back goes to the refunds queue, a message that plainly does not goes back to the normal queue, and anything in between waits for a person. The question names one fact that is printed in the message, so the model is being asked what it is good at.
 
-Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
+The recording under `recording/` holds the two live exchanges this page replays. The model answered 0.99 on the refund message and 0.02 on the product question, and no block asserts on a probability.
 
 ## Input
 
@@ -96,7 +96,7 @@ printf 'bad=%s\n' "$bad" | mustmatch "bad=2"
 
 Nothing here acts on the model's word. The `case` is code, and the model only moved the exit code.
 
-The recording under `recording/` does not exist yet, so this page is red. Every `thinkthen` line carries `--replay recording/`, so a gate touches no network and reads no key. `record.sh` makes the two exchanges once by hand.
+Every `thinkthen` line carries `--replay recording/`, so a gate touches no network and reads no key. `record.sh` made the two exchanges once, through `sdlc/scripts/live`.
 
 ## What this demo decides
 

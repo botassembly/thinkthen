@@ -23,7 +23,9 @@ for page in */README.md; do
 	fi
 	# A green page replays a recording. A folder it names and does not hold
 	# would send the page to a backend, so the run stops here instead.
-	sed -n 's/.*--replay \([^ ]*\).*/\1/p' "$page" | sort -u | while IFS= read -r named; do
+	# A page names the folder in its blocks and in its prose, where a backtick
+	# closes the name, so a backtick ends the name here too.
+	sed -n 's/.*--replay \([^ `]*\).*/\1/p' "$page" | sort -u | while IFS= read -r named; do
 		[ -n "$named" ] || continue
 		if [ ! -d "$folder/$named" ]; then
 			printf 'demos: %s is green, and it names no folder %s\n' "$page" "$named" >&2
