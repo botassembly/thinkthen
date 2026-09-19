@@ -6,7 +6,7 @@ opens: crates spec specification/records.md specification/choose.md specificatio
 
 # 0013: Jobs, the cache folder, and options from the record
 
-Status: held by Ian on 2026-09-19
+Status: ready
 
 ## Outcome
 
