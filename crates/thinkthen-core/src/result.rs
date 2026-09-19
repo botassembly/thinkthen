@@ -91,12 +91,6 @@ impl DecisionResult {
             meta,
         }
     }
-
-    /// Read the assessment back.
-    #[must_use]
-    pub const fn assessment(&self) -> Assessment {
-        self.assessment
-    }
 }
 
 #[cfg(test)]
