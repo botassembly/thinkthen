@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 50
-opens: crates spec specification/annotate.md specification/result.md specification/fixtures sdlc/ratchet.json sdlc/live-tokens demos/07-judged-columns demos/08-release-checklist demos/README.md sdlc/planning/documentation-plan.md
+opens: crates spec specification/annotate.md specification/result.md specification/fixtures sdlc/ratchet.json sdlc/live-tokens demos/07-judged-columns demos/08-release-checklist demos/39-screen-a-message demos/14-grade-a-batch demos/README.md sdlc/planning/documentation-plan.md
 ---
 
 # 0015: `annotate`
@@ -10,7 +10,7 @@ Status: waiting on ticket 0014
 
 ## Outcome
 
-`annotate FILE` asks a saved question set about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 07 and 08 are green. A later ticket then writes the flagship triage how-to and the first eval how-tos over this command with no further code.
+`annotate FILE` asks a saved question set about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 39 and 14 are green. A later ticket then writes the flagship triage how-to and the first eval how-tos over this command with no further code.
 
 ## Current Facts
 
@@ -29,7 +29,7 @@ Status: waiting on ticket 0014
 - `--dry-run` checks the file, prints the plan of `annotate.md`, sends nothing, and needs no key. With no evidence on standard input it still checks the file and prints the plan with no first record.
 - `annotate` refuses `--threshold`, `--quiet`, and `--raw`, and each message says that a question carries its own threshold. It honors `--lines`, `--jsonl`, `--field`, `--input`, `--jobs`, `--record`, `--replay`, and `--cache` as record mode built them. `--jobs` bounds requests, and a record with three `on` sets uses three of them.
 - One live check settles the ceiling on questions in one request: which status and which message come back when it is passed. `annotate.md` states the number.
-- How-tos 07 (add several judged columns in one pass) and 08 (check a document against a checklist) turn green in the form of ADR 0011, recorded through `sdlc/scripts/live`. How-to 08 combines its answers by the written rule of `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md`: any required no makes no, otherwise any required unresolved makes unresolved, otherwise yes. It never multiplies probabilities.
+- How-tos 39 (screen one message for several hazards at once) and 14 (grade an assistant's answers with a rubric in place of a second model) turn green in the form of ADR 0011 and to the limits of ADR 0016, recorded through `sdlc/scripts/live`. ADR 0018 lists them and gives the design of page 14: a record holds the assistant's request, context, and reply; the rubric is a question set of three narrow yes/no checks, one pick for the kind of failure, and one placement for severity; one `annotate` pass grades every case; the count and cost transforms report; and a few human labels check the judge, with a link to page 25. Page 14 is in the README's front window. Page 39 absorbs the red folder 08, page 14 absorbs the red folder 07, and both folders are deleted. Page 39 combines its answers by the written rule of `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md`: any required no makes no, otherwise any required unresolved makes unresolved, otherwise yes. It never multiplies probabilities.
 
 Excluded: the `rules` block, structured question values, templating inside the file, any eval engine, and `find`.
 
@@ -41,6 +41,6 @@ Excluded: the `rules` block, structured question values, templating inside the f
 - A recording made by `annotate` replays with no key and no request.
 - The key and the evidence never appear in any error or Debug output.
 - The pinned `decide` digest holds, and every committed recording still replays.
-- The spec rung prints how-tos 07 and 08 green with the key unset and touches no network. The recordings hold no key.
+- The spec rung prints how-tos 39 and 14 green with the key unset and touches no network. The recordings hold no key.
 - The ratchet equals the measured total, and the commit that raises it says what grew, why it earns its lines, and where duplication was looked for first.
 - The whole ladder is green, and a second agent reviews the public surface change.
