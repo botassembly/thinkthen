@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Given that the item is now discontinued, I understand you cannot send a like for like replacement. Would it be possible to receive the value as credit toward a future order instead, so I can choose something similar.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":316,"output_tokens":21}}
+}

@@ -42,6 +42,26 @@ ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": set(), "thinkthen-core": {"proptest"}}
 MAX_FILE_LINES = 500
 INHERITED = {"workspace": True}
 
+# ADR 0010's clarification of 2026-09-19: other backends will come, so the
+# vendor's words live behind one adapter. These are the words that name the
+# vendor rather than the judgment: its question type, its field for what an
+# option means, its module, and its host.
+VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe")
+# The adapter's own module, where every vendor word belongs.
+ADAPTER = ("crates/thinkthen-core/src/systemone.rs", "crates/thinkthen-core/src/systemone/")
+# Ticket 0017 leaves these call sites where they are. A later small ticket moves
+# DEFAULT_BASE, DEFAULT_MODEL, and the systemone::NAME call sites into the
+# adapter's module, and each line here goes with them. Every file names the
+# words it may still hold, so a new use of one fails this check.
+SEAM_ALLOWED = {
+    "crates/thinkthen-core/src/backend.rs": {"systemone", "typesafe"},
+    "crates/thinkthen-core/src/lib.rs": {"systemone"},
+    "crates/thinkthen-core/src/plan_document.rs": {"systemone"},
+    "crates/thinkthen-core/src/recording.rs": {"systemone"},
+    "crates/thinkthen/src/failure.rs": {"systemone"},
+    "crates/thinkthen/src/judge.rs": {"systemone"},
+}
+
 ACCEPTED_RUST_LINTS = {
     "missing_debug_implementations": "forbid",
     "missing_docs": "warn",
@@ -251,6 +271,38 @@ def check_sources() -> None:
             fail("size", f"{relative} has {lines} non-blank lines and the ceiling is {MAX_FILE_LINES}")
 
 
+def check_seam() -> None:
+    """Hold the vendor's words inside the adapter, the fixtures, and the tests."""
+    unused = set(SEAM_ALLOWED)
+    for source in sorted((REPO / "crates").rglob("*.rs")):
+        relative = source.relative_to(REPO).as_posix()
+        # A file named tests.rs is one module's `#[cfg(test)] mod tests`, and
+        # a file under tests/ is an integration test. Both are tests.
+        if relative.startswith(ADAPTER) or "/tests/" in relative or relative.endswith("/tests.rs"):
+            continue
+        allowed = SEAM_ALLOWED.get(relative, frozenset())
+        unused.discard(relative)
+        held = set()
+        lines = source.read_text(encoding="utf-8").splitlines()
+        # The code ends where the module's test module begins. A bare
+        # `#[cfg(test)]` on anything else, such as a use line, stops nothing,
+        # so the attribute alone is not the end.
+        for number, line in enumerate(lines, 1):
+            if line.startswith("#[cfg(test)]") and lines[number : number + 1] and (
+                lines[number].startswith("mod tests")
+            ):
+                break
+            for word in VENDOR_WORDS:
+                if word in line.lower() and word not in allowed:
+                    fail("seam", f"{relative}:{number} names {word!r} outside the adapter")
+                elif word in line.lower():
+                    held.add(word)
+        for word in sorted(allowed - held):
+            fail("seam", f"{relative} no longer names {word!r}, so the seam allowance goes")
+    for relative in sorted(unused):
+        fail("seam", f"the seam allowance names {relative}, which the workspace no longer holds")
+
+
 def license_allowed(expression: str, allowed: set[str] = frozenset()) -> bool:
     """Say whether an SPDX expression offers this repository an allowed license.
 
@@ -406,6 +458,7 @@ def main() -> int:
     check_clippy_configs()
     check_crate_roots()
     check_sources()
+    check_seam()
     check_license_grammar()
     check_dependencies()
     for failure in FAILURES:

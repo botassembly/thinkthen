@@ -5,14 +5,14 @@ Status: **Settled** for version one, by ADR 0007.
 Answers a yes/no question about the evidence and sets the exit code.
 
 ```text
-thinkthen decide QUESTION [--threshold T|LOW:HIGH] [--quiet] [--details] [RECORD] [BACKEND]
+thinkthen decide QUESTION|@FILE [--true TEXT] [--false TEXT] [--threshold T|LOW:HIGH] [--quiet] [--details] [RECORD] [BACKEND]
 ```
 
 ## What it reads
 
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines` and `--jsonl` turn the input into records, and [records.md](records.md) gives the rules.
 
-`QUESTION` is one argument. It states a fact that is true or false of the evidence. The decider model reads it as the question. A question that is empty or holds only white space is a usage error. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
+`QUESTION` is one argument. It states a fact that is true or false of the evidence. The decider model reads it as the question. A question that is empty or holds only white space is a usage error. `@FILE` reads the question from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
 
 ## What it prints
 
@@ -22,12 +22,22 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 | Option | Meaning | Default |
 | --- | --- | --- |
+| `--true TEXT` | What a yes means, in the words the model reads. See below | No text |
+| `--false TEXT` | What a no means, in the words the model reads. See below | No text |
 | `--threshold T\|LOW:HIGH` | The rule in [threshold.md](threshold.md). `decide` is the one verb that takes both forms | `0.5` |
 | `--quiet` | Prints nothing on standard output. The exit code still carries the answer | Off |
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--field`. See [records.md](records.md) | One document |
 | Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+
+## Saying what yes and no mean
+
+`--true` and `--false` carry one sentence each, and either may appear alone. They travel with the question, and [backends.md](backends.md) gives the field they land in. A run that names neither sends the request it always sent, byte for byte.
+
+They are for a question whose two sides are not obvious from the question text. "The writer asks for money back" and "The writer asks for anything else" separate a refund from a complaint. They are not a place for instructions to the model, and they are not a second question.
+
+Both texts have a home in a question file, under `true` and `false`. A text that is empty or holds only white space is a usage error.
 
 ## Exit codes
 

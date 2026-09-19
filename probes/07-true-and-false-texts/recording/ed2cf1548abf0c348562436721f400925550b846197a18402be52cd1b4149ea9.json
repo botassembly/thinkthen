@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The garden hose split along its length the very first time I used it at normal water pressure, which suggests a manufacturing fault. I would like my money back for this item rather than trying a second one from the same batch.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":319,"output_tokens":21}}
+}

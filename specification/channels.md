@@ -69,6 +69,10 @@ fi
 
 A script that must tell a no from an unresolved reads `$?` with `case`.
 
+## A gate
+
+A gate is a command whose exit code decides whether something happens. Word the question so that yes permits the action, and treat every exit code other than 0 as a refusal. A no, an unresolved answer, a usage error, a backend failure, and a defect then all leave the action undone.
+
 ## `set -e` and `pipefail`
 
 `decide` exits 1 on a no and 3 on an unresolved answer. Under `set -e` a plain `thinkthen decide ...` ends the script on any no. Under `set -o pipefail` a `decide` inside a pipeline gives the whole pipeline a non-zero status for the same reason. Put the command in an `if`, a `case`, or a `||` list. The help says so.
@@ -91,6 +95,12 @@ In record mode `--dry-run` prints the plan for the first record and stops. It re
 
 ```json
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
+```
+
+A run that read a question file carries one more field, `from`, between `input` and `request`. It names each setting's source as `file`, `command line`, or `default`, so a confused user can see what won. A run with no question file carries no `from`, and [question-file.md](question-file.md) gives the rest.
+
+```json
+{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","from":{"question":"file","true":"file","false":"file","threshold":"command line","on":"default","model":"file"},"request":{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this message ask for a refund?","criteria":{"true":"The writer asks for money back.","false":"The writer asks for anything else."}}}}}
 ```
 
 `annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.

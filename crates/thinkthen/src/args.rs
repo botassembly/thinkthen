@@ -155,14 +155,11 @@ pub(crate) struct Common {
     #[arg(long, value_name = "URL", hide_short_help = true)]
     pub(crate) url: Option<String>,
 
-    /// The model named in the request.
-    #[arg(
-        long,
-        value_name = "NAME",
-        default_value = thinkthen_core::DEFAULT_MODEL,
-        hide_short_help = true
-    )]
-    pub(crate) model: String,
+    /// The model named in the request. [default: jev-latest]
+    ///
+    /// It outranks a `model` key in a question file.
+    #[arg(long, value_name = "NAME", hide_short_help = true)]
+    pub(crate) model: Option<String>,
 
     /// Call the backend, then write the exchange into DIR. DIR is created when absent.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
@@ -210,8 +207,21 @@ pub(crate) struct Common {
 /// Everything `decide` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct DecideArguments {
-    /// The question to answer, as one argument naming one visible fact.
+    /// The question to answer, or `@` and the path of a question file.
+    ///
+    /// As text it is one argument naming one visible fact. As `@FILE` it is a
+    /// question file holding one `decide` question, and a value typed beside
+    /// it replaces the file's value. A question that must begin with `@` is
+    /// written in a file.
     pub(crate) question: String,
+
+    /// One sentence saying what a yes means, sent beside the question.
+    #[arg(long = "true", value_name = "TEXT")]
+    pub(crate) yes: Option<String>,
+
+    /// One sentence saying what a no means, sent beside the question.
+    #[arg(long = "false", value_name = "TEXT")]
+    pub(crate) no: Option<String>,
 
     /// The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved.
     #[arg(long, value_name = "T|LOW:HIGH")]
@@ -229,11 +239,20 @@ pub(crate) struct DecideArguments {
 /// Everything `choose` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct ChooseArguments {
-    /// The question that states what decides the pick.
+    /// The question that states what decides the pick, or `@` and a file path.
     pub(crate) question: String,
 
     /// The labels to pick between, 2 to 255 of them, in the order they are sent.
     pub(crate) options: Vec<String>,
+
+    /// One label and what it means, as LABEL=DESCRIPTION. Give it once per label.
+    ///
+    /// The first `=` splits the label from the description, and the
+    /// description travels beside the label so the model reads both. It does
+    /// not stand beside the positional labels, because two lists have no order
+    /// between them.
+    #[arg(long = "option", value_name = "LABEL=DESCRIPTION")]
+    pub(crate) described: Vec<String>,
 
     /// Take each record's own options from this RFC 6901 pointer.
     ///
@@ -263,7 +282,7 @@ pub(crate) struct ChooseArguments {
 /// Everything `score` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct ScoreArguments {
-    /// The question that names what is being placed.
+    /// The question that names what is being placed, or `@` and a file path.
     pub(crate) question: String,
 
     /// The levels, 2 to 10 of them, lowest first.

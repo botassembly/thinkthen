@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The rug I received has a strong chemical smell that has not faded after airing it out for several days. I do not want to keep it in my home, so I would like a refund rather than a replacement rug.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.97}},"usage":{"input_tokens":318,"output_tokens":21}}
+}

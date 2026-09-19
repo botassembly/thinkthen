@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I had to return the shoes because they did not fit, and I paid for the return postage myself. Since the item was faulty rather than a change of mind, I would like that postage cost reimbursed to me.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":320,"output_tokens":21}}
+}

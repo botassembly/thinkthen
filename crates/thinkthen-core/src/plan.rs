@@ -72,6 +72,8 @@ mod tests {
     fn question(text: &str) -> Question {
         Question::Decide {
             text: QuestionText::new(text).expect("not blank"),
+            yes: None,
+            no: None,
         }
     }
 

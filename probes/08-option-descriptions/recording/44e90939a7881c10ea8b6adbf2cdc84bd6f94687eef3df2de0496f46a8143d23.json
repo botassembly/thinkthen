@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I was charged twice for my monthly subscription this week and neither charge matches the price I originally signed up for, so I need someone to check my invoice history and refund the extra amount taken from my card.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":1.0,"probabilities":{"product":0.0,"other":0.0,"shipping":0.0,"billing":1.0,"account":0.0}}},"usage":{"input_tokens":347,"output_tokens":53}}
+}

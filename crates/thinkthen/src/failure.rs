@@ -5,8 +5,7 @@ use std::process::ExitCode;
 
 use thinkthen_core::systemone::DecodeError;
 use thinkthen_core::{
-    BackendError, BlankTextError, LabelsError, PointerError, ReadingError, RecordError,
-    RenderError, ThresholdError,
+    BackendError, PointerError, QuestionFileError, ReadingError, RecordError, RenderError, Source,
 };
 
 /// The phrase `specification/backends.md` fixes for each common failure status.
@@ -36,20 +35,18 @@ const UNNAMED: &str = "defect: a usage error with no sentence";
 pub(crate) enum Failure {
     /// The flags and the environment name no backend.
     Backend(BackendError),
-    /// The question or the evidence arrived blank.
-    Blank(BlankTextError),
-    /// The threshold is not a threshold.
-    Threshold(ThresholdError),
     /// Two views of one answer were asked for at once.
     QuietWithDetails,
     /// A bare label was asked for beside another view of the same answer.
     RawWithAnotherView,
-    /// The options or the levels are not a list the verb takes.
-    Labels(LabelsError),
-    /// A band was given to a verb that cuts on one winning probability.
-    BandOnChoose,
-    /// A rule was given to a verb that has none.
-    RuleOnScore,
+    /// The question file, or a value beside it, was refused.
+    Question(QuestionFileError),
+    /// The file the question was to be read from could not be opened.
+    OpenQuestionFile(io::Error),
+    /// `--option` was given beside a list of options on the command line.
+    OptionWithList,
+    /// An `--option` entry carries no `=`, so it names no description.
+    OptionWithoutSign,
     /// The framing and the pointers cannot act together.
     Reading(ReadingError),
     /// A pointer is not a JSON Pointer, and the message names the one typed.
@@ -142,9 +139,19 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     }
     let (code, message): (u8, String) = match failure {
         Failure::Backend(error) => (2, error.to_string()),
-        Failure::Blank(error) => (2, error.to_string()),
-        Failure::Threshold(error) => (2, format!("--threshold: {error}")),
-        Failure::Labels(error) => (2, error.to_string()),
+        Failure::Question(error) => (
+            match error.origin() {
+                // A value the file holds is a failure of a local file, which
+                // `annotate.md` already puts at exit 5. A value the user typed
+                // is a usage error, as it has always been.
+                Source::File => 5,
+                _ => 2,
+            },
+            error.to_string(),
+        ),
+        Failure::OpenQuestionFile(error) => {
+            (5, format!("the question file could not be opened: {error}"))
+        }
         Failure::Reading(error) => (2, error.to_string()),
         Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
         Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
@@ -189,10 +196,6 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
         Failure::RawWithAnotherView => {
             "--raw prints a bare label, so it does not take --details or --quiet"
         }
-        Failure::BandOnChoose => "--threshold: `choose` takes a single cut and never a band",
-        Failure::RuleOnScore => {
-            "--threshold: `score` takes no rule, so cut on the number with `jq -e`"
-        }
         Failure::TwoFolders => {
             "--record and --replay name two different folders, and one run keeps one"
         }
@@ -205,6 +208,10 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
         Failure::OptionsWithList => {
             "--options takes the options from each record, so the command line gives none"
         }
+        Failure::OptionWithList => {
+            "--option and a list of options have no order between them, so one run takes one"
+        }
+        Failure::OptionWithoutSign => "--option is LABEL=DESCRIPTION, and this one holds no `=`",
         Failure::OptionsOutsideJsonl => {
             "--options needs --jsonl, because a pointer needs a JSON record to point into"
         }
@@ -233,21 +240,9 @@ impl From<BackendError> for Failure {
     }
 }
 
-impl From<BlankTextError> for Failure {
-    fn from(error: BlankTextError) -> Self {
-        Self::Blank(error)
-    }
-}
-
-impl From<LabelsError> for Failure {
-    fn from(error: LabelsError) -> Self {
-        Self::Labels(error)
-    }
-}
-
-impl From<ThresholdError> for Failure {
-    fn from(error: ThresholdError) -> Self {
-        Self::Threshold(error)
+impl From<QuestionFileError> for Failure {
+    fn from(error: QuestionFileError) -> Self {
+        Self::Question(error)
     }
 }
 

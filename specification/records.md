@@ -50,6 +50,8 @@ The evidence is then `{"input":"...","output":"..."}`. A check that must not see
 
 The evidence object is not a string, so it goes out as compact JSON by the rule above. [backends.md](backends.md) carries it in one field, the way a single pointer's value travels.
 
+The vendor also accepts that field as a real JSON object rather than as text holding one. `probes/09-evidence-shape/` measured both on forty made-up labeled cases on 2026-09-19. Both shapes answered 40 of 40 correctly, no answer differed, the probability moved by 0.0045 on average and by 0.05 at most, and the object shape cost 13,954 input tokens against the string shape's 13,714. The check separated nothing, so the string stays. A measurement on cases the model finds hard could overturn it.
+
 ## What a record may not hold
 
 - A JSON record that holds two members under one name is refused, because no reader can say which of the two a pointer means.
@@ -121,6 +123,8 @@ The vendor published these on 2026-09-19 for the hosted service at `https://api.
 | Requests a minute | 1,200 |
 | Evidence in one request | about 32,000 tokens |
 | One whole request | about 64,000 tokens |
+
+The vendor's pages disagreed on the last row, and one page gave 32,000 tokens for a whole request. A live check on 2026-09-19 sent one request of 33,663 input tokens, with about 20,000 tokens of evidence and three long questions, and the service accepted it. The larger number holds, which matters to `annotate`, because a question set rides in one request. `sdlc/records/0017-every-question-option-has-two-homes.md` holds the check.
 
 A run over the rate limit gets a 429, and [backends.md](backends.md) fixes the retry. Evidence past the token limit is refused, and the exit code is 4.
 

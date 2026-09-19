@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Please cancel the recurring booking I have for the weekly class, starting from next month onward. I have enjoyed the sessions but my schedule has changed and I will not be able to attend anymore, so no further bookings please.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":318,"output_tokens":21}}
+}

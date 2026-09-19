@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Update: parking gate issue already resolved\",\"body\":\"The parking gate that would not lift yesterday morning has been repaired by the vendor and tested several times since. It is opening and closing normally for every vehicle so far. Sending this note mainly for the record in case anyone else logged the same complaint.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":341,"output_tokens":21}}
+}

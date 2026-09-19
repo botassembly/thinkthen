@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The picture frame arrived with the glass shattered inside the box, and shards had gotten into the packaging material as well. Given the safety concern, I would prefer a refund over having a replacement sent to the same address.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.93}},"usage":{"input_tokens":317,"output_tokens":21}}
+}

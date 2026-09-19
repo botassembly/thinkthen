@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"After the recent update I keep getting logged out every few minutes even on a device I have used for years without any trouble, and re-entering my password each time is becoming genuinely exhausting, so please look into this.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"account","confidence":0.92,"probabilities":{"shipping":0.0,"billing":0.0,"product":0.06,"account":0.9299999999999999,"other":0.01}}},"usage":{"input_tokens":351,"output_tokens":53}}
+}

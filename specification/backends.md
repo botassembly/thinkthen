@@ -55,6 +55,8 @@ A failure after the last retry is exit code 4. The message gives the status code
 | 422 | the backend refused the request as malformed or too large |
 | 429 | the backend's rate limit was reached |
 
+Status 402 was seen live on 2026-09-19, on an account with no credit left. The vendor's own pages list no 402 anywhere. `sdlc/records/0003-live-call.md` holds the calls that met it.
+
 ## The adapter contract
 
 An adapter is two pure functions.
@@ -86,12 +88,13 @@ The response body:
 | --- | --- |
 | The evidence | `state`, as one string |
 | A yes/no question and its text | `type` `noul`, with the question as `instructions` |
+| What true means and what false means | `criteria.true` and `criteria.false` under the `noul` question. A text that was not given is absent, and a question with neither sends no `criteria` at all |
 | A yes/no answer's probability | `noul` |
 | Pick one from a list | `type` `choice`, with the options as the keys of `criteria` and each description as the value, or `null` |
 | Place on named levels | `type` `score`, with the levels as the `criteria` array |
 | A choice answer's probability per option | `probabilities` under the `choice` answer, keyed by option name. The key order carries no meaning, and the adapter rebuilds the distribution in the order the options were sent |
 | A score answer's probability per level | `probabilities` under the `score` answer, keyed by the level's position as a string, counting from `"0"`. The adapter maps each key back to the level text it sent |
-| The backend's own confidence | `confidence`, kept and never cut on |
+| The backend's own confidence | `confidence`, kept and never cut on. The vendor sends it on a pick and a placement, and never on a yes/no answer |
 | A score's number | Computed locally from the level probabilities. Nothing is read from the wire |
 | Several questions over one evidence | One `questions` map with one entry per question. One request, one `state` |
 

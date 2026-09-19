@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The kettle stopped heating water entirely after only three uses, well within what I would consider a reasonable lifespan for a new appliance. I would like a refund processed for the full purchase price rather than a repair or exchange.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back.","criteria":{"true":"The writer asks the shop to return money that was already paid, in any form: a refund, a reimbursement, a reversed charge, or a partial repayment.","false":"The writer asks for anything else, or asks for nothing. An exchange, a replacement, a repair, store credit, a discount on a later order, or a question about the refund policy are all false."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.99}},"usage":{"input_tokens":407,"output_tokens":21}}
+}

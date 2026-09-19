@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Network drive still unreachable\",\"body\":\"The shared network drive has been down since early this morning and nobody on the floor can open their project files right now. We tried reconnecting from two different computers with no luck. This is holding up the reports that are due before the end of the day.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":343,"output_tokens":21}}
+}

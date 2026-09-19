@@ -100,9 +100,9 @@ impl Record {
     /// Read the candidate list this record carries where the pointer names one.
     ///
     /// A list of labels gives each option no description. A map from label to
-    /// description gives each one the description it holds, and
-    /// `specification/backends.md` sends that description as the value under
-    /// the option's key in `criteria`.
+    /// description gives each one the description it holds, and the adapter
+    /// sends that description with the option, as `specification/backends.md`
+    /// writes out.
     ///
     /// # Errors
     ///

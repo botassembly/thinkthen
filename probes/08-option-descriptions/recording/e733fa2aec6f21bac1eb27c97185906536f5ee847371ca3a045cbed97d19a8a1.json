@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The receipt I was emailed lists a subtotal that does not add up to the line items listed above it, off by a small but consistent amount, and I would like someone to check whether I was overcharged somewhere.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":1.0,"probabilities":{"account":0.0,"billing":1.0,"product":0.0,"other":0.0,"shipping":0.0}}},"usage":{"input_tokens":350,"output_tokens":53}}
+}

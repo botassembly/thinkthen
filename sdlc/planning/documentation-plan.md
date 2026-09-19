@@ -28,8 +28,8 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 | Tell "not stated" from "false" with `decide` and `choose` | 20 | 5 | Green |
 | Route a request by how hard it is, with `score` and `jq -e` | 17 | 5, rewritten by 0018 | Green |
 | Choose the next action from a list that changes at every step | 21 | 7, rewritten by 0018 | Green |
-| Say what yes and no mean | 40 | 7b | Red. Coming with ticket 0017 |
-| Tune a question once and use the same file in the test and in the gate | 41 | 7b | Red. Coming with ticket 0017 |
+| Say what yes and no mean | 40 | 7b | Green. Landed with ticket 0017 |
+| Tune a question file and use the same file in the gate | 41 | 7b | Green. Landed with ticket 0017 |
 
 ## Many records
 

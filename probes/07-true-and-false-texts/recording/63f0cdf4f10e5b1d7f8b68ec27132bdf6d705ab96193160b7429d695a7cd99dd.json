@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I was disappointed that my order arrived a day late for the event I needed it for. Given the inconvenience, would you consider offering me a discount on my next purchase as a gesture of goodwill.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03}},"usage":{"input_tokens":313,"output_tokens":21}}
+}

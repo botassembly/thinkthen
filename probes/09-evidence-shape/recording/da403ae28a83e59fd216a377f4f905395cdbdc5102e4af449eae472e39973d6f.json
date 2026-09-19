@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Invoice system throwing errors again\",\"body\":\"The invoice system is throwing the same error message it did last month, and right now nobody can submit a completed invoice for approval. We have tried logging out and back in twice with no change. Finance is waiting on several of these before end of day.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":341,"output_tokens":21}}
+}

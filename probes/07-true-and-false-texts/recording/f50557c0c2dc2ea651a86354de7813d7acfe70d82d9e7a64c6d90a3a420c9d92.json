@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The jacket I received is a size too small. Could you send me a larger size instead of the one I have, and I will post the small one back to you as soon as the replacement arrives.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.01}},"usage":{"input_tokens":315,"output_tokens":21}}
+}

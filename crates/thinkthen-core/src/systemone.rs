@@ -106,6 +106,8 @@ pub(crate) mod tests {
                 .iter()
                 .map(|text| Question::Decide {
                     text: QuestionText::new(*text).expect("not blank"),
+                    yes: None,
+                    no: None,
                 })
                 .collect(),
         )

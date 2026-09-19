@@ -8,11 +8,12 @@ use std::time::Duration;
 use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::systemone;
 use thinkthen_core::{
-    Backend, DecisionResult, Framing, Labels, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, Reply, Threshold, json_line,
+    Backend, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
+    QuestionText, Reading, Record, Reply, Resolved, Sources, Threshold, json_line, question_sha256,
 };
 
 use crate::args::{ChooseArguments, Common, DecideArguments, ScoreArguments};
+use crate::asked;
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::{Client, Exchange};
@@ -24,7 +25,7 @@ use crate::schedule::{self, Judged};
 struct Asked<'a> {
     common: &'a Common,
     asks: Asks,
-    threshold: Option<Threshold>,
+    settled: &'a Resolved,
     view: View,
 }
 
@@ -103,13 +104,7 @@ pub(crate) fn decide(
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let threshold = match arguments.threshold.as_deref() {
-        Some(text) => text.parse()?,
-        None => Threshold::default(),
-    };
-    let question = Question::Decide {
-        text: QuestionText::new(arguments.question.as_str())?,
-    };
+    let settled = asked::decide(arguments)?;
     let view = View {
         quiet: arguments.quiet,
         raw: false,
@@ -118,14 +113,25 @@ pub(crate) fn decide(
     run(
         Asked {
             common: &arguments.common,
-            asks: Asks::Fixed(question),
-            threshold: Some(threshold),
+            asks: fixed(&settled)?,
+            settled: &settled,
             view,
         },
         environment,
         input,
         writer,
     )
+}
+
+/// The one question every record is asked, which every verb but one has.
+fn fixed(settled: &Resolved) -> Result<Asks, Failure> {
+    settled
+        .question()
+        .cloned()
+        .map(Asks::Fixed)
+        .ok_or(Failure::Defect(
+            "a verb with no list left its question open",
+        ))
 }
 
 /// Pick one label from the options, and set the exit code from the answer.
@@ -140,35 +146,19 @@ pub(crate) fn choose(
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let threshold = match arguments.threshold.as_deref() {
-        Some(text) => {
-            let rule: Threshold = text.parse()?;
-            if !rule.is_cut() {
-                return Err(Failure::BandOnChoose);
-            }
-            Some(rule)
-        }
-        None => None,
-    };
-    let text = QuestionText::new(arguments.question.as_str())?;
+    let settled = asked::choose(arguments)?;
     let asks = match arguments.options_pointer.as_deref() {
         Some(typed) => {
-            if !arguments.options.is_empty() {
-                return Err(Failure::OptionsWithList);
-            }
             if !arguments.common.jsonl {
                 return Err(Failure::OptionsOutsideJsonl);
             }
             Asks::FromRecord {
-                text,
+                text: settled.text().clone(),
                 pointer: Pointer::new(typed)
                     .map_err(|error| Failure::Pointer("--options", typed.to_owned(), error))?,
             }
         }
-        None => Asks::Fixed(Question::Choose {
-            text,
-            options: Labels::options(arguments.options.clone())?,
-        }),
+        None => fixed(&settled)?,
     };
     let view = View {
         quiet: arguments.quiet,
@@ -179,7 +169,7 @@ pub(crate) fn choose(
         Asked {
             common: &arguments.common,
             asks,
-            threshold,
+            settled: &settled,
             view,
         },
         environment,
@@ -201,13 +191,7 @@ pub(crate) fn score(
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    if arguments.threshold.is_some() {
-        return Err(Failure::RuleOnScore);
-    }
-    let question = Question::Score {
-        text: QuestionText::new(arguments.question.as_str())?,
-        levels: Labels::levels(arguments.levels.clone())?,
-    };
+    let settled = asked::score(arguments)?;
     let view = View {
         quiet: false,
         raw: false,
@@ -216,8 +200,8 @@ pub(crate) fn score(
     run(
         Asked {
             common: &arguments.common,
-            asks: Asks::Fixed(question),
-            threshold: None,
+            asks: fixed(&settled)?,
+            settled: &settled,
             view,
         },
         environment,
@@ -236,9 +220,10 @@ fn run(
     let Asked {
         common,
         asks,
-        threshold,
+        settled,
         view,
     } = asked;
+    let threshold = settled.threshold();
     let view = view.checked()?;
     let folders = Folders::of(common)?;
     if common.dry_run && folders.named() {
@@ -247,9 +232,9 @@ fn run(
     let backend = Backend::resolve(
         common.url.as_deref(),
         environment.base_url(),
-        common.model.as_str(),
+        settled.model().as_str(),
     )?;
-    let reading = read_by(common)?;
+    let reading = read_by(common, settled)?;
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
@@ -262,7 +247,10 @@ fn run(
         return plan(
             &backend,
             &reading,
-            &asks,
+            &Planning {
+                asks: &asks,
+                sources: settled.sources().from_file().then(|| *settled.sources()),
+            },
             chunks.next().transpose()?,
             writer,
         );
@@ -332,40 +320,44 @@ impl<'a> Folders<'a> {
     }
 }
 
-/// Read the framing and the pointers the command line asked for.
-fn read_by(common: &Common) -> Result<Reading, Failure> {
+/// Read the framing the command line asked for, over the settled pointers.
+fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
     let framing = match (common.lines, common.jsonl) {
         (true, _) => Framing::Lines,
         (_, true) => Framing::Jsonl,
         _ => Framing::Document,
     };
-    let mut fields = Vec::with_capacity(common.field.len());
-    for typed in &common.field {
-        let pointer = Pointer::new(typed.as_str())
-            .map_err(|error| Failure::Pointer("--field", typed.clone(), error))?;
-        fields.push(pointer);
-    }
-    Ok(Reading::new(framing, fields)?)
+    Ok(Reading::new(framing, settled.on().to_vec())?)
+}
+
+/// What a plan shows beyond the request: the question and where it came from.
+struct Planning<'a> {
+    asks: &'a Asks,
+    sources: Option<Sources>,
 }
 
 /// Print the plan for the first record, and read no further than that record.
 fn plan(
     backend: &Backend,
     reading: &Reading,
-    asks: &Asks,
+    planning: &Planning<'_>,
     first: Option<Vec<u8>>,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let Some(bytes) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let sending = asked_of(reading, &bytes, backend, asks)?;
+    let sending = asked_of(reading, &bytes, backend, planning.asks)?;
     let document = PlanDocument::of(backend, &sending.plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let document = if reading.streams() {
         document.reading(reading)
     } else {
         document
+    };
+    let document = match planning.sources {
+        Some(sources) => document.from(sources),
+        None => document,
     };
     edge::write_line(writer, &json_line(&document)?)?;
     Ok(ExitCode::SUCCESS)
@@ -431,6 +423,7 @@ impl Judging<'_> {
         let printed = if self.view.details {
             let meta = Meta::new(
                 env!("CARGO_PKG_VERSION"),
+                question_sha256(&sending.question, self.threshold)?,
                 self.backend.url().clone(),
                 reply.model().clone(),
                 reply.usage(),

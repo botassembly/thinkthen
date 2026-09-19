@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"subject\":\"Planned maintenance window for the printer fleet\",\"body\":\"IT will be updating firmware on all networked printers this coming Saturday between eight and ten in the morning. Printing will be unavailable during that window across every floor. Please queue any large print jobs for Friday afternoon so they finish before the maintenance begins.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The message reports a problem that is still happening right now."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":344,"output_tokens":21}}
+}

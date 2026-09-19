@@ -7,6 +7,7 @@ use serde_json::value::RawValue;
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
+use crate::digest::hex;
 use crate::systemone;
 use crate::text::Url;
 
@@ -181,24 +182,6 @@ fn place(error: serde_json::Error) -> EntryError {
     EntryError::Malformed(error.line(), error.column())
 }
 
-/// Write bytes as lowercase hexadecimal.
-fn hex(bytes: &[u8]) -> String {
-    bytes
-        .iter()
-        .flat_map(|byte| [byte >> 4, byte & 0x0f])
-        .map(nibble)
-        .collect()
-}
-
-/// Write one half of a byte as its hexadecimal figure.
-fn nibble(value: u8) -> char {
-    char::from(if value < 10 {
-        b'0' + value
-    } else {
-        b'a' + value - 10
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::{Entry, EntryError, Exchange, SCHEMA};
@@ -243,6 +226,8 @@ mod tests {
             ModelName::new("jev-latest").expect("not blank"),
             vec![Question::Decide {
                 text: QuestionText::new("Does this convey urgency?").expect("not blank"),
+                yes: None,
+                no: None,
             }],
         )
         .expect("a plan of one question")

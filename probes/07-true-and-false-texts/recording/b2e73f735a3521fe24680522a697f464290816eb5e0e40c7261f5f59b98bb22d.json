@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The trousers did not fit as expected so I returned them the same week, and I covered the postage cost out of pocket at the time. Since the return was within your stated window, please reimburse that postage along with the item cost.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.96}},"usage":{"input_tokens":321,"output_tokens":21}}
+}

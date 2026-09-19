@@ -3,7 +3,7 @@
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
-use crate::text::QuestionText;
+use crate::text::{Meaning, QuestionText};
 
 /// Why a list of options or levels is not one the verb takes.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -72,10 +72,17 @@ impl Labels {
     /// # Errors
     ///
     /// Returns [`LabelsError`] on the same four counts `options` does.
+    ///
+    /// A description that is blank is no description, so a list of names, a map
+    /// whose values are `null`, and a map whose values are white space all name
+    /// the same question. `question-file.md` writes that rule out.
     pub(crate) fn described(values: Vec<(String, Option<String>)>) -> Result<Self, LabelsError> {
         let labels = values
             .into_iter()
-            .map(|(name, description)| Label { name, description })
+            .map(|(name, description)| Label {
+                name,
+                description: description.filter(|text| !text.trim().is_empty()),
+            })
             .collect();
         Self::checked(labels, MOST_OPTIONS, LabelsError::OptionCount)
     }
@@ -158,6 +165,12 @@ pub enum Question {
     Decide {
         /// The question the model receives.
         text: QuestionText,
+        /// What a yes means, when the user said so. Absent by default.
+        #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
+        yes: Option<Meaning>,
+        /// What a no means, when the user said so. Absent by default.
+        #[serde(rename = "false", skip_serializing_if = "Option::is_none")]
+        no: Option<Meaning>,
     },
     /// Ask which of a fixed list of labels fits the evidence.
     Choose {
@@ -178,7 +191,19 @@ pub enum Question {
 #[cfg(test)]
 mod tests {
     use super::{Labels, LabelsError, Question};
-    use crate::text::QuestionText;
+    use crate::text::{Meaning, QuestionText};
+
+    fn meaning(text: &str) -> Option<Meaning> {
+        Some(Meaning::new(text).expect("not blank"))
+    }
+
+    fn asking() -> Question {
+        Question::Decide {
+            text: text(),
+            yes: None,
+            no: None,
+        }
+    }
 
     fn listed(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| (*value).to_owned()).collect()
@@ -193,8 +218,33 @@ mod tests {
         let rendered =
             |question: &Question| serde_json::to_string(question).expect("a question serializes");
         assert_eq!(
-            rendered(&Question::Decide { text: text() }),
+            rendered(&asking()),
             r#"{"verb":"decide","text":"Which team owns this request?"}"#
+        );
+        // The two texts are absent from the JSON when the user named neither,
+        // so a request built today is byte for byte the request of yesterday.
+        assert_eq!(
+            rendered(&Question::Decide {
+                text: text(),
+                yes: meaning("The message asks for money back."),
+                no: meaning("The message asks for anything else."),
+            }),
+            concat!(
+                r#"{"verb":"decide","text":"Which team owns this request?","#,
+                r#""true":"The message asks for money back.","#,
+                r#""false":"The message asks for anything else."}"#,
+            )
+        );
+        assert_eq!(
+            rendered(&Question::Decide {
+                text: text(),
+                yes: None,
+                no: meaning("The message asks for anything else."),
+            }),
+            concat!(
+                r#"{"verb":"decide","text":"Which team owns this request?","#,
+                r#""false":"The message asks for anything else."}"#,
+            )
         );
         assert_eq!(
             rendered(&Question::Choose {
@@ -299,6 +349,17 @@ mod tests {
                 ("late".to_owned(), Some("twice".to_owned())),
             ]),
             Err(LabelsError::Duplicate)
+        );
+        // A description that is blank is no description at all, so three
+        // spellings of the same list are the same list.
+        let blank = Labels::described(vec![
+            ("late".to_owned(), Some("  ".to_owned())),
+            ("lost".to_owned(), Some(String::new())),
+        ])
+        .expect("two options");
+        assert_eq!(
+            blank.descriptions().collect::<Vec<_>>(),
+            [(&"late".to_owned(), None), (&"lost".to_owned(), None)]
         );
     }
 

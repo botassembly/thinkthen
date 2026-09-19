@@ -24,7 +24,11 @@ pub(crate) struct Request {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(crate) enum RequestQuestion {
     /// A yes/no question, which the vendor calls `noul`.
-    Noul { instructions: String },
+    Noul {
+        instructions: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        criteria: Option<NoulCriteria>,
+    },
     /// A pick, with the options as the keys of `criteria`.
     Choice {
         instructions: String,
@@ -35,6 +39,21 @@ pub(crate) enum RequestQuestion {
         instructions: String,
         criteria: Vec<String>,
     },
+}
+
+/// What a yes means and what a no means, as the vendor's `criteria` object.
+///
+/// The tool's own words for these two are `--true` and `--false`, and this
+/// module alone knows they travel here. A question that names neither carries
+/// no `criteria` at all, so its request is byte for byte the request of the
+/// version before the two texts existed.
+#[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+pub(crate) struct NoulCriteria {
+    #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
+    yes: Option<String>,
+    #[serde(rename = "false", skip_serializing_if = "Option::is_none")]
+    no: Option<String>,
 }
 
 /// The options of a pick, as a map from each option to its description.
@@ -110,8 +129,12 @@ impl RequestQuestion {
     /// Write one question in the shape its verb asks for.
     fn asking(question: &Question) -> Self {
         match question {
-            Question::Decide { text } => Self::Noul {
+            Question::Decide { text, yes, no } => Self::Noul {
                 instructions: text.as_str().to_owned(),
+                criteria: (yes.is_some() || no.is_some()).then(|| NoulCriteria {
+                    yes: yes.as_ref().map(|meaning| meaning.as_str().to_owned()),
+                    no: no.as_ref().map(|meaning| meaning.as_str().to_owned()),
+                }),
             },
             Question::Choose { text, options } => Self::Choice {
                 instructions: text.as_str().to_owned(),
@@ -185,7 +208,7 @@ mod tests {
         let plan = plan_for("Help!", &["is urgent", "asks for a refund"]);
         let written = written(&plan);
         let named = |name: &str| match written.questions.get(name) {
-            Some(RequestQuestion::Noul { instructions }) => instructions.clone(),
+            Some(RequestQuestion::Noul { instructions, .. }) => instructions.clone(),
             _ => panic!("one yes/no question per name"),
         };
         assert_eq!(named("q1"), "is urgent");
@@ -207,7 +230,11 @@ mod tests {
             let written = written(&plan_for(&state, &[&instructions]));
             prop_assert_eq!(&written.state, &state);
             let question = written.questions.get("q1").expect("one named question");
-            let RequestQuestion::Noul { instructions: sent } = question else {
+            let RequestQuestion::Noul {
+                instructions: sent,
+                ..
+            } = question
+            else {
                 panic!("a decide plan writes a yes/no question");
             };
             prop_assert_eq!(sent, &instructions);

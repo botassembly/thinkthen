@@ -48,8 +48,8 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 20 | [Tell "not stated" from "false" with `decide` and `choose`](20-not-stated-or-false/) | `decide`, `choose` | green |
 | 17 | [Route a request by how hard it is](17-rate-and-sort/) | `score` | green |
 | 21 | [Choose the next action from a list that changes at every step](21-options-from-the-record/) | `choose` | green |
-| 40 | Say what yes and no mean | `decide` | coming with ticket 0017 |
-| 41 | Tune a question once and use the same file in the test and in the gate | `decide` | coming with ticket 0017 |
+| 40 | [Say what yes and no mean](40-what-yes-and-no-mean/) | `decide` | green |
+| 41 | [Tune a question file and use the same file in the gate](41-tune-a-question-file/) | `decide` | green |
 
 ## Many records
 

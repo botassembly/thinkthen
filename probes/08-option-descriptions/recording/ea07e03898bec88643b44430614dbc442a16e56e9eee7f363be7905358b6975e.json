@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The hinge on the folding stand that came with the item is already loose after light use, and the whole thing tips over on a flat surface, which makes me think it was assembled incorrectly before it was packaged.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"product","confidence":0.94,"probabilities":{"shipping":0.02,"billing":0.0,"account":0.0,"product":0.95,"other":0.03}}},"usage":{"input_tokens":348,"output_tokens":53}}
+}

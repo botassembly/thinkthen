@@ -1,8 +1,10 @@
 # probes/
 
-Ticket 0011 ran six measurements against the hosted decider model. Each folder holds its cases, the job that judged them, the rows the job wrote, the recorded exchanges, and the analysis that reads the rows. `sdlc/records/0011-the-live-probe.md` holds the numbers and what each one changes.
+Ticket 0011 ran six measurements against the hosted decider model, and ticket 0017 ran four more. Each folder holds its cases, the job that judged them, the rows the job wrote, the recorded exchanges, and the analysis that reads the rows. `sdlc/records/0011-the-live-probe.md` holds the numbers and what each one changes.
 
-Every case is made-up text written for this ticket, with a trusted answer fixed before any call went out. No case is real customer text and no case names anything private.
+Every case is made-up text written for its ticket, with a trusted answer fixed and committed before any call went out. No case is real customer text and no case names anything private.
+
+Two checks cannot be replayed, and their folders say so at the top of the script. `09-evidence-shape/object.sh` posts a request shape the tool cannot send, and `token-budget/` posts three questions in one request, which the tool never does. Both keep the backend's answers as files instead of a recording. `token-budget/` carries no leading number, so the `spec` rung's replay check passes it by.
 
 | Folder | Asks |
 | --- | --- |
@@ -12,6 +14,10 @@ Every case is made-up text written for this ticket, with a trusted answer fixed 
 | `04-option-order/` | Does reversing or shuffling the options move the pick |
 | `05-irrelevant-option/` | Does one added label that fits nothing move the pick |
 | `06-hostile-text/` | Does an instruction aimed at the judge, inside the evidence, move the answer |
+| `07-true-and-false-texts/` | Does saying what true and what false mean move the answer |
+| `08-option-descriptions/` | Does a description under each option pick better than a bare label |
+| `09-evidence-shape/` | Does evidence from several pointers judge better as a JSON object than as the string the tool flattens it into |
+| `token-budget/` | Which of the vendor's two published request budgets is real. Written and not yet run, because a request that tests a 32,000 token ceiling costs more than 32,000 tokens |
 
 ## Running one again
 

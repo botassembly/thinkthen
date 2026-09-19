@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I noticed a small recurring charge on my statement that I do not recognise and cannot match to any service I signed up for, so I would like someone to trace where this charge originated and stop it immediately.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.97,"probabilities":{"shipping":0.0,"account":0.02,"other":0.01,"product":0.0,"billing":0.97}}},"usage":{"input_tokens":347,"output_tokens":53}}
+}

@@ -162,7 +162,9 @@ fn a_detailed_pick_keeps_every_option_in_order_and_the_backends_confidence() {
             r#""answer":{"kind":"choice","pick":"billing","#,
             r#""probabilities":{"billing":0.9,"shipping":0.04,"account":0.04,"other":0.02},"#,
             r#""confidence":0.91},"threshold":0.8,"#,
-            r#""meta":{"tool":"thinkthen 0.0.1","url":""#,
+            r#""meta":{"tool":"thinkthen 0.0.1","#,
+            r#""question_sha256":"84ee9333d3eef7fb2cd628892cd284a033919333149a5c9475393341dd91f172","#,
+            r#""url":""#,
         )),
         "{printed}"
     );

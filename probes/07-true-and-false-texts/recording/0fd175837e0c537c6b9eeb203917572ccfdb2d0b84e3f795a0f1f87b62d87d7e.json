@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Could you clarify whether opened items are eligible to be sent back at all under your terms, or if that only applies to items still in the original sealed packaging. I want to understand the rules before I do anything further.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The customer explicitly asks for money back."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.05}},"usage":{"input_tokens":318,"output_tokens":21}}
+}

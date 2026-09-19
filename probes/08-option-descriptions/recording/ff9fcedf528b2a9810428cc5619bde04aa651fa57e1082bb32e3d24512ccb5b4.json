@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"After the last software update the screen occasionally freezes for several seconds during normal operation, and restarting the device only fixes the problem temporarily before it starts happening again within an hour or so of regular use.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"product":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"product","confidence":0.72,"probabilities":{"billing":0.0,"other":0.22,"shipping":0.0,"account":0.0,"product":0.78}}},"usage":{"input_tokens":345,"output_tokens":53}}
+}

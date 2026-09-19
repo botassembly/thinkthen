@@ -5,14 +5,14 @@ Status: **Settled** for version one, by ADR 0007 and ADR 0010.
 Picks one label from a fixed list.
 
 ```text
-thinkthen choose QUESTION OPTION... [--threshold T] [--raw] [--quiet] [--details] [RECORD] [BACKEND]
+thinkthen choose QUESTION|@FILE [OPTION...] [--option LABEL=DESCRIPTION] [--threshold T] [--raw] [--quiet] [--details] [RECORD] [BACKEND]
 ```
 
 ## What it reads
 
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines` and `--jsonl` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
 
-`QUESTION` comes first and states what decides the pick. Each `OPTION` is one argument. `choose` takes 2 to 255 options. A duplicate option name is a usage error, and so is an option that is empty or holds only white space. An option holding a control character is a usage error too, because `--raw` prints a label byte for byte and a label with a line feed in it would write a line of its own into the caller's output. The tool sends the options in the order the user gave and never reorders them.
+`QUESTION` comes first and states what decides the pick. Each `OPTION` is one argument. `choose` takes 2 to 255 options. A duplicate option name is a usage error, and so is an option that is empty or holds only white space. An option holding a control character is a usage error too, because `--raw` prints a label byte for byte and a label with a line feed in it would write a line of its own into the caller's output. The tool sends the options in the order the user gave and never reorders them. `@FILE` reads the question and its options from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence.
 
 ## What it prints
 
@@ -26,12 +26,25 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 | --- | --- | --- |
 | `--threshold T` | A single cut on the winning option's probability. The band form is a usage error. See [threshold.md](threshold.md) | None. The winning label is returned |
 | `--raw` | Prints the label without quotation marks | Off |
+| `--option LABEL=DESCRIPTION` | One option and what it means, and it may repeat. See below | None. The positional options carry no description |
 | `--options POINTER` | Takes the options from each record. Requires `--jsonl`. See below | None. The options come from the arguments |
 | `--quiet` | Prints nothing on standard output | Off |
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--field` | One document |
 | Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+
+## A description per option
+
+`--option LABEL=DESCRIPTION` gives one option and what it means. It may repeat, and the first `=` splits the label from the description. Positional options and `--option` together are a usage error, because the order of options matters and two lists have no order between them. An `--option` with no `=` is a usage error.
+
+The description travels with the option, and [backends.md](backends.md) gives the field it lands in. An option with no description still travels, with nothing under its label. Descriptions have a home in a question file too, as a map under `options`.
+
+```sh
+thinkthen choose 'Which team owns this request?' \
+  --option 'billing=Money, invoices, and refunds.' \
+  --option 'shipping=Parcels, addresses, and delivery dates.' < message.txt
+```
 
 ## Options from the record
 
@@ -85,6 +98,6 @@ thinkthen choose 'Which kind of request is this?' bug feature other --jsonl --fi
 
 Measurement of the first decider model found picking from a fixed list stable. A live run then judged sixty made-up support messages over five labels. The cases are few and they are made up. Reversing the list changed 2 of 60 picks and shuffling it changed 1 of 60. Every change landed on the catch-all `other`. Keep the option order fixed once a cut is tuned, because a run with a reordered list is a different measurement. Put the catch-all last.
 
-The same run added a sixth label that fits nothing. It changed 0 of 60 picks, and the model gave it a probability of 0.0 on all 60 rows. That measures one kind of added option, on sixty made-up cases. A label that overlaps a real one is untested, and the vendor's own documents warn about it. Word the options so that they exclude one another, and keep the list short.
+The same run added a sixth label that fits nothing. It changed 0 of 60 picks, and the model gave it a probability of 0.0 on all 60 rows. That measures one kind of added option, on sixty made-up cases. A label that overlaps a real one is untested, and the vendor's own documents warn about it. Word the options so that they exclude one another, and keep the list short. One vendor page reports weaker picks above about 240 options, which is under the tool's ceiling of 255.
 
 The cut falls on the winning option's probability and never on the backend's `confidence`. [backends.md](backends.md) says why.
