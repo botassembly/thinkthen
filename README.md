@@ -33,6 +33,8 @@ These four words name the four things a user writes or runs. ADR 0015 fixed them
 
 A transform is one of two kinds. A metric reads a whole run and prints numbers. A policy reads one row and names an action.
 
+A question file holds one question. A question set holds several named questions, and each entry has the shape of a question file. `annotate` reads a question set.
+
 ## Where to read
 
 The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.

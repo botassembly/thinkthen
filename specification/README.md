@@ -4,7 +4,7 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 
 Version one is six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`. The configuration file left version one, and ADR 0010 holds that ruling. `roadmap.md` holds what left. ADR 0015 accepted `find` on the live comparison, and it enters after `rank`.
 
-The names table in [`../README.md`](../README.md) fixes the four names: question file, transform, how-to, and pipeline.
+The names table in [`../README.md`](../README.md) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions.
 
 `spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of `sdlc/planning/plan.md` closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
 
@@ -21,7 +21,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [score.md](score.md) | `score` | Settled |
 | [filter.md](filter.md) | `filter` | Settled |
 | [rank.md](rank.md) | `rank` | Settled |
-| [annotate.md](annotate.md) | `annotate` and the saved question file | Settled |
+| [annotate.md](annotate.md) | `annotate` and the saved question set | Settled |
 | [find.md](find.md) | `find`, and the `none` option that says nothing fits | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
@@ -40,5 +40,5 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `score QUESTION LEVEL...` | Places the evidence on named levels and prints a number |
 | `filter QUESTION` | Keeps the records that reach the mark and prints them unchanged |
 | `rank QUESTION` | Prints the records in order of the probability of yes |
-| `annotate FILE` | Asks a saved file of questions and adds one field per question |
+| `annotate FILE` | Asks a saved question set and adds one field per question |
 | `find QUESTION` | Picks the unit that best answers a question, out of a set the model sees at once |

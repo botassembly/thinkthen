@@ -10,11 +10,11 @@ Every number in an expected output on this page is illustrative until a recordin
 
 ## Input
 
-`release-notes.txt` is one set of release notes. `checklist.json` is the saved question file: one top-level `threshold` and four named questions, three `decide` and one `choose`. The band is written once. The `choose` question overrides it with a single cut, because a four-way pick is not a two-sided decision.
+`release-notes.txt` is one set of release notes. `checklist.json` is the saved question set: one top-level `threshold` and four named questions, three `decide` and one `choose`. The band is written once. The `choose` question overrides it with a single cut, because a four-way pick is not a two-sided decision.
 
 ## Check the file before the release
 
-`annotate --dry-run` reads the question file, validates it, and sends nothing. It runs in a lint job with no key in the environment.
+`annotate --dry-run` reads the question set, validates it, and sends nothing. It runs in a lint job with no key in the environment.
 
 ```bash
 set -euo pipefail

@@ -10,15 +10,15 @@ Status: waiting on ticket 0014
 
 ## Outcome
 
-`annotate FILE` asks a saved file of questions about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 07 and 08 are green. Ticket 0016 then writes the flagship triage how-to and the first eval how-tos over this command with no further code.
+`annotate FILE` asks a saved question set about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 07 and 08 are green. Ticket 0016 then writes the flagship triage how-to and the first eval how-tos over this command with no further code.
 
 ## Current Facts
 
-`annotate.md` is Settled for the file grammar, the output, and several pointers on `on`. ADR 0010 struck structured question values. The three single-question verbs already build each question type, read each answer, and apply each threshold, so `annotate` adds a file parser, a grouping of questions by `on`, and a merge of answers into the record. ADR 0013 proposes an optional `rules` block for this file and is not accepted. This ticket builds no `rules` block, and the parser refuses the key as it refuses any unknown key.
+`annotate.md` is Settled for the file grammar, the output, and several pointers on `on`. ADR 0010 struck structured question values. The three single-question verbs already build each question type, read each answer, and apply each threshold, so `annotate` adds a file parser, a grouping of questions by `on`, and a merge of answers into the record. ADR 0013 proposes an optional `rules` block for this set and is not accepted. This ticket builds no `rules` block, and the parser refuses the key as it refuses any unknown key.
 
 ## Scope
 
-- The question file as `annotate.md` gives it: `version` 1, an optional top-level `threshold`, and `questions`. A question has exactly one of `decide`, `choose`, or `score`. `options` is a list or a map from label to description. `levels` is a list, lowest first. A `choose` question takes a single cut alone. A name uses lowercase letters, digits, and underscores. An unknown key anywhere is an error. An unreadable or invalid file is exit 5, and the message names the path of the key at fault, such as `questions.kind.options`.
+- The question set as `annotate.md` gives it: `version` 1, an optional top-level `threshold`, and `questions`. A question has exactly one of `decide`, `choose`, or `score`. `options` is a list or a map from label to description. `levels` is a list, lowest first. A `choose` question takes a single cut alone. A name uses lowercase letters, digits, and underscores. An unknown key anywhere is an error. An unreadable or invalid file is exit 5, and the message names the path of the key at fault, such as `questions.kind.options`.
 - The parser and the grouping live in `thinkthen-core` and touch no file. The binary reads the file and hands the text inward.
 - `on` takes one pointer or several and works inside the evidence that `--field` selected. Several pointers build an evidence object by the rule of `--field`, and a key clash is an error in the file.
 - Questions with the same `on` ride in one request, in file order. Requests for one record go out in the file order of their first question. Records never share a request.

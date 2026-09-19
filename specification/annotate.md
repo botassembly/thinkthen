@@ -2,7 +2,7 @@
 
 Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one.
 
-Asks a saved file of questions about each record and adds one field per question.
+Asks a saved question set about each record and adds one field per question.
 
 ```text
 thinkthen annotate FILE [--lines|--jsonl] [--field POINTER] [--details] [--dry-run] [BACKEND]
@@ -10,9 +10,9 @@ thinkthen annotate FILE [--lines|--jsonl] [--field POINTER] [--details] [--dry-r
 
 ## What it reads
 
-`FILE` is the saved question file. `annotate` reads one document on standard input by default, and it reads records under `--lines` or `--jsonl`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
+`FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `annotate` reads one document on standard input by default, and it reads records under `--lines` or `--jsonl`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
 
-## The file
+## The question set
 
 ```json
 {
@@ -28,7 +28,7 @@ thinkthen annotate FILE [--lines|--jsonl] [--field POINTER] [--details] [--dry-r
 
 A question has exactly one of `decide`, `choose`, or `score`, and its value is the question text. `options` is a list of labels or a map from label to description. `levels` is a list, lowest first. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name uses lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error.
 
-The top-level `threshold` applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`. The file holds questions and nothing else. It holds no backend, no output path, and no format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
+The top-level `threshold` applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`. The set holds questions and nothing else. It holds no backend, no output path, and no format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 
 `on` is a JSON Pointer inside the evidence that `--field` selected. It can never reach outside that evidence. A table asks different questions of different columns, and no question should see a column it does not need.
 
@@ -93,7 +93,7 @@ One record makes one request per distinct `on`, and the plan shows one request. 
 {"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}
 ```
 
-`--dry-run` reads the question file and the first record. A name that collides with a field on record two is invisible to it, as [demo 07](../demos/07-judged-columns/) shows.
+`--dry-run` reads the question set and the first record. A name that collides with a field on record two is invisible to it, as [demo 07](../demos/07-judged-columns/) shows.
 
 ## Requests
 
@@ -109,7 +109,7 @@ The questions and the evidence together can pass the backend's token limit for o
 
 ## An eval is `annotate` and a saved run
 
-Settled by ADR 0008 item 1. A case is one flat JSON object with any field names. A definition is an `annotate` file. A run is the file of `--details` rows. `jq` reads the run and counts it. No eval engine enters this tool.
+Settled by ADR 0008 item 1. A case is one flat JSON object with any field names. A definition is a question set. A run is the file of `--details` rows. `jq` reads the run and counts it. No eval engine enters this tool.
 
 ```sh
 thinkthen annotate checks.json --jsonl --record runs/v1 --replay runs/v1 < cases.jsonl > run-v1.jsonl
