@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Notifications arrive about an hour late. I check the page myself when I am waiting for something, so nothing has been missed.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"none","confidence":0.48,"probabilities":{"none":0.59,"total":0.0,"moderate":0.0,"minor":0.41,"major":0.0}}},"usage":{"input_tokens":337,"output_tokens":54}}
+}

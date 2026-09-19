@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Reporting is unavailable across the company and the month end is Friday. Day to day work continues, but nothing can be signed off.","model":"jev-latest","questions":{"q1":{"type":"score","instructions":"How much disruption to the work does this report describe?","criteria":["none","minor","moderate","major","total"]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":2.95,"confidence":0.92,"legend":{"0":"none","1":"minor","2":"moderate","3":"major","4":"total"},"probabilities":{"0":0.0,"1":0.0,"2":0.07,"3":0.91,"4":0.02}}},"usage":{"input_tokens":340,"output_tokens":18}}
+}

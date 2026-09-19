@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Everything runs but every figure on every screen is wrong by an order of magnitude. We cannot trust a single number, so we have halted trading for the day.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"total","confidence":0.58,"probabilities":{"major":0.33,"total":0.67,"moderate":0.0,"none":0.0,"minor":0.0}}},"usage":{"input_tokens":344,"output_tokens":54}}
+}

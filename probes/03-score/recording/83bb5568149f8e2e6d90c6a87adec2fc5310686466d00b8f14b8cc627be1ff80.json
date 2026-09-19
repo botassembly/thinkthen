@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The payment step fails for every customer using a card. Bank transfer still goes through, and about one order in ten is a transfer. The rest are simply not completing.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"major","confidence":0.98,"probabilities":{"major":0.98,"moderate":0.01,"total":0.01,"none":0.0,"minor":0.0}}},"usage":{"input_tokens":346,"output_tokens":54}}
+}

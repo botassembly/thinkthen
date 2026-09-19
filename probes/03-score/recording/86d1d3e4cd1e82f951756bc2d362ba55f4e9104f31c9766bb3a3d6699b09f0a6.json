@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Half the team cannot see the new queue. Those of us who can are covering the work, which is slow and means the others are idle.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"major","confidence":0.61,"probabilities":{"major":0.69,"total":0.0,"none":0.0,"moderate":0.31,"minor":0.0}}},"usage":{"input_tokens":341,"output_tokens":54}}
+}

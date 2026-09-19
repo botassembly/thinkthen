@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The nightly import failed on Monday and Tuesday. We loaded Monday's file by hand on Wednesday morning. Tuesday's is still outstanding and the figures are wrong until it lands.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"moderate","confidence":0.83,"probabilities":{"none":0.0,"total":0.0,"major":0.06,"minor":0.07,"moderate":0.87}}},"usage":{"input_tokens":346,"output_tokens":55}}
+}

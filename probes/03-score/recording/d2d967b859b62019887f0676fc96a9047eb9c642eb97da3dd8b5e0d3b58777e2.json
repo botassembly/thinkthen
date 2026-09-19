@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Nobody in the office can raise a new order. Existing orders still open and we can dispatch what is already in the system, but nothing new can come in.","model":"jev-latest","questions":{"q1":{"type":"score","instructions":"How much disruption to the work does this report describe?","criteria":["none","minor","moderate","major","total"]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":2.98,"confidence":0.93,"legend":{"0":"none","1":"minor","2":"moderate","3":"major","4":"total"},"probabilities":{"0":0.0,"1":0.0,"2":0.05,"3":0.92,"4":0.03}}},"usage":{"input_tokens":346,"output_tokens":18}}
+}

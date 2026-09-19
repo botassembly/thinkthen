@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The load spinner runs for about half a second longer than it used to. The page still opens and I have lost no time worth counting.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"minor","confidence":0.39,"probabilities":{"none":0.48,"total":0.0,"major":0.0,"moderate":0.0,"minor":0.52}}},"usage":{"input_tokens":340,"output_tokens":54}}
+}

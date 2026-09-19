@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The bulk edit screen fails on more than fifty rows. I split the work into batches of forty and it goes through. It adds maybe twenty minutes to a job I do weekly.","model":"jev-latest","questions":{"q1":{"type":"score","instructions":"How much disruption to the work does this report describe?","criteria":["none","minor","moderate","major","total"]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":1.37,"confidence":0.69,"legend":{"0":"none","1":"minor","2":"moderate","3":"major","4":"total"},"probabilities":{"0":0.0,"1":0.64,"2":0.36,"3":0.0,"4":0.0}}},"usage":{"input_tokens":350,"output_tokens":18}}
+}

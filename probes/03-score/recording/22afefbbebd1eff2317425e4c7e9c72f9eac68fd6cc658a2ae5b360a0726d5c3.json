@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Sorting by name puts the lowercase entries after the uppercase ones. I only have four entries so it makes no odds to me, but it looks odd.","model":"jev-latest","questions":{"q1":{"type":"score","instructions":"How much disruption to the work does this report describe?","criteria":["none","minor","moderate","major","total"]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":0.79,"confidence":0.82,"legend":{"0":"none","1":"minor","2":"moderate","3":"major","4":"total"},"probabilities":{"0":0.21,"1":0.79,"2":0.0,"3":0.0,"4":0.0}}},"usage":{"input_tokens":344,"output_tokens":18}}
+}

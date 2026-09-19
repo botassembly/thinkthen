@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Attachments over two megabytes are rejected. Most of what I send is larger, so I am splitting documents into parts and sending several messages.","model":"jev-latest","questions":{"q1":{"type":"score","instructions":"How much disruption to the work does this report describe?","criteria":["none","minor","moderate","major","total"]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":1.67,"confidence":0.68,"legend":{"0":"none","1":"minor","2":"moderate","3":"major","4":"total"},"probabilities":{"0":0.0,"1":0.35,"2":0.63,"3":0.02,"4":0.0}}},"usage":{"input_tokens":343,"output_tokens":18}}
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Printing crashes the preview. I export to a file and print from there instead. It works every time and I have stopped using the preview.","model":"jev-latest","questions":{"q1":{"type":"score","instructions":"How much disruption to the work does this report describe?","criteria":["none","minor","moderate","major","total"]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":1.48,"confidence":0.6,"legend":{"0":"none","1":"minor","2":"moderate","3":"major","4":"total"},"probabilities":{"0":0.0,"1":0.56,"2":0.41,"3":0.03,"4":0.0}}},"usage":{"input_tokens":342,"output_tokens":18}}
+}

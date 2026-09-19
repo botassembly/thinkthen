@@ -1,0 +1,40 @@
+{"id":"S-01","level":0,"hard":false,"body":"A tooltip on the export button is spelled wrong. Everything works and I only noticed because I was reading the screen closely."}
+{"id":"S-02","level":0,"hard":false,"body":"The icon in the corner is a slightly different shade of grey since the update. No effect on anything I do."}
+{"id":"S-03","level":0,"hard":true,"body":"The load spinner runs for about half a second longer than it used to. The page still opens and I have lost no time worth counting."}
+{"id":"S-04","level":0,"hard":false,"body":"The help page lists the old menu names. I found what I wanted anyway. Might be worth updating some day."}
+{"id":"S-05","level":0,"hard":true,"body":"An error box flashed up once yesterday and then went away on its own. I carried on and nothing else happened all day."}
+{"id":"S-06","level":0,"hard":false,"body":"The column headings are not centred on the print out. It reads fine."}
+{"id":"S-07","level":0,"hard":false,"body":"The date in the footer says last year. Purely cosmetic as far as I can tell."}
+{"id":"S-08","level":0,"hard":true,"body":"Sorting by name puts the lowercase entries after the uppercase ones. I only have four entries so it makes no odds to me, but it looks odd."}
+{"id":"S-09","level":1,"hard":false,"body":"The keyboard shortcut for save has stopped working. I use the menu instead, which is two extra clicks each time."}
+{"id":"S-10","level":1,"hard":false,"body":"Saved filters do not stick between sessions any more. I set them up again each morning, which takes a minute."}
+{"id":"S-11","level":1,"hard":true,"body":"The bulk edit screen fails on more than fifty rows. I split the work into batches of forty and it goes through. It adds maybe twenty minutes to a job I do weekly."}
+{"id":"S-12","level":1,"hard":false,"body":"The search box misses partial words, so I have to type the whole term. Slightly slower but nothing is blocked."}
+{"id":"S-13","level":1,"hard":true,"body":"Printing crashes the preview. I export to a file and print from there instead. It works every time and I have stopped using the preview."}
+{"id":"S-14","level":1,"hard":false,"body":"The file picker opens in the wrong folder each time. I navigate across, which is irritating but quick."}
+{"id":"S-15","level":1,"hard":false,"body":"Notifications arrive about an hour late. I check the page myself when I am waiting for something, so nothing has been missed."}
+{"id":"S-16","level":1,"hard":true,"body":"Two of my six reports will not open in the browser. They open fine in the desktop client, which I have on the same machine."}
+{"id":"S-17","level":2,"hard":false,"body":"The reconciliation screen times out about half the time. When it fails I have to start the whole run again, and some days it takes three attempts."}
+{"id":"S-18","level":2,"hard":false,"body":"I can read records but I cannot edit them. Anything that needs a change has to be passed to a colleague on the other team, who does it for me."}
+{"id":"S-19","level":2,"hard":true,"body":"The nightly import failed on Monday and Tuesday. We loaded Monday's file by hand on Wednesday morning. Tuesday's is still outstanding and the figures are wrong until it lands."}
+{"id":"S-20","level":2,"hard":false,"body":"Attachments over two megabytes are rejected. Most of what I send is larger, so I am splitting documents into parts and sending several messages."}
+{"id":"S-21","level":2,"hard":true,"body":"Only one of us can have the schedule open at a time. The second person gets locked out with no message. We have taken to shouting across the room before we open it."}
+{"id":"S-22","level":2,"hard":false,"body":"Half the team cannot see the new queue. Those of us who can are covering the work, which is slow and means the others are idle."}
+{"id":"S-23","level":2,"hard":false,"body":"Saving a long form loses everything below the fold. I now save every few fields, and I have lost an hour of typing twice this week."}
+{"id":"S-24","level":2,"hard":true,"body":"The mobile app will not sync. Everything works at a desk. Half my day is on the road and that half is now written on paper and typed up in the evening."}
+{"id":"S-25","level":3,"hard":false,"body":"Nobody in the office can raise a new order. Existing orders still open and we can dispatch what is already in the system, but nothing new can come in."}
+{"id":"S-26","level":3,"hard":false,"body":"The pricing engine has been down since nine. We are quoting from last month's printed list, which is wrong for about a third of the range."}
+{"id":"S-27","level":3,"hard":true,"body":"We can log in and the screens load, but every save fails with a server error. Reading works. As far as the day's work goes we are stopped."}
+{"id":"S-28","level":3,"hard":false,"body":"Both warehouses have lost the picking screens. The pickers are working from printed sheets from yesterday, which are missing about two hundred lines."}
+{"id":"S-29","level":3,"hard":true,"body":"The payment step fails for every customer using a card. Bank transfer still goes through, and about one order in ten is a transfer. The rest are simply not completing."}
+{"id":"S-30","level":3,"hard":false,"body":"The main queue has been frozen since the early hours and is now eleven hours behind. Nothing has been lost yet but nothing is moving either."}
+{"id":"S-31","level":3,"hard":true,"body":"Our largest site is completely off. The three small sites are unaffected and carrying what they can, which is under a tenth of normal volume."}
+{"id":"S-32","level":3,"hard":false,"body":"Reporting is unavailable across the company and the month end is Friday. Day to day work continues, but nothing can be signed off."}
+{"id":"S-33","level":4,"hard":false,"body":"Everything is down. No page loads for anybody, at any site, on any device. We have sent the floor home."}
+{"id":"S-34","level":4,"hard":false,"body":"Total outage since six this morning. Every service, every office. There is no workaround and no partial service of any kind."}
+{"id":"S-35","level":4,"hard":true,"body":"The system is up but every record we open shows another customer's details. We have stopped all work entirely until somebody tells us it is safe."}
+{"id":"S-36","level":4,"hard":false,"body":"Nobody can log in anywhere. The sign in page itself will not load. All work has stopped across every team."}
+{"id":"S-37","level":4,"hard":true,"body":"The database is refusing every connection and the standby will not come up either. Nothing can be read and nothing can be written. We are at a full stop."}
+{"id":"S-38","level":4,"hard":false,"body":"Complete loss of service for all three hundred staff since midnight. No part of the platform responds."}
+{"id":"S-39","level":4,"hard":true,"body":"Everything runs but every figure on every screen is wrong by an order of magnitude. We cannot trust a single number, so we have halted trading for the day."}
+{"id":"S-40","level":4,"hard":false,"body":"The whole estate is offline. No email, no ordering, no telephones. We are turning customers away at the door."}

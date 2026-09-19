@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I can read records but I cannot edit them. Anything that needs a change has to be passed to a colleague on the other team, who does it for me.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"moderate","confidence":0.45,"probabilities":{"minor":0.36,"total":0.01,"major":0.03,"none":0.05,"moderate":0.55}}},"usage":{"input_tokens":345,"output_tokens":55}}
+}

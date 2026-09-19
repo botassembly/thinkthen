@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The main queue has been frozen since the early hours and is now eleven hours behind. Nothing has been lost yet but nothing is moving either.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"How much disruption to the work does this report describe?","criteria":{"none":null,"minor":null,"moderate":null,"major":null,"total":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"major","confidence":0.85,"probabilities":{"none":0.0,"major":0.88,"minor":0.0,"moderate":0.02,"total":0.1}}},"usage":{"input_tokens":340,"output_tokens":54}}
+}
