@@ -1,9 +1,9 @@
 #!/bin/sh
 # Read probe 3: the agreement numbers from analyse.py and the cost of each run.
 #
-# No recipe in transforms/ reads a `score` row or a `choice` row, and jq has no
+# No transform in transforms/ reads a `score` row or a `choice` row, and jq has no
 # rank correlation, so the agreement arithmetic is the Python script beside this
-# one. cost.jq is the one recipe that fits any row.
+# one. cost.jq is the one transform that fits any row.
 set -eu
 cd -- "$(dirname -- "$0")"
 

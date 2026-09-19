@@ -2,7 +2,7 @@
 # Read probe 6: what the injected instruction did to the answer and to the
 # probability of yes.
 #
-# Both runs are yes/no rows with a boolean `input.label`, so three recipes fit
+# Both runs are yes/no rows with a boolean `input.label`, so three transforms fit
 # unchanged: compare.jq pairs the twins and names the flips, score.jq scores
 # each arm, and counts.jq counts the three answers.
 set -eu

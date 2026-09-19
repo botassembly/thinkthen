@@ -12,7 +12,7 @@
 # Record mode is not built, so the loop is the shell's. Each row is the record
 # row of specification/result.md: the result object with `input` holding the
 # whole case. The rank rows carry `input.id` and a boolean `input.label`, so the
-# yes/no recipes read them unchanged.
+# yes/no transforms read them unchanged.
 #
 #   sdlc/scripts/live probes/01-find-vs-rank/job.sh      records
 #   OUT=DIR sh probes/01-find-vs-rank/job.sh --replay    replays, no network

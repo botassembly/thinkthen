@@ -2,9 +2,9 @@
 # Read probe 2: the sweep on each of the two numbers, and how far apart the two
 # numbers are on the same row.
 #
-# None of the recipes in transforms/ reads a `choice` row. They read `value` as
+# No transform in transforms/ reads a `choice` row. They read `value` as
 # true, false, or null, and a pick is a string, so sweep-two.jq is written here
-# beside the probe. cost.jq is the one recipe that fits any row.
+# beside the probe. cost.jq is the one transform that fits any row.
 set -eu
 cd -- "$(dirname -- "$0")"
 
