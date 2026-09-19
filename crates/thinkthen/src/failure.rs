@@ -50,7 +50,11 @@ pub(crate) enum Failure {
     /// The framing and the pointers cannot act together.
     Reading(ReadingError),
     /// A pointer is not a JSON Pointer, and the message names the one typed.
-    Pointer(String, PointerError),
+    Pointer(&'static str, String, PointerError),
+    /// `--options` was given beside a list of options on the command line.
+    OptionsWithList,
+    /// `--options` was given where no record holds a pointer to follow.
+    OptionsOutsideJsonl,
     /// An answer was asked to reach the exit code where no answer can.
     QuietOverRecords,
     /// One record could not become the evidence of one request.
@@ -175,7 +179,17 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             format!("the recording folder could not be read or written: {error}"),
         ),
         Failure::Reading(error) => (2, error.to_string()),
-        Failure::Pointer(typed, error) => (2, format!("--field `{typed}`: {error}")),
+        Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
+        Failure::OptionsWithList => (
+            2,
+            "--options takes the options from each record, so the command line gives none"
+                .to_owned(),
+        ),
+        Failure::OptionsOutsideJsonl => (
+            2,
+            "--options needs --jsonl, because a pointer needs a JSON record to point into"
+                .to_owned(),
+        ),
         Failure::QuietOverRecords => (
             2,
             "--quiet carries the answer in the exit code, and no record's answer sets it"

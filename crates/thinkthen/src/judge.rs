@@ -21,9 +21,48 @@ use crate::recorder::Recorder;
 #[derive(Debug)]
 struct Asked<'a> {
     common: &'a Common,
-    question: Question,
+    asks: Asks,
     threshold: Option<Threshold>,
     view: View,
+}
+
+/// Where one record's question comes from.
+///
+/// Every verb but `choose --options` asks the same question of every record.
+/// `--options` names a pointer, and each record holds its own candidate list
+/// there, so the question is built again for each one.
+#[derive(Debug)]
+enum Asks {
+    /// One question, asked of every record.
+    Fixed(Question),
+    /// A pick whose options each record carries at this pointer.
+    FromRecord {
+        /// The question the model receives.
+        text: QuestionText,
+        /// Where in the record the candidate list sits.
+        pointer: Pointer,
+    },
+}
+
+impl Asks {
+    /// Build the question this record is asked.
+    fn of(&self, record: &Record) -> Result<Question, Failure> {
+        match self {
+            Self::Fixed(question) => Ok(question.clone()),
+            Self::FromRecord { text, pointer } => Ok(Question::Choose {
+                text: text.clone(),
+                options: record.choices(pointer)?,
+            }),
+        }
+    }
+}
+
+/// One record, the question it was asked, and the request that carries both.
+#[derive(Debug)]
+struct Sending {
+    record: Record,
+    question: Question,
+    plan: Plan,
 }
 
 /// Which of the three views of one answer the command line asked for.
@@ -77,7 +116,7 @@ pub(crate) fn decide(
     run(
         Asked {
             common: &arguments.common,
-            question,
+            asks: Asks::Fixed(question),
             threshold: Some(threshold),
             view,
         },
@@ -109,9 +148,25 @@ pub(crate) fn choose(
         }
         None => None,
     };
-    let question = Question::Choose {
-        text: QuestionText::new(arguments.question.as_str())?,
-        options: Labels::options(arguments.options.clone())?,
+    let text = QuestionText::new(arguments.question.as_str())?;
+    let asks = match arguments.options_pointer.as_deref() {
+        Some(typed) => {
+            if !arguments.options.is_empty() {
+                return Err(Failure::OptionsWithList);
+            }
+            if !arguments.common.jsonl {
+                return Err(Failure::OptionsOutsideJsonl);
+            }
+            Asks::FromRecord {
+                text,
+                pointer: Pointer::new(typed)
+                    .map_err(|error| Failure::Pointer("--options", typed.to_owned(), error))?,
+            }
+        }
+        None => Asks::Fixed(Question::Choose {
+            text,
+            options: Labels::options(arguments.options.clone())?,
+        }),
     };
     let view = View {
         quiet: arguments.quiet,
@@ -121,7 +176,7 @@ pub(crate) fn choose(
     run(
         Asked {
             common: &arguments.common,
-            question,
+            asks,
             threshold,
             view,
         },
@@ -159,7 +214,7 @@ pub(crate) fn score(
     run(
         Asked {
             common: &arguments.common,
-            question,
+            asks: Asks::Fixed(question),
             threshold: None,
             view,
         },
@@ -178,7 +233,7 @@ fn run(
 ) -> Result<ExitCode, Failure> {
     let Asked {
         common,
-        question,
+        asks,
         threshold,
         view,
     } = asked;
@@ -204,7 +259,7 @@ fn run(
         return plan(
             &backend,
             &reading,
-            &question,
+            &asks,
             chunks.next().transpose()?,
             writer,
         );
@@ -215,7 +270,7 @@ fn run(
         environment,
         recorder: Recorder::of(common.record.as_deref(), common.replay.as_deref())?,
         backend,
-        question,
+        asks,
         threshold,
         view,
         streams: reading.streams(),
@@ -250,8 +305,8 @@ fn read_by(common: &Common) -> Result<Reading, Failure> {
     };
     let mut fields = Vec::with_capacity(common.field.len());
     for typed in &common.field {
-        let pointer =
-            Pointer::new(typed.as_str()).map_err(|error| Failure::Pointer(typed.clone(), error))?;
+        let pointer = Pointer::new(typed.as_str())
+            .map_err(|error| Failure::Pointer("--field", typed.clone(), error))?;
         fields.push(pointer);
     }
     Ok(Reading::new(framing, fields)?)
@@ -261,15 +316,15 @@ fn read_by(common: &Common) -> Result<Reading, Failure> {
 fn plan(
     backend: &Backend,
     reading: &Reading,
-    question: &Question,
+    asks: &Asks,
     first: Option<Vec<u8>>,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let Some(bytes) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let (_, plan) = asked_of(reading, &bytes, backend, question)?;
-    let document = PlanDocument::of(backend, &plan)
+    let sending = asked_of(reading, &bytes, backend, asks)?;
+    let document = PlanDocument::of(backend, &sending.plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let document = if reading.streams() {
         document.reading(reading)
@@ -285,16 +340,21 @@ fn asked_of(
     reading: &Reading,
     bytes: &[u8],
     backend: &Backend,
-    question: &Question,
-) -> Result<(Record, Plan), Failure> {
+    asks: &Asks,
+) -> Result<Sending, Failure> {
     let record = reading.record(bytes)?;
+    let question = asks.of(&record)?;
     let plan = Plan::new(
         reading.evidence(&record)?,
         backend.model().clone(),
         vec![question.clone()],
     )
     .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
-    Ok((record, plan))
+    Ok(Sending {
+        record,
+        question,
+        plan,
+    })
 }
 
 /// One question over one backend, asked of every record in turn.
@@ -304,7 +364,7 @@ struct Judging<'a> {
     environment: &'a Environment,
     recorder: Recorder,
     backend: Backend,
-    question: Question,
+    asks: Asks,
     threshold: Option<Threshold>,
     view: View,
     streams: bool,
@@ -318,10 +378,10 @@ impl Judging<'_> {
         bytes: &[u8],
         mut writer: impl Write,
     ) -> Result<(Outcome, bool), Failure> {
-        let (record, plan) = asked_of(reading, bytes, &self.backend, &self.question)?;
+        let sending = asked_of(reading, bytes, &self.backend, &self.asks)?;
         let (reply, replayed) = ask(
             &self.backend,
-            &plan,
+            &sending.plan,
             self.common,
             self.environment,
             &self.recorder,
@@ -340,10 +400,9 @@ impl Judging<'_> {
                 reply.usage(),
                 replayed,
             );
-            let row =
-                DecisionResult::new(value, self.question.clone(), answer, self.threshold, meta);
+            let row = DecisionResult::new(value, sending.question, answer, self.threshold, meta);
             let row = if self.streams {
-                row.with_input(record)
+                row.with_input(sending.record)
             } else {
                 row
             };

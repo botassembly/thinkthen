@@ -10,5 +10,6 @@ mod harness;
 mod address;
 mod choosing;
 mod exchange;
+mod from_record;
 mod recordings;
 mod streaming;

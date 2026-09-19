@@ -37,17 +37,19 @@ pub(crate) enum RequestQuestion {
     },
 }
 
-/// The options of a pick, as a map from each option to no description.
+/// The options of a pick, as a map from each option to its description.
 ///
-/// The command line carries labels alone, so every description is `null`. The
-/// keys keep the order the user typed, because option order moves the odds.
+/// The command line carries labels alone, so every description is `null`
+/// there. `--options` reads a map from a record, and each value travels as the
+/// description. The keys keep the order they were given, because option order
+/// moves the odds.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) struct Criteria(Vec<String>);
+pub(crate) struct Criteria(Vec<(String, Option<String>)>);
 
 impl Serialize for Criteria {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_map(self.0.iter().map(|option| (option, None::<&str>)))
+        serializer.collect_map(self.0.iter().map(|(option, described)| (option, described)))
     }
 }
 
@@ -65,8 +67,8 @@ impl<'de> serde::de::Visitor<'de> for Keys {
 
     fn visit_map<M: serde::de::MapAccess<'de>>(self, mut map: M) -> Result<Criteria, M::Error> {
         let mut options = Vec::new();
-        while let Some((option, _)) = map.next_entry::<String, serde::de::IgnoredAny>()? {
-            options.push(option);
+        while let Some((option, described)) = map.next_entry::<String, Option<String>>()? {
+            options.push((option, described));
         }
         Ok(Criteria(options))
     }
@@ -113,11 +115,16 @@ impl RequestQuestion {
             },
             Question::Choose { text, options } => Self::Choice {
                 instructions: text.as_str().to_owned(),
-                criteria: Criteria(options.as_slice().to_vec()),
+                criteria: Criteria(
+                    options
+                        .descriptions()
+                        .map(|(name, described)| (name.clone(), described.map(str::to_owned)))
+                        .collect(),
+                ),
             },
             Question::Score { text, levels } => Self::Score {
                 instructions: text.as_str().to_owned(),
-                criteria: levels.as_slice().to_vec(),
+                criteria: levels.names().cloned().collect(),
             },
         }
     }

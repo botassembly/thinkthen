@@ -1,6 +1,6 @@
 //! The question a judgment asks, as one verb over the text it was given.
 
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 use crate::text::QuestionText;
@@ -28,14 +28,30 @@ const MOST_OPTIONS: usize = 255;
 /// The most levels `score` places on, by ADR 0007.
 const MOST_LEVELS: usize = 10;
 
+/// One label, with the description that rides beside it on the wire.
+///
+/// The command line carries labels alone, so a positional option has no
+/// description. A record that holds a map from label to description gives one.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct Label {
+    name: String,
+    description: Option<String>,
+}
+
 /// The options `choose` picks from, or the levels `score` places on.
 ///
 /// The order is the user's own. The tool never reorders a list, because option
 /// order moves the odds and a run with a changed list is a different
 /// measurement.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-#[serde(transparent)]
-pub struct Labels(Vec<String>);
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Labels(Vec<Label>);
+
+impl Serialize for Labels {
+    /// Write the names alone, so a result names the labels it was asked with.
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.names())
+    }
+}
 
 impl Labels {
     /// Take 2 to 255 option labels, in the order the user gave them.
@@ -45,7 +61,20 @@ impl Labels {
     /// Returns [`LabelsError`] when the list is too short or too long, when a
     /// label is blank, or when one label was given twice.
     pub fn options(values: Vec<String>) -> Result<Self, LabelsError> {
-        Self::checked(values, MOST_OPTIONS, LabelsError::OptionCount)
+        Self::checked(bare(values), MOST_OPTIONS, LabelsError::OptionCount)
+    }
+
+    /// Take 2 to 255 option labels, each with the description a record gave it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LabelsError`] on the same four counts `options` does.
+    pub(crate) fn described(values: Vec<(String, Option<String>)>) -> Result<Self, LabelsError> {
+        let labels = values
+            .into_iter()
+            .map(|(name, description)| Label { name, description })
+            .collect();
+        Self::checked(labels, MOST_OPTIONS, LabelsError::OptionCount)
     }
 
     /// Take 2 to 10 levels, lowest first.
@@ -55,29 +84,56 @@ impl Labels {
     /// Returns [`LabelsError`] when the list is too short or too long, when a
     /// level is blank, or when one level was given twice.
     pub fn levels(values: Vec<String>) -> Result<Self, LabelsError> {
-        Self::checked(values, MOST_LEVELS, LabelsError::LevelCount)
+        Self::checked(bare(values), MOST_LEVELS, LabelsError::LevelCount)
     }
 
     /// Take a list that is long enough, short enough, filled, and unrepeated.
-    fn checked(values: Vec<String>, most: usize, count: LabelsError) -> Result<Self, LabelsError> {
+    fn checked(values: Vec<Label>, most: usize, count: LabelsError) -> Result<Self, LabelsError> {
         if values.len() < 2 || values.len() > most {
             return Err(count);
         }
-        if values.iter().any(|value| value.trim().is_empty()) {
+        if values.iter().any(|value| value.name.trim().is_empty()) {
             return Err(LabelsError::Blank);
         }
         for (place, value) in values.iter().enumerate() {
-            if values.iter().skip(place + 1).any(|other| other == value) {
+            if values
+                .iter()
+                .skip(place + 1)
+                .any(|other| other.name == value.name)
+            {
                 return Err(LabelsError::Duplicate);
             }
         }
         Ok(Self(values))
     }
 
-    /// Read the labels back, in the order they were given.
-    pub(crate) fn as_slice(&self) -> &[String] {
-        &self.0
+    /// Read the names back, in the order they were given.
+    pub(crate) fn names(&self) -> impl Iterator<Item = &String> {
+        self.0.iter().map(|label| &label.name)
     }
+
+    /// Read each name with its description, in the order they were given.
+    pub(crate) fn descriptions(&self) -> impl Iterator<Item = (&String, Option<&str>)> {
+        self.0
+            .iter()
+            .map(|label| (&label.name, label.description.as_deref()))
+    }
+
+    /// How many labels the list holds.
+    pub(crate) fn count(&self) -> usize {
+        self.0.len()
+    }
+}
+
+/// Take labels the command line gave, which carry no description.
+fn bare(values: Vec<String>) -> Vec<Label> {
+    values
+        .into_iter()
+        .map(|name| Label {
+            name,
+            description: None,
+        })
+        .collect()
 }
 
 /// What the judgment was asked, and which of the three shapes it takes.
@@ -169,22 +225,37 @@ mod tests {
         assert_eq!(
             Labels::options(listed(&["b", "a"]))
                 .expect("two options")
-                .as_slice(),
-            ["b".to_owned(), "a".to_owned()]
+                .names()
+                .collect::<Vec<_>>(),
+            [&"b".to_owned(), &"a".to_owned()]
         );
         assert_eq!(
-            Labels::options(many(255))
-                .expect("255 options")
-                .as_slice()
-                .len(),
+            Labels::options(many(255)).expect("255 options").count(),
             255
         );
+        assert_eq!(Labels::levels(many(10)).expect("ten levels").count(), 10);
+    }
+
+    #[test]
+    fn a_described_list_keeps_each_description_beside_its_own_label() {
+        let described = Labels::described(vec![
+            ("late".to_owned(), Some("It arrived late.".to_owned())),
+            ("lost".to_owned(), None),
+        ])
+        .expect("two options");
         assert_eq!(
-            Labels::levels(many(10))
-                .expect("ten levels")
-                .as_slice()
-                .len(),
-            10
+            described.descriptions().collect::<Vec<_>>(),
+            [
+                (&"late".to_owned(), Some("It arrived late.")),
+                (&"lost".to_owned(), None),
+            ]
+        );
+        assert_eq!(
+            Labels::described(vec![
+                ("late".to_owned(), None),
+                ("late".to_owned(), Some("twice".to_owned())),
+            ]),
+            Err(LabelsError::Duplicate)
         );
     }
 

@@ -9,6 +9,7 @@ use thiserror::Error;
 
 use crate::json::{Json, JsonError};
 use crate::pointer::Pointer;
+use crate::question::{Labels, LabelsError};
 use crate::render::{RenderError, json_line};
 use crate::text::{BlankTextError, Evidence};
 
@@ -59,6 +60,14 @@ pub enum RecordError {
     /// The evidence could not be written as JSON.
     #[error("{0}")]
     Render(#[from] RenderError),
+    /// The pointer names no candidate list this tool reads.
+    #[error(
+        "the options at `{0}` are a list of labels or a map from each label to its description"
+    )]
+    OptionsShape(String),
+    /// The candidate list the record holds is not a list the verb takes.
+    #[error("{0}")]
+    Options(#[from] LabelsError),
 }
 
 /// One record, as it arrived, which `--details` prints back under `input`.
@@ -74,6 +83,45 @@ enum Held {
     Text(String),
     /// A JSON record.
     Json(Json),
+}
+
+impl Record {
+    /// Read the candidate list this record carries where the pointer names one.
+    ///
+    /// A list of labels gives each option no description. A map from label to
+    /// description gives each one the description it holds, and
+    /// `specification/backends.md` sends that description as the value under
+    /// the option's key in `criteria`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the pointer finds nothing, when what it
+    /// finds is neither a list of strings nor a map to strings, and when the
+    /// list is not one `choose` takes.
+    pub fn choices(&self, pointer: &Pointer) -> Result<Labels, RecordError> {
+        let Held::Json(value) = &self.0 else {
+            return Err(RecordError::TextHasNoMembers);
+        };
+        let shape = || RecordError::OptionsShape(pointer.as_str().to_owned());
+        let listed = match found(pointer, value)? {
+            Json::Array(items) => items
+                .iter()
+                .map(|item| match item {
+                    Json::String(name) => Ok((name.clone(), None)),
+                    _ => Err(shape()),
+                })
+                .collect::<Result<Vec<_>, RecordError>>()?,
+            Json::Object(members) => members
+                .iter()
+                .map(|(name, held)| match held {
+                    Json::String(text) => Ok((name.clone(), Some(text.clone()))),
+                    _ => Err(shape()),
+                })
+                .collect::<Result<Vec<_>, RecordError>>()?,
+            _ => return Err(shape()),
+        };
+        Ok(Labels::described(listed)?)
+    }
 }
 
 /// The framing and the pointers one run reads its records by.
@@ -189,6 +237,7 @@ mod tests {
     use super::{Framing, Held, Reading, ReadingError, Record, RecordError};
     use crate::json::JsonError;
     use crate::pointer::Pointer;
+    use crate::question::LabelsError;
     use crate::render::json_line;
     use crate::text::BlankTextError;
     use proptest::collection::vec;
@@ -306,6 +355,79 @@ mod tests {
             let said = refused.to_string();
             assert!(!said.contains("Payouts"), "{said}");
             assert!(!said.contains("other"), "{said}");
+        }
+    }
+
+    #[test]
+    fn a_record_carries_its_own_candidate_list_as_a_list_or_as_a_map() {
+        let jsonl = reading(Framing::Jsonl, &["/note"]);
+        let pointer = Pointer::new("/codes").expect("a pointer");
+        let listed = jsonl
+            .record(br#"{"note":"n","codes":["late","lost"]}"#)
+            .expect("a record")
+            .choices(&pointer)
+            .expect("a candidate list");
+        assert_eq!(
+            json_line(&listed).expect("a list is writable"),
+            r#"["late","lost"]"#
+        );
+        assert_eq!(
+            listed.descriptions().collect::<Vec<_>>(),
+            [(&"late".to_owned(), None), (&"lost".to_owned(), None)]
+        );
+
+        let mapped = jsonl
+            .record(br#"{"note":"n","codes":{"late":"It arrived late.","lost":"It never came."}}"#)
+            .expect("a record")
+            .choices(&pointer)
+            .expect("a candidate list");
+        assert_eq!(
+            json_line(&mapped).expect("a list is writable"),
+            r#"["late","lost"]"#
+        );
+        assert_eq!(
+            mapped.descriptions().collect::<Vec<_>>(),
+            [
+                (&"late".to_owned(), Some("It arrived late.")),
+                (&"lost".to_owned(), Some("It never came.")),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_candidate_list_the_verb_does_not_take_names_no_part_of_the_record() {
+        let jsonl = reading(Framing::Jsonl, &["/note"]);
+        let pointer = Pointer::new("/codes").expect("a pointer");
+        let cases: [(&[u8], RecordError); 6] = [
+            (br#"{"note":"n"}"#, RecordError::Missed("/codes".to_owned())),
+            (
+                br#"{"note":"n","codes":"late"}"#,
+                RecordError::OptionsShape("/codes".to_owned()),
+            ),
+            (
+                br#"{"note":"n","codes":["late",7]}"#,
+                RecordError::OptionsShape("/codes".to_owned()),
+            ),
+            (
+                br#"{"note":"n","codes":{"late":null}}"#,
+                RecordError::OptionsShape("/codes".to_owned()),
+            ),
+            (
+                br#"{"note":"n","codes":["late"]}"#,
+                RecordError::Options(LabelsError::OptionCount),
+            ),
+            (
+                br#"{"note":"n","codes":["late","  "]}"#,
+                RecordError::Options(LabelsError::Blank),
+            ),
+        ];
+        for (bytes, expected) in cases {
+            let record = jsonl.record(bytes).expect("a record");
+            let refused = record.choices(&pointer).expect_err("a refused list");
+            assert_eq!(refused, expected);
+            let said = refused.to_string();
+            assert!(!said.contains("late"), "{said}");
+            assert!(!said.contains("arrived"), "{said}");
         }
     }
 

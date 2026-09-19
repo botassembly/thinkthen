@@ -99,12 +99,7 @@ fn read(
                 confidence,
             },
         ) => Answer::new_choice(
-            spread(
-                options,
-                options.as_slice().iter().cloned(),
-                probabilities,
-                place,
-            )?,
+            spread(options, options.names().cloned(), probabilities, place)?,
             reported(*confidence, place)?,
         )
         .ok_or(DecodeError::MissingProbability(place)),
@@ -125,7 +120,7 @@ fn read(
 
 /// The wire keys a score answer uses: each level's number, as a string.
 fn numbered(levels: &Labels) -> impl Iterator<Item = String> {
-    (0..levels.as_slice().len()).map(|level| level.to_string())
+    (0..levels.count()).map(|level| level.to_string())
 }
 
 /// Read one probability per label, in the order the labels were sent.
@@ -135,8 +130,8 @@ fn spread(
     wire: &BTreeMap<String, f64>,
     place: usize,
 ) -> Result<Distribution, DecodeError> {
-    let mut entries = Vec::with_capacity(labels.as_slice().len());
-    for (label, key) in labels.as_slice().iter().zip(keys) {
+    let mut entries = Vec::with_capacity(labels.count());
+    for (label, key) in labels.names().zip(keys) {
         let Some(value) = wire.get(&key) else {
             return Err(DecodeError::MissingProbability(place));
         };

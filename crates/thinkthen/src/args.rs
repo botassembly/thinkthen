@@ -203,6 +203,14 @@ pub(crate) struct ChooseArguments {
     /// The labels to pick between, 2 to 255 of them, in the order they are sent.
     pub(crate) options: Vec<String>,
 
+    /// Take each record's own options from this RFC 6901 pointer.
+    ///
+    /// The record holds a list of labels, or a map from each label to the
+    /// description that travels with it. It needs --jsonl, because a pointer
+    /// needs a JSON record, and it takes no list on the command line.
+    #[arg(long = "options", value_name = "POINTER")]
+    pub(crate) options_pointer: Option<String>,
+
     /// One cut T on the winning option's probability. A band is a usage error.
     #[arg(long, value_name = "T")]
     pub(crate) threshold: Option<String>,
