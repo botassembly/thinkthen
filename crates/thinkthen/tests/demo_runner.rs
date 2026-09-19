@@ -117,6 +117,12 @@ fn the_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
     assert_eq!(output.status.code(), Some(0), "{said}");
     assert!(said.contains("demos: 3 green, "), "{said}");
     assert!(said.contains("running 01-refund-gate/README.md"), "{said}");
-    assert!(said.contains("running 19-no-or-could-not-ask/README.md"), "{said}");
-    assert!(said.contains("running 27-test-with-no-network/README.md"), "{said}");
+    assert!(
+        said.contains("running 19-no-or-could-not-ask/README.md"),
+        "{said}"
+    );
+    assert!(
+        said.contains("running 27-test-with-no-network/README.md"),
+        "{said}"
+    );
 }
