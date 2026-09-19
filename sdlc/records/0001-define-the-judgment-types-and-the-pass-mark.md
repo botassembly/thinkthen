@@ -86,7 +86,7 @@ The ceiling was 87 and is now 951, which is the measured total. The commit that 
 
 ## Dependencies
 
-`serde` 1.0.229 with derive, `serde_json` 1.0.151, `thiserror` 2.0.20, and `proptest` 1.11.0 as a development dependency. The closure is 66 packages. Every one resolves from crates.io with a checksum, and every license expression offers MIT, Apache-2.0, Unicode-3.0, or Unlicense. The expressions in the tree use every operator the reader now handles: a bare `MIT`, an `OR`, the deprecated slash in `Apache-2.0 / MIT`, a `WITH` exception in `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`, and a parenthesized `AND` in `(MIT OR Apache-2.0) AND Unicode-3.0`.
+`serde` 1.0.229 with derive, `serde_json` 1.0.151, `thiserror` 2.0.20, and `proptest` 1.11.0 as a development dependency. The closure was 66 packages, and the review trimmed it to 52. Every one resolves from crates.io with a checksum, and every license expression offers MIT, Apache-2.0, Unicode-3.0, or Unlicense. The expressions in the tree use every operator the reader now handles: a bare `MIT`, an `OR`, the deprecated slash in `Apache-2.0 / MIT`, a `WITH` exception in `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`, and a parenthesized `AND` in `(MIT OR Apache-2.0) AND Unicode-3.0`.
 
 ## What the specification and the standards left open
 
@@ -106,3 +106,61 @@ It checked the argument for each of the four crates against the standard library
 On the public surface it checked that every exported name is in the ticket's scope, that `Adapter` is there because the `meta.adapter` field requires it, and that each enum carries one variant for `decide if` and no more. It checked that every struct field is private with an accessor, that every fallible constructor returns a result, and that the infallible ones take already validated types. It confirmed no file, environment variable, socket, clock, or process appears in the crate, and that `serde_json::Value`, `Map`, and `json!` appear nowhere. It walked the serialized field order, the snake_case values, the lowercase adapter, and the skipped usage field against the specification.
 
 It found no defect in either category. It noted one fact. `serde_json` is a normal dependency of the core while only test code uses it today. The ticket asks for exactly that, because the Clippy ban paths do nothing until `serde_json` resolves, and the binary will print through it.
+
+## Review
+
+A second reviewing agent read the branch after it was rebased onto `75cad05`, the commit that settled `specification/result.md` on a compact one-line document. The figures above describe the branch as the build agent left it. The figures in this section describe the branch as it now stands.
+
+### What the review checked
+
+It read `AGENTS.md`, `sdlc/planning/rust-standards.md`, Ian's Rust ideal state, the settled part of `specification/result.md`, the ticket, the record, the whole diff against main, and every file under `crates/thinkthen-core/`.
+
+Against the ticket it walked each Scope item and each Acceptance bullet to the code and the test that satisfies it. It broke three behaviors and watched the matching test fail, then restored the code. Turning `1 - p >= P` into `1 - p > P` failed `the_pass_mark_rules_follow_the_specification` at `probability 0.1 under Symmetric(PassMark(0.9))`. Swapping the `question` and `answer` fields failed `a_result_serializes_in_the_order_the_specification_prints` on the rendered string. Widening `value <= 0.5` to `value < 0.5` failed `new_refuses_what_is_not_a_pass_mark` at `mark 0.5`.
+
+Against the rebased specification it checked the compact rendering character by character, the field names and their order, the always-present `value` and `min_prob` printed as null when nothing was assessed, `usage` as the only field carrying `skip_serializing_if`, token counts as `u64`, and `meta.adapter` serializing as `systemone`, which `specification/backends.md` settles. It checked the three pass-mark rules, including a probability exactly on the mark accepted at both ends.
+
+On size it counted every file, hunted duplication across the whole crate rather than the diff, and listed every public item against what this ticket and tickets 0002 and 0003 need.
+
+On the public surface it confirmed every struct field is private, every fallible constructor returns a result, every fixed set is an enum, no value travels as a bare string, and every public item carries a doc comment that `cargo doc` with warnings denied proves. Every module is private and reachable only through `lib.rs`, so `unreachable_pub` leaves no `pub` that could be `pub(crate)`.
+
+On errors it confirmed three `thiserror` enums, no string error, no boxed error, no ignored result binding, and variants a caller can act on kept apart. `EmptyTextError` names which of the three text values arrived empty.
+
+On ownership it found no clone outside one test comparison, no owned parameter that is not kept, and no reference counting or interior mutability.
+
+On dependencies it checked the four crates against the starting set in the standards, the exact versions, the crates.io source and checksum of every resolved package, the license expression of every package against the four allowed identifiers, the accepted sets in `policy.py` against both manifests, and the SPDX reader against its own fourteen-case table.
+
+On gates it confirmed the workspace lint table, both `clippy.toml` files, and all four ladder scripts are byte for byte what main carries. No `#[allow]` appears anywhere in the crate. The largest file is `assessment.rs` at 179 non-blank lines, well under the ceiling of 500.
+
+### What the review changed
+
+- Trimmed `proptest` to `default-features = false, features = ["std"]`. The fork, timeout, and bit-set strategies were never asked for, and the closure falls from 66 packages to 52.
+- Dropped every `Deserialize` derive, the `TryFrom` conversions behind them, the `Fields` shadow struct, `AssessmentShapeError`, and the private `Schema` enum. Nothing in `thinkthen` parses a `thinkthen` result. `Assessment` has one constructor, `assess`, which cannot build an inconsistent value, so the shape check guarded a path no caller reaches. The two tests that parsed the specification example back were deleted, and the `schema` field now holds the `SCHEMA` constant directly.
+- Deleted the read-back accessors on `Meta`, `Usage`, and `DecisionResult`, except `DecisionResult::assessment`, which ticket 0003 needs to pick an exit code under `--status`.
+- Reworded the first documentation line of `text.rs` and `question.rs` so neither states two jobs joined by "and".
+
+### What the review left, and why
+
+- The ticket asks for a test that compares a serialized result **by value** with the specification example. The rebased specification prints one compact line and calls the indented example a reading aid, so the conformance test is now a string comparison against that one line. A by-value comparison would need a parser the program never runs, and `serde_json::Value` is banned in the core, so there is no smaller way to keep it. The steering agent can overturn this and restore `Deserialize` on `DecisionResult` alone.
+- `Probability` and `PassMark` share about thirty lines of newtype shape. A `macro_rules` could fold them the way `text.rs` folds its three, but the two differ in their error variants, their range rules, and their documentation, so the macro would take a rule and three doc fragments as arguments and read worse than the two plain types. The duplication stays and is named here.
+- `Question::verb` and `Answer::kind` read back fields that nothing calls today. They stay because ticket 0002 builds a request from a question and may dispatch on the verb.
+- `Condition::new` accepts text that holds only whitespace. The specification says nothing about trimming, and adding a rule is a specification decision rather than a review fix.
+- `serde_json` stays a normal dependency of the core while only test code calls it. Clippy resolves a ban-list path against the graph of the target it is linting, so a development dependency would leave the dynamic JSON bans silent on library code. Ticket 0003 gives the dependency a second reason when the binary prints.
+
+### The ratchet
+
+The ceiling was 951 when the review started and is 799 now. Every step down landed in the commit that removed the lines.
+
+### The ladder after the review
+
+| Rung | Script | Exit |
+| --- | --- | --- |
+| 0 | `sdlc/scripts/install` | 0 |
+| 1 | `sdlc/scripts/lint` | 0 |
+| 2 | `sdlc/scripts/test` | 0 |
+| 3 | `sdlc/scripts/spec` | 0 |
+
+Nineteen unit tests, one integration test, one documentation test, and four spec examples pass.
+
+### The verdict
+
+The work is good enough to land.
