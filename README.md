@@ -56,3 +56,7 @@ sdlc/scripts/spec
 ```
 
 Cheapest rung first. No gate touches the network.
+
+## License
+
+MIT. [`LICENSE`](LICENSE) holds the text.

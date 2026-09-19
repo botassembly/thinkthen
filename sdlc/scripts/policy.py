@@ -206,8 +206,8 @@ def check_crates() -> None:
                 fail("workspace", f"{name} inherits the workspace {field}")
         if package.get("publish") is not False:
             fail("workspace", f"{name} is not publishable while the repository is private")
-        if "license" in package:
-            fail("workspace", f"{name} declares no license while the repository is private")
+        if package.get("license") != "MIT":
+            fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
         if set(manifest.get("dependencies", {})) != ACCEPTED_DEPENDENCIES[name]:
             fail("dependencies", f"{name} declares the accepted direct dependency set")
         if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:

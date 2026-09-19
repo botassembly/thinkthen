@@ -4,6 +4,7 @@ version = "0.0.1"
 edition.workspace = true
 rust-version.workspace = true
 description = "Pure decision types and rendering for thinkthen"
+license = "MIT"
 publish = false
 
 [dependencies]

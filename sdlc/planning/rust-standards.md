@@ -74,7 +74,7 @@ Cheapest rung first. The whole ladder runs before any hand-back.
 
 ## When the repository goes public
 
-Add `LICENSE`, `CHANGELOG.md`, `deny.toml` with `cargo deny` in `lint`, and one CI workflow that runs the three rungs. No private repository in the workspace carries these, and neither does this one until then.
+`LICENSE` is here. Ian ruled MIT in ADR 0015, each package declares `license = "MIT"`, and `policy.py` checks both. `CHANGELOG.md` and `deny.toml` with `cargo deny` in `lint` still wait. One CI workflow that runs the ladder still waits.
 
 ## Not yet enforced
 

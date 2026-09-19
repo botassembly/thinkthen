@@ -4,6 +4,7 @@ version = "0.0.1"
 edition.workspace = true
 rust-version.workspace = true
 description = "Put a decider model in the shell"
+license = "MIT"
 publish = false
 
 [[bin]]
