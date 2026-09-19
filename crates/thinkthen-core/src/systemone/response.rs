@@ -65,10 +65,9 @@ struct ResponseUsage {
 /// shape, when it leaves an option or a level without a probability, or when a
 /// probability falls outside zero to one.
 pub fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
-    let response: Response =
-        serde_json::from_slice(body).map_err(|error| DecodeError::Malformed(error.to_string()))?;
-    let model = ModelName::new(response.model)
-        .map_err(|error| DecodeError::Malformed(error.to_string()))?;
+    let response: Response = serde_json::from_slice(body)
+        .map_err(|error| DecodeError::Malformed(error.line(), error.column()))?;
+    let model = ModelName::new(response.model).map_err(|_| DecodeError::NoModel)?;
     let mut answers = Vec::with_capacity(plan.questions().len());
     for (place, question) in plan.questions().iter().enumerate() {
         let Some(answered) = response.answers.get(&wire_name(place)) else {
@@ -273,30 +272,55 @@ mod tests {
             assert!(
                 matches!(
                     decode(&urgency_plan(), body.as_bytes()),
-                    Err(DecodeError::Malformed(_))
+                    Err(DecodeError::Malformed(..))
                 ),
                 "{body:?}"
             );
         }
     }
 
+    /// A backend can quote the evidence back, and no refusal repeats it.
+    ///
+    /// A JSON reader names the value it stopped on. That value came from the
+    /// backend's reply, which may hold whatever was sent to it, so the refusal
+    /// says where the reply broke and never what it held.
+    #[test]
+    fn no_refusal_of_a_reply_quotes_what_the_reply_held() {
+        let evidence = "marker-evidence-7b3ac5";
+        let body = format!(r#"{{"model":"jev-latest","answers":"{evidence}"}}"#);
+
+        let error = decode(&urgency_plan(), body.as_bytes()).expect_err("a reply is refused");
+
+        assert!(!error.to_string().contains(evidence), "{error}");
+        assert_eq!(
+            error.to_string(),
+            "the response is not a systemone response: the JSON at line 1 column 56 is not one"
+        );
+    }
+
     #[test]
     fn a_response_that_does_not_name_the_model_is_refused() {
         let answers = r#""answers":{"q1":{"type":"noul","noul":0.5}}}"#;
-        let cases = [
-            format!("{{{answers}"),
+        for body in [
             format!(r#"{{"model":"",{answers}"#),
             format!(r#"{{"model":" \t ",{answers}"#),
-        ];
-        for body in cases {
-            assert!(
-                matches!(
-                    decode(&urgency_plan(), body.as_bytes()),
-                    Err(DecodeError::Malformed(_))
-                ),
+        ] {
+            assert_eq!(
+                decode(&urgency_plan(), body.as_bytes()),
+                Err(DecodeError::NoModel),
                 "{body}"
             );
         }
+
+        // A reply with no `model` field at all never reaches the name at all.
+        let missing = format!("{{{answers}");
+        assert!(
+            matches!(
+                decode(&urgency_plan(), missing.as_bytes()),
+                Err(DecodeError::Malformed(..))
+            ),
+            "{missing}"
+        );
     }
 
     #[test]

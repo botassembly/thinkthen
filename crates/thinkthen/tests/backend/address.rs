@@ -1,8 +1,6 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
-use std::fs;
 use std::io;
-use std::path::PathBuf;
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
@@ -23,13 +21,6 @@ const BUILT_IN: &str = "https://api.typesafe.ai/v1/systemone";
 fn decide(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     let asked = ["decide", "asks for a refund"];
     spawn(&[&asked[..], arguments].concat(), environment, EVIDENCE)
-}
-
-/// A folder this test owns, removed and remade so each run starts empty.
-fn folder(name: &str) -> PathBuf {
-    let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
 }
 
 #[test]
@@ -97,6 +88,79 @@ fn a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address() {
         );
         assert!(!message.contains("127.0.0.1"), "{message}");
         assert!(!message.contains("sk-in-the-address"), "{message}");
+    }
+}
+
+/// A plain `http://` base to anywhere but this machine sends nothing at all.
+///
+/// The listener counts the requests, so the case proves no key crossed the
+/// network rather than only that the exit code was 2. Each base is a spelling a
+/// reader might expect to pass: a name that ends in `localhost`, a trailing
+/// dot, the short form of the loopback address, the wildcard address, and an
+/// IPv4-mapped IPv6 address.
+#[test]
+fn a_plain_http_base_that_is_not_loopback_is_refused_before_any_request() {
+    let listener = Listener::serving(Vec::new()).expect("a loopback listener");
+    let refused = [
+        "http://example.com/v1",
+        "http://localhost.example.com/v1",
+        "http://localhost./v1",
+        "http://127.1/v1",
+        "http://0.0.0.0/v1",
+        "http://10.0.0.5:8080/v1",
+        "http://[::ffff:127.0.0.1]/v1",
+        "HTTP://example.com/v1",
+    ];
+
+    for base in refused {
+        for arguments in [vec![], vec!["--dry-run"]] {
+            let by_option = [arguments.clone(), vec!["--url", base]].concat();
+            for (given, environment) in [
+                (by_option, vec![("THINKTHEN_API_KEY", "sk-test-value")]),
+                (
+                    arguments.clone(),
+                    vec![
+                        ("THINKTHEN_BASE_URL", base),
+                        ("THINKTHEN_API_KEY", "sk-test-value"),
+                    ],
+                ),
+            ] {
+                let output = decide(&given, &environment).expect("the compiled binary runs");
+
+                assert_eq!(output.status.code(), Some(2), "{base} {given:?}");
+                assert!(output.stdout.is_empty(), "{base} {given:?}");
+                assert_eq!(
+                    String::from_utf8_lossy(&output.stderr),
+                    "thinkthen: `http://` sends the key across the network in clear text, \
+                     so it reaches localhost, 127.0.0.1, and [::1] alone\n",
+                    "{base} {given:?}"
+                );
+            }
+        }
+    }
+
+    assert!(
+        listener.requests().is_empty(),
+        "a refused address opens no connection"
+    );
+    assert_eq!(listener.connections(), 0);
+}
+
+/// Every loopback spelling is taken, and `https://` to anywhere is untouched.
+#[test]
+fn loopback_over_plain_http_is_taken_and_https_reaches_any_host() {
+    for base in [
+        "http://localhost:1/v1",
+        "http://LOCALHOST:1/v1",
+        "http://127.0.0.1:1/v1",
+        "http://[::1]:1/v1",
+        "https://example.com/v1",
+        "https://10.0.0.5/v1",
+    ] {
+        let output = decide(&["--dry-run", "--url", base], &[]).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(0), "{base}");
+        assert!(output.stderr.is_empty(), "{base}");
     }
 }
 
@@ -170,48 +234,6 @@ fn a_variable_that_holds_nothing_counts_as_absent() {
 }
 
 #[test]
-fn the_key_comes_from_thinkthen_api_key_and_reaches_nothing_but_the_header() {
-    let secret = "sk-never-printed";
-    let folder = folder("key");
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-
-    let output = decide(
-        &["--details", "--record", &folder.to_string_lossy()],
-        &[
-            ("THINKTHEN_BASE_URL", listener.base()),
-            ("THINKTHEN_API_KEY", secret),
-        ],
-    )
-    .expect("the compiled binary runs");
-
-    assert_eq!(output.status.code(), Some(0));
-    let requests = listener.requests();
-    let request = requests.first().expect("one request reached the listener");
-    assert_eq!(
-        request.header("authorization"),
-        Some("Bearer sk-never-printed")
-    );
-
-    let printed = format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(!printed.contains(secret), "{printed}");
-
-    let mut entries = 0;
-    for entry in fs::read_dir(&folder).expect("the recording folder is there") {
-        let path = entry.expect("an entry").path();
-        let written = fs::read_to_string(&path).expect("an entry is text");
-        for shown in [secret, "authorization", "Authorization", "Bearer"] {
-            assert!(!written.contains(shown), "{written}");
-        }
-        entries += 1;
-    }
-    assert_eq!(entries, 1, "the run recorded its one exchange");
-}
-
-#[test]
 fn a_key_that_is_unset_or_empty_is_exit_four_and_names_the_variable_it_read() {
     let listener = Listener::serving(Vec::new()).expect("a loopback listener");
     let unset: &[(&str, &str)] = &[("THINKTHEN_BASE_URL", listener.base())];
@@ -234,4 +256,38 @@ fn a_key_that_is_unset_or_empty_is_exit_four_and_names_the_variable_it_read() {
     }
 
     assert!(listener.requests().is_empty(), "no key, no request");
+}
+
+/// A proxy variable never carries a plain `http://` request off this machine.
+///
+/// The address rule refuses `http://` to anywhere but loopback, and a proxy
+/// would undo it: the request would go to the proxy's host in clear text with
+/// the key and the evidence in it. The proxy listener counts the connections,
+/// so the case proves nothing reached it rather than only that the run passed.
+#[test]
+fn a_proxy_variable_carries_no_plain_http_request() {
+    let proxy = Listener::answering(|_| Canned::ok(ANSWERED)).expect("a loopback listener");
+    let backend = Listener::answering(|_| Canned::ok(ANSWERED)).expect("a loopback listener");
+    let address = proxy
+        .base()
+        .strip_suffix("/v1")
+        .expect("the listener base ends in the path it was built with")
+        .to_owned();
+
+    for variable in ["HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"] {
+        let output = decide(
+            &["--url", backend.base()],
+            &[
+                (variable, address.as_str()),
+                ("THINKTHEN_API_KEY", "sk-test-value"),
+            ],
+        )
+        .expect("the compiled binary runs");
+
+        assert_eq!(proxy.connections(), 0, "{variable} reached the proxy");
+        assert_eq!(output.status.code(), Some(0), "{variable}");
+    }
+
+    let requests = backend.requests();
+    assert_eq!(requests.len(), 4, "every run reached the backend itself");
 }

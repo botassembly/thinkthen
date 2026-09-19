@@ -38,7 +38,7 @@ pub use crate::question::{Labels, LabelsError, Question};
 pub use crate::question_file::{
     Described, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, resolve,
 };
-pub use crate::records::{Framing, Reading, ReadingError, Record, RecordError};
+pub use crate::records::{Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError};
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
 pub use crate::result::{DecisionResult, Meta, Usage};

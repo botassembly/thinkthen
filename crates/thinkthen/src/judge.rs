@@ -260,7 +260,7 @@ fn run(
     let judging = Judging {
         common,
         environment,
-        client: Client::new(Duration::from_secs(common.timeout)),
+        client: Client::new(Duration::from_secs(common.timeout), backend.is_secure()),
         recorder: Recorder::of(folders.record, folders.replay)?,
         backend,
         asks,

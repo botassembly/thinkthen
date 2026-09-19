@@ -98,6 +98,11 @@ ACCEPTED_SHARED_CLIPPY = {
     "allow-dbg-in-tests": False,
     "allow-print-in-tests": False,
 }
+# An overflow in release is a wrong number rather than a stop, and a wrong
+# number in a judgment is worse than a stop. A panic ends the process, because
+# a tool this small has nothing to unwind to.
+ACCEPTED_RELEASE_PROFILE = {"overflow-checks": True, "panic": "abort"}
+
 ACCEPTED_CRATE_ROOT_ATTRIBUTES = {
     "crates/thinkthen-core/src/lib.rs": (
         "#![forbid(unsafe_code)]",
@@ -208,6 +213,8 @@ def check_workspace() -> None:
         fail("workspace", "rust-version is one exact three-part release")
     if package.get("rust-version") != read_toml("rust-toolchain.toml").get("toolchain", {}).get("channel"):
         fail("workspace", "rust-version matches the pinned toolchain channel")
+    if manifest.get("profile", {}).get("release") != ACCEPTED_RELEASE_PROFILE:
+        fail("profile", "the release profile matches the accepted copy")
     lints = workspace.get("lints", {})
     if lints.get("rust") != ACCEPTED_RUST_LINTS:
         fail("lints", "the workspace Rust lint table matches the accepted copy")

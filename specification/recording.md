@@ -34,6 +34,9 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
 - The five fields each sit on their own line, in the order above. `request` and `response` are JSON values rather than strings, and each one is copied exactly as the bytes that crossed the wire, so an entry is a faithful copy of the exchange. One exchange therefore writes the same file every time, and a diff shows which field changed.
 - Only an exchange that succeeded and decoded is recorded. A failure is never recorded.
 - An entry holds bodies and never headers. No key can reach a recording.
+- A file under `DIR` that is not an entry is a local failure, exit code 5. The message names the file and the line and column the reading stopped at, and never the text it stopped on. An entry is written around the evidence, so quoting that text would print the evidence into a diagnostic.
+- No refusal repeats any field of an entry. An entry that parses and names another schema is refused with a sentence that names no schema. Every field of a file under `DIR` is untrusted text: it is unbounded, it can carry a control byte, and it can quote the evidence back.
+- An entry stores the address the request went to, its path included, so a token must never sit in the path of a base. A base carrying user information, a query, or a fragment is refused for the same reason.
 - An entry is written to a temporary name in `DIR` and then renamed, so a reader never sees half a file. A write that fails takes its temporary file with it.
 - A `DIR` the tool creates is readable by its owner alone, and so is every entry the tool writes, because a recording holds the evidence. On Unix that is mode `0700` for the folder and `0600` for each file, whatever the umask says. A `DIR` that already exists keeps the mode it has.
 - Recording the same request again replaces the entry. A decider model can answer differently on another day, and the newest answer wins.

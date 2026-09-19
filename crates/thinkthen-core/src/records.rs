@@ -13,6 +13,14 @@ use crate::question::{Labels, LabelsError};
 use crate::render::{RenderError, json_line};
 use crate::text::{BlankTextError, Evidence};
 
+/// The most one record may hold before the tool refuses to judge it.
+///
+/// The vendor reads about 32,000 tokens of evidence, far under a megabyte, so a
+/// record this large is a mistake in the pipeline rather than a judgment anyone
+/// asked for. No option sets it, and the bound keeps a hostile or mistaken
+/// stream out of this process's memory.
+pub const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
+
 /// What one record is.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -45,6 +53,9 @@ pub enum RecordError {
     /// The bytes of the record are not text.
     #[error("the record is not valid UTF-8")]
     NotUtf8,
+    /// The record is past [`MAX_RECORD_BYTES`].
+    #[error("the record is over 16 MiB, which is far past what a backend reads in one request")]
+    TooLarge,
     /// The record is not JSON this tool will read.
     #[error("{0}")]
     Json(#[from] JsonError),
@@ -182,16 +193,24 @@ impl Reading {
     ///
     /// # Errors
     ///
-    /// Returns [`RecordError`] when the bytes are not text, and when a JSON
-    /// record is not JSON this tool will read.
+    /// Returns [`RecordError`] when the record is past [`MAX_RECORD_BYTES`],
+    /// when the bytes are not text, and when a JSON record is not JSON this
+    /// tool will read.
     pub fn record(&self, bytes: &[u8]) -> Result<Record, RecordError> {
-        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
-        let text = if self.streams() {
-            text.strip_suffix('\n')
-                .map_or(text, |line| line.strip_suffix('\r').unwrap_or(line))
+        // The line that ended the record is not part of it, so it is dropped
+        // before the size is measured. The size is read before the bytes are,
+        // because a huge record is too large whatever its bytes turn out to be.
+        let bytes = if self.streams() {
+            bytes
+                .strip_suffix(b"\n")
+                .map_or(bytes, |line| line.strip_suffix(b"\r").unwrap_or(line))
         } else {
-            text
+            bytes
         };
+        if bytes.len() > MAX_RECORD_BYTES {
+            return Err(RecordError::TooLarge);
+        }
+        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
         if self.framing == Framing::Jsonl || !self.fields.is_empty() {
             return Ok(Record(Held::Json(Json::parse(text)?)));
         }
@@ -356,6 +375,28 @@ mod tests {
             assert!(!said.contains("Payouts"), "{said}");
             assert!(!said.contains("other"), "{said}");
         }
+    }
+
+    /// The line that ended the record is not part of it, and the size is read
+    /// before the bytes are, so huge bytes that are not text are too large first.
+    #[test]
+    fn a_record_over_the_limit_is_refused_and_one_at_the_limit_is_taken() {
+        let limit = super::MAX_RECORD_BYTES;
+        let over = Err(RecordError::TooLarge);
+        let wide = |byte: u8, size: usize, ending: &[u8]| [&vec![byte; size], ending].concat();
+        let read = |framing, bytes: &[u8]| sent(&reading(framing, &[]), bytes).map(|t| t.len());
+        assert_eq!(read(Framing::Document, &wide(b'x', limit, b"")), Ok(limit));
+        assert_eq!(read(Framing::Lines, &wide(b'x', limit, b"\n")), Ok(limit));
+        assert_eq!(read(Framing::Lines, &wide(b'x', limit, b"\r\n")), Ok(limit));
+        let past = limit + 1;
+        assert_eq!(read(Framing::Document, &wide(b'x', past, b"")), over);
+        assert_eq!(read(Framing::Lines, &wide(b'x', past, b"\n")), over);
+        assert_eq!(read(Framing::Lines, &wide(b'x', past, b"\r\n")), over);
+        assert_eq!(read(Framing::Lines, &wide(0xff, past, b"\n")), over);
+        assert_eq!(
+            RecordError::TooLarge.to_string(),
+            "the record is over 16 MiB, which is far past what a backend reads in one request"
+        );
     }
 
     #[test]
