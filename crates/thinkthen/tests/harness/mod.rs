@@ -10,6 +10,7 @@ pub(crate) struct Canned {
     status: u16,
     body: String,
     location: Option<String>,
+    promised: Option<usize>,
 }
 
 impl Canned {
@@ -24,6 +25,17 @@ impl Canned {
             status: 302,
             body: String::new(),
             location: Some(url.to_owned()),
+            promised: None,
+        }
+    }
+
+    /// Promise a body of this length and close the connection without it.
+    pub(crate) fn cut_short() -> Self {
+        Self {
+            status: 200,
+            body: String::new(),
+            location: None,
+            promised: Some(4096),
         }
     }
 
@@ -33,6 +45,7 @@ impl Canned {
             status,
             body: body.to_owned(),
             location: None,
+            promised: None,
         }
     }
 }
@@ -135,7 +148,7 @@ fn serve(mut stream: TcpStream, canned: &Canned) {
     let head = format!(
         "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}content-length: {}\r\nconnection: close\r\n\r\n",
         canned.status,
-        canned.body.len()
+        canned.promised.unwrap_or(canned.body.len())
     );
     let _ = stream.write_all(head.as_bytes());
     let _ = stream.write_all(canned.body.as_bytes());

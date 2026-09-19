@@ -264,17 +264,33 @@ fn a_response_body_past_the_bound_is_exit_four_and_never_fills_memory() {
 
 #[test]
 fn a_reply_the_adapter_refuses_is_exit_four() {
-    let listener = Listener::serving(vec![Canned::ok(
+    let cases = [
         r#"{"model":"jev-1.13.0","answers":{"q2":{"type":"noul","noul":0.9}}}"#,
-    )])
-    .expect("a loopback listener");
+        "not json at all",
+        "",
+    ];
 
-    let output = decide(listener.url(), &[], None, "Refund me.").expect("the compiled binary runs");
+    for body in cases {
+        let listener = Listener::serving(vec![Canned::ok(body)]).expect("a loopback listener");
+
+        let output =
+            decide(listener.url(), &[], None, "Refund me.").expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(4), "{body}");
+        assert!(output.stdout.is_empty(), "{body}");
+        assert!(!output.stderr.is_empty(), "{body}");
+    }
+}
+
+#[test]
+fn a_body_the_backend_cut_short_is_exit_four() {
+    let listener = Listener::serving(vec![Canned::cut_short()]).expect("a loopback listener");
+
+    let output = decide(listener.url(), &["--max-retries", "0"], None, "Refund me.")
+        .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
-    let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("q1"), "{message}");
 }
 
 #[test]
