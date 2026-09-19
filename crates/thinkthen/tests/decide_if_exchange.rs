@@ -114,7 +114,8 @@ fn the_result_names_the_url_the_adapter_and_the_model_that_answered() {
                 r#""answer":{{"kind":"yes_no","probability":0.92}},"#,
                 r#""assessment":{{"status":"accepted","value":true,"min_prob":0.9}},"#,
                 r#""meta":{{"backend":null,"url":"{url}","adapter":"systemone","#,
-                r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}}}}}}"#,
+                r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
+                r#""replayed":false}}}}"#,
                 "\n",
             ),
             url = listener.url()

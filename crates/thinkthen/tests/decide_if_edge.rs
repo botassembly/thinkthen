@@ -308,6 +308,8 @@ fn the_help_for_decide_if_names_the_condition_and_every_option() {
         "--adapter",
         "--model",
         "--key-env",
+        "--record",
+        "--replay",
         "--timeout",
         "--max-retries",
     ] {

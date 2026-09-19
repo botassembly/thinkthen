@@ -29,7 +29,7 @@ impl Usage {
     }
 }
 
-/// Who answered, how, and at what cost.
+/// Who answered, how, at what cost, from a backend or from a recording.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Meta {
     backend: Option<BackendName>,
@@ -38,14 +38,15 @@ pub struct Meta {
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
+    replayed: bool,
 }
 
 impl Meta {
-    /// Name the backend, the URL that answered, the adapter, the model, and the usage.
+    /// Name who answered, how, at what cost, and whether a recording answered.
     ///
     /// `backend` is `None` for an ad-hoc backend, and the field is then `null`.
     /// `usage` is `None` when the backend reported none, and the field is then
-    /// absent from the JSON.
+    /// absent from the JSON. `replayed` is always present.
     #[must_use]
     pub const fn new(
         backend: Option<BackendName>,
@@ -53,6 +54,7 @@ impl Meta {
         adapter: Adapter,
         model: ModelName,
         usage: Option<Usage>,
+        replayed: bool,
     ) -> Self {
         Self {
             backend,
@@ -60,6 +62,7 @@ impl Meta {
             adapter,
             model,
             usage,
+            replayed,
         }
     }
 }
@@ -113,7 +116,7 @@ mod tests {
         r#""assessment":{"status":"accepted","value":true,"min_prob":0.9},"#,
         r#""meta":{"backend":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
         r#""adapter":"systemone","model":"jev-1.13.0","#,
-        r#""usage":{"input_tokens":312,"output_tokens":48}}}"#,
+        r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}"#,
     );
 
     fn example() -> DecisionResult {
@@ -130,6 +133,7 @@ mod tests {
                 Adapter::SystemOne,
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
+                false,
             ),
         )
     }
@@ -158,11 +162,12 @@ mod tests {
             Adapter::SystemOne,
             ModelName::new("local-1").expect("not empty"),
             None,
+            true,
         );
         let rendered = serde_json::to_string(&meta).expect("meta serializes");
         assert_eq!(
             rendered,
-            r#"{"backend":null,"url":"http://127.0.0.1:8080/v1","adapter":"systemone","model":"local-1"}"#
+            r#"{"backend":null,"url":"http://127.0.0.1:8080/v1","adapter":"systemone","model":"local-1","replayed":true}"#
         );
     }
 

@@ -45,6 +45,16 @@ pub(crate) enum Failure {
     Status(u16),
     /// The adapter refused what the backend answered.
     Reply(DecodeError),
+    /// The two recording options named two different folders.
+    TwoFolders,
+    /// A plan sends nothing, so it has nothing to record or to replay.
+    PlanWithRecording,
+    /// The replay folder holds no entry for the request being made.
+    ReplayMiss(String),
+    /// The entry the digest names cannot answer the request being made.
+    Entry(String, String),
+    /// The recording folder could not be written.
+    Recording(io::Error),
     /// An invariant inside `thinkthen` broke.
     Defect(&'static str),
     /// A document `thinkthen` built could not be written as JSON.
@@ -69,6 +79,23 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
         Failure::Transport(what) => (4, format!("the backend could not be reached: {what}")),
         Failure::Status(status) => (4, said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
+        Failure::TwoFolders => (
+            2,
+            "--record and --replay name two different folders, and one run keeps one".to_owned(),
+        ),
+        Failure::PlanWithRecording => (
+            2,
+            "--plan sends nothing, so it takes neither --record nor --replay".to_owned(),
+        ),
+        Failure::ReplayMiss(name) => (
+            5,
+            format!("the replay folder holds no entry named `{name}`"),
+        ),
+        Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
+        Failure::Recording(error) => (
+            5,
+            format!("the recording folder could not be written: {error}"),
+        ),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
         Failure::NotUtf8 => (5, "the evidence is not valid UTF-8".to_owned()),
         Failure::Output(error) => (5, format!("standard output could not be written: {error}")),

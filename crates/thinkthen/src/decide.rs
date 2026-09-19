@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::process::ExitCode;
 use std::time::Duration;
 
+use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::systemone;
 use thinkthen_core::{
     Adapter, Assessment, AssessmentStatus, Backend, Condition, DecisionResult, Meta, PassMark,
@@ -14,6 +15,7 @@ use crate::args::IfArguments;
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::{self, Exchange};
+use crate::recorder::Recorder;
 
 /// Judge whether the condition holds for the evidence, and say so on one line.
 ///
@@ -38,13 +40,17 @@ pub(crate) fn decide_if(
     .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
 
     if arguments.plan {
+        if arguments.record.is_some() || arguments.replay.is_some() {
+            return Err(Failure::PlanWithRecording);
+        }
         let document = PlanDocument::of(&backend, &plan)
             .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
         edge::write_line(writer, &json_line(&document)?)?;
         return Ok(ExitCode::SUCCESS);
     }
 
-    let reply = ask(&backend, &plan, arguments, environment)?;
+    let recorder = Recorder::of(arguments.record.as_deref(), arguments.replay.as_deref())?;
+    let (reply, replayed) = ask(&backend, &plan, arguments, environment, &recorder)?;
     let answer = *reply
         .answers()
         .first()
@@ -60,6 +66,7 @@ pub(crate) fn decide_if(
             backend.adapter(),
             reply.model().clone(),
             reply.usage(),
+            replayed,
         ),
     );
     edge::write_line(writer, &json_line(&result)?)?;
@@ -74,18 +81,26 @@ fn policy_of(min_prob: Option<f64>) -> Result<Policy, Failure> {
     }
 }
 
-/// Send the plan to the backend and read what it answered.
+/// Answer the plan from the recording folder, or from the backend itself.
+///
+/// The recording is read before a key is, so a replay opens no connection and
+/// needs no key. Only an exchange the adapter read is recorded.
 fn ask(
     backend: &Backend,
     plan: &Plan,
     arguments: &IfArguments,
     environment: &Environment,
-) -> Result<Reply, Failure> {
-    let key = backend.key_env().map(edge::key).transpose()?;
+    recorder: &Recorder,
+) -> Result<(Reply, bool), Failure> {
     let body = match backend.adapter() {
         Adapter::SystemOne => systemone::encode(plan),
     }
     .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+    let recorded = Recorded::new(backend.adapter(), backend.url(), &body);
+    if let Some(response) = recorder.replayed(&recorded)? {
+        return Ok((read(backend, plan, &response)?, true));
+    }
+    let key = backend.key_env().map(edge::key).transpose()?;
     let answered = http::post(&Exchange {
         url: backend.url().as_str(),
         body: &body,
@@ -94,8 +109,15 @@ fn ask(
         max_retries: arguments.max_retries,
         retry_wait: environment.retry_wait(),
     })?;
+    let reply = read(backend, plan, &answered)?;
+    recorder.record(&recorded, &answered)?;
+    Ok((reply, false))
+}
+
+/// Read one response body in the language the backend speaks.
+fn read(backend: &Backend, plan: &Plan, body: &[u8]) -> Result<Reply, Failure> {
     match backend.adapter() {
-        Adapter::SystemOne => Ok(systemone::decode(plan, &answered)?),
+        Adapter::SystemOne => Ok(systemone::decode(plan, body)?),
     }
 }
 

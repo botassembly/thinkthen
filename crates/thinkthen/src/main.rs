@@ -11,6 +11,7 @@ mod decide;
 mod edge;
 mod failure;
 mod http;
+mod recorder;
 
 use std::io::{self, Write};
 use std::process::ExitCode;

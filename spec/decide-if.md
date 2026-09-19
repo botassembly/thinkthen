@@ -6,7 +6,7 @@ The help names the condition and every option the verb carries.
 
 ```bash
 thinkthen decide if --help | head -1 | mustmatch like "Ask whether a condition holds for the evidence on standard input"
-for option in --min-prob --status --plan --backend --url --adapter --model --key-env --timeout --max-retries; do
+for option in --min-prob --status --plan --backend --url --adapter --model --key-env --record --replay --timeout --max-retries; do
   thinkthen decide if --help | grep -c -- "$option" | mustmatch not like "0"
 done
 ```
@@ -66,6 +66,17 @@ printf 'x' | thinkthen decide if 'asks for a refund' --plan --adapter systemone 
 echo "$status" | mustmatch like "2"
 status=0
 printf 'x' | thinkthen decide if 'asks for a refund' --plan --backend nowhere >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+```
+
+`--plan` sends nothing, so it takes neither `--record` nor `--replay`. Naming two different folders is a usage error too, because one run keeps one folder.
+
+```bash
+status=0
+printf 'x' | thinkthen decide if 'asks for a refund' --plan --replay recording/ >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+status=0
+printf 'x' | thinkthen decide if 'asks for a refund' --record here/ --replay there/ >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch like "2"
 ```
 

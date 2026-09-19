@@ -1,5 +1,7 @@
 //! The command line, as the clap types that parse it.
 
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand};
 use thinkthen_core::BackendValues;
 
@@ -73,6 +75,14 @@ pub(crate) struct IfArguments {
     /// The environment variable that holds the key [env: THINKTHEN_KEY_ENV]
     #[arg(long, value_name = "NAME")]
     pub(crate) key_env: Option<String>,
+
+    /// Call the backend, then write the exchange into DIR. DIR is created when absent.
+    #[arg(long, value_name = "DIR")]
+    pub(crate) record: Option<PathBuf>,
+
+    /// Answer from DIR alone. No connection opens, and no key is read.
+    #[arg(long, value_name = "DIR")]
+    pub(crate) replay: Option<PathBuf>,
 
     /// Seconds one attempt may take, from connect to the last byte.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
