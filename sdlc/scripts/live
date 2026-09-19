@@ -1,0 +1,76 @@
+#!/bin/sh
+# The one door for a paid live call. Run by hand, with Ian's authorization.
+# No rung calls this, and nothing here belongs in a gate.
+#
+#   sdlc/scripts/live demos/01-refund-gate/record.sh
+#
+# It refuses at the spend limit and with no key, builds the binary, runs the
+# job with that binary on PATH, then adds the input tokens of every recording
+# entry the job wrote to the ledger. The key is read from the environment by
+# the binary alone. This script never prints it, never passes it as an
+# argument, and never writes it anywhere.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+LEDGER=${THINKTHEN_LIVE_LEDGER:-$REPO/sdlc/live-tokens}
+
+job=${1:-}
+if [ -z "$job" ]; then
+	printf 'live: name the job to run, as the path of a script\n' >&2
+	exit 2
+fi
+if [ ! -f "$job" ]; then
+	printf 'live: %s is not a file, so there is no job to run\n' "$job" >&2
+	exit 2
+fi
+shift
+
+field() {
+	awk -v want="$1" '$1 == want { print $2 }' "$LEDGER"
+}
+
+limit=$(field limit_tokens)
+spent=$(field spent_tokens)
+case "${limit:-x}${spent:-x}" in
+*[!0-9]*)
+	printf 'live: %s holds no limit and no spend in whole tokens\n' "$LEDGER" >&2
+	exit 2
+	;;
+esac
+if [ "$spent" -ge "$limit" ]; then
+	printf 'live: %s of %s tokens are spent, so no call goes out\n' "$spent" "$limit" >&2
+	exit 1
+fi
+
+# A blank key is an absent key, which is the rule the binary itself applies.
+case "${THINKTHEN_API_KEY:-}" in
+*[![:space:]]*) ;;
+*)
+	printf 'live: THINKTHEN_API_KEY holds nothing, so no call goes out\n' >&2
+	exit 1
+	;;
+esac
+
+cargo build --locked --quiet --manifest-path "$REPO/Cargo.toml" --package thinkthen
+PATH="$REPO/target/debug:$PATH"
+export PATH
+
+# Every recording entry newer than this stamp is one call this run made.
+stamp=$(mktemp)
+trap 'rm -f -- "$stamp"' EXIT
+
+cd -- "$REPO"
+sh -- "$job" "$@"
+
+tokens=$(
+	find "$REPO" -path "$REPO/target" -prune -o -type f -name '*.json' -newer "$stamp" \
+		-exec sed -n 's/.*"input_tokens":\([0-9][0-9]*\).*/\1/p' {} + |
+		awk '{ total += $1 } END { print total + 0 }'
+)
+total=$((spent + tokens))
+awk -v spent="$total" '$1 == "spent_tokens" { print "spent_tokens " spent; next } { print }' \
+	"$LEDGER" >"$LEDGER.new"
+mv -- "$LEDGER.new" "$LEDGER"
+
+printf 'live: %s spent %s input tokens, and %s of %s tokens are spent now\n' \
+	"$job" "$tokens" "$total" "$limit"

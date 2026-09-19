@@ -1,10 +1,11 @@
 #!/bin/sh
-# Record this demo's two exchanges against the live backend. Run by hand only.
+# Record this demo's two exchanges against the live backend.
+# Run through sdlc/scripts/live, which holds the key check and the spend ledger.
 set -eu
 
 cd -- "$(dirname -- "$0")"
 
-: "${TYPESAFE_API_KEY:?the built-in profile reads this variable, which holds no value}"
+: "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
 
 # Two exchanges answer every block of the page. The request bytes carry the
 # evidence and the question, and nothing else, so --threshold, --quiet, and
