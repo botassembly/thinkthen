@@ -5,6 +5,7 @@ use serde_json::value::RawValue;
 
 use crate::backend::{Backend, KEY_VAR};
 use crate::plan::Plan;
+use crate::question_file::Sources;
 use crate::records::{Reading, ReadingPlan};
 use crate::systemone::{self, EncodeError};
 use crate::text::{ModelName, Url};
@@ -21,6 +22,8 @@ pub struct PlanDocument<'a> {
     key_env: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<ReadingPlan<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    from: Option<Sources>,
     request: Box<RawValue>,
 }
 
@@ -36,6 +39,7 @@ impl<'a> PlanDocument<'a> {
             model: backend.model(),
             key_env: KEY_VAR,
             input: None,
+            from: None,
             request: systemone::encode_raw(plan)?,
         })
     }
@@ -48,6 +52,17 @@ impl<'a> PlanDocument<'a> {
     #[must_use]
     pub fn reading(mut self, reading: &'a Reading) -> Self {
         self.input = Some(reading.plan());
+        self
+    }
+
+    /// Name the source of every setting, as a plan over a question file does.
+    ///
+    /// A run that named no question file carries no `from` object, because
+    /// every setting came from the command line or from the default and the
+    /// user is looking at the command line already.
+    #[must_use]
+    pub const fn from(mut self, sources: Sources) -> Self {
+        self.from = Some(sources);
         self
     }
 }
@@ -67,6 +82,8 @@ mod tests {
             ModelName::new("jev-latest").expect("not blank"),
             vec![Question::Decide {
                 text: QuestionText::new("is urgent").expect("not blank"),
+                yes: None,
+                no: None,
             }],
         )
         .expect("a plan of one question")

@@ -11,12 +11,14 @@
 
 mod answer;
 mod backend;
+mod digest;
 mod json;
 mod plan;
 mod plan_document;
 mod pointer;
 mod probability;
 mod question;
+mod question_file;
 pub mod recording;
 mod records;
 mod render;
@@ -28,15 +30,19 @@ mod threshold;
 
 pub use crate::answer::{Answer, Value};
 pub use crate::backend::{Backend, BackendError, DEFAULT_MODEL, KEY_VAR};
+pub use crate::digest::question_sha256;
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::plan_document::PlanDocument;
 pub use crate::pointer::{Pointer, PointerError};
 pub use crate::question::{Labels, LabelsError, Question};
+pub use crate::question_file::{
+    QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, resolve,
+};
 pub use crate::records::{Framing, Reading, ReadingError, Record, RecordError};
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
 pub use crate::result::{DecisionResult, Meta, Usage};
-pub use crate::text::{BlankTextError, Evidence, ModelName, QuestionText, Url};
+pub use crate::text::{BlankTextError, Evidence, Meaning, ModelName, QuestionText, Url};
 pub use crate::threshold::{Outcome, Threshold, ThresholdError};
 
 /// The name the tool answers to on the command line and in its own output.

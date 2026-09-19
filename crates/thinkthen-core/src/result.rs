@@ -33,6 +33,7 @@ impl Usage {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Meta {
     tool: String,
+    question_sha256: String,
     url: Url,
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -44,12 +45,15 @@ impl Meta {
     /// Name the tool, who answered, at what cost, and whether a recording did.
     ///
     /// `version` is the binary's own version, and `tool` is the identity line
-    /// the tool prints of itself, so a saved row names what made it. `usage`
-    /// is `None` when the backend reported none, and the field is then absent
-    /// from the JSON. `replayed` is always present.
+    /// the tool prints of itself, so a saved row names what made it.
+    /// `question_sha256` names the exact question that produced the row, and
+    /// `specification/question-file.md` writes out the form it digests.
+    /// `usage` is `None` when the backend reported none, and the field is then
+    /// absent from the JSON. `replayed` is always present.
     #[must_use]
     pub fn new(
         version: &str,
+        question_sha256: String,
         url: Url,
         model: ModelName,
         usage: Option<Usage>,
@@ -57,6 +61,7 @@ impl Meta {
     ) -> Self {
         Self {
             tool: crate::version_line(version),
+            question_sha256,
             url,
             model,
             usage,
@@ -124,12 +129,16 @@ mod tests {
     use crate::text::{ModelName, QuestionText, Url};
     use crate::threshold::Threshold;
 
+    /// The digest of the example question, which `result.md` prints too.
+    const DIGEST: &str = "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888";
+
     /// The example in `specification/result.md`, on the one line it prints on.
     const COMPACT: &str = concat!(
         r#"{"schema":"thinkthen.result/1","value":true,"#,
         r#""question":{"verb":"decide","text":"Does this ask for a refund?"},"#,
         r#""answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"#,
-        r#""meta":{"tool":"thinkthen 0.4.0","url":"https://api.typesafe.ai/v1/systemone","#,
+        r#""meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
+        r#""url":"https://api.typesafe.ai/v1/systemone","#,
         r#""model":"jev-1.13.0","#,
         r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}"#,
     );
@@ -141,11 +150,16 @@ mod tests {
         let threshold = Threshold::default();
         DecisionResult::new(
             answer.read(Some(threshold)).0,
-            Question::Decide { text },
+            Question::Decide {
+                text,
+                yes: None,
+                no: None,
+            },
             answer,
             Some(threshold),
             Meta::new(
                 "0.4.0",
+                DIGEST.to_owned(),
                 Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
@@ -174,6 +188,7 @@ mod tests {
     fn meta_names_the_tool_and_drops_the_usage_a_backend_never_reported() {
         let meta = Meta::new(
             "0.4.0",
+            DIGEST.to_owned(),
             Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
             ModelName::new("local-1").expect("not empty"),
             None,
@@ -183,7 +198,8 @@ mod tests {
         assert_eq!(
             rendered,
             concat!(
-                r#"{"tool":"thinkthen 0.4.0","url":"http://127.0.0.1:8080/v1/systemone","#,
+                r#"{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
+                r#""url":"http://127.0.0.1:8080/v1/systemone","#,
                 r#""model":"local-1","replayed":true}"#,
             )
         );
@@ -196,11 +212,16 @@ mod tests {
         let threshold: Threshold = "0.1:0.9".parse().expect("a band");
         let result = DecisionResult::new(
             answer.read(Some(threshold)).0,
-            Question::Decide { text },
+            Question::Decide {
+                text,
+                yes: None,
+                no: None,
+            },
             answer.clone(),
             Some(threshold),
             Meta::new(
                 "0.4.0",
+                DIGEST.to_owned(),
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
@@ -240,6 +261,7 @@ mod tests {
             None,
             Meta::new(
                 "0.4.0",
+                DIGEST.to_owned(),
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,

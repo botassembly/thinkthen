@@ -18,6 +18,9 @@ pub enum BlankTextError {
     /// A URL names where the request is posted, so it carries text.
     #[error("a URL is text, not white space")]
     Url,
+    /// What yes or no means is read by the model, so it carries text.
+    #[error("what yes or no means is text, not white space")]
+    Meaning,
 }
 
 /// Declare one text value that is not blank, its accessor, and its conversions.
@@ -62,10 +65,11 @@ text_value!(QuestionText, QuestionText, "question a judgment asks");
 text_value!(Evidence, Evidence, "evidence a judgment reads");
 text_value!(ModelName, ModelName, "model that answered");
 text_value!(Url, Url, "URL a request is posted to");
+text_value!(Meaning, Meaning, "text that says what yes or what no means");
 
 #[cfg(test)]
 mod tests {
-    use super::{BlankTextError, Evidence, ModelName, QuestionText, Url};
+    use super::{BlankTextError, Evidence, Meaning, ModelName, QuestionText, Url};
 
     #[test]
     fn new_keeps_the_text_it_was_given() {
@@ -80,7 +84,11 @@ mod tests {
     #[test]
     fn new_refuses_text_that_is_empty_or_only_white_space() {
         type Make = fn(&str) -> Result<(), BlankTextError>;
-        let makers: [(Make, BlankTextError); 4] = [
+        let makers: [(Make, BlankTextError); 5] = [
+            (
+                |text| Meaning::new(text).map(|_| ()),
+                BlankTextError::Meaning,
+            ),
             (|text| Url::new(text).map(|_| ()), BlankTextError::Url),
             (
                 |text| QuestionText::new(text).map(|_| ()),
