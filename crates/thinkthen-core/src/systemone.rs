@@ -181,13 +181,14 @@ mod tests {
         "../../../specification/fixtures/systemone/refused-probability-out-of-range.response.json"
     );
 
-    fn plan_for(state: &str, instructions: &str) -> Plan {
+    fn plan_for(state: &str, conditions: &[&str]) -> Plan {
         Plan::new(
             Evidence::new(state).expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
-            vec![Question::new_if(
-                Condition::new(instructions).expect("not blank"),
-            )],
+            conditions
+                .iter()
+                .map(|condition| Question::new_if(Condition::new(*condition).expect("not blank")))
+                .collect(),
         )
         .expect("a question is asked")
     }
@@ -195,13 +196,13 @@ mod tests {
     fn urgency_plan() -> Plan {
         plan_for(
             "Help! My payouts have been failing for 3 days.",
-            "Does this convey urgency?",
+            &["Does this convey urgency?"],
         )
     }
 
     /// Encode one condition over one evidence and read the bytes back.
     fn round_tripped(state: &str, instructions: &str) -> Request {
-        let bytes = encode(&plan_for(state, instructions)).expect("a plan is writable");
+        let bytes = encode(&plan_for(state, &[instructions])).expect("a plan is writable");
         serde_json::from_slice(&bytes).expect("a systemone request")
     }
 
@@ -255,6 +256,53 @@ mod tests {
                 "{body:?}"
             );
         }
+    }
+
+    #[test]
+    fn a_response_that_does_not_name_the_model_is_refused() {
+        let answers = r#""answers":{"q1":{"type":"noul","noul":0.5}}}"#;
+        let cases = [
+            format!("{{{answers}"),
+            format!(r#"{{"model":"",{answers}"#),
+            format!(r#"{{"model":" \t ",{answers}"#),
+        ];
+        for body in cases {
+            assert!(
+                matches!(
+                    decode(&urgency_plan(), body.as_bytes()),
+                    Err(DecodeError::Malformed(_))
+                ),
+                "{body}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_names_carry_the_order_and_the_key_order_carries_nothing() {
+        let plan = plan_for("Help!", &["is urgent", "asks for a refund"]);
+        let written: Request = serde_json::from_slice(&encode(&plan).expect("a plan is writable"))
+            .expect("a systemone request");
+        let named = |name: &str| {
+            written
+                .questions
+                .get(name)
+                .expect("one question per name")
+                .instructions
+                .clone()
+        };
+        assert_eq!(named("q1"), "is urgent");
+        assert_eq!(named("q2"), "asks for a refund");
+
+        let body = concat!(
+            r#"{"answers":{"q2":{"type":"noul","noul":0.25},"#,
+            r#""q1":{"type":"noul","noul":0.75}},"model":"jev-latest"}"#
+        );
+        let reply = decode(&plan, body.as_bytes()).expect("a systemone response");
+        let [first, second] = reply.answers() else {
+            panic!("one answer per planned question");
+        };
+        assert!((first.probability().as_f64() - 0.75).abs() < f64::EPSILON);
+        assert!((second.probability().as_f64() - 0.25).abs() < f64::EPSILON);
     }
 
     #[test]
