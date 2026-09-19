@@ -20,6 +20,8 @@ Settled by ADR 0010.
 
 The address comes from the hidden `--url`, then `THINKTHEN_BASE_URL`, then the default base `https://api.typesafe.ai/v1`. The tool posts to `BASE/systemone`. A base with a trailing slash is accepted. A base that is not an `http` or `https` address is a usage error before any request. An empty variable counts as absent.
 
+Space around a base is dropped. A scheme is read without regard to case and written back in lower case, so one exchange keeps one recording digest whatever case the caller typed. A base carrying user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a recording. The refusal message names the rule and never the base it refused. `--url` names a base like the other two sources, and an ad-hoc backend still needs an adapter and a model beside it.
+
 `--dry-run` shows the address the run would use, and it reads no key.
 
 ## Profiles and ad-hoc backends

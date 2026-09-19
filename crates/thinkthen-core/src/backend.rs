@@ -183,31 +183,33 @@ pub fn resolve_backend(flags: BackendValues<'_>) -> Result<Backend, BackendError
 /// The address one request is posted to: the base, then the adapter's path.
 ///
 /// Space around the base is not part of it, and neither are the slashes it
-/// ends in, so both are dropped before the path is added. A scheme is matched
-/// without regard to case, as every reader of an address matches one.
+/// ends in, so both are dropped before the path is added. A scheme is read
+/// without regard to case and written back in lower case, so one exchange
+/// keeps one recording digest whatever case the caller typed.
 fn address(base: &str, adapter: Adapter) -> Result<Url, BackendError> {
     let base = base.trim();
     if base.is_empty() {
         return Err(BackendError::Blank(BlankTextError::Url));
     }
     let base = base.trim_end_matches('/');
-    let rest = after_scheme(base).ok_or(BackendError::NotAnAddress)?;
+    let (scheme, rest) = after_scheme(base).ok_or(BackendError::NotAnAddress)?;
     // The address is printed in a plan and kept in a recording, so a base that
-    // carries user information would write a password into both.
+    // carries user information or a query would write a secret into both. A
+    // path added after either one would also land in the wrong place.
     let authority = rest.split('/').next().unwrap_or(rest);
-    if authority.contains('@') {
+    if authority.contains('@') || rest.contains(['?', '#']) {
         return Err(BackendError::NotAnAddress);
     }
-    Ok(Url::new(format!("{base}/{}", adapter.as_str()))?)
+    Ok(Url::new(format!("{scheme}{rest}/{}", adapter.as_str()))?)
 }
 
-/// What follows a scheme the tool speaks, or `None` when it speaks none of them.
-fn after_scheme(base: &str) -> Option<&str> {
+/// The scheme in lower case and what follows it, or `None` when it is neither.
+fn after_scheme(base: &str) -> Option<(&'static str, &str)> {
     for scheme in ["http://", "https://"] {
         if let Some((found, rest)) = base.split_at_checked(scheme.len())
             && found.eq_ignore_ascii_case(scheme)
         {
-            return Some(rest);
+            return Some((scheme, rest));
         }
     }
     None
@@ -409,7 +411,8 @@ mod tests {
             ("http://host/v1/", "http://host/v1/systemone"),
             ("http://host/v1///", "http://host/v1/systemone"),
             ("  http://host/v1\n", "http://host/v1/systemone"),
-            ("HTTPS://host/v1", "HTTPS://host/v1/systemone"),
+            ("HTTPS://host/v1", "https://host/v1/systemone"),
+            ("HtTpS://host/v1", "https://host/v1/systemone"),
             ("http://host", "http://host/systemone"),
         ];
         for (base, expected) in taken {
@@ -424,6 +427,8 @@ mod tests {
             "http:/host/v1",
             "https://someone:sk-in-the-address@host/v1",
             "http://someone@host/v1",
+            "http://host/v1?key=sk-in-the-address",
+            "http://host/v1#sk-in-the-address",
         ];
         for base in refused {
             let error = resolve(BackendValues::default().with_base(Some(base)))
