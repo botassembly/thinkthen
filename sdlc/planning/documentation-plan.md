@@ -1,8 +1,10 @@
 # Documentation plan
 
-Written 2026-09-19, rewritten to ADR 0016 by ticket 0018. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. This page holds the list. Each line names the task, the demo that teaches it, the slice of `plan.md` that turns it green, and its state. A demo number is a folder under `demos/`. New numbers are reserved here and get a folder when their slice starts.
+Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. This page holds the list. Each line names the number, the task, the slice of `plan.md` that turns it green, and its state. A demo number is a folder under `demos/`. New numbers are reserved here and get a folder when their slice starts.
 
 The published documentation has three kinds of page. How-tos are the green demos. Reference is `specification/`, with its executable examples in `spec/`. The README is the one tutorial and the one explanation. Nothing is written twice.
+
+`sdlc/scripts/pages` checks that this list, `demos/README.md`, and the folders under `demos/` agree on every number, title, and state, and that every link between them resolves. `sdlc/scripts/pages-self-test` proves each check against a copy that breaks it.
 
 ## The form and the standard
 
@@ -12,68 +14,72 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 
 ## Start here
 
-| How to | Demo | Slice | State |
+| # | How to | Slice | State |
 | --- | --- | --- | --- |
-| Gate a script step on a yes/no answer | 01 | 4 | Green |
-| Gate a risky command and fail closed: yes, no, unsure, and could not ask | 19 | Ticket 0010, rewritten by 0018 | Green |
-| Test a script with no network, with `--record` and `--replay` | 27 | Ticket 0010 | Green |
-| Point the tool at another server with `THINKTHEN_BASE_URL` | 18 | 13 | Red |
+| 01 | Gate a script step on a yes/no answer | 4 | green |
+| 19 | Gate a risky command and fail closed | Ticket 0010, rewritten by 0018 | green |
+| 27 | Test a script with no network | Ticket 0010 | green |
+| 18 | Point the tool at another server and compare two deciders | 13 | coming, slice 13 |
 
 ## Gates and branches
 
-| How to | Demo | Slice | State |
+| # | How to | Slice | State |
 | --- | --- | --- | --- |
-| Act only when the answer is sure, and send the rest to a person | 04 | 7 | Green |
-| Branch on a label with `choose` and `case`, and file a whole folder by it | 02 | 5 | Green. It absorbed 05 under ADR 0016 |
-| Tell "not stated" from "false" with `decide` and `choose` | 20 | 5 | Green |
-| Route a request by how hard it is, with `score` and `jq -e` | 17 | 5, rewritten by 0018 | Green |
-| Choose the next action from a list that changes at every step | 21 | 7, rewritten by 0018 | Green |
-| Say what yes and no mean | 40 | 7b | Green. Landed with ticket 0017 |
-| Tune a question file and use the same file in the gate | 41 | 7b | Green. Landed with ticket 0017 |
+| 02 | Branch on a label with `choose` and `case` | 5 | green |
+| 40 | Say what yes and no mean | 7b | green |
+| 17 | Route a request by how hard it is | 5, rewritten by 0018 | green |
+| 21 | Choose the next action from a list that changes at every step | 7, rewritten by 0018 | green |
+| 41 | Tune a question file and use the same file in the gate | 7b | green |
 
 ## Many records
 
-| How to | Demo | Slice | State |
+| # | How to | Slice | State |
 | --- | --- | --- | --- |
-| Keep only the records that match a meaning | 03 | 8 | Red. It absorbs 09, and one sentence names transcript compaction as the same command |
-| Put the best matches first | 06 | 8 | Red |
-| Resume a long run that stopped, with `--cache` and `--jobs` | 12 | 7 | Green. It owns `--cache` |
-| Find the one line that answers a question | 15 | 11 | Red. Slice 11 measures the longer documents first |
-| Serve a loop from one long-lived process | 42 | 8 | Red. New under ADR 0016: record mode through a Bash `coproc`, and no `serve` command |
+| 03 | Keep only the records that match a meaning | 8 | coming, ticket 0014 |
+| 43 | Lint a change by meaning and fail the build | 8 | coming, ticket 0014 |
+| 06 | Put the best matches first | 8 | coming, ticket 0014 |
+| 12 | Resume a long run that stopped | 7 | green |
+| 15 | Find the line that answers a question | 11 | coming, slice 11 |
 
 ## Many questions at once
 
-| How to | Demo | Slice | State |
+| # | How to | Slice | State |
 | --- | --- | --- | --- |
-| Screen one message for several hazards and a severity in one request | 39 | 9 | Red. New under ADR 0016, and it absorbs 08 |
-| Add several judged columns in one pass, including a `score` column | 07 | 9 | Red. It absorbs 22 and 34 |
-| Build a triage pipeline that drafts, blocks, or asks a person | 16 | 9 | Red. The flagship: all three question types, a policy in `jq`, and audit rows |
+| 39 | Screen one message for several hazards | 9 | coming, ticket 0015 |
+| 16 | Build a triage pipeline that drafts, blocks, or asks a person | 9 | coming, slice 9 |
 
 ## Evals
 
-Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. ADR 0016 cut this section from fifteen pages to eight, because seven of them taught half an idea each. Each how-to below is also a transform folder under `transforms/` where it has `jq` in it, as ADR 0012 proposes.
+Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. ADR 0016 cut this section from fifteen pages to eight, and ADR 0018 cut it to four, because the rest taught half an idea each or repeated a neighbour. Each how-to below is also a transform folder under `transforms/` where it has `jq` in it, as ADR 0012 proposes.
 
-| How to | Demo | Slice | State |
+| # | How to | Slice | State |
 | --- | --- | --- | --- |
-| Grade a batch with a reusable definition of named checks, over structured cases | 14 | 9 | Red. Still written against the removed `report`. It absorbs 29 and 31 |
-| Mix exact checks in `jq` with judged checks | 30 | 10b | Red |
-| Keep a run that can be traced and replayed: cases, definition, rows, model version, recording | 23 | 9 | Red |
-| Pick a threshold from labeled cases, and change it later without asking again | 13 | 10a, ticket 0008 | Green. `sweep.jq`, `score.jq`, and `band.jq` over committed rows. It absorbs 36 |
-| Compare two runs: improvements, regressions, missing cases, and why a value changed | 24 | 10a, ticket 0008 | Green. `compare.jq` over two committed runs |
-| Check the judge against human labels, and read whether a probability means what it says | 25 | 10a, ticket 0008 | Green. `counts.jq`, `score.jq`, and `calibration.jq`. It absorbed 38 and absorbs 35 and 26 |
-| Test the judge with hard and hostile cases | 37 | 10b | Red. The live probe measured the hostile case first |
-| Know what a run cost | 28 | 10a, ticket 0008 | Green. `cost.jq` over committed rows and a replayed row |
+| 14 | Grade an assistant's answers with a rubric | 9 | coming, ticket 0015 |
+| 13 | Pick a threshold from labeled cases | 10a, ticket 0008 | green |
+| 25 | Check the judge against human labels | 10a, ticket 0008 | green |
+| 28 | Know what a run cost | 10a, ticket 0008 | green |
 
 ### Ian's six capabilities, and the how-tos that teach each
 
 | Capability | How-tos |
 | --- | --- |
 | Structured cases with stable ids, one case or a batch | 14 |
-| Reusable definitions that mix exact and judged checks and control what each judgment sees | 14, 30 |
+| Reusable definitions that mix exact and judged checks and control what each judgment sees | 14 |
 | Detailed results that keep probabilities, keep checks apart, and tell no from unsure from missing from failed | 19, 25 |
-| Traceable artifacts, an unchanged source, and a spreadsheet as another view | 23, 07 |
-| Local reporting and comparison, with thresholds changed without asking again | 25, 13, 24, 28 |
-| Validation of the judge itself | 25, 37 |
+| Traceable artifacts, an unchanged source, and a spreadsheet as another view | 27, 14, 16 |
+| Local reporting and comparison, with thresholds changed without asking again | 25, 13, 41, 28 |
+| Validation of the judge itself | 25 |
+
+## Folders that stay and then leave
+
+A green page leaves only when the page that absorbs it is green, so no lesson is ever missing. These four folders are not in the list of 20 and are still on disk.
+
+| # | Folder | Absorbed by | Leaves when |
+| --- | --- | --- | --- |
+| 04 | Act only when the answer is sure | 19, 16, 13 | 16 is green |
+| 07 | Judged columns | 14, 16 | 14 and 16 are green |
+| 08 | Release checklist | 39 | 39 is green |
+| 09 | What leaves the machine | 03 | 03 is green |
 
 ## Numbers that left
 
@@ -83,11 +89,17 @@ Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An 
 | 08 | 39 |
 | 09 | 03 |
 | 10, 11 | Left with the configuration file and `segment` under ADR 0010 |
-| 22, 34 | 07 |
+| 20 | 40, which fixes "not stated" by saying what yes and no mean. Its pick with a `not_stated` label and its reading of a pick's odds are two traps on 40 |
+| 22, 34 | 07, and then 14 and 16 |
+| 23 | 27 for the recording, and 14 for the row that carries the model version and the digests |
+| 24 | 41, where the comparison is step 3 of tuning. `compare.jq` and its header hold the pairing rules |
 | 26, 35, 38 | 25 |
 | 29, 31 | 14 |
+| 30 | 14, as one sentence: an exact check is a `jq` field on the record |
 | 32 | 19 |
 | 36 | 13 |
+| 37 | 25, because hostile cases and human labels answer the same question about the judge |
+| 42 | 12, as one sentence and a `coproc` line |
 
 No number is reused. The pages once planned for transcript compaction and for routing a request to a cheap or a strong model became a sentence in 03 and the whole of 17.
 
@@ -95,4 +107,4 @@ No number is reused. The pages once planned for transcript compaction and for ro
 
 - A how-to enters when a user task needs it. A feature with no how-to here has no place in version one.
 - A ticket that turns a demo green writes it in the form, holds it to the standard, and updates its line here.
-- Every state on this page, in `demos/README.md`, and in the folders under `demos/` says the same thing.
+- Every state on this page, in `demos/README.md`, and in the folders under `demos/` says the same thing, and `sdlc/scripts/pages` fails the `lint` rung when one of them drifts.

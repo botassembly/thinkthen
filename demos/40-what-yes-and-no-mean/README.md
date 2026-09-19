@@ -13,7 +13,7 @@ thinkthen decide @window.json --replay recording/ < notices/silent.txt \
   | mustmatch "true"
 ```
 
-The notice never mentions the length of the window. `window.json` says that an unsettled length counts as a yes, so the claim reaches the branch that asks the author.
+The notice never mentions the length. `window.json` counts an unsettled length as a yes, so the claim reaches the branch that asks the author.
 
 ## Input
 
@@ -65,7 +65,7 @@ The silent notice moved from 0.1 to 0.81 and its exit code moved with it. Only t
 
 ## Step 3: keep the two texts in a question file
 
-The two texts belong to the question, not to the command line that ran it. A question file holds them under `true` and `false`, and the request that goes out is the same one byte for byte.
+The two texts belong to the question, not to the command line that ran it. A question file holds them under `true` and `false`, and the request is the same byte for byte.
 
 ```bash
 set -euo pipefail
@@ -86,10 +86,13 @@ true"
 - **Expecting the texts to rescue a vague question.** "Is this notice good?" stays vague with two sentences bolted on.
 - **Assuming a recording still matches.** A changed text is a changed request and a changed digest, so `--replay` will name the entry it cannot find.
 - **A blank text.** An empty `--true` or an empty `true` key is a usage error, not an absent text.
-- **Reading 0.81 as a measurement.** Three made-up notices show the direction. A cut is tuned on labeled cases.
+- **Reading 0.81 as a measurement.** Three made-up notices show the direction. A cut is tuned on labeled cases. A confident answer is about what the notice says, never about the world the notice never raises.
+- **Two branches when the script wants three.** A pick with `supported`, `contradicted`, and `not_stated` keeps silence as its own label, which has to be typed because nothing adds it.
+- **Reading a pick's odds.** `--details` on a pick prints a probability for every option in the order they were sent, so a margin over the runner-up is a rule a desk writes in `jq`. An `ambiguous` label is the model hedging, and exit 3 is the tool saying no option cleared the mark.
 
 ## Related how-tos
 
 - [How to tune a question file and use the same file in the gate](../41-tune-a-question-file/) measures a wording against labeled cases.
+- [How to branch on a label with `choose` and `case`](../02-route-a-ticket/) is the pick that names silence as its own label.
 - [How to pick a threshold from labeled cases](../13-pick-a-threshold/) tunes the cut instead of the wording.
 - [How to gate a script step on a yes/no answer](../01-refund-gate/) is the plain form with no texts.

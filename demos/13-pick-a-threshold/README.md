@@ -93,6 +93,6 @@ sh ../../transforms/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
 ## Related how-tos
 
 - [How to check the judge against human labels](../25-check-the-judge/)
-- [How to compare two runs](../24-compare-two-runs/)
+- [How to tune a question file](../41-tune-a-question-file/)
 - [How to know what a run cost](../28-what-a-run-cost/)
 - [How to act only when the answer is sure, and send the rest to a person](../04-review-queue/)

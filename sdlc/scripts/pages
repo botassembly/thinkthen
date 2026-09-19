@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""The how-to lists and the folders under demos/ say the same thing.
+
+ADR 0018 fixes the list of 20. Three places carry it: `demos/README.md`,
+`sdlc/planning/documentation-plan.md`, and the folders themselves. This check
+holds them together and refuses a link that goes nowhere.
+
+Usage: pages [ROOT]. ROOT defaults to the repository, and the self-test hands
+it a small tree built to break one rule at a time.
+"""
+
+import pathlib
+import re
+import sys
+
+LIST_HEADER = re.compile(r"^\|\s*#\s*\|\s*How to\s*\|")
+ROW = re.compile(r"^\|\s*(\d{2})\s*\|(.*)$")
+LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+FENCE = re.compile(r"^\s*```")
+
+INDEX = "demos/README.md"
+PLAN = "sdlc/planning/documentation-plan.md"
+
+
+def prose(text):
+    """The lines outside every fenced block. A block may show a table."""
+    out, fenced = [], False
+    for line in text.splitlines():
+        if FENCE.match(line):
+            fenced = not fenced
+            continue
+        if not fenced:
+            out.append(line)
+    return out
+
+
+def rows(path):
+    """Every row of every table whose header reads `| # | How to |`."""
+    found, reading = {}, False
+    for line in prose(path.read_text()):
+        if LIST_HEADER.match(line):
+            reading = True
+            continue
+        if reading and not line.startswith("|"):
+            reading = False
+        if not reading:
+            continue
+        hit = ROW.match(line)
+        if not hit:
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 4:
+            continue
+        number, title, state = cells[0], cells[1], cells[3]
+        link = LINK.match(title)
+        found[number] = {
+            "title": link.group(1) if link else title,
+            "target": link.group(2) if link else None,
+            "state": state.split(",")[0].strip().lower(),
+            "line": line,
+        }
+    return found
+
+
+def links(path):
+    """Every relative link outside a fenced block, with its line."""
+    for line in prose(path.read_text()):
+        for text, target in LINK.findall(line):
+            if target.startswith(("http:", "https:", "#", "mailto:")):
+                continue
+            yield text, target.split("#")[0]
+
+
+def check(root):
+    bad = []
+
+    def fail(where, said):
+        bad.append(f"pages: {where}: {said}")
+
+    index, plan = root / INDEX, root / PLAN
+    for path in (index, plan):
+        if not path.is_file():
+            fail(str(path), "is missing")
+    if bad:
+        return bad
+
+    listed, planned = rows(index), rows(plan)
+    for number in sorted(set(listed) | set(planned)):
+        if number not in listed:
+            fail(INDEX, f"lists no how-to {number}, and {PLAN} does")
+            continue
+        if number not in planned:
+            fail(PLAN, f"lists no how-to {number}, and {INDEX} does")
+            continue
+        here, there = listed[number], planned[number]
+        if here["title"] != there["title"]:
+            fail(
+                PLAN,
+                f"how-to {number} is titled [{there['title']}], "
+                f"and {INDEX} titles it [{here['title']}]",
+            )
+        if here["state"] != there["state"]:
+            fail(
+                PLAN,
+                f"how-to {number} is {there['state']}, "
+                f"and {INDEX} says {here['state']}",
+            )
+
+    demos = root / "demos"
+    folders = sorted(p for p in demos.glob("[0-9]*") if p.is_dir())
+    index_text = index.read_text()
+    for folder in folders:
+        if f"{folder.name}/" not in index_text:
+            fail(INDEX, f"names no folder {folder.name}, and demos/ holds it")
+
+    for number, row in sorted(listed.items()):
+        if row["state"] not in ("green", "coming"):
+            fail(INDEX, f"how-to {number} is [{row['state']}], "
+                 "and a state is green or coming")
+            continue
+        folder = None
+        if row["target"]:
+            folder = demos / row["target"].rstrip("/")
+            if not folder.is_dir():
+                fail(INDEX, f"how-to {number} links {row['target']}, "
+                     "and demos/ holds no such folder")
+                continue
+        else:
+            matches = [p for p in folders if p.name.startswith(number + "-")]
+            if matches:
+                folder = matches[0]
+        if folder is None:
+            if row["state"] == "green":
+                fail(INDEX, f"how-to {number} is green and links no folder")
+            continue
+        page = folder / "README.md"
+        if not page.is_file():
+            fail(INDEX, f"{folder.name} holds no README.md")
+            continue
+        said = prose(page.read_text())
+        status = [line for line in said if line.startswith("Status: ")]
+        wanted = "Status: green" if row["state"] == "green" else "Status: red"
+        if wanted not in status:
+            fail(f"demos/{folder.name}/README.md",
+                 f"says {status or ['no status line']}, "
+                 f"and {INDEX} wants [{wanted}]")
+        if row["state"] != "green":
+            continue
+        heads = [line for line in said if line.startswith("# ")]
+        head = heads[0][2:] if heads else ""
+        title = row["title"]
+        wanted_head = "How to " + title[0].lower() + title[1:]
+        if head != wanted_head:
+            fail(f"demos/{folder.name}/README.md",
+                 f"is titled [{head}], and {INDEX} wants [{wanted_head}]")
+
+    pages = [index, plan, root / "README.md"] + [
+        folder / "README.md" for folder in folders
+    ]
+    for path in pages:
+        if not path.is_file():
+            continue
+        for text, target in links(path):
+            if not (path.parent / target).exists():
+                fail(str(path.relative_to(root)),
+                     f"links [{text}] to {target}, and nothing is there")
+    return bad
+
+
+def main():
+    root = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else
+                        pathlib.Path(__file__).resolve().parents[2])
+    bad = check(root)
+    for line in bad:
+        print(line, file=sys.stderr)
+    if bad:
+        return 1
+    listed = rows(root / INDEX)
+    green = sum(1 for row in listed.values() if row["state"] == "green")
+    print(f"pages: {len(listed)} how-tos, {green} green, "
+          f"{len(listed) - green} coming")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

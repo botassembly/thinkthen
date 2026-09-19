@@ -23,7 +23,7 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | `sweep/` | What every cut would have done, and which one to pick | [13](../demos/13-pick-a-threshold/) |
 | `band/` | Accuracy beside coverage for a band | [13](../demos/13-pick-a-threshold/) |
 | `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
-| `compare/` | What changed between two runs, and why it could have | [24](../demos/24-compare-two-runs/) |
+| `compare/` | What changed between two runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
 | `cost/` | The input tokens a run spent and what they cost | [28](../demos/28-what-a-run-cost/) |
 
 ## The rules every transform follows

@@ -50,7 +50,7 @@ esac
 printf 'queue=%s\n' "$queue" | mustmatch "queue=payments"
 ```
 
-`--raw` prints nothing when the answer is unresolved, and an empty string is no label. Only the exit code tells an unresolved pick from a crash, which is why the first `case` reads `$rc`. `--details` prints a probability for every option instead; [how to tell "not stated" from "false"](../20-not-stated-or-false/) reads those odds.
+`--raw` prints nothing when the answer is unresolved, and an empty string is no label. Only the exit code tells an unresolved pick from a crash, which is why the first `case` reads `$rc`. `--details` prints a probability for every option instead, in the order they were sent.
 
 ## Step 2: run the same shape over a whole folder
 
@@ -105,7 +105,7 @@ Two notes name a broken thing plainly, and the model put every point of probabil
 
 ## Related how-tos
 
-- [How to tell "not stated" from "false" with `decide` and `choose`](../20-not-stated-or-false/) picks labels that a yes/no question cannot tell apart.
+- [How to say what yes and no mean](../40-what-yes-and-no-mean/) puts silence where a yes/no question cannot.
 - [How to choose the next action from a list that changes at every step](../21-options-from-the-record/) takes the options out of each record.
 - [How to gate a script step on a yes/no answer](../01-refund-gate/) is the two-sided decision `choose` is not.
 - [How to route a request by how hard it is](../17-rate-and-sort/) orders a queue instead of filing it.
