@@ -8,6 +8,8 @@ Keeps the records whose evidence reaches the mark and prints them unchanged.
 thinkthen filter QUESTION (--lines|--jsonl) [--threshold T] [--field POINTER] [--details] [BACKEND]
 ```
 
+`QUESTION` is the question text, or `@` and the path of a question file holding one `decide` question. [question-file.md](question-file.md) gives the grammar and the precedence, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.
+
 ## What it reads
 
 A stream of records. `filter` requires `--lines` or `--jsonl`, because one document is not a stream. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing, the pointer rules, and the order.
@@ -29,10 +31,18 @@ Each kept record, byte for byte as it arrived, in input order. A record that did
 | `--field POINTER` | The part of each record the model sees. See [records.md](records.md) | The whole record |
 | `--details` | Prints one result object per record in place of the kept records | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
+| `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
+| Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
 | Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
-`filter` takes no `--quiet` and no `--raw`.
+`filter` takes no `--quiet` and no `--raw`. Each is refused by name, and the message says which command carries that view. A missing framing is a usage error, because one document is not a stream.
+
+A band is refused wherever it came from. A band typed on the command line is a usage error at exit 2, and a band a question file holds is a local failure at exit 5, which is the rule [question-file.md](question-file.md) already fixes for every value.
+
+A record that `filter` keeps is written back as it arrived: nothing is parsed, nothing is re-encoded, odd spacing and a trailing space survive, and the line ending is written as a line feed. A run that stops at a failed record has already printed a prefix of its output.
+
+The request, the result object, and the recording entry are those of `decide`, so a recording made by `decide` over the same records replays here.
 
 ## Exit codes
 

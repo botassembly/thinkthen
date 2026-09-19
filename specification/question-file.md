@@ -6,7 +6,7 @@ Every structural setting of a question has two homes. One is an option on the co
 
 ## Naming a file
 
-The first argument of `decide`, `choose`, and `score` is the question. It is the question text, or `@` and a path to a question file.
+The first argument of `decide`, `choose`, `score`, `filter`, and `rank` is the question. `filter` and `rank` ask a yes/no question of each record, so both read a `decide` file. It is the question text, or `@` and a path to a question file.
 
 ```sh
 thinkthen decide @refund.json < message.txt
@@ -47,7 +47,7 @@ A file that holds none of `decide`, `choose`, and `score` is refused, and so is 
 | What false means | `--false TEXT` | `false` | No text | Empty or only white space. Not on `choose` or `score` |
 | The options | The arguments after the question, or `--option LABEL=DESCRIPTION` | `options` | None. `choose` requires 2 to 255 | Fewer than 2, more than 255, repeated, blank, not text, or holding a control character. An `--option` with no `=`. `--option` beside a list of options |
 | The levels | The arguments after the question | `levels` | None. `score` requires 2 to 10, lowest first | Fewer than 2, more than 10, repeated, blank, not text, or holding a control character |
-| The rule | `--threshold T` or `--threshold LOW:HIGH` | `threshold` | `0.5` for `decide`, none for `choose`, none for `score` | A cut of 0 or above 1, a band whose low side is not below its high side, a band on `choose`, and any threshold on `score` |
+| The rule | `--threshold T` or `--threshold LOW:HIGH` | `threshold` | `0.5` for `decide` and `filter`, none for `choose`, `score`, and `rank` | A cut of 0 or above 1, a band whose low side is not below its high side, a band on `choose` and on `filter`, and any threshold on `score` and on `rank` |
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901 |
 | The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
 
