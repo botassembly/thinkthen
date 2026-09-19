@@ -36,22 +36,60 @@ pub(crate) enum Command {
     /// never says the model is sure of no. A three-way gate takes a band, as
     /// `--threshold 0.1:0.9` writes one.
     Decide(DecideArguments),
+
+    /// Pick one label from a fixed list and print it.
+    ///
+    /// The answer is a bare JSON string, or `null` when the winning option
+    /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
+    /// a label and exit 3 is unresolved. `choose` never exits 1, because a pick
+    /// is not a two-sided decision.
+    ///
+    /// A script reads the exit code first and the label second, so it takes two
+    /// `case` blocks. `--raw` prints nothing at all for an unresolved answer,
+    /// and an empty string is no label, so only the exit code tells an
+    /// unresolved pick from a command that failed:
+    ///
+    /// label=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
+    ///
+    /// case $rc in 0) ;; 3) label=unresolved ;; *) exit "$rc" ;; esac
+    ///
+    /// case $label in billing) pay ;; unresolved) triage ;; *) exit 2 ;; esac
+    ///
+    /// "Not stated" is a different answer from "false". "Does the document
+    /// establish X?" and "Is X true?" are different questions. When the
+    /// difference matters, ask `choose` with labels such as supported,
+    /// contradicted, and not_stated rather than one yes/no question.
+    ///
+    /// Word the options so that they exclude one another, and type a catch-all
+    /// such as other yourself. Option order moves the odds, so a run with a
+    /// reordered list is a different measurement.
+    Choose(ChooseArguments),
+
+    /// Place the evidence on named levels and print the number.
+    ///
+    /// The levels come lowest first, and the number is the backend's
+    /// probability-weighted position on them, from 0 to the number of levels
+    /// minus one. `score` takes no threshold, and no answer sets the exit code.
+    /// `jq -e` cuts on the number in one line and sets one:
+    ///
+    /// thinkthen score 'How much disruption?' none workaround blocked < t.txt | jq -e '. >= 2' > /dev/null
+    ///
+    /// One number hides the shape of the distribution. The level odds 0, 1, 0
+    /// and 0.5, 0, 0.5 both score 1. Read `--details` for the odds of every
+    /// level when the difference matters.
+    ///
+    /// Rating is the weakest thing a decider model does. Measurement of the
+    /// first decider model showed rubric judgments rejecting 18% to 46% of work
+    /// that people had accepted. A number belongs in a review queue a person
+    /// reads. A gate that has to hold belongs in `decide` or `choose`, and the
+    /// Bash way to branch on levels is `choose` with the levels as ordered
+    /// labels.
+    Score(ScoreArguments),
 }
 
-/// Everything `decide` was asked, before any of it is read.
+/// The options every judging verb takes.
 #[derive(Args, Debug)]
-pub(crate) struct DecideArguments {
-    /// The question to answer, as one argument naming one visible fact.
-    pub(crate) question: String,
-
-    /// The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved.
-    #[arg(long, value_name = "T|LOW:HIGH")]
-    pub(crate) threshold: Option<String>,
-
-    /// Print nothing on standard output. The exit code still carries the answer.
-    #[arg(long)]
-    pub(crate) quiet: bool,
-
+pub(crate) struct Common {
     /// Print the full result object in place of the bare value.
     #[arg(long)]
     pub(crate) details: bool,
@@ -93,4 +131,63 @@ pub(crate) struct DecideArguments {
     /// How many times a transport failure or a retried status is sent again.
     #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
     pub(crate) max_retries: u32,
+}
+
+/// Everything `decide` was asked, before any of it is read.
+#[derive(Args, Debug)]
+pub(crate) struct DecideArguments {
+    /// The question to answer, as one argument naming one visible fact.
+    pub(crate) question: String,
+
+    /// The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved.
+    #[arg(long, value_name = "T|LOW:HIGH")]
+    pub(crate) threshold: Option<String>,
+
+    /// Print nothing on standard output. The exit code still carries the answer.
+    #[arg(long)]
+    pub(crate) quiet: bool,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
+/// Everything `choose` was asked, before any of it is read.
+#[derive(Args, Debug)]
+pub(crate) struct ChooseArguments {
+    /// The question that states what decides the pick.
+    pub(crate) question: String,
+
+    /// The labels to pick between, 2 to 255 of them, in the order they are sent.
+    pub(crate) options: Vec<String>,
+
+    /// One cut T on the winning option's probability. A band is a usage error.
+    #[arg(long, value_name = "T")]
+    pub(crate) threshold: Option<String>,
+
+    /// Print the label without quotation marks, and nothing when unresolved.
+    #[arg(long)]
+    pub(crate) raw: bool,
+
+    /// Print nothing on standard output. The exit code still carries the answer.
+    #[arg(long)]
+    pub(crate) quiet: bool,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
+/// Everything `score` was asked, before any of it is read.
+#[derive(Args, Debug)]
+pub(crate) struct ScoreArguments {
+    /// The question that names what is being placed.
+    pub(crate) question: String,
+
+    /// The levels, 2 to 10 of them, lowest first.
+    pub(crate) levels: Vec<String>,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
 }

@@ -8,5 +8,6 @@
 mod harness;
 
 mod address;
+mod choosing;
 mod exchange;
 mod recordings;

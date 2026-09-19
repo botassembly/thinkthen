@@ -22,7 +22,9 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
     let plan = Plan::new(
         Evidence::new(evidence).ok()?,
         ModelName::new("local-1").ok()?,
-        vec![Question::new_decide(QuestionText::new(question).ok()?)],
+        vec![Question::Decide {
+            text: QuestionText::new(question).ok()?,
+        }],
     )
     .ok()?;
     systemone::encode(&plan).ok()

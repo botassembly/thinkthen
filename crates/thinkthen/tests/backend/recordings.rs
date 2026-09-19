@@ -95,9 +95,9 @@ fn plant(folder: &Path, response: &str) -> Option<String> {
     let plan = Plan::new(
         Evidence::new(EVIDENCE).ok()?,
         ModelName::new("jev-latest").ok()?,
-        vec![Question::new_decide(
-            QuestionText::new("asks for a refund").ok()?,
-        )],
+        vec![Question::Decide {
+            text: QuestionText::new("asks for a refund").ok()?,
+        }],
     )
     .ok()?;
     let request = systemone::encode(&plan).ok()?;

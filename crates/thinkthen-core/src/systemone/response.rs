@@ -1,0 +1,335 @@
+//! Reading one response body as the answers the plan asked for.
+
+use std::collections::BTreeMap;
+
+use serde::Deserialize;
+
+use crate::answer::{Answer, Distribution};
+use crate::plan::Plan;
+use crate::probability::Probability;
+use crate::question::{Labels, Question};
+use crate::reply::Reply;
+use crate::result::Usage;
+use crate::systemone::{DecodeError, wire_name};
+use crate::text::ModelName;
+
+/// The body one response carries.
+#[derive(Debug, Deserialize)]
+struct Response {
+    model: String,
+    answers: BTreeMap<String, ResponseAnswer>,
+    #[serde(default)]
+    usage: Option<ResponseUsage>,
+}
+
+/// One named answer inside a response.
+///
+/// The vendor also sends `choice`, `score`, and `legend`. Each one is derived
+/// from the distribution and the question that was asked, so the adapter
+/// computes them rather than reading them, and one answer keeps one arithmetic.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum ResponseAnswer {
+    /// The answer to a yes/no question, as one probability.
+    Noul { noul: f64 },
+    /// The answer to a pick, keyed by option name.
+    Choice {
+        probabilities: BTreeMap<String, f64>,
+        #[serde(default)]
+        confidence: Option<f64>,
+    },
+    /// The answer to a placement, keyed by the level's number as a string.
+    Score {
+        probabilities: BTreeMap<String, f64>,
+        #[serde(default)]
+        confidence: Option<f64>,
+    },
+    /// An answer of some other shape, which this version does not read.
+    #[serde(other)]
+    Other,
+}
+
+/// The token counts a response reports.
+#[derive(Debug, Deserialize)]
+struct ResponseUsage {
+    input_tokens: u64,
+    output_tokens: u64,
+}
+
+/// Read the response body as one answer per question the plan asked.
+///
+/// # Errors
+///
+/// Returns [`DecodeError`] when the body is not a `systemone` response, when it
+/// answers a planned question with nothing, when an answer carries the wrong
+/// shape, when it leaves an option or a level without a probability, or when a
+/// probability falls outside zero to one.
+pub fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
+    let response: Response =
+        serde_json::from_slice(body).map_err(|error| DecodeError::Malformed(error.to_string()))?;
+    let model = ModelName::new(response.model)
+        .map_err(|error| DecodeError::Malformed(error.to_string()))?;
+    let mut answers = Vec::with_capacity(plan.questions().len());
+    for (place, question) in plan.questions().iter().enumerate() {
+        let Some(answered) = response.answers.get(&wire_name(place)) else {
+            return Err(DecodeError::MissingAnswer(place));
+        };
+        answers.push(read(question, answered, place)?);
+    }
+    let usage = response
+        .usage
+        .map(|usage| Usage::new(usage.input_tokens, usage.output_tokens));
+    Ok(Reply::new(model, answers, usage))
+}
+
+/// Read one answer against the question that was asked in its place.
+fn read(
+    question: &Question,
+    answered: &ResponseAnswer,
+    place: usize,
+) -> Result<Answer, DecodeError> {
+    match (question, answered) {
+        (Question::Decide { .. }, ResponseAnswer::Noul { noul }) => {
+            Ok(Answer::new_yes_no(probability(*noul, place)?))
+        }
+        (
+            Question::Choose { options, .. },
+            ResponseAnswer::Choice {
+                probabilities,
+                confidence,
+            },
+        ) => Answer::new_choice(
+            spread(
+                options,
+                options.as_slice().iter().cloned(),
+                probabilities,
+                place,
+            )?,
+            reported(*confidence, place)?,
+        )
+        .ok_or(DecodeError::MissingProbability(place)),
+        (
+            Question::Score { levels, .. },
+            ResponseAnswer::Score {
+                probabilities,
+                confidence,
+            },
+        ) => Answer::new_score(
+            spread(levels, numbered(levels), probabilities, place)?,
+            reported(*confidence, place)?,
+        )
+        .ok_or(DecodeError::MissingProbability(place)),
+        _ => Err(DecodeError::WrongKind(place)),
+    }
+}
+
+/// The wire keys a score answer uses: each level's number, as a string.
+fn numbered(levels: &Labels) -> impl Iterator<Item = String> {
+    (0..levels.as_slice().len()).map(|level| level.to_string())
+}
+
+/// Read one probability per label, in the order the labels were sent.
+fn spread(
+    labels: &Labels,
+    keys: impl Iterator<Item = String>,
+    wire: &BTreeMap<String, f64>,
+    place: usize,
+) -> Result<Distribution, DecodeError> {
+    let mut entries = Vec::with_capacity(labels.as_slice().len());
+    for (label, key) in labels.as_slice().iter().zip(keys) {
+        let Some(value) = wire.get(&key) else {
+            return Err(DecodeError::MissingProbability(place));
+        };
+        entries.push((label.clone(), probability(*value, place)?));
+    }
+    Ok(Distribution::new(entries))
+}
+
+/// Take one number from the wire as a probability.
+fn probability(value: f64, place: usize) -> Result<Probability, DecodeError> {
+    Probability::new(value).map_err(|_| DecodeError::ProbabilityOutOfRange(place))
+}
+
+/// Take the backend's own confidence, when the backend reported one.
+fn reported(value: Option<f64>, place: usize) -> Result<Option<Probability>, DecodeError> {
+    value.map(|value| probability(value, place)).transpose()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decode;
+    use crate::answer::Answer;
+    use crate::probability::Probability;
+    use crate::result::Usage;
+    use crate::systemone::DecodeError;
+    use crate::systemone::tests::{
+        LEVELS, TEAMS, disruption_plan, plan_for, team_plan, urgency_plan,
+    };
+
+    const RESPONSE: &str =
+        include_str!("../../../../specification/fixtures/systemone/decide-urgent.response.json");
+    const MISSING: &str = include_str!(
+        "../../../../specification/fixtures/systemone/refused-missing-answer.response.json"
+    );
+    const WRONG_KIND: &str = include_str!(
+        "../../../../specification/fixtures/systemone/refused-wrong-kind.response.json"
+    );
+    const OUT_OF_RANGE: &str = include_str!(
+        "../../../../specification/fixtures/systemone/refused-probability-out-of-range.response.json"
+    );
+    const CHOOSE: &str =
+        include_str!("../../../../specification/fixtures/systemone/choose-team.response.json");
+    const SCORE: &str =
+        include_str!("../../../../specification/fixtures/systemone/score-disruption.response.json");
+    const MISSING_PROBABILITY: &str = include_str!(
+        "../../../../specification/fixtures/systemone/refused-missing-probability.response.json"
+    );
+
+    #[test]
+    fn decode_reads_the_answer_the_fixture_shows() {
+        let reply = decode(&urgency_plan(), RESPONSE.as_bytes()).expect("a systemone response");
+        assert_eq!(reply.model().as_str(), "jev-latest");
+        let [answer] = reply.answers() else {
+            panic!("one answer per planned question");
+        };
+        assert_eq!(
+            serde_json::to_string(answer).expect("an answer serializes"),
+            r#"{"kind":"yes_no","probability":0.92}"#
+        );
+        assert_eq!(reply.usage(), Some(Usage::new(312, 48)));
+    }
+
+    #[test]
+    fn a_choice_answer_is_read_back_in_the_order_the_options_were_sent() {
+        let reply = decode(&team_plan(), CHOOSE.as_bytes()).expect("a systemone response");
+        let [answer] = reply.answers() else {
+            panic!("one answer per planned question");
+        };
+        let distribution = answer
+            .distribution()
+            .expect("a choice carries a distribution");
+        assert_eq!(distribution.labels().collect::<Vec<_>>(), TEAMS.to_vec());
+        assert_eq!(answer.leader(), Some("billing"));
+        assert_eq!(answer.confidence().map(Probability::as_f64), Some(1.0));
+    }
+
+    #[test]
+    fn a_score_answer_is_read_by_level_number_and_keyed_by_the_level_text() {
+        let reply = decode(&disruption_plan(), SCORE.as_bytes()).expect("a systemone response");
+        let [answer] = reply.answers() else {
+            panic!("one answer per planned question");
+        };
+        let distribution = answer
+            .distribution()
+            .expect("a score carries a distribution");
+        assert_eq!(distribution.labels().collect::<Vec<_>>(), LEVELS.to_vec());
+        assert_eq!(
+            distribution
+                .probabilities()
+                .map(Probability::as_f64)
+                .collect::<Vec<_>>(),
+            vec![0.0, 0.13, 0.87]
+        );
+        assert_eq!(answer.confidence().map(Probability::as_f64), Some(0.79));
+    }
+
+    #[test]
+    fn each_refused_response_names_its_own_cause() {
+        let cases = [
+            (MISSING, DecodeError::MissingAnswer(0)),
+            (WRONG_KIND, DecodeError::WrongKind(0)),
+            (OUT_OF_RANGE, DecodeError::ProbabilityOutOfRange(0)),
+        ];
+        for (body, expected) in cases {
+            assert!(expected.to_string().contains("`q1`"), "{expected}");
+            assert_eq!(
+                decode(&urgency_plan(), body.as_bytes()),
+                Err(expected.clone()),
+                "{expected}"
+            );
+        }
+        assert_eq!(
+            decode(&team_plan(), MISSING_PROBABILITY.as_bytes()),
+            Err(DecodeError::MissingProbability(0))
+        );
+    }
+
+    #[test]
+    fn an_answer_of_another_shape_than_the_question_asked_is_refused() {
+        let noul = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
+        let choice = concat!(
+            r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","#,
+            r#""probabilities":{"billing":1.0,"shipping":0.0,"account":0.0,"other":0.0}}}}"#,
+        );
+        assert_eq!(
+            decode(&team_plan(), noul.as_bytes()),
+            Err(DecodeError::WrongKind(0))
+        );
+        assert_eq!(
+            decode(&disruption_plan(), choice.as_bytes()),
+            Err(DecodeError::WrongKind(0))
+        );
+    }
+
+    #[test]
+    fn a_body_that_is_not_a_systemone_response_is_refused() {
+        let cases = ["", "not json at all", "[]", r#"{"model":"jev-latest"}"#];
+        for body in cases {
+            assert!(
+                matches!(
+                    decode(&urgency_plan(), body.as_bytes()),
+                    Err(DecodeError::Malformed(_))
+                ),
+                "{body:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_response_that_does_not_name_the_model_is_refused() {
+        let answers = r#""answers":{"q1":{"type":"noul","noul":0.5}}}"#;
+        let cases = [
+            format!("{{{answers}"),
+            format!(r#"{{"model":"",{answers}"#),
+            format!(r#"{{"model":" \t ",{answers}"#),
+        ];
+        for body in cases {
+            assert!(
+                matches!(
+                    decode(&urgency_plan(), body.as_bytes()),
+                    Err(DecodeError::Malformed(_))
+                ),
+                "{body}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_key_order_of_an_answers_object_carries_nothing() {
+        let plan = plan_for("Help!", &["is urgent", "asks for a refund"]);
+        let body = concat!(
+            r#"{"answers":{"q2":{"type":"noul","noul":0.25},"#,
+            r#""q1":{"type":"noul","noul":0.75}},"model":"jev-latest"}"#
+        );
+        let reply = decode(&plan, body.as_bytes()).expect("a systemone response");
+        let [first, second] = reply.answers() else {
+            panic!("one answer per planned question");
+        };
+        let rendered = |answer: &Answer| serde_json::to_string(answer).expect("an answer");
+        assert_eq!(rendered(first), r#"{"kind":"yes_no","probability":0.75}"#);
+        assert_eq!(rendered(second), r#"{"kind":"yes_no","probability":0.25}"#);
+    }
+
+    #[test]
+    fn a_response_decodes_without_usage_and_past_unknown_fields() {
+        let body = concat!(
+            r#"{"model":"jev-1.13.0","request_id":"abc","#,
+            r#""answers":{"q1":{"type":"noul","noul":0.5,"rationale":"none"},"#,
+            r#""q9":{"type":"noul","noul":0.1}}}"#,
+        );
+        let reply = decode(&urgency_plan(), body.as_bytes()).expect("a systemone response");
+        assert_eq!(reply.model().as_str(), "jev-1.13.0");
+        assert_eq!(reply.answers().len(), 1);
+        assert_eq!(reply.usage(), None);
+    }
+}

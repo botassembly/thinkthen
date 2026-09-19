@@ -1,0 +1,11 @@
+{
+  "state": "Subject: card declined on renewal\n\nMy yearly plan tried to renew last night and the charge bounced.\n",
+  "model": "jev-latest",
+  "questions": {
+    "q1": {
+      "type": "choice",
+      "instructions": "Which team owns this request?",
+      "criteria": { "billing": null, "shipping": null, "account": null, "other": null }
+    }
+  }
+}

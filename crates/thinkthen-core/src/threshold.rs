@@ -6,7 +6,7 @@ use std::str::FromStr;
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
-use crate::answer::Answer;
+use crate::probability::Probability;
 
 /// Why a value is not a threshold.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -114,10 +114,17 @@ impl Threshold {
         Ok(Self(Rule::Band { low, high }))
     }
 
-    /// Read one answer under this rule.
+    /// True for a single cut, and false for a band.
+    ///
+    /// `choose` and `filter` take the single form alone, so the binary asks.
     #[must_use]
-    pub fn judge(self, answer: Answer) -> Outcome {
-        let probability = answer.probability().as_f64();
+    pub const fn is_cut(self) -> bool {
+        matches!(self.0, Rule::Cut(_))
+    }
+
+    /// Read one probability under this rule.
+    pub(crate) fn judge(self, probability: Probability) -> Outcome {
+        let probability = probability.as_f64();
         match self.0 {
             Rule::Cut(mark) => {
                 if probability >= mark {
@@ -180,13 +187,12 @@ impl Serialize for Threshold {
 #[cfg(test)]
 mod tests {
     use super::{Outcome, Threshold, ThresholdError};
-    use crate::answer::Answer;
     use crate::probability::Probability;
     use proptest::strategy::Strategy;
     use proptest::{prop_assert, prop_assert_eq, proptest};
 
-    fn answer(probability: f64) -> Answer {
-        Answer::new_yes_no(Probability::new(probability).expect("a probability"))
+    fn answer(probability: f64) -> Probability {
+        Probability::new(probability).expect("a probability")
     }
 
     fn rule(text: &str) -> Threshold {
@@ -234,6 +240,14 @@ mod tests {
         assert_eq!(Outcome::Yes.value(), Some(true));
         assert_eq!(Outcome::No.value(), Some(false));
         assert_eq!(Outcome::Unresolved.value(), None);
+    }
+
+    #[test]
+    fn a_cut_says_it_is_one_and_a_band_says_it_is_not() {
+        assert!(rule("0.8").is_cut());
+        assert!(rule("1").is_cut());
+        assert!(Threshold::default().is_cut());
+        assert!(!rule("0.1:0.9").is_cut());
     }
 
     #[test]

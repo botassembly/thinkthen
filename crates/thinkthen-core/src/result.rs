@@ -2,10 +2,10 @@
 
 use serde::Serialize;
 
-use crate::answer::Answer;
+use crate::answer::{Answer, Value};
 use crate::question::Question;
 use crate::text::{ModelName, Url};
-use crate::threshold::{Outcome, Threshold};
+use crate::threshold::Threshold;
 
 /// The schema string a version one result carries.
 pub(crate) const SCHEMA: &str = "thinkthen.result/1";
@@ -58,10 +58,10 @@ impl Meta {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct DecisionResult {
     schema: &'static str,
-    value: Option<bool>,
+    value: Value,
     question: Question,
     answer: Answer,
-    threshold: Threshold,
+    threshold: Option<Threshold>,
     meta: Meta,
 }
 
@@ -70,17 +70,18 @@ impl DecisionResult {
     ///
     /// `value` is the bare value the command would have printed, so a reader of
     /// the object and a reader of the bare line learn the same thing.
+    /// `threshold` is `None` on a verb that takes no rule, and it prints `null`.
     #[must_use]
     pub const fn new(
-        outcome: Outcome,
+        value: Value,
         question: Question,
         answer: Answer,
-        threshold: Threshold,
+        threshold: Option<Threshold>,
         meta: Meta,
     ) -> Self {
         Self {
             schema: SCHEMA,
-            value: outcome.value(),
+            value,
             question,
             answer,
             threshold,
@@ -92,9 +93,9 @@ impl DecisionResult {
 #[cfg(test)]
 mod tests {
     use super::{DecisionResult, Meta, SCHEMA, Usage};
-    use crate::answer::Answer;
+    use crate::answer::{Answer, Value};
     use crate::probability::Probability;
-    use crate::question::Question;
+    use crate::question::{Labels, Question};
     use crate::text::{ModelName, QuestionText, Url};
     use crate::threshold::Threshold;
 
@@ -114,10 +115,10 @@ mod tests {
         let answer = Answer::new_yes_no(probability);
         let threshold = Threshold::default();
         DecisionResult::new(
-            threshold.judge(answer),
-            Question::new_decide(text),
+            answer.read(Some(threshold)).0,
+            Question::Decide { text },
             answer,
-            threshold,
+            Some(threshold),
             Meta::new(
                 Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
                 ModelName::new("jev-1.13.0").expect("not empty"),
@@ -164,10 +165,10 @@ mod tests {
         let answer = Answer::new_yes_no(Probability::new(0.5).expect("a probability"));
         let threshold: Threshold = "0.1:0.9".parse().expect("a band");
         let result = DecisionResult::new(
-            threshold.judge(answer),
-            Question::new_decide(text),
-            answer,
-            threshold,
+            answer.read(Some(threshold)).0,
+            Question::Decide { text },
+            answer.clone(),
+            Some(threshold),
             Meta::new(
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
@@ -178,5 +179,28 @@ mod tests {
         let rendered = serde_json::to_string(&result).expect("a result serializes");
         assert!(rendered.contains(r#""value":null,"#), "{rendered}");
         assert!(rendered.contains(r#""threshold":"0.1:0.9","#), "{rendered}");
+    }
+
+    #[test]
+    fn a_verb_that_takes_no_rule_prints_a_null_threshold() {
+        let text = QuestionText::new("How much disruption does this report?").expect("not empty");
+        let levels =
+            Labels::levels(vec!["None.".to_owned(), "Blocked.".to_owned()]).expect("two levels");
+        let answer = Answer::new_yes_no(Probability::new(0.25).expect("a probability"));
+        let result = DecisionResult::new(
+            Value::Score(0.25),
+            Question::Score { text, levels },
+            answer,
+            None,
+            Meta::new(
+                Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
+                ModelName::new("local-1").expect("not empty"),
+                None,
+                false,
+            ),
+        );
+        let rendered = serde_json::to_string(&result).expect("a result serializes");
+        assert!(rendered.contains(r#""value":0.25,"#), "{rendered}");
+        assert!(rendered.contains(r#""threshold":null,"#), "{rendered}");
     }
 }

@@ -1,0 +1,11 @@
+{
+  "state": "The nightly import died again at 02:14. It stops on the row with an empty postcode. We need a fix before the next run.",
+  "model": "jev-latest",
+  "questions": {
+    "q1": {
+      "type": "score",
+      "instructions": "How much disruption does this report?",
+      "criteria": ["None.", "Work continues with a workaround.", "Work is blocked."]
+    }
+  }
+}

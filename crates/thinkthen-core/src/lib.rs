@@ -23,11 +23,11 @@ pub mod systemone;
 mod text;
 mod threshold;
 
-pub use crate::answer::Answer;
+pub use crate::answer::{Answer, Value};
 pub use crate::backend::{Backend, BackendError, DEFAULT_MODEL, KEY_VAR};
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::plan_document::PlanDocument;
-pub use crate::question::Question;
+pub use crate::question::{Labels, LabelsError, Question};
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
 pub use crate::result::{DecisionResult, Meta, Usage};

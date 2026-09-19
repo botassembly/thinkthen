@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use std::process::ExitCode;
 
 use thinkthen_core::systemone::DecodeError;
-use thinkthen_core::{BackendError, BlankTextError, RenderError, ThresholdError};
+use thinkthen_core::{BackendError, BlankTextError, LabelsError, RenderError, ThresholdError};
 
 /// The phrase `specification/backends.md` fixes for each common failure status.
 ///
@@ -33,6 +33,12 @@ pub(crate) enum Failure {
     Threshold(ThresholdError),
     /// Two views of one answer were asked for at once.
     QuietWithDetails,
+    /// A bare label was asked for beside another view of the same answer.
+    RawWithAnotherView,
+    /// The options or the levels are not a list the verb takes.
+    Labels(LabelsError),
+    /// A band was given to a verb that cuts on one winning probability.
+    BandOnChoose,
     /// Standard input could not be read.
     Input(io::Error),
     /// Standard input held bytes that are not text.
@@ -77,6 +83,15 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
         Failure::QuietWithDetails => (
             2,
             "--quiet prints nothing, so it does not take --details".to_owned(),
+        ),
+        Failure::RawWithAnotherView => (
+            2,
+            "--raw prints a bare label, so it does not take --details or --quiet".to_owned(),
+        ),
+        Failure::Labels(error) => (2, error.to_string()),
+        Failure::BandOnChoose => (
+            2,
+            "--threshold: `choose` takes a single cut and never a band".to_owned(),
         ),
         Failure::NoKey(variable) => (
             4,
@@ -131,6 +146,12 @@ impl From<BackendError> for Failure {
 impl From<BlankTextError> for Failure {
     fn from(error: BlankTextError) -> Self {
         Self::Blank(error)
+    }
+}
+
+impl From<LabelsError> for Failure {
+    fn from(error: LabelsError) -> Self {
+        Self::Labels(error)
     }
 }
 

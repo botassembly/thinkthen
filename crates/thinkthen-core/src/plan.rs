@@ -70,7 +70,9 @@ mod tests {
     }
 
     fn question(text: &str) -> Question {
-        Question::new_decide(QuestionText::new(text).expect("not blank"))
+        Question::Decide {
+            text: QuestionText::new(text).expect("not blank"),
+        }
     }
 
     #[test]

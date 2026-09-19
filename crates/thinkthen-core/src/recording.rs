@@ -229,9 +229,9 @@ mod tests {
         Plan::new(
             Evidence::new("Help! My payouts have been failing for 3 days.").expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
-            vec![Question::new_decide(
-                QuestionText::new("Does this convey urgency?").expect("not blank"),
-            )],
+            vec![Question::Decide {
+                text: QuestionText::new("Does this convey urgency?").expect("not blank"),
+            }],
         )
         .expect("a plan of one question")
     }

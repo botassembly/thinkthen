@@ -50,9 +50,9 @@ mod tests {
         Plan::new(
             Evidence::new("Help!").expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
-            vec![Question::new_decide(
-                QuestionText::new("is urgent").expect("not blank"),
-            )],
+            vec![Question::Decide {
+                text: QuestionText::new("is urgent").expect("not blank"),
+            }],
         )
         .expect("a plan of one question")
     }

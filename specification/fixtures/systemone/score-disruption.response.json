@@ -1,0 +1,17 @@
+{
+  "model": "jev-1.13.0",
+  "answers": {
+    "q1": {
+      "type": "score",
+      "score": 1.86,
+      "confidence": 0.79,
+      "legend": {
+        "0": "None.",
+        "1": "Work continues with a workaround.",
+        "2": "Work is blocked."
+      },
+      "probabilities": { "0": 0.0, "1": 0.13, "2": 0.87 }
+    }
+  },
+  "usage": { "input_tokens": 338, "output_tokens": 18 }
+}

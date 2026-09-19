@@ -7,10 +7,10 @@
 #![forbid(unsafe_code)]
 
 mod args;
-mod decide;
 mod edge;
 mod failure;
 mod http;
+mod judge;
 mod recorder;
 
 use std::io::{self, Write};
@@ -39,10 +39,12 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
         edge::write_line(writer, &line)?;
         return Ok(ExitCode::SUCCESS);
     }
+    let environment = Environment::read();
+    let input = io::stdin().lock();
     match &cli.command {
-        Some(Command::Decide(arguments)) => {
-            decide::decide(arguments, &Environment::read(), io::stdin().lock(), writer)
-        }
+        Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),
+        Some(Command::Choose(arguments)) => judge::choose(arguments, &environment, input, writer),
+        Some(Command::Score(arguments)) => judge::score(arguments, &environment, input, writer),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }
