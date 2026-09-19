@@ -1,6 +1,6 @@
 # ADR 0004: A backend is a URL and a pure adapter
 
-- Status: Accepted
+- Status: Accepted. ADR 0007 renames `--backend` to `--profile` and drops the five backend environment variables. The rest stands.
 - Date: 2026-09-18
 
 An agent decision that carries out Ian's ruling in ADR 0003. Ian can overturn it cheaply while the code is small.

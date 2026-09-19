@@ -1,6 +1,6 @@
 # ADR 0003: Ian rules a standalone shell primitive, built now
 
-- Status: Accepted
+- Status: Accepted. ADR 0007 replaces the grammar `thinkthen decide VERB` with flat verbs. The rest stands.
 - Date: 2026-09-18
 
 Ian made these rulings in dictation on 2026-09-18. They answer questions 1, 2, 3, 4, 5, 8, 9, and 11 of the design study. Only Ian overturns them.

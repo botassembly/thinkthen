@@ -1,37 +1,41 @@
 # Plan
 
-Updated 2026-09-18, after Ian's rulings in ADR 0003. The whole command line is planned. The `decide` family comes first. Every family gets a document under `specification/` before any ticket.
+Updated 2026-09-19, after Ian accepted the flat-verb surface in ADR 0007. Version one is nine commands: `decide`, `choose`, `score`, `filter`, `rank`, `segment`, `annotate`, `report`, and `config`. Everything else waits on `specification/roadmap.md`.
 
-## The `decide` family
+## How a slice moves
 
-| Slice | Delivers | State |
-| --- | --- | --- |
-| 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version`, one executable spec | Done |
-| 1 | `thinkthen decide if` over text: the types, the pass mark, the result, the `systemone` adapter, `--status`, exit codes, `--plan` | Done. Tickets 0001, 0002, 0003 landed. No live judgment yet, because the vendor account has no credits |
-| 2 | `--record` and `--replay` over one content-addressed directory. Moved up by ADR 0005, because demos replay recordings | Done. Ticket 0004 landed. Demo 01 turns green once it is recorded live with `demos/01-refund-gate/record.sh` |
-| 3 | `thinkthen decide which` with inline options and `--from` | Drafted in `specification/decide.md` |
-| 4 | A configuration file with named backend profiles, and `thinkthen backend check` | Needs a specification document |
-| 5 | The `chat-logprobs` adapter, proven against a local server | Needs its section in `specification/backends.md` |
-| 6 | Record framing for JSONL and lines, `--on`, `--id`, `where`, bounded parallel requests with order kept, a request cap, a rate limit, a token ledger | Needs its section |
-| 7 | `thinkthen decide run FILE` over a saved question file | Waits on question 6 of the study |
-| 8 | `thinkthen eval FILE --cases FILE` | After slice 7 |
-| 9 | `rank` and `how` | After slice 6 |
-| 10 | `--as` enrichment for JSONL, then CSV and TSV | After slice 7 |
-| 11 | `match` and `segment` | Needs its section |
+1. The specification page for the slice is Settled. Changing a Settled page takes an ADR.
+2. The slice's demos are written or rewritten against that page. They start red. Anything a demo cannot say cleanly goes into `demos/FINDINGS.md` and back into the page.
+3. A ticket under `sdlc/tickets/` cites the sections it builds. One Opus agent builds it in its own worktree, red test first.
+4. A second Opus agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency. The review names what it checked.
+5. The steering agent rebases, runs all four rungs, checks for attribution lines, merges, and pushes.
+6. The slice's demos turn green by replaying a recording. No gate touches a network.
 
-## Demos
+A slice is done when its demos are green, the four rungs pass on main, and this page says so.
 
-ADR 0005 makes demos the driver. `demos/` holds small real shell jobs as executable pages. A demo starts red, argues for design choices, and turns green when its verbs exist and its recording is made. The `spec` rung runs the green ones. The demo set is being drafted now.
+## Slices
 
-## The other families
+| Slice | Delivers | Pages | Demos | State |
+| --- | --- | --- | --- | --- |
+| 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version` | | | Done |
+| 1 | `decide if` on the first surface: the types, the result, the `systemone` adapter, exit codes, the plan document | | | Done. Tickets 0001 to 0003. Slice 3 reshapes it |
+| 2 | `--record` and `--replay` over one content-addressed folder | `recording.md` | | Done. Ticket 0004 |
+| 3 | The flat surface on the landed code: `decide QUESTION`, the bare value, `--details`, `--threshold`, exit 0, 1, and 3 without a flag, `--quiet`, `--dry-run`, `--profile`, and the end of the five backend variables | `channels.md`, `threshold.md`, `result.md`, `decide.md` | 01, 09 | Ticket 0005 is written |
+| 4 | `choose` with `--raw`, then `score` | `choose.md`, `score.md` | 02, 05 | Next |
+| 5 | The `chat-logprobs` adapter against a local server, and the first live judgments. It needs no vendor credits | `backends.md` | 10 | Its section needs settling first |
+| 6 | The configuration file, profiles from the file, `THINKTHEN_PROFILE`, `THINKTHEN_CONFIG`, and `config path`, `show`, `check` | `config.md` | 10 | |
+| 7 | Records: `--input`, `--lines`, `--jsonl`, `--field` on `decide`, `choose`, and `score`. Order kept, stop at the first failure, resume through the cache, bounded parallel requests | `records.md` | 04, 12 | |
+| 8 | `filter`, then `rank` | `filter.md`, `rank.md` | 03, 06 | |
+| 9 | `annotate` | `annotate.md` | 07, 08 | |
+| 10 | `report` | `report.md` | 13 | Draft until demo 13 drives it |
+| 11 | `segment` | `segment.md` | 11 | |
+| 12 | The release pass: every help text, a manual page, the license, and the public switch | | all | Waits on Ian's release ruling |
 
-In order: the utility families `eval`, `record`, `backend`, `config`. Then `patch`, `reduce`, `fold`, `resolve`, and `derive`. `specification/README.md` gives one line for each. The order can change when Ian rules.
+The order can change. Slice 5 sits early on purpose. No live judgment has come back yet, and a local server gives one for free. It also proves the backend seam with a second adapter before more verbs lean on the first.
 
-## Rules for the plan
+## After version one
 
-- A slice becomes one or more tickets under `sdlc/tickets/`.
-- Code follows the specification. A ticket cites the sections it builds.
-- Opus agents build, one ticket per worktree. A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency.
+`specification/roadmap.md` lists every held verb and option with the reason it is held and what would bring it in. The rule is ADR 0005: a feature enters when a demo cannot be written without it.
 
 ## Live testing budget
 
@@ -39,6 +43,7 @@ Ian granted more budget for paid calls on 2026-09-18. The cap for this repositor
 
 ## Levers left open
 
-- Ian's rulings on questions 6, 7, and 10 of `design-study.md`, and on the public release.
-- Ian's read of `specification/`. Sections marked Draft wait for it.
+- **Vendor credits.** Ian adds them at the vendor's billing page. Then `demos/01-refund-gate/record.sh` records demo 01 against the hosted model.
+- **The public release.** Ian rules on the timing, the license, and whether to talk to the vendor first. That is question 10 of `design-study.md`. Questions 6 and 7 of the study are settled by ADR 0007: saved questions are JSON, and a threshold lives on the command line or in the saved file.
+- **The review leftovers** in `sdlc/issues/2026-09-19-review-leftovers-from-the-core-tickets.md`. Slice 3 rewrites much of the code they touch, so the ticket checks each one.
 - Registration with Factory 2, and the five `sdlc/project/` scripts that come with it.

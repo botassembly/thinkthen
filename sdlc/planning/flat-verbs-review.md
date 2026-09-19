@@ -1,6 +1,6 @@
 # Review of the flat-verb redesign
 
-- Status: proposal. Nothing here is settled until Ian rules.
+- Status: accepted by Ian on 2026-09-19. ADR 0007 records the decision and the full surface. This page stays as the reasoning.
 - Date: 2026-09-19
 
 Ian rewrote the command line in four design notes on 2026-09-19: a simplified core, a critique of that core, a grading design, and a saved-question design. This page reviews them against the twelve demos in `demos/`, the measurements in `design-study.md` section 5, and the code that has landed. It ends with one recommended surface and the list of rulings it needs.
@@ -74,4 +74,4 @@ One rework ticket covers all of it. `decide if CONDITION` becomes `decide QUESTI
 
 ## What Ian rules on
 
-Every item under "Where I differ" departs from his notes, so each is his to accept or overturn. Items 1, 9, 10, and 11 change the shape of the tool the most.
+Every item under "Where I differ" departs from his notes, so each was his to accept or overturn. Items 1, 9, 10, and 11 change the shape of the tool the most. He accepted all fifteen.

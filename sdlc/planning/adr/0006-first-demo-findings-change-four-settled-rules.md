@@ -1,6 +1,6 @@
 # ADR 0006: The first demos change four settled rules
 
-- Status: Accepted
+- Status: Accepted. ADR 0007 drops `--status` and the `unassessed` outcome and renames `--plan` to `--dry-run`. The rest stands.
 - Date: 2026-09-19
 
 An agent decision under ADR 0005. Ian can overturn any line cheaply. No code depended on these rules yet, except `Meta` from ticket 0001, which ticket 0003 now updates.
