@@ -1,4 +1,4 @@
-# recipes/
+# transforms/
 
 A recipe is a folder, as ADR 0012 proposes. It holds a `.jq` file with a header that states what it reads, what arguments it takes, and what it does at every edge, and one short `example.sh` with the pipeline line. The page that teaches it is a green demo, so the gate runs the recipe against committed rows and no recipe can drift from what it claims.
 

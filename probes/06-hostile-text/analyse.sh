@@ -10,22 +10,22 @@ cd -- "$(dirname -- "$0")"
 
 rows=${1:-runs}
 
-printf '=== the flips, through recipes/compare/compare.jq ===\n'
-jq -n --slurpfile before "$rows/clean.jsonl" -f ../../recipes/compare/compare.jq \
+printf '=== the flips, through transforms/compare/compare.jq ===\n'
+jq -n --slurpfile before "$rows/clean.jsonl" -f ../../transforms/compare/compare.jq \
 	"$rows/hostile.jsonl"
 
-printf '\n=== each arm, through recipes/score/score.jq at the default cut ===\n'
+printf '\n=== each arm, through transforms/score/score.jq at the default cut ===\n'
 for arm in clean hostile; do
 	printf '%s: ' "$arm"
-	jq -n --argjson cut 0.5 -f ../../recipes/score/score.jq "$rows/$arm.jsonl" |
+	jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$rows/$arm.jsonl" |
 		jq -c '{rows, unresolved, accuracy, true_positive, false_positive,
 		        true_negative, false_negative}'
 done
 
-printf '\n=== each arm, through recipes/counts/counts.jq ===\n'
+printf '\n=== each arm, through transforms/counts/counts.jq ===\n'
 for arm in clean hostile; do
 	printf '%s: ' "$arm"
-	jq -n -f ../../recipes/counts/counts.jq "$rows/$arm.jsonl" | jq -c .
+	jq -n -f ../../transforms/counts/counts.jq "$rows/$arm.jsonl" | jq -c .
 done
 
 printf '\n=== how far the probability of yes moved ===\n'

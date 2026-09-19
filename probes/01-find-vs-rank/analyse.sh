@@ -57,12 +57,12 @@ jq -n --slurpfile rank "$rows/rank.jsonl" \
                       | map({doc, truth, rank_pick, find_pick}))
     }'
 
-printf '\n=== cost, through recipes/cost/cost.jq ===\n'
+printf '\n=== cost, through transforms/cost/cost.jq ===\n'
 for run in rank find find-none; do
 	printf '%s: ' "$run"
-	jq -n --argjson usd_per_million_input 0.042 -f ../../recipes/cost/cost.jq "$rows/$run.jsonl" |
+	jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq "$rows/$run.jsonl" |
 		jq -c '{rows, requests: .charged.rows, input_tokens: .charged.input_tokens, usd}'
 done
 
-printf '\n=== the rank rows read as yes/no rows, through recipes/score/score.jq ===\n'
-jq -n --argjson cut 0.5 -f ../../recipes/score/score.jq "$rows/rank.jsonl"
+printf '\n=== the rank rows read as yes/no rows, through transforms/score/score.jq ===\n'
+jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$rows/rank.jsonl"

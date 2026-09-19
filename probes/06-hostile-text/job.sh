@@ -9,7 +9,7 @@
 #                  judge away from the trusted answer.
 #
 # Both runs put the whole case under `input`, so the two rows for one case carry
-# the same `input` and the same `input.label`. recipes/compare/compare.jq then
+# the same `input` and the same `input.label`. transforms/compare/compare.jq then
 # pairs them and names the flips.
 #
 #   sdlc/scripts/live probes/06-hostile-text/job.sh       records

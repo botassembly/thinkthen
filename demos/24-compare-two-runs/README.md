@@ -8,9 +8,9 @@ You reworded a question, or a model version changed under you, and you want to k
 
 ## Input
 
-`../../recipes/rows/runs/run-a.jsonl` and `../../recipes/rows/runs/run-b.jsonl` hold the same forty cases judged with two wordings of one question. `../../recipes/rows/question.txt` asks "Does the message report a payment failure?" and `../../recipes/rows/question-b.txt` asks "Does the customer report that a payment or a payout did not go through?". Both runs applied the band `0.2:0.8`, and both were answered by `jev-1.13.0`.
+`../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` hold the same forty cases judged with two wordings of one question. `../../transforms/rows/question.txt` asks "Does the message report a payment failure?" and `../../transforms/rows/question-b.txt` asks "Does the customer report that a payment or a payout did not go through?". Both runs applied the band `0.2:0.8`, and both were answered by `jev-1.13.0`.
 
-The recipe is `../../recipes/compare/compare.jq`. The earlier run arrives through `--slurpfile` and the later one on the command line.
+The recipe is `../../transforms/compare/compare.jq`. The earlier run arrives through `--slurpfile` and the later one on the command line.
 
 ## Line the runs up
 
@@ -18,10 +18,10 @@ The recipe is `../../recipes/compare/compare.jq`. The earlier run arrives throug
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-before=../../recipes/rows/runs/run-a.jsonl
-after=../../recipes/rows/runs/run-b.jsonl
+before=../../transforms/rows/runs/run-a.jsonl
+after=../../transforms/rows/runs/run-b.jsonl
 
-jq -n --slurpfile before "$before" -f ../../recipes/compare/compare.jq "$after" \
+jq -n --slurpfile before "$before" -f ../../transforms/compare/compare.jq "$after" \
   > "$work/compare.json"
 jq -c '{paired, same, flips}' "$work/compare.json" \
   | mustmatch '{"paired":40,"same":36,"flips":{"yes to unresolved":["C-11","C-39"],"unresolved to yes":["C-12"],"unresolved to no":["C-16"]}}'
@@ -35,10 +35,10 @@ A flip has four possible causes: the evidence, the question, the model, or the c
 
 ```bash
 set -euo pipefail
-before=../../recipes/rows/runs/run-a.jsonl
-after=../../recipes/rows/runs/run-b.jsonl
+before=../../transforms/rows/runs/run-a.jsonl
+after=../../transforms/rows/runs/run-b.jsonl
 
-jq -n --slurpfile before "$before" -f ../../recipes/compare/compare.jq "$after" \
+jq -n --slurpfile before "$before" -f ../../transforms/compare/compare.jq "$after" \
   | jq -c '{changed, mismatched_input, mismatched_label}' \
   | mustmatch '{"changed":{"question":true,"model":false,"threshold":false},"mismatched_input":[],"mismatched_label":[]}'
 ```
@@ -53,13 +53,13 @@ An empty list is easy to believe and easy to get wrong. This block changes one l
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-before=../../recipes/rows/runs/run-a.jsonl
-after=../../recipes/rows/runs/run-b.jsonl
+before=../../transforms/rows/runs/run-a.jsonl
+after=../../transforms/rows/runs/run-b.jsonl
 
 jq -c 'if .input.id == "C-03" then .input.label = false else . end
        | select(.input.id != "C-40")' "$after" > "$work/doctored.jsonl"
 
-jq -n --slurpfile before "$before" -f ../../recipes/compare/compare.jq "$work/doctored.jsonl" \
+jq -n --slurpfile before "$before" -f ../../transforms/compare/compare.jq "$work/doctored.jsonl" \
   | jq -c '{paired, only_in_before, mismatched_label, mismatched_input}' \
   | mustmatch '{"paired":39,"only_in_before":["C-40"],"mismatched_label":["C-03"],"mismatched_input":[]}'
 ```
@@ -71,7 +71,7 @@ A case in one run alone is listed rather than dropped, so a run that stopped ear
 ```bash
 set -euo pipefail
 
-sh ../../recipes/compare/example.sh | jq -c '{paired, same}' \
+sh ../../transforms/compare/example.sh | jq -c '{paired, same}' \
   | mustmatch '{"paired":40,"same":36}'
 ```
 

@@ -8,9 +8,9 @@ Every other page types a threshold. This one says where the number comes from. U
 
 ## Input
 
-`../../recipes/rows/runs/run-a.jsonl` holds forty judged cases, one row per case. Each row is the `decide --details` object with `input` holding the whole case: the `id`, the `body` that was sent, and the `label` a person gave. `../../recipes/rows/cases.jsonl` is the case file the run was made from, and `../../recipes/rows/record.sh` is the loop that made it.
+`../../transforms/rows/runs/run-a.jsonl` holds forty judged cases, one row per case. Each row is the `decide --details` object with `input` holding the whole case: the `id`, the `body` that was sent, and the `label` a person gave. `../../transforms/rows/cases.jsonl` is the case file the run was made from, and `../../transforms/rows/record.sh` is the loop that made it.
 
-The recipes are `../../recipes/sweep/sweep.jq`, `../../recipes/score/score.jq`, and `../../recipes/band/band.jq`. Each one states its policies in its header.
+The recipes are `../../transforms/sweep/sweep.jq`, `../../transforms/score/score.jq`, and `../../transforms/band/band.jq`. Each one states its policies in its header.
 
 ## Split the run in two
 
@@ -20,7 +20,7 @@ A sweep over a file flatters that file. Tune on one part and check on the other.
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
 jq -c 'select(.input.id <= "C-24")' "$rows" > "$work/tune.jsonl"
 jq -c 'select(.input.id > "C-24")' "$rows" > "$work/holdout.jsonl"
@@ -37,10 +37,10 @@ wc -l < "$work/holdout.jsonl" | tr -d ' ' | mustmatch "16"
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
 jq -c 'select(.input.id <= "C-24")' "$rows" > "$work/tune.jsonl"
-jq -n -f ../../recipes/sweep/sweep.jq "$work/tune.jsonl" > "$work/sweep.json"
+jq -n -f ../../transforms/sweep/sweep.jq "$work/tune.jsonl" > "$work/sweep.json"
 
 jq -c '{rows, labeled, unlabeled}' "$work/sweep.json" \
   | mustmatch '{"rows":24,"labeled":23,"unlabeled":["C-12"]}'
@@ -60,15 +60,15 @@ Twenty-four rows, twenty-three of them labeled. `C-12` carries no label, so the 
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
 jq -c 'select(.input.id <= "C-24")' "$rows" > "$work/tune.jsonl"
 jq -c 'select(.input.id > "C-24")' "$rows" > "$work/holdout.jsonl"
 
-cut=$(jq -n -f ../../recipes/sweep/sweep.jq "$work/tune.jsonl" | jq -r '.pick.cut')
+cut=$(jq -n -f ../../transforms/sweep/sweep.jq "$work/tune.jsonl" | jq -r '.pick.cut')
 printf '%s\n' "$cut" | mustmatch "0.7"
 
-jq -n --argjson cut "$cut" -f ../../recipes/score/score.jq "$work/holdout.jsonl" \
+jq -n --argjson cut "$cut" -f ../../transforms/score/score.jq "$work/holdout.jsonl" \
   | jq -c '{cut, labeled, unlabeled, accuracy, precision, recall, f1}' \
   | mustmatch '{"cut":0.7,"labeled":16,"unlabeled":[],"accuracy":1,"precision":1,"recall":1,"f1":1}'
 ```
@@ -81,13 +81,13 @@ A single cut answers every row, and `unresolved` is zero at every line of the sw
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
-jq -n --argjson band '[0.2,0.8]' -f ../../recipes/band/band.jq "$rows" \
+jq -n --argjson band '[0.2,0.8]' -f ../../transforms/band/band.jq "$rows" \
   | jq -c '{labeled, resolved, unresolved, coverage, accuracy_resolved, accuracy_unresolved}' \
   | mustmatch '{"labeled":39,"resolved":36,"unresolved":3,"coverage":0.9231,"accuracy_resolved":1,"accuracy_unresolved":0.6667}'
 
-jq -n --argjson band '[0.2,0.8]' -f ../../recipes/band/band.jq "$rows" \
+jq -n --argjson band '[0.2,0.8]' -f ../../transforms/band/band.jq "$rows" \
   | jq -c '.refused' \
   | mustmatch '[{"id":"C-12","label":null,"probability":0.58},{"id":"C-15","label":false,"probability":0.51},{"id":"C-16","label":false,"probability":0.34},{"id":"C-29","label":true,"probability":0.79}]'
 ```
@@ -98,13 +98,13 @@ Note what is counted where. The three labeled refusals are `unresolved`, counted
 
 ## The same lines, kept as files
 
-Each recipe folder holds the pipeline line, so a reader of `recipes/` runs one command and sees the shape of the output. These two read the whole run rather than the split.
+Each recipe folder holds the pipeline line, so a reader of `transforms/` runs one command and sees the shape of the output. These two read the whole run rather than the split.
 
 ```bash
 set -euo pipefail
 
-sh ../../recipes/sweep/example.sh | jq -c '.pick | {cut, f1}' | mustmatch '{"cut":0.65,"f1":1}'
-sh ../../recipes/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
+sh ../../transforms/sweep/example.sh | jq -c '.pick | {cut, f1}' | mustmatch '{"cut":0.65,"f1":1}'
+sh ../../transforms/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
   | mustmatch '{"coverage":0.9231,"accuracy_resolved":1}'
 ```
 

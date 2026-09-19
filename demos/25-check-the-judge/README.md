@@ -8,19 +8,19 @@ A probability is a claim about the world, and the only test of it is a file of c
 
 ## Input
 
-`../../recipes/rows/cases.jsonl` is forty made-up support messages with a stable `id`, a `body`, and a `label` a person gave. One case, `C-12`, carries no label, because a real case file has one nobody could settle.
+`../../transforms/rows/cases.jsonl` is forty made-up support messages with a stable `id`, a `body`, and a `label` a person gave. One case, `C-12`, carries no label, because a real case file has one nobody could settle.
 
-`../../recipes/rows/runs/run-a.jsonl` holds the judged rows. Each row is the `decide --details` object with `input` holding the whole case. The body went to the model and the label never left the machine.
+`../../transforms/rows/runs/run-a.jsonl` holds the judged rows. Each row is the `decide --details` object with `input` holding the whole case. The body went to the model and the label never left the machine.
 
-The recipes are `../../recipes/counts/counts.jq` and `../../recipes/score/score.jq`.
+The recipes are `../../transforms/counts/counts.jq` and `../../transforms/score/score.jq`.
 
 ## Count the answers before scoring them
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
-jq -n -f ../../recipes/counts/counts.jq "$rows" | jq -c . \
+jq -n -f ../../transforms/counts/counts.jq "$rows" | jq -c . \
   | mustmatch '{"rows":40,"yes":18,"no":18,"unresolved":4,"thresholds":["0.2:0.8"],"questions":["Does the message report a payment failure?"]}'
 ```
 
@@ -32,9 +32,9 @@ Three answers, not two. The run applied the band `0.2:0.8`, so four rows resolve
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
-jq -n --argjson cut 0.5 -f ../../recipes/score/score.jq "$rows" | jq -c . \
+jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$rows" | jq -c . \
   | mustmatch '{"cut":0.5,"rows":40,"labeled":39,"unlabeled":["C-12"],"unresolved":0,"true_positive":19,"false_positive":1,"true_negative":19,"false_negative":0,"coverage":1,"accuracy":0.9744,"precision":0.95,"recall":1,"f1":0.9744}'
 ```
 
@@ -48,7 +48,7 @@ An aggregate says how many. The rows say which, and a wrong answer with its prob
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
 jq -c 'select(.input | has("label"))
        | select((.answer.probability >= 0.5) != .input.label)
@@ -65,9 +65,9 @@ Score the same rows at the band the run used, and the three labeled refusals lea
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
-jq -n --argjson cut '[0.2,0.8]' -f ../../recipes/score/score.jq "$rows" \
+jq -n --argjson cut '[0.2,0.8]' -f ../../transforms/score/score.jq "$rows" \
   | jq -c '{labeled, unresolved, coverage, accuracy, precision, recall, f1}' \
   | mustmatch '{"labeled":39,"unresolved":3,"coverage":0.9231,"accuracy":1,"precision":1,"recall":1,"f1":1}'
 ```
@@ -79,9 +79,9 @@ Thirty-nine labeled rows: thirty-six scored and three counted apart. An accuracy
 ```bash
 set -euo pipefail
 
-sh ../../recipes/counts/example.sh | jq -c '{yes, no, unresolved}' \
+sh ../../transforms/counts/example.sh | jq -c '{yes, no, unresolved}' \
   | mustmatch '{"yes":18,"no":18,"unresolved":4}'
-sh ../../recipes/score/example.sh | jq -c '{accuracy, f1}' \
+sh ../../transforms/score/example.sh | jq -c '{accuracy, f1}' \
   | mustmatch '{"accuracy":0.9744,"f1":0.9744}'
 ```
 

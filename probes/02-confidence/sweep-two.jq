@@ -13,7 +13,7 @@
 #   - A row is covered at a cut when its number reaches the cut. `accuracy` is
 #     over the covered rows, `accuracy_refused` over the rest, and a zero
 #     denominator yields null rather than zero.
-#   - The grid is the 19 cuts from 0.05 to 0.95, the grid recipes/sweep/sweep.jq
+#   - The grid is the 19 cuts from 0.05 to 0.95, the grid transforms/sweep/sweep.jq
 #     uses.
 #   - Counts are exact and rates are rounded to four decimals.
 

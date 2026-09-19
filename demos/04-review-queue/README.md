@@ -89,7 +89,7 @@ MSG-04 reads "Cancel the second seat, keep mine." The model answered 0.07, so it
 
 ## Step 4: count the run
 
-The rows are the input the `jq` recipes read. `recipes/counts` counts the three answers and reports what the file holds, so a file that concatenated two runs could not pass as one.
+The rows are the input the `jq` recipes read. `transforms/counts` counts the three answers and reports what the file holds, so a file that concatenated two runs could not pass as one.
 
 ```bash
 set -euo pipefail
@@ -100,7 +100,7 @@ thinkthen decide 'Does the customer ask to end their subscription?' \
   --jsonl --field /body --threshold 0.1:0.9 --details \
   --input messages.jsonl --replay recording/ > "$work/judged.jsonl"
 
-jq -n -f ../../recipes/counts/counts.jq "$work/judged.jsonl" \
+jq -n -f ../../transforms/counts/counts.jq "$work/judged.jsonl" \
   | jq -c '.' \
   | mustmatch '{"rows":5,"yes":1,"no":3,"unresolved":1,"thresholds":["0.1:0.9"],"questions":["Does the customer ask to end their subscription?"]}'
 ```

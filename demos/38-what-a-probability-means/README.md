@@ -8,19 +8,19 @@ A probability of 0.8 claims that about eight cases in ten like this one are real
 
 ## Input
 
-`../../recipes/rows/runs/run-a.jsonl` holds forty judged cases. Each row carries `answer.probability`, the stored probability of yes, and `input.label`, the answer a person gave. The recipe is `../../recipes/calibration/calibration.jq`. It sets ten bands a tenth wide beside the share of cases in each band that were truly yes.
+`../../transforms/rows/runs/run-a.jsonl` holds forty judged cases. Each row carries `answer.probability`, the stored probability of yes, and `input.label`, the answer a person gave. The recipe is `../../transforms/calibration/calibration.jq`. It sets ten bands a tenth wide beside the share of cases in each band that were truly yes.
 
 ## Read the table
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
-jq -n -f ../../recipes/calibration/calibration.jq "$rows" \
+jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
   | jq -c '{rows, unlabeled}' \
   | mustmatch '{"rows":40,"unlabeled":["C-12"]}'
 
-jq -n -f ../../recipes/calibration/calibration.jq "$rows" \
+jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
   | jq -c '.bands[] | select(.rows > 0)' \
   | mustmatch '{"band":"0-0.1","rows":17,"unresolved":0,"labeled":17,"truly_yes":0,"share_truly_yes":0,"mean_probability":0.0171}
 {"band":"0.1-0.2","rows":1,"unresolved":0,"labeled":1,"truly_yes":0,"share_truly_yes":0,"mean_probability":0.1}
@@ -39,13 +39,13 @@ The middle is another story. The band from 0.5 to 0.6 holds two rows, one of the
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
-jq -n -f ../../recipes/calibration/calibration.jq "$rows" \
+jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
   | jq -c '[.bands[] | select(.rows == 0) | .band]' \
   | mustmatch '["0.2-0.3","0.4-0.5","0.6-0.7"]'
 
-jq -n -f ../../recipes/calibration/calibration.jq "$rows" \
+jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
   | jq -c '.bands[] | select(.band == "0.2-0.3")' \
   | mustmatch '{"band":"0.2-0.3","rows":0,"unresolved":0,"labeled":0,"truly_yes":0,"share_truly_yes":null,"mean_probability":null}'
 ```
@@ -60,9 +60,9 @@ The `unresolved` column counts the rows the run's own band left with no answer. 
 
 ```bash
 set -euo pipefail
-rows=../../recipes/rows/runs/run-a.jsonl
+rows=../../transforms/rows/runs/run-a.jsonl
 
-jq -n -f ../../recipes/calibration/calibration.jq "$rows" \
+jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
   | jq -c '[.bands[] | select(.unresolved > 0) | {band, rows, unresolved}]' \
   | mustmatch '[{"band":"0.3-0.4","rows":1,"unresolved":1},{"band":"0.5-0.6","rows":2,"unresolved":2},{"band":"0.7-0.8","rows":1,"unresolved":1}]'
 ```
@@ -74,7 +74,7 @@ Every refused row sits between 0.3 and 0.8, which is the band the run applied. A
 ```bash
 set -euo pipefail
 
-sh ../../recipes/calibration/example.sh \
+sh ../../transforms/calibration/example.sh \
   | jq -c '.bands[] | select(.band == "0.9-1") | {rows, truly_yes, mean_probability}' \
   | mustmatch '{"rows":12,"truly_yes":12,"mean_probability":0.9842}'
 ```

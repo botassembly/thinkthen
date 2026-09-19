@@ -27,4 +27,4 @@ A job replays from its own recording with no network and no key. `probes/replay-
 sh probes/replay-check.sh probes/01-find-vs-rank
 ```
 
-Record mode is not built, so every loop is the shell's, one call per case, with `--details` and a record folder. Each row is the record row of `specification/result.md`, with the case under `input`, which is the shape `recipes/` reads.
+Record mode is not built, so every loop is the shell's, one call per case, with `--details` and a record folder. Each row is the record row of `specification/result.md`, with the case under `input`, which is the shape `transforms/` reads.

@@ -74,4 +74,4 @@ An eval is a reproducible workflow over the same commands as everything else. Th
 | 38 | [See whether a probability means what it says](38-what-a-probability-means/) | `decide` | green |
 | 14 | [Grade a batch with a reusable definition](14-grade-a-batch/) | `annotate`, `report` | red |
 
-Demos 13, 24, 25, 28, and 38 read the `jq` recipes in `recipes/` over the committed rows of one live run, which is what `report` would have done inside the tool. Demo 14 still names `report`, which left the plan under ADR 0010, and it is rewritten when `annotate` lands.
+Demos 13, 24, 25, 28, and 38 read the `jq` recipes in `transforms/` over the committed rows of one live run, which is what `report` would have done inside the tool. Demo 14 still names `report`, which left the plan under ADR 0010, and it is rewritten when `annotate` lands.
