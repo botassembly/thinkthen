@@ -19,6 +19,13 @@ const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 /// The statuses a backend is asked again after.
 const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
 
+/// The longest a `Retry-After` header moves the wait to.
+///
+/// The header is the backend's own number and this process trusts it only so
+/// far. A backend asking for an hour would hang a script with no way out but
+/// a signal, so the wait stops here and the attempt goes out.
+const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
+
 /// One connection pool, built once and shared by every worker.
 ///
 /// A pool keeps a connection open between requests, so a run over many records
@@ -60,14 +67,14 @@ impl Client {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
-            let failure = match send(&self.0, exchange) {
+            let attempt = match send(&self.0, exchange) {
                 Ok(body) => return Ok(body),
-                Err(failure) => failure,
+                Err(attempt) => attempt,
             };
-            if retries >= exchange.max_retries || !is_retried(&failure) {
-                return Err(failure);
+            if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
+                return Err(attempt.failure);
             }
-            thread::sleep(wait);
+            thread::sleep(attempt.asked.unwrap_or(wait));
             wait = wait.saturating_mul(2);
             retries += 1;
         }
@@ -105,8 +112,34 @@ impl fmt::Debug for Exchange<'_> {
     }
 }
 
+/// What one attempt failed with, and how long the backend asked this one to wait.
+#[derive(Debug)]
+struct Attempt {
+    failure: Failure,
+    asked: Option<Duration>,
+}
+
+impl From<Failure> for Attempt {
+    /// A failure with no header behind it waits the doubling wait.
+    fn from(failure: Failure) -> Self {
+        Self {
+            failure,
+            asked: None,
+        }
+    }
+}
+
+/// The wait a `Retry-After` header asks for, in the delta-seconds form.
+///
+/// `specification/backends.md` takes the seconds form alone. The HTTP-date
+/// form needs a clock and a date reader, and neither belongs here.
+fn honored(header: Option<&str>) -> Option<Duration> {
+    let seconds: u64 = header?.trim().parse().ok()?;
+    Some(Duration::from_secs(seconds).min(MAX_RETRY_WAIT))
+}
+
 /// Post the request once.
-fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
+fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Attempt> {
     let request = agent
         .post(exchange.url)
         .header("content-type", "application/json")
@@ -116,17 +149,25 @@ fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
         );
     let mut response = request
         .send(exchange.body)
-        .map_err(|error| Failure::Transport(error.to_string()))?;
+        .map_err(|error| Attempt::from(Failure::Transport(error.to_string())))?;
     let status = response.status().as_u16();
     if !(200..300).contains(&status) {
-        return Err(Failure::Status(status));
+        let asked = response
+            .headers()
+            .get("retry-after")
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| honored(Some(value)));
+        return Err(Attempt {
+            failure: Failure::Status(status),
+            asked,
+        });
     }
     response
         .body_mut()
         .with_config()
         .limit(MAX_RESPONSE_BYTES)
         .read_to_vec()
-        .map_err(|error| Failure::Transport(error.to_string()))
+        .map_err(|error| Attempt::from(Failure::Transport(error.to_string())))
 }
 
 /// Say whether this failure earns another attempt.
@@ -140,7 +181,7 @@ fn is_retried(failure: &Failure) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::Exchange;
+    use super::{Exchange, honored};
     use crate::edge::Key;
     use std::time::Duration;
 
@@ -159,5 +200,22 @@ mod tests {
         assert!(!shown.contains("sk-secret-value"), "{shown}");
         assert!(!shown.contains("something private"), "{shown}");
         assert!(shown.contains("withheld"), "{shown}");
+    }
+
+    #[test]
+    fn a_retry_after_header_is_read_in_seconds_and_stops_at_the_ceiling() {
+        let cases = [
+            (Some("2"), Some(Duration::from_secs(2))),
+            (Some("  7 "), Some(Duration::from_secs(7))),
+            (Some("0"), Some(Duration::ZERO)),
+            (Some("99999"), Some(Duration::from_secs(60))),
+            (Some("Wed, 21 Oct 2026 07:28:00 GMT"), None),
+            (Some("-1"), None),
+            (Some(""), None),
+            (None, None),
+        ];
+        for (header, expected) in cases {
+            assert_eq!(honored(header), expected, "{header:?}");
+        }
     }
 }

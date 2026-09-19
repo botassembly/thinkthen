@@ -15,6 +15,7 @@ pub(crate) struct Canned {
     location: Option<String>,
     promised: Option<usize>,
     delay: Duration,
+    retry_after: Option<String>,
 }
 
 impl Canned {
@@ -31,6 +32,7 @@ impl Canned {
             location: Some(url.to_owned()),
             promised: None,
             delay: Duration::ZERO,
+            retry_after: None,
         }
     }
 
@@ -42,6 +44,7 @@ impl Canned {
             location: None,
             promised: Some(4096),
             delay: Duration::ZERO,
+            retry_after: None,
         }
     }
 
@@ -53,12 +56,19 @@ impl Canned {
             location: None,
             promised: None,
             delay: Duration::ZERO,
+            retry_after: None,
         }
     }
 
     /// Wait this long before answering, so a later request can answer first.
     pub(crate) fn after(mut self, millis: u64) -> Self {
         self.delay = Duration::from_millis(millis);
+        self
+    }
+
+    /// Carry a `Retry-After` header with this value.
+    pub(crate) fn retry_after(mut self, value: &str) -> Self {
+        self.retry_after = Some(value.to_owned());
         self
     }
 }
@@ -278,8 +288,12 @@ fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
     } else {
         "connection: keep-alive\r\n"
     };
+    let asked = canned
+        .retry_after
+        .as_ref()
+        .map_or_else(String::new, |value| format!("retry-after: {value}\r\n"));
     let head = format!(
-        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}content-length: {}\r\n{ending}\r\n",
+        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}{asked}content-length: {}\r\n{ending}\r\n",
         canned.status,
         canned.promised.unwrap_or(canned.body.len())
     );

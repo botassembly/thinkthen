@@ -2,6 +2,7 @@
 
 use std::io;
 use std::process::Output;
+use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn};
 use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, systemone};
@@ -267,6 +268,26 @@ fn retries_run_out_and_the_backend_failure_is_exit_four() {
     let message = String::from_utf8_lossy(&output.stderr);
     assert!(message.contains("503"), "{message}");
     assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn a_rate_limit_waits_the_seconds_the_backend_asked_for() {
+    // The harness shortens the doubling wait to a millisecond, so a run that
+    // took a whole second took it from the header and from nowhere else.
+    let listener = Listener::serving(vec![
+        Canned::status(429, "slow down").retry_after("1"),
+        Canned::ok(ANSWERED),
+    ])
+    .expect("a loopback listener");
+
+    let started = Instant::now();
+    let output = decide(listener.base(), &["--max-retries", "1"], KEY, "Refund me.")
+        .expect("the compiled binary runs");
+    let took = started.elapsed();
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(listener.requests().len(), 2);
+    assert!(took >= Duration::from_millis(900), "{took:?}");
 }
 
 #[test]
