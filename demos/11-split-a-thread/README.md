@@ -2,13 +2,15 @@
 
 Status: red
 
-Verbs: `decide segment`
+Verbs: `segment`
 
 One customer message holds three separate requests. A desk that files it as one ticket will answer one of them and lose the other two. `segment` finds where a new request starts, and the shell cuts the file.
 
+Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
+
 ## Input
 
-`thread.txt` is one message, one sentence per line.
+`thread.txt` is one message, one sentence per line, ten lines long.
 
 ## Find the parts
 
@@ -16,25 +18,31 @@ One customer message holds three separate requests. A desk that files it as one 
 
 ```bash
 set -euo pipefail
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide segment --boundary 'a new request from the customer begins on this line' \
-  --units lines --window 0 --min-prob 0.9 --replay recording/ \
-  < thread.txt > "$work/parts.json"
-
-jq -r '.segments | length' "$work/parts.json" | mustmatch "3"
-jq -r '.segments[] | "\(.start_unit)-\(.end_unit)"' "$work/parts.json" \
+thinkthen segment 'Does a new request from the customer begin on this line?' \
+  --units lines --window 0 --threshold 0.9 --input thread.txt --replay recording/ \
+  | jq -r '"\(.start_line)-\(.end_line)"' \
   | mustmatch "1-2
 3-5
 6-10"
 ```
 
-The model never computed a line number. It answered nine yes/no questions about whether a line starts something new, and the tool counted the units.
+One JSON object per segment, one per line. The model never computed a line number. It answered nine yes/no questions about whether a line starts something new, and the tool counted.
+
+Each segment carries both numberings and its own text.
+
+```bash
+set -euo pipefail
+
+thinkthen segment 'Does a new request from the customer begin on this line?' \
+  --units lines --window 0 --threshold 0.9 --input thread.txt --replay recording/ \
+  | head -1 | jq -S -c 'keys' \
+  | mustmatch '["end_line","end_unit","start_line","start_unit","text"]'
+```
 
 ## Cut the file
 
-The ranges are one-based and inclusive, so `sed -n` is the whole extraction.
+The line numbers are one-based and inclusive, so `sed -n` is the whole extraction. `text` is already in the output, and a desk that wants the file on disk cuts the original rather than trusting a copy.
 
 ```bash
 set -euo pipefail
@@ -42,42 +50,40 @@ set -o pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide segment --boundary 'a new request from the customer begins on this line' \
-  --units lines --window 0 --min-prob 0.9 --replay recording/ \
-  < thread.txt > "$work/parts.json"
+thinkthen segment 'Does a new request from the customer begin on this line?' \
+  --units lines --window 0 --threshold 0.9 --input thread.txt --replay recording/ \
+  > "$work/parts.jsonl"
 
 n=0
 while read -r start end; do
   n=$((n + 1))
   sed -n "${start},${end}p" thread.txt > "$work/part-$n.txt"
-done < <(jq -r '.segments[] | "\(.start_unit) \(.end_unit)"' "$work/parts.json")
+done < <(jq -r '"\(.start_line) \(.end_line)"' "$work/parts.jsonl")
 
 printf 'parts=%d\n' "$n" | mustmatch "parts=3"
 head -1 "$work/part-3.txt" | mustmatch "One more thing."
 grep -c . "$work/part-2.txt" | mustmatch "3"
 ```
 
-## Every boundary carries its own judgment
+## The segments cover the file once
 
-A part that was split on a shaky boundary is worth a second look before it becomes a ticket.
+Three parts, ten lines, no gap and no overlap. A desk that files each part as a ticket needs that to hold, and nothing but arithmetic checks it.
 
 ```bash
 set -euo pipefail
 
-thinkthen decide segment --boundary 'a new request from the customer begins on this line' \
-  --units lines --window 0 --min-prob 0.9 --replay recording/ \
-  < thread.txt \
-  | jq -r '[.segments[].boundary.assessment.status] | unique | join(",")' \
-  | mustmatch "accepted"
+thinkthen segment 'Does a new request from the customer begin on this line?' \
+  --units lines --window 0 --threshold 0.9 --input thread.txt --replay recording/ \
+  | jq -s -r '[.[] | .end_line - .start_line + 1] | add' \
+  | mustmatch "10"
 ```
 
 The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **`segment` is a convincing everyday job, and `match` was not.** Splitting a message that holds three requests is work a support desk does by hand every day, and the shell can act on a line range without any judgment of quality. A `match` demo would have spent most of its lines building candidate pairs, because the tool never builds them, and the interesting half of a matching job is the half `match` does not do. That is not an argument to cut `match`. It is an argument that `match` is not the verb a stranger meets first.
-- **A segment needs line numbers and not only unit indices.** With `--units lines` the two are the same and `sed -n` works. With `--units paragraphs` a unit index is a count of blank-line-separated blocks, and nothing in the result tells a shell where that block starts in the file, so the one thing a user wants to do with a segment cannot be done. Smallest fix: every segment carries `start_line` and `end_line` beside `start_unit` and `end_unit`, for both unit kinds. This is the change this demo argues hardest for.
-- **`--window 0` is the right default.** One message, one request, nine boundary questions. A per-boundary window would have cost nine requests for a ten-line file. The help should say to raise it when a document does not fit, which the draft already recommends.
-- **Lines and paragraphs are enough. Sentences are not needed.** This thread is one sentence per line because the customer wrote it that way. A thread that is not gets split upstream by whatever the user already trusts, and a sentence splitter inside the tool would take the blame for its own mistakes.
-- **`--unknown join` is the right default.** An unsure boundary that split would create a part nobody asked for, and a part is a ticket. Joining leaves the doubt visible inside one part, where a person reading the ticket will see it.
-- **Everyone who uses `segment` writes the same `sed` loop.** The tool must not write the files, and it should not. Smallest fix: the `segment` help carries the `jq` plus `sed -n` loop from this demo as its worked example.
+- **The demo confirms line numbers on every segment.** `sed -n` is the whole extraction, and the `jq` plus `sed` loop above is what every user of `segment` will write. The demo asks that it sit in the `segment` help as the worked example.
+- **The demo could not exercise `--units paragraphs`.** `thread.txt` has no blank line, so the unit numbering and the line numbering agree on every segment and the page proves nothing about the case the line numbers were added for. A paragraph fixture would fix the demo and not the surface. The finding is that the page is weaker than the claim it supports.
+- **The demo could not say what `--window 0` means.** ADR 0007 lists `--window N` on `segment` and defines neither the default nor the meaning of zero. This page reads it as "one request for the whole document". That reading makes a ten-line thread cost one request instead of nine. The surface has to say it.
+- **The demo could not say what happens to an unresolved boundary.** A band is refused on `segment`, and the single cut says a gap is a boundary when p reaches the mark. So a boundary the model is unsure about silently joins, and no field on a segment records that anything was close. The old surface had a flag and a status for it. The demo does not ask for the flag back. It asks that each segment carry the probability of the boundary that opened it, because a part built on a shaky boundary becomes a ticket.
+- **The demo could not say what `segment` does with a record flag.** ADR 0007 names which verbs take `--lines` and `--jsonl` and leaves `segment` out of the list. `--units lines` and `--lines` would then be two words for two different ideas on one command line. The surface should say that `segment` reads one document and takes neither flag.

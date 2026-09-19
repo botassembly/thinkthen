@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "profile": "site",
+  "profiles": {
+    "site": {
+      "url": "http://decider.internal:8099/v1/systemone",
+      "adapter": "systemone",
+      "model": "local-decider-3",
+      "key_env": null
+    }
+  },
+  "timeout_seconds": 30,
+  "max_retries": 3,
+  "jobs": 4
+}
