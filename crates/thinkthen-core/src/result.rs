@@ -34,18 +34,6 @@ impl Usage {
             output_tokens,
         }
     }
-
-    /// Read the input token count back.
-    #[must_use]
-    pub const fn input_tokens(self) -> u64 {
-        self.input_tokens
-    }
-
-    /// Read the output token count back.
-    #[must_use]
-    pub const fn output_tokens(self) -> u64 {
-        self.output_tokens
-    }
 }
 
 /// Who answered, how, and at what cost.
@@ -77,30 +65,6 @@ impl Meta {
             usage,
         }
     }
-
-    /// Read the backend name back.
-    #[must_use]
-    pub const fn backend(&self) -> &BackendName {
-        &self.backend
-    }
-
-    /// Read the adapter back.
-    #[must_use]
-    pub const fn adapter(&self) -> Adapter {
-        self.adapter
-    }
-
-    /// Read the model name back.
-    #[must_use]
-    pub const fn model(&self) -> &ModelName {
-        &self.model
-    }
-
-    /// Read the reported usage back, or `None` when the backend reported none.
-    #[must_use]
-    pub const fn usage(&self) -> Option<Usage> {
-        self.usage
-    }
 }
 
 /// One judgment, in the shape `specification/result.md` prints.
@@ -131,28 +95,10 @@ impl DecisionResult {
         }
     }
 
-    /// Read the question back.
-    #[must_use]
-    pub const fn question(&self) -> &Question {
-        &self.question
-    }
-
-    /// Read the answer back.
-    #[must_use]
-    pub const fn answer(&self) -> Answer {
-        self.answer
-    }
-
     /// Read the assessment back.
     #[must_use]
     pub const fn assessment(&self) -> Assessment {
         self.assessment
-    }
-
-    /// Read the meta back.
-    #[must_use]
-    pub const fn meta(&self) -> &Meta {
-        &self.meta
     }
 }
 
@@ -223,7 +169,6 @@ mod tests {
             rendered,
             r#"{"backend":"jev","adapter":"systemone","model":"jev-1.13.0"}"#
         );
-        assert_eq!(meta.usage(), None);
     }
 
     #[test]
