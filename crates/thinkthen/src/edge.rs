@@ -1,6 +1,7 @@
 //! The process edge: the environment, standard input, and standard output.
 
 use std::env;
+use std::fmt;
 use std::io::{ErrorKind, Read, Write};
 use std::time::Duration;
 
@@ -74,18 +75,41 @@ pub(crate) fn evidence(mut reader: impl Read) -> Result<Evidence, Failure> {
     Ok(Evidence::new(text)?)
 }
 
+/// The key one request carries, which no diagnostic and no `Debug` line shows.
+pub(crate) struct Key(String);
+
+impl Key {
+    /// Read the key back for the one header that carries it.
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Take a key value directly, which only a test that needs one does.
+    #[cfg(test)]
+    pub(crate) fn of(value: &str) -> Self {
+        Self(value.to_owned())
+    }
+}
+
+impl fmt::Debug for Key {
+    /// Print a fixed placeholder, so a `{:?}` anywhere can never spill the key.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Key(<withheld>)")
+    }
+}
+
 /// Read the key the backend's variable names.
 ///
 /// # Errors
 ///
 /// Returns [`Failure::NoKey`] when the variable is unset or blank. The message
 /// names the variable and never a value.
-pub(crate) fn key(variable: &KeyVar) -> Result<String, Failure> {
+pub(crate) fn key(variable: &KeyVar) -> Result<Key, Failure> {
     let value = read(variable.as_str()).unwrap_or_default();
     if value.trim().is_empty() {
         return Err(Failure::NoKey(variable.as_str().to_owned()));
     }
-    Ok(value)
+    Ok(Key(value))
 }
 
 /// Write one line and flush it, letting a closed pipe downstream end it quietly.

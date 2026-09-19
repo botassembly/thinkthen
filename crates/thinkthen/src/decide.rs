@@ -89,7 +89,7 @@ fn ask(
     let answered = http::post(&Exchange {
         url: backend.url().as_str(),
         body: &body,
-        key: key.as_deref(),
+        key: key.as_ref(),
         timeout: Duration::from_secs(arguments.timeout),
         max_retries: arguments.max_retries,
         retry_wait: environment.retry_wait(),
