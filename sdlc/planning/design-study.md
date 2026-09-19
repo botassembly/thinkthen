@@ -1,5 +1,7 @@
 # thinkthen design study
 
+**Read ADR 0007 first.** Ian replaced the `thinkthen decide VERB` grammar, the symmetric pass mark, and the saved question format described below with the flat-verb surface on 2026-09-19. The measurements in section 5 and the reasoning about fit still stand.
+
 **A study. Nothing here is ruled.** Written 2026-09-18 from seven design captures Ian made in chats with an AI, from a survey of the Rust repositories in his workspace, and from three measurements of a decider model taken the same day. Section 9 lists what Ian has to rule on. Decisions an agent already made are ADRs under `adr/`.
 
 ## 1. What thinkthen is
