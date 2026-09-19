@@ -1,6 +1,6 @@
 # ADR 0016: Fewer how-tos, each held to a standard
 
-- Status: Decided by the agent on 2026-09-19 at Ian's instruction. He can overturn any line
+- Status: Decided by the agent on 2026-09-19 at Ian's instruction. He can overturn any line. Ticket 0018 applied it. ADR 0018 replaces the list and the front window, and the standard holds
 - Date: 2026-09-19
 
 Ian asked that the demos be the best they can be: no two that teach the same thing, each chosen and upgraded for impact, with simplicity and understandability first and the power of the tool still shown. A second agent read all 21 pages as a newcomer with thirty seconds, beside the documentation plan, the ten use cases, and the interface audit. The plan held 40 how-tos. This ADR keeps 27.
