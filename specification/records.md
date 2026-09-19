@@ -98,9 +98,9 @@ Output order never depends on `jobs`. The tool holds finished rows in a bounded 
 
 When the program downstream closes the pipe, the tool stops reading and stops scheduling. Requests already sent may still be billed.
 
-## The built-in profile's published limits
+## The default backend's published limits
 
-The vendor published these on 2026-09-19 for the `jev` profile. Another profile has its own.
+The vendor published these on 2026-09-19 for the hosted service at `https://api.typesafe.ai/v1`. Another address has its own.
 
 | Limit | Value |
 | --- | --- |

@@ -17,8 +17,9 @@ use crate::text::ModelName;
 /// The name this wire shape answers to, in an address and in a recording entry.
 ///
 /// Ruling 1 of ADR 0010 leaves one wire shape, so nothing chooses between
-/// shapes and this is the only name there is.
-pub const NAME: &str = "systemone";
+/// shapes and this is the only name there is. The binary never needs it,
+/// because the address and the entry are both written in this crate.
+pub(crate) const NAME: &str = "systemone";
 
 /// Why a plan could not be written as a request body.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]

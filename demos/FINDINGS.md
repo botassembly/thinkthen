@@ -42,7 +42,7 @@ Earlier drafts of these pages raised the following, and `specification/` now ans
 
 - `find.md` fixes what `find` prints: the chosen unit byte for byte, the record under `--jsonl`, and one unit rather than a list. More than 255 units is a usage error before any request.
 - `annotate --dry-run` prints the plan as well as checking the file. The plan shows the first record's first `on` set, and its `input` object names every question's pointers.
-- The three ad-hoc backend flags travel together. A URL without an adapter and a model is a usage error, so no adapter is ever left pointed at a server that may not speak it.
+- A base that is not an `http` or `https` address is a usage error before any request goes out, and so is a base carrying user information. ADR 0010 later left one wire shape, so nothing names one and nothing can be pointed at a server that does not speak it.
 - An evidence object built from several pointers travels as compact JSON in one field, like any pointed value that is not a string.
 
 ## Settled by ADR 0007 and its clarifications

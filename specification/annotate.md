@@ -28,7 +28,7 @@ thinkthen annotate FILE [--lines|--jsonl] [--field POINTER] [--details] [--dry-r
 
 A question has exactly one of `decide`, `choose`, or `score`, and its value is the question text. `options` is a list of labels or a map from label to description. `levels` is a list, lowest first. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name uses lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error.
 
-The top-level `threshold` applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`. The file holds questions and nothing else. It holds no profile, no output path, and no format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
+The top-level `threshold` applies to every `decide` question that names none. It is the only key allowed beside `version` and `questions`. The file holds questions and nothing else. It holds no backend, no output path, and no format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 
 `on` is a JSON Pointer inside the evidence that `--field` selected. It can never reach outside that evidence. A table asks different questions of different columns, and no question should see a column it does not need.
 
