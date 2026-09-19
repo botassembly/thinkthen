@@ -4,15 +4,22 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
+use std::thread;
 
 /// Write one question file under the test target directory and name its path.
 ///
-/// Each case owns its file, so a case that rewrites one cannot reach another.
+/// Two tests drive the same table at once, so the write is made atomic and a
+/// reader sees a whole file. Each case owns its name.
 pub(crate) fn written(name: &str, text: &str) -> String {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("question-file");
     let _ = fs::create_dir_all(&folder);
     let path = folder.join(format!("{name}.json"));
-    let _ = fs::write(&path, text);
+    // Two tests in this binary write the same case at the same time, so the
+    // text goes under a name of this thread's own and moves into place in one
+    // step. A reader then sees the whole file or the whole earlier one.
+    let staged = folder.join(format!("{name}-{:?}.part", thread::current().id()));
+    let _ = fs::write(&staged, text);
+    let _ = fs::rename(&staged, &path);
     format!("@{}", path.display())
 }
 

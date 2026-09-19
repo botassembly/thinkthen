@@ -28,7 +28,7 @@ The refusals went in the core too, because the sentence table, the `named()` pre
 
 `judge.rs` reached 627 non-blank lines and the ceiling is 500. The split is `judge.rs` (which verb, what it keeps, what view) and `asking.rs` (one record to one request, one reply to one row). The seam allowance in `sdlc/scripts/policy.py` moved with the vendor words.
 
-The ratchet went from 11563 to 12953 on the branch, and to 14823 after main was merged twice and the review was answered. What grew: `order.rs` and its properties, the two verbs and their argument groups, the sink, the four refusal sentences, and about 700 lines of integration tests, which are the larger half. Duplication was looked for first in three places and deleted in two. `Record::as_it_arrived` is now one method, and `record()` calls it instead of repeating the line-ending rule. `yes_no` in `asked.rs` is one settler for all three verbs. `over_kept` is one path for `filter` and `rank`, which earned an `#[expect(clippy::too_many_arguments)]` with a reason, because splitting the call would split the flow.
+The ratchet went from 11563 to 12953 on the branch, and to 14830 after main was merged twice and the review was answered. What grew: `order.rs` and its properties, the two verbs and their argument groups, the sink, the four refusal sentences, and about 700 lines of integration tests, which are the larger half. Duplication was looked for first in three places and deleted in two. `Record::as_it_arrived` is now one method, and `record()` calls it instead of repeating the line-ending rule. `yes_no` in `asked.rs` is one settler for all three verbs. `over_kept` is one path for `filter` and `rank`, which earned an `#[expect(clippy::too_many_arguments)]` with a reason, because splitting the call would split the flow.
 
 ## Red then green
 
@@ -108,3 +108,7 @@ A second agent with fresh context read the ticket, the whole diff against `origi
 | Page 03 conflated two kinds of narrowing | Fixed. The bullet now says to cut the file before `filter` and drops the back-reference. |
 
 The reviewer also read page 43 cold for thirty seconds. It understood the page: a rule no linter can express, asked of each changed hunk, with the breaking hunks kept and the build failed. It saw the result, a beat late, because the result is the argument to `mustmatch` rather than printed output, and the sentence under the block carried it. It wanted three things the page does not say: what `thinkthen` is, what `mustmatch` is, and whether running the page costs money. The third is now one clause in the Input section. The first two are the same on all twenty pages, so they belong to `demos/README.md` and not to one page.
+
+## One thing found along the way
+
+The whole ladder failed once on `question_file::grammar::every_refusal_the_grammar_makes_names_its_key_and_its_exit_code`, which read a question file as "not valid JSON". Two tests in that binary drive the same table of twenty cases at once and wrote the same file at the same time, so one of them read a file another had just truncated. The helper now writes under a name of the running thread's own and renames it into place, which is one step, and the case passed five runs in a row after that. The race came in with ticket 0019 and reaches no shipped code.
