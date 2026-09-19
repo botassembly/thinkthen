@@ -19,6 +19,7 @@ mod plan_document;
 mod policy;
 mod probability;
 mod question;
+pub mod recording;
 mod render;
 mod reply;
 mod result;

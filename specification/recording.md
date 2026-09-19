@@ -23,12 +23,12 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
   "schema": "thinkthen.recording/1",
   "adapter": "systemone",
   "url": "https://api.typesafe.ai/v1/systemone",
-  "request": { "state": "...", "model": "jev-latest", "questions": { "q1": { "type": "noul", "instructions": "..." } } },
-  "response": { "model": "jev-latest", "answers": { "q1": { "type": "noul", "noul": 0.92 } }, "usage": { "input_tokens": 312, "output_tokens": 48 } }
+  "request": {"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}},
+  "response": {"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":312,"output_tokens":48}}
 }
 ```
 
-- The file is spread over lines with sorted, stable formatting, so a recording reads well in a diff.
+- The five fields each sit on their own line, in the order above. `request` and `response` are JSON values rather than strings, and each one is copied exactly as the bytes that crossed the wire, so an entry is a faithful copy of the exchange. One exchange therefore writes the same file every time, and a diff shows which field changed.
 - Only an exchange that succeeded and decoded is recorded. A failure is never recorded.
 - An entry holds bodies and never headers. No key can reach a recording.
 - An entry is written to a temporary name in `DIR` and then renamed, so a reader never sees half a file.

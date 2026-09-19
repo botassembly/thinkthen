@@ -36,7 +36,7 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {"clap", "thinkthen-core", "ureq"},
-    "thinkthen-core": {"serde", "serde_json", "thiserror"},
+    "thinkthen-core": {"serde", "serde_json", "sha2", "thiserror"},
 }
 ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": set(), "thinkthen-core": {"proptest"}}
 MAX_FILE_LINES = 500
