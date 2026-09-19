@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"My card was charged twice for the same order on the same morning.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which of these codes fits the note?","criteria":{"double_charge":"The same order was paid for more than once.","wrong_amount":"The amount charged is not the amount on the order.","refund_late":"A refund was promised and has not arrived.","other":"None of the three above fits this note."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"double_charge","confidence":1.0,"probabilities":{"other":0.0,"refund_late":0.0,"double_charge":1.0,"wrong_amount":0.0}}},"usage":{"input_tokens":385,"output_tokens":51}}
+}

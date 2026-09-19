@@ -53,7 +53,8 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 03 | [Keep only the records that match a meaning](03-grep-for-meaning/) | `filter` | red |
 | 06 | [Put the best matches first](06-top-search-hits/) | `rank`, `filter` | red |
 | 09 | [Control what leaves the machine](09-what-leaves-the-machine/) | `filter`, `--dry-run` | red |
-| 12 | [Resume a long run that stopped](12-keep-going/) | `decide` | red |
+| 12 | [Resume a long run that stopped](12-keep-going/) | `decide` | green |
+| 21 | [Choose from a list that differs for every record](21-options-from-the-record/) | `choose` | green |
 | 15 | [Find the one line that answers a question](15-find-the-line/) | `find` | red |
 
 ## Many questions at once

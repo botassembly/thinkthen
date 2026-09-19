@@ -33,9 +33,9 @@ The title starts with "How to" and names a task. One paragraph says when to use 
 | --- | --- | --- | --- |
 | Keep only the records that match a meaning | 03 | 8 | Red |
 | Put the best matches first | 06 | 8 | Red |
-| Choose from a list that differs for every record | 21 | 7 | |
+| Choose from a list that differs for every record | 21 | 7 | Green |
 | Control what leaves the machine, and prove it with `--dry-run` | 09 | 8 | Red |
-| Resume a long run that stopped | 12 | 7 | Red |
+| Resume a long run that stopped | 12 | 7 | Green |
 | Find the one line that answers a question | 15 | 11 | Red. Slice 11 measures the longer documents first |
 
 ## Many questions at once

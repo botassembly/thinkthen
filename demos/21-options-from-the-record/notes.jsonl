@@ -1,0 +1,3 @@
+{"id":"N-1","desk":"delivery","note":"The box turned up on Thursday, two days after the date on the confirmation email.","codes":["late","never_arrived","wrong_address","other"]}
+{"id":"N-2","desk":"item","note":"I ordered the blue mug and the one in the box is green.","codes":["wrong_item","damaged","missing_part","other"]}
+{"id":"N-3","desk":"billing","note":"My card was charged twice for the same order on the same morning.","codes":{"double_charge":"The same order was paid for more than once.","wrong_amount":"The amount charged is not the amount on the order.","refund_late":"A refund was promised and has not arrived.","other":"None of the three above fits this note."}}

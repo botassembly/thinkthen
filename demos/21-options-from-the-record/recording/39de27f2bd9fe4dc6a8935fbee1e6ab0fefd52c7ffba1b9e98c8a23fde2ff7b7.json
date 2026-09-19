@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I ordered the blue mug and the one in the box is green.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which of these codes fits the note?","criteria":{"wrong_item":null,"damaged":null,"missing_part":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"wrong_item","confidence":1.0,"probabilities":{"other":0.0,"wrong_item":1.0,"damaged":0.0,"missing_part":0.0}}},"usage":{"input_tokens":319,"output_tokens":50}}
+}
