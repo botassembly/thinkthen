@@ -4,17 +4,15 @@ Status: red
 
 Verbs: `decide`, `report`
 
-Every other demo types a threshold. Nobody has said where the number comes from. A team with a few labelled examples judges them once, then asks what each cut would have done against the labels, and picks. `report` reads the saved rows and calls no model, so the sweep is free and repeatable.
+Every other demo types a threshold. Nobody has said where the number comes from. A team with a few labelled examples judges them once, asks what each cut would have done against the labels, picks one, and then checks the pick on a second file it never tuned against. `report` reads the saved rows and calls no model, so every step after the first is free.
 
 Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
 
-**The options of `report` are Draft in ADR 0007. Everything this page passes to `report` is a proposal, and the findings list it as one.**
-
 ## Input
 
-`labeled.jsonl` holds eight support messages with `id`, `body`, and `label`. `label` is what a person answered. Four are true and four are false.
+`labeled.jsonl` holds eight support messages with `id`, `body`, and `label`. `holdout.jsonl` holds six more, kept back. `label` is what a person answered.
 
-## Judge the labelled file once
+## Judge the tuning file once
 
 The labels never leave the machine. `--field /body` sends the body, and `--details` in record mode keeps the whole record in `input`, the label with it.
 
@@ -25,39 +23,17 @@ trap 'rm -rf -- "$work"' EXIT
 
 thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
-  > "$work/judged.jsonl"
+  > "$work/tune.jsonl"
 
-wc -l < "$work/judged.jsonl" | tr -d ' ' | mustmatch "8"
-jq -r '.input.label | tostring' "$work/judged.jsonl" | sort | uniq -c | tr -s ' ' \
+wc -l < "$work/tune.jsonl" | tr -d ' ' | mustmatch "8"
+jq -r '.input.label | tostring' "$work/tune.jsonl" | sort | uniq -c | tr -s ' ' \
   | mustmatch " 4 false
  4 true"
 ```
 
-## Count, then sweep
+## Read the run, then score it
 
-`report` calls no model, so it runs with no key in the environment. With no options it prints counts. `--truth POINTER` names the recorded answer inside each row's `input` and turns the counts into a sweep over every distinct probability the rows carry.
-
-```bash
-set -euo pipefail
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
-q='Does the message report a payment failure?'
-
-thinkthen decide "$q" \
-  --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
-  > "$work/judged.jsonl"
-
-env -u TYPESAFE_API_KEY thinkthen report < "$work/judged.jsonl" \
-  | jq -c --arg q "$q" '{rows, counts: .questions[$q].counts}' \
-  | mustmatch '{"rows":8,"counts":{"yes":4,"no":4,"unresolved":0}}'
-
-thinkthen report --truth /label < "$work/judged.jsonl" > "$work/sweep.json"
-jq -r --arg q "$q" '.questions[$q].sweep | length' "$work/sweep.json" | mustmatch "8"
-jq -S -c --arg q "$q" '.questions[$q].sweep[0] | keys' "$work/sweep.json" \
-  | mustmatch '["false_no","false_yes","right","threshold"]'
-```
-
-Counts alone say nothing about whether the cut was right. Four yes and four no is what a perfect run looks like and also what a coin looks like. The sweep carries four numbers per cut: the cut, how many it got right, how many it called yes when the label said no, and how many it called no when the label said yes. A desk that must never miss a payment failure reads `false_no` and ignores the rest.
+`report` takes the run as an argument. With no option it prints the counts and the run's own facts. A run made by a bare verb is one check named after the verb, so this one is called `decide`.
 
 ```bash
 set -euo pipefail
@@ -66,32 +42,70 @@ trap 'rm -rf -- "$work"' EXIT
 
 thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
-  > "$work/judged.jsonl"
+  > "$work/tune.jsonl"
+
+env -u TYPESAFE_API_KEY thinkthen report "$work/tune.jsonl" \
+  | jq -c '{rows, models: .run.models, replayed: .run.replayed, counts: .checks.decide.counts}' \
+  | mustmatch '{"rows":8,"models":["local-decider-3"],"replayed":8,"counts":{"yes":4,"no":4,"unresolved":0}}'
+```
+
+Four yes and four no is what a perfect run looks like and also what a coin looks like. `--truth NAME=POINTER` compares the check with the trusted label and says which one this is.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+thinkthen decide 'Does the message report a payment failure?' \
+  --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
+  > "$work/tune.jsonl"
+
+thinkthen report "$work/tune.jsonl" --truth decide=/label > "$work/sweep.json"
+
+jq -S -c '.checks.decide | keys' "$work/sweep.json" \
+  | mustmatch '["accuracy","calibration","counts","coverage","f1","precision","recall","sweep"]'
+jq -r '.checks.decide.sweep | length' "$work/sweep.json" | mustmatch "8"
+jq -S -c '.checks.decide.sweep[0] | keys' "$work/sweep.json" \
+  | mustmatch '["accuracy","coverage","f1","precision","recall","threshold","unresolved_accuracy"]'
+```
+
+`coverage` leads: the share of rows that resolved, the accuracy among them, and the accuracy among the rest. A cut that resolves three rows out of eight at 100 percent is not better than one that resolves eight at 90 percent, and only the pair of numbers says so.
+
+## Pick the cut, then check it on the other file
+
+The sweep is over the file it was tuned on, so its best number flatters itself. The pick goes onto a file that was never swept.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+thinkthen decide 'Does the message report a payment failure?' \
+  --jsonl --field /body --details --input labeled.jsonl --replay recording/ \
+  > "$work/tune.jsonl"
 
 cut=$(
-  thinkthen report --truth /label < "$work/judged.jsonl" \
-    | jq -r '
-        .questions["Does the message report a payment failure?"].sweep
-        | map(select(.false_no == 0))
-        | max_by(.right)
-        | .threshold'
+  thinkthen report "$work/tune.jsonl" --truth decide=/label \
+    | jq -r '.checks.decide.sweep | map(select(.coverage == 1)) | max_by(.accuracy) | .threshold'
 )
 
 thinkthen decide 'Does the message report a payment failure?' \
-  --threshold "$cut" --input labeled.jsonl --jsonl --field /body --replay recording/ \
-  | sort | uniq -c | tr -s ' ' \
-  | mustmatch " 4 false
- 4 true"
+  --jsonl --field /body --details --input holdout.jsonl --replay recording/ \
+  > "$work/holdout.jsonl"
+
+thinkthen report "$work/holdout.jsonl" --truth decide=/label --threshold "decide=$cut" \
+  | jq -c '.checks.decide | {coverage, accuracy}' \
+  | mustmatch '{"coverage":1,"accuracy":1}'
 ```
 
-The number came back out of the report and went straight onto the command line. That works because a threshold is a decimal fraction in both places and nothing else.
+`--threshold NAME=RULE` reapplies a rule to the stored probabilities and makes no request. The same rows can be read at any cut for as long as the file is kept.
 
 The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **The demo proposes the whole `report` surface, and the proposal is one option.** `--truth POINTER` names the label inside `input`. With it, `report` prints a sweep. Without it, `report` prints counts. Nothing else is needed: the candidate cuts are the observed probabilities, and a grid step, a metric flag, and an output format flag would all be levers nobody on this page pulled.
-- **The demo could not name a question.** `--details` rows carry `question.text` and no name, so `report` has only the question text to group by and every `jq` on this page carries a sentence as a key. A question with a typo fixed halfway through a file becomes two questions. The surface should give a result object a question name, or `report` should number its questions and print the text beside.
-- **The demo could not sweep a band.** Two numbers make a two-dimensional sweep, and nothing on this page asks for one. The proposal covers single cuts only, and the page says so. A team that wants a band reads the sweep and sets `LOW` and `HIGH` by hand.
-- **`report` reading `--details` rows and nothing else is the right shape.** One verb makes the rows and one verb reads them, and a saved file of rows can be swept again next month with no model call. That is the argument for `input` carrying the whole record.
-- **Nothing stops a label reaching the backend.** `--field /body` keeps `label` on the machine, and a user who forgets it sends the answer with the question and poisons the measurement. One line in the `report` help closes it.
+- **The two-file procedure is the whole answer and it needs no option.** Sweep one file, take a number, report the other file at that number. ADR 0009 item 7 asks for exactly this, and the shell already has it. No held-out split flag is wanted.
+- **Accuracy at coverage is the right headline.** A single accuracy number hides a band that refused half the file. Two numbers beside `coverage` say what the cut bought and what it cost.
+- **Naming a check after the verb makes `--threshold decide=0.82` read badly.** The user never wrote the word `decide` as a name. Worse, two runs of two different questions concatenate into one check called `decide`, and the only warning is the list of question texts. The demo asks that a bare-verb run be named after its question text, or that `report` refuse a file whose rows carry two texts.
+- **The demo could not fix the shape of a report.** ADR 0008 names the metrics and ADR 0009 names the headline. Neither fixes a key. Every `jq` path on this page is a proposal, `run` and `checks` included.
+- **The demo could not read the calibration table.** ADR 0008 asks for one and says only that it sets each probability band beside the share of cases that were truly yes. Eight rows cannot fill bands. The page asserts that the key exists and nothing more.
