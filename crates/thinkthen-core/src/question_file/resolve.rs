@@ -8,7 +8,7 @@
 
 use serde::{Serialize, Serializer};
 
-use crate::backend::DEFAULT_MODEL;
+use crate::adapters::built_in::DEFAULT_MODEL;
 use crate::pointer::Pointer;
 use crate::question::{Labels, Question};
 use crate::question_file::{Described, QuestionFile, QuestionFileError, Source, Verb, pointers};

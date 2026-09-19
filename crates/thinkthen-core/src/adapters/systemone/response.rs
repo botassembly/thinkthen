@@ -4,13 +4,13 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
+use crate::adapters::systemone::{DecodeError, wire_name};
 use crate::answer::{Answer, Distribution};
 use crate::plan::Plan;
 use crate::probability::Probability;
 use crate::question::{Labels, Question};
 use crate::reply::Reply;
 use crate::result::Usage;
-use crate::systemone::{DecodeError, wire_name};
 use crate::text::ModelName;
 
 /// The body one response carries.
@@ -152,31 +152,32 @@ fn reported(value: Option<f64>, place: usize) -> Result<Option<Probability>, Dec
 #[cfg(test)]
 mod tests {
     use super::decode;
+    use crate::adapters::systemone::DecodeError;
+    use crate::adapters::systemone::tests::{
+        LEVELS, TEAMS, disruption_plan, plan_for, team_plan, urgency_plan,
+    };
     use crate::answer::Answer;
     use crate::probability::Probability;
     use crate::result::Usage;
-    use crate::systemone::DecodeError;
-    use crate::systemone::tests::{
-        LEVELS, TEAMS, disruption_plan, plan_for, team_plan, urgency_plan,
-    };
 
     const RESPONSE: &str =
-        include_str!("../../../../specification/fixtures/systemone/decide-urgent.response.json");
+        include_str!("../../../../../specification/fixtures/systemone/decide-urgent.response.json");
     const MISSING: &str = include_str!(
-        "../../../../specification/fixtures/systemone/refused-missing-answer.response.json"
+        "../../../../../specification/fixtures/systemone/refused-missing-answer.response.json"
     );
     const WRONG_KIND: &str = include_str!(
-        "../../../../specification/fixtures/systemone/refused-wrong-kind.response.json"
+        "../../../../../specification/fixtures/systemone/refused-wrong-kind.response.json"
     );
     const OUT_OF_RANGE: &str = include_str!(
-        "../../../../specification/fixtures/systemone/refused-probability-out-of-range.response.json"
+        "../../../../../specification/fixtures/systemone/refused-probability-out-of-range.response.json"
     );
     const CHOOSE: &str =
-        include_str!("../../../../specification/fixtures/systemone/choose-team.response.json");
-    const SCORE: &str =
-        include_str!("../../../../specification/fixtures/systemone/score-disruption.response.json");
+        include_str!("../../../../../specification/fixtures/systemone/choose-team.response.json");
+    const SCORE: &str = include_str!(
+        "../../../../../specification/fixtures/systemone/score-disruption.response.json"
+    );
     const MISSING_PROBABILITY: &str = include_str!(
-        "../../../../specification/fixtures/systemone/refused-missing-probability.response.json"
+        "../../../../../specification/fixtures/systemone/refused-missing-probability.response.json"
     );
 
     #[test]

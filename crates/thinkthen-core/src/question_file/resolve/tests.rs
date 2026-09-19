@@ -5,11 +5,11 @@ use proptest::{prop_assert_eq, proptest};
 use serde::Serialize;
 
 use super::{Resolved, Typed, resolve};
+use crate::adapters::built_in::encode;
 use crate::plan::Plan;
 use crate::question::{LabelsError, Question};
 use crate::question_file::{Described, QuestionFile, QuestionFileError as Refused, Source, Verb};
 use crate::render::json_line;
-use crate::systemone::encode;
 use crate::text::Evidence;
 
 fn file(text: &str) -> QuestionFile {

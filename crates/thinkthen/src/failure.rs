@@ -3,7 +3,7 @@
 use std::io::{self, Write};
 use std::process::ExitCode;
 
-use thinkthen_core::systemone::DecodeError;
+use thinkthen_core::adapters::built_in::DecodeError;
 use thinkthen_core::{
     BackendError, PointerError, QuestionFileError, ReadingError, RecordError, RenderError, Source,
 };

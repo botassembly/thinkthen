@@ -47,20 +47,15 @@ INHERITED = {"workspace": True}
 # vendor rather than the judgment: its question type, its field for what an
 # option means, its module, and its host.
 VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe")
-# The adapter's own module, where every vendor word belongs.
-ADAPTER = ("crates/thinkthen-core/src/systemone.rs", "crates/thinkthen-core/src/systemone/")
-# Ticket 0017 leaves these call sites where they are. A later small ticket moves
-# DEFAULT_BASE, DEFAULT_MODEL, and the systemone::NAME call sites into the
-# adapter's module, and each line here goes with them. Every file names the
-# words it may still hold, so a new use of one fails this check.
-SEAM_ALLOWED = {
-    "crates/thinkthen-core/src/backend.rs": {"systemone", "typesafe"},
-    "crates/thinkthen-core/src/lib.rs": {"systemone"},
-    "crates/thinkthen-core/src/plan_document.rs": {"systemone"},
-    "crates/thinkthen-core/src/recording.rs": {"systemone"},
-    "crates/thinkthen/src/failure.rs": {"systemone"},
-    "crates/thinkthen/src/judge.rs": {"systemone"},
-}
+# The adapters folder, where every vendor word belongs. `adapters.rs` names the
+# modules it holds and says which one this build uses, and each adapter's own
+# module owns its name, its default address, its default model, and its
+# endpoint path.
+ADAPTER = ("crates/thinkthen-core/src/adapters.rs", "crates/thinkthen-core/src/adapters/")
+# Ticket 0020 moved the last of them, so no file outside the adapters folder
+# holds a vendor word and the allowance is empty. A file added here would need
+# a ticket saying why a vendor word cannot live behind the adapter.
+SEAM_ALLOWED: dict[str, set[str]] = {}
 
 ACCEPTED_RUST_LINTS = {
     "missing_debug_implementations": "forbid",

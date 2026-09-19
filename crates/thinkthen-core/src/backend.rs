@@ -2,14 +2,8 @@
 
 use thiserror::Error;
 
-use crate::systemone;
+use crate::adapters::built_in;
 use crate::text::{BlankTextError, ModelName, Url};
-
-/// The base the tool posts under when nothing else names one.
-const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
-
-/// The model a request names when `--model` names none.
-pub const DEFAULT_MODEL: &str = "jev-latest";
 
 /// The one environment variable that holds the key.
 ///
@@ -59,9 +53,9 @@ const LOOPBACK: [&str; 3] = ["localhost", "127.0.0.1", "[::1]"];
 impl Backend {
     /// Resolve the backend from the option, the environment, and the default.
     ///
-    /// Every source names a base, and the request is posted to `BASE/systemone`.
-    /// `--url` outranks `THINKTHEN_BASE_URL`, which outranks the default base
-    /// `https://api.typesafe.ai/v1`.
+    /// Every source names a base, and the request is posted to the base with
+    /// the adapter's endpoint path after it. `--url` outranks
+    /// `THINKTHEN_BASE_URL`, which outranks the adapter's default base.
     /// The binary reads the variable at its edge and hands the value here, so
     /// the core still reads no environment of its own.
     ///
@@ -76,7 +70,7 @@ impl Backend {
         model: &str,
     ) -> Result<Self, BackendError> {
         Ok(Self {
-            url: address(url.or(base).unwrap_or(DEFAULT_BASE))?,
+            url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE))?,
             model: ModelName::new(model)?,
         })
     }
@@ -106,7 +100,7 @@ impl Backend {
     }
 }
 
-/// The address one request is posted to: the base, then the wire shape's name.
+/// The address one request is posted to: the base, then the endpoint path.
 ///
 /// Space around the base is not part of it, and neither are the slashes it
 /// ends in, so both are dropped before the path is added. A scheme is read
@@ -130,7 +124,10 @@ fn address(base: &str) -> Result<Url, BackendError> {
     if scheme == "http://" && !LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)) {
         return Err(BackendError::KeyInClear);
     }
-    Ok(Url::new(format!("{scheme}{rest}/{}", systemone::NAME))?)
+    Ok(Url::new(format!(
+        "{scheme}{rest}/{}",
+        built_in::ENDPOINT_PATH
+    ))?)
 }
 
 /// The host inside an authority, with the port dropped, or `None` when it holds none.
@@ -176,7 +173,8 @@ fn after_scheme(base: &str) -> Option<(&'static str, &str)> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Backend, BackendError, DEFAULT_MODEL};
+    use super::{Backend, BackendError};
+    use crate::adapters::built_in::DEFAULT_MODEL;
     use crate::text::BlankTextError;
 
     /// The address the tool posts to when no base replaces the default one.

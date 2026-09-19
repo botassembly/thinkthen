@@ -3,11 +3,11 @@
 use serde::Serialize;
 use serde_json::value::RawValue;
 
+use crate::adapters::built_in::{self, EncodeError};
 use crate::backend::{Backend, KEY_VAR};
 use crate::plan::Plan;
 use crate::question_file::Sources;
 use crate::records::{Reading, ReadingPlan};
-use crate::systemone::{self, EncodeError};
 use crate::text::{ModelName, Url};
 
 /// What the command would send, in the four fields `channels.md` fixes.
@@ -40,7 +40,7 @@ impl<'a> PlanDocument<'a> {
             key_env: KEY_VAR,
             input: None,
             from: None,
-            request: systemone::encode_raw(plan)?,
+            request: built_in::encode_raw(plan)?,
         })
     }
 
@@ -70,7 +70,8 @@ impl<'a> PlanDocument<'a> {
 #[cfg(test)]
 mod tests {
     use super::PlanDocument;
-    use crate::backend::{Backend, DEFAULT_MODEL};
+    use crate::adapters::built_in::DEFAULT_MODEL;
+    use crate::backend::Backend;
     use crate::plan::Plan;
     use crate::question::Question;
     use crate::render::json_line;
