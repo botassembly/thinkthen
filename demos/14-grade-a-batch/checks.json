@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "threshold": "0.2:0.8",
+  "questions": {
+    "correct": {
+      "decide": "Does the answer say the same thing as the reference answer to the question?",
+      "on": ["/input", "/gold", "/output"]
+    },
+    "grounded": {
+      "decide": "Is every claim in the answer stated in the source text?",
+      "on": ["/context", "/output"]
+    }
+  }
+}
