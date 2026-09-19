@@ -11,3 +11,5 @@ Ticket 0007 removed profiles. The key is read from `THINKTHEN_API_KEY`, and it g
 `CLAUDE.md` is a symlink to `AGENTS.md`, so one edit fixes both. The file is not in ticket 0007's `opens:` list, so the ticket left it alone.
 
 The fix is two sentences. Somebody with the file open should also read the rest of the page for anything else the smaller surface made stale.
+
+Fixed on main on 2026-09-19, with the landing of ticket 0007.

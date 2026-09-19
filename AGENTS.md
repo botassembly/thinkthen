@@ -26,7 +26,7 @@ Tests replay recorded responses. A live call to a paid backend runs only from `s
 
 ## Credentials
 
-A key is read from the environment variable its backend profile names. It is never committed, logged, hashed, echoed in a plan, written to a recording, or sent to a host other than its profile's. A recording stores request bodies and responses and never headers.
+A key is read from `THINKTHEN_API_KEY`. It is never committed, logged, hashed, echoed in a plan, or written to a recording. It goes only to the address the user named. A recording stores request bodies and responses and never headers.
 
 ## Public hygiene
 
