@@ -81,9 +81,11 @@ Demos 13, 25, 28, and 41 read the `jq` transforms in `transforms/` over committe
 
 ## Folders that stay and then leave
 
-Each folder below holds a page that is not in the list of 20. It stays until the page that absorbs it is green, so no lesson is ever missing, and its first lines say which page that is.
+Each folder below holds a page that is not in the list of 20. It stays until the page that absorbs it is green, so no lesson is ever missing, and its first lines say which page that is. `sdlc/scripts/pages` refuses a folder here whose page does not say so.
 
-- [04 Act only when the answer is sure, and send the rest to a person](04-review-queue/) is green. Its band is taught by 19, its review pile by 16, and the trade between coverage and accuracy by 13. It leaves when 16 is green.
-- [07 Judged columns](07-judged-columns/) is red. Several judged columns on one record go to 14, and the spreadsheet view to 16.
-- [08 Release checklist](08-release-checklist/) is red, and 39 absorbs it.
-- [09 What leaves the machine](09-what-leaves-the-machine/) is red, and 03 absorbs it.
+| # | How to | Verbs | Status |
+| --- | --- | --- | --- |
+| 04 | [Act only when the answer is sure, and send the rest to a person](04-review-queue/) | `decide` | leaving, into 19, 16, and 13 |
+| 07 | [Judged columns](07-judged-columns/) | `annotate` | leaving, into 14 and 16 |
+| 08 | [Release checklist](08-release-checklist/) | `annotate` | leaving, into 39 |
+| 09 | [What leaves the machine](09-what-leaves-the-machine/) | `filter` | leaving, into 03 |

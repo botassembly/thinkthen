@@ -44,7 +44,7 @@ A question file holds one question. A question set holds several named questions
 
 ## Where to read
 
-The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.
+The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each green one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.
 
 These seven pages run from the simplest use to the strongest. ADR 0018 chose them, and the other thirteen of the twenty are in the list.
 

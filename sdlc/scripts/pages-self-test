@@ -28,7 +28,7 @@ INDEX = """# How-tos
 
 Folder {folder}/ holds the green page.
 
-| # | How to | Verbs | Status |
+{header}
 | --- | --- | --- | --- |
 | 01 | [{green}]({folder}/) | `decide` | {green_state} |
 {extra}
@@ -42,30 +42,53 @@ PLAN = """# Documentation plan
 {extra}
 """
 
-TOP = "# thinkthen\n\nThe list is [demos/README.md](demos/README.md).\n"
+ADR = """# ADR 0018
+
+## The front window
+
+| # | How to | Shows |
+| --- | --- | --- |
+| 01 | {green} | `decide` |
+| 02 | Find the line | `find` |
+"""
+
+TOP = """# thinkthen
+
+The list is [demos/README.md](demos/README.md).
+
+| How to | The job | |
+| --- | --- | --- |
+| {green} | A desk gates a step | [01](demos/{folder}/) |
+| Find the line | A handbook answers it | 02, coming |
+"""
+
+ADRPATH = "sdlc/planning/adr/0018-twenty-how-tos-and-three-themes.md"
 
 
 def build(name, *, green="Gate a step", green_state="green",
           plan_green=None, plan_green_state=None, folder="01-gate",
           head="gate a step", status="green", index_extra=None,
-          plan_extra=None, spare=None, top=TOP):
+          plan_extra=None, spare=None, top=TOP, adr=ADR, body=None,
+          index_header="| # | How to | Verbs | Status |"):
     """One tree: an index, a plan, a top page, and the folders they name."""
     root = ROOT / name
     shutil.rmtree(root, ignore_errors=True)
-    (root / "sdlc" / "planning").mkdir(parents=True)
+    (root / "sdlc" / "planning" / "adr").mkdir(parents=True)
     (root / "demos" / folder).mkdir(parents=True)
+    (root / ADRPATH).write_text(adr.format(green=green))
     coming = "| 02 | Find the line | `find` | coming, slice 11 |"
     (root / "demos" / "README.md").write_text(INDEX.format(
         green=green, green_state=green_state, folder=folder,
+        header=index_header,
         extra=coming if index_extra is None else index_extra))
     (root / PLANPATH).write_text(PLAN.format(
         green=green if plan_green is None else plan_green,
         green_state=(green_state if plan_green_state is None
                      else plan_green_state),
         extra=coming if plan_extra is None else plan_extra))
-    (root / "README.md").write_text(top)
+    (root / "README.md").write_text(top.format(green=green, folder=folder))
     (root / "demos" / folder / "README.md").write_text(
-        PAGE.format(head=head, status=status))
+        PAGE.format(head=head, status=status) if body is None else body)
     if spare:
         (root / "demos" / spare).mkdir()
         (root / "demos" / spare / "README.md").write_text(
@@ -82,7 +105,7 @@ def case(name, code, sentence, **kwargs):
     CASES.append((name, code, sentence, kwargs))
 
 
-case("ok", 0, "pages: 2 how-tos, 1 green, 1 coming")
+case("ok", 0, "pages: 1 coming, 1 green")
 
 case("missing-from-plan", 1,
      "pages: sdlc/planning/documentation-plan.md: lists no how-to 02, "
@@ -100,12 +123,12 @@ case("title-drift", 1,
      plan_green="Gate a step twice")
 
 case("state-drift", 1,
-     "pages: sdlc/planning/documentation-plan.md: how-to 01 is coming, "
+     "pages: sdlc/planning/documentation-plan.md: how-to 01 is coming, slice 4, "
      "and demos/README.md says green",
      plan_green_state="coming, slice 4")
 
 case("folder-not-listed", 1,
-     "pages: demos/README.md: names no folder 09-spare, and demos/ holds it",
+     "pages: demos/README.md: links no folder 09-spare, and demos/ holds it",
      spare="09-spare")
 
 case("folder-missing", 1,
@@ -128,11 +151,46 @@ case("head-drift", 1,
 case("dead-link", 1,
      "pages: README.md: links [the list] to demos/LIST.md, "
      "and nothing is there",
-     top="# thinkthen\n\nThe list is [the list](demos/LIST.md).\n")
+     top=TOP.replace("[demos/README.md](demos/README.md)",
+                     "[the list](demos/LIST.md)"))
+
+case("no-table", 1,
+     "pages: demos/README.md: holds no table headed `| # | How to |`, "
+     "so this check would read nothing",
+     index_header="| # | The how-to | Verbs | Status |")
+
+case("window-order", 1,
+     "pages: README.md: features ['02', '01'], and "
+     "sdlc/planning/adr/0018-twenty-how-tos-and-three-themes.md "
+     "names ['01', '02']",
+     top="""# thinkthen
+
+The list is [demos/README.md](demos/README.md).
+
+| How to | The job | |
+| --- | --- | --- |
+| Find the line | A handbook answers it | 02, coming |
+| {green} | A desk gates a step | [01](demos/{folder}/) |
+""")
+
+case("window-title", 1,
+     "pages: README.md: titles how-to 01 [Gate a step twice], "
+     "and demos/README.md titles it [Gate a step]",
+     top=TOP.replace("| {green} |", "| Gate a step twice |"))
+
+case("window-door", 1,
+     "pages: README.md: how-to 02 is coming and links a folder",
+     top=TOP.replace("| 02, coming |", "| [02](demos/{folder}/) |"))
+
+case("leaving-unmarked", 1,
+     "pages: demos/01-gate/README.md: is leaving, and no line of it "
+     "starts [Absorbed by]",
+     green_state="leaving, into 02",
+     plan_green_state="leaving, into 02")
 
 case("unknown-state", 1,
      "pages: demos/README.md: how-to 01 is [soon], "
-     "and a state is green or coming",
+     "and a state is green, coming, or leaving",
      green_state="soon", plan_green_state="soon")
 
 

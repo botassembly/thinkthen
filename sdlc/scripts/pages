@@ -16,10 +16,15 @@ import sys
 LIST_HEADER = re.compile(r"^\|\s*#\s*\|\s*How to\s*\|")
 ROW = re.compile(r"^\|\s*(\d{2})\s*\|(.*)$")
 LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+NUMBER = re.compile(r"\b(\d{2})\b")
+ADR_WINDOW = re.compile(r"^\|\s*#\s*\|\s*How to\s*\|\s*Shows\s*\|")
+TOP_WINDOW = re.compile(r"^\|\s*How to\s*\|\s*The job\s*\|")
 FENCE = re.compile(r"^\s*```")
 
 INDEX = "demos/README.md"
 PLAN = "sdlc/planning/documentation-plan.md"
+ADR = "sdlc/planning/adr/0018-twenty-how-tos-and-three-themes.md"
+TOP = "README.md"
 
 
 def prose(text):
@@ -56,10 +61,44 @@ def rows(path):
         found[number] = {
             "title": link.group(1) if link else title,
             "target": link.group(2) if link else None,
-            "state": state.split(",")[0].strip().lower(),
+            "state": state,
+            "word": state.split(",")[0].strip().lower(),
             "line": line,
         }
     return found
+
+
+def three(path, header):
+    """The three-cell rows of the one table under `header`, in order."""
+    out, reading = [], False
+    for line in prose(path.read_text()):
+        if header.match(line):
+            reading = True
+            continue
+        if reading and not line.startswith("|"):
+            reading = False
+        if not reading or line.startswith("| ---"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) == 3:
+            out.append(cells)
+    return out
+
+
+def adr_window(root):
+    """ADR 0018's front window: (number, title), in its order."""
+    return [(cells[0], cells[1])
+            for cells in three(root / ADR, ADR_WINDOW)]
+
+
+def top_window(root):
+    """The README's front window: (number, title, is a link), in its order."""
+    out = []
+    for title, _job, door in three(root / TOP, TOP_WINDOW):
+        number = NUMBER.search(door)
+        out.append((number.group(1) if number else "", title,
+                    bool(LINK.search(door))))
+    return out
 
 
 def links(path):
@@ -78,13 +117,23 @@ def check(root):
         bad.append(f"pages: {where}: {said}")
 
     index, plan = root / INDEX, root / PLAN
-    for path in (index, plan):
+    for path in (index, plan, root / ADR, root / TOP):
         if not path.is_file():
-            fail(str(path), "is missing")
+            fail(str(path.relative_to(root)), "is missing")
     if bad:
         return bad
 
     listed, planned = rows(index), rows(plan)
+    # A renamed column heading would read no table at all, and every check
+    # below would then pass on nothing. An empty list is the one state that
+    # cannot be right.
+    for where, found in ((INDEX, listed), (PLAN, planned)):
+        if not found:
+            fail(where, "holds no table headed `| # | How to |`, "
+                 "so this check would read nothing")
+    if bad:
+        return bad
+
     for number in sorted(set(listed) | set(planned)):
         if number not in listed:
             fail(INDEX, f"lists no how-to {number}, and {PLAN} does")
@@ -108,15 +157,16 @@ def check(root):
 
     demos = root / "demos"
     folders = sorted(p for p in demos.glob("[0-9]*") if p.is_dir())
-    index_text = index.read_text()
+    named = {row["target"].rstrip("/") for row in listed.values()
+             if row["target"]}
     for folder in folders:
-        if f"{folder.name}/" not in index_text:
-            fail(INDEX, f"names no folder {folder.name}, and demos/ holds it")
+        if folder.name not in named:
+            fail(INDEX, f"links no folder {folder.name}, and demos/ holds it")
 
     for number, row in sorted(listed.items()):
-        if row["state"] not in ("green", "coming"):
-            fail(INDEX, f"how-to {number} is [{row['state']}], "
-                 "and a state is green or coming")
+        if row["word"] not in ("green", "coming", "leaving"):
+            fail(INDEX, f"how-to {number} is [{row['word']}], "
+                 "and a state is green, coming, or leaving")
             continue
         folder = None
         if row["target"]:
@@ -130,21 +180,29 @@ def check(root):
             if matches:
                 folder = matches[0]
         if folder is None:
-            if row["state"] == "green":
-                fail(INDEX, f"how-to {number} is green and links no folder")
+            if row["word"] != "coming":
+                fail(INDEX, f"how-to {number} is {row['word']} "
+                     "and links no folder")
             continue
         page = folder / "README.md"
         if not page.is_file():
             fail(INDEX, f"{folder.name} holds no README.md")
             continue
         said = prose(page.read_text())
+        # A page that is leaving says so on its own first lines, so a reader
+        # who opens the folder learns it before the how-to.
+        if row["word"] == "leaving":
+            if not any(line.startswith("Absorbed by") for line in said):
+                fail(f"demos/{folder.name}/README.md",
+                     f"is leaving, and no line of it starts [Absorbed by]")
+            continue
         status = [line for line in said if line.startswith("Status: ")]
-        wanted = "Status: green" if row["state"] == "green" else "Status: red"
+        wanted = "Status: green" if row["word"] == "green" else "Status: red"
         if wanted not in status:
             fail(f"demos/{folder.name}/README.md",
                  f"says {status or ['no status line']}, "
                  f"and {INDEX} wants [{wanted}]")
-        if row["state"] != "green":
+        if row["word"] != "green":
             continue
         heads = [line for line in said if line.startswith("# ")]
         head = heads[0][2:] if heads else ""
@@ -154,7 +212,34 @@ def check(root):
             fail(f"demos/{folder.name}/README.md",
                  f"is titled [{head}], and {INDEX} wants [{wanted_head}]")
 
-    pages = [index, plan, root / "README.md"] + [
+    # The README's front window is the seven pages ADR 0018 named, in its
+    # order, under the list's own titles, and a page that is not green yet
+    # says so where its link would be.
+    wanted_window = adr_window(root)
+    if not wanted_window:
+        fail(ADR, "holds no table headed `| # | How to | Shows |`")
+    else:
+        shown = top_window(root)
+        if [number for number, _t in wanted_window] != [n for n, _t, _l in shown]:
+            fail(TOP, "features "
+                 f"{[n for n, _t, _l in shown]}, and {ADR} names "
+                 f"{[n for n, _t in wanted_window]}")
+        else:
+            for (number, _adr_title), (_n, title, is_link) in zip(
+                    wanted_window, shown):
+                row = listed.get(number)
+                if row is None:
+                    fail(TOP, f"features how-to {number}, "
+                         f"and {INDEX} lists no such page")
+                    continue
+                if title != row["title"]:
+                    fail(TOP, f"titles how-to {number} [{title}], "
+                         f"and {INDEX} titles it [{row['title']}]")
+                if is_link != (row["word"] == "green"):
+                    fail(TOP, f"how-to {number} is {row['word']} and "
+                         f"{'links a folder' if is_link else 'links nothing'}")
+
+    pages = [index, plan, root / TOP] + [
         folder / "README.md" for folder in folders
     ]
     for path in pages:
@@ -176,9 +261,11 @@ def main():
     if bad:
         return 1
     listed = rows(root / INDEX)
-    green = sum(1 for row in listed.values() if row["state"] == "green")
-    print(f"pages: {len(listed)} how-tos, {green} green, "
-          f"{len(listed) - green} coming")
+    tally = {}
+    for row in listed.values():
+        tally[row["word"]] = tally.get(row["word"], 0) + 1
+    print("pages: " + ", ".join(f"{count} {word}"
+                                for word, count in sorted(tally.items())))
     return 0
 
 
