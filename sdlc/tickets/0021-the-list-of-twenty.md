@@ -6,7 +6,7 @@ opens: demos README.md sdlc/planning/documentation-plan.md sdlc/planning/plan.md
 
 # 0021: The list of twenty
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
