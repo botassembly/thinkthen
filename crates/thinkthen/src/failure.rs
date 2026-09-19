@@ -53,7 +53,7 @@ pub(crate) enum Failure {
     ReplayMiss(String),
     /// The entry the digest names cannot answer the request being made.
     Entry(String, String),
-    /// The recording folder could not be written.
+    /// The recording folder could not be read or written.
     Recording(io::Error),
     /// An invariant inside `thinkthen` broke.
     Defect(&'static str),
@@ -94,7 +94,7 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
         Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
         Failure::Recording(error) => (
             5,
-            format!("the recording folder could not be written: {error}"),
+            format!("the recording folder could not be read or written: {error}"),
         ),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
         Failure::NotUtf8 => (5, "the evidence is not valid UTF-8".to_owned()),

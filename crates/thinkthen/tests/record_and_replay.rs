@@ -378,6 +378,38 @@ fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
 }
 
 #[test]
+fn an_entry_that_cannot_be_read_is_not_reported_as_a_miss() {
+    let folder = folder("unreadable");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+    decide(
+        listener.url(),
+        &["--record", &folder.to_string_lossy()],
+        None,
+    )
+    .expect("the compiled binary runs");
+    let (name, _) = only_entry(&folder).expect("one recorded entry");
+
+    // A directory standing where the entry stood is there and cannot be read.
+    // Calling that a miss would tell the user to record what was already recorded.
+    fs::remove_file(folder.join(&name)).expect("the entry is removable");
+    fs::create_dir(folder.join(&name)).expect("a directory takes the name");
+    let output = decide(
+        listener.url(),
+        &["--replay", &folder.to_string_lossy()],
+        None,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(5));
+    let message = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        message.contains("could not be read or written"),
+        "{message}"
+    );
+    assert!(!message.contains("no entry named"), "{message}");
+}
+
+#[test]
 fn a_failed_exchange_is_never_recorded() {
     let folder = folder("failed");
     let cases = [

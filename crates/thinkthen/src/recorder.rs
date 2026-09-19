@@ -54,11 +54,15 @@ impl Recorder {
             return Ok(None);
         };
         let name = exchange.digest().file_name();
-        let Ok(bytes) = fs::read(folder.join(&name)) else {
-            if self.recording {
-                return Ok(None);
+        let bytes = match fs::read(folder.join(&name)) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                if self.recording {
+                    return Ok(None);
+                }
+                return Err(Failure::ReplayMiss(name));
             }
-            return Err(Failure::ReplayMiss(name));
+            Err(error) => return Err(Failure::Recording(error)),
         };
         Entry::replayed(&bytes, exchange)
             .map(Some)
