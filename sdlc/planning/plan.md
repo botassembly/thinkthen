@@ -1,6 +1,6 @@
 # Plan
 
-Updated 2026-09-19, after Ian ruled on `open-concerns.md`. ADR 0010 records the rulings. Version one is six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`. `find` waits on a live measurement. `segment` and `report` left the plan and sit on `specification/roadmap.md`. `jq` transforms come before any `report` command. The tool speaks one wire shape, and two variables name the backend: `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL`.
+Updated 2026-09-19, after Ian ruled on `open-concerns.md`. ADR 0010 records the rulings. Version one is six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`. ADR 0015 accepted `find`, and slice 11 builds it after `rank`. `segment` and `report` left the plan and sit on `specification/roadmap.md`. `jq` transforms come before any `report` command. The tool speaks one wire shape, and two variables name the backend: `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL`.
 
 ## How a slice moves
 
@@ -30,7 +30,7 @@ A slice is done when its how-tos in `documentation-plan.md` are green, the four 
 | 10a | Metric transforms as folders under `transforms/`, tried on live `decide --details` rows: counts, accuracy, precision, recall, and F1 at a cut, a sweep of cuts, accuracy at coverage, calibration bands, a comparison of two runs by case id, and the cost of a run | | 13, 24, 25, 28, 38 | Done. Ticket 0008 landed on 2026-09-19 after an independent review that recomputed every number. The judge scored accuracy 0.9744 and F1 0.9744 over 39 labeled cases at the default cut. Six transforms are fine as files. The comparison of two runs is the clumsy one |
 | 10b | The policy transform, the monitors, the grouped sweep, and the check of the judge against human labels. The slice ends with a verdict on Ian's five outcomes for `report` and on ADR 0012 | | 14, 16, 26, 30, 34, 35, 36, 37 | After slice 9 |
 | 10c | The how-to form for green demos, the check that enforces it, and two how-tos that need only `decide` | | 01, 19, 27 | Done. Ticket 0010 landed on 2026-09-19 after an independent review. Three how-tos are green |
-| 11 | `find`, with a `none` option. Its ticket first repeats the comparison with `rank --top 1` on documents of 100 to 250 lines | `find.md` | 15 | Accepted by ADR 0014. The probe held on documents of 11 to 14 lines |
+| 11 | `find`, with a `none` option. Its ticket first repeats the comparison with `rank --top 1` on documents of 100 to 250 lines | `find.md` | 15 | Accepted by ADR 0014 and by Ian in ADR 0015. `find.md` is Settled. The probe held on documents of 11 to 14 lines |
 | 12 | Remove profiles, the configuration file, `config`, `--profile`, `--adapter`, and `--key-env`. Ian accepted this part of ADR 0010 on 2026-09-19 | `backends.md`, `result.md`, `channels.md` | 10 left | Done. Ticket 0007 landed on 2026-09-19. The source ceiling fell from 4,520 to 4,193 lines |
 | 13 | The release pass: every help text, a manual page, the license, and the public switch | | all, 18 | Waits on Ian's release ruling |
 

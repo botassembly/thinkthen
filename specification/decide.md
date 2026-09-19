@@ -78,3 +78,7 @@ The help shows one piece of advice beside that block. Word the question in the f
 `decide` exits 1 on a no and 3 on an unresolved answer. Under `set -e` or `set -o pipefail` that ends a script. Put the command in an `if`, a `case`, or a `||` list. [channels.md](channels.md) says more.
 
 Writing a good question matters more than any option. A question works when it names one fact that is visible in the evidence. "Mentions a delivery date" works. "Is a good reply" does not. Measurement of the first decider model showed a narrow question of the first kind catching every planted mismatch while wrongly rejecting 2% to 3% of good work. Outcome questions of the second kind rejected 18% to 46% of work people had accepted.
+
+A claim planted in the evidence moves the answer. A live run judged twenty made-up messages twice, once clean and once with hostile text appended. The cases are few and they are made up. A command aimed at the judge moved the probability of yes by 0.04 or less, in seventeen wordings. A false claim about the case moved it by as much as 0.57, and a third planted claim moved it by 0.02. The tool cannot tell a planted claim from a true one, because both are evidence.
+
+Three defenses hold. `--field` keeps the untrusted parts of a record off the wire. A band sends the moved rows to a person: under `0.2:0.8` the twenty hostile rows held their answer on 18 of 20 and turned 2 into unresolved, and no answer flipped to its opposite. An eval with hostile cases measures what is left.

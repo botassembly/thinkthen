@@ -26,7 +26,7 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 | --- | --- | --- |
 | `--threshold T` | A single cut on the winning option's probability. The band form is a usage error. See [threshold.md](threshold.md) | None. The winning label is returned |
 | `--raw` | Prints the label without quotation marks | Off |
-| `--options POINTER` | Takes the options from each record. See below | None. The options come from the arguments |
+| `--options POINTER` | Takes the options from each record. Requires `--jsonl`. See below | None. The options come from the arguments |
 | `--quiet` | Prints nothing on standard output | Off |
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
@@ -35,7 +35,7 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 
 ## Options from the record
 
-Settled by ADR 0009 item 4, accepted in ADR 0010. `--options POINTER` names a list of labels, or a map from label to description, inside each record. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error, and `--options` outside `--lines` or `--jsonl` is a usage error.
+Settled by ADR 0009 item 4, accepted in ADR 0010. `--options POINTER` names a list of labels, or a map from label to description, inside each record. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error. `--options` requires `--jsonl`, because a pointer needs a JSON record to point into. A line of text holds no pointer, so `--options` under `--lines` is a usage error, and so is `--options` on one document.
 
 ```sh
 thinkthen choose 'Which of these codes fits the note?' --jsonl --field /note --options /codes < notes.jsonl
@@ -83,6 +83,8 @@ thinkthen choose 'Which kind of request is this?' bug feature other --jsonl --fi
 
 `choose` never runs the option it picks. A label is a string that the next program reads.
 
-Measurement of the first decider model found picking from a fixed list stable. Reversing the option order changed none of fifty picks. The vendor's own documents still say that option order and added irrelevant options shift the odds. A short list of options that exclude one another gives the steadiest answer, and a run with a changed list is a different measurement.
+Measurement of the first decider model found picking from a fixed list stable. A live run then judged sixty made-up support messages over five labels. The cases are few and they are made up. Reversing the list changed 2 of 60 picks and shuffling it changed 1 of 60. Every change landed on the catch-all `other`. Keep the option order fixed once a cut is tuned, because a run with a reordered list is a different measurement. Put the catch-all last.
+
+The same run added a sixth label that fits nothing. It changed 0 of 60 picks, and the model gave it a probability of 0.0 on all 60 rows. That measures one kind of added option, on sixty made-up cases. A label that overlaps a real one is untested, and the vendor's own documents warn about it. Word the options so that they exclude one another, and keep the list short.
 
 The cut falls on the winning option's probability and never on the backend's `confidence`. [backends.md](backends.md) says why.

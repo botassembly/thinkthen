@@ -2,7 +2,7 @@
 
 The contract for `thinkthen`. Code follows these documents. A behavior that is absent here is absent from the tool. Ian reads the design here, and a ticket cites the section it builds. ADR 0007 fixes the surface, and changing a Settled section takes a new ADR.
 
-Version one is six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`. `find` waits on a live measurement, and the configuration file left version one. ADR 0010 holds both rulings, and `roadmap.md` holds what left.
+Version one is six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`. The configuration file left version one, and ADR 0010 holds that ruling. `roadmap.md` holds what left. ADR 0015 accepted `find` on the live comparison, and it enters after `rank`.
 
 The names table in [`../README.md`](../README.md) fixes the four names: question file, transform, how-to, and pipeline.
 
@@ -22,7 +22,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [filter.md](filter.md) | `filter` | Settled |
 | [rank.md](rank.md) | `rank` | Settled |
 | [annotate.md](annotate.md) | `annotate` and the saved question file | Settled |
-| [find.md](find.md) | `find`, waiting on a live measurement against `rank --top 1` | Draft |
+| [find.md](find.md) | `find`, and the `none` option that says nothing fits | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
@@ -41,4 +41,4 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `filter QUESTION` | Keeps the records that reach the mark and prints them unchanged |
 | `rank QUESTION` | Prints the records in order of the probability of yes |
 | `annotate FILE` | Asks a saved file of questions and adds one field per question |
-| `find QUESTION` | Draft. Picks the unit that best answers a question, out of a set the model sees at once |
+| `find QUESTION` | Picks the unit that best answers a question, out of a set the model sees at once |

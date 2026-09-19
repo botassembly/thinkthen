@@ -64,6 +64,6 @@ The question stays the same for every record, so one run is one measurement.
 
 The method is fixed and printed in the help. The tool asks one yes/no question of each record, sorts the records by the probability of yes, and breaks exact ties by input order. It never compares two records in one question, and it never runs a tournament.
 
-`rank` takes no rubric. Rating is the weakest thing a decider model does, and ordering by the probability of yes follows the vendor's own reranking recipe.
+`rank` takes no rubric. Ordering by the probability of yes follows the vendor's own reranking method.
 
 `rank` orders and never selects. A user who wants a floor runs `filter` first, as the second example shows.

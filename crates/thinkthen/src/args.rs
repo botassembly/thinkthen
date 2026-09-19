@@ -61,8 +61,8 @@ pub(crate) enum Command {
     /// contradicted, and not_stated rather than one yes/no question.
     ///
     /// Word the options so that they exclude one another, and type a catch-all
-    /// such as other yourself. Option order moves the odds, so a run with a
-    /// reordered list is a different measurement.
+    /// such as other yourself, last. Keep the option order fixed once a cut is
+    /// tuned, because a run with a reordered list is a different measurement.
     Choose(ChooseArguments),
 
     /// Place the evidence on named levels and print the number.
@@ -78,12 +78,12 @@ pub(crate) enum Command {
     /// and 0.5, 0, 0.5 both score 1. Read `--details` for the odds of every
     /// level when the difference matters.
     ///
-    /// Rating is the weakest thing a decider model does. Measurement of the
-    /// first decider model showed rubric judgments rejecting 18% to 46% of work
-    /// that people had accepted. A number belongs in a review queue a person
-    /// reads. A gate that has to hold belongs in `decide` or `choose`, and the
-    /// Bash way to branch on levels is `choose` with the levels as ordered
-    /// labels.
+    /// Measurement of the first decider model showed rubric judgments rejecting
+    /// 18% to 46% of work people had accepted. A later run ordered forty made-up
+    /// reports well and ran one level high on 9 of 40, so tune a cut on labeled
+    /// cases. A number belongs in a review queue a person reads. A gate that has
+    /// to hold belongs in `decide` or `choose`, and the Bash way to branch on
+    /// levels is `choose` with the levels as ordered labels.
     Score(ScoreArguments),
 }
 

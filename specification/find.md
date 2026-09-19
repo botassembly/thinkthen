@@ -1,6 +1,6 @@
 # `find`
 
-Status: **Draft**. ADR 0010 keeps `find` out of version one. Nothing is built from this page until a live run compares `find` with `rank --top 1` on the same units. If `find` picks as well, it enters. If it picks worse, it moves to the roadmap.
+Status: **Settled**. A live run compared `find` with `rank --top 1` on the same units, and ADR 0015 accepted `find` on that evidence. `sdlc/records/0011-the-live-probe.md` holds every number. `find` is slice 11 of `sdlc/planning/plan.md`.
 
 Picks the unit that best answers a question, out of a set the model sees all at once.
 
@@ -20,6 +20,18 @@ Up to 255 lines or records on standard input. `--input FILE` reads a file instea
 
 The answer is relative. `find` picks the best unit present, and `filter` judges each unit alone against a fixed mark. The units see each other, and a user accepts that by choosing this verb. A job that needs each unit judged on its own merits uses `filter` or `rank`.
 
+## What one run measured
+
+The live run judged twenty made-up documents of 11 to 14 numbered lines, with 12 to 14 options. The cases are few and they are made up. `find` named the answering line on 16 of 16 answerable documents and `rank --top 1` named it on 15 of 16. `find` sent 20 requests and 11,063 input tokens. `rank --top 1` sent 239 requests and 69,143 input tokens.
+
+Those documents run far under the 255 units this page allows, so nothing here says how the pick behaves on a long document. The ticket that builds `find` first repeats the comparison on documents of 100 to 250 lines. This page then states the largest size that held, and the limit drops to that size when the larger documents fail.
+
+## Saying that nothing fits
+
+`--none` puts a `none` option beside the units. When the model picks it, `find` prints nothing on standard output, prints `null` under `--details`, and exits 3. ADR 0009 item 3 and demo 15 asked for that spelling, and it is the one `choose` already uses.
+
+On the same twenty documents, a `none` option answered `none` on 4 of 4 documents with no answering line and on 0 of the 16 answerable documents. It sent 20 requests and 11,183 input tokens. Twenty documents are few and they are made up.
+
 ## What it prints
 
 The chosen unit as it arrived, byte for byte, the way [filter.md](filter.md) prints a kept record. Under `--jsonl` that is the whole record. `find` prints one unit and never a list.
@@ -31,6 +43,7 @@ The chosen unit as it arrived, byte for byte, the way [filter.md](filter.md) pri
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `--lines` or `--jsonl` | The framing | `--lines` |
+| `--none` | Offers a `none` option, so the model can say that nothing fits | Off |
 | `--field POINTER` | The part of each record the model sees | The whole record |
 | `--details` | Prints the full result object | Off |
 | `--input FILE` | Reads the units from a file | Standard input |
@@ -39,7 +52,7 @@ The chosen unit as it arrived, byte for byte, the way [filter.md](filter.md) pri
 
 ## Exit codes
 
-0 when a unit was chosen, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty input exits 0 with no output and no request. Whether `find` ever exits 3 rides on the first open point below.
+0 when a unit was chosen, 3 under `--none` when the model says that nothing fits, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty input exits 0 with no output and no request. Without `--none` the verb never exits 3.
 
 ## Examples
 
@@ -53,6 +66,5 @@ thinkthen find 'This ticket should be worked next.' --jsonl --field /body < queu
 
 ## Open points
 
-- How does `find` say that nothing fits? Three shapes are open: a second yes/no question asked of the winner, a `none` option among the units, and a cut on the backend's confidence. Each costs something different, and a measurement settles it. ADR 0009 item 3 names demo 15's argument for the `none` option, which spells the outcome the way `choose` does: `null`, nothing on standard output, and exit 3.
 - Which answer kind does `find` print under `--details`? `yes_no` carries one probability and `choice` carries one per option, and neither names a unit that arrived on standard input. Recommendation: a kind that names the chosen unit's id and carries a probability per unit.
 - Does `find` print more than one unit? Demo 15 wanted the three best lines and found the option free, because one request already answered the whole page. No ADR names such an option, so `find` prints one unit until one does.
