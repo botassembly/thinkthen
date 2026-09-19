@@ -8,6 +8,7 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 | [result.md](result.md) | The JSON result, the acceptance policy, and the four outcomes |
 | [backends.md](backends.md) | Backend profiles, adapters, the `systemone` wire format, keys, timeouts, and retries |
 | [decide.md](decide.md) | The `decide` family, verb by verb |
+| [records.md](records.md) | Draft. Framing, pointers, output modes, order, limits, and exit codes 6, 7, and 8 for the verbs that read a stream |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them |
 
 ## Status words
