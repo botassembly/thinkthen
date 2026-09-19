@@ -1,0 +1,15 @@
+The depot keeps one running note for every shift, and the note is written by the lead on duty.
+A note names the hour it opened, the hour it closed, and the person who signed it off.
+Goods that arrive without a docket wait in the amber bay until a docket is found or written.
+A pallet that stands in the amber bay for more than two shifts goes back to the sender.
+The forklift log is signed at the start of each shift and again when the battery is changed.
+A battery that reads under a quarter is swapped rather than charged in place.
+The cold room door is checked twice a shift, and the reading is written on the door card.
+A reading outside the range on the card is reported to the shift lead at once.
+Cardboard is flattened before it reaches the baler, and the baler is emptied before the last hour.
+The yard gate is locked by the lead on duty, and the key returns to the board in the office.
+Visitors sign the book at the front desk and wear a badge until they leave.
+A delivery booked for the morning that has not arrived by noon is chased by the desk.
+The desk keeps the chase note with the booking, so the next shift can read what was said.
+Orders picked but not dispatched are left on the outbound rack with their paperwork on top.
+Nothing leaves the outbound rack without a signature from the driver who takes it.
