@@ -14,7 +14,8 @@ ADR 0005 made executable demos drive the design. Ian then asked for a full list 
 3. **The how-to form.** The title starts with "How to" and names a task a user has. The page opens with one paragraph on when to use it. Then come the input files, the steps with their commands and real outputs, a section named "What can go wrong" with the exit codes and the traps, and a closing list of related how-tos. Plain words. No design history.
 4. **Three kinds of page, and no others.** How-tos live in `demos/`. Reference lives in `specification/`, and `spec/` holds its executable examples. The README is the one tutorial and the one explanation: what the tool is, the first command, and a link to the how-to list.
 5. **The list of how-tos is planned ahead.** `sdlc/planning/documentation-plan.md` holds the full list, each with its demo, its slice, and its state. A slice is done when its how-tos are green. A feature with no how-to on the list has no place in version one.
-6. **A check enforces the form.** The gate refuses a green demo whose title does not start with "How to", that lacks the "What can go wrong" section, or that is missing from `demos/README.md`. Ticket 0010 writes the check.
+6. **Evals are a first-class section of the how-tos.** Ian ruled this the same day. The section covers his six capabilities: structured cases, reusable definitions, detailed results, traceable artifacts, local reporting and comparison, and validation of the judge. `documentation-plan.md` maps each capability to the how-tos that teach it. The README names evals on its first screen.
+7. **A check enforces the form.** The gate refuses a green demo whose title does not start with "How to", that lacks the "What can go wrong" section, or that is missing from `demos/README.md`. Ticket 0010 writes the check.
 
 ## Consequences
 

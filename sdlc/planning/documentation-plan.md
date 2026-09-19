@@ -46,20 +46,45 @@ The title starts with "How to" and names a task. One paragraph says when to use 
 | Check a document against a checklist | 08 | 9 | Red |
 | Build a triage pipeline that drafts, blocks, or asks a person | 16 | 9 | The flagship. It uses all three question types, a policy in `jq`, and audit rows |
 | Ask one question over two scopes and route the disagreement | 22 | 9 | |
-| Keep an audit trail of every judgment | 23 | 9 | |
 
-## Thresholds and evals
+## Evals
 
-Each of these is also a recipe folder under `recipes/`, as ADR 0012 proposes.
+Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. Each how-to below is also a recipe folder under `recipes/` where it has `jq` in it, as ADR 0012 proposes.
 
 | How to | Demo | Slice | State |
 | --- | --- | --- | --- |
-| Pick a threshold from labeled cases | 13 | 10a, ticket 0008 | Red. Starts now on `decide --details` rows |
-| Grade a batch against trusted answers | 14 | 10a, ticket 0008 | Red. Its several-check form waits for slice 9 |
-| Compare two runs case by case, and say why a value changed | 24 | 10a, ticket 0008 | |
-| Check the judge against human labels | 25 | 10b | |
-| Watch a running pipeline: actions, overturns, and one cut per group | 26 | 10b | |
+| Write an eval case file with stable ids, and grade one case | 29 | 9 | |
+| Grade a batch with a reusable definition of named checks | 14 | 9 | Red. Still written against the removed `report` |
+| Control what each check sees, so a grounding check never reads the trusted answer | 31 | 9 | |
+| Mix exact checks in `jq` with judged checks | 30 | 10b | |
+| Read a result: no, unsure, missing data, and a failed request | 32 | 9 | |
+| Keep a run that can be traced and replayed: cases, definition, rows, model version, recording | 23 | 9 | |
+| Turn results into a spreadsheet and leave the source unchanged | 34 | 10b | |
+| Report accuracy and F1 for every check with no new request | 35 | 10b | |
+| Pick a threshold from labeled cases, and change it later without asking again | 13 | 10a, ticket 0008 | Red. Starts now on `decide --details` rows |
+| Compare two runs: improvements, regressions, missing cases, and why a value changed | 24 | 10a, ticket 0008 | |
+| Account for repeated trials and unsure answers | 36 | 10b | |
+| Check the judge against human labels | 25 | 10a, ticket 0008 | |
+| See whether a probability means what it says | 38 | 10a, ticket 0008 | |
+| Test the judge with hard and hostile cases | 37 | 10b | The live probe measures the hostile case first |
 | Know what a run cost | 28 | 10a, ticket 0008 | |
+
+### Ian's six capabilities, and the how-tos that teach each
+
+| Capability | How-tos |
+| --- | --- |
+| Structured cases with stable ids, one case or a batch | 29, 14 |
+| Reusable definitions that mix exact and judged checks and control what each judgment sees | 14, 30, 31 |
+| Detailed results that keep probabilities, keep checks apart, and tell no from unsure from missing from failed | 32, 35 |
+| Traceable artifacts, an unchanged source, and a spreadsheet as another view | 23, 34 |
+| Local reporting and comparison, with thresholds changed without asking again | 35, 13, 24, 36, 28 |
+| Validation of the judge itself | 25, 38, 37 |
+
+## Watching a pipeline
+
+| How to | Demo | Slice | State |
+| --- | --- | --- | --- |
+| Watch a running pipeline: actions, overturns, and one cut per group | 26 | 10b | |
 
 ## Rules for the list
 
