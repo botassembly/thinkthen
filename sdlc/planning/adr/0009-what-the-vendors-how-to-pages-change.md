@@ -1,6 +1,6 @@
 # ADR 0009: What the vendor's how-to pages change
 
-- Status: Accepted in part by Ian on 2026-09-19. Items 2, 4, and 6 are Accepted. Item 1 is held with `segment`, which left the plan. Item 3, `find`, stays Draft until a live run compares it with `rank --top 1`. Item 5, structured questions, is struck from version one. Item 7 carries over to the `jq` recipes. ADR 0010 records the rulings
+- Status: Accepted in part by Ian on 2026-09-19. Items 2, 4, and 6 are Accepted. Item 1 is held with `segment`, which left the plan. Item 3, `find`, stayed Draft until a live run compared it with `rank --top 1`. The run is ticket 0011, and ADR 0014 accepts `find` on its numbers, open to Ian's overturn. Item 5, structured questions, is struck from version one. Item 7 carries over to the `jq` recipes. ADR 0010 records the rulings
 - Date: 2026-09-19
 
 An agent proposal. Ian asked for the design to be checked against the first vendor's own how-to pages. Three agents read the saved documentation: the primitives, the patterns, and eighteen cookbooks. This record keeps what they found and what it changes. It becomes Accepted on Ian's word, and he can strike any line cheaply.

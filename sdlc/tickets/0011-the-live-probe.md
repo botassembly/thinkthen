@@ -6,7 +6,7 @@ opens: probes sdlc/live-tokens sdlc/scripts
 
 # 0011: The live probe
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
