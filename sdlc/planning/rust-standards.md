@@ -56,7 +56,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 - Unit tests sit beside pure code in the core and are table-driven.
 - Integration tests under `crates/thinkthen/tests/` run the compiled binary and see only arguments, standard input, standard output, standard error, and the exit code.
 - No gate touches the network. Tests replay recorded responses from a fixture directory. One test helper serves canned responses from a loopback listener to prove the request bytes. It uses the standard library only.
-- Property tests cover every parser and round trip: JSON Pointer, the question file, record framing, the wire format. `proptest` arrives as a development dependency with the first parser.
+- Property tests cover every parser and round trip: JSON Pointer, the question file, record framing, the wire format. Property tests also cover any total function over a numeric range, such as the pass mark. `proptest` is a development dependency of the core.
 - `spec/*.md` files are executable examples of the command line, run by `mustmatch`. They are the top rung, and they double as the user documentation.
 - Live calls to a paid backend sit outside the ladder in `sdlc/scripts/live`. They run by hand, under a token cap, with Ian's authorization.
 

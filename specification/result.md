@@ -2,7 +2,7 @@
 
 Status: **Settled** for `decide if`. **Draft** for the other verbs.
 
-A single judgment prints one JSON document and a newline.
+A single judgment prints one JSON document and a newline. The document is compact and sits on one line, so a result is also one record for `jq`, `grep`, and `wc -l`. The example below is spread out for reading. Every field in the example is always present. An empty field holds `null`, and only `usage` may be absent. Token counts are whole numbers of zero or more. `meta.adapter` is an adapter name from [backends.md](backends.md).
 
 ```json
 {
