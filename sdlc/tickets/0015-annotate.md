@@ -6,7 +6,7 @@ opens: crates spec specification/annotate.md specification/result.md specificati
 
 # 0015: `annotate`
 
-Status: waiting on ticket 0014
+Status: ready
 
 ## Outcome
 
