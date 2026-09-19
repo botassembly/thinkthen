@@ -39,7 +39,7 @@ One function maps every error to its exit code.
 
 ## `--plan`
 
-`--plan` prints what the command would send and then stops. It calls no backend and needs no key. The plan is one compact JSON document on standard output with five fields that are always present: `backend`, `url`, `adapter`, `model`, `key_env`, and then `request`, the body the adapter would send. `backend` is `null` for an ad-hoc backend. `key_env` is the name of the key variable, or `null` when no key would be sent, so a script can prove that a key stays home. The request body carries the evidence, because the evidence is what leaves the machine. The plan never holds a key.
+`--plan` prints what the command would send and then stops. It calls no backend and needs no key. The plan is one compact JSON document on standard output with six fields that are always present: `backend`, `url`, `adapter`, `model`, `key_env`, and `request`. `request` is the body the adapter would send. `backend` is `null` for an ad-hoc backend. `key_env` is the name of the key variable, or `null` when no key would be sent, so a script can prove that a key stays home. The request body carries the evidence, because the evidence is what leaves the machine. The plan never holds a key.
 
 ## `--status`
 

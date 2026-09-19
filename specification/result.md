@@ -12,6 +12,7 @@ A single judgment prints one JSON document and a newline. The document is compac
   "assessment": { "status": "accepted", "value": true, "min_prob": 0.9 },
   "meta": {
     "backend": "jev",
+    "url": "https://api.typesafe.ai/v1/systemone",
     "adapter": "systemone",
     "model": "jev-1.13.0",
     "usage": { "input_tokens": 312, "output_tokens": 48 }
@@ -23,7 +24,7 @@ A single judgment prints one JSON document and a newline. The document is compac
 
 - **answer** is what the backend said, in thinkthen's own words. No vendor field name appears in it.
 - **assessment** is what local policy made of the answer.
-- **meta** names the backend, the adapter, the model that answered as the backend reported it, and the usage the backend reported. `usage` is absent when the backend reports none.
+- **meta** names the backend profile, the URL that answered, the adapter, the model that answered as the backend reported it, and the usage the backend reported. `backend` is `null` for an ad-hoc backend. `usage` is absent when the backend reports none.
 
 ## Four outcomes
 
@@ -64,6 +65,7 @@ Status: **Draft**. `decide which` prints this shape.
   "assessment": { "status": "accepted", "value": "bug", "min_prob": 0.8, "min_gap": 0.3 },
   "meta": {
     "backend": "jev",
+    "url": "https://api.typesafe.ai/v1/systemone",
     "adapter": "systemone",
     "model": "jev-1.13.0",
     "usage": { "input_tokens": 312, "output_tokens": 48 }
@@ -105,6 +107,7 @@ Status: **Draft**. `decide how` prints this shape.
   "assessment": { "status": "unsure", "value": null, "min_prob": 0.8 },
   "meta": {
     "backend": "jev",
+    "url": "https://api.typesafe.ai/v1/systemone",
     "adapter": "systemone",
     "model": "jev-1.13.0",
     "usage": { "input_tokens": 208, "output_tokens": 32 }
