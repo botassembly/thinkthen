@@ -54,6 +54,12 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 3] = [
 /// A reply the adapter refuses, whatever question was asked.
 const MALFORMED: &str = r#"{"model":"","answers":{}}"#;
 
+/// A recording entry that is not JSON, holding the evidence it recorded.
+const DAMAGED: &str = concat!(
+    r#"{"schema":"thinkthen.recording/1","adapter":"systemone","#,
+    r#""request":{"evidence":"marker-evidence-7b3ac5"} "response":{}}"#,
+);
+
 /// The address of a port nothing listens on, which fails in the transport.
 const CLOSED: &str = "http://127.0.0.1:1/v1";
 
@@ -71,6 +77,14 @@ fn quoting() -> String {
     format!(r#"{{"error":{{"message":"refused: {EVIDENCE}"}}}}"#)
 }
 
+/// A reply that is JSON no adapter reads, quoting the evidence back.
+///
+/// A JSON reader names the value it stopped on, so a reply shaped like this one
+/// is what would carry the evidence into a diagnostic.
+fn unreadable() -> String {
+    format!(r#"{{"model":"jev-1.13.0","answers":"{EVIDENCE}"}}"#)
+}
+
 /// What the loopback backend answers one run with.
 #[derive(Clone, Copy, Debug)]
 enum Answers {
@@ -84,6 +98,8 @@ enum Answers {
     RateLimited,
     /// A reply the adapter refuses.
     Malformed,
+    /// A reply that is JSON no adapter reads, quoting the evidence back.
+    Unreadable,
     /// Nothing at all, because the run must not reach the listener.
     Nothing,
 }
@@ -100,6 +116,7 @@ impl Answers {
                 Canned::status(429, &quoting()),
             ],
             Self::Malformed => vec![Canned::ok(MALFORMED)],
+            Self::Unreadable => vec![Canned::ok(&unreadable())],
             Self::Nothing => Vec::new(),
         }
     }
@@ -119,12 +136,14 @@ struct Route {
     code: i32,
     /// Whether a recording is written into the folder before the run.
     primed: bool,
+    /// Whether every entry the priming run wrote is damaged before the run.
+    damaged: bool,
     /// Whether the run carries the key at all.
     keyed: bool,
 }
 
 /// Every path the backend and the recording folder can send a run down.
-const PATHS: [Route; 14] = [
+const PATHS: [Route; 16] = [
     route("a success", &[], Answers::Good, 1, 0),
     route("a plan", &["--dry-run"], Answers::Nothing, 0, 0),
     route("a record run", &["--record", "{dir}"], Answers::Good, 1, 0),
@@ -139,6 +158,19 @@ const PATHS: [Route; 14] = [
         requests: 1,
         code: 0,
         primed: true,
+        damaged: false,
+        keyed: true,
+    },
+    // The entry is damaged after it is written, so the reply the run reads is
+    // untrusted bytes holding the evidence that was recorded.
+    Route {
+        named: "a damaged entry",
+        adds: &["--replay", "{dir}"],
+        answers: Answers::Good,
+        requests: 1,
+        code: 5,
+        primed: true,
+        damaged: true,
         keyed: true,
     },
     route(
@@ -172,6 +204,7 @@ const PATHS: [Route; 14] = [
         4,
     ),
     route("a malformed answer", &[], Answers::Malformed, 1, 4),
+    route("an unreadable answer", &[], Answers::Unreadable, 1, 4),
     // The exchange succeeds and the entry cannot be written, which is the one
     // failure that happens after a key has already crossed the wire.
     route(
@@ -188,6 +221,7 @@ const PATHS: [Route; 14] = [
         requests: 0,
         code: 4,
         primed: false,
+        damaged: false,
         keyed: false,
     },
 ];
@@ -207,6 +241,7 @@ const fn route(
         requests,
         code,
         primed: false,
+        damaged: false,
         keyed: true,
     }
 }
@@ -322,6 +357,13 @@ fn sweep(
             .collect();
         let first = spawn(&priming, &environment(true), evidence.as_bytes())?;
         assert_eq!(first.status.code(), Some(0), "{framing}: the priming run");
+    }
+    if route.damaged {
+        let entries = written(&dir);
+        assert!(!entries.is_empty(), "{framing}: an entry to damage");
+        for entry in entries {
+            fs::write(&entry, DAMAGED)?;
+        }
     }
 
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();

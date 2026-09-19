@@ -122,6 +122,8 @@ fn the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record() {
     assert!(listener.requests().is_empty(), "the tail was sent");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        format!("{REFUSED}thinkthen: stopped at record 1; 0 records finished, 0 from a recording\n")
+        format!(
+            "{REFUSED}thinkthen: stopped at record 1; 0 records finished, 0 from a recording\n"
+        )
     );
 }

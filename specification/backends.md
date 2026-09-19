@@ -64,6 +64,8 @@ An adapter is two pure functions.
 
 An adapter touches no network, no file, and no clock. Its tests are the fixture files under `fixtures/`. Version one compiles one adapter, `systemone`, and nothing selects it. Ruling 1 of ADR 0010 left one wire shape, so there is nothing to choose between. A recording entry still names `systemone`, so an entry written today says which shape it recorded.
 
+A reply that is not a `systemone` response at all is exit code 4, and the message names the line and column the reading stopped at and never the text it stopped on. A backend can send back whatever was sent to it, so a diagnostic never repeats a reply.
+
 Decode refuses a reply that lacks an answer for a planned question, carries an answer of the wrong kind, or holds a probability outside zero to one. A refused reply is exit code 4. An adapter that cannot supply a probability per option or per level refuses the reply. It never invents one.
 
 ## The `systemone` adapter

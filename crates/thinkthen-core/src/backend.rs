@@ -95,8 +95,8 @@ impl Backend {
 
     /// Say whether the request travels under TLS.
     ///
-    /// A `false` here means the address is a loopback one, because [`address`]
-    /// refuses every other host under `http://`. The binary reads this to
+    /// A `false` here means the address is a loopback one, because the address
+    /// rule refuses every other host under `http://`. The binary reads this to
     /// cancel any proxy for such a request: a proxy would carry it off this
     /// machine in clear text and undo the rule. Under `https://` a proxy sees
     /// the host alone, so it is left in place.

@@ -35,8 +35,15 @@ impl EncodeError {
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub enum DecodeError {
     /// The bytes are not a `systemone` response.
-    #[error("the response is not a systemone response: {0}")]
-    Malformed(String),
+    ///
+    /// The message names the place and never the text. A backend can send back
+    /// whatever was sent to it, and a JSON reader quotes the value it stopped
+    /// on, so quoting the reader would print the evidence.
+    #[error("the response is not a systemone response: the JSON at line {0} column {1} is not one")]
+    Malformed(usize, usize),
+    /// The response names no model, so nothing says what answered.
+    #[error("the response names no model")]
+    NoModel,
     /// The response answered every question but the one in this place.
     #[error("the response carries no answer for question `{}`", wire_name(*.0))]
     MissingAnswer(usize),

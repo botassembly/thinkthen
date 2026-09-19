@@ -17,8 +17,12 @@ const SCHEMA: &str = "thinkthen.recording/1";
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub enum EntryError {
     /// The bytes are not a recording entry.
-    #[error("the file is not a recording entry: {0}")]
-    Malformed(String),
+    ///
+    /// The message names the place and never the text. An entry is written
+    /// around the evidence that was sent, and a JSON reader quotes the text it
+    /// stopped on, so quoting the reader would print the evidence.
+    #[error("the file is not a recording entry: the JSON at line {0} column {1} is not one")]
+    Malformed(usize, usize),
     /// The entry was written by a version that names another schema.
     #[error("the entry carries schema `{0}` and this version reads `{SCHEMA}`")]
     Schema(String),
@@ -26,8 +30,10 @@ pub enum EntryError {
     #[error("the entry records a different exchange, so the file was damaged or hand-edited")]
     Mismatched,
     /// The entry could not be written as JSON.
-    #[error("the entry could not be written as JSON: {0}")]
-    Unwritable(String),
+    ///
+    /// The message names no cause, for the reason [`Self::Malformed`] gives.
+    #[error("the entry could not be written as JSON")]
+    Unwritable,
 }
 
 /// The name one exchange is filed under: its SHA-256 in lowercase hex.
@@ -133,8 +139,7 @@ impl Entry {
     ///
     /// Returns [`EntryError::Unwritable`] when the entry cannot be written as JSON.
     pub fn written(&self) -> Result<String, EntryError> {
-        let mut text = serde_json::to_string_pretty(self)
-            .map_err(|error| EntryError::Unwritable(error.to_string()))?;
+        let mut text = serde_json::to_string_pretty(self).map_err(|_| EntryError::Unwritable)?;
         text.push('\n');
         Ok(text)
     }
@@ -149,8 +154,7 @@ impl Entry {
     /// Returns [`EntryError`] when the file is not an entry, when it names
     /// another schema, or when it records another exchange.
     pub fn replayed(bytes: &[u8], exchange: &Exchange<'_>) -> Result<Vec<u8>, EntryError> {
-        let entry: Self = serde_json::from_slice(bytes)
-            .map_err(|error| EntryError::Malformed(error.to_string()))?;
+        let entry: Self = serde_json::from_slice(bytes).map_err(place)?;
         if entry.schema != SCHEMA {
             return Err(EntryError::Schema(entry.schema));
         }
@@ -166,7 +170,12 @@ impl Entry {
 
 /// Take bytes that are JSON as one value to embed, never as a string.
 fn json(bytes: &[u8]) -> Result<Box<RawValue>, EntryError> {
-    serde_json::from_slice(bytes).map_err(|error| EntryError::Malformed(error.to_string()))
+    serde_json::from_slice(bytes).map_err(place)
+}
+
+/// Where a JSON reader stopped, with nothing of what it stopped on.
+fn place(error: serde_json::Error) -> EntryError {
+    EntryError::Malformed(error.line(), error.column())
 }
 
 /// Write bytes as lowercase hexadecimal.
@@ -189,7 +198,7 @@ fn nibble(value: u8) -> char {
 
 #[cfg(test)]
 mod tests {
-    use super::{Entry, EntryError, Exchange};
+    use super::{Entry, EntryError, Exchange, SCHEMA};
     use crate::plan::Plan;
     use crate::question::Question;
     use crate::systemone;
@@ -300,7 +309,32 @@ mod tests {
         );
         assert!(matches!(
             Entry::replayed(b"not an entry at all", &exchange),
-            Err(EntryError::Malformed(_))
+            Err(EntryError::Malformed(..))
         ));
+    }
+
+    /// A damaged entry holds the evidence it recorded, and no message quotes it.
+    ///
+    /// A JSON reader names the text it stopped on. The entry is a file this
+    /// tool wrote around the evidence, so that text is the evidence, and the
+    /// message says where the file broke and never what it held.
+    #[test]
+    fn no_refusal_of_a_damaged_entry_quotes_the_evidence_inside_it() {
+        let url = Url::new("http://127.0.0.1:9/v1/systemone").expect("an address");
+        let exchange = Exchange::new(&url, br#"{"asked":1}"#);
+        let evidence = "marker-evidence-7b3ac5";
+        let damaged = format!(
+            "{{\"schema\":\"{SCHEMA}\",\"adapter\":\"systemone\",\
+             \"request\":{{\"evidence\":\"{evidence}\"}} \"response\":{{}}}}"
+        );
+
+        let error =
+            Entry::replayed(damaged.as_bytes(), &exchange).expect_err("a damaged entry is refused");
+
+        assert!(!error.to_string().contains(evidence), "{error}");
+        assert_eq!(
+            error.to_string(),
+            "the file is not a recording entry: the JSON at line 1 column 105 is not one"
+        );
     }
 }
