@@ -25,6 +25,7 @@ A second agent read the code and ran the binary with no key. It found the design
 - **The release profile is stated.** `[profile.release]` sets `overflow-checks = true` and `panic = "abort"`. The build in `sdlc/scripts/` uses `--locked` everywhere.
 - **The workflow pins what it runs.** Each action is pinned to a commit SHA with its tag in a comment, and the downloaded `jq` is checked against a recorded SHA-256.
 - **Three sentences.** `README.md` says beside its recording bullet that a recording holds the evidence, so committing one publishes it. `backends.md` names the proxy variables the HTTP client reads. `recording.md` says that an address is stored in every recording, path included, so a token must never sit in the path.
+- **One secrecy test for every path.** One shared test helper runs each command with a marker key and marker evidence through success, each refusal, a failed request, a malformed answer, a rate limit, `--dry-run`, `--record`, `--replay`, and `--cache`. It reads both output streams, every file the run wrote, and every `Debug` line the tests can reach. It fails if the key appears anywhere or if the evidence appears in an error. A later ticket adds a command to it in one line. `review-lessons.md` found this gap in three reviews, and the narrower tests it replaces are deleted.
 
 Excluded: any new option, a trust store for a private certificate authority, and shell completions or a manual page, which wait for the release pass.
 

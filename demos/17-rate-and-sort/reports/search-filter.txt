@@ -1,3 +1,0 @@
-The date filter on the search page ignores the year. Picking March
-returns March of every year. You can still find the record by typing
-the full date into the search box.

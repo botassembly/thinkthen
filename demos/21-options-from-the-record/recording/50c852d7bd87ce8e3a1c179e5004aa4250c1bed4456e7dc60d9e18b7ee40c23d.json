@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The carrier confirmed in writing that the parcel is lost. The customer replied that they still want the item and do not want their money back.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which of these actions should be taken next?","criteria":{"ship_a_replacement":"Send the same item again at no charge.","refund_the_order":"Give the money back and send nothing.","open_a_carrier_claim":"Ask the carrier to investigate the parcel.","close_the_ticket":"End the conversation with no further action."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"ship_a_replacement","confidence":0.85,"probabilities":{"ship_a_replacement":0.89,"open_a_carrier_claim":0.1,"close_the_ticket":0.01,"refund_the_order":0.0}}},"usage":{"input_tokens":402,"output_tokens":62}}
+}

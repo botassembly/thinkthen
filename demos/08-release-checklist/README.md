@@ -1,5 +1,7 @@
 # 08 Release checklist
 
+Absorbed by how-to 39, which screens one message for several hazards and a severity in one request. ADR 0016 rules that this folder stays until 39 is green and then leaves.
+
 Status: red
 
 Verbs: `annotate`

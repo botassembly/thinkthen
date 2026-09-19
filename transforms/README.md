@@ -22,7 +22,7 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | `score/` | Accuracy, precision, recall, and F1 at a cut | [25](../demos/25-check-the-judge/) |
 | `sweep/` | What every cut would have done, and which one to pick | [13](../demos/13-pick-a-threshold/) |
 | `band/` | Accuracy beside coverage for a band | [13](../demos/13-pick-a-threshold/) |
-| `calibration/` | Whether a probability of 0.8 means eight in ten | [38](../demos/38-what-a-probability-means/) |
+| `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
 | `compare/` | What changed between two runs, and why it could have | [24](../demos/24-compare-two-runs/) |
 | `cost/` | The input tokens a run spent and what they cost | [28](../demos/28-what-a-run-cost/) |
 

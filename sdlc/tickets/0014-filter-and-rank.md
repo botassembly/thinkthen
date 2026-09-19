@@ -25,6 +25,7 @@ Status: waiting on ticket 0017
 - Both honor `--field`, `--input`, `--jobs`, `--record`, `--replay`, `--cache`, and `--dry-run` as record mode built them. A failed record stops the run. `filter` has then printed a prefix of its output. `rank` has printed nothing, and its line on standard error says so.
 - "Byte for byte" covers a JSON record with odd spacing and a text line with trailing spaces. The record's line ending is written as a line feed.
 - `meta.tool`, the result object, and the recording entry are those of `decide`. A recording made by `decide` over the same records replays under `filter` and `rank` with the same question, and a test proves it.
+- The cut, the sort by probability of yes, the tiebreak by input order, and the `--top N` slice are pure functions in `thinkthen-core`, so a library in another language can be held to the same cases. ADR 0017 gives the reason.
 - The short help of `rank` states the method in one sentence: one yes/no question per record, a local sort, no comparison of two records.
 - How-tos 03 (keep only the records that match a meaning), 06 (put the best matches first), and 09 (control what leaves the machine, and prove it with `--dry-run`) turn green in the form of ADR 0011, recorded through `sdlc/scripts/live`. How-to 06 uses the several-pointer form to rank passages against a query.
 

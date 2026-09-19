@@ -1,3 +1,0 @@
-The export button on the settings page does nothing in one browser.
-It works in the others, and the same file downloads from the reports
-page in two clicks. A few people only use that one browser.
