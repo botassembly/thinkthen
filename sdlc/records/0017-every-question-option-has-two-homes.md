@@ -61,6 +61,8 @@ Each of these is Ian's to overturn.
 - **The tool keeps sending the evidence as a string**, as check 3 above explains.
 - **`probes/token-budget/` carries no leading number**, so the `spec` rung's replay check passes it by. It posts three questions in one request, which the tool never does, so there is no exchange to record.
 
+**How-to 40 shares how-to 20's scenario on purpose.** ADR 0016 rule 6 lets no two pages share a scenario unless one is the sequel of the other. 40 is written so that 20 can be deleted with nothing lost, which is the coordinator's instruction, and the rule is met the moment 20 goes. 40 links to 20 until then. Deleting 20 is not this ticket's work.
+
 ## One issue opened
 
 `sdlc/issues/2026-09-19-compare-cannot-see-a-question-change-that-only-the-digest-shows.md`. `transforms/compare/compare.jq` reads a question change from `question.text`, which the two texts never reach, so it reported `changed.question` as false for two runs that asked two different questions. How-to 41 names this in its traps section, and the fix is to read `meta.question_sha256`.
