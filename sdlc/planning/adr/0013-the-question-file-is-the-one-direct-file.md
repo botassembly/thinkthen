@@ -51,3 +51,6 @@ Proposed, as item 6 of this decision:
 - **The `annotate` file is a question set.** It holds several named questions, and each entry has exactly the shape of a question file. `jq` lifts one question out of a set, and `jq` builds a set from question files. No `--name` option exists.
 
 The parser exists once `annotate` lands, so the cost is one option on five commands. A how-to proves the need: tune a cut in an eval, then ship the same file in the gate. It waits for Ian's word, and it would land after ticket 0015.
+
+Ian accepted two parts of this amendment on 2026-09-19: a question file holds one question, and the `annotate` file is called a question set. He does not love either name and may return to them. The spelling is still open. Ian disliked `--from`, because the thing it names is the question, and he floated `@` and a path in the question's own position. The agent recommends that form: `thinkthen decide @refund.json < message.txt`. The first argument is then always the question, as text or as `@` and a path, and no option is added. `curl` and other tools read `@` the same way.
+
