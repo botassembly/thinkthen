@@ -25,7 +25,7 @@ Every caller asks `built_in` for the value it needs.
 - `question_file/resolve.rs` takes the default model, and `lib.rs` re-exports it at the crate root as it did before.
 - `crates/thinkthen/tests/backend/harness/mod.rs` builds the loopback URL it expects from `ENDPOINT_PATH` rather than from a literal.
 
-`SEAM_ALLOWED` in `sdlc/scripts/policy.py` is empty. `ADAPTER` is now the adapters folder. `specification/backends.md` says in one sentence that an adapter owns its name, its default address, its default model, and its endpoint path.
+`SEAM_ALLOWED` in `sdlc/scripts/policy.py` is empty, and `adapter_paths` computes what the check exempts from the `pub mod` lines of `adapters.rs`. `specification/backends.md` says in one sentence that an adapter owns its name, its default address, its default model, and its endpoint path.
 
 ## Nothing changed by a byte
 
@@ -38,7 +38,7 @@ The pinned `decide` digest in `recording.rs::tests::PINNED` is unchanged and sti
 - **The pinning test.** `left: [... 104, 105, 103, 104 ...] right: [... 72, 73, 71, 72 ...]` on a deliberately altered level name, then green on the real bytes.
 - **The move.** `error[E0432]: unresolved import crate::systemone` in `recording.rs` and in `question_file/resolve/tests.rs`, and `couldn't read .../specification/fixtures/systemone/decide-urgent.request.json` from each `include_str!` in the adapter's own tests, which sat one directory shallower than the files now are.
 - **The help check.** `the long help does not name the default model jev-latest`, raised by changing the literal in `args.rs` to a name the constant does not carry.
-- **The seam check under its new prefix.** A line holding all four vendor words was planted in `backend.rs` and the check refused each one by name: `seam: crates/thinkthen-core/src/backend.rs:6 names 'noul' outside the adapter`, and the same for `criteria`, `systemone`, and `typesafe`. `rust-standards.md` asks that every ban be planted and refused rather than trusted, and moving `ADAPTER` to another folder is a change to the ban.
+- **The seam check over its new ground.** A line holding every vendor word was planted in `backend.rs` and the check refused each one by name: `seam: crates/thinkthen-core/src/backend.rs:6 names 'noul' outside the adapter`, and the same for `criteria`, `systemone`, `typesafe`, and, after the review added it, `jev`. `rust-standards.md` asks that every ban be planted and refused rather than trusted, and moving what the check exempts is a change to the ban.
 
 ## The choices made where the pages were silent
 
@@ -83,7 +83,7 @@ It confirmed the two questions the ticket turns on. No behavior changed: every o
 
 **5. A test built the vendor's URL as a literal.** `recordings.rs` constructs an address to take a digest over rather than pinning a rendered line, so by this record's own rule it should read the adapter's constants. **Fixed.** It now builds from `DEFAULT_BASE` and `ENDPOINT_PATH`, and its model from `DEFAULT_MODEL`.
 
-**6. The pinned bytes were all plain ASCII.** ADR 0017 calls the JSON escaping the hardest rule to hold still, and nothing pinned it. **Fixed.** A fourth case sends evidence carrying a quote, a line feed, a tab, a control byte, an accented letter, and a dash outside ASCII, and pins the body escape for escape. The three original bodies were left alone, because they are the ones watched against pre-move code. The fourth was pinned after the move, and it is honest to say so: it guards every change from here on rather than this one. What makes it safe is that the encoder's diff against `4c3fddf` is three `use` lines and five `include_str!` paths, and no serialization line at all.
+**6. The pinned bytes were all plain ASCII.** ADR 0017 calls the JSON escaping the hardest rule to hold still, and nothing pinned it. **Fixed.** A fourth case sends evidence carrying a quote, a line feed, a tab, a control byte, an accented letter, and a dash outside ASCII, and pins the body escape for escape. The three original bodies were left alone, because they are the ones watched against pre-move code. The fourth was pinned after the move, and it is honest to say so: it guards every change from here on rather than this one. What makes it safe is that the encoder's diff against `4c3fddf` is five `use` lines and the ten `include_str!` paths that sit one directory deeper, and no serialization line at all.
 
 **7. The record was uncommitted and the ticket said `in progress`.** The record is committed with this pass. The ticket stays at `in progress` on purpose: the coordinator lands it, which is the instruction this builder works under.
 

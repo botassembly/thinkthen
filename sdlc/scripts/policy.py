@@ -273,7 +273,13 @@ def adapter_paths() -> tuple[str, ...]:
     without a `pub mod` line naming it is read like any other source, so the
     exemption cannot be taken by moving a file.
     """
-    declared = re.findall(r"^pub mod (\w+);", (REPO / ADAPTERS).read_text(encoding="utf-8"), re.M)
+    listing = REPO / ADAPTERS
+    if not listing.is_file():
+        # Every source is then read, because nothing is exempt. The run fails
+        # on this line and on each vendor word the adapter's own files hold.
+        fail("seam", f"{ADAPTERS} is missing, so the seam has no home")
+        return ()
+    declared = re.findall(r"^pub mod (\w+);", listing.read_text(encoding="utf-8"), re.M)
     if not declared:
         fail("seam", f"{ADAPTERS} declares no adapter module, so the seam has no home")
     folder = ADAPTERS.removesuffix(".rs")

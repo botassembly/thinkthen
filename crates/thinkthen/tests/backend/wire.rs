@@ -1,11 +1,15 @@
-//! The bytes one request carries, pinned for each of the three question types.
+//! The bytes one request carries, pinned for each question type.
 //!
 //! Ticket 0020 moved the adapter's name, its default address, its default
 //! model, and its endpoint path into the adapter's module. Nothing there may
 //! change a request by a byte, because the digest of these bytes names the
-//! recording a run replays. Each case holds the body the tool sent before the
-//! move, written out rather than encoded again, so a change in the encoder
-//! cannot move the test with it.
+//! recording a run replays. The first three cases hold the body the tool sent
+//! before the move, written out rather than encoded again, so a change in the
+//! encoder cannot move the test with it.
+//!
+//! The fourth case was pinned after the move, so it says nothing about the
+//! move itself. It guards the JSON escaping from here on, which nothing else
+//! pinned and which ADR 0017 calls the hardest rule to hold still.
 
 use crate::harness::{Canned, Listener, spawn};
 
