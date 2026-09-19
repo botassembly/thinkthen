@@ -33,6 +33,21 @@ A key is read from `THINKTHEN_API_KEY`. It is never committed, logged, hashed, e
 
 This repository will go public. Never name a private project or a customer. Describe a consumer generically.
 
+## What reviewers keep finding
+
+- A secrecy test covers every command and every failure path, and it reads every `Debug` line too.
+- A test that claims "sends nothing" counts the requests on the loopback listener. `--dry-run` proves nothing about a live path.
+- A test pins the exact sentence it checks. `contains("3")` passes on any text with a 3 in it.
+- A check script strips fenced code blocks before it reads a title or a status line.
+- A block that turns `set -e` off pins the exit code it captured.
+- A `jq` transform never uses `//` for a three-way rule, because `false` and a missing value read alike under it.
+- A number on a page names the record that measured it, and a change in behavior changes its pages in the same commit.
+- A script that checks something runs from a rung, or it rots.
+
+## Where things are
+
+`crates/thinkthen-core` and `crates/thinkthen` hold the code. `specification/` is the contract. `spec/` holds executable pages that `mustmatch` runs. `demos/` holds the how-tos, and each green one is also a test held to ADR 0016. `transforms/` holds `jq` files over saved rows. `probes/` holds the live measurements behind a ruling. `sdlc/` is the record: `planning/adr/` for decisions, `tickets/` for authorized work, `records/` for what landed and its review, `issues/` for problems found, and `scripts/` for the gate ladder. `README.md` holds the names: question file, question set, transform, how-to, pipeline.
+
 ## Where decisions go
 
 Every decision lands in `sdlc/`: an ADR for an architecture decision, an issue for a problem found, a ticket for work authorized. Tickets are numbered from 0001 in this repository, and a ticket lands through a worktree. A decision Ian cannot find later was not made. Say which ones he can overturn.
