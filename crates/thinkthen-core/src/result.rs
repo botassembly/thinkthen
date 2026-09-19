@@ -2,6 +2,7 @@
 
 use serde::Serialize;
 
+use crate::adapter::Adapter;
 use crate::answer::Answer;
 use crate::assessment::Assessment;
 use crate::question::Question;
@@ -9,14 +10,6 @@ use crate::text::{BackendName, ModelName};
 
 /// The schema string a version one result carries.
 pub const SCHEMA: &str = "thinkthen.result/1";
-
-/// The wire formats an adapter speaks. Version one speaks one of them.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Adapter {
-    /// The `systemone` request and response format.
-    SystemOne,
-}
 
 /// What the backend reported it spent on the judgment.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -104,7 +97,8 @@ impl DecisionResult {
 
 #[cfg(test)]
 mod tests {
-    use super::{Adapter, DecisionResult, Meta, SCHEMA, Usage};
+    use super::{DecisionResult, Meta, SCHEMA, Usage};
+    use crate::adapter::Adapter;
     use crate::answer::Answer;
     use crate::assessment::assess;
     use crate::pass_mark::PassMark;

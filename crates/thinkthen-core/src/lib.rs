@@ -9,6 +9,7 @@
 #![forbid(clippy::disallowed_macros, clippy::indexing_slicing)]
 #![forbid(clippy::allow_attributes_without_reason)]
 
+mod adapter;
 mod answer;
 mod assessment;
 mod pass_mark;
@@ -18,13 +19,14 @@ mod question;
 mod result;
 mod text;
 
+pub use crate::adapter::{Adapter, UnknownAdapterError};
 pub use crate::answer::{Answer, AnswerKind};
 pub use crate::assessment::{Assessment, AssessmentStatus, assess};
 pub use crate::pass_mark::{PassMark, PassMarkError};
 pub use crate::policy::Policy;
 pub use crate::probability::{Probability, ProbabilityError};
 pub use crate::question::{Question, Verb};
-pub use crate::result::{Adapter, DecisionResult, Meta, SCHEMA, Usage};
+pub use crate::result::{DecisionResult, Meta, SCHEMA, Usage};
 pub use crate::text::{BackendName, BlankTextError, Condition, Evidence, ModelName};
 
 /// The name the tool answers to on the command line and in its own output.
