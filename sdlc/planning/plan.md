@@ -8,8 +8,8 @@ Updated 2026-09-18, after Ian's rulings in ADR 0003. The whole command line is p
 | --- | --- | --- |
 | 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version`, one executable spec | Done |
 | 1 | `thinkthen decide if` over text: the types, the pass mark, the result, the `systemone` adapter, `--status`, exit codes, `--plan` | Tickets 0001, 0002, 0003 |
-| 2 | `thinkthen decide which` with inline options and `--from` | Needs its section in `specification/decide.md` |
-| 3 | `--record` and `--replay` over one content-addressed directory | Needs a specification document |
+| 2 | `--record` and `--replay` over one content-addressed directory. Moved up by ADR 0005, because demos replay recordings | Needs a specification document |
+| 3 | `thinkthen decide which` with inline options and `--from` | Drafted in `specification/decide.md` |
 | 4 | A configuration file with named backend profiles, and `thinkthen backend check` | Needs a specification document |
 | 5 | The `chat-logprobs` adapter, proven against a local server | Needs its section in `specification/backends.md` |
 | 6 | Record framing for JSONL and lines, `--on`, `--id`, `where`, bounded parallel requests with order kept, a request cap, a rate limit, a token ledger | Needs its section |
@@ -18,6 +18,10 @@ Updated 2026-09-18, after Ian's rulings in ADR 0003. The whole command line is p
 | 9 | `rank` and `how` | After slice 6 |
 | 10 | `--as` enrichment for JSONL, then CSV and TSV | After slice 7 |
 | 11 | `match` and `segment` | Needs its section |
+
+## Demos
+
+ADR 0005 makes demos the driver. `demos/` holds small real shell jobs as executable pages. A demo starts red, argues for design choices, and turns green when its verbs exist and its recording is made. The `spec` rung runs the green ones. The demo set is being drafted now.
 
 ## The other families
 
