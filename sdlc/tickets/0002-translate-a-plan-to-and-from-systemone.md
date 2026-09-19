@@ -6,7 +6,7 @@ opens: crates/thinkthen-core specification/fixtures sdlc/ratchet.json
 
 # 0002: Translate a plan to and from systemone
 
-Status: ready
+Status: landed
 
 ## Outcome
 
