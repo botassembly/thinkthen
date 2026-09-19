@@ -96,6 +96,6 @@ Three observations stand with no change, and Ian can overturn any of them.
 
 ## The gates
 
-`install`, `lint`, `test`, and `spec` all exit 0. 224 tests. `demos: 13 green, 7 red`. The count is a count of pages marked green, and every one of them passes. It fell from 15 because the merge from `origin/main` brought ticket 0018's reorganization of the how-to list. The ceiling went from 9025 to 10484.
+`install`, `lint`, `test`, and `spec` all exit 0. 224 tests. `demos: 13 green, 7 red`. The count is a count of pages marked green, and every one of them passes. It fell from 15 because the merge from `origin/main` brought ticket 0018's reorganization of the how-to list. The ceiling went from 9025 to 10499.
 
 The ticket stays at `in progress`.
