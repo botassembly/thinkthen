@@ -52,9 +52,13 @@ impl Environment {
     }
 }
 
-/// Read one variable, or `None` when it is unset or holds bytes that are not text.
+/// Read one variable, or `None` when it holds nothing at all.
+///
+/// A variable set to the empty string counts as unset, the way most Unix tools
+/// read one. A variable holding white space is given as it stands, so the value
+/// it offers is refused as blank further in.
 fn read(name: &str) -> Option<String> {
-    env::var(name).ok()
+    env::var(name).ok().filter(|value| !value.is_empty())
 }
 
 /// Read standard input to its end and take it as the evidence.

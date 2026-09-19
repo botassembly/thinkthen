@@ -119,6 +119,28 @@ fn environment_variables_name_a_backend_and_a_flag_beats_them() {
 }
 
 #[test]
+fn an_empty_environment_variable_is_unset_and_white_space_is_still_refused() {
+    let output = run(
+        &["decide", "if", "asks for a refund", "--plan"],
+        &[("THINKTHEN_BACKEND", ""), ("THINKTHEN_MODEL", "")],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(printed.contains(r#""backend":"jev""#), "{printed}");
+    assert!(printed.contains(r#""model":"jev-latest""#), "{printed}");
+    assert_eq!(output.status.code(), Some(0));
+
+    let output = run(
+        &["decide", "if", "asks for a refund", "--plan"],
+        &[("THINKTHEN_MODEL", " ")],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
 fn each_way_of_naming_no_backend_and_no_mark_is_a_usage_error() {
     let cases: [(&[&str], &str); 8] = [
         (&["--url", CLOSED], "a url with no adapter and no model"),
