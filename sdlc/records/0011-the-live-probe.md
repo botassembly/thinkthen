@@ -55,9 +55,9 @@ The sweep over the 19 cuts from 0.05 to 0.95 follows from that. Every cut up to 
 
 The two numbers are nearly the same number. They are equal on 30 of 60 rows, the mean absolute gap is 0.0107, and the largest gap is 0.09.
 
-**Conclusion.** No cut on `confidence` beat a cut on the winning probability on these sixty cases. Neither number separates right from wrong here, because the model was wrong most confidently. The measurement is weak by construction: two errors cannot separate two scales, and the honest reading is an upper bound on how much a change could gain rather than a verdict on `confidence` in general.
+**Conclusion.** No cut on `confidence` beat a cut on the winning probability on these sixty cases. Neither number separates right from wrong here, because the model was wrong most confidently. Two errors cannot settle which of two scales separates right from wrong. The question stays open. What these sixty cases bound is the size of the prize: a perfect cut could have saved two rows out of sixty, and the two numbers are close enough that no cut found even one of them without dropping eight right rows first.
 
-**What it changes.** Nothing. The line in ADR 0009 item 2 that says the rule is looked at again once this has been measured is now answered, and the answer is that the cut stays on the winning probability. `specification/result.md` keeps `confidence` in the saved row without a cut, and `backends.md` keeps its reason.
+**What it changes.** Nothing. The cut stays on the winning probability, because nothing measured here argues for moving it. The reopening clause in ADR 0009 item 2 is not discharged, and it takes a run with enough errors to tell the two scales apart. `specification/result.md` keeps `confidence` in the saved row without a cut, and `backends.md` keeps its reason.
 
 ## Probe 3: `score`
 
@@ -150,7 +150,7 @@ Both cost a run to find, as record 0008's did.
 Each of these is a page or an ADR line that this record cannot change itself.
 
 1. Build `find`. `find.md` leaves Draft, its first open point closes on the `none` option, and the plan gains it after `rank`.
-2. The cut stays on the winning probability. ADR 0009 item 2's reopening clause is discharged.
+2. The cut stays on the winning probability. ADR 0009 item 2's reopening clause stays open, because two errors cannot separate the two numbers.
 3. `score.md`'s measured warning gains the split between ordering and the absolute level.
 4. `choose.md` loses the sentence about fifty picks and gains this run's numbers, and the help says to keep option order fixed once a cut is tuned.
 5. `choose.md` says which kind of added option was measured.
