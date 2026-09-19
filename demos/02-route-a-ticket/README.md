@@ -72,6 +72,8 @@ printf 'queue=%s\n' "$queue" | mustmatch "queue=payments"
 
 `--threshold 0.8` applies to the winning option's probability. A winner under the mark is unresolved and exits 3.
 
+The model put every point of probability on `billing` for this ticket, so every mark up to and including 1 clears. The blocks below show that. [How to sort files into folders by label](../05-sort-a-folder/) runs the same mark over notes the model was less sure about, and three of them come back unresolved.
+
 ```bash
 set -euo pipefail
 
