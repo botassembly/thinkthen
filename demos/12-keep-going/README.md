@@ -14,7 +14,7 @@ Every number in an expected output on this page is illustrative until a recordin
 
 ## The backend is down
 
-Under `set -e` a bare command ends the script, so the exit code is captured and read. `--max-retries 0` makes the failure arrive once. A health check wants exactly that.
+Under `set -e` a bare command ends the script, so the exit code is captured and read. `--max-retries 0` makes the failure arrive once. A health check wants exactly that. The three ad-hoc flags travel together, because a new URL with a borrowed adapter or model is a guess and the surface refuses it at exit 2.
 
 ```bash
 set -euo pipefail
@@ -23,7 +23,7 @@ trap 'rm -rf -- "$work"' EXIT
 
 thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --details --input queue.jsonl \
-  --url http://127.0.0.1:9/v1/systemone --adapter systemone \
+  --url http://127.0.0.1:9/v1/systemone --adapter systemone --model local-decider-3 \
   --timeout 2 --max-retries 0 \
   > "$work/out.jsonl" 2> "$work/err.txt" && rc=0 || rc=$?
 
@@ -89,7 +89,7 @@ jq -r '.input.id' "$work/out.jsonl" | mustmatch "Q-01
 Q-02
 Q-03
 Q-04"
-jq -r '[.meta.replayed] | join("")' "$work/out.jsonl" | sort -u | mustmatch "true"
+jq -r '.meta.replayed | tostring' "$work/out.jsonl" | sort -u | mustmatch "true"
 ```
 
 `meta.replayed` is the ledger. Every row here came from the cache, because a gate touches no network and the folder holds every entry. On a real rerun the first two rows would read `true` and the last two `false`, and the bill would be two requests instead of four.

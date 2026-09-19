@@ -46,7 +46,8 @@ trap 'rm -rf -- "$work"' EXIT
 thinkthen config check --config site.json && printf 'config ok\n' | mustmatch "config ok"
 thinkthen config path --config site.json | mustmatch "site.json"
 
-printf '%s\n' '{"version":1,"profiles":{}}' > "$work/broken.json"
+printf '%s\n' '{"version":1,"profiles":{"site":{"url":"http://decider.internal:8099/v1/systemone","adapter":"systemone"}}}' \
+  > "$work/broken.json"
 thinkthen config check --config "$work/broken.json" >/dev/null 2>&1 && bad=0 || bad=$?
 printf 'bad=%s\n' "$bad" | mustmatch "bad=5"
 
@@ -57,6 +58,8 @@ jq -c '{profile, url, model, key_env}' "$work/plan.json" \
   | mustmatch '{"profile":"site","url":"http://decider.internal:8099/v1/systemone","model":"local-decider-3","key_env":null}'
 mustmatch not like "not-a-real-key" < "$work/plan.json"
 ```
+
+The refused file names a profile with no `model`. A profile is complete or it is not a profile, and `check` reports the first problem with its JSON Pointer at exit 5.
 
 `key_env` is `null` in the file and `null` in the plan. The file never holds a key and the profile never borrows one.
 
