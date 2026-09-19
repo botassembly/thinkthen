@@ -6,7 +6,7 @@ opens: crates spec specification/records.md specification/choose.md specificatio
 
 # 0013: Jobs, the cache folder, and options from the record
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
