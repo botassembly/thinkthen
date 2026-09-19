@@ -6,7 +6,7 @@ opens: crates specification/recording.md Cargo.toml Cargo.lock sdlc/ratchet.json
 
 # 0004: Record and replay backend exchanges
 
-Status: ready
+Status: landed
 
 ## Outcome
 
