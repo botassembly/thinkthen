@@ -169,6 +169,14 @@ Rewriting the demos found more. None changes a ruling.
 - For `annotate`, the record-mode plan shows the first record's first request, taking the `on` sets in file order. A second plan shape for one verb is not worth its cost.
 - `report` treats rows from `decide`, `choose`, or `score` as one check named after the verb. Rows that carry more than one question text are listed in the report as a warning.
 
+Building and reviewing ticket 0005 found more. None changes a ruling.
+
+- `--dry-run` may be added to any valid command line. It prints the plan whatever view option is present, so `--dry-run --quiet` and `--dry-run --details` both print the plan and exit 0. A user inspects a working command by adding one option and removing none. Ian can overturn this cheaply.
+- A cut of 0 is refused, because every answer would be yes. A band whose low side is 0 is accepted, because an exact 0 is still a no.
+- `decide` never prints `threshold: null`, because a rule always exists. `null` belongs to a verb that takes no threshold.
+- `-h` prints the short help, and `--help` prints the long help with the advanced options.
+- Demo 01 reads its evidence by redirecting standard input. `--input FILE` arrives with `--lines`, `--jsonl`, and `--field` in the records slice, because those four settle each other.
+
 ## What this replaces
 
 - ADR 0003: the grammar `thinkthen decide VERB`. The rest of ADR 0003 stands.
