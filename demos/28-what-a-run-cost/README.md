@@ -105,6 +105,6 @@ sh ../../transforms/cost/example.sh | jq -c '{rows, usd}' | mustmatch '{"rows":4
 ## Related how-tos
 
 - [How to check the judge against human labels](../25-check-the-judge/)
-- [How to compare two runs](../24-compare-two-runs/)
+- [How to tune a question file](../41-tune-a-question-file/)
 - [How to pick a threshold from labeled cases](../13-pick-a-threshold/)
 - [How to gate a script step on a yes/no answer](../01-refund-gate/)

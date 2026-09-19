@@ -89,7 +89,7 @@ sh ../../transforms/calibration/example.sh \
 
 ## What can go wrong
 
-- **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error a transform raises, such as a row carrying no `value`. The message names the file and the line.
+- **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error a transform raises, such as a row with no `value`. It names the file and the line.
 - **Treating unresolved as no.** `.value // false` turns a refusal into a wrong answer. Every transform here tests true, false, and null explicitly, and a refused row keeps its probability and stays in its calibration band.
 - **Scoring a case nobody labeled.** `C-12` is scored nowhere. A rate that included it would be a rate about a guess.
 - **One accuracy number.** Accuracy without coverage hides a band that refused half the file, and accuracy alone hides which side the judge errs on. Read precision and recall together.
@@ -99,6 +99,6 @@ sh ../../transforms/calibration/example.sh \
 ## Related how-tos
 
 - [How to pick a threshold from labeled cases](../13-pick-a-threshold/)
-- [How to compare two runs](../24-compare-two-runs/)
+- [How to tune a question file](../41-tune-a-question-file/)
 - [How to know what a run cost](../28-what-a-run-cost/)
 - [How to act only when the answer is sure, and send the rest to a person](../04-review-queue/)

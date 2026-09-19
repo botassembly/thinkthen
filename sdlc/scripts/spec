@@ -20,6 +20,10 @@ export PATH
 
 mustmatch test spec
 
+# The transform page proves the edges its `jq` files claim, and `compare.jq`
+# answers with lists that are empty until something is wrong.
+mustmatch test transforms/README.md
+
 # Every probe reproduces its committed rows from its own recording. The check
 # ran by hand once and rotted, so the rung runs it. It takes a few seconds.
 for probe in "$REPO"/probes/[0-9]*/; do

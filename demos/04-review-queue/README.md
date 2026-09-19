@@ -1,5 +1,7 @@
 # How to act only when the answer is sure, and send the rest to a person
 
+Absorbed by how-tos 19, 16, and 13: the band goes to 19, the review pile to 16, and the trade between coverage and accuracy to 13. ADR 0018 rules that this folder stays until 16 is green and then leaves.
+
 Status: green
 
 Verbs: `decide`
