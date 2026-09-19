@@ -14,19 +14,27 @@ const RETRY_WAIT: Duration = Duration::from_secs(1);
 
 /// The environment the command reads, read once.
 ///
-/// A backend comes from the flags and the configuration file alone. The one
-/// variable here shortens the retry wait, and only a test sets it.
+/// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
+/// variable shortens the retry wait, and only a test sets it. The key itself is
+/// read later, by name, and only when a request is about to go out.
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
+    base_url: Option<String>,
     retry_wait_ms: Option<u64>,
 }
 
 impl Environment {
-    /// Read the hidden test wait, which help never shows.
+    /// Read the base address and the hidden test wait, which help never shows.
     pub(crate) fn read() -> Self {
         Self {
+            base_url: read("THINKTHEN_BASE_URL"),
             retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
         }
+    }
+
+    /// The base the request is posted under, or `None` when the variable is empty.
+    pub(crate) fn base_url(&self) -> Option<&str> {
+        self.base_url.as_deref()
     }
 
     /// How long the first retry waits before the wait doubles.
@@ -38,9 +46,9 @@ impl Environment {
 /// Read one variable, or `None` when it holds nothing at all.
 ///
 /// A variable set to the empty string counts as unset, the way most Unix tools
-/// read one.
+/// read one, and so does a variable holding only white space.
 fn read(name: &str) -> Option<String> {
-    env::var(name).ok().filter(|value| !value.is_empty())
+    env::var(name).ok().filter(|value| !value.trim().is_empty())
 }
 
 /// Read standard input to its end and take it as the evidence.

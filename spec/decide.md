@@ -19,27 +19,44 @@ thinkthen decide --help | grep -c -- 'set -e' | mustmatch not like "0"
 `--dry-run` prints what would be sent, in the six fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.
 
 ```bash
-printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run | mustmatch like '{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","request":{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}'
+printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run | mustmatch like '{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}'
 ```
 
 The plan needs no key. It names the variable a key would be read from and never a value.
 
 ```bash
-env -u TYPESAFE_API_KEY sh -c "printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"key_env":"TYPESAFE_API_KEY"' | mustmatch like "1"
+env -u THINKTHEN_API_KEY sh -c "printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"key_env":"THINKTHEN_API_KEY"' | mustmatch like "1"
 ```
 
-An ad-hoc backend is a URL, an adapter, and a model together. It has no name and borrows no key variable, so both fields print as null.
+An ad-hoc backend is a base, an adapter, and a model together. It has no name and borrows no key variable, so both fields print as null.
 
 ```bash
 printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run \
   --url http://127.0.0.1:1/v1 --adapter systemone --model local-1 \
-  | grep -c '"profile":null,"url":"http://127.0.0.1:1/v1","adapter":"systemone","model":"local-1","key_env":null' | mustmatch like "1"
+  | grep -c '"profile":null,"url":"http://127.0.0.1:1/v1/systemone","adapter":"systemone","model":"local-1","key_env":null' | mustmatch like "1"
 ```
 
-The five `THINKTHEN_*` backend variables are gone. A backend comes from the flags alone, so none of them changes the plan.
+Every source names a base, and the request is posted to `BASE/systemone`. `THINKTHEN_BASE_URL` names the base when `--url` does not, a trailing slash is accepted, and an empty variable counts as absent.
 
 ```bash
-env THINKTHEN_BACKEND=nowhere THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY"' | mustmatch like "1"
+printf 'x' | env THINKTHEN_BASE_URL=http://127.0.0.1:1/v2/ thinkthen decide 'asks for a refund' --dry-run | grep -c '"url":"http://127.0.0.1:1/v2/systemone"' | mustmatch like "1"
+printf 'x' | env THINKTHEN_BASE_URL= thinkthen decide 'asks for a refund' --dry-run | grep -c '"url":"https://api.typesafe.ai/v1/systemone"' | mustmatch like "1"
+printf 'x' | env THINKTHEN_BASE_URL=http://127.0.0.1:1/v2 thinkthen decide 'asks for a refund' --dry-run --url http://127.0.0.1:1/v3 --adapter systemone --model local-1 | grep -c '"url":"http://127.0.0.1:1/v3/systemone"' | mustmatch like "1"
+```
+
+A base that is not an `http` or `https` address is a usage error, and the message shows no address, because a base can carry a secret in its user information.
+
+```bash
+status=0
+printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\`"
+```
+
+The five `THINKTHEN_*` backend variables of ADR 0004 are gone. None of them changes the plan.
+
+```bash
+env THINKTHEN_BACKEND=nowhere THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY"' | mustmatch like "1"
 ```
 
 A model alone replaces the profile's model, which is how a run is pinned to one version.

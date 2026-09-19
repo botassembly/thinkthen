@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
 /// A port nothing listens on, so a connection would be refused at once.
-const CLOSED: &str = "http://127.0.0.1:1/v1/systemone";
+const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// Run the binary with no environment but what the case names, and feed it bytes.
 fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io::Result<Output> {
@@ -72,7 +72,7 @@ fn the_plan_of_a_named_profile_names_its_key_variable_and_needs_no_key() {
     assert!(
         printed.starts_with(concat!(
             r#"{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
-            r#""adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","#,
+            r#""adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","#,
         )),
         "{printed}"
     );
@@ -98,7 +98,7 @@ fn the_backend_environment_variables_are_gone_and_change_no_plan() {
     assert!(printed.contains(r#""profile":"jev""#), "{printed}");
     assert!(printed.contains(r#""model":"jev-latest""#), "{printed}");
     assert!(
-        printed.contains(r#""key_env":"TYPESAFE_API_KEY""#),
+        printed.contains(r#""key_env":"THINKTHEN_API_KEY""#),
         "{printed}"
     );
     assert!(!printed.contains("from-the-environment"), "{printed}");

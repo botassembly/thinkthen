@@ -33,7 +33,7 @@ pub(crate) fn decide(
         return Err(Failure::QuietWithDetails);
     }
     let threshold = threshold_of(arguments.threshold.as_deref())?;
-    let backend = resolve_backend(arguments.backend_values())?;
+    let backend = resolve_backend(arguments.backend_values().with_base(environment.base_url()))?;
     let text = QuestionText::new(arguments.question.as_str())?;
     let plan = Plan::new(
         edge::evidence(input)?,

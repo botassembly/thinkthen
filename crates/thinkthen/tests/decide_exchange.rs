@@ -31,13 +31,20 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
 }
 
 /// Run `decide` against one URL, with no environment but what the case names.
-fn decide(url: &str, arguments: &[&str], key: Option<&str>, evidence: &str) -> io::Result<Output> {
+fn decide(base: &str, arguments: &[&str], key: Option<&str>, evidence: &str) -> io::Result<Output> {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         .args(["decide", "asks for a refund"])
-        .args(["--url", url, "--adapter", "systemone", "--model", "local-1"])
+        .args([
+            "--url",
+            base,
+            "--adapter",
+            "systemone",
+            "--model",
+            "local-1",
+        ])
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -62,7 +69,7 @@ fn the_request_carries_the_encoded_plan_the_content_type_and_no_key() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output =
-        decide(listener.url(), &[], None, "Refund me please.").expect("the compiled binary runs");
+        decide(listener.base(), &[], None, "Refund me please.").expect("the compiled binary runs");
 
     let requests = listener.requests();
     let request = requests.first().expect("one request reached the listener");
@@ -82,7 +89,7 @@ fn the_request_carries_the_encoded_plan_the_content_type_and_no_key() {
 fn a_named_key_variable_is_sent_as_a_bearer_token_and_never_printed() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-    let output = decide(listener.url(), &[], Some("sk-secret-value"), "Refund me.")
+    let output = decide(listener.base(), &[], Some("sk-secret-value"), "Refund me.")
         .expect("the compiled binary runs");
 
     let requests = listener.requests();
@@ -112,7 +119,7 @@ fn every_answer_prints_its_bare_value_and_earns_its_own_exit_code() {
             .expect("a loopback listener");
 
         let output = decide(
-            listener.url(),
+            listener.base(),
             &["--threshold", "0.1:0.9"],
             None,
             "Refund me.",
@@ -132,7 +139,7 @@ fn a_single_cut_answers_yes_or_no_and_never_leaves_a_run_unresolved() {
         let listener = Listener::serving(vec![Canned::ok(&answered(probability))])
             .expect("a loopback listener");
 
-        let output = decide(listener.url(), &["--threshold", "0.9"], None, "Refund me.")
+        let output = decide(listener.base(), &["--threshold", "0.9"], None, "Refund me.")
             .expect("the compiled binary runs");
 
         assert_eq!(String::from_utf8_lossy(&output.stdout), printed);
@@ -147,7 +154,7 @@ fn quiet_prints_nothing_and_keeps_the_exit_code_the_answer_earned() {
             .expect("a loopback listener");
 
         let output = decide(
-            listener.url(),
+            listener.base(),
             &["--threshold", "0.1:0.9", "--quiet"],
             None,
             "Refund me.",
@@ -165,8 +172,8 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     let bare = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
     let detailed = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-    decide(bare.url(), &[], None, "Refund me.").expect("the compiled binary runs");
-    let output = decide(detailed.url(), &["--details"], None, "Refund me.")
+    decide(bare.base(), &[], None, "Refund me.").expect("the compiled binary runs");
+    let output = decide(detailed.base(), &["--details"], None, "Refund me.")
         .expect("the compiled binary runs");
 
     let sent = bare.requests();
@@ -198,7 +205,7 @@ fn a_details_run_carries_the_rule_it_was_judged_under() {
     let listener = Listener::serving(vec![Canned::ok(&answered("0.5"))]).expect("a listener");
 
     let output = decide(
-        listener.url(),
+        listener.base(),
         &["--details", "--threshold", "0.1:0.9"],
         None,
         "Refund me.",
@@ -215,7 +222,7 @@ fn a_details_run_carries_the_rule_it_was_judged_under() {
 fn a_dry_run_prints_the_plan_and_opens_no_connection() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-    let output = decide(listener.url(), &["--dry-run"], None, "Refund me.")
+    let output = decide(listener.base(), &["--dry-run"], None, "Refund me.")
         .expect("the compiled binary runs");
 
     assert!(listener.requests().is_empty(), "a plan opens no connection");
@@ -232,7 +239,7 @@ fn a_threshold_that_is_refused_stops_before_any_request_goes_out() {
     for bad in ["90", "0", "0.9:0.1", "0.1:", ":0.9", "inf", "NaN", "half"] {
         let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-        let output = decide(listener.url(), &["--threshold", bad], None, "Refund me.")
+        let output = decide(listener.base(), &["--threshold", bad], None, "Refund me.")
             .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{bad}");
@@ -249,7 +256,8 @@ fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
     ])
     .expect("a loopback listener");
 
-    let output = decide(listener.url(), &[], None, "Refund me.").expect("the compiled binary runs");
+    let output =
+        decide(listener.base(), &[], None, "Refund me.").expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 2);
     assert_eq!(output.status.code(), Some(0));
@@ -264,7 +272,7 @@ fn retries_run_out_and_the_backend_failure_is_exit_four() {
     ])
     .expect("a loopback listener");
 
-    let output = decide(listener.url(), &["--max-retries", "2"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "2"], None, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 3);
@@ -282,7 +290,7 @@ fn an_error_status_that_is_not_retried_fails_at_once() {
     )])
     .expect("a loopback listener");
 
-    let output = decide(listener.url(), &[], Some("sk-bad"), "Refund me please.")
+    let output = decide(listener.base(), &[], Some("sk-bad"), "Refund me please.")
         .expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 1);
@@ -300,7 +308,7 @@ fn a_redirect_is_refused_so_no_key_and_no_evidence_reach_another_host() {
         Listener::serving(vec![Canned::redirect(elsewhere.url())]).expect("a loopback listener");
 
     let output = decide(
-        listener.url(),
+        listener.base(),
         &["--max-retries", "0"],
         Some("sk-secret-value"),
         "Refund me please.",
@@ -321,7 +329,7 @@ fn a_response_body_past_the_bound_is_exit_four_and_never_fills_memory() {
     let body = ANSWERED.replace(r#""usage""#, &format!(r#""padding":"{padding}","usage""#));
     let listener = Listener::serving(vec![Canned::ok(&body)]).expect("a loopback listener");
 
-    let output = decide(listener.url(), &["--max-retries", "0"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "0"], None, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
@@ -340,7 +348,7 @@ fn a_reply_the_adapter_refuses_is_exit_four() {
         let listener = Listener::serving(vec![Canned::ok(body)]).expect("a loopback listener");
 
         let output =
-            decide(listener.url(), &[], None, "Refund me.").expect("the compiled binary runs");
+            decide(listener.base(), &[], None, "Refund me.").expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(4), "{body}");
         assert!(output.stdout.is_empty(), "{body}");
@@ -352,7 +360,7 @@ fn a_reply_the_adapter_refuses_is_exit_four() {
 fn a_body_the_backend_cut_short_is_exit_four() {
     let listener = Listener::serving(vec![Canned::cut_short()]).expect("a loopback listener");
 
-    let output = decide(listener.url(), &["--max-retries", "0"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "0"], None, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
@@ -363,7 +371,7 @@ fn a_body_the_backend_cut_short_is_exit_four() {
 fn a_backend_that_answers_nothing_is_exit_four() {
     let listener = Listener::serving(Vec::new()).expect("a loopback listener");
 
-    let output = decide(listener.url(), &["--max-retries", "0"], None, "Refund me.")
+    let output = decide(listener.base(), &["--max-retries", "0"], None, "Refund me.")
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
@@ -379,7 +387,7 @@ fn a_key_variable_that_is_unset_or_blank_is_exit_four_and_never_shows_a_value() 
 
     for (arguments, key) in cases {
         let output =
-            decide(listener.url(), arguments, key, "Refund.").expect("the compiled binary runs");
+            decide(listener.base(), arguments, key, "Refund.").expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(4), "{key:?}");
         assert!(listener.requests().is_empty(), "{key:?}");

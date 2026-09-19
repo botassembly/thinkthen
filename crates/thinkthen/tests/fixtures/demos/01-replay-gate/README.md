@@ -14,7 +14,7 @@ The recording under `recording/` holds one exchange. Its file name is the digest
 set -euo pipefail
 
 thinkthen decide 'the customer asks for money back' \
-  --url http://127.0.0.1:8721/v1/systemone --adapter systemone --model local-1 \
+  --url http://127.0.0.1:8721/v1 --adapter systemone --model local-1 \
   --threshold 0.1:0.9 --quiet --replay recording/ \
   < message.txt && rc=0 || rc=$?
 printf 'rc=%s\n' "$rc" | mustmatch "rc=0"
@@ -26,7 +26,7 @@ The result says a recording answered, and it names the model the recorded respon
 set -euo pipefail
 
 thinkthen decide 'the customer asks for money back' \
-  --url http://127.0.0.1:8721/v1/systemone --adapter systemone --model local-1 \
+  --url http://127.0.0.1:8721/v1 --adapter systemone --model local-1 \
   --threshold 0.1:0.9 --details --replay recording/ \
   < message.txt \
   | jq -c '{replayed: .meta.replayed, model: .meta.model, value: .value}' \

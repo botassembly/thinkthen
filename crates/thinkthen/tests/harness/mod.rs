@@ -1,4 +1,8 @@
 //! A loopback listener that serves scripted responses and records what it was sent.
+#![allow(
+    dead_code,
+    reason = "every test file compiles this module and each one uses part of it"
+)]
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -70,6 +74,7 @@ impl Recorded {
 
 /// A listener serving one scripted response per connection, then closing.
 pub(crate) struct Listener {
+    base: String,
     url: String,
     recorded: Receiver<Recorded>,
 }
@@ -78,10 +83,20 @@ impl Listener {
     /// Serve these responses in order, one per connection, on a free loopback port.
     pub(crate) fn serving(responses: Vec<Canned>) -> io::Result<Self> {
         let listener = TcpListener::bind("127.0.0.1:0")?;
-        let url = format!("http://{}/v1/systemone", listener.local_addr()?);
+        let base = format!("http://{}/v1", listener.local_addr()?);
+        let url = format!("{base}/systemone");
         let (sender, recorded) = channel();
         thread::spawn(move || serve_script(&listener, responses, &sender));
-        Ok(Self { url, recorded })
+        Ok(Self {
+            base,
+            url,
+            recorded,
+        })
+    }
+
+    /// The base a command is given, which the tool posts under.
+    pub(crate) fn base(&self) -> &str {
+        &self.base
     }
 
     /// The URL a request reaches this listener at.

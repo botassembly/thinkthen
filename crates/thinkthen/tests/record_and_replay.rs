@@ -18,7 +18,7 @@ const ANSWERED: &str = concat!(
 );
 
 /// A port nothing listens on, so a connection would be refused at once.
-const CLOSED: &str = "http://127.0.0.1:1/v1/systemone";
+const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// A folder this test owns, removed and remade so each run starts empty.
 fn folder(name: &str) -> PathBuf {
@@ -54,12 +54,12 @@ fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
 }
 
 /// Run `decide` against one ad-hoc URL, asking one question.
-fn judge(question: &str, url: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
+fn judge(question: &str, base: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
     let ad_hoc = [
         "decide",
         question,
         "--url",
-        url,
+        base,
         "--adapter",
         "systemone",
         "--model",
@@ -74,8 +74,8 @@ fn judge(question: &str, url: &str, arguments: &[&str], key: Option<&str>) -> io
 }
 
 /// Run `decide` against one ad-hoc URL, asking the refund question.
-fn decide(url: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
-    judge("asks for a refund", url, arguments, key)
+fn decide(base: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output> {
+    judge("asks for a refund", base, arguments, key)
 }
 
 /// Record one answered exchange into the folder and give the entry it wrote.
@@ -86,7 +86,7 @@ fn decide(url: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Output
 fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(ANSWERED)])?;
     let output = decide(
-        listener.url(),
+        listener.base(),
         &["--record", &folder.to_string_lossy()],
         None,
     )?;
@@ -145,7 +145,7 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
     let recorded = {
         let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
         let output = decide(
-            listener.url(),
+            listener.base(),
             &["--details", "--record", &folder.to_string_lossy()],
             Some("sk-secret-value"),
         )
@@ -162,7 +162,7 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
             String::from_utf8_lossy(&request.body).contains(EVIDENCE),
             "the request carried the evidence"
         );
-        (listener.url().to_owned(), output.stdout)
+        (listener.base().to_owned(), output.stdout)
     };
 
     let (name, written) = only_entry(&folder).expect("one recorded entry");
@@ -202,12 +202,12 @@ fn a_replay_under_the_built_in_profile_reads_no_key_and_opens_no_connection() {
     let name = plant(&folder, ANSWERED).expect("an entry for the built-in profile");
     let asked: [&str; 2] = ["decide", "asks for a refund"];
 
-    // The built-in profile names TYPESAFE_API_KEY, which env_clear leaves unset.
+    // The built-in profile names THINKTHEN_API_KEY, which env_clear leaves unset.
     // Without a recording that is exit 4, and no connection opens.
     let output = run(&asked, &[]).expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(4));
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("TYPESAFE_API_KEY"), "{message}");
+    assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
 
     let output = run(
         &[
@@ -242,7 +242,7 @@ fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
     // this folder does not hold.
     let output = judge(
         "asks for something else",
-        listener.url(),
+        listener.base(),
         &["--replay", &folder.to_string_lossy()],
         None,
     )
@@ -270,7 +270,7 @@ fn an_entry_that_records_another_exchange_is_refused_by_name() {
     fs::write(folder.join(&name), edited).expect("the entry is writable");
 
     let output = decide(
-        listener.url(),
+        listener.base(),
         &["--replay", &folder.to_string_lossy()],
         None,
     )
@@ -283,7 +283,7 @@ fn an_entry_that_records_another_exchange_is_refused_by_name() {
 
     fs::write(folder.join(&name), "not an entry at all").expect("the entry is writable");
     let output = decide(
-        listener.url(),
+        listener.base(),
         &["--replay", &folder.to_string_lossy()],
         None,
     )
@@ -306,7 +306,7 @@ fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
     ];
 
     for run in 0..2 {
-        let output = decide(listener.url(), &both, None).expect("the compiled binary runs");
+        let output = decide(listener.base(), &both, None).expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(0), "run {run}");
         let printed = String::from_utf8_lossy(&output.stdout);
         let replayed = format!(r#""replayed":{}"#, run == 1);
@@ -363,7 +363,7 @@ fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
     let blocked = folder.join("blocked");
     fs::create_dir_all(blocked.join(&name)).expect("a directory stands where the entry would go");
     let output = decide(
-        listener.url(),
+        listener.base(),
         &["--record", &blocked.to_string_lossy()],
         None,
     )
@@ -388,7 +388,7 @@ fn an_entry_that_cannot_be_read_is_not_reported_as_a_miss() {
     fs::remove_file(folder.join(&name)).expect("the entry is removable");
     fs::create_dir(folder.join(&name)).expect("a directory takes the name");
     let output = decide(
-        listener.url(),
+        listener.base(),
         &["--replay", &folder.to_string_lossy()],
         None,
     )
@@ -416,7 +416,7 @@ fn a_failed_exchange_is_never_recorded() {
     for canned in cases {
         let listener = Listener::serving(vec![canned]).expect("a loopback listener");
         let output = decide(
-            listener.url(),
+            listener.base(),
             &["--record", &folder.to_string_lossy(), "--max-retries", "0"],
             None,
         )

@@ -75,7 +75,7 @@ mod tests {
             json_line(&document).expect("a plan document serializes"),
             concat!(
                 r#"{"profile":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
-                r#""adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","#,
+                r#""adapter":"systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","#,
                 r#""request":{"state":"Help!","model":"jev-latest","#,
                 r#""questions":{"q1":{"type":"noul","instructions":"is urgent"}}}}"#,
             )

@@ -10,6 +10,6 @@ This page is green and names a folder it does not hold. The runner stops before 
 set -euo pipefail
 
 thinkthen decide 'the customer asks for money back' \
-  --url http://127.0.0.1:8721/v1/systemone --adapter systemone --model local-1 \
+  --url http://127.0.0.1:8721/v1 --adapter systemone --model local-1 \
   --threshold 0.9 --replay recording/ < message.txt | mustmatch like "never run"
 ```

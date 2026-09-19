@@ -11,7 +11,7 @@ use crate::text::{BlankTextError, KeyVar, ModelName, ProfileName, Url};
 #[derive(Clone, Copy, Debug)]
 struct Profile {
     name: &'static str,
-    url: &'static str,
+    base: &'static str,
     adapter: Adapter,
     model: &'static str,
     key_env: &'static str,
@@ -20,10 +20,10 @@ struct Profile {
 /// The profile a user gets when nothing else is named.
 const JEV: Profile = Profile {
     name: "jev",
-    url: "https://api.typesafe.ai/v1/systemone",
+    base: "https://api.typesafe.ai/v1",
     adapter: Adapter::SystemOne,
     model: "jev-latest",
-    key_env: "TYPESAFE_API_KEY",
+    key_env: "THINKTHEN_API_KEY",
 };
 
 /// The profiles version one is born with.
@@ -37,6 +37,7 @@ pub struct BackendValues<'a> {
     adapter: Option<&'a str>,
     model: Option<&'a str>,
     key_env: Option<&'a str>,
+    base: Option<&'a str>,
 }
 
 impl<'a> BackendValues<'a> {
@@ -55,7 +56,17 @@ impl<'a> BackendValues<'a> {
             adapter,
             model,
             key_env,
+            base: None,
         }
+    }
+
+    /// Take the base address the environment offers, which `--url` outranks.
+    ///
+    /// The binary reads `THINKTHEN_BASE_URL` at its edge and hands the value
+    /// here, so the core still reads no environment of its own.
+    #[must_use]
+    pub const fn with_base(self, base: Option<&'a str>) -> Self {
+        Self { base, ..self }
     }
 }
 
@@ -122,30 +133,37 @@ pub enum BackendError {
     /// A profile name arrived beside a URL, and an ad-hoc backend has no name.
     #[error("an ad-hoc backend has no name, so a url cannot join a named profile")]
     NameWithUrl,
+    /// The base address names no scheme the tool speaks.
+    ///
+    /// The message shows no address, because a base can carry a secret in its
+    /// user information.
+    #[error("a base address begins with `http://` or `https://`")]
+    NotAnAddress,
 }
 
-/// Resolve the backend from the flags and the built-in profile.
+/// Resolve the backend from the flags, the environment, and the built-in profile.
 ///
-/// A URL, an adapter, and a model given together make an ad-hoc backend, which
+/// Every source names a base, and the request is posted to `BASE/systemone`. A
+/// URL, an adapter, and a model given together make an ad-hoc backend, which
 /// has no name and takes no key variable from any profile. A model alone
 /// replaces the profile's model, which is how a run is pinned to one version.
 ///
 /// # Errors
 ///
-/// Returns [`BackendError`] when a value is blank, when a name belongs to no
-/// profile or adapter, or when the values do not make one backend.
+/// Returns [`BackendError`] when a value is blank, when a base names no `http`
+/// or `https` address, when a name belongs to no profile or adapter, or when
+/// the values do not make one backend.
 pub fn resolve_backend(flags: BackendValues<'_>) -> Result<Backend, BackendError> {
     let name = given(flags.profile, |text: &str| ProfileName::new(text))?;
-    let url = given(flags.url, |text: &str| Url::new(text))?;
     let adapter = given(flags.adapter, Adapter::from_str)?;
     let model = given(flags.model, |text: &str| ModelName::new(text))?;
     let key_env = given(flags.key_env, |text: &str| KeyVar::new(text))?;
 
-    let Some(url) = url else {
+    let Some(base) = flags.url else {
         if adapter.is_some() {
             return Err(BackendError::AdapterWithoutUrl);
         }
-        return from_profile(name, model, key_env);
+        return from_profile(name, flags.base, model, key_env);
     };
     if name.is_some() {
         return Err(BackendError::NameWithUrl);
@@ -155,11 +173,26 @@ pub fn resolve_backend(flags: BackendValues<'_>) -> Result<Backend, BackendError
     };
     Ok(Backend {
         profile: None,
-        url,
+        url: address(base, adapter)?,
         adapter,
         model,
         key_env,
     })
+}
+
+/// The address one request is posted to: the base, then the adapter's path.
+///
+/// A base that ends in slashes is the same base, so the slashes are dropped
+/// before the path is added.
+fn address(base: &str, adapter: Adapter) -> Result<Url, BackendError> {
+    if base.trim().is_empty() {
+        return Err(BackendError::Blank(BlankTextError::Url));
+    }
+    let base = base.trim_end_matches('/');
+    if !(base.starts_with("http://") || base.starts_with("https://")) {
+        return Err(BackendError::NotAnAddress);
+    }
+    Ok(Url::new(format!("{base}/{}", adapter.as_str()))?)
 }
 
 /// Read one flag value into the type that holds it.
@@ -167,9 +200,11 @@ fn given<T, E>(flag: Option<&str>, read: impl Fn(&str) -> Result<T, E>) -> Resul
     flag.map(read).transpose()
 }
 
-/// Fill a named profile in, letting a model and a key variable replace its own.
+/// Fill a named profile in, letting the environment, a model, and a key
+/// variable replace its own.
 fn from_profile(
     name: Option<ProfileName>,
+    base: Option<&str>,
     model: Option<ModelName>,
     key_env: Option<KeyVar>,
 ) -> Result<Backend, BackendError> {
@@ -180,7 +215,7 @@ fn from_profile(
         .ok_or_else(|| BackendError::UnknownProfile(wanted.to_owned()))?;
     Ok(Backend {
         profile: Some(ProfileName::new(profile.name)?),
-        url: Url::new(profile.url)?,
+        url: address(base.unwrap_or(profile.base), profile.adapter)?,
         adapter: profile.adapter,
         model: match model {
             Some(model) => model,
@@ -195,7 +230,10 @@ fn from_profile(
 
 #[cfg(test)]
 mod tests {
-    use super::{Backend, BackendError, BackendValues, JEV, resolve_backend as resolve};
+    use super::{Backend, BackendError, BackendValues, resolve_backend as resolve};
+
+    /// The address the built-in profile posts to when no base replaces its own.
+    const BUILT_IN: &str = "https://api.typesafe.ai/v1/systemone";
     use crate::adapter::Adapter;
     use crate::text::{BlankTextError, KeyVar, ProfileName};
 
@@ -223,10 +261,10 @@ mod tests {
             flat(&backend),
             (
                 Some("jev"),
-                JEV.url,
+                BUILT_IN,
                 Adapter::SystemOne,
                 "jev-latest",
-                Some("TYPESAFE_API_KEY"),
+                Some("THINKTHEN_API_KEY"),
             )
         );
     }
@@ -249,7 +287,7 @@ mod tests {
             flat(&backend),
             (
                 Some("jev"),
-                JEV.url,
+                BUILT_IN,
                 Adapter::SystemOne,
                 "jev-latest",
                 Some("OTHER_KEY"),
@@ -272,7 +310,7 @@ mod tests {
             flat(&backend),
             (
                 None,
-                "http://127.0.0.1:8080/v1",
+                "http://127.0.0.1:8080/v1/systemone",
                 Adapter::SystemOne,
                 "local-1",
                 None,
@@ -362,7 +400,7 @@ mod tests {
                 BlankTextError::KeyVar,
             ),
             (
-                BackendValues::new(None, Some("\n"), None, None, None),
+                BackendValues::new(None, Some("\n"), Some("systemone"), Some("m"), None),
                 BlankTextError::Url,
             ),
         ];
