@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
 use harness::{Canned, Listener};
+use thinkthen_core::{Condition, Evidence, ModelName, Plan, Question, systemone};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -16,6 +17,17 @@ const ANSWERED: &str = concat!(
 /// The same response with the probability the case needs.
 fn answered(probability: &str) -> String {
     ANSWERED.replace("0.92", probability)
+}
+
+/// The bytes the adapter writes for the plan the command was given.
+fn encoded(evidence: &str, condition: &str) -> Option<Vec<u8>> {
+    let plan = Plan::new(
+        Evidence::new(evidence).ok()?,
+        ModelName::new("local-1").ok()?,
+        vec![Question::new_if(Condition::new(condition).ok()?)],
+    )
+    .ok()?;
+    systemone::encode(&plan).ok()
 }
 
 /// Run `decide if` against one URL, with no environment but what the case names.
@@ -61,12 +73,10 @@ fn the_request_carries_the_encoded_plan_the_content_type_and_no_key() {
     assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
     assert_eq!(request.header("content-type"), Some("application/json"));
     assert_eq!(request.header("authorization"), None);
+    let written = encoded("Refund me please.", "asks for a refund").expect("the plan encodes");
     assert_eq!(
         String::from_utf8_lossy(&request.body),
-        concat!(
-            r#"{"state":"Refund me please.","model":"local-1","#,
-            r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}"#,
-        )
+        String::from_utf8_lossy(&written)
     );
     assert_eq!(output.status.code(), Some(0));
 }
