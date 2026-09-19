@@ -31,6 +31,15 @@ printf 'Refund me please.' | thinkthen decide if 'asks for a refund' --plan \
   | grep -c '"backend":null,"url":"http://127.0.0.1:1/v1","adapter":"systemone","model":"local-1","key_env":null' | mustmatch like "1"
 ```
 
+An environment variable set to the empty string counts as unset, the way most Unix tools read one. One holding white space is a usage error.
+
+```bash
+env THINKTHEN_MODEL= sh -c "printf 'Refund me please.' | thinkthen decide if 'asks for a refund' --plan" | grep -c '"model":"jev-latest"' | mustmatch like "1"
+status=0
+env THINKTHEN_MODEL=' ' sh -c "printf 'Refund me please.' | thinkthen decide if 'asks for a refund' --plan" >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+```
+
 A model alone replaces the profile's model, which is how a run is pinned to one version.
 
 ```bash
