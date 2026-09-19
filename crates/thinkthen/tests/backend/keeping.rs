@@ -20,7 +20,7 @@ pub(crate) const RECORDS: &str = concat!(
 );
 
 /// The response a backend gives, with the probability the case names.
-fn answered(probability: &str) -> String {
+pub(crate) fn answered(probability: &str) -> String {
     format!(
         concat!(
             r#"{{"model":"jev-1.13.0","answers":{{"q1":{{"type":"noul","noul":{probability}}}}},"#,
@@ -74,17 +74,17 @@ fn over(verb: &str, base: &str, arguments: &[&str], input: &str) -> io::Result<O
 }
 
 /// What the run printed on standard output.
-fn printed(output: &Output) -> String {
+pub(crate) fn printed(output: &Output) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
 /// What the run said on standard error.
-fn said(output: &Output) -> String {
+pub(crate) fn said(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
 /// The exit code the run earned.
-fn code(output: &Output) -> i32 {
+pub(crate) fn code(output: &Output) -> i32 {
     output.status.code().unwrap_or(-1)
 }
 
@@ -398,6 +398,97 @@ fn the_plan_under_dry_run_shows_the_first_record_and_sends_nothing() -> io::Resu
         );
         assert!(plan.contains("The payout failed again."), "{verb}: {plan}");
         assert!(!plan.contains("quick fix"), "{verb}: {plan}");
+    }
+    Ok(())
+}
+
+/// A small spread of probabilities, taken from one multiplier per record.
+///
+/// `proptest` is a development dependency of the core alone, and adding it to
+/// this crate would be a new dependency. The loop below drives the same claim
+/// over the counts and the cuts that matter, and `order.rs` in the core holds
+/// the permutation property itself as a `proptest` case.
+fn odds(place: usize) -> f64 {
+    let stepped = (place * 37 % 13) as f64 / 13.0;
+    (stepped * 100.0).round() / 100.0
+}
+
+/// A file of `count` JSON records, each naming its own place.
+fn spread(count: usize) -> String {
+    (0..count)
+        .map(|place| format!("{{\"id\":\"P-{place}\",\"body\":\"record {place}\"}}\n"))
+        .collect()
+}
+
+/// A listener that answers each record with the probability its place earns.
+fn by_place() -> io::Result<Listener> {
+    Listener::answering(move |body| {
+        let sent = String::from_utf8_lossy(body).into_owned();
+        let place = (0..64)
+            .find(|place| {
+                sent.contains(&format!("record {place}\\\""))
+                    || sent.contains(&format!("record {place}\""))
+            })
+            .unwrap_or(0);
+        Canned::ok(&answered(&format!("{}", odds(place))))
+    })
+}
+
+#[test]
+fn filter_prints_a_subsequence_of_its_input_and_rank_a_permutation_of_it() -> io::Result<()> {
+    for count in 0..8_usize {
+        let input = spread(count);
+        let lines: Vec<&str> = input.lines().collect();
+
+        for cut in ["0.1", "0.5", "0.9"] {
+            let listener = by_place()?;
+            let output = over(
+                "filter",
+                listener.base(),
+                &["--jsonl", "--field", "/body", "--threshold", cut],
+                &input,
+            )?;
+            assert_eq!(code(&output), 0, "filter {count} {cut}: {}", said(&output));
+            let kept = printed(&output);
+            let kept: Vec<&str> = kept.lines().collect();
+            let mut next = lines.iter();
+            for line in &kept {
+                assert!(
+                    next.any(|held| held == line),
+                    "filter {count} {cut} printed a line that is not the next input line"
+                );
+            }
+            assert!(kept.len() <= count, "filter {count} {cut} printed too much");
+        }
+
+        for top in [None, Some(1_usize), Some(3), Some(99)] {
+            let listener = by_place()?;
+            let asked = top.map(|n| n.to_string());
+            let mut arguments = vec!["--jsonl", "--field", "/body"];
+            if let Some(number) = asked.as_deref() {
+                arguments.extend(["--top", number]);
+            }
+            let output = over("rank", listener.base(), &arguments, &input)?;
+            assert_eq!(code(&output), 0, "rank {count} {top:?}: {}", said(&output));
+            let ordered = printed(&output);
+            let mut ordered: Vec<&str> = ordered.lines().collect();
+            assert_eq!(
+                ordered.len(),
+                top.unwrap_or(count).min(count),
+                "rank {count} {top:?} printed the wrong number of records"
+            );
+            ordered.sort_unstable();
+            ordered.dedup();
+            assert!(
+                ordered.iter().all(|line| lines.contains(line)),
+                "rank {count} {top:?} printed a line that was never read"
+            );
+            assert_eq!(
+                ordered.len(),
+                top.unwrap_or(count).min(count),
+                "rank {count} {top:?} printed one record twice"
+            );
+        }
     }
     Ok(())
 }

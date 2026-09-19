@@ -154,6 +154,9 @@ pub(crate) fn rank(
     input: impl Read,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    if arguments.top == Some(0) {
+        return Err(Failure::TopIsZero);
+    }
     let settled = asked::rank(arguments)?;
     over_kept(
         Keeping::Ordered,

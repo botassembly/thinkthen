@@ -316,11 +316,7 @@ pub(crate) struct RankArguments {
     ///
     /// It saves no request, because every record is judged before anything is
     /// sorted.
-    #[arg(
-        long,
-        value_name = "N",
-        value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..)
-    )]
+    #[arg(long, value_name = "N")]
     pub(crate) top: Option<usize>,
 
     /// Taken so that the tool refuses it in its own words. `rank` has no rule.

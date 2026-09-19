@@ -94,6 +94,8 @@ pub(crate) enum Failure {
     CacheWithRecording,
     /// `--jobs` was given to a run that sends one request.
     JobsOutsideRecords,
+    /// `--top` was asked for none of the order, which prints nothing.
+    TopIsZero,
     /// `--quiet` was given to a verb whose answer is the records it prints.
     QuietOverKept(&'static str),
     /// `--raw` was given where no label is ever printed.
@@ -253,6 +255,7 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
         Failure::JobsOutsideRecords => {
             "--jobs bounds the requests in flight, and one document sends one request"
         }
+        Failure::TopIsZero => "--top prints the first N of the order, and N is 1 or more",
         _ => return None,
     })
 }
