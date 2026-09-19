@@ -326,6 +326,57 @@ fn two_different_folders_and_a_plan_that_records_are_usage_errors() {
     assert!(!folder.exists(), "a usage error writes no folder");
 }
 
+/// The mode a path carries, on the one family of systems the tool targets.
+#[cfg(unix)]
+fn mode(path: &Path) -> io::Result<u32> {
+    use std::os::unix::fs::PermissionsExt as _;
+    Ok(fs::metadata(path)?.permissions().mode() & 0o777)
+}
+
+#[cfg(unix)]
+#[test]
+fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
+    let folder = folder("private");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(ANSWERED)])
+        .expect("a loopback listener");
+    let output = decide(
+        listener.url(),
+        &["--record", &folder.to_string_lossy()],
+        None,
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(0));
+
+    // A recording holds the evidence, so neither the folder the tool made nor
+    // the entry inside it is readable by anybody else, whatever the umask says.
+    let (name, _) = only_entry(&folder).expect("one recorded entry");
+    assert_eq!(mode(&folder).expect("the folder is there"), 0o700);
+    assert_eq!(
+        mode(&folder.join(&name)).expect("the entry is there"),
+        0o600
+    );
+
+    // The same exchange into a folder where a directory already holds the
+    // entry's name. The rename fails, and the temporary file the entry was
+    // written under goes with it, so nothing private is left behind.
+    let blocked = folder.join("blocked");
+    fs::create_dir_all(blocked.join(&name)).expect("a directory stands where the entry would go");
+    let output = decide(
+        listener.url(),
+        &["--record", &blocked.to_string_lossy()],
+        None,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(5));
+    let left: Vec<_> = fs::read_dir(&blocked)
+        .expect("the folder is there")
+        .filter_map(|entry| entry.ok().map(|found| found.file_name()))
+        .filter(|found| found != name.as_str())
+        .collect();
+    assert!(left.is_empty(), "{left:?}");
+}
+
 #[test]
 fn a_failed_exchange_is_never_recorded() {
     let folder = folder("failed");
