@@ -27,7 +27,10 @@ fn folder(name: &str) -> io::Result<PathBuf> {
 /// Write a ledger holding this limit and this spend.
 fn ledger(folder: &Path, limit: u64, spent: u64) -> io::Result<PathBuf> {
     let path = folder.join("live-tokens");
-    fs::write(&path, format!("limit_tokens {limit}\nspent_tokens {spent}\n"))?;
+    fs::write(
+        &path,
+        format!("limit_tokens {limit}\nspent_tokens {spent}\n"),
+    )?;
     Ok(path)
 }
 
