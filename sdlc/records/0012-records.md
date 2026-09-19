@@ -75,13 +75,28 @@ Each one is cheap to overturn.
 - **The empty pointer's key is the empty name.** `--field ''` alone means the whole record. Two of them would end in the same empty name and are refused by the clash rule, so no extra rule was needed.
 - **A `--dry-run` over an empty record stream prints nothing and exits 0,** the way an empty record stream does anywhere else.
 - **`--input` that names no readable file is exit 5,** because `channels.md` gives 5 to a local failure over a file.
-- **`--quiet` in record mode is allowed and prints nothing.** It suppresses output, which it can still do. It tells the caller nothing, because no record's answer reaches the exit code, and that is the caller's choice to make.
+- **`--quiet` in record mode was allowed at first and is a usage error now.** The review read `channels.md` the other way and the safer reading won. See the review section above.
 - **The stop line is a second line on standard error.** The first line is the cause and its wording, and the second is the count. `records.md` asks for one line about the stop, and a run that said only where it stopped would not say why.
 - **The diagnostic names the pointer that found nothing.** A pointer is what the user typed on the command line, so it is not a record's content.
 
 ## The review
 
-A second agent reviewed the widened public surface and the raised ceiling. Its findings and what was done with each are recorded in the commits that follow this file.
+A second agent reviewed the widened public surface and the raised ceiling. It read the ticket, the standards, the three specification pages, every changed file, and the whole diff; ran all four rungs; drove the compiled binary by hand over every RFC 6901 case, the stop path, and the demo's five recordings; read every `Display` for leaked content; and proved four dead paths and four narrowable items by patching a scratch copy and re-running the suite. It would merge, and it asked for four things before the ticket closes.
+
+1. **`JsonError` was exported and no caller named it.** The re-export is gone. `RecordError` still carries the variant, and the binary maps `RecordError` by the variants it reads.
+2. **Four items were `pub` that only the core calls.** `Pointer::key`, `Pointer::as_str`, `Reading::plan`, and `ReadingPlan` are `pub(crate)` now.
+3. **The carriage-return sentence said less than the code does.** The code strips the return under `--jsonl` too, and a test pinned that. The sentence now names both framings.
+4. **`sdlc/planning/plan.md` still reads 32,842 spent tokens while the ledger reads 34,295.** That file is held by another ticket running beside this one, so this ticket does not touch it. The number is reported to the reviewer who merges.
+
+Three more findings were taken although the review left them to the next ticket.
+
+- **`--quiet` over records is a usage error now.** It printed nothing and exited 0, throwing every paid answer away. `channels.md` justifies `--quiet` by the answer reaching the exit code, and no record's answer does, so the option cannot act in that mode. This overturns the choice recorded further down this page, and Ian can overturn it back cheaply.
+- **A pointer refusal names the pointer that was typed.** `--field body` used to be told that `$.body` is not a pointer. A pointer is a command-line argument and never a record's content, so naming it leaks nothing.
+- **One helper builds the plan for both paths.** `asked_of` frames the record and builds the request, and the single-document run, the stream loop, and `--dry-run` all call it.
+
+Four findings are left standing, each with its reason. `RecordError::TextHasNoMembers` is unreachable through `Reading` and stays, because the alternative is a panic or a wrong answer in a total function. The `NOT_FINITE` branch in `json.rs` is a belt on a parser that already refuses those numbers. The `Failure::Stopped` arm in `failure.rs` is unreachable and required for the match to be exhaustive. The row-count case is a loop over counts rather than a `proptest` case, for the reason given above.
+
+The review also found that no page under `spec/` named the record options, and `rust-standards.md` calls those pages the user documentation. `spec/decide.md` gained four blocks: the two framings and the plan's fifth field, several pointers and the key clash, every refused pointer language with the message that names RFC 6901, and the empty stream, `--quiet` over records, and a file that cannot be opened.
 
 ## The ladder
 
@@ -89,14 +104,14 @@ A second agent reviewed the widened public surface and the raised ceiling. Its f
 | --- | --- | --- |
 | 0 | `sdlc/scripts/install` | exit 0 |
 | 1 | `sdlc/scripts/lint` | exit 0 |
-| 2 | `sdlc/scripts/test` | exit 0, 181 tests, the documentation test included |
-| 3 | `sdlc/scripts/spec` | exit 0, 13 green demos and 8 red |
+| 2 | `sdlc/scripts/test` | exit 0, 182 tests, the documentation test included |
+| 3 | `sdlc/scripts/spec` | exit 0, 26 cases on `spec/decide.md`, 13 green demos and 8 red |
 
 The largest file is `crates/thinkthen/tests/backend/streaming.rs` at 474 lines, under the 500-line ceiling.
 
 ## The ratchet
 
-5862 to 7407, in four commits that each say what grew. The core's three new modules and their tests are 800 lines, `meta.tool` and `input` are 46, the binary's record path with its seventeen cases is 698, and the demo runner's own count is 1. Duplication was looked for in `judge.rs`, where the single-document run now calls the same `Judging::one` the stream calls, so the request, the recording, the answer, and all three views are written once; in `edge.rs`, where the chunk reader replaced `evidence` rather than joining it; in `text.rs` and `render.rs`, whose blank-text values and compact writer the new code reuses; in `question.rs`, whose `Labels::checked` holds a repeat check over a list of owned strings that shares no type with the check over pointer keys; and in `tests/backend/harness`, whose `spawn` and `Listener` the new page reuses.
+5862 to 7440, in five commits that each say what grew. The core's three new modules and their tests are 800 lines, `meta.tool` and `input` are 46, the binary's record path with its seventeen cases is 698, the demo runner's own count is 1, and the review's own fixes are 33. Duplication was looked for in `judge.rs`, where the single-document run now calls the same `Judging::one` the stream calls, so the request, the recording, the answer, and all three views are written once; in `edge.rs`, where the chunk reader replaced `evidence` rather than joining it; in `text.rs` and `render.rs`, whose blank-text values and compact writer the new code reuses; in `question.rs`, whose `Labels::checked` holds a repeat check over a list of owned strings that shares no type with the check over pointer keys; and in `tests/backend/harness`, whose `spawn` and `Listener` the new page reuses.
 
 ## Dependencies
 

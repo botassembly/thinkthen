@@ -49,8 +49,10 @@ pub(crate) enum Failure {
     RuleOnScore,
     /// The framing and the pointers cannot act together.
     Reading(ReadingError),
-    /// A pointer is not a JSON Pointer.
-    Pointer(PointerError),
+    /// A pointer is not a JSON Pointer, and the message names the one typed.
+    Pointer(String, PointerError),
+    /// An answer was asked to reach the exit code where no answer can.
+    QuietOverRecords,
     /// One record could not become the evidence of one request.
     Record(RecordError),
     /// The file the records were to be read from could not be opened.
@@ -173,7 +175,12 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             format!("the recording folder could not be read or written: {error}"),
         ),
         Failure::Reading(error) => (2, error.to_string()),
-        Failure::Pointer(error) => (2, format!("--field: {error}")),
+        Failure::Pointer(typed, error) => (2, format!("--field `{typed}`: {error}")),
+        Failure::QuietOverRecords => (
+            2,
+            "--quiet carries the answer in the exit code, and no record's answer sets it"
+                .to_owned(),
+        ),
         Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
         Failure::Record(RecordError::Render(error)) => (70, format!("defect: {error}")),
         Failure::Record(error) => (2, error.to_string()),
@@ -231,12 +238,6 @@ impl From<DecodeError> for Failure {
 impl From<ReadingError> for Failure {
     fn from(error: ReadingError) -> Self {
         Self::Reading(error)
-    }
-}
-
-impl From<PointerError> for Failure {
-    fn from(error: PointerError) -> Self {
-        Self::Pointer(error)
     }
 }
 

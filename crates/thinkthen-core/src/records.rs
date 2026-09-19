@@ -85,7 +85,7 @@ pub struct Reading {
 
 /// The `input` field a plan carries in record mode.
 #[derive(Debug, Serialize)]
-pub struct ReadingPlan<'a> {
+pub(crate) struct ReadingPlan<'a> {
     framing: Framing,
     field: &'a [Pointer],
 }
@@ -120,8 +120,7 @@ impl Reading {
     }
 
     /// Name the framing and the pointers, as the record-mode plan prints them.
-    #[must_use]
-    pub fn plan(&self) -> ReadingPlan<'_> {
+    pub(crate) fn plan(&self) -> ReadingPlan<'_> {
         ReadingPlan {
             framing: self.framing,
             field: &self.fields,

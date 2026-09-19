@@ -16,11 +16,11 @@ use crate::json::Json;
 /// which pointer language the tool reads.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum PointerError {
-    /// The string does not begin with `/`, as `$.body` does not.
-    #[error("a pointer is RFC 6901, so it is empty or begins with `/`, and `$.body` is not one")]
+    /// The string does not begin with `/`, as a JSONPath expression does not.
+    #[error("a pointer is RFC 6901, so it is empty or begins with `/`")]
     NotAPointer,
     /// The string begins with `#`, which is the URI fragment form.
-    #[error("a pointer is RFC 6901, and `#/id` is the URI fragment form of one")]
+    #[error("a pointer is RFC 6901, and a leading `#` is the URI fragment form of one")]
     Fragment,
     /// A part is a wildcard, which RFC 6901 has none of.
     #[error("a pointer is RFC 6901, which has no wildcard")]
@@ -65,14 +65,12 @@ impl Pointer {
     ///
     /// The whole record has no last part, so its key is the empty name, and
     /// two pointers that would share one key are refused where they are taken.
-    #[must_use]
-    pub fn key(&self) -> &str {
+    pub(crate) fn key(&self) -> &str {
         self.parts.last().map_or("", String::as_str)
     }
 
     /// The pointer as the user wrote it.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub(crate) fn as_str(&self) -> &str {
         &self.text
     }
 

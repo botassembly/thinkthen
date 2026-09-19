@@ -28,7 +28,6 @@ mod threshold;
 
 pub use crate::answer::{Answer, Value};
 pub use crate::backend::{Backend, BackendError, DEFAULT_MODEL, KEY_VAR};
-pub use crate::json::JsonError;
 pub use crate::plan::{EmptyPlanError, Plan};
 pub use crate::plan_document::PlanDocument;
 pub use crate::pointer::{Pointer, PointerError};

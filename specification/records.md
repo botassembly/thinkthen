@@ -16,7 +16,7 @@ The default input is one text document. A record stream turns a command into a m
 
 The tool never guesses the framing. It never repairs invalid JSON, never truncates a record, and never opens a file because a string looks like a path.
 
-Under `--lines` a carriage return before the line feed is stripped with it, and a carriage return anywhere else in the line is kept.
+Under `--lines` and under `--jsonl` a carriage return before the line feed is stripped with it, and a carriage return anywhere else in the line is kept.
 
 | Command | Framing |
 | --- | --- |

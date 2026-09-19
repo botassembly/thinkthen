@@ -8,7 +8,7 @@ use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::systemone;
 use thinkthen_core::{
     Backend, DecisionResult, Framing, Labels, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Reply, Threshold, json_line,
+    QuestionText, Reading, Record, Reply, Threshold, json_line,
 };
 
 use crate::args::{ChooseArguments, Common, DecideArguments, ScoreArguments};
@@ -192,6 +192,9 @@ fn run(
         common.model.as_str(),
     )?;
     let reading = read_by(common)?;
+    if view.quiet && reading.streams() {
+        return Err(Failure::QuietOverRecords);
+    }
     let mut chunks = edge::Chunks::new(
         edge::source(common.input.as_deref(), input)?,
         reading.streams(),
@@ -246,8 +249,10 @@ fn read_by(common: &Common) -> Result<Reading, Failure> {
         _ => Framing::Document,
     };
     let mut fields = Vec::with_capacity(common.field.len());
-    for pointer in &common.field {
-        fields.push(Pointer::new(pointer.as_str())?);
+    for typed in &common.field {
+        let pointer =
+            Pointer::new(typed.as_str()).map_err(|error| Failure::Pointer(typed.clone(), error))?;
+        fields.push(pointer);
     }
     Ok(Reading::new(framing, fields)?)
 }
@@ -263,13 +268,7 @@ fn plan(
     let Some(bytes) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let record = reading.record(&bytes)?;
-    let plan = Plan::new(
-        reading.evidence(&record)?,
-        backend.model().clone(),
-        vec![question.clone()],
-    )
-    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+    let (_, plan) = asked_of(reading, &bytes, backend, question)?;
     let document = PlanDocument::of(backend, &plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let document = if reading.streams() {
@@ -279,6 +278,23 @@ fn plan(
     };
     edge::write_line(writer, &json_line(&document)?)?;
     Ok(ExitCode::SUCCESS)
+}
+
+/// Read one record and build the one request it asks, which both paths do.
+fn asked_of(
+    reading: &Reading,
+    bytes: &[u8],
+    backend: &Backend,
+    question: &Question,
+) -> Result<(Record, Plan), Failure> {
+    let record = reading.record(bytes)?;
+    let plan = Plan::new(
+        reading.evidence(&record)?,
+        backend.model().clone(),
+        vec![question.clone()],
+    )
+    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+    Ok((record, plan))
 }
 
 /// One question over one backend, asked of every record in turn.
@@ -302,13 +318,7 @@ impl Judging<'_> {
         bytes: &[u8],
         mut writer: impl Write,
     ) -> Result<(Outcome, bool), Failure> {
-        let record = reading.record(bytes)?;
-        let plan = Plan::new(
-            reading.evidence(&record)?,
-            self.backend.model().clone(),
-            vec![self.question.clone()],
-        )
-        .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+        let (record, plan) = asked_of(reading, bytes, &self.backend, &self.question)?;
         let (reply, replayed) = ask(
             &self.backend,
             &plan,

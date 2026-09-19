@@ -104,6 +104,47 @@ printf 'x' | thinkthen decide 'asks for a refund' --record here/ --replay there/
 echo "$status" | mustmatch like "2"
 ```
 
+`--lines` and `--jsonl` turn the input into records, and the plan then shows the first record with a fifth field naming the framing and the pointers. It reads no further than that record.
+
+```bash
+printf '{"id":"T-1","body":"Payouts failed."}\n{"id":"T-2","body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts failed.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"reports a payment failure"}}}}'
+printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure' --lines --dry-run | grep -c '"input":{"framing":"lines","field":\[\]},"request":{"state":"first line"' | mustmatch like "1"
+```
+
+`--field` given more than once sends an object of the named parts, keyed by the last part of each pointer. Two pointers that end in one name are a usage error, and so is `--field` beside `--lines`.
+
+```bash
+printf '{"id":"T-1","body":"Payouts failed."}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --field /id --dry-run | grep -c '"state":"{\\"body\\":\\"Payouts failed.\\",\\"id\\":\\"T-1\\"}"' | mustmatch like "1"
+for bad in "--field /a/text --field /b/text" "--lines --field /body"; do
+  status=0
+  printf '{"a":{"text":"x"},"b":{"text":"y"}}\n' | thinkthen decide 'reports a payment failure' --jsonl --dry-run $bad >/dev/null 2>&1 || status=$?
+  echo "$status" | mustmatch like "2"
+done
+```
+
+A pointer that is not RFC 6901 is a usage error, and the message names RFC 6901 and the pointer that was typed.
+
+```bash
+for bad in '$.body' '#/id' '/*' '/list/-1' '/a~2b'; do
+  status=0
+  printf '{"body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field "$bad" --dry-run >/dev/null 2>&1 || status=$?
+  echo "$status" | mustmatch like "2"
+done
+printf '{"body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field '$.body' --dry-run 2>&1 >/dev/null | mustmatch like "thinkthen: --field \`\$.body\`: a pointer is RFC 6901, so it is empty or begins with \`/\`"
+```
+
+`--input FILE` names a path. An empty record stream succeeds with no output and no request, and `--quiet` cannot act over records, because no record's answer reaches the exit code.
+
+```bash
+printf '' | thinkthen decide 'reports a payment failure' --jsonl --dry-run | mustmatch like ""
+status=0
+printf 'a line\n' | thinkthen decide 'reports a payment failure' --lines --quiet --dry-run >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+status=0
+thinkthen decide 'reports a payment failure' --jsonl --input no-such-file.jsonl --dry-run >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "5"
+```
+
 A percent, a reversed band, an empty side, and a number that is not finite are usage errors before any request goes out.
 
 ```bash

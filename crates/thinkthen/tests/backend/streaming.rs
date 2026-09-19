@@ -160,7 +160,12 @@ fn a_pointer_in_another_language_is_refused_by_name_before_any_request() {
 
         assert_eq!(output.status.code(), Some(2), "{pointer}");
         assert!(printed(&output).is_empty(), "{pointer}");
-        assert!(said(&output).contains("RFC 6901"), "{}", said(&output));
+        let message = said(&output);
+        assert!(message.contains("RFC 6901"), "{message}");
+        assert!(
+            message.contains(&format!("--field `{pointer}`")),
+            "{message}"
+        );
         assert!(listener.requests().is_empty(), "{pointer}");
     }
 }
@@ -277,6 +282,25 @@ fn no_records_answer_sets_the_exit_code() {
 }
 
 #[test]
+fn quiet_over_records_is_a_usage_error_because_no_answer_reaches_the_exit_code() {
+    for framing in ["--lines", "--jsonl"] {
+        let listener = serving(&["0.97"]).expect("a loopback listener");
+        let output =
+            decide(listener.base(), &[framing, "--quiet"], RECORDS).expect("the binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{framing}");
+        assert!(said(&output).contains("--quiet"), "{}", said(&output));
+        assert!(listener.requests().is_empty(), "{framing}");
+    }
+    // One document still carries its answer in the exit code, so it takes it.
+    let listener = serving(&["0.02"]).expect("a loopback listener");
+    let output =
+        decide(listener.base(), &["--quiet"], "The payout failed again.").expect("the binary runs");
+    assert_eq!(output.status.code(), Some(1));
+    assert!(printed(&output).is_empty());
+}
+
+#[test]
 fn a_record_row_carries_the_whole_record_under_input() {
     let listener = serving(&["0.97"]).expect("a loopback listener");
     let output = decide(
@@ -296,7 +320,13 @@ fn a_record_row_carries_the_whole_record_under_input() {
         )),
         "{row}"
     );
-    assert!(row.contains(r#""tool":"thinkthen 0.0.1""#), "{row}");
+    assert!(
+        row.contains(&format!(
+            r#""tool":"thinkthen {}""#,
+            env!("CARGO_PKG_VERSION")
+        )),
+        "{row}"
+    );
     // Only the pointed value left the machine.
     assert_eq!(states(&listener), [r#""The payout failed again.""#]);
 }
@@ -349,8 +379,9 @@ fn the_record_mode_plan_shows_the_first_record_and_names_the_framing() {
 }
 
 #[test]
-fn the_plan_reads_no_further_than_the_first_record() {
-    // The second record would be refused, and a plan that read it would say so.
+fn the_plan_frames_no_record_after_the_first() {
+    // The second record would be refused, and a plan that framed it would say
+    // so. The reader ahead of it is a buffer, and a buffer is not a record.
     let output = planned(
         &["--jsonl", "--field", "/body"],
         "{\"body\":\"The payout failed again.\"}\nnot json\n",

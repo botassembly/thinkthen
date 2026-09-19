@@ -142,10 +142,6 @@ impl<'de> Visitor<'de> for Reader {
         Ok(Json::Null)
     }
 
-    fn visit_none<E>(self) -> Result<Json, E> {
-        Ok(Json::Null)
-    }
-
     fn visit_bool<E>(self, held: bool) -> Result<Json, E> {
         Ok(Json::Bool(held))
     }
