@@ -1,0 +1,18 @@
+[package]
+name = "thinkthen"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+description = "Put a decider model in the shell"
+publish = false
+
+[[bin]]
+name = "thinkthen"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+thinkthen-core = { path = "../thinkthen-core" }
+
+[lints]
+workspace = true

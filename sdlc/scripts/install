@@ -1,0 +1,6 @@
+#!/bin/sh
+# Rung 0: fetch the dependency closure recorded in Cargo.lock.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+exec cargo fetch --manifest-path "$REPO/Cargo.toml" --locked

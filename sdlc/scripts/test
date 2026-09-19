@@ -1,0 +1,9 @@
+#!/bin/sh
+# Rung 2: the unit tests, the integration tests, and the documentation tests.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+cargo test --locked --workspace --all-targets --all-features
+cargo test --locked --workspace --doc --all-features

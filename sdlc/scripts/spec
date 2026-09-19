@@ -1,0 +1,14 @@
+#!/bin/sh
+# Rung 3: the compiled binary against the executable pages in spec/.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+if ! command -v mustmatch >/dev/null 2>&1; then
+	printf '%s\n' 'spec: mustmatch is not on PATH' >&2
+	exit 1
+fi
+
+cargo build --locked --quiet --package thinkthen
+exec env PATH="$REPO/target/debug:$PATH" mustmatch test spec

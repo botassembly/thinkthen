@@ -1,0 +1,29 @@
+[workspace]
+members = ["crates/thinkthen", "crates/thinkthen-core"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.93.1"
+
+[workspace.lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unreachable_pub = "forbid"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"

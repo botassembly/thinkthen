@@ -1,0 +1,12 @@
+#!/bin/sh
+# Rung 1: the accepted policies, the size ceiling, formatting, clippy, and docs.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+python3 sdlc/scripts/policy.py
+node sdlc/scripts/ratchet.mjs
+cargo fmt --all -- --check
+cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
