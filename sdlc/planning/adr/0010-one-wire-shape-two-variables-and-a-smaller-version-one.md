@@ -28,7 +28,7 @@ Ian read `open-concerns.md` and ruled. His goal stands over every line: the simp
 Ian can overturn each of these cheaply.
 
 - The default base is `https://api.typesafe.ai/v1`, and the tool posts to `BASE/systemone`. This follows the convention of other model clients, where the base ends at the version.
-- The order of sources for the address is: the hidden `--url` option, then `THINKTHEN_BASE_URL`, then the default. The key is read from `THINKTHEN_API_KEY` unless a hidden `--key-env` names another variable.
+- The order of sources for the address is: the hidden `--url` option, then `THINKTHEN_BASE_URL`, then the default. The key is read from `THINKTHEN_API_KEY`. Ticket 0006 still allowed a hidden `--key-env`, and ticket 0007 removes it.
 - The `chat-logprobs` adapter leaves version one. Ruling 1 makes a second wire format inside the binary unnecessary. A local model is reached by a small server that presents the System One shape, and that server is a separate project.
 - The recipes live in `recipes/` as `.jq` files, each with one example of its use. Demos 13 and 14 use them.
 
@@ -36,7 +36,7 @@ Ian can overturn each of these cheaply.
 
 Ian accepted this section on 2026-09-19. Ticket 0007 carries it.
 
-**The configuration file, profiles, and the `config` command leave version one.** ADR 0007 accepted them when a profile held an address, an adapter, a model, and the name of a key variable. Under rulings 1 and 2 a profile holds nothing that two variables and `--model` do not already say. The options `--profile`, `--adapter`, `--key-env`, and `--config` would go with them, and `--url` would stay as a hidden option for tests. Version one would then be six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`, with `find` waiting on its measurement.
+**The configuration file, profiles, and the `config` command leave version one.** ADR 0007 accepted them when a profile held an address, an adapter, a model, and the name of a key variable. Under rulings 1 and 2 a profile holds nothing that two variables and `--model` do not already say. The options `--profile`, `--adapter`, `--key-env`, and `--config` go with them, and `--url` stays as a hidden option for tests. Version one is then six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`, with `find` waiting on its measurement.
 
 The cost is small. A user with two endpoints sets a variable in front of the command, as every shell user already does. The file can return later without breaking anything.
 
