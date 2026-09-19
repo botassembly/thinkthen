@@ -7,6 +7,7 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 | [channels.md](channels.md) | Arguments, standard input, standard output, standard error, and exit codes. The rules every command obeys |
 | [result.md](result.md) | The JSON result, the acceptance policy, and the four outcomes |
 | [backends.md](backends.md) | Backend profiles, adapters, the `systemone` wire format, keys, timeouts, and retries |
+| [recording.md](recording.md) | `--record` and `--replay`: a folder of backend exchanges that lets a command run again with no network |
 | [decide.md](decide.md) | The `decide` family, verb by verb |
 | [records.md](records.md) | Draft. Framing, pointers, output modes, order, limits, and exit codes 6, 7, and 8 for the verbs that read a stream |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them |
