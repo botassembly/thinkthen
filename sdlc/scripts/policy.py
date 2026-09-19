@@ -17,7 +17,11 @@ import tomllib
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
 ALLOWED_LICENSES = {"MIT", "Apache-2.0", "Unicode-3.0", "Unlicense"}
-ACCEPTED_DEPENDENCIES = {"thinkthen": {"clap", "thinkthen-core"}, "thinkthen-core": set()}
+ACCEPTED_DEPENDENCIES = {
+    "thinkthen": {"clap", "thinkthen-core"},
+    "thinkthen-core": {"serde", "serde_json", "thiserror"},
+}
+ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": set(), "thinkthen-core": {"proptest"}}
 MAX_FILE_LINES = 500
 INHERITED = {"workspace": True}
 
@@ -189,6 +193,8 @@ def check_crates() -> None:
             fail("workspace", f"{name} declares no license while the repository is private")
         if set(manifest.get("dependencies", {})) != ACCEPTED_DEPENDENCIES[name]:
             fail("dependencies", f"{name} declares the accepted direct dependency set")
+        if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:
+            fail("dependencies", f"{name} declares the accepted development dependency set")
 
 
 def check_clippy_configs() -> None:
@@ -222,37 +228,71 @@ def check_sources() -> None:
 
 
 def license_allowed(expression: str) -> bool:
-    tokens = re.findall(r"[A-Za-z0-9.-]+|[()]", expression)
+    """Say whether an SPDX expression offers this repository an allowed license.
+
+    OR takes any allowed operand, AND takes every operand, and OR binds looser
+    than AND. The deprecated slash spells OR. A `WITH` exception makes its own
+    identifier, so `Apache-2.0 WITH LLVM-exception` is not `Apache-2.0`, and a
+    crate that offers it beside MIT still passes through the OR.
+    """
+    tokens = re.findall(r"[A-Za-z0-9.+-]+|[()/]", expression)
     if "".join(tokens) != re.sub(r"\s+", "", expression):
         return False
+    tokens = ["OR" if token == "/" else token for token in tokens]
     position = 0
 
-    def primary() -> bool:
+    def primary() -> bool | None:
         nonlocal position
         if position == len(tokens):
-            return False
-        if tokens[position] in ALLOWED_LICENSES:
-            position += 1
-            return True
+            return None
         if tokens[position] == "(":
             position += 1
-            if not group() or position == len(tokens) or tokens[position] != ")":
-                return False
+            value = disjunction()
+            if value is None or position == len(tokens) or tokens[position] != ")":
+                return None
             position += 1
-            return True
-        return False
+            return value
+        name = tokens[position]
+        if name in {"AND", "OR", "WITH", ")"}:
+            return None
+        position += 1
+        allowed = name in ALLOWED_LICENSES
+        if position < len(tokens) and tokens[position] == "WITH":
+            position += 1
+            if position == len(tokens) or tokens[position] in {"AND", "OR", "WITH", "(", ")"}:
+                return None
+            position += 1
+            allowed = False
+        return allowed
 
-    def group() -> bool:
+    def conjunction() -> bool | None:
         nonlocal position
-        if not primary():
-            return False
-        while position < len(tokens) and tokens[position] in {"AND", "OR"}:
+        value = primary()
+        if value is None:
+            return None
+        while position < len(tokens) and tokens[position] == "AND":
             position += 1
-            if not primary():
-                return False
-        return True
+            operand = primary()
+            if operand is None:
+                return None
+            value = value and operand
+        return value
 
-    return group() and position == len(tokens)
+    def disjunction() -> bool | None:
+        nonlocal position
+        value = conjunction()
+        if value is None:
+            return None
+        while position < len(tokens) and tokens[position] == "OR":
+            position += 1
+            operand = conjunction()
+            if operand is None:
+                return None
+            value = value or operand
+        return value
+
+    value = disjunction()
+    return value is True and position == len(tokens)
 
 
 def check_dependencies() -> None:
@@ -273,7 +313,8 @@ def check_dependencies() -> None:
     nodes = {node["id"]: node for node in metadata["resolve"]["nodes"]}
     for name, identifier in members.items():
         resolved = {packages[dependency]["name"] for dependency in nodes[identifier]["dependencies"]}
-        if resolved != ACCEPTED_DEPENDENCIES[name]:
+        accepted = ACCEPTED_DEPENDENCIES[name] | ACCEPTED_DEV_DEPENDENCIES[name]
+        if resolved != accepted:
             fail("dependencies", f"{name} resolves the accepted direct dependency set, found {sorted(resolved)}")
 
     for identifier in nodes:

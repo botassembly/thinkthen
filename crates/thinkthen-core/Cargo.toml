@@ -7,6 +7,12 @@ description = "Pure decision types and rendering for thinkthen"
 publish = false
 
 [dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.20"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+proptest = "1.11.0"
