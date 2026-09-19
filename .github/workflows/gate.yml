@@ -47,6 +47,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
             ~/.cargo/bin/cargo-deny
+            ~/.cargo/advisory-dbs
             target
           key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-deny-${{ env.DENY_VERSION }}
           restore-keys: cargo-${{ runner.os }}-

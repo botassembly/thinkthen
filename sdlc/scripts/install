@@ -28,4 +28,10 @@ if ! cargo deny --version >/dev/null 2>&1; then
 	exit 1
 fi
 
-exec cargo fetch --manifest-path "$REPO/Cargo.toml" --locked
+cargo fetch --manifest-path "$REPO/Cargo.toml" --locked
+
+# The advisory database is the other thing a later rung needs and cannot make.
+# `fetch db` is the advisory database alone; the crates.io index is not needed.
+# This is the one rung that reaches the network, so it is fetched here and rung
+# 1 reads it offline.
+exec cargo deny --manifest-path "$REPO/Cargo.toml" fetch db
