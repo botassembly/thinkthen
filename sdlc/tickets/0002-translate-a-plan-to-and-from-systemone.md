@@ -18,6 +18,7 @@ Ticket 0001 supplies `Question`, `Answer`, `Probability`, and `Usage`. `specific
 
 ## Scope
 
+- `Condition` refuses text that holds only white space, as `decide.md` now says. Ticket 0001 refused only the empty string. `Evidence` follows the same rule.
 - `Evidence`, `ModelName`, and `Plan`: the evidence, the model name, and an ordered list of questions. The adapter names them `q1` onward.
 - `AdapterKind`, an enum with one variant, `Systemone`. It parses from its lowercase name and refuses any other.
 - `encode(plan)` returns the request bytes. `decode(plan, bytes)` returns the model that answered, one answer per planned question, and optional usage.

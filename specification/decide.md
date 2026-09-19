@@ -14,8 +14,8 @@ thinkthen decide if 'the customer explicitly requests a refund' --min-prob 0.9 -
 thinkthen decide if 'the customer explicitly requests a refund' --plan < message.txt
 ```
 
-- `CONDITION` is one argument. It states a fact that is true or false of the evidence. The decider model reads it as the question.
-- Standard input is read to its end as UTF-8 text and becomes the evidence. Empty input is a usage error, because a judgment about nothing is a mistake in the pipeline.
+- `CONDITION` is one argument. It states a fact that is true or false of the evidence. The decider model reads it as the question. A condition that is empty or holds only white space is a usage error.
+- Standard input is read to its end as UTF-8 text and becomes the evidence. Input that is empty or holds only white space is a usage error, because a judgment about nothing is a mistake in the pipeline.
 - `--min-prob P` sets the pass mark. Without it the result is `unassessed`.
 - `--status` sets the exit code from the assessment and needs `--min-prob`.
 - `--plan` prints the request and stops.
