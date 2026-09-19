@@ -16,18 +16,23 @@ import tomllib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
-# ISC, BSD-3-Clause, and CDLA-Permissive-2.0 joined the list for the TLS stack
-# under ureq: ring and rustls-webpki and untrusted are ISC, subtle is
-# BSD-3-Clause, and webpki-roots is CDLA-Permissive-2.0. There is no HTTPS in
-# Rust without them. All three are permissive and carry no copyleft term.
 ALLOWED_LICENSES = {
     "MIT",
     "Apache-2.0",
     "Unicode-3.0",
     "Unlicense",
-    "ISC",
-    "BSD-3-Clause",
-    "CDLA-Permissive-2.0",
+}
+# Three more licenses arrive with the TLS stack under ureq and with nothing
+# else. Each one is tied to the crates that force it, so the allowance cannot
+# quietly cover a crate that lands later. All three are permissive and carry no
+# copyleft term, and there is no HTTPS in Rust without them. A crate listed here
+# that stops needing its exception fails the check, so the list cannot rot.
+LICENSE_EXCEPTIONS = {
+    "ring": {"ISC"},
+    "rustls-webpki": {"ISC"},
+    "untrusted": {"ISC"},
+    "subtle": {"BSD-3-Clause"},
+    "webpki-roots": {"CDLA-Permissive-2.0"},
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {"clap", "thinkthen-core", "ureq"},
@@ -239,7 +244,7 @@ def check_sources() -> None:
             fail("size", f"{relative} has {lines} non-blank lines and the ceiling is {MAX_FILE_LINES}")
 
 
-def license_allowed(expression: str) -> bool:
+def license_allowed(expression: str, allowed: set[str] = frozenset()) -> bool:
     """Say whether an SPDX expression offers this repository an allowed license.
 
     OR takes any allowed operand, AND takes every operand, and OR binds looser
@@ -247,6 +252,7 @@ def license_allowed(expression: str) -> bool:
     identifier, so `Apache-2.0 WITH LLVM-exception` is not `Apache-2.0`, and a
     crate that offers it beside MIT still passes through the OR.
     """
+    allowed = ALLOWED_LICENSES | set(allowed)
     tokens = re.findall(r"[A-Za-z0-9.+-]+|[()/]", expression)
     if "".join(tokens) != re.sub(r"\s+", "", expression):
         return False
@@ -268,14 +274,14 @@ def license_allowed(expression: str) -> bool:
         if name in {"AND", "OR", "WITH", ")"}:
             return None
         position += 1
-        allowed = name in ALLOWED_LICENSES
+        offered = name in allowed
         if position < len(tokens) and tokens[position] == "WITH":
             position += 1
             if position == len(tokens) or tokens[position] in {"AND", "OR", "WITH", "(", ")"}:
                 return None
             position += 1
-            allowed = False
-        return allowed
+            offered = False
+        return offered
 
     def conjunction() -> bool | None:
         nonlocal position
@@ -316,7 +322,7 @@ LICENSE_GRAMMAR_CASES = (
     ("(MIT OR Apache-2.0) AND Unicode-3.0", True),
     ("(MIT OR GPL-3.0) AND GPL-2.0", False),
     ("Apache-2.0 WITH LLVM-exception", False),
-    ("Apache-2.0 AND ISC", True),
+    ("Apache-2.0 AND ISC", False),
     ("Apache-2.0 AND GPL-3.0", False),
     ("Apache-2.0 WITH LLVM-exception OR MIT", True),
     ("", False),
@@ -332,6 +338,9 @@ def check_license_grammar() -> None:
     for expression, expected in LICENSE_GRAMMAR_CASES:
         if license_allowed(expression) is not expected:
             fail("dependencies", f"the SPDX reader answers {expected} for {expression!r}")
+    for expression, expected in ((("Apache-2.0 AND ISC"), True), ("ISC AND MIT", True)):
+        if license_allowed(expression, {"ISC"}) is not expected:
+            fail("dependencies", f"the SPDX reader answers {expected} for {expression!r} with ISC")
 
 
 def check_dependencies() -> None:
@@ -350,6 +359,7 @@ def check_dependencies() -> None:
         return
 
     nodes = {node["id"]: node for node in metadata["resolve"]["nodes"]}
+    resolved_names: set[str] = set()
     for name, identifier in members.items():
         resolved = {packages[dependency]["name"] for dependency in nodes[identifier]["dependencies"]}
         accepted = ACCEPTED_DEPENDENCIES[name] | ACCEPTED_DEV_DEPENDENCIES[name]
@@ -362,9 +372,17 @@ def check_dependencies() -> None:
         package = packages[identifier]
         if package["source"] != CRATES_IO:
             fail("dependencies", f"{package['name']} resolves from crates.io")
+        name = package["name"]
         expression = package.get("license") or ""
-        if not license_allowed(expression):
-            fail("dependencies", f"{package['name']} has a disallowed license expression {expression!r}")
+        exception = LICENSE_EXCEPTIONS.get(name, set())
+        if not license_allowed(expression, exception):
+            fail("dependencies", f"{name} has a disallowed license expression {expression!r}")
+        elif exception and license_allowed(expression):
+            fail("dependencies", f"{name} passes without its license exception, so the exception goes")
+        resolved_names.add(name)
+
+    for name in sorted(set(LICENSE_EXCEPTIONS) - resolved_names):
+        fail("dependencies", f"the license exception for {name} names a crate the tree no longer holds")
 
     for locked in read_toml("Cargo.lock").get("package", []):
         if locked["name"] in members:
