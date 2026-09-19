@@ -57,16 +57,15 @@ impl Outcome {
 /// answers yes at or above the high side, no at or below the low side, and
 /// leaves the middle unresolved. Boundaries are inclusive.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Threshold {
+pub struct Threshold(Rule);
+
+/// The two shapes a rule takes, which only a checked constructor builds.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Rule {
     /// One cut, above zero and at most one.
     Cut(f64),
     /// A band, with the low side below the high side.
-    Band {
-        /// At or below this the answer is no.
-        low: f64,
-        /// At or above this the answer is yes.
-        high: f64,
-    },
+    Band { low: f64, high: f64 },
 }
 
 /// The cut a user who names no threshold is judged under.
@@ -75,7 +74,7 @@ const DEFAULT_CUT: f64 = 0.5;
 impl Default for Threshold {
     /// Take the cut of one half, which is the rule when the user names none.
     fn default() -> Self {
-        Self::Cut(DEFAULT_CUT)
+        Self(Rule::Cut(DEFAULT_CUT))
     }
 }
 
@@ -86,14 +85,14 @@ impl Threshold {
     ///
     /// Returns [`ThresholdError`] when the number is not finite or falls
     /// outside the range the cut allows.
-    pub fn cut(value: f64) -> Result<Self, ThresholdError> {
+    pub(crate) fn cut(value: f64) -> Result<Self, ThresholdError> {
         if !value.is_finite() {
             return Err(ThresholdError::NotFinite);
         }
         if value <= 0.0 || value > 1.0 {
             return Err(ThresholdError::CutOutOfRange);
         }
-        Ok(Self::Cut(value))
+        Ok(Self(Rule::Cut(value)))
     }
 
     /// Take a band whose low side is below its high side.
@@ -102,7 +101,7 @@ impl Threshold {
     ///
     /// Returns [`ThresholdError`] when a side is not finite, when a side falls
     /// outside zero to one, or when the low side reaches the high side.
-    pub fn band(low: f64, high: f64) -> Result<Self, ThresholdError> {
+    pub(crate) fn band(low: f64, high: f64) -> Result<Self, ThresholdError> {
         if !low.is_finite() || !high.is_finite() {
             return Err(ThresholdError::NotFinite);
         }
@@ -112,22 +111,22 @@ impl Threshold {
         if low >= high {
             return Err(ThresholdError::BandNotRising);
         }
-        Ok(Self::Band { low, high })
+        Ok(Self(Rule::Band { low, high }))
     }
 
     /// Read one answer under this rule.
     #[must_use]
     pub fn judge(self, answer: Answer) -> Outcome {
         let probability = answer.probability().as_f64();
-        match self {
-            Self::Cut(mark) => {
+        match self.0 {
+            Rule::Cut(mark) => {
                 if probability >= mark {
                     Outcome::Yes
                 } else {
                     Outcome::No
                 }
             }
-            Self::Band { low, high } => {
+            Rule::Band { low, high } => {
                 if probability >= high {
                     Outcome::Yes
                 } else if probability <= low {
@@ -161,9 +160,9 @@ impl FromStr for Threshold {
 impl fmt::Display for Threshold {
     /// Write the rule the way `--threshold` takes it back.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Self::Cut(mark) => write!(formatter, "{mark}"),
-            Self::Band { low, high } => write!(formatter, "{low}:{high}"),
+        match self.0 {
+            Rule::Cut(mark) => write!(formatter, "{mark}"),
+            Rule::Band { low, high } => write!(formatter, "{low}:{high}"),
         }
     }
 }
@@ -171,9 +170,9 @@ impl fmt::Display for Threshold {
 impl Serialize for Threshold {
     /// Write a cut as a number and a band as the string `LOW:HIGH`.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match *self {
-            Self::Cut(mark) => serializer.serialize_f64(mark),
-            Self::Band { .. } => serializer.collect_str(self),
+        match self.0 {
+            Rule::Cut(mark) => serializer.serialize_f64(mark),
+            Rule::Band { .. } => serializer.collect_str(self),
         }
     }
 }
@@ -239,15 +238,9 @@ mod tests {
 
     #[test]
     fn a_threshold_parses_from_a_cut_and_from_a_band() {
-        assert_eq!(rule("1"), Threshold::Cut(1.0));
-        assert_eq!(rule("0.9"), Threshold::Cut(0.9));
-        assert_eq!(
-            rule("0:1"),
-            Threshold::Band {
-                low: 0.0,
-                high: 1.0
-            }
-        );
+        assert_eq!(rule("1"), Threshold::cut(1.0).expect("a cut"));
+        assert_eq!(rule("0.9"), Threshold::cut(0.9).expect("a cut"));
+        assert_eq!(rule("0:1"), Threshold::band(0.0, 1.0).expect("a band"));
     }
 
     #[test]

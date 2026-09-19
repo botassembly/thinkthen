@@ -10,7 +10,7 @@
 
 The core gained one module.
 
-- `threshold.rs`: `Threshold`, `Outcome`, and `ThresholdError`. `Threshold` parses `T` as a cut and `LOW:HIGH` as a band through `FromStr`, applies the inclusive rule, and defaults to the cut of one half. It serializes as a number for a cut and as the string `"LOW:HIGH"` for a band, and its `Display` writes what `--threshold` takes back. `judge` reads one answer and gives `Yes`, `No`, or `Unresolved`, and `Outcome::value` gives the bare value that outcome prints.
+- `threshold.rs`: `Threshold`, `Outcome`, and `ThresholdError`. `Threshold` is a struct over a private `Rule`, so the only way in from outside the crate is the checked parse, and `cut` and `band` are crate-private. It parses `T` as a cut and `LOW:HIGH` as a band through `FromStr`, applies the inclusive rule, and defaults to the cut of one half. It serializes as a number for a cut and as the string `"LOW:HIGH"` for a band, and its `Display` writes what `--threshold` takes back. `judge` reads one answer and gives `Yes`, `No`, or `Unresolved`, and `Outcome::value` gives the bare value that outcome prints.
 
 The core lost three modules and two names.
 
@@ -62,7 +62,7 @@ Each rule below was watched failing at the code before the code was right.
 Four were touched by this rework and are fixed.
 
 1. **The three decode errors carried a wire name as a `String`.** They now carry the place number, and `thiserror` renders it through `wire_name`, so the message is the same text and nothing parses it back. `each_refused_response_names_its_own_cause` asserts the rendered `` `q1` ``.
-2. **Public items with no caller outside the crate.** Every remaining export is reachable from a public signature the binary uses: `Answer` and `Usage` through `Reply`, `UnknownAdapterError` through `BackendError` and `Adapter::from_str`, `EmptyPlanError` through `Plan::new`, and `ProfileName` through `Backend::profile` and `Meta::new`. Making any of them crate-private would put a private type in a public signature. The leftover is answered, and nothing moved.
+2. **Public items with no caller outside the crate.** `Threshold::cut` and `Threshold::band` had no outside caller and are now crate-private, and the enum they built is private too, so no caller outside can write a rule past the range check. Every other export is reachable from a public signature the binary uses: `Answer` and `Usage` through `Reply`, `UnknownAdapterError` through `BackendError` and `Adapter::from_str`, `EmptyPlanError` through `Plan::new`, and `ProfileName` through `Backend::profile` and `Meta::new`. Making any of them crate-private would put a private type in a public signature. The leftover is answered, and nothing moved.
 6. **`Probability` and `PassMark` repeated a newtype shape.** `PassMark` is deleted, so `Probability` stands alone and the repetition is gone.
 10. **The demo runner split a harvested `--replay` folder name on white space.** It now reads one name a line at a time and fails the rung when a name inside the loop finds no folder.
 12. **`record_and_replay.rs` repeated one record call five times, and the wrong-assertion fixture copied a whole demo page.** Four of the five calls now go through one `recorded` helper that gives back the listener, the entry name, and the entry text. The wrong-assertion fixture is one block with one wrong exit code.
