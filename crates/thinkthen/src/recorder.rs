@@ -4,10 +4,18 @@ use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use thinkthen_core::recording::{Entry, Exchange};
 
 use crate::failure::Failure;
+
+/// How many entries this process has begun to write.
+///
+/// Two records that are byte for byte alike make one digest, so every worker
+/// that misses it writes that same entry at once. The count gives each attempt
+/// a temporary name of its own, and the rename that follows is the atomic step.
+static WRITES: AtomicU64 = AtomicU64::new(0);
 
 /// Which folders `--record` and `--replay` named, once they agree.
 #[derive(Debug)]
@@ -87,8 +95,11 @@ impl Recorder {
             .written()
             .map_err(|_| Failure::Defect("a recorded exchange could not be written as JSON"))?;
         let name = exchange.digest().file_name();
-        let partial = folder.join(format!(".{}.{name}", process::id()));
+        let attempt = WRITES.fetch_add(1, Ordering::Relaxed);
+        let partial = folder.join(format!(".{}.{attempt}.{name}", process::id()));
         make_folder(folder).map_err(Failure::Recording)?;
+        // A crashed run may have left this name behind, and no other worker
+        // holds it, because the count above gives each attempt its own.
         let _stale = fs::remove_file(&partial);
         write_private(&partial, &folder.join(&name), &written).map_err(Failure::Recording)
     }

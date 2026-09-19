@@ -9,7 +9,7 @@ thinkthen decide -h | head -1 | mustmatch like "Answer a yes/no question about t
 for option in --threshold --quiet --details --dry-run; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch not like "0"
 done
-for option in --url --model --record --replay --timeout --max-retries; do
+for option in --url --model --record --replay --cache --jobs --timeout --max-retries; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch like "0"
   thinkthen decide --help | grep -c -- "$option" | mustmatch not like "0"
 done

@@ -78,8 +78,29 @@ How-to 12 shows its stop and its resume through one `--cache` folder over a comm
 
 `channels.md` names `--cache DIR` and `--jobs N` among the advanced options. `choose.md` and `score.md` each gained one sentence on control characters, and `choose.md` says that every rule on a label holds for a label a record supplies. `backends.md` gained the three sentences on the two retry headers.
 
+## The review
+
+A second agent read the branch against the ticket, the specification, and the standards. It named what it checked: the public surface against every page, the scheduler for deadlock, lost rows, double prints and bounded memory, every `Debug` and every message for a key or a record, `thinkthen-core` for a file, a variable, a socket, a clock or a process, the dependency sets and both lint tables, the 500-line ceiling, the commits for attribution, and both pages for the how-to form and for public hygiene.
+
+Six findings were fixed.
+
+1. **A recording race under `--jobs`.** The temporary file was named `.{pid}.{digest}`, one path per digest per process. Two records that are byte for byte alike make one digest, so every worker that missed it wrote that one path, and one worker's cleanup unlinked another's file. The run then ended at exit 5 with "No such file or directory" or "File exists". A counter gives each attempt its own name now, and the rename stays the atomic step. `parallel::records_that_are_byte_for_byte_alike_write_one_entry_and_race_with_nobody` failed on three runs of three before the fix and passes on three of three after it.
+2. **A dead worker ended the run at exit 0.** A closed channel with records still in flight broke the loop and reported success, and a failed hand-off dropped a record the same way. Both are `Failure::Defect` now, at exit 70.
+3. **A stray doc comment.** `DEFAULT_JOBS` moved to `schedule.rs` and its doc block stayed in `judge.rs`, documenting `struct Asked`.
+4. **`spec/decide.md` pinned six advanced options and not the two new ones.** The loop names `--cache` and `--jobs` now, so the spec rung proves both are hidden from `-h` and present in `--help`.
+5. **Both pages broke ADR 0016.** ADR 0016 landed on main while this branch was out, and it caps a page at 120 lines, 900 words, six blocks, and four steps, with nothing set up before the first result. How-to 12 is 110 lines, 764 words, six blocks, four steps. How-to 21 is 95 lines, 804 words, five blocks, three steps. Neither opens with `mktemp` or `trap` any more, because a cache folder that holds every entry writes nothing and the repair pipes through `jq`.
+6. **The branch was three commits behind main.** `origin/main` is merged in, so ADR 0016, three tickets, and two planning pages stay.
+
+Two more changes came from its notes. `Judged` now has a hand-written `Debug` that withholds the printed line, which holds the whole record under `--details`. `parallel::no_more_requests_are_in_flight_than_the_jobs_asked_for` asked for the bound exactly, which a loaded machine can miss, and it asks for the bound and for more than one request in flight now.
+
+Three findings stand.
+
+- **How-to 21 keeps its returns-desk scenario.** ADR 0016 suggests "picking the next action from a list that changes at every step" for demo 21. The ticket, `documentation-plan.md`, and `demos/README.md` all name "choose from a list that differs for every record", and the recorded exchanges are that scenario. Changing it means a new live recording for a page that already teaches the option.
+- **The `--jobs` property is a table and not a `proptest` case.** `proptest` is a development dependency of the core alone. Adding it to the binary is a new dependency and needs a review of its own.
+- **`exchange::a_rate_limit_waits_the_seconds_the_backend_asked_for` sleeps about a real second.** The header names whole seconds, so one second is the smallest honest case.
+
 ## The gates
 
-`install`, `lint`, `test`, and `spec` all exit 0. 204 tests pass. `demos: 15 green, 7 red`. The ceiling went from 7450 to 8967.
+`install`, `lint`, `test`, and `spec` all exit 0. 205 tests pass. `demos: 15 green, 7 red`. The ceiling went from 7450 to 9025.
 
 The ticket stays at `in progress`.

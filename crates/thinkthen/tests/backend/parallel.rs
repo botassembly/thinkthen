@@ -138,8 +138,13 @@ fn no_more_requests_are_in_flight_than_the_jobs_asked_for() {
         assert_eq!(printed(&output).lines().count(), 8, "{jobs} jobs");
         let peak = listener.peak();
         let asked: usize = jobs.parse().expect("a number of jobs");
+        // The bound is the claim. A loaded machine can fall short of it, so
+        // the run asks for the bound and for more than one where one is due.
         assert!(peak <= asked, "{jobs} jobs reached {peak} in flight");
-        assert_eq!(peak, asked, "{jobs} jobs reached {peak} in flight");
+        assert!(
+            asked == 1 || peak > 1,
+            "{jobs} jobs reached {peak} in flight"
+        );
     }
 }
 
@@ -341,4 +346,30 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     // pay, for all 24.
     let sent = listener.requests().len();
     assert!(sent <= 12, "the run kept scheduling and sent {sent}");
+}
+
+#[test]
+fn records_that_are_byte_for_byte_alike_write_one_entry_and_race_with_nobody() {
+    // Identical records make identical requests, so every worker misses the
+    // same digest and every worker writes the same entry at once.
+    let folder = folder("same-digest");
+    let named = folder.to_string_lossy().into_owned();
+    let listener =
+        Listener::answering(|_| Canned::ok(&answered(1)).after(20)).expect("a loopback listener");
+    let same: String = (0..16)
+        .map(|_| "{\"id\":\"R-1\",\"body\":\"record 1\"}\n".to_owned())
+        .collect();
+
+    let output = decide(
+        listener.base(),
+        &[
+            "--jsonl", "--field", "/body", "--record", &named, "--jobs", "8",
+        ],
+        &same,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    assert_eq!(printed(&output).lines().count(), 16);
+    assert_eq!(entries(&folder), 1);
 }

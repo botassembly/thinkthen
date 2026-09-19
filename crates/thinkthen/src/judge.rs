@@ -19,11 +19,6 @@ use crate::http::{Client, Exchange};
 use crate::recorder::Recorder;
 use crate::schedule::{self, Judged};
 
-/// How many requests are in flight when `--jobs` names no number.
-///
-/// ADR 0010 fixes it. The vendor's own example code uses 4 to 12 workers and
-/// says the public endpoint limits concurrency above about eight, so 4 is safe
-/// everywhere and a measured run can raise it.
 /// One question, its rule, and the view its answer prints in.
 #[derive(Debug)]
 struct Asked<'a> {

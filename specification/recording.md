@@ -11,6 +11,7 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 | `--record DIR` | Call the backend, then write the exchange into `DIR`. `DIR` is created when absent |
 | `--replay DIR` | Answer from `DIR` alone. Open no connection and read no key. A request that `DIR` lacks is a local failure, exit code 5, and the message names the missing entry |
 | Both, with the same `DIR` | A cache. An entry that exists is replayed. A request that is absent goes to the backend and is recorded |
+| `--cache DIR` | The row above, written once. It stands beside neither `--record` nor `--replay`, because one run keeps one folder |
 
 Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads nothing.
 

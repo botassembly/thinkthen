@@ -5,6 +5,7 @@
 //! the writer that owns standard output.
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::io::Write;
 use std::process::ExitCode;
 use std::sync::Mutex;
@@ -33,7 +34,6 @@ type Answered = (usize, Result<Judged, Failure>);
 type Asking<'a> = dyn Fn(&[u8]) -> Result<Judged, Failure> + Sync + 'a;
 
 /// One record's answer, as the line it prints and what the run counts.
-#[derive(Debug)]
 pub(crate) struct Judged {
     /// The line standard output takes, or nothing when the view prints none.
     pub(crate) printed: Option<String>,
@@ -41,6 +41,27 @@ pub(crate) struct Judged {
     pub(crate) outcome: Outcome,
     /// True when a recording answered rather than a backend.
     pub(crate) replayed: bool,
+}
+
+impl fmt::Debug for Judged {
+    /// Show what the row carries and never the row, which holds the evidence.
+    ///
+    /// Under `--details` the printed line holds the whole record. Nothing shows
+    /// a `Judged` today, and a later line that does must not print a record.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Judged")
+            .field(
+                "printed",
+                &format_args!(
+                    "<{} bytes withheld>",
+                    self.printed.as_ref().map_or(0, String::len)
+                ),
+            )
+            .field("outcome", &self.outcome)
+            .field("replayed", &self.replayed)
+            .finish()
+    }
 }
 
 /// How many requests this run keeps in flight, or why the number cannot act.
@@ -87,7 +108,9 @@ pub(crate) fn over_records(
                 break;
             }
             let Ok((place, judged)) = gathered.recv() else {
-                break;
+                // Every worker went away with records still out. Nothing will
+                // answer them, and a short file must not read as a whole one.
+                return Err(Failure::Defect("a worker ended with records in flight"));
             };
             run.in_flight -= 1;
             run.halted |= judged.is_err();
@@ -169,10 +192,13 @@ impl Run {
         self.halted = true;
     }
 
-    /// Hand this record to the workers, and stop when none is left to take it.
+    /// Hand this record to the workers, and refuse it when none is left to take it.
+    ///
+    /// No worker to take a record means no answer for it, and the run reports
+    /// a defect rather than printing a short file that reads as a whole one.
     fn send(&mut self, bytes: Vec<u8>, hand: &SyncSender<Work>) {
         if hand.send((self.dispatched, bytes)).is_err() {
-            self.halted = true;
+            self.refuse(Failure::Defect("every worker ended before the records did"));
             return;
         }
         self.dispatched += 1;
