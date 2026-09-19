@@ -4,7 +4,7 @@ Updated 2026-09-18. The reasons behind each slice are in `design-study.md`, sect
 
 | Slice | Delivers | State |
 | --- | --- | --- |
-| 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version`, one executable spec | In progress |
+| 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version`, one executable spec | Done |
 | 1 | `thinkthen decide if` over text, the result shape, the pass mark, `--status`, exit codes, `--plan` | Waits on nothing. Every option in the study includes it |
 | 2 | `thinkthen decide which` with inline options and `--from` | Waits on question 6 for the file form of `--from` |
 | 3 | `--record` and `--replay` over one content-addressed directory | Ready after slice 1 |
