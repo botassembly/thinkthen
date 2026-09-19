@@ -1,4 +1,4 @@
 {"id":"Q-01","body":"The card on file expired last week and the retry failed."}
 {"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."}
-{"id":"Q-03","body":"Payout to our bank bounced twice on Tuesday with no reason given. Attaching the log. 12:01 worker start pool=8 queue=payouts 12:01 claim batch id=8841 size=200 12:02 submit batch id=8841 12:04 response 502 from settlement gateway retry=1 12:06 response 502 from settlement gateway retry=2 12:09 response 502 from settlement gateway retry=3 12:09 batch id=8841 marked failed 12:10 claim batch id=8842 size=200 12:12 submit batch id=8842 12:14 response 502 from settlement gateway retry=1 12:17 response 502 from settlement gateway retry=2 12:20 response 502 from settlement gateway retry=3 12:20 batch id=8842 marked failed 12:21 worker idle"}
+{"id":"Q-03","note":"Payout to our bank bounced twice on Tuesday with no reason given."}
 {"id":"Q-04","body":"Can you point me at the API docs for webhooks?"}

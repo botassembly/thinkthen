@@ -2,9 +2,11 @@
 
 Status: red
 
-Verbs: `decide where`
+Verbs: `filter`
 
-A maintainer has a file of issue reports and wants the ones that describe a bug somebody could reproduce. `grep` cannot do it, because the words that matter are not in the text. `where` sits between two ordinary commands and keeps the records that pass, and every field of every kept record survives, because only the pointed value ever left the machine.
+A maintainer has a file of issue reports and wants the ones that describe a defect somebody could reproduce. `grep` cannot do it, because the words that matter are not in the text. `filter` sits between two ordinary commands and keeps the records that pass. Every field of every kept record survives, because only the pointed value ever left the machine.
+
+Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
 
 ## Input
 
@@ -12,53 +14,78 @@ A maintainer has a file of issue reports and wants the ones that describe a bug 
 
 ## Filter in the middle of a pipeline
 
-`jq` narrows the file by date, `where` narrows it by meaning, and `jq` projects the result. `--on /body` sends the body and nothing else. `--id /id` names the field that identifies a record in a result row.
+`jq` narrows the file by date, `filter` narrows it by meaning, and `jq` projects the result. `--jsonl` makes each line a JSON record and `--field /body` sends the body and nothing else.
 
 ```bash
 set -euo pipefail
+set -o pipefail
 
 jq -c 'select(.opened >= "2026-03-02")' issues.jsonl \
-  | thinkthen decide where 'the report gives steps that would reproduce a defect' \
-      --input jsonl --on /body --id /id \
-      --min-prob 0.9 --jobs 2 --replay recording/ \
+  | thinkthen filter 'Does the report give steps that would reproduce a defect?' \
+      --jsonl --field /body --threshold 0.9 --replay recording/ \
   | jq -r '.id' \
   | mustmatch "ISS-101
 ISS-104"
 ```
 
-Two records pass. The feature request, the vague report, and the how-to question do not. `where` counts what it left out and says so on standard error.
-
-```bash
-set -euo pipefail
-
-jq -c '.' issues.jsonl \
-  | thinkthen decide where 'the report gives steps that would reproduce a defect' \
-      --input jsonl --on /body --id /id \
-      --min-prob 0.9 --replay recording/ \
-  2>&1 >/dev/null | mustmatch like "unsure"
-```
+Two records pass. The feature request, the vague report, and the how-to question do not.
 
 ## The kept records are whole
 
-Nothing is rewritten. The `opened` field never left the machine and it is still there on the way out.
+Nothing is rewritten. `opened` never left the machine and it is still there on the way out, byte for byte.
 
 ```bash
 set -euo pipefail
 
-thinkthen decide where 'the report gives steps that would reproduce a defect' \
-  --input jsonl --on /body --id /id \
-  --min-prob 0.9 --replay recording/ < issues.jsonl \
-  | jq -c 'keys_unsorted' \
+thinkthen filter 'Does the report give steps that would reproduce a defect?' \
+  --jsonl --field /body --threshold 0.9 --input issues.jsonl --replay recording/ \
   | head -1 \
-  | mustmatch '["id","opened","body"]'
+  | mustmatch '{"id":"ISS-101","opened":"2026-03-02","body":"Export to CSV writes an empty file. Steps: open any report, choose Export, pick CSV, save. The file is 0 bytes every time on build 4.2.1."}'
+```
+
+That is the input line, unchanged. A filter that reprinted its records through a JSON encoder would reorder keys and reformat numbers, and a `diff` against the source file would show work nobody asked for.
+
+## Three records went missing and nothing said so
+
+`filter` takes a single cut, so a record is kept or dropped and there is no third pile. The run prints two lines out of five and exits 0.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+thinkthen filter 'Does the report give steps that would reproduce a defect?' \
+  --jsonl --field /body --threshold 0.9 --input issues.jsonl --replay recording/ \
+  > "$work/kept.jsonl" 2> "$work/err.txt" && rc=0 || rc=$?
+
+printf 'rc=%s\n' "$rc" | mustmatch "rc=0"
+wc -l < "$work/kept.jsonl" | tr -d ' ' | mustmatch "2"
+```
+
+To see the three that went, judge every record and split in `jq`. Demo 04 does exactly that, and the cost is two more commands in the pipeline.
+
+## A pointer that finds nothing
+
+A record with no `/body` is an input error for that record before any request for it.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+printf '%s\n' '{"id":"ISS-900","opened":"2026-03-07"}' > "$work/bad.jsonl"
+thinkthen filter 'Does the report give steps that would reproduce a defect?' \
+  --jsonl --field /body --threshold 0.9 --input "$work/bad.jsonl" --replay recording/ \
+  > /dev/null 2>&1 && rc=0 || rc=$?
+printf 'rc=%s\n' "$rc" | mustmatch "rc=2"
 ```
 
 The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **`--id` does nothing under `--emit input`, and the tool accepts it in silence.** `--emit input` is the default for `where`, and the demo above passes `--id /id` on every line out of habit and gets no result rows to put an id into. A flag that is inert should say so. Smallest fix: `--id` without `--emit result` or `--emit annotated` is a usage error, exit 2, with a message naming the mode to pass. The same rule catches `--unknown drop` under `--emit annotated`, where the draft already says the flag changes nothing.
-- **Require `--min-prob` for `--emit input`.** This demo is a filter, and a filter with no policy would have to invent one. The draft's recommendation holds.
-- **Keep `--unknown drop` as the default.** It reads like `grep`, and the dropped count on standard error is what tells the user to look again. The count is easy to lose: a pipeline that writes `2>/dev/null` silently discards the only evidence that anything was unsure. Demo 04 routes the unsure rows to a file instead, which is the honest answer for work that matters.
-- **Four flags before the question is a lot.** `--input jsonl --on /body --id /id` appears on every stream command in every demo. No smaller spelling is safe, because the draft rules out guessing the framing, and guessing is the only thing that would shorten it. The demos accept the length and ask that the help show the four together as one unit.
-- **`--jobs` has a real use here and a default of 4 is fine.** Five records did not need it. The flag went in because a real issue file is thousands of lines and the rate limit is the reason the lever exists.
+- **The demo confirms `filter` and `--field`.** Three words in front of the question replaced four, and `--field` carries the whole boundary story: the body goes out, the rest stays. The record flags read well beside `jq` on either side.
+- **The demo could not say how many records were dropped.** The old surface printed a dropped count on standard error. ADR 0007 drops that line and says nothing in its place, so a pipeline that keeps two of five lines looks the same as a pipeline that kept two of two. The demo asks for the count back on standard error at the end of a `filter` run.
+- **A per-record input error at exit 2 contradicts the exit table.** The table says code 2 means a usage error and that nothing was sent. The block above sends nothing, so it is honest. A file where record forty lacks the pointer is not: thirty-nine requests are paid for, thirty-nine records print, and the run still exits 2. The surface needs a code for a run that started and then hit a bad record.
+- **`filter` with a band is refused, and the demo agrees.** A third pile needs a flag to steer it, and `jq` already steers piles. Demo 04 shows the shape.
+- **Parallelism left the command line.** The old page passed `--jobs 2`. ADR 0007 keeps `jobs` in the configuration file only, so a user with a rate limit and a large file edits a JSON file to change one number for one run. The demo does not ask for the flag back. It asks that the `filter` help name the configuration key, because nothing on the command line points at it.
