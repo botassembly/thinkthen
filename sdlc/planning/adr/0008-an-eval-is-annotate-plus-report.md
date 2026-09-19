@@ -32,6 +32,8 @@ thinkthen report [RUN] [--truth LEFT=POINTER]... [--threshold NAME=RULE]... [--b
 6. **Exact checks beyond equality are `jq` fields.** The definition file holds questions and nothing else.
 7. **History across many runs stays outside the tool.** `report` compares two files and keeps nothing.
 
+Three details came out of writing demos 13 and 14. `NAME=` may be left out of `--truth` and `--threshold` when the run holds a single check, as a run made by `decide --jsonl --details` does. An exact check is keyed in the report by its left pointer. `report.md` fixes the JSON shape of the report before any code is written, because only scripts read it.
+
 Every option of `report` is Draft until demo 13 (pick a threshold) and a new demo 14 (grade a batch and compare it with a baseline) drive it.
 
 ## How many requests each command makes
