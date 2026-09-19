@@ -52,7 +52,7 @@ jq -n -f ../../recipes/calibration/calibration.jq "$rows" \
 
 An empty band yields null and never zero. Zero would read as "none of them was yes", which is a finding. Null reads as "nobody asked", which is the truth.
 
-Thirty-five of the forty rows sit below 0.2 or above 0.8. This model does not hedge much, so most of the scale is empty on a run this size, and a threshold anywhere between 0.2 and 0.8 would move almost nothing. That fact is worth more than any single rate in the table.
+Thirty-six of the forty rows sit at or below 0.2 or at or above 0.8. This model does not hedge much, so most of the scale is empty on a run this size, and a threshold anywhere between 0.2 and 0.8 would move almost nothing. That fact is worth more than any single rate in the table.
 
 ## See which rows the run refused
 

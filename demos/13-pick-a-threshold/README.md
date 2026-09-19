@@ -14,7 +14,7 @@ The recipes are `../../recipes/sweep/sweep.jq`, `../../recipes/score/score.jq`, 
 
 ## Split the run in two
 
-A sweep over a file flatters that file. Tune on one half and check on the other. The rows are already judged, so the split is a `jq` filter and not a second run.
+A sweep over a file flatters that file. Tune on one part and check on the other. The ids run from `C-01` to `C-40` with a fixed width, so a string comparison splits them and any reader can repeat it. The rows are already judged, so the split is a `jq` filter and costs no second run.
 
 ```bash
 set -euo pipefail
@@ -31,7 +31,7 @@ wc -l < "$work/holdout.jsonl" | tr -d ' ' | mustmatch "16"
 
 ## Ask every cut what it would have done
 
-`sweep.jq` scores the tuning file at the 19 cuts from 0.05 to 0.95 and picks one. The pick is the highest F1, and the middle cut of the cuts that tie, because that one sits farthest from both edges of the gap. The rule travels in the output, so nobody has to remember it.
+`sweep.jq` scores the tuning file at the 19 cuts from 0.05 to 0.95 and picks one. The pick is the highest F1, and the middle cut of the cuts that tie, because that one sits farthest from both edges of the gap. An even number of ties has two middles, and the pick is the higher of the two. The rule travels in the output, so nobody has to remember it.
 
 ```bash
 set -euo pipefail
