@@ -65,13 +65,15 @@ Forty made-up incident reports on the five levels `none`, `minor`, `moderate`, `
 
 | | Exact | Within one level | Spearman against the trusted level |
 | --- | --- | --- | --- |
-| `score`, value rounded | 31 of 40 | 40 of 40 | 0.9703 |
+| `score`, the value | 31 of 40 | 40 of 40 | 0.9703 |
 | `score`, the level with the most probability | 31 of 40 | 40 of 40 | 0.9598 |
 | `choose` over the same five labels | 30 of 40 | 40 of 40 | 0.9507 |
 
+The first two columns round the `score` value to a level. The third column correlates the unrounded value, which is the number a user sorts on. Rounding the value first gives 0.9598, the same correlation as the top level, because the rounded value and the top level name the same level on all forty texts.
+
 The mean absolute error of the `score` value is 0.2752 of a level. The two verbs named the same top level on 39 of 40 texts. On the fifteen hard texts both were exact on 10 of 15.
 
-The errors have a shape. No disagreement is more than one level. Eight of the nine `score` errors are one level too high, and five of them are the same error: a text placed at `none` was called `minor`. Four rows carry a split distribution whose top level holds under 0.6, and three of those four are the cases a reader would also hesitate over.
+The errors have a shape. No disagreement is more than one level. All nine `score` errors are one level too high, and five of them are the same error: a text placed at `none` was called `minor`. `choose` makes those same nine errors and one more, S-15, which is its only error one level too low. Four rows carry a split distribution whose top level holds under 0.6, and three of those four are the cases a reader would also hesitate over.
 
 **Conclusion.** On an ordered scale whose levels name a fact visible in the text, `score` ranked these forty texts at 0.9703 and never missed by more than one level. It is not weak at ordering. It is offset at the boundary between the bottom two levels, which is exactly the kind of error the earlier measurement describes: the model and the person draw the line in different places.
 
