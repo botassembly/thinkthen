@@ -43,6 +43,11 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
         return Ok(ExitCode::SUCCESS);
     }
     let environment = Environment::read();
+    // A person at a terminal is told what the command waits for, before the
+    // command settles down to read it. The line goes nowhere in a pipe.
+    if let Some(command) = cli.command.as_ref() {
+        edge::waiting(command.common().input.as_deref(), io::stderr().lock());
+    }
     let input = io::stdin().lock();
     match &cli.command {
         Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),

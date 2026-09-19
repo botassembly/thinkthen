@@ -3,6 +3,11 @@
 # No step here holds a secret, reads a key, or sets a THINKTHEN_ variable. A
 # live call to the paid backend never happens here. A live run is a job done by
 # hand through sdlc/scripts/live, under a token cap, with Ian's authorization.
+#
+# Every action is pinned to a commit SHA, because a tag moves and a moved tag
+# runs code nobody reviewed. The tag each SHA carried is in the comment beside
+# it. The SHAs were read with `git ls-remote` on 2026-09-19. The jq binary is
+# checked against the SHA-256 the jq project publishes beside the release.
 
 name: gate
 
@@ -13,6 +18,15 @@ on:
 permissions:
   contents: read
 
+env:
+  # The checker rung 1 runs. sdlc/scripts/install names the same version.
+  DENY_VERSION: 0.19.4
+  JQ_VERSION: jq-1.7.1
+  # From sha256sum.txt in the jq-1.7.1 release, checked against the file
+  # downloaded from the same release on 2026-09-19.
+  JQ_SHA256: 5942c9b0934e510ee61eb3e30273f1b3fe2590df93933a93d7c58b81d19c8ff5
+  MUSTMATCH_VERSION: 0.1.0
+
 jobs:
   ladder:
     name: install, lint, test, spec
@@ -20,31 +34,42 @@ jobs:
 
     steps:
       - name: Check out the commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Install the toolchain that rust-toolchain.toml pins
         run: rustup show active-toolchain || rustup toolchain install
 
       - name: Cache the cargo registry and the build directory
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
+            ~/.cargo/bin/cargo-deny
+            ~/.cargo/advisory-dbs
             target
-          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-deny-${{ env.DENY_VERSION }}
           restore-keys: cargo-${{ runner.os }}-
 
       - name: Install jq and mustmatch at pinned versions
         run: |
+          set -eu
           mkdir -p "$HOME/.local/bin"
           printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
           curl --fail --silent --show-error --location \
             --output "$HOME/.local/bin/jq" \
-            https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
+            "https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64"
+          printf '%s  %s\n' "$JQ_SHA256" "$HOME/.local/bin/jq" | sha256sum --check --strict
           chmod +x "$HOME/.local/bin/jq"
-          pipx install mustmatch==0.1.0
+          pipx install "mustmatch==$MUSTMATCH_VERSION"
+
+      - name: Install cargo-deny at the pinned version
+        run: |
+          set -eu
+          if [ "$(cargo deny --version 2>/dev/null || true)" != "cargo-deny $DENY_VERSION" ]; then
+            cargo install --locked --force "cargo-deny@$DENY_VERSION"
+          fi
 
       - name: Rung 0, install
         run: sdlc/scripts/install

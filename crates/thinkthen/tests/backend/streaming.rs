@@ -281,6 +281,24 @@ fn a_backend_failure_stops_the_run_and_the_rows_before_it_stay_printed() {
     );
 }
 
+/// A stream whose last record has no line feed after it is judged like any other.
+///
+/// The reader ends the stream where it finds no line feed, so this case pins
+/// that a file with no final newline still judges its last record.
+#[test]
+fn a_last_record_with_no_line_feed_after_it_is_judged() {
+    let listener = serving(&["0.97", "0.97"]).expect("a loopback listener");
+
+    let output = decide(listener.base(), &["--lines"], "first line\nsecond line")
+        .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(printed(&output), "true\ntrue\n");
+    let mut sent = states(&listener);
+    sent.sort();
+    assert_eq!(sent, [r#""first line""#, r#""second line""#]);
+}
+
 #[test]
 fn an_empty_input_succeeds_with_no_output_and_no_request() {
     for arguments in [["--lines"], ["--jsonl"]] {

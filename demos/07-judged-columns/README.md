@@ -1,5 +1,7 @@
 # 07 Judged columns
 
+Absorbed by how-tos 14 and 16: several judged columns on one record go to 14, and the spreadsheet view goes to 16's output files. ADR 0018 rules that this folder stays until 14 and 16 are green and then leaves.
+
 Status: red
 
 Verbs: `annotate`, `filter`

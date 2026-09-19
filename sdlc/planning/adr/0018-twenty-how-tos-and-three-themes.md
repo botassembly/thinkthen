@@ -40,7 +40,7 @@ Yes. Every one of the fifteen software-development patterns is covered today or 
 | | 25 Check the judge against human labels | the score and calibration transforms, hostile cases |
 | | 28 Know what a run cost | the cost transform, `meta.usage` |
 
-Seven pages leave the list of 27, and every idea lands somewhere: 20 into 40, 24 into 41, 07 into 14 and 16, 30 into 14 as one sentence, 23 into 27 and 14, 37 into 25, 04 into 19, 16, and 13, and 42 into 12 as one sentence. No number is reused.
+Eight pages leave the list of 27 and page 43 enters, which is how 27 becomes 20. Every idea lands somewhere: 20 into 40, 24 into 41, 07 into 14 and 16, 30 into 14 as one sentence, 23 into 27 and 14, 37 into 25, 04 into 19, 16, and 13, and 42 into 12 as one sentence. No number is reused.
 
 **A green page leaves only when the page that absorbs it is green.** Pages 04, 20, and 24 are green today. They stay in the repository until 16, 40, and 41 turn green, so no lesson is ever missing.
 
@@ -67,3 +67,7 @@ The study's window left `find` out and showed `filter` twice. This one shows eac
 - Ticket 0015 turns 39 and 14 green. Page 39 absorbs 08, and page 14 absorbs what ADR 0016 gave to 07.
 - Ticket 0021 rewrites `documentation-plan.md`, `demos/README.md`, and the README's front window to this ADR, and it removes each green page whose absorbing page is green by then.
 - The flagship, page 16, keeps its own slice after `annotate`.
+
+## Amendment, 2026-09-19, by ticket 0021
+
+The count above read "seven pages leave" and then named eight: 20, 24, 07, 30, 23, 37, 04, and 42. Eight leave and page 43 enters, so the list of 27 becomes 20. The list itself was always right. Ticket 0021 also found that two of the merges have not happened yet: 42's sentence is not on page 12, and page 25 holds no hostile case for 37. `documentation-plan.md` says so on each row, and a later ticket writes them.

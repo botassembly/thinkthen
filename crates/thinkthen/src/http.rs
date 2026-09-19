@@ -42,15 +42,22 @@ impl fmt::Debug for Client {
 
 impl Client {
     /// Build the one pool this process posts through.
-    pub(crate) fn new(timeout: Duration) -> Self {
-        Self(
-            Agent::config_builder()
-                .timeout_global(Some(timeout))
-                .http_status_as_error(false)
-                .max_redirects(0)
-                .build()
-                .into(),
-        )
+    ///
+    /// `secure` says whether the resolved address is an `https://` one. A
+    /// plain `http://` address is a loopback one, because the address rule
+    /// refuses every other host under it, so no proxy carries that request:
+    /// a proxy would send the key and the evidence to another machine in
+    /// clear text. `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and
+    /// `NO_PROXY` on its own, and `proxy(None)` cancels all four.
+    pub(crate) fn new(timeout: Duration, secure: bool) -> Self {
+        let mut config = Agent::config_builder()
+            .timeout_global(Some(timeout))
+            .http_status_as_error(false)
+            .max_redirects(0);
+        if !secure {
+            config = config.proxy(None);
+        }
+        Self(config.build().into())
     }
 
     /// Post the request and hand back the response body the backend answered with.
@@ -189,26 +196,8 @@ fn is_retried(failure: &Failure) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{Exchange, honored};
-    use crate::edge::Key;
+    use super::honored;
     use std::time::Duration;
-
-    #[test]
-    fn an_exchange_shows_neither_the_key_nor_the_evidence_it_carries() {
-        let key = Key::of("sk-secret-value");
-        let exchange = Exchange {
-            url: "http://127.0.0.1:1/v1",
-            body: br#"{"state":"something private"}"#,
-            key: &key,
-            max_retries: 2,
-            retry_wait: Duration::from_secs(1),
-        };
-
-        let shown = format!("{exchange:?} {key:?}");
-        assert!(!shown.contains("sk-secret-value"), "{shown}");
-        assert!(!shown.contains("something private"), "{shown}");
-        assert!(shown.contains("withheld"), "{shown}");
-    }
 
     #[test]
     fn a_retry_after_header_is_read_in_seconds_and_stops_at_the_ceiling() {

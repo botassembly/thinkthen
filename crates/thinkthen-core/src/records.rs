@@ -13,6 +13,14 @@ use crate::question::{Labels, LabelsError};
 use crate::render::{RenderError, json_line};
 use crate::text::{BlankTextError, Evidence};
 
+/// The most one record may hold before the tool refuses to judge it.
+///
+/// The vendor reads about 32,000 tokens of evidence, far under a megabyte, so a
+/// record this large is a mistake in the pipeline rather than a judgment anyone
+/// asked for. No option sets it, and the bound keeps a hostile or mistaken
+/// stream out of this process's memory.
+pub const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
+
 /// What one record is.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -45,6 +53,9 @@ pub enum RecordError {
     /// The bytes of the record are not text.
     #[error("the record is not valid UTF-8")]
     NotUtf8,
+    /// The record is past [`MAX_RECORD_BYTES`].
+    #[error("the record is over 16 MiB, which is far past what a backend reads in one request")]
+    TooLarge,
     /// The record is not JSON this tool will read.
     #[error("{0}")]
     Json(#[from] JsonError),
@@ -186,26 +197,32 @@ impl Reading {
     ///
     /// Returns [`RecordError::NotUtf8`] when the bytes are not text.
     pub fn as_it_arrived<'a>(&self, bytes: &'a [u8]) -> Result<&'a str, RecordError> {
-        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
-        if !self.streams() {
-            return Ok(text);
-        }
-        Ok(text
-            .strip_suffix('\n')
-            .map_or(text, |line| line.strip_suffix('\r').unwrap_or(line)))
+        str::from_utf8(self.ended(bytes)).map_err(|_| RecordError::NotUtf8)
+    }
+
+    /// The bytes without the line feed that ended them, and without a
+    /// carriage return before it. Nothing ends a whole input.
+    fn ended<'a>(&self, bytes: &'a [u8]) -> &'a [u8] {
+        let line = self.streams().then(|| bytes.strip_suffix(b"\n")).flatten();
+        line.map_or(bytes, |line| line.strip_suffix(b"\r").unwrap_or(line))
     }
 
     /// Read one record from the bytes the binary handed over.
     ///
-    /// A line arrives with the line feed that ended it, and a carriage return
-    /// before that line feed is stripped with it.
-    ///
     /// # Errors
     ///
-    /// Returns [`RecordError`] when the bytes are not text, and when a JSON
-    /// record is not JSON this tool will read.
+    /// Returns [`RecordError`] when the record is past [`MAX_RECORD_BYTES`],
+    /// when the bytes are not text, and when a JSON record is not JSON this
+    /// tool will read.
     pub fn record(&self, bytes: &[u8]) -> Result<Record, RecordError> {
-        let text = self.as_it_arrived(bytes)?;
+        // The line that ended the record is not part of it, so it is dropped
+        // before the size is measured. The size is read before the bytes are,
+        // because a huge record is too large whatever its bytes turn out to be.
+        let bytes = self.ended(bytes);
+        if bytes.len() > MAX_RECORD_BYTES {
+            return Err(RecordError::TooLarge);
+        }
+        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
         if self.framing == Framing::Jsonl || !self.fields.is_empty() {
             return Ok(Record(Held::Json(Json::parse(text)?)));
         }
@@ -247,257 +264,4 @@ fn found<'a>(pointer: &Pointer, value: &'a Json) -> Result<&'a Json, RecordError
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{Framing, Held, Reading, ReadingError, Record, RecordError};
-    use crate::json::JsonError;
-    use crate::pointer::Pointer;
-    use crate::question::LabelsError;
-    use crate::render::json_line;
-    use crate::text::BlankTextError;
-    use proptest::collection::vec;
-    use proptest::prelude::{Strategy, any};
-    use proptest::{prop_assert_eq, proptest};
-
-    fn reading(framing: Framing, fields: &[&str]) -> Reading {
-        let pointers = fields
-            .iter()
-            .map(|text| Pointer::new(*text).expect("a pointer"))
-            .collect();
-        Reading::new(framing, pointers).expect("a framing and its pointers")
-    }
-
-    /// The evidence one record sends under one reading.
-    fn sent(reading: &Reading, bytes: &[u8]) -> Result<String, RecordError> {
-        let record = reading.record(bytes)?;
-        reading
-            .evidence(&record)
-            .map(|evidence| evidence.as_str().to_owned())
-    }
-
-    #[test]
-    fn each_framing_says_what_one_record_is() {
-        let document = reading(Framing::Document, &[]);
-        assert_eq!(
-            sent(&document, b"two\nlines\n").as_deref(),
-            Ok("two\nlines\n")
-        );
-        let lines = reading(Framing::Lines, &[]);
-        assert_eq!(sent(&lines, b"one line\n").as_deref(), Ok("one line"));
-        assert_eq!(sent(&lines, b"no line feed").as_deref(), Ok("no line feed"));
-        let jsonl = reading(Framing::Jsonl, &[]);
-        assert_eq!(
-            sent(&jsonl, br#"{"id":"T-91","body":"Payouts failed."}"#).as_deref(),
-            Ok(r#"{"id":"T-91","body":"Payouts failed."}"#)
-        );
-    }
-
-    #[test]
-    fn a_carriage_return_before_the_line_feed_is_stripped() {
-        let lines = reading(Framing::Lines, &[]);
-        assert_eq!(sent(&lines, b"one line\r\n").as_deref(), Ok("one line"));
-        assert_eq!(
-            sent(&lines, b"kept\rinside\n").as_deref(),
-            Ok("kept\rinside")
-        );
-        let jsonl = reading(Framing::Jsonl, &["/a"]);
-        assert_eq!(sent(&jsonl, b"{\"a\":\"x\"}\r\n").as_deref(), Ok("x"));
-    }
-
-    #[test]
-    fn one_pointer_sends_the_value_it_names_and_several_send_an_object() {
-        let one = reading(Framing::Jsonl, &["/body"]);
-        let line = br#"{"id":"T-91","body":"Payouts failed.","count":3}"#;
-        assert_eq!(sent(&one, line).as_deref(), Ok("Payouts failed."));
-        let number = reading(Framing::Jsonl, &["/count"]);
-        assert_eq!(sent(&number, line).as_deref(), Ok("3"));
-        let several = reading(Framing::Jsonl, &["/body", "/id"]);
-        assert_eq!(
-            sent(&several, line).as_deref(),
-            Ok(r#"{"body":"Payouts failed.","id":"T-91"}"#)
-        );
-    }
-
-    #[test]
-    fn a_pointer_without_jsonl_reads_the_whole_input_as_one_json_value() {
-        let document = reading(Framing::Document, &["/a/text"]);
-        assert_eq!(
-            sent(&document, b"{\n  \"a\": {\"text\": \"inner\"}\n}\n").as_deref(),
-            Ok("inner")
-        );
-    }
-
-    #[test]
-    fn the_framing_and_the_pointers_are_refused_when_they_cannot_act_together() {
-        let pointer = |text: &str| Pointer::new(text).expect("a pointer");
-        assert_eq!(
-            Reading::new(Framing::Lines, vec![pointer("/body")]),
-            Err(ReadingError::TextHasNoMembers)
-        );
-        assert_eq!(
-            Reading::new(Framing::Jsonl, vec![pointer("/a/text"), pointer("/b/text")]),
-            Err(ReadingError::KeyClash("text".to_owned()))
-        );
-        assert!(Reading::new(Framing::Jsonl, vec![pointer("/a"), pointer("/b")]).is_ok());
-    }
-
-    #[test]
-    fn a_record_the_tool_refuses_names_no_part_of_itself() {
-        let jsonl = reading(Framing::Jsonl, &["/body"]);
-        let cases = [
-            (
-                &b"{\"id\":1,\"id\":2}"[..],
-                RecordError::Json(JsonError::DuplicateName),
-            ),
-            (
-                &b"{\"body\":1e999}"[..],
-                RecordError::Json(JsonError::NotFinite),
-            ),
-            (&b"not json"[..], RecordError::Json(JsonError::Syntax)),
-            (&b"\xff\xfe"[..], RecordError::NotUtf8),
-            (
-                &b"{\"other\":\"x\"}"[..],
-                RecordError::Missed("/body".to_owned()),
-            ),
-            (
-                &b"{\"body\":\"  \"}"[..],
-                RecordError::Blank(BlankTextError::Evidence),
-            ),
-        ];
-        for (bytes, expected) in cases {
-            let refused = sent(&jsonl, bytes).expect_err("a refused record");
-            assert_eq!(refused, expected);
-            let said = refused.to_string();
-            assert!(!said.contains("Payouts"), "{said}");
-            assert!(!said.contains("other"), "{said}");
-        }
-    }
-
-    #[test]
-    fn a_record_carries_its_own_candidate_list_as_a_list_or_as_a_map() {
-        let jsonl = reading(Framing::Jsonl, &["/note"]);
-        let pointer = Pointer::new("/codes").expect("a pointer");
-        let listed = jsonl
-            .record(br#"{"note":"n","codes":["late","lost"]}"#)
-            .expect("a record")
-            .choices(&pointer)
-            .expect("a candidate list");
-        assert_eq!(
-            json_line(&listed).expect("a list is writable"),
-            r#"["late","lost"]"#
-        );
-        assert_eq!(
-            listed.descriptions().collect::<Vec<_>>(),
-            [(&"late".to_owned(), None), (&"lost".to_owned(), None)]
-        );
-
-        let mapped = jsonl
-            .record(br#"{"note":"n","codes":{"late":"It arrived late.","lost":"It never came."}}"#)
-            .expect("a record")
-            .choices(&pointer)
-            .expect("a candidate list");
-        assert_eq!(
-            json_line(&mapped).expect("a list is writable"),
-            r#"["late","lost"]"#
-        );
-        assert_eq!(
-            mapped.descriptions().collect::<Vec<_>>(),
-            [
-                (&"late".to_owned(), Some("It arrived late.")),
-                (&"lost".to_owned(), Some("It never came.")),
-            ]
-        );
-    }
-
-    #[test]
-    fn a_candidate_list_the_verb_does_not_take_names_no_part_of_the_record() {
-        let jsonl = reading(Framing::Jsonl, &["/note"]);
-        let pointer = Pointer::new("/codes").expect("a pointer");
-        let cases: [(&[u8], RecordError); 6] = [
-            (br#"{"note":"n"}"#, RecordError::Missed("/codes".to_owned())),
-            (
-                br#"{"note":"n","codes":"late"}"#,
-                RecordError::OptionsShape("/codes".to_owned()),
-            ),
-            (
-                br#"{"note":"n","codes":["late",7]}"#,
-                RecordError::OptionsShape("/codes".to_owned()),
-            ),
-            (
-                br#"{"note":"n","codes":{"late":null}}"#,
-                RecordError::OptionsShape("/codes".to_owned()),
-            ),
-            (
-                br#"{"note":"n","codes":["late"]}"#,
-                RecordError::Options(LabelsError::OptionCount),
-            ),
-            (
-                br#"{"note":"n","codes":["late","  "]}"#,
-                RecordError::Options(LabelsError::Blank),
-            ),
-        ];
-        for (bytes, expected) in cases {
-            let record = jsonl.record(bytes).expect("a record");
-            let refused = record.choices(&pointer).expect_err("a refused list");
-            assert_eq!(refused, expected);
-            let said = refused.to_string();
-            assert!(!said.contains("late"), "{said}");
-            assert!(!said.contains("arrived"), "{said}");
-        }
-    }
-
-    #[test]
-    fn a_record_mode_plan_names_the_framing_and_the_pointers() {
-        let jsonl = reading(Framing::Jsonl, &["/body", "/id"]);
-        assert_eq!(
-            json_line(&jsonl.plan()).expect("a plan is writable"),
-            r#"{"framing":"jsonl","field":["/body","/id"]}"#
-        );
-        let lines = reading(Framing::Lines, &[]);
-        assert_eq!(
-            json_line(&lines.plan()).expect("a plan is writable"),
-            r#"{"framing":"lines","field":[]}"#
-        );
-    }
-
-    #[test]
-    fn a_record_is_written_back_as_it_arrived() {
-        let jsonl = reading(Framing::Jsonl, &["/body"]);
-        let record = jsonl
-            .record(br#"{"id":"T-91","body":"Payouts failed."}"#)
-            .expect("a record");
-        assert_eq!(
-            json_line(&record).expect("a record is writable"),
-            r#"{"id":"T-91","body":"Payouts failed."}"#
-        );
-        let lines = reading(Framing::Lines, &[]);
-        let record = lines.record(b"one line\n").expect("a record");
-        assert_eq!(record, Record(Held::Text("one line".to_owned())));
-        assert_eq!(
-            json_line(&record).expect("a record is writable"),
-            r#""one line""#
-        );
-    }
-
-    fn texts() -> impl Strategy<Value = String> {
-        vec(any::<char>(), 1..24)
-            .prop_map(|characters| characters.into_iter().collect::<String>())
-            .prop_filter("a line that is one line and is not blank", |text| {
-                !text.trim().is_empty() && !text.contains(['\n', '\r'])
-            })
-    }
-
-    proptest! {
-        /// Any text line reaches the evidence unchanged, and any JSON record
-        /// hands its pointed member over as the string it holds.
-        #[test]
-        fn framing_a_line_keeps_the_line(text in texts()) {
-            let lines = reading(Framing::Lines, &[]);
-            let framed = sent(&lines, format!("{text}\n").as_bytes());
-            prop_assert_eq!(framed.as_deref(), Ok(text.as_str()));
-            let jsonl = reading(Framing::Jsonl, &["/body"]);
-            let line = json_line(&super::Json::String(text.clone())).expect("a string is writable");
-            let pointed = sent(&jsonl, format!("{{\"body\":{line}}}\n").as_bytes());
-            prop_assert_eq!(pointed.as_deref(), Ok(text.as_str()));
-        }
-    }
-}
+mod tests;

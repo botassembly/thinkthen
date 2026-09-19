@@ -47,7 +47,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 ## Dependencies
 
 - Few, and each one argued. The starting set: `serde` and `serde_json` for the wire format, `thiserror` for errors, `clap` with derive for the command line, `ureq` for blocking HTTP. Parallel requests use threads and a bounded channel. No async runtime enters until a measurement asks for one.
-- Every dependency resolves from crates.io with a checksum, under MIT, Apache-2.0, Unicode-3.0, or Unlicense. HTTPS forced three more: ISC, BSD-3-Clause, and CDLA-Permissive-2.0, each tied in `policy.py` to the crates that need it. No TLS stack exists in Rust without them. Enforced by: `lint` reads `cargo metadata` and `Cargo.lock`.
+- Every dependency resolves from crates.io with a checksum, under MIT, Apache-2.0, Unicode-3.0, or Unlicense. HTTPS forced three more: ISC, BSD-3-Clause, and CDLA-Permissive-2.0, each tied in `policy.py` to the crates that need it. No TLS stack exists in Rust without them. Enforced by: `lint` reads `cargo metadata` and `Cargo.lock`, and `cargo deny` reads the same seven licenses from `deny.toml` and fails on an advisory or on a license nothing in the tree offers.
 - Adding a dependency takes a second reviewing agent and a line in the commit message saying why the standard library would not do.
 
 ## Tests
@@ -69,7 +69,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 | Rung | Script | What it runs |
 | --- | --- | --- |
 | 0 | `sdlc/scripts/install` | Verifies the pinned toolchain and the tools the other rungs need |
-| 1 | `sdlc/scripts/lint` | Policy checks, the ratchet, the file ceiling, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
+| 1 | `sdlc/scripts/lint` | Policy checks, the ratchet, the file ceiling, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
 | 2 | `sdlc/scripts/test` | `cargo test --locked --workspace --all-targets --all-features` |
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
 
@@ -77,7 +77,7 @@ Cheapest rung first. The whole ladder runs before any hand-back.
 
 ## When the repository goes public
 
-`LICENSE` is here. Ian ruled MIT in ADR 0015, each package declares `license = "MIT"`, and `policy.py` checks both. `.github/workflows/gate.yml` runs the four rungs on every push and every pull request, and ADR 0015 item 6 rules it. `CHANGELOG.md` and `deny.toml` with `cargo deny` in `lint` still wait.
+`LICENSE` is here. Ian ruled MIT in ADR 0015, each package declares `license = "MIT"`, and `policy.py` checks both. `.github/workflows/gate.yml` runs the four rungs on every push and every pull request, and ADR 0015 item 6 rules it. Each action in it is pinned to a commit SHA and the downloaded `jq` is checked against a recorded SHA-256. `deny.toml` allows exactly the licenses the tree carries, and `lint` runs `cargo deny check advisories bans licenses` over it. `CHANGELOG.md` still waits.
 
 ## Not yet enforced
 

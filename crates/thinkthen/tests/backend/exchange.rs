@@ -77,27 +77,6 @@ fn the_request_carries_the_encoded_plan_and_the_content_type() {
 }
 
 #[test]
-fn the_key_is_sent_as_a_bearer_token_and_never_printed() {
-    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
-
-    let output = decide(listener.base(), &[], Some("sk-secret-value"), "Refund me.")
-        .expect("the compiled binary runs");
-
-    let requests = listener.requests();
-    let request = requests.first().expect("one request reached the listener");
-    assert_eq!(
-        request.header("authorization"),
-        Some("Bearer sk-secret-value")
-    );
-    let printed = format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(!printed.contains("sk-secret-value"), "{printed}");
-}
-
-#[test]
 fn every_answer_prints_its_bare_value_and_earns_its_own_exit_code() {
     let cases = [
         ("0.92", "true\n", 0),

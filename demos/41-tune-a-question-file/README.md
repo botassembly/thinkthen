@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `decide`
 
-A question worth trusting is measured against labeled cases first. Keeping it in a question file means the wording you measured is the wording the gate runs, byte for byte, and every row says which one it was.
+A question worth trusting is measured against labeled cases first. A question file makes the wording you measured the wording the gate runs, byte for byte, and every row says so.
 
 ```bash
 set -euo pipefail
@@ -18,7 +18,7 @@ That is the gate. The rest of this page is how `receipt.json` earned it.
 
 ## Input
 
-`claims.jsonl` holds twenty-four made-up expense claims with a trusted answer in `label`. The made-up office rule: a claim needs a receipt over 25 pounds, or for anything from an outside supplier whatever the amount.
+`claims.jsonl` holds twenty-four made-up expense claims with a trusted answer in `label`. The office rule: a claim needs a receipt over 25 pounds, or from an outside supplier whatever the amount.
 
 `draft.json` is the first wording of the question and `receipt.json` is the tuned one. `recording/` holds the forty-eight live exchanges this page replays, and `record.sh` made them through `sdlc/scripts/live`.
 
@@ -36,11 +36,11 @@ jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$work/draft.jsonl" \
   | mustmatch '{"rows":24,"accuracy":0.875,"false_positive":3,"false_negative":0}'
 ```
 
-Three claims were called yes that the rule calls no, and none went the other way. The draft is too willing, and it says nothing about the 25 pound line or about outside suppliers.
+Three claims were called yes that the rule calls no, and none the other way. The draft says nothing about the 25 pound line or outside suppliers.
 
 ## Step 2: change the file and never the command
 
-The fix goes in the file, under `true` and `false`. The command stays as it was.
+The fix goes in the file, under `true` and `false`. The command does not move.
 
 ```bash
 set -euo pipefail
@@ -63,7 +63,7 @@ jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$work/tuned.jsonl" \
   | mustmatch '{"rows":24,"accuracy":1,"false_positive":0,"false_negative":0}'
 ```
 
-`--dry-run` says which home each setting came from, so a run that behaves oddly can be read rather than guessed at. A value typed beside `@FILE` wins, and the plan names it.
+`--dry-run` names the home each setting came from, so an odd run is read rather than guessed at. A value typed beside `@FILE` wins.
 
 ```bash
 set -euo pipefail
@@ -93,19 +93,23 @@ jq -s -r '[.[0].meta.question_sha256[0:8]] | join("")' "$work/draft.jsonl" > "$w
 jq -s -r '[.[0].meta.question_sha256[0:8]] | join("")' "$work/tuned.jsonl" > "$work/b"
 { cat "$work/a" "$work/b"; } | mustmatch "ad25f6f9
 c2c9a714"
+
+sh ../../transforms/compare/example.sh | jq -c '{paired, same}' | mustmatch '{"paired":40,"same":36}'
 ```
 
-Twenty-four pairs, the same case ids, the same labels, and three claims that moved from yes to no. Both runs print the same `question.text`, and their digests differ, because the two sentences that were added are part of the question and ride in the digest.
+Twenty-four pairs, the same ids and labels, and three claims that moved from yes to no. Both runs print the same `question.text`, and the digests differ, because the two added sentences ride in the digest. The last line runs the same transform as a file.
 
 An automatic tuner drives this same loop by rewriting step 2, and every round it produces is traceable by its digest.
 
 ## What can go wrong
 
-- **Tuning against the cases you then report on.** Twenty-four made-up claims show the direction. Hold cases back before anyone quotes the accuracy.
+- **Tuning against the cases you then report on.** Twenty-four claims show the direction. Hold cases back before anyone quotes the accuracy.
 - **Editing the wording on the command line.** Then the gate and the measurement are two questions, and no row says so.
-- **Reading `changed.question` from the comparison.** It watches the printed text, which did not move here. `meta.question_sha256` is the field that did.
-- **A tuned file that misses the recording.** A changed text is a changed request, so `--replay` names the entry it cannot find and the page stops.
-- **A gate that reads the exit code loosely.** Word the question so that yes permits the action, and treat every code other than 0 as a refusal.
+- **Reading `changed.question` from the comparison.** It watches the printed text, which did not move here. `meta.question_sha256` is the field that did. `changed` also names the model and the cut, and when two of the three moved, rerun with one held still.
+- **Reading the flips before the pairing.** `paired`, `only_in_before`, `only_in_after`, `repeated_ids`, and the two mismatch lists say the runs measured the same cases. A run that stopped early is listed there, not passed off as a smaller run.
+- **Folding unresolved into no.** A case that moved into the band then reads as a regression. The six directions stay apart, and `compare.jq` states each rule in its header.
+- **A tuned file that misses the recording.** A changed text is a changed request, so `--replay` names the entry it cannot find.
+- **A gate that reads the exit code loosely.** Word the question so that yes permits the action, and treat any code but 0 as a refusal.
 
 ## Related how-tos
 

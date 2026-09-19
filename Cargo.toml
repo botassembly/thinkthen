@@ -6,6 +6,13 @@ resolver = "3"
 edition = "2024"
 rust-version = "1.93.1"
 
+[profile.release]
+# An overflow in release is a wrong number rather than a stop, and a wrong
+# number in a judgment is worse than a stop. A panic in a tool this small has
+# nothing to unwind to, so it ends the process.
+overflow-checks = true
+panic = "abort"
+
 [workspace.lints.rust]
 missing_debug_implementations = "forbid"
 missing_docs = "warn"

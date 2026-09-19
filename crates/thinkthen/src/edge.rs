@@ -3,7 +3,7 @@
 use std::env;
 use std::fmt;
 use std::fs::File;
-use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
+use std::io::{self, BufRead, BufReader, ErrorKind, IsTerminal as _, Read, Write};
 use std::path::Path;
 use std::time::Duration;
 
@@ -13,6 +13,13 @@ use crate::failure::Failure;
 
 /// The wait before the first retry, which only a test shortens.
 const RETRY_WAIT: Duration = Duration::from_secs(1);
+
+/// The most bytes one record is read from the input.
+///
+/// A record at the limit is taken, and one byte past it is refused, so reading
+/// one byte past the limit settles it. A stream may end a record with `\r\n`,
+/// and neither byte is part of the record, so the bound allows both.
+const BOUND: u64 = thinkthen_core::MAX_RECORD_BYTES as u64 + 2;
 
 /// The environment the command reads, read once.
 ///
@@ -101,11 +108,24 @@ impl<R: BufRead> Iterator for Chunks<R> {
             return None;
         }
         let mut bytes = Vec::new();
+        // The core refuses a record past the limit, so nothing beyond the two
+        // bytes that may end one is worth reading. A stream with no line feed
+        // in it would otherwise be read into memory whole.
+        let mut reader = (&mut self.reader).take(BOUND);
         let read = if self.streams {
-            self.reader.read_until(b'\n', &mut bytes)
+            let read = reader.read_until(b'\n', &mut bytes);
+            // A read that stopped at the bound found no line feed, so the
+            // record runs past the cut. What follows the cut is the middle of
+            // that record and not a record of its own, and framing it as one
+            // would send part of a refused record to the backend. The stream
+            // ends here, and the record the cut holds is refused for its size.
+            if !bytes.ends_with(b"\n") {
+                self.spent = true;
+            }
+            read
         } else {
             self.spent = true;
-            self.reader.read_to_end(&mut bytes)
+            reader.read_to_end(&mut bytes)
         };
         match read {
             Err(error) => {
@@ -139,6 +159,33 @@ impl fmt::Debug for Key {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("Key(<withheld>)")
     }
+}
+
+/// What a user sitting at a terminal is told the command is waiting for.
+///
+/// A command reading from a terminal looks hung, because it waits for evidence
+/// nobody typed yet. The line names what is read and how to end it.
+const WAITING: &str = concat!(
+    "thinkthen: reading evidence from the terminal; ",
+    "end it with Ctrl-D on a line of its own\n"
+);
+
+/// Say what the command waits for, when a person is the one it waits on.
+///
+/// The line goes to standard error, so it never joins the answer, and it is
+/// written only when standard input is a terminal. A pipe, a file under
+/// `--input`, and a redirection all leave it unwritten, so the bytes a script
+/// reads never change. A line that cannot be written changes nothing.
+fn waiting_on_terminal(input: Option<&Path>, terminal: bool, mut writer: impl Write) {
+    if input.is_some() || !terminal {
+        return;
+    }
+    let _unwritten = write!(writer, "{WAITING}").and_then(|()| writer.flush());
+}
+
+/// Say what the command waits for, reading the terminal from this process.
+pub(crate) fn waiting(input: Option<&Path>, writer: impl Write) {
+    waiting_on_terminal(input, io::stdin().is_terminal(), writer);
 }
 
 /// Read the key from the one variable that holds it.
@@ -176,7 +223,7 @@ pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<bool, Fai
 mod tests {
     use super::{Chunks, write_line};
     use crate::failure::Failure;
-    use std::io::{Error, ErrorKind, Write};
+    use std::io::{Error, ErrorKind, Read as _, Write};
 
     /// A writer that fails every write with the kind the case names.
     struct Failing(ErrorKind);
@@ -192,6 +239,30 @@ mod tests {
     }
 
     #[test]
+    fn only_a_terminal_with_no_input_file_is_told_what_the_command_waits_for() {
+        let file = std::path::Path::new("evidence.txt");
+        let cases = [
+            (None, true, super::WAITING),
+            (None, false, ""),
+            (Some(file), true, ""),
+            (Some(file), false, ""),
+        ];
+
+        for (input, terminal, expected) in cases {
+            let mut written = Vec::new();
+            super::waiting_on_terminal(input, terminal, &mut written);
+            let said = String::from_utf8(written).expect("a diagnostic is text");
+
+            assert_eq!(said, expected, "{input:?} {terminal}");
+        }
+        assert_eq!(
+            super::WAITING,
+            "thinkthen: reading evidence from the terminal; \
+             end it with Ctrl-D on a line of its own\n"
+        );
+    }
+
+    #[test]
     fn a_closed_pipe_ends_the_write_quietly_and_any_other_failure_does_not() {
         assert!(matches!(
             write_line(Failing(ErrorKind::BrokenPipe), "{}"),
@@ -201,6 +272,38 @@ mod tests {
             write_line(Failing(ErrorKind::PermissionDenied), "{}"),
             Err(Failure::Output(_))
         ));
+    }
+
+    /// A record with no end in sight is read no further than the refusal needs.
+    ///
+    /// The core refuses anything past the limit, so two bytes past it are
+    /// enough: a record of exactly the limit may still arrive with `\r\n` after
+    /// it. Without the bound a stream with no line feed would be read into
+    /// memory whole, however long it ran.
+    #[test]
+    fn a_record_is_read_no_further_than_two_bytes_past_the_limit() {
+        let endless = thinkthen_core::MAX_RECORD_BYTES * 4;
+        for streams in [true, false] {
+            let reader = std::io::BufReader::new(std::io::repeat(b'x').take(endless as u64));
+            let mut chunks = Chunks::new(reader, streams);
+            let first = chunks.next().expect("one record").expect("bytes");
+
+            assert_eq!(first.len(), thinkthen_core::MAX_RECORD_BYTES + 2);
+        }
+    }
+
+    /// A record of exactly the limit still arrives whole, however it was ended.
+    #[test]
+    fn a_record_of_exactly_the_limit_arrives_whole_with_its_ending() {
+        let limit = thinkthen_core::MAX_RECORD_BYTES;
+        for (ending, expected) in [("", limit), ("\n", limit + 1), ("\r\n", limit + 2)] {
+            let mut bytes = vec![b'x'; limit];
+            bytes.extend_from_slice(ending.as_bytes());
+            let mut chunks = Chunks::new(bytes.as_slice(), true);
+            let first = chunks.next().expect("one record").expect("bytes");
+
+            assert_eq!(first.len(), expected, "{ending:?}");
+        }
     }
 
     #[test]
