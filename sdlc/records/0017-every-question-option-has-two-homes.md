@@ -83,3 +83,7 @@ A second agent with fresh context read the ticket, the diff against `origin/main
 Splitting out of the reviewer's work: the test binary passed the 500-line ceiling once findings 2 and 7 landed, so `tests/question_file.rs` became `tests/question_file/` with a shared harness and three pages, the way `tests/backend/` already is. The ceiling rose to the measured total in the same commit.
 
 **Live check 4 was not run.** It was designed and its cases were sized, and the budget left after the first three checks did not cover it. Today's behavior stands unchanged, which is what the ticket says to do when a check does not settle.
+
+## Check 4, run by the coordinator after landing
+
+The coordinator ran `sdlc/scripts/live probes/token-budget/job.sh` on 2026-09-19 after the ticket landed. The request held about 20,000 tokens of made-up evidence and three questions of about 4,500 tokens each. The service answered with status 200 and reported 33,663 input tokens, so a whole request may pass 32,000 tokens while the evidence plus the longest question stays under it. The larger of the vendor's two published numbers holds. `probes/token-budget/answer.json` is the saved answer, and `specification/records.md` states the result. The ledger moved from 382,326 to 415,989. **What it changed:** nothing in the tool. It clears the way for a question set of several long questions in ticket 0015.

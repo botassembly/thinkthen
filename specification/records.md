@@ -123,6 +123,8 @@ The vendor published these on 2026-09-19 for the hosted service at `https://api.
 | Evidence in one request | about 32,000 tokens |
 | One whole request | about 64,000 tokens |
 
+The vendor's pages disagreed on the last row, and one page gave 32,000 tokens for a whole request. A live check on 2026-09-19 sent one request of 33,663 input tokens, with about 20,000 tokens of evidence and three long questions, and the service accepted it. The larger number holds, which matters to `annotate`, because a question set rides in one request. `sdlc/records/0017-every-question-option-has-two-homes.md` holds the check.
+
 A run over the rate limit gets a 429, and [backends.md](backends.md) fixes the retry. Evidence past the token limit is refused, and the exit code is 4.
 
 ## A loop over files has no budget
