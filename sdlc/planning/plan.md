@@ -1,28 +1,40 @@
 # Plan
 
-Updated 2026-09-18. The reasons behind each slice are in `design-study.md`, section 6. This file holds the order and the state.
+Updated 2026-09-18, after Ian's rulings in ADR 0003. The whole command line is planned. The `decide` family comes first. Every family gets a document under `specification/` before any ticket.
+
+## The `decide` family
 
 | Slice | Delivers | State |
 | --- | --- | --- |
 | 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version`, one executable spec | Done |
-| 1 | `thinkthen decide if` over text, the result shape, the pass mark, `--status`, exit codes, `--plan` | Waits on nothing. Every option in the study includes it |
-| 2 | `thinkthen decide which` with inline options and `--from` | Waits on question 6 for the file form of `--from` |
-| 3 | `--record` and `--replay` over one content-addressed directory | Ready after slice 1 |
-| 4 | JSONL and lines framing, `--on`, `--id`, `where`, bounded parallel requests, request cap, rate limit, token ledger | Ready after slice 3 |
-| 5 | `thinkthen decide run FILE` | Waits on question 6 |
-| 6 | `thinkthen eval FILE --cases FILE` | Ready after slice 5 |
-| 7 | `rank` and `how` | Ready after slice 4 |
-| 8 | `--as` enrichment for JSONL, then CSV and TSV | Ready after slice 5 |
+| 1 | `thinkthen decide if` over text: the types, the pass mark, the result, the `systemone` adapter, `--status`, exit codes, `--plan` | Tickets 0001, 0002, 0003 |
+| 2 | `thinkthen decide which` with inline options and `--from` | Needs its section in `specification/decide.md` |
+| 3 | `--record` and `--replay` over one content-addressed directory | Needs a specification document |
+| 4 | A configuration file with named backend profiles, and `thinkthen backend check` | Needs a specification document |
+| 5 | The `chat-logprobs` adapter, proven against a local server | Needs its section in `specification/backends.md` |
+| 6 | Record framing for JSONL and lines, `--on`, `--id`, `where`, bounded parallel requests with order kept, a request cap, a rate limit, a token ledger | Needs its section |
+| 7 | `thinkthen decide run FILE` over a saved question file | Waits on question 6 of the study |
+| 8 | `thinkthen eval FILE --cases FILE` | After slice 7 |
+| 9 | `rank` and `how` | After slice 6 |
+| 10 | `--as` enrichment for JSONL, then CSV and TSV | After slice 7 |
+| 11 | `match` and `segment` | Needs its section |
+
+## The other families
+
+In order: the utility families `eval`, `record`, `backend`, `config`. Then `patch`, `reduce`, `fold`, `resolve`, and `derive`. `specification/README.md` gives one line for each. The order can change when Ian rules.
 
 ## Rules for the plan
 
-- A slice becomes one or more tickets. Ticket numbers come from the shared counter.
-- Slice 1 also writes the wire-format specification and its fixtures, because the first request it sends defines them.
-- Nothing parked in the study enters this table without a real use named beside it.
-- The first live call to a paid backend needs Ian's authorization and a token cap. The experiment cap he granted on 2026-09-18 covered the experiment harness only.
+- A slice becomes one or more tickets under `sdlc/tickets/`.
+- Code follows the specification. A ticket cites the sections it builds.
+- Opus agents build, one ticket per worktree. A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency.
+
+## Live testing budget
+
+Ian granted more budget for paid calls on 2026-09-18. The cap for this repository is 20,000,000 input tokens. Spent so far: 0. Every live call adds its tokens here.
 
 ## Levers left open
 
-- Ian's rulings on the ten questions in `design-study.md`, section 9.
+- Ian's rulings on questions 6, 7, and 10 of `design-study.md`, and on the public release.
+- Ian's read of `specification/`. Sections marked Draft wait for it.
 - Registration with Factory 2, and the five `sdlc/project/` scripts that come with it.
-- The public release: license, changelog, `cargo deny`, and a CI workflow. `rust-standards.md` lists them.

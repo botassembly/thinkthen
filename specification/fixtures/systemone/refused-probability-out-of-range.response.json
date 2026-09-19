@@ -1,0 +1,5 @@
+{
+  "model": "jev-latest",
+  "answers": { "q1": { "type": "noul", "noul": 1.2 } },
+  "usage": { "input_tokens": 312, "output_tokens": 48 }
+}

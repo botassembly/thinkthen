@@ -113,6 +113,8 @@ On speed. A hosted decider answers in one to two tenths of a second and caps req
 
 ## 9. Open for ruling
 
+Ian ruled on 2026-09-18, and ADR 0003 records it. Questions 1, 3, 4, 5, and 9 are answered: a standalone shell primitive for a wide audience, the whole command line planned with `decide` first, the family word kept, a backend as a URL and a simple adapter, and Bash as the first job. Questions 2 and 8 wait, because every botassembly decision is deferred. Questions 6, 7, and 10 stay open. Sections 6 and 8 above predate the ruling. `plan.md` and `specification/` now lead.
+
 1. **First user.** Ian and his agents, or outside developers. The answer sets when the repository goes public and how much polish version one carries. Recommendation: Ian and botassembly first, private until slice 6 works, then public under the MIT license that botassembly's public siblings use.
 2. **The platform.** What it is, and what it needs from this tool on day one.
 3. **Scope of version one.** Section 6, or a wider first release that includes a second family. Recommendation: section 6. Cost: the "semantic shell" story waits.

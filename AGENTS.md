@@ -1,6 +1,6 @@
 # Agent instructions for thinkthen
 
-The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read `README.md` first, then `sdlc/planning/design-study.md`, then `sdlc/planning/rust-standards.md`.
+The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read `README.md` first, then `specification/README.md`, then `sdlc/planning/rust-standards.md`. The specification is the contract, and code follows it.
 
 ## Building
 
@@ -34,4 +34,4 @@ This repository will go public. Never name a private project or a customer. Desc
 
 ## Where decisions go
 
-Every decision lands in `sdlc/`: an ADR for an architecture decision, an issue for a problem found, a ticket for work authorized. Ticket numbers come from the shared counter and never by hand. A decision Ian cannot find later was not made. Say which ones he can overturn.
+Every decision lands in `sdlc/`: an ADR for an architecture decision, an issue for a problem found, a ticket for work authorized. Tickets are numbered from 0001 in this repository, and a ticket lands through a worktree. A decision Ian cannot find later was not made. Say which ones he can overturn.

@@ -8,18 +8,19 @@ thinkthen decide which bug feature question other < issue.txt
 thinkthen decide where 'describes a reproducible bug' --jsonl --on /body < issues.jsonl
 ```
 
-Those commands are the design. Nothing above is built yet. The repository holds the plan, the standards, and a scaffold with its gates.
+Those commands are the design. `decide if` is being built first. `specification/` is the contract, and code follows it.
 
 ## What it will and will not do
 
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the condition, the options, and the evidence.
 - A yes, a no, an unsure, and an error stay four different outcomes in the output and in the exit code.
-- The backend is a setting. TypeSafe's Jev is the first decider model. Any server that speaks the same small wire format can replace it, hosted or local.
+- A backend is a URL and an adapter. TypeSafe's Jev is the first decider model. Nothing is tied to one vendor, and a local model can serve.
 - A run can be recorded and replayed with no network. A pass mark is measured against labeled cases before anyone trusts it.
 
 ## Where to read
 
+- `specification/`: the contract. Channels and exit codes, the result, backends and adapters, and the `decide` family.
 - `sdlc/planning/design-study.md`: what the tool is, what version one holds, how it fits with botassembly, and the questions waiting on Ian.
 - `sdlc/planning/rust-standards.md`: how the code is judged. Every rule names the tool that enforces it.
 - `sdlc/planning/plan.md`: the build order and its state.

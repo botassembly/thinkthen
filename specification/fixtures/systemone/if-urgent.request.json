@@ -1,0 +1,7 @@
+{
+  "state": "Help! My payouts have been failing for 3 days.",
+  "model": "jev-latest",
+  "questions": {
+    "q1": { "type": "noul", "instructions": "Does this convey urgency?" }
+  }
+}
