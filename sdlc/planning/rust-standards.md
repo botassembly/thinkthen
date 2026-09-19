@@ -42,7 +42,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 
 - The core crate defines its own error enums with `thiserror`. No public signature returns a string error or a boxed unknown error. The binary adds context at the top and maps each error to one exit code in one place.
 - A fixed set of choices is an enum. A validated value gets its own type: a probability, a pass mark, a JSON Pointer, an option name, a model name. A constructor that can fail returns a result.
-- No dynamic JSON inside the core. Wire bodies decode into typed structs. Enforced by: the core's `clippy.toml` bans `serde_json::Value` access methods and the `json!` macro.
+- No dynamic JSON inside the core. Wire bodies decode into typed structs. Enforced by: the core's `clippy.toml` bans `serde_json::Value`, `serde_json::Map`, the `Value` access methods, `to_value`, `from_value`, and the `json!` macro. Ticket 0001 planted each kind and watched `lint` refuse it.
 
 ## Dependencies
 
@@ -78,7 +78,7 @@ Add `LICENSE`, `CHANGELOG.md`, `deny.toml` with `cargo deny` in `lint`, and one 
 ## Not yet enforced
 
 - `unwrap_used` skips a result whose error type cannot occur. The lint bans a risk and leaves the token legal.
-- Clippy ignores a ban-list path it cannot resolve. The dynamic JSON bans do nothing until `serde_json` is a dependency, and a typo in any ban would pass quietly. The slice that adds `serde_json` has to prove those bans fire.
+- Clippy ignores a ban-list path it cannot resolve, and a typo in any ban passes quietly. The dynamic JSON bans were proved in ticket 0001. Every ban added later has to be planted and refused the same way.
 - No tool checks that parsing happens only at the edge or that a validated value has its own type. The reviewing agent checks both and says so in its review.
 - No tool requires a second reviewer before the ceiling rises, the public surface widens, or a dependency lands. The rule is written in `AGENTS.md` only.
 - The five factory scripts under `sdlc/project/` are absent. Factory 2 runs one pilot repository and this is not it. Copy them when this repository registers.

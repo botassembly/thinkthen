@@ -6,7 +6,7 @@ opens: crates/thinkthen-core Cargo.toml Cargo.lock sdlc/ratchet.json sdlc/script
 
 # 0001: Define the judgment types and the pass mark
 
-Status: ready
+Status: landed
 
 ## Outcome
 
