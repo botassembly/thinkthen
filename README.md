@@ -39,7 +39,19 @@ A question file holds one question. A question set holds several named questions
 
 The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.
 
-The how-to list has a section on evals: writing case files, grading a batch against a reusable definition, reading detailed results, keeping a run that can be traced and replayed, reporting accuracy locally, picking a threshold, comparing two runs, and checking the judge against human labels.
+These seven pages show every command and all three question types, from the simplest use to the strongest. ADR 0016 chose them, and the rest of the 27 are in the list.
+
+| How to | The job | |
+| --- | --- | --- |
+| Gate a script step on a yes/no answer | A support desk sends the messages that ask for money back to the refunds queue | [01](demos/01-refund-gate/) |
+| Branch on a label with `choose` and `case` | A ticket goes to one of four teams, and a folder of notes is filed the same way | [02](demos/02-route-a-ticket/) |
+| Keep only the records that match a meaning | An issue export is cut down to the bugs somebody can reproduce | 03, coming |
+| Put the best matches first | A search brings back fifty passages and the best five go to the reader | 06, coming |
+| Find the line that answers a question | One line of a long document answers it, or nothing fits and the tool says so | 15, coming |
+| Build a triage pipeline that drafts, blocks, or asks a person | One request answers several questions at once, and a `jq` policy names the action | 16, coming |
+| Pick a threshold from labeled cases | A cut you can defend, chosen on cases a person already answered | [13](demos/13-pick-a-threshold/) |
+
+The how-to list also has a section on evals: grading a batch against a reusable definition, keeping a run that can be traced and replayed, picking a threshold, comparing two runs, checking the judge against human labels, and knowing what a run cost.
 
 - [`demos/`](demos/README.md): the how-tos. Small real shell jobs as executable pages. They drive the design.
 - `specification/`: the contract. Channels and exit codes, the threshold, the result, backends, and one page per command.
