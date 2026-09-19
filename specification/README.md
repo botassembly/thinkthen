@@ -17,7 +17,6 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 | [score.md](score.md) | `score` | Settled |
 | [filter.md](filter.md) | `filter` | Settled |
 | [rank.md](rank.md) | `rank` | Settled |
-| [segment.md](segment.md) | `segment` | Settled, with a Draft section |
 | [annotate.md](annotate.md) | `annotate` and the saved question file | Settled, with Draft sections |
 | [find.md](find.md) | `find`, proposed after `rank` | Draft |
 | [report.md](report.md) | `report` | Draft |
@@ -39,7 +38,6 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `score QUESTION LEVEL...` | Places the evidence on named levels and prints a number |
 | `filter QUESTION` | Keeps the records that reach the mark and prints them unchanged |
 | `rank QUESTION` | Prints the records in order of the probability of yes |
-| `segment QUESTION` | Cuts one document into segments at the boundaries a question finds |
 | `annotate FILE` | Asks a saved file of questions and adds one field per question |
 | `report` | Interprets a saved run of `--details` rows and calls no model |
 | `config path\|show\|check` | Prints the configuration path, the effective settings, or a verdict |

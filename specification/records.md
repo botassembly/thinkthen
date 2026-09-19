@@ -21,7 +21,6 @@ The tool never guesses the framing. It never repairs invalid JSON, never truncat
 | `decide`, `choose`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
 | `filter`, `rank` | One of `--lines` or `--jsonl` is required. One document is not a stream |
 | `annotate` | One document by default. Both flags are accepted |
-| `segment` | One document only. Either flag is a usage error |
 | `report`, `config` | Neither flag applies |
 
 ## `--field POINTER`
@@ -55,7 +54,7 @@ Records never share model context, and no answer reaches another record's questi
 
 ### How many requests each command makes
 
-Draft, from Proposed ADR 0008 with the `segment` row corrected by Proposed ADR 0009. One request carries one piece of evidence and every question asked of it. Two pieces of evidence never share a request, because records must not see each other and a check must not see a field outside its pointers.
+One request carries one piece of evidence and every question asked of it. Two pieces of evidence never share a request, because records must not see each other and a check must not see a field outside its pointers.
 
 | Command | Requests |
 | --- | --- |
@@ -63,7 +62,6 @@ Draft, from Proposed ADR 0008 with the `segment` row corrected by Proposed ADR 0
 | `annotate` on one document | 1 for each distinct `on` |
 | `decide`, `choose`, `score`, `filter`, `rank` over N records | N |
 | `annotate` over N records | N times the number of distinct `on` sets |
-| `segment` | 1 |
 | `find` | 1 |
 | `report`, `config`, `--dry-run`, `--replay` | 0 |
 

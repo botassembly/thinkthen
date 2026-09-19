@@ -47,7 +47,6 @@ Measurement of the first decider model showed answers inside an unresolved band 
 | `decide` | yes | yes | the probability of yes |
 | `choose` | yes | no | the winning option's probability |
 | `filter` | yes | no | the probability of yes for each record |
-| `segment` | yes | no | the probability that a gap is a boundary |
 | `score` | no | no | |
 | `rank` | no | no | |
 | `annotate` | no | no | |

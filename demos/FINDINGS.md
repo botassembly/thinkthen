@@ -1,6 +1,6 @@
 # What the demos found
 
-Every design finding from the fifteen demo pages, strongest argument first. Pages 01 to 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, both Proposed. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
+Every design finding from the demo pages, strongest argument first. Pages 01 to 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, both Proposed. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
 
 ## Against ADR 0008 and ADR 0009
 
@@ -13,8 +13,6 @@ Every design finding from the fifteen demo pages, strongest argument first. Page
 | `find` sends the whole input in one request and nothing narrows it. `--field` narrows a record, and no option narrows a page | 15 | ADR 0009 item 3 | The `find` help leads with the fact. It is the one verb where all of the input leaves at once | medium |
 | `answer` carries the vendor's `confidence` when one exists, and ADR 0009 calls its formula unpublished. A demo cannot assert on a field that may be absent and cannot explain one whose meaning nobody knows | 02, 05 | ADR 0009 item 2 | Keep `confidence` out of every example and every default rule until a measurement says what it is for | medium |
 | The demo could not show a resumed run resuming. Every entry exists in a committed recording, so a rerun replays everything and the saving is asserted in prose. ADR 0008 item 5 leans on the resume for its claim that a completed run holds a judgment for every case | 12, 14 | ADR 0008 item 5 | No change. The claim belongs to a live check and not to a gate | medium |
-| The demo could not assert the question `segment` sends. The tool adds two unit ids to the user's question and no document says how | 11 | ADR 0009 item 1 | Fix the text in `segment.md`. A user who changes a question's wording is running a new measurement and has to see the whole of it | medium |
-| The demo could not reach the refusal for a document too large. A fixture big enough to trip a vendor limit would dwarf the demos, and the limit will move | 11 | ADR 0009 item 1 | The refusal names its exit code and the limit it measured against | weak |
 | `find` prints one unit and cannot be asked for three. One request already answered the whole page, so more units would cost nothing. No ADR names the option, so `find.md` holds it open rather than inventing a flag | 15 | ADR 0009 item 3 | A demo that needs a short list from one request brings the option in | weak |
 | The two-file procedure needs no option, and demos 13 and 14 confirm it. Sweep one file, take a number, report the other file at that number | 13 | ADR 0009 item 7 | No change. The demos back the refusal of a held-out split flag | weak |
 
@@ -33,7 +31,6 @@ Every design finding from the fifteen demo pages, strongest argument first. Page
 | No request budget exists anywhere. A per-file loop is many runs and `jobs` bounds only the inside of one run. A ranked run over a million-line file makes a million requests with no lever | 05, 06 | Records; Configuration | No new flag. The record-flag help says a per-file loop is outside every budget, and shows `find -print0 \| xargs -0 -n 1 -P 4` next to the `jobs` setting | medium |
 | `meta.usage` is the sum over a record's requests, so a file with one pointer and a file with two print the same shape. No page can prove the saving without asserting a token count | 07, 14 | The clarifications | No change. The help names the request count per record instead | medium |
 | Parallelism left the command line. A user with a rate limit edits a JSON file to change one number for one run, and nothing on the command line points at the file | 03 | Configuration | No new flag. The record-flag help names the `jobs` key and the configuration path | medium |
-| An unresolved boundary on `segment` silently joins, and no field on a segment records that anything was close | 11 | The threshold; Output | Each segment carries the probability of the gap that opened it | medium |
 | `rank` buffers the whole stream, because an order needs every record. `filter` streams. The two read identically on the command line | 06 | Output, `rank` | One line in the `rank` help | medium |
 | `annotate --dry-run` checks the question file and not the records, so it passes a file that fails on the first record because of a name collision | 07 | The `annotate` file | One line in the help saying what `--dry-run` does and does not check | weak |
 | An unresolved answer is `null` everywhere. That is right in JSON and empty in CSV. A spreadsheet cell reading nothing and a listing that says nothing become the same cell | 07 | The `annotate` file | One line in the `annotate` help about the `jq -r '@csv'` step | weak |
@@ -69,8 +66,6 @@ Earlier pages raised these, and the ADR answered them. They are listed once and 
 - A record-mode `--dry-run` plan carries an `input` object naming the framing and the pointers.
 - `config path` prints the file `--config` or `THINKTHEN_CONFIG` names. `config show` prints one JSON object with the file's own key names and every default filled in.
 - `--quiet` exists on `decide` and `choose` only, and `--quiet` beside `--details` is a usage error.
-- `segment` reads one document, `--lines` and `--jsonl` are usage errors on it, and `--window` is dropped. The whole document goes in one request.
-- Every segment carries `start_line` and `end_line` beside the unit indices.
 - Judged columns are flat top-level fields on the record, so a chain of judgments never nests. `--as`, `--emit`, and `--id` are gone with the problem.
 - `decide how` is gone. `rank` orders by the probability of yes and takes no rubric.
 - The saved question file is JSON, so the proposed Markdown grammar is dead.
@@ -83,8 +78,7 @@ Earlier pages raised these, and the ADR answered them. They are listed once and 
 Fifteen jobs were written before the code. These parts of the three ADRs were never reached for.
 
 - `score`, its two-to-ten levels, and a `score` question inside an `annotate` file. No job wanted a level, and the measurement says the tool is weakest here.
-- `--lines` outside `find` and `segment`. Every record job had a file of JSON lines.
-- `--units paragraphs`. Demo 11 has no blank line in its fixture.
+- `--lines` outside `find`. Every record job had a file of JSON lines.
 - `--key-env`. The one demo with a second backend gave it a profile whose `key_env` is `null`.
 - `--` as the end of option parsing. No demo had a question or a label that begins with a dash.
 - `THINKTHEN_CONFIG` and `THINKTHEN_PROFILE`. Demo 10 used flags, because a demo page has to show what it selects.

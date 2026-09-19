@@ -13,7 +13,6 @@ One internal result model feeds both views. The view never changes the request o
 | `score` | a JSON number |
 | `filter` | each kept record, byte for byte as it arrived, in input order |
 | `rank` | each record as it arrived, most likely yes first |
-| `segment` | one JSON object per segment with `start_line`, `end_line`, `start_unit`, `end_unit`, and `text` |
 | `annotate` | one JSON object per record |
 | `report` | one JSON object |
 
@@ -41,7 +40,7 @@ Draft, from Proposed ADR 0009. `answer` carries the probability of every option 
 
 ## Three answer kinds
 
-**`yes_no`**, from `decide`, `filter`, `rank`, and `segment`. It carries `probability`, the probability of yes.
+**`yes_no`**, from `decide`, `filter`, and `rank`. It carries `probability`, the probability of yes.
 
 `find` fits none of the three kinds, and [find.md](find.md) holds that open point.
 

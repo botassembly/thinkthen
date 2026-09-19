@@ -12,7 +12,7 @@ Each page opens with a status line, the verbs it uses, and the story of the job.
 
 The blocks assert on exit codes, bare values, field names, row counts, and the records that came back. No block asserts on a probability, and every page says once that its numbers are illustrative until a recording exists. A page that pinned a probability would be testing the vendor instead of the tool.
 
-Every page closes with "What this demo decides". That section says what the demo confirms, what it could not say cleanly, and what it argues should change. `FINDINGS.md` gathers those across all fifteen pages.
+Every page closes with "What this demo decides". That section says what the demo confirms, what it could not say cleanly, and what it argues should change. `FINDINGS.md` gathers those across every page.
 
 ## Red and green
 
@@ -42,7 +42,6 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 08 | [Release checklist](08-release-checklist/) | `annotate` | red |
 | 09 | [What leaves the machine](09-what-leaves-the-machine/) | `filter`, `--dry-run` | red |
 | 10 | [Another backend](10-another-backend/) | `decide`, `config` | red |
-| 11 | [Split a thread](11-split-a-thread/) | `segment` | red |
 | 12 | [Keep going](12-keep-going/) | `decide` | red |
 | 13 | [Pick a threshold](13-pick-a-threshold/) | `decide`, `report` | red |
 | 14 | [Grade a batch](14-grade-a-batch/) | `annotate`, `report` | red |

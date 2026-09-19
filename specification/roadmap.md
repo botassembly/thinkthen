@@ -2,7 +2,7 @@
 
 Not a contract. This page lists what version one leaves out and what would bring each item in.
 
-The rule for entry is ADR 0005: a feature enters when a demo cannot be written without it. Twelve demos were written before the code, and `demos/FINDINGS.md` records what they reached for. Nothing below was reached for. The last rows come from Proposed ADR 0009, which looked at the first vendor's own how-to pages and left them out.
+The rule for entry is ADR 0005: a feature enters when a demo cannot be written without it. Twelve demos were written before the code, and `demos/FINDINGS.md` records what they reached for. Nothing in the two tables below was reached for. The last section holds what ADR 0010 took out of version one after demos had already been written for it.
 
 `match` left this page. A file of pairs goes through `annotate`, which puts both entities in one record and asks several questions of it.
 
@@ -38,3 +38,17 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | `config set` | An editor changes a JSON file. A writer would be the first thing in this tool that writes a file the user did not name | A demand strong enough to change that rule |
 | A subprocess adapter | It is the escape hatch for a vendor whose shape fits neither built-in adapter. Dynamic plugin libraries stay refused | A vendor worth supporting that serves neither `systemone` nor chat completions |
 | `--none` on `choose` | The old `which` added an option meaning that no other option fits. A user adds `other` to the list and gets the same answer | A demo where the list is generated and cannot take an extra label |
+
+## Held by ADR 0010
+
+Ian read `sdlc/planning/open-concerns.md` on 2026-09-19 and took these out of version one. Each one had a specification page or a demo behind it, and the git history keeps both.
+
+### `segment`
+
+`segment` cut one document into segments at the boundaries a yes/no question found. The whole document rode in one request, every unit carried an id, and one question per gap rode with it.
+
+Ian held it for two reasons. It is the least general verb of the nine, and it is the first one to cut when the surface has to shrink. The whole-document form also refuses a document larger than one request, and the long documents are the ones that most need cutting.
+
+A framing that reads a long document in parts and joins the answers would bring it in, measured against the vendor's cap on questions in one request. A job that `filter` over `--lines` cannot do would bring it in sooner.
+
+The earlier `specification/segment.md` and demo 11 stay in the git history.
