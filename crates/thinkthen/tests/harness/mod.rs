@@ -7,8 +7,25 @@ use std::thread;
 
 /// One response the listener will serve, in the order the script gives.
 pub(crate) struct Canned {
-    pub(crate) status: u16,
-    pub(crate) body: String,
+    status: u16,
+    body: String,
+    location: Option<String>,
+}
+
+impl Canned {
+    /// Answer with this body and a status of 200.
+    pub(crate) fn ok(body: &str) -> Self {
+        Self::status(200, body)
+    }
+
+    /// Answer with this status and this body.
+    pub(crate) fn status(status: u16, body: &str) -> Self {
+        Self {
+            status,
+            body: body.to_owned(),
+            location: None,
+        }
+    }
 }
 
 /// One request the listener read, kept for the assertions to compare.
@@ -102,8 +119,12 @@ fn read_request(stream: &TcpStream) -> Option<Recorded> {
 
 /// Write one canned response and close the connection.
 fn serve(mut stream: TcpStream, canned: &Canned) {
+    let location = canned
+        .location
+        .as_ref()
+        .map_or_else(String::new, |url| format!("location: {url}\r\n"));
     let head = format!(
-        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}content-length: {}\r\nconnection: close\r\n\r\n",
         canned.status,
         canned.body.len()
     );

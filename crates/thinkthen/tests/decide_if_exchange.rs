@@ -59,11 +59,7 @@ fn decide(url: &str, arguments: &[&str], key: Option<&str>, evidence: &str) -> i
 
 #[test]
 fn the_request_carries_the_encoded_plan_the_content_type_and_no_key() {
-    let listener = Listener::serving(vec![Canned {
-        status: 200,
-        body: ANSWERED.to_owned(),
-    }])
-    .expect("a loopback listener");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output =
         decide(listener.url(), &[], None, "Refund me please.").expect("the compiled binary runs");
@@ -83,11 +79,7 @@ fn the_request_carries_the_encoded_plan_the_content_type_and_no_key() {
 
 #[test]
 fn a_named_key_variable_is_sent_as_a_bearer_token_and_never_printed() {
-    let listener = Listener::serving(vec![Canned {
-        status: 200,
-        body: ANSWERED.to_owned(),
-    }])
-    .expect("a loopback listener");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output = decide(listener.url(), &[], Some("sk-secret-value"), "Refund me.")
         .expect("the compiled binary runs");
@@ -108,11 +100,7 @@ fn a_named_key_variable_is_sent_as_a_bearer_token_and_never_printed() {
 
 #[test]
 fn the_result_names_the_url_the_adapter_and_the_model_that_answered() {
-    let listener = Listener::serving(vec![Canned {
-        status: 200,
-        body: ANSWERED.to_owned(),
-    }])
-    .expect("a loopback listener");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output = decide(listener.url(), &["--min-prob", "0.9"], None, "Refund me.")
         .expect("the compiled binary runs");
@@ -143,11 +131,8 @@ fn the_status_flag_turns_each_outcome_into_its_own_exit_code() {
     ];
 
     for (probability, code, expected) in cases {
-        let listener = Listener::serving(vec![Canned {
-            status: 200,
-            body: answered(probability),
-        }])
-        .expect("a loopback listener");
+        let listener = Listener::serving(vec![Canned::ok(&answered(probability))])
+            .expect("a loopback listener");
 
         let output = decide(
             listener.url(),
@@ -166,11 +151,8 @@ fn the_status_flag_turns_each_outcome_into_its_own_exit_code() {
 #[test]
 fn without_the_status_flag_every_answer_exits_zero() {
     for probability in ["0.92", "0.02", "0.5"] {
-        let listener = Listener::serving(vec![Canned {
-            status: 200,
-            body: answered(probability),
-        }])
-        .expect("a loopback listener");
+        let listener = Listener::serving(vec![Canned::ok(&answered(probability))])
+            .expect("a loopback listener");
 
         let output = decide(listener.url(), &["--min-prob", "0.9"], None, "Refund me.")
             .expect("the compiled binary runs");
@@ -181,11 +163,7 @@ fn without_the_status_flag_every_answer_exits_zero() {
 
 #[test]
 fn no_pass_mark_leaves_the_result_unassessed() {
-    let listener = Listener::serving(vec![Canned {
-        status: 200,
-        body: ANSWERED.to_owned(),
-    }])
-    .expect("a loopback listener");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
     let output = decide(listener.url(), &[], None, "Refund me.").expect("the compiled binary runs");
 
@@ -200,14 +178,8 @@ fn no_pass_mark_leaves_the_result_unassessed() {
 #[test]
 fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
     let listener = Listener::serving(vec![
-        Canned {
-            status: 429,
-            body: r#"{"error":"slow down"}"#.to_owned(),
-        },
-        Canned {
-            status: 200,
-            body: ANSWERED.to_owned(),
-        },
+        Canned::status(429, r#"{"error":"slow down"}"#),
+        Canned::ok(ANSWERED),
     ])
     .expect("a loopback listener");
 
@@ -220,18 +192,9 @@ fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
 #[test]
 fn retries_run_out_and_the_backend_failure_is_exit_four() {
     let listener = Listener::serving(vec![
-        Canned {
-            status: 503,
-            body: "down".to_owned(),
-        },
-        Canned {
-            status: 503,
-            body: "down".to_owned(),
-        },
-        Canned {
-            status: 503,
-            body: "down".to_owned(),
-        },
+        Canned::status(503, "down"),
+        Canned::status(503, "down"),
+        Canned::status(503, "down"),
     ])
     .expect("a loopback listener");
 
@@ -247,10 +210,10 @@ fn retries_run_out_and_the_backend_failure_is_exit_four() {
 
 #[test]
 fn an_error_status_that_is_not_retried_fails_at_once() {
-    let listener = Listener::serving(vec![Canned {
-        status: 401,
-        body: r#"{"error":{"message":"Refund me please."}}"#.to_owned(),
-    }])
+    let listener = Listener::serving(vec![Canned::status(
+        401,
+        r#"{"error":{"message":"Refund me please."}}"#,
+    )])
     .expect("a loopback listener");
 
     let output = decide(listener.url(), &[], Some("sk-bad"), "Refund me please.")
@@ -266,10 +229,9 @@ fn an_error_status_that_is_not_retried_fails_at_once() {
 
 #[test]
 fn a_reply_the_adapter_refuses_is_exit_four() {
-    let listener = Listener::serving(vec![Canned {
-        status: 200,
-        body: r#"{"model":"jev-1.13.0","answers":{"q2":{"type":"noul","noul":0.9}}}"#.to_owned(),
-    }])
+    let listener = Listener::serving(vec![Canned::ok(
+        r#"{"model":"jev-1.13.0","answers":{"q2":{"type":"noul","noul":0.9}}}"#,
+    )])
     .expect("a loopback listener");
 
     let output = decide(listener.url(), &[], None, "Refund me.").expect("the compiled binary runs");
