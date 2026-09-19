@@ -113,7 +113,16 @@ impl<R: BufRead> Iterator for Chunks<R> {
         // in it would otherwise be read into memory whole.
         let mut reader = (&mut self.reader).take(BOUND);
         let read = if self.streams {
-            reader.read_until(b'\n', &mut bytes)
+            let read = reader.read_until(b'\n', &mut bytes);
+            // A read that stopped at the bound found no line feed, so the
+            // record runs past the cut. What follows the cut is the middle of
+            // that record and not a record of its own, and framing it as one
+            // would send part of a refused record to the backend. The stream
+            // ends here, and the record the cut holds is refused for its size.
+            if !bytes.ends_with(b"\n") {
+                self.spent = true;
+            }
+            read
         } else {
             self.spent = true;
             reader.read_to_end(&mut bytes)

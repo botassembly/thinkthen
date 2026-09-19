@@ -102,3 +102,26 @@ fn a_record_of_exactly_the_limit_is_judged() {
         assert_eq!(listener.requests().len(), 1, "{ending:?}");
     }
 }
+
+/// A line past the bound is one record, and its tail never becomes another.
+///
+/// The reader stops two bytes past the limit, so what follows the cut is the
+/// middle of that same record. Framing it as a record of its own would send
+/// part of a refused record to the backend. The listener counts the requests,
+/// so the case proves the tail was never sent.
+#[test]
+fn the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record() {
+    let listener = serving(4).expect("a loopback listener");
+    let input = format!("{}\n", wide(MAX_RECORD_BYTES + 12));
+
+    let output = decide(listener.base(), &["--lines", "--jobs", "4"], &input)
+        .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert!(listener.requests().is_empty(), "the tail was sent");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        format!("{REFUSED}thinkthen: stopped at record 1; 0 records finished, 0 from a recording\n")
+    );
+}
