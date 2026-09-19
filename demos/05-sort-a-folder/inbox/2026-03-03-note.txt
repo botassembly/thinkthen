@@ -1,0 +1,4 @@
+Standup.
+
+The nightly import died again at 02:14. Same stack trace as Monday.
+It stops on the row with an empty postcode. We need a fix before the next run.

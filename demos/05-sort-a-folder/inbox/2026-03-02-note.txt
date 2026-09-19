@@ -1,0 +1,4 @@
+Call with the warehouse team.
+
+They want the packing slip to show the order number twice, once at the top
+and once beside the barcode. Nothing here needs code today.

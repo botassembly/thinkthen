@@ -1,0 +1,6 @@
+{"id":"H1","path":"runbooks/login.md","body":"Session cookies are issued for 12 hours. A timeout at sign-in usually means the token service is refusing new tokens, so check the token service first."}
+{"id":"H2","path":"runbooks/backup.md","body":"Nightly backups run at 01:00 and write to the archive bucket. Restores are manual and take about an hour."}
+{"id":"H3","path":"notes/2025-11-outage.md","body":"Sign-in hung for twenty minutes. The token service had exhausted its connection pool. Raising the pool size cleared it and we added an alert on pool waits."}
+{"id":"H4","path":"runbooks/deploy.md","body":"Deploys go out behind a flag. Roll back by flipping the flag, then drain the old pods."}
+{"id":"H5","path":"notes/onboarding.md","body":"New starters get an account on day one. Ask the platform team if sign-in does not work by lunchtime."}
+{"id":"H6","path":"runbooks/database.md","body":"The primary accepts writes. A read replica lagging past 30 seconds will make a fresh sign-in look broken, because the session row is not visible yet."}

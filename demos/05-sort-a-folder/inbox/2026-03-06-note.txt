@@ -1,0 +1,4 @@
+Hallway chat.
+
+Someone said the search results feel off. No example, no query, nothing
+written down. Might be a defect, might be a preference.

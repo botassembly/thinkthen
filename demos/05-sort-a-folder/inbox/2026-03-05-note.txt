@@ -1,0 +1,4 @@
+Pairing session.
+
+Reproduced the logout bug: open two tabs, sign out of one, the other keeps
+a live session until you reload. Filed as a defect.
