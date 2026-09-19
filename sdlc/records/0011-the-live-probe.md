@@ -36,6 +36,8 @@ On the four documents with no answering line, `find` without a `none` option pic
 
 **Conclusion.** One request over the whole document picked at least as well as one request per line on these documents, for a sixth of the tokens and a twelfth of the requests, and the `none` option answered "nothing fits" cleanly on 4 of 4 and cost no false refusal on 16 of 16.
 
+**How far this carries.** These documents hold 11 to 14 one-sentence lines, one fact a line, with distractors the writer put there on purpose. Three things about them bound the conclusion. The token ratio is a fact about a document of this length: `find` sends the document once and `rank` sends one line plus the question 12 times, so the sixth comes mostly from the per-request question overhead and it shrinks as lines grow longer. The option list ran at 12 to 14 where `find.md` allows 255, so nothing here says how the pick or the distribution behaves over a list twenty times longer. One of the sixteen answers is arguable: on D-07 the trusted line names the expired certificate and the next line names why the expiry was missed, and a reader after a root cause could pick either, which is also the 0.27 that sets the lower edge of the floor analysis above. The result therefore carries "one request beats one per line on a short document". It does not yet carry a document of a few hundred lines. The run that would carry it is the same comparison on documents of 100 to 250 lines, with the option list at that size, reporting the hit rate, the tokens, and whether the backend takes that many options at all.
+
 **What it changes.** `specification/find.md` leaves Draft. ADR 0010's ruling that nothing is built until a live run compares `find` with `rank --top 1` is answered. The first open point on that page closes on the `none` option, which is what ADR 0009 item 3 and demo 15 recommended. The plan gains `find` after `rank`.
 
 ## Probe 2: `confidence` against the winning probability
@@ -149,7 +151,7 @@ Both cost a run to find, as record 0008's did.
 
 Each of these is a page or an ADR line that this record cannot change itself.
 
-1. Build `find`. `find.md` leaves Draft, its first open point closes on the `none` option, and the plan gains it after `rank`.
+1. Build `find`. `find.md` leaves Draft, its first open point closes on the `none` option, and the plan gains it after `rank`. The measurement stands on documents of 11 to 14 lines with 12 to 14 options, so the 255-unit limit on that page is still untested.
 2. The cut stays on the winning probability. ADR 0009 item 2's reopening clause stays open, because two errors cannot separate the two numbers.
 3. `score.md`'s measured warning gains the split between ordering and the absolute level.
 4. `choose.md` loses the sentence about fifty picks and gains this run's numbers, and the help says to keep option order fixed once a cut is tuned.
