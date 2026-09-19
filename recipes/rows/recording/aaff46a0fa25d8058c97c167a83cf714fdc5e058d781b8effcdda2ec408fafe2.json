@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The transfer to my account was rejected and the money went back to your side.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the message report a payment failure?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.97}},"usage":{"input_tokens":290,"output_tokens":21}}
+}
