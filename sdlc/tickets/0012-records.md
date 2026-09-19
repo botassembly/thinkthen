@@ -6,7 +6,7 @@ opens: crates spec specification/fixtures sdlc/ratchet.json sdlc/live-tokens dem
 
 # 0012: Records
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
