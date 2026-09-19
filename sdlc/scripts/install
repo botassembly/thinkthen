@@ -7,7 +7,7 @@ REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 # A rung that fails on a missing tool fails deep inside a build. Name it here.
 # cargo builds and tests, python3 reads the accepted policies, node measures the
 # size ceiling, mustmatch runs the spec pages, the demos, and the demo runner's
-# own tests under rung 2, and jq runs the metric recipes the eval how-tos teach.
+# own tests under rung 2, and jq runs the metric transforms the eval how-tos teach.
 for tool in cargo python3 node mustmatch jq; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		printf 'install: %s is not on PATH, and a later rung needs it\n' "$tool" >&2

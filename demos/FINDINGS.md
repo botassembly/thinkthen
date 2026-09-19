@@ -2,7 +2,7 @@
 
 Every design finding from the demo pages, strongest argument first. Pages 01 to 09 and 12 are written to ADR 0007 and its clarifications. Pages 13, 14, and 15 also drive ADR 0008 and ADR 0009, which ADR 0010 accepted in part. Strength is how hard the demos push: **strong** means a demo could not be written without the change, **medium** means a demo worked but read badly or hid something, **weak** means a demo noticed it.
 
-ADR 0010 took `segment`, `report`, and the configuration file out of version one. The findings that belonged to them left this page with demo 11, demo 10, and `report.md`, and the git history keeps them. Two of those questions carry to the `jq` recipes of the plan's recipes slice: how a check made by a bare verb is named, and how a truth label stays off the wire.
+ADR 0010 took `segment`, `report`, and the configuration file out of version one. The findings that belonged to them left this page with demo 11, demo 10, and `report.md`, and the git history keeps them. Two of those questions carry to the `jq` transforms of the plan's transforms slice: how a check made by a bare verb is named, and how a truth label stays off the wire.
 
 ## Against ADR 0008 and ADR 0009
 

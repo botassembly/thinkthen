@@ -12,7 +12,7 @@ Every judged record is a paid request, and a run has no spending cap. Use this p
 
 `../../transforms/rows/recording/` holds the eighty exchanges both runs were made from. A recording keeps request bodies and never headers, so no key is in it.
 
-The recipe is `../../transforms/cost/cost.jq`. The price of a million input tokens is an argument, because a price is a fact about a contract and not about a run.
+The transform is `../../transforms/cost/cost.jq`. The price of a million input tokens is an argument, because a price is a fact about a contract and not about a run.
 
 ## Add up one run
 
@@ -54,7 +54,7 @@ The messages in this case file run about twenty-five words, and a case still cos
 
 ## A replayed row spent nothing
 
-The rows above came from a backend. The same command against the recording opens no connection and reads no key, and the recipe keeps its tokens out of the money.
+The rows above came from a backend. The same command against the recording opens no connection and reads no key, and the transform keeps its tokens out of the money.
 
 ```bash
 set -euo pipefail
@@ -95,7 +95,7 @@ sh ../../transforms/cost/example.sh | jq -c '{rows, usd}' | mustmatch '{"rows":4
 ## What can go wrong
 
 - **`jq` is missing.** The `install` rung names it.
-- **A recipe stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the recipe raises.
+- **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the transform raises.
 - **A missing entry in the recording is exit 5 too, from the tool.** `thinkthen` names the entry it wanted. A body that differs by one byte from the recorded one is a different entry, so evidence read through a pipe has to arrive exactly as it did when the exchange was recorded.
 - **Assuming a zero for a missing count.** A backend that reports no usage leaves `meta.usage` absent. Those rows are listed in `no_usage` and add nothing, so a total is never quietly short.
 - **Pricing output tokens with the input price.** They are reported beside the input tokens and never converted. A decider model answers with numbers, so output is small, and only the input side is worth watching.

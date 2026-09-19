@@ -8,7 +8,7 @@ A probability of 0.8 claims that about eight cases in ten like this one are real
 
 ## Input
 
-`../../transforms/rows/runs/run-a.jsonl` holds forty judged cases. Each row carries `answer.probability`, the stored probability of yes, and `input.label`, the answer a person gave. The recipe is `../../transforms/calibration/calibration.jq`. It sets ten bands a tenth wide beside the share of cases in each band that were truly yes.
+`../../transforms/rows/runs/run-a.jsonl` holds forty judged cases. Each row carries `answer.probability`, the stored probability of yes, and `input.label`, the answer a person gave. The transform is `../../transforms/calibration/calibration.jq`. It sets ten bands a tenth wide beside the share of cases in each band that were truly yes.
 
 ## Read the table
 
@@ -67,7 +67,7 @@ jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
   | mustmatch '[{"band":"0.3-0.4","rows":1,"unresolved":1},{"band":"0.5-0.6","rows":2,"unresolved":2},{"band":"0.7-0.8","rows":1,"unresolved":1}]'
 ```
 
-Every refused row sits between 0.3 and 0.8, which is the band the run applied. A refusal is not a wrong answer and it is not a no, and it is counted apart here as it is in every other recipe.
+Every refused row sits between 0.3 and 0.8, which is the band the run applied. A refusal is not a wrong answer and it is not a no, and it is counted apart here as it is in every other transform.
 
 ## The same line, kept as a file
 
@@ -82,7 +82,7 @@ sh ../../transforms/calibration/example.sh \
 ## What can go wrong
 
 - **`jq` is missing.** The `install` rung names it.
-- **A recipe stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the recipe raises.
+- **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the transform raises.
 - **Reading a band that holds one case.** A share of 0 or 1 over a single row is noise. Read `labeled` first, and treat anything under a few dozen rows a band as a hint.
 - **Forty cases across ten bands.** Three bands are empty and three hold one row. A calibration table earns trust at hundreds of cases, not tens.
 - **Calling a model well calibrated from the ends alone.** Answers near 0 and 1 are the easy cases. The middle is where a probability has to earn its keep, and this run has almost nothing there.

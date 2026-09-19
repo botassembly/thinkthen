@@ -20,7 +20,7 @@
 #     recall is null with no true label, and F1 is null when either is null or
 #     when both are zero.
 #   - Counts are exact. Every rate is rounded to four decimals.
-#   - A row with no probability stops the recipe.
+#   - A row with no probability stops the transform.
 
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 

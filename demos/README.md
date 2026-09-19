@@ -2,6 +2,8 @@
 
 Every page here is one shell job written so that it runs. A green page is the how-to, the demo, and the test at once, and `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy.
 
+A how-to is one of the four names in the table in [`../README.md`](../README.md).
+
 `sdlc/planning/documentation-plan.md` holds the full list, the groups below, and the demo number reserved for each task. A number here is a folder under `demos/`.
 
 ## How to read one
@@ -74,4 +76,4 @@ An eval is a reproducible workflow over the same commands as everything else. Th
 | 38 | [See whether a probability means what it says](38-what-a-probability-means/) | `decide` | green |
 | 14 | [Grade a batch with a reusable definition](14-grade-a-batch/) | `annotate`, `report` | red |
 
-Demos 13, 24, 25, 28, and 38 read the `jq` recipes in `transforms/` over the committed rows of one live run, which is what `report` would have done inside the tool. Demo 14 still names `report`, which left the plan under ADR 0010, and it is rewritten when `annotate` lands.
+Demos 13, 24, 25, 28, and 38 read the `jq` transforms in `transforms/` over the committed rows of one live run, which is what `report` would have done inside the tool. Demo 14 still names `report`, which left the plan under ADR 0010, and it is rewritten when `annotate` lands.

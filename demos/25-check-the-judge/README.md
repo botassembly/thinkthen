@@ -12,7 +12,7 @@ A probability is a claim about the world, and the only test of it is a file of c
 
 `../../transforms/rows/runs/run-a.jsonl` holds the judged rows. Each row is the `decide --details` object with `input` holding the whole case. The body went to the model and the label never left the machine.
 
-The recipes are `../../transforms/counts/counts.jq` and `../../transforms/score/score.jq`.
+The transforms are `../../transforms/counts/counts.jq` and `../../transforms/score/score.jq`.
 
 ## Count the answers before scoring them
 
@@ -24,7 +24,7 @@ jq -n -f ../../transforms/counts/counts.jq "$rows" | jq -c . \
   | mustmatch '{"rows":40,"yes":18,"no":18,"unresolved":4,"thresholds":["0.2:0.8"],"questions":["Does the message report a payment failure?"]}'
 ```
 
-Three answers, not two. The run applied the band `0.2:0.8`, so four rows resolved to nothing and the recipe holds them in their own count. `questions` and `thresholds` each hold one value, which is how you know the file is one run and not two concatenated.
+Three answers, not two. The run applied the band `0.2:0.8`, so four rows resolved to nothing and the transform holds them in their own count. `questions` and `thresholds` each hold one value, which is how you know the file is one run and not two concatenated.
 
 ## Score the run against the labels
 
@@ -88,8 +88,8 @@ sh ../../transforms/score/example.sh | jq -c '{accuracy, f1}' \
 ## What can go wrong
 
 - **`jq` is missing.** The `install` rung names it.
-- **A recipe stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error a recipe raises, such as a row carrying no `value`. The message names the file and the line.
-- **Treating unresolved as no.** `.value // false` does exactly that, and it turns a refusal into a wrong answer. Every recipe here tests true, false, and null explicitly.
+- **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error a transform raises, such as a row carrying no `value`. The message names the file and the line.
+- **Treating unresolved as no.** `.value // false` does exactly that, and it turns a refusal into a wrong answer. Every transform here tests true, false, and null explicitly.
 - **Scoring a case nobody labeled.** `C-12` is listed and scored nowhere. A rate that included it would be a rate about a guess.
 - **One accuracy number.** Accuracy without coverage hides a band that refused half the file, and accuracy alone hides which side the judge errs on. Read precision and recall together.
 - **Forty cases.** One case moves accuracy by two and a half points. This run measures the wording of one question against one model version, and nothing more.

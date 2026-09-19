@@ -8,7 +8,7 @@
 # Policies:
 #   - Cases are paired by `input.id`. An id that appears twice in one run is
 #     listed in `repeated_ids` and paired in nothing, because two rows under
-#     one id are repeated trials and averaging them is another recipe.
+#     one id are repeated trials and averaging them is another transform.
 #   - A pair is checked beyond its id. `mismatched_input` lists the ids whose
 #     evidence differs, and `mismatched_label` lists the ids whose trusted
 #     label differs. A changed label means the two runs measured different

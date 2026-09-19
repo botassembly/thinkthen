@@ -6,7 +6,7 @@
 #   $usd_per_million_input  the price of a million input tokens. The hosted
 #     decider charged 0.042 on 2026-09-19, which is the number in
 #     sdlc/live-tokens. Another address has another price, and a price is a
-#     fact about a contract rather than about a run, so the recipe never
+#     fact about a contract rather than about a run, so the transform never
 #     assumes one.
 # Policies:
 #   - A row whose `meta.replayed` is true came from a recording. It opened no

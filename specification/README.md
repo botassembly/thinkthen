@@ -4,6 +4,8 @@ The contract for `thinkthen`. Code follows these documents. A behavior that is a
 
 Version one is six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`. `find` waits on a live measurement, and the configuration file left version one. ADR 0010 holds both rulings, and `roadmap.md` holds what left.
 
+The names table in [`../README.md`](../README.md) fixes the four names: question file, transform, how-to, and pipeline.
+
 `spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of `sdlc/planning/plan.md` closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
 
 | Document | What it fixes | Status |

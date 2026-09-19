@@ -20,6 +20,19 @@ Those commands are the design. `specification/` is the contract, and code follow
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first decider model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - A run can be recorded and replayed with no network. A threshold is measured against labeled cases before anyone trusts it.
 
+## Four names
+
+These four words name the four things a user writes or runs. ADR 0015 fixed them, and every other page links here.
+
+| Thing | Name | What it is | What runs it |
+| --- | --- | --- | --- |
+| What to ask, with its options, levels, and cuts | question file | JSON | `thinkthen` |
+| `jq` that reads saved rows | transform | One `.jq` file | `jq` |
+| A whole worked example that can be run again | how-to | A folder under `demos/`: the page, the inputs, the question, the transform, the recording | The spec rung |
+| A user's own job over the user's own input | pipeline | A Bash script | Bash |
+
+A transform is one of two kinds. A metric reads a whole run and prints numbers. A policy reads one row and names an action.
+
 ## Where to read
 
 The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.

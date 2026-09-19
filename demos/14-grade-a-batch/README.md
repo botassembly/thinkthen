@@ -2,7 +2,7 @@
 
 Status: red
 
-`report` left the plan under ADR 0010. This demo is rewritten over the `jq` recipes of the plan's recipes slice, and it stays red until they exist.
+`report` left the plan under ADR 0010. This demo is rewritten over the `jq` transforms of the plan's transforms slice, and it stays red until they exist.
 
 Verbs: `annotate`, `report`
 

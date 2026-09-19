@@ -32,7 +32,7 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | Nesting in `annotate` output | Flat top-level fields keep a chain of judgments flat. Demo 07 found nesting made the next `jq` read `.input.input.sku` | A demo whose answers collide with record fields that cannot be renamed |
 | History across many runs | A comparison of two saved runs keeps nothing. A trend over many runs needs a store, and the tool holds no state | A store that lives outside this tool and reads the saved runs |
 | A threshold on `score` | `jq -e '. >= 2'` after the command cuts on the number in one line, and the help shows it | A demo where the cut has to travel inside a saved question file |
-| A flag that repeats a run for trials | A shell loop does it, and a recipe averages within a case before it scores | A demo where the trials have to share one recording folder in one run |
+| A flag that repeats a run for trials | A shell loop does it, and a transform averages within a case before it scores | A demo where the trials have to share one recording folder in one run |
 | Packing many records into one request | Each record is sent once either way, so packing saves no tokens. It saves round trips, and those already run in parallel. It costs isolation, and accuracy falls as the evidence fills with unrelated content | Nothing measured so far |
 | A two-pass `find` beyond 255 units | One request holds 255 units. A second pass over the winners would need a merge rule and a second measurement | A job whose candidate set cannot be cut to 255 upstream |
 | `config set` | An editor changes a JSON file. A writer would be the first thing in this tool that writes a file the user did not name | A demand strong enough to change that rule |
@@ -58,19 +58,19 @@ The earlier `specification/segment.md` and demo 11 stay in the git history.
 
 `report` read a file of `--details` rows, called no model, and printed the run's counts, accuracy against truth labels, a sweep of cuts, a calibration table, and a comparison of two runs by case id.
 
-Ian set it aside and put `jq` recipes first. He named five outcomes:
+Ian set it aside and put `jq` transforms first. He named five outcomes:
 
 1. No `report` at all.
 2. The full `report`.
 3. A partial `report`: the summary, `--truth`, `--threshold`, and the sweep.
-4. The recipes alone.
-5. A general way to carry recipes inside the tool.
+4. The transforms alone.
+5. A general way to carry transforms inside the tool.
 
-One test decides between them. The recipes are written and tried on real rows in the recipes slice of `sdlc/planning/plan.md`. A command comes back only if the recipes prove too clumsy on those rows.
+One test decides between them. The transforms are written and tried on real rows in the transforms slice of `sdlc/planning/plan.md`. A command comes back only if the transforms prove too clumsy on those rows.
 
-The fifth outcome carries a rule of its own. It enters only when several recipes exist that people would otherwise copy and paste. One recipe does not earn it.
+The fifth outcome carries a rule of its own. It enters only when several transforms exist that people would otherwise copy and paste. One transform does not earn it.
 
-An idea for that fifth outcome: the cheapest form is a command that prints a named recipe on standard output for `jq -f`, and it adds no dependency.
+An idea for that fifth outcome: the cheapest form is a command that prints a named transform on standard output for `jq -f`, and it adds no dependency.
 
 The earlier `specification/report.md` holds what the command knew about accuracy at coverage and about the fixed JSON shape of a report. It stays in the git history.
 

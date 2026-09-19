@@ -116,6 +116,6 @@ thinkthen annotate checks.json --jsonl --record runs/v1 --replay runs/v1 < cases
 jq -s '[.[] | select(.value.correct)] | length' run-v1.jsonl
 ```
 
-ADR 0010 holds the `report` command out of version one and puts the `jq` recipes first. `specification/roadmap.md` records the five outcomes and the test between them.
+ADR 0010 holds the `report` command out of version one and puts the `jq` transforms first. `specification/roadmap.md` records the five outcomes and the test between them.
 
 A missing field and a failed request stop the run, so a completed run holds a judgment for every case. A rerun on the same recording folder answers the finished cases from disk.

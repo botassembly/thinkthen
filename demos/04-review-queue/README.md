@@ -89,7 +89,7 @@ MSG-04 reads "Cancel the second seat, keep mine." The model answered 0.07, so it
 
 ## Step 4: count the run
 
-The rows are the input the `jq` recipes read. `transforms/counts` counts the three answers and reports what the file holds, so a file that concatenated two runs could not pass as one.
+The rows are the input the `jq` transforms read. `transforms/counts` counts the three answers and reports what the file holds, so a file that concatenated two runs could not pass as one.
 
 ```bash
 set -euo pipefail
@@ -174,4 +174,4 @@ thinkthen decide 'Does the customer ask to end their subscription?' \
 
 - [How to gate a script step on a yes/no answer](../01-refund-gate/) does the same judgment over one document.
 - [How to tell "no" from "could not ask"](../19-no-or-could-not-ask/) reads the failure codes in full.
-- [How to check the judge against human labels](../25-check-the-judge/) reads rows like these with the `jq` recipes.
+- [How to check the judge against human labels](../25-check-the-judge/) reads rows like these with the `jq` transforms.

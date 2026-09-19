@@ -8,7 +8,7 @@
 #     yes, false is no, and null is unresolved. The test is an explicit
 #     three-way `if`, because `.value // false` turns unresolved into no.
 #   - Unresolved rows are counted apart and are never folded into no.
-#   - A row that carries no `value` stops the recipe. A missing answer is a
+#   - A row that carries no `value` stops the transform. A missing answer is a
 #     broken run rather than an unresolved one.
 #   - `thresholds` and `questions` report what the file holds, so a file that
 #     concatenates two runs cannot pass as one.

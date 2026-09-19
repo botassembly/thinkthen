@@ -10,7 +10,7 @@ Every other page types a threshold. This one says where the number comes from. U
 
 `../../transforms/rows/runs/run-a.jsonl` holds forty judged cases, one row per case. Each row is the `decide --details` object with `input` holding the whole case: the `id`, the `body` that was sent, and the `label` a person gave. `../../transforms/rows/cases.jsonl` is the case file the run was made from, and `../../transforms/rows/record.sh` is the loop that made it.
 
-The recipes are `../../transforms/sweep/sweep.jq`, `../../transforms/score/score.jq`, and `../../transforms/band/band.jq`. Each one states its policies in its header.
+The transforms are `../../transforms/sweep/sweep.jq`, `../../transforms/score/score.jq`, and `../../transforms/band/band.jq`. Each one states its policies in its header.
 
 ## Split the run in two
 
@@ -98,7 +98,7 @@ Note what is counted where. The three labeled refusals are `unresolved`, counted
 
 ## The same lines, kept as files
 
-Each recipe folder holds the pipeline line, so a reader of `transforms/` runs one command and sees the shape of the output. These two read the whole run rather than the split.
+Each transform folder holds the pipeline line, so a reader of `transforms/` runs one command and sees the shape of the output. These two read the whole run rather than the split.
 
 ```bash
 set -euo pipefail
@@ -110,13 +110,13 @@ sh ../../transforms/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
 
 ## What can go wrong
 
-- **`jq` is missing.** The `install` rung names it, because every recipe here is `jq`.
-- **A recipe stops with exit 5.** `jq` exits 5 both for a row it cannot parse and for an error a recipe raises itself, such as a row that carries no `value`. The message names the file and the line.
-- **`.value // false` quietly turns unresolved into no.** Every recipe here tests the three answers explicitly, and `band.jq` keeps the refused rows in their own group. A recipe of your own that reaches for `//` is scoring an unresolved row as a wrong no.
+- **`jq` is missing.** The `install` rung names it, because every transform here is `jq`.
+- **A transform stops with exit 5.** `jq` exits 5 both for a row it cannot parse and for an error a transform raises itself, such as a row that carries no `value`. The message names the file and the line.
+- **`.value // false` quietly turns unresolved into no.** Every transform here tests the three answers explicitly, and `band.jq` keeps the refused rows in their own group. A transform of your own that reaches for `//` is scoring an unresolved row as a wrong no.
 - **Sweeping and reporting on one file.** The best cut on the file that chose it is not a measurement. Split first.
 - **A cut does not travel.** It belongs to one question text and one model version. Change either and sweep again. The rows carry both under `question.text` and `meta.model`, and `compare.jq` reads them.
 - **Forty cases are few.** Every rate here moves by a whole case at a time. A cut chosen on this much evidence is a starting point, not a finding.
-- **An unlabeled case is not a no.** `C-12` is in no rate. A recipe that scored it as a no would report a precision that no person ever agreed with.
+- **An unlabeled case is not a no.** `C-12` is in no rate. A transform that scored it as a no would report a precision that no person ever agreed with.
 
 ## Related how-tos
 

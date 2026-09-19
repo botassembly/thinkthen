@@ -15,7 +15,7 @@
 #     the grid. The column stays, because the same arithmetic under a band
 #     fills it, and band.jq reads a band.
 #   - A zero denominator yields null, and a null F1 never wins the pick.
-#   - A row with no probability stops the recipe. jq reads a missing number as
+#   - A row with no probability stops the transform. jq reads a missing number as
 #     below every cut, so an unguarded sweep would score it a no and print a
 #     rate nobody could tell from a real one.
 #   - `pick` is the cut with the highest F1. When several cuts tie, the pick is

@@ -49,7 +49,7 @@ The title starts with "How to" and names a task. One paragraph says when to use 
 
 ## Evals
 
-Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. Each how-to below is also a recipe folder under `transforms/` where it has `jq` in it, as ADR 0012 proposes.
+Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. Each how-to below is also a transform folder under `transforms/` where it has `jq` in it, as ADR 0012 proposes.
 
 | How to | Demo | Slice | State |
 | --- | --- | --- | --- |

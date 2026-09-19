@@ -20,7 +20,7 @@
 #     `unlabeled` and is scored in nothing. It still appears in `refused` when
 #     the band refused it, because a refused row is a row a person must read.
 #   - A zero denominator yields null.
-#   - A row with no probability stops the recipe. jq reads a missing number as
+#   - A row with no probability stops the transform. jq reads a missing number as
 #     below the low side, so an unguarded band would score it a no.
 #   - Counts are exact. Every rate is rounded to four decimals.
 

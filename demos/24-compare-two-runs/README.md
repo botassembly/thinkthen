@@ -10,7 +10,7 @@ You reworded a question, or a model version changed under you, and you want to k
 
 `../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` hold the same forty cases judged with two wordings of one question. `../../transforms/rows/question.txt` asks "Does the message report a payment failure?" and `../../transforms/rows/question-b.txt` asks "Does the customer report that a payment or a payout did not go through?". Both runs applied the band `0.2:0.8`, and both were answered by `jev-1.13.0`.
 
-The recipe is `../../transforms/compare/compare.jq`. The earlier run arrives through `--slurpfile` and the later one on the command line.
+The transform is `../../transforms/compare/compare.jq`. The earlier run arrives through `--slurpfile` and the later one on the command line.
 
 ## Line the runs up
 
@@ -47,7 +47,7 @@ jq -n --slurpfile before "$before" -f ../../transforms/compare/compare.jq "$afte
 
 ## Prove the checks with a doctored file
 
-An empty list is easy to believe and easy to get wrong. This block changes one label and drops one case, and the recipe names both.
+An empty list is easy to believe and easy to get wrong. This block changes one label and drops one case, and the transform names both.
 
 ```bash
 set -euo pipefail
@@ -78,9 +78,9 @@ sh ../../transforms/compare/example.sh | jq -c '{paired, same}' \
 ## What can go wrong
 
 - **`jq` is missing.** The `install` rung names it.
-- **A recipe stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the recipe raises, such as a row carrying no `value`.
-- **Pairing on the id alone.** Two runs can share every id and measure different things. The recipe checks the evidence and the label of every pair for that reason.
-- **Two rows under one id.** They are repeated trials, and averaging them is a different recipe. This one lists them in `repeated_ids` and pairs them in nothing, so a duplicate can never be counted twice.
+- **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the transform raises, such as a row carrying no `value`.
+- **Pairing on the id alone.** Two runs can share every id and measure different things. The transform checks the evidence and the label of every pair for that reason.
+- **Two rows under one id.** They are repeated trials, and averaging them is a different transform. This one lists them in `repeated_ids` and pairs them in nothing, so a duplicate can never be counted twice.
 - **Folding unresolved into no.** Then a case that moved into the band reads as a regression. The six directions stay apart here.
 - **Reading flips before reading `changed`.** If the model version moved as well as the question, the comparison cannot tell you which one did it, and the answer is to rerun with one of the two held still.
 - **Four flips out of forty.** That is a count, not a rate with a confidence behind it. It says where to look.
