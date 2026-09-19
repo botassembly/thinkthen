@@ -148,8 +148,9 @@ fn every_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
 
     let said = printed(&output);
     assert_eq!(output.status.code(), Some(0), "{said}");
-    assert!(said.contains("demos: 12 green, "), "{said}");
+    assert!(said.contains("demos: 13 green, "), "{said}");
     assert!(said.contains("running 01-refund-gate/README.md"), "{said}");
+    assert!(said.contains("running 04-review-queue/README.md"), "{said}");
     assert!(
         said.contains("running 19-no-or-could-not-ask/README.md"),
         "{said}"
