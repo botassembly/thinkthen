@@ -55,7 +55,7 @@ sdlc/scripts/test
 sdlc/scripts/spec
 ```
 
-Cheapest rung first. No gate touches the network.
+Cheapest rung first. No gate touches the network. `.github/workflows/gate.yml` runs the same four rungs on every push and every pull request.
 
 ## License
 

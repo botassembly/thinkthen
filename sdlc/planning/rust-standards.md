@@ -74,7 +74,7 @@ Cheapest rung first. The whole ladder runs before any hand-back.
 
 ## When the repository goes public
 
-`LICENSE` is here. Ian ruled MIT in ADR 0015, each package declares `license = "MIT"`, and `policy.py` checks both. `CHANGELOG.md` and `deny.toml` with `cargo deny` in `lint` still wait. One CI workflow that runs the ladder still waits.
+`LICENSE` is here. Ian ruled MIT in ADR 0015, each package declares `license = "MIT"`, and `policy.py` checks both. `.github/workflows/gate.yml` runs the four rungs on every push and every pull request, and ADR 0015 item 6 rules it. `CHANGELOG.md` and `deny.toml` with `cargo deny` in `lint` still wait.
 
 ## Not yet enforced
 

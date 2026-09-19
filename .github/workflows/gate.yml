@@ -1,0 +1,59 @@
+# The gate ladder, on every push and every pull request.
+#
+# No step here holds a secret, reads a key, or sets a THINKTHEN_ variable. A
+# live call to the paid backend never happens here. A live run is a job done by
+# hand through sdlc/scripts/live, under a token cap, with Ian's authorization.
+
+name: gate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ladder:
+    name: install, lint, test, spec
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out the commit
+        uses: actions/checkout@v5
+
+      - name: Install the toolchain that rust-toolchain.toml pins
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: Cache the cargo registry and the build directory
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Install jq and mustmatch at pinned versions
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+          curl --fail --silent --show-error --location \
+            --output "$HOME/.local/bin/jq" \
+            https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
+          chmod +x "$HOME/.local/bin/jq"
+          pipx install mustmatch==0.1.0
+
+      - name: Rung 0, install
+        run: sdlc/scripts/install
+
+      - name: Rung 1, lint
+        run: sdlc/scripts/lint
+
+      - name: Rung 2, test
+        run: sdlc/scripts/test
+
+      - name: Rung 3, spec
+        run: sdlc/scripts/spec
