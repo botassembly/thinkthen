@@ -24,7 +24,7 @@ A slice is done when its how-tos in `documentation-plan.md` are green, the four 
 | 4 | The two variables, `sdlc/scripts/live` with the spend limit inside it, and demo 01 recorded live and turned green | `backends.md` | 01 | Done. Ticket 0006 landed on 2026-09-19 after an independent review. Demo 01 is the first green demo |
 | 5 | `choose` with `--raw`, then `score`. The adapter keeps every option's probability and the vendor's `confidence` | `choose.md`, `score.md`, `result.md` | 02, 05, 17, 20 | Done. Ticket 0009 landed on 2026-09-19 after an independent review. All three question types are in the shell. The source ceiling is 5,862 lines, and the review judged the rise earned |
 | 6 | The live probe: `find` against `rank --top 1`, `confidence` against the winning probability, `score` against trusted levels, option order, an added irrelevant option, and hostile text in the evidence | | | Done. Ticket 0011, and ADR 0014 records what it changed. The cap on questions in one request waits for `annotate` |
-| 7 | Records: `--input`, `--lines`, `--jsonl`, `--field` with one pointer or several, the small input rules, and `meta.tool` (ticket 0012). Then `--jobs`, `--cache DIR`, and `choose --options POINTER` (ticket 0013). Order kept, stop at the first failure | `records.md`, `choose.md`, `result.md` | 04, 12, 21 | Ticket 0012 is running. Ticket 0013 is ready |
+| 7 | Records: `--input`, `--lines`, `--jsonl`, `--field` with one pointer or several, the small input rules, and `meta.tool` (ticket 0012). Then `--jobs`, `--cache DIR`, and `choose --options POINTER` (ticket 0013). Order kept, stop at the first failure | `records.md`, `choose.md`, `result.md` | 04, 12, 21 | Ticket 0012 is done, and how-to 04 is green. Ticket 0013 is held |
 | 8 | `filter`, then `rank` (ticket 0014) | `filter.md`, `rank.md` | 03, 06, 09 | Ticket 0014 is written and waits on ticket 0013 |
 | 9 | `annotate`, with several pointers on `on` and provenance in `meta`. The flagship triage demo lands here with its policy recipe | `annotate.md`, `result.md` | 07, 08, 16, 22, 23, 29, 31, 32 | Ticket 0015 builds the command with how-tos 07 and 08 and waits on ticket 0014. Ticket 0016 then writes the flagship and the first eval how-tos with no further code |
 | 10a | Metric recipes as folders under `recipes/`, tried on live `decide --details` rows: counts, accuracy, precision, recall, and F1 at a cut, a sweep of cuts, accuracy at coverage, calibration bands, a comparison of two runs by case id, and the cost of a run | | 13, 24, 25, 28, 38 | Done. Ticket 0008 landed on 2026-09-19 after an independent review that recomputed every number. The judge scored accuracy 0.9744 and F1 0.9744 over 39 labeled cases at the default cut. Six recipes are fine as files. The comparison of two runs is the clumsy one |
@@ -52,8 +52,9 @@ Ian set the limit at $20 on 2026-09-19. The vendor charges $0.042 for a million 
 | 2026-09-19 | Ticket 0008: forty labeled cases judged twice, 80 calls | 23,848 |
 | 2026-09-19 | Ticket 0009: one probe of each new type and the recordings of how-tos 02, 05, 17, and 20 | 6,222 |
 | 2026-09-19 | Ticket 0011: the six live probes, 639 recorded requests | 214,997 |
+| 2026-09-19 | Ticket 0012: the recording of how-to 04, five record-mode calls | 1,453 |
 
-Spent so far: 247,839 tokens, which is about one cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
+Spent so far: 249,292 tokens, which is about one cent. `sdlc/live-tokens` holds the same two numbers for the script to read, and the script adds every call it makes.
 
 ## Levers left open
 

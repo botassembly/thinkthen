@@ -119,7 +119,7 @@ None added, none removed.
 
 ## The live spend
 
-One job, `demos/04-review-queue/record.sh`, through `sdlc/scripts/live`. Five exchanges for 1,453 input tokens. The ledger went from 32,842 to 34,295 of 476,000,000.
+One job, `demos/04-review-queue/record.sh`, through `sdlc/scripts/live`. Five exchanges for 1,453 input tokens. The ledger went from 32,842 to 34,295 of 476,000,000 on the branch. Ticket 0011 merged first, so main went from 247,839 to 249,292.
 
 The live answers disagreed with the red page. MSG-04 reads "Cancel the second seat, keep mine." and answered 0.07 where the page had assumed a yes, and MSG-05 asks about pausing and answered 0.08. The page now says what the model said: one record cleared the high mark, three fell under the low one, and one landed in the band. The finding survives its point, which is that a partial cancellation is a different question from ending a subscription, so the page states it rather than rewording the question until the old numbers return.
 
