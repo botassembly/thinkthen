@@ -45,8 +45,8 @@ thinkthen decide 'Does the message report a payment failure?' \
   > "$work/tune.jsonl"
 
 env -u TYPESAFE_API_KEY thinkthen report "$work/tune.jsonl" \
-  | jq -c '{rows, models: .run.models, replayed: .run.replayed, counts: .checks.decide.counts}' \
-  | mustmatch '{"rows":8,"models":["local-decider-3"],"replayed":8,"counts":{"yes":4,"no":4,"unresolved":0}}'
+  | jq -c '{rows, models, replayed, warnings, counts: (.checks.decide | {yes, no, unresolved})}' \
+  | mustmatch '{"rows":8,"models":["jev-1.13.0"],"replayed":8,"warnings":[],"counts":{"yes":4,"no":4,"unresolved":0}}'
 ```
 
 Four yes and four no is what a perfect run looks like and also what a coin looks like. `--truth NAME=POINTER` compares the check with the trusted label and says which one this is.
@@ -62,11 +62,12 @@ thinkthen decide 'Does the message report a payment failure?' \
 
 thinkthen report "$work/tune.jsonl" --truth decide=/label > "$work/sweep.json"
 
-jq -S -c '.checks.decide | keys' "$work/sweep.json" \
-  | mustmatch '["accuracy","calibration","counts","coverage","f1","precision","recall","sweep"]'
-jq -r '.checks.decide.sweep | length' "$work/sweep.json" | mustmatch "8"
-jq -S -c '.checks.decide.sweep[0] | keys' "$work/sweep.json" \
-  | mustmatch '["accuracy","coverage","f1","precision","recall","threshold","unresolved_accuracy"]'
+jq -c '.checks.decide | keys' "$work/sweep.json" \
+  | mustmatch '["accuracy_resolved","accuracy_unresolved","calibration","coverage","f1","false_negative","false_positive","kind","no","precision","recall","sweep","true_negative","true_positive","unresolved","yes"]'
+jq -r '.checks.decide.sweep | length' "$work/sweep.json" | mustmatch "19"
+jq -c '.checks.decide.sweep[0] | keys' "$work/sweep.json" \
+  | mustmatch '["accuracy_resolved","accuracy_unresolved","coverage","f1","precision","recall","threshold"]'
+jq -r '.checks.decide.calibration | length' "$work/sweep.json" | mustmatch "10"
 ```
 
 `coverage` leads: the share of rows that resolved, the accuracy among them, and the accuracy among the rest. A cut that resolves three rows out of eight at 100 percent is not better than one that resolves eight at 90 percent, and only the pair of numbers says so.
@@ -86,7 +87,7 @@ thinkthen decide 'Does the message report a payment failure?' \
 
 cut=$(
   thinkthen report "$work/tune.jsonl" --truth decide=/label \
-    | jq -r '.checks.decide.sweep | map(select(.coverage == 1)) | max_by(.accuracy) | .threshold'
+    | jq -r '.checks.decide.sweep | map(select(.coverage == 1)) | max_by(.accuracy_resolved) | .threshold'
 )
 
 thinkthen decide 'Does the message report a payment failure?' \
@@ -94,9 +95,11 @@ thinkthen decide 'Does the message report a payment failure?' \
   > "$work/holdout.jsonl"
 
 thinkthen report "$work/holdout.jsonl" --truth decide=/label --threshold "decide=$cut" \
-  | jq -c '.checks.decide | {coverage, accuracy}' \
-  | mustmatch '{"coverage":1,"accuracy":1}'
+  | jq -c '.checks.decide | {coverage, accuracy_resolved}' \
+  | mustmatch '{"coverage":1,"accuracy_resolved":1}'
 ```
+
+The run holds one check, so `decide=` may be left out of both options. The page writes the name to show what it is.
 
 `--threshold NAME=RULE` reapplies a rule to the stored probabilities and makes no request. The same rows can be read at any cut for as long as the file is kept.
 
@@ -106,6 +109,6 @@ The recording under `recording/` does not exist yet.
 
 - **The two-file procedure is the whole answer and it needs no option.** Sweep one file, take a number, report the other file at that number. ADR 0009 item 7 asks for exactly this, and the shell already has it. No held-out split flag is wanted.
 - **Accuracy at coverage is the right headline.** A single accuracy number hides a band that refused half the file. Two numbers beside `coverage` say what the cut bought and what it cost.
-- **Naming a check after the verb makes `--threshold decide=0.82` read badly.** The user never wrote the word `decide` as a name. Worse, two runs of two different questions concatenate into one check called `decide`, and the only warning is the list of question texts. The demo asks that a bare-verb run be named after its question text, or that `report` refuse a file whose rows carry two texts.
-- **The demo could not fix the shape of a report.** ADR 0008 names the metrics and ADR 0009 names the headline. Neither fixes a key. Every `jq` path on this page is a proposal, `run` and `checks` included.
-- **The demo could not read the calibration table.** ADR 0008 asks for one and says only that it sets each probability band beside the share of cases that were truly yes. Eight rows cannot fill bands. The page asserts that the key exists and nothing more.
+- **Naming a check after the verb makes `--threshold decide=0.82` read badly.** The user never wrote the word `decide` as a name. Leaving `decide=` out works here, because the run holds one check, so the word is only forced on a file that holds two. Worse, two runs of two different questions concatenate into one check called `decide`, and the only sign is the `warnings` list. The demo asks that a bare-verb run be named after its question text, or that `report` refuse a file whose rows carry two texts.
+- **The shape is fixed and the demo reads it.** `report.md` now names every key, so the `jq` paths on this page are assertions and no longer proposals. That was the one change the page could not be written without.
+- **The demo could not fill the calibration table.** `report.md` fixes ten bands of 0.1 and says an empty band reports `null`. Eight rows leave most of them empty, so the page asserts the band count and nothing about the numbers inside.

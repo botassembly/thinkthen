@@ -77,7 +77,7 @@ jq -r '[.input.id, (.value.correct|tostring), .answers.correct.answer.probabilit
 
 ## Score the run, then score the judge
 
-`report` with no option prints the counts and the run's facts. `--truth correct=/human_correct` scores the `correct` check against the human verdicts. `--truth /gold_code=/output_code` compares two fields of the case exactly and involves no judgment at all.
+`report` with no option prints the counts and the run's facts. `--truth correct=/human_correct` scores the `correct` check against the human verdicts. `--truth /gold_code=/output_code` compares two fields of the case exactly and involves no judgment at all. An exact check is keyed by its left pointer, so it prints under `/gold_code`.
 
 ```bash
 set -euo pipefail
@@ -89,14 +89,14 @@ thinkthen annotate checks.json --jsonl --details --input cases.jsonl \
   --record "$work/cache" --replay "$work/cache" > "$work/run-a.jsonl"
 
 env -u TYPESAFE_API_KEY thinkthen report "$work/run-a.jsonl" \
-  | jq -c '{rows, tools: .run.tools, checks: (.checks | keys)}' \
-  | mustmatch '{"rows":6,"tools":["thinkthen 0.1.0"],"checks":["correct","grounded"]}'
+  | jq -c '{rows, tool, checks: (.checks | keys)}' \
+  | mustmatch '{"rows":6,"tool":["thinkthen 0.1.0"],"checks":["correct","grounded"]}'
 
 thinkthen report "$work/run-a.jsonl" \
   --truth correct=/human_correct --truth /gold_code=/output_code \
-  | jq -c '{judge: .checks.correct | {coverage, accuracy, f1},
-            codes: .checks["/gold_code=/output_code"].accuracy}' \
-  | mustmatch '{"judge":{"coverage":1,"accuracy":1,"f1":1},"codes":0.8333333333333334}'
+  | jq -c '{judge: (.checks.correct | {coverage, accuracy_resolved, f1}),
+            codes: .checks["/gold_code"] | {kind, matched, accuracy}}' \
+  | mustmatch '{"judge":{"coverage":1,"accuracy_resolved":1,"f1":1},"codes":{"kind":"exact","matched":5,"accuracy":0.8333333333333334}}'
 ```
 
 Five of six codes match, and the judge agreed with the humans on every case it resolved.
@@ -129,6 +129,6 @@ The recording under `recording/` does not exist yet.
 
 - **Two commands and one file are the whole eval, and the demo confirms it.** No engine, no `eval` verb, no second question language. `annotate` obtains the judgments, `report` interprets them, and `jq` does everything else.
 - **Several pointers on one `on` are what make a flat case work.** The grounding check cannot see the gold answer, and the `--dry-run` block is the proof. That block is the single most valuable one on the page.
-- **The demo could not fix the shape of a comparison.** ADR 0008 says `--baseline` prints the change in every metric, the cases that flipped in each direction, and the cases present in only one run. It fixes no key. `only_baseline`, `only_run`, and `flipped` are a proposal.
-- **An exact check has no name to be called by.** `--truth /gold_code=/output_code` makes a check out of two pointers, and ADR 0008 never says what to call it. This page keys it by the whole expression. That key is a mouthful and it breaks the moment a pointer changes. The demo asks for `--truth NAME=/A=/B`, or for the exact form to take a name.
+- **The shape of a comparison is fixed and the demo reads it.** `report.md` now names `only_baseline`, `only_run`, `flipped`, and `delta`, so the `jq` paths on this page are assertions. The page also confirms that a missing case is reported as missing and never as a change.
+- **An exact check is keyed by a pointer and not by a name the user chose.** ADR 0008 keys it by the left pointer, so this page reads `/gold_code`. That key moves the moment somebody renames the field, and a saved dashboard breaks with it. The demo asks for `--truth NAME=/A=/B`, so a script can name the metric it charts.
 - **The demo could not show a resumed run resuming.** The cache holds every entry, so a rerun replays all twelve requests and the saving is asserted in prose. ADR 0008 item 5 leans on the resume for its claim that a completed run holds a judgment for every case.
