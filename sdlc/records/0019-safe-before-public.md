@@ -78,6 +78,8 @@ No advisory fires on any crate in the lock file, so nothing had to be bumped.
 
 ## The review
 
+The reviewer was a second agent with fresh context, run three times. Its verdict on the third pass is **ready**.
+
 A second agent with fresh context read the ticket, the diff against `origin/main`, and "What reviewers keep finding". It was asked to get around the address rule and around the record limit. Its verdict on the first pass was **not ready**, with three findings that had to change and three observations that did not.
 
 **1. A proxy variable defeated the whole address rule.** `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` on its own. A run against a loopback base with one of them set sent the key and the evidence to the proxy's host in clear text, which is the exact thing the rule refuses. Fixed. `Backend::is_secure` says whether the resolved address is an `https://` one, and `Client::new` calls `proxy(None)` when it is not. `address::a_proxy_variable_carries_no_plain_http_request` runs a real proxy listener and counts its connections: three before the fix, zero after. The paragraph on `backends.md` said only that a proxy carries the request, which read as an aside while it in fact cancelled the paragraph above it. It now states the rule.
@@ -101,7 +103,19 @@ The reviewer also verified the three fixes from the first pass and read every `#
 - `RenderError` carried a `serde_json` message about the document being written, and that document holds the evidence. The reviewer called it unreachable in practice. It is now a unit struct with no payload, because an unreachable leak is still a leak waiting for a change elsewhere.
 - A port outside `u16` was taken and then silently dropped, so `https://host:99999999999/v1` sent the key to port 443 rather than to the port that was typed. A port is now digits that parse as a `u16`. `http://localhost:/v1`, `http://[::1]:+80/v1`, and `https://host:65536/v1` are all refused as `NotAnAddress`. `backends.md` states the rule.
 
-Three observations stand with no change, and Ian can overturn any of them.
+### The third pass
+
+The same reviewer read the four fixes again with the whole diff. Verdict: **ready**. It re-ran its own reproduction against the rebuilt binary: the crafted 200 KB entry now prints 158 bytes of fixed text with no escape and no marker. It traced `Failure::Transport`, the last foreign string in either crate, to the end and confirmed that every reachable `ureq` rendering carries fixed text, a number, the user's own URL, or an OS message. It ran a key holding a control byte and a newline through the binary and saw no fragment of it on standard error. It grepped every base in `spec/`, `fixtures/`, `specification/`, `sdlc/`, and `README.md` and found no legitimate address the port rule now refuses. Leading zeros still resolve.
+
+One of its four closing observations was the repository's own rule and is fixed: the "a hostile entry" route pinned only an exit code, and exit 5 is also what "a damaged entry" earns, so the route would have passed silently if the schema check ever moved after the mismatch check. Each of the two entry routes now pins the sentence it means.
+
+Three observations stand, and each names its lever.
+
+- **A refused port is reported as a scheme problem.** `host_of` returning nothing collapses into `NotAnAddress`, so `http://host:/v1` reads "a base address begins with `http://` or `https://`". Failing is right and the sentence names the wrong rule. The lever is a `BadPort` variant with its own sentence, the shape `KeyInClear` already has. It widens a public enum, which is outside this ticket's scope.
+- **`Failure::Pointer` echoes a command-line value as it was typed.** Ticket 0013 refuses a control character in a `--label`, and `--field` and `--options` get no such check. It is the operator's own argument rather than a file or a reply, so it is the weakest member of the class. The lever is the check ticket 0013 already wrote.
+- **A transport failure that cannot succeed is still retried.** `is_retried` is true for every transport error, so a header the HTTP crate refuses is attempted three times. It is cosmetic and it is older than this ticket.
+
+Three observations from the second pass stand with no change, and Ian can overturn any of them.
 
 - **An empty port is refused.** `http://localhost:/v1` is a legal URL under RFC 3986 and this rule refuses it. A rule that refuses more than it must is the safe direction here, and the message names the rule rather than the address.
 - **The host keeps the case it was typed in.** Only the scheme is written back in lower case, so `http://LOCALHOST/v1` and `http://localhost/v1` reach two recording digests. This is how the tool behaved before the ticket, and the loopback comparison itself ignores case. Normalizing the host would change the digest of every recording that names a host in mixed case.
@@ -111,6 +125,6 @@ Three observations stand with no change, and Ian can overturn any of them.
 
 ## The gates
 
-`install`, `lint`, `test`, and `spec` all exit 0. 226 tests. `demos: 13 green, 7 red`. The count is a count of pages marked green, and every one of them passes. It fell from 15 because the merge from `origin/main` brought ticket 0018's reorganization of the how-to list. The ceiling went from 9025 to 10561.
+`install`, `lint`, `test`, and `spec` all exit 0. 226 tests. `demos: 13 green, 7 red`. The count is a count of pages marked green, and every one of them passes. It fell from 15 because the merge from `origin/main` brought ticket 0018's reorganization of the how-to list. The ceiling went from 9025 to 10578.
 
 The ticket stays at `in progress`.

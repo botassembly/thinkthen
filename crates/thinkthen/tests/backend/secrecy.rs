@@ -150,6 +150,11 @@ struct Route {
     primed: bool,
     /// What every entry the priming run wrote is overwritten with, if anything.
     damage: Option<&'static str>,
+    /// The part of the message that names this refusal and no other one.
+    ///
+    /// Two routes can share an exit code, so a route that would otherwise pass
+    /// on a neighbour's refusal pins the sentence it means.
+    says: Option<&'static str>,
     /// Whether the run carries the key at all.
     keyed: bool,
 }
@@ -171,6 +176,7 @@ const PATHS: [Route; 17] = [
         code: 0,
         primed: true,
         damage: None,
+        says: None,
         keyed: true,
     },
     // The entry is damaged after it is written, so the reply the run reads is
@@ -183,6 +189,7 @@ const PATHS: [Route; 17] = [
         code: 5,
         primed: true,
         damage: Some(DAMAGED),
+        says: Some("the file is not a recording entry: the JSON at line 1 column 105 is not one"),
         keyed: true,
     },
     // The entry parses and every field of it is hostile text, so the refusal
@@ -195,6 +202,10 @@ const PATHS: [Route; 17] = [
         code: 5,
         primed: true,
         damage: Some(HOSTILE),
+        says: Some(
+            "the entry names a schema this version does not read, \
+             and this version reads `thinkthen.recording/1`",
+        ),
         keyed: true,
     },
     route(
@@ -246,6 +257,7 @@ const PATHS: [Route; 17] = [
         code: 4,
         primed: false,
         damage: None,
+        says: None,
         keyed: false,
     },
 ];
@@ -266,6 +278,7 @@ const fn route(
         code,
         primed: false,
         damage: None,
+        says: None,
         keyed: true,
     }
 }
@@ -404,6 +417,10 @@ fn sweep(
         route.requests,
         "{framing} {view:?}: the requests the listener saw"
     );
+    if let Some(says) = route.says {
+        let said = String::from_utf8_lossy(&output.stderr);
+        assert!(said.contains(says), "{framing} {view:?}: {said}");
+    }
     nothing_leaked(&format!("{framing} {view:?}"), &output, &into);
     Ok(())
 }
