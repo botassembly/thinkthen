@@ -6,7 +6,7 @@ opens: crates spec specification README.md demos sdlc/ratchet.json sdlc/live-tok
 
 # 0017: Every question option has two homes
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
