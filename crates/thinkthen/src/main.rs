@@ -1,42 +1,47 @@
 //! The `thinkthen` command line.
 //!
-//! This crate owns every edge: arguments, standard output, and the exit code.
-//! It hands typed values to `thinkthen-core` and prints what comes back.
+//! This crate owns every edge: arguments, the environment, standard input,
+//! standard output, HTTP, and the exit code. It hands typed values to
+//! `thinkthen-core` and prints what comes back.
 
 #![forbid(unsafe_code)]
+
+mod args;
+mod decide;
+mod edge;
+mod failure;
+mod http;
 
 use std::io::{self, Write};
 use std::process::ExitCode;
 
 use clap::Parser;
 
-/// Put a decider model in the shell.
-#[derive(Debug, Parser)]
-#[command(
-    name = thinkthen_core::NAME,
-    about,
-    disable_version_flag = true,
-    arg_required_else_help = true
-)]
-struct Cli {
-    /// Print the version and exit.
-    #[arg(short = 'V', long = "version")]
-    version: bool,
-}
+use crate::args::{Cli, Command, Decide};
+use crate::edge::Environment;
+use crate::failure::Failure;
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let stdout = io::stdout();
+    let stderr = io::stderr();
     match run(&cli, stdout.lock()) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(_) => ExitCode::FAILURE,
+        Ok(code) => code,
+        Err(failure) => failure::report(&failure, stderr.lock()),
     }
 }
 
-fn run(cli: &Cli, mut writer: impl Write) -> io::Result<()> {
+/// Run what was asked and give back the exit code it earned.
+fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
     if cli.version {
         let line = thinkthen_core::version_line(env!("CARGO_PKG_VERSION"));
-        writeln!(writer, "{line}")?;
+        edge::write_line(writer, &line)?;
+        return Ok(ExitCode::SUCCESS);
     }
-    writer.flush()
+    match &cli.command {
+        Some(Command::Decide(Decide::If(arguments))) => {
+            decide::decide_if(arguments, &Environment::read(), io::stdin().lock(), writer)
+        }
+        None => Err(Failure::Defect("no command and no version was parsed")),
+    }
 }

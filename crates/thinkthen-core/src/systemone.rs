@@ -100,12 +100,8 @@ pub fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
     encode_raw(plan).map(|raw| raw.get().as_bytes().to_owned())
 }
 
-/// Write the plan as the request body, ready to sit inside the plan document.
-///
-/// # Errors
-///
-/// Returns [`EncodeError`] when the body cannot be written as JSON.
-pub fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
+/// Write the plan as the request body the plan document embeds.
+pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
     let request = Request {
         state: plan.evidence().as_str().to_owned(),
         model: plan.model().as_str().to_owned(),

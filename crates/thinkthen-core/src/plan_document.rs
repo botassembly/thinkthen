@@ -5,6 +5,8 @@ use serde_json::value::RawValue;
 
 use crate::adapter::Adapter;
 use crate::backend::Backend;
+use crate::plan::Plan;
+use crate::systemone::{self, EncodeError};
 use crate::text::{BackendName, KeyVar, ModelName, Url};
 
 /// What the command would send, in the six fields `channels.md` fixes.
@@ -19,21 +21,27 @@ pub struct PlanDocument<'a> {
     adapter: Adapter,
     model: &'a ModelName,
     key_env: Option<&'a KeyVar>,
-    request: &'a RawValue,
+    request: Box<RawValue>,
 }
 
 impl<'a> PlanDocument<'a> {
-    /// Show the request one backend would be sent.
-    #[must_use]
-    pub fn new(backend: &'a Backend, request: &'a RawValue) -> Self {
-        Self {
+    /// Show the request this backend's adapter would send.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EncodeError`] when the request cannot be written as JSON.
+    pub fn of(backend: &'a Backend, plan: &Plan) -> Result<Self, EncodeError> {
+        let request = match backend.adapter() {
+            Adapter::SystemOne => systemone::encode_raw(plan)?,
+        };
+        Ok(Self {
             backend: backend.name(),
             url: backend.url(),
             adapter: backend.adapter(),
             model: backend.model(),
             key_env: backend.key_env(),
             request,
-        }
+        })
     }
 }
 
@@ -43,7 +51,7 @@ mod tests {
     use crate::backend::{BackendValues, resolve_backend};
     use crate::plan::Plan;
     use crate::question::Question;
-    use crate::systemone::encode_raw;
+    use crate::render::json_line;
     use crate::text::{Condition, Evidence, ModelName};
 
     fn plan() -> Plan {
@@ -61,12 +69,10 @@ mod tests {
     fn a_plan_document_carries_six_fields_in_the_order_the_specification_fixes() {
         let backend = resolve_backend(BackendValues::default(), BackendValues::default())
             .expect("the built-in profile resolves");
-        let request = encode_raw(&plan()).expect("the plan encodes");
-        let document = PlanDocument::new(&backend, &request);
+        let document = PlanDocument::of(&backend, &plan()).expect("the plan encodes");
 
-        let rendered = serde_json::to_string(&document).expect("a plan document serializes");
         assert_eq!(
-            rendered,
+            json_line(&document).expect("a plan document serializes"),
             concat!(
                 r#"{"backend":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
                 r#""adapter":"systemone","model":"jev-latest","key_env":"TYPESAFE_API_KEY","#,
@@ -87,10 +93,9 @@ mod tests {
         );
         let backend =
             resolve_backend(values, BackendValues::default()).expect("an ad-hoc backend resolves");
-        let request = encode_raw(&plan()).expect("the plan encodes");
+        let document = PlanDocument::of(&backend, &plan()).expect("the plan encodes");
 
-        let rendered = serde_json::to_string(&PlanDocument::new(&backend, &request))
-            .expect("a plan document serializes");
+        let rendered = json_line(&document).expect("a plan document serializes");
         assert!(rendered.starts_with(r#"{"backend":null,"#), "{rendered}");
         assert!(rendered.contains(r#""key_env":null,"#), "{rendered}");
     }

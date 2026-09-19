@@ -16,9 +16,21 @@ import tomllib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
-ALLOWED_LICENSES = {"MIT", "Apache-2.0", "Unicode-3.0", "Unlicense"}
+# ISC, BSD-3-Clause, and CDLA-Permissive-2.0 joined the list for the TLS stack
+# under ureq: ring and rustls-webpki and untrusted are ISC, subtle is
+# BSD-3-Clause, and webpki-roots is CDLA-Permissive-2.0. There is no HTTPS in
+# Rust without them. All three are permissive and carry no copyleft term.
+ALLOWED_LICENSES = {
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "ISC",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
+}
 ACCEPTED_DEPENDENCIES = {
-    "thinkthen": {"clap", "thinkthen-core"},
+    "thinkthen": {"clap", "thinkthen-core", "ureq"},
     "thinkthen-core": {"serde", "serde_json", "thiserror"},
 }
 ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": set(), "thinkthen-core": {"proptest"}}
@@ -304,6 +316,8 @@ LICENSE_GRAMMAR_CASES = (
     ("(MIT OR Apache-2.0) AND Unicode-3.0", True),
     ("(MIT OR GPL-3.0) AND GPL-2.0", False),
     ("Apache-2.0 WITH LLVM-exception", False),
+    ("Apache-2.0 AND ISC", True),
+    ("Apache-2.0 AND GPL-3.0", False),
     ("Apache-2.0 WITH LLVM-exception OR MIT", True),
     ("", False),
     ("MIT OR", False),
