@@ -7,6 +7,9 @@ cd -- "$REPO"
 
 python3 sdlc/scripts/policy.py
 node sdlc/scripts/ratchet.mjs
+# `deny.toml` allows exactly the licenses the tree carries, and an advisory on
+# any crate in the lock file fails here. It reads the lock file and no network.
+cargo deny --offline check advisories bans licenses
 cargo fmt --all -- --check
 cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps

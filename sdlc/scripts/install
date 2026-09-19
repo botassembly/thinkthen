@@ -4,6 +4,10 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 
+# The version the workflow installs and the version this rung names in its
+# advice, so a machine and the gate run the same checker.
+DENY_VERSION=0.19.4
+
 # A rung that fails on a missing tool fails deep inside a build. Name it here.
 # cargo builds and tests, python3 reads the accepted policies, node measures the
 # size ceiling, mustmatch runs the spec pages, the demos, and the demo runner's
@@ -16,5 +20,12 @@ for tool in cargo python3 node mustmatch jq script; do
 		exit 1
 	fi
 done
+
+# cargo-deny is a cargo subcommand, so `command -v` does not find it.
+if ! cargo deny --version >/dev/null 2>&1; then
+	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2
+	printf 'install: cargo install --locked cargo-deny@%s\n' "$DENY_VERSION" >&2
+	exit 1
+fi
 
 exec cargo fetch --manifest-path "$REPO/Cargo.toml" --locked
