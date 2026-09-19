@@ -19,6 +19,61 @@ const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 /// The statuses a backend is asked again after.
 const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
 
+/// One connection pool, built once and shared by every worker.
+///
+/// A pool keeps a connection open between requests, so a run over many records
+/// pays for one handshake rather than one per record. `ureq` shares an agent
+/// across threads, so the workers hold one of these between them.
+pub(crate) struct Client(Agent);
+
+impl fmt::Debug for Client {
+    /// Name the pool and show nothing of what has travelled through it.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Client(<pool>)")
+    }
+}
+
+impl Client {
+    /// Build the one pool this process posts through.
+    pub(crate) fn new(timeout: Duration) -> Self {
+        Self(
+            Agent::config_builder()
+                .timeout_global(Some(timeout))
+                .http_status_as_error(false)
+                .max_redirects(0)
+                .build()
+                .into(),
+        )
+    }
+
+    /// Post the request and hand back the response body the backend answered with.
+    ///
+    /// No redirect is followed. A key and the evidence go to the resolved URL
+    /// and nowhere else, so a redirect comes back as the status it carries and
+    /// fails like any other error status.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Failure`] when the backend cannot be reached, when it answers
+    /// with an error status, or when both still hold after the last retry.
+    pub(crate) fn post(&self, exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
+        let mut wait = exchange.retry_wait;
+        let mut retries = 0;
+        loop {
+            let failure = match send(&self.0, exchange) {
+                Ok(body) => return Ok(body),
+                Err(failure) => failure,
+            };
+            if retries >= exchange.max_retries || !is_retried(&failure) {
+                return Err(failure);
+            }
+            thread::sleep(wait);
+            wait = wait.saturating_mul(2);
+            retries += 1;
+        }
+    }
+}
+
 /// What one exchange needs, gathered at the edge before anything opens.
 pub(crate) struct Exchange<'a> {
     /// Where the body is posted.
@@ -27,8 +82,6 @@ pub(crate) struct Exchange<'a> {
     pub(crate) body: &'a [u8],
     /// The key the one authorization header carries.
     pub(crate) key: &'a Key,
-    /// How long one attempt may take, from connect to the last byte.
-    pub(crate) timeout: Duration,
     /// How many times a retried failure is sent again.
     pub(crate) max_retries: u32,
     /// The first wait, which doubles on every retry after it.
@@ -46,43 +99,9 @@ impl fmt::Debug for Exchange<'_> {
                 &format_args!("<{} bytes withheld>", self.body.len()),
             )
             .field("key", &self.key)
-            .field("timeout", &self.timeout)
             .field("max_retries", &self.max_retries)
             .field("retry_wait", &self.retry_wait)
             .finish()
-    }
-}
-
-/// Post the request and hand back the response body the backend answered with.
-///
-/// No redirect is followed. A key and the evidence go to the resolved URL and
-/// nowhere else, so a redirect comes back as the status it carries and fails
-/// like any other error status.
-///
-/// # Errors
-///
-/// Returns [`Failure`] when the backend cannot be reached, when it answers with
-/// an error status, or when both still hold after the last retry.
-pub(crate) fn post(exchange: &Exchange<'_>) -> Result<Vec<u8>, Failure> {
-    let agent: Agent = Agent::config_builder()
-        .timeout_global(Some(exchange.timeout))
-        .http_status_as_error(false)
-        .max_redirects(0)
-        .build()
-        .into();
-    let mut wait = exchange.retry_wait;
-    let mut retries = 0;
-    loop {
-        let failure = match send(&agent, exchange) {
-            Ok(body) => return Ok(body),
-            Err(failure) => failure,
-        };
-        if retries >= exchange.max_retries || !is_retried(&failure) {
-            return Err(failure);
-        }
-        thread::sleep(wait);
-        wait = wait.saturating_mul(2);
-        retries += 1;
     }
 }
 
@@ -132,7 +151,6 @@ mod tests {
             url: "http://127.0.0.1:1/v1",
             body: br#"{"state":"something private"}"#,
             key: &key,
-            timeout: Duration::from_secs(30),
             max_retries: 2,
             retry_wait: Duration::from_secs(1),
         };

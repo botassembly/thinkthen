@@ -45,8 +45,13 @@ fn picked(options: &[&str]) -> String {
 }
 
 /// Run `choose` against one URL over the records on standard input.
+///
+/// One request at a time, because the listener answers in the order it was
+/// asked and each case here pins which record carried which options.
 fn choose(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
-    let asked = ["choose", QUESTION, "--url", base, "--model", "local-1"];
+    let asked = [
+        "choose", QUESTION, "--url", base, "--model", "local-1", "--jobs", "1",
+    ];
     spawn(
         &[&asked[..], arguments].concat(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],

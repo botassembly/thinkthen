@@ -1,6 +1,6 @@
 # Records
 
-Status: **Settled** for version one, by ADR 0007 and ADR 0010. **Draft** for the default of `jobs`.
+Status: **Settled** for version one, by ADR 0007 and ADR 0010.
 
 The default input is one text document. A record stream turns a command into a map over records. [channels.md](channels.md) governs the five channels, and [result.md](result.md) governs the shape of one result.
 
@@ -101,9 +101,13 @@ A first run that stops at record 400 leaves 399 entries. The same command run ag
 
 ## `jobs`
 
-`jobs` bounds how many requests are in flight at once. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. ADR 0010 gives it the advanced option `--jobs N` with a default of 4, and the sequential form landed first. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight, so 4 is safe everywhere and a measured run can raise it.
+`jobs` bounds how many requests are in flight at once. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. ADR 0010 gives it the advanced option `--jobs N`, which takes a whole number from 1 to 32 and defaults to 4. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight, so 4 is safe everywhere and a measured run can raise it. `--jobs` outside record mode is a usage error, because one document sends one request.
 
-Output order never depends on `jobs`. The tool holds finished rows in a bounded buffer until the rows before them are written.
+Output order never depends on `jobs`. A run with any number prints the bytes that `--jobs 1` prints, on standard output and on standard error, whether it finished or stopped. The tool holds finished rows in a bounded buffer until the rows before them are written, and the buffer holds at most `jobs` rows, so the memory of a long run stays flat.
+
+One process opens one pool of connections and every worker posts through it, so a run over many records pays for one handshake rather than one for each record.
+
+A run still stops at the first failed record. No new request starts once a failure is seen, and a request that finished after the failed record is still written under `--record`, because it was billed and a resume should not pay for it twice.
 
 When the program downstream closes the pipe, the tool stops reading and stops scheduling. Requests already sent may still be billed.
 

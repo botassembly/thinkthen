@@ -2,8 +2,11 @@
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::process::{Command, Output, Stdio};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
+use std::time::Duration;
 
 /// One response the listener will serve, in the order the script gives.
 pub(crate) struct Canned {
@@ -11,6 +14,7 @@ pub(crate) struct Canned {
     body: String,
     location: Option<String>,
     promised: Option<usize>,
+    delay: Duration,
 }
 
 impl Canned {
@@ -26,6 +30,7 @@ impl Canned {
             body: String::new(),
             location: Some(url.to_owned()),
             promised: None,
+            delay: Duration::ZERO,
         }
     }
 
@@ -36,6 +41,7 @@ impl Canned {
             body: String::new(),
             location: None,
             promised: Some(4096),
+            delay: Duration::ZERO,
         }
     }
 
@@ -46,8 +52,23 @@ impl Canned {
             body: body.to_owned(),
             location: None,
             promised: None,
+            delay: Duration::ZERO,
         }
     }
+
+    /// Wait this long before answering, so a later request can answer first.
+    pub(crate) fn after(mut self, millis: u64) -> Self {
+        self.delay = Duration::from_millis(millis);
+        self
+    }
+}
+
+/// What the listener saw, for the assertions that count connections.
+#[derive(Debug, Default)]
+struct Counts {
+    connections: AtomicUsize,
+    in_flight: AtomicUsize,
+    peak: AtomicUsize,
 }
 
 /// One request the listener read, kept for the assertions to compare.
@@ -73,6 +94,7 @@ pub(crate) struct Listener {
     base: String,
     url: String,
     recorded: Receiver<Recorded>,
+    counts: Arc<Counts>,
 }
 
 impl Listener {
@@ -82,12 +104,58 @@ impl Listener {
         let base = format!("http://{}/v1", listener.local_addr()?);
         let url = format!("{base}/systemone");
         let (sender, recorded) = channel();
+        let counts = Arc::new(Counts::default());
         thread::spawn(move || serve_script(&listener, responses, &sender));
         Ok(Self {
             base,
             url,
             recorded,
+            counts,
         })
+    }
+
+    /// Answer every connection at once, from the body of each request.
+    ///
+    /// The connection is kept open until the caller closes it, so a run that
+    /// reuses one pool opens one connection and a run with several workers
+    /// opens no more than it has workers. Each answer waits the delay its
+    /// `Canned` carries, which lets a later request answer first.
+    pub(crate) fn answering(
+        reply: impl Fn(&[u8]) -> Canned + Send + Sync + 'static,
+    ) -> io::Result<Self> {
+        let listener = TcpListener::bind("127.0.0.1:0")?;
+        let base = format!("http://{}/v1", listener.local_addr()?);
+        let url = format!("{base}/systemone");
+        let (sender, recorded) = channel();
+        let counts = Arc::new(Counts::default());
+        let serving = Arc::clone(&counts);
+        let reply = Arc::new(reply);
+        thread::spawn(move || {
+            for accepted in listener.incoming() {
+                let Ok(stream) = accepted else { return };
+                serving.connections.fetch_add(1, Ordering::SeqCst);
+                let reply = Arc::clone(&reply);
+                let counts = Arc::clone(&serving);
+                let sender = sender.clone();
+                thread::spawn(move || serve_kept(&stream, reply.as_ref(), &sender, &counts));
+            }
+        });
+        Ok(Self {
+            base,
+            url,
+            recorded,
+            counts,
+        })
+    }
+
+    /// How many connections the listener has accepted.
+    pub(crate) fn connections(&self) -> usize {
+        self.counts.connections.load(Ordering::SeqCst)
+    }
+
+    /// The most requests the listener held at once.
+    pub(crate) fn peak(&self) -> usize {
+        self.counts.peak.load(Ordering::SeqCst)
     }
 
     /// The base a command is given, which the tool posts under.
@@ -122,11 +190,49 @@ fn serve_script(listener: &TcpListener, responses: Vec<Canned>, sender: &Sender<
     }
 }
 
+/// Answer every request on one connection until the caller closes it.
+fn serve_kept(
+    stream: &TcpStream,
+    reply: &(dyn Fn(&[u8]) -> Canned + Send + Sync),
+    sender: &Sender<Recorded>,
+    counts: &Counts,
+) {
+    let mut reader = BufReader::new(stream);
+    loop {
+        let Some(request) = read_kept(&mut reader) else {
+            return;
+        };
+        let held = counts.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
+        counts.peak.fetch_max(held, Ordering::SeqCst);
+        let canned = reply(&request.body);
+        if sender.send(request).is_err() {
+            return;
+        }
+        thread::sleep(canned.delay);
+        write_answer(stream, &canned, false);
+        counts.in_flight.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// Read one request from a connection that stays open, or nothing at its end.
+fn read_kept(reader: &mut BufReader<&TcpStream>) -> Option<Recorded> {
+    let mut line = String::new();
+    if reader.read_line(&mut line).ok()? == 0 {
+        return None;
+    }
+    read_rest(reader, line)
+}
+
 /// Read one request line, its headers, and the body its content length names.
 fn read_request(stream: &TcpStream) -> Option<Recorded> {
     let mut reader = BufReader::new(stream);
     let mut line = String::new();
     reader.read_line(&mut line).ok()?;
+    read_rest(&mut reader, line)
+}
+
+/// Read the headers and the body that follow one request line.
+fn read_rest(reader: &mut BufReader<&TcpStream>, line: String) -> Option<Recorded> {
     let mut headers = Vec::new();
     let mut length = 0;
     loop {
@@ -151,13 +257,23 @@ fn read_request(stream: &TcpStream) -> Option<Recorded> {
 }
 
 /// Write one canned response and close the connection.
-fn serve(mut stream: TcpStream, canned: &Canned) {
+fn serve(stream: TcpStream, canned: &Canned) {
+    write_answer(&stream, canned, true);
+}
+
+/// Write one canned response, closing the connection or keeping it open.
+fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
     let location = canned
         .location
         .as_ref()
         .map_or_else(String::new, |url| format!("location: {url}\r\n"));
+    let ending = if closing {
+        "connection: close\r\n"
+    } else {
+        "connection: keep-alive\r\n"
+    };
     let head = format!(
-        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}content-length: {}\r\nconnection: close\r\n\r\n",
+        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}content-length: {}\r\n{ending}\r\n",
         canned.status,
         canned.promised.unwrap_or(canned.body.len())
     );

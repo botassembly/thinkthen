@@ -93,6 +93,8 @@ pub(crate) enum Failure {
     DryRunWithRecording,
     /// `--cache` was given beside one of the two options it stands for.
     CacheWithRecording,
+    /// `--jobs` was given to a run that sends one request.
+    JobsOutsideRecords,
     /// The replay folder holds no entry for the request being made.
     ReplayMiss(String),
     /// The entry the digest names cannot answer the request being made.
@@ -208,6 +210,9 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
         }
         Failure::QuietOverRecords => {
             "--quiet carries the answer in the exit code, and no record's answer sets it"
+        }
+        Failure::JobsOutsideRecords => {
+            "--jobs bounds the requests in flight, and one document sends one request"
         }
         _ => return None,
     })

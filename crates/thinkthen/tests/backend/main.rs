@@ -11,5 +11,6 @@ mod address;
 mod choosing;
 mod exchange;
 mod from_record;
+mod parallel;
 mod recordings;
 mod streaming;

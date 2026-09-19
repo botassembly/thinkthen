@@ -178,6 +178,19 @@ pub(crate) struct Common {
     )]
     pub(crate) timeout: u64,
 
+    /// How many requests are in flight at once, from 1 to 32.
+    ///
+    /// It acts in record mode alone, because one document sends one request.
+    /// Output never depends on it: a run with any number prints the bytes one
+    /// job prints, in input order.
+    #[arg(
+        long,
+        value_name = "N",
+        value_parser = clap::builder::RangedU64ValueParser::<u8>::new().range(1..=32),
+        hide_short_help = true
+    )]
+    pub(crate) jobs: Option<u8>,
+
     /// How many times a transport failure or a retried status is sent again.
     #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
     pub(crate) max_retries: u32,

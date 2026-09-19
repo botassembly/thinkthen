@@ -38,6 +38,13 @@ fn serving(probabilities: &[&str]) -> io::Result<Listener> {
     )
 }
 
+/// The bound that makes the listener's script line up with the input order.
+///
+/// This page pins the sequential form: one request out, one answer back, and
+/// the listener answering in the order it was asked. `parallel.rs` pins what
+/// several requests in flight do, and the default is four.
+const ONE_AT_A_TIME: [&str; 2] = ["--jobs", "1"];
+
 /// Run `decide` against one URL over the records on standard input.
 fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
     let asked = ["decide", QUESTION, "--url", base, "--model", "local-1"];
@@ -88,8 +95,12 @@ fn written(name: &str, text: &str) -> io::Result<PathBuf> {
 #[test]
 fn each_framing_prints_one_value_per_record_in_input_order() {
     let listener = serving(&["0.97", "0.02", "0.80"]).expect("a loopback listener");
-    let output = decide(listener.base(), &["--jsonl", "--field", "/body"], RECORDS)
-        .expect("the compiled binary runs");
+    let output = decide(
+        listener.base(),
+        &[&["--jsonl", "--field", "/body"][..], &ONE_AT_A_TIME].concat(),
+        RECORDS,
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(printed(&output), "true\nfalse\ntrue\n");
@@ -103,8 +114,12 @@ fn each_framing_prints_one_value_per_record_in_input_order() {
     );
 
     let listener = serving(&["0.97", "0.02"]).expect("a loopback listener");
-    let output = decide(listener.base(), &["--lines"], "first line\nsecond line\n")
-        .expect("the compiled binary runs");
+    let output = decide(
+        listener.base(),
+        &[&["--lines"][..], &ONE_AT_A_TIME].concat(),
+        "first line\nsecond line\n",
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(printed(&output), "true\nfalse\n");
@@ -243,7 +258,15 @@ fn a_backend_failure_stops_the_run_and_the_rows_before_it_stay_printed() {
     .expect("a loopback listener");
     let output = decide(
         listener.base(),
-        &["--jsonl", "--field", "/body", "--max-retries", "0"],
+        &[
+            "--jsonl",
+            "--field",
+            "/body",
+            "--max-retries",
+            "0",
+            "--jobs",
+            "1",
+        ],
         RECORDS,
     )
     .expect("the compiled binary runs");
@@ -402,6 +425,8 @@ fn input_reads_the_records_from_the_file_it_names() {
             "--jsonl",
             "--field",
             "/body",
+            "--jobs",
+            "1",
             "--input",
             &path.to_string_lossy(),
         ],
@@ -463,6 +488,8 @@ fn choose_raw_prints_an_empty_line_for_an_unresolved_record() {
             "0.8",
             "--raw",
             "--lines",
+            "--jobs",
+            "1",
         ],
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"first line\nsecond line\n",

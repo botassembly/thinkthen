@@ -155,19 +155,20 @@ pub(crate) fn key() -> Result<Key, Failure> {
     Ok(Key(value))
 }
 
-/// Write one line and flush it, letting a closed pipe downstream end it quietly.
+/// Write one line and flush it, saying whether the pipe downstream is still open.
 ///
 /// A reader that stops early, as `head` does, is how Unix pipelines end. The
 /// command has already done its job, so the answer is the exit code it earned.
+/// A record run reads the `false` and stops reading and scheduling.
 ///
 /// # Errors
 ///
 /// Returns [`Failure::Output`] when the write fails for any other reason.
-pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<(), Failure> {
+pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<bool, Failure> {
     match writeln!(writer, "{line}").and_then(|()| writer.flush()) {
-        Err(error) if error.kind() == ErrorKind::BrokenPipe => Ok(()),
+        Err(error) if error.kind() == ErrorKind::BrokenPipe => Ok(false),
         Err(error) => Err(Failure::Output(error)),
-        Ok(()) => Ok(()),
+        Ok(()) => Ok(true),
     }
 }
 
@@ -194,7 +195,7 @@ mod tests {
     fn a_closed_pipe_ends_the_write_quietly_and_any_other_failure_does_not() {
         assert!(matches!(
             write_line(Failing(ErrorKind::BrokenPipe), "{}"),
-            Ok(())
+            Ok(false)
         ));
         assert!(matches!(
             write_line(Failing(ErrorKind::PermissionDenied), "{}"),
