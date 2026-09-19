@@ -28,6 +28,9 @@ const PHRASES: [(u16, &str); 6] = [
 /// What a run that read bytes which are not text is told.
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
+/// What a usage error with no sentence of its own would be told.
+const UNNAMED: &str = "defect: a usage error with no sentence";
+
 /// What stopped the command.
 #[derive(Debug)]
 pub(crate) enum Failure {
@@ -139,23 +142,12 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Backend(error) => (2, error.to_string()),
         Failure::Blank(error) => (2, error.to_string()),
         Failure::Threshold(error) => (2, format!("--threshold: {error}")),
-        Failure::QuietWithDetails => (
-            2,
-            "--quiet prints nothing, so it does not take --details".to_owned(),
-        ),
-        Failure::RawWithAnotherView => (
-            2,
-            "--raw prints a bare label, so it does not take --details or --quiet".to_owned(),
-        ),
         Failure::Labels(error) => (2, error.to_string()),
-        Failure::BandOnChoose => (
-            2,
-            "--threshold: `choose` takes a single cut and never a band".to_owned(),
-        ),
-        Failure::RuleOnScore => (
-            2,
-            "--threshold: `score` takes no rule, so cut on the number with `jq -e`".to_owned(),
-        ),
+        Failure::Reading(error) => (2, error.to_string()),
+        Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
+        Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
+        Failure::Record(RecordError::Render(error)) => (70, format!("defect: {error}")),
+        Failure::Record(error) => (2, error.to_string()),
         Failure::NoKey(variable) => (
             4,
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
@@ -163,19 +155,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Transport(what) => (4, format!("the backend could not be reached: {what}")),
         Failure::Status(status) => (4, said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
-        Failure::TwoFolders => (
-            2,
-            "--record and --replay name two different folders, and one run keeps one".to_owned(),
-        ),
-        Failure::DryRunWithRecording => (
-            2,
-            "--dry-run sends nothing, so it takes neither --record nor --replay".to_owned(),
-        ),
-        Failure::CacheWithRecording => (
-            2,
-            "--cache is --record and --replay on one folder, so it stands beside neither"
-                .to_owned(),
-        ),
         Failure::ReplayMiss(name) => (
             5,
             format!("the replay folder holds no entry named `{name}`"),
@@ -185,36 +164,53 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             5,
             format!("the recording folder could not be read or written: {error}"),
         ),
-        Failure::Reading(error) => (2, error.to_string()),
-        Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
-        Failure::OptionsWithList => (
-            2,
-            "--options takes the options from each record, so the command line gives none"
-                .to_owned(),
-        ),
-        Failure::OptionsOutsideJsonl => (
-            2,
-            "--options needs --jsonl, because a pointer needs a JSON record to point into"
-                .to_owned(),
-        ),
-        Failure::QuietOverRecords => (
-            2,
-            "--quiet carries the answer in the exit code, and no record's answer sets it"
-                .to_owned(),
-        ),
-        Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
-        Failure::Record(RecordError::Render(error)) => (70, format!("defect: {error}")),
-        Failure::Record(error) => (2, error.to_string()),
         Failure::OpenInput(error) => (5, format!("--input could not be opened: {error}")),
-        Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
         Failure::Output(error) => (5, format!("standard output could not be written: {error}")),
+        Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
         Failure::Defect(what) => (70, format!("defect: {what}")),
         Failure::Render(error) => (70, format!("defect: {error}")),
+        other => (2, refused(other).unwrap_or(UNNAMED).to_owned()),
     };
     // A diagnostic that cannot be written changes neither the failure nor its code.
     let _unwritten = writeln!(writer, "{}: {message}", thinkthen_core::NAME);
     code
+}
+
+/// The fixed sentence each option clash is refused with, at exit code 2.
+///
+/// Every one of these is a command line no run can act on. The sentence names
+/// the options and never a record, because the clash is in what was typed.
+const fn refused(failure: &Failure) -> Option<&'static str> {
+    Some(match failure {
+        Failure::QuietWithDetails => "--quiet prints nothing, so it does not take --details",
+        Failure::RawWithAnotherView => {
+            "--raw prints a bare label, so it does not take --details or --quiet"
+        }
+        Failure::BandOnChoose => "--threshold: `choose` takes a single cut and never a band",
+        Failure::RuleOnScore => {
+            "--threshold: `score` takes no rule, so cut on the number with `jq -e`"
+        }
+        Failure::TwoFolders => {
+            "--record and --replay name two different folders, and one run keeps one"
+        }
+        Failure::DryRunWithRecording => {
+            "--dry-run sends nothing, so it takes neither --record nor --replay"
+        }
+        Failure::CacheWithRecording => {
+            "--cache is --record and --replay on one folder, so it stands beside neither"
+        }
+        Failure::OptionsWithList => {
+            "--options takes the options from each record, so the command line gives none"
+        }
+        Failure::OptionsOutsideJsonl => {
+            "--options needs --jsonl, because a pointer needs a JSON record to point into"
+        }
+        Failure::QuietOverRecords => {
+            "--quiet carries the answer in the exit code, and no record's answer sets it"
+        }
+        _ => return None,
+    })
 }
 
 /// Name the status the backend answered with, plus its fixed phrase when it has one.
