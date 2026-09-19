@@ -22,8 +22,12 @@ Those commands are the design. `specification/` is the contract, and code follow
 
 ## Where to read
 
+The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.
+
+The how-to list has a section on evals: writing case files, grading a batch against a reusable definition, reading detailed results, keeping a run that can be traced and replayed, reporting accuracy locally, picking a threshold, comparing two runs, and checking the judge against human labels.
+
+- [`demos/`](demos/README.md): the how-tos. Small real shell jobs as executable pages. They drive the design.
 - `specification/`: the contract. Channels and exit codes, the threshold, the result, backends, and one page per command.
-- `demos/`: small real shell jobs as executable pages. They drive the design.
 - `sdlc/planning/design-study.md`: what the tool is, what version one holds, how it fits with botassembly, and the questions waiting on Ian.
 - `sdlc/planning/rust-standards.md`: how the code is judged. Every rule names the tool that enforces it.
 - `sdlc/planning/plan.md`: the build order and its state.

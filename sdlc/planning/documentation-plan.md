@@ -12,9 +12,9 @@ The title starts with "How to" and names a task. One paragraph says when to use 
 
 | How to | Demo | Slice | State |
 | --- | --- | --- | --- |
-| Gate a script step on a yes/no answer | 01 | 4 | Green. Takes the form in ticket 0010 |
-| Tell "no" from "could not ask" in a script, with `case $?` and under `set -e` | 19 | Ticket 0010 | Needs only `decide` |
-| Test a script with no network, with `--record` and `--replay` | 27 | Ticket 0010 | Needs only `decide` |
+| Gate a script step on a yes/no answer | 01 | 4 | Green, in the how-to form |
+| Tell "no" from "could not ask" in a script, with `case $?` and under `set -e` | 19 | Ticket 0010 | Green, in the how-to form |
+| Test a script with no network, with `--record` and `--replay` | 27 | Ticket 0010 | Green, in the how-to form |
 | Point the tool at another server with `THINKTHEN_BASE_URL` | 18 | 13 | |
 
 ## Gates and branches
