@@ -54,7 +54,7 @@ Fine as a file, with the duplication noted. It is the longest recipe and the one
 
 Traps met:
 
-- `accuracy_unresolved` has no obvious definition. The refused rows are scored at a plain 0.5 here, which answers the question a band raises: would the model have got them right anyway. On this run it got two of the three right, so the band paid for its accuracy.
+- `accuracy_unresolved` has no obvious definition. The refused rows stay out of `accuracy_resolved`, and they are never right or wrong in this run. The field reports a separate counterfactual: what a plain cut of 0.5 would have made of those same rows. It answers the question a band raises, which is whether the model would have got them right anyway. On this run it got two of the three right.
 - An unlabeled row belongs in `refused` and in no rate. Those are two different questions about one row, and the reduce had to keep them apart.
 
 Fine as a file.
@@ -98,8 +98,8 @@ Ian can overturn each of these cheaply.
 1. **A record row carries the case under `input`, and the trusted label lives inside it.** `specification/result.md` says a record row carries `input`, the whole record including parts never sent, and `records.md` says nothing further. The simplest reading is that the case's own `id` and `label` are members of that record, so every recipe reads `input.id` and `input.label`. Nothing new was invented, and the recipes need no change when record mode lands.
 2. **Rates are rounded to four decimals and money to six.** Counts stay exact.
 3. **The sweep grid is the 19 cuts from 0.05 to 0.95,** which is the number `report.md` had drafted.
-4. **The sweep picks the highest F1, and the middle cut of the cuts that tie.** The rule is printed in the output.
-5. **`accuracy_unresolved` scores the refused rows at a plain cut of 0.5.**
+4. **The sweep picks the highest F1, and the middle cut of the cuts that tie.** An even number of ties has two middles, and the pick is the higher of the two. The rule is printed in the output.
+5. **`accuracy_unresolved` reports what a plain cut of 0.5 would have made of the refused rows.** It is a counterfactual beside the band's own rates. The refused rows are still counted apart, and they enter no rate of the run itself, which is the rule of ADR 0008.
 6. **The rows live once, in `recipes/rows/`,** and the five pages read them by relative path. Copying forty rows into five demo folders would have been five files to keep in step.
 7. **A recipe folder holds the `.jq` file and `example.sh`.** The question file lives once in `recipes/rows/` beside the cases it was asked of, rather than once per recipe. ADR 0012 names the question file as part of a recipe folder, and seven copies of one question would have been seven chances to drift.
 8. **One live job ran both runs.** The reworded question is a second pass in the same script.
@@ -108,11 +108,11 @@ Ian can overturn each of these cheaply.
 
 ## One change under `crates/`, which the ticket excluded
 
-`crates/thinkthen/tests/demo_runner.rs` asserted `demos: 1 green, `. Five more demos turn green here, so the test failed on rung 2. It now reads the count off the pages the runner reported, which leaves it passing for every later ticket that turns a demo green as well. The change is one line, and the ceiling in `sdlc/ratchet.json` rose from 4193 to 4194 in the commit that made it. No other file under `crates/` changed.
+`crates/thinkthen/tests/demo_runner.rs` pinned the number of green demos. Five more demos turn green here, so the test failed on rung 2. The pinned number is now 8. The change is one line, the ceiling in `sdlc/ratchet.json` stays at 4252, and no other file under `crates/` changed.
 
 ## Evidence
 
 - Rungs: `install`, `lint`, `test`, and `spec` all exit 0 with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset.
-- `demos: 6 green, 11 red`.
+- `demos: 8 green, 11 red`.
 - A search of the committed rows and recordings for `apikey_`, `authorization`, and `bearer` in any case finds nothing: three counts of zero.
 - `sdlc/live-tokens` carries the spend. This ticket added 23,848 input tokens.
