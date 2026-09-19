@@ -220,6 +220,7 @@ fn run(
             answer,
             threshold,
             Meta::new(
+                env!("CARGO_PKG_VERSION"),
                 backend.url().clone(),
                 reply.model().clone(),
                 reply.usage(),

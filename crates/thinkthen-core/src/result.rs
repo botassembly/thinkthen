@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::answer::{Answer, Value};
 use crate::question::Question;
+use crate::records::Record;
 use crate::text::{ModelName, Url};
 use crate::threshold::Threshold;
 
@@ -31,6 +32,7 @@ impl Usage {
 /// Who answered, how, at what cost, from a backend or from a recording.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Meta {
+    tool: String,
     url: Url,
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -39,13 +41,22 @@ pub struct Meta {
 }
 
 impl Meta {
-    /// Name who answered, at what cost, and whether a recording answered.
+    /// Name the tool, who answered, at what cost, and whether a recording did.
     ///
-    /// `usage` is `None` when the backend reported none, and the field is then
-    /// absent from the JSON. `replayed` is always present.
+    /// `version` is the binary's own version, and `tool` is the identity line
+    /// the tool prints of itself, so a saved row names what made it. `usage`
+    /// is `None` when the backend reported none, and the field is then absent
+    /// from the JSON. `replayed` is always present.
     #[must_use]
-    pub const fn new(url: Url, model: ModelName, usage: Option<Usage>, replayed: bool) -> Self {
+    pub fn new(
+        version: &str,
+        url: Url,
+        model: ModelName,
+        usage: Option<Usage>,
+        replayed: bool,
+    ) -> Self {
         Self {
+            tool: crate::version_line(version),
             url,
             model,
             usage,
@@ -59,6 +70,8 @@ impl Meta {
 pub struct DecisionResult {
     schema: &'static str,
     value: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input: Option<Record>,
     question: Question,
     answer: Answer,
     threshold: Option<Threshold>,
@@ -82,11 +95,22 @@ impl DecisionResult {
         Self {
             schema: SCHEMA,
             value,
+            input: None,
             question,
             answer,
             threshold,
             meta,
         }
+    }
+
+    /// Carry the whole record this row answered, as a record row does.
+    ///
+    /// `input` holds the record as it arrived, including the parts no pointer
+    /// sent. A single document is not a record stream, so it carries none.
+    #[must_use]
+    pub fn with_input(mut self, record: Record) -> Self {
+        self.input = Some(record);
+        self
     }
 }
 
@@ -96,6 +120,7 @@ mod tests {
     use crate::answer::{Answer, Value};
     use crate::probability::Probability;
     use crate::question::{Labels, Question};
+    use crate::records::{Framing, Reading};
     use crate::text::{ModelName, QuestionText, Url};
     use crate::threshold::Threshold;
 
@@ -104,7 +129,7 @@ mod tests {
         r#"{"schema":"thinkthen.result/1","value":true,"#,
         r#""question":{"verb":"decide","text":"Does this ask for a refund?"},"#,
         r#""answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"#,
-        r#""meta":{"url":"https://api.typesafe.ai/v1/systemone","#,
+        r#""meta":{"tool":"thinkthen 0.4.0","url":"https://api.typesafe.ai/v1/systemone","#,
         r#""model":"jev-1.13.0","#,
         r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}"#,
     );
@@ -120,6 +145,7 @@ mod tests {
             answer,
             Some(threshold),
             Meta::new(
+                "0.4.0",
                 Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
@@ -145,8 +171,9 @@ mod tests {
     }
 
     #[test]
-    fn meta_holds_four_fields_and_drops_the_usage_a_backend_never_reported() {
+    fn meta_names_the_tool_and_drops_the_usage_a_backend_never_reported() {
         let meta = Meta::new(
+            "0.4.0",
             Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
             ModelName::new("local-1").expect("not empty"),
             None,
@@ -155,7 +182,10 @@ mod tests {
         let rendered = serde_json::to_string(&meta).expect("meta serializes");
         assert_eq!(
             rendered,
-            r#"{"url":"http://127.0.0.1:8080/v1/systemone","model":"local-1","replayed":true}"#
+            concat!(
+                r#"{"tool":"thinkthen 0.4.0","url":"http://127.0.0.1:8080/v1/systemone","#,
+                r#""model":"local-1","replayed":true}"#,
+            )
         );
     }
 
@@ -170,6 +200,7 @@ mod tests {
             answer.clone(),
             Some(threshold),
             Meta::new(
+                "0.4.0",
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
@@ -179,6 +210,21 @@ mod tests {
         let rendered = serde_json::to_string(&result).expect("a result serializes");
         assert!(rendered.contains(r#""value":null,"#), "{rendered}");
         assert!(rendered.contains(r#""threshold":"0.1:0.9","#), "{rendered}");
+    }
+
+    #[test]
+    fn a_record_row_carries_the_whole_record_under_input() {
+        let reading = Reading::new(Framing::Jsonl, Vec::new()).expect("a framing");
+        let line = br#"{"id":"T-91","body":"Payouts have failed for 3 days."}"#;
+        let record = reading.record(line).expect("a record");
+        let rendered = serde_json::to_string(&example().with_input(record)).expect("a row");
+        assert!(
+            rendered.starts_with(concat!(
+                r#"{"schema":"thinkthen.result/1","value":true,"#,
+                r#""input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":"#,
+            )),
+            "{rendered}"
+        );
     }
 
     #[test]
@@ -193,6 +239,7 @@ mod tests {
             answer,
             None,
             Meta::new(
+                "0.4.0",
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
