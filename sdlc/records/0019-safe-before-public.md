@@ -22,7 +22,7 @@ The findings of the security and command-line review of 2026-09-19 are closed. S
 
 The coordinator asked for one shared helper that proves no secret reaches any output, over every command and every failure path. `secrecy::nothing_leaked` is that helper. It reads standard output, standard error, and every file a run wrote. The key may reach no byte of any of them, and no file may hold the word `authorization` or `bearer` either. The evidence may reach no byte of a diagnostic.
 
-- `crates/thinkthen/tests/backend/secrecy.rs` drives every verb down fourteen backend paths, on one document and over records, in the bare view and under `--details`. Each row pins its exit code and the number of requests the listener saw.
+- `crates/thinkthen/tests/backend/secrecy.rs` drives every verb down sixteen backend paths, on one document and over records, in the bare view and under `--details`. Each row pins its exit code and the number of requests the listener saw.
 - `crates/thinkthen/tests/backend/refusals.rs` drives thirty rows of usage error and local failure over every verb that has them. Each row pins the part of the message that names it and no other refusal.
 - `crates/thinkthen/src/failure.rs` holds the two the integration sweep cannot reach: every `Debug` line that could hold either marker, and every diagnostic `report` writes.
 
@@ -60,9 +60,9 @@ Each of these is written into the page or the code that states it, and Ian can o
 
 ## What the recordings do
 
-Every committed recording stores `http://127.0.0.1:8721/v1/systemone` or `https://api.typesafe.ai/v1/systemone`. Both are addresses the new rule takes, so no committed recording holds an address a user could no longer name.
+Every committed recording stores an address under `http://127.0.0.1:` or `https://api.typesafe.ai/v1/systemone`. Both are addresses the new rule takes, so no committed recording holds an address a user could no longer name.
 
-Replay never applies the rule to a stored address. `Entry::replayed` compares the stored `url` against the address the run resolved, as text, and the address rule runs only over the base the user gave. A recording written before the rule therefore replays unchanged. The `spec` rung proves it: fifteen demos are green over their committed recordings, and `probes/replay-check.sh` reproduces every probe's committed rows from its own recording.
+Replay never applies the rule to a stored address. `Entry::replayed` compares the stored `url` against the address the run resolved, as text, and the address rule runs only over the base the user gave. A recording written before the rule therefore replays unchanged. The `spec` rung proves it: every demo marked green replays its committed recording, and `probes/replay-check.sh` reproduces every probe's committed rows from its own recording.
 
 ## The pinned versions and SHAs
 
@@ -78,8 +78,24 @@ No advisory fires on any crate in the lock file, so nothing had to be bumped.
 
 ## The review
 
+A second agent with fresh context read the ticket, the diff against `origin/main`, and "What reviewers keep finding". It was asked to get around the address rule and around the record limit. Its verdict on the first pass was **not ready**, with three findings that had to change and three observations that did not.
+
+**1. A proxy variable defeated the whole address rule.** `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` on its own. A run against a loopback base with one of them set sent the key and the evidence to the proxy's host in clear text, which is the exact thing the rule refuses. Fixed. `Backend::is_secure` says whether the resolved address is an `https://` one, and `Client::new` calls `proxy(None)` when it is not. `address::a_proxy_variable_carries_no_plain_http_request` runs a real proxy listener and counts its connections: three before the fix, zero after. The paragraph on `backends.md` said only that a proxy carries the request, which read as an aside while it in fact cancelled the paragraph above it. It now states the rule.
+
+**2. The tail of a record past the read bound was framed as a record of its own.** The reader stops two bytes past the limit. A stream whose line ran longer than that refused the first chunk for its size and then sent what followed the cut to the backend, which is part of a refused record. Fixed. A stream read that found no line feed now ends the stream. `limits::the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record` sends one line of 16 MiB and 12 bytes and counts zero requests on the listener.
+
+**3. Two diagnostics quoted bytes the tool did not write.** `EntryError::Malformed` and `DecodeError::Malformed` each carried a `serde_json` message, and that message quotes the value the reading stopped on. A recording entry is written around the evidence, and a backend can send back whatever was sent to it, so both printed the evidence into a diagnostic. The reviewer found the first. The second is the same defect in the same crate and is fixed with it. Both variants now carry the line and the column. `EntryError::Unwritable` carries nothing. A reply that names no model became its own variant, `DecodeError::NoModel`, because a blank name is not a JSON position. The sweep gained two rows: a recording entry damaged after it was written, and a reply that is JSON no adapter reads. Both quote the evidence marker and both are refused with a message that names a place.
+
+The existing "a malformed answer" row sends `{"model":"","answers":{}}`, which is valid JSON, so it never reached `DecodeError::Malformed`. That is why the sweep had not caught the second one.
+
+Three observations stand with no change, and Ian can overturn any of them.
+
+- **`http://localhost:/v1` is refused as `NotAnAddress`.** An empty port after a colon is a legal URL under RFC 3986 and this rule refuses it. A rule that refuses more than it must is the safe direction here, and the message names the rule rather than the address.
+- **A 16 MiB record costs about 104 MB of resident memory.** The bytes are read once, read again as text, and encoded into a request body. The limit is a bound on the damage, not a budget. Nothing in the ticket asked for a streaming encoder, and adding one would be a larger change than this ticket carries.
+- **`mustmatch` is pinned by version and not by hash.** It is installed from a source the workflow already trusts. Pinning it by hash is worth a ticket of its own and is not this one.
+
 ## The gates
 
-`install`, `lint`, `test`, and `spec` all exit 0. `demos: 15 green, 7 red`. The ceiling went from 9025 to 10297.
+`install`, `lint`, `test`, and `spec` all exit 0. 224 tests. `demos: 13 green, 7 red`. The count is a count of pages marked green, and every one of them passes. It fell from 15 because the merge from `origin/main` brought ticket 0018's reorganization of the how-to list. The ceiling went from 9025 to 10484.
 
 The ticket stays at `in progress`.
