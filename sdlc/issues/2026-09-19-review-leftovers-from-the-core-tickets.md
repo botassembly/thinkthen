@@ -10,3 +10,13 @@ Filed 2026-09-19 by the steering agent from the second reviews of tickets 0001 a
 6. `Probability` and `PassMark` repeat about thirty lines of newtype shape. A macro would read worse.
 
 `DecodeError::Malformed` also covers a response with no model name. The steering agent left that merged on purpose. The binary maps every decode error to exit code 4, and the message already differs.
+
+## Added from the reviews of tickets 0003 and 0004
+
+7. Standard input has no size cap. The specification sets none today.
+8. An oversized or cut-short response body is retried like a transport failure.
+9. A defect and a render failure share exit code 70.
+10. The demo runner splits a harvested `--replay` folder name on white space, so a folder with a space in its name would be checked wrong.
+11. `EntryError::Unwritable` cannot fire, and `EntryError::Schema` echoes the schema string of a hand-edited file.
+12. `record_and_replay.rs` repeats one record call five times, and the wrong-assertion fixture copies a whole demo page.
+13. `backend.rs` is 411 lines and its first doc line joins two jobs.

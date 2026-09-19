@@ -7,8 +7,8 @@ Updated 2026-09-18, after Ian's rulings in ADR 0003. The whole command line is p
 | Slice | Delivers | State |
 | --- | --- | --- |
 | 0 | The workspace, both crates, the lint tables, the ratchet, the ladder, `thinkthen --version`, one executable spec | Done |
-| 1 | `thinkthen decide if` over text: the types, the pass mark, the result, the `systemone` adapter, `--status`, exit codes, `--plan` | Tickets 0001, 0002, 0003 |
-| 2 | `--record` and `--replay` over one content-addressed directory. Moved up by ADR 0005, because demos replay recordings | Ticket 0004, specified in `specification/recording.md` |
+| 1 | `thinkthen decide if` over text: the types, the pass mark, the result, the `systemone` adapter, `--status`, exit codes, `--plan` | Done. Tickets 0001, 0002, 0003 landed. No live judgment yet, because the vendor account has no credits |
+| 2 | `--record` and `--replay` over one content-addressed directory. Moved up by ADR 0005, because demos replay recordings | Done. Ticket 0004 landed. Demo 01 turns green once it is recorded live with `demos/01-refund-gate/record.sh` |
 | 3 | `thinkthen decide which` with inline options and `--from` | Drafted in `specification/decide.md` |
 | 4 | A configuration file with named backend profiles, and `thinkthen backend check` | Needs a specification document |
 | 5 | The `chat-logprobs` adapter, proven against a local server | Needs its section in `specification/backends.md` |
