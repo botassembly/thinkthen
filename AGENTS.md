@@ -50,4 +50,4 @@ This repository will go public. Never name a private project or a customer. Desc
 
 ## Where decisions go
 
-Every decision lands in `sdlc/`: an ADR for an architecture decision, an issue for a problem found, a ticket for work authorized. Tickets are numbered from 0001 in this repository, and a ticket lands through a worktree. A decision Ian cannot find later was not made. Say which ones he can overturn.
+Every decision lands in `sdlc/`: an ADR for an architecture decision, an issue for a problem found, a ticket for work authorized. Tickets are numbered from 0001 in this repository, and a ticket lands through a worktree. A decision Ian cannot find later was not made. Say which ones he can overturn. A proposal that changes before anyone acts on it is written again whole, with the design and its decisions first. An amendment is for an accepted ADR, where the history matters.
