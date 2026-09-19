@@ -22,7 +22,7 @@ The findings of the security and command-line review of 2026-09-19 are closed. S
 
 The coordinator asked for one shared helper that proves no secret reaches any output, over every command and every failure path. `secrecy::nothing_leaked` is that helper. It reads standard output, standard error, and every file a run wrote. The key may reach no byte of any of them, and no file may hold the word `authorization` or `bearer` either. The evidence may reach no byte of a diagnostic.
 
-- `crates/thinkthen/tests/backend/secrecy.rs` drives every verb down sixteen backend paths, on one document and over records, in the bare view and under `--details`. Each row pins its exit code and the number of requests the listener saw.
+- `crates/thinkthen/tests/backend/secrecy.rs` drives every verb down seventeen backend paths, on one document and over records, in the bare view and under `--details`. Each row pins its exit code and the number of requests the listener saw.
 - `crates/thinkthen/tests/backend/refusals.rs` drives thirty rows of usage error and local failure over every verb that has them. Each row pins the part of the message that names it and no other refusal.
 - `crates/thinkthen/src/failure.rs` holds the two the integration sweep cannot reach: every `Debug` line that could hold either marker, and every diagnostic `report` writes.
 
@@ -88,14 +88,29 @@ A second agent with fresh context read the ticket, the diff against `origin/main
 
 The existing "a malformed answer" row sends `{"model":"","answers":{}}`, which is valid JSON, so it never reached `DecodeError::Malformed`. That is why the sweep had not caught the second one.
 
+### The second pass
+
+The same reviewer read the three fixes with fresh context. Verdict: **not ready**, with one must-change that survived the first pass.
+
+**4. `EntryError::Schema` echoed a field out of an untrusted file.** The variant carried the schema string the file named, and that field is unbounded text from a file in the replay folder. The reviewer ran it and got 200 KB of chosen text and raw terminal escapes onto standard error. It is the same class as finding 3, left standing beside an `Unwritable` that was emptied in the same commit. Fixed. The variant carries nothing, and `Entry`'s `Debug` now shows no field at all, because every field of an entry was read out of a file. `recording::no_refusal_of_a_parseable_entry_repeats_a_field_it_read` pins the sentence.
+
+The sweep missed it because the one damaged-entry row wrote JSON that does not parse, so it only ever reached `Malformed`. A second damage shape closed that: `HOSTILE` in `secrecy.rs` is an entry a reader takes whose every field is a terminal escape, the evidence marker, and another schema name. That is the seventeenth row.
+
+The reviewer also verified the three fixes from the first pass and read every `#[error]` in both crates. Two more were worth closing and were closed with the same change.
+
+- `RenderError` carried a `serde_json` message about the document being written, and that document holds the evidence. The reviewer called it unreachable in practice. It is now a unit struct with no payload, because an unreachable leak is still a leak waiting for a change elsewhere.
+- A port outside `u16` was taken and then silently dropped, so `https://host:99999999999/v1` sent the key to port 443 rather than to the port that was typed. A port is now digits that parse as a `u16`. `http://localhost:/v1`, `http://[::1]:+80/v1`, and `https://host:65536/v1` are all refused as `NotAnAddress`. `backends.md` states the rule.
+
 Three observations stand with no change, and Ian can overturn any of them.
 
-- **`http://localhost:/v1` is refused as `NotAnAddress`.** An empty port after a colon is a legal URL under RFC 3986 and this rule refuses it. A rule that refuses more than it must is the safe direction here, and the message names the rule rather than the address.
+- **An empty port is refused.** `http://localhost:/v1` is a legal URL under RFC 3986 and this rule refuses it. A rule that refuses more than it must is the safe direction here, and the message names the rule rather than the address.
+- **The host keeps the case it was typed in.** Only the scheme is written back in lower case, so `http://LOCALHOST/v1` and `http://localhost/v1` reach two recording digests. This is how the tool behaved before the ticket, and the loopback comparison itself ignores case. Normalizing the host would change the digest of every recording that names a host in mixed case.
+- **The request body can grow past the record limit.** A 16 MiB record of control bytes becomes roughly 96 MiB once JSON escapes it. The limit bounds the record and not the body. The factor is small and constant and the run still ends, so nothing in the ticket's outcome turns on it.
 - **A 16 MiB record costs about 104 MB of resident memory.** The bytes are read once, read again as text, and encoded into a request body. The limit is a bound on the damage, not a budget. Nothing in the ticket asked for a streaming encoder, and adding one would be a larger change than this ticket carries.
 - **`mustmatch` is pinned by version and not by hash.** It is installed from a source the workflow already trusts. Pinning it by hash is worth a ticket of its own and is not this one.
 
 ## The gates
 
-`install`, `lint`, `test`, and `spec` all exit 0. 224 tests. `demos: 13 green, 7 red`. The count is a count of pages marked green, and every one of them passes. It fell from 15 because the merge from `origin/main` brought ticket 0018's reorganization of the how-to list. The ceiling went from 9025 to 10499.
+`install`, `lint`, `test`, and `spec` all exit 0. 226 tests. `demos: 13 green, 7 red`. The count is a count of pages marked green, and every one of them passes. It fell from 15 because the merge from `origin/main` brought ticket 0018's reorganization of the how-to list. The ceiling went from 9025 to 10561.
 
 The ticket stays at `in progress`.

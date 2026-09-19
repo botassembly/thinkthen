@@ -54,6 +54,18 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 3] = [
 /// A reply the adapter refuses, whatever question was asked.
 const MALFORMED: &str = r#"{"model":"","answers":{}}"#;
 
+/// A recording entry a reader takes, whose every field is hostile text.
+///
+/// It names another schema, so it is refused after it parses. No field of it
+/// may reach a diagnostic: the text is unbounded, it holds a terminal escape,
+/// and it quotes the evidence marker back.
+const HOSTILE: &str = concat!(
+    r#"{"schema":"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5","#,
+    r#""adapter":"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5","#,
+    r#""url":"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5","#,
+    r#""request":{},"response":{}}"#,
+);
+
 /// A recording entry that is not JSON, holding the evidence it recorded.
 const DAMAGED: &str = concat!(
     r#"{"schema":"thinkthen.recording/1","adapter":"systemone","#,
@@ -136,14 +148,14 @@ struct Route {
     code: i32,
     /// Whether a recording is written into the folder before the run.
     primed: bool,
-    /// Whether every entry the priming run wrote is damaged before the run.
-    damaged: bool,
+    /// What every entry the priming run wrote is overwritten with, if anything.
+    damage: Option<&'static str>,
     /// Whether the run carries the key at all.
     keyed: bool,
 }
 
 /// Every path the backend and the recording folder can send a run down.
-const PATHS: [Route; 16] = [
+const PATHS: [Route; 17] = [
     route("a success", &[], Answers::Good, 1, 0),
     route("a plan", &["--dry-run"], Answers::Nothing, 0, 0),
     route("a record run", &["--record", "{dir}"], Answers::Good, 1, 0),
@@ -158,7 +170,7 @@ const PATHS: [Route; 16] = [
         requests: 1,
         code: 0,
         primed: true,
-        damaged: false,
+        damage: None,
         keyed: true,
     },
     // The entry is damaged after it is written, so the reply the run reads is
@@ -170,7 +182,19 @@ const PATHS: [Route; 16] = [
         requests: 1,
         code: 5,
         primed: true,
-        damaged: true,
+        damage: Some(DAMAGED),
+        keyed: true,
+    },
+    // The entry parses and every field of it is hostile text, so the refusal
+    // comes after the reading rather than during it.
+    Route {
+        named: "a hostile entry",
+        adds: &["--replay", "{dir}"],
+        answers: Answers::Good,
+        requests: 1,
+        code: 5,
+        primed: true,
+        damage: Some(HOSTILE),
         keyed: true,
     },
     route(
@@ -221,7 +245,7 @@ const PATHS: [Route; 16] = [
         requests: 0,
         code: 4,
         primed: false,
-        damaged: false,
+        damage: None,
         keyed: false,
     },
 ];
@@ -241,7 +265,7 @@ const fn route(
         requests,
         code,
         primed: false,
-        damaged: false,
+        damage: None,
         keyed: true,
     }
 }
@@ -358,11 +382,11 @@ fn sweep(
         let first = spawn(&priming, &environment(true), evidence.as_bytes())?;
         assert_eq!(first.status.code(), Some(0), "{framing}: the priming run");
     }
-    if route.damaged {
+    if let Some(damage) = route.damage {
         let entries = written(&dir);
         assert!(!entries.is_empty(), "{framing}: an entry to damage");
         for entry in entries {
-            fs::write(&entry, DAMAGED)?;
+            fs::write(&entry, damage)?;
         }
     }
 

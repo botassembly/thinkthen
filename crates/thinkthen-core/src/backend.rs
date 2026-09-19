@@ -148,10 +148,14 @@ fn host_of(authority: &str) -> Option<&str> {
         return None;
     }
     match port.strip_prefix(':') {
-        // A port is digits or nothing. A second colon means the authority holds
-        // an address the brackets should have held, and anything else after the
-        // colon is no port, so neither is an address this rule reads.
-        Some(number) if number.bytes().all(|byte| byte.is_ascii_digit()) => Some(host),
+        // A port is digits that a socket can carry, or there is no colon at
+        // all. An empty port, a sign, a number past 65535, and a second colon
+        // each name no port, so none of them is an address this rule reads. A
+        // second colon means the authority holds an address the brackets
+        // should have held.
+        Some(number) if number.bytes().all(|byte| byte.is_ascii_digit()) => {
+            number.parse::<u16>().ok().map(|_| host)
+        }
         Some(_) => None,
         None if port.is_empty() => Some(host),
         None => None,
@@ -252,9 +256,13 @@ mod tests {
             "http://someone@host/v1",
             "http://host/v1?key=sk-in-the-address",
             "http://host/v1#sk-in-the-address",
-            // A port is digits, and neither of these names one.
+            // A port is a number a socket can carry, and none of these is one.
             "http://localhost:x/v1",
             "https://host:8080a/v1",
+            "http://localhost:/v1",
+            "http://localhost:99999999999/v1",
+            "https://host:65536/v1",
+            "http://[::1]:+80/v1",
         ];
         for base in refused {
             let error =

@@ -24,8 +24,15 @@ pub enum EntryError {
     #[error("the file is not a recording entry: the JSON at line {0} column {1} is not one")]
     Malformed(usize, usize),
     /// The entry was written by a version that names another schema.
-    #[error("the entry carries schema `{0}` and this version reads `{SCHEMA}`")]
-    Schema(String),
+    ///
+    /// The message names no schema, for the reason [`Self::Malformed`] gives.
+    /// The field is text out of a file, so it is unbounded and can hold a
+    /// control byte, and the name it carries tells a reader nothing to act on.
+    #[error(
+        "the entry names a schema this version does not read, \
+             and this version reads `{SCHEMA}`"
+    )]
+    Schema,
     /// The entry records another exchange, so the file was damaged or edited.
     #[error("the entry records a different exchange, so the file was damaged or hand-edited")]
     Mismatched,
@@ -104,16 +111,12 @@ pub struct Entry {
 }
 
 impl fmt::Debug for Entry {
-    /// Show what the entry records and never the bodies it holds.
+    /// Name the entry and show nothing of it.
+    ///
+    /// Every field an entry holds was read out of a file, so no field of it
+    /// reaches a line a person or a log will read.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter
-            .debug_struct("Entry")
-            .field("schema", &self.schema)
-            .field("adapter", &self.adapter)
-            .field("url", &self.url)
-            .field("request", &format_args!("<withheld>"))
-            .field("response", &format_args!("<withheld>"))
-            .finish()
+        formatter.write_str("Entry(<withheld>)")
     }
 }
 
@@ -156,7 +159,7 @@ impl Entry {
     pub fn replayed(bytes: &[u8], exchange: &Exchange<'_>) -> Result<Vec<u8>, EntryError> {
         let entry: Self = serde_json::from_slice(bytes).map_err(place)?;
         if entry.schema != SCHEMA {
-            return Err(EntryError::Schema(entry.schema));
+            return Err(EntryError::Schema);
         }
         if entry.adapter != systemone::NAME
             || entry.url != exchange.url.as_str()
@@ -305,12 +308,40 @@ mod tests {
         let stale = written.replace("thinkthen.recording/1", "thinkthen.recording/0");
         assert_eq!(
             Entry::replayed(stale.as_bytes(), &exchange),
-            Err(EntryError::Schema("thinkthen.recording/0".to_owned()))
+            Err(EntryError::Schema)
         );
         assert!(matches!(
             Entry::replayed(b"not an entry at all", &exchange),
             Err(EntryError::Malformed(..))
         ));
+    }
+
+    /// A file in a recording folder is untrusted, and no message repeats a field.
+    ///
+    /// Every field of an entry comes out of a file. A file that parses and
+    /// names another schema would otherwise print whatever that field held:
+    /// unbounded text, control bytes, and whatever the evidence was.
+    #[test]
+    fn no_refusal_of_a_parseable_entry_repeats_a_field_it_read() {
+        let url = Url::new("http://127.0.0.1:9/v1/systemone").expect("an address");
+        let exchange = Exchange::new(&url, br#"{"asked":1}"#);
+        // The escape is written the way JSON writes it, so the file is a file a
+        // reader takes and the field carries a control byte all the same.
+        let hostile = r"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5";
+        let entry = format!(
+            "{{\"schema\":\"{hostile}\",\"adapter\":\"systemone\",\
+             \"url\":\"{hostile}\",\"request\":{{}},\"response\":{{}}}}"
+        );
+
+        let error = Entry::replayed(entry.as_bytes(), &exchange)
+            .expect_err("an entry naming another schema is refused");
+
+        assert_eq!(
+            error.to_string(),
+            "the entry names a schema this version does not read, \
+             and this version reads `thinkthen.recording/1`"
+        );
+        assert!(!format!("{error:?}").contains("PWNED"), "{error:?}");
     }
 
     /// A damaged entry holds the evidence it recorded, and no message quotes it.

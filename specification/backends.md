@@ -28,7 +28,7 @@ A proxy carries an `https://` request and never an `http://` one. The HTTP clien
 
 `--url` names a base and takes no companion option. It is the command-line spelling of `THINKTHEN_BASE_URL`, it outranks the variable, and the key rule above does not change when it is given. It stays hidden from the short help, because a variable in front of the command is the everyday way to point a run somewhere else.
 
-Space around a base is dropped. A scheme is read without regard to case and written back in lower case, so one exchange keeps one recording digest whatever case the caller typed. A base carrying user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a recording. The refusal message names the rule and never the base it refused. A base that is empty or holds only white space is a usage error too.
+Space around a base is dropped. A scheme is read without regard to case and written back in lower case, so one exchange keeps one recording digest whatever case the caller typed. A port is digits naming a number from 0 to 65535, or there is no colon at all. An empty port, a signed number, and a number past 65535 are each a usage error, because a port a socket cannot carry would be dropped and the request would go somewhere the caller did not name. A base carrying user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a recording. The refusal message names the rule and never the base it refused. A base that is empty or holds only white space is a usage error too.
 
 `--dry-run` shows the address the run would use, and it reads no key.
 
