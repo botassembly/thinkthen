@@ -6,7 +6,7 @@ opens: crates spec specification/fixtures sdlc/ratchet.json sdlc/live-tokens dem
 
 # 0009: `choose` and `score`
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
