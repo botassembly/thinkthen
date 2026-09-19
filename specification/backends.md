@@ -72,8 +72,14 @@ The response body:
 | A yes/no answer's probability | `noul` |
 | Pick one from a list | `type` `choice`, with the options as the keys of `criteria` and each description as the value, or `null` |
 | Rate on named levels | `type` `score`, with the levels as the `criteria` array |
+| A pick-one answer's probability per option | Draft. One probability per option name, under the `choice` answer |
+| A rating answer's probability per level | Draft. One probability per level, in level order, under the `score` answer |
+| A rating's weighted value | Draft. Computed locally from the level probabilities. Nothing is read from the wire |
+| Several questions over one evidence | One `questions` map with one entry per question. One request, one `state` |
 
 Question names are `q1`, `q2`, and onward in plan order. The vendor does not show names to the model.
+
+The four Draft rows above name what an adapter must produce for `decide which` and `decide how`. The exact response field names for a `choice` answer and a `score` answer land with their fixtures under `fixtures/systemone/`, and this table stops being Draft then. An adapter that cannot supply a probability per option or per level refuses the reply, and the exit code is 4. It never invents one.
 
 ## The `chat-logprobs` adapter
 
