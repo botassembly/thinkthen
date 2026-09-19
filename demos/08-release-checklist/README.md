@@ -2,54 +2,64 @@
 
 Status: red
 
-Verbs: `decide run`
+Verbs: `annotate`
 
 A team publishes release notes and has four things the notes must say. The checks live in a file the team owns and edits, not in a shell script, and the same file runs before every release. Each check asks about a fact that is printed in the notes or absent from them.
 
+Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
+
 ## Input
 
-`release-notes.txt` is one set of release notes. `release-checks.md` is the saved question file: frontmatter for the defaults, one heading per question, and one small block under each heading holding the verb and the question.
+`release-notes.txt` is one set of release notes. `checklist.json` is the saved question file: four named questions, three `decide` and one `choose`, each with its own threshold.
+
+## Check the file before the release
+
+`annotate --dry-run` reads the question file, validates it, and sends nothing. It runs in a lint job with no key in the environment.
+
+```bash
+set -euo pipefail
+
+env -u TYPESAFE_API_KEY thinkthen annotate checklist.json --dry-run \
+  --input release-notes.txt > /dev/null && printf 'checklist ok\n' | mustmatch "checklist ok"
+```
 
 ## Run the checklist
 
-All four questions travel in one request, because the backend answers several named questions over one evidence.
+The evidence is one text document, so the output is the object of named answers alone. There is no record to add fields to.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide run release-checks.md --replay recording/ \
-  < release-notes.txt > "$work/checks.json"
+thinkthen annotate checklist.json --input release-notes.txt --replay recording/ \
+  > "$work/checks.json"
 
-jq -r '.answers | keys_unsorted | join(",")' "$work/checks.json" \
+jq -r 'keys_unsorted | join(",")' "$work/checks.json" \
   | mustmatch "names_upgrade_command,states_upload_limit,lists_known_issues,session_lifetime"
-jq -c '.answers.names_upgrade_command.assessment | {status, value}' "$work/checks.json" \
-  | mustmatch '{"status":"accepted","value":true}'
-jq -c '.answers.session_lifetime.assessment | {status, value}' "$work/checks.json" \
-  | mustmatch '{"status":"accepted","value":"shorter"}'
+jq -c '.' "$work/checks.json" \
+  | mustmatch '{"names_upgrade_command":true,"states_upload_limit":true,"lists_known_issues":true,"session_lifetime":"shorter"}'
 ```
 
-The question names come back in file order, so the checklist reads top to bottom the way the file does.
+The names come back in file order, so the checklist reads top to bottom the way the file does. A `decide` answer is a boolean, a `choose` answer is a string, and an unresolved answer of either kind is `null`.
 
 ## Read it as a checklist
 
-One `jq` program turns the answers map into lines a person can read, and the `if` questions and the `which` question print the same way.
+One `jq` program turns the object into lines a person can read. The `decide` answers and the `choose` answer print the same way.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide run release-checks.md --replay recording/ \
-  < release-notes.txt > "$work/checks.json"
+thinkthen annotate checklist.json --input release-notes.txt --replay recording/ \
+  > "$work/checks.json"
 
 jq -r '
-  .answers
-  | to_entries[]
+  to_entries[]
   | [.key,
-     (if .value.assessment.status != "accepted" then "review"
-      elif .value.assessment.value == false then "fail"
+     (if .value == null then "review"
+      elif .value == false then "fail"
       else "ok" end)]
   | @tsv
 ' "$work/checks.json" | mustmatch "names_upgrade_command	ok
@@ -57,6 +67,8 @@ states_upload_limit	ok
 lists_known_issues	ok
 session_lifetime	ok"
 ```
+
+`session_lifetime` prints `ok` because its answer is a label and not `false`. The checklist cannot tell `shorter` from `longer` without naming the labels it wants, and the release gate below has to do that itself.
 
 ## Fail the build on a failed check
 
@@ -67,11 +79,15 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide run release-checks.md --replay recording/ \
-  < release-notes.txt > "$work/checks.json"
+thinkthen annotate checklist.json --input release-notes.txt --replay recording/ \
+  > "$work/checks.json"
 
-jq -e '[.answers[] | .assessment.status == "accepted" and .assessment.value != false] | all' \
-  "$work/checks.json" > /dev/null && rc=0 || rc=$?
+jq -e '
+  .names_upgrade_command == true
+  and .states_upload_limit == true
+  and .lists_known_issues == true
+  and (.session_lifetime == "shorter" or .session_lifetime == "unchanged")
+' "$work/checks.json" > /dev/null && rc=0 || rc=$?
 
 case $rc in
   0) printf 'release notes pass\n' ;;
@@ -84,9 +100,8 @@ The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **Markdown with frontmatter is the saved question file.** The team that owns the checks reads the file, and the prose between the headings is where the reason for a check lives. The exact grammar this demo used, which decide.md has to pin: a YAML frontmatter block for the defaults, a level-two heading per question whose text is the question name, and one fenced `yaml` block under that heading holding `verb`, `ask`, and the `options` or `levels` the verb needs. Prose anywhere else is ignored. One parser reads the frontmatter and the question blocks, so the grammar is YAML and the headings.
-- **A question name is a key in JSON and a word in a `jq` path, so its characters have to be fixed.** This demo used lowercase letters, digits, and underscores. Without a rule, a heading with a space becomes `.answers["states upload limit"]` and every checklist reads worse.
-- **The frontmatter carries a default pass mark and a question overrides it.** The draft puts a mark on each question and an override on the command line, with nothing in between, so a file of twelve `if` questions repeats one number twelve times. This file sets `min_prob: 0.9` once and the `which` question sets `0.8` for itself, because a four-way pick is not a two-sided decision. This bears on question 7 of the design study, the home of a pass mark.
-- **`--min-prob` on the command line overriding every question is blunt, and it should stay.** In this file it would flatten a 0.9 and a 0.8 into one number, which is wrong for a release gate. It is still the right flag for one job: sweeping a file at several marks to see what moves. The help should say that is what it is for.
-- **`run` prints one document and a checklist wants lines.** The `jq` program above is nine lines and every user of `run` will write it. Smallest fix: put that program in the `run` help as the worked example. No new output mode is needed, because the shape of a checklist line is a local preference.
-- **No question in the file asks whether the notes are good.** Each one names something a reader can point at. That rule belongs in the `run` help, next to the file grammar, because a saved file is exactly where a bad question gets written once and run forever.
+- **The demo confirms JSON for the saved file.** One format for the configuration, the questions, and the results means `jq` edits all three and no second parser enters the build. The old Markdown proposal needed a grammar of frontmatter, headings, and fenced blocks, and this file needs none.
+- **The demo could not write a default threshold.** Three `decide` questions repeat `"0.1:0.9"` three times, and a real checklist of twenty repeats it twenty times. ADR 0007 gives the file `version` and `questions` and makes any other key an error, so a user cannot add a default and the command line has no `--threshold` for `annotate` either. The demo asks for one optional top-level `threshold` that a question overrides.
+- **The demo could not tell a failed check from an unresolved one in one pass.** A bare answer is the value, so `false` and `null` are two `jq` tests and a `choose` answer needs a third. The nine-line checklist program above is what every user of `annotate` will write. The demo asks that it sit in the `annotate` help as the worked example.
+- **The exit code says nothing about the answers, and that is right.** `annotate` finishes at 0 whatever the checks said. The gate is `jq -e`. That is code, and the surface never lets the model set the build's exit code.
+- **No question in the file asks whether the notes are good.** Each one names something a reader can point at. That rule belongs in the `annotate` help next to the file grammar, because a saved file is exactly where a bad question gets written once and run forever.

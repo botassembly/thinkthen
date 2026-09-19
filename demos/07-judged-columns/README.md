@@ -2,37 +2,47 @@
 
 Status: red
 
-Verbs: `decide where`
+Verbs: `annotate`, `filter`
 
 A buyer keeps a product list and wants two columns that no supplier fills in: whether the listing says a bulb comes with the lamp, and whether the listing says the thing needs assembly. Both are facts a reader can point at in the text. The columns go onto the records first, and the spreadsheet comes out at the end.
 
+Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
+
 ## Input
 
-`listings.jsonl` holds five product listings with `sku`, `price`, and `body`.
+`listings.jsonl` holds five product listings with `sku`, `price`, and `body`. `columns.json` holds the two questions, each with its own band and each pointing at `/body`. `collides.json` holds one question named after a field the records already carry.
 
-## Add one column
+## Add both columns in one pass
 
-`--as NAME` keeps the record and appends the judgment as a field, with its status in a field beside it. Nothing is selected and nothing is dropped.
+An object record gains one top-level field per question. The two questions share an `on`, so they share one request.
 
 ```bash
 set -euo pipefail
 
-thinkthen decide where 'the listing states that a bulb is included' \
-  --input jsonl --on /body --as bulb_included \
-  --min-prob 0.9 --replay recording/ < listings.jsonl \
-  | jq -r '[.sku, (.bulb_included|tostring), .bulb_included_status] | @tsv' \
-  | mustmatch "LMP-11	false	accepted
-LMP-12	true	accepted
-CHR-03	false	accepted
-DSK-07	false	accepted
-LMP-14	true	accepted"
+thinkthen annotate columns.json --jsonl --input listings.jsonl --replay recording/ \
+  | jq -r '[.sku, (.bulb_included|tostring), (.needs_assembly|tostring)] | @tsv' \
+  | mustmatch "LMP-11	false	null
+LMP-12	true	false
+CHR-03	false	true
+DSK-07	false	false
+LMP-14	true	false"
 ```
 
-The status field is what keeps a column honest. An unsure row carries `null` in the value and `unsure` in the status, and no row is quietly turned into `false`.
+`LMP-11` says "ships flat packed" and never says whether anything has to be screwed together. Its band put it at `null`. That is the right place for it. Nothing turned an unsure answer into `false`.
 
-## Add a second column
+The record keeps every field it arrived with, and the new fields sit beside them.
 
-Each pass is its own command, and the record that comes out of the first is the record that goes into the second.
+```bash
+set -euo pipefail
+
+thinkthen annotate columns.json --jsonl --input listings.jsonl --replay recording/ \
+  | head -1 | jq -c 'keys_unsorted' \
+  | mustmatch '["sku","price","body","bulb_included","needs_assembly"]'
+```
+
+## A chain stays flat
+
+`filter` prints its kept records byte for byte and `annotate` adds top-level fields, so two judgments in a row leave the record at one level. The second `jq` reads `.sku` and not `.input.sku`.
 
 ```bash
 set -euo pipefail
@@ -40,53 +50,67 @@ set -o pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide where 'the listing states that a bulb is included' \
-  --input jsonl --on /body --as bulb_included \
-  --min-prob 0.9 --replay recording/ < listings.jsonl \
-  | thinkthen decide where 'the listing states that assembly is needed' \
-      --input jsonl --on /body --as needs_assembly \
-      --min-prob 0.9 --replay recording/ \
+thinkthen filter 'Is this listing for a lamp?' \
+  --jsonl --field /body --threshold 0.9 --input listings.jsonl --replay recording/ \
+  | thinkthen annotate columns.json --jsonl --replay recording/ \
   > "$work/judged.jsonl"
 
-wc -l < "$work/judged.jsonl" | tr -d ' ' | mustmatch "5"
-jq -r 'select(.needs_assembly_status == "unsure") | .sku' "$work/judged.jsonl" \
-  | mustmatch "LMP-11"
-jq -r 'select(.needs_assembly == true) | .sku' "$work/judged.jsonl" \
-  | mustmatch "CHR-03"
+jq -r '[.sku, (.bulb_included|tostring)] | @tsv' "$work/judged.jsonl" \
+  | mustmatch "LMP-11	false
+LMP-12	true
+LMP-14	true"
 ```
-
-`LMP-11` says "ships flat packed" and never says whether anything has to be screwed together. It lands in the unsure band, which is the right place for it.
 
 ## Hand it to a spreadsheet
 
-The columns are already on the records, so the CSV step is `jq` and no second judgment.
+The columns are already fields, so the CSV step is `jq` and no second judgment.
 
 ```bash
 set -euo pipefail
-set -o pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-thinkthen decide where 'the listing states that a bulb is included' \
-  --input jsonl --on /body --as bulb_included \
-  --min-prob 0.9 --replay recording/ < listings.jsonl \
-  | thinkthen decide where 'the listing states that assembly is needed' \
-      --input jsonl --on /body --as needs_assembly \
-      --min-prob 0.9 --replay recording/ \
-  | jq -r '[.sku, .price, .bulb_included, .bulb_included_status, .needs_assembly, .needs_assembly_status] | @csv' \
+thinkthen annotate columns.json --jsonl --input listings.jsonl --replay recording/ \
+  | jq -r '[.sku, .price, .bulb_included, .needs_assembly] | @csv' \
   > "$work/catalogue.tmp"
 
 mv -- "$work/catalogue.tmp" "$work/catalogue.csv"
-head -1 "$work/catalogue.csv" | mustmatch '"LMP-11",34,false,"accepted",false,"accepted"'
-grep -c ',' "$work/catalogue.csv" | mustmatch "5"
+head -1 "$work/catalogue.csv" | mustmatch '"LMP-11",34,false,'
+wc -l < "$work/catalogue.csv" | tr -d ' ' | mustmatch "5"
+```
+
+## A name that is already taken
+
+`collides.json` names its question `price`, and every record already carries a `price`. That is an input error for the record, before any request for it.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+thinkthen annotate collides.json --jsonl --input listings.jsonl --replay recording/ \
+  > "$work/out.jsonl" 2> "$work/err.txt" && rc=0 || rc=$?
+
+printf 'rc=%s\n' "$rc" | mustmatch "rc=2"
+wc -c < "$work/out.jsonl" | tr -d ' ' | mustmatch "0"
+mustmatch like "price" < "$work/err.txt"
+```
+
+The file itself is fine, so `--dry-run` passes it. The collision is a fact about the records.
+
+```bash
+set -euo pipefail
+
+thinkthen annotate collides.json --dry-run --jsonl --input listings.jsonl \
+  > /dev/null && printf 'file ok\n' | mustmatch "file ok"
 ```
 
 The recording under `recording/` does not exist yet.
 
 ## What this demo decides
 
-- **Define `--as NAME` for `jsonl` now, and not only for CSV.** records.md puts `--as` in the CSV paragraph and defers the whole thing. This demo needed it for JSONL, where there is no quoting dialect to settle and no collision rule to invent beyond one line. Every alternative was worse: `--emit annotated` makes the next `jq` read `.input.sku` and the one after that read `.input.input.sku`, because the wrapper nests on every pass. Flat columns chain and nested wrappers do not. Proposed rule: `--as NAME` implies `--emit input`, appends `NAME` and `NAME_status`, and a record that already carries either field fails as a record error.
-- **The status field must sit beside the value and must be named.** Without it, `false` and "the model was not sure" are the same cell in a spreadsheet, which is the error the four outcomes exist to prevent. Proposed rule: the value is `null` when the status is not `accepted`, and `NAME_status` carries `accepted`, `unsure`, or `unassessed`.
-- **`--as` and `--emit` are two answers to one question, and one of them should win.** Proposed rule: `--as` with any explicit `--emit` other than `input` is a usage error, exit 2. Two flags that both decide the output shape is one flag too many.
-- **Chaining two stream commands doubles the process count and stays readable.** Two passes over five records is two commands, and the pipeline says which column came from which question. No combined verb is wanted.
-- **CSV can stay deferred.** Once the columns are fields on a JSON record, `jq -r '@csv'` is the whole CSV feature, and the quoting dialect belongs to `jq`. records.md can drop the promise of a CSV framing and name the `@csv` line instead.
+- **The demo confirms flat fields.** Two judgments in a row leave the record at one level, and every `jq` on this page reads `.sku`. The old wrapper nested on every pass and made the third read `.input.input.sku`.
+- **The demo could not see which answers were unsure without reading the values twice.** The old surface put a status field beside each column. ADR 0007 spells unresolved as `null`, so a spreadsheet cell reading `null` and a listing that genuinely says nothing are the same cell. In this page that is correct and legible. In CSV it is an empty field. The demo accepts `null` and asks that the `annotate` help warn about the CSV step.
+- **The demo could not tell whether the two questions really shared one request.** ADR 0007 says questions with the same `on` share one request, and it gives an `annotate --details` row one `meta`. A record whose questions have two different pointers makes two requests and has one `meta` to report them in. The surface needs to say what `meta.usage` holds then, or make it a list.
+- **The collision error at exit 2 arrives before the first request and contradicts the exit table.** Every record collides here, so nothing was sent and the code is honest. A file whose fortieth record carries the name would print thirty-nine rows and still exit 2. This is the same gap demo 03 found.
+- **`annotate --dry-run` checks the file and not the records, and the demo shows why that is a limit.** The dry run above passes a file that fails on the first record. One line in the help closes it.
