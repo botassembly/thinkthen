@@ -1,5 +1,7 @@
 # 09 What leaves the machine
 
+Absorbed by how-to 03, which keeps only the records that match a meaning. ADR 0016 rules that this folder stays until 03 is green and then leaves.
+
 Status: red
 
 Verbs: `filter`

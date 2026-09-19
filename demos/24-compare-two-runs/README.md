@@ -16,14 +16,11 @@ The transform is `../../transforms/compare/compare.jq`. The earlier run arrives 
 
 ```bash
 set -euo pipefail
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
 before=../../transforms/rows/runs/run-a.jsonl
 after=../../transforms/rows/runs/run-b.jsonl
 
 jq -n --slurpfile before "$before" -f ../../transforms/compare/compare.jq "$after" \
-  > "$work/compare.json"
-jq -c '{paired, same, flips}' "$work/compare.json" \
+  | jq -c '{paired, same, flips}' \
   | mustmatch '{"paired":40,"same":36,"flips":{"yes to unresolved":["C-11","C-39"],"unresolved to yes":["C-12"],"unresolved to no":["C-16"]}}'
 ```
 
@@ -90,4 +87,3 @@ sh ../../transforms/compare/example.sh | jq -c '{paired, same}' \
 - [How to check the judge against human labels](../25-check-the-judge/)
 - [How to pick a threshold from labeled cases](../13-pick-a-threshold/)
 - [How to know what a run cost](../28-what-a-run-cost/)
-- [How to see whether a probability means what it says](../38-what-a-probability-means/)

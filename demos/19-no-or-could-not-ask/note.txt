@@ -1,4 +1,0 @@
-Change 812: raise the cache timeout from 30 to 120 seconds.
-
-Rolled out on staging on Tuesday and left running overnight. The queue
-drained normally and the error rate did not move. Ready for production.
