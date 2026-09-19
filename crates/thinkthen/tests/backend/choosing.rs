@@ -1,9 +1,9 @@
 //! The compiled binary asking a pick and a placement of a loopback backend.
 
-use std::io::{self, Write};
-use std::process::{Command, Output, Stdio};
+use std::io;
+use std::process::Output;
 
-use crate::harness::{Canned, Listener};
+use crate::harness::{Canned, Listener, spawn};
 
 /// The teams a routing question picks between, in the order they are sent.
 const TEAMS: [&str; 4] = ["billing", "shipping", "account", "other"];
@@ -44,26 +44,13 @@ const PLACED: &str = concat!(
 
 /// Run one verb against one URL, with no environment but the key.
 fn ask(base: &str, verb: &str, labels: &[&str], arguments: &[&str]) -> io::Result<Output> {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    command
-        .env_clear()
-        .env("THINKTHEN_API_KEY", "sk-test-value")
-        .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
-        .args([verb, "Which team owns this request?"])
-        .args(labels)
-        .args(["--url", base, "--model", "local-1"])
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    let mut child = command.spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(TICKET.as_bytes());
-    drop(input);
-    child.wait_with_output()
+    let asked = [verb, "Which team owns this request?"];
+    let named = ["--url", base, "--model", "local-1"];
+    spawn(
+        &[&asked[..], labels, &named[..], arguments].concat(),
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        TICKET.as_bytes(),
+    )
 }
 
 /// Ask a pick of a listener serving this one response.
@@ -253,6 +240,9 @@ fn listed(values: &[String]) -> Vec<&str> {
     values.iter().map(String::as_str).collect()
 }
 
+/// One refusal case: the verb, its labels, the options it carries, and its name.
+type Refusal<'a> = (&'a str, Vec<&'a str>, &'a [&'a str], &'a str);
+
 #[test]
 fn a_list_the_verb_does_not_take_is_refused_and_no_request_leaves_the_machine() {
     let long_options = many(256);
@@ -260,7 +250,7 @@ fn a_list_the_verb_does_not_take_is_refused_and_no_request_leaves_the_machine() 
     let band: &[&str] = &["--threshold", "0.1:0.9"];
     let cut: &[&str] = &["--threshold", "0.8"];
     let none: &[&str] = &[];
-    let cases: [(&str, Vec<&str>, &[&str], &str); 11] = [
+    let cases: [Refusal<'_>; 11] = [
         ("choose", vec!["billing"], none, "one option"),
         ("choose", Vec::new(), none, "no option at all"),
         ("choose", listed(&long_options), none, "256 options"),

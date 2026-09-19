@@ -1,11 +1,11 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::Output;
 
-use crate::harness::{Canned, Listener};
+use crate::harness::{Canned, Listener, spawn};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -21,26 +21,8 @@ const BUILT_IN: &str = "https://api.typesafe.ai/v1/systemone";
 
 /// Run `decide` over the evidence, with no environment but what the case names.
 fn decide(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    command
-        .env_clear()
-        .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
-        .args(["decide", "asks for a refund"])
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    for (name, value) in environment {
-        command.env(name, value);
-    }
-    let mut child = command.spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(EVIDENCE);
-    drop(input);
-    child.wait_with_output()
+    let asked = ["decide", "asks for a refund"];
+    spawn(&[&asked[..], arguments].concat(), environment, EVIDENCE)
 }
 
 /// A folder this test owns, removed and remade so each run starts empty.

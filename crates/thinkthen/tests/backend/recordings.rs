@@ -1,11 +1,11 @@
 //! The compiled binary against a folder of recorded exchanges.
 
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::Output;
 
-use crate::harness::{Canned, Listener};
+use crate::harness::{Canned, Listener, spawn};
 use thinkthen_core::recording::{Entry, Exchange};
 use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url, systemone};
 
@@ -30,25 +30,7 @@ const EVIDENCE: &str = "Refund me please.";
 
 /// Run the binary over one line of evidence, with the environment the case names.
 fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    command
-        .env_clear()
-        .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    for (name, value) in environment {
-        command.env(name, value);
-    }
-    let mut child = command.spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(EVIDENCE.as_bytes());
-    drop(input);
-    child.wait_with_output()
+    spawn(arguments, environment, EVIDENCE.as_bytes())
 }
 
 /// Run `decide` against one named base, asking one question.

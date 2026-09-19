@@ -1,9 +1,9 @@
 //! The compiled binary against a loopback backend: the request it sends and the reply it reads.
 
-use std::io::{self, Write};
-use std::process::{Command, Output, Stdio};
+use std::io;
+use std::process::Output;
 
-use crate::harness::{Canned, Listener};
+use crate::harness::{Canned, Listener, spawn};
 use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, systemone};
 
 /// The response a backend gives when it answers the one question that was asked.
@@ -38,27 +38,19 @@ const KEY: Option<&str> = Some("sk-test-value");
 /// `key` is the value `THINKTHEN_API_KEY` holds, or `None` for a run with the
 /// variable unset.
 fn decide(base: &str, arguments: &[&str], key: Option<&str>, evidence: &str) -> io::Result<Output> {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    command
-        .env_clear()
-        .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
-        .args(["decide", "asks for a refund"])
-        .args(["--url", base, "--model", "local-1"])
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    if let Some(key) = key {
-        command.env("THINKTHEN_API_KEY", key);
-    }
-    let mut child = command.spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(evidence.as_bytes());
-    drop(input);
-    child.wait_with_output()
+    let asked = [
+        "decide",
+        "asks for a refund",
+        "--url",
+        base,
+        "--model",
+        "local-1",
+    ];
+    spawn(
+        &[&asked[..], arguments].concat(),
+        &key.map_or_else(Vec::new, |value| vec![("THINKTHEN_API_KEY", value)]),
+        evidence.as_bytes(),
+    )
 }
 
 #[test]
