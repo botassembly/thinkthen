@@ -1,9 +1,4 @@
 //! A loopback listener that serves scripted responses and records what it was sent.
-#![allow(
-    dead_code,
-    reason = "every test file compiles this module and each one uses part of it"
-)]
-
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{Receiver, Sender, channel};

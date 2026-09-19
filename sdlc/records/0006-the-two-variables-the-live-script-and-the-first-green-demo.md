@@ -41,7 +41,7 @@ Each rule was watched failing at the code before the code was right.
 | An empty variable counts as absent | `address::a_variable_that_holds_nothing_counts_as_absent`, `address::a_key_that_is_unset_or_empty_is_exit_four_and_names_the_variable_it_read` |
 | The key is read from `THINKTHEN_API_KEY`, and no error, plan, recording, or `Debug` line carries it | `address::the_key_comes_from_thinkthen_api_key_and_reaches_nothing_but_the_header`, `decide_edge::no_diagnostic_ever_carries_the_key_or_the_evidence`, `record_and_replay::a_recorded_exchange_replays_with_no_listener_and_no_key` |
 | The pinned recording digest from ticket 0004 still holds | `recording::tests::the_digest_of_the_fixture_request_is_the_name_the_entry_keeps` |
-| `sdlc/scripts/spec` prints `demos: 1 green` and touches no network | `env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/spec`, exit 0, `demos: 1 green, 14 red` |
+| `sdlc/scripts/spec` prints `demos: 1 green` and touches no network | `env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/spec`, exit 0, `demos: 1 green, 13 red` |
 | The live script's refusal at the limit, with no network | `live_script::a_ledger_at_its_limit_refuses_the_job_and_leaves_the_spend_alone`, `a_key_that_holds_nothing_refuses_the_job_and_never_shows_a_value`, `a_job_the_repository_does_not_hold_is_refused_before_anything_else` |
 | `sdlc/planning/plan.md` gains the tokens the recording spent | The table under Live testing budget, 626 tokens on 2026-09-19 |
 | The ratchet equals the measured total | `sdlc/scripts/ratchet.mjs`, run by `lint` |
@@ -98,12 +98,16 @@ The review also named the failure of a live job as a lost spend. That was fixed 
 | 2 | `sdlc/scripts/test` | 0 |
 | 3 | `sdlc/scripts/spec` | 0 |
 
-One hundred and four tests, one documentation test, twenty-one spec examples, and the demo runner over one green demo and fourteen red ones pass. Rung 3 was run with `env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL`.
+One hundred and four tests, one documentation test, twenty-one spec examples, and the demo runner over one green demo and thirteen red ones pass. Rung 3 was run with `env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL`.
 
 ## The ratchet
 
-The ceiling was 4094 and is 4531. `tests/address.rs` holds the six cases the two variables need and `tests/live_script.rs` holds the three refusals, which is the whole growth; the source itself moved by a few lines, because the address rule replaced a stored URL with one function both paths call. Duplication was looked for in `backend.rs`, `edge.rs`, and the three listener test files before a line was added. The one shared shape across the test files is the process runner, and each file writes the environment its own cases need, so folding them would cost more in arguments than it saves in lines.
+The ceiling was 4094 and is 4520. `tests/address.rs` holds the six cases the two variables need and `tests/live_script.rs` holds the three refusals, which is the whole growth; the source itself moved by a few lines, because the address rule replaced a stored URL with one function both paths call. Duplication was looked for in `backend.rs`, `edge.rs`, and the three listener test files before a line was added. The one shared shape across the test files is the process runner, and each file writes the environment its own cases need, so folding them would cost more in arguments than it saves in lines.
 
 ## Dependencies
 
 None added, none removed.
+
+## Correction
+
+Written 2026-09-19 under ticket 0007, from `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0006.md` item 4. This record first said the ceiling was 4531 and that fourteen demos were red. `sdlc/ratchet.json` held 4520 and `sdlc/scripts/spec` printed `demos: 1 green, 13 red`. The three lines above now carry the measured numbers.

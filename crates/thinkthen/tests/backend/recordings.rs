@@ -1,13 +1,11 @@
 //! The compiled binary against a folder of recorded exchanges.
 
-mod harness;
-
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
-use harness::{Canned, Listener};
+use crate::harness::{Canned, Listener};
 use thinkthen_core::recording::{Entry, Exchange};
 use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url, systemone};
 

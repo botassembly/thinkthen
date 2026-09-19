@@ -1,13 +1,11 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
-mod harness;
-
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
-use harness::{Canned, Listener};
+use crate::harness::{Canned, Listener};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(

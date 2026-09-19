@@ -29,7 +29,10 @@ for page in */README.md; do
 	# A page names the folder in its blocks and in its prose, where a backtick
 	# closes the name, so a backtick ends the name here too.
 	sed -n 's/.*--replay \([^ `]*\).*/\1/p' "$page" | sort -u | while IFS= read -r named; do
-		[ -n "$named" ] || continue
+		if [ -z "$named" ]; then
+			printf 'demos: %s writes --replay with no folder name after it\n' "$page" >&2
+			exit 1
+		fi
 		if [ ! -d "$folder/$named" ]; then
 			printf 'demos: %s is green, and it names no folder %s\n' "$page" "$named" >&2
 			exit 1

@@ -11,8 +11,11 @@
 # argument, and never writes it anywhere.
 set -eu
 
+# The ledger is the one beside this script. No variable moves it, because a
+# variable that moved it would let any caller point the spend limit at a
+# throwaway file. A test copies this script into a tree of its own instead.
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-LEDGER=${THINKTHEN_LIVE_LEDGER:-$REPO/sdlc/live-tokens}
+LEDGER=$REPO/sdlc/live-tokens
 
 job=${1:-}
 if [ -z "$job" ]; then

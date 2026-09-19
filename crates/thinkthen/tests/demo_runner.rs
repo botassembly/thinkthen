@@ -70,6 +70,16 @@ fn a_green_page_that_names_no_recording_folder_stops_the_run() {
 }
 
 #[test]
+fn a_green_page_that_names_the_folder_in_backticks_stops_the_run() {
+    let output = demos("crates/thinkthen/tests/fixtures/demos-unnamed").expect("the runner runs");
+
+    let said = printed(&output);
+    assert_eq!(output.status.code(), Some(1), "{said}");
+    assert!(said.contains("no folder name after it"), "{said}");
+    assert!(!said.contains("running"), "{said}");
+}
+
+#[test]
 fn the_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
     let output = demos("demos").expect("the runner runs");
 

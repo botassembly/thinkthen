@@ -1,11 +1,9 @@
 //! The compiled binary against a loopback backend: the request it sends and the reply it reads.
 
-mod harness;
-
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
-use harness::{Canned, Listener};
+use crate::harness::{Canned, Listener};
 use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, systemone};
 
 /// The response a backend gives when it answers the one question that was asked.
