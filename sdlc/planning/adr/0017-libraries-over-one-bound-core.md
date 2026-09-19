@@ -1,9 +1,9 @@
-# ADR 0017: Libraries for other languages, held together by shared cases
+# ADR 0017: Libraries for other languages over one bound core
 
 - Status: Proposed. It becomes Accepted on Ian's word. Nothing is built from it until then, except the small guards named under "Decided now"
 - Date: 2026-09-19
 
-Ian asked whether the grammar of the shell tool can also exist as a library for Python, for JavaScript and TypeScript, and for Rust, perhaps with the Rust core compiled to WebAssembly. He also ruled that other backends will come, so nothing may tie the project to one vendor. A second agent read the core, the vendor's two thin clients, two community Rust crates, and one real third-party caller, and it wrote `sdlc/planning/sdk-design-study.md`. This ADR judges that study.
+Ian asked whether the grammar of the shell tool can also exist as a library for Python, for JavaScript and TypeScript, and for Rust, perhaps with the Rust core compiled to WebAssembly. He also ruled that other backends will come, so nothing may tie the project to one vendor. A second agent read the core, the vendor's two thin clients, two community Rust crates, and one real third-party caller, and it wrote `sdlc/planning/sdk-design-study.md`. This ADR judges that study, and it departs from the study on the main question.
 
 ## Why a library at all
 
@@ -35,16 +35,24 @@ match d.outcome:
 
 ## Recommendation
 
-**B, in stages, and Python first.**
+**A, bind the Rust core, in stages, and Python first.** The first draft of this ADR followed the study and recommended B. Ian challenged it on 2026-09-19: performance aside, one copy of the rules is the whole point of having a pure core. The agent read the study's argument again and reversed. Three of its points do not hold.
 
-1. The shared cases are written against the shipped shell tool. They also guard the shell tool itself, so they pay for themselves before any library exists.
-2. The Rust package becomes a library with the binary as its first caller.
-3. Python follows as a pure port: `decide`, `choose`, `score`, question files, replay, and rows first, then `filter`, `rank`, `annotate`, and concurrency.
-4. TypeScript waits until Python has been used in anger. The choice between a port and WebAssembly for JavaScript is made then, with the cases in hand, because the cases are needed under either choice.
+- **The study's seam objection rests on a wrong picture.** It says an adapter written in Python would have to call back through the binding. That is true only if the core drives the request. It does not. The core touches no socket, no file, and no clock, and an adapter is two pure functions: plan in and bytes out, bytes in and answers out. The host language sends the request. A Python adapter is then plain Python beside the built-in one, and nothing calls back through anything.
+- **The rules are not that small once they are counted.** The core holds the question-file grammar with every refusal and its sentence, precedence with the source of each setting, the threshold rule, the score arithmetic, the adapter's encoder and decoder, the row, the encoding behind every digest, and the recording key. Under B all of that is written three times, and every refusal sentence must match in three places. Under A each language writes only what is truly its own: sending the request, waiting and retrying, running several at once, reading and writing recording files, and wrapping the row in types that feel native.
+- **The hardest rule to port is the one that must never drift.** A recording is found by a digest of the exact request bytes. Python's JSON writer escapes every character outside ASCII by default, and JavaScript's and Rust's do not. One accented letter in the evidence would give a Python port a different digest, and a recording made by the shell tool would silently fail to replay. The study itself called this the hard part. Under A the bytes come from one encoder, so recordings are shared across languages by construction.
 
-The rules at risk are few and small: a band is three comparisons, a tie is unresolved, a score is a weighted sum, and precedence is three ordered sources. Each is a table, and a table is a fixture. The pure core is the reason WebAssembly is even possible, and that door stays open.
+What A really costs. Python wheels are built per platform in the release workflow, and a machine with no matching wheel needs a Rust toolchain. This is a solved problem with standard tools, and it is paid once. JavaScript gets the core as WebAssembly, and bundlers differ in how they load it, so Node comes first and the browser waits for someone who needs it. A debugger stops at the edge of the core, which matters little because the core is small, pure, and answers every mistake with a sentence. Speed is not part of the argument either way, because the network call takes hundreds of milliseconds and everything else takes microseconds.
 
-The libraries start after version one of the shell tool is whole, which means after `annotate` and `find` land. The cost of this recommendation is that every later rule change touches the cases and two implementations, and that the project maintains a small HTTP client with retries in each language.
+The stages:
+
+1. The core's public surface becomes a handful of plain functions over text and bytes: parse a question file, resolve a question from a file and overrides, encode a request, decode a response into a row, and name a recording. The shell tool is their first caller and the Rust library is their second.
+2. A spike binds `decide` alone for Python, builds the wheels in the push check, and installs one on a clean machine with no Rust. It reports the lines of wrapper code and what broke. The spike decides whether A holds, and B remains the fallback if it does not.
+3. Python in full: `decide`, `choose`, `score`, question files, replay, and rows first, then `filter`, `rank`, `annotate`, and several requests at once.
+4. JavaScript and TypeScript over WebAssembly, Node first.
+
+A small set of shared cases still exists, and it is far smaller than under B. It checks each binding end to end: the same question file, the same recorded response, the same row, and the same digest in every language.
+
+The libraries start after version one of the shell tool is whole, which means after `annotate` and `find` land. The cost of this recommendation is a release workflow that builds native packages, and one small HTTP client with retries in each language.
 
 ## Decided now by the agent, and Ian can overturn each
 
@@ -58,5 +66,5 @@ The libraries start after version one of the shell tool is whole, which means af
 ## For Ian
 
 1. Whether libraries are wanted after version one of the shell tool, and whether Python comes first.
-2. Ports held by shared cases, as recommended, or the bound Rust core he first pictured.
+2. The bound Rust core, as he first pictured and as the agent now recommends, or ports held by shared cases, as the study recommends.
 3. The names `thinkthen` on PyPI, npm, and crates.io and `thinkthen-core` on crates.io were all unclaimed on 2026-09-19. Claiming a name is an outward act and is his alone.
