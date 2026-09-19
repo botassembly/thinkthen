@@ -8,6 +8,8 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 use std::time::Duration;
 
+use thinkthen_core::adapters::built_in::ENDPOINT_PATH;
+
 /// One response the listener will serve, in the order the script gives.
 pub(crate) struct Canned {
     status: u16,
@@ -115,7 +117,7 @@ impl Listener {
     pub(crate) fn serving(responses: Vec<Canned>) -> io::Result<Self> {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let base = format!("http://{}/v1", listener.local_addr()?);
-        let url = format!("{base}/systemone");
+        let url = format!("{base}/{ENDPOINT_PATH}");
         let (sender, recorded) = channel();
         let counts = Arc::new(Counts::default());
         thread::spawn(move || serve_script(&listener, responses, &sender));
@@ -138,7 +140,7 @@ impl Listener {
     ) -> io::Result<Self> {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let base = format!("http://{}/v1", listener.local_addr()?);
-        let url = format!("{base}/systemone");
+        let url = format!("{base}/{ENDPOINT_PATH}");
         let (sender, recorded) = channel();
         let counts = Arc::new(Counts::default());
         let serving = Arc::clone(&counts);

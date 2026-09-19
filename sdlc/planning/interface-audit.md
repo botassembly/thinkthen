@@ -4,6 +4,8 @@ Written 2026-09-19 by a reading agent at Ian's request, after he learned that `d
 
 Read-only audit. No file in the tool's repository was changed, no request was made to the vendor, and no key or `.env` value was read or printed.
 
+The paths below were written before ticket 0020 moved the adapter. `crates/thinkthen-core/src/systemone.rs` and `systemone/` now sit under `crates/thinkthen-core/src/adapters/`, and the default model moved from `backend.rs` into the adapter's own module. Line numbers were a snapshot of the day and have drifted since.
+
 Sources are cited three ways. `wheel:<path>:<line>` is the vendor's published Python client, unpacked but not installed; its `_schemas/models.py` is generated from the vendor's own `openapi.json` and is the most exact source there is. `docs:<file>:<line>` is the saved copy of the vendor's documentation. Paths with no prefix are files in the tool's repository. One third-party caller is cited as `jev-align/src/jev_align/jev.py:<line>`.
 
 One fact governs the whole "question file" column. No question file and no question set parser exists in the code. `crates/thinkthen/src/main.rs:45-47` wires exactly three subcommands: `decide`, `choose`, `score`. The verbs `annotate`, `filter`, `rank`, and `find` are specification text only. So every "question file home" below is a proposed shape, not a behavior.

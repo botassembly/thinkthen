@@ -5,9 +5,9 @@ use std::collections::BTreeMap;
 use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
 
+use crate::adapters::systemone::{EncodeError, wire_name};
 use crate::plan::Plan;
 use crate::question::Question;
-use crate::systemone::{EncodeError, wire_name};
 
 /// The body one request carries.
 #[derive(Debug, Serialize)]
@@ -156,17 +156,18 @@ impl RequestQuestion {
 #[cfg(test)]
 mod tests {
     use super::{Request, RequestQuestion, encode};
-    use crate::systemone::tests::{disruption_plan, plan_for, team_plan, urgency_plan};
+    use crate::adapters::systemone::tests::{disruption_plan, plan_for, team_plan, urgency_plan};
     use proptest::collection::vec;
     use proptest::prelude::{Strategy, any};
     use proptest::{prop_assert_eq, proptest};
 
     const DECIDE: &str =
-        include_str!("../../../../specification/fixtures/systemone/decide-urgent.request.json");
+        include_str!("../../../../../specification/fixtures/systemone/decide-urgent.request.json");
     const CHOOSE: &str =
-        include_str!("../../../../specification/fixtures/systemone/choose-team.request.json");
-    const SCORE: &str =
-        include_str!("../../../../specification/fixtures/systemone/score-disruption.request.json");
+        include_str!("../../../../../specification/fixtures/systemone/choose-team.request.json");
+    const SCORE: &str = include_str!(
+        "../../../../../specification/fixtures/systemone/score-disruption.request.json"
+    );
 
     /// The bytes one plan writes, read back as the request they spell.
     fn written(plan: &crate::plan::Plan) -> Request {

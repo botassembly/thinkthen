@@ -128,7 +128,9 @@ Rust splits encode from decode so the pure core keeps both and the binary keeps 
 
 **Identical across backends:** the question file and set, the three kinds and every refusal, the threshold rule, the score arithmetic, `question_sha256`, the result row, the names. **Names the backend:** the recording key, which already digests the adapter name with the URL and request bytes; the entry's `adapter` field; and `meta`, which gains it.
 
-**Leaks today.** `Question`, `Answer`, `Value`, `Threshold`, and `Outcome` carry no vendor word, so the vocabulary is clean. A grep finds these leaks outside `systemone/`.
+**Leaks today.** Ticket 0020 closed every one of the four below. The adapter's module now owns its name, its default address, its default model, and its endpoint path, and `sdlc/scripts/policy.py` holds the seam with no allowed site. `sdlc/records/0020-the-adapter-owns-its-name-address-and-model.md` says what moved. The list is kept as it was written.
+
+**What it said.** `Question`, `Answer`, `Value`, `Threshold`, and `Outcome` carry no vendor word, so the vocabulary is clean. A grep finds these leaks outside `systemone/`.
 
 - `backend.rs`: the vendor address as `DEFAULT_BASE`, the vendor model as the public `DEFAULT_MODEL`, and a URL built by appending `systemone::NAME`. All three belong to the adapter.
 - `recording.rs`: `systemone::NAME` in the digest, the entry, and the replay check. The `adapter` field is right; the constant is the leak.

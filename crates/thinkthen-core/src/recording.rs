@@ -7,8 +7,8 @@ use serde_json::value::RawValue;
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
+use crate::adapters::built_in;
 use crate::digest::hex;
-use crate::systemone;
 use crate::text::Url;
 
 /// The schema string a version one recording entry carries.
@@ -83,16 +83,16 @@ impl<'a> Exchange<'a> {
         Self { url, request }
     }
 
-    /// Take the digest of the wire shape, the URL, and the request bytes.
+    /// Take the digest of the adapter's name, the URL, and the request bytes.
     ///
     /// The adapter writes the same plan to the same bytes every time, so the
-    /// same command reaches the same entry. The wire shape's name leads the
+    /// same command reaches the same entry. The adapter's name leads the
     /// digest, as it has since ticket 0004, so an entry recorded then is found
     /// now.
     #[must_use]
     pub fn digest(&self) -> Digest {
         let mut hasher = Sha256::new();
-        hasher.update(systemone::NAME.as_bytes());
+        hasher.update(built_in::NAME.as_bytes());
         hasher.update(b"\n");
         hasher.update(self.url.as_str().as_bytes());
         hasher.update(b"\n");
@@ -130,7 +130,7 @@ impl Entry {
     pub fn of(exchange: &Exchange<'_>, response: &[u8]) -> Result<Self, EntryError> {
         Ok(Self {
             schema: SCHEMA.to_owned(),
-            adapter: systemone::NAME.to_owned(),
+            adapter: built_in::NAME.to_owned(),
             url: exchange.url.as_str().to_owned(),
             request: json(exchange.request)?,
             response: json(response)?,
@@ -162,7 +162,7 @@ impl Entry {
         if entry.schema != SCHEMA {
             return Err(EntryError::Schema);
         }
-        if entry.adapter != systemone::NAME
+        if entry.adapter != built_in::NAME
             || entry.url != exchange.url.as_str()
             || entry.request.get().as_bytes() != exchange.request
         {
@@ -185,9 +185,9 @@ fn place(error: serde_json::Error) -> EntryError {
 #[cfg(test)]
 mod tests {
     use super::{Entry, EntryError, Exchange, SCHEMA};
+    use crate::adapters::built_in;
     use crate::plan::Plan;
     use crate::question::Question;
-    use crate::systemone;
     use crate::text::{Evidence, ModelName, QuestionText, Url};
 
     /// The digest of the `decide-urgent` fixture request against the built-in URL.
@@ -234,7 +234,7 @@ mod tests {
     }
 
     fn request() -> Vec<u8> {
-        systemone::encode(&plan()).expect("a plan is writable")
+        built_in::encode(&plan()).expect("a plan is writable")
     }
 
     #[test]
@@ -265,7 +265,7 @@ mod tests {
 
         let replayed =
             Entry::replayed(written.as_bytes(), &exchange).expect("the entry answers its own url");
-        let reply = systemone::decode(&plan(), &replayed).expect("a systemone response");
+        let reply = built_in::decode(&plan(), &replayed).expect("a systemone response");
         assert_eq!(reply.model().as_str(), "jev-latest");
     }
 

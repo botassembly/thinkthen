@@ -9,8 +9,8 @@ use std::path::Path;
 use std::process::ExitCode;
 use std::time::Duration;
 
+use thinkthen_core::adapters::built_in;
 use thinkthen_core::recording::Exchange as Recorded;
-use thinkthen_core::systemone;
 use thinkthen_core::{
     Backend, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
     QuestionText, Reading, Record, Reply, Resolved, Sources, Threshold, json_line, question_sha256,
@@ -357,11 +357,11 @@ fn ask(
     recorder: &Recorder,
     client: &Client,
 ) -> Result<(Reply, bool), Failure> {
-    let body = systemone::encode(plan)
+    let body = built_in::encode(plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let recorded = Recorded::new(backend.url(), &body);
     if let Some(response) = recorder.replayed(&recorded)? {
-        return Ok((systemone::decode(plan, &response)?, true));
+        return Ok((built_in::decode(plan, &response)?, true));
     }
     let key = edge::key()?;
     let answered = client.post(&Exchange {
@@ -371,7 +371,7 @@ fn ask(
         max_retries: common.max_retries,
         retry_wait: environment.retry_wait(),
     })?;
-    let reply = systemone::decode(plan, &answered)?;
+    let reply = built_in::decode(plan, &answered)?;
     recorder.record(&recorded, &answered)?;
     Ok((reply, false))
 }

@@ -59,6 +59,8 @@ Status 402 was seen live on 2026-09-19, on an account with no credit left. The v
 
 ## The adapter contract
 
+An adapter owns its name, its default address, its default model, and its endpoint path, and nothing outside its own module names any of the four.
+
 An adapter is two pure functions.
 
 - **encode** takes a plan and returns the request body as bytes. A plan holds the evidence, the model name, and an ordered list of named questions.

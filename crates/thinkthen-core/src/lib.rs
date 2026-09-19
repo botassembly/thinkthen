@@ -9,6 +9,7 @@
 #![forbid(clippy::disallowed_macros, clippy::indexing_slicing)]
 #![forbid(clippy::allow_attributes_without_reason)]
 
+pub mod adapters;
 mod answer;
 mod backend;
 mod digest;
@@ -25,12 +26,12 @@ mod records;
 mod render;
 mod reply;
 mod result;
-pub mod systemone;
 mod text;
 mod threshold;
 
+pub use crate::adapters::built_in::DEFAULT_MODEL;
 pub use crate::answer::{Answer, Value};
-pub use crate::backend::{Backend, BackendError, DEFAULT_MODEL, KEY_VAR};
+pub use crate::backend::{Backend, BackendError, KEY_VAR};
 pub use crate::digest::question_sha256;
 pub use crate::order::ranking;
 pub use crate::plan::{EmptyPlanError, Plan};

@@ -2,22 +2,44 @@
 //!
 //! The two directions live apart. One module writes a plan as bytes and the
 //! other reads bytes as answers, and each one keeps its own fixtures.
+//!
+//! This module owns every word that names the vendor behind this shape: the
+//! adapter's name, the address a run reaches when nothing else names one, the
+//! model a request carries when nothing else names one, and the path the
+//! endpoint sits under. Nothing outside this module names any of the four.
 
 mod request;
 mod response;
 
 use thiserror::Error;
 
-pub use crate::systemone::request::encode;
-pub(crate) use crate::systemone::request::encode_raw;
-pub use crate::systemone::response::decode;
+pub use crate::adapters::systemone::request::encode;
+pub(crate) use crate::adapters::systemone::request::encode_raw;
+pub use crate::adapters::systemone::response::decode;
 
-/// The name this wire shape answers to, in an address and in a recording entry.
+/// The name this adapter answers to, in the recording key and the entry.
 ///
 /// Ruling 1 of ADR 0010 leaves one wire shape, so nothing chooses between
 /// shapes and this is the only name there is. The binary never needs it,
 /// because the address and the entry are both written in this crate.
 pub(crate) const NAME: &str = "systemone";
+
+/// The base this adapter is reached at when nothing else names one.
+///
+/// It ends at the version, as other model clients' bases do. `--url` outranks
+/// `THINKTHEN_BASE_URL`, which outranks this. `specification/backends.md`
+/// states the order.
+pub const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
+
+/// The model this adapter names when `--model` and the question file name none.
+pub const DEFAULT_MODEL: &str = "jev-latest";
+
+/// The path under a base that this adapter's endpoint sits at.
+///
+/// It spells the adapter's name here, and another adapter's need not. The
+/// address rule reads the base and appends this, so the two are separate
+/// values even where they read alike.
+pub const ENDPOINT_PATH: &str = "systemone";
 
 /// Why a plan could not be written as a request body.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]

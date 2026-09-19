@@ -6,8 +6,9 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
+use thinkthen_core::adapters::built_in;
 use thinkthen_core::recording::{Entry, Exchange};
-use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url, systemone};
+use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -76,7 +77,7 @@ fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
 fn plant(folder: &Path, response: &str) -> Option<String> {
     let plan = Plan::new(
         Evidence::new(EVIDENCE).ok()?,
-        ModelName::new("jev-latest").ok()?,
+        ModelName::new(built_in::DEFAULT_MODEL).ok()?,
         vec![Question::Decide {
             text: QuestionText::new("asks for a refund").ok()?,
             yes: None,
@@ -84,8 +85,15 @@ fn plant(folder: &Path, response: &str) -> Option<String> {
         }],
     )
     .ok()?;
-    let request = systemone::encode(&plan).ok()?;
-    let url = Url::new("https://api.typesafe.ai/v1/systemone").ok()?;
+    let request = built_in::encode(&plan).ok()?;
+    // The exchange is built here rather than pinned, so it takes the address
+    // from the adapter that owns it.
+    let url = Url::new(format!(
+        "{}/{}",
+        built_in::DEFAULT_BASE,
+        built_in::ENDPOINT_PATH
+    ))
+    .ok()?;
     let exchange = Exchange::new(&url, &request);
     let name = exchange.digest().file_name();
     let written = Entry::of(&exchange, response.as_bytes())

@@ -5,7 +5,8 @@ use std::process::Output;
 use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn};
-use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, systemone};
+use thinkthen_core::adapters::built_in;
+use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -30,7 +31,7 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
         }],
     )
     .ok()?;
-    systemone::encode(&plan).ok()
+    built_in::encode(&plan).ok()
 }
 
 /// The key a case sends when the case is not about the key itself.
