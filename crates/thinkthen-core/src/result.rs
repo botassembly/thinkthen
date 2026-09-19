@@ -6,7 +6,7 @@ use crate::adapter::Adapter;
 use crate::answer::Answer;
 use crate::assessment::Assessment;
 use crate::question::Question;
-use crate::text::{BackendName, ModelName};
+use crate::text::{BackendName, ModelName, Url};
 
 /// The schema string a version one result carries.
 pub const SCHEMA: &str = "thinkthen.result/1";
@@ -32,7 +32,8 @@ impl Usage {
 /// Who answered, how, and at what cost.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct Meta {
-    backend: BackendName,
+    backend: Option<BackendName>,
+    url: Url,
     adapter: Adapter,
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -40,19 +41,22 @@ pub struct Meta {
 }
 
 impl Meta {
-    /// Name the backend, the adapter, the model, and the usage it reported.
+    /// Name the backend, the URL that answered, the adapter, the model, and the usage.
     ///
+    /// `backend` is `None` for an ad-hoc backend, and the field is then `null`.
     /// `usage` is `None` when the backend reported none, and the field is then
     /// absent from the JSON.
     #[must_use]
     pub const fn new(
-        backend: BackendName,
+        backend: Option<BackendName>,
+        url: Url,
         adapter: Adapter,
         model: ModelName,
         usage: Option<Usage>,
     ) -> Self {
         Self {
             backend,
+            url,
             adapter,
             model,
             usage,
@@ -105,7 +109,7 @@ mod tests {
     use crate::policy::Policy;
     use crate::probability::Probability;
     use crate::question::Question;
-    use crate::text::{BackendName, Condition, ModelName};
+    use crate::text::{BackendName, Condition, ModelName, Url};
 
     /// The example in `specification/result.md`, on the one line it prints on.
     const COMPACT: &str = concat!(
@@ -113,7 +117,8 @@ mod tests {
         r#""question":{"verb":"if","condition":"asks for a refund"},"#,
         r#""answer":{"kind":"yes_no","probability":0.92},"#,
         r#""assessment":{"status":"accepted","value":true,"min_prob":0.9},"#,
-        r#""meta":{"backend":"jev","adapter":"systemone","model":"jev-1.13.0","#,
+        r#""meta":{"backend":"jev","url":"https://api.typesafe.ai/v1/systemone","#,
+        r#""adapter":"systemone","model":"jev-1.13.0","#,
         r#""usage":{"input_tokens":312,"output_tokens":48}}}"#,
     );
 
@@ -126,7 +131,8 @@ mod tests {
             Answer::new_yes_no(probability),
             assess(Answer::new_yes_no(probability), Policy::Symmetric(mark)),
             Meta::new(
-                BackendName::new("jev").expect("not empty"),
+                Some(BackendName::new("jev").expect("not empty")),
+                Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
                 Adapter::SystemOne,
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
@@ -151,17 +157,18 @@ mod tests {
     }
 
     #[test]
-    fn usage_is_absent_when_the_backend_reports_none() {
+    fn usage_is_absent_and_an_ad_hoc_backend_is_null() {
         let meta = Meta::new(
-            BackendName::new("jev").expect("not empty"),
+            None,
+            Url::new("http://127.0.0.1:8080/v1").expect("not empty"),
             Adapter::SystemOne,
-            ModelName::new("jev-1.13.0").expect("not empty"),
+            ModelName::new("local-1").expect("not empty"),
             None,
         );
         let rendered = serde_json::to_string(&meta).expect("meta serializes");
         assert_eq!(
             rendered,
-            r#"{"backend":"jev","adapter":"systemone","model":"jev-1.13.0"}"#
+            r#"{"backend":null,"url":"http://127.0.0.1:8080/v1","adapter":"systemone","model":"local-1"}"#
         );
     }
 

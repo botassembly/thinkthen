@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
 use thiserror::Error;
 
 use crate::answer::Answer;
@@ -96,6 +97,15 @@ struct ResponseUsage {
 ///
 /// Returns [`EncodeError`] when the body cannot be written as JSON.
 pub fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
+    encode_raw(plan).map(|raw| raw.get().as_bytes().to_owned())
+}
+
+/// Write the plan as the request body, ready to sit inside the plan document.
+///
+/// # Errors
+///
+/// Returns [`EncodeError`] when the body cannot be written as JSON.
+pub fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
     let request = Request {
         state: plan.evidence().as_str().to_owned(),
         model: plan.model().as_str().to_owned(),
@@ -106,7 +116,7 @@ pub fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
             .map(|(place, question)| (wire_name(place), RequestQuestion::asking(question)))
             .collect(),
     };
-    serde_json::to_vec(&request).map_err(|error| EncodeError(error.to_string()))
+    serde_json::value::to_raw_value(&request).map_err(|error| EncodeError(error.to_string()))
 }
 
 /// Read the response body as one answer per question the plan asked.

@@ -18,6 +18,12 @@ pub enum BlankTextError {
     /// A model name reports what answered, so it carries text.
     #[error("a model name is text, not white space")]
     ModelName,
+    /// A URL names where the request is posted, so it carries text.
+    #[error("a URL is text, not white space")]
+    Url,
+    /// A key variable names an environment variable, so it carries text.
+    #[error("a key variable name is text, not white space")]
+    KeyVar,
 }
 
 /// Declare one text value that is not blank, its accessor, and its conversions.
@@ -62,10 +68,12 @@ text_value!(Condition, Condition, "condition a question asks about");
 text_value!(Evidence, Evidence, "evidence a judgment reads");
 text_value!(BackendName, BackendName, "backend that answered");
 text_value!(ModelName, ModelName, "model that answered");
+text_value!(Url, Url, "URL a request is posted to");
+text_value!(KeyVar, KeyVar, "environment variable that holds the key");
 
 #[cfg(test)]
 mod tests {
-    use super::{BackendName, BlankTextError, Condition, Evidence, ModelName};
+    use super::{BackendName, BlankTextError, Condition, Evidence, KeyVar, ModelName, Url};
 
     #[test]
     fn new_keeps_the_text_it_was_given() {
@@ -82,7 +90,9 @@ mod tests {
     #[test]
     fn new_refuses_text_that_is_empty_or_only_white_space() {
         type Make = fn(&str) -> Result<(), BlankTextError>;
-        let makers: [(Make, BlankTextError); 4] = [
+        let makers: [(Make, BlankTextError); 6] = [
+            (|text| Url::new(text).map(|_| ()), BlankTextError::Url),
+            (|text| KeyVar::new(text).map(|_| ()), BlankTextError::KeyVar),
             (
                 |text| Condition::new(text).map(|_| ()),
                 BlankTextError::Condition,
