@@ -100,3 +100,65 @@ Issue item 2 asked which public core items the binary needs. `SCHEMA`, `Usage::n
 - `result.md` shows `meta` as backend, url, adapter, model, usage. The order is now fixed by a test, because nothing says it may vary.
 - `decide.md` says `--status` needs `--min-prob` and never says what a set but empty environment variable means. An empty `THINKTHEN_MODEL` counts as given and blank, so it is exit 2 rather than absent.
 - Nothing in the specification names a way to make tests fast. `THINKTHEN_TEST_RETRY_WAIT_MS` is read at the edge, hidden from the help, and documented here as test-only. It shortens the first retry wait and nothing else.
+
+## Review
+
+Second review of record, 2026-09-19, on the branch rebased onto `36010af`. Ian writes no Rust, so this review stands in for him. No request left this machine: every test drove a loopback listener, and the only network access was cargo reading the crate registry it had already cached.
+
+### What was checked
+
+**Secrets and evidence.** Every path a key value can take was read end to end: `edge::key` reads the variable, `decide::ask` hands the value to `http::Exchange`, and `http::send` writes it into one `authorization` header on the resolved URL. Nothing else touches it. `failure::report` is the one place a message is built, and its table carries a status code, a variable name, an error kind, and never a value or a body. The evidence reaches the request body and the plan document and no diagnostic. Two holes were found and closed. The key was a plain `String` inside a struct that derived `Debug`, and the request body, which carries the evidence, was a byte slice in the same derived `Debug`. A key now lives in a type whose `Debug` prints a placeholder, the exchange writes its own `Debug`, and a unit test formats an exchange carrying both and finds neither. ureq strips auth headers on a redirect by default, so a key could never have crossed a host, but the evidence could, which the redirect finding below covers. An ad-hoc backend takes no key variable from any profile: `resolve_backend` builds it with `key_env` from the given values alone, and two core tests hold that.
+
+**The rebased pages.** An environment variable set to the empty string was a usage error and now counts as unset. White space in a variable, and a blank flag value, are still exit 2. `--backend` beside a URL is exit 2. A named key variable holding nothing is exit 4 for a profile and for an ad-hoc backend alike. The timeout covers one attempt, which ureq's global timeout gives from connect to the last byte; the help said the whole exchange and now says one attempt. No wait follows the last attempt. An error message gives the status code and never the body. The plan's `request` is a JSON value. A closed pipe keeps the exit code the command earned. The six plan fields, their order, the exit table, `--status`, the flag-then-variable-then-profile precedence, the ad-hoc rule, the six retried statuses, the doubling wait, the two headers, and the one compact line were each read against the page and each has a test.
+
+**Acceptance.** Every bullet of the ticket has a test. Four of the builder's tests were checked by breaking the code and watching each fail for its own reason, then restoring: dropping the content type gave `left: None, right: Some("application/json")`; taking 429 out of the retried list gave one request against two; swapping the no and unsure exit codes gave `left: Some(3), right: Some(1)`; letting a blank key variable through lost the exit 4. Three of the four fixes below were written red first and their failures are recorded in the commits.
+
+**Dependencies and licenses.** `ureq` with `default-features = false, features = ["rustls"]` is the smallest set that posts HTTPS under a timeout. The default adds `gzip`, which this tool does not need, and dropping it is already done. `native-tls` would put OpenSSL under the binary and cost the single portable file the owner asked for. `platform-verifier` would drop `webpki-roots` and its license, and would make the binary depend on the host carrying a trust store, which costs the same thing. All five crates that force a license were confirmed against `cargo metadata`: `ring`, `rustls-webpki`, and `untrusted` for ISC, `subtle` for BSD-3-Clause, and `webpki-roots` for CDLA-Permissive-2.0. `rustls` itself passes on MIT and needs no exception. The three licenses were allowed globally and are now tied to those crates alone. `serde_json`'s `raw_value` feature is needed: the plan embeds the request as a JSON value rather than a string, and `RawValue` is what writes it once for both the plan and the wire.
+
+**Size.** The canned responses in the exchange tests were four-line struct literals and are now one call each. The refused-reply test became a table. `render.rs` and `plan_document.rs` each hold one job and earn their file. The text newtype macro declares six values in the lines two would take by hand. No defensive check was found that cannot fire.
+
+**Structure.** `http.rs` is the only module naming ureq. `failure::report` is the one map from an error to an exit code and a message. No print macro appears outside a test. The largest file is 371 non-blank lines against a ceiling of 500. Every public item in the core is reachable from a public signature the binary calls, so nothing further can be narrowed; `UnknownAdapterError`, `EmptyPlanError`, `Usage`, `BackendName`, and `Url` have no direct caller but each names a type in a signature the binary uses.
+
+**Robustness.** The response body read was bounded only by whatever ureq defaults to. It is now bounded at one megabyte, named in this crate, with a test that serves two megabytes and watches the command exit 4. A 200 carrying text that is not JSON, a 200 carrying nothing, and a connection closed after an unfilled content length are all exit 4 and none hangs. A slow server is cut off by the per-attempt timeout.
+
+**Gates.** The two lint tables, both `clippy.toml` files, the crate root attributes, and every ladder script are unchanged. `policy.py` changed only in its license handling. No `#[allow]` was added.
+
+### What changed
+
+| Commit | What it does |
+| --- | --- |
+| `ebe8fcb` | Takes an environment variable set to the empty string as unset |
+| `2059302` | Keeps the key and the evidence out of every `Debug` line |
+| `a62a2ee` | Names a canned response instead of spelling out its two fields |
+| `6fc36cf` | Refuses to follow a redirect so a request stays on one host |
+| `f350045` | Bounds the response body one attempt will read |
+| `df33532` | Ties the three TLS licenses to the crates that force them |
+| `1b482c5` | Deletes the assessment reader nobody calls |
+| `6f53f8e` | Says in the help that the timeout covers one attempt |
+| `f4d3e37` | Judges a body that is not JSON and a body the backend cut short |
+| `7518af3` | Shows the empty variable rule in the executable spec |
+
+### What was left
+
+- A profile name in `THINKTHEN_BACKEND` beside a `--url` flag is exit 2, because the values merge one at a time and a name beside a URL is refused whichever source offered it. A user who exports `THINKTHEN_BACKEND` cannot reach an ad-hoc backend at all. `backends.md` refuses the case only for `--backend`, so either reading is defensible and the page has to settle it. The steering agent decides.
+- Standard input has no cap. `edge::evidence` reads to the end into memory, so a stream that never ends fills it. The specification sets no cap today, and inventing one is a settled-page change.
+- A response past the byte bound and a body cut short both count as transport failures, so both are retried. Downloading a megabyte three times is the cost. `backends.md` says a transport failure is retried, so the current behavior follows the page.
+- `edge.rs` and `failure.rs` each carry the word "and" in their first documentation line, which the module rule refuses. Splitting either would cost more lines than the rule saves, because one owns the process edge and the other owns every failure.
+- `Failure::Defect` and `Failure::Render` both reach exit 70 with the same prefix, and nobody distinguishes them. Merging them would drop the serde message that `Render` carries.
+- clap's `env` feature would delete the hand-written environment reading, and it was refused. It reads the environment inside the parser rather than once at the edge, and it takes a variable set to the empty string as a value that was given, which is the opposite of the rule this branch just settled.
+- Items 1 and 3 through 6 of `sdlc/issues/2026-09-19-review-leftovers-from-the-core-tickets.md` still stand. Item 2 is answered: nothing further in the core can be made private.
+
+### The ratchet
+
+The ceiling was 2876 when the branch rebased and is 3010. It rose for the empty variable test, the key type and the hand-written `Debug` with their test, the redirect test, the response bound and its test, and the two response shapes, and it fell for the collapsed canned responses and the deleted accessor.
+
+### The ladder
+
+| Rung | Script | Exit |
+| --- | --- | --- |
+| 0 | `sdlc/scripts/install` | 0 |
+| 1 | `sdlc/scripts/lint` | 0 |
+| 2 | `sdlc/scripts/test` | 0 |
+| 3 | `sdlc/scripts/spec` | 0 |
+
+Good enough to land.
