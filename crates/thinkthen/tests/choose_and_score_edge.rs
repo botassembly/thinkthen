@@ -83,31 +83,6 @@ fn a_placement_plans_the_levels_as_an_ordered_list() {
 }
 
 #[test]
-fn a_list_the_verb_does_not_take_is_a_usage_error_before_any_request() {
-    let long_options = many(256);
-    let long_levels = many(11);
-    let cases: [(&str, Vec<&str>, &str); 9] = [
-        ("choose", vec!["billing"], "one option"),
-        ("choose", Vec::new(), "no option at all"),
-        ("choose", listed(&long_options), "256 options"),
-        ("choose", vec!["billing", "  "], "a blank label"),
-        ("choose", vec!["billing", ""], "an empty label"),
-        ("choose", vec!["billing", "other", "billing"], "a repeat"),
-        ("score", vec!["none"], "one level"),
-        ("score", listed(&long_levels), "eleven levels"),
-        ("score", vec!["none", "none"], "a repeated level"),
-    ];
-
-    for (name, labels, what) in cases {
-        let output = verb(name, &labels, &["--dry-run"]).expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(2), "{what}");
-        assert!(output.stdout.is_empty(), "{what}");
-        assert!(!output.stderr.is_empty(), "{what}");
-    }
-}
-
-#[test]
 fn a_list_at_each_edge_of_the_range_is_taken() {
     let full_options = many(255);
     let full_levels = many(10);

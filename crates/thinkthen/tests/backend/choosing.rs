@@ -242,3 +242,51 @@ fn a_reply_that_answers_with_the_wrong_shape_or_leaves_an_option_out_is_refused(
         assert!(message.contains("`q1`"), "{message}");
     }
 }
+
+/// A list of the given length, so a case can sit on each edge of the range.
+fn many(count: usize) -> Vec<String> {
+    (0..count).map(|place| format!("option{place}")).collect()
+}
+
+/// The same list as borrowed arguments.
+fn listed(values: &[String]) -> Vec<&str> {
+    values.iter().map(String::as_str).collect()
+}
+
+#[test]
+fn a_list_the_verb_does_not_take_is_refused_and_no_request_leaves_the_machine() {
+    let long_options = many(256);
+    let long_levels = many(11);
+    let band: &[&str] = &["--threshold", "0.1:0.9"];
+    let cut: &[&str] = &["--threshold", "0.8"];
+    let none: &[&str] = &[];
+    let cases: [(&str, Vec<&str>, &[&str], &str); 11] = [
+        ("choose", vec!["billing"], none, "one option"),
+        ("choose", Vec::new(), none, "no option at all"),
+        ("choose", listed(&long_options), none, "256 options"),
+        ("choose", vec!["billing", "  "], none, "a blank label"),
+        ("choose", vec!["billing", ""], none, "an empty label"),
+        (
+            "choose",
+            vec!["billing", "other", "billing"],
+            none,
+            "a repeat",
+        ),
+        ("score", vec!["none"], none, "one level"),
+        ("score", listed(&long_levels), none, "eleven levels"),
+        ("score", vec!["none", "none"], none, "a repeated level"),
+        ("choose", TEAMS.to_vec(), band, "a band on a pick"),
+        ("score", LEVELS.to_vec(), cut, "a rule on a placement"),
+    ];
+
+    for (verb, labels, arguments, what) in cases {
+        let listener = Listener::serving(vec![Canned::ok(PICKED)]).expect("a loopback listener");
+        let output =
+            ask(listener.base(), verb, &labels, arguments).expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(2), "{what}");
+        assert!(output.stdout.is_empty(), "{what}");
+        assert!(!output.stderr.is_empty(), "{what}");
+        assert_eq!(listener.requests().len(), 0, "{what}");
+    }
+}
