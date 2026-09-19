@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"A connection that is refused counts as a failure.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line gives how many times a failed delivery is tried again."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.06}},"usage":{"input_tokens":289,"output_tokens":21}}
+}

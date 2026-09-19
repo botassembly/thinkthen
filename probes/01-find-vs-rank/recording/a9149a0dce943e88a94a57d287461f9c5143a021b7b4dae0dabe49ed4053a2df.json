@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The outage began at 09:12 and ended at 10:40.\nL02: Customers saw a blank page and no error text.\nL03: The first responder restarted the front door process.\nL04: The restart did not help.\nL05: A second responder drained the west rack.\nL06: Traffic moved to the east rack and the page came back.\nL07: A certificate on the west rack had expired that morning at 09:00.\nL08: The expiry was not caught because the reminder went to a mailbox nobody reads.\nL09: A new certificate was installed at 11:30.\nL10: The west rack was returned to service at 12:05.\nL11: The reminder mailbox has been changed to the duty rota.\nL12: An audit of every other certificate is scheduled.\nL13: No customer data was touched during the outage.\nL14: The full timeline is in the incident folder.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line names the cause of the Thursday morning outage?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"L13":null,"L14":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L07","confidence":1.0,"probabilities":{"L07":1.0,"L13":0.0,"L11":0.0,"L05":0.0,"L04":0.0,"L08":0.0,"L12":0.0,"L06":0.0,"L09":0.0,"L02":0.0,"L14":0.0,"L03":0.0,"L01":0.0,"L10":0.0}}},"usage":{"input_tokens":613,"output_tokens":146}}
+}

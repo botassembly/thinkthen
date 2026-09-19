@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The importer runs once an hour and takes whatever it finds in the drop folder.\nL02: It reads tab separated files and refuses everything else.\nL03: A refused file is moved to the reject folder with a note beside it.\nL04: The note names the first line that could not be read.\nL05: A file with no header row is refused.\nL06: The header row must carry every named column.\nL07: Extra columns are ignored and never an error.\nL08: An empty file is not an error and is moved aside.\nL09: The importer writes a summary line to its own log.\nL10: The summary names the counts of rows read, kept, and refused.\nL11: Nothing is written to the store until the whole file has been read.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line states the file format the importer accepts?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L02","confidence":1.0,"probabilities":{"L03":0.0,"L04":0.0,"L08":0.0,"L05":0.0,"L02":1.0,"L06":0.0,"L01":0.0,"L07":0.0,"L11":0.0,"L10":0.0,"L09":0.0}}},"usage":{"input_tokens":543,"output_tokens":119}}
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The hirer returns the key to the clerk's letterbox.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line says where the spare key to the village hall is kept."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.18}},"usage":{"input_tokens":294,"output_tokens":21}}
+}

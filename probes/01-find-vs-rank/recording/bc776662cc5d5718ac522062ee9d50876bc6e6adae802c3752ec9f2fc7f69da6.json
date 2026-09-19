@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"A member may send a written view but not a vote.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line gives the number of members needed for a quorum."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":291,"output_tokens":21}}
+}

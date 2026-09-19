@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"A steady amber light means the reader is starting up.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line says what a slow blinking amber light on the reader means."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.21}},"usage":{"input_tokens":291,"output_tokens":21}}
+}

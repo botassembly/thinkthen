@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The allotment society met on the second Tuesday of the month.\nL02: Eleven members attended and three sent apologies.\nL03: The minutes of the last meeting were agreed without change.\nL04: The water butt at the north gate is still leaking.\nL05: A repair was promised for the spring.\nL06: Two plots on the east row remain unlet.\nL07: The waiting list holds nine names.\nL08: A member asked about the cost of wood chip.\nL09: The treasurer will bring prices to the next meeting.\nL10: The autumn show will run on the last Saturday of September.\nL11: Maureen Alder chairs the committee for a second year.\nL12: The meeting closed at half past eight.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line names the person who chairs the allotment committee?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L11","confidence":1.0,"probabilities":{"L12":0.0,"L08":0.0,"L02":0.0,"L06":0.0,"L04":0.0,"L09":0.0,"L10":0.0,"L01":0.0,"L03":0.0,"L11":1.0,"L07":0.0,"L05":0.0}}},"usage":{"input_tokens":551,"output_tokens":128}}
+}

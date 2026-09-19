@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The museum stands at the top of the market square.\nL02: Entry is free and a donation is welcome.\nL03: The building is open every day but Christmas Day.\nL04: From Monday to Saturday the doors open at ten.\nL05: The last entry is half an hour before closing.\nL06: On a Sunday the doors open at noon.\nL07: Closing is at five throughout the year.\nL08: The upper gallery closes an hour earlier in winter.\nL09: The tea room keeps its own hours, which are on its door.\nL10: Large bags are left at the desk.\nL11: Photography without a flash is allowed everywhere.\nL12: School groups book in advance through the education office.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line gives the time the museum opens on a Sunday?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L06","confidence":1.0,"probabilities":{"L07":0.0,"L11":0.0,"L03":0.0,"L10":0.0,"L09":0.0,"L05":0.0,"L06":1.0,"L02":0.0,"L01":0.0,"L04":0.0,"L08":0.0,"L12":0.0}}},"usage":{"input_tokens":543,"output_tokens":128}}
+}

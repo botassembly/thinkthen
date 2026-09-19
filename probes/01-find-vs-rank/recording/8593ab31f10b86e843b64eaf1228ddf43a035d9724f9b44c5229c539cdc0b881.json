@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The tenant may ask the third party for a statement at any time.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line says when the tenancy deposit is returned."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03}},"usage":{"input_tokens":291,"output_tokens":21}}
+}

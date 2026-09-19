@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The tea room keeps its own hours, which are on its door.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line gives the time the museum opens on a Sunday."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":292,"output_tokens":21}}
+}

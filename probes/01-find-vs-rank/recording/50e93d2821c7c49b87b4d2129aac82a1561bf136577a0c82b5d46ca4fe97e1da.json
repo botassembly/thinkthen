@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: A membership runs from the day it is taken out.\nL02: It is paid monthly by standing order.\nL03: A member may cancel at any time.\nL04: A cancellation is made in writing to the office.\nL05: An electronic message counts as writing.\nL06: The office confirms every cancellation in writing.\nL07: A member who cancels keeps access until the paid period ends.\nL08: No part month is refunded.\nL09: A member may instead freeze the membership for up to three months.\nL10: A frozen membership is not charged.\nL11: A freeze is requested the same way as a cancellation.\nL12: A cancelled membership may be taken out again at the going rate.\nL13: The going rate is the rate on the day it is taken out again.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line states how much notice is needed to cancel the membership?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"L13":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L03","confidence":0.61,"probabilities":{"L01":0.0,"L11":0.0,"L13":0.0,"L10":0.0,"L02":0.0,"L06":0.0,"L03":0.65,"L04":0.11,"L07":0.22,"L08":0.02,"L05":0.0,"L09":0.0,"L12":0.0}}},"usage":{"input_tokens":569,"output_tokens":137}}
+}

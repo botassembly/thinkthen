@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: A message is handed to the delivery agent once it is accepted.\nL02: The agent opens one connection per destination.\nL03: A connection that is refused counts as a failure.\nL04: A failure is written to the delivery log with its reason.\nL05: A failed delivery is tried three further times.\nL06: The waits between tries are one minute, ten minutes, and one hour.\nL07: A message that fails every try is moved to the held folder.\nL08: The held folder is reviewed by hand each morning.\nL09: A message may be released from the held folder at any time.\nL10: A released message starts its tries again from the first.\nL11: Nothing is ever deleted by the agent.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line gives how many times a failed delivery is tried again?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L05","confidence":1.0,"probabilities":{"L10":0.0,"L01":0.0,"none":0.0,"L02":0.0,"L04":0.0,"L06":0.0,"L09":0.0,"L07":0.0,"L03":0.0,"L08":0.0,"L11":0.0,"L05":1.0}}},"usage":{"input_tokens":543,"output_tokens":126}}
+}

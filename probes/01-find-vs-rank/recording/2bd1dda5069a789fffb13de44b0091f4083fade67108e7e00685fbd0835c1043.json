@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The tenancy runs for twelve months from the date of the keys.\nL02: Rent is due on the first working day of each month.\nL03: A deposit of one month's rent is held by a third party.\nL04: The third party is named in the schedule.\nL05: The tenant may ask the third party for a statement at any time.\nL06: Damage beyond fair wear is charged against the deposit.\nL07: Fair wear is judged against the inventory taken on the first day.\nL08: The inventory is signed by both sides.\nL09: A disagreement goes to the third party's own adjudicator.\nL10: The deposit is returned within ten working days of the final inspection.\nL11: The final inspection happens after the keys come back.\nL12: Either side may end the tenancy with two months' notice.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line says when the tenancy deposit is returned?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L10","confidence":1.0,"probabilities":{"L01":0.0,"L12":0.0,"L11":0.0,"L06":0.0,"L02":0.0,"L04":0.0,"L08":0.0,"L05":0.0,"L10":1.0,"L03":0.0,"L09":0.0,"L07":0.0}}},"usage":{"input_tokens":568,"output_tokens":128}}
+}

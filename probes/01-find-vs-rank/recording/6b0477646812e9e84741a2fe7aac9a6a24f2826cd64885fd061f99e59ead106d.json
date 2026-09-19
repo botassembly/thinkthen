@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The third party is named in the schedule.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line says when the tenancy deposit is returned."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":286,"output_tokens":21}}
+}

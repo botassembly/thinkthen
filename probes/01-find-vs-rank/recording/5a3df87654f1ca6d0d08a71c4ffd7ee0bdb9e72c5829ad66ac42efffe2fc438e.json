@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"It writes into the cold store and never into the working store.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line states the hour at which the nightly archive job starts."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":292,"output_tokens":21}}
+}

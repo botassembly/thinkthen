@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: Fill the kettle between the marks on the window.\nL02: Never fill it above the upper mark.\nL03: Set it on its base and press the switch down.\nL04: The switch lifts when the water boils.\nL05: Lift the kettle straight up off the base.\nL06: Pour away from yourself.\nL07: Empty the kettle if it will stand for a day.\nL08: Descale it once a month in hard water.\nL09: Use a descaler sold for kettles and follow its own instructions.\nL10: Never put the kettle or its base in water.\nL11: Wipe the outside with a damp cloth.\nL12: Have a damaged cord replaced before the kettle is used again.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line states how long the kettle is under warranty?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"none","confidence":1.0,"probabilities":{"L03":0.0,"none":1.0,"L05":0.0,"L09":0.0,"L06":0.0,"L02":0.0,"L10":0.0,"L11":0.0,"L08":0.0,"L07":0.0,"L12":0.0,"L01":0.0,"L04":0.0}}},"usage":{"input_tokens":548,"output_tokens":133}}
+}

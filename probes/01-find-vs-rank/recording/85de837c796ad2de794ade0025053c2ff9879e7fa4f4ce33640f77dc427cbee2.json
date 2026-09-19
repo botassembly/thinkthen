@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The courier leaves a card when nobody is in.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line states how many days a customer has to ask for a refund."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.01}},"usage":{"input_tokens":291,"output_tokens":21}}
+}

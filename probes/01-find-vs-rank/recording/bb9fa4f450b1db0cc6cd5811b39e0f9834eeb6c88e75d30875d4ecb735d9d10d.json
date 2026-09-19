@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The board holds twelve seats.\nL02: Nine seats are elected and three are appointed.\nL03: An elected seat runs for three years.\nL04: An appointed seat runs for one year and may be renewed.\nL05: The board meets four times a year.\nL06: A meeting may be called at short notice by the chair.\nL07: Papers go out five working days before a meeting.\nL08: No business is transacted unless five members are present.\nL09: A member who joins late counts from the moment they arrive.\nL10: A member may send a written view but not a vote.\nL11: The chair has a casting vote and no other.\nL12: Minutes are agreed at the following meeting.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line gives the number of members needed for a quorum?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L08","confidence":1.0,"probabilities":{"L09":0.0,"L01":0.0,"L04":0.0,"L11":0.0,"L03":0.0,"L06":0.0,"L05":0.0,"L08":1.0,"none":0.0,"L12":0.0,"L07":0.0,"L02":0.0,"L10":0.0}}},"usage":{"input_tokens":551,"output_tokens":135}}
+}

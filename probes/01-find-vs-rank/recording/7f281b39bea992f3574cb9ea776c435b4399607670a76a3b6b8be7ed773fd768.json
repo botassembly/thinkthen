@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Eleven members attended and three sent apologies.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line names the person who chairs the allotment committee."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":288,"output_tokens":21}}
+}

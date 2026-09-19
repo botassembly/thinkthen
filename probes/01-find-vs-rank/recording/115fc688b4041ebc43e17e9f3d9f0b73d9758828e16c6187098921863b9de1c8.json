@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The village hall is let by the hour to anyone in the parish.\nL02: Bookings go through the clerk.\nL03: The clerk keeps the diary and the ledger.\nL04: A booking is confirmed when the fee is paid.\nL05: The main key is handed over on the day.\nL06: The hirer returns the key to the clerk's letterbox.\nL07: A hirer who keeps the key overnight is charged another hour.\nL08: The heating is on a timer and cannot be changed by a hirer.\nL09: A spare key hangs in the porch of the old school, behind the notice board.\nL10: The porch is unlocked between eight and six.\nL11: The hall must be swept before the key comes back.\nL12: Chairs are stacked six high and no higher.\nL13: Nothing is stored in the hall between bookings.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line says where the spare key to the village hall is kept?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"L13":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L09","confidence":1.0,"probabilities":{"L09":1.0,"L01":0.0,"L10":0.0,"L04":0.0,"L05":0.0,"L08":0.0,"L11":0.0,"L06":0.0,"L12":0.0,"L13":0.0,"L07":0.0,"L02":0.0,"L03":0.0}}},"usage":{"input_tokens":588,"output_tokens":137}}
+}

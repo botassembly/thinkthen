@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The Friday review looks back at the week and no further.\nL02: It runs for forty minutes and never longer.\nL03: Anyone may attend and nobody must.\nL04: The notes go out the same afternoon.\nL05: The chair rotates each month.\nL06: The review is held in the Larch room on the second floor.\nL07: A remote link is open for anyone away.\nL08: The link is in the calendar entry.\nL09: Decisions taken there are written down or they did not happen.\nL10: Nothing on the agenda carries over twice.\nL11: An item that carries over twice becomes a ticket.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line names the room where the Friday review is held?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L06","confidence":1.0,"probabilities":{"L01":0.0,"L10":0.0,"L08":0.0,"none":0.0,"L09":0.0,"L07":0.0,"L02":0.0,"L06":1.0,"L05":0.0,"L11":0.0,"L04":0.0,"L03":0.0}}},"usage":{"input_tokens":525,"output_tokens":126}}
+}

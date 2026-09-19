@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"A deposit of forty pounds is taken at the desk.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This line gives the amount charged for returning a hired boat late."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.12}},"usage":{"input_tokens":290,"output_tokens":21}}
+}

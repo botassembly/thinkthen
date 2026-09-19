@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The panel heard the case over two afternoons.\nL02: Both sides made a written statement in advance.\nL03: The written statements were exchanged a week before the hearing.\nL04: The panel asked for one further document.\nL05: That document arrived the following morning.\nL06: The ruling was read out at the close of the second afternoon.\nL07: A written copy of the ruling was sent the next day.\nL08: The ruling explains which parts of the claim were upheld.\nL09: An appeal is heard by a different panel.\nL10: The appeal panel does not hear new evidence.\nL11: The registrar answers questions about how to lodge an appeal.\nL12: The registrar's telephone line is open on weekday afternoons.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line states the deadline for lodging an appeal against the ruling?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"none","confidence":0.99,"probabilities":{"none":0.99,"L01":0.0,"L04":0.0,"L08":0.0,"L09":0.0,"L11":0.01,"L03":0.0,"L12":0.0,"L05":0.0,"L02":0.0,"L06":0.0,"L10":0.0,"L07":0.0}}},"usage":{"input_tokens":557,"output_tokens":133}}
+}

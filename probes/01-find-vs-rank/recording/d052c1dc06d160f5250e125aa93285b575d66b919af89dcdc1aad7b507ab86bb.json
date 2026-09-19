@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: The door reader sits at shoulder height beside the frame.\nL02: Its light is off when the reader has no power.\nL03: A steady green light means the door is unlocked.\nL04: A steady red light means the door is locked.\nL05: A fast blinking red light means the reader has failed and needs a visit.\nL06: The amber light is used for states that need no visit.\nL07: A steady amber light means the reader is starting up.\nL08: A slow blinking amber light means the reader has lost its link to the panel and is working from its stored list.\nL09: The stored list holds the last two thousand cards.\nL10: A card that is not on the stored list is refused while the link is down.\nL11: The link usually returns within a minute.\nL12: An operator can force the reader to reload from the console.\nL13: A reload takes about ten seconds.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line says what a slow blinking amber light on the reader means?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"L13":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L08","confidence":1.0,"probabilities":{"L05":0.0,"L01":0.0,"L09":0.0,"L11":0.0,"L08":1.0,"L03":0.0,"L13":0.0,"L06":0.0,"L10":0.0,"L12":0.0,"L07":0.0,"L02":0.0,"L04":0.0}}},"usage":{"input_tokens":597,"output_tokens":137}}
+}

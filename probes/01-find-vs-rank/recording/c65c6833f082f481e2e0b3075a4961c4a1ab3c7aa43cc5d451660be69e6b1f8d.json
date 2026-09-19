@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"L01: Sow the seed in trays on a windowsill in March.\nL02: Keep the compost damp and never wet.\nL03: Thin the seedlings when they carry two true leaves.\nL04: Pot them on into small pots at the end of April.\nL05: Harden them off over a fortnight.\nL06: Hardening off means longer outside each day.\nL07: Nothing goes into open ground before the fifteenth of May in this valley.\nL08: Space the plants a foot apart.\nL09: Water at the root and not on the leaf.\nL10: Feed once a fortnight from midsummer.\nL11: Pick often and the plant keeps giving.\nL12: Pull the plants up when the first frost blackens them.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which line gives the date after which the seedlings can go outside?","criteria":{"L01":null,"L02":null,"L03":null,"L04":null,"L05":null,"L06":null,"L07":null,"L08":null,"L09":null,"L10":null,"L11":null,"L12":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"L07","confidence":1.0,"probabilities":{"none":0.0,"L09":0.0,"L05":0.0,"L03":0.0,"L10":0.0,"L01":0.0,"L12":0.0,"L08":0.0,"L02":0.0,"L06":0.0,"L04":0.0,"L07":1.0,"L11":0.0}}},"usage":{"input_tokens":561,"output_tokens":135}}
+}
