@@ -3,7 +3,7 @@
 use std::env;
 use std::fmt;
 use std::fs::File;
-use std::io::{BufRead, BufReader, ErrorKind, Read, Write};
+use std::io::{self, BufRead, BufReader, ErrorKind, IsTerminal as _, Read, Write};
 use std::path::Path;
 use std::time::Duration;
 
@@ -152,6 +152,33 @@ impl fmt::Debug for Key {
     }
 }
 
+/// What a user sitting at a terminal is told the command is waiting for.
+///
+/// A command reading from a terminal looks hung, because it waits for evidence
+/// nobody typed yet. The line names what is read and how to end it.
+const WAITING: &str = concat!(
+    "thinkthen: reading evidence from the terminal; ",
+    "end it with Ctrl-D on a line of its own\n"
+);
+
+/// Say what the command waits for, when a person is the one it waits on.
+///
+/// The line goes to standard error, so it never joins the answer, and it is
+/// written only when standard input is a terminal. A pipe, a file under
+/// `--input`, and a redirection all leave it unwritten, so the bytes a script
+/// reads never change. A line that cannot be written changes nothing.
+fn waiting_on_terminal(input: Option<&Path>, terminal: bool, mut writer: impl Write) {
+    if input.is_some() || !terminal {
+        return;
+    }
+    let _unwritten = write!(writer, "{WAITING}").and_then(|()| writer.flush());
+}
+
+/// Say what the command waits for, reading the terminal from this process.
+pub(crate) fn waiting(input: Option<&Path>, writer: impl Write) {
+    waiting_on_terminal(input, io::stdin().is_terminal(), writer);
+}
+
 /// Read the key from the one variable that holds it.
 ///
 /// # Errors
@@ -200,6 +227,30 @@ mod tests {
         fn flush(&mut self) -> std::io::Result<()> {
             Err(Error::from(self.0))
         }
+    }
+
+    #[test]
+    fn only_a_terminal_with_no_input_file_is_told_what_the_command_waits_for() {
+        let file = std::path::Path::new("evidence.txt");
+        let cases = [
+            (None, true, super::WAITING),
+            (None, false, ""),
+            (Some(file), true, ""),
+            (Some(file), false, ""),
+        ];
+
+        for (input, terminal, expected) in cases {
+            let mut written = Vec::new();
+            super::waiting_on_terminal(input, terminal, &mut written);
+            let said = String::from_utf8(written).expect("a diagnostic is text");
+
+            assert_eq!(said, expected, "{input:?} {terminal}");
+        }
+        assert_eq!(
+            super::WAITING,
+            "thinkthen: reading evidence from the terminal; \
+             end it with Ctrl-D on a line of its own\n"
+        );
     }
 
     #[test]

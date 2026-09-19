@@ -31,6 +31,10 @@ Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FI
 
 Advanced options appear in the long help alone: `--url`, `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, and `--jobs N`.
 
+## Standard input
+
+Without `--input FILE` the evidence comes from standard input. When standard input is a terminal, the tool writes one line on standard error that says it is reading evidence from the terminal and how to end it, so a person does not read a waiting command as a hung one. The line never appears in a pipe, in a redirection, or under `--input`, and standard output is the same either way.
+
 ## Standard output
 
 Standard output holds a bare JSON value. `true`, `"bug"`, and `1.6` are whole outputs. [result.md](result.md) gives the value for each command and the object that `--details` prints in its place.

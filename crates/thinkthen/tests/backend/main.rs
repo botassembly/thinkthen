@@ -15,3 +15,4 @@ mod limits;
 mod parallel;
 mod recordings;
 mod streaming;
+mod terminal;

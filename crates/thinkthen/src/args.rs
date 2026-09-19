@@ -97,6 +97,17 @@ pub(crate) enum Command {
     Score(ScoreArguments),
 }
 
+impl Command {
+    /// The options every judging verb takes, whichever verb was named.
+    pub(crate) const fn common(&self) -> &Common {
+        match self {
+            Self::Decide(arguments) => &arguments.common,
+            Self::Choose(arguments) => &arguments.common,
+            Self::Score(arguments) => &arguments.common,
+        }
+    }
+}
+
 /// The options every judging verb takes.
 #[derive(Args, Debug)]
 pub(crate) struct Common {
