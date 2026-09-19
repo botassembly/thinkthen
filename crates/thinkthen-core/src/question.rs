@@ -1,4 +1,4 @@
-//! The question a judgment asks: one verb and what it asks about.
+//! The question a judgment asks, as one verb over what it names.
 
 use serde::Serialize;
 

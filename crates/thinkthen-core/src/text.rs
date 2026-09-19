@@ -1,4 +1,4 @@
-//! The text values a judgment carries: the condition, the backend, and the model.
+//! The text values a judgment carries, each one refused when it is empty.
 
 use serde::Serialize;
 use thiserror::Error;
