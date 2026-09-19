@@ -20,6 +20,9 @@ pub enum LabelsError {
     /// One label was given twice, so no answer could name which one won.
     #[error("a list holds each option and each level once")]
     Duplicate,
+    /// A label holds a control character, which `--raw` would print as it is.
+    #[error("an option or a level is one line of printable text")]
+    Control,
 }
 
 /// The most options `choose` picks between, by ADR 0007.
@@ -94,6 +97,17 @@ impl Labels {
         }
         if values.iter().any(|value| value.name.trim().is_empty()) {
             return Err(LabelsError::Blank);
+        }
+        // `--raw` prints a label byte for byte, and `--options` lets a record
+        // the tool did not write supply one. A label carrying a line feed or
+        // an escape would then write a line of its own into the caller's
+        // output. The message never quotes the label, because a record is
+        // evidence.
+        if values
+            .iter()
+            .any(|value| value.name.chars().any(char::is_control))
+        {
+            return Err(LabelsError::Control);
         }
         for (place, value) in values.iter().enumerate() {
             if values
@@ -234,6 +248,35 @@ mod tests {
             255
         );
         assert_eq!(Labels::levels(many(10)).expect("ten levels").count(), 10);
+    }
+
+    #[test]
+    fn a_label_holding_a_control_character_is_refused_without_being_quoted() {
+        // `--raw` prints a label as it is, so a label that carries a line feed
+        // or an escape would write a line of its own into a caller's output.
+        let cases = ["bug\nrm -rf /", "bug\r", "bug\u{1b}[31m", "bug\u{0}"];
+        for typed in cases {
+            let refused = Labels::options(listed(&["other", typed])).expect_err("a refused list");
+            assert_eq!(refused, LabelsError::Control, "{typed:?}");
+            assert_eq!(
+                Labels::levels(listed(&["none", typed])),
+                Err(LabelsError::Control),
+                "{typed:?}"
+            );
+            assert_eq!(
+                Labels::described(vec![
+                    ("other".to_owned(), None),
+                    (typed.to_owned(), Some("a description".to_owned())),
+                ]),
+                Err(LabelsError::Control),
+                "{typed:?}"
+            );
+            let said = refused.to_string();
+            assert!(!said.contains("rm -rf"), "{said}");
+            assert!(!said.contains('\n'), "{said:?}");
+        }
+        // A label with an ordinary space inside it is still one line of text.
+        assert!(Labels::options(listed(&["not stated", "stated"])).is_ok());
     }
 
     #[test]

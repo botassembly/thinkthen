@@ -63,6 +63,9 @@ impl Canned {
     }
 }
 
+/// What a listener answers one request body with.
+pub(crate) type Reply = dyn Fn(&[u8]) -> Canned + Send + Sync;
+
 /// What the listener saw, for the assertions that count connections.
 #[derive(Debug, Default)]
 struct Counts {
@@ -129,17 +132,8 @@ impl Listener {
         let (sender, recorded) = channel();
         let counts = Arc::new(Counts::default());
         let serving = Arc::clone(&counts);
-        let reply = Arc::new(reply);
-        thread::spawn(move || {
-            for accepted in listener.incoming() {
-                let Ok(stream) = accepted else { return };
-                serving.connections.fetch_add(1, Ordering::SeqCst);
-                let reply = Arc::clone(&reply);
-                let counts = Arc::clone(&serving);
-                let sender = sender.clone();
-                thread::spawn(move || serve_kept(&stream, reply.as_ref(), &sender, &counts));
-            }
-        });
+        let reply: Arc<Reply> = Arc::new(reply);
+        thread::spawn(move || accept_every(&listener, &reply, &sender, &serving));
         Ok(Self {
             base,
             url,
@@ -190,13 +184,25 @@ fn serve_script(listener: &TcpListener, responses: Vec<Canned>, sender: &Sender<
     }
 }
 
-/// Answer every request on one connection until the caller closes it.
-fn serve_kept(
-    stream: &TcpStream,
-    reply: &(dyn Fn(&[u8]) -> Canned + Send + Sync),
+/// Take every connection and answer each one in a thread of its own.
+fn accept_every(
+    listener: &TcpListener,
+    reply: &Arc<Reply>,
     sender: &Sender<Recorded>,
-    counts: &Counts,
+    counts: &Arc<Counts>,
 ) {
+    for accepted in listener.incoming() {
+        let Ok(stream) = accepted else { return };
+        counts.connections.fetch_add(1, Ordering::SeqCst);
+        let reply = Arc::clone(reply);
+        let counts = Arc::clone(counts);
+        let sender = sender.clone();
+        thread::spawn(move || serve_kept(&stream, reply.as_ref(), &sender, &counts));
+    }
+}
+
+/// Answer every request on one connection until the caller closes it.
+fn serve_kept(stream: &TcpStream, reply: &Reply, sender: &Sender<Recorded>, counts: &Counts) {
     let mut reader = BufReader::new(stream);
     loop {
         let Some(request) = read_kept(&mut reader) else {

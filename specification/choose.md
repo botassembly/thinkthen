@@ -12,7 +12,7 @@ thinkthen choose QUESTION OPTION... [--threshold T] [--raw] [--quiet] [--details
 
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines` and `--jsonl` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
 
-`QUESTION` comes first and states what decides the pick. Each `OPTION` is one argument. `choose` takes 2 to 255 options. A duplicate option name is a usage error, and so is an option that is empty or holds only white space. The tool sends the options in the order the user gave and never reorders them.
+`QUESTION` comes first and states what decides the pick. Each `OPTION` is one argument. `choose` takes 2 to 255 options. A duplicate option name is a usage error, and so is an option that is empty or holds only white space. An option holding a control character is a usage error too, because `--raw` prints a label byte for byte and a label with a line feed in it would write a line of its own into the caller's output. The tool sends the options in the order the user gave and never reorders them.
 
 ## What it prints
 
@@ -35,7 +35,7 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 
 ## Options from the record
 
-Settled by ADR 0009 item 4, accepted in ADR 0010. `--options POINTER` names a list of labels, or a map from label to description, inside each record. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error. `--options` requires `--jsonl`, because a pointer needs a JSON record to point into. A line of text holds no pointer, so `--options` under `--lines` is a usage error, and so is `--options` on one document.
+Settled by ADR 0009 item 4, accepted in ADR 0010. `--options POINTER` names a list of labels, or a map from label to description, inside each record. Every rule above holds for the labels a record supplies, and a record that breaks one is exit 2 for that record before any request for it. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error. `--options` requires `--jsonl`, because a pointer needs a JSON record to point into. A line of text holds no pointer, so `--options` under `--lines` is a usage error, and so is `--options` on one document.
 
 ```sh
 thinkthen choose 'Which of these codes fits the note?' --jsonl --field /note --options /codes < notes.jsonl

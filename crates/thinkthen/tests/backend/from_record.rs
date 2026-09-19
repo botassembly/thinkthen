@@ -190,7 +190,39 @@ fn a_candidate_list_the_verb_refuses_stops_the_run_and_sends_nothing_for_itself(
             "{message}"
         );
         assert!(!message.contains("parcel"), "{message}");
+        assert!(!message.contains("rm -rf"), "{message}");
     }
+}
+
+#[test]
+fn a_typed_option_holding_a_control_character_is_refused_before_any_request() {
+    // `--raw` prints a label byte for byte, so a label carrying a line feed
+    // would write a line of its own into the caller's output.
+    let listener =
+        Listener::serving(vec![Canned::ok(&picked(&["late", "lost"]))]).expect("a listener");
+    let output = spawn(
+        &[
+            "choose",
+            QUESTION,
+            "late",
+            "lost\nrm -rf /",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--raw",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"The parcel arrived late.",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(printed(&output).is_empty());
+    let message = said(&output);
+    assert!(message.contains("one line of printable text"), "{message}");
+    assert!(!message.contains("rm -rf"), "{message}");
+    assert!(listener.requests().is_empty());
 }
 
 #[test]

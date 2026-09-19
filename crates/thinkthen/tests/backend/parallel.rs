@@ -1,6 +1,7 @@
 //! The compiled binary with several requests in flight, and the cache that resumes.
 
 use std::fs;
+use std::io;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -45,24 +46,34 @@ fn answered(place: usize) -> String {
     )
 }
 
+/// The answer a record earns, later records sooner than earlier ones.
+fn later_sooner(body: &[u8]) -> Canned {
+    let place = ordinal(body);
+    let waiting = 20 * (9 - place.min(8)) as u64;
+    Canned::ok(&answered(place)).after(waiting)
+}
+
+/// The answer a record earns on a run whose third record fails at the backend.
+fn stopping_at_three(body: &[u8]) -> Canned {
+    if ordinal(body) == 3 {
+        return Canned::status(500, "{}").after(10);
+    }
+    later_sooner(body)
+}
+
 /// A listener that answers each record, later records sooner than earlier ones.
-fn out_of_order() -> Listener {
-    Listener::answering(|body| {
-        let place = ordinal(body);
-        Canned::ok(&answered(place)).after(20 * (9 - place.min(8)) as u64)
-    })
-    .expect("a loopback listener")
+fn out_of_order() -> io::Result<Listener> {
+    Listener::answering(later_sooner)
 }
 
 /// Run `decide` against one URL over the records on standard input.
-fn decide(base: &str, arguments: &[&str], input: &str) -> Output {
+fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
     let asked = ["decide", QUESTION, "--url", base, "--model", "local-1"];
     spawn(
         &[&asked[..], arguments].concat(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         input.as_bytes(),
     )
-    .expect("the compiled binary runs")
 }
 
 /// What the run printed on standard output.
@@ -89,12 +100,13 @@ fn entries(folder: &Path) -> usize {
 
 #[test]
 fn a_backend_that_answers_out_of_order_still_prints_in_input_order() {
-    let listener = out_of_order();
+    let listener = out_of_order().expect("a loopback listener");
     let output = decide(
         listener.base(),
         &["--jsonl", "--field", "/body", "--details", "--jobs", "4"],
         &records(6),
-    );
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
     let rows = printed(&output);
@@ -119,7 +131,8 @@ fn no_more_requests_are_in_flight_than_the_jobs_asked_for() {
             listener.base(),
             &["--jsonl", "--field", "/body", "--jobs", jobs],
             &records(8),
-        );
+        )
+        .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{jobs} jobs");
         assert_eq!(printed(&output).lines().count(), 8, "{jobs} jobs");
@@ -142,19 +155,17 @@ fn every_number_of_jobs_prints_the_bytes_that_one_job_prints() {
     ];
 
     for (input, extra) in runs {
-        let stopping = extra.contains(&"--max-retries");
+        let reply: fn(&[u8]) -> Canned = if extra.contains(&"--max-retries") {
+            stopping_at_three
+        } else {
+            later_sooner
+        };
         let mut first: Option<(Option<i32>, String, String)> = None;
         for jobs in ["1", "2", "3", "5", "8", "32"] {
-            let listener = Listener::answering(move |body| {
-                let place = ordinal(body);
-                if stopping && place == 3 {
-                    return Canned::status(500, "{}").after(10);
-                }
-                Canned::ok(&answered(place)).after(20 * (9 - place.min(8)) as u64)
-            })
-            .expect("a loopback listener");
+            let listener = Listener::answering(reply).expect("a loopback listener");
             let arguments = [&["--jsonl", "--field", "/body", "--jobs", jobs][..], extra].concat();
-            let output = decide(listener.base(), &arguments, input);
+            let output =
+                decide(listener.base(), &arguments, input).expect("the compiled binary runs");
             let seen = (output.status.code(), printed(&output), said(&output));
 
             match first.as_ref() {
@@ -198,7 +209,8 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
             "0",
         ],
         &records(4),
-    );
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(printed(&output), "false\nfalse\n");
@@ -219,7 +231,8 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
             "--jsonl", "--field", "/body", "--cache", &named, "--jobs", "4",
         ],
         &records(4),
-    );
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(printed(&output), "false\nfalse\nfalse\nfalse\n");
@@ -232,7 +245,8 @@ fn jobs_acts_in_record_mode_alone_and_inside_its_range() {
     let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))))
         .expect("a loopback listener");
 
-    let output = decide(listener.base(), &["--jobs", "2"], "record 1");
+    let output =
+        decide(listener.base(), &["--jobs", "2"], "record 1").expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(2));
     assert!(said(&output).contains("--jobs"), "{}", said(&output));
     assert!(listener.requests().is_empty());
@@ -242,7 +256,8 @@ fn jobs_acts_in_record_mode_alone_and_inside_its_range() {
             listener.base(),
             &["--jsonl", "--field", "/body", "--jobs", outside],
             &records(1),
-        );
+        )
+        .expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(2), "{outside}");
         assert!(said(&output).contains("--jobs"), "{}", said(&output));
     }
@@ -251,7 +266,8 @@ fn jobs_acts_in_record_mode_alone_and_inside_its_range() {
         listener.base(),
         &["--jsonl", "--field", "/body", "--jobs", "32"],
         &records(2),
-    );
+    )
+    .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(printed(&output), "false\nfalse\n");
 }
@@ -265,7 +281,8 @@ fn one_process_reuses_the_connections_it_opens() {
             listener.base(),
             &["--jsonl", "--field", "/body", "--jobs", jobs],
             &records(6),
-        );
+        )
+        .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{jobs} jobs");
         assert_eq!(printed(&output).lines().count(), 6, "{jobs} jobs");
@@ -279,7 +296,8 @@ fn one_process_reuses_the_connections_it_opens() {
 
 #[test]
 fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
-    let listener = out_of_order();
+    let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))).after(30))
+        .expect("a loopback listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
         .env("THINKTHEN_API_KEY", "sk-test-value")
@@ -317,6 +335,10 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     let status = child.wait().expect("the compiled binary ends");
     assert_eq!(status.code(), Some(0));
     assert_eq!(row, "false\n");
+    // The tool learns of the closed pipe from the write that fails, so it
+    // stops within one round of requests. The count stays near --jobs and
+    // never reaches the input. A tool that kept scheduling would ask, and
+    // pay, for all 24.
     let sent = listener.requests().len();
-    assert!(sent < 24, "the run kept scheduling and sent {sent}");
+    assert!(sent <= 12, "the run kept scheduling and sent {sent}");
 }

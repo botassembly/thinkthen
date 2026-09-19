@@ -12,6 +12,7 @@ mod failure;
 mod http;
 mod judge;
 mod recorder;
+mod schedule;
 
 use std::io::{self, Write};
 use std::process::ExitCode;

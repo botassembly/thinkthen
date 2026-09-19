@@ -1,12 +1,8 @@
 //! The one flow every judging verb takes, from what was asked to what is printed.
 
-use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
-use std::sync::Mutex;
-use std::sync::mpsc::{self, SyncSender};
-use std::thread;
 use std::time::Duration;
 
 use thinkthen_core::recording::Exchange as Recorded;
@@ -21,14 +17,13 @@ use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::{Client, Exchange};
 use crate::recorder::Recorder;
+use crate::schedule::{self, Judged};
 
 /// How many requests are in flight when `--jobs` names no number.
 ///
 /// ADR 0010 fixes it. The vendor's own example code uses 4 to 12 workers and
 /// says the public endpoint limits concurrency above about eight, so 4 is safe
 /// everywhere and a measured run can raise it.
-const DEFAULT_JOBS: usize = 4;
-
 /// One question, its rule, and the view its answer prints in.
 #[derive(Debug)]
 struct Asked<'a> {
@@ -278,7 +273,7 @@ fn run(
         );
     }
 
-    let jobs = jobs_of(common, reading.streams())?;
+    let jobs = schedule::jobs_of(common.jobs, reading.streams())?;
     let judging = Judging {
         common,
         environment,
@@ -298,178 +293,12 @@ fn run(
         }
         return Ok(exit_code(judged.outcome));
     }
-    over_records(&judging, &reading, &mut chunks, jobs, &mut writer)
-}
-
-/// How many requests this run keeps in flight, or why the number cannot act.
-///
-/// # Errors
-///
-/// Returns [`Failure::JobsOutsideRecords`] when `--jobs` was given to a run
-/// over one document, which sends one request and has nothing to bound.
-fn jobs_of(common: &Common, streams: bool) -> Result<usize, Failure> {
-    match common.jobs {
-        Some(_) if !streams => Err(Failure::JobsOutsideRecords),
-        Some(asked) => Ok(usize::from(asked)),
-        None => Ok(DEFAULT_JOBS),
-    }
-}
-
-/// Ask every record with at most `jobs` requests in flight, printing in order.
-///
-/// The workers share one queue of records and one channel back. The records go
-/// out in input order and no more than `jobs` are outstanding, so the buffer of
-/// finished rows waiting for the rows before them holds at most `jobs` and the
-/// memory of a long run stays flat.
-fn over_records(
-    judging: &Judging<'_>,
-    reading: &Reading,
-    chunks: &mut dyn Iterator<Item = Result<Vec<u8>, Failure>>,
-    jobs: usize,
-    writer: &mut dyn Write,
-) -> Result<ExitCode, Failure> {
-    let (hand, queue) = mpsc::sync_channel::<(usize, Vec<u8>)>(jobs);
-    let queue = Mutex::new(queue);
-    let (give, gathered) = mpsc::channel::<(usize, Result<Judged, Failure>)>();
-    thread::scope(|scope| {
-        for _ in 0..jobs {
-            let queue = &queue;
-            let give = give.clone();
-            scope.spawn(move || {
-                while let Ok(Ok((place, bytes))) = queue.lock().map(|taken| taken.recv()) {
-                    if give.send((place, judging.row(reading, &bytes))).is_err() {
-                        return;
-                    }
-                }
-            });
-        }
-        drop(give);
-        let mut run = Run::new();
-        loop {
-            run.dispatch(chunks, &hand, jobs);
-            run.drain(writer)?;
-            if run.in_flight == 0 {
-                break;
-            }
-            let Ok((place, judged)) = gathered.recv() else {
-                break;
-            };
-            run.in_flight -= 1;
-            run.halted |= judged.is_err();
-            run.pending.insert(place, judged);
-        }
-        drop(hand);
-        run.finished()
-    })
-}
-
-/// What has gone out, what has come back, and what has been printed.
-#[derive(Debug)]
-struct Run {
-    pending: BTreeMap<usize, Result<Judged, Failure>>,
-    next: usize,
-    dispatched: usize,
-    in_flight: usize,
-    replayed: usize,
-    exhausted: bool,
-    halted: bool,
-    printing: bool,
-    stop: Option<(usize, Failure)>,
-}
-
-impl Run {
-    /// Start with nothing sent and nothing printed.
-    const fn new() -> Self {
-        Self {
-            pending: BTreeMap::new(),
-            next: 0,
-            dispatched: 0,
-            in_flight: 0,
-            replayed: 0,
-            exhausted: false,
-            halted: false,
-            printing: true,
-            stop: None,
-        }
-    }
-
-    /// Send records until the workers hold `jobs` of them or the input ends.
-    ///
-    /// A record the reader could not hand over takes its own place in the
-    /// order, so it stops the run where it sits rather than where it was read.
-    fn dispatch(
-        &mut self,
-        chunks: &mut dyn Iterator<Item = Result<Vec<u8>, Failure>>,
-        hand: &SyncSender<(usize, Vec<u8>)>,
-        jobs: usize,
-    ) {
-        while !self.halted && !self.exhausted && self.in_flight < jobs {
-            match chunks.next() {
-                None => self.exhausted = true,
-                Some(Err(error)) => {
-                    self.pending.insert(self.dispatched, Err(error));
-                    self.dispatched += 1;
-                    self.halted = true;
-                }
-                Some(Ok(bytes)) => {
-                    if hand.send((self.dispatched, bytes)).is_err() {
-                        self.halted = true;
-                        return;
-                    }
-                    self.dispatched += 1;
-                    self.in_flight += 1;
-                }
-            }
-        }
-    }
-
-    /// Print every row whose place has come, and stop at the first failure.
-    ///
-    /// A reader that closed the pipe ends the printing and the scheduling with
-    /// it, and the run keeps the exit code it had earned.
-    fn drain(&mut self, writer: &mut dyn Write) -> Result<(), Failure> {
-        while self.printing {
-            let Some(judged) = self.pending.remove(&self.next) else {
-                return Ok(());
-            };
-            match judged {
-                Err(cause) => {
-                    self.stop = Some((self.next, cause));
-                    self.halted = true;
-                    self.printing = false;
-                }
-                Ok(judged) => {
-                    self.replayed += usize::from(judged.replayed);
-                    if let Some(line) = judged.printed
-                        && !edge::write_line(&mut *writer, &line)?
-                    {
-                        self.halted = true;
-                        self.printing = false;
-                    }
-                    self.next += 1;
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Give the exit code, or the stop that names the earliest failed record.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Failure::Stopped`] when a record failed, carrying the cause
-    /// that sets the exit code.
-    fn finished(self) -> Result<ExitCode, Failure> {
-        match self.stop {
-            Some((place, cause)) => Err(Failure::Stopped {
-                at: place + 1,
-                finished: place,
-                replayed: self.replayed,
-                cause: Box::new(cause),
-            }),
-            None => Ok(ExitCode::SUCCESS),
-        }
-    }
+    schedule::over_records(
+        &|bytes| judging.row(&reading, bytes),
+        &mut chunks,
+        jobs,
+        &mut writer,
+    )
 }
 
 /// The folders `--record`, `--replay`, and `--cache` name between them.
@@ -581,17 +410,6 @@ struct Judging<'a> {
     threshold: Option<Threshold>,
     view: View,
     streams: bool,
-}
-
-/// One record's answer, as the line it prints and what the run counts.
-#[derive(Debug)]
-struct Judged {
-    /// The line standard output takes, or nothing when the view prints none.
-    printed: Option<String>,
-    /// What the answer earns a run over one document.
-    outcome: Outcome,
-    /// True when a recording answered rather than a backend.
-    replayed: bool,
 }
 
 impl Judging<'_> {
