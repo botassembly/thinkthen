@@ -20,7 +20,7 @@ const ANSWERED: &str = concat!(
 const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// A folder this test owns, removed and remade so each run starts empty.
-fn folder(name: &str) -> PathBuf {
+pub(crate) fn folder(name: &str) -> PathBuf {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
     let _absent = fs::remove_dir_all(&path);
     path
@@ -106,7 +106,7 @@ fn plant(folder: &Path, response: &str) -> Option<String> {
 }
 
 /// The one entry a folder holds, as the file name and the text inside it.
-fn only_entry(folder: &Path) -> io::Result<(String, String)> {
+pub(crate) fn only_entry(folder: &Path) -> io::Result<(String, String)> {
     let mut entries = Vec::new();
     for entry in fs::read_dir(folder)? {
         entries.push(entry?.path());

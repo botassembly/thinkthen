@@ -6,7 +6,7 @@ opens: crates/thinkthen-core/src/backend.rs crates/thinkthen/tests/backend/addre
 
 # 0031: Canonicalize DNS host case
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -55,4 +55,4 @@ ADR 0025, decided with this ticket. Ticket 0019 is landed; this ticket overturns
 ## Review
 
 - Design review: accepted after the minimum level floor was raised to level 3 for shared durable recording identity. The reviewer accepted the byte boundaries, committed-recording inventory, explicit external compatibility cost, focused parser matrix, and local record-and-replay proof.
-- Code review: pending.
+- Code review: accepted after one documentation correction. The reviewer confirmed the parser boundaries, recording identity, committed inventory, pinned digest, and helper locality. It found that an older sentence saying every HTTPS base was untouched contradicted host normalization; the page now says the clear-text restriction allows every HTTPS host.

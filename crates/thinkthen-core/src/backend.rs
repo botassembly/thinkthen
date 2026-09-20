@@ -139,10 +139,38 @@ fn address(base: &str) -> Result<Url, BackendError> {
     if scheme == "http://" && !LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)) {
         return Err(BackendError::KeyInClear);
     }
+    let rest = canonical_rest(rest, host);
     Ok(Url::new(format!(
         "{scheme}{rest}/{}",
         built_in::ENDPOINT_PATH
     ))?)
+}
+
+/// Lowercase literal ASCII letters in an unbracketed host and keep every other byte.
+fn canonical_rest(rest: &str, host: &str) -> String {
+    if host.starts_with('[') {
+        return rest.to_owned();
+    }
+    let mut canonical = String::with_capacity(rest.len());
+    let mut offset = 0;
+    while let Some(remaining) = host.get(offset..)
+        && !remaining.is_empty()
+    {
+        let bytes = remaining.as_bytes();
+        if bytes.first() == Some(&b'%')
+            && bytes.get(1).is_some_and(u8::is_ascii_hexdigit)
+            && bytes.get(2).is_some_and(u8::is_ascii_hexdigit)
+        {
+            canonical.push_str(remaining.get(..3).unwrap_or_default());
+            offset += 3;
+        } else {
+            let character = remaining.chars().next().unwrap_or_default();
+            canonical.push(character.to_ascii_lowercase());
+            offset += character.len_utf8();
+        }
+    }
+    canonical.push_str(rest.get(host.len()..).unwrap_or_default());
+    canonical
 }
 
 /// The host inside an authority, with the port dropped, or `None` when it holds none.
@@ -297,6 +325,33 @@ mod tests {
                 resolve(None, Some(base)).expect_err("a base that names no address is refused");
             assert_eq!(error, expected, "{base}");
             assert!(!error.to_string().contains("host"), "{error}");
+        }
+    }
+
+    #[test]
+    fn only_literal_ascii_letters_in_an_unbracketed_host_become_lowercase() {
+        let cases = [
+            (
+                "HTTPS://XN--BCHER-KVA.ExAmPlE:00443/MiXeD/%2F",
+                "https://xn--bcher-kva.example:00443/MiXeD/%2F/systemone",
+            ),
+            (
+                "https://[2001:DB8::A]:00443/MiXeD/%2F",
+                "https://[2001:DB8::A]:00443/MiXeD/%2F/systemone",
+            ),
+            (
+                "https://MiXeD%2EHoSt/MiXeD/%2F",
+                "https://mixed%2Ehost/MiXeD/%2F/systemone",
+            ),
+            (
+                "https://BÜCHER.ExAmPlE/MiXeD/%2F",
+                "https://bÜcher.example/MiXeD/%2F/systemone",
+            ),
+        ];
+
+        for (base, expected) in cases {
+            let backend = resolve(None, Some(base)).expect("a base names an address");
+            assert_eq!(backend.url().as_str(), expected, "{base:?}");
         }
     }
 

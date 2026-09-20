@@ -4,6 +4,10 @@ use std::io;
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
+use crate::recordings::{folder, only_entry};
+use thinkthen_core::adapters::built_in;
+use thinkthen_core::recording::Exchange;
+use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -262,6 +266,82 @@ fn every_spelling_of_one_base_reaches_the_same_path() {
         let request = requests.first().expect("one request reached the listener");
         assert_eq!(request.line, "POST /v1/systemone HTTP/1.1", "{given:?}");
     }
+}
+
+#[test]
+fn dns_host_case_spellings_share_one_recording_identity() {
+    let folder = folder("dns-host-case");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+    let uppercase = listener.base().replace("127.0.0.1", "LOCALHOST");
+    let lowercase = listener.base().replace("127.0.0.1", "localhost");
+    let canonical = format!("{lowercase}/systemone");
+    let named = folder.to_string_lossy();
+
+    let recorded = decide(
+        &[
+            "--url",
+            &uppercase,
+            "--model",
+            "local-1",
+            "--details",
+            "--record",
+            &named,
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    )
+    .expect("the compiled binary records");
+    assert_eq!(recorded.status.code(), Some(0));
+    let recorded = String::from_utf8(recorded.stdout).expect("a result is text");
+    assert!(recorded.contains(r#""value":true"#), "{recorded}");
+    assert!(
+        recorded.contains(&format!(r#""url":"{canonical}""#)),
+        "{recorded}"
+    );
+    assert!(recorded.contains(r#""replayed":false"#), "{recorded}");
+    assert_eq!(listener.requests().len(), 1, "record sends one request");
+
+    let (name, written) = only_entry(&folder).expect("one canonical entry");
+    assert!(
+        written.contains(&format!(r#""url": "{canonical}""#)),
+        "{written}"
+    );
+    let plan = Plan::new(
+        Evidence::new("Refund me please.").expect("evidence is not blank"),
+        ModelName::new("local-1").expect("model is not blank"),
+        vec![Question::Decide {
+            text: QuestionText::new("asks for a refund").expect("question is not blank"),
+            yes: None,
+            no: None,
+        }],
+    )
+    .expect("one question is a plan");
+    let request = built_in::encode(&plan).expect("a plan is writable");
+    let url = Url::new(&canonical).expect("the canonical URL is not blank");
+    assert_eq!(name, Exchange::new(&url, &request).digest().file_name());
+
+    let replayed = decide(
+        &[
+            "--url",
+            &lowercase,
+            "--model",
+            "local-1",
+            "--details",
+            "--replay",
+            &named,
+        ],
+        &[],
+    )
+    .expect("the compiled binary replays");
+    assert_eq!(replayed.status.code(), Some(0));
+    let replayed = String::from_utf8(replayed.stdout).expect("a result is text");
+    assert!(replayed.contains(r#""value":true"#), "{replayed}");
+    assert!(
+        replayed.contains(&format!(r#""url":"{canonical}""#)),
+        "{replayed}"
+    );
+    assert!(replayed.contains(r#""replayed":true"#), "{replayed}");
+    assert!(listener.requests().is_empty(), "replay asks nothing");
+    assert_eq!(only_entry(&folder).expect("one canonical entry").0, name);
 }
 
 /// A base given as white space is blank, and the message says so.

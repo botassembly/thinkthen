@@ -77,6 +77,8 @@ rc=5
 
 ### 4. Host case changes the recording digest; scheme case does not
 
+Status: Closed by ticket 0031.
+
 Severity: **papercut**.
 
 ```
