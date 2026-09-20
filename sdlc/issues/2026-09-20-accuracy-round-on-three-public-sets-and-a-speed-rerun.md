@@ -81,6 +81,29 @@ The same 3,000 lines of Pride and Prejudice and the same question as the first s
 
 The bill matches the first run. Staying inside the limit costs time and no money.
 
+## Published numbers to set beside ours
+
+A survey agent read these from the papers on 2026-09-20. Both less-known papers exist on arXiv, checked by fetch. The table cells were not checked a second time, so check the table in the paper before any number is printed. Every published row is zero-shot unless it says otherwise. Ours are samples, and most published rows use a full split.
+
+| Set | Who | Number | Source |
+| --- | --- | --- | --- |
+| SMS spam | ThinkThen on Jev, criteria arm | Accuracy 0.980, F1 0.930 | This page |
+| SMS spam | GPT-4 | Accuracy 0.973, F1 0.947 | Wang, Pang, and Lin, "Large Language Models Are Zero-Shot Text Classifiers", arXiv 2312.01044, table VI |
+| SMS spam | GPT-3.5 | Accuracy 0.873, F1 0.800 | The same table |
+| SMS spam | Llama 2 | Accuracy 0.727, F1 0.444 | The same table |
+| BoolQ | ThinkThen on Jev | 0.886 | This page |
+| BoolQ | PaLM 540B | 0.880 | The PaLM paper, arXiv 2204.02311, table 4 |
+| BoolQ | ChatGPT | 0.873 | "Is ChatGPT a General-Purpose NLP Task Solver?", arXiv 2302.06476, table 6 |
+| BoolQ | Llama 2 70B | 0.850 | The Llama 2 paper, arXiv 2307.09288, table 20 |
+| BoolQ | T5-11B, fine-tuned | 0.910 | The GPT-3 paper, arXiv 2005.14165, table 3.8 |
+| BoolQ | Always yes | 0.62 | The BoolQ paper, arXiv 1905.10044 |
+| Banking77 | ThinkThen on Jev, bare names | 0.781 | This page |
+| Banking77 | The best of 41 open-weight models, Mistral-7B-Instruct-v0.3 | 0.708 | Ganesh, Dozier, and Seals, arXiv 2607.27421 |
+| Banking77 | The mean of those 41 models | 0.388 | The same paper |
+| Banking77 | Fine-tuned on the full training set | 0.934 to 0.937 | Casanueva and others, 2020, table 3 |
+
+What this shows. With no training, the small model sits beside the largest general models on all three sets, for about a cent per thousand short records. A model fine-tuned on the task still wins on BoolQ and wins clearly on Banking77. No zero-shot GPT-3 number for BoolQ exists in its paper, so never print one.
+
 ## The default width passes the documented limit on short records
 
 `--jobs` defaults to 4. From this machine a width of 4 measured 1,267, 1,319, and 1,272 requests a minute on three separate 200-record checks. A width of 3 measured between 972 and 1,017 on five. The vendor documents 1,200. So a new user who never touches `--jobs` runs about 6 to 10 percent over the documented limit on short records. Longer records answer more slowly and stay under it. The service refused nothing, here or at 4,300 a minute in the first spike.
@@ -97,8 +120,8 @@ My recommendation stands from the first findings page: no pacer, and a test that
 | --- | --- | --- |
 | Spam detection with no training | 98.0 percent of 1,000 SMS messages, one question and two criteria sentences, 1.6 US cents | Name the dataset and the size. Say the set is public and old |
 | The plain-question version | 96.8 percent, 1.2 US cents | The same rule. Print both arms or neither |
-| Reading comprehension | 88.6 percent on 500 BoolQ questions for under one US cent | Only beside a cited published baseline. That lookup is running |
-| One of 77 intents, bare names | 78 percent top-1 | Do not lead with it. Useful as an honest answer on where it is weaker, and as the before number when descriptions are measured |
+| Reading comprehension | 88.6 percent on 500 BoolQ questions for under one US cent. PaLM 540B scored 88.0 zero-shot | Print with the cited baseline and the words "a sample of 500". Check the paper's table first |
+| One of 77 intents, bare names | 78 percent top-1. The best of 41 open-weight models scored 70.8 zero-shot, and a fine-tuned model scores about 93 | Print all three numbers together or none. It shows where a trained model still wins. Check the paper's table first |
 | Speed inside the vendor's limit | 3,000 lines in about three minutes, at about 980 requests a minute | Quotable now. It replaces the 41-second figure |
 | Calibration | "When it said 95 percent, it was right 96 percent of the time, on 97 messages" | Quotable with the count. Never say "calibrated" with no number |
 
