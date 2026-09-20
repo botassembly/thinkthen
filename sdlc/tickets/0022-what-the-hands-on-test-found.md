@@ -1,42 +1,65 @@
 ---
 flow: build
 priority: 46
-opens: crates spec specification demos sdlc/ratchet.json
+opens: crates/thinkthen-core/src/backend.rs crates/thinkthen/tests/backend specification/backends.md sdlc/ratchet.json
 ---
 
-# 0022: What the hands-on test found
+# 0022: Name the refused address rule
 
 Status: ready
 
 ## Outcome
 
-Every finding of the hands-on test of 2026-09-19 is closed: each refusal names the rule that fired, each page says what the binary does, and the papercuts are gone. No answer, exit code, request, or recording changes except where a line below says so.
+A refused base address says which address rule failed without repeating the address, and every refusal happens before a request.
 
 ## Current Facts
 
-A second agent used the release binary as a careful stranger would, with no key and no live call, against committed recordings and a throwaway server on this machine. `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` holds its full report, with the command that shows each finding. It found no wrong answer, no leak, no crash, and no hang. The threshold table, the three pinned question digests, the resume from `--cache` with zero requests, the stop on a closed pipe, the record size limit, the proxy rule, the terminal notice, and the secrecy of the key and the evidence over 21 runs all held. It found one wrong message, three places where a page disagrees with the binary, and six papercuts. `sdlc/issues/2026-09-19-small-leftovers-from-the-security-ticket.md` holds three more small items from the review of ticket 0019, and the first of them is finding 1 here.
+The first hands-on test and the independent review of ticket 0019 found the same defect. `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` and `sdlc/issues/2026-09-19-small-leftovers-from-the-security-ticket.md` hold the evidence.
 
-## Scope
+On current main, an invalid scheme, user information, an empty port, a signed port, a port above 65535, a query, and a fragment all exit 2 with this sentence:
 
-1. **An address that is refused names its rule.** A port past 65535, an empty port, a query, a fragment, and a bad scheme each get their own sentence. Today all five print the sentence about the scheme and user information. `backends.md` states the four rules and says the message names the rule.
-2. **`recording.md` says what replay does with a stray file.** The binary reads only the entry it needs, so a file that is no entry beside a good entry is ignored. The page says exit 5. The binary is right, and the page changes.
-3. **`recording.md` says what the foreign-schema refusal prints.** The sentence names the schema this version reads and never repeats the schema the file named. The page says it names no schema.
-4. **The host is written in lower case, as the scheme is.** `http://LOCALHOST:1234` and `http://localhost:1234` then share one recording digest, which is the goal `backends.md` already states. No committed recording holds a host in mixed case, and a test proves that every committed recording still replays. This overturns one choice of ticket 0019, which kept the host's case for fear of changing digests.
-5. **A reader of JSON names what it was reading.** A question file that is empty, that starts with a byte-order mark, or that holds a trailing comma says "the question file", and a whole document under `--field` says "the input". Today all say "the record". The message gives the line and the column, as a recording entry's message already does.
-6. **`--threshold -0.1` is refused in the tool's own words.** Today the argument parser refuses it and advises `--`, which would turn the number into the question.
-7. **An option on a command that does not take it is refused in the tool's own words,** such as `--quiet` on `score` and `--raw` on `decide`. Today the argument parser advises `--`, which would turn the option into a level. The message says which commands take the option.
-8. **The pages say that `--quiet` is refused in record mode.** One clause in `channels.md` and one in `decide.md`. The binary's message is already right.
-9. **"1 record finished".** The stop line uses the singular at one.
-10. **A how-to that reads a transform says so under its inputs.** Pages 12, 13, 25, 28, and 41 reach `../../transforms/`, and a reader who copies one folder gets a missing file. One sentence in each page's input section names the transform folder. `sdlc/scripts/demos` checks that a page which reads `../../transforms/` says so.
-11. **A pointer typed on the command line is checked for control characters** before any message repeats it, with the check ticket 0013 wrote for labels.
-12. **A transport failure that can never succeed is tried once.** A header the HTTP library refuses is not retried.
+> a base address begins with `http://` or `https://` and carries no user information
 
-Excluded: any new option, and the HTTP-date form of `Retry-After`.
+The refusals are safe and occur before a request, but the sentence often names the wrong rule. `specification/backends.md` already separates the rules and requires the refusal to name the one that failed.
+
+## Decisions
+
+- An invalid scheme says: `a base address begins with http:// or https://`. The rendered diagnostic keeps the two schemes in backticks.
+- User information says: `a base address carries no user information`.
+- An empty, signed, or out-of-range port says: `a port is digits naming a number from 0 to 65535`.
+- A query or fragment says: `a base address carries no query or fragment`.
+- Every diagnostic omits the refused address and preserves exit 2. Parsing still stops before key access or a network request.
+- `specification/backends.md` states the four exact rules and their safe refusal behavior.
+
+Excluded: blank-base wording, clear-text host restrictions, host normalization, path handling, any accepted-address change, and every other finding in the two issue reports. Those findings remain there until a smallest useful ticket becomes active.
 
 ## Acceptance
 
-- One test per item pins the exact sentence or the exact page line.
-- The key and the evidence never appear in any new message, and the shared secrecy test covers the new paths.
-- The pinned `decide` digest holds, and every committed recording still replays.
-- The ratchet equals the measured total, and the commit that raises it says what grew and why.
-- The whole ladder is green, and a second agent reviews the public surface change.
+- Exact integration cases pin the complete sentence and exit 2 for an invalid scheme, user information, empty port, signed port, port 65536, query, and fragment.
+- Each case uses a counted local listener where applicable and proves zero requests. No test reaches an outside address.
+- No standard output, standard error, plan, or debug text repeats the refused base. The shared refusal and secrecy coverage includes every new address-error path.
+- Valid address cases and the clear-text loopback rule remain unchanged.
+- `specification/backends.md` matches the four refusal categories.
+- The ratchet equals the measured total, the whole ladder passes, and an independent reviewer checks error ownership, no-echo behavior, and the zero-request boundary.
+
+## Dependencies
+
+Ticket 0019 is landed. It introduced the address validation and the safe but overly broad refusal this ticket splits by rule.
+
+## Complexity
+
+- Contract score: 1
+- State and timing score: 0
+- Reach score: 1
+- Proof score: 1
+- Cost of error score: 1
+- Total: 4
+- Minimum level floor: none
+- Final level: 2
+- Reasons: one settled address rule needs four precise public diagnostics; the change stays in the backend parser, its integration coverage, and one specification page; exact no-request and no-echo cases provide direct proof; a wrong split misleads a user or risks echoing an address, but is local and reversible.
+- Selected model: `gpt-5.6-luna` with high reasoning
+
+## Review
+
+- Design review: accepted after the original twelve-finding batch was split. The reviewer required one address-parser outcome, exact safe sentences, unchanged positive and loopback cases, and direct no-request proof. It confirmed complexity level 2 and the Luna High route.
+- Code review: pending.
