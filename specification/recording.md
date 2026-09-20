@@ -31,17 +31,20 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
 }
 ```
 
-- The five fields each sit on their own line, in the order above. `request` and `response` are JSON values rather than strings, and each one is copied exactly as the bytes that crossed the wire, so an entry is a faithful copy of the exchange. One exchange therefore writes the same file every time, and a diff shows which field changed.
+- The five fields each sit on their own line, in the order above. `request` and `response` are JSON values rather than strings. The adapter emits the request as one compact JSON value, so its stored value is the bytes sent. The stored response is the JSON value the backend returned; whitespace outside that value is not part of the entry. One exchange therefore writes the same file every time, and a diff shows which field changed.
 - Only an exchange that succeeded and decoded is recorded. A failure is never recorded.
 - An entry holds bodies and never headers. No key can reach a recording.
 - A file under `DIR` that is not an entry is a local failure, exit code 5. The message names the file and the line and column the reading stopped at, and never the text it stopped on. An entry is written around the evidence, so quoting that text would print the evidence into a diagnostic.
 - No refusal repeats any field of an entry. An entry that parses and names another schema is refused with a sentence that names no schema. Every field of a file under `DIR` is untrusted text: it is unbounded, it can carry a control byte, and it can quote the evidence back.
 - An entry stores the address the request went to, its path included, so a token must never sit in the path of a base. A base carrying user information, a query, or a fragment is refused for the same reason.
-- An entry is written to a temporary name in `DIR` and then renamed, so a reader never sees half a file. A write that fails takes its temporary file with it.
+- An entry is written completely to a private temporary name in `DIR` and closed. The tool then makes the final name as a hard link without replacing anything already there, so a reader never sees half a file. Every returned write path attempts to remove its temporary name. A process crash can leave a complete private dot-prefixed temporary file.
 - A `DIR` the tool creates is readable by its owner alone, and so is every entry the tool writes, because a recording holds the evidence. On Unix that is mode `0700` for the folder and `0600` for each file, whatever the umask says. A `DIR` that already exists keeps the mode it has.
-- Recording the same request again replaces the entry. A decider model can answer differently on another day, and the newest answer wins.
+- The first complete entry installed for a digest stays there until the user removes it. Recording the same stored JSON response again succeeds without changing the entry. Whitespace outside the backend's JSON value and formatting around a valid version-one envelope do not distinguish responses. A different stored response is a local failure at exit 5. The message names the entry and repeats neither response. A damaged existing entry keeps its current safe refusal and is never replaced.
+- New writes require hard-link support in `DIR`. A filesystem that refuses hard links returns a local recording failure at exit 5 and leaves an existing entry untouched.
 
-The first live answers on 2026-09-19 returned the same probability for two identical requests. ADR 0010 holds the measurement. A repeated trial therefore means something only when the candidate's output changes.
+A successful recorded run can replay the answers it printed. A run that receives different responses for one digest stops at the conflict instead of saving a history that would replay differently. A repeated trial that wants another backend answer uses a fresh folder.
+
+The first live answers on 2026-09-19 returned the same probability for two identical requests. ADR 0010 holds the measurement.
 
 ## What replay changes in a result
 

@@ -106,6 +106,8 @@ pub(crate) enum Failure {
     ReplayMiss(String),
     /// The entry the digest names cannot answer the request being made.
     Entry(String, String),
+    /// The entry already keeps another response for this request.
+    RecordingConflict(String),
     /// The recording folder could not be read or written.
     Recording(io::Error),
     /// An invariant inside `thinkthen` broke.
@@ -185,6 +187,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             format!("the replay folder holds no entry named `{name}`"),
         ),
         Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
+        Failure::RecordingConflict(name) => (
+            5,
+            format!("the entry `{name}` already records a different response"),
+        ),
         Failure::Recording(error) => (
             5,
             format!("the recording folder could not be read or written: {error}"),

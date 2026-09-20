@@ -15,6 +15,7 @@ mod from_record;
 mod keeping;
 mod limits;
 mod parallel;
+mod recording_conflicts;
 mod recordings;
 mod refusals;
 mod refused;

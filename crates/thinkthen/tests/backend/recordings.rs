@@ -379,7 +379,7 @@ fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
     );
 
     // The same exchange into a folder where a directory already holds the
-    // entry's name. The rename fails, and the temporary file the entry was
+    // entry's name. The hard link fails, and the temporary file the entry was
     // written under goes with it, so nothing private is left behind.
     let blocked = folder.join("blocked");
     fs::create_dir_all(blocked.join(&name)).expect("a directory stands where the entry would go");

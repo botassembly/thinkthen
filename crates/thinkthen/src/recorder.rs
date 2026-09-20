@@ -14,7 +14,7 @@ use crate::failure::Failure;
 ///
 /// Two records that are byte for byte alike make one digest, so every worker
 /// that misses it writes that same entry at once. The count gives each attempt
-/// a temporary name of its own, and the rename that follows is the atomic step.
+/// a temporary name of its own, and the hard link that follows is the atomic step.
 static WRITES: AtomicU64 = AtomicU64::new(0);
 
 /// Which folders `--record` and `--replay` named, once they agree.
@@ -77,10 +77,10 @@ impl Recorder {
             .map_err(|error| Failure::Entry(name, error.to_string()))
     }
 
-    /// Write this exchange into the folder, replacing whatever it recorded before.
+    /// Write this exchange into the folder without replacing an existing response.
     ///
-    /// The entry is written under a temporary name in the same folder and then
-    /// renamed, so a reader never sees half a file.
+    /// The entry is closed under a temporary name in the same folder and then
+    /// hard-linked without replacement, so a reader never sees half a file.
     ///
     /// # Errors
     ///
@@ -101,7 +101,7 @@ impl Recorder {
         // A crashed run may have left this name behind, and no other worker
         // holds it, because the count above gives each attempt its own.
         let _stale = fs::remove_file(&partial);
-        write_private(&partial, &folder.join(&name), &written).map_err(Failure::Recording)
+        write_private(&partial, &folder.join(&name), &written, exchange, &name)
     }
 }
 
@@ -124,11 +124,17 @@ fn make_folder(folder: &Path) -> io::Result<()> {
 /// Write the entry readable by its owner alone, and leave nothing behind.
 ///
 /// A recording holds the evidence, so the file is created at mode `0600` and
-/// the rename carries that mode onto the entry. A write or a rename that fails
-/// takes the temporary file with it, so no half-written private file is left in
-/// a folder a user keeps.
-fn write_private(partial: &Path, entry: &Path, written: &str) -> io::Result<()> {
-    let attempt = || -> io::Result<()> {
+/// its hard link carries that mode onto the entry. Every returned path attempts
+/// to remove the temporary name. A process crash can leave that complete private
+/// file behind.
+fn write_private(
+    partial: &Path,
+    entry: &Path,
+    written: &str,
+    exchange: &Exchange<'_>,
+    name: &str,
+) -> Result<(), Failure> {
+    let attempt = || -> Result<(), Failure> {
         let mut options = fs::OpenOptions::new();
         options.write(true).create_new(true);
         #[cfg(unix)]
@@ -136,10 +142,30 @@ fn write_private(partial: &Path, entry: &Path, written: &str) -> io::Result<()> 
             use std::os::unix::fs::OpenOptionsExt as _;
             options.mode(0o600);
         }
-        options.open(partial)?.write_all(written.as_bytes())?;
-        fs::rename(partial, entry)
+        let mut file = options.open(partial).map_err(Failure::Recording)?;
+        file.write_all(written.as_bytes())
+            .map_err(Failure::Recording)?;
+        drop(file);
+        match fs::hard_link(partial, entry) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                let existing = fs::read(entry).map_err(Failure::Recording)?;
+                let recorded = Entry::replayed(&existing, exchange)
+                    .map_err(|error| Failure::Entry(name.to_owned(), error.to_string()))?;
+                let new = Entry::replayed(written.as_bytes(), exchange)
+                    .map_err(|_| Failure::Defect("a written recording entry cannot be read"))?;
+                // The v1 envelope stores a JSON value, not whitespace around it.
+                // Compare that value without coupling it to envelope formatting.
+                if recorded == new {
+                    Ok(())
+                } else {
+                    Err(Failure::RecordingConflict(name.to_owned()))
+                }
+            }
+            Err(error) => Err(Failure::Recording(error)),
+        }
     };
-    attempt().inspect_err(|_| {
-        let _left = fs::remove_file(partial);
-    })
+    let result = attempt();
+    let _left = fs::remove_file(partial);
+    result
 }
