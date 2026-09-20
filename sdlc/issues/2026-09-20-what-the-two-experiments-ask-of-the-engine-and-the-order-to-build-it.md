@@ -62,7 +62,7 @@ One number proves it. The experiments' bench is 1,000 records, a 300 ms stub, an
 ## Two rules for building
 
 - A library artifact builds with `panic = "unwind"`. The workspace release profile says `abort`. That setting suits the command. Inside a host, an abort kills someone else's process. Cargo ignores a dependency's profile, and each binding's build sets its own.
-- The first release is numbered below 1.0. One crate carries the binary and the library, and publishing the command publishes the function surface. Python should call that surface before semantic versioning freezes it.
+- The first release is 0.1.0 on every surface, and builds before it are 0.0.N. Ian ruled it on 2026-09-20, and `2026-09-20-the-first-release-is-0-1-on-every-surface.md` has the ruling. One crate carries the binary and the library, and publishing the command publishes the function surface. A number below 1.0 lets Python call that surface before semantic versioning freezes it.
 
 ## Parked questions this page answers
 
@@ -78,4 +78,4 @@ Left for the database ADR: the DuckDB version pin and the PostgreSQL key channel
 
 ## What Ian can overturn
 
-Everything here. Four reach widest: staying blocking, moving the ADR 0017 rewrite ahead of the merge, numbering the first release below 1.0, and the double for `thinkthen_score`.
+Everything here except the release number, and that ruling is his own. Three reach widest: staying blocking, moving the ADR 0017 rewrite ahead of the merge, and the double for `thinkthen_score`.
