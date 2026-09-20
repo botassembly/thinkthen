@@ -104,7 +104,10 @@ fn a_record_the_tool_refuses_names_no_part_of_itself() {
             &b"{\"body\":1e999}"[..],
             RecordError::Json(JsonError::NotFinite),
         ),
-        (&b"not json"[..], RecordError::Json(JsonError::Syntax)),
+        (
+            &b"not json"[..],
+            RecordError::Json(JsonError::Syntax { line: 1, column: 2 }),
+        ),
         (&b"\xff\xfe"[..], RecordError::NotUtf8),
         (
             &b"{\"other\":\"x\"}"[..],
@@ -122,6 +125,37 @@ fn a_record_the_tool_refuses_names_no_part_of_itself() {
         assert!(!said.contains("Payouts"), "{said}");
         assert!(!said.contains("other"), "{said}");
     }
+}
+
+#[test]
+fn syntax_names_a_whole_input_but_keeps_jsonl_record_wording() {
+    let syntax = JsonError::Syntax {
+        line: 1,
+        column: 10,
+    };
+    assert_eq!(
+        reading(Framing::Document, &["/a"]).record(b"{\"a\":\"x\",}\n"),
+        Err(RecordError::InputJson {
+            line: 1,
+            column: 10,
+        })
+    );
+    assert_eq!(
+        reading(Framing::Jsonl, &["/a"]).record(b"{\"a\":\"x\",}\n"),
+        Err(RecordError::Json(syntax))
+    );
+    assert_eq!(
+        RecordError::InputJson {
+            line: 1,
+            column: 10,
+        }
+        .to_string(),
+        "the input is not valid JSON: the JSON at line 1 column 10 is not one"
+    );
+    assert_eq!(
+        RecordError::Json(syntax).to_string(),
+        "the record is not valid JSON"
+    );
 }
 
 /// The line that ended the record is not part of it, and the size is read

@@ -212,6 +212,16 @@ fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
             "{message}"
         );
         assert!(!message.contains("payout"), "{message}");
+        if bad == "not json\n" {
+            assert_eq!(
+                message,
+                concat!(
+                    "thinkthen: the record is not valid JSON\n",
+                    "thinkthen: stopped at record 2; 1 records finished, 0 from a recording\n",
+                )
+            );
+            assert!(!message.contains("not json"), "{message}");
+        }
     }
 }
 

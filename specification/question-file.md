@@ -16,6 +16,8 @@ A question that must begin with `@` is written in a file. Nothing escapes the `@
 
 An unreadable file is exit 5. A file that is not JSON, that is not one object, or that breaks a rule below is exit 5, because the file is a local input the user can fix. A command that names the wrong verb for the file is exit 2, because the line to fix is the one the user typed.
 
+A JSON syntax error says `the question file is not valid JSON: the JSON at line LINE column COLUMN is not one`. The line and column come from the JSON parser. The message carries no parser text and repeats no byte from the file.
+
 ## The grammar
 
 A question file holds exactly one question. The first key names the verb and carries the question text.

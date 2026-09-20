@@ -12,6 +12,7 @@ mod asked;
 mod choosing;
 mod exchange;
 mod from_record;
+mod json_syntax;
 mod keeping;
 mod limits;
 mod parallel;

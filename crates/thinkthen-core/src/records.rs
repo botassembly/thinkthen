@@ -59,6 +59,14 @@ pub enum RecordError {
     /// The record is not JSON this tool will read.
     #[error("{0}")]
     Json(#[from] JsonError),
+    /// The whole input is not valid JSON where the safe position names.
+    #[error("the input is not valid JSON: the JSON at line {line} column {column} is not one")]
+    InputJson {
+        /// The one-based line where the parser stopped.
+        line: usize,
+        /// The one-based column where the parser stopped, or zero at empty input.
+        column: usize,
+    },
     /// The record holds nothing at one of the pointers.
     #[error("the record holds nothing at `{0}`")]
     Missed(String),
@@ -224,7 +232,13 @@ impl Reading {
         }
         let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
         if self.framing == Framing::Jsonl || !self.fields.is_empty() {
-            return Ok(Record(Held::Json(Json::parse(text)?)));
+            let value = Json::parse(text).map_err(|error| match (self.framing, error) {
+                (Framing::Document, JsonError::Syntax { line, column }) => {
+                    RecordError::InputJson { line, column }
+                }
+                (_, other) => RecordError::Json(other),
+            })?;
+            return Ok(Record(Held::Json(value)));
         }
         Ok(Record(Held::Text(text.to_owned())))
     }

@@ -18,9 +18,9 @@ const DUPLICATE: &str = "a JSON record holds each member name once, and one name
 /// The message a number that is not finite is refused with.
 const NOT_FINITE: &str = "a JSON number is finite, so `NaN` and `Infinity` are refused";
 
-/// Why a record is not JSON this tool will read.
+/// Why an input is not JSON this tool will read.
 ///
-/// No variant carries any part of the record, because a record is evidence.
+/// No variant carries any input byte, because an input may hold private evidence.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum JsonError {
     /// Two members of one object arrived under one name.
@@ -31,7 +31,12 @@ pub enum JsonError {
     NotFinite,
     /// The bytes are not JSON at all.
     #[error("the record is not valid JSON")]
-    Syntax,
+    Syntax {
+        /// The one-based line where the parser stopped.
+        line: usize,
+        /// The one-based column where the parser stopped, or zero at empty input.
+        column: usize,
+    },
 }
 
 /// One JSON value, in the order it arrived.
@@ -62,17 +67,21 @@ impl Json {
     /// Returns [`JsonError`] when the text is not JSON, when one object holds
     /// two members under one name, or when a number is not finite.
     pub(crate) fn parse(text: &str) -> Result<Self, JsonError> {
-        let error = match serde_json::from_str(text) {
+        let error = match serde_json::from_str::<Self>(text) {
             Ok(value) => return Ok(value),
-            Err(error) => error.to_string(),
+            Err(error) => error,
         };
-        if error.starts_with(DUPLICATE) {
+        let message = error.to_string();
+        if message.starts_with(DUPLICATE) {
             return Err(JsonError::DuplicateName);
         }
-        if error.starts_with(NOT_FINITE) || error.contains("number out of range") {
+        if message.starts_with(NOT_FINITE) || message.contains("number out of range") {
             return Err(JsonError::NotFinite);
         }
-        Err(JsonError::Syntax)
+        Err(JsonError::Syntax {
+            line: error.line(),
+            column: error.column(),
+        })
     }
 
     /// The string this value holds, or `None` when it is not a string.
@@ -240,8 +249,20 @@ mod tests {
 
     #[test]
     fn bytes_that_are_not_json_are_refused_as_syntax() {
-        for case in ["", "{", "not json", "{'a':1}", "{\"a\":1,}"] {
-            assert_eq!(Json::parse(case), Err(JsonError::Syntax), "{case}");
+        let cases = [
+            ("", 1, 0),
+            ("\u{feff}{\"a\":1}", 1, 1),
+            ("{\"a\":1,}\n", 1, 8),
+            ("{\n\"private-marker\": true,\n}\n", 3, 1),
+        ];
+        for (case, line, column) in cases {
+            let error = Json::parse(case).expect_err("invalid JSON");
+            assert_eq!(error, JsonError::Syntax { line, column }, "{case}");
+            assert_eq!(
+                format!("{error:?}"),
+                format!("Syntax {{ line: {line}, column: {column} }}"),
+                "{case}"
+            );
         }
     }
 

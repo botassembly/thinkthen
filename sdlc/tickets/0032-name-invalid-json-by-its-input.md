@@ -6,7 +6,7 @@ opens: crates/thinkthen-core/src crates/thinkthen/tests/question_file crates/thi
 
 # 0032: Name invalid JSON by its input
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -59,4 +59,4 @@ ADR 0026, decided with this ticket. ADR 0013 establishes `@FILE` as JSON. ADR 00
 ## Review
 
 - Design review: accepted after ADR 0026, counted keyed listener cases, and the level 3 Sol Medium route were added. The reviewer confirmed the three owners, exact statuses and messages, location-only parser data, secrecy boundary, and unchanged JSONL behavior.
-- Code review: pending.
+- Code review: accepted with no findings. The reviewer confirmed the exact owner-specific messages and statuses, location-only parser state, keyed zero-request proof, unchanged JSONL behavior, regression coverage, specifications, and ratchet. The reviewer also accepted `RecordError::InputJson` as the smallest local typed boundary between whole-document and JSONL framing while the crate remains unpublished.

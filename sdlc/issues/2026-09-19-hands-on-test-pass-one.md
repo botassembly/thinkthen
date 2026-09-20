@@ -93,6 +93,8 @@ rc=5
 
 ### 5. A question file that is empty, that holds a BOM, or that holds a trailing comma all report "the record is not valid JSON"
 
+Status: Closed by ticket 0032.
+
 Severity: **papercut**.
 
 ```

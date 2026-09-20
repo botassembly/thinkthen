@@ -108,7 +108,7 @@ impl Serialize for Source {
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub enum QuestionFileError {
     /// The bytes of the file are not JSON this tool will read.
-    #[error("the question file is not JSON this tool reads: {0}")]
+    #[error("{}", question_json(.0))]
     NotJson(#[from] JsonError),
     /// The file holds something other than one JSON object.
     #[error("a question file is one JSON object")]
@@ -201,6 +201,16 @@ pub enum QuestionFileError {
         /// Why it is not a JSON Pointer.
         error: PointerError,
     },
+}
+
+/// Name malformed JSON by the question file while preserving other refusals.
+fn question_json(error: &JsonError) -> String {
+    match error {
+        JsonError::Syntax { line, column } => format!(
+            "the question file is not valid JSON: the JSON at line {line} column {column} is not one"
+        ),
+        _ => format!("the question file is not JSON this tool reads: {error}"),
+    }
 }
 
 /// Name the source and the key a message is about, or say nothing.

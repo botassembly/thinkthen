@@ -12,7 +12,11 @@ fn refused(text: &str) -> Refused {
 #[test]
 fn every_refusal_of_the_grammar_names_the_key_at_fault() {
     let cases: [(&str, Refused, &str); 12] = [
-        ("not json", Refused::NotJson(JsonError::Syntax), "not JSON"),
+        (
+            "not json",
+            Refused::NotJson(JsonError::Syntax { line: 1, column: 2 }),
+            "the question file is not valid JSON: the JSON at line 1 column 2 is not one",
+        ),
         ("[1,2]", Refused::NotAnObject, "one JSON object"),
         (r#"{"model":"m"}"#, Refused::NoVerb, "`decide`"),
         (
