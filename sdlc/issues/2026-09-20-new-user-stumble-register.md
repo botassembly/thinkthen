@@ -22,6 +22,9 @@ Rows 1 to 8 were observed by command on 2026-09-20. An agent played a new user w
 | 12 | Each agent host reads exit codes its own way | One host blocks a tool call on exit 2. This tool says no with exit 1 and uses exit 2 for a usage error | The host hook how-to shows the three-line `case` that maps them | Page |
 | 13 | A control loop cannot pay for a process on every step | The long-lived loop landed in ticket 0024. No how-to shows it | A how-to | Page |
 | 14 | The tool reads text only | A screen or an image has to become text first | One line on the refusals page | Page |
+| 15 | The `cost` transform fails on a `--lines` run | Seen by command on 2026-09-20. A `--details` row from `--lines` has a string for `input`, and `transforms/cost/cost.jq` reads `$row.input.id`. jq stops with `Cannot index string with string "id"`. An object row works | Read the id only when `input` is an object, and add a text-record case to the transform's example | Defect |
+| 16 | A script written for `decide --details` breaks on `choose --details` | A builder hit it in experiment 206. `decide` gives `answer.probability`. `choose` gives `answer.pick`, `answer.probabilities`, and `answer.confidence`, as `specification/result.md` says. The shapes are right and nothing warns a reader that they differ | The `--details` reference page opens with one table of the three answer shapes side by side | Page |
+| 17 | Nothing reports or holds a request rate | Experiment 206 measured it three times from this machine. A width of 4 sent about 1,270 to 1,320 requests a minute against a documented 1,200. A width of 3 sent about 980. The default width and the vendor's limit are both invisible to the user | The reference page for `--jobs` gives the measured widths and the arithmetic. A summary line on standard error at the end of a run could name the measured rate | Page, maybe flag |
 
 ## Messages that already work
 
