@@ -6,7 +6,7 @@ opens: transforms/compare/compare.jq transforms/README.md demos/41-tune-a-questi
 
 # 0027: Compare only like cases and whole questions
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -18,7 +18,7 @@ A run comparison reports question changes from the full resolved question and ne
 
 ## Scope
 
-- Use question digests when both runs are nonempty and every row in both has one. Fall back to printed question text for an older or mixed nonempty run, and report which identity was used. Report the question change as unavailable when either run is empty.
+- Use valid 64-character lowercase hexadecimal question digests when both runs are nonempty and every row in both has one. Fall back to printed question text for an older, mixed, or malformed nonempty run, and report which identity was used. Report the question change as unavailable when either run is empty.
 - Keep `paired` as the shared unique-id count. Add `compared` for matching evidence and labels. Compute `same` and every flip from those comparable pairs alone.
 - Update the transform header, its executable README proof, how-to 41, both issues, the plan, and the landed record. Do not change result rows or the binary.
 
@@ -27,7 +27,7 @@ Excluded: changing how ids pair, accepting repeated ids, adding metrics for `cho
 ## Acceptance
 
 - How-to 41's real draft and tuned rows report `changed.question: true` and `question_by: digest` while retaining 24 paired and compared rows, 21 same answers, and the three existing flips.
-- A deterministic legacy fixture with one missing digest uses text for both runs, reports `question_by: text`, and detects a printed text change.
+- Deterministic legacy and malformed-digest fixtures use text for both runs, report `question_by: text`, and detect a printed text change.
 - If either run is empty, `changed.question` is null and `question_by` is `unavailable`.
 - A doctored pair whose evidence and label differ remains in both mismatch lists but enters neither `same` nor `flips`. The output proves exactly that `compared` equals `same` plus the total lengths of every flip list.
 - Missing cases and repeated ids remain outside both `paired` and `compared`. The full ladder passes without a network call.
@@ -52,4 +52,4 @@ ADR 0021, decided with this ticket. Ticket 0026 is landed.
 ## Review
 
 - Design review: accepted after one correction. The reviewer required defined empty-run semantics, an exact comparison-count invariant, and a proof score of 2 for legacy compatibility. It accepted the corrected null question change and unavailable identity for an empty side, the explicit invariant, and the level 2 Luna High route.
-- Code review: pending
+- Code review: accepted after two corrections. The first pass required exact 64-character lowercase hexadecimal digest validation and a mismatch fixture whose excluded row really changed verdict. The second found that the supposed trailing newline fixture held a printed escape instead. The final proof contains a real line feed, fails under the weaker end anchor, passes under the strict rule, and proves that a doubly mismatched flipping row enters no flip list.

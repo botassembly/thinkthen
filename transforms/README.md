@@ -39,11 +39,89 @@ jq -c 'if .input.id == "C-03" then .input.label = false else . end
        | select(.input.id != "C-40")' rows/runs/run-b.jsonl > "$work/doctored.jsonl"
 
 jq -n --slurpfile before rows/runs/run-a.jsonl -f compare/compare.jq "$work/doctored.jsonl" \
-  | jq -c '{paired, only_in_before, only_in_after, repeated_ids, mismatched_input, mismatched_label}' \
-  | mustmatch '{"paired":39,"only_in_before":["C-40"],"only_in_after":[],"repeated_ids":{"before":[],"after":[]},"mismatched_input":[],"mismatched_label":["C-03"]}'
+  | jq -c '{paired, compared, only_in_before, only_in_after, repeated_ids, mismatched_input, mismatched_label}' \
+  | mustmatch '{"paired":39,"compared":38,"only_in_before":["C-40"],"only_in_after":[],"repeated_ids":{"before":[],"after":[]},"mismatched_input":[],"mismatched_label":["C-03"]}'
 ```
 
 A case in one run alone is listed rather than dropped, so a run that stopped early cannot pass as a smaller run that finished. A changed label is named, because it means somebody moved the target between the two measurements. `repeated_ids` holds the ids a run carries twice, which are repeated trials and are paired in nothing.
+
+This fixture proves the comparison partition, digest choice, legacy fallback, and empty-run result. The two mismatched pairs remain in both mismatch lists where applicable, but neither reaches `same` or `flips`.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+jq -n -c '
+  def row($id; $body; $label; $value):
+    {input: {id: $id, body: $body, label: $label}, value: $value,
+     question: {text: "same question"}, threshold: 0.5,
+     meta: {model: "same", question_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}};
+  [row("same"; "same"; true; true),
+   row("flip"; "same"; false; false),
+   row("input"; "old"; true; true),
+   row("both"; "old"; true; false),
+   row("gone"; "same"; true; true),
+   row("repeat"; "same"; true; true),
+   row("repeat"; "same"; true; true)] | .[]' > "$work/before.jsonl"
+
+jq -n -c '
+  def row($id; $body; $label; $value):
+    {input: {id: $id, body: $body, label: $label}, value: $value,
+     question: {text: "same question"}, threshold: 0.5,
+     meta: {model: "same", question_sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}};
+  [row("same"; "same"; true; true),
+   row("flip"; "same"; false; true),
+   row("input"; "new"; true; true),
+   row("both"; "new"; false; true),
+   row("new"; "same"; true; true),
+   row("repeat"; "same"; true; true),
+   row("repeat"; "same"; true; true)] | .[]' > "$work/after.jsonl"
+
+jq -n --slurpfile before "$work/before.jsonl" -f compare/compare.jq "$work/after.jsonl" \
+  | jq -c '{paired, compared, mismatched_input, mismatched_label, same, flips,
+            both_in_flips: ([.flips[]? | .[]] | index("both") != null),
+            partition: (.compared == (.same + ([.flips[]? | length] | add // 0))),
+            changed}' \
+  | mustmatch '{"paired":4,"compared":2,"mismatched_input":["both","input"],"mismatched_label":["both"],"same":1,"flips":{"no to yes":["flip"]},"both_in_flips":false,"partition":true,"changed":{"question":true,"question_by":"digest","model":false,"threshold":false}}'
+
+jq -n -c '{input:{id:"legacy",body:"same",label:true},value:true,
+           question:{text:"old question"},threshold:0.5,meta:{model:"same"}}' > "$work/legacy-before.jsonl"
+jq -n -c '{input:{id:"legacy",body:"same",label:true},value:true,
+           question:{text:"new question"},threshold:0.5,
+           meta:{model:"same",question_sha256:"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}}' > "$work/legacy-after.jsonl"
+
+jq -n --slurpfile before "$work/legacy-before.jsonl" -f compare/compare.jq "$work/legacy-after.jsonl" \
+  | jq -c '{changed}' \
+  | mustmatch '{"changed":{"question":true,"question_by":"text","model":false,"threshold":false}}'
+
+jq -n -c '{input:{id:"mixed",body:"same",label:true},value:true,
+           question:{text:"same question"},threshold:0.5,
+           meta:{model:"same",question_sha256:7}}' > "$work/mixed-before.jsonl"
+jq -n -c '{input:{id:"mixed",body:"same",label:true},value:true,
+           question:{text:"same question"},threshold:0.5,
+           meta:{model:"same",question_sha256:"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}}' > "$work/mixed-after.jsonl"
+
+jq -n --slurpfile before "$work/mixed-before.jsonl" -f compare/compare.jq "$work/mixed-after.jsonl" \
+  | jq -c '{changed}' \
+  | mustmatch '{"changed":{"question":false,"question_by":"text","model":false,"threshold":false}}'
+
+jq -n -c '{input:{id:"malformed",body:"same",label:true},value:true,
+           question:{text:"old question"},threshold:0.5,
+           meta:{model:"same",question_sha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"}}' > "$work/malformed-before.jsonl"
+jq -n -c '{input:{id:"malformed",body:"same",label:true},value:true,
+           question:{text:"new question"},threshold:0.5,
+           meta:{model:"same",question_sha256:"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}}' > "$work/malformed-after.jsonl"
+
+jq -n --slurpfile before "$work/malformed-before.jsonl" -f compare/compare.jq "$work/malformed-after.jsonl" \
+  | jq -c '{changed}' \
+  | mustmatch '{"changed":{"question":true,"question_by":"text","model":false,"threshold":false}}'
+
+: > "$work/empty.jsonl"
+jq -n --slurpfile before "$work/before.jsonl" -f compare/compare.jq "$work/empty.jsonl" \
+  | jq -c '{changed}' \
+  | mustmatch '{"changed":{"question":null,"question_by":"unavailable","model":true,"threshold":true}}'
+```
 
 ## The rules every transform follows
 
@@ -52,5 +130,5 @@ A case in one run alone is listed rather than dropped, so a run that stopped ear
 - **A metric states its definition.** The header names the label set, what each rate divides by, and what a zero denominator yields, which is null.
 - **A case with no label is reported.** It is listed by id and scored in nothing. No row is dropped silently.
 - **A cut is an argument.** `--argjson` carries it, so one saved run is read at any cut with no second request.
-- **A comparison checks more than an id.** It checks the evidence and the label of every pair, and it reads the rows to say whether the question, the model, or the threshold changed.
+- **A comparison checks more than an id.** It checks the evidence and the label of every pair, counts only matching pairs in `compared`, `same`, and `flips`, and reads the rows to say whether the question, the model, or the threshold changed. A complete nonempty run uses `meta.question_sha256`; a legacy or mixed run names its text fallback, and an empty side makes question change unavailable.
 - **Counts are exact and rates are rounded.** Four decimals for a rate, six for money.

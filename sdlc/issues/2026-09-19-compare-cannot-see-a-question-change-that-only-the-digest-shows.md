@@ -1,5 +1,7 @@
 # `compare.jq` cannot see a question change that only the digest shows
 
+Status: Closed by ticket 0027
+
 Found on 2026-09-19 while writing how-to 41 for ticket 0017.
 
 ## What happens
@@ -23,6 +25,6 @@ The purpose of `changed` is to stop a reader blaming the wording for a flip that
 
 ## The fix, for whoever takes it
 
-Read `meta.question_sha256` in place of `question.text`, or beside it. The digest covers the verb, the text, the two texts, the options with their descriptions, the levels, and the threshold, so one comparison replaces three. A row older than ticket 0017 carries no digest, so the transform falls back to the text and says which test it used.
+Ticket 0027 makes a complete nonempty comparison read `meta.question_sha256`. The digest covers the verb, the text, the two texts, the options with their descriptions, the levels, and the threshold, so one comparison replaces three. A row older than ticket 0017 carries no digest, so the transform falls back to the text and says which test it used.
 
-How-to 41 names this in its traps section, so a reader of that page is not misled in the meantime.
+How-to 41 names the digest and fallback rules in its traps section.

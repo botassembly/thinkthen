@@ -86,8 +86,8 @@ thinkthen decide @receipt.json --jsonl --field /body --details \
   --replay recording/ < claims.jsonl > "$work/tuned.jsonl"
 
 jq -n --slurpfile before "$work/draft.jsonl" -f ../../transforms/compare/compare.jq \
-  "$work/tuned.jsonl" | jq -c '{paired, same, flips, mismatched_label}' \
-  | mustmatch '{"paired":24,"same":21,"flips":{"yes to no":["C-06","C-12","C-18"]},"mismatched_label":[]}'
+  "$work/tuned.jsonl" | jq -c '{paired, compared, same, flips, mismatched_label, changed}' \
+  | mustmatch '{"paired":24,"compared":24,"same":21,"flips":{"yes to no":["C-06","C-12","C-18"]},"mismatched_label":[],"changed":{"question":true,"question_by":"digest","model":false,"threshold":false}}'
 
 jq -s -r '[.[0].meta.question_sha256[0:8]] | join("")' "$work/draft.jsonl" > "$work/a"
 jq -s -r '[.[0].meta.question_sha256[0:8]] | join("")' "$work/tuned.jsonl" > "$work/b"
@@ -97,15 +97,13 @@ c2c9a714"
 sh ../../transforms/compare/example.sh | jq -c '{paired, same}' | mustmatch '{"paired":40,"same":36}'
 ```
 
-Twenty-four pairs, the same ids and labels, and three claims that moved from yes to no. Both runs print the same `question.text`, and the digests differ, because the two added sentences ride in the digest. The last line runs the same transform as a file.
-
-An automatic tuner drives this same loop by rewriting step 2, and every round it produces is traceable by its digest.
+Twenty-four compared rows share ids and labels, and three claims moved from yes to no. Both runs print the same `question.text`, but complete digests make `changed.question` true. The last line runs the file transform.
 
 ## What can go wrong
 
 - **Tuning against the cases you then report on.** Twenty-four claims show the direction. Hold cases back before anyone quotes the accuracy.
 - **Editing the wording on the command line.** Then the gate and the measurement are two questions, and no row says so.
-- **Reading `changed.question` from the comparison.** It watches the printed text, which did not move here. `meta.question_sha256` is the field that did. `changed` also names the model and the cut, and when two of the three moved, rerun with one held still.
+- **Reading `changed.question` from the comparison.** A complete run uses `meta.question_sha256`, so true and false description changes are visible. A legacy or mixed run says `question_by: text`; an empty side makes it unavailable. `changed` also names the model and cut. Rerun when two move.
 - **Reading the flips before the pairing.** `paired`, `only_in_before`, `only_in_after`, `repeated_ids`, and the two mismatch lists say the runs measured the same cases. A run that stopped early is listed there, not passed off as a smaller run.
 - **Folding unresolved into no.** A case that moved into the band then reads as a regression. The six directions stay apart, and `compare.jq` states each rule in its header.
 - **A tuned file that misses the recording.** A changed text is a changed request, so `--replay` names the entry it cannot find.
