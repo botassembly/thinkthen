@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/args.rs crates/thinkthen/tests/backend/refusals.rs s
 
 # 0033: Name a negative threshold
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -56,4 +56,4 @@ Ticket 0032 is the landed sequencing predecessor in the plan and is not a techni
 ## Review
 
 - Design review: accepted. The reviewer confirmed the five command homes, the narrow clap setting, exact safe diagnostic, keyed zero-request proof, following-option regression, existing ADR coverage, and level 2 Luna High route.
-- Code review: pending
+- Code review: accepted with no findings. The reviewer confirmed the narrow setting on all five argument homes, exact space-and-equals matrix, empty output and safe diagnostics, keyed zero-connection and zero-request proof, following-option behavior, regression coverage, and exact ratchet.

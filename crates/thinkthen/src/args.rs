@@ -260,7 +260,7 @@ pub(crate) struct DecideArguments {
     pub(crate) meanings: Meanings,
 
     /// The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved.
-    #[arg(long, value_name = "T|LOW:HIGH")]
+    #[arg(long, value_name = "T|LOW:HIGH", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 
     /// Print nothing on standard output. The exit code still carries the answer.
@@ -309,7 +309,7 @@ pub(crate) struct FilterArguments {
     pub(crate) question: String,
 
     /// One cut T on the probability of yes. A band is a usage error.
-    #[arg(long, value_name = "T")]
+    #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 
     /// What a yes and a no mean.
@@ -342,7 +342,7 @@ pub(crate) struct RankArguments {
     pub(crate) top: Option<usize>,
 
     /// Taken so that the tool refuses it in its own words. `rank` has no rule.
-    #[arg(long, value_name = "T", hide = true)]
+    #[arg(long, value_name = "T", hide = true, allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 
     /// What a yes and a no mean.
@@ -385,7 +385,7 @@ pub(crate) struct ChooseArguments {
     pub(crate) options_pointer: Option<String>,
 
     /// One cut T on the winning option's probability. A band is a usage error.
-    #[arg(long, value_name = "T")]
+    #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 
     /// Print the label without quotation marks, and nothing when unresolved.
@@ -414,7 +414,7 @@ pub(crate) struct ScoreArguments {
     ///
     /// Left to the parser, `--threshold` drew a tip naming `--record` and a
     /// usage line that read as if `--record` were required.
-    #[arg(long, value_name = "T", hide = true)]
+    #[arg(long, value_name = "T", hide = true, allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 
     /// The options every judging verb takes.

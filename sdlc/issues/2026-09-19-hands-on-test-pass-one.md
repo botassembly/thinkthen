@@ -115,6 +115,8 @@ Smallest fix: give the question-file reader and the whole-document reader their 
 
 ### 6. `--threshold -0.1` falls out of clap with a message about passing `-0` as a value
 
+Status: Closed by ticket 0033.
+
 Severity: **papercut**.
 
 ```
