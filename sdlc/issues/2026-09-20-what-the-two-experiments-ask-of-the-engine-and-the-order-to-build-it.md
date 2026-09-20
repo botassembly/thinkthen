@@ -49,6 +49,8 @@ The twenty shared cases in `experiments/205-thinkthen-libs/shared/cases/` and `e
 | A fork check | A child forked after a call hangs on the wire in Python, Ruby, and PostgreSQL | Fork after a call, and the child's call answers |
 | A fast stop | A dead address crawled about 3 s for every call | 1,000 records against a dead address return after one retry cycle |
 
+The gate covers one process. PostgreSQL's parallel workers are separate processes, and the `PARALLEL RESTRICTED` marking holds them. The experiment measured its cost at 3.7 times on the parallel scan.
+
 The promise for cancel is exact: no new request starts, and requests already sent finish. Every page promises that and no more.
 
 **Step 4. The cache and the counters become engine settings.** The per-digest locks from the builder's step 4 land here, or move here in step 1. They also give the databases their rule: equal pairs of question and text are asked once. `usage` counts requests, cache answers, and tokens for the process. The digest in `details` is `Exchange::digest` over the real request bytes, and the stand-in's digest gap closes with no new code. `annotate` already packs a question set into one request, and that closes the stand-in's other gap.
