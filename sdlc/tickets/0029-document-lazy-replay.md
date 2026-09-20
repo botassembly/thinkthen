@@ -6,7 +6,7 @@ opens: specification/recording.md crates/thinkthen/tests/backend/recordings.rs s
 
 # 0029: Document lazy replay
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -53,4 +53,4 @@ ADR 0023, decided with this ticket. Ticket 0004 is landed; it introduced digest-
 ## Review
 
 - Design review: accepted after ADR 0023 was added. The reviewer required a recorded compatibility decision because the page is Settled, raised the ticket to level 3 for persistent recording state and hostile-file proof, and accepted the combined success-and-failure integration flow.
-- Code review: pending.
+- Code review: accepted with no findings. The reviewer confirmed that the one integration flow uses no key, drains the setup request before replay, proves both replay attempts make zero requests, pins the requested entry and JSON location, and never echoes the planted private text.

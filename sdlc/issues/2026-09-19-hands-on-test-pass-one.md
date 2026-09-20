@@ -39,6 +39,8 @@ Smallest fix: split the one refusal into four, one sentence per rule, each namin
 
 ### 2. `recording.md` says a non-entry file under `DIR` is exit 5; the binary ignores it
 
+Status: Closed by ticket 0029.
+
 Severity: **page disagrees with the binary**.
 
 ```

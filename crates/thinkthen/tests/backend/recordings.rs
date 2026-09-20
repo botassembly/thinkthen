@@ -280,6 +280,48 @@ fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
 }
 
 #[test]
+fn replay_reads_only_the_requested_entry_and_safely_refuses_it_when_malformed() {
+    const MALFORMED: &[u8] = b"{\n\"private\":\"DO_NOT_ECHO\"\n";
+    let folder = folder("lazy-replay");
+    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
+    assert_eq!(
+        listener.requests().len(),
+        1,
+        "the recording run called once"
+    );
+    fs::write(folder.join("notes.txt"), MALFORMED).expect("an unrelated stray file");
+
+    let output = decide(
+        listener.base(),
+        &["--replay", &folder.to_string_lossy()],
+        None,
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(output.stdout, b"true\n");
+    assert!(output.stderr.is_empty());
+
+    fs::write(folder.join(&name), MALFORMED).expect("the requested entry is writable");
+    let output = decide(
+        listener.base(),
+        &["--replay", &folder.to_string_lossy()],
+        None,
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        format!(
+            "thinkthen: the entry `{name}` was refused: the file is not a recording entry: \
+             the JSON at line 3 column 0 is not one\n"
+        )
+    );
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("DO_NOT_ECHO"));
+    assert_eq!(listener.requests().len(), 0, "replays open no connection");
+}
+
+#[test]
 fn an_entry_that_records_another_exchange_is_refused_by_name() {
     let folder = folder("damaged");
     let (listener, name, written) = recorded(&folder).expect("one recorded entry");
