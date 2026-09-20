@@ -6,7 +6,7 @@ opens: sdlc/scripts/live sdlc/scripts/README.md sdlc/live-tokens crates/thinkthe
 
 # 0028: Precharge and serialize live spend
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -22,7 +22,8 @@ The script starts any job while `spent_tokens` is one below `limit_tokens`, howe
 - Validate one canonical positive limit and one canonical nonnegative spend no greater than the limit, both at most 999,999,999. Reject duplicate or unknown data rows.
 - Hold `sdlc/live-tokens.lock` from ledger validation through child completion. Write its safe owner and state record without printing its contents.
 - Refuse a reservation above the remainder. Atomically add an accepted reservation to the ledger before starting the job, and never refund it automatically.
-- Forward HUP, INT, and TERM to the job shell, wait for it to stop, preserve the signal status, and then clean up. Leave uncertain precharge or uncatchable-stop state fail-closed for the documented manual recovery.
+- Forward HUP and TERM to the job shell. Translate wrapper INT to child TERM because an asynchronous POSIX shell may ignore INT, but preserve wrapper status 130. Wait for the child to stop and then clean up. Leave uncertain precharge or uncatchable-stop state fail-closed for the documented manual recovery.
+- Validate the key before repository resolution or any external command. Refuse LF with the fixed safe diagnostic. Pass every accepted key byte through a FIFO only after the durable child PID, and release the paid job only after receipt and a signal checkpoint.
 - Keep the newer-JSON count as informational output only. Warn and fail a successful job when measured use exceeds its reservation. Preserve a failed job's status.
 - Update the script page and living invocation examples. Make no network call in a test.
 
@@ -35,6 +36,9 @@ Excluded: exact vendor-token prediction, interrupting a request before its respo
 - A failed job retains its nonzero status and full charge. A successful job measured above its reservation keeps the charge, exits 1, and names only the reservation and measured count.
 - A deterministic two-process test holds the first job after precharge. The second invocation refuses before build and job execution. After release, the first removes its lock and temporary files.
 - A deterministic TERM test sends the signal to the wrapper alone. The wrapper forwards it, waits for a child that records receipt, keeps the full charge, removes the lock, and exits 143.
+- Deterministic INT tests stop a gated child before paid work and send TERM to a running child while the wrapper exits 130. HUP, repeated signals, build-time signals, the child-start window, and post-child bookkeeping preserve the first wrapper status.
+- Deterministic FIFO-phase tests signal before and after creation, stop the gate before it opens its reader, and signal after key receipt. The stopped-gate case sends TERM and then HUP while the wrapper waits; the gate and lock remain until the gate resumes and exits, and the first status 143 wins. The wrapper has no later blocking open or untracked helper. Every case waits without hanging, starts no job, keeps the charge, and removes the safe lock.
+- An LF-bearing key gets the fixed safe diagnostic before repository lookup, lock creation, build, or job. Wholly whitespace keys remain blank. FIFO tests preserve accepted leading and trailing spaces, backslashes, tabs, and carriage returns exactly, while build and bookkeeping helpers never receive the key.
 - A prebuilt stale lock in `charged` state refuses. Its fixture proves the documented recovery keeps the recorded charge. An uncertain or lower ledger stays fail-closed.
 - Missing, zero, leading-zero, signed, decimal-point, over-999999999, and extremely long reservations run no build or job. Ledger fixtures cover missing and duplicate fields, unknown data, zero or oversized limits, leading zeroes, spend above limit, and the exact numeric edges.
 - The old `live JOB` form refuses before build or job execution. The script header, script README, and living probe instructions use the new form. Historical records remain unchanged.
@@ -62,4 +66,4 @@ This ticket is irreducible at level 4. The precharge, serialization, and recover
 ## Review
 
 - Design review: accepted after one rewrite. The reviewer found that refunding from the recording scan recreated the undercount, signal and accounting failures could reopen the door, numeric bounds were undefined, stale-lock recovery lacked evidence, the old invocation was untested, and shared paid state sets a level 4 floor. It accepted the permanent conservative precharge, fail-closed recovery, signal lifecycle, numeric bounds, compatibility proof, and level 4 Sol Medium route.
-- Code review: pending
+- Code review: accepted after four remediations. The reviewer found missing durability and key confinement, broken INT forwarding, an unrecorded key-bearing window, changed path bytes, blocking FIFO signal windows, an orphaned helper, and a one-shot wait that could clear the lock while the gate lived. The accepted implementation has two durable sync points, validates and removes the key before external work, preserves path bytes, uses one tracked gate and a helper-free FIFO handoff, and waits through repeated signals until the child is confirmed gone. Twenty-six focused tests cover the final contract.

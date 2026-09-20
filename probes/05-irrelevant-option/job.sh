@@ -5,7 +5,7 @@
 # order, with one label appended that no case is about. The appended label is in
 # added.txt and was chosen before any call went out.
 #
-#   sdlc/scripts/live probes/05-irrelevant-option/job.sh       records
+#   sdlc/scripts/live --max-tokens 1000000 probes/05-irrelevant-option/job.sh records
 #   OUT=DIR sh probes/05-irrelevant-option/job.sh --replay     replays, no network
 set -eu
 

@@ -10,7 +10,7 @@
 # configuration on standard input, which is the one channel curl reads it from
 # without putting it in the process list.
 #
-#   sdlc/scripts/live probes/09-evidence-shape/object.sh
+#   sdlc/scripts/live --max-tokens 1000000 probes/09-evidence-shape/object.sh
 set -eu
 
 cd -- "$(dirname -- "$0")"

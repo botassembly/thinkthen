@@ -6,7 +6,7 @@
 # real JSON object. It opens its own connection, so it keeps no recording and
 # lives outside runs/.
 #
-#   sdlc/scripts/live probes/09-evidence-shape/job.sh   records
+#   sdlc/scripts/live --max-tokens 1000000 probes/09-evidence-shape/job.sh records
 #   OUT=DIR sh probes/09-evidence-shape/job.sh --replay  replays, no network
 set -eu
 

@@ -11,7 +11,7 @@
 # Record mode is not built, so the loop is the shell's. Each row is the record
 # row of specification/result.md, with the whole case under `input`.
 #
-#   sdlc/scripts/live probes/03-score/job.sh        records
+#   sdlc/scripts/live --max-tokens 1000000 probes/03-score/job.sh records
 #   OUT=DIR sh probes/03-score/job.sh --replay      replays, no network
 set -eu
 

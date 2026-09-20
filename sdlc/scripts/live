@@ -2,86 +2,448 @@
 # The one door for a paid live call. Run by hand, with Ian's authorization.
 # No rung calls this, and nothing here belongs in a gate.
 #
-#   sdlc/scripts/live demos/01-refund-gate/record.sh
+#   sdlc/scripts/live --max-tokens 10000 demos/01-refund-gate/record.sh
 #
-# It refuses at the spend limit and with no key, builds the binary, runs the
-# job with that binary on PATH, then adds the input tokens of every recording
-# entry the job wrote to the ledger. The key is read from the environment by
-# the binary alone. This script never prints it, never passes it as an
-# argument, and never writes it anywhere.
+# The declared maximum is charged before the job starts and is never refunded
+# automatically. Both charged owner states are synced before the gated job is
+# released. The later scan is informational. Only the job shell receives the key.
 set -eu
+umask 077
 
-# The ledger is the one beside this script. No variable moves it, because a
-# variable that moved it would let any caller point the spend limit at a
-# throwaway file. A test copies this script into a tree of its own instead.
-REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-LEDGER=$REPO/sdlc/live-tokens
-
-job=${1:-}
-if [ -z "$job" ]; then
-	printf 'live: name the job to run, as the path of a script\n' >&2
-	exit 2
-fi
-if [ ! -f "$job" ]; then
-	printf 'live: %s is not a file, so there is no job to run\n' "$job" >&2
-	exit 2
-fi
-shift
-
-if [ ! -f "$LEDGER" ]; then
-	printf 'live: %s is not a file, so the spend cannot be read\n' "$LEDGER" >&2
-	exit 2
-fi
-
-field() {
-	awk -v want="$1" '$1 == want { print $2 }' "$LEDGER"
-}
-
-limit=$(field limit_tokens)
-spent=$(field spent_tokens)
-case "${limit:-x}${spent:-x}" in
-*[!0-9]*)
-	printf 'live: %s holds no limit and no spend in whole tokens\n' "$LEDGER" >&2
-	exit 2
-	;;
-esac
-if [ "$spent" -ge "$limit" ]; then
-	printf 'live: %s of %s tokens are spent, so no call goes out\n' "$spent" "$limit" >&2
-	exit 1
-fi
-
-# A blank key is an absent key, which is the rule the binary itself applies.
-case "${THINKTHEN_API_KEY:-}" in
-*[![:space:]]*) ;;
+case ${THINKTHEN_API_KEY:-} in
+*[![:space:]]*) captured_api_key=$THINKTHEN_API_KEY ;;
 *)
 	printf 'live: THINKTHEN_API_KEY holds nothing, so no call goes out\n' >&2
 	exit 1
 	;;
 esac
+case $captured_api_key in
+*'
+'*)
+	printf 'live: THINKTHEN_API_KEY contains a line break, so no call goes out\n' >&2
+	exit 1
+	;;
+esac
+unset THINKTHEN_API_KEY
+unset live_api_key
+live_api_key=$captured_api_key
+unset captured_api_key
 
-cargo build --locked --quiet --manifest-path "$REPO/Cargo.toml" --package thinkthen
+case $0 in
+*/*) script_dir=${0%/*} ;;
+*) script_dir=. ;;
+esac
+REPO=$(CDPATH= cd -- "$script_dir/../.." && pwd)
+LEDGER=$REPO/sdlc/live-tokens
+LOCK=$LEDGER.lock
+
+usage() {
+	printf 'live: usage: sdlc/scripts/live --max-tokens N JOB [ARG...]\n' >&2
+	exit 2
+}
+
+case ${1:-} in
+--max-tokens) ;;
+*) usage ;;
+esac
+reservation=${2:-}
+case $reservation in
+'' | 0 | 0* | *[!0-9]*) usage ;;
+esac
+if [ "${#reservation}" -gt 9 ] || [ "$reservation" -gt 999999999 ]; then
+	usage
+fi
+job_arg=${3:-}
+if [ -z "$job_arg" ]; then
+	usage
+fi
+shift 3
+case $job_arg in
+/*) job_candidate=$job_arg ;;
+*) job_candidate=$REPO/$job_arg ;;
+esac
+if [ ! -f "$job_candidate" ]; then
+	printf 'live: %s is not a file, so there is no job to run\n' "$job_arg" >&2
+	exit 2
+fi
+job=$job_candidate
+if [ ! -f "$LEDGER" ]; then
+	printf 'live: %s is not a file, so the spend cannot be read\n' "$LEDGER" >&2
+	exit 2
+fi
+
+child=
+child_live=0
+signal_status=0
+remember_signal() {
+	forwarded=$1
+	forwarded_status=$2
+	if [ "$signal_status" -eq 0 ]; then
+		signal_status=$forwarded_status
+	fi
+	if [ "$child_live" -eq 1 ]; then
+		case $forwarded in
+		INT) kill -TERM "$child" 2>/dev/null || : ;;
+		*) kill -"$forwarded" "$child" 2>/dev/null || : ;;
+		esac
+	fi
+}
+
+forward_pending_signal() {
+	case $signal_status in
+	129) kill -HUP "$child" 2>/dev/null || : ;;
+	130 | 143) kill -TERM "$child" 2>/dev/null || : ;;
+	esac
+}
+trap 'remember_signal HUP 129' HUP
+trap 'remember_signal INT 130' INT
+trap 'remember_signal TERM 143' TERM
+
+exit_prefer_signal() {
+	fallback=$1
+	if [ "$signal_status" -ne 0 ]; then
+		exit "$signal_status"
+	fi
+	exit "$fallback"
+}
+
+wait_child_gone() {
+	while :; do
+		if wait "$child" 2>/dev/null; then
+			child_status=0
+		else
+			child_status=$?
+		fi
+		if ! kill -0 "$child" 2>/dev/null; then
+			child_live=0
+			return
+		fi
+	done
+}
+
+finish_handoff_signal() {
+	forward_pending_signal
+	wait_child_gone
+	if ! remove_lock; then
+		printf 'live: cleanup failed; the lock stays for recovery\n' >&2
+	fi
+	exit "$signal_status"
+}
+
+if ! mkdir -- "$LOCK" 2>/dev/null; then
+	printf 'live: the live spend lock is held, so no call goes out\n' >&2
+	exit_prefer_signal 1
+fi
+if [ "$signal_status" -ne 0 ]; then
+	rmdir -- "$LOCK"
+	exit "$signal_status"
+fi
+
+remove_lock() {
+	rm -f -- "$LOCK/ledger-values" "$LOCK/ledger.new" "$LOCK/owner.new" \
+		"$LOCK/stamp" "$LOCK/usage" "$LOCK/measurement" "$LOCK/scan-failed" \
+		"$LOCK/start" "$LOCK/key" "$LOCK/deliver" "$LOCK/gate-ready" \
+		"$LOCK/key-received"
+	if unexpected=$(find "$LOCK" ! -path "$LOCK" ! -name owner -print -quit); then
+		:
+	else
+		return 1
+	fi
+	if [ -n "$unexpected" ]; then
+		return 1
+	fi
+	rm -f -- "$LOCK/owner"
+	rmdir -- "$LOCK"
+}
+
+job_hex=$(printf '%s' "$job" | od -An -tx1 | tr -d ' \n')
+write_owner() {
+	owner_state=$1
+	owner_prior=$2
+	owner_total=$3
+	owner_child=$4
+	{
+		printf 'pid %s\n' "$$"
+		printf 'child_pid %s\n' "$owner_child"
+		printf 'job_path_hex %s\n' "$job_hex"
+		printf 'reservation %s\n' "$reservation"
+		printf 'prior_spend %s\n' "$owner_prior"
+		printf 'charged_total %s\n' "$owner_total"
+		printf 'state %s\n' "$owner_state"
+	} >"$LOCK/owner.new" && mv -- "$LOCK/owner.new" "$LOCK/owner"
+}
+
+if ! write_owner uncharged 0 0 0; then
+	rm -f -- "$LOCK/owner.new"
+	if rmdir -- "$LOCK"; then
+		printf 'live: the initial lock owner could not be written; the uncharged lock was removed\n' >&2
+	else
+		printf 'live: the initial lock owner could not be written; the uncharged lock stays for recovery\n' >&2
+	fi
+	exit_prefer_signal 1
+fi
+if [ "$signal_status" -ne 0 ]; then
+	remove_lock
+	exit "$signal_status"
+fi
+if ! awk '
+  /^[[:space:]]*($|#)/ { next }
+  NF != 2 { bad = 1; next }
+  $1 == "limit_tokens" {
+    if (seen_limit++) bad = 1
+    limit = $2
+    next
+  }
+  $1 == "spent_tokens" {
+    if (seen_spent++) bad = 1
+    spent = $2
+    next
+  }
+  { bad = 1 }
+  END {
+    if (seen_limit != 1 || seen_spent != 1) bad = 1
+    if (limit !~ /^[1-9][0-9]*$/ || length(limit) > 9 || limit > 999999999) bad = 1
+    if (spent !~ /^(0|[1-9][0-9]*)$/ || length(spent) > 9 || spent > 999999999) bad = 1
+    if (!bad && spent > limit) bad = 1
+    if (bad) exit 1
+    print limit, spent
+  }
+' "$LEDGER" >"$LOCK/ledger-values"; then
+	printf 'live: %s does not hold one valid limit and spend\n' "$LEDGER" >&2
+	remove_lock
+	exit_prefer_signal 2
+fi
+read -r limit spent <"$LOCK/ledger-values"
+charged=$((spent + reservation))
+if ! write_owner uncharged "$spent" "$charged" 0; then
+	printf 'live: the lock owner state could not be written; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if [ "$charged" -gt "$limit" ]; then
+	printf 'live: reservation %s exceeds the %s tokens remaining, so no call goes out\n' \
+		"$reservation" "$((limit - spent))" >&2
+	remove_lock
+	exit_prefer_signal 1
+fi
+
+if cargo build --locked --quiet --manifest-path "$REPO/Cargo.toml" --package thinkthen; then
+	:
+else
+	build_status=$?
+	remove_lock
+	exit_prefer_signal "$build_status"
+fi
 PATH="$REPO/target/debug:$PATH"
 export PATH
 
-# Every recording entry newer than this stamp is one call this run made.
-stamp=$(mktemp)
-trap 'rm -f -- "$stamp"' EXIT
+if [ "$signal_status" -ne 0 ]; then
+	remove_lock
+	exit "$signal_status"
+fi
 
-# A job that fails partway may already have paid for a call, so the ledger is
-# written either way and the job's own status is the status of this run.
+# Recovery treats this transition as uncertain until both atomic renames land.
+if ! rm -f -- "$LOCK/ledger-values"; then
+	printf 'live: validated ledger state could not be cleared; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if ! write_owner charging "$spent" "$charged" 0; then
+	printf 'live: the lock owner state could not be written; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if ! awk -v charged="$charged" '
+  $1 == "spent_tokens" { print "spent_tokens " charged; next }
+  { print }
+' "$LEDGER" >"$LOCK/ledger.new"; then
+	rm -f -- "$LOCK/ledger.new"
+	printf 'live: the precharge could not be prepared; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if ! mv -- "$LOCK/ledger.new" "$LEDGER"; then
+	rm -f -- "$LOCK/ledger.new"
+	printf 'live: the precharge could not be installed; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if ! write_owner charged "$spent" "$charged" 0; then
+	printf 'live: the charged owner state could not be written; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if ! sync; then
+	printf 'live: the precharge could not be made durable; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+
+if ! : >"$LOCK/stamp" || ! : >"$LOCK/usage"; then
+	rm -f -- "$LOCK/stamp" "$LOCK/usage"
+	printf 'live: temporary accounting files could not be prepared; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if [ "$signal_status" -ne 0 ]; then
+	remove_lock
+	exit "$signal_status"
+fi
+if ! mkfifo -- "$LOCK/key"; then
+	printf 'live: the key channel could not be created; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+exec 3<>"$LOCK/key"
+if [ "$signal_status" -ne 0 ]; then
+	exec 3>&-
+	remove_lock
+	exit "$signal_status"
+fi
+
 cd -- "$REPO"
-sh -- "$job" "$@" && ran=0 || ran=$?
+sh -c '
+  lock=$1
+  gate=$2
+  fifo=$3
+  shift 3
+  exec 3>&-
+  : >"$lock/gate-ready"
+  while [ ! -e "$lock/deliver" ]; do
+    [ -d "$lock" ] || exit 125
+    sleep 0.02
+  done
+  exec 3<"$fifo" || exit 125
+  if ! IFS= read -r delivered_key <&3; then exit 125; fi
+  exec 3<&-
+  : >"$lock/key-received"
+  while [ ! -e "$gate" ]; do
+    [ -d "$lock" ] || exit 125
+    sleep 0.02
+  done
+  THINKTHEN_API_KEY=$delivered_key exec sh -- "$@"
+' live-gate "$LOCK" "$LOCK/start" "$LOCK/key" "$job" "$@" &
+child=$!
+child_live=1
+forward_pending_signal
+if ! write_owner charged "$spent" "$charged" "$child"; then
+	exec 3>&-
+	kill -TERM "$child" 2>/dev/null || :
+	wait_child_gone
+	printf 'live: the child owner state could not be written; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if ! sync; then
+	exec 3>&-
+	kill -TERM "$child" 2>/dev/null || :
+	wait_child_gone
+	printf 'live: the child owner state could not be made durable; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if [ "$signal_status" -ne 0 ]; then
+	exec 3>&-
+	wait_child_gone
+	remove_lock
+	exit "$signal_status"
+fi
+if ! : >"$LOCK/deliver"; then
+	exec 3>&-
+	kill -TERM "$child" 2>/dev/null || :
+	wait_child_gone
+	printf 'live: the key channel could not be released; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+if [ "$signal_status" -ne 0 ]; then
+	exec 3>&-
+	finish_handoff_signal
+fi
+trap '' PIPE
+if ! printf '%s\n' "$live_api_key" >&3; then
+	exec 3>&-
+	kill -TERM "$child" 2>/dev/null || :
+	wait_child_gone
+	trap - PIPE
+	if [ "$signal_status" -ne 0 ]; then
+		remove_lock || :
+		exit "$signal_status"
+	fi
+	printf 'live: the key could not be delivered; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+trap - PIPE
+unset live_api_key
+while [ ! -e "$LOCK/key-received" ]; do
+	if [ "$signal_status" -ne 0 ]; then
+		exec 3>&-
+		finish_handoff_signal
+	fi
+	if ! kill -0 "$child" 2>/dev/null; then
+		exec 3>&-
+		wait_child_gone
+		printf 'live: the key channel closed before receipt; the lock stays for recovery\n' >&2
+		exit_prefer_signal 1
+	fi
+	sleep 0.02
+done
+exec 3>&-
+if [ "$signal_status" -ne 0 ]; then
+	finish_handoff_signal
+fi
+if ! : >"$LOCK/start"; then
+	kill -TERM "$child" 2>/dev/null || :
+	wait_child_gone
+	printf 'live: the child could not be released; the lock stays for recovery\n' >&2
+	exit_prefer_signal 1
+fi
+rm -f -- "$LOCK/key" "$LOCK/deliver" "$LOCK/key-received"
 
-tokens=$(
-	find "$REPO" -path "$REPO/target" -prune -o -type f -name '*.json' -newer "$stamp" \
-		-exec sed -n 's/.*"input_tokens":\([0-9][0-9]*\).*/\1/p' {} + |
-		awk '{ total += $1 } END { print total + 0 }'
-)
-total=$((spent + tokens))
-awk -v spent="$total" '$1 == "spent_tokens" { print "spent_tokens " spent; next } { print }' \
-	"$LEDGER" >"$LEDGER.new"
-mv -- "$LEDGER.new" "$LEDGER"
+wait_child_gone
+ran=$child_status
 
-printf 'live: %s spent %s input tokens, and %s of %s tokens are spent now\n' \
-	"$job" "$tokens" "$total" "$limit"
-exit "$ran"
+scan_failed=0
+if find "$REPO" -path "$REPO/target" -prune -o -type f -name '*.json' \
+	-newer "$LOCK/stamp" -exec sh -c '
+    usage=$1
+    failure=$2
+    shift 2
+    if ! sed -n '\''s/.*"input_tokens":\([0-9][0-9]*\).*/\1/p'\'' "$@" >>"$usage"; then
+      : >"$failure"
+    fi
+  ' scan "$LOCK/usage" "$LOCK/scan-failed" {} +; then
+	if [ -e "$LOCK/scan-failed" ]; then
+		scan_failed=1
+		measured=unknown
+		over=no
+	elif awk -v reservation="$reservation" '
+    { total += $1 }
+    END { printf "%.0f %s\n", total, (total > reservation ? "yes" : "no") }
+  ' "$LOCK/usage" >"$LOCK/measurement"; then
+		read -r measured over <"$LOCK/measurement"
+	else
+		scan_failed=1
+		measured=unknown
+		over=no
+	fi
+else
+	scan_failed=1
+	measured=unknown
+	over=no
+fi
+
+printf 'live: measured %s input tokens; charged %s, and %s of %s tokens are charged now\n' \
+	"$measured" "$reservation" "$charged" "$limit"
+if [ "$over" = yes ]; then
+	printf 'live: reservation %s was exceeded; measured %s input tokens\n' \
+		"$reservation" "$measured" >&2
+fi
+if [ "$scan_failed" -eq 1 ]; then
+	printf 'live: usage measurement failed; the full reservation remains charged\n' >&2
+fi
+
+cleanup_failed=0
+if ! remove_lock; then
+	cleanup_failed=1
+	printf 'live: cleanup failed; the lock stays for recovery\n' >&2
+fi
+
+if [ "$signal_status" -ne 0 ]; then
+	exit "$signal_status"
+fi
+if [ "$ran" -ne 0 ]; then
+	exit "$ran"
+fi
+if [ "$over" = yes ] || [ "$scan_failed" -eq 1 ] || [ "$cleanup_failed" -eq 1 ]; then
+	exit 1
+fi
+exit 0

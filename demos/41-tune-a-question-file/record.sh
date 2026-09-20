@@ -2,7 +2,7 @@
 # Record the forty-eight exchanges this page replays: twenty-four claims, asked
 # with the draft question file and then with the tuned one.
 #
-#   sdlc/scripts/live demos/41-tune-a-question-file/record.sh
+#   sdlc/scripts/live --max-tokens 1000000 demos/41-tune-a-question-file/record.sh
 set -eu
 cd -- "$(dirname -- "$0")"
 

@@ -9,7 +9,7 @@
 # Both runs put the whole case under `input`, so the two rows for one case carry
 # the same `input` and the same `input.label`, which is what transforms/ reads.
 #
-#   sdlc/scripts/live probes/07-true-and-false-texts/job.sh   records
+#   sdlc/scripts/live --max-tokens 1000000 probes/07-true-and-false-texts/job.sh records
 #   OUT=DIR sh probes/07-true-and-false-texts/job.sh --replay replays, no network
 set -eu
 

@@ -8,7 +8,7 @@
 #   described.jsonl  the same five labels, each with one sentence from
 #                    question.json saying what the label covers.
 #
-#   sdlc/scripts/live probes/08-option-descriptions/job.sh   records
+#   sdlc/scripts/live --max-tokens 1000000 probes/08-option-descriptions/job.sh records
 #   OUT=DIR sh probes/08-option-descriptions/job.sh --replay replays, no network
 set -eu
 

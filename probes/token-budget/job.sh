@@ -13,7 +13,7 @@
 # key is never an argument and never printed. It goes into curl's configuration
 # on standard input, which keeps it out of the process list.
 #
-#   sdlc/scripts/live probes/token-budget/job.sh
+#   sdlc/scripts/live --max-tokens 40000 probes/token-budget/job.sh
 set -eu
 
 cd -- "$(dirname -- "$0")"

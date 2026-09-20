@@ -14,7 +14,7 @@
 # whole case. The rank rows carry `input.id` and a boolean `input.label`, so the
 # yes/no transforms read them unchanged.
 #
-#   sdlc/scripts/live probes/01-find-vs-rank/job.sh      records
+#   sdlc/scripts/live --max-tokens 1000000 probes/01-find-vs-rank/job.sh records
 #   OUT=DIR sh probes/01-find-vs-rank/job.sh --replay    replays, no network
 set -eu
 

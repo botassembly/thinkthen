@@ -9,7 +9,7 @@
 #   shuffled.jsonl  one fixed shuffle, written down in shuffled.txt before any
 #                   call went out and never changed since.
 #
-#   sdlc/scripts/live probes/04-option-order/job.sh       records
+#   sdlc/scripts/live --max-tokens 1000000 probes/04-option-order/job.sh records
 #   OUT=DIR sh probes/04-option-order/job.sh --replay     replays, no network
 set -eu
 

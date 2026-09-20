@@ -1,7 +1,7 @@
 #!/bin/sh
 # Record the six exchanges this page replays: three notices, asked twice.
 #
-#   sdlc/scripts/live demos/40-what-yes-and-no-mean/record.sh
+#   sdlc/scripts/live --max-tokens 100000 demos/40-what-yes-and-no-mean/record.sh
 set -eu
 cd -- "$(dirname -- "$0")"
 

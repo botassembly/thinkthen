@@ -12,7 +12,7 @@
 # the same `input` and the same `input.label`. transforms/compare/compare.jq then
 # pairs them and names the flips.
 #
-#   sdlc/scripts/live probes/06-hostile-text/job.sh       records
+#   sdlc/scripts/live --max-tokens 1000000 probes/06-hostile-text/job.sh records
 #   OUT=DIR sh probes/06-hostile-text/job.sh --replay     replays, no network
 set -eu
 
