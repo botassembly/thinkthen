@@ -42,7 +42,7 @@ A question is either the bare sentence or JSON text with the keys a question fil
 ## Rules every extension keeps
 
 1. **No rule lives in the extension.** Thresholds, bands, scoring, request building, retries, and the cache are the engine's. The extension maps SQL types in and out.
-2. **One crossing per batch.** DuckDB hands a function about 2,048 rows at a time, and the whole chunk crosses into the engine once and runs at full width there. SQLite and PostgreSQL call a scalar function one row at a time, so each page must give a bulk form that feeds the engine many rows, and must say plainly that the scalar form is serial.
+2. **Every bulk form the database offers is used.** Ian ruled on 2026-09-20 that each surface maximizes performance with whatever its engine supports: vectors, batches, or any other scheme. `../libraries/README.md` has the rule for all ten surfaces. DuckDB hands a function about 2,048 rows at a time, and the whole chunk crosses into the engine once and runs at full width there. A constant vector is one judgment, and a dictionary vector is one judgment per distinct value. DuckDB's worker threads share one scheduler, so the width is one number for the process. SQLite and PostgreSQL call a scalar function one row at a time, so each page gives a bulk form that feeds the engine many rows, and says plainly that the scalar form is serial. Equal pairs of question and text are asked once. Each page lists every such mechanism its database has, and each experiment measures rows a second beside the engine's own number.
 3. **The key never appears in SQL text.** No function takes it as an argument. Statement logs, `pg_stat_statements`, and shell history would hold it. DuckDB uses a secret. PostgreSQL uses a setting that only a superuser sets and that no view shows. SQLite reads the environment variable.
 4. **The question is checked when the query is planned** wherever the database allows it, so a bad threshold fails before the first paid request.
 5. **Answers are kept on disk.** The engine's immutable cache is keyed by the whole request. The same call in `WHERE` and in `SELECT` is asked once. Tomorrow's run of the same query costs nothing. A recording folder makes a SQL test run with no network and no key.
@@ -50,11 +50,17 @@ A question is either the bare sentence or JSON text with the keys a question fil
 7. **A query can be cancelled.** A wait on the network checks for the database's interrupt, and a statement timeout is honored.
 8. **The function is marked volatile** unless a page proves a weaker marking safe. The cache stops a second bill. The planner cannot be trusted to.
 
-## The open question that decides the speed story: rows in one request
+## Rows in one request: measured, and one record per request stays the rule
 
-Every project above packs many rows into one request, and that is why they report thousands of rows in a few seconds. ThinkThen sends one request per record, and `specification/annotate.md` says records never share a request. Measured on 2026-09-20 inside the vendor's documented rate limit, that is about 980 rows a minute and about 1.2 US cents per thousand short rows. `pg-jev` reports 2,000 rows in 3.5 seconds for 1.2 US cents, and also reports the accuracy cliff.
+Every project above packs many rows into one request, and that is why they report thousands of rows in a few seconds. ThinkThen sends one request per record, and `specification/annotate.md` says records never share a request. Inside the vendor's documented rate limit that is about 980 short rows a minute and about 1.2 US cents per thousand. `pg-jev` reports 2,000 rows in 3.5 seconds for 1.2 US cents.
 
-A public comparison will be made. The honest positions are two. Keep one record per request, and sell exact answers, no cross-talk between rows, and a cache. Or let the engine pack a small, measured number of records per request as an option, off by default. A measurement on the same 1,000 SMS messages at 1, 5, 10, and 20 rows per request settles which. It is running under Ian's standing go-ahead, and its findings will be filed in `sdlc/issues/`. Until then no page here assumes packing.
+Our own run on 2026-09-20 used the largest project's layout on the same 1,000 SMS messages as the accuracy round. `sdlc/issues/2026-09-20-packing-rows-into-one-request-measured.md` has the tables.
+
+- At 10 rows per request the accuracy matched one row per request, 0.968, for 3.3 times fewer tokens and ten times fewer requests.
+- At 20 rows the accuracy fell to 0.941. At 40 rows the recall fell from 0.94 to 0.43, and the later rows in a request did worst. One public DuckDB extension defaults to 40.
+- At 10 rows, dealing the same messages into different groups changed the answer for 34 rows of 1,000. A row's answer depends on its neighbors.
+
+So packing keeps the totals and loses the single answers. It also breaks replay, because a recording is keyed by the whole request. One record per request stays the rule and the default on every surface. If packing is ever offered it is an engine option for an ADR, off by default, capped at ten, for `filter` and `rank` over short rows only. No page here assumes it.
 
 ## Shared goals
 

@@ -44,6 +44,18 @@ One measured judgment took over 300 ms, and nearly all of it is the network. A s
 5. **Start fast.** The command has no work before its first request beyond parsing arguments. A library import loads one compiled file and nothing else.
 6. **Then count microseconds.** The shim builds no JSON, copies no evidence twice, and allocates nothing the engine already holds.
 
+## Use every bulk form the host offers
+
+Ian ruled on 2026-09-20: "Make sure we're maximizing performance using whatever the database engine supports, whether it's vectorization, batching, or whatever schemes we need... That's true for all the libraries." The rule binds all ten surfaces.
+
+- **Each surface finds the widest native container its host has and takes it whole.** A character vector in R. A list, a NumPy array, a pandas or Polars column, or an Arrow array in Python. An array or an async iterable in JavaScript. An `Enumerable` in Ruby. A slice or a stream in Rust. An array of pointers and lengths in C. A chunk of rows in DuckDB. The per-surface page names the container and says how it crosses into Rust once, with no copy where the host allows it.
+- **Work the engine can skip is skipped before any request.** Equal pairs of question and evidence inside one batch are asked once, and the answer is shared. A constant column is one judgment. A dictionary-encoded column is one judgment per distinct value. A value already in the cache costs nothing.
+- **Every question about one piece of evidence rides in one request.** Measured on 2026-09-20: forty questions in one request billed 20.8 times fewer tokens than forty requests, and no answer changed.
+- **The width is one number for the whole process.** Host threads, database worker threads, and async tasks all feed one scheduler in the engine. Two callers never double the width by accident.
+- **A scalar, one-at-a-time form may exist for convenience. Its page says it is serial, and points at the bulk form in the same breath.**
+- **Each experiment measures it.** A surface reports rows a second through its bulk form against the stub, beside the engine's own number from pure Rust. A gap between the two is a defect in the shim.
+- Packing many records into one request is a separate question. It trades accuracy for speed, and a measurement decides it. `../databases/README.md` has the state of that.
+
 ## Budgets, each a failing build
 
 These numbers are proposals until a bench measures them. A bench runs against a stub backend on the loopback address, so the network is out of the number.
