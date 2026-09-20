@@ -1,36 +1,39 @@
-# Prospective plan for Bash, Rust, and Python
+# Prospective plan for the command line and libraries
 
 Date: 2026-09-20. Status: temporary, prospective. Character budget: 4,000.
 
-Tickets are written as work begins. The [main plan](plan.md) records current work; the [review report](../issues/2026-09-20-full-project-review-and-follow-up.md) holds the evidence. [ADR 0017](adr/0017-libraries-over-one-bound-core.md) remains proposed.
+Tickets are written as work begins. The [main plan](plan.md) records current work. The [repair-tranche review](../issues/2026-09-20-the-live-guard-grew-past-its-job.md) explains this revised order.
 
 ## Destination
 
-Bash users call the command-line tool. Rust applications use a client library over the public pure core. Python applications install a package bound to that core. All three share question files, judgment rules, request bytes, results, and recordings. Version one has seven commands: `decide`, `choose`, `score`, `filter`, `rank`, `annotate`, and `find`.
+Version one adds `annotate` and `find` to the five built commands. Bash uses the command-line tool. Rust, Python, and JavaScript use libraries named `thinkthen`. All interfaces share questions, rules, request bytes, results, and recordings. Ian ruled the libraries and public name in.
 
-The core keeps judgment rules. Hosts own I/O, credentials, retries, and concurrency. Policy stays in the caller or a `jq` transform.
+The core keeps judgment rules. Hosts own files, credentials, retries, and concurrency. Policy stays in the caller or a `jq` transform.
 
 ## Current state
 
-Tickets 0024 through 0027 closed four defects. Ticket 0034 completed the live-authority repair and migrated every registered worktree to one audited allowance. Six first-pass findings are closed. Seventeen small repairs remain: four first-pass, ten second-pass, two security leftovers, and the hostless-address diagnostic.
+Tickets 0024 through 0027 fixed an interactive hang, unbounded paid dispatch, invalid answers, replay corruption, and false comparisons. Ticket 0034 then overbuilt the cooperative $20 spend guard. The review was strong, but the design grew past its risk and still has failure paths. Green how-tos remain at sixteen.
 
-Parallel duplicate cache misses can pay twice and fail if replies differ. Probability totals require machine precision without a provider rounding promise. Both contracts need an explicit operating assessment.
+`annotate` is next. Its local work and page drafts need no paid call. Its limit probe and live recordings depend on the guard.
 
-## Version-one sequence
+## Next work
 
-1. **Build `annotate`.** Ticket 0015 is the next product work. It groups questions, turns how-tos 39 and 14 green, and measures the accepted question count through the shared live authority.
-2. **Build `find`.** First compare it with `rank --top 1` on documents of 100 to 250 lines. Write the ticket from that evidence, then build the command and how-to 15 if the result still supports it.
-3. **Finish the workflows.** Write flagship how-to 16 and its tested policy transform. Complete compare and sweep over every value shape, the monitors, grouped sweep, and the human-label check. Decide again whether `report` earns a command.
-4. **Prepare version one.** Finish the repair inventory, help, manual page, installation, agent skill, and how-to 18 against another server. Test the installed artifact. Publication timing remains Ian's decision.
+1. **Shrink the live guard while `annotate` work starts.** One bounded ticket keeps a common lock, validated counter, durable precharge, and direct job execution. It deletes the gate, socket, pending state, recovery, process scans, migration command, production fault switches, full-history checkout, and Rust tests of Python scripts. Linux script tests stay outside the product crate. It defines ambiguous sync, rewrites ADR 0022 whole, converts authority, and removes the worktree trap. It deliberately drops wrapper-owned interruption, recovery, and its post-job charge line.
+2. **Land `annotate` and how-tos 39 and 14.** Ticket 0015 starts locally now. Its paid limit probe and live recordings wait only for step 1.
+3. **Make one small correction pass.** Pin the hostless-address sentence, make every negative threshold spelling reach the same parser, correct `493 recorded distributions plus four standalone fixtures`, and correct stale pages. New records use plain roles such as builder and reviewer. Old routing labels need no bulk rewrite.
+4. **Coalesce duplicate cache misses.** One bounded per-digest lock prevents repeated rows under `--jobs` and separate writers from paying twice or failing on divergent replies. It needs no paid stability probe.
+5. **Build `find`.** Repeat the `rank --top 1` comparison on documents of 100 to 250 lines, then build the command and how-to 15 if the evidence holds.
+6. **Finish workflows and release preparation.** Write flagship how-to 16, finish transforms and repairs, then complete help, manual, installation, the agent skill, and how-to 18.
 
-Ticket 0034 keeps one durable authority across local worktrees and bounds interruption. Its ADR 0022 amendment replaces the FIFO protocol and permits checked recovery. One initialized installation owns the allowance; other machines need an explicit transfer. Pin the hostless-address sentence, document duplicate cache misses, and check ratchet commit messages on push. Close the 17 small repairs in batches before release. Collect response and rounded-total evidence during authorized probes before changing contracts. Write tickets as work begins; use an ADR for a contract change.
+Document the cache limitation until step 4 lands. Keep the strict probability-total rule and collect rounding evidence during an authorized product probe. Drop the commit-message checker and separate response-stability experiment. The ratchet rule and independent review remain.
 
 ## After version one
 
-No library work begins until Ian accepts or rewrites ADR 0017. It promises a Rust library but omits its host layer from the work order.
+The libraries are committed work. Before implementation, rewrite ADR 0017 whole around Ian's rulings: Rust, Python, and JavaScript; one public name; bare answers by default and details on request; one `thinkthen` crate preferred, with a `thinkthen-cli` crate as the accepted fallback. Then:
 
-1. Expose the pure-core interface and refactor the existing Rust networking, file, retry, recording, and concurrency layer into the `thinkthen` library, with the binary as its first caller. Add shared cases and prove another wire format with a second test adapter. This combines the shared-core and Rust-client outcomes; it does not insert an extra stage before Python.
-2. Bind `decide` in a Python spike and install a wheel without Rust. The spike tests the bound-core design.
-3. Build Python in full, then verify all three interfaces against shared cases, recordings, local failures, installed artifacts, and independent labels.
+1. Expose the pure rules through the `thinkthen` Rust library and make the binary its first caller. Shared cases prove the public behavior and a second test adapter proves the seam.
+2. Spike one Python `decide` binding and install its wheel on a machine without Rust, then build Python fully.
+3. Build JavaScript and TypeScript for Node first.
+4. Verify Bash, Rust, Python, and JavaScript against the same question files, recordings, failures, and installed artifacts.
 
-JavaScript and TypeScript remain ADR 0017's later stage, outside this plan.
+Ruby remains an open later choice. Claiming registry names remains Ian's outward action.

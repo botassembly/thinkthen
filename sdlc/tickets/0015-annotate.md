@@ -8,6 +8,8 @@ opens: crates spec specification/annotate.md specification/result.md specificati
 
 Status: ready
 
+Local parser, grouping, listener, replay, and page drafting can start immediately. The paid limit probe and live recordings for how-tos 39 and 14 wait for the bounded live-guard simplification recorded in the prospective plan.
+
 ## Outcome
 
 `annotate FILE` asks a saved question set about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 39 and 14 are green. A later ticket then writes the flagship triage how-to and the first eval how-tos over this command with no further code.

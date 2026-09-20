@@ -25,6 +25,8 @@ The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read
 
 Tests replay recorded responses. A live call to a paid backend runs only from `sdlc/scripts/live`, by hand, under a token cap, with Ian's authorization.
 
+Until the live guard is simplified, do not switch a registered detached worktree back to an older branch. One old launcher blocks paid work from every current tree. Create work from current `main`. If a registered folder is missing, name it and stop. Never prune or delete a registered worktree.
+
 ## Credentials
 
 A key is read from `THINKTHEN_API_KEY`. It is never committed, logged, hashed, echoed in a plan, or written to a recording. It goes only to the address the user named. A recording stores request bodies and responses and never headers.
