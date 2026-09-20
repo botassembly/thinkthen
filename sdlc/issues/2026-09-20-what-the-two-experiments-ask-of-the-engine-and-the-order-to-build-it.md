@@ -24,7 +24,7 @@ The builder's order for the command stands: `tag`, CSV and TSV input, the correc
 
 Two changes:
 
-1. **The ADR 0017 rewrite moves ahead of the one-crate merge.** The plan puts the rewrite after version one. The merge makes the command "the first caller of the public Rust library shape". A merge ticket with no ADR would choose that shape alone. The evidence is complete now, and the rewrite touches no code. It can run beside `tag` and CSV.
+1. **The ADR 0017 rewrite moves ahead of the one-crate merge.** The plan puts the rewrite after version one. The merge makes the command "the first caller of the public Rust library shape". A merge ticket with no ADR would choose that shape alone. The rewrite touches no code, and it runs beside the rest of the command work. The experiment team drafts it after its run on a blocking engine, per `2026-09-20-feedback-to-the-experiment-team-after-both-harvests.md`. The build team reviews it before the merge ticket, because it names their modules.
 2. **The merge becomes four steps.** The command stays the first caller through all four, and the existing how-tos and gates prove each one.
 
 ## The engine, in four steps
