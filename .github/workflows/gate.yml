@@ -35,6 +35,9 @@ jobs:
     steps:
       - name: Check out the commit
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Live-authority regressions execute launchers from two historical commits.
+          fetch-depth: 0
 
       - name: Install the toolchain that rust-toolchain.toml pins
         run: rustup show active-toolchain || rustup toolchain install
