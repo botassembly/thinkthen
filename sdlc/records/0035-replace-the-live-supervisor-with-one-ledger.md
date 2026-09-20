@@ -10,4 +10,6 @@ Code review reproduced two faults. Deleting a charged ledger allowed reinitializ
 
 Production fell from 996 raw and 869 nonblank lines to 309 raw and 267 nonblank lines. Proof fell from 1,634 raw and 1,560 nonblank Rust lines to 228 raw and 206 nonblank shell lines. The deletions are 687 raw and 602 nonblank production lines and 1,406 raw and 1,354 nonblank proof lines. The Rust ratchet fell from 17,827 to 16,267.
 
-The second review reproduced both repairs and accepted the implementation. The four local rungs passed with the key and base address unset. Landing, the real authority migration, and GitHub verification remain with the coordinator.
+The second review reproduced both repairs and accepted the implementation. The four local rungs passed with the key and base address unset. Commit `6343e7a` landed on `main`, and GitHub run `35523772125` passed all four rungs.
+
+The coordinator acquired the permanent lock and verified active idle version-one state against the checkpoint. The coordinator renamed it to `state-v1-retired.json`, synced the authority directory, and initialized the new ledger. Status then reported 476,000,000 allowed, 429,118 charged, and 475,570,882 remaining. Migration ran no job and made no paid call.

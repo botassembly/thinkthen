@@ -6,7 +6,7 @@ opens: sdlc/scripts sdlc/live-tokens .github/workflows sdlc/planning sdlc/ratche
 
 # 0035: Replace the live supervisor with one ledger
 
-Status: ready to land
+Status: done
 
 ## Outcome
 
@@ -67,3 +67,5 @@ Production fell from 996 raw and 869 nonblank lines to 309 raw and 267 nonblank 
 The first script run failed because missing setup returned the old generic failure instead of the required `--init` instruction. The completed script suite passes with dummy keys, local jobs, and no network. The coordinator still owns landing, the real migration, and GitHub verification.
 
 The first code review reproduced reusable initialization after ledger deletion and acceptance of a final row without a newline. Regression tests failed for both reasons. The remediation syncs a permanent initialization marker before ledger creation, refuses a missing ledger after that point, and requires the ledger bytes to end in a newline.
+
+Commit `6343e7a` landed on `main`, passed the four local rungs with the key and base address unset, and passed GitHub run `35523772125`. The coordinator migrated the active idle authority under its lock. The new status reports a 476,000,000 limit, 429,118 charged, and 475,570,882 remaining. Migration ran no job and made no paid call.

@@ -1,6 +1,6 @@
 # The live guard grew past its job
 
-Status: Resolved by ticket 0035; landing and migration remain
+Status: Resolved by ticket 0035
 
 Found by Fable's adversarial review of `2c32524..4eadc02` and independently checked on 2026-09-20. Reviewers used throwaway repositories, dummy keys, and no network.
 
