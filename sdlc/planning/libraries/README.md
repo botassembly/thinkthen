@@ -80,6 +80,39 @@ These numbers are proposals until a bench measures them. A bench runs against a 
 - No telemetry, no log of the evidence, and no configuration file read on the hot path.
 - No claim about speed without the bench that measured it.
 
+## A saved question is a value
+
+Ian asked on 2026-09-20 what the library equivalent of the command's saved question is, whether the name is right, and whether the libraries should bake in currying so nobody needs a class.
+
+**The name stays.** The repository calls it a question file, and a file of several named questions is a question set. No page says "argument file". The name says what the file holds, and the line "a question is a file" sells it.
+
+**In a library the same thing is a question value.** It is built with the keys the file uses, so the file and the code share one grammar.
+
+    asks_for_refund = tt.question(decide="The customer asks for a refund.", threshold=0.9)
+    route = tt.question(choose="Which team owns this?", options=["billing", "shipping", "other"])
+
+- The keywords are the file's keys: `decide`, `choose`, `score`, `tag`, `options`, `levels`, `labels`, `true`, `false`, `threshold`, `on`, `model`. Loading a file and building from keywords give the same value. In JavaScript the object literal is the file's JSON. Rust has no keywords and gets a builder. In C the question is the JSON text.
+- A question is frozen data. Nobody extends a class and nobody builds a client.
+- Every verb takes a question value wherever it takes question text: the first slot.
+- Calling a question with evidence asks it once: `asks_for_refund(message)`.
+- One `decide` question serves three verbs, as it does on the command line: `decide`, `filter`, and `rank`.
+- A question set is a plain mapping from a name to a question, and `annotate` takes it.
+
+| Verb | Takes | Configure once | Then run |
+| --- | --- | --- | --- |
+| `decide` | a `decide` question | `q = tt.question(decide=...)` | `q(text)` or `tt.decide(q, text)` |
+| `choose` | a `choose` question | `tt.question(choose=..., options=...)` | `q(text)` or `tt.choose(q, text)` |
+| `score` | a `score` question | `tt.question(score=..., levels=...)` | `q(text)` or `tt.score(q, text)` |
+| `tag` | a `tag` question | `tt.question(tag=..., labels=...)` | `q(text)` or `tt.tag(q, text)` |
+| `filter` | a `decide` question | the same value `decide` takes | `tt.filter(q, records)` |
+| `rank` | a `decide` question | the same value | `tt.rank(q, records, top=10)` |
+| `find` | question text. `find` reads no question file today | none | `tt.find("Which line names the date?", lines)` |
+| `annotate` | a question set | `{"spam": q1, "folder": q2}` or a loaded file | `tt.annotate(questions, records)` |
+
+**No automatic currying.** A verb called with no evidence is an error. If it returned a function instead, a forgotten argument would hand `if` a function, and a function is true in JavaScript and in Ruby. That is the forgotten `await` bug again. Partial application stays free for anyone who wants it, because the question comes first: Python's `functools.partial(tt.decide, question)` already works.
+
+**One speed trap, and the pages must name it.** A called question inside the host language's own `filter` or loop makes one judgment at a time. `tt.filter(q, records)` hands the whole list to the engine, and the engine runs it at full width. The documents show the record verb first.
+
 ## The seventh is C, and C is the door to the rest
 
 Ian asked whether a seventh language made sense, and he approved C on 2026-09-20. His words: "Add C as the seventh language. I like that."
