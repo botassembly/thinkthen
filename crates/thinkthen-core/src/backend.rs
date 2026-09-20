@@ -24,11 +24,23 @@ pub enum BackendError {
     /// The base or the model arrived blank.
     #[error(transparent)]
     Blank(#[from] BlankTextError),
-    /// The base names no scheme the tool speaks, or it carries user information.
+    /// The base does not begin with a scheme the tool speaks.
     ///
     /// The message shows no address, because the refused base is the one that
     /// may carry a secret.
-    #[error("a base address begins with `http://` or `https://` and carries no user information")]
+    #[error("a base address begins with `http://` or `https://`")]
+    InvalidScheme,
+    /// The base carries credentials in its authority.
+    #[error("a base address carries no user information")]
+    UserInformation,
+    /// The base carries a port that is not a decimal `u16`.
+    #[error("a port is digits naming a number from 0 to 65535")]
+    InvalidPort,
+    /// The base carries a query or fragment.
+    #[error("a base address carries no query or fragment")]
+    QueryOrFragment,
+    /// The scheme is valid, but the authority has no host.
+    #[error("a base address has a host")]
     NotAnAddress,
     /// The base names a host under `http://` that is not proven to be loopback.
     ///
@@ -112,15 +124,18 @@ fn address(base: &str) -> Result<Url, BackendError> {
         return Err(BackendError::Blank(BlankTextError::Url));
     }
     let base = base.trim_end_matches('/');
-    let (scheme, rest) = after_scheme(base).ok_or(BackendError::NotAnAddress)?;
+    let (scheme, rest) = after_scheme(base).ok_or(BackendError::InvalidScheme)?;
     // The address is printed in a plan and kept in a recording, so a base that
     // carries user information or a query would write a secret into both. A
     // path added after either one would also land in the wrong place.
     let authority = rest.split('/').next().unwrap_or(rest);
-    if authority.contains('@') || rest.contains(['?', '#']) {
-        return Err(BackendError::NotAnAddress);
+    if authority.contains('@') {
+        return Err(BackendError::UserInformation);
     }
-    let host = host_of(authority).ok_or(BackendError::NotAnAddress)?;
+    if rest.contains(['?', '#']) {
+        return Err(BackendError::QueryOrFragment);
+    }
+    let host = host_of(authority)?;
     if scheme == "http://" && !LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)) {
         return Err(BackendError::KeyInClear);
     }
@@ -135,14 +150,18 @@ fn address(base: &str) -> Result<Url, BackendError> {
 /// An address in brackets is an IPv6 literal, and its colons belong to the
 /// address rather than to a port, so the brackets are kept and only what
 /// follows them may be a port.
-fn host_of(authority: &str) -> Option<&str> {
+fn host_of(authority: &str) -> Result<&str, BackendError> {
     let end = match authority.strip_prefix('[') {
-        Some(inside) => inside.find(']')? + 2,
+        Some(inside) => inside
+            .find(']')
+            .map_or(Err(BackendError::NotAnAddress), |index| Ok(index + 2))?,
         None => authority.find(':').unwrap_or(authority.len()),
     };
-    let (host, port) = authority.split_at_checked(end)?;
+    let (host, port) = authority
+        .split_at_checked(end)
+        .ok_or(BackendError::NotAnAddress)?;
     if host.is_empty() {
-        return None;
+        return Err(BackendError::NotAnAddress);
     }
     match port.strip_prefix(':') {
         // A port is digits that a socket can carry, or there is no colon at
@@ -150,12 +169,14 @@ fn host_of(authority: &str) -> Option<&str> {
         // each name no port, so none of them is an address this rule reads. A
         // second colon means the authority holds an address the brackets
         // should have held.
-        Some(number) if number.bytes().all(|byte| byte.is_ascii_digit()) => {
-            number.parse::<u16>().ok().map(|_| host)
+        Some(number) if !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit()) => {
+            number
+                .parse::<u16>()
+                .map_or(Err(BackendError::InvalidPort), |_| Ok(host))
         }
-        Some(_) => None,
-        None if port.is_empty() => Some(host),
-        None => None,
+        Some(_) => Err(BackendError::InvalidPort),
+        None if port.is_empty() => Ok(host),
+        None => Err(BackendError::NotAnAddress),
     }
 }
 
@@ -247,25 +268,34 @@ mod tests {
         }
 
         let refused = [
-            "ftp://host/v1",
-            "host/v1",
-            "http:/host/v1",
-            "https://someone:sk-in-the-address@host/v1",
-            "http://someone@host/v1",
-            "http://host/v1?key=sk-in-the-address",
-            "http://host/v1#sk-in-the-address",
+            ("ftp://host/v1", BackendError::InvalidScheme),
+            ("host/v1", BackendError::InvalidScheme),
+            ("http:/host/v1", BackendError::InvalidScheme),
+            (
+                "https://someone:sk-in-the-address@host/v1",
+                BackendError::UserInformation,
+            ),
+            ("http://someone@host/v1", BackendError::UserInformation),
+            (
+                "http://host/v1?key=sk-in-the-address",
+                BackendError::QueryOrFragment,
+            ),
+            (
+                "http://host/v1#sk-in-the-address",
+                BackendError::QueryOrFragment,
+            ),
             // A port is a number a socket can carry, and none of these is one.
-            "http://localhost:x/v1",
-            "https://host:8080a/v1",
-            "http://localhost:/v1",
-            "http://localhost:99999999999/v1",
-            "https://host:65536/v1",
-            "http://[::1]:+80/v1",
+            ("http://localhost:x/v1", BackendError::InvalidPort),
+            ("https://host:8080a/v1", BackendError::InvalidPort),
+            ("http://localhost:/v1", BackendError::InvalidPort),
+            ("http://localhost:99999999999/v1", BackendError::InvalidPort),
+            ("https://host:65536/v1", BackendError::InvalidPort),
+            ("http://[::1]:+80/v1", BackendError::InvalidPort),
         ];
-        for base in refused {
+        for (base, expected) in refused {
             let error =
                 resolve(None, Some(base)).expect_err("a base that names no address is refused");
-            assert_eq!(error, BackendError::NotAnAddress, "{base}");
+            assert_eq!(error, expected, "{base}");
             assert!(!error.to_string().contains("host"), "{error}");
         }
     }

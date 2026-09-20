@@ -70,7 +70,7 @@ const fn only(
 }
 
 /// Every refusal a command line or one record can reach.
-const REFUSALS: [Refusal; 24] = [
+const REFUSALS: [Refusal; 29] = [
     every(
         "a base that is no address",
         &["--url", "ftp://127.0.0.1/v1"],
@@ -87,6 +87,36 @@ const REFUSALS: [Refusal; 24] = [
         "a base carrying user information",
         &["--url", "https://a@b/v1"],
         "carries no user information",
+        2,
+    ),
+    every(
+        "a base with an empty port",
+        &["--url", "http://127.0.0.1:/v1"],
+        "a port is digits naming a number from 0 to 65535",
+        2,
+    ),
+    every(
+        "a base with a signed port",
+        &["--url", "http://127.0.0.1:+80/v1"],
+        "a port is digits naming a number from 0 to 65535",
+        2,
+    ),
+    every(
+        "a base with an out of range port",
+        &["--url", "http://127.0.0.1:65536/v1"],
+        "a port is digits naming a number from 0 to 65535",
+        2,
+    ),
+    every(
+        "a base carrying a query",
+        &["--url", "https://127.0.0.1/v1?secret=value"],
+        "a base address carries no query or fragment",
+        2,
+    ),
+    every(
+        "a base carrying a fragment",
+        &["--url", "https://127.0.0.1/v1#secret"],
+        "a base address carries no query or fragment",
         2,
     ),
     every(

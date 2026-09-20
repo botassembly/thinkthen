@@ -12,6 +12,8 @@ The binary reports `thinkthen 0.0.1`. `filter`, `rank`, `annotate`, and `find` a
 
 ### 1. A refused port, a query, a fragment, and a bad scheme all give one message, and it names the wrong rule
 
+Status: Closed by ticket 0022.
+
 Severity: **wrong message**.
 
 ```

@@ -30,6 +30,8 @@ A proxy carries an `https://` request and never an `http://` one. The HTTP clien
 
 Space around a base is dropped. A scheme is read without regard to case and written back in lower case, so one exchange keeps one recording digest whatever case the caller typed. A port is digits naming a number from 0 to 65535, or there is no colon at all. An empty port, a signed number, and a number past 65535 are each a usage error, because a port a socket cannot carry would be dropped and the request would go somewhere the caller did not name. A base carrying user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a recording. The refusal message names the rule and never the base it refused. A base that is empty or holds only white space is a usage error too.
 
+The four address rules have these exact safe refusals. An invalid scheme says ``a base address begins with `http://` or `https://` ``. User information says `a base address carries no user information`. An empty, signed, or out-of-range port says `a port is digits naming a number from 0 to 65535`. A query or fragment says `a base address carries no query or fragment`. Each refusal exits 2 before key access or a request, and no output repeats the refused base.
+
 `--dry-run` shows the address the run would use, and it reads no key.
 
 ## The model

@@ -48,7 +48,7 @@ A base that is not an `http` or `https` address is a usage error, and so is a ba
 status=0
 printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch like "2"
-printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\` and carries no user information"
+printf 'x' | env THINKTHEN_BASE_URL=ftp://127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\`"
 status=0
 printf 'x' | env THINKTHEN_BASE_URL=https://someone:secret@127.0.0.1/v1 thinkthen decide 'asks for a refund' --dry-run >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch like "2"
@@ -202,5 +202,5 @@ A diagnostic goes to standard error and never to standard output, so a script re
 
 ```bash
 printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>/dev/null | mustmatch like ""
-printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\` and carries no user information"
+printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\`"
 ```

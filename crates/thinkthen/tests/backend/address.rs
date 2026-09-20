@@ -91,6 +91,71 @@ fn a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address() {
     }
 }
 
+#[test]
+fn each_address_rule_refusal_names_only_the_rule_that_failed() {
+    let listener = Listener::serving(Vec::new()).expect("a loopback listener");
+    let authority = listener
+        .base()
+        .strip_prefix("http://")
+        .and_then(|base| base.strip_suffix("/v1"))
+        .expect("the listener uses plain HTTP")
+        .to_owned();
+    let cases = [
+        (
+            format!("ftp://{authority}"),
+            "thinkthen: a base address begins with `http://` or `https://`\n",
+        ),
+        (
+            format!("https://someone:secret@{authority}"),
+            "thinkthen: a base address carries no user information\n",
+        ),
+        (
+            "http://127.0.0.1:/v1".to_owned(),
+            "thinkthen: a port is digits naming a number from 0 to 65535\n",
+        ),
+        (
+            "http://127.0.0.1:+80/v1".to_owned(),
+            "thinkthen: a port is digits naming a number from 0 to 65535\n",
+        ),
+        (
+            "http://127.0.0.1:65536/v1".to_owned(),
+            "thinkthen: a port is digits naming a number from 0 to 65535\n",
+        ),
+        (
+            format!("https://{authority}/v1?secret=value"),
+            "thinkthen: a base address carries no query or fragment\n",
+        ),
+        (
+            format!("https://{authority}/v1#secret"),
+            "thinkthen: a base address carries no query or fragment\n",
+        ),
+    ];
+
+    for (base, expected) in cases {
+        for environment in [&[("THINKTHEN_API_KEY", "sk-test-value")][..], &[][..]] {
+            let output = decide(&["--url", &base], environment).expect("the compiled binary runs");
+
+            assert_eq!(output.status.code(), Some(2), "{base} {environment:?}");
+            assert!(output.stdout.is_empty(), "{base} {environment:?}");
+            assert_eq!(
+                String::from_utf8_lossy(&output.stderr),
+                expected,
+                "{base} {environment:?}"
+            );
+            assert!(
+                !String::from_utf8_lossy(&output.stderr).contains(&base),
+                "{base} {environment:?}"
+            );
+        }
+    }
+
+    assert!(
+        listener.requests().is_empty(),
+        "a refused address opens no connection"
+    );
+    assert_eq!(listener.connections(), 0);
+}
+
 /// A plain `http://` base to anywhere but this machine sends nothing at all.
 ///
 /// The listener counts the requests, so the case proves no key crossed the

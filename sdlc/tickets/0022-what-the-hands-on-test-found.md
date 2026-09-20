@@ -6,7 +6,7 @@ opens: crates/thinkthen-core/src/backend.rs crates/thinkthen/tests/backend speci
 
 # 0022: Name the refused address rule
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -62,4 +62,4 @@ Ticket 0019 is landed. It introduced the address validation and the safe but ove
 ## Review
 
 - Design review: accepted after the original twelve-finding batch was split. The reviewer required one address-parser outcome, exact safe sentences, unchanged positive and loopback cases, and direct no-request proof. It confirmed complexity level 2 and the Luna High route.
-- Code review: pending.
+- Code review: accepted after one remediation. The reviewer found that three integration fixtures appended a second port and therefore missed the literal empty, signed, and out-of-range forms. It also found that key-present cases did not prove address validation happened before key access. The corrected matrix uses the seven exact forms with and without a key, pins each complete sentence and exit code, and retains the counted zero-connection listener.
