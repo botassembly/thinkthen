@@ -1,8 +1,9 @@
 //! The one sweep that proves no key leaves this process and no error quotes the
 //! evidence.
 //!
-//! Every command runs down every path the backend can send it, on one document
-//! and over records, in the bare view and under `--details`. One reader then
+//! The three single-answer commands run down every path the backend can send
+//! them, on one document and over records, in both views. The record commands
+//! run the hostile replay path under both framings and views. One reader then
 //! reads standard output, standard error, and every file the run wrote.
 //! `refusals.rs` drives the same reader down every usage error, and
 //! `crates/thinkthen/src/failure.rs` drives it over every diagnostic and every
@@ -51,6 +52,11 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 3] = [
     ),
 ];
 
+const RECORD_VERBS: [(&str, &[&str], &str); 2] = [
+    ("filter", &[], r#""type":"noul","noul":0.92"#),
+    ("rank", &[], r#""type":"noul","noul":0.92"#),
+];
+
 /// A reply the adapter refuses, whatever question was asked.
 const MALFORMED: &str = r#"{"model":"","answers":{}}"#;
 
@@ -65,6 +71,8 @@ const HOSTILE: &str = concat!(
     r#""url":"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5","#,
     r#""request":{},"response":{}}"#,
 );
+
+const HOSTILE_SCHEMA_MARKER: &str = "PWNED";
 
 /// A recording entry that is not JSON, holding the evidence it recorded.
 const DAMAGED: &str = concat!(
@@ -344,17 +352,21 @@ fn sweep(
     route: &Route,
     verb: (&str, &[&str], &str),
     view: &[&str],
-    records: bool,
+    framing: Option<&str>,
 ) -> io::Result<()> {
     let (name, operands, answer) = verb;
-    let framing = format!("{}-{}-{}", route.named.replace(' ', "-"), name, records);
-    let into = folder(&framing)?;
+    let case = format!(
+        "{}-{name}-{}",
+        route.named.replace(' ', "-"),
+        framing.unwrap_or("document")
+    );
+    let into = folder(&case)?;
     let dir = into.join("recording");
     let listener = Listener::serving(route.answers.script(answer))?;
-    let evidence = if records {
-        format!("{{\"body\":\"{EVIDENCE}\"}}\n")
-    } else {
-        EVIDENCE.to_owned()
+    let evidence = match framing {
+        Some("--jsonl") => format!("{{\"body\":\"{EVIDENCE}\"}}\n"),
+        Some("--lines") => format!("{EVIDENCE}\n"),
+        _ => EVIDENCE.to_owned(),
     };
     let named = |argument: &&str| match *argument {
         "{dir}" => dir.to_string_lossy().into_owned(),
@@ -370,12 +382,11 @@ fn sweep(
         asked.extend(["--url".to_owned(), listener.base().to_owned()]);
     }
     asked.extend(["--model".to_owned(), "local-1".to_owned()]);
-    if records {
-        asked.extend([
-            "--jsonl".to_owned(),
-            "--field".to_owned(),
-            "/body".to_owned(),
-        ]);
+    if let Some(framing) = framing {
+        asked.push(framing.to_owned());
+        if framing == "--jsonl" {
+            asked.extend(["--field".to_owned(), "/body".to_owned()]);
+        }
     }
     asked.extend(view.iter().map(|option| (*option).to_owned()));
     asked.extend(adds);
@@ -393,11 +404,11 @@ fn sweep(
             })
             .collect();
         let first = spawn(&priming, &environment(true), evidence.as_bytes())?;
-        assert_eq!(first.status.code(), Some(0), "{framing}: the priming run");
+        assert_eq!(first.status.code(), Some(0), "{case}: the priming run");
     }
     if let Some(damage) = route.damage {
         let entries = written(&dir);
-        assert!(!entries.is_empty(), "{framing}: an entry to damage");
+        assert!(!entries.is_empty(), "{case}: an entry to damage");
         for entry in entries {
             fs::write(&entry, damage)?;
         }
@@ -409,28 +420,44 @@ fn sweep(
     assert_eq!(
         output.status.code(),
         Some(route.code),
-        "{framing} {view:?}: {}",
+        "{case} {view:?}: {}",
         String::from_utf8_lossy(&output.stderr)
     );
     assert_eq!(
         listener.requests().len(),
         route.requests,
-        "{framing} {view:?}: the requests the listener saw"
+        "{case} {view:?}: the requests the listener saw"
     );
     if let Some(says) = route.says {
         let said = String::from_utf8_lossy(&output.stderr);
-        assert!(said.contains(says), "{framing} {view:?}: {said}");
+        assert!(said.contains(says), "{case} {view:?}: {said}");
     }
-    nothing_leaked(&format!("{framing} {view:?}"), &output, &into);
+    nothing_leaked(&format!("{case} {view:?}"), &output, &into);
+    if route.damage == Some(HOSTILE) {
+        for bytes in [&output.stdout, &output.stderr] {
+            let text = String::from_utf8_lossy(bytes);
+            for forbidden in [HOSTILE_SCHEMA_MARKER, EVIDENCE] {
+                assert!(!text.contains(forbidden), "{case} {view:?}: {forbidden}");
+            }
+        }
+    }
     Ok(())
 }
 
 /// The four ways one route is driven: both views, one document and records.
-const WAYS: [(&[&str], bool); 4] = [
-    (&[], false),
-    (&[], true),
-    (&["--details"], false),
-    (&["--details"], true),
+const WAYS: [(&[&str], Option<&str>); 4] = [
+    (&[], None),
+    (&[], Some("--jsonl")),
+    (&["--details"], None),
+    (&["--details"], Some("--jsonl")),
+];
+
+/// Both record framings in the bare and detailed views.
+const RECORD_WAYS: [(&[&str], Option<&str>); 4] = [
+    (&[], Some("--lines")),
+    (&[], Some("--jsonl")),
+    (&["--details"], Some("--lines")),
+    (&["--details"], Some("--jsonl")),
 ];
 
 /// The environment one run is given, with or without the key.
@@ -446,9 +473,18 @@ fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
 fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
     for route in &PATHS {
         for verb in VERBS {
-            for (view, records) in WAYS {
-                sweep(route, verb, view, records).expect("the compiled binary runs");
+            for (view, framing) in WAYS {
+                sweep(route, verb, view, framing).expect("the compiled binary runs");
             }
+        }
+    }
+    let hostile = PATHS
+        .iter()
+        .find(|route| route.damage == Some(HOSTILE))
+        .expect("the hostile replay route stays in the matrix");
+    for verb in RECORD_VERBS {
+        for (view, framing) in RECORD_WAYS {
+            sweep(hostile, verb, view, framing).expect("the compiled binary runs");
         }
     }
 }

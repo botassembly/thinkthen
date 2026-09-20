@@ -26,9 +26,9 @@ pub enum EntryError {
     Malformed(usize, usize),
     /// The entry was written by a version that names another schema.
     ///
-    /// The message names no schema, for the reason [`Self::Malformed`] gives.
-    /// The field is text out of a file, so it is unbounded and can hold a
-    /// control byte, and the name it carries tells a reader nothing to act on.
+    /// The message names only this version's trusted fixed schema. It never
+    /// repeats the schema field from the entry: that field is unbounded text
+    /// from a file and can hold a control byte or private evidence.
     #[error(
         "the entry names a schema this version does not read, \
              and this version reads `{SCHEMA}`"

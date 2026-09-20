@@ -63,6 +63,8 @@ Lazy reading is the better behavior; the page is what is wrong. Smallest fix: ch
 
 ### 3. `recording.md` says a foreign schema is refused "with a sentence that names no schema"; the sentence names one
 
+Status: Closed by ticket 0030.
+
 Severity: **page disagrees with the binary**.
 
 ```
