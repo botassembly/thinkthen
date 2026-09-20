@@ -10,7 +10,7 @@ use thinkthen_core::{Pointer, Resolved};
 
 use crate::args::{
     ChooseArguments, Common, DecideArguments, FilterArguments, RankArguments, Refused,
-    ScoreArguments,
+    ScoreArguments, TagArguments,
 };
 use crate::asked;
 use crate::asking::{Asks, fixed, run};
@@ -273,6 +273,38 @@ pub(crate) fn choose(
             asks,
             settled: &settled,
             view,
+            keeping: Keeping::Answers,
+        },
+        environment,
+        input,
+        writer,
+    )
+}
+
+/// Return every label whose independent yes probability reaches the cut.
+pub(crate) fn tag(
+    arguments: &TagArguments,
+    environment: &Environment,
+    input: impl Read + Send + 'static,
+    writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    if arguments.raw {
+        return Err(Failure::TagRaw);
+    }
+    if arguments.quiet {
+        return Err(Failure::TagQuiet);
+    }
+    let settled = asked::tag(arguments)?;
+    judging(
+        Asked {
+            common: &arguments.common,
+            asks: fixed(&settled)?,
+            settled: &settled,
+            view: View {
+                quiet: false,
+                raw: false,
+                details: arguments.common.details,
+            },
             keeping: Keeping::Answers,
         },
         environment,

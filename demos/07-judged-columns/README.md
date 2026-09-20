@@ -65,7 +65,7 @@ jq -c '{sku, bulb_included}' "$work/judged.jsonl" \
 
 ## Keep the output as JSONL
 
-CSV and DSV describe input. The enriched records remain JSON objects, one per line.
+CSV and TSV describe input. The enriched records remain JSON objects, one per line.
 
 ```bash
 set -euo pipefail

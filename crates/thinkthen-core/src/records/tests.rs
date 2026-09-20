@@ -242,7 +242,7 @@ fn a_candidate_list_the_verb_does_not_take_names_no_part_of_the_record() {
         ),
         (
             br#"{"note":"n","codes":["late","  "]}"#,
-            RecordError::Options(LabelsError::Blank),
+            RecordError::Options(LabelsError::OptionBlank),
         ),
     ];
     for (bytes, expected) in cases {

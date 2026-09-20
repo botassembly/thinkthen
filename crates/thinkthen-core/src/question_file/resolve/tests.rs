@@ -55,6 +55,18 @@ fn a_file_of_each_verb_holds_the_settings_it_names() {
     assert!(matches!(resolved.question(), Some(Question::Choose { .. })));
     assert!(resolved.threshold().expect("a cut").is_cut());
 
+    let tag = file(r#"{"tag":"Which topics?","labels":{"billing":"Money.","urgent":null}}"#);
+    let resolved = resolve(Verb::Tag, None, Some(&tag), &Typed::default()).expect("a resolved tag");
+    assert!(matches!(resolved.question(), Some(Question::Tag { .. })));
+    assert_eq!(
+        json_line(resolved.question().expect("a question")).expect("a question is writable"),
+        r#"{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]}"#
+    );
+    assert_eq!(
+        resolved.threshold().map(|rule| rule.to_string()).as_deref(),
+        Some("0.5")
+    );
+
     let score = file(r#"{"score":"How much?","levels":["None.","Some."]}"#);
     let resolved =
         resolve(Verb::Score, None, Some(&score), &Typed::default()).expect("a resolved placement");
@@ -222,7 +234,7 @@ fn a_label_holding_a_control_character_is_refused_from_a_file_too() {
         Refused::Labels {
             origin: Source::File,
             key: "options",
-            error: LabelsError::Control,
+            error: LabelsError::OptionControl,
         }
     );
     let said = refusal.to_string();

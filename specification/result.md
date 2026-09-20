@@ -1,6 +1,6 @@
 # The result
 
-Status: **Settled** for the bare value, the object, the three answer kinds, the full distribution with `confidence`, and the two `annotate` digests. ADR 0010 accepted the last three. One open point is left at the foot of the page.
+Status: **Settled** for the bare value, the object, the four answer kinds, the full distribution with `confidence`, and the two `annotate` digests. ADR 0010 accepted the last three. One open point is left at the foot of the page.
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
@@ -10,6 +10,7 @@ One internal result model feeds both views. The view never changes the request o
 | --- | --- |
 | `decide` | `true`, `false`, or `null` |
 | `choose` | a JSON string, or `null`. `--raw` prints the bare label, as [choose.md](choose.md) describes |
+| `tag` | a JSON array of every label that reaches the cut, including `[]` |
 | `score` | a JSON number |
 | `filter` | each kept record, byte for byte as it arrived, in input order |
 | `rank` | each record as it arrived, most likely yes first |
@@ -37,11 +38,11 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 `confidence` is present only when the backend sends it. No cut is taken on it. [backends.md](backends.md) says why. The vendor sends no `confidence` on a yes/no answer, so a `yes_no` answer carries none. `sdlc/planning/interface-audit.md` found the page promising one, and this page no longer does.
 
-## Three answer kinds
+## Four answer kinds
 
 **`yes_no`**, from `decide`, `filter`, and `rank`. It carries `probability`, the probability of yes, and nothing else.
 
-`find` fits none of the three kinds, and [find.md](find.md) holds that open point.
+`find` fits none of the four kinds, and [find.md](find.md) holds that open point.
 
 **`choice`**, from `choose`.
 
@@ -52,6 +53,14 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 `answer.pick` is the option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the label that cleared the cut.
 
 `value` is `null` when the answer is unresolved, and `answer.pick` still names the option that led. A script reads `value` and never `pick`. A person reading an unresolved row learns from `pick` what the model was leaning toward.
+
+**`tag`**, from `tag`.
+
+```json
+{"schema":"thinkthen.result/1","value":["billing"],"question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]},"answer":{"kind":"tag","probabilities":{"billing":0.91,"urgent":0.22}},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"00b0...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"replayed":false}}
+```
+
+`answer.probabilities` holds one entry per label in the order sent. `value` keeps every label whose probability reaches the one cut, in that order. An empty array is a complete successful answer.
 
 **`score`**, from `score`.
 

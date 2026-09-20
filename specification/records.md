@@ -20,7 +20,7 @@ Under `--lines` and under `--jsonl` a carriage return before the line feed is st
 
 | Command | Framing |
 | --- | --- |
-| `decide`, `choose`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
+| `decide`, `choose`, `tag`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
 | `filter`, `rank` | One of `--lines` or `--jsonl` is required. One document is not a stream |
 | `annotate` | One document by default. Both flags are accepted |
 
@@ -72,9 +72,9 @@ Settled by ADR 0008, accepted in ADR 0010. One request carries one piece of evid
 
 | Command | Requests |
 | --- | --- |
-| `decide`, `choose`, `score` on one document | 1 |
+| `decide`, `choose`, `tag`, `score` on one document | 1 |
 | `annotate` on one document | 1 for each distinct `on` |
-| `decide`, `choose`, `score`, `filter`, `rank` over N records | N |
+| `decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records | N |
 | `annotate` over N records | N times the number of distinct `on` sets |
 | `find` | 1 |
 | `--dry-run`, `--replay` | 0 |

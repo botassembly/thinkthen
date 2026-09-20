@@ -70,16 +70,43 @@ pub fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
         .map_err(|error| DecodeError::Malformed(error.line(), error.column()))?;
     let model = ModelName::new(response.model).map_err(|_| DecodeError::NoModel)?;
     let mut answers = Vec::with_capacity(plan.questions().len());
-    for (place, question) in plan.questions().iter().enumerate() {
-        let Some(answered) = response.answers.get(&wire_name(place)) else {
-            return Err(DecodeError::MissingAnswer(place));
+    let mut wire_place = 0;
+    for question in plan.questions() {
+        if let Question::Tag { labels, .. } = question {
+            answers.push(read_tag(&response.answers, labels, &mut wire_place)?);
+            continue;
+        }
+        let Some(answered) = response.answers.get(&wire_name(wire_place)) else {
+            return Err(DecodeError::MissingAnswer(wire_place));
         };
-        answers.push(read(question, answered, place)?);
+        answers.push(read(question, answered, wire_place)?);
+        wire_place += 1;
     }
     let usage = response
         .usage
         .map(|usage| Usage::new(usage.input_tokens, usage.output_tokens));
     Ok(Reply::new(model, answers, usage))
+}
+
+/// Read the adjacent yes-or-no wire answers that make one tag answer.
+fn read_tag(
+    answered: &BTreeMap<String, ResponseAnswer>,
+    labels: &Labels,
+    wire_place: &mut usize,
+) -> Result<Answer, DecodeError> {
+    let mut probabilities = Vec::with_capacity(labels.count());
+    for label in labels.names() {
+        let place = *wire_place;
+        let answer = answered
+            .get(&wire_name(place))
+            .ok_or(DecodeError::MissingAnswer(place))?;
+        let ResponseAnswer::Noul { noul } = answer else {
+            return Err(DecodeError::WrongKind(place));
+        };
+        probabilities.push((label.clone(), probability(*noul, place)?));
+        *wire_place += 1;
+    }
+    Ok(Answer::new_tag(probabilities))
 }
 
 /// Read one answer against the question that was asked in its place.
@@ -114,6 +141,7 @@ fn read(
             reported(*confidence, place)?,
         )
         .ok_or(DecodeError::MissingProbability(place)),
+        (Question::Tag { .. }, _) => Err(DecodeError::WrongKind(place)),
         _ => Err(DecodeError::WrongKind(place)),
     }
 }
@@ -169,7 +197,7 @@ mod tests {
     use super::decode;
     use crate::adapters::systemone::DecodeError;
     use crate::adapters::systemone::tests::{
-        LEVELS, TEAMS, disruption_plan, plan_for, team_plan, urgency_plan,
+        LEVELS, TEAMS, disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
     };
     use crate::answer::Answer;
     use crate::probability::Probability;
@@ -241,6 +269,23 @@ mod tests {
             vec![0.0, 0.13, 0.87]
         );
         assert_eq!(answer.confidence().map(Probability::as_f64), Some(0.79));
+    }
+
+    #[test]
+    fn tag_answers_are_aggregated_in_label_order() {
+        let body = br#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.2},"q2":{"type":"noul","noul":0.91}}}"#;
+        let reply = decode(&tag_plan(), body).expect("a tag response");
+        let [answer] = reply.answers() else {
+            panic!("one logical tag answer");
+        };
+        assert_eq!(
+            serde_json::to_string(answer).expect("answer serializes"),
+            r#"{"kind":"tag","probabilities":{"bill\\\"ing":0.2,"urgent":0.91}}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&answer.read(None).0).expect("value serializes"),
+            r#"["urgent"]"#
+        );
     }
 
     #[test]

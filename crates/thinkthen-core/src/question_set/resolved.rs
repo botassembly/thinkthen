@@ -52,6 +52,10 @@ impl Serialize for ResolvedQuestion<'_> {
                 map.serialize_entry("choose", text.as_str())?;
                 map.serialize_entry("options", &ResolvedDescriptions(options))?;
             }
+            Question::Tag { text, labels } => {
+                map.serialize_entry("tag", text.as_str())?;
+                map.serialize_entry("labels", &ResolvedDescriptions(labels))?;
+            }
             Question::Score { text, levels } => {
                 map.serialize_entry("score", text.as_str())?;
                 map.serialize_entry("levels", levels)?;

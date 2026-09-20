@@ -76,6 +76,12 @@ pub(crate) enum Command {
     /// tuned, because a run with a reordered list is a different measurement.
     Choose(ChooseArguments),
 
+    /// Return every applicable label as one JSON array.
+    #[command(
+        before_help = "thinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt\nthinkthen tag 'Which topics?' billing urgent < message.txt\n"
+    )]
+    Tag(TagArguments),
+
     /// Place the evidence on named levels and print the number.
     ///
     /// The levels come lowest first, and the number is the backend's
@@ -138,6 +144,7 @@ impl Command {
         match self {
             Self::Decide(arguments) => &arguments.common,
             Self::Choose(arguments) => &arguments.common,
+            Self::Tag(arguments) => &arguments.common,
             Self::Score(arguments) => &arguments.common,
             Self::Filter(arguments) => &arguments.common,
             Self::Rank(arguments) => &arguments.common,
@@ -407,6 +414,37 @@ pub(crate) struct ChooseArguments {
     pub(crate) common: Common,
 }
 
+/// Everything `tag` was asked, before any of it is read.
+#[derive(Args, Debug)]
+pub(crate) struct TagArguments {
+    /// The question that frames the labels, or `@` and a question-file path.
+    pub(crate) question: String,
+
+    /// The labels to test independently, 1 to 20, in request and output order.
+    #[arg(value_name = "LABEL")]
+    pub(crate) labels: Vec<String>,
+
+    /// One label and what it means, as LABEL=DESCRIPTION. Give it once per label.
+    #[arg(long = "label", value_name = "LABEL=DESCRIPTION")]
+    pub(crate) described: Vec<String>,
+
+    /// One cut applied to every label's probability of yes.
+    #[arg(long, value_name = "T", allow_negative_numbers = true)]
+    pub(crate) threshold: Option<String>,
+
+    /// Taken so the command can explain that its output is always JSON.
+    #[arg(long, hide = true)]
+    pub(crate) raw: bool,
+
+    /// Taken so the command can explain that an empty array is an answer.
+    #[arg(long, hide = true)]
+    pub(crate) quiet: bool,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
 /// Everything `score` was asked, before any of it is read.
 #[derive(Args, Debug)]
 pub(crate) struct ScoreArguments {
@@ -459,6 +497,16 @@ pub(crate) struct AnnotateArguments {
 mod annotate_tests {
     use super::{Cli, Command};
     use clap::Parser as _;
+
+    #[test]
+    fn tag_accepts_plain_labels() {
+        let cli = Cli::try_parse_from(["thinkthen", "tag", "Which topics?", "billing"])
+            .expect("valid tag command");
+        let Some(Command::Tag(arguments)) = cli.command else {
+            panic!("tag command");
+        };
+        assert_eq!(arguments.labels, ["billing"]);
+    }
 
     #[test]
     fn annotate_accepts_a_question_set_and_record_options() {

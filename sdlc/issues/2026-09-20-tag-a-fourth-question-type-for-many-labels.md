@@ -70,7 +70,7 @@ Nothing here is decided. The recommendation is to add `tag` as the fourth questi
 
 ## Update, later on 2026-09-20: three public choices
 
-**Superseded on 2026-09-20 by ADR 0028.** Ian ruled that CSV and DSV are input only and every output remains JSONL. Points 2 and 3 below preserve the earlier recommendation; they no longer steer implementation.
+**Superseded on 2026-09-20 by ADR 0028.** Ian ruled that CSV and TSV are input only and every output remains JSONL. Points 2 and 3 below preserve the earlier recommendation; they no longer steer implementation.
 
 Ian relayed three questions from the builder and asked for the marketing side's view. These are recommendations. The builder's ADR decides.
 

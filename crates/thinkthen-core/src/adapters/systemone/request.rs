@@ -1,7 +1,10 @@
 //! Writing one plan as the request body the backend reads.
 
+#[cfg(test)]
 use std::collections::BTreeMap;
 
+#[cfg(test)]
+use serde::Deserialize;
 use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
 
@@ -15,7 +18,36 @@ use crate::question::Question;
 pub(crate) struct Request {
     state: String,
     model: String,
-    questions: BTreeMap<String, RequestQuestion>,
+    questions: Questions,
+}
+
+/// The wire questions in request order.
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) struct Questions(Vec<(String, RequestQuestion)>);
+
+#[cfg(test)]
+impl Questions {
+    fn get(&self, name: &str) -> Option<&RequestQuestion> {
+        self.0
+            .iter()
+            .find(|(held, _)| held == name)
+            .map(|(_, question)| question)
+    }
+}
+
+impl Serialize for Questions {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(self.0.iter().map(|(name, question)| (name, question)))
+    }
+}
+
+#[cfg(test)]
+impl<'de> Deserialize<'de> for Questions {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        BTreeMap::<String, RequestQuestion>::deserialize(deserializer)
+            .map(|questions| Self(questions.into_iter().collect()))
+    }
 }
 
 /// One named question inside a request, in the shape its verb asks for.
@@ -115,20 +147,51 @@ pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
     let request = Request {
         state: plan.evidence().as_str().to_owned(),
         model: plan.model().as_str().to_owned(),
-        questions: plan
-            .questions()
-            .iter()
-            .enumerate()
-            .map(|(place, question)| (wire_name(place), RequestQuestion::asking(question)))
-            .collect(),
+        questions: questions(plan)?,
     };
     serde_json::value::to_raw_value(&request).map_err(|error| EncodeError::of(&error))
 }
 
+/// Expand logical tag questions into one wire yes/no question per label.
+fn questions(plan: &Plan) -> Result<Questions, EncodeError> {
+    let mut written = Vec::new();
+    for question in plan.questions() {
+        match question {
+            Question::Tag { text, labels } => {
+                for (label, description) in labels.descriptions() {
+                    let label =
+                        serde_json::to_string(label).map_err(|error| EncodeError::of(&error))?;
+                    let instructions = format!(
+                        "{}\n\nDetermine whether the label {label} applies to this item.",
+                        text.as_str()
+                    );
+                    written.push((
+                        wire_name(written.len()),
+                        RequestQuestion::Noul {
+                            instructions,
+                            criteria: description.map(|description| NoulCriteria {
+                                yes: Some(description.to_owned()),
+                                no: None,
+                            }),
+                        },
+                    ));
+                }
+            }
+            _ => {
+                let Some(question) = RequestQuestion::asking(question) else {
+                    return Err(EncodeError::of(&"a tag question was not expanded"));
+                };
+                written.push((wire_name(written.len()), question));
+            }
+        }
+    }
+    Ok(Questions(written))
+}
+
 impl RequestQuestion {
     /// Write one question in the shape its verb asks for.
-    fn asking(question: &Question) -> Self {
-        match question {
+    fn asking(question: &Question) -> Option<Self> {
+        Some(match question {
             Question::Decide { text, yes, no } => Self::Noul {
                 instructions: text.as_str().to_owned(),
                 criteria: (yes.is_some() || no.is_some()).then(|| NoulCriteria {
@@ -149,14 +212,17 @@ impl RequestQuestion {
                 instructions: text.as_str().to_owned(),
                 criteria: levels.names().cloned().collect(),
             },
-        }
+            Question::Tag { .. } => return None,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Request, RequestQuestion, encode};
-    use crate::adapters::systemone::tests::{disruption_plan, plan_for, team_plan, urgency_plan};
+    use crate::adapters::systemone::tests::{
+        disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
+    };
     use proptest::collection::vec;
     use proptest::prelude::{Strategy, any};
     use proptest::{prop_assert_eq, proptest};
@@ -200,6 +266,25 @@ mod tests {
             text.contains(
                 r#""criteria":{"billing":null,"shipping":null,"account":null,"other":null}"#
             ),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_tag_expands_labels_in_order_and_quotes_the_label_inside_the_instruction() {
+        let bytes = encode(&tag_plan()).expect("a plan is writable");
+        let text = String::from_utf8(bytes).expect("a request is text");
+        let written: Request = serde_json::from_str(&text).expect("request JSON");
+        assert_eq!(
+            written.questions.get("q1"),
+            Some(&RequestQuestion::Noul {
+                instructions: "Which topics?\n\nDetermine whether the label \"bill\\\\\\\"ing\" applies to this item."
+                    .to_owned(),
+                criteria: None,
+            })
+        );
+        assert!(
+            text.find(r#""q1""#).expect("q1") < text.find(r#""q2""#).expect("q2"),
             "{text}"
         );
     }

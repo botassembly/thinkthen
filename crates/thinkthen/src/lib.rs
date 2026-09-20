@@ -48,6 +48,7 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
     match &cli.command {
         Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),
         Some(Command::Choose(arguments)) => judge::choose(arguments, &environment, input, writer),
+        Some(Command::Tag(arguments)) => judge::tag(arguments, &environment, input, writer),
         Some(Command::Score(arguments)) => judge::score(arguments, &environment, input, writer),
         Some(Command::Filter(arguments)) => judge::filter(arguments, &environment, input, writer),
         Some(Command::Rank(arguments)) => judge::rank(arguments, &environment, input, writer),

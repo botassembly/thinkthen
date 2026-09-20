@@ -88,7 +88,7 @@ pub(crate) const REFUSALS: [(&str, &str, &str, i32); 20] = [
 /// The sentence each refusal above prints, in the same order.
 const SAID: [&str; 20] = [
     "a question file holds one question, and this one holds `decide` and `choose`",
-    "a question file holds one of `decide`, `choose`, or `score`",
+    "a question file holds one of `decide`, `choose`, `tag`, or `score`",
     "a question file holds no key `nope`",
     "a `choose` question file takes no key `true`",
     "the question file's `threshold`: `choose` takes a single cut and never a band",
@@ -96,10 +96,10 @@ const SAID: [&str; 20] = [
     "the question file's `threshold`: a single cut is above zero and at most one",
     "the question file's `threshold`: a band's low side is below its high side",
     "the question file's `options`: `choose` takes 2 to 255 options",
-    "the question file's `options`: a list holds each option and each level once",
-    "the question file's `options`: an option or a level is text, not white space",
+    "the question file's `options`: a list holds each option once",
+    "the question file's `options`: an option is text, not white space",
     "`options` in the question file is a list of labels, or a map from each label to its description",
-    "the question file's `options`: an option or a level is one line of printable text",
+    "the question file's `options`: an option is one line of printable text",
     "the question file's `levels`: `score` takes 2 to 10 levels, lowest first",
     "the question file's `levels`: `score` takes 2 to 10 levels, lowest first",
     "the question file is not valid JSON: the JSON at line 1 column 2 is not one",
@@ -181,7 +181,7 @@ fn a_score_file_refuses_a_rule_and_a_level_that_holds_a_control_character() {
         (
             concat!(
                 "thinkthen: the question file's `levels`: ",
-                "an option or a level is one line of printable text\n",
+                "a level is one line of printable text\n",
             )
             .to_owned(),
             Some(5)

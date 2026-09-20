@@ -288,7 +288,7 @@ const OPERANDS: [Refusal; 6] = [
             "a label holding a control character",
             &["choose"],
             &[],
-            "an option or a level is one line of printable text",
+            "an option is one line of printable text",
             2,
         )
     },
@@ -298,7 +298,7 @@ const OPERANDS: [Refusal; 6] = [
             "a label that is white space",
             &["choose"],
             &[],
-            "an option or a level is text, not white space",
+            "an option is text, not white space",
             2,
         )
     },

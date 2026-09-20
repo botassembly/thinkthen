@@ -16,7 +16,7 @@ Every `thinkthen` command that would otherwise reach a backend carries `--replay
 
 ## Red and green
 
-A demo starts **red**, and this list marks it **coming** with the ticket or the slice that writes it. `decide`, `choose`, `score`, `filter`, `rank`, and `annotate` are built. Pages that need `find` or recordings that have not been made remain plans. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
+A demo starts **red**, and this list marks it **coming** with the ticket or the slice that writes it. `decide`, `choose`, `tag`, `score`, `filter`, `rank`, and `annotate` are built. Pages that need `find` or recordings that have not been made remain plans. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. When it turns green it takes the how-to form and the argument leaves the page. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. It refuses a green page out of form, a green page this index does not list, and a green page that names a `--replay` folder it does not hold.
 
@@ -63,7 +63,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
-| 39 | [Screen one message for several hazards](39-screen-a-message/) | `annotate` | green |
+| 39 | [Screen one message for several hazards](39-screen-a-message/) | `tag` | green |
 | 16 | Build a triage pipeline that drafts, blocks, or asks a person | `annotate` | coming, slice 9 |
 
 ## Evals

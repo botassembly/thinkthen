@@ -2,41 +2,40 @@
 
 Status: green
 
-Use one question set when one message needs several independent checks before a person or script acts. This example checks for a secret, a destructive request, and urgent wording in one request.
+Use `tag` when one record can have zero, one, or several labels. Descriptions make each label concrete while all labels ride in one request.
 
 ```bash
-env -u THINKTHEN_API_KEY thinkthen annotate hazards.json --replay recording \
-  --input message.txt | jq -c 'keys' \
-  | mustmatch '["destructive","secret","urgent"]'
+env -u THINKTHEN_API_KEY thinkthen tag @hazards.json --replay recording \
+  --input message.txt | mustmatch '["urgent"]'
 ```
 
-Verbs: `annotate`
+Verbs: `tag`
 
 ## Input
 
-`message.txt` contains one support message. `hazards.json` gives three narrow yes-or-no questions the backend sees beside that same message. Their shared evidence means they ride in one request.
+`message.txt` contains one support message. `hazards.json` names three labels and describes what evidence makes each one apply.
 
 ## Screen the message
 
+The bare result is one JSON array in label order. Raising the local cut above every recorded probability shows the successful empty answer without another backend call.
+
 ```bash
-env -u THINKTHEN_API_KEY thinkthen annotate hazards.json --details \
-  --replay recording --input message.txt \
-  | jq -c '{value, one_request: ([.answers[].request] | unique | length)}' \
-  | mustmatch '{"value":{"secret":false,"destructive":false,"urgent":true},"one_request":1}'
+env -u THINKTHEN_API_KEY thinkthen tag @hazards.json --threshold .99 \
+  --replay recording --input message.txt | mustmatch '[]'
 ```
 
-The policy sends any unresolved check to a person and permits automatic handling only when every required answer is `false`.
+Use `--details` before acting on a label near the cut. This recording measured all three probabilities and put `urgent` well above the default cut.
 
 ```bash
-env -u THINKTHEN_API_KEY thinkthen annotate hazards.json --replay recording \
-  --input message.txt \
-  | jq -r 'if any(.[]; . == null) then "review" elif any(.[]; . == true) then "hold" else "continue" end' \
-  | mustmatch 'hold'
+env -u THINKTHEN_API_KEY thinkthen tag @hazards.json --details \
+  --replay recording --input message.txt \
+  | jq -c '{value, probabilities: .answer.probabilities}' \
+  | mustmatch '{"value":["urgent"],"probabilities":{"secret":0.03,"destructive":0.03,"urgent":0.95}}'
 ```
 
 ## What can go wrong
 
-Exit 2 means the input object already owns a question name or the command line is invalid. Exit 4 means the backend failed. Exit 5 means the question set or recording is missing or malformed. A new question changes the whole grouped request and asks it again. Keep the set fixed while comparing runs, and inspect `--details` when an answer sits near its threshold.
+Exit 2 means the labels, threshold, or command line are invalid. Exit 4 means the backend failed. Exit 5 means the question file or recording is missing or malformed. Adding, removing, describing, or reordering one label changes the whole request and cache key. The rerun asks every label again, and an answer near the cut can move.
 
 ## Related how-tos
 

@@ -1,7 +1,7 @@
 //! The one sweep that proves no key leaves this process and no error quotes the
 //! evidence.
 //!
-//! The three single-answer commands run down every path the backend can send
+//! The four single-answer commands run down every path the backend can send
 //! them, on one document and over records, in both views. The record commands
 //! run the hostile replay path under both framings and views. One reader then
 //! reads standard output, standard error, and every file the run wrote.
@@ -38,13 +38,14 @@ pub(crate) const QUESTION: &str = "Does this report a payment failure?";
 ///
 /// A command enters this sweep by adding one row here. Every path below then
 /// runs over it, on one document and over records, in both views.
-pub(crate) const VERBS: [(&str, &[&str], &str); 3] = [
+pub(crate) const VERBS: [(&str, &[&str], &str); 4] = [
     ("decide", &[], r#""type":"noul","noul":0.92"#),
     (
         "choose",
         &["late", "lost"],
         r#""type":"choice","choice":"late","probabilities":{"late":0.9,"lost":0.1}"#,
     ),
+    ("tag", &["billing"], r#""type":"noul","noul":0.92"#),
     (
         "score",
         &["none", "some", "much"],
@@ -489,7 +490,6 @@ fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
     }
 }
 
-/// The key reaches the one authorization header, and the listener saw it there.
 ///
 /// A sweep that proved only absence would pass on a run that sent no key at
 /// all, so one case pins where the key does go.

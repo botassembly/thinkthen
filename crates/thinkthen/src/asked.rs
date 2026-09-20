@@ -10,7 +10,7 @@ use thinkthen_core::{Cutting, QuestionFile, Resolved, Typed, Verb, resolve};
 
 use crate::args::{
     ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, RankArguments,
-    ScoreArguments,
+    ScoreArguments, TagArguments,
 };
 use crate::failure::Failure;
 
@@ -145,6 +145,46 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
     )?)
 }
 
+/// Settle everything `tag` was asked.
+pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
+    let file = read(&arguments.question)?;
+    let listed = !arguments.labels.is_empty();
+    let described = !arguments.described.is_empty();
+    if listed && described {
+        return Err(Failure::LabelWithList);
+    }
+    let labels = match (listed, described) {
+        (true, _) => Some(
+            arguments
+                .labels
+                .iter()
+                .map(|name| (name.clone(), None))
+                .collect(),
+        ),
+        (_, true) => Some(
+            arguments
+                .described
+                .iter()
+                .map(|entry| split_label(entry))
+                .collect::<Result<Vec<_>, Failure>>()?,
+        ),
+        _ => None,
+    };
+    let typed = Typed {
+        threshold: arguments.threshold.clone(),
+        labels,
+        model: arguments.common.model.clone(),
+        on: fields(&arguments.common),
+        ..Typed::default()
+    };
+    Ok(resolve(
+        Verb::Tag,
+        typed_text(&arguments.question, file.is_some()),
+        file.as_ref(),
+        &typed,
+    )?)
+}
+
 /// Settle everything `score` was asked.
 pub(crate) fn score(arguments: &ScoreArguments) -> Result<Resolved, Failure> {
     let file = read(&arguments.question)?;
@@ -177,6 +217,12 @@ pub(crate) fn score(arguments: &ScoreArguments) -> Result<Resolved, Failure> {
 /// `LABEL=` asks the same question `LABEL` alone asks.
 fn split(entry: &str) -> Result<(String, Option<String>), Failure> {
     let (label, described) = entry.split_once('=').ok_or(Failure::OptionWithoutSign)?;
+    Ok((label.to_owned(), Some(described.to_owned())))
+}
+
+/// Split one `--label` entry at its first `=`.
+fn split_label(entry: &str) -> Result<(String, Option<String>), Failure> {
+    let (label, described) = entry.split_once('=').ok_or(Failure::LabelWithoutSign)?;
     Ok((label.to_owned(), Some(described.to_owned())))
 }
 

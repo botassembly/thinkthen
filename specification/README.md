@@ -2,7 +2,7 @@
 
 The contract for `thinkthen`. Code follows these documents. A behavior that is absent here is absent from the tool. Ian reads the design here, and a ticket cites the section it builds. ADR 0007 fixes the surface, and changing a Settled section takes a new ADR.
 
-Version one is six commands: `decide`, `choose`, `score`, `filter`, `rank`, and `annotate`. The configuration file left version one, and ADR 0010 holds that ruling. `roadmap.md` holds what left. ADR 0015 accepted `find` on the live comparison, and it enters after `rank`.
+Version one is seven commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, and `annotate`. The configuration file left version one, and ADR 0010 holds that ruling. `roadmap.md` holds what left. ADR 0015 accepted `find` on the live comparison, and it enters after `rank`.
 
 The names table in [`../README.md`](../README.md) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions.
 
@@ -13,12 +13,13 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--dry-run`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | The bare value, the `--details` object, and the three answer kinds | Settled, with one open point |
+| [result.md](result.md) | The bare value, the `--details` object, and the four answer kinds | Settled, with one open point |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [recording.md](recording.md) | `--record` and `--replay`: a folder of exchanges that runs again with no network | Settled |
 | [decide.md](decide.md) | `decide` | Settled |
 | [choose.md](choose.md) | `choose` | Settled |
+| [tag.md](tag.md) | `tag` | Settled |
 | [score.md](score.md) | `score` | Settled |
 | [filter.md](filter.md) | `filter` | Settled |
 | [rank.md](rank.md) | `rank` | Settled |
@@ -38,6 +39,7 @@ Each section carries one of three words. **Settled** means code may be built aga
 | --- | --- |
 | `decide QUESTION` | Answers yes, no, or unresolved, and sets the exit code |
 | `choose QUESTION OPTION...` | Picks one label from a fixed list |
+| `tag QUESTION LABEL...` | Returns every applicable label |
 | `score QUESTION LEVEL...` | Places the evidence on named levels and prints a number |
 | `filter QUESTION` | Keeps the records that reach the mark and prints them unchanged |
 | `rank QUESTION` | Prints the records in order of the probability of yes |

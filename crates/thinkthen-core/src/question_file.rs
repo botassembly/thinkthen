@@ -18,13 +18,15 @@ use crate::question::LabelsError;
 use crate::text::{BlankTextError, Meaning, ModelName, QuestionText};
 use crate::threshold::{Threshold, ThresholdError};
 
-/// Which of the three question types a file holds or a command asks.
+/// Which question type a file holds or a command asks.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Verb {
     /// A yes/no question.
     Decide,
     /// A pick from a fixed list.
     Choose,
+    /// Any number of independent labels from a fixed list.
+    Tag,
     /// A placement on named levels.
     Score,
 }
@@ -36,6 +38,7 @@ impl Verb {
         match self {
             Self::Decide => "decide",
             Self::Choose => "choose",
+            Self::Tag => "tag",
             Self::Score => "score",
         }
     }
@@ -45,6 +48,7 @@ impl Verb {
         match self {
             Self::Decide => &["decide", "true", "false", "threshold", "on", "model"],
             Self::Choose => &["choose", "options", "threshold", "on", "model"],
+            Self::Tag => &["tag", "labels", "threshold", "on", "model"],
             Self::Score => &["score", "levels", "on", "model"],
         }
     }
@@ -60,13 +64,15 @@ impl fmt::Display for Verb {
 pub type Described = Vec<(String, Option<String>)>;
 
 /// Every key any question file may hold, so an unknown one is told apart.
-const EVERY_KEY: [&str; 9] = [
+const EVERY_KEY: [&str; 11] = [
     "decide",
     "choose",
+    "tag",
     "score",
     "true",
     "false",
     "options",
+    "labels",
     "levels",
     "threshold",
     "on",
@@ -113,10 +119,10 @@ pub enum QuestionFileError {
     /// The file holds something other than one JSON object.
     #[error("a question file is one JSON object")]
     NotAnObject,
-    /// The file names none of the three question types.
-    #[error("a question file holds one of `decide`, `choose`, or `score`")]
+    /// The file names none of the four question types.
+    #[error("a question file holds one of `decide`, `choose`, `tag`, or `score`")]
     NoVerb,
-    /// The file names two of the three question types.
+    /// The file names two of the four question types.
     #[error("a question file holds one question, and this one holds `{0}` and `{1}`")]
     TwoVerbs(&'static str, &'static str),
     /// The file holds a key no question file has.
@@ -167,6 +173,9 @@ pub enum QuestionFileError {
     /// A band reached a verb that cuts on one winning probability.
     #[error("{}`choose` takes a single cut and never a band", named(*.0, "threshold"))]
     BandOnChoose(Source),
+    /// A band reached `tag`, which applies one cut to every label.
+    #[error("{}`tag` takes a single cut and never a band", named(*.0, "threshold"))]
+    BandOnTag(Source),
     /// A rule reached the verb that answers with a number and no rule.
     #[error("{}`score` takes no rule, so cut on the number with `jq -e`", named(*.0, "threshold"))]
     RuleOnScore(Source),
@@ -252,6 +261,7 @@ impl QuestionFileError {
             | Self::Labels { origin, .. }
             | Self::Pointer { origin, .. }
             | Self::BandOnChoose(origin)
+            | Self::BandOnTag(origin)
             | Self::RuleOnScore(origin)
             | Self::BandOnFilter(origin)
             | Self::RuleOnRank(origin) => *origin,
@@ -331,10 +341,10 @@ impl QuestionFile {
     }
 }
 
-/// Which of the three question types the file names, and only one of them.
+/// Which of the four question types the file names, and only one of them.
 fn verb_of(members: &[(String, Json)]) -> Result<Verb, QuestionFileError> {
     let mut found: Option<Verb> = None;
-    for verb in [Verb::Decide, Verb::Choose, Verb::Score] {
+    for verb in [Verb::Decide, Verb::Choose, Verb::Tag, Verb::Score] {
         if !members.iter().any(|(name, _)| name == verb.word()) {
             continue;
         }
@@ -393,6 +403,10 @@ fn labels_in(value: &Json, verb: Verb) -> Result<Option<Described>, QuestionFile
             "options",
             "is a list of labels, or a map from each label to its description",
         ),
+        Verb::Tag => (
+            "labels",
+            "is a list of labels, or a map from each label to its description",
+        ),
         Verb::Score => ("levels", "is a list of levels, lowest first"),
     };
     let Some(held) = value.member(key) else {
@@ -407,7 +421,7 @@ fn labels_in(value: &Json, verb: Verb) -> Result<Option<Described>, QuestionFile
                 _ => Err(shape.clone()),
             })
             .collect::<Result<Vec<_>, QuestionFileError>>()?,
-        Json::Object(members) if verb == Verb::Choose => members
+        Json::Object(members) if matches!(verb, Verb::Choose | Verb::Tag) => members
             .iter()
             .map(|(name, described)| match described {
                 Json::String(text) => Ok((name.clone(), Some(text.clone()))),

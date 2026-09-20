@@ -80,7 +80,7 @@ set -eu
 printf '%s\n' '{"id":"S-7","state":"Nothing has happened yet.","actions":["look_up_the_order","ok\nrm -rf /","close_the_ticket"]}' \
   | thinkthen choose 'Which of these actions should be taken next?' \
       --jsonl --field /state --options /actions --replay recording/ 2>&1 >/dev/null \
-  | mustmatch "thinkthen: an option or a level is one line of printable text
+  | mustmatch "thinkthen: an option is one line of printable text
 thinkthen: stopped at record 1; 0 records finished, 0 from a recording"
 ```
 

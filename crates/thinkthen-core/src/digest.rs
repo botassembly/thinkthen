@@ -95,6 +95,11 @@ impl Serialize for Canonical<'_> {
                 map.serialize_entry("text", text.as_str())?;
                 map.serialize_entry("options", &Described(options))?;
             }
+            Question::Tag { text, labels } => {
+                map.serialize_entry("verb", "tag")?;
+                map.serialize_entry("text", text.as_str())?;
+                map.serialize_entry("labels", &Described(labels))?;
+            }
             Question::Score { text, levels } => {
                 map.serialize_entry("verb", "score")?;
                 map.serialize_entry("text", text.as_str())?;
@@ -224,6 +229,30 @@ mod tests {
                 "6466cfebbbc92e7d21501d45013f89fc72cf6a533a9020b82edc1784956222fe",
                 "831eb29bdbcb62c91bba7790ab0430d40ac2d8e7b866ed1134dab764646f2d34",
             ]
+        );
+    }
+
+    #[test]
+    fn the_tag_canonical_form_and_digest_stay_pinned() {
+        let question = Question::Tag {
+            text: text("Which topics?"),
+            labels: Labels::tags(vec![
+                ("billing".to_owned(), None),
+                (
+                    "urgent".to_owned(),
+                    Some("The item needs prompt attention.".to_owned()),
+                ),
+            ])
+            .expect("two tags"),
+        };
+        let threshold = Some(Threshold::default());
+        assert_eq!(
+            json_line(&Canonical::new(&question, threshold)).expect("canonical JSON"),
+            r#"{"verb":"tag","text":"Which topics?","labels":{"billing":null,"urgent":"The item needs prompt attention."},"threshold":0.5}"#
+        );
+        assert_eq!(
+            question_sha256(&question, threshold).expect("digest"),
+            "00b00cf7e1d55b2bb16356f583da7d2dab8fb538f459d859f817392b59efdedf"
         );
     }
 

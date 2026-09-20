@@ -102,6 +102,20 @@ impl Serialize for Distribution {
     }
 }
 
+/// Independent yes probabilities for tag labels, in user order.
+#[derive(Clone, Debug, PartialEq)]
+struct TagProbabilities(Vec<(String, Probability)>);
+
+impl Serialize for TagProbabilities {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(
+            self.0
+                .iter()
+                .map(|(label, probability)| (label, probability)),
+        )
+    }
+}
+
 /// The three shapes of answer, each carrying what its backend reported.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -115,6 +129,8 @@ enum Shape {
         #[serde(skip_serializing_if = "Option::is_none")]
         confidence: Option<Probability>,
     },
+    /// Independent probabilities that each tag applies.
+    Tag { probabilities: TagProbabilities },
     /// A place on named levels, with the odds of every level.
     Score {
         level: String,
@@ -137,6 +153,8 @@ pub enum Value {
     YesNo(Option<bool>),
     /// `choose`: the winning label, or `null` when the answer is unresolved.
     Choice(Option<String>),
+    /// `tag`: every label whose yes probability reached the cut.
+    Tag(Vec<String>),
     /// `score`: the weighted position on the levels.
     Score(f64),
 }
@@ -147,7 +165,7 @@ impl Value {
     pub fn label(&self) -> Option<&str> {
         match self {
             Self::Choice(label) => label.as_deref(),
-            Self::YesNo(_) | Self::Score(_) => None,
+            Self::YesNo(_) | Self::Tag(_) | Self::Score(_) => None,
         }
     }
 }
@@ -176,6 +194,13 @@ impl Answer {
             probabilities,
             confidence,
         }))
+    }
+
+    /// Take one independent yes probability per tag label.
+    pub(crate) fn new_tag(probabilities: Vec<(String, Probability)>) -> Self {
+        Self(Shape::Tag {
+            probabilities: TagProbabilities(probabilities),
+        })
     }
 
     /// Take the odds of every level as the answer to a placement.
@@ -220,6 +245,16 @@ impl Answer {
                     (Value::Choice(None), Outcome::Unresolved)
                 }
             }
+            Shape::Tag { probabilities } => {
+                let threshold = threshold.unwrap_or_default();
+                let selected = probabilities
+                    .0
+                    .iter()
+                    .filter(|(_, probability)| threshold.judge(*probability) == Outcome::Yes)
+                    .map(|(label, _)| label.clone())
+                    .collect();
+                (Value::Tag(selected), Outcome::Yes)
+            }
             Shape::Score { probabilities, .. } => {
                 (Value::Score(probabilities.position()), Outcome::Yes)
             }
@@ -234,7 +269,7 @@ impl Answer {
     pub fn yes(&self) -> Option<f64> {
         match &self.0 {
             Shape::YesNo { probability } => Some(probability.as_f64()),
-            Shape::Choice { .. } | Shape::Score { .. } => None,
+            Shape::Choice { .. } | Shape::Tag { .. } | Shape::Score { .. } => None,
         }
     }
 
@@ -246,6 +281,7 @@ impl Answer {
             Shape::Choice { probabilities, .. } | Shape::Score { probabilities, .. } => {
                 Some(probabilities)
             }
+            Shape::Tag { .. } => None,
         }
     }
 
@@ -255,6 +291,7 @@ impl Answer {
         match &self.0 {
             Shape::YesNo { .. } => None,
             Shape::Choice { pick: label, .. } | Shape::Score { level: label, .. } => Some(label),
+            Shape::Tag { .. } => None,
         }
     }
 
@@ -264,6 +301,7 @@ impl Answer {
         match &self.0 {
             Shape::YesNo { .. } => None,
             Shape::Choice { confidence, .. } | Shape::Score { confidence, .. } => *confidence,
+            Shape::Tag { .. } => None,
         }
     }
 }
@@ -350,6 +388,32 @@ mod tests {
                 "{threshold:?}"
             );
         }
+    }
+
+    #[test]
+    fn tag_selects_each_label_at_or_above_one_shared_cut_and_empty_succeeds() {
+        let answer = Answer::new_tag(vec![
+            (
+                "billing".to_owned(),
+                Probability::new(0.5).expect("probability"),
+            ),
+            (
+                "urgent".to_owned(),
+                Probability::new(0.2).expect("probability"),
+            ),
+        ]);
+        assert_eq!(
+            answer.read(None),
+            (Value::Tag(vec!["billing".to_owned()]), Outcome::Yes)
+        );
+        assert_eq!(
+            answer.read(Some(rule("0.9"))),
+            (Value::Tag(Vec::new()), Outcome::Yes)
+        );
+        assert_eq!(
+            serde_json::to_string(&answer).expect("answer serializes"),
+            r#"{"kind":"tag","probabilities":{"billing":0.5,"urgent":0.2}}"#
+        );
     }
 
     #[test]

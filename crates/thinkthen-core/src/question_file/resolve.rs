@@ -137,6 +137,7 @@ impl Serialize for Sources {
         match self.verb {
             Verb::Decide => named.extend([("true", self.yes), ("false", self.no)]),
             Verb::Choose => named.push(("options", self.labels)),
+            Verb::Tag => named.push(("labels", self.labels)),
             Verb::Score => named.push(("levels", self.labels)),
         }
         if self.verb != Verb::Score {
@@ -201,37 +202,7 @@ pub fn resolve(
     let (threshold, threshold_source) = threshold_of(verb, typed, file)?;
     let (model, model_source) = model_of(typed, file)?;
     let (on, on_source) = on_of(typed, file)?;
-    let (question, labels_source) = match verb {
-        Verb::Decide => (
-            Some(Question::Decide {
-                text: question_text.clone(),
-                yes,
-                no,
-            }),
-            Source::Default,
-        ),
-        Verb::Choose if typed.options_from_record => (None, Source::CommandLine),
-        Verb::Choose => {
-            let (options, source) = labels_of(verb, typed, file)?;
-            (
-                Some(Question::Choose {
-                    text: question_text.clone(),
-                    options,
-                }),
-                source,
-            )
-        }
-        Verb::Score => {
-            let (levels, source) = labels_of(verb, typed, file)?;
-            (
-                Some(Question::Score {
-                    text: question_text.clone(),
-                    levels,
-                }),
-                source,
-            )
-        }
-    };
+    let (question, labels_source) = resolved_question(verb, &question_text, yes, no, typed, file)?;
     Ok(Resolved {
         question,
         text: question_text,
@@ -248,6 +219,58 @@ pub fn resolve(
             on: on_source,
             model: model_source,
         },
+    })
+}
+
+/// Build the verb's question and name where its list came from.
+fn resolved_question(
+    verb: Verb,
+    text: &QuestionText,
+    yes: Option<Meaning>,
+    no: Option<Meaning>,
+    typed: &Typed,
+    file: Option<&QuestionFile>,
+) -> Result<(Option<Question>, Source), QuestionFileError> {
+    Ok(match verb {
+        Verb::Decide => (
+            Some(Question::Decide {
+                text: text.clone(),
+                yes,
+                no,
+            }),
+            Source::Default,
+        ),
+        Verb::Choose if typed.options_from_record => (None, Source::CommandLine),
+        Verb::Choose => {
+            let (options, source) = labels_of(verb, typed, file)?;
+            (
+                Some(Question::Choose {
+                    text: text.clone(),
+                    options,
+                }),
+                source,
+            )
+        }
+        Verb::Tag => {
+            let (labels, source) = labels_of(verb, typed, file)?;
+            (
+                Some(Question::Tag {
+                    text: text.clone(),
+                    labels,
+                }),
+                source,
+            )
+        }
+        Verb::Score => {
+            let (levels, source) = labels_of(verb, typed, file)?;
+            (
+                Some(Question::Score {
+                    text: text.clone(),
+                    levels,
+                }),
+                source,
+            )
+        }
     })
 }
 
@@ -339,7 +362,7 @@ fn threshold_of(
         ),
         (None, Some(held)) => (Some(held), Source::File),
         (None, None) => match verb {
-            Verb::Decide => (Some(Threshold::default()), Source::Default),
+            Verb::Decide | Verb::Tag => (Some(Threshold::default()), Source::Default),
             _ => (None, Source::Default),
         },
     };
@@ -356,6 +379,9 @@ fn threshold_of(
         }
         if verb == Verb::Choose && !rule.is_cut() {
             return Err(QuestionFileError::BandOnChoose(source));
+        }
+        if verb == Verb::Tag && !rule.is_cut() {
+            return Err(QuestionFileError::BandOnTag(source));
         }
         match typed.cutting {
             Cutting::AsTheVerbAllows => {}
@@ -375,10 +401,10 @@ fn labels_of(
     typed: &Typed,
     file: Option<&QuestionFile>,
 ) -> Result<(Labels, Source), QuestionFileError> {
-    let key = if verb == Verb::Choose {
-        "options"
-    } else {
-        "levels"
+    let key = match verb {
+        Verb::Choose => "options",
+        Verb::Tag => "labels",
+        Verb::Decide | Verb::Score => "levels",
     };
     let from_file = file.and_then(|held| held.labels.clone());
     let (listed, source) = match (typed.labels.clone(), from_file) {
@@ -391,7 +417,10 @@ fn labels_of(
     };
     let built = match verb {
         Verb::Choose => Labels::described(listed),
-        _ => Labels::levels(listed.into_iter().map(|(name, _)| name).collect()),
+        Verb::Tag => Labels::tags(listed),
+        Verb::Decide | Verb::Score => {
+            Labels::levels(listed.into_iter().map(|(name, _)| name).collect())
+        }
     };
     built
         .map(|labels| (labels, source))

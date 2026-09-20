@@ -45,7 +45,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 
 | # | How to | Slice | State |
 | --- | --- | --- | --- |
-| 39 | Screen one message for several hazards | 9 | green |
+| 39 | Screen one message for several hazards | Ticket 0036: `tag` | green |
 | 16 | Build a triage pipeline that drafts, blocks, or asks a person | 9 | coming, slice 9 |
 
 ## Evals

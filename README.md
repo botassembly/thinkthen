@@ -1,14 +1,15 @@
 # thinkthen
 
-`thinkthen` puts a decider model in the shell. A decider model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, a pick from a list, or a rating on a scale. A command names the job, asks the question, and reads the evidence on standard input.
+`thinkthen` puts a decider model in the shell. A decider model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a rating on a scale. A command names the job, asks the question, and reads the evidence on standard input.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
 thinkthen choose 'Which kind of request is this?' bug feature question other < issue.txt
+thinkthen tag 'Which topics?' billing urgent < message.txt
 thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --field /body < issues.jsonl
 ```
 
-The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints a label. The third prints the records that pass. `--details` adds the probabilities behind any answer.
+The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. `--details` adds the probabilities behind any answer.
 
 Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several judgments belong on the same input.
 

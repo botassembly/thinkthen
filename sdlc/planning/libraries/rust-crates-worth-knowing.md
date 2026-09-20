@@ -19,7 +19,7 @@ One judgment is a fifth to a third of a second of waiting. The work on this side
 | Crate | What it is | Why it helps here | The cost |
 | --- | --- | --- | --- |
 | The small Arrow crates: `arrow-array`, `arrow-schema`, `arrow-data` with the `ffi` feature | Arrow is a standard memory layout for a column. A column of strings is one block of bytes and a list of offsets. The C data interface passes a column between languages as two pointers | pandas, Polars, R, DuckDB, and DataFusion all speak it. One bulk door in the engine, "here is a column of strings", then serves Python, R, and DuckDB with no copy and no per-item object. The answers fit too: a boolean column with nulls is exactly yes, no, and not sure | The full `arrow` crate is large and slow to build. Take the small crates alone, behind a feature, and keep Arrow at the border. The core stays free of it |
-| `csv` | The standard delimiter-aware reader, with correct quoting | The planned CSV and DSV input framing should use it. A hand-written reader is a bug farm | Small |
+| `csv` | The standard delimiter-aware reader, with correct quoting | The planned CSV and TSV input framing should use it. A hand-written reader is a bug farm | Small |
 | The binding generators: `pyo3` and `maturin`, `napi-rs`, `magnus` and `rb-sys`, `extendr`, `cbindgen`, `pgrx`, `duckdb`, `rusqlite` or `sqlite-loadable` | Each writes the glue for one host | Already chosen. They are the largest saving in code we would otherwise maintain | Each pins us to its release rhythm |
 | `cargo-dist` | Builds release archives, an installer script, and a Homebrew formula from one config | The `curl` installer Ian ruled on, with no release scripts of our own | Already in the plan |
 

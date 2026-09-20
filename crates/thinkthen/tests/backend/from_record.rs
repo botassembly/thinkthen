@@ -154,7 +154,7 @@ fn a_candidate_list_the_verb_refuses_stops_the_run_and_sends_nothing_for_itself(
         ),
         (
             "{\"note\":\"n\",\"codes\":[\"late\",\"late\"]}\n",
-            "each option and each level once",
+            "each option once",
         ),
         (
             "{\"note\":\"n\",\"codes\":[\"late\",\"  \"]}\n",

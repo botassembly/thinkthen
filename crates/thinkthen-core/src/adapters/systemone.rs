@@ -230,4 +230,22 @@ pub(crate) mod tests {
             },
         )
     }
+
+    /// A tag plan with one bare and one described label.
+    pub(crate) fn tag_plan() -> Plan {
+        one(
+            "The invoice failed and work is blocked.",
+            Question::Tag {
+                text: QuestionText::new("Which topics?").expect("not blank"),
+                labels: Labels::tags(vec![
+                    (r#"bill\"ing"#.to_owned(), None),
+                    (
+                        "urgent".to_owned(),
+                        Some("The item needs prompt attention.".to_owned()),
+                    ),
+                ])
+                .expect("two tags"),
+            },
+        )
+    }
 }

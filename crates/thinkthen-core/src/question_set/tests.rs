@@ -137,11 +137,12 @@ proptest! {
     fn generated_question_grammar_round_trips_through_resolved_json(
         name in "[a-z][a-z0-9_]{0,15}",
         question in "[A-Za-z][A-Za-z0-9 ?]{0,40}",
-        kind in 0_u8..3,
+        kind in 0_u8..4,
     ) {
         let held = match kind {
             0 => format!(r#"{{"decide":"{question}","threshold":"0.2:0.8"}}"#),
             1 => format!(r#"{{"choose":"{question}","options":["first","second"],"threshold":0.7}}"#),
+            2 => format!(r#"{{"tag":"{question}","labels":{{"first":null,"second":"Second label."}},"threshold":0.7}}"#),
             _ => format!(r#"{{"score":"{question}","levels":["low","high"]}}"#),
         };
         let compact = format!(r#"{{"version":1,"questions":{{"{name}":{held}}}}}"#);

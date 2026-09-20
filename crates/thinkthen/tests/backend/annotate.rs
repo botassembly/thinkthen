@@ -69,6 +69,41 @@ fn same_evidence_packs_mixed_questions_and_appends_answers() {
 }
 
 #[test]
+fn tag_aggregates_beside_another_question_in_one_request() {
+    let answer = concat!(
+        r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92},"#,
+        r#""q2":{"type":"noul","noul":0.81},"q3":{"type":"noul","noul":0.12}}}"#,
+    );
+    let listener = Listener::serving(vec![Canned::ok(answer)]).expect("a listener");
+    let file = set(
+        "tag-mixed",
+        concat!(
+            r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"},"#,
+            r#""topics":{"tag":"Which topics?","labels":["billing","urgent"]}}}"#,
+        ),
+    );
+    let output = spawn(
+        &[
+            "annotate",
+            &file.to_string_lossy(),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        br#"{"body":"The invoice failed."}"#,
+    )
+    .expect("the command runs");
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "{\"body\":\"The invoice failed.\",\"risky\":true,\"topics\":[\"billing\"]}\n"
+    );
+    assert_eq!(listener.requests().len(), 1);
+}
+
+#[test]
 fn absent_on_and_explicit_root_share_one_request_and_whole_evidence() {
     let answer = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,

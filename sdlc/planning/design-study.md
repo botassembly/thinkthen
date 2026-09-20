@@ -23,7 +23,7 @@ The seven captures were written in this order. None of it was built. None of it 
 | A Bash primer | Fifty shell idioms for scripts that call the tool. No commands |
 | The tool renamed `sem` | Five families: `decide`, `fold`, `reduce`, `patch`, `resolve`. Utility families. About forty-five subcommands |
 | A derived-field layer | A store of named, versioned fields with refresh, history, and policy simulation |
-| Add columns | CSV and DSV input with JSONL enrichment through `annotate` |
+| Add columns | CSV and TSV input with JSONL enrichment through `annotate` |
 | JSON from a decider | The technique under all of it. Code finds candidates, the decider picks, code copies the pick |
 
 The surface grew ninefold across three chats with no code behind it. This repository keeps a size ceiling that makes every line cost. Version one has to be small, and each later family has to arrive with a real use.
@@ -51,7 +51,7 @@ These hold across the captures and this study keeps them.
 | The name | `decide`, then `sem` | `thinkthen`, ruled by Ian on 2026-09-18. It is free on crates.io and in the organization |
 | The result shape | A flat object in one capture. A nested three-layer object in two | The nested object, with a schema version |
 | Output selection | `--annotate` and `--details` in one capture. `--emit` with named values in two | `--emit` |
-| Input kinds | `text`, `json`, `jsonl`, `lines`. CSV and DSV are input framings only | One enum that includes CSV and DSV when their reader lands |
+| Input kinds | `text`, `json`, `jsonl`, `lines`. CSV and TSV are input framings only | One enum that includes CSV and TSV when their reader lands |
 | Durable evidence | A recording directory in one capture. A derived-field store in another | One recording directory first. The store waits for a use |
 | Saved question files | JSON in every capture | Markdown with frontmatter. See section 6 |
 
@@ -85,7 +85,7 @@ One family, six verbs, and the machinery that makes a pass mark honest.
 | 5 | `thinkthen decide run FILE`. A saved question file holds several questions over one state and sends them in one request |
 | 6 | `thinkthen eval FILE --cases FILE`. It reports wrong accepts and wrong rejects at each pass mark for one backend and model version |
 | 7 | `rank` and `how` |
-| 8 | `annotate` enrichment for JSONL, then CSV and DSV input with the same JSONL output |
+| 8 | `annotate` enrichment for JSONL, then CSV and TSV input with the same JSONL output |
 
 Parked until a real use arrives: `match`, `segment`, `fold`, `reduce`, `patch`, `resolve`, `derive`, subprocess adapters, shell completion.
 
