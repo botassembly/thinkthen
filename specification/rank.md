@@ -5,18 +5,18 @@ Status: **Settled** for version one, by ADR 0007.
 Prints the records in order of the probability of yes.
 
 ```text
-thinkthen rank QUESTION (--lines|--jsonl) [--top N] [--field POINTER] [--details] [BACKEND]
+thinkthen rank QUESTION (--lines|--jsonl|--csv|--tsv) [--top N] [--field POINTER] [--details] [BACKEND]
 ```
 
 ## What it reads
 
-A stream of records. `rank` requires `--lines` or `--jsonl`. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing and the pointer rules.
+A stream of records. `rank` requires `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing and the pointer rules.
 
 `QUESTION` is one argument. The tool asks it of each record as a yes/no question. It is the question text, or `@` and the path of a question file holding one `decide` question, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.
 
 ## What it prints
 
-Each record as it arrived, most likely yes first. Ties keep input order. `--details` prints the object in [result.md](result.md) for the same records in the same order.
+Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JSON object, most likely yes first. Ties keep input order. `--details` prints the object in [result.md](result.md) for the same records in the same order.
 
 `rank` holds every record until the input ends, because a final order needs the whole set. An endless stream has to be cut into windows upstream.
 
@@ -25,7 +25,7 @@ Each record as it arrived, most likely yes first. Ties keep input order. `--deta
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `--top N` | Prints the first `N` records of the order. It saves no requests, because every record is judged before anything is sorted | All records |
-| `--lines` or `--jsonl` | The framing. One of the two is required | None. Its absence is a usage error |
+| `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing. One of the four is required | None. Its absence is a usage error |
 | `--field POINTER` | The part of each record the model sees | The whole record |
 | `--details` | Prints one result object for each record it prints | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
@@ -38,7 +38,7 @@ Each record as it arrived, most likely yes first. Ties keep input order. `--deta
 
 `--top N` takes a whole number of 1 or more. `--top 0` prints nothing and is a usage error.
 
-A record is written back as it arrived: nothing is parsed, nothing is re-encoded, and the line ending is written as a line feed. A run that stops at a failed record has printed nothing at all, and the line on standard error says so.
+A line or JSONL record is written back as it arrived: nothing is re-encoded, and the line ending is written as a line feed. A CSV or TSV row is written as a compact JSON object in header order. A run that stops at a failed record has printed nothing at all, and the line on standard error says so.
 
 The request, the result object, and the recording entry are those of `decide`, so a recording made by `decide` over the same records replays here. Every ranked row carries `threshold: null` and `value: null`, because `rank` reads no rule and makes no selection. The probability the order came from is under `answer`.
 

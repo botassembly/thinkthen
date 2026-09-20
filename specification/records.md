@@ -13,16 +13,28 @@ The default input is one text document. A record stream turns a command into a m
 | none | The whole input is one text document and one record |
 | `--lines` | Each line is one text record. A trailing newline ends the last record |
 | `--jsonl` | Each line is one JSON value and one record. No blank lines |
+| `--csv` | The first logical row is a header. Each later row becomes one JSON object of string cells |
+| `--tsv` | The CSV rules with a tab delimiter |
 
-The tool never guesses the framing. It never repairs invalid JSON, never truncates a record, and never opens a file because a string looks like a path.
+The four flags are mutually exclusive. The tool never guesses the framing from a filename. It never repairs invalid JSON, never truncates a record, and never opens a file because a string looks like a path.
 
 Under `--lines` and under `--jsonl` a carriage return before the line feed is stripped with it, and a carriage return anywhere else in the line is kept.
 
 | Command | Framing |
 | --- | --- |
-| `decide`, `choose`, `tag`, `score` | One document by default. `--lines` and `--jsonl` are accepted |
-| `filter`, `rank` | One of `--lines` or `--jsonl` is required. One document is not a stream |
-| `annotate` | One document by default. Both flags are accepted |
+| `decide`, `choose`, `tag`, `score` | One document by default. All four record flags are accepted |
+| `filter`, `rank` | One record flag is required. One document is not a stream |
+| `annotate` | One document by default. All four record flags are accepted |
+
+### CSV and TSV
+
+CSV uses a comma and TSV uses a tab. Both require a header. Empty input is exit 2. A header without data rows is a successful empty dataset and makes no request. One UTF-8 byte-order mark is ignored only at the start of the first header name.
+
+After that removal, a header name may preserve whitespace but may not be blank, contain a control character, or exactly duplicate another name. Comparison is case-sensitive. Header order becomes object key order. Every cell becomes a JSON string, including empty cells and text that looks like a number, boolean, null, array, or object. Every result remains JSONL.
+
+The maintained `csv-core` grammar owns quoted delimiters, doubled quotes, quoted line feeds, irregular quote placement, LF and CRLF records, trailing empty cells, and blank physical lines outside quoted fields. Every data row must have the header's field count. `choose --options` remains JSONL-only because table cells are strings.
+
+A header or logical data row may hold at most 16 MiB of encoded bytes before its record terminator. Quoted line feeds and doubled quotes count. The edge parses incrementally within that bound and stops after an oversized row; its unread tail never becomes another record. Header diagnostics say `the CSV header` or `the TSV header`. Data diagnostics say `the CSV record` or `the TSV record` and the stopped-run line counts data rows from one. A diagnostic never repeats a header or cell value. Invalid UTF-8 remains a local failure at exit 5; other table grammar failures exit 2.
 
 ## `--field POINTER`
 
@@ -30,15 +42,15 @@ Under `--lines` and under `--jsonl` a carriage return before the line feed is st
 
 **The pointer is the disclosure boundary.** Only the pointed value leaves the machine. `--details` still carries the whole record in `input`.
 
-- `--field` with `--jsonl` reads the pointer in each line's record.
-- `--field` without `--jsonl` reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists.
+- `--field` with `--jsonl`, `--csv`, or `--tsv` reads the pointer in each record.
+- `--field` without a record framing reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists.
 - `--field` with `--lines` is a usage error. A text line has no members.
 - A pointer that finds nothing is an input error for that record at exit 2, before any request for it.
 - `$.body`, `#/id`, a wildcard, and a negative index are refused with a message that names RFC 6901, because the tool never guesses a pointer language.
 - A pointed value that is not a string is serialized as compact JSON and sent as text.
-- Without `--field`, a `--jsonl` record is serialized as compact JSON and the whole record becomes the evidence.
+- Without `--field`, a JSONL, CSV, or TSV record is serialized as compact JSON and the whole record becomes the evidence.
 
-Invalid JSON under `--field` without `--jsonl` is an input error at exit 2. It says `the input is not valid JSON: the JSON at line LINE column COLUMN is not one` for both standard input and `--input FILE`. The line and column come from the JSON parser. The message carries no parser text and repeats no input byte.
+Invalid JSON under `--field` without a record framing is an input error at exit 2. It says `the input is not valid JSON: the JSON at line LINE column COLUMN is not one` for both standard input and `--input FILE`. The line and column come from the JSON parser. The message carries no parser text and repeats no input byte.
 
 ### Several pointers
 
@@ -64,7 +76,7 @@ The vendor also accepts that field as a real JSON object rather than as text hol
 
 ## Order and requests
 
-Records never share model context, and no answer reaches another record's question. One value prints per record, and output keeps input order everywhere but `rank`. No record is dropped for being unresolved, except that `filter` prints only what it keeps. `filter` prints a kept record byte for byte as it arrived.
+Records never share model context, and no answer reaches another record's question. One value prints per record, and output keeps input order everywhere but `rank`. No record is dropped for being unresolved, except that `filter` prints only what it keeps. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order.
 
 ### How many requests each command makes
 

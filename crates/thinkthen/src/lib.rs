@@ -13,6 +13,7 @@ mod http;
 mod judge;
 mod recorder;
 mod schedule;
+mod table;
 
 use std::io::{self, Write};
 use std::process::ExitCode;

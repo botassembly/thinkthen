@@ -8,7 +8,7 @@ cd -- "$(dirname -- "$0")"
 : "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
 
 thinkthen filter 'Does the report give steps that would reproduce a defect?' \
-	--jsonl --field /body --threshold 0.9 --input issues.jsonl \
+	--csv --field /body --threshold 0.9 --input issues.csv \
 	--cache recording/ | jq -r '.id'
 
 ls -1 recording/ | wc -l | tr -d ' '

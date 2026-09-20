@@ -10,7 +10,7 @@ thinkthen score QUESTION|@FILE [LEVEL...] [--details] [RECORD] [BACKEND]
 
 ## What it reads
 
-One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines` and `--jsonl` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
+One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines`, `--jsonl`, `--csv`, and `--tsv` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
 
 `QUESTION` comes first and names what is being placed. Each `LEVEL` is one argument. `score` takes 2 to 10 levels, lowest first. A duplicate level is a usage error, and so is a level that is empty, that holds only white space, or that holds a control character, because a level is one line of printable text. `@FILE` reads the question and its levels from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence.
 
@@ -32,7 +32,7 @@ The number is a position on the levels the user named. It is not a probability t
 | --- | --- | --- |
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
-| Record options | `--input`, `--lines`, `--jsonl`, `--field` | One document |
+| Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
 | Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `score` takes no `--threshold`, no `--quiet`, and no `--raw`.

@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
+csv-core = "0.1.13"
 thinkthen-core = { path = "../thinkthen-core" }
 ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 

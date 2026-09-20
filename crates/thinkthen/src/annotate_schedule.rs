@@ -19,8 +19,13 @@ struct Work {
     places: Vec<usize>,
 }
 
+pub(crate) enum Input {
+    Bytes(Vec<u8>),
+    Record(Record),
+}
+
 enum Event {
-    Input(Option<Result<Vec<u8>, Failure>>),
+    Input(Option<Result<Input, Failure>>),
     Answered {
         row: usize,
         group: usize,
@@ -132,7 +137,7 @@ pub(crate) fn run<I>(
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
 where
-    I: Iterator<Item = Result<Vec<u8>, Failure>> + Send + 'static,
+    I: Iterator<Item = Result<Input, Failure>> + Send + 'static,
 {
     let (work_send, work_recv) = mpsc::channel::<Work>();
     let work_recv = Mutex::new(work_recv);
@@ -168,7 +173,7 @@ where
 
 fn read<I>(mut chunks: I, requests: &Receiver<()>, events: &Sender<Event>)
 where
-    I: Iterator<Item = Result<Vec<u8>, Failure>>,
+    I: Iterator<Item = Result<Input, Failure>>,
 {
     while requests.recv().is_ok() {
         if events.send(Event::Input(chunks.next())).is_err() {
@@ -249,14 +254,14 @@ fn accept(
             };
             let row = state.read_rows;
             state.read_rows += 1;
-            let bytes = match bytes {
-                Ok(bytes) => bytes,
+            let input = match bytes {
+                Ok(input) => input,
                 Err(error) => {
                     state.failed(row, 0, error);
                     return Ok(());
                 }
             };
-            let record = match judging.record(reading, &bytes) {
+            let record = match judging.record(reading, input) {
                 Ok(record) => record,
                 Err(error) => {
                     state.failed(row, 0, error);

@@ -20,6 +20,7 @@ use crate::failure::Failure;
 use crate::http::Client;
 use crate::recorder::Recorder;
 use crate::schedule::{Judged, Output};
+use crate::table::{Kind as TableKind, Rows as TableRows};
 
 pub(crate) fn run(
     arguments: &AnnotateArguments,
@@ -53,10 +54,40 @@ pub(crate) fn run(
         model,
     )?;
     let reading = reading(&arguments.common)?;
-    let mut chunks = edge::Chunks::new(
-        edge::source(arguments.common.input.as_deref(), input)?,
-        reading.streams(),
-    );
+    let source = edge::source(arguments.common.input.as_deref(), input)?;
+    if let Some(kind) = table_kind(&arguments.common) {
+        let mut rows = TableRows::new(source, kind)?;
+        if arguments.common.dry_run {
+            return dry_run_record(
+                &set,
+                &backend,
+                &reading,
+                rows.next().transpose()?,
+                &mut writer,
+            );
+        }
+        let judging = Judging {
+            common: &arguments.common,
+            environment,
+            recorder: Recorder::of(folders.0, folders.1)?,
+            client: Client::new(
+                Duration::from_secs(arguments.common.timeout),
+                backend.is_secure(),
+            ),
+            backend,
+            set,
+        };
+        let mut output = Output::Streaming(&mut writer);
+        let jobs = arguments.common.jobs.map_or(4, usize::from);
+        return crate::annotate_schedule::run(
+            &judging,
+            &reading,
+            rows.map(|row| row.map(crate::annotate_schedule::Input::Record)),
+            jobs,
+            &mut output,
+        );
+    }
+    let mut chunks = edge::Chunks::new(source, reading.streams());
     if arguments.common.dry_run {
         return dry_run(
             &set,
@@ -79,7 +110,13 @@ pub(crate) fn run(
     };
     let mut output = Output::Streaming(&mut writer);
     let jobs = arguments.common.jobs.map_or(4, usize::from);
-    crate::annotate_schedule::run(&judging, &reading, chunks, jobs, &mut output)
+    crate::annotate_schedule::run(
+        &judging,
+        &reading,
+        chunks.map(|row| row.map(crate::annotate_schedule::Input::Bytes)),
+        jobs,
+        &mut output,
+    )
 }
 
 fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
@@ -132,9 +169,20 @@ fn framing(common: &Common) -> Framing {
         Framing::Lines
     } else if common.jsonl {
         Framing::Jsonl
+    } else if common.csv {
+        Framing::Csv
+    } else if common.tsv {
+        Framing::Tsv
     } else {
         Framing::Document
     }
+}
+
+fn table_kind(common: &Common) -> Option<TableKind> {
+    common
+        .csv
+        .then_some(TableKind::Csv)
+        .or_else(|| common.tsv.then_some(TableKind::Tsv))
 }
 
 fn reading(common: &Common) -> Result<Reading, Failure> {
@@ -159,6 +207,19 @@ fn dry_run(
         return Ok(ExitCode::SUCCESS);
     };
     let record = base.annotation_record(&bytes)?;
+    dry_run_record(set, backend, base, Some(record), writer)
+}
+
+fn dry_run_record(
+    set: &QuestionSet,
+    backend: &Backend,
+    base: &Reading,
+    first: Option<Record>,
+    writer: &mut dyn Write,
+) -> Result<ExitCode, Failure> {
+    let Some(record) = first else {
+        return Ok(ExitCode::SUCCESS);
+    };
     collisions(set, &record)?;
     let group = set
         .groups()
@@ -193,8 +254,15 @@ pub(crate) struct Judging<'a> {
 }
 
 impl Judging<'_> {
-    pub(crate) fn record(&self, base: &Reading, bytes: &[u8]) -> Result<Record, Failure> {
-        let record = base.annotation_record(bytes)?;
+    pub(crate) fn record(
+        &self,
+        base: &Reading,
+        input: crate::annotate_schedule::Input,
+    ) -> Result<Record, Failure> {
+        let record = match input {
+            crate::annotate_schedule::Input::Bytes(bytes) => base.annotation_record(&bytes)?,
+            crate::annotate_schedule::Input::Record(record) => record,
+        };
         collisions(&self.set, &record)?;
         Ok(record)
     }

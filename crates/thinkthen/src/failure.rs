@@ -9,6 +9,8 @@ use thinkthen_core::{
     RenderError, Source,
 };
 
+use crate::table;
+
 /// The phrases are fixed text written here. A backend can quote the evidence
 /// back in an error body, so nothing a backend sent ever reaches a message.
 const PHRASES: [(u16, &str); 6] = [
@@ -63,6 +65,8 @@ pub(crate) enum Failure {
     LabelWithoutSign,
     /// `--raw` was given to `tag`, whose bare value is already JSON.
     TagRaw,
+    /// `--raw` was given with a table, whose rows always become JSONL.
+    TableRaw,
     /// `--quiet` was given to `tag`, whose list has no exit-code spelling.
     TagQuiet,
     /// The framing and the pointers cannot act together.
@@ -77,6 +81,8 @@ pub(crate) enum Failure {
     QuietOverRecords,
     /// One record could not become the evidence of one request.
     Record(RecordError),
+    /// A CSV or TSV header or record broke its table rule.
+    Table(table::Error),
     /// The file the records were to be read from could not be opened.
     OpenInput(io::Error),
     /// A record failed, and the run stopped there.
@@ -150,31 +156,16 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
 /// calls itself once. The writer is a trait object, because a generic call
 /// into itself has no end.
 fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
-    if let Failure::Stopped {
-        at,
-        finished,
-        replayed,
-        held,
-        cause,
-    } = failure
-    {
-        let code = say(cause, writer);
-        // The line names the record by its number and never by its content,
-        // because a record is evidence and a diagnostic is read by a person.
-        let withheld = if *held {
-            ", and nothing was printed because an order needs every record"
-        } else {
-            ""
-        };
-        let _unwritten = writeln!(
-            writer,
-            "{}: stopped at record {at}; {finished} records finished, {replayed} from a recording{withheld}",
-            thinkthen_core::NAME
-        );
+    if let Some(code) = stopped(failure, writer) {
         return code;
     }
     if let Some((code, message)) = annotate_failure(failure) {
         let _unwritten = writeln!(writer, "{}: {message}", thinkthen_core::NAME);
+        return code;
+    }
+    if let Failure::Table(error) = failure {
+        let code = if error.input_failure() { 5 } else { 2 };
+        let _unwritten = writeln!(writer, "{}: {error}", thinkthen_core::NAME);
         return code;
     }
     let (code, message): (u8, String) = match failure {
@@ -197,6 +188,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
         Failure::Record(RecordError::Render(error)) => (70, format!("defect: {error}")),
         Failure::Record(error) => (2, error.to_string()),
+        Failure::Table(_) => (70, "defect: a table failure was not reported".to_owned()),
         Failure::NoKey(variable) => (
             4,
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
@@ -236,7 +228,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         ),
         Failure::NoFraming(verb) => (
             2,
-            format!("`{verb}` maps over a stream, so it takes --lines or --jsonl"),
+            format!("`{verb}` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv"),
         ),
         Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
         Failure::Defect(what) => (70, format!("defect: {what}")),
@@ -246,6 +238,31 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     // A diagnostic that cannot be written changes neither the failure nor its code.
     let _unwritten = writeln!(writer, "{}: {message}", thinkthen_core::NAME);
     code
+}
+
+fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
+    let Failure::Stopped {
+        at,
+        finished,
+        replayed,
+        held,
+        cause,
+    } = failure
+    else {
+        return None;
+    };
+    let code = say(cause, writer);
+    let withheld = if *held {
+        ", and nothing was printed because an order needs every record"
+    } else {
+        ""
+    };
+    let _unwritten = writeln!(
+        writer,
+        "{}: stopped at record {at}; {finished} records finished, {replayed} from a recording{withheld}",
+        thinkthen_core::NAME
+    );
+    Some(code)
 }
 
 fn annotate_failure(failure: &Failure) -> Option<(u8, String)> {
@@ -305,6 +322,9 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
         Failure::OptionWithoutSign => "--option is LABEL=DESCRIPTION, and this one holds no `=`",
         Failure::LabelWithoutSign => "--label is LABEL=DESCRIPTION, and this one holds no `=`",
         Failure::TagRaw => "`tag` prints one JSON array per record and takes no --raw",
+        Failure::TableRaw => {
+            "--raw prints a bare label, but table results stay JSONL; omit --raw or use --lines or --jsonl"
+        }
         Failure::TagQuiet => {
             "`tag` returns a list, including an empty list, so no exit code can carry its answer and it takes no --quiet"
         }

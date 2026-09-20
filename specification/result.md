@@ -12,8 +12,8 @@ One internal result model feeds both views. The view never changes the request o
 | `choose` | a JSON string, or `null`. `--raw` prints the bare label, as [choose.md](choose.md) describes |
 | `tag` | a JSON array of every label that reaches the cut, including `[]` |
 | `score` | a JSON number |
-| `filter` | each kept record, byte for byte as it arrived, in input order |
-| `rank` | each record as it arrived, most likely yes first |
+| `filter` | each kept line or JSONL record as it arrived; each kept table row as compact JSON, in input order |
+| `rank` | each line or JSONL record as it arrived and each table row as compact JSON, most likely yes first |
 | `annotate` | one JSON object per record |
 
 Every value is compact and sits on one line, so one answer is also one record for `jq`, `grep`, and `wc -l`.

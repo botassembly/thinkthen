@@ -2,6 +2,7 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use crate::harness::{Canned, Listener, spawn};
 
@@ -21,14 +22,19 @@ fn set(name: &str, text: &str) -> PathBuf {
 }
 
 fn questions() -> PathBuf {
-    set(
-        "mixed",
-        concat!(
-            r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"},"#,
-            r#""kind":{"choose":"What kind?","options":["bug","other"]},"#,
-            r#""severity":{"score":"How severe?","levels":["low","high"]}}}"#,
-        ),
-    )
+    static QUESTIONS: OnceLock<PathBuf> = OnceLock::new();
+    QUESTIONS
+        .get_or_init(|| {
+            set(
+                "mixed",
+                concat!(
+                    r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"},"#,
+                    r#""kind":{"choose":"What kind?","options":["bug","other"]},"#,
+                    r#""severity":{"score":"How severe?","levels":["low","high"]}}}"#,
+                ),
+            )
+        })
+        .clone()
 }
 
 mod scheduling;

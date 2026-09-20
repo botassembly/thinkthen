@@ -1,0 +1,6 @@
+id,opened,reporter,body
+ISS-101,2026-03-02,sam.okafor@example.net,"Export to CSV writes an empty file. Steps: open any report, choose Export, pick CSV, save. The file is 0 bytes every time on build 4.2.1."
+ISS-102,2026-03-02,r.tam@example.net,Could we get a dark theme? The white background is rough at night.
+ISS-103,2026-03-03,j.okon@example.org,App is slow sometimes. Not sure when. It just feels laggy lately.
+ISS-104,2026-03-04,p.duarte@example.net,"Uploading a large file fails. Steps: open Files, choose Upload, pick a 120 MB video, wait. It stops at about 60 percent every time on 4.2.1. The network log shows a 413 from the upload endpoint."
+ISS-105,2026-03-05,m.lindqvist@example.org,Where do I change the billing address? I cannot find it in settings.

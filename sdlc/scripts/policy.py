@@ -22,7 +22,8 @@ ALLOWED_LICENSES = {
     "Unicode-3.0",
     "Unlicense",
 }
-# Three more licenses arrive with the TLS stack under ureq and with nothing
+# `csv-core` uses the already accepted MIT/Unlicense terms. Three more licenses
+# arrive with the TLS stack under ureq and with nothing
 # else. Each one is tied to the crates that force it, so the allowance cannot
 # quietly cover a crate that lands later. All three are permissive and carry no
 # copyleft term, and there is no HTTPS in Rust without them. A crate listed here
@@ -35,7 +36,7 @@ LICENSE_EXCEPTIONS = {
     "webpki-roots": {"CDLA-Permissive-2.0"},
 }
 ACCEPTED_DEPENDENCIES = {
-    "thinkthen": {"clap", "thinkthen-core", "ureq"},
+    "thinkthen": {"clap", "csv-core", "thinkthen-core", "ureq"},
     "thinkthen-core": {"serde", "serde_json", "sha2", "thiserror"},
 }
 ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": set(), "thinkthen-core": {"proptest"}}

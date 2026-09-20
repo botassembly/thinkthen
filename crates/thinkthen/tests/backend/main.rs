@@ -24,6 +24,7 @@ mod refused;
 mod scheduling;
 mod secrecy;
 mod streaming;
+mod table;
 mod tag;
 mod terminal;
 mod wire;

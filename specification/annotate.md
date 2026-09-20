@@ -5,12 +5,12 @@ Status: **Settled** for the file grammar, the output, and several pointers on `o
 Asks a saved question set about each record and adds one field per question.
 
 ```text
-thinkthen annotate FILE [--lines|--jsonl] [--field POINTER] [--details] [--dry-run] [BACKEND]
+thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--details] [--dry-run] [BACKEND]
 ```
 
 ## What it reads
 
-`FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `annotate` reads one document on standard input by default, and it reads records under `--lines` or `--jsonl`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
+`FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `annotate` reads one document on standard input by default, and it reads records under `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
 
 ## The question set
 
@@ -56,7 +56,7 @@ An unresolved answer is `null`. A backend failure is never `null`, because a fai
 
 | Option | Meaning | Default |
 | --- | --- | --- |
-| `--lines` or `--jsonl` | Reads a record stream in place of one document | One document |
+| `--lines`, `--jsonl`, `--csv`, or `--tsv` | Reads a record stream in place of one document | One document |
 | `--field POINTER` | The part of each record the questions see. An `on` pointer works inside it | The whole record |
 | `--details` | Prints the full result object per record | Off |
 | `--input FILE` | Reads the evidence from a file | Standard input |

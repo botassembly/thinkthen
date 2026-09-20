@@ -10,7 +10,7 @@ thinkthen decide QUESTION|@FILE [--true TEXT] [--false TEXT] [--threshold T|LOW:
 
 ## What it reads
 
-One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines` and `--jsonl` turn the input into records, and [records.md](records.md) gives the rules.
+One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines`, `--jsonl`, `--csv`, and `--tsv` turn the input into records, and [records.md](records.md) gives the rules.
 
 `QUESTION` is one argument. It states a fact that is true or false of the evidence. The decider model reads it as the question. A question that is empty or holds only white space is a usage error. `@FILE` reads the question from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
 
@@ -28,7 +28,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 | `--quiet` | Prints nothing on standard output. The exit code still carries the answer | Off |
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
-| Record options | `--input`, `--lines`, `--jsonl`, `--field`. See [records.md](records.md) | One document |
+| Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |
 | Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 ## Saying what yes and no mean

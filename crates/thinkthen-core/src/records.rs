@@ -32,6 +32,10 @@ pub enum Framing {
     Lines,
     /// Each line is one JSON value and one record.
     Jsonl,
+    /// A comma-separated table with a header row.
+    Csv,
+    /// A tab-separated table with a header row.
+    Tsv,
 }
 
 /// Why the framing and the pointers cannot act together.
@@ -106,6 +110,17 @@ enum Held {
 }
 
 impl Record {
+    /// Build one object record from table headers and their string cells.
+    #[must_use]
+    pub fn string_fields(fields: Vec<(String, String)>) -> Self {
+        Self(Held::Json(Json::Object(
+            fields
+                .into_iter()
+                .map(|(name, value)| (name, Json::String(value)))
+                .collect(),
+        )))
+    }
+
     /// True when this record is an object holding the given member.
     #[must_use]
     pub fn has_member(&self, name: &str) -> bool {

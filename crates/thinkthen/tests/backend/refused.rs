@@ -165,11 +165,11 @@ fn each_view_and_the_missing_framing_are_refused_in_the_tools_own_words() -> io:
         ),
         (
             vec!["filter", QUESTION, "--field", "/body"],
-            "thinkthen: `filter` maps over a stream, so it takes --lines or --jsonl\n",
+            "thinkthen: `filter` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv\n",
         ),
         (
             vec!["rank", QUESTION],
-            "thinkthen: `rank` maps over a stream, so it takes --lines or --jsonl\n",
+            "thinkthen: `rank` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv\n",
         ),
     ];
     for (arguments, message) in cases {

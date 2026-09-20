@@ -46,7 +46,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 
 ## Dependencies
 
-- Few, and each one argued. The starting set: `serde` and `serde_json` for the wire format, `thiserror` for errors, `clap` with derive for the command line, `ureq` for blocking HTTP. Parallel requests use threads and a bounded channel. No async runtime enters until a measurement asks for one.
+- Few, and each one argued. The starting set: `serde` and `serde_json` for the wire format, `thiserror` for errors, `clap` with derive for the command line, `ureq` for blocking HTTP, `csv-core` for bounded table grammar at the binary edge. Parallel requests use threads and a bounded channel. No async runtime enters until a measurement asks for one.
 - Every dependency resolves from crates.io with a checksum, under MIT, Apache-2.0, Unicode-3.0, or Unlicense. HTTPS forced three more: ISC, BSD-3-Clause, and CDLA-Permissive-2.0, each tied in `policy.py` to the crates that need it. No TLS stack exists in Rust without them. Enforced by: `lint` reads `cargo metadata` and `Cargo.lock`, and `cargo deny` reads the same seven licenses from `deny.toml` and fails on an advisory or on a license nothing in the tree offers.
 - Adding a dependency takes a second reviewing agent and a line in the commit message saying why the standard library would not do.
 

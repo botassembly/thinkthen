@@ -55,6 +55,9 @@ pub(crate) enum Command {
     /// a label and exit 3 is unresolved. `choose` never exits 1, because a pick
     /// is not a two-sided decision.
     ///
+    /// --raw is available for one document, --lines, and --jsonl. CSV and TSV
+    /// always print JSONL and refuse --raw.
+    ///
     /// A script reads the exit code first and the label second, so it takes two
     /// `case` blocks. `--raw` prints nothing at all for an unresolved answer,
     /// and an empty string is no label, so only the exit code tells an
@@ -103,12 +106,12 @@ pub(crate) enum Command {
     /// levels is `choose` with the levels as ordered labels.
     Score(ScoreArguments),
 
-    /// Keep the records that reach the mark and print them unchanged.
+    /// Keep the records that reach the mark.
     ///
     /// `filter` asks one yes/no question of each record and prints the records
-    /// that reach `--threshold`, byte for byte as they arrived and in input
-    /// order. It needs --lines or --jsonl, because one document is not a
-    /// stream, and it makes one paid request for every record.
+    /// that reach `--threshold` in input order. Line and JSONL records return
+    /// as they arrived; CSV and TSV rows become compact JSON objects. It needs
+    /// a record framing and makes one paid request for every record.
     ///
     /// A single cut keeps or drops, and there is no third pile. A run that
     /// wants one asks `decide --details` and splits with `jq`:
@@ -173,22 +176,36 @@ pub(crate) struct Common {
     ///
     /// One value prints per record, in input order. The bare values alone tie
     /// no line to a record, so a script that names records reads --details.
-    #[arg(long, conflicts_with = "jsonl")]
+    #[arg(long, conflicts_with_all = ["jsonl", "csv", "tsv"])]
     pub(crate) lines: bool,
 
     /// Take each line as one JSON record.
     ///
     /// One value prints per record, in input order. The bare values alone tie
     /// no line to a record, so a script that names records reads --details.
-    #[arg(long)]
+    #[arg(long, conflicts_with_all = ["csv", "tsv"])]
     pub(crate) jsonl: bool,
+
+    /// Read a comma-separated table with a required header row.
+    ///
+    /// Every cell is a string, and every result is JSONL. The tool never
+    /// guesses this framing from a filename.
+    #[arg(long, conflicts_with = "tsv")]
+    pub(crate) csv: bool,
+
+    /// Read a tab-separated table with a required header row.
+    ///
+    /// Every cell is a string, and every result is JSONL. The tool never
+    /// guesses this framing from a filename.
+    #[arg(long)]
+    pub(crate) tsv: bool,
 
     /// Send only the part of each record this RFC 6901 pointer names.
     ///
     /// Give it more than once to send an object of the named parts, keyed by
-    /// the last part of each pointer. Without --jsonl it reads the whole input
-    /// as one JSON value. The pointer is the disclosure boundary: only the
-    /// pointed value leaves the machine.
+    /// the last part of each pointer. Without a record framing it reads the
+    /// whole input as one JSON value. The pointer is the disclosure boundary:
+    /// only the pointed value leaves the machine.
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,
 
@@ -402,6 +419,9 @@ pub(crate) struct ChooseArguments {
     pub(crate) threshold: Option<String>,
 
     /// Print the label without quotation marks, and nothing when unresolved.
+    ///
+    /// This view is available for one document, --lines, and --jsonl. CSV and
+    /// TSV always print JSONL and refuse --raw.
     #[arg(long)]
     pub(crate) raw: bool,
 

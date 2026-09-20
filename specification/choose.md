@@ -10,7 +10,7 @@ thinkthen choose QUESTION|@FILE [OPTION...] [--option LABEL=DESCRIPTION] [--thre
 
 ## What it reads
 
-One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines` and `--jsonl` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
+One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines`, `--jsonl`, `--csv`, and `--tsv` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
 
 `QUESTION` comes first and states what decides the pick. Each `OPTION` is one argument. `choose` takes 2 to 255 options. A duplicate option name is a usage error, and so is an option that is empty or holds only white space. An option holding a control character is a usage error too, because `--raw` prints a label byte for byte and a label with a line feed in it would write a line of its own into the caller's output. The tool sends the options in the order the user gave and never reorders them. `@FILE` reads the question and its options from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence.
 
@@ -18,20 +18,20 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 A JSON string, or `null` when the answer is unresolved. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `choice`. In record mode one value prints per record, in input order.
 
-`--raw` prints the label without its quotation marks, as `jq -r` does. On one document an unresolved answer prints nothing. Under `--lines` or `--jsonl` an unresolved answer prints an empty line, so one line still stands for one record. A blank label is a usage error, so an empty line never means a label.
+`--raw` is available for one document, `--lines`, and `--jsonl`. It prints the label without its quotation marks, as `jq -r` does. On one document an unresolved answer prints nothing. Under `--lines` or `--jsonl` an unresolved answer prints an empty line, so one line still stands for one record. CSV and TSV always print JSONL and refuse `--raw`. A blank label is a usage error, so an empty line never means a label.
 
 ## Options
 
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `--threshold T` | A single cut on the winning option's probability. The band form is a usage error. See [threshold.md](threshold.md) | None. The winning label is returned |
-| `--raw` | Prints the label without quotation marks | Off |
+| `--raw` | Prints the label without quotation marks for a document, `--lines`, or `--jsonl`; CSV and TSV refuse it | Off |
 | `--option LABEL=DESCRIPTION` | One option and what it means, and it may repeat. See below | None. The positional options carry no description |
 | `--options POINTER` | Takes the options from each record. Requires `--jsonl`. See below | None. The options come from the arguments |
 | `--quiet` | Prints nothing on standard output | Off |
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
-| Record options | `--input`, `--lines`, `--jsonl`, `--field` | One document |
+| Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
 | Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 ## A description per option

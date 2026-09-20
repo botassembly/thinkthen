@@ -24,6 +24,7 @@ use crate::http::{Client, Exchange};
 use crate::judge::{Asked, Keeping, View};
 use crate::recorder::Recorder;
 use crate::schedule::{self, Judged, Output};
+use crate::table::{Kind as TableKind, Rows as TableRows};
 
 /// Where one record's question comes from.
 ///
@@ -117,18 +118,33 @@ pub(crate) fn run(
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
-    let mut chunks = edge::Chunks::new(
-        edge::source(common.input.as_deref(), input)?,
-        reading.streams(),
-    );
+    let source = edge::source(common.input.as_deref(), input)?;
+    let configuration = JudgingInput {
+        common,
+        environment,
+        folders,
+        backend,
+        asks,
+        threshold,
+        view,
+        keeping,
+        streams: reading.streams(),
+        sources: settled.sources().from_file().then(|| *settled.sources()),
+    };
+
+    if let Some(kind) = table_kind(common) {
+        return over_table(configuration, &reading, source, kind, output);
+    }
+
+    let mut chunks = edge::Chunks::new(source, reading.streams());
 
     if common.dry_run {
         return plan(
-            &backend,
+            &configuration.backend,
             &reading,
             &Planning {
-                asks: &asks,
-                sources: settled.sources().from_file().then(|| *settled.sources()),
+                asks: &configuration.asks,
+                sources: configuration.sources,
             },
             chunks.next().transpose()?,
             output.writer(),
@@ -136,18 +152,7 @@ pub(crate) fn run(
     }
 
     let jobs = schedule::jobs_of(common.jobs, reading.streams())?;
-    let judging = Judging {
-        common,
-        environment,
-        client: Client::new(Duration::from_secs(common.timeout), backend.is_secure()),
-        recorder: Recorder::of(folders.record, folders.replay)?,
-        backend,
-        asks,
-        threshold,
-        view,
-        keeping,
-        streams: reading.streams(),
-    };
+    let judging = Judging::new(configuration)?;
     if !judging.streams {
         let bytes = chunks.next().transpose()?.unwrap_or_default();
         let judged = judging.row(&reading, &bytes)?;
@@ -155,7 +160,42 @@ pub(crate) fn run(
         output.take(judged)?;
         return Ok(exit_code(outcome));
     }
-    schedule::over_records(&|bytes| judging.row(&reading, bytes), chunks, jobs, output)
+    schedule::over_records(
+        &|bytes: &Vec<u8>| judging.row(&reading, bytes),
+        chunks,
+        jobs,
+        output,
+    )
+}
+
+fn over_table(
+    configuration: JudgingInput<'_>,
+    reading: &Reading,
+    source: Box<dyn std::io::BufRead + Send>,
+    kind: TableKind,
+    output: &mut Output<'_>,
+) -> Result<ExitCode, Failure> {
+    let mut rows = TableRows::new(source, kind)?;
+    if configuration.common.dry_run {
+        return plan_record(
+            &configuration.backend,
+            reading,
+            &Planning {
+                asks: &configuration.asks,
+                sources: configuration.sources,
+            },
+            rows.next().transpose()?,
+            output.writer(),
+        );
+    }
+    let jobs = schedule::jobs_of(configuration.common.jobs, true)?;
+    let judging = Judging::new(configuration)?;
+    schedule::over_records(
+        &|record| judging.typed_row(reading, record),
+        rows,
+        jobs,
+        output,
+    )
 }
 
 /// The folders `--record`, `--replay`, and `--cache` name between them.
@@ -196,12 +236,25 @@ impl<'a> Folders<'a> {
 
 /// Read the framing the command line asked for, over the settled pointers.
 fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
-    let framing = match (common.lines, common.jsonl) {
-        (true, _) => Framing::Lines,
-        (_, true) => Framing::Jsonl,
-        _ => Framing::Document,
+    let framing = if common.lines {
+        Framing::Lines
+    } else if common.jsonl {
+        Framing::Jsonl
+    } else if common.csv {
+        Framing::Csv
+    } else if common.tsv {
+        Framing::Tsv
+    } else {
+        Framing::Document
     };
     Ok(Reading::new(framing, settled.on().to_vec())?)
+}
+
+fn table_kind(common: &Common) -> Option<TableKind> {
+    common
+        .csv
+        .then_some(TableKind::Csv)
+        .or_else(|| common.tsv.then_some(TableKind::Tsv))
 }
 
 /// What a plan shows beyond the request: the question and where it came from.
@@ -221,7 +274,21 @@ fn plan(
     let Some(bytes) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let sending = asked_of(reading, &bytes, backend, planning.asks)?;
+    let record = reading.record(&bytes)?;
+    plan_record(backend, reading, planning, Some(record), writer)
+}
+
+fn plan_record(
+    backend: &Backend,
+    reading: &Reading,
+    planning: &Planning<'_>,
+    first: Option<Record>,
+    writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    let Some(record) = first else {
+        return Ok(ExitCode::SUCCESS);
+    };
+    let sending = asked_of(reading, record, backend, planning.asks)?;
     let document = PlanDocument::of(backend, &sending.plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let document = if reading.streams() {
@@ -240,11 +307,10 @@ fn plan(
 /// Read one record and build the one request it asks, which both paths do.
 fn asked_of(
     reading: &Reading,
-    bytes: &[u8],
+    record: Record,
     backend: &Backend,
     asks: &Asks,
 ) -> Result<Sending, Failure> {
-    let record = reading.record(bytes)?;
     let question = asks.of(&record)?;
     let plan = Plan::new(
         reading.evidence(&record)?,
@@ -274,13 +340,68 @@ struct Judging<'a> {
     streams: bool,
 }
 
+struct JudgingInput<'a> {
+    common: &'a Common,
+    environment: &'a Environment,
+    folders: Folders<'a>,
+    backend: Backend,
+    asks: Asks,
+    threshold: Option<Threshold>,
+    view: View,
+    keeping: Keeping,
+    streams: bool,
+    sources: Option<Sources>,
+}
+
 impl Judging<'_> {
+    fn new(input: JudgingInput<'_>) -> Result<Judging<'_>, Failure> {
+        let JudgingInput {
+            common,
+            environment,
+            folders,
+            backend,
+            asks,
+            threshold,
+            view,
+            keeping,
+            streams,
+            sources: _,
+        } = input;
+        let secure = backend.is_secure();
+        Ok(Judging {
+            common,
+            environment,
+            client: Client::new(Duration::from_secs(common.timeout), secure),
+            recorder: Recorder::of(folders.record, folders.replay)?,
+            backend,
+            asks,
+            threshold,
+            view,
+            keeping,
+            streams,
+        })
+    }
+
     /// Ask one record and build the line its answer prints.
     ///
     /// Nothing here touches the writer, so a worker thread may call it and the
     /// one thread that owns standard output prints the lines in input order.
     fn row(&self, reading: &Reading, bytes: &[u8]) -> Result<Judged, Failure> {
-        let sending = asked_of(reading, bytes, &self.backend, &self.asks)?;
+        let record = reading.record(bytes)?;
+        self.finish_row(reading, record, Some(bytes))
+    }
+
+    fn typed_row(&self, reading: &Reading, record: &Record) -> Result<Judged, Failure> {
+        self.finish_row(reading, record.clone(), None)
+    }
+
+    fn finish_row(
+        &self,
+        reading: &Reading,
+        record: Record,
+        arrived: Option<&[u8]>,
+    ) -> Result<Judged, Failure> {
+        let sending = asked_of(reading, record, &self.backend, &self.asks)?;
         let (reply, replayed) = ask(
             &self.backend,
             &sending.plan,
@@ -323,9 +444,10 @@ impl Judging<'_> {
             // A record that did not reach the mark prints nothing at all.
             None
         } else if self.keeping.streams_only() {
-            // The record goes back as it arrived, so nothing is parsed and
-            // nothing is written through a JSON encoder.
-            Some(reading.as_it_arrived(bytes)?.to_owned())
+            Some(match arrived {
+                Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
+                None => json_line(&sending.record)?,
+            })
         } else if self.view.raw {
             // One line stands for one record, so an unresolved record prints
             // an empty line. On one document it prints nothing at all.

@@ -20,7 +20,7 @@ The prospective plan says "Hosts own files, credentials, retries, and concurrenc
 
 ## What changes in the order
 
-The builder's order for the command stands: `tag`, CSV and DSV input, the correction pass, the cache locks, `find`, then page 16 and the transforms. Ticket 0023 is still `ready` and fits the correction pass.
+The builder's order for the command stands: `tag`, CSV and TSV input, the correction pass, the cache locks, `find`, then page 16 and the transforms. Ticket 0023 is still `ready` and fits the correction pass.
 
 Two changes:
 

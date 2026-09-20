@@ -248,6 +248,9 @@ pub(crate) fn choose(
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    if arguments.raw && (arguments.common.csv || arguments.common.tsv) {
+        return Err(Failure::TableRaw);
+    }
     let settled = asked::choose(arguments)?;
     let asks = match arguments.options_pointer.as_deref() {
         Some(typed) => {

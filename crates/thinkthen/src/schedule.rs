@@ -24,20 +24,20 @@ use crate::failure::Failure;
 /// everywhere and a measured run can raise it.
 const DEFAULT_JOBS: usize = 4;
 
-/// One record's place and the bytes it holds, as the queue carries them.
-type Work = (usize, Vec<u8>);
+/// One record's place and value, as the queue carries them.
+type Work<T> = (usize, T);
 
 /// One record's place and the answer it earned.
 type Answered = (usize, Result<Judged, Failure>);
 
+/// What one worker calls on one input value.
+type Asking<'a, T> = dyn Fn(&T) -> Result<Judged, Failure> + Sync + 'a;
+
 /// One input or worker event the scheduler can act on without blocking either.
-enum Event {
-    Input(Option<Result<Vec<u8>, Failure>>),
+enum Event<T> {
+    Input(Option<Result<T, Failure>>),
     Answered(Answered),
 }
-
-/// What one worker calls on one record's bytes.
-type Asking<'a> = dyn Fn(&[u8]) -> Result<Judged, Failure> + Sync + 'a;
 
 /// One record's answer, as the line it prints and what the run counts.
 pub(crate) struct Judged {
@@ -185,18 +185,19 @@ pub(crate) fn jobs_of(asked: Option<u8>, streams: bool) -> Result<usize, Failure
 /// out in input order and no more than `jobs` are outstanding, so the buffer of
 /// finished rows waiting for the rows before them holds at most `jobs` and the
 /// memory of a long run stays flat.
-pub(crate) fn over_records<I>(
-    row: &Asking<'_>,
+pub(crate) fn over_records<T, I>(
+    row: &Asking<'_, T>,
     chunks: I,
     jobs: usize,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
 where
-    I: Iterator<Item = Result<Vec<u8>, Failure>> + Send + 'static,
+    T: Send + 'static,
+    I: Iterator<Item = Result<T, Failure>> + Send + 'static,
 {
-    let (hand, queue) = mpsc::sync_channel::<Work>(jobs);
+    let (hand, queue) = mpsc::sync_channel::<Work<T>>(jobs);
     let queue = Mutex::new(queue);
-    let (give, gathered) = mpsc::channel::<Event>();
+    let (give, gathered) = mpsc::channel::<Event<T>>();
     let (ask, asked) = mpsc::channel();
     let input_give = give.clone();
     thread::spawn(move || read_records(chunks, &asked, &input_give));
@@ -226,9 +227,9 @@ where
 }
 
 /// Read one record for each place the scheduler opens.
-fn read_records<I>(mut chunks: I, asked: &Receiver<()>, give: &Sender<Event>)
+fn read_records<T, I>(mut chunks: I, asked: &Receiver<()>, give: &Sender<Event<T>>)
 where
-    I: Iterator<Item = Result<Vec<u8>, Failure>>,
+    I: Iterator<Item = Result<T, Failure>>,
 {
     while asked.recv().is_ok() {
         if give.send(Event::Input(chunks.next())).is_err() {
@@ -241,9 +242,9 @@ where
 ///
 /// The lock is held over the wait, so one worker takes one record and the next
 /// worker takes the next. A worker that finds the queue closed is done.
-fn work(queue: &Mutex<Receiver<Work>>, give: &Sender<Event>, row: &Asking<'_>) {
-    while let Ok(Ok((place, bytes))) = queue.lock().map(|taken| taken.recv()) {
-        if give.send(Event::Answered((place, row(&bytes)))).is_err() {
+fn work<T>(queue: &Mutex<Receiver<Work<T>>>, give: &Sender<Event<T>>, row: &Asking<'_, T>) {
+    while let Ok(Ok((place, value))) = queue.lock().map(|taken| taken.recv()) {
+        if give.send(Event::Answered((place, row(&value)))).is_err() {
             return;
         }
     }
@@ -292,7 +293,7 @@ impl Run {
     }
 
     /// Take one event without letting a blocked input read hide an answer.
-    fn accept(&mut self, event: Event, hand: &SyncSender<Work>) {
+    fn accept<T>(&mut self, event: Event<T>, hand: &SyncSender<Work<T>>) {
         match event {
             Event::Input(input) => {
                 self.reading = false;
@@ -302,7 +303,7 @@ impl Run {
                 match input {
                     None => self.exhausted = true,
                     Some(Err(error)) => self.refuse(error),
-                    Some(Ok(bytes)) => self.send(bytes, hand),
+                    Some(Ok(value)) => self.send(value, hand),
                 }
             }
             Event::Answered((place, judged)) => {
@@ -345,8 +346,8 @@ impl Run {
     ///
     /// No worker to take a record means no answer for it, and the run reports
     /// a defect rather than printing a short file that reads as a whole one.
-    fn send(&mut self, bytes: Vec<u8>, hand: &SyncSender<Work>) {
-        if hand.send((self.dispatched, bytes)).is_err() {
+    fn send<T>(&mut self, value: T, hand: &SyncSender<Work<T>>) {
+        if hand.send((self.dispatched, value)).is_err() {
             self.refuse(Failure::Defect("every worker ended before the records did"));
             return;
         }

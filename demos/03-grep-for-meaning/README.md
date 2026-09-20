@@ -4,13 +4,13 @@ Status: green
 
 Verbs: `filter`
 
-`grep` keeps the lines that hold a word. `filter` keeps the records that mean something, and it prints them unchanged, so it sits between two ordinary commands in a pipeline and the pipeline never learns it is there.
+`grep` keeps the lines that hold a word. `filter` keeps the records that mean something. Here it reads CSV and prints JSONL for the next command in the pipeline.
 
 ```bash
 set -euo pipefail
 
 thinkthen filter 'Does the report give steps that would reproduce a defect?' \
-  --jsonl --field /body --threshold 0.9 --replay recording/ < issues.jsonl \
+  --csv --field /body --threshold 0.9 --replay recording/ < issues.csv \
   | jq -r '.id' \
   | mustmatch "ISS-101
 ISS-104"
@@ -20,7 +20,7 @@ Two of the five reports pass. The feature request, the vague one, and the how-to
 
 ## Input
 
-`issues.jsonl` holds five made-up issue reports, one JSON object each, with `id`, `opened`, `reporter`, and `body`. `recording/` holds the five live exchanges the page replays, and `record.sh` made them through `sdlc/scripts/live`.
+`issues.csv` holds five made-up issue reports under the `id`, `opened`, `reporter`, and `body` headers. Every CSV cell becomes a JSON string before the command reads `/body`. `recording/` holds the five live exchanges the page replays, and `record.sh` made them through `sdlc/scripts/live`.
 
 ## Step 1: see what leaves the machine
 
@@ -30,10 +30,10 @@ Two of the five reports pass. The feature request, the vague one, and the how-to
 set -euo pipefail
 
 env -u THINKTHEN_API_KEY thinkthen filter 'Does the report give steps that would reproduce a defect?' \
-  --jsonl --field /body --threshold 0.9 --dry-run --input issues.jsonl \
+  --csv --field /body --threshold 0.9 --dry-run --input issues.csv \
   | jq -S -c 'keys, .input, {state: (.request.state | .[0:20])}' \
   | mustmatch '["input","key_env","model","request","url"]
-{"field":["/body"],"framing":"jsonl"}
+{"field":["/body"],"framing":"csv"}
 {"state":"Export to CSV writes"}'
 ```
 
@@ -43,26 +43,26 @@ The plan names the key variable and never a key. The reporter's address is in ev
 set -euo pipefail
 
 env -u THINKTHEN_API_KEY thinkthen filter 'Does the report give steps that would reproduce a defect?' \
-  --jsonl --field /body --threshold 0.9 --dry-run --input issues.jsonl \
+  --csv --field /body --threshold 0.9 --dry-run --input issues.csv \
   | mustmatch not like "example.net"
 ```
 
 Drop `--field` and the whole record becomes the evidence. Run the plan again and the addresses are in it, which is the reason to run it.
 
-## Step 2: check that the kept records are whole
+## Step 2: read the JSONL output
 
-`--field` narrows what is sent and never what is printed. A kept record comes back byte for byte, so `diff` against the source file shows no work nobody asked for.
+`--field` narrows what is sent and never what is printed. CSV is an input framing. A kept row prints as one compact JSON object, so the next command gets predictable JSONL.
 
 ```bash
 set -euo pipefail
 
 thinkthen filter 'Does the report give steps that would reproduce a defect?' \
-  --jsonl --field /body --threshold 0.9 --replay recording/ --input issues.jsonl \
+  --csv --field /body --threshold 0.9 --replay recording/ --input issues.csv \
   | head -1 \
   | mustmatch '{"id":"ISS-101","opened":"2026-03-02","reporter":"sam.okafor@example.net","body":"Export to CSV writes an empty file. Steps: open any report, choose Export, pick CSV, save. The file is 0 bytes every time on build 4.2.1."}'
 ```
 
-A filter that reprinted its records through a JSON encoder would reorder the keys and reformat the numbers.
+The header fixes the object key order. Every cell stays a string; the tool does not infer dates, numbers, booleans, or JSON from cell text.
 
 ## What can go wrong
 
