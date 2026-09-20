@@ -50,7 +50,7 @@ One yes or no question per label, all in one `questions` map, one request per re
 - Whether a label's answer moves when its neighbors change. A tag that flips because an unrelated label joined the list is a defect users will find.
 - The joining sentence, and whether a bare label with no description is good enough to be the default.
 
-Paid probes wait for the live guard work, as the plan says. No live call was made for this page.
+No live call was made for this page when it was written. A live run later on 2026-09-20 measured it, and `2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` holds the numbers. Twenty labels in one request worked on twenty made-up posts. Bare labels matched the whole set on 10 of 20 posts. A description per label, sent as `criteria.true`, raised that to 16 of 20 and cut false positives from 10 to 3. Two added labels and a shuffled order each flipped 3 answers of 400.
 
 ## To decide
 

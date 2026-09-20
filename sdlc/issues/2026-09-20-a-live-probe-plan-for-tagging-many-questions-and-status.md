@@ -1,6 +1,6 @@
 # A live probe plan: many questions in one request, tagging, and status
 
-Status: Open. Ian gave the direct go-ahead on 2026-09-20 with a ceiling of 50 cents. A builder is running the four measurements as a spike outside this repository, through `sdlc/scripts/live`, with a total declared maximum of 4,000,000 tokens. The findings will be filed here as a new issue. The builders' own probe after `annotate` still stands, and this run gives them an early answer.
+Status: Done. Ian gave the direct go-ahead on 2026-09-20 with a ceiling of 50 cents. A builder ran the four measurements as a spike outside this repository, through `sdlc/scripts/live`. The launches declared 1,520,000 tokens and the service billed 1,080,200, which is 4.5 US cents. `2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` holds the findings. The builders' own probe after `annotate` still stands, and this run gives them an early answer.
 
 Ian asked on 2026-09-20 for tests that show the tool gets the most out of the hosted service, and for a look at what status the service can report. He named a ceiling of 50 cents. At the listed price of 0.042 dollars per million input tokens, 50 cents buys about 11.9 million tokens. The shared ledger showed a limit of 476,000,000 tokens and 429,118 charged on that day, read from the local ledger file with no key and no network.
 

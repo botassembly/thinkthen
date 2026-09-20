@@ -22,6 +22,8 @@ Ian wants one set of tests that works across all seven surfaces. The how-tos and
 
 The plan stops the expanded scope if twenty labels fail. Twenty came from Ian's example of a blog with twenty topics. Nobody promised it. If the probe holds at ten and fails at twenty, `tag` ships with a ceiling of ten and the page says so. The launch copy can sell "up to N labels in one request, measured". It cannot sell a missing command.
 
+A live run later on 2026-09-20 held at twenty labels and at twenty-two, so this point is moot. `2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` has the numbers. The same run answered point 5.
+
 ## 5. Add the status look to the multi-question probe
 
 Ian asked what status the service can report. Two calls answer it while the guard is open, at almost no cost: the documented models listing, and the names of the response headers on one ordinary judgment, with no values saved. `2026-09-20-a-live-probe-plan-for-tagging-many-questions-and-status.md` has the detail. The product `status` command stays after version one, as the plan says.
