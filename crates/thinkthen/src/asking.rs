@@ -89,7 +89,7 @@ pub(crate) fn fixed(settled: &Resolved) -> Result<Asks, Failure> {
 pub(crate) fn run(
     asked: Asked<'_>,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let Asked {
@@ -155,12 +155,7 @@ pub(crate) fn run(
         output.take(judged)?;
         return Ok(exit_code(outcome));
     }
-    schedule::over_records(
-        &|bytes| judging.row(&reading, bytes),
-        &mut chunks,
-        jobs,
-        output,
-    )
+    schedule::over_records(&|bytes| judging.row(&reading, bytes), chunks, jobs, output)
 }
 
 /// The folders `--record`, `--replay`, and `--cache` name between them.

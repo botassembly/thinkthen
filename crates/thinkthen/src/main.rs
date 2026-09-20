@@ -48,7 +48,7 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
     if let Some(command) = cli.command.as_ref() {
         edge::waiting(command.common().input.as_deref(), io::stderr().lock());
     }
-    let input = io::stdin().lock();
+    let input = io::stdin();
     match &cli.command {
         Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),
         Some(Command::Choose(arguments)) => judge::choose(arguments, &environment, input, writer),

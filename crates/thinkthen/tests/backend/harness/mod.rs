@@ -2,9 +2,9 @@
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::process::{Command, Output, Stdio};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
 
@@ -17,6 +17,8 @@ pub(crate) struct Canned {
     location: Option<String>,
     promised: Option<usize>,
     delay: Duration,
+    release: Option<Arc<Barrier>>,
+    answered: Option<Sender<()>>,
     asked: Vec<(String, String)>,
 }
 
@@ -34,6 +36,8 @@ impl Canned {
             location: Some(url.to_owned()),
             promised: None,
             delay: Duration::ZERO,
+            release: None,
+            answered: None,
             asked: Vec::new(),
         }
     }
@@ -46,6 +50,8 @@ impl Canned {
             location: None,
             promised: Some(4096),
             delay: Duration::ZERO,
+            release: None,
+            answered: None,
             asked: Vec::new(),
         }
     }
@@ -58,6 +64,8 @@ impl Canned {
             location: None,
             promised: None,
             delay: Duration::ZERO,
+            release: None,
+            answered: None,
             asked: Vec::new(),
         }
     }
@@ -65,6 +73,18 @@ impl Canned {
     /// Wait this long before answering, so a later request can answer first.
     pub(crate) fn after(mut self, millis: u64) -> Self {
         self.delay = Duration::from_millis(millis);
+        self
+    }
+
+    /// Wait at this barrier before answering, so a test controls the release.
+    pub(crate) fn after_release(mut self, release: Arc<Barrier>) -> Self {
+        self.release = Some(release);
+        self
+    }
+
+    /// Announce after this response has been written to the caller.
+    pub(crate) fn notifying(mut self, answered: Sender<()>) -> Self {
+        self.answered = Some(answered);
         self
     }
 
@@ -77,6 +97,15 @@ impl Canned {
 
 /// What a listener answers one request body with.
 pub(crate) type Reply = dyn Fn(&[u8]) -> Canned + Send + Sync;
+
+/// One request or output event, ordered as the scheduling test observes it.
+#[derive(Debug)]
+pub(crate) enum Observed {
+    /// A request reached the listener.
+    Request,
+    /// One line reached the process reading standard output.
+    Output(String),
+}
 
 /// What the listener saw, for the assertions that count connections.
 #[derive(Debug, Default)]
@@ -138,6 +167,22 @@ impl Listener {
     pub(crate) fn answering(
         reply: impl Fn(&[u8]) -> Canned + Send + Sync + 'static,
     ) -> io::Result<Self> {
+        Self::answering_observed(reply, None)
+    }
+
+    /// Answer every connection and announce each request on one event channel.
+    pub(crate) fn answering_with_events(
+        reply: impl Fn(&[u8]) -> Canned + Send + Sync + 'static,
+        events: Sender<Observed>,
+    ) -> io::Result<Self> {
+        Self::answering_observed(reply, Some(events))
+    }
+
+    /// Build an answering listener with optional request observations.
+    fn answering_observed(
+        reply: impl Fn(&[u8]) -> Canned + Send + Sync + 'static,
+        events: Option<Sender<Observed>>,
+    ) -> io::Result<Self> {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let base = format!("http://{}/v1", listener.local_addr()?);
         let url = format!("{base}/{ENDPOINT_PATH}");
@@ -145,7 +190,7 @@ impl Listener {
         let counts = Arc::new(Counts::default());
         let serving = Arc::clone(&counts);
         let reply: Arc<Reply> = Arc::new(reply);
-        thread::spawn(move || accept_every(&listener, &reply, &sender, &serving));
+        thread::spawn(move || accept_every(&listener, &reply, &sender, &serving, events.as_ref()));
         Ok(Self {
             base,
             url,
@@ -202,6 +247,7 @@ fn accept_every(
     reply: &Arc<Reply>,
     sender: &Sender<Recorded>,
     counts: &Arc<Counts>,
+    events: Option<&Sender<Observed>>,
 ) {
     for accepted in listener.incoming() {
         let Ok(stream) = accepted else { return };
@@ -209,12 +255,21 @@ fn accept_every(
         let reply = Arc::clone(reply);
         let counts = Arc::clone(counts);
         let sender = sender.clone();
-        thread::spawn(move || serve_kept(&stream, reply.as_ref(), &sender, &counts));
+        let events = events.cloned();
+        thread::spawn(move || {
+            serve_kept(&stream, reply.as_ref(), &sender, &counts, events.as_ref());
+        });
     }
 }
 
 /// Answer every request on one connection until the caller closes it.
-fn serve_kept(stream: &TcpStream, reply: &Reply, sender: &Sender<Recorded>, counts: &Counts) {
+fn serve_kept(
+    stream: &TcpStream,
+    reply: &Reply,
+    sender: &Sender<Recorded>,
+    counts: &Counts,
+    events: Option<&Sender<Observed>>,
+) {
     let mut reader = BufReader::new(stream);
     loop {
         let Some(request) = read_kept(&mut reader) else {
@@ -226,8 +281,17 @@ fn serve_kept(stream: &TcpStream, reply: &Reply, sender: &Sender<Recorded>, coun
         if sender.send(request).is_err() {
             return;
         }
+        if let Some(events) = events {
+            let _ = events.send(Observed::Request);
+        }
         thread::sleep(canned.delay);
+        if let Some(release) = canned.release.as_ref() {
+            release.wait();
+        }
         write_answer(stream, &canned, false);
+        if let Some(answered) = canned.answered.as_ref() {
+            let _ = answered.send(());
+        }
         counts.in_flight.fetch_sub(1, Ordering::SeqCst);
     }
 }
@@ -276,7 +340,13 @@ fn read_rest(reader: &mut BufReader<&TcpStream>, line: String) -> Option<Recorde
 
 /// Write one canned response and close the connection.
 fn serve(stream: TcpStream, canned: &Canned) {
+    if let Some(release) = canned.release.as_ref() {
+        release.wait();
+    }
     write_answer(&stream, canned, true);
+    if let Some(answered) = canned.answered.as_ref() {
+        let _ = answered.send(());
+    }
 }
 
 /// Write one canned response, closing the connection or keeping it open.

@@ -67,8 +67,8 @@ fn read(name: &str) -> Option<String> {
 /// Returns [`Failure::OpenInput`] when the path names no file this user reads.
 pub(crate) fn source<'a>(
     path: Option<&Path>,
-    reader: impl Read + 'a,
-) -> Result<Box<dyn BufRead + 'a>, Failure> {
+    reader: impl Read + Send + 'a,
+) -> Result<Box<dyn BufRead + Send + 'a>, Failure> {
     match path {
         Some(path) => Ok(Box::new(BufReader::new(
             File::open(path).map_err(Failure::OpenInput)?,

@@ -92,7 +92,7 @@ impl View {
 pub(crate) fn decide(
     arguments: &DecideArguments,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let settled = asked::decide(arguments)?;
@@ -125,7 +125,7 @@ pub(crate) fn decide(
 pub(crate) fn filter(
     arguments: &FilterArguments,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     views(&arguments.refused, Keeping::Passing)?;
@@ -151,7 +151,7 @@ pub(crate) fn filter(
 pub(crate) fn rank(
     arguments: &RankArguments,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     views(&arguments.refused, Keeping::Ordered)?;
@@ -195,7 +195,7 @@ fn over_kept(
     settled: &Resolved,
     top: Option<usize>,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
@@ -229,7 +229,7 @@ fn over_kept(
 fn judging(
     asked: Asked<'_>,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
@@ -245,7 +245,7 @@ fn judging(
 pub(crate) fn choose(
     arguments: &ChooseArguments,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let settled = asked::choose(arguments)?;
@@ -291,7 +291,7 @@ pub(crate) fn choose(
 pub(crate) fn score(
     arguments: &ScoreArguments,
     environment: &Environment,
-    input: impl Read,
+    input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let settled = asked::score(arguments)?;

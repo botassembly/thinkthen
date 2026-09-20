@@ -30,6 +30,12 @@ type Work = (usize, Vec<u8>);
 /// One record's place and the answer it earned.
 type Answered = (usize, Result<Judged, Failure>);
 
+/// One input or worker event the scheduler can act on without blocking either.
+enum Event {
+    Input(Option<Result<Vec<u8>, Failure>>),
+    Answered(Answered),
+}
+
 /// What one worker calls on one record's bytes.
 type Asking<'a> = dyn Fn(&[u8]) -> Result<Judged, Failure> + Sync + 'a;
 
@@ -179,15 +185,21 @@ pub(crate) fn jobs_of(asked: Option<u8>, streams: bool) -> Result<usize, Failure
 /// out in input order and no more than `jobs` are outstanding, so the buffer of
 /// finished rows waiting for the rows before them holds at most `jobs` and the
 /// memory of a long run stays flat.
-pub(crate) fn over_records(
+pub(crate) fn over_records<I>(
     row: &Asking<'_>,
-    chunks: &mut dyn Iterator<Item = Result<Vec<u8>, Failure>>,
+    chunks: I,
     jobs: usize,
     output: &mut Output<'_>,
-) -> Result<ExitCode, Failure> {
+) -> Result<ExitCode, Failure>
+where
+    I: Iterator<Item = Result<Vec<u8>, Failure>> + Send + 'static,
+{
     let (hand, queue) = mpsc::sync_channel::<Work>(jobs);
     let queue = Mutex::new(queue);
-    let (give, gathered) = mpsc::channel::<Answered>();
+    let (give, gathered) = mpsc::channel::<Event>();
+    let (ask, asked) = mpsc::channel();
+    let input_give = give.clone();
+    thread::spawn(move || read_records(chunks, &asked, &input_give));
     thread::scope(|scope| {
         for _ in 0..jobs {
             let queue = &queue;
@@ -197,32 +209,41 @@ pub(crate) fn over_records(
         drop(give);
         let mut run = Run::new();
         loop {
-            run.dispatch(chunks, &hand, jobs);
             run.drain(output)?;
-            if run.in_flight == 0 {
+            if run.done() {
                 break;
             }
-            let Ok((place, judged)) = gathered.recv() else {
-                // Every worker went away with records still out. Nothing will
-                // answer them, and a short file must not read as a whole one.
-                return Err(Failure::Defect("a worker ended with records in flight"));
+            run.request(&ask, jobs, output.holds());
+            let Ok(event) = gathered.recv() else {
+                return Err(Failure::Defect("the record scheduler ended early"));
             };
-            run.in_flight -= 1;
-            run.halted |= judged.is_err();
-            run.pending.insert(place, judged);
+            run.accept(event, &hand);
         }
+        drop(ask);
         drop(hand);
         run.finished(output)
     })
+}
+
+/// Read one record for each place the scheduler opens.
+fn read_records<I>(mut chunks: I, asked: &Receiver<()>, give: &Sender<Event>)
+where
+    I: Iterator<Item = Result<Vec<u8>, Failure>>,
+{
+    while asked.recv().is_ok() {
+        if give.send(Event::Input(chunks.next())).is_err() {
+            return;
+        }
+    }
 }
 
 /// Take one record at a time off the queue and answer it, until the queue ends.
 ///
 /// The lock is held over the wait, so one worker takes one record and the next
 /// worker takes the next. A worker that finds the queue closed is done.
-fn work(queue: &Mutex<Receiver<Work>>, give: &Sender<Answered>, row: &Asking<'_>) {
+fn work(queue: &Mutex<Receiver<Work>>, give: &Sender<Event>, row: &Asking<'_>) {
     while let Ok(Ok((place, bytes))) = queue.lock().map(|taken| taken.recv()) {
-        if give.send((place, row(&bytes))).is_err() {
+        if give.send(Event::Answered((place, row(&bytes)))).is_err() {
             return;
         }
     }
@@ -236,6 +257,7 @@ struct Run {
     dispatched: usize,
     in_flight: usize,
     replayed: usize,
+    reading: bool,
     exhausted: bool,
     halted: bool,
     printing: bool,
@@ -251,6 +273,7 @@ impl Run {
             dispatched: 0,
             in_flight: 0,
             replayed: 0,
+            reading: false,
             exhausted: false,
             halted: false,
             printing: true,
@@ -258,22 +281,53 @@ impl Run {
         }
     }
 
-    /// Send records until the workers hold `jobs` of them or the input ends.
-    ///
-    /// A record the reader could not hand over takes its own place in the
-    /// order, so it stops the run where it sits rather than where it was read.
-    fn dispatch(
-        &mut self,
-        chunks: &mut dyn Iterator<Item = Result<Vec<u8>, Failure>>,
-        hand: &SyncSender<Work>,
-        jobs: usize,
-    ) {
-        while !self.halted && !self.exhausted && self.in_flight < jobs {
-            match chunks.next() {
-                None => self.exhausted = true,
-                Some(Err(error)) => self.refuse(error),
-                Some(Ok(bytes)) => self.send(bytes, hand),
+    /// Ask the input thread for one row when the schedule has a place for it.
+    fn request(&mut self, ask: &Sender<()>, jobs: usize, holds_order: bool) {
+        if !self.reading && !self.halted && !self.exhausted && self.waiting(holds_order) < jobs {
+            self.reading = ask.send(()).is_ok();
+            if !self.reading {
+                self.refuse(Failure::Defect("the record reader ended early"));
             }
+        }
+    }
+
+    /// Take one event without letting a blocked input read hide an answer.
+    fn accept(&mut self, event: Event, hand: &SyncSender<Work>) {
+        match event {
+            Event::Input(input) => {
+                self.reading = false;
+                if self.halted {
+                    return;
+                }
+                match input {
+                    None => self.exhausted = true,
+                    Some(Err(error)) => self.refuse(error),
+                    Some(Ok(bytes)) => self.send(bytes, hand),
+                }
+            }
+            Event::Answered((place, judged)) => {
+                self.in_flight -= 1;
+                self.halted |= judged.is_err();
+                self.pending.insert(place, judged);
+            }
+        }
+    }
+
+    /// True when no event that changes this run still needs to arrive.
+    const fn done(&self) -> bool {
+        self.in_flight == 0 && (self.halted || self.exhausted)
+    }
+
+    /// Count rows that occupy one scheduling place.
+    ///
+    /// Streaming keeps every dispatched row inside the bound until its place
+    /// prints. A final order must read the whole input, so only live requests
+    /// occupy its worker bound.
+    const fn waiting(&self, holds_order: bool) -> usize {
+        if holds_order {
+            self.in_flight
+        } else {
+            self.dispatched - self.next
         }
     }
 

@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/schedule.rs crates/thinkthen/tests specification/rec
 
 # 0024: Bound record scheduling and serve the loop
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -52,4 +52,4 @@ None.
 ## Review
 
 - Design review: accepted. The reviewer confirmed the scheduler owns both defects, the two deterministic tests prove the outcome, the ticket outranks the prior polish work, and level 3 with Sol medium is correct.
-- Code review: pending
+- Code review: accepted after two correction passes. The first pass found that draining before dispatch still blocked under the default four jobs and that the bound test relied on elapsed time. The second accepted the event scheduler and required tests for failure and a closed output pipe while input stays open. The final pass found no remaining blocker and ran all four rungs.

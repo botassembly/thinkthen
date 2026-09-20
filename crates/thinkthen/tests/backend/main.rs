@@ -18,6 +18,7 @@ mod parallel;
 mod recordings;
 mod refusals;
 mod refused;
+mod scheduling;
 mod secrecy;
 mod streaming;
 mod terminal;
