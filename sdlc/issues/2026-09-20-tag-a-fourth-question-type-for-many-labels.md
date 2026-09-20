@@ -19,7 +19,7 @@ As a verb, with the same grammar as `choose`:
 
     thinkthen tag 'Which topics does this post cover?' rust python devops career < post.md
 
-One document prints each label that passes on its own line and prints nothing when none pass. A record stream prints one JSON list per record, in input order. `--details` carries the probability of every label.
+One document prints one JSON list on one line, such as `["rust","devops"]`, and `[]` when no label passes. A record stream prints one JSON list per record, in input order. `--details` carries the probability of every label. An earlier draft of this page printed one label per line for one document. That was wrong, and the update at the end says why.
 
 As a question file:
 
@@ -67,3 +67,12 @@ Paid probes wait for the live guard work, as the plan says. No live call was mad
 ## What Ian can overturn
 
 Nothing here is decided. The recommendation is to add `tag` as the fourth question type and the eighth verb, after `annotate`, if the probe holds at twenty labels. The change widens the public surface, so a second agent reviews it and an ADR records it.
+
+## Update, later on 2026-09-20: three public choices
+
+Ian relayed three questions from the builder and asked for the marketing side's view. These are recommendations. The builder's ADR decides.
+
+1. **`tag` prints one JSON list per line.** Ian assumed so, and he is right. The tool already prints JSON values: `choose` prints `"billing"` and `--raw` prints `billing`. A list keeps one line out for each record in, so line N still belongs to record N and `paste` and `jq` keep working. `[]` says "no label passed", which one label per line cannot say, because an empty output also looks like a run that failed before it printed. `--raw` gives the shell form: one label per line for one document, and one tab-joined line per record in a stream. A label already refuses control characters, so a tab is a safe separator. In a library the same answer is a plain list of strings.
+2. **`--csv` and `--tsv` say how to read, and nothing more.** The tool gets no CSV writer and no output mode. Everything the tool produces stays JSON: a judgment is a JSON value, a `--details` row is a JSON object, and `annotate` builds a JSON object with the columns in their order and the judged fields after them. A list of tags, an unresolved `null`, and a nested `--details` row have no honest spelling in a CSV cell, and each spelling would be a public choice that is awkward to reverse. One nuance follows from a promise the tool already makes. `filter` and `rank` produce nothing. They hand back the user's own records as they arrived. On CSV input that means the header line and then the kept rows, byte for byte. A semantic grep over a spreadsheet then returns a spreadsheet, with no writer in the tool. If that nuance costs too much, the fallback is JSON objects from every verb, and the how-to ends with one `jq` line.
+3. **The page that writes a CSV back is a transform.** A spreadsheet user wants a spreadsheet at the end of `annotate`. A `jq` file under `transforms/` that writes a header, joins a list with a semicolon, and ends in `@csv` covers it and keeps the rule that transforms come before any new command.
+4. **Keep twenty how-to pages.** Every page is a tested demo, so a smaller set that is all green beats a larger one. Two conditions from the marketing side. Each title names the job in the user's words, because the site builds its navigation from these pages. The rewritten pages have to cover the four lessons the launch leans on: split one file into piles by a `choose` label, a tool-call guard with the exit code mapping, the long-lived loop, and text split into paragraphs before a verb reads it. CSV rules also need a home on the records reference page, so a reader who only wants to read a CSV does not have to find the tagging page.
