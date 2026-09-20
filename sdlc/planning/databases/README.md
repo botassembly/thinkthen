@@ -36,7 +36,7 @@ The question comes first and the text second, as in every other surface. The tex
 | `thinkthen_usage()` | A table | Requests, answers from the cache, and tokens for this session |
 | `thinkthen_warm(question, text)` | A count | An aggregate. It judges the rows the database already scans at full width and fills the cache on disk. The query that follows reads the cache. It changes no answer |
 
-`filter`, `rank`, and `find` get no functions. `WHERE`, `ORDER BY`, and `LIMIT` are those verbs, and SQL users already know them. Nine functions are the whole surface. The review of 2026-09-20 added the ninth, `thinkthen_warm`, as the one bulk form all three databases can spell. How it takes the options for `choose`, `score`, and `tag` is open. The JSON form of a question can carry them.
+`filter`, `rank`, and `find` get no functions. `WHERE`, `ORDER BY`, and `LIMIT` are those verbs, and SQL users already know them. Nine functions are the whole surface. The review of 2026-09-20 added the ninth, `thinkthen_warm`, as the one bulk form all three databases can spell. The name comes from "warming a cache": filling it before it is needed, so the next read is fast. PostgreSQL ships a module named `pg_prewarm` for its own cache, so the word is known there. How it takes the options for `choose`, `score`, and `tag` is open. The JSON form of a question can carry them.
 
 A question is either the bare sentence or JSON text with the keys a question file uses, such as `{"decide": "...", "threshold": 0.9}`. That form works in all three databases and adds no new grammar. The per-database pages may offer a native struct beside it. They may not drop it.
 
