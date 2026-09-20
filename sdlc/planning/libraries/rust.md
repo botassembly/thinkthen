@@ -58,3 +58,4 @@ There is no binding tool. The crate is the engine every other surface binds. The
 2. Settled by Ian on 2026-09-20: the engine is private. Every library shows the eight verbs and the question setup and nothing else. The binding crates live in this workspace and are never published, so they can call a hidden module with no promise to anyone.
 3. Does `panic = "abort"` stay in the release profile? A library linked into a host process cannot abort.
 4. Do the builder steps return `Result` one at a time, as `.field("/text")?` shows, or gather refusals until `send`?
+5. A `#[derive]` for typed choices needs a proc-macro crate, and crates.io would make it a second published name. That fights Ian's ruling of one crate. The choices are a `macro_rules!` form, a plain trait with no macro, or no typed choices in Rust. Experiment 205 tests them.
