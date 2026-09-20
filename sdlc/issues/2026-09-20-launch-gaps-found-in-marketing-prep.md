@@ -16,7 +16,7 @@ Ian ruled on 2026-09-20 that the command installs through a `curl` installer tha
 
 ## 3. A first run with no key
 
-The vendor's quickstart says a key comes from its dashboard. One outside article says early access is waitlisted. That is unconfirmed, and Ian can settle it from his own sign-up. If a new user must wait for a key, the first thing they run has to work with none. The pieces exist: `--replay` opens no connection and reads no key. The gap is packaging. A release archive, or the README's first example, would need to carry one small recording folder and the input it answers. This is a stumble-register item, and it is cheap once the installer exists.
+The vendor's quickstart says a key comes from its dashboard. Ian confirmed on 2026-09-20 that there is a waitlist and that his key took about a day. He called it no big deal. A new user still waits a day, so the first thing they run has to work with no key, and the install page should tell them to ask for the key first. The pieces exist: `--replay` opens no connection and reads no key. The gap is packaging. A release archive, or the README's first example, would need to carry one small recording folder and the input it answers. This is a stumble-register item, and it is cheap once the installer exists.
 
 ## 4. One page on exit code 1 under `set -e`
 
