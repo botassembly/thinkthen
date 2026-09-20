@@ -70,6 +70,8 @@ Nothing here is decided. The recommendation is to add `tag` as the fourth questi
 
 ## Update, later on 2026-09-20: three public choices
 
+**Superseded on 2026-09-20 by ADR 0028.** Ian ruled that CSV and DSV are input only and every output remains JSONL. Points 2 and 3 below preserve the earlier recommendation; they no longer steer implementation.
+
 Ian relayed three questions from the builder and asked for the marketing side's view. These are recommendations. The builder's ADR decides.
 
 1. **`tag` prints one JSON list per line.** Ian assumed so, and he is right. The tool already prints JSON values: `choose` prints `"billing"` and `--raw` prints `billing`. A list keeps one line out for each record in, so line N still belongs to record N and `paste` and `jq` keep working. `[]` says "no label passed", which one label per line cannot say, because an empty output also looks like a run that failed before it printed. `--raw` gives the shell form: one label per line for one document, and one tab-joined line per record in a stream. A label already refuses control characters, so a tab is a safe separator. In a library the same answer is a plain list of strings.

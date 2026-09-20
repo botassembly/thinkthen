@@ -51,9 +51,9 @@ The current package gains an internal library target and a thin binary entrypoin
 
 ## Excluded and following order
 
-Excluded: `tag`, CSV/TSV, `find`, rules, templating, a public library API, request IDs, and special plain-line output. Do not add hooks for them.
+Excluded: `tag`, CSV/DSV input, `find`, rules, templating, a public library API, request IDs, and special plain-line output. Do not add hooks for them.
 
-After this ticket: `tag`; CSV and TSV input plus the CSV transform; the correction pass; duplicate-cache coalescing; `find`; page 16 and transforms; a separate one-crate merge; release preparation. Tickets are written when work begins.
+After this ticket: `tag`; CSV and DSV input with JSONL output; the correction pass; duplicate-cache coalescing; `find`; page 16 and transforms; a separate one-crate merge; release preparation. Tickets are written when work begins.
 
 ## Complexity
 

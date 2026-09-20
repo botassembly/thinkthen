@@ -27,7 +27,6 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | `--context FILE` | One verb carrying extra evidence alone would split the grammar. A user concatenates the context into standard input | A demo where the context has to stay separate from the evidence in the request |
 | `--on-error continue` | It needs an error row shape, a failure count on standard error, and an exit code of its own. Stopping at the first failure needs none of those | A demo over a large file where one bad record must not end the run |
 | A request cap | Demo 05 wanted a budget and found it the wrong shape, because a per-file loop spends across processes rather than within a run | A budget that holds across processes. That is a different tool |
-| CSV and TSV reading | Judgments are fields on a record now, so a CSV framing buys nothing. `jq -r '@csv'` writes the output | A demo whose input is CSV that cannot be converted upstream |
 | A `required` mark in the `annotate` file | The file holds questions and nothing else. A required mark is policy | A demo where a missing answer must fail the record |
 | Nesting in `annotate` output | Flat top-level fields keep a chain of judgments flat. Demo 07 found nesting made the next `jq` read `.input.input.sku` | A demo whose answers collide with record fields that cannot be renamed |
 | History across many runs | A comparison of two saved runs keeps nothing. A trend over many runs needs a store, and the tool holds no state | A store that lives outside this tool and reads the saved runs |

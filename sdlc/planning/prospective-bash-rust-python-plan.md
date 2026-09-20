@@ -19,7 +19,7 @@ Ticket 0015 built `annotate`, turned how-tos 39 and 14 green, and deleted absorb
 ## Next work
 
 1. **Build `tag`.** Add the accepted label-appending command before the remaining input and repair work.
-2. **Add CSV and TSV input plus the CSV transform.** Keep the input grammar and its conversion together.
+2. **Add CSV and DSV input.** These are input framings only. Every record the tool prints remains JSONL; no CSV or DSV writer or output transform enters the plan.
 3. **Make one small correction pass.** Pin the hostless-address sentence, make every negative threshold spelling reach the same parser, correct `493 recorded distributions plus four standalone fixtures`, and correct stale pages.
 4. **Coalesce duplicate cache misses.** One bounded per-digest lock prevents repeated rows under `--jobs` and separate writers from paying twice or failing on divergent replies.
 5. **Build `find`.** Repeat the `rank --top 1` comparison on documents of 100 to 250 lines, then build the command and how-to 15 if the evidence holds.
