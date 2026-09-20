@@ -41,6 +41,8 @@ The order can change.
 
 ## After version one
 
+The [temporary prospective plan for Bash, Rust, and Python](prospective-bash-rust-python-plan.md) sketches the remaining foundation work and library direction. Tickets are written as work begins, and the library design remains proposed in ADR 0017.
+
 `specification/roadmap.md` lists every held verb and option with the reason it is held and what would bring it in. The rule is ADR 0005: a feature enters when a demo cannot be written without it.
 
 ## Live testing budget
