@@ -6,7 +6,7 @@ opens: crates spec specification demos README.md sdlc/ratchet.json
 
 # 0023: What the second hands-on test found
 
-Status: waiting on ticket 0022
+Status: ready
 
 ## Outcome
 
@@ -14,7 +14,7 @@ Every finding of the second hands-on test of 2026-09-19 is closed. `filter` and 
 
 ## Current Facts
 
-A second agent used the release binary as a careful stranger would, after tickets 0014, 0020, and 0021 landed, with no key and no live call. `sdlc/issues/2026-09-19-hands-on-test-pass-two.md` holds its full report, with the command that shows each finding. It found no wrong answer, no leak, no crash, and no hang. Byte-for-byte output, order under `--jobs` 1, 4, and 32, exact ties, the cut at its edge, `--top`, the stop at a failed record, `--cache` with zero requests on a second run, a `decide` recording answering `filter` and `rank` with zero requests, secrecy over 20 runs, 4,000 records in 9.5 MB, and every block of how-tos 03, 06, 43, 40, and 41 all held. It found two wrong messages, four places where a page disagrees with the binary, and four papercuts. Ticket 0022 holds the first pass, and three of its items show again on the new commands.
+A second agent used the release binary as a careful stranger would, after tickets 0014, 0020, and 0021 landed, with no key and no live call. `sdlc/issues/2026-09-19-hands-on-test-pass-two.md` holds its full report, with the command that shows each finding. It found no wrong answer, no leak, no crash, and no hang. Byte-for-byte output, order under `--jobs` 1, 4, and 32, exact ties, the cut at its edge, `--top`, the stop at a failed record, `--cache` with zero requests on a second run, a `decide` recording answering `filter` and `rank` with zero requests, secrecy over 20 runs, 4,000 records in 9.5 MB, and every block of how-tos 03, 06, 43, 40, and 41 all held. It found two wrong messages, four places where a page disagrees with the binary, and four papercuts. The pass-one issue report holds the earlier findings; tickets 0022 and 0029 through 0033 closed six of them.
 
 ## Scope
 
