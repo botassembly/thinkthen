@@ -1,6 +1,6 @@
 # The live budget check does not enforce the limit
 
-Status: Ticket 0034 implementation in progress
+Status: Closed by ticket 0034 and its audited migration
 
 Found 2026-09-20 in the full-project review at `2c32524` and confirmed after ticket 0027.
 
@@ -14,4 +14,6 @@ Ticket 0028 requires and permanently precharges that maximum before the child st
 
 The follow-up at `a556b97` found that `sdlc/scripts/live` derives both the ledger and lock from its own checkout. Registered linked worktrees hold separate copies of the full allowance. The same-checkout concurrency tests do not cover this. Its child wait also has no deadline, and manual recovery cannot clear an active hung child. No paid call was made to inspect either path.
 
-Ticket 0034 moves authority outside tracked worktree files into one shared Git common directory and replaces the FIFO supervisor with bounded interruption and checked recovery. Its real two-worktree test must prove combined reservations against one allowance. `annotate` remains the next product command; its paid measurements wait for this repair and the audited migration.
+Ticket 0034 moved authority outside tracked worktree files into one shared Git common directory and replaced the FIFO supervisor with bounded interruption and checked recovery. Its real two-worktree test proves combined reservations against one allowance.
+
+Ticket 0034 landed at `fa3290c`. The coordinator retired every registered legacy launcher, activated one shared authority with the audited 476,000,000-token limit and 429,118-token charge, and confirmed active status with no pending run. The migration preserved every branch reference and worktree directory.

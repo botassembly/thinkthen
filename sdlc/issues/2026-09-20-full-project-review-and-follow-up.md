@@ -1,6 +1,6 @@
 # Full-project review and follow-up
 
-Status: four foundation defects closed; live authority repair in ticket 0034; other follow-up risks planned.
+Status: five foundation defects closed; other follow-up risks planned.
 
 ## Scope and snapshot
 
@@ -14,7 +14,7 @@ A follow-up at `5f452ff` checked the repairs and the independent feedback about 
 2. Ticket 0025 added total and extra-key validation to answer distributions while preserving the existing missing-key refusal.
 3. Ticket 0026 keeps the first complete recording entry and refuses a different later response for the same request.
 4. Ticket 0027 compares modern complete rows by question digest. Older, mixed, or malformed rows fall back to the printed question text and say that they did so.
-5. Ticket 0028 serializes and durably precharges live spending authority within one checkout. The review at `a556b97` found that separate worktrees still receive separate ledgers and locks. Ticket 0034 repairs this remaining budget-control defect.
+5. Ticket 0028 serialized and durably precharged live spending authority within one checkout. The review at `a556b97` found that separate worktrees still received separate ledgers and locks. Ticket 0034 moved authority to Git's common directory, bounded interruption, added checked recovery, retired every legacy launcher, and activated the audited shared totals.
 
 These were real correctness or budget-control defects. The hands-on passes still found no secret leak, crash, or wrong accepted answer outside the defects above.
 
@@ -22,7 +22,7 @@ These were real correctness or budget-control defects. The hands-on passes still
 
 ### Confirmed maintainability and operating problems
 
-- Ticket 0028 grew the live wrapper from 87 to 449 lines and its Rust proof from 124 to 1,158 lines. Its child wait has no deadline, and manual recovery cannot clear an active hung child. Ticket 0034 proposes shared local authority, bounded child waiting, and checked recovery. Its first design was rejected; the rewrite specifies keyless gate startup, legacy launcher retirement, crash proof, and audited migration. It retires the usage scan and preserves permanent precharge. No size reduction is claimed before measurement. Ian can overturn these agent decisions.
+- Ticket 0028 grew the live wrapper from 87 to 449 lines and its Rust proof from 124 to 1,158 lines. Ticket 0034 replaced it with shared local authority, bounded child waiting, and checked recovery. Its accepted implementation measures 996 raw and 869 nonblank production lines and 1,634 raw and 1,560 nonblank proof lines. Every file stays below 500 nonblank lines. It retires the usage scan and preserves permanent precharge. Ian can overturn these agent decisions.
 - `BackendError::NotAnAddress` prints `a base address has a host`, but no settled page or exact test owns that sentence. Add both with the remaining address repairs.
 - The main plan and ticket 0023 carried stale state after tickets 0022 and 0033 landed. This plan update corrects them.
 - Commits `be2c9a3`, `cab3922`, and `3f8d9bc` raised the Rust ceiling without the explanation required in the commit message. Their records explain the growth, but published commits cannot be repaired. Later commits comply. Add a mechanical push check for the rule.
@@ -40,4 +40,4 @@ These were real correctness or budget-control defects. The hands-on passes still
 
 ## Work order
 
-The [prospective plan](../planning/prospective-bash-rust-python-plan.md) carries the order: ticket 0034 repairs live authority; `annotate` remains the next product command, followed by the long-document measurement and `find`, workflows and transforms, release preparation, then libraries only after ADR 0017 is decided. Local `annotate` design can proceed, but its paid measurement waits for ticket 0034 and migration. Other companion work gathers operating evidence during authorized probes and closes the small repairs before release.
+The [prospective plan](../planning/prospective-bash-rust-python-plan.md) carries the order: `annotate` remains the next product command, followed by the long-document measurement and `find`, workflows and transforms, release preparation, then libraries only after ADR 0017 is decided. Other companion work gathers operating evidence during authorized probes and closes the small repairs before release.

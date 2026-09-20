@@ -6,7 +6,7 @@ opens: sdlc/scripts sdlc/live-tokens sdlc/planning sdlc/issues crates/thinkthen/
 
 # 0034: Share live authority and bound interruption
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -49,5 +49,11 @@ ADR 0022's amendment. Ticket 0028 is landed. This ticket blocks the paid measure
 ## Review
 
 - Design review: accepted after the first draft was rejected. The revised design retires registered legacy launchers, execs a keyless gate, verifies complete process identity before charge, defines migration and transfer, explicitly retires the scan contract, covers sudden death and restart, limits the grace claim to child waiting, and measures rather than assumes simplification.
-- Code review: rejected three times. The first remediation added cancellation-aware nonblocking delivery, owned-child signaling before verified readiness, stale-boot recovery without process inspection, permanent-lock enforcement, shell-compatible signal statuses, actual `2c32524` wrapper/job detection, primary-tree retirement, and the full fault/state/process proof matrix. The second made failed activation disabled, required consistent wrapper/gate boot identity, and detected an actual relative `2c32524` wrapper with its execed job. The third added a pre-publication activation fence that runtime checks and persistent storage failure cannot remove. The supervisor is split so every production and proof file remains below 500 nonblank lines. Repeat review is pending.
+- Code review: rejected three times. The first remediation added cancellation-aware nonblocking delivery, owned-child signaling before verified readiness, stale-boot recovery without process inspection, permanent-lock enforcement, shell-compatible signal statuses, actual `2c32524` wrapper/job detection, primary-tree retirement, and the full fault/state/process proof matrix. The second made failed activation disabled, required consistent wrapper/gate boot identity, and detected an actual relative `2c32524` wrapper with its execed job. The third added a pre-publication activation fence that runtime checks and persistent storage failure cannot remove. The supervisor is split so every production and proof file remains below 500 nonblank lines. The same reviewer then accepted all prior findings as resolved.
 - Measured implementation size is 996 raw and 869 nonblank lines: `live` 539/478, `live-state.py` 171/145, and `live-migrate` 286/246. The prior wrapper was 449/426, so shared authority and migration add 547 raw and 443 nonblank lines. Measured proof size is 1,634 raw and 1,560 nonblank lines: `live_authority.rs` 496/476, `live_faults.rs` 504/486, `live_migration.rs` 299/287, `live_recovery.rs` 53/49, and shared support 282/262. The prior proof was 1,158/1,090, so proof adds 476 raw and 470 nonblank lines.
+
+## Migration
+
+Commit `fa3290c` landed on main before migration. The coordinator removed generated `__pycache__` directories that made three otherwise-clean worktrees dirty, then verified that no registered tree was locked, prunable, unreachable, dirty, active, or carrying a legacy lock. Git history and every worktree ledger agreed on a 476,000,000-token limit and the latest 429,118-token charge. No later live run existed.
+
+`live-migrate --retire fa3290c` detached every legacy linked worktree at the landed revision while preserving its branch reference and directory. A second verification passed. One-time activation created authority `5c95a2e0-5bbf-43f1-b31b-b8936992ec97` with the audited limit and charge. `live --status` then reported `active`, the same authority, the same totals, and `pending none`. The key and base address were unset throughout.
