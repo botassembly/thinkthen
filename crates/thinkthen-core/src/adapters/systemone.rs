@@ -81,6 +81,18 @@ pub enum DecodeError {
     /// The answer holds a number that is not a probability.
     #[error("the answer to question `{}` holds a probability outside zero to one", wire_name(*.0))]
     ProbabilityOutOfRange(usize),
+    /// The answer's probabilities do not make a complete distribution.
+    #[error(
+        "the answer to question `{}` has probabilities whose total differs from one by more than member count × f64::EPSILON",
+        wire_name(*.0)
+    )]
+    DistributionTotal(usize),
+    /// The answer names a probability for a label the question did not send.
+    #[error(
+        "the answer to question `{}` has a probability for an option or level the question did not send",
+        wire_name(*.0)
+    )]
+    UnexpectedProbability(usize),
 }
 
 /// The name a question carries on the wire: `q1` onward, in plan order.

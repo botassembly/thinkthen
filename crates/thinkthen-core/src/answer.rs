@@ -1,6 +1,7 @@
 //! The answer a backend gave, in thinkthen's own words.
 
 use serde::{Serialize, Serializer};
+use thiserror::Error;
 
 use crate::probability::Probability;
 use crate::threshold::{Outcome, Threshold};
@@ -13,28 +14,47 @@ const ROUNDING: f64 = 1e12;
 /// The backend may answer in any key order. The order here is the user's own,
 /// so a reader of a result sees the list they typed.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Distribution(Vec<(String, Probability)>);
+pub(crate) struct Distribution {
+    entries: Vec<(String, Probability)>,
+    total: f64,
+}
+
+/// Why a set of probabilities is not a complete distribution.
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub(crate) enum DistributionError {
+    /// The members do not total one within the permitted floating-point error.
+    #[error("probabilities must total one within member count times f64::EPSILON")]
+    Total,
+}
 
 impl Distribution {
     /// Take one probability per label, in label order.
-    pub(crate) const fn new(entries: Vec<(String, Probability)>) -> Self {
-        Self(entries)
+    pub(crate) fn new(entries: Vec<(String, Probability)>) -> Result<Self, DistributionError> {
+        let total = entries
+            .iter()
+            .map(|(_, probability)| probability.as_f64())
+            .sum::<f64>();
+        let tolerance = entries.len() as f64 * f64::EPSILON;
+        if (total - 1.0).abs() > tolerance {
+            return Err(DistributionError::Total);
+        }
+        Ok(Self { entries, total })
     }
 
     /// Read the labels back, in the order they were sent.
     #[cfg(test)]
     pub(crate) fn labels(&self) -> impl Iterator<Item = &str> {
-        self.0.iter().map(|(label, _)| label.as_str())
+        self.entries.iter().map(|(label, _)| label.as_str())
     }
 
     /// Read the probabilities back, in the same order.
     pub(crate) fn probabilities(&self) -> impl Iterator<Item = Probability> {
-        self.0.iter().map(|(_, probability)| *probability)
+        self.entries.iter().map(|(_, probability)| *probability)
     }
 
     /// The first label with the highest probability, which is the one that led.
     fn leader(&self) -> Option<(&str, Probability)> {
-        self.0
+        self.entries
             .iter()
             .fold(None, |best, (label, probability)| match best {
                 Some((_, highest)) if highest.as_f64() >= probability.as_f64() => best,
@@ -66,7 +86,8 @@ impl Distribution {
                 f64::from(place) * probability.as_f64()
             })
             .sum();
-        (weighted * ROUNDING).round() / ROUNDING
+        let normalized = weighted / self.total;
+        (normalized * ROUNDING).round() / ROUNDING
     }
 }
 
@@ -74,7 +95,7 @@ impl Serialize for Distribution {
     /// Write one JSON object with the labels as its keys, in label order.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_map(
-            self.0
+            self.entries
                 .iter()
                 .map(|(label, probability)| (label, probability)),
         )
@@ -130,6 +151,10 @@ impl Value {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "answer_distribution_tests.rs"]
+mod distribution_tests;
 
 impl Answer {
     /// Take a probability as the answer to a yes/no question.
@@ -270,6 +295,7 @@ mod tests {
                 })
                 .collect(),
         )
+        .expect("a distribution")
     }
 
     fn choice(entries: &[(&str, f64)]) -> Answer {
@@ -400,12 +426,23 @@ mod tests {
     /// A label and a probability, so a generated distribution is a real one.
     fn entries() -> impl Strategy<Value = Vec<(String, f64)>> {
         vec((1_usize..8, 0.0_f64..=1.0), 2..8).prop_map(|drawn| {
+            let total: f64 = drawn.iter().map(|(_, value)| *value).sum();
             drawn
                 .into_iter()
                 .enumerate()
-                .map(|(place, (width, value))| (format!("{place}{}", "x".repeat(width)), value))
+                .map(|(place, (width, value))| {
+                    let value = normalized(place, value, total);
+                    (format!("{place}{}", "x".repeat(width)), value)
+                })
                 .collect()
         })
+    }
+
+    fn normalized(place: usize, value: f64, total: f64) -> f64 {
+        if total == 0.0 {
+            return f64::from(place == 0);
+        }
+        value / total
     }
 
     proptest! {

@@ -29,7 +29,11 @@ fn picked(options: &[&str]) -> String {
         .iter()
         .enumerate()
         .map(|(place, option)| {
-            let share = if place == 0 { "0.9" } else { "0.05" };
+            let share = if place == 0 {
+                0.9
+            } else {
+                0.1 / (options.len() - 1) as f64
+            };
             format!("\"{option}\":{share}")
         })
         .collect();

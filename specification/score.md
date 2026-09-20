@@ -20,9 +20,9 @@ A JSON number. The score runs from 0 at the lowest level to the number of levels
 
 ## The number
 
-The number is the backend's probability-weighted position on the levels. With K levels, it is the sum of each level's probability times its zero-based index. Three levels with probabilities 0.05, 0.30, and 0.65 give `0 × 0.05 + 1 × 0.30 + 2 × 0.65`. That is 1.6. Every probability here is illustrative.
+The number is the backend's probability-weighted position on the levels. With K levels, it is the sum of each level's probability times its zero-based index, divided by the measured total of the accepted probabilities. The tool rounds that result at twelve decimal places. Three levels with probabilities 0.05, 0.30, and 0.65 give `(0 × 0.05 + 1 × 0.30 + 2 × 0.65) / 1`. That is 1.6. Every probability here is illustrative.
 
-The tool computes that sum itself, from the probabilities the backend returned, and never reads the vendor's own score field. The vendor's field is the same weighted average, so the two agree, and one vendor page warns against reading it as an exact size. The tool computes its own so that the number and the probabilities in a row always match.
+The tool computes that weighted sum and normalization itself, from the probabilities the backend returned, and never reads the vendor's own score field. The vendor's field is the same weighted average, so the two agree, and one vendor page warns against reading it as an exact size. The tool computes its own so that the number and the probabilities in a row always match.
 
 The number is a position on the levels the user named. It is not a probability that anything holds, and it is not a confidence in the answer. A script that compares two runs over different level lists is comparing two different scales.
 

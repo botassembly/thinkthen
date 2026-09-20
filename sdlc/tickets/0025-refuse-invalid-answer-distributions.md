@@ -6,7 +6,7 @@ opens: crates/thinkthen-core/src/answer.rs crates/thinkthen-core/src/adapters/sy
 
 # 0025: Refuse invalid answer distributions
 
-Status: ready
+Status: landed
 
 ## Outcome
 
@@ -56,4 +56,4 @@ ADR 0019, decided with this ticket. No code ticket.
 ## Review
 
 - Design review: accepted after two corrections. The reviewer required a derived tolerance and bounded score arithmetic, then required `score.md` to state that arithmetic. It confirmed the ownership, compatibility evidence, acceptance cases, and level 2 route.
-- Code review: pending
+- Code review: accepted after one correction pass. The first pass accepted the production code and required complete proof above and below one, at both score endpoints, in serialized output, and in the safe extra-label error. The final pass found no remaining blocker.

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use serde::Deserialize;
 
 use crate::adapters::systemone::{DecodeError, wire_name};
-use crate::answer::{Answer, Distribution};
+use crate::answer::{Answer, Distribution, DistributionError};
 use crate::plan::Plan;
 use crate::probability::Probability;
 use crate::question::{Labels, Question};
@@ -63,7 +63,8 @@ struct ResponseUsage {
 /// Returns [`DecodeError`] when the body is not a `systemone` response, when it
 /// answers a planned question with nothing, when an answer carries the wrong
 /// shape, when it leaves an option or a level without a probability, or when a
-/// probability falls outside zero to one.
+/// probability falls outside zero to one, or when its probabilities do not
+/// make a complete distribution.
 pub fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
     let response: Response = serde_json::from_slice(body)
         .map_err(|error| DecodeError::Malformed(error.line(), error.column()))?;
@@ -129,14 +130,28 @@ fn spread(
     wire: &BTreeMap<String, f64>,
     place: usize,
 ) -> Result<Distribution, DecodeError> {
-    let mut entries = Vec::with_capacity(labels.count());
-    for (label, key) in labels.names().zip(keys) {
-        let Some(value) = wire.get(&key) else {
+    let keys: Vec<String> = keys.collect();
+    for key in &keys {
+        if !wire.contains_key(key) {
             return Err(DecodeError::MissingProbability(place));
-        };
+        }
+    }
+    let mut entries = Vec::with_capacity(labels.count());
+    for (label, key) in labels.names().zip(&keys) {
+        let value = wire
+            .get(key)
+            .ok_or(DecodeError::MissingProbability(place))?;
         entries.push((label.clone(), probability(*value, place)?));
     }
-    Ok(Distribution::new(entries))
+    if wire
+        .keys()
+        .any(|key| !keys.iter().any(|expected| expected == key))
+    {
+        return Err(DecodeError::UnexpectedProbability(place));
+    }
+    Distribution::new(entries).map_err(|error| match error {
+        DistributionError::Total => DecodeError::DistributionTotal(place),
+    })
 }
 
 /// Take one number from the wire as a probability.
@@ -351,5 +366,103 @@ mod tests {
         assert_eq!(reply.model().as_str(), "jev-1.13.0");
         assert_eq!(reply.answers().len(), 1);
         assert_eq!(reply.usage(), None);
+    }
+
+    #[test]
+    fn a_choice_and_score_refuse_a_total_outside_member_count_epsilon() {
+        let choice = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
+            r#""probabilities":{"billing":1.0,"shipping":1.0,"account":1.0,"other":1.0}}}}"#,
+        );
+        let score = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"score","#,
+            r#""probabilities":{"0":1.0,"1":1.0,"2":1.0}}}}"#,
+        );
+        let choice_below = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
+            r#""probabilities":{"billing":0.0,"shipping":0.0,"account":0.0,"other":0.0}}}}"#,
+        );
+        let score_below = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"score","#,
+            r#""probabilities":{"0":0.0,"1":0.0,"2":0.0}}}}"#,
+        );
+        assert_eq!(
+            decode(&team_plan(), choice.as_bytes()),
+            Err(DecodeError::DistributionTotal(0))
+        );
+        assert_eq!(
+            decode(&disruption_plan(), score.as_bytes()),
+            Err(DecodeError::DistributionTotal(0))
+        );
+        assert_eq!(
+            decode(&team_plan(), choice_below.as_bytes()),
+            Err(DecodeError::DistributionTotal(0))
+        );
+        assert_eq!(
+            decode(&disruption_plan(), score_below.as_bytes()),
+            Err(DecodeError::DistributionTotal(0))
+        );
+    }
+
+    #[test]
+    fn a_distribution_total_error_names_the_rule_without_reply_values() {
+        let body = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
+            r#""probabilities":{"billing":0.2,"shipping":0.2,"account":0.2,"other":0.2}}}}"#,
+        );
+        let error = decode(&team_plan(), body.as_bytes()).expect_err("an invalid total");
+        assert_eq!(
+            error.to_string(),
+            "the answer to question `q1` has probabilities whose total differs from one by more than member count × f64::EPSILON"
+        );
+        assert!(!error.to_string().contains("0.2"));
+    }
+
+    #[test]
+    fn an_extra_choice_or_score_key_is_refused() {
+        let choice = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
+            r#""probabilities":{"billing":1.0,"shipping":0.0,"account":0.0,"other":0.0,"extra":0.0}}}}"#,
+        );
+        let score = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"score","#,
+            r#""probabilities":{"0":1.0,"1":0.0,"2":0.0,"3":0.0}}}}"#,
+        );
+        assert_eq!(
+            decode(&team_plan(), choice.as_bytes()),
+            Err(DecodeError::UnexpectedProbability(0))
+        );
+        assert_eq!(
+            decode(&disruption_plan(), score.as_bytes()),
+            Err(DecodeError::UnexpectedProbability(0))
+        );
+    }
+
+    #[test]
+    fn an_extra_label_refusal_is_complete_and_does_not_repeat_reply_values() {
+        let sentinel = "sentinel-extra-label-4f8e";
+        let body = format!(
+            r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"choice","probabilities":{{"billing":1.0,"shipping":0.0,"account":0.0,"other":0.0,"{sentinel}":0.25}}}}}}}}"#
+        );
+        let error = decode(&team_plan(), body.as_bytes()).expect_err("an extra label");
+        assert_eq!(
+            error.to_string(),
+            "the answer to question `q1` has a probability for an option or level the question did not send"
+        );
+        assert!(!error.to_string().contains(sentinel));
+        assert!(!error.to_string().contains("0.25"));
+        assert!(!error.to_string().contains("1.0"));
+    }
+
+    #[test]
+    fn a_missing_key_precedes_an_extra_key() {
+        let body = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
+            r#""probabilities":{"shipping":0.0,"account":0.0,"other":0.0,"extra":1.0}}}}"#,
+        );
+        assert_eq!(
+            decode(&team_plan(), body.as_bytes()),
+            Err(DecodeError::MissingProbability(0))
+        );
     }
 }
