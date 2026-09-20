@@ -58,5 +58,5 @@ The shim holds the parser, the two variables, the mapping to one engine request,
 
 ## Open questions for the ADR
 
-1. Does one crate ship the library and the binary behind a default `cli` feature, or does `thinkthen-cli` install the command?
+1. Settled by Ian on 2026-09-20: one crate named `thinkthen`, and no `thinkthen-cli`. The install path is a `curl` installer that downloads a release from GitHub. `cargo install thinkthen` should also give the command if one crate can carry both, and the installer is the path that must work.
 2. Does the long-lived record-mode process get a written protocol for callers in other languages, or do they stay on one process per batch?

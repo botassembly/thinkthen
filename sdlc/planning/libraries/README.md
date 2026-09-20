@@ -80,6 +80,22 @@ These numbers are proposals until a bench measures them. A bench runs against a 
 - No telemetry, no log of the evidence, and no configuration file read on the hot path.
 - No claim about speed without the bench that measured it.
 
+## What every library shows
+
+Ian's ruling, 2026-09-20: "I just want there to be a clean layer of eight functions, and it's kept as simple as possible from all the libraries. The libraries should be the eight functions plus the question setup thing."
+
+- The public surface of every library is the eight verbs (`decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find`, `annotate`), the question setup, and the few types an answer needs: the three-valued outcome, the details of a result, and the error.
+- The engine is private plumbing. No user imports it, no document shows it, and no version promise covers it. The binding crates sit in this workspace and are never published, so they may call it freely.
+- A check fails the build when a library's public surface grows past this list without an ADR.
+
+## One crate, one way to install the command
+
+Ian's ruling, 2026-09-20: one crate named `thinkthen`. No `thinkthen-core` and no `thinkthen-cli` is ever published. "I just don't really want to have multiple landing zones."
+
+- The command installs through a `curl` installer that downloads a release from GitHub. That path has to work.
+- `cargo install thinkthen` should give the command too, if the one crate can carry the library and the binary. It is welcome and it is second.
+- The C surface ships from the same GitHub releases: the shared library, the static library, and the header.
+
 ## A saved question is a value
 
 Ian asked on 2026-09-20 what the library equivalent of the command's saved question is, whether the name is right, and whether the libraries should bake in currying so nobody needs a class.

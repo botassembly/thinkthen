@@ -19,7 +19,7 @@ let dated: Vec<Note> = tt::filter("Names a delivery date.", notes)
 ## Goals
 
 - One published crate named `thinkthen`, the binary behind a default `cli` feature, and `cargo add thinkthen --no-default-features` resolving no argument parser.
-- Two levels. `thinkthen::*` is the user API of the agreed grammar, and `thinkthen::engine` is what the shims call. A check fails when the user API grows without an ADR.
+- Two levels. `thinkthen::*` is the user API: the eight verbs and the question setup. `thinkthen::engine` is what the shims call, and it is hidden from the documents and outside the semver promise. A check fails when the user API grows without an ADR.
 - Async is the default surface, `thinkthen::blocking` mirrors it, and every conformance case runs through both.
 - One `thinkthen::Error` enum from `thiserror`, with a named variant per conformance failure kind.
 - A client is `Send + Sync`. A test drives several requests at once from two threads.
@@ -55,6 +55,6 @@ There is no binding tool. The crate is the engine every other surface binds. The
 ## Open questions for the ADR
 
 1. Which runtime does `blocking` own, and does the async API ever build one? `rust-standards.md` admits none until a measurement asks.
-2. Is `thinkthen::engine` public and covered by semver, or private with the binding crates inside this workspace?
+2. Settled by Ian on 2026-09-20: the engine is private. Every library shows the eight verbs and the question setup and nothing else. The binding crates live in this workspace and are never published, so they can call a hidden module with no promise to anyone.
 3. Does `panic = "abort"` stay in the release profile? A library linked into a host process cannot abort.
 4. Do the builder steps return `Result` one at a time, as `.field("/text")?` shows, or gather refusals until `send`?

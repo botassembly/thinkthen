@@ -57,6 +57,10 @@ Ian approved R later the same day. His words: "Let's go ahead and approve R beca
 
 Two facts shape the R work. CRAN takes no placeholder package, because it reviews every submission by hand, so the name is held only by shipping a real package. R-universe publishes from a GitHub repository with no review and is the first home. Bioconductor is where bioinformatics packages live, and nobody has checked whether it accepts a package with a Rust core. Check before anyone promises it. The command line already fits the workflow tools those pipelines use, because a rule or a process in such a tool is a shell command.
 
+## One crate, confirmed
+
+Ian confirmed on 2026-09-20: "I prefer to keep the crates single-named." The two-crate fallback is withdrawn. The command installs through a `curl` installer that downloads a release from GitHub. `cargo install thinkthen` should also give the command if the one crate can carry the library and the binary. He wants no second landing zone. He also ruled that every library shows a clean layer of the eight verbs and the question setup, so the engine under them stays private. `sdlc/planning/libraries/README.md` records both.
+
 ## Open
 
 - Whether the package on each registry is claimed with a placeholder before the public push. A free name on the day of a launch is a name somebody else can take.
