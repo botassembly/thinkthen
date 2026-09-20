@@ -1,5 +1,3 @@
-# Audit checkpoint only. Runtime authority lives under Git's shared common directory.
-# The coordinator replaces the placeholder ID after audited one-time activation.
+# Audit checkpoint for one-time live authority initialization.
 checkpoint_limit_tokens 476000000
 checkpoint_charged_tokens 429118
-checkpoint_authority_id 5c95a2e0-5bbf-43f1-b31b-b8936992ec97

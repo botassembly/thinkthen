@@ -1,6 +1,6 @@
 # The live guard grew past its job
 
-Status: Accepted into the prospective plan; no repair ticket exists yet
+Status: Resolved by ticket 0035; landing and migration remain
 
 Found by Fable's adversarial review of `2c32524..4eadc02` and independently checked on 2026-09-20. Reviewers used throwaway repositories, dummy keys, and no network.
 

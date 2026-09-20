@@ -1,0 +1,228 @@
+#!/bin/sh
+# Linux-only proof for the paid-call ledger. It uses dummy keys and local jobs.
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+LIVE=$ROOT/sdlc/scripts/live
+TMP=${TMPDIR:-/tmp}/thinkthen-live-test.$$
+trap 'chmod -R u+w "$TMP" 2>/dev/null || true; rm -rf "$TMP"' EXIT HUP INT TERM
+mkdir -m 700 "$TMP"
+
+fail() {
+	printf 'live-test: %s\n' "$*" >&2
+	exit 1
+}
+
+repo() {
+	name=$1
+	dir=$TMP/$name
+	mkdir -p "$dir/sdlc/scripts" "$dir/target/debug"
+	cp "$LIVE" "$dir/sdlc/scripts/live"
+	chmod 755 "$dir/sdlc/scripts/live"
+	printf '%s\n' \
+		'# Audit checkpoint for one-time live authority initialization.' \
+		'checkpoint_limit_tokens 10' \
+		'checkpoint_charged_tokens 0' >"$dir/sdlc/live-tokens"
+	chmod 644 "$dir/sdlc/live-tokens"
+	printf '#!/bin/sh\nexit 0\n' >"$dir/target/debug/thinkthen"
+	chmod 755 "$dir/target/debug/thinkthen"
+	git -C "$dir" init -q
+	printf '%s\n' "$dir"
+}
+
+run() {
+	dir=$1
+	shift
+	set +e
+	output=$(cd "$dir" && "$dir/sdlc/scripts/live" "$@" 2>&1)
+	status=$?
+	set -e
+}
+
+assert_status() {
+	[ "$status" -eq "$1" ] || fail "expected status $1, got $status: $output"
+}
+
+assert_has() {
+	case $output in *"$1"*) ;; *) fail "missing '$1' in: $output";; esac
+}
+
+missing=$(repo missing)
+run "$missing" --status
+assert_status 1
+assert_has 'run sdlc/scripts/live --init'
+
+init=$(repo init)
+run "$init" --init
+assert_status 0
+run "$init" --init
+assert_status 1
+assert_has 'already initialized'
+run "$init" --status
+assert_status 0
+[ "$output" = 'limit_tokens 10
+charged_tokens 0
+remaining_tokens 10' ] || fail "unexpected status: $output"
+before=$(cksum "$init/.git/thinkthen-live/ledger")
+run "$init" --status
+[ "$(cksum "$init/.git/thinkthen-live/ledger")" = "$before" ] || fail 'status changed the ledger'
+
+printf '#!/bin/sh\ngrep -qx "charge 10" .git/thinkthen-live/ledger || exit 90\nprintf "%%s\\n" "$*" >job.args\nprintf "%%s\\n" "$PWD" >job.cwd\nexit 23\n' >"$init/job.sh"
+chmod 755 "$init/job.sh"
+THINKTHEN_API_KEY=dummy run "$init" --max-tokens 10 job.sh 'two words' tail
+assert_status 23
+[ "$(cat "$init/job.args")" = 'two words tail' ] || fail 'relative job arguments changed'
+[ "$(cat "$init/job.cwd")" = "$init" ] || fail 'job did not run in its checkout'
+run "$init" --status
+assert_has 'charged_tokens 10'
+THINKTHEN_API_KEY=dummy run "$init" --max-tokens 1 job.sh
+assert_status 1
+assert_has 'exceeds the 0 tokens remaining'
+
+concurrent=$(repo concurrent)
+run "$concurrent" --init
+printf '#!/bin/sh\nprintf x >>runs\n' >"$concurrent/job.sh"
+chmod 755 "$concurrent/job.sh"
+(cd "$concurrent" && THINKTHEN_API_KEY=seven sdlc/scripts/live --max-tokens 7 job.sh) &
+first=$!
+(cd "$concurrent" && THINKTHEN_API_KEY=three sdlc/scripts/live --max-tokens 3 job.sh) &
+second=$!
+wait "$first"
+wait "$second"
+[ "$(wc -c <"$concurrent/runs" | tr -d ' ')" -eq 2 ] || fail 'concurrent jobs did not each run once'
+run "$concurrent" --status
+assert_has 'charged_tokens 10'
+THINKTHEN_API_KEY=dummy run "$concurrent" --max-tokens 1 job.sh
+assert_status 1
+
+malformed=$(repo malformed)
+run "$malformed" --init
+printf 'charge ' >>"$malformed/.git/thinkthen-live/ledger"
+run "$malformed" --status
+assert_status 1
+assert_has 'ledger is malformed'
+
+unknown=$(repo unknown)
+run "$unknown" --init
+printf 'future 1\n' >>"$unknown/.git/thinkthen-live/ledger"
+run "$unknown" --status
+assert_status 1
+assert_has 'ledger is malformed'
+
+lost=$(repo lost)
+run "$lost" --init
+printf '#!/bin/sh\nexit 0\n' >"$lost/job.sh"
+chmod 755 "$lost/job.sh"
+THINKTHEN_API_KEY=dummy run "$lost" --max-tokens 2 job.sh
+assert_status 0
+rm "$lost/.git/thinkthen-live/ledger"
+run "$lost" --init
+assert_status 1
+assert_has 'already initialized'
+[ ! -e "$lost/.git/thinkthen-live/ledger" ] || fail 'lost ledger was recreated from the checkpoint'
+run "$lost" --status
+assert_status 1
+assert_has 'ledger is missing; live work is disabled'
+
+unterminated=$(repo unterminated)
+run "$unterminated" --init
+size=$(wc -c <"$unterminated/.git/thinkthen-live/ledger")
+truncate -s "$((size - 1))" "$unterminated/.git/thinkthen-live/ledger"
+run "$unterminated" --status
+assert_status 1
+assert_has 'ledger is malformed'
+
+bad_checkpoint=$(repo bad-checkpoint)
+printf 'checkpoint_limit_tokens 01\ncheckpoint_charged_tokens 0\n' >"$bad_checkpoint/sdlc/live-tokens"
+run "$bad_checkpoint" --init
+assert_status 1
+assert_has 'checkpoint is malformed'
+
+linked_checkpoint=$(repo linked-checkpoint)
+mv "$linked_checkpoint/sdlc/live-tokens" "$linked_checkpoint/sdlc/real-tokens"
+ln -s real-tokens "$linked_checkpoint/sdlc/live-tokens"
+run "$linked_checkpoint" --init
+assert_status 1
+assert_has 'unsafe type'
+
+storage=$(repo storage)
+run "$storage" --init
+printf '#!/bin/sh\ntouch should-not-run\n' >"$storage/job.sh"
+chmod 755 "$storage/job.sh"
+chmod 400 "$storage/.git/thinkthen-live/ledger"
+THINKTHEN_API_KEY=dummy run "$storage" --max-tokens 1 job.sh
+assert_status 1
+assert_has 'charge may have been recorded; inspect --status before retry'
+[ ! -e "$storage/should-not-run" ] || fail 'job ran after storage failure'
+
+status_repo=$(repo statuses)
+run "$status_repo" --init
+printf '#!/bin/sh\nexit 19\n' >"$status_repo/fail.sh"
+printf '#!/bin/sh\nkill -TERM $$\n' >"$status_repo/signal.sh"
+chmod 755 "$status_repo/fail.sh" "$status_repo/signal.sh"
+THINKTHEN_API_KEY=dummy run "$status_repo" --max-tokens 1 fail.sh
+assert_status 19
+THINKTHEN_API_KEY=dummy run "$status_repo" --max-tokens 1 signal.sh 2>/dev/null
+assert_status 143
+
+secret=$(repo secret)
+marker='marker-key-29812'
+printf '#!/bin/sh\ncase " $* " in *marker-key-29812*) exit 91;; esac\nfind .git -type f -exec grep -l marker-key-29812 {} + >key.files 2>/dev/null || :\n[ "$THINKTHEN_API_KEY" = marker-key-29812 ] || exit 92\nprintf delivered >key.delivered\n' >"$secret/key.sh"
+chmod 755 "$secret/key.sh"
+run "$secret" --init
+THINKTHEN_API_KEY=$marker run "$secret" --max-tokens 1 key.sh plain
+assert_status 0
+[ -f "$secret/key.delivered" ] || fail 'job did not receive key'
+[ ! -s "$secret/key.files" ] || fail 'key was written under Git authority'
+! grep -R "$marker" "$secret/.git/thinkthen-live" >/dev/null 2>&1 || fail 'key entered authority files'
+
+killed=$(repo killed)
+run "$killed" --init
+printf '#!/bin/sh\nprintf started >started\nwhile :; do sleep 1; done\n' >"$killed/wait.sh"
+chmod 755 "$killed/wait.sh"
+(cd "$killed" && THINKTHEN_API_KEY=dummy exec sdlc/scripts/live --max-tokens 2 wait.sh) 2>/dev/null &
+pid=$!
+count=0
+while [ ! -e "$killed/started" ]; do
+	count=$((count + 1))
+	[ "$count" -lt 200 ] || fail 'waiting job did not start'
+	sleep 0.01
+done
+kill -KILL "$pid"
+set +e
+wait "$pid" 2>/dev/null
+set -e
+run "$killed" --status
+assert_has 'charged_tokens 2'
+[ ! -e "$killed/.git/thinkthen-live/pending" ] || fail 'recovery state exists'
+
+migration=$(repo migration)
+authority=$migration/.git/thinkthen-live
+mkdir -m 700 "$authority"
+: >"$authority/lock"
+chmod 600 "$authority/lock"
+printf '{"version":1,"status":"active","limit_tokens":476000000,"charged_tokens":429118,"pending":null}\n' >"$authority/state.json"
+printf '%s\n' '# Audit checkpoint for one-time live authority initialization.' \
+	'checkpoint_limit_tokens 476000000' 'checkpoint_charged_tokens 429118' >"$migration/sdlc/live-tokens"
+run "$migration" --init
+assert_status 1
+mv "$authority/state.json" "$authority/state-v1-retired.json"
+printf '#!/bin/sh\ntouch migrated-job-ran\n' >"$migration/job.sh"
+chmod 755 "$migration/job.sh"
+THINKTHEN_API_KEY=dummy run "$migration" --max-tokens 1 job.sh
+assert_status 1
+assert_has 'run sdlc/scripts/live --init'
+run "$migration" --init
+assert_status 0
+run "$migration" --status
+assert_has 'limit_tokens 476000000'
+assert_has 'charged_tokens 429118'
+THINKTHEN_API_KEY=dummy run "$migration" --max-tokens 1 job.sh
+assert_status 0
+[ -e "$migration/migrated-job-ran" ] || fail 'completed migration did not launch'
+cp "$authority/state-v1-retired.json" "$authority/state.json"
+run "$migration" --status
+assert_status 1
+assert_has 'legacy live state exists'
+
+printf 'live-test: all cases passed\n'

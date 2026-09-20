@@ -25,7 +25,7 @@ The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read
 
 Tests replay recorded responses. A live call to a paid backend runs only from `sdlc/scripts/live`, by hand, under a token cap, with Ian's authorization.
 
-Until the live guard is simplified, do not switch a registered detached worktree back to an older branch. One old launcher blocks paid work from every current tree. Create work from current `main`. If a registered folder is missing, name it and stop. Never prune or delete a registered worktree.
+The live ledger under Git's common directory is the only runtime authority. Do not edit, replace, remove, or copy it by hand. Use `live --status` to audit it. Follow the migration in `sdlc/scripts/README.md` when a ticket explicitly authorizes an authority change.
 
 ## Credentials
 

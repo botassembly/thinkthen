@@ -1,62 +1,41 @@
 # sdlc/scripts/
 
-How thinkthen installs itself and judges its own work. Edit these freely. Nothing above reads them except by name and exit code.
+The repository gate and its hand-run support scripts.
 
 | Script | Contract |
 | --- | --- |
-| `install` | Rung 0. Checks the gate tools and, on Linux, the live supervisor's exact Python, Git, procfs, machine identity, socket-pair, and `waitid` prerequisites. It then fetches the locked dependency closure and advisory database |
-| `lint` | Rung 1. The policy checker, the how-to list check, the ratchet, `cargo deny` over `deny.toml`, `cargo fmt --check`, clippy with warnings denied, and `cargo doc` with warnings denied. Exit 0 when the code is clean |
-| `test` | Rung 2. `cargo test` across every target, every feature, and the documentation examples. It needs `mustmatch` on PATH, because the demo runner's own tests run the real runner. Exit 0 when the tests pass |
-| `spec` | Rung 3. Builds the binary, runs the Markdown pages in `spec/` and `transforms/README.md` through `mustmatch`, then calls `demos-self-test` and `demos`. Exit 0 when the tool behaves as the pages say |
-| `demos` | Called by `spec`. Runs every `demos/NN-name/README.md` whose status line reads `Status: green`, and skips every red one. A green page that names a `--replay` folder it does not hold stops the run, and so does one that breaks a rule of ADR 0016. It takes another root as its one argument, which is how its own tests give it fixture pages |
-| `demos-self-test` | Called by `spec` before `demos`. Builds sixteen fixture pages under `target/`, covering every rule of ADR 0016 a script can measure plus a page that breaks none, runs the real `demos` over each, and pins the exit code and the whole sentence. Exit 0 when every check still catches what it was written for |
-| `live` | The one door for a paid live call, run by hand and never by a rung. `live --max-tokens N JOB [ARG...]` requires a prebuilt `target/debug/thinkthen`, checks every registered worktree, and precharges one authority under Git's shared common directory. A separately execed `/usr/bin/python3 -I -S` gate receives the key through an anonymous socket after the charge is durable, acknowledges it, and waits for a separate release. `live --status` reports safe totals. `live --recover` clears a pending run only after its exact wrapper and entire recorded session are absent. Neither command creates authority |
-| `live-state.py` | Private state, durability, and process-identity support loaded by `live`. Registered worktrees must carry its guarded marker with the launcher |
-| `live-migrate` | Coordinator-only retirement and one-time activation. `--verify` checks every registered tree and refuses active historical wrappers or jobs. `--retire LANDED_SHA` detaches each clean legacy linked tree at the guarded landed revision without moving its branch. `--activate AUDITED_LIMIT AUDITED_CHARGED` creates the machine-bound shared authority once. It never audits totals or chooses them |
-| `pages` | Called by `lint`. Holds `demos/README.md`, `sdlc/planning/documentation-plan.md`, the README's front window, and the folders under `demos/` to one list: the same numbers, the same titles, the same state cells word for word, a green page whose own title and status line agree with the list, a leaving page that says on its own first lines which page absorbs it, a front window in ADR 0018's order with a link for a green page and the word coming for a red one, and no relative link that goes nowhere. It refuses a list it could read no table from, so a renamed column cannot silence it. It takes another root as its one argument, which is how its own tests give it small broken trees |
-| `pages-self-test` | Called by `lint` before `pages`. Builds sixteen trees under `target/`, each breaking one check, runs the real `pages` over each, and pins the exit code and the whole sentence. Exit 0 when every check still catches what it was written for |
-| `policy.py` | The accepted tables, read by `lint`. It checks the toolchain pin, the workspace lint table, both `clippy.toml` copies, lint inheritance, the crate-root attributes, the 500-line file ceiling, and the dependency source, license, and direct sets |
-| `ratchet.mjs` | The size ceiling, read from `sdlc/ratchet.json`. Copied rather than written, so lint and the sealed gate apply the same rule |
+| `install` | Rung 0. Checks the gate tools, fetches the locked dependency closure, and fetches the advisory database |
+| `lint` | Rung 1. Runs policy, page, size, dependency, format, Clippy, and documentation checks |
+| `test` | Rung 2. Runs Rust tests and documentation tests, then `sdlc/live-test` on Linux |
+| `spec` | Rung 3. Runs executable specification pages, transforms, and green how-tos |
+| `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals |
+| `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
+| `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
+| `policy.py` | Holds accepted Rust policy tables for rung 1 |
+| `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json` |
 
-Cheapest rung first. The whole ladder runs before any hand-back. No rung reaches the network beyond cargo fetching the crates that `Cargo.lock` already names.
-
-Build before a live job, with the credential removed from the build process:
+Build without the credential, then run a charged job:
 
 ```sh
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL cargo build --locked --package thinkthen
 sdlc/scripts/live --max-tokens N JOB [ARG...]
 ```
 
-The supervisor does not build. It does not scan recordings or other JSON files after a job. The durable charge is the declared maximum. A successful job keeps its own status even when its observed use exceeds that declaration. Job records may report observed use separately.
+`N` is a positive canonical decimal no greater than 999,999,999. A relative job is resolved from the checkout. The prebuilt checkout binary leads `PATH`, the job starts in the checkout, and the job receives the caller's environment and `THINKTHEN_API_KEY`. The wrapper adds one durable `charge N` row before it starts the job. A failed or killed job keeps the charge. The wrapper owns no completion line or recovery state.
 
-## Migrating and recovering live authority
+`sdlc/scripts/live --status` takes the shared lock, validates the durable initialization marker and every ledger row, and prints the limit, charge, and remainder. A missing ledger after initialization, a partial row, an unterminated row, or an unknown row disables live work. If appending or syncing reports failure, the charge may still exist. Run `--status` or inspect the ledger under the lock before any retry.
 
-Migration runs only after ticket 0034 lands and while no paid call runs. Keep `THINKTHEN_API_KEY` unset. Record each worktree's path, HEAD, and branch, then verify that every tree is reachable, clean, unlocked, and idle:
+## One-time migration from version one
 
-```sh
-/usr/bin/git worktree list --porcelain -z
-/usr/bin/git -C TREE rev-parse HEAD
-/usr/bin/git -C TREE symbolic-ref -q HEAD
-/usr/bin/git -C TREE status --porcelain=v1 -z
-env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/live-migrate --verify
-```
+Run this only after ticket 0035 lands and while no paid job runs. Keep the key unset. Hold `.git/thinkthen-live/lock` exclusively and verify that `state.json` is active, has no pending run, and exactly matches `sdlc/live-tokens`: 476,000,000 allowed and 429,118 charged. Refuse an existing `initialized`, `ledger`, or `state-v1-retired.json`.
 
-Audit every old ledger and every charged run since the last checkpoint. The known baseline is a 476,000,000 allowance and 429,118 charged tokens. Use it only when all evidence agrees. Divergent ledgers require reconciliation from run records. A maximum can omit independent reservations. Missing or unexplained spend stops migration.
-
-After ticket 0034 is on the target revision, retire clean legacy linked trees and verify all registered launchers again. This leaves their branch references unchanged and preserves every directory:
+Rename `state.json` to `state-v1-retired.json`, sync `.git/thinkthen-live/`, and release the lock. Then run:
 
 ```sh
-env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/live-migrate --retire LANDED_0034_SHA
-env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/live-migrate --verify
-```
-
-Create authority once from the audited totals. This command prints the new authority ID and totals. Record that output in the ticket record and copy the ID and charged total into `sdlc/live-tokens`. Run status and compare all fields before any paid work resumes:
-
-```sh
-env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/live-migrate --activate 476000000 429118
+env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/live --init
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL sdlc/scripts/live --status
 ```
 
-Any dirty, locked, prunable, unreachable, active, or newly registered historical tree stops these commands. Never remove or recreate `.git/thinkthen-live`. Activation creates a fence before publishing active state, and runtime refuses while that fence remains. After an interrupted run, call `sdlc/scripts/live --status`, inspect the named processes without signaling them, then call `sdlc/scripts/live --recover`. Recovery sends no signal, retains the full charge, and refuses while the exact wrapper or any member of the recorded session may remain. A missing or damaged state file disables live work. Restore authority only through the later transfer procedure in ADR 0022.
+Status must report 476,000,000 allowed and 429,118 charged. A failure before rename leaves the old authority. A failure after rename and before initialization disables both launchers. `--init` refuses while `state.json` exists, and every new action refuses if it reappears. Do not edit the authority by hand after migration.
 
-The ceiling must equal the measured total, so slack cannot accumulate and a raise is always a deliberate edit. Raising it takes two things in that commit's message: what grew and why it earns its lines, and the confirmation that you looked for duplication to remove first and name what you checked.
+The ceiling in `sdlc/ratchet.json` equals the measured Rust total. A raise records what grew, why it earns its lines, and where duplication was checked first.
