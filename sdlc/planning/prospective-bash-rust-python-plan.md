@@ -6,7 +6,7 @@ Tickets are written as work begins. The [main plan](plan.md) records current wor
 
 ## Destination
 
-Version one adds `annotate` and `find` to the five built commands. Bash uses the command-line tool. Rust, Python, and JavaScript use libraries named `thinkthen`. All interfaces share questions, rules, request bytes, results, and recordings. Ian ruled the libraries and public name in.
+Version one adds `annotate` and `find` to the five built commands. Bash uses the command-line tool. Rust, Python, JavaScript, and Ruby use libraries named `thinkthen`. All interfaces share questions, rules, request bytes, results, and recordings. Ian ruled the libraries and public name in.
 
 The core keeps judgment rules. Hosts own files, credentials, retries, and concurrency. Policy stays in the caller or a `jq` transform.
 
@@ -25,15 +25,15 @@ Tickets 0024 through 0027 fixed an interactive hang, unbounded paid dispatch, in
 5. **Build `find`.** Repeat the `rank --top 1` comparison on documents of 100 to 250 lines, then build the command and how-to 15 if the evidence holds.
 6. **Finish workflows and release preparation.** Write flagship how-to 16, finish transforms and repairs, then complete help, manual, installation, the agent skill, and how-to 18.
 
-Document the cache limitation until step 4 lands. Keep the strict probability-total rule and collect rounding evidence during an authorized product probe. Drop the commit-message checker and separate response-stability experiment. The ratchet rule and independent review remain.
+Document the cache limitation until step 4 lands. Keep the strict probability-total rule and collect rounding evidence during an authorized product probe. Drop the commit-message checker and separate response-stability experiment.
 
 ## After version one
 
-The libraries are committed work. Before implementation, rewrite ADR 0017 whole around Ian's rulings: Rust, Python, and JavaScript; one public name; bare answers by default and details on request; one `thinkthen` crate preferred, with a `thinkthen-cli` crate as the accepted fallback. Then:
+The libraries are committed work. Before implementation, rewrite ADR 0017 whole around Ian's rulings: Rust, Python, JavaScript, and Ruby; one public name; bare answers by default and details on request; one `thinkthen` crate preferred, with a `thinkthen-cli` crate as the accepted fallback. Then:
 
 1. Expose the pure rules through the `thinkthen` Rust library and make the binary its first caller. Shared cases prove the public behavior and a second test adapter proves the seam.
 2. Spike one Python `decide` binding and install its wheel on a machine without Rust, then build Python fully.
-3. Build JavaScript and TypeScript for Node first.
-4. Verify Bash, Rust, Python, and JavaScript against the same question files, recordings, failures, and installed artifacts.
+3. Build JavaScript and TypeScript for Node first, then Ruby.
+4. Verify all five interfaces against the same questions, recordings, failures, and installed artifacts.
 
-Ruby remains an open later choice. Claiming registry names remains Ian's outward action.
+R remains open. Claiming registry names remains Ian's outward action.
