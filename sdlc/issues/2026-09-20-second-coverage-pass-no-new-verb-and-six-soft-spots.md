@@ -57,4 +57,4 @@ None of these is a missing verb. Each is a place where a new user will stumble.
 
 ## What Ian can overturn
 
-The verdict that no verb is added. The strongest case for an eighth verb is a many-label `tag`, which would be `annotate` with shorter typing. This issue recommends against it, because one `jq` line does the same.
+The verdict that no verb is added. The strongest case for an eighth verb is a many-label `tag`. This issue first recommended against it. Ian asked for it later the same day, and a check of the vendor documents showed that every label rides in one request. The recommendation reversed. See `2026-09-20-tag-a-fourth-question-type-for-many-labels.md`. Every job in the two notes can still be done without it.
