@@ -43,9 +43,15 @@ Ian also called the JavaScript snippet `if ((await tt.decide(q, text)).yes)` ugl
 
 This fights `sdk-design-study.md` in two places. The study returns a rich result object from every verb, and it has Python's boolean read always raise.
 
-Ian asked whether Ruby can work. It can. The `magnus` crate with `rb-sys` wraps a Rust core into a Ruby gem, and RubyGems and Bundler build Rust extensions natively. Ruby reads best of all: `if ThinkThen.decide?("The command only reads files.", command)`. The gem name `thinkthen` returned 404 on rubygems.org on 2026-09-20. Ruby is not ruled in.
+Ian asked whether Ruby can work. It can. The `magnus` crate with `rb-sys` wraps a Rust core into a Ruby gem, and RubyGems and Bundler build Rust extensions natively. Ruby reads best of all: `if ThinkThen.decide?("The command only reads files.", command)`. The gem name `thinkthen` returned 404 on rubygems.org on 2026-09-20.
+
+## Ruby is ruled in
+
+Ian approved Ruby later on 2026-09-20. His words: "Approve Ruby to JavaScript, Python, Rust, and Bash, so we'd have five languages." The homepage sample gets five tabs. The registries to claim are now four: crates.io, npm, PyPI, and RubyGems. A second todo is filed for the gem name. ADR 0017 names three bindings and needs Ruby added when it is rewritten.
+
+Ian also asked whether R would work from Rust. It would. The `extendr` project wraps a Rust core into an R package, as `pyo3` does for Python and `magnus` does for Ruby. R fits the verbs well. R is vectorized, so a verb takes a column and returns a column inside `dplyr::filter` and `mutate`. R has a native three-valued logical, so an unresolved answer is `NA`, and `if (NA)` is already an error in R. The friction is CRAN. It wants the Rust toolchain on its build machines and the crate sources vendored into the package, so Rust-backed packages often ship through R-universe first. The package name `thinkthen` returned 404 on CRAN's package database on 2026-09-20. R is not ruled in. Ian can add it the same way he added Ruby.
 
 ## Open
 
 - Whether the package on each registry is claimed with a placeholder before the public push. A free name on the day of a launch is a name somebody else can take.
-- Whether Ruby joins the first three languages.
+- Whether R becomes a sixth language.
