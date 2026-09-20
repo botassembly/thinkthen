@@ -49,9 +49,16 @@ Ian asked whether Ruby can work. It can. The `magnus` crate with `rb-sys` wraps 
 
 Ian approved Ruby later on 2026-09-20. His words: "Approve Ruby to JavaScript, Python, Rust, and Bash, so we'd have five languages." The homepage sample gets five tabs. The registries to claim are now four: crates.io, npm, PyPI, and RubyGems. A second todo is filed for the gem name. ADR 0017 names three bindings and needs Ruby added when it is rewritten.
 
-Ian also asked whether R would work from Rust. It would. The `extendr` project wraps a Rust core into an R package, as `pyo3` does for Python and `magnus` does for Ruby. R fits the verbs well. R is vectorized, so a verb takes a column and returns a column inside `dplyr::filter` and `mutate`. R has a native three-valued logical, so an unresolved answer is `NA`, and `if (NA)` is already an error in R. The friction is CRAN. It wants the Rust toolchain on its build machines and the crate sources vendored into the package, so Rust-backed packages often ship through R-universe first. The package name `thinkthen` returned 404 on CRAN's package database on 2026-09-20. R is not ruled in. Ian can add it the same way he added Ruby.
+Ian also asked whether R would work from Rust. It would. The `extendr` project wraps a Rust core into an R package, as `pyo3` does for Python and `magnus` does for Ruby. R fits the verbs well. R is vectorized, so a verb takes a column and returns a column inside `dplyr::filter` and `mutate`. R has a native three-valued logical, so an unresolved answer is `NA`, and `if (NA)` is already an error in R. The friction is CRAN. It wants the Rust toolchain on its build machines and the crate sources vendored into the package, so Rust-backed packages often ship through R-universe first. The package name `thinkthen` returned 404 on CRAN's package database on 2026-09-20.
+
+## R is ruled in
+
+Ian approved R later the same day. His words: "Let's go ahead and approve R because I have people that work in bioinformatics pipelines, and that would be great for my brand as being biomedical." The languages are now six: Bash, Python, JavaScript, Rust, Ruby, and R. The homepage sample gets six tabs.
+
+Two facts shape the R work. CRAN takes no placeholder package, because it reviews every submission by hand, so the name is held only by shipping a real package. R-universe publishes from a GitHub repository with no review and is the first home. Bioconductor is where bioinformatics packages live, and nobody has checked whether it accepts a package with a Rust core. Check before anyone promises it. The command line already fits the workflow tools those pipelines use, because a rule or a process in such a tool is a shell command.
 
 ## Open
 
 - Whether the package on each registry is claimed with a placeholder before the public push. A free name on the day of a launch is a name somebody else can take.
-- Whether R becomes a sixth language.
+- Whether Bioconductor accepts a package with a Rust core.
+- ADR 0017 names three bindings. Its rewrite has to name five: Python, JavaScript, Rust, Ruby, and R.
