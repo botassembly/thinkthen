@@ -34,9 +34,11 @@ dated.each { |note| schedule(note) }
 
 ## Where this language wastes time
 
-- **The global VM lock.** Held through a network wait, it serializes every thread. The shim wraps the engine call in `rb_thread_call_without_gvl` and touches no Ruby object inside.
+- **The global VM lock.** Held through a network wait, it serializes every thread. The shim reads a whole chunk under the lock, turns it into Rust-owned data, then calls `rb_thread_call_without_gvl` for that whole batch and touches no Ruby object inside. `magnus` does not wrap that call, and its `rb_sys` module is the door to it.
 - **A call per record.** Each crossing pays a conversion and an allocation. A chunk goes down in one call and comes back in one.
-- **String copies.** A copy each way per record beats the shim's own cost. Frozen strings skip the copy in.
+- **String copies.** The widest containers Ruby has are an `Array`, any `Enumerable`, and an `Enumerator::Lazy`, and none of them reads many strings in one call. `RString::as_str` views Ruby's own memory with no copy. It is unsafe, it demands UTF-8 or US-ASCII, and it holds only while no other Ruby call runs. `RString::new_frozen` is the safe form and copies once. Whether `magnus` has a bulk string reader is unchecked.
+- **Pulling from a lazy enumerator costs the lock.** `first(n)` and `next` are Ruby method calls. The shim takes one chunk, releases the lock for that whole batch, then takes the next chunk. Memory holds at one chunk plus the width, so an endless enumerator runs flat.
+- **Work the shim must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No `uniq` and no hash of seen records in Ruby. `jobs` is one number for the process, and eight threads and two callers feed the one scheduler in Rust. A `decide?` inside `select` is serial, and `ThinkThen.filter` is the bulk form.
 - **Load time.** A `require` that pulls a chain of Ruby files spends the budget first. This one loads a compiled file and a small Ruby file.
 
 ## How little code
@@ -55,6 +57,8 @@ It never holds threshold math, band rules, JSON, retries, the rate limit wait, r
 - A `fork` after the pool exists gives a working child or a named error, never a hang.
 - `filter` yields the same `object_id` it was handed, lazily.
 - `gem install` on an image with no Rust toolchain, then a call under replay.
+- An endless lazy enumerator through `filter` holds memory flat.
+- A bench counts rows a second through `filter` over an array against the stub, beside the engine's own number from pure Rust. A gap is a defect in the shim.
 
 ## Open questions for the ADR
 
@@ -62,3 +66,4 @@ It never holds threshold math, band rules, JSON, retries, the rate limit wait, r
 2. Are choices symbols or strings? `%i[billing shipping other]` reads better, and the homepage shows `%w[]`.
 3. How does the pool survive `fork` under Puma and Sidekiq? A pid check per call, a fork hook, or a rule that the child builds it.
 4. Does the fiber scheduler move from unchecked to supported before release?
+5. Does the shim borrow through the unsafe `as_str` or copy through `new_frozen`? Borrowing is free and demands UTF-8 and no Ruby call while the reference lives. One rule covers every verb.

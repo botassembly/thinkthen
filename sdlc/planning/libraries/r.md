@@ -34,8 +34,10 @@ triaged |> filter(is.na(refund)) |> send_to_a_person()
 
 ## Where this language wastes time
 
-- **A crossing per element.** `.Call` converts each `CHARSXP` down and allocates up, and `mutate` copies the column it assigns. Fix: one crossing down, and one answer vector allocated in Rust at its final type.
-- **String re-encoding.** A `CHARSXP` that is not UTF-8 gets a copy from `translateCharUTF8`. Fix: read the encoding mark and pass UTF-8 bytes through.
+- **A crossing per element.** `.Call` converts each `CHARSXP` down and allocates up, and `mutate` copies the column it assigns. Fix: one crossing down, and one answer vector allocated in Rust at its final type. The character vector is already the widest container R has. A data frame is a list of vectors, so a column is that same vector and `VECTOR_ELT` hands it over with no copy.
+- **String re-encoding.** A character vector holds pointers into R's global `CHARSXP` cache, so equal strings already share storage and nothing is copied to reach Rust. extendr's `Strings` dereferences to a slice of `Rstr`, and reading one as `&str` views the `CHARSXP` bytes in place. That read assumes UTF-8 and checks no encoding mark, so the shim reads the mark itself. `translateCharUTF8` copies only when it re-encodes, and it returns the existing pointer for a UTF-8 or ASCII string.
+- **An Arrow column turned into a character vector first.** The `nanoarrow` package carries the Arrow C data and stream interfaces with no dependency on the `arrow` package, and it holds them as external pointers. `arrow-extendr` turns those into `FFI_ArrowArray` and `FFI_ArrowSchema` for Rust, so a string column arrives as one contiguous UTF-8 buffer with offsets. `nanoarrow` would be suggested, and `Imports:` still names nothing.
+- **Work the shim must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No `unique()` in R before the call. `jobs` is one number for the process, R runs one thread, and two calls in one session share that width. A per-row call is serial, and one `tt_decide()` over the column is the bulk form.
 - **The interrupt poll.** Only the main thread may read R's interrupt flag. Fix: the engine works on its own threads while the main thread waits on a channel with a short timeout. Rust never calls into R while waiting.
 
 ## How little code
@@ -52,9 +54,11 @@ The shim converts the column to string slices, maps arguments to engine options,
 - Vectors marked UTF-8, marked latin1, and native encoded give the same request bytes.
 - `tt_choose` gives one value per row in label order, even when every answer is `NA`.
 - A `targets` or knitr rebuild under replay makes no network call.
+- A bench counts rows a second through one `tt_decide()` over a long column against the stub, beside the engine's own number from pure Rust. A gap is a defect in the shim.
 
 ## Open questions for the ADR
 
 1. Where does `details` live? One column per call is the whole R grammar. A spliced data frame and a `tt_details()` verb are the candidates.
 2. How is replay scoped with no dependency? A `tt_replaying(dir, expr)` wrapper, an `options()` entry, and an inherited environment variable nest differently.
-3. Does `tt_choose` return a character vector or a factor? The agreed grammar passes the answer to `switch()`, and `switch()` refuses a factor.
+3. Does the Arrow path ship at all? It adds `arrow-extendr` to the crate and suggests `nanoarrow` in the package, and the character vector already reaches Rust with no copy. A bench says whether the second door earns its lines.
+4. Does `tt_choose` return a character vector or a factor? The agreed grammar passes the answer to `switch()`, and `switch()` refuses a factor.

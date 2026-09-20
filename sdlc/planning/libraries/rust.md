@@ -40,6 +40,11 @@ let dated: Vec<Note> = tt::filter("Names a delivery date.", notes)
 - **A runtime built per call.** `Runtime::new` starts threads and installs a reactor. `blocking` builds one and reuses it. The async API builds none.
 - **Copying the evidence.** `filter` returns the very records it was handed, and the engine borrows the text into the request buffer.
 - **Generics all the way down.** A verb generic at every layer compiles the engine again at each call site. Keep it outermost over one inner function that is not generic.
+- **Rust has no barrier, so the waste is shape.** A slice, any `IntoIterator`, and any `Stream` reach the engine as borrowed `&str`. The widest container is the one the caller already holds.
+- **One future at a time.** `for` with `.await` inside sends one request and waits. The streaming verbs keep `jobs` futures in flight. `buffered` holds the width in input order, and `buffer_unordered` yields as answers land. Memory follows the width and not the length of the input, so an endless `Stream` runs flat.
+- **A map built before the call.** The engine asks an equal pair of question and evidence once inside a batch, and it answers from the cache with no request. A caller who de-duplicates first pays for a hash table and saves nothing.
+- **Width set twice.** `jobs` is one number for the whole process, the engine's scheduler owns it, and two clients in one process share it.
+- **The one-at-a-time form is serial.** `tt::filter` and the `Stream` form are the bulk forms, and the documents show them first.
 
 ## How little code
 
@@ -51,6 +56,8 @@ There is no binding tool. The crate is the engine every other surface binds. The
 - A `trybuild` test pins the compile error from a rejected `#[derive(tt::Choose)]`.
 - Every conformance case answers the same through async and through `blocking`.
 - `blocking` inside a running runtime returns a named error instead of hanging.
+- A bench counts rows a second through the `Stream` form against the stub backend. This number is the one every other surface is measured against, so a gap on another page is a defect in that shim.
+- An endless `Stream` at width `jobs` holds memory flat over a long run.
 
 ## Open questions for the ADR
 
@@ -58,4 +65,5 @@ There is no binding tool. The crate is the engine every other surface binds. The
 2. Settled by Ian on 2026-09-20: the engine is private. Every library shows the eight verbs and the question setup and nothing else. The binding crates live in this workspace and are never published, so they can call a hidden module with no promise to anyone.
 3. Does `panic = "abort"` stay in the release profile? A library linked into a host process cannot abort.
 4. Do the builder steps return `Result` one at a time, as `.field("/text")?` shows, or gather refusals until `send`?
-5. A `#[derive]` for typed choices needs a proc-macro crate, and crates.io would make it a second published name. That fights Ian's ruling of one crate. The choices are a `macro_rules!` form, a plain trait with no macro, or no typed choices in Rust. Experiment 205 tests them.
+5. Does the streaming form default to input order through `buffered`, or to `buffer_unordered` with the row's own key on each answer? Input order is what every other surface promises.
+6. A `#[derive]` for typed choices needs a proc-macro crate, and crates.io would make it a second published name. That fights Ian's ruling of one crate. The choices are a `macro_rules!` form, a plain trait with no macro, or no typed choices in Rust. Experiment 205 tests them.

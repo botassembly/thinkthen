@@ -35,8 +35,10 @@ const dated = await Array.fromAsync(
 ## Where this language wastes time
 
 - **The event loop is one thread.** Work in the synchronous entry stalls every timer and socket. The entry returns a promise, and a Node-API async task over a Rust thread pool resolves it.
-- **Every crossing copies.** Field-by-field conversion pays a crossing per field, and JSON text parses the same bytes twice. One chunk goes down and one comes up, built as JavaScript values in Rust.
-- **An `await` inside a `for` loop sends one request at a time.** Record verbs hand the iterable to Rust at width `jobs`.
+- **Every crossing copies, and a string copies twice over.** Field-by-field conversion pays a crossing per field, and JSON text parses the same bytes twice. One chunk goes down and one comes up, built as JavaScript values in Rust. Node-API reads one string per call and copies it, and no bulk string call exists, so the fix cuts the crossings and not the copies. napi-rs takes a whole `Array` in one call, and `AsyncTask` runs the work on a libuv thread and resolves the promise on the main one. A `Buffer` or a typed array is the one container that arrives with no copy, because Node-API hands back a pointer into the engine's backing store. A caller holding UTF-8 bytes may send one buffer and one offsets array.
+- **An `await` inside a `for` loop sends one request at a time.** Record verbs hand the array, the async iterable, or the stream to Rust at width `jobs`.
+- **An endless stream with no backpressure.** A reader that pushes faster than the engine answers grows the heap. `write` returns false once the queued bytes pass `highWaterMark`, and the writer waits for `drain`. The default is 64 KiB since Node 22 and 16 objects in object mode. `for await` pulls one chunk at a time in practice, and the Node documents do not say so, so it is unchecked. The verbs hold `jobs` records in flight, so memory stays flat at any input length. napi-rs has `ReadableStream` and `WritableStream` behind its `web_stream` feature, and its generator classes are experimental.
+- **Work the shim must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No `Set` of seen records in JavaScript. `jobs` is one number for the process, and two callers, a worker thread, and a stream feed the one scheduler in Rust. A called question is serial, and `tt.filter(q, records)` is the bulk form.
 - **A forgotten `await` is truthy.** `if (tt.decide(...))` always takes the yes branch. The docs turn on `@typescript-eslint/no-floating-promises` and `@typescript-eslint/no-misused-promises`.
 
 ## How little code
@@ -49,7 +51,7 @@ const dated = await Array.fromAsync(
 
 **It never contains** an HTTP call, a retry, a rate limit wait, threshold math, JSON building, or a recording read or write.
 
-**Build and ship.** `napi build` produces one `.node` per platform. A user installs `thinkthen`, and each platform binary publishes under its own scoped name with `os` and `cpu` fields, listed under `optionalDependencies`. Prebuilt: darwin-arm64, darwin-x64, linux-x64-gnu, linux-arm64-gnu, linux-x64-musl, win32-x64-msvc. `exports` names an `import` and a `require` condition.
+**Build and ship.** `napi build` produces one `.node` per platform. A user installs `thinkthen`, and each platform binary publishes under its own scoped name with `os` and `cpu` fields, listed under `optionalDependencies`. Prebuilt: darwin, linux gnu and musl, and win32 on x64 and arm64 where each exists. `exports` names an `import` and a `require` condition.
 
 ## Tests only this surface needs
 
@@ -57,6 +59,8 @@ const dated = await Array.fromAsync(
 - An aborted signal rejects the promise and ends the iterable.
 - One tarball answers a replayed case in ESM and CommonJS projects, with `--ignore-scripts` and no Rust toolchain.
 - Type tests assert both overloads, and a lint fixture fails on a missing `await`.
+- A stream of ten million records holds heap flat, and a slow consumer stops the reader through backpressure.
+- A bench counts rows a second through the array form and the stream form against the stub, beside the engine's own number from pure Rust. A gap is a defect in the shim.
 
 ## Open questions for the ADR
 
@@ -64,3 +68,4 @@ const dated = await Array.fromAsync(
 2. Do Bun and Deno load the addon, and may the first release claim them?
 3. Does breaking out of a `for await` early cancel the Rust work?
 4. May a platform binary publish under a scoped name beside `thinkthen`?
+5. Does a record verb accept a `Uint8Array` of UTF-8 bytes with an offsets array, or only arrays of strings? The byte form is the only one that skips a copy per record.

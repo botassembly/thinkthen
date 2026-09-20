@@ -38,8 +38,10 @@ else ask_a_person();
 
 - **A client per call.** Opening a handle builds an async runtime and a secure connection, so a binding holds one per process.
 - **A terminator hunt.** `strlen` reads the whole buffer, and a length removes that read and the copy behind it.
-- **One call per record.** The barrier is cheap and the JSON encode is not. A record verb takes an array.
+- **One call per record.** The barrier is cheap and the JSON encode is not. C has one wide container, and a record verb takes it: an array of pointers and an array of lengths, with a caller-owned array of answers to fill. `thinkthen_decide_many(h, question, const char *const *items, const size_t *lens, size_t n, thinkthen_outcome *out)`. `libpq` passes parameters in that same shape, so the form is already familiar. The library allocates nothing and the caller frees nothing.
 - **Hand escaping the request.** A binding uses its own JSON writer.
+- **Why the array call matters past C.** Every language that binds this header reaches the engine through it. With the JSON door alone, each binding builds request text per record in its own language, and the batching lives outside Rust. The array call hands them full width with no encoder.
+- **Work the binding must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No binding compares or sorts records first. The handle holds the pool and the scheduler, `jobs` is set on it once, and a binding opens one handle per process. The typed single calls are serial, the array call is the bulk form, and the header says so above the single form.
 
 ## How little code
 
@@ -56,9 +58,13 @@ The crate builds a `cdylib` and a `staticlib`, and a release ships an archive pe
 - A forced panic returns a code and the process lives.
 - One handle called from many threads gives the single-threaded answers.
 - A check compiles the header as C99, as C++, and through Zig.
+- A bench counts rows a second through the array call against the stub, beside the engine's own number from pure Rust. A gap is a defect in the shim.
+- The array call with a short output array is refused, and the memory checker stays at zero.
 
 ## Open questions for the ADR
 
 1. Do the typed calls ship in version one, or does the JSON door ship alone first?
 2. Is the request text its own versioned schema, or the command's shape?
-3. Does a null handle open a default client per loaded copy, or must every caller open one?
+3. Does a null handle open a default client per loaded copy, or must every caller open one? Two handles in one process would be two widths, and the shared rule says the width is one number.
+4. Do the array calls ship in version one? They cost three more frozen signatures. Leaving them out pushes per-record JSON building into every language that binds C.
+5. How does the array form report a per-record failure? A parallel array of codes, a sentinel in the outcome array, and a single failed call are the candidates.
