@@ -22,7 +22,7 @@ Ian asked on 2026-09-20 for a message he can send to the builders for their shor
 
 ## Not asked for
 
-The libraries. Five are ruled in: Python, JavaScript, Rust, Ruby, and R. Ruby and R are part of the long-term plan, and Ian approved both on 2026-09-20. None of the five is part of the launch. `annotate` is the launch. The libraries follow the command line, and the opinion on how they should read is written. One thing helps them now: keep every verb's core free of the terminal, so a binding calls the same function the command calls.
+The libraries. Six are ruled in: Rust, Python, JavaScript, Ruby, R, and a C interface. Ruby, R, and C are part of the long-term plan, and Ian approved all three on 2026-09-20. None of the six is part of the launch. `sdlc/planning/libraries/` holds the goals and anti-goals for each. `annotate` is the launch. The libraries follow the command line, and the opinion on how they should read is written. One thing helps them now: keep every verb's core free of the terminal, so a binding calls the same function the command calls.
 
 ## What Ian can overturn
 
