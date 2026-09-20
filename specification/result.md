@@ -92,7 +92,7 @@ In record mode the object also carries `input`, the original record. `input` hol
 
 Each entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints.
 
-Settled by ADR 0008 item 3, accepted in ADR 0010. `meta.questions_sha256` is the digest of the definition file, so a saved row names the definition that made it. Each answer carries `request`, the digest that also names the recording entry, so a row can be traced to the exchange that produced it. Two answers that rode in one request carry the same digest.
+Settled by ADR 0008 item 3 and replaced in part by ADR 0027. `meta.questions_sha256` is the digest of the resolved canonical question set, so spacing, its path, and runtime backend settings do not change it. Each answer carries `request`, the digest that also names the recording entry. Two answers that rode in one request carry the same digest.
 
 `meta.usage` is the sum over the record's requests.
 
@@ -100,6 +100,4 @@ Settled by ADR 0008 item 3, accepted in ADR 0010. `meta.questions_sha256` is the
 
 A decider model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
 
-## Open points
-
-- How does `meta` name an `annotate` record whose requests were answered by different model versions? A run that mixes versions is two measurements. Recommendation: `meta.model` becomes the list of distinct versions when more than one answered.
+Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It tells the user to pin `--model` and rerun with `--record` or `--cache`.

@@ -21,6 +21,7 @@ mod pointer;
 mod probability;
 mod question;
 mod question_file;
+mod question_set;
 pub mod recording;
 mod records;
 mod render;
@@ -42,10 +43,15 @@ pub use crate::question_file::{
     Cutting, Described, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb,
     resolve,
 };
-pub use crate::records::{Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError};
+pub use crate::question_set::{NamedQuestion, QuestionSet, QuestionSetError};
+pub use crate::records::{
+    AnnotatedRecord, Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
+};
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
-pub use crate::result::{DecisionResult, Meta, Usage};
+pub use crate::result::{
+    AnnotateMeta, AnnotateResult, AnnotatedAnswer, DecisionResult, Meta, Usage,
+};
 pub use crate::text::{BlankTextError, Evidence, Meaning, ModelName, QuestionText, Url};
 pub use crate::threshold::{Outcome, Threshold, ThresholdError};
 

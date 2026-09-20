@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+probe=$root/probes/annotate-0015
+base=https://api.typesafe.ai/v1
+
+thinkthen annotate "$root/demos/39-screen-a-message/hazards.json" --details \
+  --url "$base" --cache "$root/demos/39-screen-a-message/recording" \
+  --input "$root/demos/39-screen-a-message/message.txt" \
+  > "$probe/howto-39.jsonl"
+
+thinkthen annotate "$root/demos/14-grade-a-batch/checks.json" --jsonl --details \
+  --jobs 1 --url "$base" --cache "$root/demos/14-grade-a-batch/recording" \
+  --input "$root/demos/14-grade-a-batch/cases.jsonl" \
+  > "$probe/howto-14.jsonl"
+
+thinkthen annotate "$probe/mixed-packed.json" --jsonl --details --jobs 1 \
+  --url "$base" --cache "$probe/mixed-recording" --input "$probe/mixed.jsonl" \
+  > "$probe/mixed-packed.jsonl"
+for name in asks_money kind severity; do
+  thinkthen annotate "$probe/mixed-$name.json" --jsonl --details --jobs 1 \
+    --url "$base" --cache "$probe/mixed-recording" --input "$probe/mixed.jsonl" \
+    > "$probe/mixed-$name.jsonl"
+done
+jq -n \
+  --slurpfile packed "$probe/mixed-packed.jsonl" \
+  --slurpfile asks_money "$probe/mixed-asks_money.jsonl" \
+  --slurpfile kind "$probe/mixed-kind.jsonl" \
+  --slurpfile severity "$probe/mixed-severity.jsonl" \
+  '{same_values: ($packed[0].value == {asks_money:$asks_money[0].value.asks_money,kind:$kind[0].value.kind,severity:$severity[0].value.severity}), packed_input_tokens:$packed[0].meta.usage.input_tokens, alone_input_tokens:([$asks_money[0],$kind[0],$severity[0]]|map(.meta.usage.input_tokens)|add)}' \
+  > "$probe/mixed-summary.json"
+
+thinkthen annotate "$probe/borderline-packed.json" --jsonl --details --jobs 1 \
+  --url "$base" --cache "$probe/borderline-recording" --input "$probe/borderline.jsonl" \
+  > "$probe/borderline-packed.jsonl"
+thinkthen annotate "$probe/borderline-alone.json" --jsonl --details --jobs 1 \
+  --url "$base" --cache "$probe/borderline-recording" --input "$probe/borderline.jsonl" \
+  > "$probe/borderline-alone.jsonl"
+
+jq -n \
+  --slurpfile packed "$probe/borderline-packed.jsonl" \
+  --slurpfile alone "$probe/borderline-alone.jsonl" \
+  'def accuracy($rows): [$rows[] | select(.value.asks_money != null)] as $resolved | {resolved:($resolved|length), correct:([$resolved[] | select(.value.asks_money == .input.expected)]|length), accuracy:(if ($resolved|length) == 0 then null else ([$resolved[] | select(.value.asks_money == .input.expected)]|length) / ($resolved|length) end)}; {cases: ($packed|length), labeled: ($packed|map(.input.expected)|length), flips: [range(0; $packed|length) | select($packed[.].value.asks_money != $alone[.].value.asks_money)] | length, maximum_probability_shift: [range(0; $packed|length) | (($packed[.].answers.asks_money.answer.probability - $alone[.].answers.asks_money.answer.probability)|fabs)] | max, packed_resolved_accuracy:accuracy($packed), alone_resolved_accuracy:accuracy($alone)}' \
+  > "$probe/borderline-summary.json"

@@ -8,6 +8,7 @@
 mod harness;
 
 mod address;
+mod annotate;
 mod asked;
 mod choosing;
 mod exchange;

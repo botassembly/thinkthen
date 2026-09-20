@@ -124,6 +124,12 @@ pub(crate) enum Command {
     ///
     /// `rank` orders and never selects. A floor is `filter` in front of it.
     Rank(RankArguments),
+
+    /// Ask every question in a saved set and print one annotated JSON object.
+    #[command(
+        before_help = "thinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\n"
+    )]
+    Annotate(AnnotateArguments),
 }
 
 impl Command {
@@ -135,6 +141,7 @@ impl Command {
             Self::Score(arguments) => &arguments.common,
             Self::Filter(arguments) => &arguments.common,
             Self::Rank(arguments) => &arguments.common,
+            Self::Annotate(arguments) => &arguments.common,
         }
     }
 }
@@ -196,7 +203,7 @@ pub(crate) struct Common {
         help = format!("The model named in the request. [default: {DEFAULT_MODEL}]"),
         long_help = format!(
             "The model named in the request. [default: {DEFAULT_MODEL}]\n\n\
-             It outranks a `model` key in a question file."
+             It outranks a `model` key in a single question file. A question set holds no model."
         )
     )]
     pub(crate) model: Option<String>,
@@ -228,9 +235,8 @@ pub(crate) struct Common {
 
     /// How many requests are in flight at once, from 1 to 32.
     ///
-    /// It acts in record mode alone, because one document sends one request.
-    /// Output never depends on it: a run with any number prints the bytes one
-    /// job prints, in input order.
+    /// It acts in record mode and on `annotate`, where one document can make
+    /// several grouped requests. Output stays in input order.
     #[arg(
         long,
         value_name = "N",
@@ -420,4 +426,61 @@ pub(crate) struct ScoreArguments {
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
+}
+
+/// Everything `annotate` was asked, before the set or evidence is read.
+#[derive(Args, Debug)]
+pub(crate) struct AnnotateArguments {
+    /// A JSON question set containing the named judgments to apply.
+    pub(crate) questions: PathBuf,
+
+    /// A likely input file written without `--input`.
+    #[arg(value_name = "INPUT", hide = true)]
+    pub(crate) extra_input: Option<PathBuf>,
+
+    /// Taken so the command can explain that thresholds belong to questions.
+    #[arg(long, value_name = "T", hide = true, allow_negative_numbers = true)]
+    pub(crate) threshold: Option<String>,
+
+    /// Taken so the command can explain that every named answer prints.
+    #[arg(long, hide = true)]
+    pub(crate) quiet: bool,
+
+    /// Taken so the command can explain that its output is always JSON.
+    #[arg(long, hide = true)]
+    pub(crate) raw: bool,
+
+    /// The options shared with record-oriented judging commands.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
+#[cfg(test)]
+mod annotate_tests {
+    use super::{Cli, Command};
+    use clap::Parser as _;
+
+    #[test]
+    fn annotate_accepts_a_question_set_and_record_options() {
+        let cli = Cli::try_parse_from([
+            "thinkthen",
+            "annotate",
+            "checks.json",
+            "--jsonl",
+            "--field",
+            "/body",
+            "--details",
+            "--jobs",
+            "4",
+        ])
+        .expect("valid annotate command");
+        let Some(Command::Annotate(arguments)) = cli.command else {
+            panic!("annotate command");
+        };
+        assert_eq!(arguments.questions.to_string_lossy(), "checks.json");
+        assert!(arguments.extra_input.is_none());
+        assert!(arguments.common.jsonl);
+        assert_eq!(arguments.common.field, ["/body"]);
+        assert_eq!(arguments.common.jobs, Some(4));
+    }
 }

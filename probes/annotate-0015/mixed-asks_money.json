@@ -1,0 +1,1 @@
+{"version":1,"questions":{"asks_money":{"decide":"Does the message ask for money to be returned?","on":"/message"}}}

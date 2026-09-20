@@ -41,6 +41,30 @@ pub const DEFAULT_MODEL: &str = "jev-latest";
 /// values even where they read alike.
 pub const ENDPOINT_PATH: &str = "systemone";
 
+/// True when a reported model is safe and useful in a mixed-version diagnostic.
+#[must_use]
+pub fn diagnostic_model(value: &str, requested: &str) -> bool {
+    let printable = |text: &str| {
+        !text.is_empty()
+            && text.len() <= 64
+            && text.bytes().all(|byte| {
+                byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-' | b'/')
+            })
+    };
+    if printable(value) && printable(requested) && value == requested {
+        return true;
+    }
+    let Some(version) = value.strip_prefix("jev-") else {
+        return false;
+    };
+    let parts: Vec<&str> = version.split('.').collect();
+    printable(value)
+        && (1..=3).contains(&parts.len())
+        && parts.iter().all(|part| {
+            (1..=4).contains(&part.len()) && part.bytes().all(|byte| byte.is_ascii_digit())
+        })
+}
+
 /// Why a plan could not be written as a request body.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 #[error("the plan could not be written as JSON: {0}")]
@@ -102,9 +126,37 @@ fn wire_name(place: usize) -> String {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use super::diagnostic_model;
     use crate::plan::Plan;
     use crate::question::{Labels, Question};
     use crate::text::{Evidence, ModelName, QuestionText};
+
+    #[test]
+    fn only_safe_expected_or_versioned_model_names_reach_diagnostics() {
+        for accepted in ["jev-latest", "jev-1", "jev-1.2", "jev-1234.2.30"] {
+            assert!(
+                diagnostic_model(accepted, "jev-latest"),
+                "expected {accepted:?} to be safe"
+            );
+        }
+        for refused in [
+            "",
+            "other-model",
+            "jev-",
+            "jev-1.2.3.4",
+            "jev-12345",
+            "jev-1a",
+            "jev-1\u{1b}",
+            "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        ] {
+            assert!(
+                !diagnostic_model(refused, "jev-latest"),
+                "expected {refused:?} to be hidden"
+            );
+        }
+        assert!(diagnostic_model("other-model", "other-model"));
+        assert!(!diagnostic_model("other\u{1b}", "other\u{1b}"));
+    }
 
     /// The teams a routing question picks between, in the order they are sent.
     pub(crate) const TEAMS: [&str; 4] = ["billing", "shipping", "account", "other"];

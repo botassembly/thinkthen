@@ -85,7 +85,7 @@ thinkthen annotate triage.json --dry-run
 
 ## `--dry-run`
 
-`--dry-run` validates the file, prints the plan that [channels.md](channels.md) fixes, and sends nothing. It needs no key, so a lint job runs it with the key variable removed.
+`--dry-run` validates the file and sends nothing. It needs no key. Empty evidence succeeds and prints nothing. With evidence it prints the first request and an `on` object that names the normalized pointers for every question.
 
 One record makes one request per distinct `on`, and the plan shows one request. It is the first record's first `on` set, taking the questions in file order. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
 
@@ -97,7 +97,7 @@ One record makes one request per distinct `on`, and the plan shows one request. 
 
 ## Requests
 
-One record makes one request for each distinct `on`. Every question with the same evidence rides in that one request, and the evidence is billed once. The vendor measured thirteen questions over one long article: the same answers, twelve times cheaper and ten times faster than thirteen calls.
+One record makes one request for each distinct `on`. Every question with the same evidence rides in that one request, and the evidence is billed once. The project measured forty clear yes-or-no questions over 120 cases. Packed requests changed no answer and used 20.8 times fewer billed input tokens than separate requests. A second measurement packed one decision, one choice, and one score. The values stayed the same, and billed input fell from 915 tokens across three requests to 371 in one request. Neither measurement found a lower question-count limit.
 
 Records never share a request. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
 
@@ -106,6 +106,8 @@ Records never share a request. A question never sees another question's answer. 
 ## Cautions
 
 The questions and the evidence together can pass the backend's token limit for one request. The backend refuses, and the exit code is 4. Fewer questions per file is the answer.
+
+The cache key covers the whole request group. Adding or changing one question asks the whole group again for every record. An answer near its threshold can move when neighboring questions change. In six deliberately borderline cases, one answer moved from `false` to unresolved when neighboring questions joined it. The largest probability shift was 0.04. Keep the group fixed while comparing runs and retain `--details` probabilities. Use a narrower, distinct `on` group when the record permits it and the questions need separate stability.
 
 ## An eval is `annotate` and a saved run
 

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Work is blocked because checkout fails after the latest deploy. Please help us restore service. No credentials are included, and do not delete any data.\n","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this message contain a password, access token, or private key?"},"q2":{"type":"noul","instructions":"Does this message ask someone to delete or irreversibly overwrite data?"},"q3":{"type":"noul","instructions":"Does this message explicitly say that work is blocked or urgent?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02},"q2":{"type":"noul","noul":0.02},"q3":{"type":"noul","noul":0.98}},"usage":{"input_tokens":349,"output_tokens":55}}
+}

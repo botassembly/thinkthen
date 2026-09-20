@@ -4,7 +4,8 @@
 //! opens the file, reads standard input, and writes the rows. This module
 //! decides what one record is and what part of it leaves the machine.
 
-use serde::Serialize;
+use serde::ser::SerializeMap;
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 use crate::json::{Json, JsonError};
@@ -105,6 +106,21 @@ enum Held {
 }
 
 impl Record {
+    /// True when this record is an object holding the given member.
+    #[must_use]
+    pub fn has_member(&self, name: &str) -> bool {
+        matches!(&self.0, Held::Json(Json::Object(members)) if members.iter().any(|(held, _)| held == name))
+    }
+
+    /// Add named answers to an object record, or return the answers alone.
+    #[must_use]
+    pub fn annotated(self, answers: Vec<(String, crate::Value)>) -> AnnotatedRecord {
+        AnnotatedRecord {
+            record: self,
+            answers,
+        }
+    }
+
     /// Read the candidate list this record carries where the pointer names one.
     ///
     /// A list of labels gives each option no description. A map from label to
@@ -140,6 +156,33 @@ impl Record {
             _ => return Err(shape()),
         };
         Ok(Labels::described(listed)?)
+    }
+}
+
+/// One record with its named bare answers appended.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AnnotatedRecord {
+    record: Record,
+    answers: Vec<(String, crate::Value)>,
+}
+
+impl Serialize for AnnotatedRecord {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let original = match &self.record.0 {
+            Held::Json(Json::Object(members)) => Some(members.as_slice()),
+            Held::Text(_) | Held::Json(_) => None,
+        };
+        let mut map =
+            serializer.serialize_map(Some(original.map_or(0, <[_]>::len) + self.answers.len()))?;
+        if let Some(members) = original {
+            for (name, value) in members {
+                map.serialize_entry(name, value)?;
+            }
+        }
+        for (name, value) in &self.answers {
+            map.serialize_entry(name, value)?;
+        }
+        map.end()
     }
 }
 
@@ -241,6 +284,27 @@ impl Reading {
             return Ok(Record(Held::Json(value)));
         }
         Ok(Record(Held::Text(text.to_owned())))
+    }
+
+    /// Read an annotation record, preserving a whole JSON object when present.
+    ///
+    /// A document is normally free text. `annotate` also accepts one JSON
+    /// object without requiring record framing because it can append named
+    /// answers to that object. Other commands keep the established document
+    /// behavior through [`Self::record`].
+    pub fn annotation_record(&self, bytes: &[u8]) -> Result<Record, RecordError> {
+        if self.framing != Framing::Document || !self.fields.is_empty() {
+            return self.record(bytes);
+        }
+        if bytes.len() > MAX_RECORD_BYTES {
+            return Err(RecordError::TooLarge);
+        }
+        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
+        match Json::parse(text) {
+            Ok(value) => Ok(Record(Held::Json(value))),
+            Err(JsonError::Syntax { .. }) => Ok(Record(Held::Text(text.to_owned()))),
+            Err(error) => Err(RecordError::Json(error)),
+        }
     }
 
     /// Build the evidence this record sends, which is all that leaves the machine.

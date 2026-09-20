@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Please put the purchase amount back on my card.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the message ask for money to be returned?"},"q2":{"type":"noul","instructions":"Does the message explicitly request an action rather than ask about a possibility?"},"q3":{"type":"choice","instructions":"What remedy does the message request?","criteria":{"refund":null,"replacement":null,"information":null,"unclear":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98},"q2":{"type":"noul","noul":0.97},"q3":{"type":"choice","choice":"refund","confidence":1.0,"probabilities":{"refund":1.0,"unclear":0.0,"replacement":0.0,"information":0.0}}},"usage":{"input_tokens":350,"output_tokens":81}}
+}

@@ -5,11 +5,10 @@ use std::process::ExitCode;
 
 use thinkthen_core::adapters::built_in::DecodeError;
 use thinkthen_core::{
-    BackendError, PointerError, QuestionFileError, ReadingError, RecordError, RenderError, Source,
+    BackendError, PointerError, QuestionFileError, QuestionSetError, ReadingError, RecordError,
+    RenderError, Source,
 };
 
-/// The phrase `specification/backends.md` fixes for each common failure status.
-///
 /// The phrases are fixed text written here. A backend can quote the evidence
 /// back in an error body, so nothing a backend sent ever reaches a message.
 const PHRASES: [(u16, &str); 6] = [
@@ -24,7 +23,6 @@ const PHRASES: [(u16, &str); 6] = [
     (429, "the backend's rate limit was reached"),
 ];
 
-/// What a run that read bytes which are not text is told.
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
 /// What a usage error with no sentence of its own would be told.
@@ -43,6 +41,18 @@ pub(crate) enum Failure {
     Question(QuestionFileError),
     /// The file the question was to be read from could not be opened.
     OpenQuestionFile(io::Error),
+    /// The question set was refused.
+    QuestionSet(QuestionSetError),
+    /// The question-set file could not be opened.
+    OpenQuestionSet(io::Error),
+    /// One input object already holds a question name.
+    AnnotationCollision(String),
+    /// Replies for one record named different model versions.
+    ModelsDiffer(Option<(String, String)>),
+    /// Reply token counts cannot be represented as one total.
+    UsageOverflow,
+    /// A command-line shape was understood but cannot act.
+    Usage(&'static str),
     /// `--option` was given beside a list of options on the command line.
     OptionWithList,
     /// An `--option` entry carries no `=`, so it names no description.
@@ -155,6 +165,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         );
         return code;
     }
+    if let Some((code, message)) = annotate_failure(failure) {
+        let _unwritten = writeln!(writer, "{}: {message}", thinkthen_core::NAME);
+        return code;
+    }
     let (code, message): (u8, String) = match failure {
         Failure::Backend(error) => (2, error.to_string()),
         Failure::Question(error) => (
@@ -226,6 +240,32 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     code
 }
 
+fn annotate_failure(failure: &Failure) -> Option<(u8, String)> {
+    Some(match failure {
+        Failure::QuestionSet(error) => (5, error.to_string()),
+        Failure::OpenQuestionSet(error) => {
+            (5, format!("the question set could not be opened: {error}"))
+        }
+        Failure::AnnotationCollision(name) => (
+            2,
+            format!("the record already holds `{name}`, so that question cannot be appended"),
+        ),
+        Failure::ModelsDiffer(Some((first, second))) => (
+            4,
+            format!("the backend returned model versions `{first}` and `{second}` for one record; pin --model and rerun with --record or --cache"),
+        ),
+        Failure::ModelsDiffer(None) => (
+            4,
+            "the backend returned different model versions for one record; pin --model and rerun with --record or --cache".to_owned(),
+        ),
+        Failure::UsageOverflow => (
+            4,
+            "the backend reported token counts whose total is too large".to_owned(),
+        ),
+        _ => return None,
+    })
+}
+
 /// The fixed sentence each option clash is refused with, at exit code 2.
 ///
 /// Every one of these is a command line no run can act on. The sentence names
@@ -262,6 +302,7 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
             "--jobs bounds the requests in flight, and one document sends one request"
         }
         Failure::TopIsZero => "--top prints the first N of the order, and N is 1 or more",
+        Failure::Usage(message) => message,
         _ => return None,
     })
 }
@@ -284,6 +325,12 @@ impl From<BackendError> for Failure {
 impl From<QuestionFileError> for Failure {
     fn from(error: QuestionFileError) -> Self {
         Self::Question(error)
+    }
+}
+
+impl From<QuestionSetError> for Failure {
+    fn from(error: QuestionSetError) -> Self {
+        Self::QuestionSet(error)
     }
 }
 
@@ -317,7 +364,7 @@ mod tests {
     use std::process::ExitCode;
     use std::time::Duration;
     use thinkthen_core::recording::{Entry, Exchange as Recorded};
-    use thinkthen_core::{RecordError, Url};
+    use thinkthen_core::{QuestionSetError, RecordError, Url};
 
     /// The key and the evidence every case here is built from.
     ///
@@ -369,9 +416,10 @@ mod tests {
 
         let shown = format!(
             "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {:?} {:?}",
+             {ordered:?} {:?} {:?} {:?}",
             Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
             Failure::Status(401),
+            Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
         );
 
         assert!(!shown.contains(KEY), "{shown}");

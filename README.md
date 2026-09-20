@@ -10,7 +10,7 @@ thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --fi
 
 The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints a label. The third prints the records that pass. `--details` adds the probabilities behind any answer.
 
-Those commands are the design. `specification/` is the contract, and code follows it. The code that has landed still speaks an earlier grammar, and `sdlc/planning/plan.md` says where the change stands.
+Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several judgments belong on the same input.
 
 ## What it will and will not do
 
@@ -55,7 +55,7 @@ These seven pages run from the simplest use to the strongest. ADR 0018 chose the
 | Find the line that answers a question | One line of a long handbook answers the question, or nothing does and the tool says so | 15, coming |
 | Lint a change by meaning and fail the build | A house rule nobody can grep for is checked on every changed hunk, and the build fails on the hunks that break it | [43](demos/43-lint-a-change/) |
 | Put the best matches first | A search brings back six wiki pages, and the best three go to the reader | [06](demos/06-top-search-hits/) |
-| Grade an assistant's answers with a rubric | Last week's assistant replies are graded against five written checks, with no second model asked whether they were good | 14, coming |
+| Grade an assistant's answers with a rubric | Last week's assistant replies are graded against five written checks, with no second model asked whether they were good | [14](demos/14-grade-a-batch/) |
 | Build a triage pipeline that drafts, blocks, or asks a person | One request is judged on several questions at once, and a `jq` policy drafts a reply, blocks it, or asks a person | 16, coming |
 
 The how-to list also has a section on evals: grading answers against a written rubric, picking a threshold, checking the judge against human labels, and knowing what a run cost.

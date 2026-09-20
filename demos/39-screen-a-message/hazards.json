@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "threshold": "0.2:0.8",
+  "questions": {
+    "secret": {"decide": "Does this message contain a password, access token, or private key?"},
+    "destructive": {"decide": "Does this message ask someone to delete or irreversibly overwrite data?"},
+    "urgent": {"decide": "Does this message explicitly say that work is blocked or urgent?"}
+  }
+}

@@ -16,7 +16,7 @@ Every `thinkthen` command that would otherwise reach a backend carries `--replay
 
 ## Red and green
 
-A demo starts **red**, and this list marks it **coming** with the ticket or the slice that writes it. Only `decide`, `choose`, and `score` are built, so every page that needs another verb is still a plan. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
+A demo starts **red**, and this list marks it **coming** with the ticket or the slice that writes it. `decide`, `choose`, `score`, `filter`, `rank`, and `annotate` are built. Pages that need `find` or recordings that have not been made remain plans. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. When it turns green it takes the how-to form and the argument leaves the page. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. It refuses a green page out of form, a green page this index does not list, and a green page that names a `--replay` folder it does not hold.
 
@@ -63,7 +63,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
-| 39 | Screen one message for several hazards | `annotate` | coming, ticket 0015 |
+| 39 | [Screen one message for several hazards](39-screen-a-message/) | `annotate` | green |
 | 16 | Build a triage pipeline that drafts, blocks, or asks a person | `annotate` | coming, slice 9 |
 
 ## Evals
@@ -72,7 +72,7 @@ An eval is a reproducible workflow over the same commands as everything else. Th
 
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
-| 14 | [Grade an assistant's answers with a rubric](14-grade-a-batch/) | `annotate` | coming, ticket 0015 |
+| 14 | [Grade an assistant's answers with a rubric](14-grade-a-batch/) | `annotate` | green |
 | 13 | [Pick a threshold from labeled cases](13-pick-a-threshold/) | `decide` | green |
 | 25 | [Check the judge against human labels](25-check-the-judge/) | `decide` | green |
 | 28 | [Know what a run cost](28-what-a-run-cost/) | `decide` | green |
@@ -87,4 +87,3 @@ Each folder below holds a page that is not in the list of 20. It stays until the
 | --- | --- | --- | --- |
 | 04 | [Act only when the answer is sure, and send the rest to a person](04-review-queue/) | `decide` | leaving, into 19, 16, and 13 |
 | 07 | [Judged columns](07-judged-columns/) | `annotate` | leaving, into 14 and 16 |
-| 08 | [Release checklist](08-release-checklist/) | `annotate` | leaving, into 39 |

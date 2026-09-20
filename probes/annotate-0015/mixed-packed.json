@@ -1,0 +1,1 @@
+{"version":1,"questions":{"asks_money":{"decide":"Does the message ask for money to be returned?","on":"/message"},"kind":{"choose":"What kind of request is this?","options":["refund","technical","other"],"on":"/message"},"severity":{"score":"How much disruption does the message explicitly report?","levels":["None.","Work continues.","Work is blocked."],"on":"/message"}}}

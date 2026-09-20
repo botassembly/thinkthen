@@ -98,7 +98,9 @@ fn a_record_the_tool_refuses_names_no_part_of_itself() {
     let cases = [
         (
             &b"{\"id\":1,\"id\":2}"[..],
-            RecordError::Json(JsonError::DuplicateName),
+            RecordError::Json(JsonError::DuplicateName {
+                path: "id".to_owned(),
+            }),
         ),
         (
             &b"{\"body\":1e999}"[..],
@@ -142,7 +144,7 @@ fn syntax_names_a_whole_input_but_keeps_jsonl_record_wording() {
     );
     assert_eq!(
         reading(Framing::Jsonl, &["/a"]).record(b"{\"a\":\"x\",}\n"),
-        Err(RecordError::Json(syntax))
+        Err(RecordError::Json(syntax.clone()))
     );
     assert_eq!(
         RecordError::InputJson {

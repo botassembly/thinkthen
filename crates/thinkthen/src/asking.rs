@@ -352,7 +352,7 @@ impl Judging<'_> {
 ///
 /// The recording is read before a key is, so a replay opens no connection and
 /// needs no key. Only an exchange the adapter read is recorded.
-fn ask(
+pub(crate) fn ask(
     backend: &Backend,
     plan: &Plan,
     common: &Common,

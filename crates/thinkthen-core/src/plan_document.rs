@@ -1,6 +1,6 @@
 //! The document `--plan` prints: what would be sent, and never a key.
 
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
 
 use crate::adapters::built_in::{self, EncodeError};
@@ -24,6 +24,8 @@ pub struct PlanDocument<'a> {
     input: Option<ReadingPlan<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     from: Option<Sources>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    on: Option<QuestionPointers>,
     request: Box<RawValue>,
 }
 
@@ -40,6 +42,7 @@ impl<'a> PlanDocument<'a> {
             key_env: KEY_VAR,
             input: None,
             from: None,
+            on: None,
             request: built_in::encode_raw(plan)?,
         })
     }
@@ -64,6 +67,37 @@ impl<'a> PlanDocument<'a> {
     pub const fn from(mut self, sources: Sources) -> Self {
         self.from = Some(sources);
         self
+    }
+
+    /// Show the normalized evidence pointers for every question in a set.
+    #[must_use]
+    pub fn questions_on(mut self, pointers: Vec<(String, Vec<crate::Pointer>)>) -> Self {
+        self.on = Some(QuestionPointers(
+            pointers
+                .into_iter()
+                .map(|(name, pointers)| {
+                    let shown = if pointers.is_empty() {
+                        vec![String::new()]
+                    } else {
+                        pointers
+                            .into_iter()
+                            .map(|pointer| pointer.as_str().to_owned())
+                            .collect()
+                    };
+                    (name, shown)
+                })
+                .collect(),
+        ));
+        self
+    }
+}
+
+#[derive(Debug)]
+struct QuestionPointers(Vec<(String, Vec<String>)>);
+
+impl Serialize for QuestionPointers {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(self.0.iter().map(|(name, pointers)| (name, pointers)))
     }
 }
 

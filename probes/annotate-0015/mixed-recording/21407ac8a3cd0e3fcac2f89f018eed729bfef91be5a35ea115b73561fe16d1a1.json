@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Please refund the duplicate charge today because it blocks month-end close.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"What kind of request is this?","criteria":{"refund":null,"technical":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"refund","confidence":1.0,"probabilities":{"technical":0.0,"other":0.0,"refund":1.0}}},"usage":{"input_tokens":308,"output_tokens":39}}
+}

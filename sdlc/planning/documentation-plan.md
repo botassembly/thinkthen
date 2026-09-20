@@ -45,7 +45,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 
 | # | How to | Slice | State |
 | --- | --- | --- | --- |
-| 39 | Screen one message for several hazards | 9 | coming, ticket 0015 |
+| 39 | Screen one message for several hazards | 9 | green |
 | 16 | Build a triage pipeline that drafts, blocks, or asks a person | 9 | coming, slice 9 |
 
 ## Evals
@@ -54,7 +54,7 @@ Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An 
 
 | # | How to | Slice | State |
 | --- | --- | --- | --- |
-| 14 | Grade an assistant's answers with a rubric | 9 | coming, ticket 0015 |
+| 14 | Grade an assistant's answers with a rubric | 9 | green |
 | 13 | Pick a threshold from labeled cases | 10a, ticket 0008 | green |
 | 25 | Check the judge against human labels | 10a, ticket 0008 | green |
 | 28 | Know what a run cost | 10a, ticket 0008 | green |
@@ -72,13 +72,12 @@ Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An 
 
 ## Folders that stay and then leave
 
-A green page leaves only when the page that absorbs it is green, so no lesson is ever missing. These four folders are not in the list of 20 and are still on disk.
+A green page leaves only when the page that absorbs it is green, so no lesson is ever missing. These two folders are not in the list of 20 and are still on disk.
 
 | # | How to | Slice | State |
 | --- | --- | --- | --- |
 | 04 | Act only when the answer is sure, and send the rest to a person | Leaves when 16 is green | leaving, into 19, 16, and 13 |
 | 07 | Judged columns | Leaves when 14 and 16 are green | leaving, into 14 and 16 |
-| 08 | Release checklist | Leaves when 39 is green | leaving, into 39 |
 
 ## Numbers that left
 
@@ -87,7 +86,7 @@ A green page leaves only when the page that absorbs it is green, so no lesson is
 | 04 | 19 for the band, 16 for the review pile, and 13 for the trade between coverage and accuracy. Its folder is still on disk |
 | 05 | 02, as the closing section that files a folder |
 | 07 | 14 for several judged columns on one record, and 16 for the spreadsheet view. Its folder is still on disk |
-| 08 | 39, once 39 is green. Its folder is still on disk |
+| 08 | 39. Its folder left with ticket 0015 |
 | 09 | 03, whose `--dry-run` block proves what leaves the machine. Its folder left with ticket 0014 |
 | 10, 11 | Left with the configuration file and `segment` under ADR 0010 |
 | 20 | 40, which fixes "not stated" by saying what yes and no mean. Its pick with a `not_stated` label and its reading of a pick's odds are two traps on 40 |

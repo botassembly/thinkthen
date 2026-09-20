@@ -1,0 +1,16 @@
+{
+  "cases": 6,
+  "labeled": 6,
+  "flips": 1,
+  "maximum_probability_shift": 0.03999999999999998,
+  "packed_resolved_accuracy": {
+    "resolved": 3,
+    "correct": 3,
+    "accuracy": 1
+  },
+  "alone_resolved_accuracy": {
+    "resolved": 4,
+    "correct": 4,
+    "accuracy": 1
+  }
+}

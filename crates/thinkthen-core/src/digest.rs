@@ -61,9 +61,18 @@ pub fn question_sha256(
 /// It is not the `question` field of a result. That field prints a pick's
 /// options as the list of names a reader wants to see, and the digest has to
 /// separate two runs whose options carry different descriptions.
-struct Canonical<'a> {
+pub(crate) struct Canonical<'a> {
     question: &'a Question,
     threshold: Option<Threshold>,
+}
+
+impl<'a> Canonical<'a> {
+    pub(crate) const fn new(question: &'a Question, threshold: Option<Threshold>) -> Self {
+        Self {
+            question,
+            threshold,
+        }
+    }
 }
 
 impl Serialize for Canonical<'_> {

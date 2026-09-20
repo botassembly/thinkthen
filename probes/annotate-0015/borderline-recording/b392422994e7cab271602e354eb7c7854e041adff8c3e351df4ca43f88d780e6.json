@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"I may send this back if the replacement does not arrive.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the message ask for money to be returned?"},"q2":{"type":"noul","instructions":"Does the message explicitly request an action rather than ask about a possibility?"},"q3":{"type":"choice","instructions":"What remedy does the message request?","criteria":{"refund":null,"replacement":null,"information":null,"unclear":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.21},"q2":{"type":"noul","noul":0.19},"q3":{"type":"choice","choice":"replacement","confidence":0.62,"probabilities":{"unclear":0.09,"replacement":0.71,"information":0.01,"refund":0.19}}},"usage":{"input_tokens":352,"output_tokens":81}}
+}

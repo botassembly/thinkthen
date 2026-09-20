@@ -13,19 +13,24 @@ use serde_json::Number;
 use thiserror::Error;
 
 /// The message a duplicate member name is refused with.
-const DUPLICATE: &str = "a JSON record holds each member name once, and one name arrived twice";
+const DUPLICATE: &str = "duplicate JSON member at ";
+const DUPLICATE_MESSAGE: &str =
+    "a JSON record holds each member name once, and one name arrived twice";
 
 /// The message a number that is not finite is refused with.
 const NOT_FINITE: &str = "a JSON number is finite, so `NaN` and `Infinity` are refused";
 
 /// Why an input is not JSON this tool will read.
 ///
-/// No variant carries any input byte, because an input may hold private evidence.
-#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+/// Display and debug text reveal no input byte, because input may hold private evidence.
+#[derive(Clone, Eq, Error, PartialEq)]
 pub enum JsonError {
     /// Two members of one object arrived under one name.
-    #[error("{DUPLICATE}")]
-    DuplicateName,
+    #[error("{DUPLICATE_MESSAGE}")]
+    DuplicateName {
+        /// Dot-separated path to the repeated name.
+        path: String,
+    },
     /// A number arrived that no finite JSON number can hold.
     #[error("{NOT_FINITE}")]
     NotFinite,
@@ -37,6 +42,20 @@ pub enum JsonError {
         /// The one-based column where the parser stopped, or zero at empty input.
         column: usize,
     },
+}
+
+impl fmt::Debug for JsonError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DuplicateName { .. } => formatter.write_str("DuplicateName(<path withheld>)"),
+            Self::NotFinite => formatter.write_str("NotFinite"),
+            Self::Syntax { line, column } => formatter
+                .debug_struct("Syntax")
+                .field("line", line)
+                .field("column", column)
+                .finish(),
+        }
+    }
 }
 
 /// One JSON value, in the order it arrived.
@@ -72,8 +91,8 @@ impl Json {
             Err(error) => error,
         };
         let message = error.to_string();
-        if message.starts_with(DUPLICATE) {
-            return Err(JsonError::DuplicateName);
+        if let Some(path) = marked_path(&message) {
+            return Err(JsonError::DuplicateName { path });
         }
         if message.starts_with(NOT_FINITE) || message.contains("number out of range") {
             return Err(JsonError::NotFinite);
@@ -178,22 +197,47 @@ impl<'de> Visitor<'de> for Reader {
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut access: A) -> Result<Json, A::Error> {
         let mut elements = Vec::new();
-        while let Some(element) = access.next_element()? {
-            elements.push(element);
+        loop {
+            match access.next_element::<Json>() {
+                Ok(Some(element)) => elements.push(element),
+                Ok(None) => break,
+                Err(error) => {
+                    return Err(prefix_duplicate(error, &format!("[{}]", elements.len())));
+                }
+            }
         }
         Ok(Json::Array(elements))
     }
 
     fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Json, A::Error> {
         let mut members: Vec<(String, Json)> = Vec::new();
-        while let Some((name, value)) = access.next_entry::<String, Json>()? {
+        while let Some(name) = access.next_key::<String>()? {
             if members.iter().any(|(held, _)| held == &name) {
-                return Err(<A::Error as serde::de::Error>::custom(DUPLICATE));
+                return Err(<A::Error as serde::de::Error>::custom(format!(
+                    "{DUPLICATE}{name}"
+                )));
             }
+            let value = access
+                .next_value::<Json>()
+                .map_err(|error| prefix_duplicate(error, &name))?;
             members.push((name, value));
         }
         Ok(Json::Object(members))
     }
+}
+
+fn marked_path(message: &str) -> Option<String> {
+    let rest = message.strip_prefix(DUPLICATE)?;
+    Some(rest.split(" at line ").next().unwrap_or(rest).to_owned())
+}
+
+fn prefix_duplicate<E: serde::de::Error>(error: E, parent: &str) -> E {
+    let message = error.to_string();
+    let Some(path) = marked_path(&message) else {
+        return error;
+    };
+    let separator = if path.starts_with('[') { "" } else { "." };
+    E::custom(format!("{DUPLICATE}{parent}{separator}{path}"))
 }
 
 impl<'de> Deserialize<'de> for Json {
@@ -232,8 +276,21 @@ mod tests {
             r#"[{"id":1,"id":2}]"#,
         ];
         for case in cases {
-            assert_eq!(Json::parse(case), Err(JsonError::DuplicateName), "{case}");
+            assert!(
+                matches!(Json::parse(case), Err(JsonError::DuplicateName { .. })),
+                "{case}"
+            );
         }
+        assert_eq!(
+            Json::parse(r#"{"a":{"id":1,"id":2}}"#),
+            Err(JsonError::DuplicateName {
+                path: "a.id".to_owned()
+            })
+        );
+        let hidden = Json::parse(r#"{"private-marker":1,"private-marker":2}"#)
+            .expect_err("duplicate refused");
+        assert!(!format!("{hidden:?}").contains("private-marker"));
+        assert!(!hidden.to_string().contains("private-marker"));
     }
 
     #[test]

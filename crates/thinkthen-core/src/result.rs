@@ -1,6 +1,7 @@
 //! The JSON document one judgment prints.
 
-use serde::Serialize;
+use serde::ser::SerializeMap;
+use serde::{Serialize, Serializer};
 
 use crate::answer::{Answer, Value};
 use crate::question::Question;
@@ -21,11 +22,139 @@ pub struct Usage {
 impl Usage {
     /// Take the token counts the backend reported.
     #[must_use]
-    pub(crate) const fn new(input_tokens: u64, output_tokens: u64) -> Self {
+    pub const fn new(input_tokens: u64, output_tokens: u64) -> Self {
         Self {
             input_tokens,
             output_tokens,
         }
+    }
+
+    /// Add the counts from two replies when both totals fit.
+    #[must_use]
+    pub const fn checked_plus(self, other: Self) -> Option<Self> {
+        let Some(input_tokens) = self.input_tokens.checked_add(other.input_tokens) else {
+            return None;
+        };
+        let Some(output_tokens) = self.output_tokens.checked_add(other.output_tokens) else {
+            return None;
+        };
+        Some(Self {
+            input_tokens,
+            output_tokens,
+        })
+    }
+}
+
+/// One named answer inside an annotated detailed row.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AnnotatedAnswer {
+    value: Value,
+    question: Question,
+    answer: Answer,
+    threshold: Option<Threshold>,
+    request: String,
+}
+
+impl AnnotatedAnswer {
+    /// Gather the complete answer and the request that produced it.
+    #[must_use]
+    pub const fn new(
+        value: Value,
+        question: Question,
+        answer: Answer,
+        threshold: Option<Threshold>,
+        request: String,
+    ) -> Self {
+        Self {
+            value,
+            question,
+            answer,
+            threshold,
+            request,
+        }
+    }
+}
+
+/// Aggregate metadata for one annotated record.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct AnnotateMeta {
+    tool: String,
+    questions_sha256: String,
+    url: Url,
+    model: ModelName,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<Usage>,
+    replayed: bool,
+}
+
+impl AnnotateMeta {
+    /// Gather the shared facts about every request behind one row.
+    #[must_use]
+    pub fn new(
+        version: &str,
+        questions_sha256: String,
+        url: Url,
+        model: ModelName,
+        usage: Option<Usage>,
+        replayed: bool,
+    ) -> Self {
+        Self {
+            tool: crate::version_line(version),
+            questions_sha256,
+            url,
+            model,
+            usage,
+            replayed,
+        }
+    }
+}
+
+/// The detailed result from applying a question set to one record.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AnnotateResult {
+    schema: &'static str,
+    input: Record,
+    value: NamedValues,
+    answers: NamedAnswers,
+    meta: AnnotateMeta,
+}
+
+impl AnnotateResult {
+    /// Gather one complete annotation row.
+    #[must_use]
+    pub const fn new(
+        input: Record,
+        values: Vec<(String, Value)>,
+        answers: Vec<(String, AnnotatedAnswer)>,
+        meta: AnnotateMeta,
+    ) -> Self {
+        Self {
+            schema: SCHEMA,
+            input,
+            value: NamedValues(values),
+            answers: NamedAnswers(answers),
+            meta,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct NamedValues(Vec<(String, Value)>);
+impl Serialize for NamedValues {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(self.0.iter().map(|(name, value)| (name, value)))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct NamedAnswers(Vec<(String, AnnotatedAnswer)>);
+impl Serialize for NamedAnswers {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (name, answer) in &self.0 {
+            map.serialize_entry(name, answer)?;
+        }
+        map.end()
     }
 }
 
@@ -142,6 +271,17 @@ mod tests {
         r#""model":"jev-1.13.0","#,
         r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}"#,
     );
+
+    #[test]
+    fn usage_addition_refuses_either_counter_overflow() {
+        let largest = Usage::new(u64::MAX, u64::MAX);
+        assert_eq!(largest.checked_plus(Usage::new(1, 0)), None);
+        assert_eq!(largest.checked_plus(Usage::new(0, 1)), None);
+        assert_eq!(
+            Usage::new(2, 3).checked_plus(Usage::new(5, 7)),
+            Some(Usage::new(7, 10))
+        );
+    }
 
     fn example() -> DecisionResult {
         let text = QuestionText::new("Does this ask for a refund?").expect("not empty");

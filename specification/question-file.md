@@ -117,6 +117,16 @@ Three worked examples, pinned in the tests:
 
 The canonical form is not the `question` field of a result. That field prints a pick's options as the bare list of names a reader wants to see, and the digest has to separate two runs whose options carry different descriptions.
 
+## The digest of a question set
+
+`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. The canonical object has `version`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. The path, model, address, formatting, and other runtime settings are absent.
+
+```json
+{"version":1,"questions":[{"name":"refund","question":{"verb":"decide","text":"Does this ask for a refund?","threshold":0.5},"on":[""]}]}
+```
+
+`4318689ccd64c08b788ea48c5f72b8dca279cf3d482173ed280f3fe243158b62`
+
 ## Examples
 
 ```sh

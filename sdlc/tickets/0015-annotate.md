@@ -1,48 +1,74 @@
 ---
 flow: build
 priority: 50
-opens: crates spec specification/annotate.md specification/result.md specification/fixtures sdlc/ratchet.json sdlc/live-tokens demos/07-judged-columns demos/08-release-checklist demos/39-screen-a-message demos/14-grade-a-batch demos/README.md sdlc/planning/documentation-plan.md
+opens: crates specification spec demos sdlc/planning sdlc/ratchet.json
 ---
 
 # 0015: `annotate`
 
-Status: ready
-
-Local parser, grouping, listener, replay, and page drafting can start immediately. The paid limit probe and live recordings for how-tos 39 and 14 wait for the bounded live-guard simplification recorded in the prospective plan.
+Status: landed
 
 ## Outcome
 
-`annotate FILE` asks a saved question set about one document or about each record, and it adds one field per question. One record makes one request for each distinct `on`. How-tos 39 and 14 are green. A later ticket then writes the flagship triage how-to and the first eval how-tos over this command with no further code.
+`thinkthen annotate QUESTIONS` asks several named questions about one document or each record. Questions that see the same evidence share one request, and one complete JSON object returns per record in input order. How-tos 39 and 14 are green. The command behaves like the five existing commands at the shell, file, recording, failure, and concurrency boundaries.
 
-## Current Facts
+## Current facts
 
-`annotate.md` is Settled for the file grammar, the output, and several pointers on `on`. ADR 0010 struck structured question values. The three single-question verbs already build each question type, read each answer, and apply each threshold, so `annotate` adds a file parser, a grouping of questions by `on`, and a merge of answers into the record. ADR 0013 proposes an optional `rules` block for this set and is not accepted. This ticket builds no `rules` block, and the parser refuses the key as it refuses any unknown key.
+The core already holds the three question types, thresholds, pointers, multi-question plans, request encoding, reply decoding, and question digests. The binary already holds record framing, one shared connection, retries, recordings, replay, cache, and a bounded ordered scheduler. `annotate` adds the question-set grammar, grouping, several requests per record, aggregate results, and the command surface. ADR 0027 records the four replacements to settled text that this work requires.
 
-## Scope
+The first live probe packed forty clear yes-or-no questions with no changed answer across 120 cases and 20.8 times fewer billed input tokens than separate requests. The ticket's authorized 29-request job then recorded both how-tos and measured mixed and borderline sets. One packed decision, choice, and score kept the separate values while input fell from 915 tokens to 371. Among six deliberately borderline decisions, packing changed one `false` to unresolved and moved probabilities by at most 0.04. The packed form resolved three of three correctly; the separate form resolved four of four correctly. Neither probe found a lower question-count ceiling. No probe should be repeated.
 
-- The question set as `annotate.md` gives it: `version` 1, an optional top-level `threshold`, and `questions`. A question has exactly one of `decide`, `choose`, or `score`. `options` is a list or a map from label to description. `levels` is a list, lowest first. A `choose` question takes a single cut alone. A name uses lowercase letters, digits, and underscores. An unknown key anywhere is an error. An unreadable or invalid file is exit 5, and the message names the path of the key at fault, such as `questions.kind.options`.
-- Each entry under `questions` has exactly the shape of a question file, `true` and `false` included, and the parser of ticket 0017 reads it. This ticket adds the set around the entries and nothing to an entry. The set takes an optional top-level `model`, and an entry's own `model` is refused, because one request has one model. No option on the command line overrides one entry.
-- `meta.questions_sha256` digests the question set that results, in the encoding that ticket 0017 wrote into `question-file.md`, and never the file's bytes. Two files that differ in spacing give one digest, a `--model` typed beside the file shows up in it, and a library that builds a set in memory gets the same digest. `result.md` says "the digest of the definition file" today, and this ticket corrects it. ADR 0017 gives the reason.
-- The parser and the grouping live in `thinkthen-core` and touch no file. The binary reads the file and hands the text inward.
-- `on` takes one pointer or several and works inside the evidence that `--field` selected. Several pointers build an evidence object by the rule of `--field`, and a key clash is an error in the file.
-- Questions with the same `on` ride in one request, in file order. Requests for one record go out in the file order of their first question. Records never share a request.
-- An object record gains one top-level field per question. Any other record yields an object of the named answers alone. A question name that the record already holds is exit 2 for that record before any request for it. An unresolved answer is `null`. The `score` value is the number the tool computes, as `score.md` says.
-- `--details` prints `input`, `value`, `answers`, and `meta` as `result.md` gives them. `meta.usage` sums the record's requests, and each answer carries the digest of the request that produced it.
-- `--dry-run` checks the file, prints the plan of `annotate.md`, sends nothing, and needs no key. With no evidence on standard input it still checks the file and prints the plan with no first record.
-- `annotate` refuses `--threshold`, `--quiet`, and `--raw`, and each message says that a question carries its own threshold. It honors `--lines`, `--jsonl`, `--field`, `--input`, `--jobs`, `--record`, `--replay`, and `--cache` as record mode built them. `--jobs` bounds requests, and a record with three `on` sets uses three of them.
-- One live check settles the ceiling on questions in one request: which status and which message come back when it is passed. `annotate.md` states the number.
-- How-tos 39 (screen one message for several hazards at once) and 14 (grade an assistant's answers with a rubric in place of a second model) turn green in the form of ADR 0011 and to the limits of ADR 0016, recorded through `sdlc/scripts/live`. ADR 0018 lists them and gives the design of page 14: a record holds the assistant's request, context, and reply; the rubric is a question set of three narrow yes/no checks, one pick for the kind of failure, and one placement for severity; one `annotate` pass grades every case; the count and cost transforms report; and a few human labels check the judge, with a link to page 25. Page 14 is in the README's front window. Page 39 absorbs the red folder 08, page 14 absorbs the red folder 07, and both folders are deleted. Page 39 combines its answers by the written rule of `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md`: any required no makes no, otherwise any required unresolved makes unresolved, otherwise yes. It never multiplies probabilities.
+## Contract
 
-Excluded: the `rules` block, structured question values, templating inside the file, any eval engine, and `find`.
+- A set has `version: 1`, optional top-level `threshold`, and a nonempty ordered `questions` object. A name matches `[a-z0-9_]+`. Each entry uses the existing `decide`, `choose`, or `score` file grammar, except `model` is refused. The top-level threshold supplies only a missing `decide` threshold. Unknown keys, duplicate keys, bad shapes, pointer-key clashes, and an empty set are exit 5 with the full key path.
+- `--model` applies to the run. The set holds no backend, rules, output path, or framing. `--field` first selects the record evidence; each question's `on` pointers act inside it.
+- Questions with the same normalized `on` pointer list share one request in file order. The queue orders groups by record, then by the first question in each group. Records never share a request. `--jobs` bounds all requests in flight, including the groups of one document, and at most `jobs` records may have been read without a complete row being printed.
+- Object input keeps its fields and appends bare answers in question order. Other input returns the answer object alone. An existing field name fails that record at exit 2 before any request for it. An unresolved answer is `null`.
+- `--details` holds `schema`, original `input`, `value` as the named bare answers, `answers` as the complete per-question results with request digests, and aggregate `meta`. Usage appears only when every reply reports it. `replayed` is true only when every reply was replayed. A record whose replies report different model versions fails. The diagnostic names both only when each is at most 64 bytes of ASCII letters, digits, `.`, `_`, `-`, or `/`, and each either equals the requested model or matches `jev-` followed by one to three decimal parts of one to four digits each. The requested model must pass the same 64-byte printable grammar before equality permits a reply name. Otherwise the diagnostic says that the backend returned different model versions without printing either value. It says to pin `--model` and rerun with `--record` or `--cache`.
+- `questions_sha256` is the lowercase hexadecimal SHA-256 of the resolved set's canonical UTF-8 JSON bytes. The object keys are `version`, then `questions`. `version` is the number `1`. `questions` is a list in file order. Each member has keys `name`, `question`, then `on`. `question` is the existing canonical question object from `question-file.md`, including the effective threshold. `on` is always a list: absent `on` becomes `[""]`, one pointer becomes a one-member list, and a list retains its order. Strings, numbers, absent question keys, and whitespace follow the seven existing canonical-question rules. Path, model, address, formatting, and other runtime settings are absent.
+- This canonical set is one worked and pinned example: `{"version":1,"questions":[{"name":"refund","question":{"verb":"decide","text":"Does this ask for a refund?","threshold":0.5},"on":[""]}]}`. Its digest is `4318689ccd64c08b788ea48c5f72b8dca279cf3d482173ed280f3fe243158b62`.
+- `--dry-run` validates with no key, connection, or recording. With evidence it prints the first group's request plus the complete question-to-pointer map. With no evidence it succeeds and prints nothing.
+- `annotate` accepts the established input, framing, field, details, backend, retry, jobs, record, replay, and cache options. It refuses command-level `--threshold`, `--quiet`, and `--raw` with an actionable sentence. A stray second path points to `--input`; swapped question and evidence files name the mistake.
+- Standard output contains compact JSON rows alone. Diagnostics use standard error. Earlier complete rows remain after a later failure, and no partial row prints. Once any request failure is observed, no queued request starts. Requests already in flight finish and any complete response is recorded because it was paid for. The run waits for earlier work, prints complete rows in order, and reports the earliest failed `(record, group)` in queue order, independent of completion order. A closed pipe stops reading and scheduling quietly; requests already in flight may finish and be recorded.
+- Short help starts with runnable stdin and `--input` examples. Advanced options stay in long help.
+
+The current package gains an internal library target and a thin binary entrypoint. Parsing, grouping, digesting, and result assembly stay pure. Request execution, scheduling, record/replay, and cache stay independent of argument parsing and printing. This ticket does not merge the two crates or promise the later public Rust API.
+
+## Pages and evidence
+
+- How-to 39 screens one message for several hazards. How-to 14 grades assistant replies with three decisions, one choice, and one score. Both are green over committed recordings. Page 08 is deleted into 39. Page 07 stays until page 16 is green.
+- `specification/annotate.md` carries the measured 20.8-times figure over 120 clear cases, the 371-versus-915 mixed-question measurement, and the borderline result.
+- Explain that the cache key covers a whole group: changing one question re-asks the group for every record, and a near-cut answer can move when neighboring questions change. Recommend retaining probabilities, holding the group fixed, or using a distinct narrower `on` where the record permits it.
+- The authorized job made 29 requests and wrote 29 recordings. Their usage totals 10,104 input tokens and 1,533 output tokens. Every recording passed the schema, endpoint, request-response key, model, usage, digest-link, and credential-marker checks.
 
 ## Acceptance
 
-- Unit tests in the core cover every refusal of the file grammar, with the path of the key named in the message.
-- Integration tests against a local listener cover: one request per distinct `on` with the questions in file order, what each request's evidence holds under several pointers, the merge into an object record and into a text document, the name clash at zero requests for that record, `null` for unresolved, the stop at a failed record, order kept under `--jobs 4`, the plan under `--dry-run` with and without a first record, and each refused option.
-- A property test holds that the output object of an object record holds every input field unchanged and exactly one new field per question.
-- A recording made by `annotate` replays with no key and no request.
-- The key and the evidence never appear in any error or Debug output.
-- The pinned `decide` digest holds, and every committed recording still replays.
-- The spec rung prints how-tos 39 and 14 green with the key unset and touches no network. The recordings hold no key.
-- The ratchet equals the measured total, and the commit that raises it says what grew, why it earns its lines, and where duplication was looked for first.
-- The whole ladder is green, and a second agent reviews the public surface change.
+- Data-backed parser tests cover every grammar refusal and exact path. Property tests cover parse/canonical round trips and digest equivalence.
+- Local-listener tests prove grouping, disclosure boundaries, request order and count, jobs 1/4/32 on one document and record streams, the read-ahead bound, output order, stop behavior, recording of already-billed completions, collisions before a request, mixed replay/live aggregation, model mismatch, dry-run, replay without a key, broken pipes, and secrecy on every route. One listener makes two groups fail in reverse completion order and pins the queue-first diagnostic. The secrecy sweep gives model fields control characters, oversized text, an oversized all-digit `jev-` value, the evidence marker, and the key marker; one hostile reply equals the requested model. None reaches diagnostics or `Debug` output.
+- A cold CLI pass with an empty environment checks help, likely argument mistakes, stdout/stderr separation, exit codes, deterministic output, and recovery messages.
+- Existing request bytes and pinned single-question digests stay unchanged. Every committed recording replays.
+- How-tos 39 and 14 pass with the key unset and no network. The four repository rungs pass, an independent reviewer accepts the diff, main is clean and pushed, and GitHub is green.
+
+## Excluded and following order
+
+Excluded: `tag`, CSV/TSV, `find`, rules, templating, a public library API, request IDs, and special plain-line output. Do not add hooks for them.
+
+After this ticket: `tag`; CSV and TSV input plus the CSV transform; the correction pass; duplicate-cache coalescing; `find`; page 16 and transforms; a separate one-crate merge; release preparation. Tickets are written when work begins.
+
+## Complexity
+
+- Contract: 2
+- State and timing: 2
+- Reach: 1
+- Proof: 2
+- Cost of error: 1
+- Total: 8
+- Minimum level floor: level 3, because one record fans out into concurrent paid requests and combines their answers into a new public result.
+- Final level: 3
+- Reasons: the public grammar, request grouping, disclosure boundary, ordered concurrency, aggregate metadata, recordings, and failure behavior form one command contract. Splitting them would leave an unusable or misleading partial command.
+- Selected model: `gpt-5.6-sol` with medium reasoning.
+
+## Review
+
+- Design review: accepted after three passes by a separate Sol Medium agent. The review corrected the settled-decision record, canonical digest, queue and failure rules, hostile model diagnostics, and complexity score. It independently recomputed the pinned digest.
+- Code review: accepted after two remediation passes. The first review replaced record workers with one global request queue, normalized root evidence before grouping, required checked usage totals, widened the concurrency and secrecy matrix, and corrected the paid launch. The second review made a closed output pipe outrank later in-flight failures while still recording paid completions, redacted duplicate paths from `Debug` while keeping exact paths in the user message, and required a real generated resolved-source round trip. The same reviewer accepted the final regressions and local gates before the paid run.

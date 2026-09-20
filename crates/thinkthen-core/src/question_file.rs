@@ -283,6 +283,10 @@ impl QuestionFile {
         self.verb
     }
 
+    pub(crate) const fn has_threshold(&self) -> bool {
+        self.threshold.is_some()
+    }
+
     /// Read one question file from the text a caller already holds.
     ///
     /// # Errors

@@ -54,6 +54,12 @@ impl Digest {
     pub fn file_name(&self) -> String {
         format!("{}.json", self.0)
     }
+
+    /// Read the lowercase hexadecimal digest without its file suffix.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 /// What one exchange is: where it goes and what it carries.

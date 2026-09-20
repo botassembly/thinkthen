@@ -12,17 +12,20 @@ The core keeps judgment rules. Hosts own files, credentials, retries, and concur
 
 ## Current state
 
-Tickets 0024 through 0027 fixed an interactive hang, unbounded paid dispatch, invalid answers, replay corruption, and false comparisons. Ticket 0035 replaced ticket 0034's supervisor with one append-only ledger and deleted its Rust harness. Green how-tos remain at sixteen.
+Tickets 0024 through 0027 fixed an interactive hang, unbounded paid dispatch, invalid answers, replay corruption, and false comparisons. Ticket 0035 replaced ticket 0034's supervisor with one append-only ledger and deleted its Rust harness. Eighteen how-tos are green.
 
-`annotate` is next. Its local work and page drafts need no paid call. Its limit probe and live recordings follow the ledger migration.
+Ticket 0015 built `annotate`, turned how-tos 39 and 14 green, and deleted absorbed page 08. Its mixed-question measurement kept the same values while reducing billed input from 915 tokens to 371. Its borderline measurement moved one of six answers from `false` to unresolved, which confirms the reference warning to keep a comparison's question group fixed.
 
 ## Next work
 
-1. **Land `annotate` and how-tos 39 and 14.** Ticket 0015 is next. Its paid limit probe and live recordings follow the ledger migration.
-2. **Make one small correction pass.** Pin the hostless-address sentence, make every negative threshold spelling reach the same parser, correct `493 recorded distributions plus four standalone fixtures`, and correct stale pages.
-3. **Coalesce duplicate cache misses.** One bounded per-digest lock prevents repeated rows under `--jobs` and separate writers from paying twice or failing on divergent replies.
-4. **Build `find`.** Repeat the `rank --top 1` comparison on documents of 100 to 250 lines, then build the command and how-to 15 if the evidence holds.
-5. **Finish workflows and release preparation.** Write flagship how-to 16, finish transforms and repairs, then complete help, manual, installation, the agent skill, and how-to 18.
+1. **Build `tag`.** Add the accepted label-appending command before the remaining input and repair work.
+2. **Add CSV and TSV input plus the CSV transform.** Keep the input grammar and its conversion together.
+3. **Make one small correction pass.** Pin the hostless-address sentence, make every negative threshold spelling reach the same parser, correct `493 recorded distributions plus four standalone fixtures`, and correct stale pages.
+4. **Coalesce duplicate cache misses.** One bounded per-digest lock prevents repeated rows under `--jobs` and separate writers from paying twice or failing on divergent replies.
+5. **Build `find`.** Repeat the `rank --top 1` comparison on documents of 100 to 250 lines, then build the command and how-to 15 if the evidence holds.
+6. **Write page 16 and finish the transforms.** Land the flagship triage workflow and its policy before library restructuring.
+7. **Merge to one crate.** Make the command-line tool the first caller of the public Rust library shape.
+8. **Prepare the release.** Complete help, the manual, installation, the agent skill, and how-to 18.
 
 Document the cache limitation until step 4 lands. Keep the strict probability-total rule and collect rounding evidence during an authorized product probe. Drop the commit-message checker and separate response-stability experiment.
 

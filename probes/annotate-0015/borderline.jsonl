@@ -1,0 +1,6 @@
+{"id":"B-1","message":"I may send this back if the replacement does not arrive.","expected":false}
+{"id":"B-2","message":"Could you explain whether a refund remains possible?","expected":false}
+{"id":"B-3","message":"I would prefer the charge reversed, but store credit also works.","expected":true}
+{"id":"B-4","message":"The item is unusable. What can you do for me?","expected":false}
+{"id":"B-5","message":"Please put the purchase amount back on my card.","expected":true}
+{"id":"B-6","message":"I do not want a refund. Please replace the item.","expected":false}

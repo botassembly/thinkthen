@@ -70,7 +70,7 @@ impl Pointer {
     }
 
     /// The pointer as the user wrote it.
-    pub(crate) fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.text
     }
 
