@@ -1,7 +1,5 @@
-# The live spend ledger, in input tokens. Ian set the limit at $20 on
-# 2026-09-19, and the vendor charges $0.042 for a million input tokens, so
-# the limit is 476,000,000 tokens. sdlc/scripts/live validates both rows and
-# permanently and durably precharges each approved maximum under its lock.
-# Its later usage scan is informational and never refunds the charge.
-limit_tokens 476000000
-spent_tokens 429118
+# Audit checkpoint only. Runtime authority lives under Git's shared common directory.
+# The coordinator replaces the placeholder ID after audited one-time activation.
+checkpoint_limit_tokens 476000000
+checkpoint_charged_tokens 429118
+checkpoint_authority_id not-activated

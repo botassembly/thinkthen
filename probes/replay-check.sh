@@ -15,8 +15,8 @@ probe=${1:?name the probe folder}
 probe=$(CDPATH= cd -- "$probe" && pwd)
 repo=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 
-# The job calls the built binary by name. No rung builds it, so this check runs
-# after a build, which is what sdlc/scripts/live already does before a job.
+# The job calls the built binary by name. Build it before the replay, just as a
+# person must now build with the key unset before starting a live job.
 cargo build --locked --quiet --manifest-path "$repo/Cargo.toml" --package thinkthen
 PATH="$repo/target/debug:$PATH"
 export PATH

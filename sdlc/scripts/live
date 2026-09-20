@@ -1,449 +1,539 @@
-#!/bin/sh
-# The one door for a paid live call. Run by hand, with Ian's authorization.
-# No rung calls this, and nothing here belongs in a gate.
-#
-#   sdlc/scripts/live --max-tokens 10000 demos/01-refund-gate/record.sh
-#
-# The declared maximum is charged before the job starts and is never refunded
-# automatically. Both charged owner states are synced before the gated job is
-# released. The later scan is informational. Only the job shell receives the key.
-set -eu
-umask 077
+#!/usr/bin/python3 -IS
+"""Guarded paid-call supervisor. THINKTHEN_LIVE_V2 marks retired launchers."""
 
-case ${THINKTHEN_API_KEY:-} in
-*[![:space:]]*) captured_api_key=$THINKTHEN_API_KEY ;;
-*)
-	printf 'live: THINKTHEN_API_KEY holds nothing, so no call goes out\n' >&2
-	exit 1
-	;;
-esac
-case $captured_api_key in
-*'
-'*)
-	printf 'live: THINKTHEN_API_KEY contains a line break, so no call goes out\n' >&2
-	exit 1
-	;;
-esac
-unset THINKTHEN_API_KEY
-unset live_api_key
-live_api_key=$captured_api_key
-unset captured_api_key
+import base64
+import errno
+import fcntl
+import json
+import os
+import select
+import signal
+import socket
+import stat
+import subprocess
+import sys
+import time
+import uuid
 
-case $0 in
-*/*) script_dir=${0%/*} ;;
-*) script_dir=. ;;
-esac
-REPO=$(CDPATH= cd -- "$script_dir/../.." && pwd)
-LEDGER=$REPO/sdlc/live-tokens
-LOCK=$LEDGER.lock
+SAFE_ENV = {b"PATH": b"/usr/bin:/bin", b"LC_ALL": b"C"}
+MAXIMUM = 999_999_999
+GRACE = 5.0
+STATE_KEYS = {"version", "authority_id", "status", "limit_tokens", "charged_tokens", "machine_id", "common_dir_hex", "pending"}
+PENDING_KEYS = {"wrapper", "gate", "prior_charge", "reservation", "charged_total", "phase"}
+IDENTITY_KEYS = {"boot_id", "pid", "start_ticks"}
+GATE_KEYS = IDENTITY_KEYS | {"pgid", "sid"}
 
-usage() {
-	printf 'live: usage: sdlc/scripts/live --max-tokens N JOB [ARG...]\n' >&2
-	exit 2
-}
 
-case ${1:-} in
---max-tokens) ;;
-*) usage ;;
-esac
-reservation=${2:-}
-case $reservation in
-'' | 0 | 0* | *[!0-9]*) usage ;;
-esac
-if [ "${#reservation}" -gt 9 ] || [ "$reservation" -gt 999999999 ]; then
-	usage
-fi
-job_arg=${3:-}
-if [ -z "$job_arg" ]; then
-	usage
-fi
-shift 3
-case $job_arg in
-/*) job_candidate=$job_arg ;;
-*) job_candidate=$REPO/$job_arg ;;
-esac
-if [ ! -f "$job_candidate" ]; then
-	printf 'live: %s is not a file, so there is no job to run\n' "$job_arg" >&2
-	exit 2
-fi
-job=$job_candidate
-if [ ! -f "$LEDGER" ]; then
-	printf 'live: %s is not a file, so the spend cannot be read\n' "$LEDGER" >&2
-	exit 2
-fi
+class Refusal(Exception):
+    def __init__(self, message, status=1):
+        super().__init__(message)
+        self.status = status
 
-child=
-child_live=0
-signal_status=0
-remember_signal() {
-	forwarded=$1
-	forwarded_status=$2
-	if [ "$signal_status" -eq 0 ]; then
-		signal_status=$forwarded_status
-	fi
-	if [ "$child_live" -eq 1 ]; then
-		case $forwarded in
-		INT) kill -TERM "$child" 2>/dev/null || : ;;
-		*) kill -"$forwarded" "$child" 2>/dev/null || : ;;
-		esac
-	fi
-}
 
-forward_pending_signal() {
-	case $signal_status in
-	129) kill -HUP "$child" 2>/dev/null || : ;;
-	130 | 143) kill -TERM "$child" 2>/dev/null || : ;;
-	esac
-}
-trap 'remember_signal HUP 129' HUP
-trap 'remember_signal INT 130' INT
-trap 'remember_signal TERM 143' TERM
+def refuse(message, status=1):
+    raise Refusal(f"live: {message}\n", status)
 
-exit_prefer_signal() {
-	fallback=$1
-	if [ "$signal_status" -ne 0 ]; then
-		exit "$signal_status"
-	fi
-	exit "$fallback"
-}
 
-wait_child_gone() {
-	while :; do
-		if wait "$child" 2>/dev/null; then
-			child_status=0
-		else
-			child_status=$?
-		fi
-		if ! kill -0 "$child" 2>/dev/null; then
-			child_live=0
-			return
-		fi
-	done
-}
+def clean_run(arguments):
+    return subprocess.run(arguments, env=SAFE_ENV, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False)
 
-finish_handoff_signal() {
-	forward_pending_signal
-	wait_child_gone
-	if ! remove_lock; then
-		printf 'live: cleanup failed; the lock stays for recovery\n' >&2
-	fi
-	exit "$signal_status"
-}
 
-if ! mkdir -- "$LOCK" 2>/dev/null; then
-	printf 'live: the live spend lock is held, so no call goes out\n' >&2
-	exit_prefer_signal 1
-fi
-if [ "$signal_status" -ne 0 ]; then
-	rmdir -- "$LOCK"
-	exit "$signal_status"
-fi
+def prerequisites():
+    if os.environ.get("THINKTHEN_LIVE_TEST_FAULT") == "prerequisite":
+        refuse("a required live-supervisor prerequisite is unavailable")
+    if sys.platform != "linux":
+        refuse("the live supervisor requires Linux")
+    if sys.version_info < (3, 12) or sys.executable != "/usr/bin/python3":
+        refuse("the live supervisor requires /usr/bin/python3 version 3.12 or newer")
+    for path in (b"/usr/bin/git", b"/proc/self/stat", b"/proc/sys/kernel/random/boot_id", b"/etc/machine-id"):
+        if not os.path.exists(path):
+            refuse("a required live-supervisor prerequisite is unavailable")
+    if not hasattr(os, "waitid") or not hasattr(os, "WNOWAIT"):
+        refuse("the live supervisor requires waitid with WNOWAIT")
 
-remove_lock() {
-	rm -f -- "$LOCK/ledger-values" "$LOCK/ledger.new" "$LOCK/owner.new" \
-		"$LOCK/stamp" "$LOCK/usage" "$LOCK/measurement" "$LOCK/scan-failed" \
-		"$LOCK/start" "$LOCK/key" "$LOCK/deliver" "$LOCK/gate-ready" \
-		"$LOCK/key-received"
-	if unexpected=$(find "$LOCK" ! -path "$LOCK" ! -name owner -print -quit); then
-		:
-	else
-		return 1
-	fi
-	if [ -n "$unexpected" ]; then
-		return 1
-	fi
-	rm -f -- "$LOCK/owner"
-	rmdir -- "$LOCK"
-}
 
-job_hex=$(printf '%s' "$job" | od -An -tx1 | tr -d ' \n')
-write_owner() {
-	owner_state=$1
-	owner_prior=$2
-	owner_total=$3
-	owner_child=$4
-	{
-		printf 'pid %s\n' "$$"
-		printf 'child_pid %s\n' "$owner_child"
-		printf 'job_path_hex %s\n' "$job_hex"
-		printf 'reservation %s\n' "$reservation"
-		printf 'prior_spend %s\n' "$owner_prior"
-		printf 'charged_total %s\n' "$owner_total"
-		printf 'state %s\n' "$owner_state"
-	} >"$LOCK/owner.new" && mv -- "$LOCK/owner.new" "$LOCK/owner"
-}
+def checkout_path():
+    return os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(os.fsencode(__file__))), b"../.."))
 
-if ! write_owner uncharged 0 0 0; then
-	rm -f -- "$LOCK/owner.new"
-	if rmdir -- "$LOCK"; then
-		printf 'live: the initial lock owner could not be written; the uncharged lock was removed\n' >&2
-	else
-		printf 'live: the initial lock owner could not be written; the uncharged lock stays for recovery\n' >&2
-	fi
-	exit_prefer_signal 1
-fi
-if [ "$signal_status" -ne 0 ]; then
-	remove_lock
-	exit "$signal_status"
-fi
-if ! awk '
-  /^[[:space:]]*($|#)/ { next }
-  NF != 2 { bad = 1; next }
-  $1 == "limit_tokens" {
-    if (seen_limit++) bad = 1
-    limit = $2
-    next
-  }
-  $1 == "spent_tokens" {
-    if (seen_spent++) bad = 1
-    spent = $2
-    next
-  }
-  { bad = 1 }
-  END {
-    if (seen_limit != 1 || seen_spent != 1) bad = 1
-    if (limit !~ /^[1-9][0-9]*$/ || length(limit) > 9 || limit > 999999999) bad = 1
-    if (spent !~ /^(0|[1-9][0-9]*)$/ || length(spent) > 9 || spent > 999999999) bad = 1
-    if (!bad && spent > limit) bad = 1
-    if (bad) exit 1
-    print limit, spent
-  }
-' "$LEDGER" >"$LOCK/ledger-values"; then
-	printf 'live: %s does not hold one valid limit and spend\n' "$LEDGER" >&2
-	remove_lock
-	exit_prefer_signal 2
-fi
-read -r limit spent <"$LOCK/ledger-values"
-charged=$((spent + reservation))
-if ! write_owner uncharged "$spent" "$charged" 0; then
-	printf 'live: the lock owner state could not be written; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if [ "$charged" -gt "$limit" ]; then
-	printf 'live: reservation %s exceeds the %s tokens remaining, so no call goes out\n' \
-		"$reservation" "$((limit - spent))" >&2
-	remove_lock
-	exit_prefer_signal 1
-fi
 
-if cargo build --locked --quiet --manifest-path "$REPO/Cargo.toml" --package thinkthen; then
-	:
-else
-	build_status=$?
-	remove_lock
-	exit_prefer_signal "$build_status"
-fi
-PATH="$REPO/target/debug:$PATH"
-export PATH
+def common_path(checkout):
+    test_directory = os.environb.get(b"THINKTHEN_LIVE_TEST_GIT_DIR")
+    if test_directory:
+        helper = subprocess.Popen([b"/usr/bin/git", b"hash-object", b"--stdin"], env=SAFE_ENV, stdin=subprocess.PIPE)
+        with open(os.path.join(test_directory, b"git-helper.pid"), "w", encoding="ascii") as stream:
+            stream.write(str(helper.pid))
+        while not os.path.exists(os.path.join(test_directory, b"git-helper.release")):
+            time.sleep(0.01)
+        helper.stdin.close()
+        helper.wait()
+    result = clean_run([b"/usr/bin/git", b"-C", checkout, b"rev-parse", b"--path-format=absolute", b"--git-common-dir"])
+    if result.returncode or not result.stdout.endswith(b"\n"):
+        refuse("the calling checkout has no readable Git common directory", 2)
+    path = result.stdout[:-1]
+    if not path.startswith(b"/") or b"\n" in path:
+        refuse("Git returned an invalid common directory", 2)
+    return os.path.realpath(path)
 
-if [ "$signal_status" -ne 0 ]; then
-	remove_lock
-	exit "$signal_status"
-fi
 
-# Recovery treats this transition as uncertain until both atomic renames land.
-if ! rm -f -- "$LOCK/ledger-values"; then
-	printf 'live: validated ledger state could not be cleared; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if ! write_owner charging "$spent" "$charged" 0; then
-	printf 'live: the lock owner state could not be written; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if ! awk -v charged="$charged" '
-  $1 == "spent_tokens" { print "spent_tokens " charged; next }
-  { print }
-' "$LEDGER" >"$LOCK/ledger.new"; then
-	rm -f -- "$LOCK/ledger.new"
-	printf 'live: the precharge could not be prepared; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if ! mv -- "$LOCK/ledger.new" "$LEDGER"; then
-	rm -f -- "$LOCK/ledger.new"
-	printf 'live: the precharge could not be installed; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if ! write_owner charged "$spent" "$charged" 0; then
-	printf 'live: the charged owner state could not be written; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if ! sync; then
-	printf 'live: the precharge could not be made durable; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
+def registered_trees(common):
+    result = clean_run([b"/usr/bin/git", b"--git-dir", common, b"worktree", b"list", b"--porcelain", b"-z"])
+    if result.returncode:
+        refuse("registered worktrees could not be inspected")
+    trees = [field[9:] for field in result.stdout.split(b"\0") if field.startswith(b"worktree ")]
+    if not trees:
+        refuse("Git reported no registered worktree")
+    return trees
 
-if ! : >"$LOCK/stamp" || ! : >"$LOCK/usage"; then
-	rm -f -- "$LOCK/stamp" "$LOCK/usage"
-	printf 'live: temporary accounting files could not be prepared; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if [ "$signal_status" -ne 0 ]; then
-	remove_lock
-	exit "$signal_status"
-fi
-if ! mkfifo -- "$LOCK/key"; then
-	printf 'live: the key channel could not be created; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-exec 3<>"$LOCK/key"
-if [ "$signal_status" -ne 0 ]; then
-	exec 3>&-
-	remove_lock
-	exit "$signal_status"
-fi
 
-cd -- "$REPO"
-sh -c '
-  lock=$1
-  gate=$2
-  fifo=$3
-  shift 3
-  exec 3>&-
-  : >"$lock/gate-ready"
-  while [ ! -e "$lock/deliver" ]; do
-    [ -d "$lock" ] || exit 125
-    sleep 0.02
-  done
-  exec 3<"$fifo" || exit 125
-  if ! IFS= read -r delivered_key <&3; then exit 125; fi
-  exec 3<&-
-  : >"$lock/key-received"
-  while [ ! -e "$gate" ]; do
-    [ -d "$lock" ] || exit 125
-    sleep 0.02
-  done
-  THINKTHEN_API_KEY=$delivered_key exec sh -- "$@"
-' live-gate "$LOCK" "$LOCK/start" "$LOCK/key" "$job" "$@" &
-child=$!
-child_live=1
-forward_pending_signal
-if ! write_owner charged "$spent" "$charged" "$child"; then
-	exec 3>&-
-	kill -TERM "$child" 2>/dev/null || :
-	wait_child_gone
-	printf 'live: the child owner state could not be written; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if ! sync; then
-	exec 3>&-
-	kill -TERM "$child" 2>/dev/null || :
-	wait_child_gone
-	printf 'live: the child owner state could not be made durable; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if [ "$signal_status" -ne 0 ]; then
-	exec 3>&-
-	wait_child_gone
-	remove_lock
-	exit "$signal_status"
-fi
-if ! : >"$LOCK/deliver"; then
-	exec 3>&-
-	kill -TERM "$child" 2>/dev/null || :
-	wait_child_gone
-	printf 'live: the key channel could not be released; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-if [ "$signal_status" -ne 0 ]; then
-	exec 3>&-
-	finish_handoff_signal
-fi
-trap '' PIPE
-if ! printf '%s\n' "$live_api_key" >&3; then
-	exec 3>&-
-	kill -TERM "$child" 2>/dev/null || :
-	wait_child_gone
-	trap - PIPE
-	if [ "$signal_status" -ne 0 ]; then
-		remove_lock || :
-		exit "$signal_status"
-	fi
-	printf 'live: the key could not be delivered; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-trap - PIPE
-unset live_api_key
-while [ ! -e "$LOCK/key-received" ]; do
-	if [ "$signal_status" -ne 0 ]; then
-		exec 3>&-
-		finish_handoff_signal
-	fi
-	if ! kill -0 "$child" 2>/dev/null; then
-		exec 3>&-
-		wait_child_gone
-		printf 'live: the key channel closed before receipt; the lock stays for recovery\n' >&2
-		exit_prefer_signal 1
-	fi
-	sleep 0.02
-done
-exec 3>&-
-if [ "$signal_status" -ne 0 ]; then
-	finish_handoff_signal
-fi
-if ! : >"$LOCK/start"; then
-	kill -TERM "$child" 2>/dev/null || :
-	wait_child_gone
-	printf 'live: the child could not be released; the lock stays for recovery\n' >&2
-	exit_prefer_signal 1
-fi
-rm -f -- "$LOCK/key" "$LOCK/deliver" "$LOCK/key-received"
+def read_file(path, limit=1_000_000):
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        contents = os.read(descriptor, limit)
+        if os.read(descriptor, 1):
+            raise ValueError("file too large")
+        return contents
+    finally:
+        os.close(descriptor)
 
-wait_child_gone
-ran=$child_status
 
-scan_failed=0
-if find "$REPO" -path "$REPO/target" -prune -o -type f -name '*.json' \
-	-newer "$LOCK/stamp" -exec sh -c '
-    usage=$1
-    failure=$2
-    shift 2
-    if ! sed -n '\''s/.*"input_tokens":\([0-9][0-9]*\).*/\1/p'\'' "$@" >>"$usage"; then
-      : >"$failure"
-    fi
-  ' scan "$LOCK/usage" "$LOCK/scan-failed" {} +; then
-	if [ -e "$LOCK/scan-failed" ]; then
-		scan_failed=1
-		measured=unknown
-		over=no
-	elif awk -v reservation="$reservation" '
-    { total += $1 }
-    END { printf "%.0f %s\n", total, (total > reservation ? "yes" : "no") }
-  ' "$LOCK/usage" >"$LOCK/measurement"; then
-		read -r measured over <"$LOCK/measurement"
-	else
-		scan_failed=1
-		measured=unknown
-		over=no
-	fi
-else
-	scan_failed=1
-	measured=unknown
-	over=no
-fi
+def checkpoint_is_guarded(path):
+    expected = {b"checkpoint_limit_tokens", b"checkpoint_charged_tokens", b"checkpoint_authority_id"}
+    try:
+        rows = read_file(path, 65536).splitlines()
+    except (OSError, ValueError):
+        return False
+    found = set()
+    for row in rows:
+        if not row or row.startswith(b"#"):
+            continue
+        fields = row.split()
+        if len(fields) != 2 or fields[0] not in expected or fields[0] in found:
+            return False
+        found.add(fields[0])
+    return found == expected
 
-printf 'live: measured %s input tokens; charged %s, and %s of %s tokens are charged now\n' \
-	"$measured" "$reservation" "$charged" "$limit"
-if [ "$over" = yes ]; then
-	printf 'live: reservation %s was exceeded; measured %s input tokens\n' \
-		"$reservation" "$measured" >&2
-fi
-if [ "$scan_failed" -eq 1 ]; then
-	printf 'live: usage measurement failed; the full reservation remains charged\n' >&2
-fi
 
-cleanup_failed=0
-if ! remove_lock; then
-	cleanup_failed=1
-	printf 'live: cleanup failed; the lock stays for recovery\n' >&2
-fi
+def check_registered_trees(common):
+    for tree in registered_trees(common):
+        if os.path.lexists(os.path.join(tree, b"sdlc/live-tokens.lock")):
+            refuse("a registered worktree has a legacy live lock")
+        try:
+            launcher = read_file(os.path.join(tree, b"sdlc/scripts/live"))
+            state_module = read_file(os.path.join(tree, b"sdlc/scripts/live-state.py"))
+        except (OSError, ValueError):
+            refuse("a registered worktree has no guarded live launcher")
+        if b"THINKTHEN_LIVE_V2" not in launcher or b"THINKTHEN_LIVE_V2" not in state_module or not checkpoint_is_guarded(os.path.join(tree, b"sdlc/live-tokens")):
+            refuse("a registered worktree still has a legacy live launcher")
 
-if [ "$signal_status" -ne 0 ]; then
-	exit "$signal_status"
-fi
-if [ "$ran" -ne 0 ]; then
-	exit "$ran"
-fi
-if [ "$over" = yes ] || [ "$scan_failed" -eq 1 ] || [ "$cleanup_failed" -eq 1 ]; then
-	exit 1
-fi
-exit 0
+
+def load_state_module():
+    with open(os.path.join(os.path.dirname(__file__), "live-state.py"), "rb") as state_module:
+        exec(compile(state_module.read(), "live-state.py", "exec"), globals())
+
+
+def take_lock(authority):
+    try:
+        lock_path = os.path.join(authority, b"lock")
+        descriptor = os.open(lock_path, os.O_RDWR | os.O_NOFOLLOW)
+        require_private(lock_path)
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return descriptor
+    except OSError:
+        refuse("the live authority lock is held or unavailable")
+
+
+def send_bytes(channel, payload, deadline, signals):
+    sent = 0
+    while sent < len(payload):
+        if signals.status:
+            raise InterruptedError
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError
+        _, writable, _ = select.select([], [channel], [], min(0.05, remaining))
+        if writable:
+            written = channel.send(payload[sent:])
+            if written == 0:
+                raise EOFError
+            sent += written
+
+
+def send_packet(channel, payload, deadline, signals):
+    send_bytes(channel, len(payload).to_bytes(8, "big") + payload, deadline, signals)
+
+
+def receive_exact(channel, length, deadline=None, signals=None):
+    result = bytearray()
+    while len(result) < length:
+        if signals is not None and signals.status:
+            raise InterruptedError
+        timeout = 0.05 if deadline is None else min(0.05, max(0, deadline - time.monotonic()))
+        if deadline is not None and timeout == 0:
+            raise TimeoutError
+        readable, _, _ = select.select([channel], [], [], timeout)
+        if not readable:
+            continue
+        piece = channel.recv(length - len(result))
+        if not piece:
+            raise EOFError
+        result.extend(piece)
+    return bytes(result)
+
+
+def receive_packet(channel):
+    length = int.from_bytes(receive_exact(channel, 8), "big")
+    if length > 16_000_000:
+        raise ValueError("packet too large")
+    return receive_exact(channel, length)
+
+
+def gate_main(descriptor, fault=None):
+    try:
+        channel = socket.socket(fileno=int(descriptor))
+        if fault == "readiness":
+            time.sleep(GRACE * 2)
+            return 125
+        channel.sendall(b"R")
+        payload = json.loads(receive_packet(channel))
+        key = base64.b64decode(payload["key"], validate=True)
+        arguments = [base64.b64decode(item, validate=True) for item in payload["arguments"]]
+        environment = {base64.b64decode(item[0], validate=True): base64.b64decode(item[1], validate=True) for item in payload["environment"]}
+        environment[b"THINKTHEN_API_KEY"] = key
+        channel.sendall(b"A")
+        if receive_exact(channel, 1) != b"G":
+            return 125
+        channel.close()
+        if payload.get("fault") == "exec":
+            return 125
+        os.execve(b"/bin/sh", [b"/bin/sh", b"--", *arguments], environment)
+    except Exception:
+        return 125
+
+
+def unreaped(pid):
+    try:
+        return os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None
+    except ChildProcessError:
+        return False
+
+
+def identity_matches(recorded):
+    if recorded["boot_id"] != current_boot():
+        return False
+    fields = proc_fields(recorded["pid"])
+    return fields is not None and fields["start_ticks"] == recorded["start_ticks"] and fields["state"] != "Z"
+
+
+def session_members(gate):
+    if gate["boot_id"] != current_boot():
+        return []
+    try:
+        entries = os.listdir(b"/proc")
+    except OSError:
+        refuse("running process sessions cannot be inspected")
+    members = []
+    for entry in entries:
+        if entry.isdigit():
+            fields = proc_fields(int(entry))
+            if fields is not None and fields["sid"] == gate["sid"] and fields["state"] != "Z":
+                members.append(int(entry))
+    return members
+
+
+def status_or_recover(mode, authority, common):
+    lock = take_lock(authority)
+    try:
+        state = read_state(authority, common)
+        if mode == "status":
+            pending = "none" if state["pending"] is None else state["pending"]["phase"]
+            sys.stdout.write(
+                f"authority_id {state['authority_id']}\nstatus {state['status']}\n"
+                f"limit_tokens {state['limit_tokens']}\ncharged_tokens {state['charged_tokens']}\n"
+                f"pending {pending}\n"
+            )
+            return 0
+        if state["status"] != "active":
+            refuse("the live authority is retired")
+        pending = state["pending"]
+        if pending is None:
+            return 0
+        old_boot = pending["gate"]["boot_id"] != current_boot()
+        if not old_boot and identity_matches(pending["wrapper"]):
+            refuse("the pending live wrapper still exists")
+        gate = pending["gate"]
+        if not old_boot:
+            fields = proc_fields(gate["pid"])
+            if fields is not None and fields["start_ticks"] == gate["start_ticks"] and fields["state"] != "Z":
+                refuse("the pending live session still exists")
+            if session_members(gate):
+                refuse("the pending live session still exists")
+        state["pending"] = None
+        try:
+            replace_state(authority, state)
+        except OSError:
+            refuse("the recovered authority could not be made durable")
+        return 0
+    finally:
+        os.close(lock)
+
+
+class Signals:
+    def __init__(self):
+        self.status = 0
+        self.deadline = None
+        self.group = None
+        self.child = None
+
+    def receive(self, number, _frame):
+        if self.status == 0:
+            self.status = {signal.SIGHUP: 129, signal.SIGINT: 130, signal.SIGTERM: 143}[number]
+            self.deadline = time.monotonic() + GRACE
+        if self.group is not None and self.child is not None and unreaped(self.child.pid):
+            forwarded = signal.SIGTERM if number == signal.SIGINT else number
+            try:
+                os.killpg(self.group, forwarded)
+            except ProcessLookupError:
+                pass
+        elif self.child is not None and unreaped(self.child.pid):
+            try:
+                self.child.send_signal(signal.SIGTERM if number == signal.SIGINT else number)
+            except ProcessLookupError:
+                pass
+
+
+def stop_gate(gate, signals):
+    if gate is None or not unreaped(gate.pid):
+        return True
+    try:
+        if signals.group is None:
+            gate.terminate()
+        else:
+            os.killpg(signals.group, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    deadline = signals.deadline or time.monotonic() + GRACE
+    while time.monotonic() < deadline:
+        if not unreaped(gate.pid):
+            gate.wait()
+            return True
+        time.sleep(0.02)
+    return False
+
+
+def reservation_value(text):
+    if not text or not text.isascii() or not text.isdigit() or text.startswith("0"):
+        refuse("usage: sdlc/scripts/live --max-tokens N JOB [ARG...]", 2)
+    value = int(text)
+    if value > MAXIMUM:
+        refuse("usage: sdlc/scripts/live --max-tokens N JOB [ARG...]", 2)
+    return value
+
+
+def payload_for(job, arguments, key, checkout):
+    environment = dict(os.environb)
+    environment.pop(b"THINKTHEN_API_KEY", None)
+    environment[b"PATH"] = os.path.join(checkout, b"target/debug") + b":" + environment.get(b"PATH", b"/usr/bin:/bin")
+    return json.dumps({
+        "key": base64.b64encode(key).decode("ascii"),
+        "arguments": [base64.b64encode(item).decode("ascii") for item in [job, *arguments]],
+        "environment": [[base64.b64encode(name).decode("ascii"), base64.b64encode(value).decode("ascii")] for name, value in environment.items()],
+        "fault": os.environ.get("THINKTHEN_LIVE_TEST_FAULT"),
+    }, separators=(",", ":")).encode("ascii")
+
+
+def capture_key():
+    key = os.environb.get(b"THINKTHEN_API_KEY", b"")
+    if not any(byte not in b" \t\r\n\v\f" for byte in key):
+        refuse("THINKTHEN_API_KEY holds nothing, so no call goes out")
+    if b"\n" in key:
+        refuse("THINKTHEN_API_KEY contains a line break, so no call goes out")
+    os.environb.pop(b"THINKTHEN_API_KEY", None)
+    return key
+
+
+def launch(arguments, checkout, common, authority, key):
+    if len(arguments) < 3 or arguments[0] != "--max-tokens":
+        refuse("usage: sdlc/scripts/live --max-tokens N JOB [ARG...]", 2)
+    reservation = reservation_value(arguments[1])
+    job_argument = os.fsencode(arguments[2])
+    job = job_argument if job_argument.startswith(b"/") else os.path.join(checkout, job_argument)
+    if not os.path.isfile(job):
+        refuse("the named live job is not a file", 2)
+    binary = os.path.join(checkout, b"target/debug/thinkthen")
+    if not os.path.isfile(binary) or not os.access(binary, os.X_OK):
+        refuse("target/debug/thinkthen must be built before a live job", 2)
+    check_registered_trees(common)
+    lock = take_lock(authority)
+    gate = None
+    channel = None
+    signals = Signals()
+    state = None
+    charged = False
+    for number in (signal.SIGHUP, signal.SIGINT, signal.SIGTERM):
+        signal.signal(number, signals.receive)
+    try:
+        state = read_state(authority, common)
+        if state["status"] != "active":
+            refuse("the live authority is retired")
+        if state["pending"] is not None:
+            refuse("the live authority has a pending run")
+        total = state["charged_tokens"] + reservation
+        if total > state["limit_tokens"]:
+            remaining = state["limit_tokens"] - state["charged_tokens"]
+            refuse(f"reservation {reservation} exceeds the {remaining} tokens remaining, so no call goes out")
+        fault = os.environ.get("THINKTHEN_LIVE_TEST_FAULT")
+        if fault == "socket":
+            refuse("the live gate could not be created")
+        parent, child = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            if fault == "spawn":
+                refuse("the live gate could not be started")
+            gate = subprocess.Popen(
+                [b"/usr/bin/python3", b"-I", b"-S", os.fsencode(__file__), b"--gate", str(child.fileno()).encode(), os.fsencode(fault or "none")],
+                env=SAFE_ENV,
+                pass_fds=(child.fileno(),),
+                close_fds=True,
+                start_new_session=fault != "setsid",
+                cwd=checkout,
+            )
+        finally:
+            child.close()
+        channel = parent
+        channel.setblocking(False)
+        signals.child = gate
+        test_hook("before-readiness")
+        try:
+            ready = receive_exact(channel, 1, time.monotonic() + GRACE, signals)
+        except (EOFError, InterruptedError, TimeoutError, OSError):
+            if signals.status:
+                return signals.status
+            refuse("the live gate did not become ready")
+        if ready != b"R" or not unreaped(gate.pid):
+            refuse("the live gate did not become ready")
+        gate_identity = process_identity(gate.pid, True)
+        if fault == "identity":
+            refuse("the live gate has an invalid process identity")
+        if gate_identity["pgid"] != gate.pid or gate_identity["sid"] != gate.pid:
+            refuse("the live gate has an invalid process identity")
+        signals.group = gate.pid
+        test_hook("after-ready")
+        if signals.status:
+            return signals.status
+        state["pending"] = {
+            "wrapper": process_identity(os.getpid()),
+            "gate": gate_identity,
+            "prior_charge": state["charged_tokens"],
+            "reservation": reservation,
+            "charged_total": total,
+            "phase": "pending",
+        }
+        state["charged_tokens"] = total
+        try:
+            replace_state(authority, state)
+        except OSError:
+            refuse("the live charge could not be made durable")
+        charged = True
+        test_hook("after-charge")
+        if signals.status:
+            return signals.status
+        delivery_deadline = time.monotonic() + GRACE
+        try:
+            send_packet(
+                channel,
+                payload_for(job, [os.fsencode(item) for item in arguments[3:]], key, checkout),
+                delivery_deadline,
+                signals,
+            )
+        except (EOFError, InterruptedError, TimeoutError, OSError):
+            if signals.status:
+                return signals.status
+            refuse("the live gate did not receive its job")
+        try:
+            receipt = receive_exact(channel, 1, time.monotonic() + GRACE, signals)
+        except (EOFError, InterruptedError, TimeoutError, OSError):
+            if signals.status:
+                return signals.status
+            refuse("the live gate did not receive its job")
+        if receipt != b"A":
+            refuse("the live gate did not receive its job")
+        key = b""
+        test_hook("after-key-receipt")
+        if signals.status:
+            return signals.status
+        try:
+            send_bytes(channel, b"G", time.monotonic() + GRACE, signals)
+        except (EOFError, InterruptedError, TimeoutError, OSError):
+            if signals.status:
+                return signals.status
+            refuse("the live gate could not be released")
+        test_hook("after-release")
+        channel.close()
+        channel = None
+        while True:
+            leader_exited = not unreaped(gate.pid)
+            remaining = [pid for pid in session_members(gate_identity) if pid != gate.pid]
+            if leader_exited and not remaining:
+                break
+            if leader_exited and signals.deadline is None:
+                signals.deadline = time.monotonic() + GRACE
+                try:
+                    os.killpg(gate.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+            if signals.deadline is not None and time.monotonic() >= signals.deadline:
+                state["pending"]["phase"] = "unresolved"
+                test_hook("before-unresolved-sync")
+                try:
+                    replace_state(authority, state)
+                except OSError:
+                    pass
+                return signals.status or 1
+            time.sleep(0.02)
+        test_hook("after-job-exit")
+        status = gate.wait()
+        state["pending"] = None
+        try:
+            replace_state(authority, state)
+        except OSError:
+            refuse("the live run ended but settlement could not be made durable")
+        print(f"live: charged {reservation}; {state['charged_tokens']} of {state['limit_tokens']} tokens are charged now")
+        return signals.status or (128 + -status if status < 0 else status)
+    finally:
+        if channel is not None:
+            channel.close()
+        if gate is not None and unreaped(gate.pid):
+            stopped = stop_gate(gate, signals)
+            if charged and not stopped and state is not None and state.get("pending") is not None:
+                state["pending"]["phase"] = "unresolved"
+                try:
+                    replace_state(authority, state)
+                except OSError:
+                    pass
+        os.close(lock)
+
+
+def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--gate":
+        return gate_main(sys.argv[2], None if sys.argv[3] == "none" else sys.argv[3])
+    action = sys.argv[1] if len(sys.argv) == 2 else None
+    key = None if action in ("--status", "--recover") else capture_key()
+    prerequisites()
+    load_state_module()
+    checkout = checkout_path()
+    common = common_path(checkout)
+    authority = os.path.join(common, b"thinkthen-live")
+    if os.path.lexists(os.path.join(authority, b"activation-fence")):
+        refuse("the live authority activation is incomplete")
+    if action in ("--status", "--recover"):
+        return status_or_recover(action[2:], authority, common)
+    return launch(sys.argv[1:], checkout, common, authority, key)
+
+
+try:
+    raise SystemExit(main())
+except Refusal as error:
+    sys.stderr.write(str(error))
+    raise SystemExit(error.status)
+except (AttributeError, OSError, ValueError, UnicodeError, json.JSONDecodeError):
+    sys.stderr.write("live: the live supervisor failed safely\n")
+    raise SystemExit(1)

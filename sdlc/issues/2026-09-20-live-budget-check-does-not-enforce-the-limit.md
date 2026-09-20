@@ -1,6 +1,6 @@
 # The live budget check does not enforce the limit
 
-Status: Partly closed by ticket 0028; reopened for ticket 0034
+Status: Ticket 0034 implementation in progress
 
 Found 2026-09-20 in the full-project review at `2c32524` and confirmed after ticket 0027.
 

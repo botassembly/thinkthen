@@ -21,6 +21,35 @@ for tool in cargo python3 node mustmatch jq script; do
 	fi
 done
 
+# Paid live work has a narrower Linux supervisor contract than the judgment
+# binary. Check its exact absolute tools and kernel interfaces before a person
+# relies on the live door.
+if [ "$(uname -s)" = Linux ]; then
+	for path in /usr/bin/git /usr/bin/python3 /etc/machine-id \
+		/proc/self/stat /proc/sys/kernel/random/boot_id; do
+		if [ ! -r "$path" ]; then
+			printf 'install: live prerequisite %s is not readable\n' "$path" >&2
+			exit 1
+		fi
+	done
+	if ! /usr/bin/python3 -I -S -c '
+import os, socket, sys
+assert sys.version_info >= (3, 12)
+assert hasattr(os, "waitid") and hasattr(os, "WNOWAIT")
+left, right = socket.socketpair()
+left.close()
+right.close()
+'; then
+		printf 'install: live requires /usr/bin/python3 3.12+, socket pairs, and waitid(WNOWAIT)\n' >&2
+		exit 1
+	fi
+	if ! /usr/bin/git -C "$REPO" rev-parse --path-format=absolute --git-common-dir >/dev/null 2>&1 || \
+		! /usr/bin/git -C "$REPO" worktree list --porcelain -z >/dev/null 2>&1; then
+		printf 'install: live requires /usr/bin/git with absolute common-dir and NUL worktree output\n' >&2
+		exit 1
+	fi
+fi
+
 # cargo-deny is a cargo subcommand, so `command -v` does not find it.
 if ! cargo deny --version >/dev/null 2>&1; then
 	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2

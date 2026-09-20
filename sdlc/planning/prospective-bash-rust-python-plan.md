@@ -12,7 +12,7 @@ The core keeps judgment rules. Hosts own I/O, credentials, retries, and concurre
 
 ## Current state
 
-Tickets 0024 through 0027 closed four defects. Ticket 0028 repaired one checkout's budget; worktrees still receive separate allowances. Ticket 0034's rewritten design awaits review. Six first-pass findings are closed. Seventeen small repairs remain: four first-pass, ten second-pass, two security leftovers, and the hostless-address diagnostic.
+Tickets 0024 through 0027 closed four defects. Ticket 0028 repaired one checkout's budget; worktrees still receive separate allowances until ticket 0034's accepted design lands and migration completes. Ticket 0034 is in implementation. Six first-pass findings are closed. Seventeen small repairs remain: four first-pass, ten second-pass, two security leftovers, and the hostless-address diagnostic.
 
 The live wrapper also waits indefinitely after interruption. Parallel duplicate cache misses can pay twice and fail if replies differ. Probability totals require machine precision without a provider rounding promise. The last two contracts need an explicit operating assessment.
 
