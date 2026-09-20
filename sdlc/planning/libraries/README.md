@@ -25,19 +25,19 @@ Ian approved Ruby, R, and C on 2026-09-20. `annotate` is the launch, and no libr
 
 ## What the two rules overturn
 
-ADR 0017 is still Proposed. Its item 3 says the host language owns everything that touches the world: sending, waiting on a rate limit, several requests at once, and recording files. That writes the same machinery five times in five languages. It is the most code and the slowest path, so Ian's two rules reverse it. ADR 0017 also picks WebAssembly for JavaScript. WebAssembly cannot open a socket, so that choice forces the sending into JavaScript. A native addon lets Rust own it. The rewrite of ADR 0017 decides both. Ian can overturn either.
+ADR 0017 is still Proposed. Its item 3 says the host language owns everything that touches the world: sending, waiting on a rate limit, several requests at once, and recording files. That writes the same machinery once for every host language. It is the most code and the slowest path, so Ian's two rules reverse it. ADR 0017 also picks WebAssembly for JavaScript. WebAssembly cannot open a socket, so that choice forces the sending into JavaScript. A native addon lets Rust own it. The rewrite of ADR 0017 decides both. Ian can overturn either.
 
 ## Three layers
 
 - **The core.** The rules: the question-file grammar, the request and the response shapes, the threshold and the band, the recording names. It stays pure, as it is today.
-- **The engine.** Rust that touches the world: one pooled connection to the backend, retries and the wait a rate limit asks for, the scheduler that runs many requests at once, record, replay, and cache, and the reading of the two environment variables. This layer is what gets bound. It is the change from ADR 0017, which bound the core alone.
+- **The engine.** Rust that touches the world: one pooled connection to the backend, retries and the wait a rate limit asks for, the scheduler that runs many requests at once, record, replay, and cache, and the reading of the two environment variables. This layer is what gets bound. ADR 0017 bound the core alone, and this is the change.
 - **A shim per surface.** It converts arguments, calls one engine function, converts the result, and maps a failure to the language's own error. The command is the first shim.
 
 ## Where the time goes
 
 One measured judgment took over 300 ms, and nearly all of it is the network. A shim's own cost is microseconds. The order of work follows the size of the win.
 
-1. **Keep the connection open.** A new secure connection costs a large share of a judgment. The engine holds one pool for the life of the process. This is the largest gain a library has over the command, which pays for a new process and a new connection on every call.
+1. **Keep the connection open.** A new secure connection costs a large share of a judgment. The engine holds one pool for the life of the process. This is the largest gain a library has over the command. The command pays for a new process and a new connection on every call.
 2. **Run many requests at once inside Rust.** A record verb hands its records to the engine, and the engine runs them at the width `--jobs` names. The host language's lock is released while Rust waits.
 3. **Send many questions in one request.** The vendor measured twelve times cheaper and ten times faster. `annotate` and `tag` ride on it.
 4. **Cross the barrier once per batch.** One call carries a chunk of records down and one carries the answers up. A call per record pays the conversion a thousand times.
