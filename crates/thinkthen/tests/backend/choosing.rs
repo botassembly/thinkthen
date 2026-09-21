@@ -169,7 +169,10 @@ fn a_detailed_pick_keeps_every_option_in_order_and_the_backends_confidence() {
         "{printed}"
     );
     assert!(printed.contains(r#""model":"jev-1.13.0""#), "{printed}");
-    assert!(printed.contains(r#""replayed":false}}"#), "{printed}");
+    assert!(
+        printed.contains(r#""replayed":false,"requests":[""#),
+        "{printed}"
+    );
     assert_eq!(output.status.code(), Some(0));
 }
 

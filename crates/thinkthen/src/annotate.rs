@@ -7,7 +7,6 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use thinkthen_core::adapters::built_in;
-use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, Backend, Framing, ModelName, Outcome, Plan,
     PlanDocument, Pointer, QuestionSet, Reading, Record, Reply, Usage, Value, json_line,
@@ -287,6 +286,7 @@ impl Judging<'_> {
         let mut values: Vec<Option<Value>> = vec![None; self.set.questions().len()];
         let mut details: Vec<Option<AnnotatedAnswer>> = vec![None; self.set.questions().len()];
         let mut model: Option<ModelName> = None;
+        let mut requests = Vec::with_capacity(answered.len());
         let mut usage: Option<Usage> = Some(Usage::new(0, 0));
         let mut replayed = true;
         for answered in answered {
@@ -297,6 +297,7 @@ impl Judging<'_> {
                 replayed: was_replayed,
             } = answered;
             check_model(&mut model, reply.model(), self.backend.model())?;
+            requests.push(digest.clone());
             usage = match (usage, reply.usage()) {
                 (Some(total), Some(next)) => {
                     Some(total.checked_plus(next).ok_or(Failure::UsageOverflow)?)
@@ -323,6 +324,7 @@ impl Judging<'_> {
                 model.ok_or(Failure::Defect("no group reported a model"))?,
                 usage,
                 replayed,
+                requests,
             );
             json_line(&AnnotateResult::new(
                 record,
@@ -348,13 +350,7 @@ impl Judging<'_> {
         places: Vec<usize>,
     ) -> Result<GroupAnswer, Failure> {
         let plan = plan_for(&self.set, &places, &self.backend, base, record)?;
-        let request = built_in::encode(&plan)
-            .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-        let digest = Recorded::new(self.backend.url(), &request)
-            .digest()
-            .as_str()
-            .to_owned();
-        let (reply, replayed) = ask(
+        let answered = ask(
             &self.backend,
             &plan,
             self.common,
@@ -364,9 +360,9 @@ impl Judging<'_> {
         )?;
         Ok(GroupAnswer {
             places,
-            reply,
-            digest,
-            replayed,
+            reply: answered.reply,
+            digest: answered.request.as_str().to_owned(),
+            replayed: answered.replayed,
         })
     }
 }

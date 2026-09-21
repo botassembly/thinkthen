@@ -7,9 +7,10 @@ use conformance_support::{Case, Document, Exchange, ExpectedAnswer, Success};
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use thinkthen_core::adapters::systemone;
+use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::{
     Cutting, Evidence, Find, ModelName, Plan, QuestionFile, QuestionSet, QuestionText, Threshold,
-    Typed, Value, Verb, question_sha256, ranking, resolve,
+    Typed, Url, Value, Verb, question_sha256, ranking, resolve,
 };
 
 const CASES: &str = include_str!("../../../conformance/cases.json");
@@ -47,9 +48,9 @@ fn word(word: &str) -> Result<Verb, String> {
     }
 }
 
-fn asked(case: &Case, exchange: &Exchange) -> Result<Asked, String> {
+fn asked(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, String> {
     if case.verb == "annotate" {
-        return annotate(case, exchange);
+        return annotate(case, place, exchange);
     }
     let raw = case
         .question
@@ -91,7 +92,7 @@ fn asked(case: &Case, exchange: &Exchange) -> Result<Asked, String> {
     })
 }
 
-fn annotate(case: &Case, exchange: &Exchange) -> Result<Asked, String> {
+fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, String> {
     let raw = case
         .question_set
         .as_ref()
@@ -101,7 +102,16 @@ fn annotate(case: &Case, exchange: &Exchange) -> Result<Asked, String> {
     let mut names = Vec::new();
     let mut thresholds = Vec::new();
     let mut digests = Vec::new();
-    for named in set.questions() {
+    let group = set
+        .groups()
+        .get(place)
+        .cloned()
+        .ok_or_else(|| format!("{} has no annotate group {place}", case.id))?;
+    for question_place in group {
+        let named = set
+            .questions()
+            .get(question_place)
+            .ok_or_else(|| format!("{} group {place} points outside its set", case.id))?;
         questions.push(named.question().clone());
         names.push(named.name().to_owned());
         thresholds.push(named.threshold());
@@ -190,12 +200,14 @@ fn validate_exchange(
     success: &Success,
     place: usize,
     exchange: &Exchange,
+    backend_url: &Url,
+    requests: &[String],
 ) -> Result<CheckedAnswers, String> {
     exchange.provenance.validate(exchange)?;
     let asked = if case.verb == "find" {
         find_asked(case)?
     } else {
-        asked(case, exchange)?
+        asked(case, place, exchange)?
     };
     let request = systemone::encode(&asked.plan).map_err(|error| error.to_string())?;
     if request != exchange.request.as_bytes() {
@@ -243,6 +255,18 @@ fn validate_exchange(
             .ok_or_else(|| "answer digest is absent".to_owned())?;
         if digest != &held.details.question_sha256 || reply.model().as_str() != held.details.model {
             return Err(format!("{} answer `{name}` has wrong metadata", case.id));
+        }
+        let exchange_request = Recorded::new(backend_url, exchange.request.as_bytes())
+            .digest()
+            .as_str()
+            .to_owned();
+        let expected_requests = if case.verb == "annotate" {
+            requests
+        } else {
+            std::slice::from_ref(&exchange_request)
+        };
+        if held.details.requests != expected_requests {
+            return Err(format!("{} answer `{name}` has wrong requests", case.id));
         }
         values.push((value, answer.yes().unwrap_or_default()));
     }
@@ -316,6 +340,7 @@ fn validate(text: &str) -> Result<(), String> {
     conformance_support::privacy(text)?;
     let document: Document = serde_json::from_str(text).map_err(|error| error.to_string())?;
     document.validate_header(&VERBS, &ERRORS)?;
+    let backend_url = Url::new(&document.backend_url).map_err(|error| error.to_string())?;
     let mut ids = BTreeSet::new();
     let mut verbs = BTreeSet::new();
     let mut errors = BTreeSet::new();
@@ -341,8 +366,19 @@ fn validate(text: &str) -> Result<(), String> {
         let mut odds = Vec::new();
         let mut values = Vec::new();
         let mut model: Option<String> = None;
+        let requests = case
+            .exchanges
+            .iter()
+            .map(|exchange| {
+                Recorded::new(&backend_url, exchange.request.as_bytes())
+                    .digest()
+                    .as_str()
+                    .to_owned()
+            })
+            .collect::<Vec<_>>();
         for (place, exchange) in case.exchanges.iter().enumerate() {
-            let (answers, reported) = validate_exchange(case, success, place, exchange)?;
+            let (answers, reported) =
+                validate_exchange(case, success, place, exchange, &backend_url, &requests)?;
             if model.as_ref().is_some_and(|held| held != &reported) {
                 return Err(format!("{} has replies from different models", case.id));
             }
@@ -379,6 +415,16 @@ fn focused_mutations_are_refused() {
         .replacen("\"kind\": \"local\"", "\"kind\": \"backend\"", 1);
     let mutations = [
         CASES.replacen("\"bare\": true", "\"bare\": false", 1),
+        CASES.replacen(
+            "https://api.typesafe.ai/v1/systemone",
+            "https://wrong.example/v1/systemone",
+            1,
+        ),
+        CASES.replacen(
+            "e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e",
+            "08b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e",
+            1,
+        ),
         CASES.replacen("{\\\"state\\\":\\\"From:", "{\\\"state\\\":\\\"XFrom:", 1),
         CASES.replacen(
             "\"id\": \"02-decide-no\"",

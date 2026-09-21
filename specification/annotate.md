@@ -101,7 +101,7 @@ One record makes one request for each distinct `on`. Every question with the sam
 
 Records never share a request. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
 
-`--details` reports `meta.usage` as the sum over the record's requests, and each answer carries the digest of the request that produced it. [result.md](result.md) gives the shape.
+`--details` reports `meta.usage` as the sum over the record's requests. `meta.requests` lists their recording digests in question-set group order. Each answer also carries the digest of the request that produced it. [result.md](result.md) gives the shape.
 
 ## Cautions
 

@@ -6,7 +6,8 @@ use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn};
 use thinkthen_core::adapters::built_in;
-use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText};
+use thinkthen_core::recording::Exchange as Recorded;
+use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -152,6 +153,8 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     let viewed = detailed.requests();
     let viewed = viewed.first().expect("one request reached the listener");
     assert_eq!(sent.body, viewed.body, "the view changes no request byte");
+    let url = Url::new(detailed.url()).expect("the listener URL is valid");
+    let request = Recorded::new(&url, &viewed.body).digest();
 
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
@@ -164,10 +167,11 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
                 r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
-                r#""replayed":false}}}}"#,
+                r#""replayed":false,"requests":["{request}"]}}}}"#,
                 "\n",
             ),
-            url = detailed.url()
+            url = detailed.url(),
+            request = request.as_str(),
         )
     );
     assert_eq!(output.status.code(), Some(0));

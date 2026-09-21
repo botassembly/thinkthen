@@ -225,6 +225,7 @@ fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
     let folder = folder("meta");
     let name = plant(&folder, ANSWERED).expect("an entry the default address answers");
     assert!(name.ends_with(".json"), "{name}");
+    let request = name.strip_suffix(".json").expect("a recording name");
 
     let output = run(
         &[
@@ -240,16 +241,19 @@ fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
 
     assert_eq!(output.status.code(), Some(0));
     let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        printed.contains(concat!(
+    let expected = [
+        concat!(
             r#""meta":{"tool":"thinkthen 0.0.1","#,
             r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
             r#""url":"https://api.typesafe.ai/v1/systemone","#,
             r#""model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"#,
-            r#""replayed":true}}"#,
-        )),
-        "{printed}"
-    );
+            r#""replayed":true,"requests":[""#,
+        ),
+        request,
+        r#""]}"#,
+    ]
+    .concat();
+    assert!(printed.contains(&expected), "{printed}");
 }
 
 #[test]

@@ -84,7 +84,7 @@ pub(crate) fn run(
     }
     let recorder = recorder.ok_or(Failure::Defect("a live find run has no recorder"))?;
     let client = Client::new(Duration::from_secs(common.timeout), backend.is_secure());
-    let (reply, replayed) = ask(
+    let answered = ask(
         &backend,
         find.plan(),
         common,
@@ -92,7 +92,16 @@ pub(crate) fn run(
         &recorder,
         &client,
     )?;
-    let (line, resolved) = rendered(common, &find, &backend, &reading, &units, &reply, replayed)?;
+    let (line, resolved) = rendered(
+        common,
+        &find,
+        &backend,
+        &reading,
+        &units,
+        &answered.reply,
+        answered.replayed,
+        answered.request.as_str(),
+    )?;
     if let Some(line) = line {
         edge::write_line(writer, &line)?;
     }
@@ -147,6 +156,7 @@ fn rendered(
     units: &[Unit],
     reply: &Reply,
     replayed: bool,
+    request: &str,
 ) -> Result<(Option<String>, bool), Failure> {
     let answer = reply
         .answers()
@@ -173,6 +183,7 @@ fn rendered(
             reply.model().clone(),
             reply.usage(),
             replayed,
+            vec![request.to_owned()],
         );
         Some(json_line(&find.result(value, selected, meta))?)
     } else {

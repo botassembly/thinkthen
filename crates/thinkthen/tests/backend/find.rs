@@ -67,7 +67,7 @@ fn a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader() {
     assert_eq!(output.status.code(), Some(3));
     let row = String::from_utf8_lossy(&output.stdout);
     assert!(row.starts_with(r#"{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which unit answers?","none":true},"answer":{"kind":"find","pick":"u001","probabilities":{"u001":0.5,"u002":0.0,"none":0.5}},"threshold":null,"meta":{"tool":"thinkthen 0.0.1","question_sha256":"#), "{row}");
-    assert!(row.contains(r#""replayed":false}}"#), "{row}");
+    assert!(row.contains(r#""replayed":false,"requests":[""#), "{row}");
 }
 
 #[test]

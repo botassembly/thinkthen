@@ -52,7 +52,7 @@ The first live answers on 2026-09-19 returned the same probability for two ident
 
 ## What replay changes in a result
 
-`meta.replayed` is `true` when the answer came from a recording and `false` when a backend answered. It is always present. Everything else in the result is what the recorded response yields, the usage included. A later token ledger counts only answers that a backend gave.
+`meta.replayed` is `true` when the answer came from a recording and `false` when a backend answered. It is always present. `meta.requests` carries the same digest that names the requested recording entry. Replay and live execution therefore report one request identity. Everything else in the result is what the recorded response yields, the usage included. A later token ledger counts only answers that a backend gave.
 
 ## A recording holds the evidence
 

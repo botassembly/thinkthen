@@ -85,10 +85,11 @@ pub struct AnnotateMeta {
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
     replayed: bool,
+    requests: Vec<String>,
 }
 
 impl AnnotateMeta {
-    /// Gather the shared facts about every request behind one row.
+    /// Gather the shared facts and ordered request identities behind one row.
     #[must_use]
     pub fn new(
         version: &str,
@@ -97,6 +98,7 @@ impl AnnotateMeta {
         model: ModelName,
         usage: Option<Usage>,
         replayed: bool,
+        requests: Vec<String>,
     ) -> Self {
         Self {
             tool: crate::version_line(version),
@@ -105,6 +107,7 @@ impl AnnotateMeta {
             model,
             usage,
             replayed,
+            requests,
         }
     }
 }
@@ -168,6 +171,7 @@ pub struct Meta {
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
     replayed: bool,
+    requests: Vec<String>,
 }
 
 impl Meta {
@@ -178,7 +182,8 @@ impl Meta {
     /// `question_sha256` names the exact question that produced the row, and
     /// `specification/question-file.md` writes out the form it digests.
     /// `usage` is `None` when the backend reported none, and the field is then
-    /// absent from the JSON. `replayed` is always present.
+    /// absent from the JSON. `replayed` and the ordered logical `requests` are
+    /// always present.
     #[must_use]
     pub fn new(
         version: &str,
@@ -187,6 +192,7 @@ impl Meta {
         model: ModelName,
         usage: Option<Usage>,
         replayed: bool,
+        requests: Vec<String>,
     ) -> Self {
         Self {
             tool: crate::version_line(version),
@@ -195,6 +201,7 @@ impl Meta {
             model,
             usage,
             replayed,
+            requests,
         }
     }
 }
@@ -260,6 +267,7 @@ mod tests {
 
     /// The digest of the example question, which `result.md` prints too.
     const DIGEST: &str = "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888";
+    const REQUEST: &str = "6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4";
 
     /// The example in `specification/result.md`, on the one line it prints on.
     const COMPACT: &str = concat!(
@@ -269,7 +277,8 @@ mod tests {
         r#""meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
         r#""url":"https://api.typesafe.ai/v1/systemone","#,
         r#""model":"jev-1.13.0","#,
-        r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}"#,
+        r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false,"#,
+        r#""requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"]}}"#,
     );
 
     #[test]
@@ -304,6 +313,7 @@ mod tests {
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
                 false,
+                vec![REQUEST.to_owned()],
             ),
         )
     }
@@ -333,6 +343,7 @@ mod tests {
             ModelName::new("local-1").expect("not empty"),
             None,
             true,
+            vec![REQUEST.to_owned()],
         );
         let rendered = serde_json::to_string(&meta).expect("meta serializes");
         assert_eq!(
@@ -340,7 +351,7 @@ mod tests {
             concat!(
                 r#"{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
                 r#""url":"http://127.0.0.1:8080/v1/systemone","#,
-                r#""model":"local-1","replayed":true}"#,
+                r#""model":"local-1","replayed":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"]}"#,
             )
         );
     }
@@ -366,6 +377,7 @@ mod tests {
                 ModelName::new("local-1").expect("not empty"),
                 None,
                 false,
+                vec![REQUEST.to_owned()],
             ),
         );
         let rendered = serde_json::to_string(&result).expect("a result serializes");
@@ -406,6 +418,7 @@ mod tests {
                 ModelName::new("local-1").expect("not empty"),
                 None,
                 false,
+                vec![REQUEST.to_owned()],
             ),
         );
         let rendered = serde_json::to_string(&result).expect("a result serializes");

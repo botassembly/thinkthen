@@ -9,6 +9,7 @@ use thinkthen_core::{Answer, FindAnswer, Value};
 #[derive(Deserialize)]
 pub(crate) struct Document {
     schema: String,
+    pub(crate) backend_url: String,
     case_count: usize,
     error_kinds: Vec<String>,
     pub(crate) cases: Vec<Case>,
@@ -16,7 +17,10 @@ pub(crate) struct Document {
 
 impl Document {
     pub(crate) fn validate_header(&self, verbs: &[&str], errors: &[&str]) -> Result<(), String> {
-        if self.schema != "thinkthen.conformance/1" || self.case_count != self.cases.len() {
+        if self.schema != "thinkthen.conformance/1"
+            || self.backend_url != "https://api.typesafe.ai/v1/systemone"
+            || self.case_count != self.cases.len()
+        {
             return Err("schema or declared case count is wrong".to_owned());
         }
         let mut declared = self
@@ -147,6 +151,7 @@ pub(crate) struct Details {
     pub(crate) answer: Box<RawValue>,
     pub(crate) model: String,
     pub(crate) question_sha256: String,
+    pub(crate) requests: Vec<String>,
 }
 
 #[derive(Deserialize)]

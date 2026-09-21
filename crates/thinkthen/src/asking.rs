@@ -10,10 +10,9 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use thinkthen_core::adapters::built_in;
-use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::{
     Backend, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, Reply, Resolved, Sources, Threshold, Value, json_line,
+    QuestionText, Reading, Record, Resolved, Sources, Threshold, Value, json_line,
     question_sha256,
 };
 
@@ -23,6 +22,7 @@ use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::{Client, Exchange};
 use crate::judge::{Asked, Keeping, View};
+use crate::prepared_request::{Answered, PreparedRequest};
 use crate::recorder::Recorder;
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
@@ -407,7 +407,7 @@ impl Judging<'_> {
         arrived: Option<&[u8]>,
     ) -> Result<Judged, Failure> {
         let sending = asked_of(reading, record, &self.backend, &self.asks)?;
-        let (reply, replayed) = ask(
+        let answered = ask(
             &self.backend,
             &sending.plan,
             self.common,
@@ -415,7 +415,8 @@ impl Judging<'_> {
             &self.recorder,
             &self.client,
         )?;
-        let answer = reply
+        let answer = answered
+            .reply
             .answers()
             .first()
             .ok_or(Failure::Defect("the adapter answered no question"))?
@@ -427,9 +428,10 @@ impl Judging<'_> {
                 env!("CARGO_PKG_VERSION"),
                 question_sha256(&sending.question, self.threshold)?,
                 self.backend.url().clone(),
-                reply.model().clone(),
-                reply.usage(),
-                replayed,
+                answered.reply.model().clone(),
+                answered.reply.usage(),
+                answered.replayed,
+                vec![answered.request.as_str().to_owned()],
             );
             // `rank` orders and never selects, so a ranked row carries no
             // value. A value here would be a cut at 0.5 that nobody named.
@@ -469,7 +471,7 @@ impl Judging<'_> {
         Ok(Judged {
             printed,
             outcome,
-            replayed,
+            replayed: answered.replayed,
             probability,
         })
     }
@@ -486,32 +488,36 @@ pub(crate) fn ask(
     environment: &Environment,
     recorder: &Recorder,
     client: &Client,
-) -> Result<(Reply, bool), Failure> {
-    let body = built_in::encode(plan)
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-    let recorded = Recorded::new(backend.url(), &body);
-    cache_lock::coalesce(
+) -> Result<Answered, Failure> {
+    let prepared = PreparedRequest::new(backend, plan)?;
+    let recorded = prepared.recorded(backend);
+    let (reply, replayed) = cache_lock::coalesce(
         || {
-            let replayed = recorder.replayed(&recorded)?;
+            let replayed = recorder.replayed(&recorded, &prepared.digest)?;
             replayed
                 .map(|response| built_in::decode(plan, &response).map_err(Failure::from))
                 .transpose()
         },
-        || recorder.lock(&recorded),
+        || recorder.lock(&prepared.digest),
         || {
             let key = edge::key()?;
             let answered = client.post(&Exchange {
                 url: backend.url().as_str(),
-                body: &body,
+                body: &prepared.body,
                 key: &key,
                 max_retries: common.max_retries,
                 retry_wait: environment.retry_wait(),
             })?;
             let reply = built_in::decode(plan, &answered)?;
-            recorder.record(&recorded, &answered)?;
+            recorder.record(&recorded, &prepared.digest, &answered)?;
             Ok(reply)
         },
-    )
+    )?;
+    Ok(Answered {
+        reply,
+        replayed,
+        request: prepared.digest,
+    })
 }
 
 /// Turn the outcome into the exit code `specification/channels.md` fixes.

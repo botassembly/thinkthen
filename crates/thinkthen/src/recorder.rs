@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use thinkthen_core::recording::{Entry, Exchange};
+use thinkthen_core::recording::{Digest, Entry, Exchange};
 
 use crate::cache_lock::{self, CacheLock};
 use crate::failure::Failure;
@@ -58,11 +58,15 @@ impl Recorder {
     ///
     /// Returns [`Failure`] when the entry is absent under replay alone, when the
     /// file is there and cannot be read, or when it records another exchange.
-    pub(crate) fn replayed(&self, exchange: &Exchange<'_>) -> Result<Option<Vec<u8>>, Failure> {
+    pub(crate) fn replayed(
+        &self,
+        exchange: &Exchange<'_>,
+        digest: &Digest,
+    ) -> Result<Option<Vec<u8>>, Failure> {
         let Some(folder) = self.folder.as_ref().filter(|_| self.replaying) else {
             return Ok(None);
         };
-        let name = exchange.digest().file_name();
+        let name = digest.file_name();
         let bytes = match fs::read(folder.join(&name)) {
             Ok(bytes) => bytes,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
@@ -82,7 +86,7 @@ impl Recorder {
     ///
     /// Record-only and replay-only runs need no lock. A cache caller keeps the
     /// returned guard through its second read, request, decode, and recording.
-    pub(crate) fn lock(&self, exchange: &Exchange<'_>) -> Result<Option<CacheLock>, Failure> {
+    pub(crate) fn lock(&self, digest: &Digest) -> Result<Option<CacheLock>, Failure> {
         let Some(folder) = self
             .folder
             .as_ref()
@@ -90,7 +94,7 @@ impl Recorder {
         else {
             return Ok(None);
         };
-        cache_lock::acquire(folder, exchange.digest().as_str())
+        cache_lock::acquire(folder, digest.as_str())
             .map(Some)
             .map_err(Failure::Recording)
     }
@@ -103,7 +107,12 @@ impl Recorder {
     /// # Errors
     ///
     /// Returns [`Failure`] when the folder or the file cannot be written.
-    pub(crate) fn record(&self, exchange: &Exchange<'_>, response: &[u8]) -> Result<(), Failure> {
+    pub(crate) fn record(
+        &self,
+        exchange: &Exchange<'_>,
+        digest: &Digest,
+        response: &[u8],
+    ) -> Result<(), Failure> {
         let Some(folder) = self.folder.as_ref().filter(|_| self.recording) else {
             return Ok(());
         };
@@ -112,7 +121,7 @@ impl Recorder {
         let written = entry
             .written()
             .map_err(|_| Failure::Defect("a recorded exchange could not be written as JSON"))?;
-        let name = exchange.digest().file_name();
+        let name = digest.file_name();
         let attempt = WRITES.fetch_add(1, Ordering::Relaxed);
         let partial = folder.join(format!(".{}.{attempt}.{name}", process::id()));
         make_folder(folder).map_err(Failure::Recording)?;

@@ -14,6 +14,7 @@ mod find;
 mod http;
 mod judge;
 mod normalize;
+mod prepared_request;
 mod recorder;
 mod schedule;
 mod table;

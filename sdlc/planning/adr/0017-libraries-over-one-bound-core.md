@@ -166,3 +166,14 @@ Ticket 0052 turns Job 3's experiment evidence into `conformance/cases.json`. Thi
 5. The offline pure-core integration test uses the production question grammar, request encoder, response decoder, digest, answer rules, ranking, and find selector. It contains no second product canonicalizer or probability formula. The section 8 step-1 merge adds the first command runner over the same file.
 
 Job 3 is complete. Section 8 step 1 is next.
+
+## Amendment, 2026-09-21: request identity on every result
+
+Ian approved the build team's request-identity recommendation before the one-crate move. This amendment fixes the result contract before `specification/result.md` changes. Ian can overturn any item.
+
+1. Every detailed result carries `meta.requests`, always as an array of lowercase recording digests. A result from one logical request carries one element.
+2. The array follows logical construction order: input record, evidence group, then any future chunk. Concurrent completion cannot reorder it. Retries add no element. Equal logical requests keep separate positions.
+3. Each detailed `annotate` answer keeps its existing singular `request`. That field identifies the request for that answer. The aggregate list identifies every request for the row.
+4. One private prepared request holds the exact encoded body and the production recording digest. Replay, cache locking, live sending, recording, and the returned result use that prepared identity. They do not encode or digest the request again.
+5. The shared conformance document names one canonical backend URL. Its expected details carry request lists derived through the production recording digest from that URL and each exact request string. A two-group annotate case fixes group order.
+6. Bare output, request bytes, recording names, diagnostics, exit codes, retries, and network behavior do not change.
