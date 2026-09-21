@@ -25,6 +25,8 @@
 #     `answer.kind` of `yes_no` and a probability from zero through one. Every
 #     value change stays visible. A same-value movement is listed only when it
 #     exceeds the tolerance. Deltas are rounded to twelve decimal places.
+#     Each probability-bearing change says whether its delta exceeds the
+#     tolerance. Equality does not exceed it.
 #     Legacy rows with no answer remain comparable. A malformed present
 #     yes-no probability fails without printing its contents.
 #   - `changed.question` uses the unique valid `meta.question_sha256` values
@@ -129,7 +131,8 @@ def valid_digest:
       + (if ((.b | yes_no_probability) != null and (.a | yes_no_probability) != null)
          then {before_probability: (.b | yes_no_probability),
                after_probability: (.a | yes_no_probability),
-               probability_delta: probability_delta}
+               probability_delta: probability_delta,
+               probability_delta_over_tolerance: (probability_delta > $tolerance)}
          else {}
          end)] | sort_by(.id)) as $changes
 | ([$probability_pairs[]

@@ -20,7 +20,7 @@ This ticket makes these decisions. Ian can overturn them:
 
 1. A comparable `value` may be null, boolean, string, or number. `same` counts exact scalar equality. `changed_values` counts comparable pairs whose values differ, and `compared == same + changed_values`.
 2. `changes` is ordered lexically by id. It lists every changed scalar value as `id`, `before_value`, and `after_value`. It also lists a same-value yes-or-no pair when its probability movement exceeds the active tolerance. The existing `flips` object remains the boolean-or-null grouping and keeps its `yes`, `no`, and `unresolved` words.
-3. Probability comparison applies only when both rows carry a valid `answer.kind` of `yes_no` and a numeric `answer.probability` from zero through one. Such a change entry also carries `before_probability`, `after_probability`, and `probability_delta`. Choice and score gain scalar comparison and no invented probability.
+3. Probability comparison applies only when both rows carry a valid `answer.kind` of `yes_no` and a numeric `answer.probability` from zero through one. Such a change entry also carries `before_probability`, `after_probability`, `probability_delta`, and `probability_delta_over_tolerance`. The last field is true only when the delta exceeds the active tolerance. Choice and score gain scalar comparison and no invented probability fields.
 4. `--argjson probability_tolerance N` is optional. The transform reads it through `$ARGS.named.probability_tolerance`. An absent name selects 0.08; an explicitly supplied `null` is invalid. The argument accepts a number from zero through one and otherwise fails with `compare: probability_tolerance must be a number from 0 through 1`. Zero lists every nonzero same-answer probability movement. `yes_no_probability` has the exact fields `tolerance`, `compared`, `changed`, `summarized_same_value`, and `largest_summarized_delta`. `changed` counts valid yes-or-no pairs with a nonzero probability delta.
 5. Every value change stays visible at every probability delta. Missing `answer` on a legacy row makes probability unavailable. A present malformed `yes_no` answer fails safely. Calculated deltas lose binary display residue at twelve decimal places, while the before and after probabilities remain unchanged.
 
@@ -36,9 +36,9 @@ Excluded: choice or score probability movement, arrays and objects such as `tag`
 
 - A red-green focused test covers null, boolean, string, and number values; every boolean and unresolved direction; exact lexical id order; and the partition `compared == same + changed_values`.
 - Existing duplicate-id, missing-row, changed-input, changed-label, changed-question, model, threshold, legacy, and empty-run behavior stays pinned.
-- A yes-or-no value change appears below, at, and above 0.08. A same-value delta of 0.08 is summarized, 0.09 is listed, and tolerance zero lists every movement. The active tolerance appears in output, and invalid tolerances earn the fixed safe error.
+- A yes-or-no value change appears below, at, and above 0.08. Its `probability_delta_over_tolerance` is false below and at the tolerance and true above it. A same-value delta of 0.08 is summarized, 0.09 is listed with the field true, and tolerance zero lists every movement. The active tolerance appears in output, and invalid tolerances earn the fixed safe error.
 - Legacy rows with no answer still compare. Present malformed yes-or-no answers fail without echoing their contents. Choice and score value changes work without probability fields. Missing, array, and object values fail safely.
-- The outside repeat check reports 100 comparable rows, 96 same values, four changed values and existing flips, and `yes_no_probability` with `compared: 100`, `changed: 63`, `summarized_same_value: 59`, and `largest_summarized_delta: 0.08`. No same-value movement exceeds the default.
+- The outside repeat check reports 100 comparable rows, 96 same values, four changed values and existing flips, and `yes_no_probability` with `compared: 100`, `changed: 63`, `summarized_same_value: 59`, and `largest_summarized_delta: 0.08`. All four flips carry `probability_delta_over_tolerance: false`, and no same-value movement exceeds the default.
 - How-to 41 demonstrates the new fields, explains the fair-pair rule and evidence limit, and passes its page limits. The transform page, focused test, all four repository rungs, and `git diff --check` pass.
 
 ## Dependencies
@@ -62,5 +62,5 @@ Re-score if implementation needs a non-scalar value, a probability rule for choi
 
 ## Review
 
-- Design review: accepted after one rejection. The first draft understated compatibility proof, left the summary field names implicit, and would have let an explicit null look absent. The corrected ticket raises the route to level 3, fixes every summary name and count, and distinguishes an omitted argument from invalid null.
+- Design review: accepted after one rejection and one implementation clarification. The first draft understated compatibility proof, left the summary field names implicit, and would have let an explicit null look absent. The corrected ticket raises the route to level 3, fixes every summary name and count, and distinguishes an omitted argument from invalid null. The later clarification adds a per-change boolean so a visible value flip does not imply that its probability movement crossed the reporting tolerance.
 - Code review: pending
