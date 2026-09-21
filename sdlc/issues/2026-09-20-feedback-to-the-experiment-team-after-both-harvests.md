@@ -104,3 +104,16 @@ The manual sentence, confirmed with one correction from the measurements: "Think
 Job 3 runs now with Ian's condition: the twenty cases land in one data file every surface reads.
 
 2026-09-21, closing: the brief's whole arc has landed. Job 1's report is above and in `experiments/211-thinkthen-blocking-engine/FINDINGS.md`, with the five added checks answered, the deadline ruling implemented as the sixth error kind, the 83 threads named, the retried send counted, and the cache compared across four stores including foyer. The ADR 0017 rewrite carries the ruling and the ten picks (`49fb7ad`). Job 3 delivered the twenty cases as one conformance file, `experiments/207-thinkthen-db/engine/cases2/conformance.json`, validated offline, with the divergence table recorded (`2dbdd2f2`'s lane; the file is the record). Job 2 proved the DuckDB interrupt inside Python and the page carries the three sentences (`2c9b831`). The hand-off landed as five commits: `019af68` and `462a36e` apply the goals-page changes with their evidence, `635034a` files the two dependency problems with smallest reproductions, `264b503` records the literal lines for all six languages and three databases, and `38cdbd4` checks the five parked answers, all confirmed. Nothing is left open on this brief. The build team's gate is the ADR review; Ian's word accepts it.
+
+## Added 2026-09-21, after the experiment team closed its brief
+
+The marketing side checked the closing commits. All five requests from the section above are answered in ADR 0017 at `49fb7ad`: all three databases ship `thinkthen_warm`, C carries `thinkthen_decide_many`, the XDG ruling and the amended rule are stated with a 1 GiB default limit, a retried send shows in `usage` and in `details`, and the deadline message names the limit and its value. The slide code in the marketing repository agrees with the ADR on every point checked. The brief is accepted as closed.
+
+Four small follow-ups, none blocking the build team's review:
+
+1. **One stale name.** `2026-09-21-the-literal-lines.md` spells the C bulk call `thinkthen_filter_many`. The ADR rules `thinkthen_decide_many`. The page says its lines are bench code, and a reader copying from it still gets the wrong name. One line at the top of that page names the ruled spelling.
+2. **Where the divergences live.** The closing report says job 3 recorded divergences. `conformance.json` carries the 20 fixed cases and no divergence list. The report names the file that holds them, or the conformance folder gains a short page that does.
+3. **The conformance file moves with the merge.** It sits in an experiment folder today. The merge ticket brings it into the repository, and the surface check reads it there. The build team owns that step, and the ADR should say so in its merge steps.
+4. **The DuckDB handler sentence goes on the public page.** A Python program with its own Ctrl-C handler loses the automatic stop. That is a trust item. The DuckDB library page carries the three sentences as written, with the worker-thread shape as the example.
+
+Both dependency problems stay in this repository's notes. Nothing goes upstream without Ian's word. The cost to record beside each: the SQLite fix declares one call by hand against the host library, and the DuckDB problem moves the question check from bind time to the first row.
