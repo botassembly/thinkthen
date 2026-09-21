@@ -58,6 +58,7 @@ def main() -> int:
     for case in cases:
         verb, ident = case["verb"], case["id"]
         expect = case["expect"]
+        rows_line = None
         if "question_file" in case:
             print(f"skip     {ident}: the local kind needs a file door")
             continue
@@ -75,6 +76,24 @@ def main() -> int:
                           f"FROM thinkthen_decide({question_arg(case)}, {array})")
                 want = ",".join("null" if r is None else ("true" if r else "false") for r in rows)
                 note = None if got == want else f"diverge {ident}: expected {want}, got {got}"
+                if note is None and expect.get("rows"):
+                    # The ruled record row (go-ahead item 4): the caller's
+                    # own record beside its value, in input order — the SQL
+                    # row itself, read back through the array's positions.
+                    pairs = "~".join(
+                        f"{row['input']}|{'true' if row['value'] else 'false'}"
+                        for row in expect["rows"]
+                    )
+                    got_rows = sql(
+                        f"WITH recs AS (SELECT {array}::text[] AS a) "
+                        "SELECT string_agg(recs.a[d.i + 1] || '|' || "
+                        "COALESCE(d.decided::text, 'null'), '~' ORDER BY d.i) "
+                        f"FROM recs, thinkthen_decide({question_arg(case)}, recs.a) AS d(i, decided)"
+                    )
+                    if got_rows != pairs:
+                        note = f"diverge {ident} rows: expected {pairs!r}, got {got_rows!r}"
+                    else:
+                        rows_line = f"ok {ident} rows"
             elif verb == "choose":
                 got = sql(f"SELECT thinkthen_choose({question_arg(case)}, {literal(case['evidence'])}, NULL)")
                 want = expect.get("answer")
@@ -211,6 +230,8 @@ def main() -> int:
             else:
                 note = f"diverge {ident}: raised when no failure was expected: {text}"
         print(note or f"ok {ident}")
+        if note is None and rows_line:
+            print(rows_line)
         NOTES.append(note)
         bad += note.startswith("diverge") if note else 0
     print(f"{len(cases) - bad} of {len(cases)} cases ok, {bad} diverged")

@@ -217,6 +217,28 @@ def main():
                     report(case_id, f"kept {held}")
                 else:
                     report(case_id, f"kept {held}, expected {wanted}", failed=True)
+                if expect.get("rows"):
+                    # The ruled record row (go-ahead item 4): SQL's own two
+                    # columns are the row, `input` and `value`, in input
+                    # order. Case 06's empty list is covered by its count.
+                    pairs = "~".join(
+                        f"{row['input']}|{'1' if row['value'] else '0'}"
+                        for row in expect["rows"]
+                    )
+                    held_pairs = fresh_conn.execute(
+                        "SELECT group_concat(body || '|' || "
+                        "thinkthen_decide(?, body), '~') FROM "
+                        "(SELECT body FROM t WHERE thinkthen_decide(?, body) ORDER BY id)",
+                        (json.dumps(question), json.dumps(question)),
+                    ).fetchone()[0]
+                    if held_pairs == pairs:
+                        report(case_id + " rows", pairs)
+                    else:
+                        report(
+                            case_id + " rows",
+                            f"held {held_pairs!r}, expected {pairs!r}",
+                            failed=True,
+                        )
             elif verb in ("choose", "score", "tag"):
                 sql = f"SELECT thinkthen_{verb}(?, ?)"
                 try:
@@ -289,6 +311,25 @@ def main():
                     report(case_id, "warm is the bulk spine, answers in order")
                 else:
                     report(case_id, f"held {held}, expected {wanted}", failed=True)
+                if expect.get("rows"):
+                    pairs = "~".join(
+                        f"{row['input']}|{'1' if row['value'] else '0'}"
+                        for row in expect["rows"]
+                    )
+                    held_pairs = fresh_conn.execute(
+                        "SELECT group_concat(body || '|' || "
+                        "thinkthen_decide(?, body), '~') FROM "
+                        "(SELECT body FROM t ORDER BY id)",
+                        (json.dumps(question),),
+                    ).fetchone()[0]
+                    if held_pairs == pairs:
+                        report(case_id + " rows", pairs)
+                    else:
+                        report(
+                            case_id + " rows",
+                            f"held {held_pairs!r}, expected {pairs!r}",
+                            failed=True,
+                        )
             elif verb == "recognize":
                 kinds = case["question"].get("kinds") or []
                 kinds_arg = ",".join(kinds) if kinds else None

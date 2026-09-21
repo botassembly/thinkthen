@@ -170,3 +170,10 @@ $ ./check.sh
 == sqlite surface: wire suite skipped, no stub on 8218
 exit 0
 ```
+
+**The record row, adopted.** The conformance slice now asserts the ruled `{"input","value"}` row on the bulk forms: the value-printing projections read back as `input|value` pairs in input order — `filter`'s kept rows and `decide_many`'s answers where the case carries them (`05`, `19`; case `06`'s empty list is covered by its count). SQL's own two columns are the row; no new function was added.
+
+```
+ok       05-filter-keeps-some-of-five rows
+ok       19-decide-many-judgments rows
+```

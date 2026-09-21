@@ -119,11 +119,39 @@ def main() -> int:
             listing = ",".join(sql_string(r) for r in records)
             check(name, f"SELECT count(*) FROM (SELECT unnest([{listing}]) AS text) WHERE thinkthen_decide({sql_string(arg)}, text);",
                   str(kept))
+            if expect.get("rows"):
+                # The ruled record row (go-ahead item 4): SQL's own two
+                # columns are the row, `input` and `value`, in input order.
+                # Case 06's empty list is covered by its count above.
+                pairs = "~".join(
+                    f"{row['input']}|{'true' if row['value'] else 'false'}"
+                    for row in expect["rows"]
+                )
+                check(
+                    name + " rows",
+                    "SELECT string_agg(text || '|' || thinkthen_decide("
+                    f"{sql_string(arg)}, text), '~' ORDER BY i) "
+                    f"FROM (SELECT * FROM unnest([{listing}]) WITH ORDINALITY AS t(text, i)) "
+                    f"WHERE thinkthen_decide({sql_string(arg)}, text);",
+                    pairs,
+                )
         elif verb == "decide_many":
             listing = ",".join(sql_string(r) for r in records)
             wanted = "[" + ", ".join("true" if a else "false" for a in expect["answers"]) + "]"
             check(name, f"SELECT list(thinkthen_decide({sql_string(arg)}, text)) FROM (SELECT unnest([{listing}]) AS text);",
                   wanted)
+            if expect.get("rows"):
+                pairs = "~".join(
+                    f"{row['input']}|{'true' if row['value'] else 'false'}"
+                    for row in expect["rows"]
+                )
+                check(
+                    name + " rows",
+                    "SELECT string_agg(text || '|' || thinkthen_decide("
+                    f"{sql_string(arg)}, text), '~' ORDER BY i) "
+                    f"FROM unnest([{listing}]) WITH ORDINALITY AS t(text, i);",
+                    pairs,
+                )
         elif verb == "details":
             check(name, f"SELECT thinkthen_details({sql_string(arg)}, {sql_string(evidence)}).digest;",
                   expect["details"]["question_sha256"])

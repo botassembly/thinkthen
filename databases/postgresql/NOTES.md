@@ -204,3 +204,10 @@ ok       decide
 **Containers.** The check's disposable containers are now named `laneb-pg` and `laneb-pg-wire`; both are removed with `docker rm -f -v` by the check's exit trap, and the measurement/debug containers used while sizing the cancel test (`laneb-pg-measure`, `laneb-pg-dbg`) were removed the same way. `docker ps -a | grep laneb` prints nothing after a run.
 
 **Fixed on the way:** the packaged `thinkthen.so` under `target/release/thinkthen-pg16/usr` had gone stale against the contract's new fields — the check repackages on every run, so the committed flow was fine, but any manual probe must run `cargo pgrx package` first (recorded here because it cost a confusing probe).
+
+**The record row, adopted.** The conformance slice now asserts the ruled `{"input","value"}` row on the bulk forms: the value-printing projections read back as `input|value` pairs in input order — `filter`'s kept rows and `decide_many`'s answers where the case carries them (`05`, `19`; case `06`'s empty list is covered by its count). SQL's own two columns are the row; no new function was added.
+
+```
+ok       05-filter-keeps-some-of-five rows
+ok       19-decide-many-judgments rows
+```

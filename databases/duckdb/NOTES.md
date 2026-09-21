@@ -216,3 +216,10 @@ ok       decide
 ok       the working replacements ran with their evidence: the edges, the relations row, the mentions join, and the join's zero requests
 ok       the 255-record refusal is in the log
 ```
+
+**The record row, adopted.** The conformance slice now asserts the ruled `{"input","value"}` row on the bulk forms: the value-printing projections read back as `input|value` pairs in input order — `filter`'s kept rows and `decide_many`'s answers where the case carries them (`05`, `19`; case `06`'s empty list is covered by its count). SQL's own two columns are the row; no new function was added.
+
+```
+ok       05-filter-keeps-some-of-five rows
+ok       19-decide-many-judgments rows
+```
