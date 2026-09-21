@@ -16,6 +16,12 @@ cargo test --release --quiet --lib
 echo "== duckdb surface: null suite"
 tools/null_suite.sh
 
+echo "== duckdb surface: fast-backend cancel, the poll-bug shape"
+tools/cancel_fast.sh
+
+echo "== duckdb surface: the function examples"
+python3 tools/examples.py
+
 echo "== duckdb surface: conformance slice"
 python3 tools/conformance.py
 
@@ -26,12 +32,16 @@ echo "ok       the slide runs as drawn (output above its run in NOTES)"
 echo "== duckdb surface: recognize and relate acceptance, calls as drawn"
 ENGINE_NULL=1 tools/run_recognize.sh >/dev/null
 if grep -q "Binder Error: Table function cannot contain subqueries" tools/recognize-run/run.log \
-  && grep -q "thinkthen usage: relate takes at most 255 records" tools/recognize-run/run.log; then
-  echo "ok       the recognize call runs as drawn; the relate subquery line is the pinned divergence"
-  echo "ok       the working replacements ran: the edges, the relations, the mentions join, the 255 refusal"
+  && grep -q "thinkthen usage: relate takes at most 255 records" tools/recognize-run/run.log \
+  && [ "$(grep -c 'based_in │ Northwind Freight │ Denver' tools/recognize-run/run.log)" -ge 1 ] \
+  && grep -q "│ Northwind Freight │ Dana    │        2 │" tools/recognize-run/run.log \
+  && [ "$(grep -c 'usage after the join │ requests      │     0' tools/recognize-run/run.log)" -ge 1 ]; then
+    echo "ok       the recognize call runs as drawn; the relate subquery line is the pinned divergence"
+    echo "ok       the working replacements ran with their evidence: the edges, the relations row, the mentions join, and the join's zero requests"
+    echo "ok       the 255-record refusal is in the log"
 else
-  echo "FAILED   the recognize acceptance's pinned lines did not appear; see tools/recognize-run/run.log"
-  exit 1
+    echo "FAILED   the recognize acceptance's pinned lines did not appear; see tools/recognize-run/run.log"
+    exit 1
 fi
 
 if curl -sf --max-time 1 http://127.0.0.1:8217/v1/stats >/dev/null 2>&1; then

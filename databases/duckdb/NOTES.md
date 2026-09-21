@@ -170,3 +170,49 @@ $ ./check.sh
 == duckdb surface: wire suite against the stub on 8217
 exit 0    (diverge 18-cancel-mid-batch is the stand-in's recorded real-engine requirement)
 ```
+
+## Lane B items 2, 5, and 6 on the DuckDB surface, 2026-09-21
+
+**Item 2, the new shapes.** `thinkthen_annotate` carries the ruled failed marker where a value would go, and `thinkthen_details` gained two struct members: `requests` (the ordered recording digests, 0053) and `failed_questions` (0054). The decide rows take both from the engine's own `Details`; the score/choose/tag rows compute the one-element list through the engine's own digest rule (`thinkthen_standin::request_digest` with the settings' model — the real engine's details will carry the list for every kind and the call goes away). The two conformance cases now run:
+
+```
+$ python3 tools/conformance.py | grep -E "73|74"
+ok       73-details-carries-requests
+ok       73-details-carries-requests requests
+ok       74-annotate-preserves-good-answers
+```
+
+```
+$ ENGINE_NULL=1 duckdb -unsigned -noheader -list -c "LOAD 'build/release/thinkthen.duckdb_extension';
+  SELECT thinkthen_annotate('{"version":1,"questions":{"kind":{"decide":"Is this a complaint?"},"topic":{"decide":"Is this about a refund?"}}}',
+    'order 4471: charged twice, please refund');"
+{"kind":true,"topic":{"failed":{"cause":"missing_answer","kind":"backend"}}}
+```
+
+**Item 5, the fast-backend cancel.** Two tests, with their claims separated honestly:
+
+- `cancel_tests::a_fast_backend_hears_a_cancel_within_a_tick` (the crate's lib tests): 8M records on the null backend at width 1, the token set at 150 ms, the call must return the cancelled kind within 1.5 s. Measured contrast, the same batch un-cancelled: **53.55 s** — so the bound cannot be met by a batch that runs to completion. The busy-arm probe (removing `maybe_tick` from the Ok arm, 2026-09-21, restored after) still returned fast, because the stand-in's workers check the token per record themselves; the caller-side tick's own contribution is the poll the host hands in, which is why the bound stays at one tick.
+- `tools/cancel_fast.sh` (end to end through the CLI): SIGINT at t+1 s of a 3M-row null query; the CLI exits within ~a tick and the query never prints its count. Stated limit: DuckDB's own abort ends a native query within a chunk under the same SIGINT, so this cannot isolate the engine's tick — a CLI timing test on a fast backend passes either way. The stub-backed wire suite proves the wire-side shape; the Rust test carries the discrimination.
+
+```
+$ ./tools/cancel_fast.sh
+the CLI exited 1 0.00s after SIGINT, one tick expected
+ok       the interrupt ended the query within about a tick (0.00s)
+ok       the query did not run to completion
+```
+
+**Item 6, the examples file.** `examples.json` is keyed by function — twelve entries, every public function on this surface — and `tools/examples.py` runs each in a fresh CLI process on the null backend and checks its answer. The site's SQL tab draws from this file.
+
+```
+$ python3 tools/examples.py
+ok       decide
+...       (twelve lines)
+12 of 12 examples ok
+```
+
+**Fixed on the way: the acceptance script still spoke the refused spelling.** `tools/run_recognize.sh` wrote `names.json` with `from`/`to`, which ruling 1 now refuses, so the working relations replacement inside `working.sql` was failing while `check.sh` printed "the working replacements ran" from a fixed string. The fixture now says `source`/`target`, and the check asserts the real evidence rows — the relations row, the join row, and the join's zero-requests line — instead of a sentence:
+
+```
+ok       the working replacements ran with their evidence: the edges, the relations row, the mentions join, and the join's zero requests
+ok       the 255-record refusal is in the log
+```

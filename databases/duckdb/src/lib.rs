@@ -743,6 +743,7 @@ fn annotate_json(record: &[(String, Annotated)]) -> Result<String, EngineError> 
                 "level": scored.nearest,
             }),
             Annotated::Tags(held) => serde_json::json!(held),
+            Annotated::Failed(failed) => serde_json::json!({ "failed": failed }),
         };
         object.insert(name.clone(), value);
     }
@@ -768,6 +769,14 @@ struct TrailRow {
     /// The wire sends that produced the judgment, when the audit door
     /// could count them.
     sends: Option<u64>,
+    /// The recording digests of the logical requests that produced the
+    /// judgment (0053): always a list, one element for a one-request
+    /// result, in construction order; a retry adds no element.
+    requests: Vec<String>,
+    /// Failed logical questions in this result (0054); always present,
+    /// zero on this surface by construction, because a failed single
+    /// question is a whole-call error here.
+    failed_questions: u32,
 }
 
 /// `thinkthen_details(question, text)`: the audit trail, with the sends
@@ -803,6 +812,8 @@ impl VScalar for DetailsScalar {
                     digest: details.digest,
                     level: None,
                     sends: Some(u64::from(details.sends)),
+                    requests: details.requests,
+                    failed_questions: details.failed_questions,
                 }
             } else {
                 let level = if question.kind() == QuestionKind::Score {
@@ -815,6 +826,16 @@ impl VScalar for DetailsScalar {
                 } else {
                     None
                 };
+                // The requests list for a non-decide question: the
+                // engine's own digest rule, the same one `details` uses
+                // for decide. When the real engine lands, its details
+                // carry the list for every kind and this call goes away.
+                let requests = vec![thinkthen_standin::request_digest(
+                    &question,
+                    thinkthen_contract::Settings::from_env().model.as_deref(),
+                    text,
+                )
+                .map_err(failure)?];
                 TrailRow {
                     probability: None,
                     answer: None,
@@ -822,6 +843,8 @@ impl VScalar for DetailsScalar {
                     digest: question.digest(),
                     level,
                     sends: None,
+                    requests,
+                    failed_questions: 0,
                 }
             };
             trail[slot] = Some(row);
@@ -900,6 +923,44 @@ impl VScalar for DetailsScalar {
                 }
             }
         }
+        {
+            let rows: Vec<Option<&Vec<String>>> = distinct
+                .slots
+                .iter()
+                .map(|slot| {
+                    slot.and_then(|slot| trail[slot].as_ref())
+                        .map(|row| &row.requests)
+                })
+                .collect();
+            let total: usize = rows.iter().map(|row| row.map_or(0, Vec::len)).sum();
+            let mut lists = structs.list_vector_child(6);
+            {
+                let child = lists.child(total.max(1));
+                let mut offset = 0usize;
+                for (i, row) in rows.iter().enumerate() {
+                    match row {
+                        None => lists.set_null(i),
+                        Some(values) => {
+                            lists.set_entry(i, offset, values.len());
+                            for value in values.iter() {
+                                child.insert(offset, value.as_str());
+                                offset += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            lists.set_len(total);
+        }
+        {
+            let mut child = structs.child(7, len);
+            let values = unsafe { child.as_mut_slice_with_len::<u64>(len) };
+            for (i, slot) in distinct.slots.iter().enumerate() {
+                if let Some(row) = slot.and_then(|slot| trail[slot].as_ref()) {
+                    values[i] = u64::from(row.failed_questions);
+                }
+            }
+        }
         Ok(())
     }
 
@@ -913,6 +974,11 @@ impl VScalar for DetailsScalar {
                 ("digest", LogicalTypeId::Varchar.into()),
                 ("level", LogicalTypeId::Varchar.into()),
                 ("sends", LogicalTypeId::UBigint.into()),
+                (
+                    "requests",
+                    LogicalTypeHandle::list(&LogicalTypeId::Varchar.into()),
+                ),
+                ("failed_questions", LogicalTypeId::UBigint.into()),
             ]),
         )]
     }
@@ -986,5 +1052,69 @@ mod mapping_tests {
         let text = failure(EngineError::defect("the relate plan lost its bind data"));
         assert!(text.contains("thinkthen defect:"), "{text}");
         assert!(text.contains("the relate plan lost its bind data"), "{text}");
+    }
+}
+
+#[cfg(test)]
+mod cancel_tests {
+    use super::*;
+    use std::sync::Arc;
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    /// The fast-backend cancel proof (lane B item 5, the poll-bug shape)
+    /// at the engine this surface calls: on the null backend the wait's
+    /// channel never idles, so the poll tick must run on the busy arm too
+    /// and a token set mid-batch must end the call within about a tick —
+    /// not after the whole batch, which is what the bug did (SIGINT one
+    /// second into a three-million-record null batch surfaced 8.48 s
+    /// later, at batch end). Width 1 stretches the full batch so the
+    /// contrast is unambiguous: the broken path drains it all.
+    ///
+    /// This lives here and not in a CLI script because DuckDB's own
+    /// abort ends a native query on SIGINT within a chunk, so a CLI
+    /// timing test cannot isolate the engine's tick on a fast backend;
+    /// the stub-backed wire suite proves the wire-side shape.
+    #[test]
+    fn a_fast_backend_hears_a_cancel_within_a_tick() {
+        // Before any engine or config is built in this process.
+        unsafe {
+            std::env::set_var("ENGINE_NULL", "1");
+            std::env::set_var("ENGINE_WIDTH", "1");
+        }
+        let engine = BlockingEngine::from_env();
+        let question = Question::from_json(r#"{"decide":"Is this a complaint?"}"#)
+            .expect("the question parses");
+        let texts: Vec<String> = (0..1_000_000).map(|i| format!("record {i}")).collect();
+        let records: Vec<&str> = (0..8_000_000).map(|i| texts[i % texts.len()].as_str()).collect();
+        let token = Cancel::new();
+        let fired = Arc::new(Mutex::new(None::<Instant>));
+        let setter = {
+            let token = token.clone();
+            let fired = Arc::clone(&fired);
+            thread::spawn(move || {
+                thread::sleep(Duration::from_millis(150));
+                token.cancel();
+                *fired.lock().expect("the fired stamp") = Some(Instant::now());
+            })
+        };
+        let outcome = engine.decide_many_opts(
+            &question,
+            &records,
+            Options::new().cancel(&token),
+            None,
+        );
+        setter.join().expect("the setter joins");
+        let fired_at = fired
+            .lock()
+            .expect("the fired stamp")
+            .expect("the token fired");
+        let heard = Instant::now().duration_since(fired_at);
+        let error = outcome.expect_err("a cancelled batch returns the cancelled kind");
+        assert_eq!(error.kind.to_string(), "cancelled", "{}", error.message);
+        assert!(
+            heard <= Duration::from_millis(1_500),
+            "the interrupt waited {heard:?} past the token; a fast backend starved the poll"
+        );
     }
 }

@@ -57,7 +57,7 @@ INSERT INTO alerts VALUES
 CREATE TABLE accounts(name VARCHAR, owner VARCHAR);
 INSERT INTO accounts VALUES ('Northwind Freight', 'Dana'), ('Kestrel Labs', 'Amara');
 EOF
-printf '{"recognize": {"relations": [{"name": "based_in", "from": "*", "to": "*"}]}}\n' > names.json
+printf '{"recognize": {"relations": [{"name": "based_in", "source": "*", "target": "*"}]}}\n' > names.json
 
 printf "LOAD '%s';\n" "$EXT" > load.sql
 cat fixtures.sql >> load.sql

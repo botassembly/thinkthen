@@ -127,12 +127,25 @@ def main() -> int:
         elif verb == "details":
             check(name, f"SELECT thinkthen_details({sql_string(arg)}, {sql_string(evidence)}).digest;",
                   expect["details"]["question_sha256"])
+            if "requests" in expect["details"]:
+                wanted = "[" + ", ".join(expect["details"]["requests"]) + "]"
+                check(name + " requests",
+                      f"SELECT (thinkthen_details({sql_string(arg)}, {sql_string(evidence)})).requests;",
+                      wanted)
         elif verb == "annotate":
             answers = expect["answers"]
-            fields = ",".join(
-                f'\"{field}\":' + ("null" if member["answer"] is None else "true" if member["answer"] is True else "false")
-                for field, member in sorted(answers.items())
-            )
+            parts = []
+            for field, member in sorted(answers.items()):
+                if "failed" in member:
+                    failed = member["failed"]
+                    parts.append(
+                        f'"{field}":{{"failed":{{"cause":"{failed["cause"]}","kind":"{failed["kind"]}"}}}}'
+                    )
+                else:
+                    parts.append(
+                        f'"{field}":' + ("null" if member["answer"] is None else "true" if member["answer"] is True else "false")
+                    )
+            fields = ",".join(parts)
             set_json = json.dumps({"version": 1, "questions": case["set"]})
             check(name, f"SELECT thinkthen_annotate({sql_string(set_json)}, {sql_string(evidence)});",
                   "{" + fields + "}")
