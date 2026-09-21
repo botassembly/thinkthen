@@ -134,8 +134,16 @@ for invocation in slurp ordinary literal-null; do
 		printf 'compare accepted %s primary input\n' "$invocation" >&2
 		exit 1
 	fi
-	grep -F 'compare: run with jq -n' "$work/error" > /dev/null
+	mustmatch 'compare: run with jq -n' < "$work/error"
 done
+
+if jq --slurpfile before "$work/before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
+	"$work/after.jsonl" > "$work/out" 2> "$work/error"
+then
+	printf '%s\n' 'compare accepted two-row ordinary input' >&2
+	exit 1
+fi
+[ "$(grep -Fxc 'compare: run with jq -n' "$work/error")" -eq 1 ]
 
 annotate_rows() {
 	phase=$1
@@ -224,6 +232,7 @@ for mutation in \
 	'del(.value)' \
 	'del(.answers)' \
 	'del(.answers.score)' \
+	'del(.answers.decide.threshold)' \
 	'.answers.score.value = 99' \
 	'.input.id = 7' \
 	'.meta.model = null' \
@@ -247,6 +256,17 @@ for mutation in \
 		fi
 	done
 done
+
+# A missing nested value cannot masquerade as an explicit top-level null.
+jq -c '.value.decide = null | del(.answers.decide.value)' \
+	"$work/annotate-before.jsonl" > "$work/bad-annotate.jsonl"
+if jq -n --slurpfile before "$work/bad-annotate.jsonl" -f "$REPO/transforms/compare/compare.jq" \
+	"$work/annotate-after.jsonl" > "$work/out" 2> "$work/error"
+then
+	printf '%s\n' 'compare accepted a missing nested null value' >&2
+	exit 1
+fi
+sed 's/^jq: error (at [^)]*): //' "$work/error" | mustmatch 'compare: invalid annotate row'
 
 # Scalar and annotate rows cannot share one invocation.
 { head -n 1 "$work/annotate-before.jsonl"; row scalar true null; } > "$work/mixed.jsonl"

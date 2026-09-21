@@ -6,7 +6,8 @@
 # with --argjson. It defaults to 0.08.
 #
 # Cases pair by input.id. Repeated ids, missing cases, changed evidence, and
-# changed trusted labels stay at record level. Scalar detailed rows retain the
+# changed trusted labels stay at record level. Nonempty primary input is
+# refused; jq does not run a filter at all for empty ordinary input. Scalar detailed rows retain the
 # original report. Annotate detailed rows compare each shared named answer.
 # Values compare exactly, including tag array order. Yes-or-no probability
 # movement is reported independently per question. Malformed annotate rows
@@ -90,8 +91,10 @@ def row_shape:
 def valid_named_answer($value):
   try (
     type == "object"
+    and has("value")
     and (.value == $value)
     and (.question | type) == "object"
+    and has("threshold")
     and ((.threshold | type) as $type
          | ["null", "number", "string"] | index($type) != null)
     and (.answer | type) == "object"
@@ -227,7 +230,9 @@ def annotate_report($before_rows; $after_rows; $tolerance):
                                     $name; $tolerance)))}
   end;
 
-if input_filename != null then error("compare: run with jq -n") else . end
+if input_filename != null
+then "compare: run with jq -n\n" | halt_error(5)
+else . end
 | ($ARGS.named
    | if has("probability_tolerance") then .probability_tolerance else 0.08 end
    | if type == "number" and . >= 0 and . <= 1 then .
