@@ -6,7 +6,7 @@ opens: transforms/compare transforms/README.md demos/14-grade-a-batch sdlc/plann
 
 # 0043: Compare named `annotate` answers
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
