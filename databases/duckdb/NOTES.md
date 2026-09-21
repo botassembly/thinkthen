@@ -123,3 +123,25 @@ All 102 checks pass with zero failures; the divergences print with reasons: the 
 - A relate query inside a user transaction (the kept connection sees committed state only).
 - More than 255 records through a *recorded* set (the guard fires before the recordings are consulted).
 - The plugin-style forms, text cutting, and question counts per request: the build team's, per the brief.
+
+## Page-section text for the manual: `relate` over a query (DuckDB)
+
+For the build team to lift:
+
+> ### relate over a query
+>
+> `relate` reads every record at once, because every pair is one pick-one question. Give it a query and the relation rules:
+>
+> ```sql
+> SELECT * FROM thinkthen_relate('SELECT id, body FROM alerts', ['caused_by']);
+> ```
+>
+> The query selects two columns: the record's id first, its text second. Each row comes back as `(name, source, target, probability)`. `source` and `target` carry the id values as text, so an integer id joins back with one cast: `JOIN alerts a ON a.id::VARCHAR = e.source`. The deck's version of this call drew the query as a subquery, `(SELECT id, body FROM alerts)`; DuckDB binds a subquery only for a table-in-out function, which the stable C API cannot register, so the query crosses as a string. One call takes at most 255 records; past that is a usage error, because the pair count grows with the square of the records. The planner never knows a function costs money: one call is one request for every pair.
+>
+> For relations as rows from a question file, the beta companion — a list of structs, so `unnest()` makes rows, the same shape `thinkthen_recognize` takes:
+>
+> ```sql
+> SELECT t.id, unnest(thinkthen_relations(t.body, '@names.json')) AS r FROM tickets t;
+> ```
+>
+> The deck's version drew a bare `body`; a scalar takes a column like any other function, so the call sits beside the table in the `FROM`.
