@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# The DuckDB surface's package rehearsal (the brief's item 5): build the
+# release extension with a pinned glibc baseline, stage it under dist/ as a
+# user receives it, load it in a clean official duckdb container at the
+# pinned version, run the slide sample exactly as drawn, and remove the
+# container. Nothing is published; the install is from the local file only.
+#
+# Why zig: `make release` builds against this box's glibc 2.39 and the
+# official image (Debian bookworm, glibc 2.36) refuses to load it —
+# GLIBC_2.39 not found. The zigbuild pins the artifact at glibc 2.28
+# (manylinux_2_28, the common Linux binary baseline), which loads in the
+# official image and on older distributions. Needs: zig, cargo-zigbuild.
+#
+# The container is disposable: created as dbpkg211-duckdb, started once,
+# removed with docker rm -f -v at the end.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+VERSION=$(cat ../../VERSION)
+CONTAINER=dbpkg211-duckdb
+cleanup() {
+  docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+IMAGE=duckdb/duckdb:1.5.5
+TARGET=x86_64-unknown-linux-gnu.2.28
+LIB=target/x86_64-unknown-linux-gnu/release/libthinkthen.so
+WORK=dist/.rehearsal
+SLIDE=tools/slide.sql
+
+echo "== duckdb package: build the release extension at glibc 2.28"
+DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
+  cargo zigbuild --release --target "$TARGET" 2>&1 | tail -2
+test -s "$LIB"
+
+echo "== duckdb package: stage dist/ (metadata footer appended)"
+rm -rf dist
+mkdir -p "$WORK"
+configure/venv/bin/python3 extension-ci-tools/scripts/append_extension_metadata.py \
+  -l "$LIB" \
+  -o dist/thinkthen.duckdb_extension \
+  -n thinkthen \
+  -dv v1.5.5 \
+  -evf configure/extension_version.txt \
+  -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
+sha256sum dist/thinkthen.duckdb_extension
+objdump -T "$LIB" | grep -o 'GLIBC_[0-9.]*' | sort -V | uniq | tail -1
+
+cat > dist/README.md << EOF
+# thinkthen for DuckDB ${VERSION}
+
+Built for DuckDB v1.5.5, the pinned version; the host CLI and the extension
+must move together. The Linux binary is pinned to glibc 2.28
+(manylinux_2_28), so it loads in the official duckdb image and on older
+distributions.
+
+    duckdb -unsigned
+    LOAD '/path/to/thinkthen.duckdb_extension';
+
+The community-repository form (\`INSTALL thinkthen FROM community;\`) awaits
+the signed community build. Nothing was published from this rehearsal.
+EOF
+
+echo "== duckdb package: fixture parquet with the stock v1.5.5 CLI"
+./duckdb-bin/duckdb -c "
+CREATE TABLE tickets(id INTEGER, body VARCHAR);
+INSERT INTO tickets VALUES
+ (1, 'I was charged twice and I want a refund today.'),
+ (2, 'Please refund my shipping label fee.'),
+ (3, 'Thanks, the fix worked.'),
+ (4, 'Maybe look at my billing question later.');
+COPY tickets TO '$PWD/$WORK/tickets.parquet' (FORMAT parquet);
+" >/dev/null
+ls -l "$WORK/tickets.parquet"
+
+printf "SELECT 'duckdb ' || version() AS duckdb;\nLOAD '/pkg/thinkthen.duckdb_extension';\n" > "$WORK/load.sql"
+
+echo "== duckdb package: clean container from the official image"
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  docker pull "$IMAGE"
+else
+  echo "image present: $(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
+fi
+docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
+docker create --name "$CONTAINER" -i -w /pkg -e ENGINE_NULL=1 --entrypoint /duckdb "$IMAGE" \
+  -unsigned -init /pkg/load.sql >/dev/null
+docker cp dist/thinkthen.duckdb_extension "$CONTAINER":/pkg/thinkthen.duckdb_extension
+docker cp "$WORK/tickets.parquet" "$CONTAINER":/pkg/tickets.parquet
+docker cp "$WORK/load.sql" "$CONTAINER":/pkg/load.sql
+docker cp "$SLIDE" "$CONTAINER":/pkg/slide.sql
+
+echo "== duckdb package: the slide sample, as drawn, in the container"
+docker start -ai "$CONTAINER" < "$SLIDE"
+
+echo "== duckdb package: cleanup"
+docker rm -f -v "$CONTAINER"
+echo "containers left under dbpkg211-*: $(docker ps -a --filter name=dbpkg211 --format '{{.Names}}' | wc -l)"
+trap - EXIT

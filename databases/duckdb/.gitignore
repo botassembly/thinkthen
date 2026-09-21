@@ -11,3 +11,4 @@ tools/null-cut.json
 tools/slide-run
 tools/wire-run
 .cargo/registry
+dist
