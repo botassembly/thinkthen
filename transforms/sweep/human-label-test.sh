@@ -183,6 +183,9 @@ expect_failure decision-derived-value 'sweep: mapped decision value must follow 
 jq -c 'del(.answers.failure_kind.threshold)' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-threshold 'sweep: mapped choice threshold must be present and null or one cut' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.failure_kind.threshold=0' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-zero-threshold 'sweep: mapped choice threshold must be present and null or one cut' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
 jq -c '.answers.failure_kind.answer.probabilities="private-marker"' \
   "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-probabilities-object 'sweep: choice probabilities must have exactly the option keys' \
