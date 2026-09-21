@@ -127,6 +127,10 @@ pub(crate) enum Failure {
     CacheWithRecording,
     /// `--jobs` was given to a run that sends one request.
     JobsOutsideRecords,
+    /// Find was given a unit count outside its policy's range.
+    FindCount { none: bool },
+    /// Find's complete original input exceeded its aggregate ceiling.
+    FindTooLarge,
     /// `--top` was asked for none of the order, which prints nothing.
     TopIsZero,
     /// `--quiet` was given to a verb whose answer is the records it prints.
@@ -249,6 +253,9 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             2,
             format!("`{verb}` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv"),
         ),
+        Failure::FindCount { none: true } => (2, "`find --none` takes 2 to 254 units".to_owned()),
+        Failure::FindCount { none: false } => (2, "`find` takes 2 to 255 units".to_owned()),
+        Failure::FindTooLarge => (2, "`find` reads at most 16 MiB across all units".to_owned()),
         Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
         Failure::Defect(what) => (70, format!("defect: {what}")),
         Failure::Render(error) => (70, format!("defect: {error}")),

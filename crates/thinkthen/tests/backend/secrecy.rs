@@ -66,14 +66,14 @@ const MALFORMED: &str = r#"{"model":"","answers":{}}"#;
 /// It names another schema, so it is refused after it parses. No field of it
 /// may reach a diagnostic: the text is unbounded, it holds a terminal escape,
 /// and it quotes the evidence marker back.
-const HOSTILE: &str = concat!(
+pub(crate) const HOSTILE: &str = concat!(
     r#"{"schema":"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5","#,
     r#""adapter":"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5","#,
     r#""url":"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5","#,
     r#""request":{},"response":{}}"#,
 );
 
-const HOSTILE_SCHEMA_MARKER: &str = "PWNED";
+pub(crate) const HOSTILE_SCHEMA_MARKER: &str = "PWNED";
 
 /// A recording entry that is not JSON, holding the evidence it recorded.
 const DAMAGED: &str = concat!(
@@ -82,7 +82,7 @@ const DAMAGED: &str = concat!(
 );
 
 /// The address of a port nothing listens on, which fails in the transport.
-const CLOSED: &str = "http://127.0.0.1:1/v1";
+pub(crate) const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// A whole reply carrying this one answer.
 fn good(answer: &str) -> String {
@@ -108,7 +108,7 @@ fn unreadable() -> String {
 
 /// What the loopback backend answers one run with.
 #[derive(Clone, Copy, Debug)]
-enum Answers {
+pub(crate) enum Answers {
     /// A good reply for the one question the verb asked.
     Good,
     /// A status that fails at once, with a body that quotes the evidence.
@@ -127,7 +127,7 @@ enum Answers {
 
 impl Answers {
     /// The responses the listener serves, in order, for this verb.
-    fn script(self, answer: &str) -> Vec<Canned> {
+    pub(crate) fn script(self, answer: &str) -> Vec<Canned> {
         match self {
             Self::Good => vec![Canned::ok(&good(answer))],
             Self::Status(status) => vec![Canned::status(status, &quoting())],
@@ -147,29 +147,29 @@ impl Answers {
 ///
 /// `adds` may hold `{dir}`, which becomes this run's own folder, and `{closed}`,
 /// which becomes the address of a port nothing listens on.
-struct Route {
-    named: &'static str,
-    adds: &'static [&'static str],
-    answers: Answers,
+pub(crate) struct Route {
+    pub(crate) named: &'static str,
+    pub(crate) adds: &'static [&'static str],
+    pub(crate) answers: Answers,
     /// How many requests the listener must see, which pins "sends nothing".
-    requests: usize,
+    pub(crate) requests: usize,
     /// The exit code the run earns, which pins that the path really ran.
-    code: i32,
+    pub(crate) code: i32,
     /// Whether a recording is written into the folder before the run.
-    primed: bool,
+    pub(crate) primed: bool,
     /// What every entry the priming run wrote is overwritten with, if anything.
-    damage: Option<&'static str>,
+    pub(crate) damage: Option<&'static str>,
     /// The part of the message that names this refusal and no other one.
     ///
     /// Two routes can share an exit code, so a route that would otherwise pass
     /// on a neighbour's refusal pins the sentence it means.
-    says: Option<&'static str>,
+    pub(crate) says: Option<&'static str>,
     /// Whether the run carries the key at all.
-    keyed: bool,
+    pub(crate) keyed: bool,
 }
 
 /// Every path the backend and the recording folder can send a run down.
-const PATHS: [Route; 17] = [
+pub(crate) const PATHS: [Route; 17] = [
     route("a success", &[], Answers::Good, 1, 0),
     route("a plan", &["--dry-run"], Answers::Nothing, 0, 0),
     route("a record run", &["--record", "{dir}"], Answers::Good, 1, 0),
@@ -293,7 +293,7 @@ const fn route(
 }
 
 /// A folder this run owns, remade so each run starts empty.
-fn folder(named: &str) -> io::Result<PathBuf> {
+pub(crate) fn folder(named: &str) -> io::Result<PathBuf> {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("secrecy")
         .join(named);
@@ -303,7 +303,7 @@ fn folder(named: &str) -> io::Result<PathBuf> {
 }
 
 /// Every file under this folder, however deep.
-fn written(folder: &Path) -> Vec<PathBuf> {
+pub(crate) fn written(folder: &Path) -> Vec<PathBuf> {
     let mut found = Vec::new();
     let Ok(entries) = fs::read_dir(folder) else {
         return found;
@@ -462,7 +462,7 @@ const RECORD_WAYS: [(&[&str], Option<&str>); 4] = [
 ];
 
 /// The environment one run is given, with or without the key.
-fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
+pub(crate) fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
     if keyed {
         vec![("THINKTHEN_API_KEY", KEY)]
     } else {

@@ -1,6 +1,6 @@
 # `find`
 
-Status: **Settled** by ADRs 0015 and 0030. Both accepted live gates passed. The public command is not built yet.
+Status: **Settled** by ADRs 0015 and 0030. Both accepted live gates passed.
 
 Picks the unit that best answers a question, out of a set the model sees all at once.
 
@@ -12,7 +12,7 @@ thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--none] [--details]
 
 From 2 to 255 lines or records on standard input, or 2 to 254 with `--none`. `--input FILE` reads a file instead. Empty input succeeds without output or a request. One unit and either overflow are usage errors before any request. The whole original input may contain at most 16 MiB. [records.md](records.md) gives the framing and pointer rules.
 
-`QUESTION` states what the best unit answers.
+`QUESTION` states what the best unit answers. CSV, TSV, and `--jobs` are absent from this command; the parser refuses them as unexpected arguments.
 
 ## One request
 
@@ -36,7 +36,7 @@ On the same twenty documents, a `none` option answered `none` on 4 of 4 document
 
 ## What it prints
 
-The chosen unit as it arrived, byte for byte, the way [filter.md](filter.md) prints a kept record. Under `--jsonl` that is the whole record. `find` prints one unit and never a list.
+The chosen unit follows the shared preservation rules in [records.md](records.md), the way [filter.md](filter.md) prints a kept record. A line loses its input line ending and output adds one line feed, including for CRLF input or a last line with no ending. Under `--jsonl` the whole original record content returns with one output line feed. `find` prints one unit and never a list.
 
 `--details` prints the object in [result.md](result.md). Its question verb and answer kind are `find`. The answer holds the selected generated unit id or `none` and every probability in input order. The value holds the original selected unit or `null`, and the threshold is `null`.
 

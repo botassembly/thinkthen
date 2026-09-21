@@ -1,6 +1,6 @@
 # The result
 
-Status: **Settled** for the bare value, the object, the four answer kinds, the full distribution with `confidence`, and the two `annotate` digests. ADR 0010 accepted the last three. One open point is left at the foot of the page.
+Status: **Settled** for the bare value, the object, the five answer kinds, the full distribution with `confidence`, and the two `annotate` digests. ADR 0010 accepted the original kinds and ADR 0030 accepted `find`.
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
@@ -15,6 +15,7 @@ One internal result model feeds both views. The view never changes the request o
 | `filter` | each kept line or JSONL record as it arrived; each kept table row as compact JSON, in input order |
 | `rank` | each line or JSONL record as it arrived and each table row as compact JSON, most likely yes first |
 | `annotate` | one JSON object per record |
+| `find` | the selected line or JSONL record as it arrived; no output when `--none` wins or ties |
 
 Every value is compact and sits on one line, so one answer is also one record for `jq`, `grep`, and `wc -l`.
 
@@ -38,11 +39,9 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 `confidence` is present only when the backend sends it. No cut is taken on it. [backends.md](backends.md) says why. The vendor sends no `confidence` on a yes/no answer, so a `yes_no` answer carries none. `sdlc/planning/interface-audit.md` found the page promising one, and this page no longer does.
 
-## Four answer kinds
+## Five answer kinds
 
 **`yes_no`**, from `decide`, `filter`, and `rank`. It carries `probability`, the probability of yes, and nothing else.
-
-`find` fits none of the four kinds, and [find.md](find.md) holds that open point.
 
 **`choice`**, from `choose`.
 
@@ -69,6 +68,16 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 ```
 
 `answer.level` is the level with the highest probability. `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first. `value` is the weighted position on those levels, and [score.md](score.md) gives the arithmetic.
+
+**`find`**, from `find`.
+
+```json
+{"schema":"thinkthen.result/1","value":"Refunds take five days.","question":{"verb":"find","text":"When does a refund arrive?","none":true},"answer":{"kind":"find","pick":"u002","probabilities":{"u001":0.01,"u002":0.98,"none":0.01}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"1f2a...9c","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}
+```
+
+`answer.pick` names the first wire choice at the highest probability. `answer.probabilities` follows unit order and puts `none` last. `value` is the selected original unit. A strict `none` lead or any top tie involving `none` makes `value` null. A tie among real units selects the first input unit.
+
+The canonical `find` question is compact JSON with keys in this order: `{"verb":"find","text":TEXT,"none":BOOL}`. Generated unit ids, evidence, and unit count are absent. For `Which unit answers?` without `--none`, the canonical bytes are `{"verb":"find","text":"Which unit answers?","none":false}` and their SHA-256 is `01456d0e17c98c801c2ad9b2a9b56e47aeb33ff0eacde8d44bd6f55e4d0ab9ef`. Question text or the `none` policy changes the digest; changing only the units does not.
 
 ## `meta`
 

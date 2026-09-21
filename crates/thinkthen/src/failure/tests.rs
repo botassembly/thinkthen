@@ -98,6 +98,9 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         Failure::RawOverKept("rank"),
         Failure::NoFraming("filter"),
         Failure::TopIsZero,
+        Failure::FindCount { none: false },
+        Failure::FindCount { none: true },
+        Failure::FindTooLarge,
         Failure::Defect("a ranked row carries no probability"),
     ];
 
@@ -149,6 +152,9 @@ fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
         (Failure::Status(503), 4, "status 503"),
         (Failure::NoKey("THINKTHEN_API_KEY".to_owned()), 4, "unset"),
         (Failure::Defect("a plan asks nothing"), 70, "defect"),
+        (Failure::FindCount { none: false }, 2, "2 to 255"),
+        (Failure::FindCount { none: true }, 2, "2 to 254"),
+        (Failure::FindTooLarge, 2, "16 MiB"),
     ];
 
     for (failure, code, said) in cases {

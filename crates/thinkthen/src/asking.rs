@@ -201,9 +201,9 @@ fn over_table(
 
 /// The folders `--record`, `--replay`, and `--cache` name between them.
 #[derive(Debug)]
-struct Folders<'a> {
-    record: Option<&'a Path>,
-    replay: Option<&'a Path>,
+pub(crate) struct Folders<'a> {
+    pub(crate) record: Option<&'a Path>,
+    pub(crate) replay: Option<&'a Path>,
 }
 
 impl<'a> Folders<'a> {
@@ -213,7 +213,7 @@ impl<'a> Folders<'a> {
     ///
     /// Returns [`Failure::CacheWithRecording`] when `--cache` is given beside
     /// one of the two options it stands for.
-    fn of(common: &'a Common) -> Result<Self, Failure> {
+    pub(crate) fn of(common: &'a Common) -> Result<Self, Failure> {
         let Some(cached) = common.cache.as_deref() else {
             return Ok(Self {
                 record: common.record.as_deref(),
@@ -230,7 +230,7 @@ impl<'a> Folders<'a> {
     }
 
     /// True when a folder is named at all, which a plan may not name.
-    const fn named(&self) -> bool {
+    pub(crate) const fn named(&self) -> bool {
         self.record.is_some() || self.replay.is_some()
     }
 }

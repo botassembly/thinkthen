@@ -10,6 +10,7 @@ mod asking;
 mod cache_lock;
 mod edge;
 mod failure;
+mod find;
 mod http;
 mod judge;
 mod normalize;
@@ -45,7 +46,7 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
     }
     let environment = Environment::read();
     if let Some(command) = cli.command.as_ref() {
-        edge::waiting(command.common().input.as_deref(), io::stderr().lock());
+        edge::waiting(command.input(), io::stderr().lock());
     }
     let input = io::stdin();
     match &cli.command {
@@ -55,6 +56,7 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
         Some(Command::Score(arguments)) => judge::score(arguments, &environment, input, writer),
         Some(Command::Filter(arguments)) => judge::filter(arguments, &environment, input, writer),
         Some(Command::Rank(arguments)) => judge::rank(arguments, &environment, input, writer),
+        Some(Command::Find(arguments)) => find::run(arguments, &environment, input, writer),
         Some(Command::Annotate(arguments)) => annotate::run(arguments, &environment, input, writer),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }

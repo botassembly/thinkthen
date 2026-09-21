@@ -25,6 +25,7 @@ Under `--lines` and under `--jsonl` a carriage return before the line feed is st
 | `decide`, `choose`, `tag`, `score` | One document by default. All four record flags are accepted |
 | `filter`, `rank` | One record flag is required. One document is not a stream |
 | `annotate` | One document by default. All four record flags are accepted |
+| `find` | Lines by default or JSONL. CSV and TSV are not options |
 
 ### CSV and TSV
 
@@ -76,11 +77,11 @@ The vendor also accepts that field as a real JSON object rather than as text hol
 
 ## Order and requests
 
-Records never share model context, and no answer reaches another record's question. One value prints per record, and output keeps input order everywhere but `rank`. No record is dropped for being unresolved, except that `filter` prints only what it keeps. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order.
+Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. One value prints per record, and output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order.
 
 ### How many requests each command makes
 
-Settled by ADR 0008, accepted in ADR 0010. One request carries one piece of evidence and every question asked of it. Two pieces of evidence never share a request, because records must not see each other and a check must not see a field outside its pointers.
+Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by ADR 0030. One request normally carries one piece of evidence and every question asked of it. `find` sends all of its units together because choosing the best unit requires comparison across the set.
 
 | Command | Requests |
 | --- | --- |

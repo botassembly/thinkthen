@@ -5,6 +5,9 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 use thinkthen_core::DEFAULT_MODEL;
 
+mod find;
+pub(crate) use find::FindArguments;
+
 /// Put a decider model in the shell.
 #[derive(Debug, Parser)]
 #[command(
@@ -134,6 +137,14 @@ pub(crate) enum Command {
     /// `rank` orders and never selects. A floor is `filter` in front of it.
     Rank(RankArguments),
 
+    /// Pick the best unit. Every unit leaves together and sees every other unit.
+    ///
+    /// Every unit leaves together in one request and sees every other unit.
+    /// Input defaults to lines; --jsonl reads records and --field selects what
+    /// the model sees. The set holds 2 to 255 units, or 2 to 254 with --none,
+    /// and at most 16 MiB across the original input.
+    Find(FindArguments),
+
     /// Ask every question in a saved set and print one annotated JSON object.
     #[command(
         before_help = "thinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\n"
@@ -142,16 +153,17 @@ pub(crate) enum Command {
 }
 
 impl Command {
-    /// The options every judging verb takes, whichever verb was named.
-    pub(crate) const fn common(&self) -> &Common {
+    /// The input file one command named, if any.
+    pub(crate) fn input(&self) -> Option<&std::path::Path> {
         match self {
-            Self::Decide(arguments) => &arguments.common,
-            Self::Choose(arguments) => &arguments.common,
-            Self::Tag(arguments) => &arguments.common,
-            Self::Score(arguments) => &arguments.common,
-            Self::Filter(arguments) => &arguments.common,
-            Self::Rank(arguments) => &arguments.common,
-            Self::Annotate(arguments) => &arguments.common,
+            Self::Decide(arguments) => arguments.common.input.as_deref(),
+            Self::Choose(arguments) => arguments.common.input.as_deref(),
+            Self::Tag(arguments) => arguments.common.input.as_deref(),
+            Self::Score(arguments) => arguments.common.input.as_deref(),
+            Self::Filter(arguments) => arguments.common.input.as_deref(),
+            Self::Rank(arguments) => arguments.common.input.as_deref(),
+            Self::Find(arguments) => arguments.common.input.as_deref(),
+            Self::Annotate(arguments) => arguments.common.input.as_deref(),
         }
     }
 }

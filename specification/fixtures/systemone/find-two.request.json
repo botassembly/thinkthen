@@ -1,0 +1,1 @@
+{"state":"[{\"id\":\"u001\",\"evidence\":\"alpha \\\"quote\\\"\\\\path\"},{\"id\":\"u002\",\"evidence\":\"beta\"}]","model":"local-1","questions":{"q1":{"type":"choice","instructions":"Which unit answers?","criteria":{"u001":null,"u002":null}}}}

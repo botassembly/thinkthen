@@ -1,86 +1,74 @@
-# 15 Find the line
+# How to find the line that answers a question
 
 Status: red
 
+Use `find` when one bounded document has several units and the best unit must answer one question. Every unit leaves together in one request and can affect the choice.
+
+```bash
+set -euo pipefail
+env -u THINKTHEN_API_KEY thinkthen find 'When does a refund reach the customer?' \
+  --lines --input policy.txt --replay recording/ \
+  | mustmatch 'Refunds reach the original payment method within five working days.'
+```
+
 Verbs: `find`
-
-A desk keeps a one-page policy and answers customers from it. Somebody asks when the money comes back. The answer is one line of the policy, and a person reads the whole page to find it. `find` reads the page once and points at the line.
-
-`find.md` is Settled. ADR 0014 accepted `find` with a `none` option on the live comparison, and ADR 0015 records the acceptance. Slice 11 repeats the comparison on longer documents and turns this page green.
-
-Every number in an expected output on this page is illustrative until a recording exists. No block asserts on a probability.
 
 ## Input
 
-`policy.txt` is a twelve-line shop policy, one rule per line.
+`policy.txt` is a twelve-line shop policy, one rule per line. The first command returns the original selected line without rewriting it.
 
-## One question, one request
+## Inspect the one request
 
-`find` reads up to 255 lines, sends them together with an id on each, and asks which one best answers. That is one request where `filter` and `rank` would make twelve.
-
-```bash
-set -euo pipefail
-
-thinkthen find 'When does a refund reach the customer?' \
-  --lines --input policy.txt --replay recording/ \
-  | mustmatch "Refunds reach the original payment method within five working days."
-```
-
-The line comes back as it arrived, the way `filter` returns a record. Nothing is rewritten and nothing is summarised.
-
-The units see each other, and that is the reason to choose this verb. `filter` asks about each line alone and would keep two lines. `find` is asked for the best one present.
+A dry run needs no key or connection. It shows one question and all twelve units in one aggregate evidence value.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-
 env -u THINKTHEN_API_KEY thinkthen find 'When does a refund reach the customer?' \
   --lines --dry-run --input policy.txt > "$work/plan.json"
-
-jq -r '.request.questions | length' "$work/plan.json" | mustmatch "1"
-jq -r '.request.state' "$work/plan.json" | wc -l | tr -d ' ' | mustmatch "12"
+jq -r '.request.questions | length' "$work/plan.json" | mustmatch '1'
+jq -r '.request.state | fromjson | length' "$work/plan.json" | mustmatch '12'
 ```
 
-One question, twelve units, one request. The evidence travels as one string, so the plan holds the whole page on one field and a reader counts the lines in it. The plan is how a user checks that the whole page left the machine, because it did.
+Choose `filter` or `rank` when each unit must be judged alone. Choose `find` only when sending the whole set together is appropriate.
 
-## When the page does not answer
+## Let nothing fit
 
-The policy says nothing about warranties. A tool that always returns its best line would hand the desk a wrong answer with no warning. `--none` offers the model a `none` option, and `find` then exits 3 and prints nothing.
+The policy says nothing about manufacturer warranties. `--none` lets the result say that. The command prints nothing and exits 3.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-
 thinkthen find 'How long is the manufacturer warranty?' \
   --lines --none --input policy.txt --replay recording/ \
   > "$work/hit.txt" && rc=0 || rc=$?
-
-printf 'rc=%s\n' "$rc" | mustmatch "rc=3"
-wc -c < "$work/hit.txt" | tr -d ' ' | mustmatch "0"
+printf 'rc=%s bytes=%s\n' "$rc" "$(wc -c < "$work/hit.txt" | tr -d ' ')" \
+  | mustmatch 'rc=3 bytes=0'
 ```
 
-Nothing on standard output and exit 3. A desk reads the code and falls back to a person.
+A script can branch on that outcome and send the question to a person.
 
 ```bash
 set -euo pipefail
-
 if answer=$(thinkthen find 'How long is the manufacturer warranty?' \
               --lines --none --input policy.txt --replay recording/)
 then
   printf 'quote: %s\n' "$answer"
 else
   printf 'ask a person\n'
-fi | mustmatch "ask a person"
+fi | mustmatch 'ask a person'
 ```
 
-The recording under `recording/` does not exist yet.
+## What can go wrong
 
-## What this demo decides
+Exit 2 means the count, aggregate size, framing, pointer, or command line is invalid. `find` accepts 2 to 255 units, or 2 to 254 with `--none`, and at most 16 MiB of original input. Exit 4 means the backend failed. Exit 5 means an input file or recording failed. A strict `none` lead or any top tie involving `none` exits 3. A tie among real units returns the first one.
 
-- **Nothing fits is a "none" option, and the demo is written that way.** ADR 0009 left three choices open, and the live comparison of ticket 0011 settled them. A `none` option costs no second request, and the tool already has a word for the outcome: the answer is unresolved, standard output is empty, and the exit code is 3, exactly as `choose` behaves. A second yes/no question doubles the request and asks about the set rather than about a unit, and it can disagree with the pick it is meant to guard. A cut on the vendor's `confidence` rests on a formula ADR 0009 item 2 calls unpublished, so nobody could say what the number meant. The demo argued for the `none` option, and `find.md` now spells it `--none` and exits 3. `find` takes no `--threshold`, so the demo's second ask went unanswered.
-- **What `find` prints is fixed and the answer kind is not.** `find.md` now says the chosen unit comes back byte for byte, as `filter` prints a record, and the page asserts it. `--details` still has no answer kind: `yes_no` carries one probability and `choice` carries one per option, and neither names a unit that arrived on standard input. The demo asks for a kind that names the chosen unit and carries a probability per unit.
-- **The demo wanted the three best lines and could not ask for them.** One request already answered the whole page, so printing three lines would cost nothing more than printing one. No ADR names such an option, and `find.md` holds it as an open point rather than inventing a flag. The page drops the block and says what it lost.
-- **`find` sends the whole page and the plan is the only warning.** `--field` narrows a record and nothing narrows a page. A user who runs `find` over a private document sends all of it in one request. The demo asks that the `find` help lead with that fact, because the verb is the one place in the surface where the whole input leaves in one go.
-- **The 255-unit ceiling is a refusal and the demo cannot reach it.** `find.md` says more than 255 units is a usage error before any request, which is the rule the demo asked for. A fixture of 256 lines would prove it and would say nothing a reader does not already know from the sentence.
+This page stays red until the two exact requests in `record.sh` have reviewed recordings. Do not run that script outside `sdlc/scripts/live`.
+
+## Related how-tos
+
+- [Put the best matches first](../06-top-search-hits/)
+- [Keep only records that match a meaning](../03-grep-for-meaning/)
+- [Test a script with no network](../27-test-with-no-network/)

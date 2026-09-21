@@ -7,9 +7,10 @@ thinkthen decide 'Does the customer ask for a refund?' < message.txt
 thinkthen choose 'Which kind of request is this?' bug feature question other < issue.txt
 thinkthen tag 'Which topics?' billing urgent < message.txt
 thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --field /body < issues.jsonl
+thinkthen find 'Which line answers the question?' --lines < handbook.txt
 ```
 
-The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. `--details` adds the probabilities behind any answer.
+The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. `--details` adds the probabilities behind any answer.
 
 Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several judgments belong on the same input.
 
