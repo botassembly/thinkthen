@@ -139,6 +139,39 @@ slide sample green
 
 No `cargo` or `rustc` was found in the container; the gem carries the compiled extension and installs from the local file alone. The slide sample is the deck's Ruby section run as drawn: filter keeps 3 of 8, rank returns the deck's five, score returns 1.7 with "Immediate." nearest — the score-comment finding is the sample's own, already filed for the slide owner in the marketing repo. Registry use: none; the gem came from the local file. Pulls recorded this section: none new (`ruby:3.4-trixie` was already local from the surface's own work). The builder image `thinkthen-ruby-builder:local` was rebuilt by `build.sh` and removed after the gem was built: `docker rmi thinkthen-ruby-builder:local`.
 
+## R
+
+Build the source tarball, from `libraries/r`:
+
+```
+$ R CMD build thinkthen
+* building ‘thinkthen_0.0.1.tar.gz’
+```
+
+**Finding fixed: the first tarball swept build junk.** The first `R CMD build` produced a 12.8 MB tarball with 3,586 entries, carrying `src/.cargo/` (a 51 MB registry cache), `src/entrypoint.o`, and `src/thinkthen.so`. The package had no `.Rbuildignore`. Added and committed (`67bd500`): `^src/\.cargo$`, `^src/.*\.o$`, `^src/.*\.so$`. The rebuilt tarball is 16,542 bytes with 19 entries and zero build-junk entries.
+
+Clean container: `docker pull rocker/r-ver:4.3` (Ubuntu 22.04, R 4.3.3). Two R packages came from the distribution (`r-cran-jsonlite`, `r-cran-dplyr`); rocker's R hides `/usr/lib/R/site-library`, so `R_LIBS_SITE` is set. The Rust toolchain is mounted read-only from the host, the same pattern as the Ruby builder. Attempt A installs from the local tarball alone; attempt B installs from the source directory with the repository present, which is how R-universe builds:
+
+```
+$ docker run --rm --name pkg211-r \
+    -v libraries/r:/tarball:ro -v ~/.rustup:/root/.rustup:ro \
+    -v /tmp/pkg211/r:/work -v .:/src:rw rocker/r-ver:4.3 bash -c '...'
+=== attempt A: install from the tarball alone (no repository present)
+  failed to read `/tmp/contract/Cargo.toml`
+  No such file or directory (os error 2)
+make: *** [Makevars:13: rust/target/release/libthinkthen.a] Error 101
+ERROR: compilation failed for package ‘thinkthen’
+=== attempt B: install from the source directory inside the repository
+* DONE (thinkthen)
+=== the slide
+slide sample green: 2 rows kept, NA dropped by filter, choose NA on a tie
+```
+
+**Finding, by design: the R source tarball is not self-contained.** `src/rust/Cargo.toml` depends on `../../../../../contract` and `../../../../../standin`, so the tarball installs only where the repository's layout exists beside it. R-universe builds from the repository in place, so the ruled path is unaffected. A standalone, CRAN-style tarball would need those two crates vendored into the package or published. The design comment in `tools/config.R` says this is deliberate (“never from a vendor tarball”); the rehearsal records what it means for installers.
+
+The installed package ran the deck's R section as drawn: 2 rows kept, `NA` dropped by `filter()`, and the choose column `NA` on an exact tie — the sample's own assertions, green. macOS: no cross-compilation path exists for an R source package; R-universe's own builders are the macOS path, and the submission stays Ian's. Registry use: none; the tarball and the source install are local. Pulls recorded: `rocker/r-ver:4.3`.
+
+
 ## Databases
 
 Added by the databases lane (DuckDB, SQLite, PostgreSQL), sharing this file with the languages lane's sections above. Same rules: one version 0.0.1, local installs from package files, disposable containers named `dbpkg211-*` removed with `docker rm -f -v`, samples run against the offline stand-in (`ENGINE_NULL=1`), no key, no paid call, nothing published. Tools added for these two lanes' cross builds: `cargo install cargo-zigbuild --locked` → cargo-zigbuild 0.23.4; zig 0.15.2 was already at `~/.local/bin/zig`.
