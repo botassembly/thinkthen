@@ -6,7 +6,7 @@ opens: demos/16-triage-pipeline transforms/cost demos/28-what-a-run-cost sdlc/pl
 
 # 0044: Show the triage result and fix string-input costs
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -56,3 +56,11 @@ Re-score if implementation changes triage policy, cost arithmetic, or a product 
 ## Review
 
 The independent design review accepted the scope, id ordering, hostile-string proof, and level-2 Luna High route. It required this final draft to say that TSV is a page-local view over JSONL audit files rather than a product format, and to name how-to 28's synthetic block as the focused proof while holding that page to the same 120-line and 900-word limits.
+
+The independent code review rejected the first proof because it projected selected cost fields before checking for the hostile marker. The repair checks the complete transform output for the marker, then pins the selected result. The same reviewer accepted the repaired proof, both page limits, and the final behavior with no remaining issue.
+
+## Implementation
+
+The page-local runner sorts the three JSONL audit files by `input.id` and prints six headerless TSV display lines before its four totals. The saved files and every streamed product result remain JSONL. Page 16 states the `annotate | jq` idea before the complete safe script.
+
+`cost.jq` reads an id only from an object input. Every other input shape and an object without an id use `with no id`. How-to 28 proves the string-input case against the full output. The triage self-test, both pages, all four repository rungs, and `git diff --check` pass. No live call ran.
