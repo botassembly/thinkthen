@@ -12,7 +12,8 @@ fn engine() -> Engine {
 }
 
 fn stub_is_configured() -> bool {
-    std::env::var_os("ENGINE_BASE_URL").is_some() || std::env::var_os("THINKTHEN_BASE_URL").is_some()
+    std::env::var_os("ENGINE_BASE_URL").is_some()
+        || std::env::var_os("THINKTHEN_BASE_URL").is_some()
 }
 
 struct Ticket {
@@ -28,19 +29,22 @@ fn the_slide_runs_as_drawn_on_the_wire() -> Result<(), Box<dyn std::error::Error
     if !stub_is_configured() {
         panic!("set ENGINE_BASE_URL to the stub, or ENGINE_NULL=1 for the null twin");
     }
-    let ticket = Ticket { body: "I want a refund for order 9".to_owned() };
+    let ticket = Ticket {
+        body: "I want a refund for order 9".to_owned(),
+    };
     let mut refunds: Vec<Ticket> = Vec::new();
     let mut review: Vec<Ticket> = Vec::new();
-    let reviews: Vec<&str> =
-        vec!["I want a refund for order 9", "just saying hi", "maybe a refund"];
+    let reviews: Vec<&str> = vec![
+        "I want a refund for order 9",
+        "just saying hi",
+        "maybe a refund",
+    ];
 
     let tt = engine();
     // FINDING 1, filed in NOTES.md: as drawn the slide chains .band on
     // Question::decide's Result, which does not compile; the one-character
     // fix is the ? after the paren, applied here.
-    let refund = Question::decide(
-        "Does the customer ask for a refund?")?
-        .band(0.2, 0.8)?;
+    let refund = Question::decide("Does the customer ask for a refund?")?.band(0.2, 0.8)?;
 
     match tt.decide(&refund, &ticket.body)? {
         Answer::Yes => refunds.push(ticket),
@@ -48,12 +52,14 @@ fn the_slide_runs_as_drawn_on_the_wire() -> Result<(), Box<dyn std::error::Error
         Answer::Unsure => review.push(ticket),
     }
 
-    let complaints = tt.filter("Is this a complaint?",
-        &reviews)?;
+    let complaints = tt.filter("Is this a complaint?", &reviews)?;
 
     assert_eq!(refunds.len(), 1);
     assert!(review.is_empty());
-    assert_eq!(complaints, vec!["I want a refund for order 9", "maybe a refund"]);
+    assert_eq!(
+        complaints,
+        vec!["I want a refund for order 9", "maybe a refund"]
+    );
     Ok(())
 }
 
@@ -92,7 +98,8 @@ fn a_cancelled_bulk_call_returns_the_cancelled_kind() -> Result<(), Box<dyn std:
 }
 
 #[test]
-fn a_refused_request_is_a_backend_error_that_is_not_retryable() -> Result<(), Box<dyn std::error::Error>> {
+fn a_refused_request_is_a_backend_error_that_is_not_retryable()
+-> Result<(), Box<dyn std::error::Error>> {
     if std::env::var_os("ENGINE_NULL").is_some() && !stub_is_configured() {
         eprintln!("wire test skipped: the null backend is on and no stub is named");
         return Ok(());

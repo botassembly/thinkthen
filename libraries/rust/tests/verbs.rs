@@ -4,9 +4,7 @@
 //! these assertions are the same expectations the conformance runner
 //! checks. Run through `./check.sh`, which sets `ENGINE_NULL=1`.
 
-use thinkthen::{
-    Annotated, Answer, Engine, ErrorKind, Options, Question, QuestionSet,
-};
+use thinkthen::{Annotated, Answer, Engine, ErrorKind, Options, Question, QuestionSet};
 
 fn engine() -> Engine {
     Engine::from_env().expect("the stand-in never fails to build")
@@ -37,8 +35,14 @@ fn decide_cut_and_band() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn text_form_uses_the_grammar_default() -> Result<(), Box<dyn std::error::Error>> {
     let tt = engine();
-    assert_eq!(tt.decide("Does the customer ask for a refund?", refund_text())?, Answer::Yes);
-    assert_eq!(tt.decide("Does the customer ask for a refund?", "good morning")?, Answer::No);
+    assert_eq!(
+        tt.decide("Does the customer ask for a refund?", refund_text())?,
+        Answer::Yes
+    );
+    assert_eq!(
+        tt.decide("Does the customer ask for a refund?", "good morning")?,
+        Answer::No
+    );
     Ok(())
 }
 
@@ -48,7 +52,10 @@ fn decide_many_keeps_order() -> Result<(), Box<dyn std::error::Error>> {
     let question = default_cut("Does the customer ask for a refund?")?;
     let records = vec![refund_text(), "good morning", "maybe later"];
     let judgments = tt.decide_many(&question, &records)?;
-    let probabilities: Vec<f64> = judgments.iter().map(|judgment| judgment.probability).collect();
+    let probabilities: Vec<f64> = judgments
+        .iter()
+        .map(|judgment| judgment.probability)
+        .collect();
     assert_eq!(probabilities, vec![0.97, 0.03, 0.55]);
     let answers: Vec<Answer> = judgments.iter().map(|judgment| judgment.answer).collect();
     assert_eq!(answers, vec![Answer::Yes, Answer::No, Answer::Yes]);
@@ -73,8 +80,7 @@ fn choose_picks_the_top_option() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn score_places_on_the_levels() -> Result<(), Box<dyn std::error::Error>> {
     let tt = engine();
-    let question =
-        Question::score("How strong is the refund claim?", &["low", "mid", "high"])?;
+    let question = Question::score("How strong is the refund claim?", &["low", "mid", "high"])?;
     let scored = tt.score(&question, refund_text())?;
     // The null rule answers refund evidence on three levels with
     // 0.05/0.20/0.75, so the weighted position is 1.70 and the top level
@@ -87,12 +93,12 @@ fn score_places_on_the_levels() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn tag_names_the_labels_that_held() -> Result<(), Box<dyn std::error::Error>> {
     let tt = engine();
-    let question = Question::tag(
-        "What is this message about?",
-        &["refund", "greeting"],
-    )?;
+    let question = Question::tag("What is this message about?", &["refund", "greeting"])?;
     let labels = tt.tag(&question, refund_text())?;
-    assert!(labels.contains(&"refund".to_owned()), "the refund label holds at 0.97");
+    assert!(
+        labels.contains(&"refund".to_owned()),
+        "the refund label holds at 0.97"
+    );
     Ok(())
 }
 
@@ -104,7 +110,10 @@ fn filter_keeps_the_marked_records() -> Result<(), Box<dyn std::error::Error>> {
     let kept = tt.filter(&question, &records)?;
     assert_eq!(kept, vec!["i want a refund now", "refund, please"]);
     let empty: Vec<&str> = Vec::new();
-    assert!(tt.filter("Does the writer ask for a refund?", &empty)?.is_empty());
+    assert!(
+        tt.filter("Does the writer ask for a refund?", &empty)?
+            .is_empty()
+    );
     Ok(())
 }
 
@@ -115,7 +124,11 @@ fn rank_orders_most_likely_first() -> Result<(), Box<dyn std::error::Error>> {
     let records = vec!["good morning", "refund, please", "maybe later"];
     let ranked = tt.rank(&question, &records)?;
     let order: Vec<usize> = ranked.iter().map(|place| place.index).collect();
-    assert_eq!(order, vec![1, 2, 0], "0.97, then 0.55, then 0.03, ties aside");
+    assert_eq!(
+        order,
+        vec![1, 2, 0],
+        "0.97, then 0.55, then 0.03, ties aside"
+    );
     Ok(())
 }
 
@@ -142,9 +155,12 @@ fn annotate_adds_one_field_a_question() -> Result<(), Box<dyn std::error::Error>
     )?;
     let records = vec![refund_text()];
     let annotated = tt.annotate(&set, &records)?;
-    let fields: Vec<&str> =
-        annotated[0].iter().map(|(name, _)| name.as_str()).collect();
-    assert_eq!(fields, vec!["heat", "refund"], "the set answers in name order");
+    let fields: Vec<&str> = annotated[0].iter().map(|(name, _)| name.as_str()).collect();
+    assert_eq!(
+        fields,
+        vec!["heat", "refund"],
+        "the set answers in name order"
+    );
     let refund = annotated[0]
         .iter()
         .find(|(name, _)| name == "refund")
@@ -174,7 +190,10 @@ fn usage_counts_the_sends() -> Result<(), Box<dyn std::error::Error>> {
     tt.decide(&question, refund_text())?;
     // The counter is process-wide and the suite runs in parallel, so the
     // honest assertion is that this call's send was counted at all.
-    assert!(tt.usage().requests >= before + 1, "the send was not counted");
+    assert!(
+        tt.usage().requests >= before + 1,
+        "the send was not counted"
+    );
     Ok(())
 }
 
@@ -184,21 +203,37 @@ fn the_error_kinds_reach_the_caller() -> Result<(), Box<dyn std::error::Error>> 
 
     let band = Question::decide("Does the writer ask for a refund?")?.band(0.2, 0.8)?;
     let error = tt.filter(&band, &vec!["one", "two"]).unwrap_err();
-    assert_eq!(error.kind, ErrorKind::Usage, "a band on filter is a usage error");
+    assert_eq!(
+        error.kind,
+        ErrorKind::Usage,
+        "a band on filter is a usage error"
+    );
 
     let named = Question::from_json(
         r#"{"decide": "Does the writer ask for a refund?", "threshold": 0.9}"#,
     )?;
     let error = tt.rank(&named, &vec!["one"]).unwrap_err();
-    assert_eq!(error.kind, ErrorKind::Usage, "a named threshold on rank is refused");
+    assert_eq!(
+        error.kind,
+        ErrorKind::Usage,
+        "a named threshold on rank is refused"
+    );
 
     let error = tt.annotate("no-such-file.json", &vec!["one"]).unwrap_err();
-    assert_eq!(error.kind, ErrorKind::Local, "a missing file is a local error");
+    assert_eq!(
+        error.kind,
+        ErrorKind::Local,
+        "a missing file is a local error"
+    );
 
     let question = default_cut("Does the customer ask for a refund?")?;
     let spent = Options::new().deadline_in(std::time::Duration::ZERO);
     let error = tt.decide_opts(&question, refund_text(), spent).unwrap_err();
-    assert_eq!(error.kind, ErrorKind::Deadline, "a past deadline is its own kind");
+    assert_eq!(
+        error.kind,
+        ErrorKind::Deadline,
+        "a past deadline is its own kind"
+    );
     assert!(error.retryable, "a second try carries a fresh budget");
     assert!(
         error.message.contains("the deadline of 0"),
@@ -211,6 +246,10 @@ fn the_error_kinds_reach_the_caller() -> Result<(), Box<dyn std::error::Error>> 
     let error = tt
         .decide_with(&question, refund_text(), Some(&token))
         .unwrap_err();
-    assert_eq!(error.kind, ErrorKind::Cancelled, "a fired token cancels the call");
+    assert_eq!(
+        error.kind,
+        ErrorKind::Cancelled,
+        "a fired token cancels the call"
+    );
     Ok(())
 }

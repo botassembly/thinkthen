@@ -22,9 +22,12 @@
 //! `Result<_, Error>`; the six kinds and the retryable signal ride the
 //! [`Error`] value itself.
 
+use std::ops::Range;
+
 pub use thinkthen_contract::{
-    Annotated, AnnotatedRecord, Answer, Cancel, Details, Error, ErrorKind, Found, Judgment,
-    Options, Question, QuestionKind, QuestionSet, Ranked, Scored, Settings, Usage,
+    Annotated, AnnotatedRecord, Answer, Cancel, Details, Edge, Entity, Error, ErrorKind, Found,
+    Judgment, Kind, MAX_RELATE_RECORDS, Options, Question, QuestionKind, QuestionSet, Ranked,
+    Recognize, Recognized, Relate, Relation, RelationRule, Scored, Settings, Usage,
 };
 
 use thinkthen_contract::Engine as ContractEngine;
@@ -53,14 +56,18 @@ impl Engine {
     /// Never, on the stand-in. The real engine returns the local or usage
     /// kind when the environment it reads is broken.
     pub fn from_env() -> Result<Self, Error> {
-        Ok(Self { inner: BlockingEngine::from_env() })
+        Ok(Self {
+            inner: BlockingEngine::from_env(),
+        })
     }
 
     /// Build an engine from settled settings, the form a host with its own
     /// configuration uses.
     #[must_use]
     pub fn from_settings(settings: Settings) -> Self {
-        Self { inner: BlockingEngine::from_settings(settings) }
+        Self {
+            inner: BlockingEngine::from_settings(settings),
+        }
     }
 
     /// Ask once.
@@ -84,7 +91,8 @@ impl Engine {
         evidence: &str,
         options: Options<'_>,
     ) -> Result<Answer, Error> {
-        self.inner.decide_opts(&question.into_question()?, evidence, options)
+        self.inner
+            .decide_opts(&question.into_question()?, evidence, options)
     }
 
     /// Ask once with an optional token, the form a caller with one cancel
@@ -173,12 +181,9 @@ impl Engine {
         question: Q,
         records: &'a [&str],
     ) -> Result<Vec<&'a str>, Error> {
-        let kept = self.inner.filter_opts(
-            &question.into_question()?,
-            records,
-            Options::new(),
-            None,
-        )?;
+        let kept =
+            self.inner
+                .filter_opts(&question.into_question()?, records, Options::new(), None)?;
         Ok(kept.into_iter().map(|place| records[place]).collect())
     }
 
@@ -188,8 +193,13 @@ impl Engine {
     ///
     /// Same kinds as [`Engine::decide_many`], and the usage kind when the
     /// question names a threshold.
-    pub fn rank<Q: IntoQuestion>(&self, question: Q, records: &[&str]) -> Result<Vec<Ranked>, Error> {
-        self.inner.rank_opts(&question.into_question()?, records, Options::new(), None)
+    pub fn rank<Q: IntoQuestion>(
+        &self,
+        question: Q,
+        records: &[&str],
+    ) -> Result<Vec<Ranked>, Error> {
+        self.inner
+            .rank_opts(&question.into_question()?, records, Options::new(), None)
     }
 
     /// Pick the unit that best answers the question, out of the units sent
@@ -200,7 +210,82 @@ impl Engine {
     /// Same kinds as [`Engine::decide`], and the usage kind when the count
     /// is outside its bounds.
     pub fn find<Q: IntoQuestion>(&self, question: Q, units: &[&str]) -> Result<Found, Error> {
-        self.inner.find_opts(&question.into_question()?, units, Options::new())
+        self.inner
+            .find_opts(&question.into_question()?, units, Options::new())
+    }
+
+    /// Find every name in one text, and, when a rule was given, the
+    /// relations between the names.
+    ///
+    /// The answer is the contract's [`Recognized`]: typed [`Entity`] and
+    /// [`Relation`] records. Each name's `start` and `end` count code
+    /// points of the text the caller gave; Rust slices bytes, so slice a
+    /// name with [`name_in`] or [`byte_range`] rather than the raw
+    /// offsets, or an accent or an emoji before the name cuts the wrong
+    /// bytes. The emoji case in the tests is the strict proof.
+    ///
+    /// The number on an entity is the interim field `number`. The
+    /// marketing vocabulary (`repos/mktg/products/thinkthen/vocabulary.md`,
+    /// "The words for numbers") restricts one word to the literal field
+    /// Jev returns, and this number is computed from several of Jev's
+    /// numbers, so it may not carry that word; the recognize team's
+    /// comparison settles its final name. The number on a relation is
+    /// `probability`, passed through unchanged.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind for a missing text, an unrecorded rule, a blank
+    /// relation end, or a named end outside the asked kinds; otherwise
+    /// the backend, deadline, or cancelled kind, per the contract.
+    pub fn recognize(&self, ask: &Recognize, text: &str) -> Result<Recognized, Error> {
+        self.inner.recognize(ask, text)
+    }
+
+    /// Say how every record relates to the others: one pick-one question
+    /// per legal pair, every record crossing at once.
+    ///
+    /// More than [`MAX_RELATE_RECORDS`] records is a usage error before
+    /// anything happens; the check lives in the contract, so every surface
+    /// inherits it. The answer is a list of typed [`Edge`] records, with
+    /// `probability` on each.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind past the record limit, for a missing text, an
+    /// unrecorded rule, a kind field the recordings cannot honour, or a
+    /// blank relation end; otherwise the backend, deadline, or cancelled
+    /// kind.
+    pub fn relate(&self, ask: &Relate, records: &[&str]) -> Result<Vec<Edge>, Error> {
+        self.inner.relate(ask, records)
+    }
+
+    /// Find every name in one text, with the options: the cancel token and
+    /// the deadline ride every call.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::recognize`].
+    pub fn recognize_opts(
+        &self,
+        ask: &Recognize,
+        text: &str,
+        options: Options<'_>,
+    ) -> Result<Recognized, Error> {
+        self.inner.recognize_opts(ask, text, options)
+    }
+
+    /// Say how every record relates to the others, with the options.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::relate`].
+    pub fn relate_opts(
+        &self,
+        ask: &Relate,
+        records: &[&str],
+        options: Options<'_>,
+    ) -> Result<Vec<Edge>, Error> {
+        self.inner.relate_opts(ask, records, options)
     }
 
     /// Ask every question of the set of every record, once each, from a
@@ -225,7 +310,8 @@ impl Engine {
     ///
     /// Same kinds as [`Engine::decide`].
     pub fn details<Q: IntoQuestion>(&self, question: Q, evidence: &str) -> Result<Details, Error> {
-        self.inner.details_opts(&question.into_question()?, evidence, Options::new())
+        self.inner
+            .details_opts(&question.into_question()?, evidence, Options::new())
     }
 
     /// The counters since the last reset: sends, cache answers, tokens.
@@ -233,6 +319,41 @@ impl Engine {
     pub fn usage(&self) -> Usage {
         self.inner.usage()
     }
+}
+
+/// The byte range of one entity's name in the text it was found in.
+///
+/// The contract counts `start` and `end` in code points, the one unit a
+/// user can check against the text they typed. Rust slices strings by
+/// bytes, and this converts once: the range sits on the text's own char
+/// boundaries, so `&text[range]` is the name. Both offsets saturate at
+/// the end of the text, which only a broken engine can ask for.
+#[must_use]
+pub fn byte_range(entity: &Entity, text: &str) -> Range<usize> {
+    Range {
+        start: byte_of(text, entity.start),
+        end: byte_of(text, entity.end),
+    }
+}
+
+/// The name as a slice of the original text, in Rust's byte indexing.
+///
+/// Use it instead of `&text[entity.start..entity.end]`: the contract's
+/// offsets count code points, so the raw slice cuts the wrong bytes the
+/// moment an accent or an emoji sits before the name; the test
+/// `the_emoji_case_slices_in_bytes` proves both halves. A broken engine's
+/// offsets give the empty string, never a panic.
+#[must_use]
+pub fn name_in<'t>(entity: &Entity, text: &'t str) -> &'t str {
+    text.get(byte_range(entity, text)).unwrap_or("")
+}
+
+/// The byte offset of the `codepoints`-th code point, saturating at the
+/// end of the text.
+fn byte_of(text: &str, codepoints: usize) -> usize {
+    text.char_indices()
+        .nth(codepoints)
+        .map_or(text.len(), |(offset, _)| offset)
 }
 
 /// A first argument that is the question, as text or as a built question.
@@ -251,7 +372,6 @@ pub trait IntoQuestion {
     /// grammar.
     fn into_question(self) -> Result<Question, Error>;
 }
-
 
 impl IntoQuestion for &Question {
     fn into_question(self) -> Result<Question, Error> {

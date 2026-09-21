@@ -71,3 +71,48 @@ $ ../..//scripts/check_surfaces.sh   (stub up)
 - The conformance runner checks the fields the file's `expect` carries
   for each verb; a `rank` and `find` case do not exist in the file yet,
   so those arms ran only in the verb tests.
+
+## 2026-09-21 — recognize and relate
+
+The two new functions on this surface, from the brief in `sdlc/issues/2026-09-21-update-for-the-library-team-recognize-and-relate.md`. What landed, in `src/lib.rs`: `Engine::recognize` and `Engine::relate` plus their `_opts` forms (cancel and deadline ride both), the re-exported contract types (`Recognize`, `Relate`, `Kind`, `RelationRule`, `Entity`, `Relation`, `Recognized`, `Edge`, `MAX_RELATE_RECORDS`), and two free functions that are this surface's one conversion: `byte_range(entity, text)` and `name_in(entity, text)`. The contract counts offsets in code points; Rust slices bytes; the emoji case is the strict proof:
+
+```
+$ ENGINE_NULL=1 cargo test --quiet
+recognize: 7 passed   (the emoji case among them: byte_range == 14..24, name_in == "Maria Chen",
+                       byte 10 is inside the 😀 and 14 starts the name)
+```
+
+The conformance runner grew `recognize` and `relate` arms (`examples/conformance.rs`): all 41 recognize cases and 3 of the 4 relate cases answer `ok`, every entity's name slices out of the text in byte indexing in the runner itself, and `./check.sh` exits 0 end to end.
+
+### Findings, filed not worked around
+
+1. **The slide's `located_in` is not in the recording.** The Rust section of `recognize-surfaces.md` asks `works_for` and `located_in` over the deck sentence; the recording behind that sentence covers `works_for` and `based_in`. The call as drawn answers the usage kind naming the coverage (test `the_slide_ask_meets_the_recordings_gap`); the deck call stays the real-engine acceptance, and the recognize package needs a `located_in` recording on the deck sentence for the stand-in to prove it.
+2. **Two recordings answer one input.** `71-relate-R03-persubject-10` and `72-relate-R04-pairs-10` carry the same records and the same question, because the package recorded both the per-subject form and the ruled pairs form over one block. The stand-in prefers the pairs form, which `relate-design.md` rules; R03's five-edge expectation is the non-ruled form's answers and cannot be met by the ruled shape. The runner records it as a divergence (green check, honest line); the conformance owner decides whether R03 stays as a case, moves to the package record, or gains a distinguishing marker.
+3. **Contract ergonomics: the slide's constructor does not exist as written.** The acceptance writes `Recognize::kinds([...])` as an associated function; the contract ships `Recognize::new().kinds([...])` (a builder method), so the slide's exact line does not compile and the tests use the builder. One token fixes it on either side; the finding is filed rather than worked around in this crate.
+4. **`relate` per the recordings carries no kinds.** A rule that names a kind, or a `kind_field`, answers the usage kind from the stand-in, because the recordings hold kind `*` only. Real-engine data.
+
+### Vocabulary sweep, run at close
+
+Against `repos/mktg/products/thinkthen/vocabulary.md`, "The words for numbers":
+
+```
+$ grep -rniE "certainty|likelihood|cutoff|gray zone" src/ tests/ examples/ README.md NOTES.md check.sh
+(no hits)
+
+$ grep -rn "confidence" src/ tests/ examples/ README.md NOTES.md check.sh
+(no hits; the doc comment on `recognize` names the restriction without the word)
+
+$ grep -rniE "accuracy|calibrated" src/ tests/ examples/ README.md NOTES.md check.sh
+(no hits)
+
+$ grep -rn "score" src/ tests/ examples/
+src/lib.rs: the verb's own name and the re-exported types; tests/verbs.rs and examples/conformance.rs use Question::score and the "score" verb arm.
+```
+
+Every `score` hit is the ruled verb, never a probability's name. The number on an entity is documented as the interim `number` field with the open comparison named; the number on a relation is `probability`.
+
+### Unchecked here
+
+- The wire for the two functions: they answer from the recordings, so `check.sh`'s wire suite stays the other verbs' suite (stub up on 8213).
+- The backend and defect kinds through `recognize`/`relate`: the stand-in's replay answers usage, deadline, and cancelled offline; backend needs the wire and defect is not fabricable.
+- R03's per-subject case (finding 2).

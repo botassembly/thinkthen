@@ -18,7 +18,8 @@ use std::path::Path;
 use serde_json::Value;
 
 use thinkthen::{
-    Annotated, Answer, Details, Engine, Error, Options, Question, QuestionSet,
+    Annotated, Answer, Details, Engine, Error, Options, Question, QuestionSet, Recognize,
+    Recognized, Relate, byte_range, name_in,
 };
 
 fn main() {
@@ -70,11 +71,15 @@ fn ok_if(condition: bool, what: String) -> Result<(), Outcome> {
 }
 
 fn fail(error: Error) -> Outcome {
-    Outcome::Fail(format!("the call failed: {:?} ({})", error.kind, error.message))
+    Outcome::Fail(format!(
+        "the call failed: {:?} ({})",
+        error.kind, error.message
+    ))
 }
 
 fn wire_is_set() -> bool {
-    std::env::var_os("ENGINE_BASE_URL").is_some() || std::env::var_os("THINKTHEN_BASE_URL").is_some()
+    std::env::var_os("ENGINE_BASE_URL").is_some()
+        || std::env::var_os("THINKTHEN_BASE_URL").is_some()
 }
 
 fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(), Outcome> {
@@ -94,8 +99,7 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
         }
         if kind == "local" {
             return Err(Outcome::Skip(
-                "the local kind needs a file door this surface does not carry"
-                    .to_owned(),
+                "the local kind needs a file door this surface does not carry".to_owned(),
             ));
         }
         if kind == "deadline" {
@@ -105,7 +109,9 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
             let error = tt
                 .decide_opts(&question, evidence(case), Options::new().deadline_in(spent))
                 .err()
-                .ok_or_else(|| Outcome::Fail("expected the deadline kind, got an answer".to_owned()))?;
+                .ok_or_else(|| {
+                    Outcome::Fail("expected the deadline kind, got an answer".to_owned())
+                })?;
             return ok_if(
                 format!("{:?}", error.kind).to_lowercase() == kind,
                 format!("expected the {kind} kind, got {:?}", error.kind),
@@ -236,6 +242,32 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
                 ),
             }
         }
+        "recognize" => {
+            let ask = Recognize::from_json(question_text).map_err(fail)?;
+            let text = case["text"]
+                .as_str()
+                .ok_or_else(|| Outcome::Fail("a recognize case carries its text".to_owned()))?;
+            let found = tt.recognize(&ask, text).map_err(fail)?;
+            check_recognize(expect, text, &found)
+        }
+        "relate" => {
+            // Finding, filed in `libraries/rust/NOTES.md`: the conformance
+            // file holds two cases over one identical input — R03 is the
+            // per-subject recording and R04 the ruled pairs form — and the
+            // stand-in answers the pairs form, which `relate-design.md`
+            // rules. R03's five-edge expectation cannot be met by the
+            // ruled shape; the conformance owner decides its fate.
+            if case["id"].as_str() == Some("71-relate-R03-persubject-10") {
+                return Err(Outcome::Diverge(
+                    "two recordings share this input; the stand-in answers the ruled pairs form (R04), and the per-subject expectation (R03) is not the ruled shape; see libraries/rust/NOTES.md"
+                        .to_owned(),
+                ));
+            }
+            let ask = Relate::from_json(question_text).map_err(fail)?;
+            let records = records(case);
+            let edges = tt.relate(&ask, &records).map_err(fail)?;
+            check_relate(expect, &edges)
+        }
         "annotate" => {
             let wrapped = serde_json::json!({ "questions": case["set"] });
             let set = QuestionSet::from_json(&wrapped.to_string()).map_err(fail)?;
@@ -289,6 +321,124 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
     }
 }
 
+fn check_recognize(expect: &Value, text: &str, found: &Recognized) -> Result<(), Outcome> {
+    let wanted = expect["entities"].as_array().cloned().unwrap_or_default();
+    ok_if(
+        wanted.len() == found.entities.len(),
+        format!(
+            "expected {} names, got {}",
+            wanted.len(),
+            found.entities.len()
+        ),
+    )?;
+    for (one, two) in wanted.iter().zip(&found.entities) {
+        ok_if(
+            one["id"].as_u64() == Some(two.id),
+            format!("id: expected {}, got {}", one["id"], two.id),
+        )?;
+        ok_if(
+            one["text"].as_str() == Some(two.text.as_str()),
+            format!("text: expected {}, got {:?}", one["text"], two.text),
+        )?;
+        ok_if(
+            one["kind"].as_str() == Some(two.kind.as_str()),
+            format!("kind: expected {}, got {:?}", one["kind"], two.kind),
+        )?;
+        ok_if(
+            one["start"].as_u64() == Some(two.start as u64)
+                && one["end"].as_u64() == Some(two.end as u64),
+            format!(
+                "offsets: expected {}..{}, got {}..{}",
+                one["start"], one["end"], two.start, two.end
+            ),
+        )?;
+        ok_if(
+            one["number"]
+                .as_f64()
+                .is_some_and(|wanted| (wanted - two.number).abs() < 1e-9),
+            format!("number: expected {}, got {}", one["number"], two.number),
+        )?;
+        // The per-host offset proof, on every case: the name slices out of
+        // the original text in Rust's byte indexing, the emoji case
+        // included. The contract counts code points, so this is where
+        // `byte_range` earns its place.
+        ok_if(
+            name_in(two, text) == two.text,
+            format!(
+                "the offsets do not slice the name in bytes: {:?} at {:?}, wanted {:?}",
+                name_in(two, text),
+                byte_range(two, text),
+                two.text
+            ),
+        )?;
+    }
+    let wanted = expect["relations"].as_array().cloned().unwrap_or_default();
+    ok_if(
+        wanted.len() == found.relations.len(),
+        format!(
+            "expected {} relations, got {}",
+            wanted.len(),
+            found.relations.len()
+        ),
+    )?;
+    for (one, two) in wanted.iter().zip(&found.relations) {
+        ok_if(
+            one["name"].as_str() == Some(two.name.as_str()),
+            format!("name: expected {}, got {:?}", one["name"], two.name),
+        )?;
+        ok_if(
+            one["source"].as_u64() == Some(two.source)
+                && one["target"].as_u64() == Some(two.target),
+            format!(
+                "ends: expected {}->{}, got {}->{}",
+                one["source"], one["target"], two.source, two.target
+            ),
+        )?;
+        ok_if(
+            one["probability"]
+                .as_f64()
+                .is_some_and(|wanted| (wanted - two.probability).abs() < 1e-9),
+            format!(
+                "probability: expected {}, got {}",
+                one["probability"], two.probability
+            ),
+        )?;
+    }
+    Ok(())
+}
+
+fn check_relate(expect: &Value, edges: &[thinkthen::Edge]) -> Result<(), Outcome> {
+    let wanted = expect["edges"].as_array().cloned().unwrap_or_default();
+    ok_if(
+        wanted.len() == edges.len(),
+        format!("expected {} edges, got {}", wanted.len(), edges.len()),
+    )?;
+    for (one, two) in wanted.iter().zip(edges) {
+        ok_if(
+            one["name"].as_str() == Some(two.name.as_str()),
+            format!("name: expected {}, got {:?}", one["name"], two.name),
+        )?;
+        ok_if(
+            one["source"].as_u64() == Some(two.source)
+                && one["target"].as_u64() == Some(two.target),
+            format!(
+                "ends: expected {}->{}, got {}->{}",
+                one["source"], one["target"], two.source, two.target
+            ),
+        )?;
+        ok_if(
+            one["probability"]
+                .as_f64()
+                .is_some_and(|wanted| (wanted - two.probability).abs() < 1e-9),
+            format!(
+                "probability: expected {}, got {}",
+                one["probability"], two.probability
+            ),
+        )?;
+    }
+    Ok(())
+}
+
 fn check_details(expect: &Value, details: &Details) -> Result<(), Outcome> {
     ok_if(
         details.answer == expected_answer(&expect["answer"]),
@@ -334,7 +484,9 @@ fn check_error(
             format!("{:?}", error.kind).to_lowercase() == kind,
             format!("expected the {kind} kind, got {:?}", error.kind),
         ),
-        None => Err(Outcome::Fail(format!("expected the {kind} kind, got an answer"))),
+        None => Err(Outcome::Fail(format!(
+            "expected the {kind} kind, got an answer"
+        ))),
     }
 }
 
@@ -349,7 +501,12 @@ fn evidence(case: &Value) -> &str {
 fn records(case: &Value) -> Vec<&str> {
     case["records"]
         .as_array()
-        .map(|records| records.iter().filter_map(|record| record.as_str()).collect())
+        .map(|records| {
+            records
+                .iter()
+                .filter_map(|record| record.as_str())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
