@@ -75,3 +75,13 @@ Two gaps sit in the Rust binding rather than in DuckDB. The `VScalar` trait requ
 6. What does a cancel reach inside the engine? `duckdb_interrupt` sits on a connection. A poll from inside a scalar function is unchecked.
 7. Does the extension ship signed through the community repository first, or unsigned from its own releases while the pull request waits?
 8. Does `thinkthen_warm(question, text)` exist here? **The recommendation is yes, for sameness.** SQLite and PostgreSQL both take the aggregate as their first bulk form, and a script that runs on all three should not fork on the name. It buys DuckDB no speed, because the chunk already runs at full width. The cost is the C aggregate path, since `duckdb-rs` exposes no aggregate. If that path is blocked, the page drops the name and the shared README records a forced difference.
+
+## Ctrl-C inside a Python process, 2026-09-21
+
+Job 2 of the experiment team proved the SIGINT-at-LOAD handler inside Python (duckdb 1.5.5, extension loaded in-process, stub at 300 ms, 2,048-row query at 32 in flight). Three findings, each with the baseline that separates DuckDB's own behavior from the extension's:
+
+- Ctrl-C during a thinkthen query stops the query within one 32-wide round (measured 0.11 s past the signal; the stub's counter frozen at 320 requests through a 3 s settle) and surfaces as DuckDB Python's own `RuntimeError: Query interrupted` — the same exception pure DuckDB raises with no extension loaded, verified against a native 19 s query. `KeyboardInterrupt` propagates only when no query is running; the chain preserves Python's default handler exactly. The earlier CLI proof stands; inside Python, the exception the host sees is DuckDB's translation, not `KeyboardInterrupt`.
+- A host that installs its own SIGINT handler after `LOAD` keeps it — the extension's chaining does not break it — but the install replaces the extension's handler at the OS level, so the automatic stop is lost, and a Python handler cannot run while the main thread is blocked in the query. Measured deaf: 16.42 s of paid work past the signal.
+- The working shape for a host with its own handler: run long queries on a worker thread, keep the main thread free, and call `thinkthen_cancel()` from a second connection when the handler fires. Measured 0.05 s from signal to stop, requests frozen, and the engine's `cancelled` kind carries in DuckDB's error message.
+
+The full commands and output are in `experiments/207-thinkthen-db/duckdb/NOTES.md` under "Job 2, 2026-09-21".
