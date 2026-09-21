@@ -228,15 +228,6 @@ impl Engine {
         self.inner.details_opts(&question.into_question()?, evidence, Options::new())
     }
 
-    /// Return the text unchanged, for testing.
-    ///
-    /// # Errors
-    ///
-    /// Returns no kind on the stand-in.
-    pub fn probe(&self, text: &str) -> Result<String, Error> {
-        self.inner.probe(text)
-    }
-
     /// The counters since the last reset: sends, cache answers, tokens.
     #[must_use]
     pub fn usage(&self) -> Usage {

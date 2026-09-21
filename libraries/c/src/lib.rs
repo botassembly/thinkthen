@@ -344,8 +344,6 @@ fn str_from<'a>(text: *const c_char, len: usize) -> Result<&'a str, Error> {
 /// - `{"decide": "...", "evidence": "...", "details": true}` for the
 ///   audit view
 /// - `{"usage": true}` for the counters
-/// - `{"probe": true, "evidence": "..."}` returns the evidence unchanged, for
-///   the maintainability test
 ///
 /// # Safety
 ///
@@ -426,7 +424,7 @@ fn call_verb(
     // The question object is the request minus the door's own keys, so the
     // caller writes the question file's shape at the top level.
     let door_keys = [
-        "evidence", "records", "units", "details", "usage", "rank", "probe",
+        "evidence", "records", "units", "details", "usage", "rank",
     ];
     let question_object: serde_json::Map<String, serde_json::Value> = object
         .iter()
@@ -435,12 +433,6 @@ fn call_verb(
         })
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
-
-    // Return the text unchanged, for testing.
-    if object.contains_key("probe") {
-        let text = evidence("evidence")?;
-        return Ok(serde_json::json!({ "answer": text }));
-    }
 
     let ask = |evidence: &str| -> Result<(Answer, f64), Error> {
         let question_text = serde_json::to_string(&serde_json::Value::Object(
@@ -543,7 +535,7 @@ fn call_verb(
         return Ok(serde_json::json!({ "answer": labels }));
     }
     Err(Error::usage(
-        "the request carries no verb the door knows: decide, choose, score, tag, find, annotate, details, usage, probe",
+        "the request carries no verb the door knows: decide, choose, score, tag, find, annotate, details, usage",
     ))
 }
 

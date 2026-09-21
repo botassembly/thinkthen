@@ -22,7 +22,6 @@ from ._thinkthen import (
     details,
     find,
     filter,
-    probe,
     question,
     rank,
     reset_usage,
@@ -33,7 +32,7 @@ from ._thinkthen import (
 
 __all__ = [
     "annotate", "Cancelled", "choose", "decide", "decide_many",
-    "details", "find", "filter", "probe", "question", "rank", "reset_usage",
+    "details", "find", "filter", "question", "rank", "reset_usage",
     "score", "tag", "usage",
     "ThinkThenError", "UsageError", "BackendError", "DeadlineError",
     "LocalError", "DefectError",

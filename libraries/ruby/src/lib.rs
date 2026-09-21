@@ -604,10 +604,6 @@ impl EngineValue {
         Ok(outer)
     }
 
-    fn probe(&self, text: String) -> Result<String, Error> {
-        ContractEngine::probe(&self.engine, &text).map_err(map_error)
-    }
-
     fn usage(&self) -> Result<RHash, Error> {
         let Usage { requests, cache_answers, tokens } = ContractEngine::usage(&self.engine);
         let ruby = magnus::Ruby::get().unwrap();
@@ -719,7 +715,6 @@ fn init() -> Result<(), Error> {
     engine.define_method("score", method!(EngineValue::score, 4))?;
     engine.define_method("tag", method!(EngineValue::tag, 4))?;
     engine.define_method("details", method!(EngineValue::details, 4))?;
-    engine.define_method("probe", method!(EngineValue::probe, 1))?;
     engine.define_method("find", method!(EngineValue::find, 4))?;
     engine.define_method("annotate", method!(EngineValue::annotate, 5))?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;

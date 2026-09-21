@@ -554,12 +554,6 @@ fn details(
     Ok(dict.into_any().unbind())
 }
 
-/// Return the text unchanged, for testing.
-#[pyfunction]
-fn probe(py: Python<'_>, text: String) -> PyResult<String> {
-    engine().probe(&text).map_err(|error| python_error(py, error))
-}
-
 /// The counters since the last reset. `requests` counts sends, so a
 /// retried send shows twice, the same as the bill.
 #[pyfunction]

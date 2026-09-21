@@ -93,12 +93,3 @@ name = "reset_usage"
 inputs = "none"
 output = "nothing"
 help = "Zero the counters"
-
-# Temporary: the maintainability test's throwaway function, 2026-09-21.
-# It is removed with the test; its help line is throwaway, not public
-# vocabulary.
-[[function]]
-name = "probe"
-inputs = "text"
-output = "the text, unchanged"
-help = "Return the text unchanged, for testing"

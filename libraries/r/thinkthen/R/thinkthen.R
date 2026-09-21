@@ -282,11 +282,6 @@ tt_details <- function(question, evidence, threshold = NULL) {
   held
 }
 
-# Return the text unchanged, for testing.
-tt_probe <- function(body) {
-  tt_probe_native(as.character(body)[[1L]])
-}
-
 # The process counters: requests count sends, so a retried send shows
 # twice; cache_answers and tokens report what the engine served.
 tt_usage <- function() {

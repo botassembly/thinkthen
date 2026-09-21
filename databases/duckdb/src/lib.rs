@@ -385,41 +385,6 @@ impl VScalar for DecideScalar {
     }
 }
 
-/// `thinkthen_probe(text)`: the text back unchanged, for the
-/// maintainability test.
-struct ProbeScalar;
-
-impl VScalar for ProbeScalar {
-    type State = ();
-
-    fn invoke(
-        _: &Self::State,
-        input: &mut DataChunkHandle,
-        output: &mut dyn WritableVector,
-    ) -> std::result::Result<(), Box<dyn Error>> {
-        let texts = read_strings(input, 0);
-        let mut out = output.flat_vector();
-        for (i, text) in texts.iter().enumerate() {
-            match text {
-                Some(text) => out.insert(i, text.as_str()),
-                None => out.set_null(i),
-            }
-        }
-        Ok(())
-    }
-
-    fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![LogicalTypeId::Varchar.into()],
-            LogicalTypeId::Varchar.into(),
-        )]
-    }
-
-    fn volatile() -> bool {
-        false
-    }
-}
-
 /// Every row's decide answer, drawn from the chunk's distinct pairs.
 fn judged_rows(distinct: &Distinct) -> std::result::Result<Vec<Option<Answer>>, String> {
     let mut answers: Vec<Option<Answer>> = vec![None; distinct.pairs.len()];
@@ -984,7 +949,6 @@ unsafe fn init(
     connection.register_scalar_function::<TagScalar>("thinkthen_tag")?;
     connection.register_scalar_function::<AnnotateScalar>("thinkthen_annotate")?;
     connection.register_scalar_function::<DetailsScalar>("thinkthen_details")?;
-    connection.register_scalar_function::<ProbeScalar>("thinkthen_probe")?;
 
     let mut raw: ffi::duckdb_connection = std::ptr::null_mut();
     if unsafe { ffi::duckdb_connect(database, &mut raw) } != ffi::DuckDBSuccess {

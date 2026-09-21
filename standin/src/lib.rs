@@ -503,10 +503,6 @@ impl Engine for BlockingEngine {
         })
     }
 
-    fn probe(&self, text: &str) -> Result<String, Error> {
-        Ok(text.to_owned())
-    }
-
     fn usage(&self) -> Usage {
         Usage {
             requests: REQUESTS.load(Ordering::Relaxed),

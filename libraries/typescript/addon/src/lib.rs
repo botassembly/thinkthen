@@ -85,7 +85,6 @@ enum Op {
     Find,
     Annotate,
     Details,
-    Probe,
 }
 
 impl Op {
@@ -101,7 +100,6 @@ impl Op {
             "find" => Self::Find,
             "annotate" => Self::Annotate,
             "details" => Self::Details,
-            "probe" => Self::Probe,
             other => {
                 return Err(napi::Error::new(
                     napi::Status::InvalidArg,
@@ -215,10 +213,6 @@ impl CallTask {
                 let question = question(&self.spec)?;
                 let details = engine.details_opts(&question, &self.payload, options)?;
                 serde_json::to_value(details).map_err(|error| tt::Error::defect(error.to_string()))
-            }
-            Op::Probe => {
-                let text = engine.probe(&self.payload)?;
-                serde_json::to_value(text).map_err(|error| tt::Error::defect(error.to_string()))
             }
         }
     }
