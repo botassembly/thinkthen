@@ -250,14 +250,14 @@ def check_recognize_case(c):
     check(set(expect) == {"entities", "relations"}, f"{c['id']} expect keys")
     ids = []
     for entity in expect["entities"]:
-        check(set(entity) == {"id", "text", "kind", "start", "end", "number"},
-              f"{c['id']} entity keys carry the interim `number`, never confidence")
+        check(set(entity) == {"id", "text", "kind", "start", "end", "strength"},
+              f"{c['id']} entity keys carry the ruled `strength`, never confidence")
         check(entity["kind"] in q["kinds"], f"{c['id']} entity kind asked")
         check(entity["start"] < entity["end"] <= len(c["text"]), f"{c['id']} offsets in bounds")
         check(c["text"][entity["start"]:entity["end"]] == entity["text"],
               f"{c['id']} offsets slice the name out")
-        check(0 <= entity["number"] <= 1 and entity["number"] >= q["threshold"],
-              f"{c['id']} number above the bar")
+        check(0 <= entity["strength"] <= 1 and entity["strength"] >= q["threshold"],
+              f"{c['id']} strength above the bar")
         ids.append(entity["id"])
     check(ids == list(range(1, len(ids) + 1)), f"{c['id']} entity ids count from 1 in order")
     names = {rule["name"] for rule in q["relations"]}
@@ -320,7 +320,7 @@ def replay_recognize_and_relate(c):
         entities, relations = replay_recognize(c, row)
         want_entities = [
             {"id": e["id"], "text": e["text"], "kind": e["kind"], "start": e["start"],
-             "end": e["end"], "number": e["confidence"]}
+             "end": e["end"], "strength": e["confidence"]}
             for e in entities
         ]
         check(want_entities == c["expect"]["entities"], f"{c['id']} entities replay exactly")
