@@ -9,4 +9,5 @@
 - `documentation-plan.md`: the full list of how-tos, each with its demo, its slice, and its state. ADR 0011 makes the demo, the how-to, and the test one file.
 - [databases/](databases/README.md): the three database extensions Ian ruled in on 2026-09-20, DuckDB, SQLite, and PostgreSQL, each in Rust over the same engine. The eight SQL functions, the rules all three keep, what other people have already published, and one page per database. A fast follow that never holds the launch.
 - [libraries/](libraries/README.md): the seven surfaces (the command, Rust, Python, JavaScript, Ruby, R, and C), the goals and anti-goals each one shares, and one page per surface. A study for the rewrite of ADR 0017.
+- [polars-plan.md](polars-plan.md): the plan for the native Rust door over the contract. One engine serves the Rust surface, the Python-Polars path, and the pure-Python list crossing; both Python containers stay first-class and all scaling runs in Rust. Experiments 212 through 216 answer the risks.
 - `adr/`: architecture decision records, numbered from 0001. Each says whether Ian can overturn it cheaply.

@@ -57,3 +57,5 @@ Ian ruled: "Polars. The Rust-based data frame project that's similar to pandas, 
 What Ian can overturn: the optional-dependency shape (a hard dependency instead), and the open Rust question.
 
 Clarified by Ian, 2026-09-21: the Python surface supports both pure Python and Polars DataFrame Python — both containers, first-class. All scalability and vectorization, whatever Polars offers, is done in Rust code, not Python code: Python never loops a row, never chunks, never bridges through a Python lambda. The proof is equality at the gate — the width bench through a Polars column must read the same wall time and the same 32 in flight as the plain-list form.
+
+2026-09-21: the Polars plan exists at `sdlc/planning/polars-plan.md`, written after the Polars ruling and Ian's clarification that both Python containers ship first-class with all scaling and vectorization in Rust. It lists the risks and experiments 212 through 216 and authorizes nothing.
