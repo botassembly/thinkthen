@@ -9,7 +9,7 @@ use crate::answer::{Answer, Distribution, DistributionError};
 use crate::plan::Plan;
 use crate::probability::Probability;
 use crate::question::{Labels, Question};
-use crate::reply::Reply;
+use crate::reply::{AnswerOutcome, BackendFailure, BackendFailureCause, Reply};
 use crate::result::Usage;
 use crate::text::ModelName;
 
@@ -72,23 +72,77 @@ pub fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
     let response: Response = serde_json::from_slice(body)
         .map_err(|error| DecodeError::Malformed(error.line(), error.column()))?;
     let model = ModelName::new(response.model).map_err(|_| DecodeError::NoModel)?;
+    let wire_count = plan
+        .questions()
+        .iter()
+        .map(|question| match question {
+            Question::Tag { labels, .. } => labels.count(),
+            _ => 1,
+        })
+        .sum::<usize>();
+    if response
+        .answers
+        .keys()
+        .any(|name| !(0..wire_count).any(|place| wire_name(place) == *name))
+    {
+        return Err(DecodeError::UnexpectedAnswer);
+    }
     let mut answers = Vec::with_capacity(plan.questions().len());
+    let mut first_error = None;
     let mut wire_place = 0;
     for question in plan.questions() {
         if let Question::Tag { labels, .. } = question {
-            answers.push(read_tag(&response.answers, labels, &mut wire_place)?);
+            let decoded = read_tag(&response.answers, labels, &mut wire_place);
+            remember(&decoded, &mut first_error);
+            answers.push(outcome(decoded));
             continue;
         }
-        let Some(answered) = response.answers.get(&wire_name(wire_place)) else {
-            return Err(DecodeError::MissingAnswer(wire_place));
-        };
-        answers.push(read(question, answered, wire_place)?);
+        let decoded = response
+            .answers
+            .get(&wire_name(wire_place))
+            .ok_or(DecodeError::MissingAnswer(wire_place))
+            .and_then(|answered| read(question, answered, wire_place));
+        remember(&decoded, &mut first_error);
+        answers.push(outcome(decoded));
         wire_place += 1;
+    }
+    if answers
+        .iter()
+        .all(|answer| matches!(answer, AnswerOutcome::Failed(_)))
+    {
+        return Err(first_error.unwrap_or(DecodeError::UnexpectedAnswer));
     }
     let usage = response
         .usage
         .map(|usage| Usage::new(usage.input_tokens, usage.output_tokens));
     Ok(Reply::new(model, answers, usage))
+}
+
+fn remember(result: &Result<Answer, DecodeError>, first: &mut Option<DecodeError>) {
+    if first.is_none() {
+        *first = result.as_ref().err().cloned();
+    }
+}
+
+fn outcome(result: Result<Answer, DecodeError>) -> AnswerOutcome {
+    match result {
+        Ok(answer) => AnswerOutcome::Answered(answer),
+        Err(error) => AnswerOutcome::Failed(BackendFailure::new(cause(&error))),
+    }
+}
+
+const fn cause(error: &DecodeError) -> BackendFailureCause {
+    match error {
+        DecodeError::MissingAnswer(_) => BackendFailureCause::MissingAnswer,
+        DecodeError::WrongKind(_) => BackendFailureCause::WrongKind,
+        DecodeError::MissingProbability(_) => BackendFailureCause::MissingProbability,
+        DecodeError::ProbabilityOutOfRange(_) => BackendFailureCause::InvalidProbability,
+        DecodeError::DistributionTotal { .. } => BackendFailureCause::InvalidDistribution,
+        DecodeError::UnexpectedProbability(_) => BackendFailureCause::UnexpectedProbability,
+        DecodeError::Malformed(..) | DecodeError::NoModel | DecodeError::UnexpectedAnswer => {
+            BackendFailureCause::WrongKind
+        }
+    }
 }
 
 /// Read the adjacent yes-or-no wire answers that make one tag answer.
@@ -98,16 +152,25 @@ fn read_tag(
     wire_place: &mut usize,
 ) -> Result<Answer, DecodeError> {
     let mut probabilities = Vec::with_capacity(labels.count());
+    let mut failed = None;
     for label in labels.names() {
         let place = *wire_place;
-        let answer = answered
-            .get(&wire_name(place))
-            .ok_or(DecodeError::MissingAnswer(place))?;
-        let ResponseAnswer::Noul { noul } = answer else {
-            return Err(DecodeError::WrongKind(place));
-        };
-        probabilities.push((label.clone(), probability(*noul, place)?));
         *wire_place += 1;
+        let decoded = answered
+            .get(&wire_name(place))
+            .ok_or(DecodeError::MissingAnswer(place))
+            .and_then(|answer| match answer {
+                ResponseAnswer::Noul { noul } => probability(*noul, place),
+                _ => Err(DecodeError::WrongKind(place)),
+            });
+        match decoded {
+            Ok(value) => probabilities.push((label.clone(), value)),
+            Err(error) if failed.is_none() => failed = Some(error),
+            Err(_) => {}
+        }
+    }
+    if let Some(error) = failed {
+        return Err(error);
     }
     Ok(Answer::new_tag(probabilities))
 }
@@ -208,6 +271,10 @@ fn reported(value: Option<f64>, place: usize) -> Result<Option<Probability>, Dec
 #[cfg(test)]
 #[path = "response_distribution_tests.rs"]
 mod distribution_tests;
+
+#[cfg(test)]
+#[path = "response_partial_tests.rs"]
+mod partial_tests;
 
 #[cfg(test)]
 mod tests {
@@ -415,38 +482,6 @@ mod tests {
         let rendered = |answer: &Answer| serde_json::to_string(answer).expect("an answer");
         assert_eq!(rendered(first), r#"{"kind":"yes_no","probability":0.75}"#);
         assert_eq!(rendered(second), r#"{"kind":"yes_no","probability":0.25}"#);
-    }
-
-    #[test]
-    fn a_response_decodes_without_usage_and_past_unknown_fields() {
-        let body = concat!(
-            r#"{"model":"jev-1.13.0","request_id":"abc","#,
-            r#""answers":{"q1":{"type":"noul","noul":0.5,"rationale":"none"},"#,
-            r#""q9":{"type":"noul","noul":0.1}}}"#,
-        );
-        let reply = decode(&urgency_plan(), body.as_bytes()).expect("a systemone response");
-        assert_eq!(reply.model().as_str(), "jev-1.13.0");
-        assert_eq!(reply.answers().len(), 1);
-        assert_eq!(reply.usage(), None);
-    }
-
-    #[test]
-    fn a_distribution_total_error_names_the_rule_without_reply_values() {
-        for (member, total) in [("0.2", "0.8"), ("0.3", "1.2")] {
-            let body = concat!(
-                r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
-                r#""probabilities":{"billing":VALUE,"shipping":VALUE,"account":VALUE,"other":VALUE}}}}"#,
-            )
-            .replace("VALUE", member);
-            let error = decode(&team_plan(), body.as_bytes()).expect_err("an invalid total");
-            assert_eq!(
-                error.to_string(),
-                format!(
-                    "the answer to question `q1` has probability total {total}, member count 4, and tolerance 0.010000000000000888; the total differs from one by more than the tolerance"
-                )
-            );
-            assert!(!error.to_string().contains(member));
-        }
     }
 
     #[test]

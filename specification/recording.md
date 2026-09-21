@@ -54,6 +54,8 @@ The first live answers on 2026-09-19 returned the same probability for two ident
 
 `meta.replayed` is `true` when the answer came from a recording and `false` when a backend answered. It is always present. `meta.requests` carries the same digest that names the requested recording entry. Replay and live execution therefore report one request identity. Everything else in the result is what the recorded response yields, the usage included. A later token ledger counts only answers that a backend gave.
 
+A recorded partial reply replays the same good answers, failed markers, failure count, and exit 6. Recording keeps the raw response and request bytes unchanged.
+
 ## A recording holds the evidence
 
 The request body carries the evidence. A recording is as private as the input it was made from. Record only what may be kept, and keep a recording of private input out of version control.

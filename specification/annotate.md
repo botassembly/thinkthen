@@ -67,7 +67,7 @@ An unresolved answer is `null`. A backend failure is never `null`, because a fai
 
 ## Exit codes
 
-0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record, at exit 2, before any request for it. An unreadable or invalid file is exit 5.
+0 when the run finished with every question answered, 6 when it finished after one or more logical questions failed, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record, at exit 2, before any request for it. An unreadable or invalid file is exit 5. A later whole-run failure keeps its own code and stop boundary.
 
 ## Examples
 
@@ -102,6 +102,8 @@ One record makes one request for each distinct `on`. Every question with the sam
 Records never share a request. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
 
 `--details` reports `meta.usage` as the sum over the record's requests. `meta.requests` lists their recording digests in question-set group order. Each answer also carries the digest of the request that produced it. [result.md](result.md) gives the shape.
+
+A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detailed output its entry carries `question`, `failure`, and `request`, and carries no `value`, `answer`, or `threshold`. `meta.failed_questions` counts failed logical questions. It is always present, including zero. `null` means not sure and never means failed.
 
 ## Cautions
 

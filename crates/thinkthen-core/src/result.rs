@@ -6,6 +6,7 @@ use serde::{Serialize, Serializer};
 use crate::answer::{Answer, Value};
 use crate::question::Question;
 use crate::records::Record;
+use crate::reply::{BackendFailure, FailedValue};
 use crate::text::{ModelName, Url};
 use crate::threshold::Threshold;
 
@@ -50,13 +51,25 @@ impl Usage {
 pub struct RequestMeta {
     replayed: bool,
     requests: Vec<String>,
+    failed_questions: usize,
 }
 
 impl RequestMeta {
     /// Take the replay fact and ordered recording digests for one result.
     #[must_use]
     pub const fn new(replayed: bool, requests: Vec<String>) -> Self {
-        Self { replayed, requests }
+        Self {
+            replayed,
+            requests,
+            failed_questions: 0,
+        }
+    }
+
+    /// Carry the number of failed logical questions in one result.
+    #[must_use]
+    pub const fn with_failed_questions(mut self, failed_questions: usize) -> Self {
+        self.failed_questions = failed_questions;
+        self
     }
 }
 
@@ -68,6 +81,46 @@ pub struct AnnotatedAnswer {
     answer: Answer,
     threshold: Option<Threshold>,
     request: String,
+}
+
+/// One failed question inside an annotated detailed row.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AnnotatedFailure {
+    question: Question,
+    failure: BackendFailure,
+    request: String,
+}
+
+impl AnnotatedFailure {
+    /// Gather the question, backend failure, and request that produced it.
+    #[must_use]
+    pub const fn new(question: Question, failure: BackendFailure, request: String) -> Self {
+        Self {
+            question,
+            failure,
+            request,
+        }
+    }
+}
+
+/// A successful or failed named entry inside detailed `annotate` output.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum AnnotatedEntry {
+    /// A successful answer keeps the established detailed shape.
+    Answered(AnnotatedAnswer),
+    /// A failed answer omits value, answer, and threshold.
+    Failed(AnnotatedFailure),
+}
+
+/// A successful or failed named value in bare `annotate` output.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum AnnotatedValue {
+    /// A value read from a usable backend answer.
+    Answered(Value),
+    /// The exact marker for one failed backend answer.
+    Failed(FailedValue),
 }
 
 impl AnnotatedAnswer {
@@ -101,6 +154,7 @@ pub struct AnnotateMeta {
     usage: Option<Usage>,
     replayed: bool,
     requests: Vec<String>,
+    failed_questions: usize,
 }
 
 impl AnnotateMeta {
@@ -114,7 +168,11 @@ impl AnnotateMeta {
         usage: Option<Usage>,
         request_meta: RequestMeta,
     ) -> Self {
-        let RequestMeta { replayed, requests } = request_meta;
+        let RequestMeta {
+            replayed,
+            requests,
+            failed_questions,
+        } = request_meta;
         Self {
             tool: crate::version_line(version),
             questions_sha256,
@@ -123,6 +181,7 @@ impl AnnotateMeta {
             usage,
             replayed,
             requests,
+            failed_questions,
         }
     }
 }
@@ -142,8 +201,8 @@ impl AnnotateResult {
     #[must_use]
     pub const fn new(
         input: Record,
-        values: Vec<(String, Value)>,
-        answers: Vec<(String, AnnotatedAnswer)>,
+        values: Vec<(String, AnnotatedValue)>,
+        answers: Vec<(String, AnnotatedEntry)>,
         meta: AnnotateMeta,
     ) -> Self {
         Self {
@@ -157,7 +216,7 @@ impl AnnotateResult {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct NamedValues(Vec<(String, Value)>);
+struct NamedValues(Vec<(String, AnnotatedValue)>);
 impl Serialize for NamedValues {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_map(self.0.iter().map(|(name, value)| (name, value)))
@@ -165,7 +224,7 @@ impl Serialize for NamedValues {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct NamedAnswers(Vec<(String, AnnotatedAnswer)>);
+struct NamedAnswers(Vec<(String, AnnotatedEntry)>);
 impl Serialize for NamedAnswers {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(Some(self.0.len()))?;
@@ -187,6 +246,7 @@ pub struct Meta {
     usage: Option<Usage>,
     replayed: bool,
     requests: Vec<String>,
+    failed_questions: usize,
 }
 
 impl Meta {
@@ -208,7 +268,11 @@ impl Meta {
         usage: Option<Usage>,
         request_meta: RequestMeta,
     ) -> Self {
-        let RequestMeta { replayed, requests } = request_meta;
+        let RequestMeta {
+            replayed,
+            requests,
+            failed_questions: _,
+        } = request_meta;
         Self {
             tool: crate::version_line(version),
             question_sha256,
@@ -217,6 +281,7 @@ impl Meta {
             usage,
             replayed,
             requests,
+            failed_questions: 0,
         }
     }
 }
@@ -293,7 +358,7 @@ mod tests {
         r#""url":"https://api.typesafe.ai/v1/systemone","#,
         r#""model":"jev-1.13.0","#,
         r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false,"#,
-        r#""requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"]}}"#,
+        r#""requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}}"#,
     );
 
     #[test]
@@ -364,7 +429,7 @@ mod tests {
             concat!(
                 r#"{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
                 r#""url":"http://127.0.0.1:8080/v1/systemone","#,
-                r#""model":"local-1","replayed":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"]}"#,
+                r#""model":"local-1","replayed":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}"#,
             )
         );
     }

@@ -129,7 +129,7 @@ impl Record {
 
     /// Add named answers to an object record, or return the answers alone.
     #[must_use]
-    pub fn annotated(self, answers: Vec<(String, crate::Value)>) -> AnnotatedRecord {
+    pub fn annotated(self, answers: Vec<(String, crate::AnnotatedValue)>) -> AnnotatedRecord {
         AnnotatedRecord {
             record: self,
             answers,
@@ -178,7 +178,7 @@ impl Record {
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnnotatedRecord {
     record: Record,
-    answers: Vec<(String, crate::Value)>,
+    answers: Vec<(String, crate::AnnotatedValue)>,
 }
 
 impl Serialize for AnnotatedRecord {

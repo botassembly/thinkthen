@@ -85,6 +85,7 @@ struct Run {
     halted: bool,
     printing: bool,
     quiet_stop: bool,
+    partial_failure: bool,
 }
 
 impl Run {
@@ -103,6 +104,7 @@ impl Run {
             halted: false,
             printing: true,
             quiet_stop: false,
+            partial_failure: false,
         }
     }
 
@@ -327,6 +329,7 @@ fn drain(state: &mut Run, output: &mut Output<'_>) -> Result<(), Failure> {
             break;
         };
         state.replayed += usize::from(judged.replayed);
+        state.partial_failure |= judged.partial_failure;
         if !output.take(judged)? {
             state.stop();
             state.printing = false;
@@ -339,7 +342,11 @@ fn drain(state: &mut Run, output: &mut Output<'_>) -> Result<(), Failure> {
 
 fn finish(mut state: Run, streams: bool) -> Result<ExitCode, Failure> {
     let Some(((row, _), cause)) = state.failures.pop_first() else {
-        return Ok(ExitCode::SUCCESS);
+        return Ok(if state.partial_failure {
+            ExitCode::from(6)
+        } else {
+            ExitCode::SUCCESS
+        });
     };
     if !streams {
         return Err(cause);

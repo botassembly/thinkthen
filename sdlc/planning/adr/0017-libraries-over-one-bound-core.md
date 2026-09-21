@@ -177,3 +177,7 @@ Ian approved the build team's request-identity recommendation before the one-cra
 4. One private prepared request holds the exact encoded body and the production recording digest. Replay, cache locking, live sending, recording, and the returned result use that prepared identity. They do not encode or digest the request again.
 5. The shared conformance document names one canonical backend URL. Its expected details carry request lists derived through the production recording digest from that URL and each exact request string. A two-group annotate case fixes group order.
 6. Bare output, request bytes, recording names, diagnostics, exit codes, retries, and network behavior do not change.
+
+## Amendment, 2026-09-21: answered or failed logical results
+
+The shared core represents each decoded logical question as answered or failed. A backend failure carries the closed cause list `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. Bulk host forms preserve good answers and return the failed marker beside them. Typed single calls and the remaining bulk and database host forms still need their ruled surface mappings before the C interface freezes.

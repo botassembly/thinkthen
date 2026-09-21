@@ -49,6 +49,8 @@ pub(crate) struct Judged {
     pub(crate) replayed: bool,
     /// The probability of yes, which `rank` sorts on and no other verb reads.
     pub(crate) probability: Option<f64>,
+    /// True when this completed row contains one or more failed questions.
+    pub(crate) partial_failure: bool,
 }
 
 impl fmt::Debug for Judged {
@@ -69,6 +71,7 @@ impl fmt::Debug for Judged {
             .field("outcome", &self.outcome)
             .field("replayed", &self.replayed)
             .field("probability", &self.probability)
+            .field("partial_failure", &self.partial_failure)
             .finish()
     }
 }

@@ -36,6 +36,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         outcome: thinkthen_core::Outcome::Yes,
         probability: Some(0.91),
         replayed: false,
+        partial_failure: false,
     };
     let client = crate::http::Client::new(Duration::from_secs(1), false);
     // `rank` holds every record in memory until the input ends, so the
@@ -47,6 +48,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             outcome: thinkthen_core::Outcome::Yes,
             probability: Some(0.91),
             replayed: false,
+            partial_failure: false,
         }],
         top: Some(2),
         writer: &mut written,

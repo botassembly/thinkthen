@@ -250,7 +250,7 @@ fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
             r#""replayed":true,"requests":[""#,
         ),
         request,
-        r#""]}"#,
+        r#""],"failed_questions":0}"#,
     ]
     .concat();
     assert!(printed.contains(&expected), "{printed}");

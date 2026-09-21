@@ -55,9 +55,10 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 3 | Single-input `decide` and `choose`: the answer is unresolved. `find --none`: nothing fits |
 | 4 | The backend failed or sent a reply the adapter refused |
 | 5 | A local failure: a file or a recording |
+| 6 | `annotate` completed its input, but one or more logical questions failed |
 | 70 | A defect in the tool |
 
-Codes 6, 7, and 8 stay reserved. One function maps every error to its exit code.
+Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
 
 In record mode the exit code reports the run. No record's answer sets it. A valid answer on standard output can accompany exit 1 or 3, so a script that wants the value reads it and then reads `$?`.
 

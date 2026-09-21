@@ -167,7 +167,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
                 r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
-                r#""replayed":false,"requests":["{request}"]}}}}"#,
+                r#""replayed":false,"requests":["{request}"],"failed_questions":0}}}}"#,
                 "\n",
             ),
             url = detailed.url(),

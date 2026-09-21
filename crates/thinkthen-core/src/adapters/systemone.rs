@@ -126,6 +126,9 @@ pub enum DecodeError {
         wire_name(*.0)
     )]
     UnexpectedProbability(usize),
+    /// The response carries an answer name the request did not send.
+    #[error("the response carries an unexpected answer name")]
+    UnexpectedAnswer,
 }
 
 /// The name a question carries on the wire: `q1` onward, in plan order.

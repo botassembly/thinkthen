@@ -50,9 +50,10 @@ pub use crate::records::{
     AnnotatedRecord, Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub use crate::render::{RenderError, json_line};
-pub use crate::reply::Reply;
+pub use crate::reply::{AnswerOutcome, BackendFailure, BackendFailureCause, FailedValue, Reply};
 pub use crate::result::{
-    AnnotateMeta, AnnotateResult, AnnotatedAnswer, DecisionResult, Meta, RequestMeta, Usage,
+    AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
+    AnnotatedValue, DecisionResult, Meta, RequestMeta, Usage,
 };
 pub use crate::text::{BlankTextError, Evidence, Meaning, ModelName, QuestionText, Url};
 pub use crate::threshold::{Outcome, Threshold, ThresholdError};

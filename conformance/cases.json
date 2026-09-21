@@ -1258,14 +1258,14 @@
       }
     },
     {
-      "id": "17-annotate-mixed",
+      "id": "17-annotate-partial",
       "verb": "annotate",
       "question_set": {
         "version": 1,
         "questions": {
           "refund": {
             "decide": "Does this ask for a refund?",
-            "threshold": 0.5
+            "threshold": "0.1:0.9"
           },
           "team": {
             "choose": "Which team owns this?",
@@ -1305,13 +1305,12 @@
             "answers": {
               "q1": {
                 "type": "noul",
-                "noul": 0.9
+                "noul": 0.5
               },
               "q2": {
                 "type": "choice",
                 "probabilities": {
-                  "billing": 0.8,
-                  "other": 0.2
+                  "billing": 0.8
                 }
               },
               "q3": {
@@ -1341,18 +1340,19 @@
       "expect": {
         "success": {
           "kind": "annotate",
+          "failed_questions": 1,
           "answers": [
             {
               "exchange": 0,
               "name": "refund",
-              "bare": true,
+              "bare": null,
               "details": {
                 "answer": {
                   "kind": "yes_no",
-                  "probability": 0.9
+                  "probability": 0.5
                 },
                 "model": "jev-latest",
-                "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
+                "question_sha256": "ba4915ac41fbcc5b72519ba45573ba32ff61354dda9789a25ae12d86a87e1d00",
                 "requests": [
                   "2ab0234c19bf75e4f4b5cdac9d3b1a02dbbd1f3b4958d65842aa1e836c8fd207"
                 ]
@@ -1361,15 +1361,16 @@
             {
               "exchange": 0,
               "name": "team",
-              "bare": "billing",
+              "bare": {
+                "failed": {
+                  "kind": "backend",
+                  "cause": "missing_probability"
+                }
+              },
               "details": {
-                "answer": {
-                  "kind": "choice",
-                  "pick": "billing",
-                  "probabilities": {
-                    "billing": 0.8,
-                    "other": 0.2
-                  }
+                "failure": {
+                  "kind": "backend",
+                  "cause": "missing_probability"
                 },
                 "model": "jev-latest",
                 "question_sha256": "2b57330b142981e4f8bf3cb45bb4c16718d34dea40b22bec4353af5e376142da",

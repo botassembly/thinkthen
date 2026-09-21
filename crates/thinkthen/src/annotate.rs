@@ -8,9 +8,9 @@ use std::time::Duration;
 
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{
-    AnnotateMeta, AnnotateResult, AnnotatedAnswer, Backend, Framing, ModelName, Outcome, Plan,
-    PlanDocument, Pointer, QuestionSet, Reading, Record, Reply, RequestMeta, Usage, Value,
-    json_line,
+    AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
+    AnnotatedValue, AnswerOutcome, Backend, FailedValue, Framing, ModelName, Outcome, Plan,
+    PlanDocument, Pointer, QuestionSet, Reading, Record, Reply, RequestMeta, Usage, json_line,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -284,12 +284,13 @@ impl Judging<'_> {
         record: Record,
         answered: Vec<GroupAnswer>,
     ) -> Result<Judged, Failure> {
-        let mut values: Vec<Option<Value>> = vec![None; self.set.questions().len()];
-        let mut details: Vec<Option<AnnotatedAnswer>> = vec![None; self.set.questions().len()];
+        let mut values: Vec<Option<AnnotatedValue>> = vec![None; self.set.questions().len()];
+        let mut details: Vec<Option<AnnotatedEntry>> = vec![None; self.set.questions().len()];
         let mut model: Option<ModelName> = None;
         let mut requests = Vec::with_capacity(answered.len());
         let mut usage: Option<Usage> = Some(Usage::new(0, 0));
         let mut replayed = true;
+        let mut failed_questions = 0;
         for answered in answered {
             let GroupAnswer {
                 places,
@@ -306,7 +307,7 @@ impl Judging<'_> {
                 _ => None,
             };
             replayed &= was_replayed;
-            take_answers(
+            failed_questions += take_answers(
                 &self.set,
                 &places,
                 &reply,
@@ -315,16 +316,16 @@ impl Judging<'_> {
                 &mut details,
             )?;
         }
-        let named_values = pair_values(&self.set, values)?;
+        let named_values = pair(&self.set, values, "a question has no value")?;
         let printed = if self.common.details {
-            let named_details = pair_details(&self.set, details)?;
+            let named_details = pair(&self.set, details, "a question has no detailed answer")?;
             let meta = AnnotateMeta::new(
                 env!("CARGO_PKG_VERSION"),
                 self.set.sha256()?,
                 self.backend.url().clone(),
                 model.ok_or(Failure::Defect("no group reported a model"))?,
                 usage,
-                RequestMeta::new(replayed, requests),
+                RequestMeta::new(replayed, requests).with_failed_questions(failed_questions),
             );
             json_line(&AnnotateResult::new(
                 record,
@@ -340,6 +341,7 @@ impl Judging<'_> {
             outcome: Outcome::Yes,
             replayed,
             probability: None,
+            partial_failure: failed_questions > 0,
         })
     }
 
@@ -423,65 +425,64 @@ fn take_answers(
     group: &[usize],
     reply: &Reply,
     digest: &str,
-    values: &mut [Option<Value>],
-    details: &mut [Option<AnnotatedAnswer>],
-) -> Result<(), Failure> {
-    if group.len() != reply.answers().len() {
+    values: &mut [Option<AnnotatedValue>],
+    details: &mut [Option<AnnotatedEntry>],
+) -> Result<usize, Failure> {
+    if group.len() != reply.outcomes().len() {
         return Err(Failure::Defect(
             "the adapter answered the wrong number of questions",
         ));
     }
-    for (place, answer) in group.iter().zip(reply.answers()) {
+    let mut failed = 0;
+    for (place, outcome) in group.iter().zip(reply.outcomes()) {
         let question = set
             .questions()
             .get(*place)
             .ok_or(Failure::Defect("a group points outside its set"))?;
-        let (value, _) = answer.read(question.threshold());
         let value_slot = values
             .get_mut(*place)
             .ok_or(Failure::Defect("an answer points outside its set"))?;
-        *value_slot = Some(value.clone());
         let detail_slot = details
             .get_mut(*place)
             .ok_or(Failure::Defect("an answer points outside its set"))?;
-        *detail_slot = Some(AnnotatedAnswer::new(
-            value,
-            question.question().clone(),
-            answer.clone(),
-            question.threshold(),
-            digest.to_owned(),
-        ));
+        match outcome {
+            AnswerOutcome::Answered(answer) => {
+                let (value, _) = answer.read(question.threshold());
+                *value_slot = Some(AnnotatedValue::Answered(value.clone()));
+                *detail_slot = Some(AnnotatedEntry::Answered(AnnotatedAnswer::new(
+                    value,
+                    question.question().clone(),
+                    answer.clone(),
+                    question.threshold(),
+                    digest.to_owned(),
+                )));
+            }
+            AnswerOutcome::Failed(failure) => {
+                failed += 1;
+                *value_slot = Some(AnnotatedValue::Failed(FailedValue::new(*failure)));
+                *detail_slot = Some(AnnotatedEntry::Failed(AnnotatedFailure::new(
+                    question.question().clone(),
+                    *failure,
+                    digest.to_owned(),
+                )));
+            }
+        }
     }
-    Ok(())
+    Ok(failed)
 }
 
-fn pair_values(
+fn pair<T>(
     set: &QuestionSet,
-    values: Vec<Option<Value>>,
-) -> Result<Vec<(String, Value)>, Failure> {
+    values: Vec<Option<T>>,
+    absent: &'static str,
+) -> Result<Vec<(String, T)>, Failure> {
     set.questions()
         .iter()
         .zip(values)
         .map(|(question, value)| {
             Ok((
                 question.name().to_owned(),
-                value.ok_or(Failure::Defect("a question has no value"))?,
-            ))
-        })
-        .collect()
-}
-
-fn pair_details(
-    set: &QuestionSet,
-    values: Vec<Option<AnnotatedAnswer>>,
-) -> Result<Vec<(String, AnnotatedAnswer)>, Failure> {
-    set.questions()
-        .iter()
-        .zip(values)
-        .map(|(question, value)| {
-            Ok((
-                question.name().to_owned(),
-                value.ok_or(Failure::Defect("a question has no detailed answer"))?,
+                value.ok_or(Failure::Defect(absent))?,
             ))
         })
         .collect()

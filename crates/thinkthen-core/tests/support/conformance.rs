@@ -136,6 +136,8 @@ pub(crate) struct Success {
     pub(crate) kind: String,
     pub(crate) answers: Vec<ExpectedAnswer>,
     pub(crate) operation: Option<Box<RawValue>>,
+    #[serde(default)]
+    pub(crate) failed_questions: usize,
 }
 
 #[derive(Deserialize)]
@@ -148,7 +150,8 @@ pub(crate) struct ExpectedAnswer {
 
 #[derive(Deserialize)]
 pub(crate) struct Details {
-    pub(crate) answer: Box<RawValue>,
+    pub(crate) answer: Option<Box<RawValue>>,
+    pub(crate) failure: Option<Box<RawValue>>,
     pub(crate) model: String,
     pub(crate) question_sha256: String,
     pub(crate) requests: Vec<String>,

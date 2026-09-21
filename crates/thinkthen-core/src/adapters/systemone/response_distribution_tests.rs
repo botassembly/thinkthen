@@ -30,6 +30,25 @@ fn score_with(values: [f64; 3]) -> String {
 }
 
 #[test]
+fn a_distribution_total_error_names_the_rule_without_reply_values() {
+    for (member, total) in [("0.2", "0.8"), ("0.3", "1.2")] {
+        let body = concat!(
+            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
+            r#""probabilities":{"billing":VALUE,"shipping":VALUE,"account":VALUE,"other":VALUE}}}}"#,
+        )
+        .replace("VALUE", member);
+        let error = decode(&team_plan(), body.as_bytes()).expect_err("an invalid total");
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "the answer to question `q1` has probability total {total}, member count 4, and tolerance 0.010000000000000888; the total differs from one by more than the tolerance"
+            )
+        );
+        assert!(!error.to_string().contains(member));
+    }
+}
+
+#[test]
 fn systemone_accepts_one_hundredth_on_both_sides_and_preserves_members() {
     for values in [
         [0.24, 0.25, 0.25, 0.25],

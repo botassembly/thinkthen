@@ -448,7 +448,6 @@ impl Judging<'_> {
             };
             Some(json_line(&row)?)
         } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
-            // A record that did not reach the mark prints nothing at all.
             None
         } else if self.keeping.streams_only() {
             Some(match arrived {
@@ -473,6 +472,7 @@ impl Judging<'_> {
             outcome,
             replayed: answered.replayed,
             probability,
+            partial_failure: false,
         })
     }
 }

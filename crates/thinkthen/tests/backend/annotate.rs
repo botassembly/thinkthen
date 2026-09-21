@@ -37,6 +37,7 @@ fn questions() -> PathBuf {
         .clone()
 }
 
+mod partial_failure;
 mod request_identity;
 mod scheduling;
 

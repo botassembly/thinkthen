@@ -2,6 +2,8 @@
 
 #[path = "support/conformance.rs"]
 mod conformance_support;
+#[path = "conformance/outcomes.rs"]
+mod outcomes;
 
 use conformance_support::{Case, Document, Exchange, ExpectedAnswer, Success};
 use serde::Deserialize;
@@ -29,7 +31,7 @@ const ERRORS: [&str; 6] = [
     "usage",
 ];
 
-type CheckedAnswers = (Vec<(Value, f64)>, String);
+type CheckedAnswers = (Vec<(Value, f64)>, String, usize);
 
 struct Asked {
     plan: Plan,
@@ -218,14 +220,15 @@ fn validate_exchange(
     }
     let reply = systemone::decode(&asked.plan, exchange.response.get().as_bytes())
         .map_err(|error| error.to_string())?;
-    if reply.answers().len() != asked.names.len() {
+    if reply.outcomes().len() != asked.names.len() {
         return Err(format!(
             "{} exchange {place} has wrong answer count",
             case.id
         ));
     }
     let mut values = Vec::new();
-    for (answer_place, answer) in reply.answers().iter().enumerate() {
+    let mut failed_questions = 0;
+    for (answer_place, outcome) in reply.outcomes().iter().enumerate() {
         let name = asked
             .names
             .get(answer_place)
@@ -236,18 +239,10 @@ fn validate_exchange(
             .get(answer_place)
             .copied()
             .ok_or_else(|| "answer threshold is absent".to_owned())?;
-        let (value, _) = answer.read(threshold);
-        if !same_json(
-            &serde_json::to_string(&value).map_err(|error| error.to_string())?,
-            held.bare.get(),
-        )? {
-            return Err(format!("{} answer `{name}` has wrong bare value", case.id));
-        }
-        if !same_json(
-            &serde_json::to_string(answer).map_err(|error| error.to_string())?,
-            held.details.answer.get(),
-        )? {
-            return Err(format!("{} answer `{name}` has wrong details", case.id));
+        if let Some(value) = outcomes::check(&case.id, name, outcome, held, threshold)? {
+            values.push(value);
+        } else {
+            failed_questions += 1;
         }
         let digest = asked
             .digests
@@ -268,9 +263,8 @@ fn validate_exchange(
         if held.details.requests != expected_requests {
             return Err(format!("{} answer `{name}` has wrong requests", case.id));
         }
-        values.push((value, answer.yes().unwrap_or_default()));
     }
-    Ok((values, reply.model().as_str().to_owned()))
+    Ok((values, reply.model().as_str().to_owned(), failed_questions))
 }
 
 fn validate_operation(
@@ -366,6 +360,7 @@ fn validate(text: &str) -> Result<(), String> {
         let mut odds = Vec::new();
         let mut values = Vec::new();
         let mut model: Option<String> = None;
+        let mut failed_questions = 0;
         let requests = case
             .exchanges
             .iter()
@@ -377,19 +372,23 @@ fn validate(text: &str) -> Result<(), String> {
             })
             .collect::<Vec<_>>();
         for (place, exchange) in case.exchanges.iter().enumerate() {
-            let (answers, reported) =
+            let (answers, reported, failed) =
                 validate_exchange(case, success, place, exchange, &backend_url, &requests)?;
             if model.as_ref().is_some_and(|held| held != &reported) {
                 return Err(format!("{} has replies from different models", case.id));
             }
             model = Some(reported);
+            failed_questions += failed;
             for (value, probability) in answers {
                 values.push(value);
                 odds.push(probability);
             }
         }
-        if success.answers.len() != values.len() {
+        if success.answers.len() != values.len() + success.failed_questions {
             return Err(format!("{} has an unmatched expected answer", case.id));
+        }
+        if failed_questions != success.failed_questions {
+            return Err(format!("{} has the wrong failed question count", case.id));
         }
         validate_operation(case, success, &odds, &values)?;
     }
