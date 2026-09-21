@@ -75,7 +75,7 @@ def check_details(expect, details)
   ok_if(details["digest"] == expect.dig("details", "question_sha256"), "the digest diverged")
 end
 
-def run_case(verb, question_text, evidence, records, expect, set_json)
+def run_case(verb, question_text, evidence, records, expect, set_json, text = nil, form = nil)
   if (error = expect["error"])
     kind = error["kind"]
     raise "SKIP: the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement" if verb == "cancel"
@@ -141,6 +141,58 @@ def run_case(verb, question_text, evidence, records, expect, set_json)
     check_details(expect, ThinkThen.details(question, evidence))
   when "usage"
     raise "SKIP: the cache half needs the disk cache, which the stand-in does not carry"
+  when "recognize"
+    spec = JSON.parse(question_text)
+    rules = (spec["relations"] || []).to_h do |rule|
+      [rule["name"], { from: rule["from"], to: rule["to"], either: rule["either"] }]
+    end
+    found = ThinkThen.recognize(text.to_s, kinds: spec["kinds"],
+                                relations: rules.empty? ? nil : rules,
+                                threshold: spec["threshold"],
+                                relation_threshold: spec["relation_threshold"])
+    wanted_entities = expect["entities"]
+    ok_if(found.entities.length == wanted_entities.length,
+          "expected #{wanted_entities.length} names, got #{found.entities.length}")
+    found.entities.zip(wanted_entities).each do |got, wanted|
+      ok_if([got.id, got.text, got.kind, got.start, got.end] ==
+              [wanted["id"], wanted["text"], wanted["kind"], wanted["start"], wanted["end"]],
+            "the name #{wanted['text'].inspect} diverged: " \
+            "#{[got.id, got.text, got.kind, got.start, got.end].inspect}")
+      ok_if((got.strength - wanted["strength"]).abs < 1e-9,
+            "strength diverged for #{wanted['text'].inspect}: #{got.strength}")
+    end
+    wanted_relations = expect["relations"]
+    ok_if(found.relations.length == wanted_relations.length,
+          "expected #{wanted_relations.length} relations, got #{found.relations.length}")
+    found.relations.zip(wanted_relations).each do |got, wanted|
+      ok_if([got.name, got.source, got.target] == [wanted["name"], wanted["source"], wanted["target"]] &&
+              (got.probability - wanted["probability"]).abs < 1e-9,
+            "the relation #{wanted['name']} diverged: " \
+            "#{[got.name, got.source, got.target, got.probability].inspect}")
+    end
+  when "relate"
+    if form == "per-subject"
+      raise "SKIP: the per-subject arm is engine-internal; the stand-in serves the ruled pairs " \
+            "form (conformance/DIVERGENCES.md)"
+    end
+    spec = JSON.parse(question_text)
+    rules = (spec["relations"] || []).map do |rule|
+      rule.is_a?(Hash) ? { rule["name"] => [rule["from"], rule["to"]] } : rule
+    end
+    edges = ThinkThen.relate(records, relations: rules.empty? ? nil : rules, either: spec["either"],
+                             threshold: spec["threshold"], kind_field: spec["kind_field"])
+    wanted_edges = expect["edges"]
+    ok_if(edges.length == wanted_edges.length,
+          "expected #{wanted_edges.length} edges, got #{edges.length}")
+    edges.zip(wanted_edges).each do |got, wanted|
+      ok_if([got.name, got.source, got.target] == [wanted["name"], wanted["source"], wanted["target"]] &&
+              (got.probability - wanted["probability"]).abs < 1e-9,
+            "edge #{[wanted['name'], wanted['source'], wanted['target']].inspect} diverged: " \
+            "#{[got.name, got.source, got.target, got.probability].inspect}")
+      %w[source_kind target_kind].each do |key|
+        ok_if(got[key.to_sym] == wanted[key], "#{key} diverged on #{wanted['name']}") if wanted.key?(key)
+      end
+    end
   else
     raise "SKIP: no case shape for #{verb}"
   end
@@ -159,7 +211,7 @@ file["cases"].each do |one|
   evidence = one["evidence"].to_s
   records = one["records"].to_a
   begin
-    run_case(verb, question_text, evidence, records, one["expect"], one["set"])
+    run_case(verb, question_text, evidence, records, one["expect"], one["set"], one["text"], one["form"])
     puts "ok       #{id}"
   rescue RuntimeError => e
     message = e.message.sub(/\AFAIL: /, "")

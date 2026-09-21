@@ -26,8 +26,9 @@ use magnus::{
     IntoValue, RArray, RClass, RHash, TypedData, Value,
 };
 use thinkthen_contract::{
-    Annotated, Answer, Cancel, Details, Engine as ContractEngine, Error as ContractError, ErrorKind,
-    Found, Judgment, Options, Question, QuestionSet, Ranked, Scored, Usage,
+    edges_json, Annotated, Answer, Cancel, Details, Edge, Engine as ContractEngine,
+    Error as ContractError, ErrorKind, Found, Judgment, Options, Question, QuestionSet, Ranked,
+    Recognize, Recognized, Relate, Scored, Usage,
 };
 use thinkthen_standin::BlockingEngine;
 
@@ -142,6 +143,25 @@ struct SingleJob {
     which: Single,
 }
 
+/// What a recognize crossing carries in and out. The spec is parsed by the
+/// contract's one grammar before the VM lock is released.
+struct RecognizeJob {
+    engine: *const BlockingEngine,
+    ask: Recognize,
+    text: String,
+    token: Option<Arc<Cancel>>,
+    deadline: Option<f64>,
+}
+
+/// What a relate crossing carries in and out: every record at once.
+struct RelateJob {
+    engine: *const BlockingEngine,
+    ask: Relate,
+    records: Vec<String>,
+    token: Option<Arc<Cancel>>,
+    deadline: Option<f64>,
+}
+
 enum SingleOut {
     Answer(Answer),
     Choice(Option<String>),
@@ -171,6 +191,26 @@ unsafe extern "C" fn single_body(pointer: *mut c_void) -> *mut c_void {
             .details_opts(&job.question, &job.evidence, options)
             .map(SingleOut::Details),
     });
+    Box::into_raw(Box::new(answer)) as *mut c_void
+}
+
+/// One recognize crossing, the VM lock released for its whole width.
+unsafe extern "C" fn recognize_body(pointer: *mut c_void) -> *mut c_void {
+    let job = unsafe { *Box::from_raw(pointer as *mut RecognizeJob) };
+    let engine = unsafe { &*job.engine };
+    let options = options_for(job.token.as_deref(), job.deadline);
+    let answer: Crossing<Recognized> =
+        guarded(|| engine.recognize_opts(&job.ask, &job.text, options));
+    Box::into_raw(Box::new(answer)) as *mut c_void
+}
+
+/// One relate crossing: every record at once, the limit checked inside.
+unsafe extern "C" fn relate_body(pointer: *mut c_void) -> *mut c_void {
+    let job = unsafe { *Box::from_raw(pointer as *mut RelateJob) };
+    let engine = unsafe { &*job.engine };
+    let options = options_for(job.token.as_deref(), job.deadline);
+    let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
+    let answer: Crossing<Vec<Edge>> = guarded(|| engine.relate_opts(&job.ask, &records, options));
     Box::into_raw(Box::new(answer)) as *mut c_void
 }
 
@@ -470,6 +510,51 @@ impl EngineValue {
 
 
 
+    /// `recognize`: the spec is the contract's one grammar; the answer is
+    /// one JSON string and the Ruby side parses it into its own records,
+    /// the pattern the C door uses for a result of no fixed size.
+    fn recognize_json(
+        &self,
+        spec: String,
+        text: String,
+        cancel: Value,
+        deadline: Value,
+    ) -> Result<String, Error> {
+        let ask = Recognize::from_json(&spec).map_err(map_error)?;
+        let job = RecognizeJob {
+            engine: &self.engine,
+            ask,
+            text,
+            token: optional_cancel(cancel)?,
+            deadline: optional_deadline(deadline),
+        };
+        let answer: Crossing<Recognized> = without_gvl(job, recognize_body);
+        let answer = answer.map_err(map_error)?;
+        Ok(answer.to_json())
+    }
+
+    /// `relate`: every record crosses at once, the 255-record limit refuses
+    /// with the usage kind before any question is asked.
+    fn relate_json(
+        &self,
+        spec: String,
+        records: Vec<String>,
+        cancel: Value,
+        deadline: Value,
+    ) -> Result<String, Error> {
+        let ask = Relate::from_json(&spec).map_err(map_error)?;
+        let job = RelateJob {
+            engine: &self.engine,
+            ask,
+            records,
+            token: optional_cancel(cancel)?,
+            deadline: optional_deadline(deadline),
+        };
+        let answer: Crossing<Vec<Edge>> = without_gvl(job, relate_body);
+        let answer = answer.map_err(map_error)?;
+        Ok(edges_json(&answer))
+    }
+
     fn decide_many(
         &self,
         question: &QuestionValue,
@@ -717,6 +802,8 @@ fn init() -> Result<(), Error> {
     engine.define_method("details", method!(EngineValue::details, 4))?;
     engine.define_method("find", method!(EngineValue::find, 4))?;
     engine.define_method("annotate", method!(EngineValue::annotate, 5))?;
+    engine.define_method("recognize_json", method!(EngineValue::recognize_json, 4))?;
+    engine.define_method("relate_json", method!(EngineValue::relate_json, 4))?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;
 
     module.define_module_function("_parse_question", function!(parse_question, 1))?;

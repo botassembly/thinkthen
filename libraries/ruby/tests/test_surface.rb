@@ -145,4 +145,61 @@ class TestSurface < Minitest::Test
     token.cancel
     assert_nil token.cancel
   end
+
+  # The deck's recognize call, as drawn, against the recordings.
+  def test_recognize_as_drawn
+    text = "Maria Chen joined Northwind Freight in Chicago last spring."
+    found = ThinkThen.recognize(
+      text, kinds: %w[person organization place],
+      relations: { works_for: %w[person organization] }
+    )
+    assert_equal "person", found.entities.first.kind
+    assert_equal "Maria Chen", found.entities.first.text
+    assert_equal "Maria Chen", text[found.entities.first.start...found.entities.first.end]
+    assert_in_delta 0.98, found.entities.first.strength, 1e-9
+    assert_equal ["works_for", 1, 2], [found.relations.first.name, found.relations.first.source,
+                                      found.relations.first.target]
+    assert_in_delta 1.0, found.relations.first.probability, 1e-9
+  end
+
+  # Offsets index Ruby characters: the emoji is one, and the name slices
+  # clean in front of an accented letter.
+  def test_recognize_offsets_count_ruby_characters
+    text = "Le café 😀 Maria Chen arrived."
+    found = ThinkThen.recognize(text, kinds: %w[person])
+    name = found.entities.first
+    assert_equal "Maria Chen", text[name.start...name.end]
+  end
+
+  # The deck's relate call, as drawn, against the four recorded alerts.
+  def test_relate_as_drawn
+    alerts = ["Checkout returns 500 at the payment step.",
+              "Card charges are failing for every customer.",
+              "The nightly export ran two hours late.",
+              "The payments database ran out of disk space."]
+    edges = ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])
+    assert_equal 4, edges.length
+    edge = edges.find { |one| one.name == "caused_by" && one.source == 1 && one.target == 4 }
+    refute_nil edge, "the recorded 1-to-4 caused_by edge is missing"
+    assert_in_delta 0.94, edge.probability, 1e-9
+  end
+
+  # relate takes every record at once, and the 255 limit refuses with the
+  # usage kind before any question is asked.
+  def test_relate_refuses_more_than_255_records
+    records = Array.new(256) { |i| "alert #{i}" }
+    error = assert_raises(ThinkThen::UsageError) { ThinkThen.relate(records, relations: %w[caused_by]) }
+    assert_equal "usage", error.kind
+    assert_match(/255/, error.message)
+  end
+
+  # The any-kind end is the one-character string "*" on this surface:
+  # the recorded C36 run asks located_in from * to place.
+  def test_the_any_kind_end_is_the_string_star
+    text = "The road from Hull to Leeds was closed."
+    found = ThinkThen.recognize(text, kinds: %w[place],
+                                relations: { located_in: ["*", "place"] })
+    assert_equal %w[Hull Leeds], found.entities.map(&:text)
+    assert_equal [], found.relations
+  end
 end

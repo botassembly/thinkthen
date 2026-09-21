@@ -124,3 +124,31 @@ $ git -C repos/dotfiles status -s | wc -l
 ```
 
 Nothing on the host changed.
+
+## 2026-09-21 — recognize and relate, the deck's Ruby calls as drawn
+
+**Tried:** the whole brief against the recordings — `cargo build --release` in the builder image, a smoke run of both deck calls, `tests/conformance.rb` (the recognize and relate cases), `tests/test_surface.rb`, and `./check.sh` with the stub on 8214; the vocabulary sweep over `lib/`, `src/`, and the two test files.
+
+**Saw:**
+
+```
+smoke, the deck's recognize call:
+[["Maria Chen","person",0,10,0.98], ["Northwind Freight","organization",18,35,1.0], ["Chicago","place",39,46,0.6693]]
+"Maria Chen"                       (text[start...end], Ruby characters)
+[["works_for",1,2,1.0]]
+smoke, the deck's relate call (the four alerts in the arm):
+[["caused_by",1,2,0.59], ["caused_by",1,4,0.94], ["caused_by",2,4,0.94], ["caused_by",3,4,0.84]]
+
+surface tests: 25 runs, 64 assertions, 0 failures, 0 errors, 0 skips
+conformance:   green; 71-relate-R03-persubject-10 skipped by name (engine-internal arm);
+               40 recognize cases and the relate arms ok, including 68-recognize-C41
+interrupt:     raised Interrupt 1.209 s from start (signal at 1.000 s), stub frozen at 32
+sweep:         no confidence, certainty, likelihood, cutoff, gray zone, calibrated, accuracy;
+               no "score" used for a probability — empty greps above
+```
+
+**Means:** the deck's Ruby calls run as written with the recorded answers; `text[start...end]` slices names out of the original text in Ruby characters, proven on `"Le café 😀 Maria Chen arrived."` from C41; `relate` crosses every record at once and refuses 256 with a usage error naming 255; the any-kind end is the one-character string `"*"` (C36's `located_in` from `*` to `place`); `strength` on names and `probability` on relations are bound per the settled rule; results of no fixed size come back as `ThinkThen::Entity`, `Relation`, `Recognized`, and `Edge` records parsed from the door's one JSON string (the C-door pattern).
+
+**Finding for the parent, not touched here:** the contract's spec grammar still reads `from` and `to` keys in a relation rule (`relation_from_value` in `contract/src/lib.rs`), while the ruling says the question file says `source` and `target` too and no door converts. The Ruby wrapper builds `from`/`to` spec keys against the parser as it stands; when the contract flips, `lib/thinkthen.rb`'s `relation_rules` is the one place here to change.
+
+**Finding, pre-existing, out of this change's scope:** the Ruby conformance runner has no arms for `rank` and `find`, so those three cases skip as "no case shape" even though the surface implements both verbs and its own tests cover them. The Python runner has a `rank` arm. A small follow-up for whichever lane owns the case runner shape.

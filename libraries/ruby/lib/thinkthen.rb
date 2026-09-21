@@ -28,6 +28,26 @@ module ThinkThen
     end
   end
 
+  # One name `recognize` found. `start` and `end` count Ruby characters, so
+  # `text[start...end]` is the name. `strength` is the settled name for the
+  # number on a name: ours, computed — the least word probability behind the
+  # name times the average kind probability — with its parts under details.
+  # A relation's number is `probability`, a Jev number passed through.
+  Entity = Struct.new(:id, :text, :kind, :start, :end, :strength)
+
+  # One relation between two names, by entity id. The ends are `source`
+  # and `target` on every surface.
+  Relation = Struct.new(:name, :source, :target, :probability)
+
+  # What `recognize` returned: the names, and the relations when a rule
+  # was given.
+  Recognized = Struct.new(:entities, :relations)
+
+  # One edge `relate` found, by record numbers counted from 1 in input
+  # order. `source` is the subject and `target` the object; an `either`
+  # edge prints once with the lower number in `source`.
+  Edge = Struct.new(:name, :source, :target, :probability, :source_kind, :target_kind)
+
   # One shared engine value: no thread is held between calls, and the
   # process keeps one width gate and one set of counters.
   @engine = Native::Engine.new
@@ -153,6 +173,55 @@ module ThinkThen
       @engine.details(built(question), evidence.to_s, cancel, deadline)
     end
 
+    # Find every name in a text and say what kind it is.
+    #
+    # The deck's call, as drawn:
+    #
+    #   found = ThinkThen.recognize(text, kinds: %w[person organization place],
+    #                               relations: { works_for: %w[person organization] })
+    #   found.entities.first.kind  # "person"
+    #
+    # `text[start...end]` slices the name out of the original text in Ruby
+    # characters. `nil` keeps the file grammar's bars. The number on a name
+    # is `entity.strength`; a relation's is `probability`. A relation value
+    # is a [from, to] pair, each end a kind or the one-character string
+    # "*".
+    def recognize(text, kinds: nil, relations: nil, threshold: nil,
+                  relation_threshold: nil, cancel: nil, deadline: nil)
+      spec = recognize_spec(kinds, relations, threshold, relation_threshold)
+      answer = JSON.parse(@engine.recognize_json(JSON.generate(spec), text.to_s, cancel, deadline))
+      Recognized.new(
+        answer.fetch("entities").map do |one|
+          Entity.new(one["id"], one["text"], one["kind"], one["start"], one["end"],
+                     one["strength"])
+        end,
+        answer.fetch("relations", []).map do |one|
+          Relation.new(one["name"], one["source"], one["target"], one["probability"])
+        end
+      )
+    end
+
+    # Say how the records relate to each other: one question per legal
+    # pair.
+    #
+    #   edges = ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])
+    #   edges[0].name, edges[0].source, edges[0].target, edges[0].probability
+    #
+    # Every record crosses at once, and more than 255 refuses with a usage
+    # error before any question is asked. `source` and `target` are record
+    # numbers counted from 1 in input order. An `either` rule reads the
+    # same both ways and prints once per pair.
+    def relate(records, relations: nil, either: nil, threshold: nil,
+               kind_field: nil, cancel: nil, deadline: nil)
+      list = records.to_a
+      spec = relate_spec(relations, either, threshold, kind_field)
+      answer = JSON.parse(@engine.relate_json(JSON.generate(spec), list.map(&:to_s), cancel, deadline))
+      answer.fetch("edges").map do |one|
+        Edge.new(one["name"], one["source"], one["target"], one["probability"],
+                 one["source_kind"], one["target_kind"])
+      end
+    end
+
     def usage
       @engine.usage
     end
@@ -167,6 +236,44 @@ module ThinkThen
     end
 
     private
+
+    # The recognize spec in the contract's one grammar: kinds as a list,
+    # relations as named rules with from and to ends (each a kind or "*"),
+    # and both bars.
+    def recognize_spec(kinds, relations, threshold, relation_threshold)
+      spec = {}
+      spec["kinds"] = kinds.map(&:to_s) if kinds
+      spec["relations"] = relation_rules(relations) if relations
+      spec["threshold"] = threshold unless threshold.nil?
+      spec["relation_threshold"] = relation_threshold unless relation_threshold.nil?
+      spec
+    end
+
+    # The relate spec: a bare name means any kind to any kind; `either`
+    # names the rules that read the same both ways.
+    def relate_spec(relations, either, threshold, kind_field)
+      spec = {}
+      spec["relations"] = relations.flat_map { |one| one.is_a?(Hash) ? relation_rules(one) : one.to_s } if relations
+      spec["either"] = either.map(&:to_s) if either
+      spec["kind_field"] = kind_field.to_s unless kind_field.nil?
+      spec["threshold"] = threshold unless threshold.nil?
+      spec
+    end
+
+    # A relations value — a Hash of name to [from, to] or to a Hash with
+    # from, to, and either — as the grammar's rule list.
+    def relation_rules(relations)
+      relations.map do |name, ends|
+        if ends.is_a?(Hash)
+          rule = { "name" => name.to_s, "from" => ends[:from].to_s, "to" => ends[:to].to_s }
+          rule["either"] = true if ends[:either]
+          rule
+        else
+          from, to = ends
+          { "name" => name.to_s, "from" => from.to_s, "to" => to.to_s }
+        end
+      end
+    end
 
     def choose_question(question, options)
       return built(question) if options.nil? && question.is_a?(Question)
