@@ -121,3 +121,35 @@ pages:
   runner does not express before building the question — and it belongs to
   the R surface lane, whose recognize work will touch that file anyway. R1
   touched no surface folder.
+
+## The two synthesized cases, 2026-09-21 (lane B, item 2)
+
+The shapes from tickets 0053 and 0054 arrive with two cases the recordings
+cannot carry, marked `synthesized` in their exchanges the way the five
+`shaped-to-contract` exchanges are marked:
+
+- **`73-details-carries-requests`** pins the ordered `requests` list (0053)
+  on a one-request result. No recorded case carried `meta.requests` at
+  capture time, so the pinned digest was produced by the production rule —
+  the adapter name, the resolved URL, and the exact request bytes through
+  `recording::Exchange::digest` — via the stand-in's
+  `examples/exchange_digest.rs` under a clean environment, exactly as the
+  conformance file's canonical `backend_url` (the built-in default) does.
+  The stand-in's own test recomputes the same value through the engine and
+  the helper, so the pin and the runtime agree by command, not by trust.
+- **`74-annotate-preserves-good-answers`** pins the failed-question marker
+  (0054): the reply answers `q1` and omits `q2`, `q2`'s field carries
+  `{"failed":{"kind":"backend","cause":"missing_answer"}}`, the neighbour's
+  good answer is preserved, and `failed_questions` counts one. No recording
+  carries a failed logical question, so the stand-in answers the marker for
+  exactly one record (`SYNTHETIC_PARTIAL_RECORD`, its last name-order
+  question) and nothing else. The wire shape check allows the one omitted
+  answer because the case's expectation names it failed; every other case
+  still requires every asked question answered.
+
+The remaining case expectations do not yet carry `requests` or
+`failed_questions` on their `details` objects; main's conformance shape
+(0053, "Shared conformance shape") derives `requests` for every expected
+answer from its exchange at the merge, and the build team's validator owns
+that derivation. What this file pins today is the shape, the ordering rule,
+the retry rule, and the closed cause list.

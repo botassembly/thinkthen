@@ -44,9 +44,9 @@ use std::time::Duration;
 use std::time::Instant;
 
 use thinkthen_contract::{
-    Annotated, AnnotatedRecord, Answer, Cancel, Details, Edge, Error, Found, Judgment, Options,
-    Question, QuestionKind, QuestionSet, Ranked, Recognize, Recognized, Relate, Scored, Settings,
-    Usage,
+    Annotated, AnnotatedRecord, Answer, Cancel, Cause, Details, Edge, Error, Failed,
+    FailureKind, Found, Judgment, Options, Question, QuestionKind, QuestionSet, Ranked,
+    Recognize, Recognized, Relate, Scored, Settings, Usage,
 };
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{Backend, Evidence, ModelName, Plan, Reply, Value};
@@ -488,6 +488,24 @@ impl Engine for BlockingEngine {
                 if let Some(poll) = poll.as_mut() {
                     poll();
                 }
+                // The one synthesized partial failure (no recording carries
+                // a failed logical question): for exactly this record, the
+                // last question in name order returns the ruled marker and
+                // its neighbours answer normally. The conformance case
+                // `74-annotate-preserves-good-answers` pins it, and
+                // DIVERGENCES.md marks it synthesized.
+                if record == &SYNTHETIC_PARTIAL_RECORD
+                    && Some(name) == set.names().last()
+                {
+                    fields.push((
+                        name.clone(),
+                        Annotated::Failed(Failed {
+                            kind: FailureKind::Backend,
+                            cause: Cause::MissingAnswer,
+                        }),
+                    ));
+                    continue;
+                }
                 let field = match question.kind() {
                     QuestionKind::Decide => {
                         let (answer, _, _) = self.ask(question, record, &options)?;
@@ -527,6 +545,8 @@ impl Engine for BlockingEngine {
             model,
             digest: question.digest(),
             sends,
+            requests: vec![request_digest(question, self.model.as_deref(), evidence)?],
+            failed_questions: 0,
         })
     }
 
@@ -578,6 +598,49 @@ static TOKENS: AtomicU64 = AtomicU64::new(0);
 pub fn reset_usage() {
     REQUESTS.store(0, Ordering::Relaxed);
     TOKENS.store(0, Ordering::Relaxed);
+}
+
+/// The one synthesized partial-failure record.
+///
+/// No recording carries a failed logical question, so the stand-in answers
+/// the ruled marker for exactly this record (its last name-order question)
+/// and nothing else; `74-annotate-preserves-good-answers` pins the output
+/// and `conformance/DIVERGENCES.md` marks it synthesized.
+pub const SYNTHETIC_PARTIAL_RECORD: &str = "order 4471: charged twice, please refund";
+
+/// The recording digest the request this call would make is filed under.
+///
+/// The production rule (0053): the adapter name, the resolved URL, and the
+/// exact request bytes through `recording::Exchange::digest`. The encoder
+/// is deterministic, so the digest is computed on the null backend too; it
+/// names the request the plan would make, and nothing is sent.
+///
+/// `model` is the engine's own model setting, exactly as [`BlockingEngine::ask`]
+/// resolves it, so the digest names the request the engine would send.
+///
+/// # Errors
+///
+/// The usage kind for a blank evidence text, an unresolvable model, or an
+/// unbuildable plan; the backend kind when the plan does not encode.
+pub fn request_digest(
+    question: &Question,
+    model: Option<&str>,
+    evidence: &str,
+) -> Result<String, Error> {
+    let text = Evidence::new(evidence).map_err(|error| Error::usage(error.to_string()))?;
+    let settings = config();
+    let model_name = model.unwrap_or(question.model());
+    let model = ModelName::new(model_name).map_err(|error| Error::usage(error.to_string()))?;
+    let plan = Plan::new(text, model, vec![question.core().clone()])
+        .map_err(|error| Error::usage(error.to_string()))?;
+    let wire = built_in::encode(&plan)
+        .map_err(|error| Error::backend_not_retryable(error.to_string()))?;
+    let backend = Backend::resolve(None, Some(&settings.base), model_name)
+        .map_err(|error| Error::usage(error.to_string()))?;
+    Ok(thinkthen_core::recording::Exchange::new(backend.url(), &wire)
+        .digest()
+        .as_str()
+        .to_owned())
 }
 
 /// The null backend's reply for any verb, in the adapter's own shapes.
@@ -1167,6 +1230,105 @@ mod tests {
         let stopped = tt.decide_many_opts(&question, &records, options, Some(&mut poll));
         assert_eq!(stopped.unwrap_err().kind, ErrorKind::Cancelled);
         assert!(calls.load(std::sync::atomic::Ordering::Relaxed) >= 1);
+    }
+
+    /// The conformance file, embedded so the pins below read the same bytes
+    /// the validator and every surface read.
+    const CONFORMANCE: &str = include_str!("../../conformance/conformance.json");
+
+    fn case(id: &str) -> serde_json::Value {
+        let file: serde_json::Value =
+            serde_json::from_str(CONFORMANCE).expect("the conformance file parses");
+        file["cases"]
+            .as_array()
+            .expect("cases is an array")
+            .iter()
+            .find(|held| held["id"] == id)
+            .unwrap_or_else(|| panic!("case {id} exists"))
+            .clone()
+    }
+
+    /// 0053: the requests list is the production digest of the logical
+    /// request, computed the way `--record` names the file, and the
+    /// conformance case pins the same value.
+    #[test]
+    fn the_requests_digest_follows_the_production_rule() {
+        let _seat = null();
+        let tt = BlockingEngine::from_env();
+        let question = Question::from_json(CUT).expect("parses");
+        let evidence = "I want my money back";
+        let details = tt.details(&question, evidence).expect("details");
+        assert_eq!(details.requests.len(), 1, "one logical request, one element");
+        assert_eq!(details.failed_questions, 0, "no failed question in a details result");
+        let pinned = case("73-details-carries-requests")["expect"]["details"]["requests"][0]
+            .as_str()
+            .expect("the case pins the digest")
+            .to_owned();
+        assert_eq!(details.requests[0], pinned, "the engine and the case agree");
+        let direct = super::request_digest(&question, None, evidence).expect("digests");
+        assert_eq!(direct, pinned, "the helper and the engine agree");
+        assert_eq!(details.requests[0].len(), 64, "64 hex figures");
+        assert!(details.requests[0].chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    }
+
+    /// 0054: one logical question may fail while its neighbour answers, the
+    /// marker is the ruled JSON, and the count is one.
+    #[test]
+    fn the_partial_failure_marker_is_the_ruled_shape() {
+        let _seat = null();
+        let tt = BlockingEngine::from_env();
+        let set = QuestionSet::from_json(
+            r#"{"version":1,"questions":{
+                "kind":{"decide":"Is this a refund request?","threshold":0.5},
+                "topic":{"decide":"Is this a billing problem?","threshold":0.5}}}"#,
+        )
+        .expect("parses");
+        let rows = tt
+            .annotate(&set, &[super::SYNTHETIC_PARTIAL_RECORD], None)
+            .expect("answers");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0][0].0, "kind", "name order: kind, then topic");
+        assert_eq!(rows[0][0].1, Annotated::Decision(Answer::Yes), "the neighbour answers");
+        assert_eq!(rows[0][1].0, "topic");
+        assert_eq!(
+            rows[0][1].1,
+            Annotated::Failed(thinkthen_contract::Failed {
+                kind: thinkthen_contract::FailureKind::Backend,
+                cause: thinkthen_contract::Cause::MissingAnswer,
+            }),
+            "the ruled marker"
+        );
+        let json = serde_json::to_string(&rows[0]).expect("clean");
+        assert!(
+            json.contains(r#"{"failed":{"kind":"backend","cause":"missing_answer"}}"#),
+            "the marker's JSON is the ruled one: {json}"
+        );
+        assert_eq!(thinkthen_contract::failed_questions(&rows), 1, "one failed logical question");
+    }
+
+    /// The ruled record row serializes as `{"input","value"}` and carries
+    /// the bare answer in the command's own JSON idiom.
+    #[test]
+    fn the_record_row_is_the_ruled_shape() {
+        let _seat = null();
+        let tt = BlockingEngine::from_env();
+        let question = Question::from_json(CUT).expect("parses");
+        let records = ["i want a refund now", "good morning"];
+        let judgments = tt.decide_many(&question, &records, None).expect("bulk");
+        let rows: Vec<thinkthen_contract::Row<Option<bool>>> = records
+            .iter()
+            .zip(&judgments)
+            .map(|(input, judgment)| thinkthen_contract::Row {
+                input: (*input).to_owned(),
+                value: judgment.value(),
+            })
+            .collect();
+        let json = thinkthen_contract::rows_json(&rows);
+        assert_eq!(
+            json,
+            r#"[{"input":"i want a refund now","value":true},{"input":"good morning","value":false}]"#,
+            "the ruled row list"
+        );
     }
 
     /// The request limit refuses a bulk call before its first request.

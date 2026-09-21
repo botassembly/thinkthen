@@ -1,6 +1,6 @@
 {
  "schema": "thinkthen.conformance/1",
- "case_count": 72,
+ "case_count": 74,
  "error_kinds": [
   "usage",
   "backend",
@@ -365,7 +365,21 @@
      "kind": "yes_no",
      "model": "jev-latest",
      "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
-    }
+    },
+    "rows": [
+     {
+      "input": "i want a refund now",
+      "value": true
+     },
+     {
+      "input": "refund, please",
+      "value": true
+     },
+     {
+      "input": "maybe later",
+      "value": true
+     }
+    ]
    }
   },
   {
@@ -385,7 +399,8 @@
      "kind": "yes_no",
      "model": "jev-latest",
      "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
-    }
+    },
+    "rows": []
    }
   },
   {
@@ -807,7 +822,8 @@
       "unsure": true,
       "probability": 0.55
      }
-    }
+    },
+    "failed_questions": 0
    }
   },
   {
@@ -1199,7 +1215,29 @@
      "kind": "yes_no",
      "model": "jev-latest",
      "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
-    }
+    },
+    "rows": [
+     {
+      "input": "refund now",
+      "value": true
+     },
+     {
+      "input": "good morning",
+      "value": false
+     },
+     {
+      "input": "maybe so",
+      "value": true
+     },
+     {
+      "input": "refund again",
+      "value": true
+     },
+     {
+      "input": "bye",
+      "value": false
+     }
+    ]
    }
   },
   {
@@ -3834,6 +3872,125 @@
       "probability": 0.93
      }
     ]
+   }
+  },
+  {
+   "id": "73-details-carries-requests",
+   "source": "synthesized 2026-09-21: no recorded case carried meta.requests at capture time; the pinned digest comes from the production rule over this exchange's request (exchange_digest example), and DIVERGENCES.md marks it synthesized",
+   "verb": "details",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.9
+   },
+   "evidence": "I want my money back",
+   "exchanges": [
+    {
+     "captured": "synthesized",
+     "request": {
+      "state": "I want my money back",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": true,
+    "details": {
+     "kind": "yes_no",
+     "probability": 0.97,
+     "model": "jev-latest",
+     "question_sha256": "fea449240a9d87cafd1fe844153250a70c161edd89518b95d35fab8e83b2f356",
+     "requests": [
+      "0df1cff5d7714cdf8c7289ac308684f7a31e86b101d27265dc869325c187a5bc"
+     ],
+     "failed_questions": 0
+    }
+   }
+  },
+  {
+   "id": "74-annotate-preserves-good-answers",
+   "source": "synthesized 2026-09-21: no recording carries a failed logical question; the stand-in returns the ruled marker for this one record (SYNTHETIC_PARTIAL_RECORD), and DIVERGENCES.md marks it synthesized",
+   "verb": "annotate",
+   "set": {
+    "kind": {
+     "decide": "Is this a refund request?",
+     "threshold": 0.5
+    },
+    "topic": {
+     "decide": "Is this a billing problem?",
+     "threshold": 0.5
+    }
+   },
+   "evidence": "order 4471: charged twice, please refund",
+   "exchanges": [
+    {
+     "captured": "synthesized",
+     "request": {
+      "state": "order 4471: charged twice, please refund",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a refund request?"
+       },
+       "q2": {
+        "type": "noul",
+        "instructions": "Is this a billing problem?"
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.97
+       }
+      },
+      "usage": {
+       "input_tokens": 18,
+       "output_tokens": 4
+      }
+     },
+     "note": "the reply answers q1 and omits q2; missing_answer is what the marker names"
+    }
+   ],
+   "expect": {
+    "answers": {
+     "kind": {
+      "answer": true,
+      "probability": 0.97
+     },
+     "topic": {
+      "failed": {
+       "kind": "backend",
+       "cause": "missing_answer"
+      }
+     }
+    },
+    "failed_questions": 1
+   },
+   "question": {
+    "decide": "Is this a refund request?",
+    "threshold": 0.5
    }
   }
  ]

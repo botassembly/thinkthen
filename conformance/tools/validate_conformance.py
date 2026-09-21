@@ -11,10 +11,12 @@ import json
 import sys
 
 KINDS = {"usage", "backend", "local", "cancelled", "deadline", "defect"}
+CAUSES = {"missing_answer", "wrong_kind", "missing_probability", "invalid_probability",
+          "invalid_distribution", "unexpected_probability"}
 VERB_KEYS = {"decide", "choose", "tag", "score"}
 CASE_KEYS = {"id", "source", "verb", "question", "question_file", "evidence", "records", "jobs", "set",
              "calls", "cancel_after_replies", "budget_ms", "none", "exchanges", "expect",
-             "text", "requests", "pairs", "form", "note"}
+             "text", "requests", "pairs", "form", "note", "failed_questions", "rows"}
 GRANT = {"decide": {"decide", "true", "false", "threshold", "on", "model"},
          "choose": {"choose", "options", "threshold", "on", "model"},
          "tag": {"tag", "labels", "threshold", "on", "model"},
@@ -118,7 +120,7 @@ def check_question(q, verb_of_case, where=""):
             check(0 < t <= 1, f"{where}cut out of range: {t}")
     return verb
 
-def check_reply_shape(request, reply, status=None):
+def check_reply_shape(request, reply, status=None, allow_missing=()):
     if status is not None:
         check(status == 422, f"non-200 exchange must be 422, is {status}")
         return
@@ -127,8 +129,10 @@ def check_reply_shape(request, reply, status=None):
     check(bool(reply.get("model")), "reply model present")
     for name, q in qs.items():
         a = answers.get(name)
-        check(a is not None, f"reply missing answer {name}")
         if a is None:
+            # 0054: a logical question the reply never answered carries the
+            # failed marker, and the case's expectation names it.
+            check(name in allow_missing, f"reply missing answer {name}")
             continue
         t = q["type"]
         if t == "noul":
@@ -425,6 +429,19 @@ def replay(c):
     _, dig = canon(q)
     if "question_sha256" in det:
         check(det["question_sha256"] == dig, f"{c['id']} digest")
+    if "requests" in det:
+        # 0053: an ordered array of lowercase recording digests, and no
+        # singular form anywhere.
+        check(isinstance(det["requests"], list), f"{c['id']} requests is an array")
+        check("request" not in det, f"{c['id']} no singular request beside requests")
+        for digest in det["requests"]:
+            check(isinstance(digest, str) and re.fullmatch("[0-9a-f]{64}", digest),
+                  f"{c['id']} request digest is 64 lowercase hex")
+        if c["verb"] in ("decide", "details", "choose", "tag", "score", "find"):
+            check(len(det["requests"]) == 1, f"{c['id']} one logical request, one element")
+    if "failed_questions" in det:
+        check(det["failed_questions"] == 0,
+              f"{c['id']} a details result carries zero failed questions")
     if verb == "decide" and c["verb"] in ("decide", "details"):
         p = reply["answers"]["q1"]["noul"]
         check(exp["answer"] == decide_answer(p, q.get("threshold", 0.5)), f"{c['id']} decide answer")
@@ -459,8 +476,8 @@ def replay(c):
     if c["verb"] == "filter":
         ps = [e["reply"]["answers"]["q1"]["noul"] for e in c["exchanges"]]
         t = q.get("threshold", 0.5)
-        check(exp["indexes"] == [i for i, p in enumerate(ps) if decide_answer(p, t)],
-              f"{c['id']} filter indexes")
+        kept = [i for i, p in enumerate(ps) if decide_answer(p, t)]
+        check(exp["indexes"] == kept, f"{c['id']} filter indexes")
         check(len(c["exchanges"]) == len(c["records"]), f"{c['id']} one exchange a record")
     if c["verb"] == "decide_many":
         ps = [e["reply"]["answers"]["q1"]["noul"] for e in c["exchanges"]]
@@ -469,10 +486,40 @@ def replay(c):
         check(exp["probabilities"] == ps, f"{c['id']} bulk probabilities")
     if c["verb"] == "annotate":
         for name, sub in c["set"].items():
+            want = exp["answers"][name]
+            if "failed" in want:
+                # The ruled failed marker (0054): the shape is exact, the
+                # cause is closed, and no answer may derive for it.
+                check(set(want) == {"failed"}, f"{c['id']} annotate {name} marker shape")
+                check(set(want["failed"]) == {"kind", "cause"}, f"{c['id']} annotate {name} keys")
+                check(want["failed"]["kind"] == "backend", f"{c['id']} annotate {name} kind")
+                check(want["failed"]["cause"] in CAUSES, f"{c['id']} annotate {name} cause closed")
+                continue
             p = reply["answers"][f"q{list(c['set']).index(name) + 1}"]["noul"]
             got = decide_answer(p, sub["threshold"])
-            check(exp["answers"][name]["answer"] == got, f"{c['id']} annotate {name}")
-            check(exp["answers"][name]["probability"] == p, f"{c['id']} annotate {name} p")
+            check(want["answer"] == got, f"{c['id']} annotate {name}")
+            check(want["probability"] == p, f"{c['id']} annotate {name} p")
+        counted = sum(1 for name in c["set"] if "failed" in exp["answers"][name])
+        check(exp.get("failed_questions") == counted, f"{c['id']} failed_questions counted")
+    # The ruled record rows ({"input","value"}) on the bulk cases.
+    if "rows" in exp:
+        rows = exp["rows"]
+        check(isinstance(rows, list), f"{c['id']} rows list")
+        for row in rows:
+            check(set(row) == {"input", "value"}, f"{c['id']} row keys input and value only")
+        if c["verb"] == "filter":
+            ps = [e["reply"]["answers"]["q1"]["noul"] for e in c["exchanges"]]
+            t = q.get("threshold", 0.5)
+            kept = [i for i, p in enumerate(ps) if decide_answer(p, t)]
+            check([r["input"] for r in rows] == [c["records"][i] for i in kept],
+                  f"{c['id']} row inputs are the kept records in input order")
+            check(all(r["value"] is True for r in rows), f"{c['id']} row values are the kept verdict")
+        if c["verb"] == "decide_many":
+            ps = [e["reply"]["answers"]["q1"]["noul"] for e in c["exchanges"]]
+            t = q.get("threshold", 0.5)
+            check([r["input"] for r in rows] == c["records"], f"{c['id']} row inputs in input order")
+            check([r["value"] for r in rows] == [decide_answer(p, t) for p in ps],
+                  f"{c['id']} row values are the answers")
 
 for c in data["cases"]:
     check(set(c) <= CASE_KEYS, f"{c.get('id')} unknown keys {set(c) - CASE_KEYS}")
@@ -499,8 +546,15 @@ for c in data["cases"]:
         check_recognize_case(c)
     if c["verb"] == "relate":
         check_relate_case(c)
+    failed_names = ()
+    if c["verb"] == "annotate":
+        # The failed logical names map to their wire names: set order is
+        # name order, and q{i} names the i-th logical question.
+        order = list(c.get("set", {}))
+        failed_names = tuple(f"q{order.index(name) + 1}" for name in order
+                             if "failed" in c["expect"]["answers"].get(name, {}))
     for ex in c["exchanges"]:
-        check_reply_shape(ex["request"], ex.get("reply", {}), ex.get("status"))
+        check_reply_shape(ex["request"], ex.get("reply", {}), ex.get("status"), failed_names)
     replay(c)
 
 if errors:

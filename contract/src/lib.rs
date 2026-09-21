@@ -360,6 +360,14 @@ pub struct Scored {
 /// `sends` counts the wire sends that produced this judgment. One is the
 /// norm; two means the connection died after the request left and the send
 /// repeated, and the caller sees what the bill sees.
+///
+/// `requests` is the ordered recording digests of the logical requests
+/// that produced the judgment, per ticket 0053: always an array, one
+/// element for a one-request result, in logical construction order, and a
+/// retry adds no element. The digests name the same files `--record` and
+/// `--cache` use. No singular form exists.
+///
+/// `failed_questions` is always present, including zero, per ticket 0054.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Details {
     /// The probability the backend gave the yes side.
@@ -372,6 +380,12 @@ pub struct Details {
     pub digest: String,
     /// The wire sends that produced this judgment.
     pub sends: u32,
+    /// The recording digests of the logical requests, in construction
+    /// order. One element for one request; a retry adds no element (0053).
+    pub requests: Vec<String>,
+    /// Failed logical questions in this result; zero here by construction,
+    /// because a failed single question is a whole-call error (0054).
+    pub failed_questions: u32,
 }
 
 /// The process counters `usage` reports.
@@ -425,6 +439,74 @@ pub enum Annotated {
     Score(Scored),
     /// A `tag` question: the labels that held, in the question's order.
     Tags(Vec<String>),
+    /// The logical question failed while the reply answered a neighbour.
+    ///
+    /// Serializes as the ruled marker `{"failed":{"kind":"backend",
+    /// "cause":CAUSE}}` (0054). A run that prints one of these markers
+    /// completes its input and exits 6; the marker, not a diagnostic,
+    /// identifies the failure.
+    #[serde(rename = "failed")]
+    Failed(Failed),
+}
+
+/// Why one logical question failed while its neighbours answered (0054).
+///
+/// The list is closed: missing answer, wrong answer kind, missing or
+/// out-of-range probability, an invalid distribution total, and an
+/// unexpected option or level.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Cause {
+    /// The response omitted the wire answer.
+    MissingAnswer,
+    /// The response used a shape the question did not ask for.
+    WrongKind,
+    /// An option or level has no probability.
+    MissingProbability,
+    /// A reported probability falls outside zero to one.
+    InvalidProbability,
+    /// A distribution does not total one within the adapter tolerance.
+    InvalidDistribution,
+    /// A distribution contains an option or level that was not sent.
+    UnexpectedProbability,
+}
+
+/// The kind a failed logical question carries; backend, today, always.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FailureKind {
+    /// The wire failed this logical question while the request succeeded.
+    Backend,
+}
+
+/// One failed logical question's marker (0054).
+///
+/// It serializes as `{"kind":"backend","cause":CAUSE}` inside the
+/// `failed` object, and `null` still means `not sure` and never failed.
+///
+/// At the merge this mirrors the core's `BackendFailure`; the build team
+/// reconciles the two spellings in one place.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub struct Failed {
+    /// The failure's kind; [`FailureKind::Backend`] today.
+    pub kind: FailureKind,
+    /// The closed cause.
+    pub cause: Cause,
+}
+
+/// Count the failed logical questions across annotate rows (0054 rule 3).
+///
+/// One failed field is one failed logical question, so a `tag` whose wire
+/// answers failed counts once through its single field.
+#[must_use]
+pub fn failed_questions(rows: &[AnnotatedRecord]) -> u32 {
+    u32::try_from(
+        rows.iter()
+            .flat_map(|row| row.iter())
+            .filter(|(_, field)| matches!(field, Annotated::Failed(_)))
+            .count(),
+    )
+    .unwrap_or(u32::MAX)
 }
 
 /// One record's `annotate` answer: one field per question, in the set's
@@ -956,6 +1038,28 @@ pub fn edges_json(edges: &[Edge]) -> String {
         edges: &'a [Edge],
     }
     serde_json::to_string(&Edges { edges }).expect("an edge list is JSON-clean")
+}
+
+/// One record with its answer: the ruled record-mode row.
+///
+/// The ruling (`sdlc/planning/go-ahead-for-the-build-team-2026-09-21.md`,
+/// item 4) makes `{"input","value"}` rows the default where records flow
+/// with answers — the value-printing bulk forms and `filter`. `annotate`
+/// keeps its enrichment of objects and does not use this row. The input is
+/// the caller's own record, unchanged; the value is the answer its verdict
+/// carries.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Row<V> {
+    /// The caller's own record, unchanged.
+    pub input: String,
+    /// The record's answer.
+    pub value: V,
+}
+
+/// The ruled row list as JSON, for a host door: `[{"input","value"}...]`.
+#[must_use]
+pub fn rows_json<V: Serialize>(rows: &[Row<V>]) -> String {
+    serde_json::to_string(rows).expect("a row list is JSON-clean")
 }
 
 /// The `find` limit, reused for `relate`: one call takes at most 255
