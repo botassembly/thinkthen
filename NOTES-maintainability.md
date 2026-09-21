@@ -100,6 +100,14 @@ per-host signatures) larger than this test should decide.
 - The probe removal commit is `121abdd`; the four probe commits
   (`a43f6aa`, `c0a29b7`, `09ed18c`, `4b386ed`) stay in the branch history
   as the measurement's record.
+- The net effect of the whole test on the tree, against the pre-test base
+  `28e4025`: eight files, all the generator's own — `functions.toml`,
+  `scripts/generate_functions.py`, the `--check` step in
+  `scripts/check_surfaces.sh`, `libraries/python/src/generated.rs`,
+  `libraries/python/src/lib.rs` (the registration call), the regenerated
+  `libraries/typescript/index.mjs`, `SURFACES.md`, and this note. The
+  probe leaves no net change anywhere: `git diff --name-only
+  28e4025..HEAD` lists exactly those eight.
 
 ## Unchecked
 
