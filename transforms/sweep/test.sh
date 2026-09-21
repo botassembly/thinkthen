@@ -26,12 +26,13 @@ jq -n -c '
 jq -n -f sweep.jq "$work/choose.jsonl" \
   | jq -c '{mode,rows,labeled,unlabeled,options,has_pick:has("pick"),
             at_half:(.sweep[]|select(.cut==0.5)),
+            at_fifty_five:(.sweep[]|select(.cut==0.55)),
             at_six:(.sweep[]|select(.cut==0.6)),
             at_ninety_five:(.sweep[]|select(.cut==0.95)),
             tied_neighbors:([.sweep[]|select(.cut==0.6 or .cut==0.65)|del(.cut)]|.[0]==.[1])}' \
   > "$work/choose-report.json"
 cat > "$work/choose-expected.json" <<'EOF'
-{"mode":"choose","rows":5,"labeled":4,"unlabeled":["unlabeled"],"options":["red","blue"],"has_pick":false,"at_half":{"cut":0.5,"resolved":3,"unresolved":1,"ties":1,"coverage":0.75,"accuracy_resolved":0.6667,"accuracy_unresolved":null},"at_six":{"cut":0.6,"resolved":2,"unresolved":2,"ties":1,"coverage":0.5,"accuracy_resolved":0.5,"accuracy_unresolved":1},"at_ninety_five":{"cut":0.95,"resolved":0,"unresolved":4,"ties":1,"coverage":0,"accuracy_resolved":null,"accuracy_unresolved":0.6667},"tied_neighbors":true}
+{"mode":"choose","rows":5,"labeled":4,"unlabeled":["unlabeled"],"options":["red","blue"],"has_pick":false,"at_half":{"cut":0.5,"resolved":3,"unresolved":1,"ties":1,"coverage":0.75,"accuracy_resolved":0.6667,"accuracy_unresolved":null},"at_fifty_five":{"cut":0.55,"resolved":3,"unresolved":1,"ties":1,"coverage":0.75,"accuracy_resolved":0.6667,"accuracy_unresolved":null},"at_six":{"cut":0.6,"resolved":2,"unresolved":2,"ties":1,"coverage":0.5,"accuracy_resolved":0.5,"accuracy_unresolved":1},"at_ninety_five":{"cut":0.95,"resolved":0,"unresolved":4,"ties":1,"coverage":0,"accuracy_resolved":null,"accuracy_unresolved":0.6667},"tied_neighbors":true}
 EOF
 cmp "$work/choose-expected.json" "$work/choose-report.json"
 
@@ -71,17 +72,30 @@ expect_failure() {
 
 choice='{"input":{"id":"private id","label":"red"},"value":"red","question":{"options":["red","blue"]},"answer":{"kind":"choice","pick":"red","probabilities":{"red":0.8,"blue":0.2}}}'
 score='{"input":{"id":"private id","label":0},"value":1,"question":{"levels":["low","high"]},"answer":{"kind":"score"}}'
+decision='{"input":{"id":"private id","label":true},"value":true,"question":{},"answer":{"kind":"yes_no","probability":0.8}}'
 
+expect_failure top-level 'sweep: every row must be an object' '[]'
+expect_failure answer 'sweep: every row must carry an answer object' "$choice | .answer=[]"
+expect_failure decision-input 'sweep: decision rows must carry an input object' "$decision | .input=[]"
+expect_failure decision-question 'sweep: decision rows must carry a question object' "$decision | .question=[]"
+expect_failure decision-probability 'sweep: decision rows must carry a numeric probability' "$decision | del(.answer.probability)"
+expect_failure choice-input 'sweep: choice rows must carry an input object' "$choice | .input=[]"
+expect_failure choice-question 'sweep: choice rows must carry a question object' "$choice | .question=[]"
+expect_failure score-input 'sweep: score rows must carry an input object' "$score | .input=[]"
+expect_failure score-question 'sweep: score rows must carry a question object' "$score | .question=[]"
 expect_failure mixed 'sweep: one run must carry one answer kind' "$choice, $score"
 expect_failure options 'sweep: choice rows must carry one shared ordered option list' "$choice, ($choice | .question.options=[\"red\",\"private\"] | .answer.probabilities={red:0.8,private:0.2})"
 expect_failure keys 'sweep: choice probabilities must have exactly the option keys' "$choice | .answer.probabilities += {private:0}"
 expect_failure missing-key 'sweep: choice probabilities must have exactly the option keys' "$choice | del(.answer.probabilities.blue)"
 expect_failure member 'sweep: choice probabilities must be numbers from zero through one' "$choice | .answer.probabilities.red=\"private\""
+expect_failure member-low 'sweep: choice probabilities must be numbers from zero through one' "$choice | .answer.probabilities.red=-0.01"
+expect_failure member-high 'sweep: choice probabilities must be numbers from zero through one' "$choice | .answer.probabilities.red=1.01"
 expect_failure leader 'sweep: a choice pick must be the first option at the maximum probability' "$choice | .answer.pick=\"blue\""
 expect_failure value 'sweep: a non-null choice value must equal its pick' "$choice | .value=\"blue\""
 expect_failure levels 'sweep: score rows must carry one shared ordered level list' "$score, ($score | .question.levels=[\"low\",\"private\"])"
 expect_failure score-value 'sweep: score values must be numbers from zero through the last level' "$score | .value=\"private\""
 expect_failure score-range 'sweep: score values must be numbers from zero through the last level' "$score | .value=2"
+expect_failure score-low 'sweep: score values must be numbers from zero through the last level' "$score | .value=-0.01"
 
 jq -n -f sweep.jq ../../probes/02-confidence/runs/run.jsonl \
   | jq -c '{rows,labeled,half:(.sweep[]|select(.cut==0.5)),high:(.sweep[]|select(.cut==0.95))}' \

@@ -54,11 +54,9 @@ def verdict($p; $cut):
 def decision_metrics($rows; $cut):
   reduce $rows[] as $row (
     {unlabeled: [], unresolved: 0, tp: 0, fp: 0, tn: 0, fn: 0};
-    ($row.input.id // "with no id") as $id
-    | $row.answer.probability as $p
-    | if ($p | type) != "number" then error("row \($id) carries no probability") else . end
+    $row.answer.probability as $p
     | $row.input.label as $label
-    | if $label != true and $label != false then .unlabeled += [$id]
+    | if $label != true and $label != false then .unlabeled += [($row.input.id // "with no id")]
       else
         verdict($p; $cut) as $said
         | if $said == "unresolved" then .unresolved += 1
@@ -90,7 +88,13 @@ def decision_metrics($rows; $cut):
     };
 
 def decision_report($rows; $cuts):
-  [$cuts[] | decision_metrics($rows; .)] as $sweep
+  if all($rows[]; (.input | type) == "object")
+  then . else error("sweep: decision rows must carry an input object") end
+  | if all($rows[]; (.question | type) == "object")
+    then . else error("sweep: decision rows must carry a question object") end
+  | if all($rows[]; (.answer.probability | type) == "number")
+    then . else error("sweep: decision rows must carry a numeric probability") end
+  | [$cuts[] | decision_metrics($rows; .)] as $sweep
   | ($sweep | map(select(.f1 != null)) | max_by(.f1) | .f1) as $best
   | {
       rows: ($rows | length),
@@ -118,7 +122,11 @@ def valid_names:
   and (unique | length) == length;
 
 def choice_report($rows; $cuts):
-  ($rows[0].question.options) as $options
+  if all($rows[]; (.input | type) == "object")
+  then . else error("sweep: choice rows must carry an input object") end
+  | if all($rows[]; (.question | type) == "object")
+    then . else error("sweep: choice rows must carry a question object") end
+  | ($rows[0].question.options) as $options
   | if ($options | valid_names) and all($rows[]; .question.options == $options)
     then . else error("sweep: choice rows must carry one shared ordered option list") end
   | if all($rows[];
@@ -194,7 +202,11 @@ def score_metrics($rows; $cut):
     };
 
 def score_report($rows):
-  ($rows[0].question.levels) as $levels
+  if all($rows[]; (.input | type) == "object")
+  then . else error("sweep: score rows must carry an input object") end
+  | if all($rows[]; (.question | type) == "object")
+    then . else error("sweep: score rows must carry a question object") end
+  | ($rows[0].question.levels) as $levels
   | if ($levels | valid_names) and all($rows[]; .question.levels == $levels)
     then . else error("sweep: score rows must carry one shared ordered level list") end
   | ($levels | length) as $count
@@ -213,7 +225,10 @@ def score_report($rows):
 [inputs] as $rows
 | [range(1; 20) | . / 20 | . * 100 | round | . / 100] as $cuts
 | if ($rows | length) == 0 then decision_report($rows; $cuts)
-  else [$rows[].answer.kind] | unique as $kinds
+  elif all($rows[]; type == "object") | not then error("sweep: every row must be an object")
+  elif all($rows[]; (.answer | type) == "object") | not then error("sweep: every row must carry an answer object")
+  else
+    [$rows[].answer.kind] | unique as $kinds
     | if ($kinds | length) != 1 then error("sweep: one run must carry one answer kind")
       elif $kinds[0] == "yes_no" then decision_report($rows; $cuts)
       elif $kinds[0] == "choice" then choice_report($rows; $cuts)
