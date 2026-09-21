@@ -106,6 +106,45 @@ def main() -> int:
                 want = "|".join(field(v) for v in held.values())
                 got = "|".join(part if part else "" for part in got.split("|"))
                 note = None if got == want else f"diverge {ident}: expected {want!r}, got {got!r}"
+            elif verb == "recognize":
+                kinds = (case.get("question") or {}).get("kinds") or []
+                arr = ("ARRAY[" + ",".join(literal(k) for k in kinds) + "]::text[]")
+                got = sql(
+                    "SELECT \"text\" || '~' || \"kind\" || '~' || \"start\" || '~' || \"end\" "
+                    "|| '~' || to_char(\"strength\", 'FM0.0000') "
+                    f"FROM thinkthen_recognize({literal(case['text'])}, {arr}) "
+                    'ORDER BY "start", "end"')
+                entities = expect.get("entities") or []
+                want_lines = [
+                    f"{e['text']}~{e['kind']}~{e['start']}~{e['end']}~{e['strength']:.4f}"
+                    for e in entities
+                ]
+                got_lines = got.splitlines() if got else []
+                note = None if got_lines == want_lines else \
+                    f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
+            elif verb == "relate":
+                if case.get("form") == "per-subject":
+                    note = ("the per-subject arm shares its input with the pairs arm and "
+                            "the stand-in serves the ruled pairs form; a conformance-data "
+                            "finding for the build team")
+                else:
+                    rules = [r["name"] for r in case["question"].get("relations", [])]
+                    arr = "ARRAY[" + ",".join(literal(r) for r in rules) + "]::text[]"
+                    values = ", ".join(
+                        f"({i + 1}, {literal(text)})"
+                        for i, text in enumerate(case["records"]))
+                    query = literal(f"SELECT i, t FROM (VALUES {values}) AS v(i, t)")
+                    got = sql(
+                        "SELECT \"name\" || '~' || \"source\" || '~' || \"target\" "
+                        "|| '~' || to_char(\"probability\", 'FM0.0000') "
+                        f"FROM thinkthen_relate({query}, {arr}) "
+                        'ORDER BY "source", "target", "name"')
+                    want_lines = sorted(
+                        f"{e['name']}~{e['source']}~{e['target']}~{e['probability']:.4f}"
+                        for e in expect["edges"])
+                    got_lines = sorted(got.splitlines()) if got else []
+                    note = None if got_lines == want_lines else \
+                        f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
             elif verb == "details":
                 held = expect["details"]
                 got = sql(f"SELECT (thinkthen_details({question_arg(case)}, {literal(case['evidence'])}))->>'probability'")

@@ -75,3 +75,43 @@ grep -c deno ~/.zshrc -> 0
 - `shared_preload_libraries` with a postmaster-built pool: `_PG_init` here registers the key setting and touches nothing else, per this brief. The preload question stays with the database ADR.
 - The `thinkthen.api_key` GUC is registered (the ruled setting exists) but the engine reads the environment at send time; wiring the setting into the send is the database ADR's preload question.
 - `details` on a score question carries no nearest level through the contract (`Details` has no such field). ADR 0017 pick 6 says the nearest level's name rides in details; the contract needs the field before the promise is reachable. Recorded for the contract's owner, not worked around.
+
+## Entry 8: recognize and relate land, 2026-09-21
+
+The two functions from the update brief (`sdlc/issues/2026-09-21-update-for-the-library-team-recognize-and-relate.md`), plus the beta relations-as-rows companion the deck's SQL block shows. Twelve SQL functions now.
+
+**Shapes.** `thinkthen_recognize(body, kinds)` is a set-returning function, `PARALLEL RESTRICTED`, returning the five ruled columns `(text, kind, start, end, strength)`; the deck's call runs as drawn with `LATERAL`, and the `"end"` column is quoted because `end` is reserved. `thinkthen_relate(query, rules)` takes a query string and a `text[]` of bare relation names (any kind to any kind — richer rules ride the question file), executes the query through SPI, and returns `(name, source, target, probability)`. `thinkthen_relations(body, '@names.json')` is the beta companion returning `(name, source_text, source_kind, target_text, target_kind, probability)`.
+
+**Three decisions this lane made, each with its reason.**
+
+- **`source` and `target` as the column names.** The design table's older line says `from_id, to_id`; the ruling of 2026-09-21 (`relate-design.md`, "a relation's ends are `source` and `target`, everywhere") overrides it, and the ruling's sentence says a user sees one pair of words on every surface.
+- **The SQL rows carry the query's id values, not the 1-based record numbers.** The query selects the id first and the text second (`SELECT id, body FROM alerts`), the edges' `source`/`target` are those id values, and the edges join back to the query's table. SQLite's ruled call passing the `id` column by name is the same choice seen from the other engine.
+- **Offsets are characters, PostgreSQL's own string indexing.** `substring(text from start + 1 for end - start)` is the name, proven on `Le café 😀 Maria Chen arrived.` (`Le café ` is 8 characters, so the name starts at character offset 10 — bytes would be 14). The contract carries code points; PostgreSQL's `substring` counts characters, so the conversion is identity and is documented in the function's comment.
+
+**One contract gap, recorded for its owner.** The ruled question file spells a relation's ends `source` and `target` (`recognize-design.md`), and the contract's spec parser (`Recognize::from_json`) reads `from` and `to`. This door accepts both spellings, normalizes to the parser's pair before the one core parser runs, and lifts the file's top-level `threshold`/`relation_threshold` into the `recognize` section. Flagged in the code comment; the contract owner decides the parser's final spelling.
+
+**The 255 limit** comes through the contract's `relate_checked` guard: the SPI fetch is capped at 256 rows, the engine refuses the 256th with `thinkthen usage: relate takes at most 255 records and 256 came (retryable: no)`, SQLSTATE 22023, proven in `check.sh`. The message names the fetched count (256), not a query's full count, because the surface stops reading at the limit.
+
+**The conformance slice** now runs 72 cases: 71 ok, case 71 named as the conformance-data finding (the per-subject arm shares its input with the pairs arm; the stand-in serves the ruled pairs form). All forty recognize cases and relate cases 69, 70, and 72 pass through SQL. The runner gained `recognize` and `relate` branches; its skips (filter/rank/find, the pre-fired cancel, the deadline door, the missing-question-file case) are unchanged and named.
+
+**The acceptance section in `check.sh`**, run offline in the disposable container:
+
+```
+71 of 72 cases ok, 1 diverged
+recognize rows, offsets, the no-request join, relate edges, and the relations rows are green
+the 256th record refuses with the usage kind and SQLSTATE 22023
+```
+
+It proves, in order: the deck's LATERAL call as drawn (five rows over the three inbox texts); a `mentions` table built from `recognize`; the offsets slicing the name back out (`substring` on the café/emoji text); the equality join to `accounts` with the usage counter frozen across it (`requests before join 0` / `requests after join 0` — the no-request proof); the deck's `thinkthen_relate` call as drawn (the four recorded edges with their id values and probabilities); and the beta `thinkthen_relations` row from `@names.json` (the ruled question-file spelling with `source`/`target` keys).
+
+**Lines.** 526 code lines against the 299 ceiling `postgres.md` records (207's measure). The two functions plus the beta companion are the growth; the ceiling is a planning-page statement, not a gate, and the number is recorded here for the build team.
+
+**Formatting.** `cargo fmt --check` reports 22 diffs; most are in the pre-existing hand style (for example `with_members` at line 135), and the lane did not reformat the file to keep this diff reviewable. No gate runs fmt on this separate workspace.
+
+Cleanup: the scratch container `dbpkg211-pgscratch` removed with `docker rm -f -v`; `docker ps -a` shows no `dbpkg211-*` left; `grep -c deno ~/.zshrc` → 0. No tool installed. No key, no paid call, nothing published, no sudo.
+
+## What was not run (unchecked)
+
+- The wire path for `recognize`, `relate`, and `thinkthen_relations`: they answer from the recordings, offline, and make no request; there is nothing on the wire to prove for them in this lane.
+- `either` rules and named-kind ends through `thinkthen_relate`'s array: the ruled SQL call carries bare names; the question file carries the richer rules.
+- `thinkthen_relations`' final fate: the design page lists it beta and open (question 3 for the build team).

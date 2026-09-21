@@ -89,6 +89,71 @@ echo "slide sample green: the maybe row reads, urgency ordered 1.7/1.05/0.99"
 echo "== postgres surface: conformance slice, offline"
 python3 runner.py "$NAME"
 
+echo "== postgres surface: recognize and relate, as drawn"
+docker cp fixtures/inbox.sql "$NAME:/inbox.sql"
+docker cp fixtures/alerts.sql "$NAME:/alerts.sql"
+docker cp fixtures/names.json "$NAME:/var/lib/postgresql/data/names.json"
+psql_in -f /inbox.sql -f /alerts.sql >/dev/null
+psql_in << 'SQL' > .tmp-recognize.out
+-- the deck's PostgreSQL call, as drawn
+SELECT t.id, n.text, n.kind
+FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n
+ORDER BY t.id, n."start";
+
+-- names become rows: read each text once
+CREATE TABLE mentions AS
+SELECT t.id, n.text, n.kind, n."start", n."end", n.strength
+FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization','place']) n;
+
+-- the offsets slice the name in PostgreSQL's own indexing: characters
+SELECT substring(body from n."start" + 1 for n."end" - n."start") AS name
+FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person']) n
+WHERE t.id = 1;
+
+-- from here it is an ordinary join: the usage counter proves no request
+SELECT 'requests before join', requests FROM thinkthen_usage();
+SELECT a.owner, count(*) AS found
+FROM mentions m JOIN accounts a ON a.name = m.text
+GROUP BY a.owner ORDER BY found DESC, a.owner;
+SELECT 'requests after join', requests FROM thinkthen_usage();
+
+-- the deck's relate call, as drawn
+SELECT name, source, target, probability
+FROM thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by'])
+ORDER BY source, target;
+
+-- the beta companion: relations as rows, from the question file
+SELECT name, source_text, source_kind, target_text, target_kind, probability
+FROM thinkthen_relations(
+    'Maria Chen joined Northwind Freight in Chicago last spring.', '@names.json');
+SQL
+must() { grep -qE "$1" .tmp-recognize.out || { echo "recognize check failed: $1" >&2; exit 1; }; }
+must '^ *1 \| Maria Chen +\| person'
+must '^ *3 \| Millbrook Athletics \| organization'
+must '^ *Maria Chen *$'
+must '^ *dana +\| *1'
+must '^ *amara +\| *1'
+must '^ *lee +\| *1'
+must '^ *caused_by \| *1 \| *2 \| *0\.59'
+must '^ *caused_by \| *3 \| *4 \| *0\.84'
+must '^ *works_for \| Maria Chen +\| person +\| Northwind Freight \| organization \| *1'
+before=$(grep "requests before join" .tmp-recognize.out | awk '{print $NF}')
+after=$(grep "requests after join" .tmp-recognize.out | awk '{print $NF}')
+[ "$before" = "$after" ] || { echo "the join moved the usage counter: $before -> $after" >&2; exit 1; }
+rm .tmp-recognize.out
+echo "recognize rows, offsets, the no-request join, relate edges, and the relations rows are green"
+
+echo "== postgres surface: relate refuses more than 255 records"
+docker exec -i -e PGHOST=/run/postgresql "$NAME" \
+  psql -U postgres -P footer=off \
+  -c '\set VERBOSITY verbose' \
+  -c "SELECT count(*) FROM thinkthen_relate('SELECT g AS id, ''x'' AS body FROM generate_series(1,256) g', ARRAY['caused_by']);" \
+  > .tmp-255.out 2>&1 || true
+grep -q "22023" .tmp-255.out
+grep -q "relate takes at most 255 records and 256 came" .tmp-255.out
+rm .tmp-255.out
+echo "the 256th record refuses with the usage kind and SQLSTATE 22023"
+
 if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   echo "== postgres surface: wire suite against the stub on 8219"
   docker rm -f -v "$WIRE_NAME" >/dev/null 2>&1 || true

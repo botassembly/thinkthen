@@ -1,4 +1,4 @@
-//! The PostgreSQL surface: nine SQL functions over the one engine.
+//! The PostgreSQL surface: twelve SQL functions over the one engine.
 //!
 //! Rule 1 of the shared database page holds: no rule lives here. This file
 //! resolves SQL values into the contract's questions, calls one engine
@@ -28,9 +28,10 @@ use std::time::Duration;
 use pgrx::datum::{Array, JsonB};
 use pgrx::pg_sys::FunctionCallInfo;
 use pgrx::prelude::*;
-use pgrx::{Aggregate, AggregateName, GucContext, GucFlags, GucRegistry, GucSetting};
+use pgrx::{Aggregate, AggregateName, GucContext, GucFlags, GucRegistry, GucSetting, Spi};
 use thinkthen_contract::{
-    Annotated, Engine as _, Error, ErrorKind, Question, QuestionKind, QuestionSet,
+    Annotated, Engine as _, Entity, Error, ErrorKind, Kind, Question, QuestionKind, QuestionSet,
+    Recognize, Relate, relate_checked,
 };
 use thinkthen_standin::BlockingEngine;
 
@@ -160,6 +161,65 @@ fn distinct_of<'a>(texts: impl Iterator<Item = Option<&'a str>>) -> Vec<String> 
     out
 }
 
+/// Read a spec file named by the caller with the command's `@name`
+/// spelling, or a bare path; a failure is the local kind.
+fn read_spec(path: &str) -> String {
+    std::fs::read_to_string(Path::new(path)).unwrap_or_else(|error| {
+        raise(Error::local(format!("the spec file {path} did not read: {error}")))
+    })
+}
+
+/// Resolve the `recognize` spec argument: `'@name'` or a bare path names a
+/// file (the question file's `recognize` section is taken when present),
+/// and JSON text carries the spec itself.
+///
+/// The ruled question file spells a relation's ends `source` and `target`
+/// (`sdlc/planning/recognize-design.md`, the ruling of 2026-09-21); the
+/// contract's spec parser reads `from` and `to` today, so this door accepts
+/// both spellings and normalizes to the parser's pair before the one core
+/// parser runs. Recorded for the contract's owner.
+fn recognizer_of(arg: Option<&str>) -> Recognize {
+    let text = arg.unwrap_or_default();
+    if text.trim().is_empty() {
+        raise(Error::usage("the recognize spec is empty"));
+    }
+    let json = match text.strip_prefix('@') {
+        Some(path) => read_spec(path),
+        None if text.trim_start().starts_with('{') => text.to_owned(),
+        None => read_spec(text),
+    };
+    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap_or_else(|error| {
+        raise(Error::usage(format!("the recognize spec is not JSON: {error}")))
+    });
+    if let Some(section) = value.get_mut("recognize").map(std::mem::take) {
+        // The question file keeps both thresholds at the top level, beside
+        // the section; the spec parser reads them inside it.
+        let held: Vec<(&str, serde_json::Value)> = ["threshold", "relation_threshold"]
+            .into_iter()
+            .filter_map(|key| value.get(key).cloned().map(|number| (key, number)))
+            .collect();
+        let mut section = section;
+        if let Some(object) = section.as_object_mut() {
+            for (key, number) in held {
+                object.entry(key.to_owned()).or_insert(number);
+            }
+        }
+        value = section;
+    }
+    if let Some(relations) = value.get_mut("relations").and_then(serde_json::Value::as_array_mut) {
+        for rule in relations {
+            if let Some(object) = rule.as_object_mut() {
+                for (ruled, parser) in [("source", "from"), ("target", "to")] {
+                    if let Some(held) = object.remove(ruled) {
+                        object.entry(parser.to_owned()).or_insert(held);
+                    }
+                }
+            }
+        }
+    }
+    Recognize::from_json(&value.to_string()).unwrap_or_else(|error| raise(error))
+}
+
 /// One annotate answer as JSON: a decision is true, false, or null; a
 /// choice is the label or null; a score is its number; tags are a list.
 fn annotated_as_json(held: &Annotated) -> serde_json::Value {
@@ -276,6 +336,198 @@ fn thinkthen_usage(
         i64::try_from(usage.tokens).unwrap_or(i64::MAX),
     );
     TableIterator::new(vec![row].into_iter())
+}
+
+/// `recognize(text, kinds)`: every name in the text as a row, the five
+/// ruled columns — `text`, `kind`, `start`, `end`, `strength`. `start`
+/// and `end` count characters, PostgreSQL's own string indexing, so
+/// `substring(text from start + 1 for end - start)` is the name. With no
+/// kinds the three defaults apply. `PARALLEL RESTRICTED`; used with
+/// `LATERAL`.
+#[pg_extern(parallel_restricted)]
+fn thinkthen_recognize(
+    body: Option<&str>,
+    kinds: Option<Array<'_, &str>>,
+) -> TableIterator<
+    'static,
+    (
+        name!(text, Option<String>),
+        name!(kind, Option<String>),
+        name!(start, Option<i32>),
+        name!(end, Option<i32>),
+        name!(strength, Option<f64>),
+    ),
+> {
+    let Some(body) = body else {
+        return TableIterator::new(std::iter::empty());
+    };
+    let mut ask = Recognize::new();
+    if let Some(kinds) = kinds {
+        let names: Vec<&str> = kinds
+            .iter()
+            .flatten()
+            .map(str::trim)
+            .filter(|kind| !kind.is_empty())
+            .collect();
+        if names.len() > 20 {
+            raise(Error::usage(format!(
+                "the recognize call carries {} kinds, and 20 is the limit",
+                names.len()
+            )));
+        }
+        if !names.is_empty() {
+            ask = ask.kinds(names);
+        }
+    }
+    let found = engine().recognize(&ask, body).unwrap_or_else(|error| raise(error));
+    let rows: Vec<_> = found
+        .entities
+        .into_iter()
+        .map(|entity| {
+            (
+                Some(entity.text),
+                Some(entity.kind),
+                Some(i32::try_from(entity.start).unwrap_or(i32::MAX)),
+                Some(i32::try_from(entity.end).unwrap_or(i32::MAX)),
+                Some(entity.strength),
+            )
+        })
+        .collect();
+    TableIterator::new(rows.into_iter())
+}
+
+/// `relate(query, rules)`: every legal pair in the query's records judged
+/// at once, as rows `(name, source, target, probability)`. The query
+/// selects two columns — the record's id first, its text second — and
+/// `source` and `target` carry those id values, so the edges join back to
+/// the query's table. More than 255 records is a usage error. Rules are
+/// bare relation names (any kind to any kind); richer rules ride the
+/// question file. `PARALLEL RESTRICTED`.
+#[pg_extern(parallel_restricted)]
+fn thinkthen_relate(
+    query: Option<&str>,
+    rules: Option<Array<'_, &str>>,
+) -> TableIterator<
+    'static,
+    (
+        name!(name, Option<String>),
+        name!(source, Option<i64>),
+        name!(target, Option<i64>),
+        name!(probability, Option<f64>),
+    ),
+> {
+    let query = query.unwrap_or_default().trim().trim_end_matches(';').to_owned();
+    if query.is_empty() {
+        raise(Error::usage("the relate query is empty"));
+    }
+    let mut ask = Relate::new();
+    let mut any_rule = false;
+    if let Some(rules) = rules {
+        for rule in rules.iter().flatten() {
+            let rule = rule.trim();
+            if rule.is_empty() {
+                raise(Error::usage("a relate rule is empty"));
+            }
+            ask = ask.relation(rule, Kind::Any, Kind::Any).unwrap_or_else(|error| raise(error));
+            any_rule = true;
+        }
+    }
+    if !any_rule {
+        raise(Error::usage("relate needs at least one relation rule"));
+    }
+    let rows = Spi::connect(|client| -> Result<Vec<(i64, String)>, Error> {
+        let wrapped = format!(
+            "SELECT ask.id::bigint AS id, ask.body::text AS body FROM ({query}) AS ask(id, body)"
+        );
+        let table = client.select(wrapped.as_str(), Some(256), &[]).map_err(|error| {
+            Error::usage(format!("the relate query did not run: {error}"))
+        })?;
+        let mut out = Vec::with_capacity(table.len());
+        for row in table {
+            let id = row
+                .get::<i64>(1)
+                .map_err(|error| {
+                    Error::usage(format!("the relate query's id column did not read: {error}"))
+                })?
+                .ok_or_else(|| Error::usage("the relate query returned a null id"))?;
+            let body = row
+                .get::<String>(2)
+                .map_err(|error| {
+                    Error::usage(format!("the relate query's text column did not read: {error}"))
+                })?
+                .ok_or_else(|| Error::usage("the relate query returned a null text"))?;
+            out.push((id, body));
+        }
+        Ok(out)
+    });
+    let rows = rows.unwrap_or_else(|error| raise(error));
+    let owned: Vec<String> = rows.iter().map(|(_, body)| body.clone()).collect();
+    let edges = run_batch(move |cancel| {
+        let texts: Vec<&str> = owned.iter().map(String::as_str).collect();
+        let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
+        relate_checked(engine(), &ask, &texts, options)
+    })
+    .unwrap_or_else(|error| raise(error));
+    let out: Vec<_> = edges
+        .into_iter()
+        .map(|edge| {
+            let id_of = |number: u64| -> Option<i64> {
+                rows.get(number.saturating_sub(1) as usize).map(|row| row.0)
+            };
+            (
+                Some(edge.name),
+                id_of(edge.source),
+                id_of(edge.target),
+                Some(edge.probability),
+            )
+        })
+        .collect();
+    TableIterator::new(out.into_iter())
+}
+
+/// The beta companion: `thinkthen_relations(body, '@names.json')` runs the
+/// spec file's rules over one text and returns the relations as rows
+/// `(name, source_text, source_kind, target_text, target_kind,
+/// probability)`. Relations need the question file. `PARALLEL RESTRICTED`.
+#[pg_extern(parallel_restricted)]
+fn thinkthen_relations(
+    body: Option<&str>,
+    spec: Option<&str>,
+) -> TableIterator<
+    'static,
+    (
+        name!(name, Option<String>),
+        name!(source_text, Option<String>),
+        name!(source_kind, Option<String>),
+        name!(target_text, Option<String>),
+        name!(target_kind, Option<String>),
+        name!(probability, Option<f64>),
+    ),
+> {
+    let Some(body) = body else {
+        return TableIterator::new(std::iter::empty());
+    };
+    let ask = recognizer_of(spec);
+    let found = engine().recognize(&ask, body).unwrap_or_else(|error| raise(error));
+    let by_id: HashMap<u64, Entity> =
+        found.entities.into_iter().map(|entity| (entity.id, entity)).collect();
+    let rows: Vec<_> = found
+        .relations
+        .into_iter()
+        .filter_map(|relation| {
+            let source = by_id.get(&relation.source)?;
+            let target = by_id.get(&relation.target)?;
+            Some((
+                Some(relation.name),
+                Some(source.text.clone()),
+                Some(source.kind.clone()),
+                Some(target.text.clone()),
+                Some(target.kind.clone()),
+                Some(relation.probability),
+            ))
+        })
+        .collect();
+    TableIterator::new(rows.into_iter())
 }
 
 /// The array overload, the second bulk form `postgres.md` names: one array
