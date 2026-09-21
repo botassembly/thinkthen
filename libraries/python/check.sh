@@ -14,7 +14,7 @@ fi
 
 if [ ! -x .venv/bin/python ]; then
   uv venv .venv
-  uv pip install --python .venv/bin/python pytest polars
+  uv pip install --python .venv/bin/python pytest polars pandas pyarrow
 fi
 # maturin develop installs into the active virtualenv
 source .venv/bin/activate
@@ -25,6 +25,9 @@ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_surface.py -q
 
 echo "== the Polars door, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_polars_door.py -q
+
+echo "== the pandas checks, null backend"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_pandas_checks.py -q
 
 echo "== conformance slice, offline"
 ENGINE_NULL=1 .venv/bin/python tests/conformance.py
