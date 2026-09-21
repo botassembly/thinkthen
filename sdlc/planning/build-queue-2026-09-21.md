@@ -68,6 +68,21 @@ Ian can overturn any placement here.
 2. Write the merge note for the build team: one conformance file, the union of cases, the engine-only defect case, the rulings issue both sides edited, the ratchet.
 3. The merge ticket belongs to the build team and comes after A7, when the public Rust library exists for the surfaces to sit on.
 
+### What the library team does while lane A runs
+
+The surfaces are built over `contract/` and the stand-in engine, so none of this waits for main. All of it stays on the branch, publishes nothing, claims no name, and makes no paid call.
+
+1. **The fix wave and the merge note**, items 1 and 2 above. Now.
+2. **Track main's new shapes on the branch.** Read 0053 and 0054 from main and carry them into the stand-in and every surface: the `meta.requests` list, the failed-question marker in each host's own types (a typed error value in Rust, an exception class or a marker object elsewhere, a ruled form in SQL), and exit 6. Then do the same ahead of time for the ruled shapes main has not built yet: the `{"input","value"}` record row, `strength`, and `source` and `target`. Every shape adopted early is one less conflict at the merge.
+3. **`recognize` and `relate` on all nine surfaces** against the forty recorded cases, including the database shape for relations that the team's own finding says can run.
+4. **The Polars Series door, then pandas through the same door**, as experiment 228 ruled. Buffer-address equality is the proof of no copy.
+5. **Cancel and deadline on every surface**, each with the fast-backend test that caught the poll bug: Ctrl-C in Python and R, `AbortSignal`, `pg_cancel_backend`, `statement_timeout`, DuckDB's interrupt.
+6. **One examples file per surface, keyed by function, run by that surface's tests.** The site's function pages and surface pages draw every tab from these files (`repos/mktg/products/thinkthen/site.md`), so an example nobody runs cannot reach the site. This is the library team's largest gift to the launch.
+7. **Packaging rehearsals, local only.** Build the wheel, the npm package, the gem, the R package, the crate, the C archive, and the three extensions, and install each from the local file on a clean machine or container. Record the install line that worked. `yellow.local` is the build host. Nothing is uploaded.
+8. **The two known blockers.** Find the road around `the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api` and `rusqlites-loadable-headers-stop-at-sqlite-3-34`, or record that none exists.
+
+Not for the library team: anything on main, publishing, the spreadsheet bridge, and a serve mode. Those wait for Ian.
+
 Then each surface ships on its own, every one proven against the shared conformance cases, in this order:
 
 | # | Surface | Notes |
