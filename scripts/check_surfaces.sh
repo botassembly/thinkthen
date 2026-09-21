@@ -42,6 +42,9 @@ fi
 step "conformance file"
 (cd conformance && python3 tools/validate_conformance.py conformance.json)
 
+step "generated function lists"
+python3 scripts/generate_functions.py --check
+
 # Each surface lands in Phase B with a check of its own. A surface is
 # checked by running its slide sample against the stand-in and its slice of
 # the conformance file; the hook is the surface's folder, named here in the

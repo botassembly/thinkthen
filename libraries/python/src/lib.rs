@@ -25,6 +25,8 @@
 //! `except KeyboardInterrupt` catches both paths). Worst case is one tick
 //! plus one in-flight round, per the experiment 211 proof.
 
+mod generated;
+
 use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -581,20 +583,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = module.py();
     module.add_class::<Question>()?;
     module.add_class::<QuestionSetHolder>()?;
-    module.add_function(wrap_pyfunction!(question, module)?)?;
-    module.add_function(wrap_pyfunction!(decide, module)?)?;
-    module.add_function(wrap_pyfunction!(decide_many, module)?)?;
-    module.add_function(wrap_pyfunction!(choose, module)?)?;
-    module.add_function(wrap_pyfunction!(score, module)?)?;
-    module.add_function(wrap_pyfunction!(tag, module)?)?;
-    module.add_function(wrap_pyfunction!(filter, module)?)?;
-    module.add_function(wrap_pyfunction!(rank, module)?)?;
-    module.add_function(wrap_pyfunction!(find, module)?)?;
-    module.add_function(wrap_pyfunction!(annotate_rows, module)?)?;
-    module.add_function(wrap_pyfunction!(details, module)?)?;
-    module.add_function(wrap_pyfunction!(probe, module)?)?;
-    module.add_function(wrap_pyfunction!(usage, module)?)?;
-    module.add_function(wrap_pyfunction!(reset_usage, module)?)?;
+    generated::register(module)?;
     module.add("ThinkThenError", py.get_type::<ThinkThenError>())?;
     module.add("UsageError", py.get_type::<UsageError>())?;
     module.add("BackendError", py.get_type::<BackendError>())?;

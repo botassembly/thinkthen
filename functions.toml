@@ -1,0 +1,104 @@
+# The public functions of the thinkthen surfaces, one row each.
+#
+# This table is the one place a function's name is written for the
+# generated lists: `scripts/generate_functions.py` reads it and writes
+# `libraries/python/src/generated.rs` and `libraries/typescript/index.mjs`.
+# Run the script after every edit, and never edit the generated files by
+# hand.
+#
+# Fields, per the maintainability test's ruling:
+#   name   — the public name, the same on every surface
+#   inputs — what the caller hands the function
+#   output — what comes back
+#   help   — the first line of the function's help. The eight verbs take
+#            their lines from the public vocabulary
+#            (sdlc/issues/2026-09-21-the-help-first-lines-and-the-public-words.md);
+#            the helpers' lines are authored here.
+version = "0.0.1"
+
+[[function]]
+name = "decide"
+inputs = "question, text"
+output = "yes, no, or unsure"
+help = "Answer one yes or no question about a text"
+
+[[function]]
+name = "choose"
+inputs = "question, text"
+output = "the winning option, or unsure"
+help = "Pick one option from your list"
+
+[[function]]
+name = "score"
+inputs = "question, text"
+output = "the position from 0 to K-1, nearest level in details"
+help = "Place a text on a scale you name"
+
+[[function]]
+name = "tag"
+inputs = "question, text"
+output = "the labels that fit, in the question's order"
+help = "Name every label that fits"
+
+[[function]]
+name = "filter"
+inputs = "question, records"
+output = "the records where the answer is yes"
+help = "Keep the records where the answer is yes"
+
+[[function]]
+name = "rank"
+inputs = "question, records"
+output = "records most likely yes first, ties in input order"
+help = "Sort records by how likely the answer is yes"
+
+[[function]]
+name = "find"
+inputs = "question, units"
+output = "the best unit's place and probability"
+help = "Pick the one line or record that best answers a question"
+
+[[function]]
+name = "annotate"
+inputs = "set, records"
+output = "one field per question, each record"
+help = "Fill out a question set for every record"
+
+[[function]]
+name = "decide_many"
+inputs = "question, records"
+output = "one answer each record, in input order"
+help = "Ask of every record, once, keeping every judgment in input order"
+
+[[function]]
+name = "details"
+inputs = "question, text"
+output = "the judgment, its model, its digest, and the sends behind it"
+help = "One judgment plus the audit trail"
+
+[[function]]
+name = "usage"
+inputs = "none"
+output = "sends, cache answers, and tokens since the last reset"
+help = "The counters since the last reset"
+
+[[function]]
+name = "question"
+inputs = "the question's parts"
+output = "a built question any verb accepts"
+help = "Build a question from parts, once, and pass it to any verb"
+
+[[function]]
+name = "reset_usage"
+inputs = "none"
+output = "nothing"
+help = "Zero the counters"
+
+# Temporary: the maintainability test's throwaway function, 2026-09-21.
+# It is removed with the test; its help line is throwaway, not public
+# vocabulary.
+[[function]]
+name = "probe"
+inputs = "text"
+output = "the text, unchanged"
+help = "Return the text unchanged, for testing"

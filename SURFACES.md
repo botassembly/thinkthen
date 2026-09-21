@@ -52,10 +52,18 @@ a verb, add one, or spell a bulk form the contract does not carry.
    takes) enforced at the engine.
 3. Add its cases to `conformance/conformance.json`, once, in the file's own
    grammar. Every surface inherits them by reading the one file.
-4. Each surface grows the verb in its own spelling of the same name. If the
-   repeated parts across surfaces feel heavy, generate them from one table
-   of functions: name, inputs, output, and the help line — the
-   maintainability test in the surfaces brief says when.
+4. Add the function to `functions.toml`: name, inputs, output, and the
+   help line. The eight verbs take their help lines from the public
+   vocabulary; a helper's line is authored there.
+5. Run `scripts/generate_functions.py`. It rewrites the two name lists
+   that are pure name lists — `libraries/python/src/generated.rs`, the
+   pyo3 registration, and `libraries/typescript/index.mjs`, the ESM
+   re-export face. `scripts/check_surfaces.sh` runs the same script with
+   `--check`, so a forgotten regeneration fails the tree.
+6. Each surface grows the verb in its own spelling of the same name, by
+   hand: a function's body has its own shape per verb and each binding's
+   signature its own types. The maintainability test of 2026-09-21
+   measured both paths; its record is `NOTES-maintainability.md`.
 
 ## What the check script runs
 
