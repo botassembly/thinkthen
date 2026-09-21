@@ -6,7 +6,7 @@ opens: transforms/sweep transforms/README.md demos/13-pick-a-threshold sdlc/plan
 
 # 0048: Sweep decision rows by record group
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -66,3 +66,11 @@ Re-score if implementation adds another transform, duplicates sweep arithmetic, 
 ## Review
 
 The independent design review rejected the first draft because it left the earlier `tag` and `annotate` sweep promise unowned, described two absent validations as existing behavior, rejected the valid empty JSON Pointer, proposed an independence test that would trip the repeated-id guard, and tried to add words to a page already near its limit. This rewrite assigns answer-group sweeps to the next ticket and both plans, treats the `jq -n` guard as new work, matches RFC 6901, gives added rows fresh ids, and requires the page to replace or trim text.
+
+The independent code review rejected the first implementation because `/` incorrectly behaved like the empty JSON Pointer. The repair preserves one empty reference token, so `/` selects an object member named `""` while the empty pointer still selects the whole row. The same reviewer reran the focused test, probed escaped and trailing-empty tokens, and accepted the repair with no remaining finding.
+
+## Result
+
+`sweep.jq` now accepts `--arg group POINTER` for detailed decision rows. It orders string-valued groups lexically and runs the unchanged decision sweep inside each group, with no pooled winner. A wrong whole-run invocation now fails with a fixed message naming `jq -n`.
+
+The focused proof covers independent picks, group isolation when thirty fresh rows enter another group, empty input, current missing and non-string id behavior, choice and score refusal, error secrecy, and RFC 6901 root, empty-name, escaped, trailing-empty, malformed, missing, null, and non-string cases. Valid ungrouped fixtures remain byte-identical. How-to 13 is 102 lines and 858 words. The focused checks, all four repository rungs, and `git diff --check` pass on the rebased branch. No live or paid call ran.
