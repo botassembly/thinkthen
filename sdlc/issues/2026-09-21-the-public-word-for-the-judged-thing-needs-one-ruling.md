@@ -1,6 +1,6 @@
 # The public word for the judged thing needs one ruling
 
-Status: Open
+Status: Closed on 2026-09-21 by Ian's ruling. The public word is "evidence": it is precise, already shipped in the help, README, and specification, and the marketing vocabulary adopted it the same day (`mktg` commit 3bffb5c). The shipped help and pages need no sweep.
 
 The vocabulary fixes "text" for what a question is asked about. The help, the README, and the specification say "evidence," in over a hundred places. The vocabulary was written to stop two spellings of one concept, and this is the largest one left.
 
