@@ -1,0 +1,25 @@
+[package]
+name = 'thinkthen'
+publish = false
+version = '0.0.1'
+edition = '2021'
+rust-version = '1.80'
+
+[lib]
+crate-type = [ 'rlib', 'staticlib' ]
+name = 'thinkthen'
+
+[[bin]]
+name = 'document'
+path = 'document.rs'
+
+[dependencies]
+extendr-api = '0.8'
+thinkthen-contract = { path = '../../../../../contract' }
+thinkthen-standin = { path = '../../../../../standin' }
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[workspace]

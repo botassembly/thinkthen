@@ -1,0 +1,22 @@
+Package: thinkthen
+Type: Package
+Title: The ThinkThen Verbs for R
+Version: 0.0.1
+Authors@R: person("Ian", "Maurer", role = c("aut", "cre"), email = "imaurer@gmail.com")
+Description: One engine under ten surfaces: the eight verbs (decide,
+    choose, score, tag, filter, rank, find, annotate) with a tt_ prefix.
+    A column goes in and a column comes out. NA is "not sure". A bulk
+    call crosses into the engine once and runs at the engine's width.
+    Errors carry one of six kinds and a retry signal.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends:
+    R (>= 4.2)
+Imports:
+    jsonlite
+Suggests:
+    dplyr
+Config/rextendr:
+    version = 0.5.0
+SystemRequirements: Cargo, rustc
+RoxygenNote: 7.3.1
