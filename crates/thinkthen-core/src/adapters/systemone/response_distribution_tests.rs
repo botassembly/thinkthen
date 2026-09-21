@@ -5,6 +5,7 @@ use crate::adapters::systemone::DecodeError;
 use crate::adapters::systemone::tests::{disruption_plan, team_plan};
 use crate::answer::Value;
 use crate::probability::Probability;
+use crate::reply::AnswerOutcome;
 
 fn choice_with(values: [f64; 4]) -> String {
     let [v0, v1, v2, v3] = values;
@@ -58,7 +59,7 @@ fn systemone_accepts_one_hundredth_on_both_sides_and_preserves_members() {
     ] {
         let reply = decode(&team_plan(), choice_with(values).as_bytes())
             .expect("System One rounds to hundredths");
-        let [answer] = reply.answers() else {
+        let [AnswerOutcome::Answered(answer)] = reply.outcomes() else {
             panic!("one answer");
         };
         assert_eq!(
@@ -78,7 +79,7 @@ fn systemone_accepts_one_hundredth_on_both_sides_and_preserves_members() {
     ] {
         let reply =
             decode(&disruption_plan(), score_with(values).as_bytes()).expect("a rounded score");
-        let [answer] = reply.answers() else {
+        let [AnswerOutcome::Answered(answer)] = reply.outcomes() else {
             panic!("one answer");
         };
         assert_eq!(

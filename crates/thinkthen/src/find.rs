@@ -158,10 +158,9 @@ fn rendered(
     replayed: bool,
     request: &str,
 ) -> Result<(Option<String>, bool), Failure> {
-    let answer = reply
-        .answers()
-        .first()
-        .ok_or(Failure::Defect("the adapter answered no question"))?;
+    let [thinkthen_core::AnswerOutcome::Answered(answer)] = reply.outcomes() else {
+        return Err(Failure::Defect("the adapter answered no question"));
+    };
     let selected = find
         .select(answer)
         .map_err(|_| Failure::Defect("a find choice could not be mapped"))?;

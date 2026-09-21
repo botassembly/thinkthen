@@ -30,8 +30,35 @@ fn a_mixed_reply_preserves_its_valid_logical_answer() {
         r#""q2":{"type":"choice","probabilities":{"yes":1.0}}}}"#,
     );
     let reply = decode(&plan, body.as_bytes()).expect("one valid answer makes this partial");
-    assert_eq!(reply.answers().len(), 1);
-    assert_eq!(reply.outcomes().len(), 2);
+    assert!(matches!(
+        reply.outcomes(),
+        [AnswerOutcome::Answered(_), AnswerOutcome::Failed(_)]
+    ));
+}
+
+#[test]
+fn the_key_order_of_an_answers_object_carries_nothing() {
+    let plan = plan_for("Help!", &["is urgent", "asks for a refund"]);
+    let body = concat!(
+        r#"{"answers":{"q2":{"type":"noul","noul":0.25},"#,
+        r#""q1":{"type":"noul","noul":0.75}},"model":"jev-latest"}"#
+    );
+    let reply = decode(&plan, body.as_bytes()).expect("a systemone response");
+    let [
+        AnswerOutcome::Answered(first),
+        AnswerOutcome::Answered(second),
+    ] = reply.outcomes()
+    else {
+        panic!("one answer per planned question");
+    };
+    assert_eq!(
+        serde_json::to_string(first).expect("an answer"),
+        r#"{"kind":"yes_no","probability":0.75}"#
+    );
+    assert_eq!(
+        serde_json::to_string(second).expect("an answer"),
+        r#"{"kind":"yes_no","probability":0.25}"#
+    );
 }
 
 #[test]
@@ -54,7 +81,7 @@ fn a_response_decodes_without_usage_and_past_unknown_fields() {
     );
     let reply = decode(&urgency_plan(), body.as_bytes()).expect("a systemone response");
     assert_eq!(reply.model().as_str(), "jev-1.13.0");
-    assert_eq!(reply.answers().len(), 1);
+    assert!(matches!(reply.outcomes(), [AnswerOutcome::Answered(_)]));
     assert_eq!(reply.usage(), None);
 }
 

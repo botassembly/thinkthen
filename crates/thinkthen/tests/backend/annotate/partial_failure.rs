@@ -5,6 +5,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
+use thinkthen_core::Url;
+use thinkthen_core::recording::Exchange as Recorded;
 
 fn questions(name: &str, body: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate-partial");
@@ -14,7 +16,7 @@ fn questions(name: &str, body: &str) -> PathBuf {
     path
 }
 
-fn run(file: &Path, response: &str, details: bool) -> io::Result<std::process::Output> {
+fn run(file: &Path, response: &str, details: bool) -> io::Result<(Listener, std::process::Output)> {
     let listener = Listener::serving(vec![Canned::ok(response)])?;
     let file = file.to_string_lossy();
     let mut arguments = vec![
@@ -28,11 +30,12 @@ fn run(file: &Path, response: &str, details: bool) -> io::Result<std::process::O
     if details {
         arguments.push("--details");
     }
-    spawn(
+    let output = spawn(
         &arguments,
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"The invoice failed.",
-    )
+    )?;
+    Ok((listener, output))
 }
 
 #[test]
@@ -47,7 +50,7 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
         r#""q3":{"type":"noul","noul":0.5}},"usage":{"input_tokens":9,"output_tokens":3}}"#,
     );
 
-    let bare = run(&file, response, false)?;
+    let (_, bare) = run(&file, response, false)?;
     assert_eq!(bare.status.code(), Some(6));
     assert!(bare.stderr.is_empty());
     assert_eq!(
@@ -55,25 +58,41 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
         "{\"good\":true,\"failed\":{\"failed\":{\"kind\":\"backend\",\"cause\":\"wrong_kind\"}},\"not_sure\":null}\n"
     );
 
-    let detailed = run(&file, response, true)?;
+    let (listener, detailed) = run(&file, response, true)?;
     assert_eq!(detailed.status.code(), Some(6));
     assert!(detailed.stderr.is_empty());
-    let row = String::from_utf8_lossy(&detailed.stdout);
-    assert!(row.contains(r#""failed_questions":1"#), "{row}");
-    assert!(row.contains(r#""not_sure":null"#), "{row}");
-    let failed = row
-        .split(r#""failed":{"question"#)
-        .nth(1)
-        .and_then(|tail| tail.split(r#"},"not_sure"#).next());
-    assert!(failed.is_some(), "{row}");
-    let failed = failed.unwrap_or_default();
-    assert!(
-        failed.contains(r#"{"verb":"decide","text":"failed?"},"failure":{"kind":"backend","cause":"wrong_kind"},"request":"#),
-        "{failed}"
+    let row: serde_json::Value = serde_json::from_slice(&detailed.stdout)?;
+    assert_eq!(row["value"]["not_sure"], serde_json::Value::Null);
+    assert_eq!(row["meta"]["model"], "local-1");
+    assert_eq!(row["meta"]["usage"]["input_tokens"], 9);
+    assert_eq!(row["meta"]["usage"]["output_tokens"], 3);
+    assert_eq!(row["meta"]["failed_questions"], 1);
+
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let url = Url::new(listener.url()).map_err(|error| io::Error::other(error.to_string()))?;
+    let request = Recorded::new(&url, &requests[0].body).digest();
+    let request = request.as_str();
+    assert_eq!(row["meta"]["requests"], serde_json::json!([request]));
+    for name in ["good", "failed", "not_sure"] {
+        assert_eq!(row["answers"][name]["request"], request);
+    }
+
+    let failed = row["answers"]["failed"]
+        .as_object()
+        .ok_or_else(|| io::Error::other("the failed answer is not an object"))?;
+    assert_eq!(
+        failed.keys().map(String::as_str).collect::<Vec<_>>(),
+        ["failure", "question", "request"]
     );
-    assert!(!failed.contains(r#""value""#), "{failed}");
-    assert!(!failed.contains(r#""answer""#), "{failed}");
-    assert!(!failed.contains(r#""threshold""#), "{failed}");
+    assert_eq!(
+        failed["question"],
+        serde_json::json!({"verb": "decide", "text": "failed?"})
+    );
+    assert_eq!(
+        failed["failure"],
+        serde_json::json!({"kind": "backend", "cause": "wrong_kind"})
+    );
     Ok(())
 }
 
@@ -88,7 +107,7 @@ fn one_bad_tag_member_fails_one_logical_question() -> io::Result<()> {
         r#""q2":{"type":"noul","noul":0.8},"q3":{"type":"score","probabilities":{"0":1.0}}}}"#,
     );
 
-    let output = run(&file, response, true)?;
+    let (_, output) = run(&file, response, true)?;
     assert_eq!(output.status.code(), Some(6));
     let row = String::from_utf8_lossy(&output.stdout);
     assert!(row.contains(r#""failed_questions":1"#), "{row}");
@@ -110,7 +129,7 @@ fn a_group_with_no_valid_answer_remains_a_backend_failure() -> io::Result<()> {
         r#""q2":{"type":"choice","probabilities":{"x":1.0}}}}"#,
     );
 
-    let output = run(&file, response, false)?;
+    let (_, output) = run(&file, response, false)?;
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
     assert_eq!(

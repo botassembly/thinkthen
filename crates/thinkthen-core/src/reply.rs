@@ -10,7 +10,6 @@ use crate::text::ModelName;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Reply {
     model: ModelName,
-    answers: Vec<Answer>,
     outcomes: Vec<AnswerOutcome>,
     usage: Option<Usage>,
 }
@@ -22,14 +21,8 @@ impl Reply {
         outcomes: Vec<AnswerOutcome>,
         usage: Option<Usage>,
     ) -> Self {
-        let answers = outcomes
-            .iter()
-            .filter_map(AnswerOutcome::answered)
-            .cloned()
-            .collect();
         Self {
             model,
-            answers,
             outcomes,
             usage,
         }
@@ -39,12 +32,6 @@ impl Reply {
     #[must_use]
     pub const fn model(&self) -> &ModelName {
         &self.model
-    }
-
-    /// Read the answers back, one per planned question, in plan order.
-    #[must_use]
-    pub fn answers(&self) -> &[Answer] {
-        &self.answers
     }
 
     /// Read every logical outcome in plan order, including partial failures.

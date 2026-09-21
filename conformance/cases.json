@@ -1,7 +1,7 @@
 {
   "schema": "thinkthen.conformance/1",
   "backend_url": "https://api.typesafe.ai/v1/systemone",
-  "case_count": 26,
+  "case_count": 27,
   "error_kinds": [
     "usage",
     "backend",
@@ -1254,6 +1254,174 @@
               }
             ]
           }
+        }
+      }
+    },
+    {
+      "id": "17-annotate-mixed",
+      "verb": "annotate",
+      "question_set": {
+        "version": 1,
+        "questions": {
+          "refund": {
+            "decide": "Does this ask for a refund?",
+            "threshold": 0.5
+          },
+          "team": {
+            "choose": "Which team owns this?",
+            "options": [
+              "billing",
+              "other"
+            ],
+            "threshold": 0.5
+          },
+          "severity": {
+            "score": "How severe is this?",
+            "levels": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "topics": {
+            "tag": "Which labels apply?",
+            "labels": [
+              "billing",
+              "urgent"
+            ],
+            "threshold": 0.5
+          }
+        }
+      },
+      "exchanges": [
+        {
+          "provenance": {
+            "kind": "synthetic_contract"
+          },
+          "evidence": "Refund requested for a failed payment.",
+          "request": "{\"state\":\"Refund requested for a failed payment.\",\"model\":\"jev-latest\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does this ask for a refund?\"},\"q2\":{\"type\":\"choice\",\"instructions\":\"Which team owns this?\",\"criteria\":{\"billing\":null,\"other\":null}},\"q3\":{\"type\":\"score\",\"instructions\":\"How severe is this?\",\"criteria\":[\"low\",\"medium\",\"high\"]},\"q4\":{\"type\":\"noul\",\"instructions\":\"Which labels apply?\\n\\nDetermine whether the label \\\"billing\\\" applies to this item.\"},\"q5\":{\"type\":\"noul\",\"instructions\":\"Which labels apply?\\n\\nDetermine whether the label \\\"urgent\\\" applies to this item.\"}}}",
+          "response": {
+            "model": "jev-latest",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.9
+              },
+              "q2": {
+                "type": "choice",
+                "probabilities": {
+                  "billing": 0.8,
+                  "other": 0.2
+                }
+              },
+              "q3": {
+                "type": "score",
+                "probabilities": {
+                  "0": 0.1,
+                  "1": 0.6,
+                  "2": 0.3
+                }
+              },
+              "q4": {
+                "type": "noul",
+                "noul": 0.8
+              },
+              "q5": {
+                "type": "noul",
+                "noul": 0.6
+              }
+            },
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 2
+            }
+          }
+        }
+      ],
+      "expect": {
+        "success": {
+          "kind": "annotate",
+          "answers": [
+            {
+              "exchange": 0,
+              "name": "refund",
+              "bare": true,
+              "details": {
+                "answer": {
+                  "kind": "yes_no",
+                  "probability": 0.9
+                },
+                "model": "jev-latest",
+                "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
+                "requests": [
+                  "2ab0234c19bf75e4f4b5cdac9d3b1a02dbbd1f3b4958d65842aa1e836c8fd207"
+                ]
+              }
+            },
+            {
+              "exchange": 0,
+              "name": "team",
+              "bare": "billing",
+              "details": {
+                "answer": {
+                  "kind": "choice",
+                  "pick": "billing",
+                  "probabilities": {
+                    "billing": 0.8,
+                    "other": 0.2
+                  }
+                },
+                "model": "jev-latest",
+                "question_sha256": "2b57330b142981e4f8bf3cb45bb4c16718d34dea40b22bec4353af5e376142da",
+                "requests": [
+                  "2ab0234c19bf75e4f4b5cdac9d3b1a02dbbd1f3b4958d65842aa1e836c8fd207"
+                ]
+              }
+            },
+            {
+              "exchange": 0,
+              "name": "severity",
+              "bare": 1.2,
+              "details": {
+                "answer": {
+                  "kind": "score",
+                  "level": "medium",
+                  "probabilities": {
+                    "low": 0.1,
+                    "medium": 0.6,
+                    "high": 0.3
+                  }
+                },
+                "model": "jev-latest",
+                "question_sha256": "a3d5a2fd4692aa7d687be18d8cb439f3297eb29e08c35837b524be21d73bee49",
+                "requests": [
+                  "2ab0234c19bf75e4f4b5cdac9d3b1a02dbbd1f3b4958d65842aa1e836c8fd207"
+                ]
+              }
+            },
+            {
+              "exchange": 0,
+              "name": "topics",
+              "bare": [
+                "billing",
+                "urgent"
+              ],
+              "details": {
+                "answer": {
+                  "kind": "tag",
+                  "probabilities": {
+                    "billing": 0.8,
+                    "urgent": 0.6
+                  }
+                },
+                "model": "jev-latest",
+                "question_sha256": "361888f9cb60704a8c7f1a380d8a51a8515fb7b13120c02d21477956da800dd3",
+                "requests": [
+                  "2ab0234c19bf75e4f4b5cdac9d3b1a02dbbd1f3b4958d65842aa1e836c8fd207"
+                ]
+              }
+            }
+          ]
         }
       }
     },

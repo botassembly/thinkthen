@@ -281,10 +281,10 @@ mod tests {
     use super::decode;
     use crate::adapters::systemone::DecodeError;
     use crate::adapters::systemone::tests::{
-        LEVELS, TEAMS, disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
+        LEVELS, TEAMS, disruption_plan, tag_plan, team_plan, urgency_plan,
     };
-    use crate::answer::Answer;
     use crate::probability::Probability;
+    use crate::reply::AnswerOutcome;
     use crate::result::Usage;
 
     const RESPONSE: &str =
@@ -311,7 +311,7 @@ mod tests {
     fn decode_reads_the_answer_the_fixture_shows() {
         let reply = decode(&urgency_plan(), RESPONSE.as_bytes()).expect("a systemone response");
         assert_eq!(reply.model().as_str(), "jev-latest");
-        let [answer] = reply.answers() else {
+        let [AnswerOutcome::Answered(answer)] = reply.outcomes() else {
             panic!("one answer per planned question");
         };
         assert_eq!(
@@ -324,7 +324,7 @@ mod tests {
     #[test]
     fn a_choice_answer_is_read_back_in_the_order_the_options_were_sent() {
         let reply = decode(&team_plan(), CHOOSE.as_bytes()).expect("a systemone response");
-        let [answer] = reply.answers() else {
+        let [AnswerOutcome::Answered(answer)] = reply.outcomes() else {
             panic!("one answer per planned question");
         };
         let distribution = answer
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn a_score_answer_is_read_by_level_number_and_keyed_by_the_level_text() {
         let reply = decode(&disruption_plan(), SCORE.as_bytes()).expect("a systemone response");
-        let [answer] = reply.answers() else {
+        let [AnswerOutcome::Answered(answer)] = reply.outcomes() else {
             panic!("one answer per planned question");
         };
         let distribution = answer
@@ -359,7 +359,7 @@ mod tests {
     fn tag_answers_are_aggregated_in_label_order() {
         let body = br#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.2},"q2":{"type":"noul","noul":0.91}}}"#;
         let reply = decode(&tag_plan(), body).expect("a tag response");
-        let [answer] = reply.answers() else {
+        let [AnswerOutcome::Answered(answer)] = reply.outcomes() else {
             panic!("one logical tag answer");
         };
         assert_eq!(
@@ -466,22 +466,6 @@ mod tests {
             ),
             "{missing}"
         );
-    }
-
-    #[test]
-    fn the_key_order_of_an_answers_object_carries_nothing() {
-        let plan = plan_for("Help!", &["is urgent", "asks for a refund"]);
-        let body = concat!(
-            r#"{"answers":{"q2":{"type":"noul","noul":0.25},"#,
-            r#""q1":{"type":"noul","noul":0.75}},"model":"jev-latest"}"#
-        );
-        let reply = decode(&plan, body.as_bytes()).expect("a systemone response");
-        let [first, second] = reply.answers() else {
-            panic!("one answer per planned question");
-        };
-        let rendered = |answer: &Answer| serde_json::to_string(answer).expect("an answer");
-        assert_eq!(rendered(first), r#"{"kind":"yes_no","probability":0.75}"#);
-        assert_eq!(rendered(second), r#"{"kind":"yes_no","probability":0.25}"#);
     }
 
     #[test]

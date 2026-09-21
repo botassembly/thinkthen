@@ -413,12 +413,10 @@ impl Judging<'_> {
             &self.recorder,
             &self.client,
         )?;
-        let answer = answered
-            .reply
-            .answers()
-            .first()
-            .ok_or(Failure::Defect("the adapter answered no question"))?
-            .clone();
+        let [thinkthen_core::AnswerOutcome::Answered(answer)] = answered.reply.outcomes() else {
+            return Err(Failure::Defect("the adapter answered no question"));
+        };
+        let answer = answer.clone();
         let (value, outcome) = answer.read(self.threshold);
         let probability = answer.yes();
         let printed = if self.view.details {

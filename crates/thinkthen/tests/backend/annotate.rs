@@ -258,6 +258,7 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
     let row = String::from_utf8_lossy(&first.stdout);
     assert!(row.contains(r#""questions_sha256":"#), "{row}");
     assert!(row.contains(r#""replayed":false"#), "{row}");
+    assert!(row.contains(r#""failed_questions":0"#), "{row}");
     assert!(row.contains(r#""answers":{"risky":{"value":true"#), "{row}");
 
     let mut replayed = base.to_vec();

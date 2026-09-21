@@ -39,7 +39,7 @@ ACCEPTED_DEPENDENCIES = {
     "thinkthen": {"clap", "csv-core", "thinkthen-core", "ureq"},
     "thinkthen-core": {"serde", "serde_json", "sha2", "thiserror"},
 }
-ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": set(), "thinkthen-core": {"proptest"}}
+ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": {"serde_json"}, "thinkthen-core": {"proptest"}}
 MAX_FILE_LINES = 500
 INHERITED = {"workspace": True}
 

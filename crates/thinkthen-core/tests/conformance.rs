@@ -11,8 +11,8 @@ use std::collections::BTreeSet;
 use thinkthen_core::adapters::systemone;
 use thinkthen_core::recording::Exchange as Recorded;
 use thinkthen_core::{
-    Cutting, Evidence, Find, ModelName, Plan, QuestionFile, QuestionSet, QuestionText, Threshold,
-    Typed, Url, Value, Verb, question_sha256, ranking, resolve,
+    AnswerOutcome, Cutting, Evidence, Find, ModelName, Plan, QuestionFile, QuestionSet,
+    QuestionText, Threshold, Typed, Url, Value, Verb, question_sha256, ranking, resolve,
 };
 
 const CASES: &str = include_str!("../../../conformance/cases.json");
@@ -287,10 +287,9 @@ fn validate_operation(
             let asked = find_asked(case)?;
             let reply = systemone::decode(&asked.plan, exchange.response.get().as_bytes())
                 .map_err(|error| error.to_string())?;
-            let answer = reply
-                .answers()
-                .first()
-                .ok_or_else(|| "find has no answer".to_owned())?;
+            let [AnswerOutcome::Answered(answer)] = reply.outcomes() else {
+                return Err("find has no answer".to_owned());
+            };
             conformance_support::find(
                 raw,
                 &finding(case)?
