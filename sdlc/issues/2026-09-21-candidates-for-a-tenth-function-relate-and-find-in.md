@@ -55,3 +55,21 @@ The article multiplies the model's probabilities together, so an error in each o
 ## What Ian can overturn
 
 All of it.
+
+## How `relate` asks, ruled with Ian on 2026-09-21
+
+Ian asked that `relate` be organized around choices. It is. The rules and the kinds produce the list of legal pairs, and each pair becomes one pick-one question, the way `annotate` turns a form into questions.
+
+- One question per unordered pair. The options carry the direction: "A works for B", "B works for A", and "no relation". That halves the questions against asking each ordered pair.
+- The options for a pair are only the relations its two kinds allow. A pair with no legal relation is never asked.
+- All the pairs of one text ride in one request, up to the backend's question limit, so the text is paid for once.
+- The ends are the **subject** (`from`) and the **object** (`to`). The relation name is the predicate.
+
+Two things the experiment must measure before this is settled:
+
+1. **A pick-one question allows one relation per pair.** A person can work for a company and also have founded it. The cheap default stays pick-one. The experiment measures how often real pairs carry two relations, and what a yes-or-no question per relation costs in its place.
+2. **The cheaper form for a large set.** When a subject has at most one object, such as `works_for`, ask one question per subject with every candidate object as an option plus "none". That costs one question per record where pairs cost the square. It is the same form as `find --in`. The experiment compares accuracy and cost of both forms at 10, 50, and 200 records.
+
+## Assigning a kind is already its own function
+
+`recognize` is three steps: find the names, give each a kind, relate them. Ian asked whether the middle step should stand alone. It already does. Giving a label to a stretch of text is `choose`: `thinkthen choose "What kind of thing is 'Chicago' here?" person organization place < hire.txt`. No new verb is proposed. The three steps stay separate inside the core, and the public surface stays `recognize` and, later, `relate`. A `recognize` that takes names the user already found, and skips the first step, waits until someone asks for it.
