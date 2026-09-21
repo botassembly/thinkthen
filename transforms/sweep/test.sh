@@ -10,6 +10,7 @@ cmp decision-expected.json "$work/decision.json"
 : > "$work/empty.jsonl"
 jq -n -f sweep.jq "$work/empty.jsonl" > "$work/decision-empty.json"
 cmp decision-empty-expected.json "$work/decision-empty.json"
+sh grouped-test.sh
 
 jq -n -c '
   def row($id; $label; $value; $pick; $red; $blue):
