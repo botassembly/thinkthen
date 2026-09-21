@@ -1,10 +1,17 @@
 # sweep.jq — what every meaningful cut would have done.
 #
-# Reads: one detailed decide, choose, or score run, one JSON object per line.
+# Reads: one detailed decide, choose, score, tag, or annotate run, one JSON
+#   object per line.
 # Run it with `jq -n -f sweep.jq ROWS`. The whole run is held in memory.
 # Argument: optional `--arg group POINTER`. It fits one decision cut inside
 #   each string-valued record group at that RFC 6901 JSON Pointer. Groups are
 #   ordered by name. Choice and score rows do not have an automatic cut to fit.
+# Argument: optional `--arg truth POINTER` on tag rows, or `--argjson truth
+#   MAP` on annotate rows. The pointer or map locates trusted human labels in
+#   each whole result row. Tag labels and mapped annotate answers get separate
+#   reports through the same decision and choice arithmetic used below.
+#   Missing or null truth stays unlabeled. Present malformed truth fails.
+#   `group` and `truth` cannot be combined.
 # The grid is the 19 cuts from 0.05 to 0.95, a twentieth
 #   apart. jq has no optional argument, so a grid given on the command line
 #   would have to be given on every call. Another grid is a one-line edit here.
@@ -81,6 +88,25 @@ def pointer_value($row; $path):
     else null
     end
   );
+
+def truth_path($pointer):
+  if ($pointer | type) != "string" or ($pointer != "" and (($pointer | startswith("/")) | not)) then
+    error("sweep: truth must contain RFC 6901 JSON Pointers")
+  elif $pointer == "" then []
+  else
+    ($pointer | split("/") | .[1:]) as $parts
+    | if any($parts[]; test("~([^01]|$)")) then
+        error("sweep: truth must contain RFC 6901 JSON Pointers")
+      else
+        [$parts[] | gsub("~1"; "/") | gsub("~0"; "~")]
+      end
+  end;
+
+def validate_case_ids($rows; $shape):
+  if all($rows[]; (.input | type) == "object" and (.input.id | type) == "string")
+  then $rows else error("sweep: \($shape) rows must carry a string case id") end
+  | if ([$rows[].input.id] | unique | length) == ($rows | length)
+    then $rows else error("sweep: \($shape) case ids must be unique") end;
 
 def decision_metrics($rows; $cut):
   reduce $rows[] as $row (
@@ -278,22 +304,173 @@ def score_report($rows):
   | {mode: "score", rows: ($rows | length), labeled: ($labeled | length), unlabeled: $unlabeled,
      levels: $levels, sweep: [range(1; $count) | score_metrics($labeled; .)]};
 
+def validate_tag_rows($rows):
+  validate_case_ids($rows; "tag") as $rows
+  | if all($rows[]; (.question | type) == "object" and .question.verb == "tag")
+    then . else error("sweep: tag rows must carry a tag question") end
+  | ($rows[0].question) as $question
+  | ($question.labels) as $labels
+  | if ($labels | type) == "array" and ($labels | length) > 0
+       and all($labels[]; type == "string") and (($labels | unique | length) == ($labels | length))
+       and all($rows[]; .question == $question)
+    then . else error("sweep: tag rows must carry one shared ordered label list") end
+  | ($rows[0].threshold) as $threshold
+  | if ($threshold | type) == "number" and $threshold >= 0 and $threshold <= 1
+       and all($rows[]; .threshold == $threshold)
+    then . else error("sweep: tag rows must carry one shared numeric threshold") end
+  | if all($rows[]; (.answer | type) == "object" and .answer.kind == "tag")
+    then . else error("sweep: tag rows must carry tag answers") end
+  | if all($rows[];
+      (.answer.probabilities | type) == "object"
+      and ((.answer.probabilities | keys) == ($labels | sort)))
+    then . else error("sweep: tag probabilities must have exactly the label keys") end
+  | if all($rows[];
+      .answer.probabilities as $p
+      | all($labels[]; ($p[.] | type) == "number" and $p[.] >= 0 and $p[.] <= 1))
+    then . else error("sweep: tag probabilities must be numbers from zero through one") end
+  | if all($rows[];
+      .answer.probabilities as $p
+      | (.value | type) == "array"
+      and .value == [$labels[] | select($p[.] >= $threshold)])
+    then . else error("sweep: a tag value must equal labels at or above its threshold") end
+  | {rows:$rows, labels:$labels};
+
+def tag_report($rows; $cuts; $pointer; $nested):
+  truth_path($pointer) as $path
+  | validate_tag_rows($rows) as $valid
+  | [$valid.rows[] | {row:., truth:(if $nested then .input.label else pointer_value(.; $path) end)}] as $truths
+  | if all($truths[];
+      .truth as $truth
+      | if $truth == null then true
+        elif ($truth | type) != "array" then false
+        else (($truth | unique | length) == ($truth | length))
+             and all($truth[]; . as $label | ($label | type) == "string"
+                     and (($valid.labels | index($label)) != null))
+        end)
+    then . else error("sweep: tag truth must contain unique known labels") end
+  | [
+      $valid.labels[] as $label
+      | [$truths[]
+         | .truth as $truth
+         | .row
+         | .input.label = (if $truth == null then null else ($truth | index($label)) != null end)
+         | .answer = {kind:"yes_no", probability:.answer.probabilities[$label]}]
+        as $adapted
+      | {label:$label} + decision_report($adapted; $cuts)
+    ] as $labels
+  | if $nested then {rows:($rows | length), labels:$labels}
+    else {mode:"tag", truth:$pointer, rows:($rows | length), labels:$labels}
+    end;
+
+def validate_annotate_rows($rows):
+  validate_case_ids($rows; "annotate") as $rows
+  | if all($rows[]; (.value | type) == "object" and (.answers | type) == "object"
+                    and ((.value | keys) == (.answers | keys)))
+    then . else error("sweep: annotate rows must carry matching value and answer names") end
+  | ($rows[0].answers | keys) as $names
+  | if all($rows[]; (.answers | keys) == $names)
+    then . else error("sweep: annotate rows must carry one shared set of answer names") end
+  | if all($rows[]; (.meta.questions_sha256 | type) == "string"
+                    and (.meta.questions_sha256 | test("^[0-9a-f]{64}$")))
+       and ([$rows[].meta.questions_sha256] | unique | length) == 1
+    then . else error("sweep: annotate rows must carry one valid question-set digest") end
+  | {rows:$rows, names:$names};
+
+def annotate_answer_rows($rows; $name; $path):
+  [$rows[]
+   | pointer_value(.; $path) as $truth
+   | .answers[$name] as $nested
+   | {input:(.input + {label:$truth}), value:$nested.value,
+      question:$nested.question, threshold:$nested.threshold, answer:$nested.answer}];
+
+def validate_annotate_answer($rows; $name):
+  if all($rows[]; (.answers[$name] | type) == "object"
+                  and (.answers[$name].question | type) == "object"
+                  and (.answers[$name].answer | type) == "object")
+    then . else error("sweep: annotate rows must carry complete mapped answers") end
+  | if all($rows[]; .answers[$name].value == .value[$name])
+    then . else error("sweep: an annotate answer must equal its outer value") end
+  | if ([$rows[].answers[$name].question] | unique | length) == 1
+       and ([$rows[].answers[$name].threshold] | unique | length) == 1
+       and ([$rows[].answers[$name].answer.kind] | unique | length) == 1
+    then . else error("sweep: a mapped annotate answer must keep one definition") end
+  | ($rows[0].answers[$name]) as $first
+  | if (($first.question.verb == "decide" and $first.answer.kind == "yes_no")
+        or ($first.question.verb == "choose" and $first.answer.kind == "choice")
+        or ($first.question.verb == "tag" and $first.answer.kind == "tag"))
+    then . else error("sweep: an annotate question verb must match its answer kind") end
+  | $first;
+
+def annotate_report($rows; $cuts; $truth):
+  if ($truth | type) != "object" or ($truth | length) == 0
+       or (all($truth[]; type == "string") | not)
+    then error("sweep: annotate truth must be a nonempty object of JSON Pointers")
+  else . end
+  | validate_annotate_rows($rows) as $valid
+  | if all(($truth | keys)[]; . as $name | ($valid.names | index($name)) != null)
+    then . else error("sweep: annotate truth names an unknown question") end
+  | (reduce ($truth | to_entries[]) as $mapping (
+      {};
+      truth_path($mapping.value) as $path
+      | ($valid.rows[0].answers[$mapping.key].answer.kind) as $kind
+      | (if (["yes_no","choice","tag"] | index($kind)) == null
+         then error("sweep: annotate truth accepts decide, choose, or tag answers only")
+         else validate_annotate_answer($valid.rows; $mapping.key)
+         end) as $first
+      | annotate_answer_rows($valid.rows; $mapping.key; $path) as $adapted
+      | .[$mapping.key] = (
+          if $first.answer.kind == "yes_no" then
+            if all($adapted[]; .input.label == null or (.input.label | type) == "boolean")
+            then {verb:"decide"} + decision_report($adapted; $cuts)
+            else error("sweep: decision truth must be boolean") end
+          elif $first.answer.kind == "choice" then
+            if all($adapted[]; .input.label as $label
+                 | $label == null or
+                   (($label | type) == "string" and (($first.question.options | index($label)) != null)))
+            then {verb:"choose"} + (choice_report($adapted; $cuts) | del(.mode))
+            else error("sweep: choice truth must name a listed option") end
+          elif $first.answer.kind == "tag" then
+            {verb:"tag"} + tag_report($adapted; $cuts; $mapping.value; true)
+          else error("sweep: annotate truth accepts decide, choose, or tag answers only")
+          end
+        )
+    )) as $questions
+  | {mode:"annotate", truth:$truth, rows:($rows | length), questions:$questions};
+
 if . != null then error("sweep: read rows from files with jq -n")
 else
   [inputs] as $rows
   | [range(1; 20) | . / 20 | . * 100 | round | . / 100] as $cuts
   | ($ARGS.named | has("group")) as $is_grouped
-  | if has_repeated_ids($rows) then error("metric: repeated case ids; run trials.jq first")
+  | ($ARGS.named | has("truth")) as $has_truth
+  | if $is_grouped and $has_truth then error("sweep: group and truth cannot be used together")
+    elif $has_truth and ($rows | length) == 0 then error("sweep: truth requires a nonempty run")
     elif ($rows | length) > 0 and (all($rows[]; type == "object") | not) then
       error("sweep: every row must be an object")
-    elif ($rows | length) > 0 and (all($rows[]; (.answer | type) == "object") | not) then
-      error("sweep: every row must carry an answer object")
+    elif $has_truth then
+      if all($rows[]; (.answers | type) == "object") then
+        if ($ARGS.named.truth | type) == "object" then annotate_report($rows; $cuts; $ARGS.named.truth)
+        else error("sweep: annotate truth must be a nonempty object of JSON Pointers") end
+      elif all($rows[]; (.answer | type) == "object" and .answer.kind == "tag") then
+        if ($ARGS.named.truth | type) == "string" then tag_report($rows; $cuts; $ARGS.named.truth; false)
+        else error("sweep: tag truth must be an RFC 6901 JSON Pointer") end
+      else error("sweep: truth accepts tag or annotate rows only")
+      end
+    elif has_repeated_ids($rows) then error("metric: repeated case ids; run trials.jq first")
     elif $is_grouped then
-      if ($rows | length) > 0 and
-         (([$rows[].answer.kind] | unique) != ["yes_no"])
+      if ($rows | length) > 0 and (all($rows[]; (.answer | type) == "object") | not) then
+        error("sweep: every row must carry an answer object")
+      elif ($rows | length) > 0 and
+           (([$rows[].answer.kind] | unique) != ["yes_no"])
       then error("sweep: grouped mode accepts decision rows only")
       else grouped_decision_report($rows; $cuts; $ARGS.named.group)
       end
+    elif ($rows | length) > 0 and all($rows[]; (.answers | type) == "object") then
+      error("sweep: annotate rows require --argjson truth MAP")
+    elif ($rows | length) > 0 and (all($rows[]; (.answer | type) == "object") | not) then
+      error("sweep: every row must carry an answer object")
+    elif ($rows | length) > 0 and all($rows[]; .answer.kind == "tag") then
+      error("sweep: tag rows require --arg truth POINTER")
     elif ($rows | length) == 0 then decision_report($rows; $cuts)
     else
       [$rows[].answer.kind] | unique as $kinds

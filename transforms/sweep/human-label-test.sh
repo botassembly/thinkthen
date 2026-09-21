@@ -23,7 +23,7 @@ jq -c '{keys:(keys_unsorted),mode,truth,rows,
         labels:[.labels[]|{keys:(keys_unsorted),label,rows,labeled,unlabeled,pick}]}' \
   "$work/tag-report.json" > "$work/tag-summary.json"
 cat > "$work/tag-expected.json" <<'EOF'
-{"keys":["mode","truth","rows","labels"],"mode":"tag","truth":"/input/human_tags","rows":4,"labels":[{"keys":["label","rows","labeled","unlabeled","pick","sweep"],"label":"billing","rows":4,"labeled":3,"unlabeled":["four"],"pick":{"cut":0.85,"accuracy":0.6667,"f1":0.6667,"tied_cuts":[0.85,0.9],"rule":"the highest F1, and the middle cut of the cuts that tie"}},{"keys":["label","rows","labeled","unlabeled","pick","sweep"],"label":"urgent","rows":4,"labeled":3,"unlabeled":["four"],"pick":{"cut":0.4,"accuracy":1,"f1":1,"tied_cuts":[0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7],"rule":"the highest F1, and the middle cut of the cuts that tie"}}]}
+{"keys":["mode","truth","rows","labels"],"mode":"tag","truth":"/input/human_tags","rows":4,"labels":[{"keys":["label","rows","labeled","unlabeled","pick","sweep"],"label":"billing","rows":4,"labeled":3,"unlabeled":["four"],"pick":{"cut":0.9,"accuracy":1,"f1":1,"tied_cuts":[0.85,0.9],"rule":"the highest F1, and the middle cut of the cuts that tie"}},{"keys":["label","rows","labeled","unlabeled","pick","sweep"],"label":"urgent","rows":4,"labeled":3,"unlabeled":["four"],"pick":{"cut":0.55,"accuracy":1,"f1":1,"tied_cuts":[0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7],"rule":"the highest F1, and the middle cut of the cuts that tie"}}]}
 EOF
 cmp "$work/tag-expected.json" "$work/tag-summary.json"
 
@@ -44,10 +44,10 @@ jq -c '
 truth='{"correct":"/input/human_correct","failure_kind":"/input/human_failure","topics":"/input/human_tags"}'
 jq -n --argjson truth "$truth" -f sweep.jq "$work/annotate.jsonl" > "$work/annotate-report.json"
 jq -c '{keys:(keys_unsorted),mode,truth,rows,
-        questions:(.questions|to_entries|map({name:.key,keys:(.value|keys_unsorted),value:.value
-          | if .verb=="tag" then {verb,rows,labels:[.labels[]|{label,rows,labeled,unlabeled}]}
+        questions:(.questions|to_entries|map({name:.key,keys:(.value|keys_unsorted),
+          value:(.value | if .verb=="tag" then {verb,rows,labels:[.labels[]|{label,rows,labeled,unlabeled}]}
             elif .verb=="choose" then {verb,rows,labeled,unlabeled,options}
-            else {verb,rows,labeled,unlabeled,pick} end}))}' \
+            else {verb,rows,labeled,unlabeled,pick} end)}))}' \
   "$work/annotate-report.json" > "$work/annotate-summary.json"
 cat > "$work/annotate-expected.json" <<'EOF'
 {"keys":["mode","truth","rows","questions"],"mode":"annotate","truth":{"correct":"/input/human_correct","failure_kind":"/input/human_failure","topics":"/input/human_tags"},"rows":6,"questions":[{"name":"correct","keys":["verb","rows","labeled","unlabeled","pick","sweep"],"value":{"verb":"decide","rows":6,"labeled":6,"unlabeled":[],"pick":{"cut":0.6,"accuracy":1,"f1":1,"tied_cuts":[0.55,0.6],"rule":"the highest F1, and the middle cut of the cuts that tie"}}},{"name":"failure_kind","keys":["verb","rows","labeled","unlabeled","options","sweep"],"value":{"verb":"choose","rows":6,"labeled":6,"unlabeled":[],"options":["none","wrong_fact","unsupported","incomplete"]}},{"name":"topics","keys":["verb","rows","labels"],"value":{"verb":"tag","rows":6,"labels":[{"label":"safe","rows":6,"labeled":6,"unlabeled":[]},{"label":"wrong","rows":6,"labeled":6,"unlabeled":[]}]}}]}
