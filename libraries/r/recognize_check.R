@@ -106,6 +106,17 @@ strict <- tt_relate(alerts$body, relations = "caused_by", threshold = 0.9)
 check("the bar keeps the 0.94 edge", identical(as.integer(strict$source[[1]]), 1L) &&
   identical(as.integer(strict$target[[1]]), 4L))
 
+# A saved question file carries the relate spec too.
+links_file <- tempfile(fileext = ".json")
+writeLines(paste0('{"relate": {"relations": [',
+                  '{"name": "caused_by", "from": "*", "to": "*"}, ',
+                  '{"name": "same_as", "from": "*", "to": "*", "either": true}]}}'), links_file)
+from_links <- tt_relate(alerts$body, relations = paste0("@", links_file))
+check("a links file answers the same four edges", nrow(from_links) == 4L)
+check("the links file's first edge", identical(from_links$name[[1]], "caused_by") &&
+  identical(as.integer(from_links$source[[1]]), 1L) &&
+  isTRUE(all.equal(from_links$probability[[1]], 0.59)))
+
 # More than 255 records refuses with the usage kind, before anything else.
 refused <- tryCatch(tt_relate(rep("one alert", 256), relations = "caused_by"),
                     thinkthen_error = function(e) e)

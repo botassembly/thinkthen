@@ -143,15 +143,15 @@ keeps the 0.94 edge, mirroring the deck's Python comment.
 **The outputs, as printed:**
 
 ```
-recognize acceptance: 32 checks passed
+recognize acceptance: 34 checks passed
 conformance slice green for the R surface   (64 ok, 3 diverge, 5 skip)
 width: 1000 records, wall 9.662 s
 stub: requests 1000 max_in_flight 32 connections 33
 ```
 
 **The refusals, proven:** the question-file form runs too
-(`tt_recognize(body, "@file.json")` carries the spec from the file's own
-`recognize` section); 256 records refuse with the usage kind naming
+(`tt_recognize(body, "@file.json")` and `tt_relate(records,
+"@links.json")` carry the spec from the file's own section); 256 records refuse with the usage kind naming
 255 and the count; an unrecorded text, an unrecorded rule, and a named
 end outside the asked kinds each answer the usage condition; NA evidence
 gives an empty frame and keeps the column's length; relate refuses NA
