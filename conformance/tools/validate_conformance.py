@@ -72,6 +72,8 @@ data = json.load(open("conformance.json"))
 check(data["schema"] == "thinkthen.conformance/1", "schema")
 check(set(data["error_kinds"]) == KINDS, "error_kinds must be the six")
 check(data["case_count"] == len(data["cases"]), "case_count")
+ids = [c["id"] for c in data["cases"]]
+check(len(set(ids)) == len(ids), "case ids unique")
 
 def check_question(q, verb_of_case, where=""):
     keys = set(q)
@@ -239,9 +241,10 @@ def check_recognize_case(c):
     check(isinstance(q["kinds"], list) and 1 <= len(q["kinds"]) <= 20, f"{c['id']} kinds 1..20")
     check(len(set(q["kinds"])) == len(q["kinds"]), f"{c['id']} kinds repeat")
     for rule in q["relations"]:
-        check(set(rule) <= {"name", "from", "to", "either"}, f"{c['id']} rule keys")
+        check(set(rule) <= {"name", "source", "target", "either"},
+              f"{c['id']} rule keys: source and target, never from/to")
         check(bool(rule.get("name")), f"{c['id']} rule name")
-        for end in (rule.get("from", ""), rule.get("to", "")):
+        for end in (rule.get("source", ""), rule.get("target", "")):
             check(isinstance(end, str) and end != "", f"{c['id']} rule end written")
             check(end == "*" or end in q["kinds"], f"{c['id']} rule end among the kinds")
     for key in ("threshold", "relation_threshold"):
@@ -283,9 +286,10 @@ def check_relate_case(c):
     check(isinstance(c["records"], list) and 1 <= len(c["records"]) <= 255, f"{c['id']} records 1..255")
     names = set()
     for rule in q["relations"]:
-        check(set(rule) <= {"name", "from", "to", "either"}, f"{c['id']} rule keys")
+        check(set(rule) <= {"name", "source", "target", "either"},
+              f"{c['id']} rule keys: source and target, never from/to")
         check(bool(rule.get("name")), f"{c['id']} rule name")
-        for end in (rule.get("from", ""), rule.get("to", "")):
+        for end in (rule.get("source", ""), rule.get("target", "")):
             check(end == "*", f"{c['id']} relate rules are any-kind against these recordings")
         names.add(rule["name"])
     check(0 <= q["threshold"] <= 1, f"{c['id']} threshold range")

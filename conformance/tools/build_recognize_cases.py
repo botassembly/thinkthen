@@ -56,17 +56,18 @@ SYNTH_NAME = "Maria Chen"
 
 
 def ruled_entity(entity):
-    """The recording's entity in the ruled host shape: `number` for the
-    recorded number. The marketing vocabulary page restricts `confidence`
-    to Jev's literal detailed-output field, so the interim host name is
-    `number` until the recognize team's comparison settles it."""
+    """The recording's entity in the ruled host shape: `strength` for the
+    recorded number. Ian settled the field name on 2026-09-21 (the rule of
+    sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md):
+    the number is ours, computed, and the vendor's `confidence` is a
+    different thing that passes under details only."""
     return {
         "id": entity["id"],
         "text": entity["text"],
         "kind": entity["kind"],
         "start": entity["start"],
         "end": entity["end"],
-        "number": entity["confidence"],
+        "strength": entity["confidence"],
     }
 
 
@@ -145,7 +146,7 @@ def build_recognize():
             if rule not in RULE_ENDS:
                 raise SystemExit(f"{cid}: rule {rule} has no recorded ends")
             first, second = RULE_ENDS[rule]
-            relations.append({"name": rule, "from": first, "to": second})
+            relations.append({"name": rule, "source": first, "target": second})
         derived = []
         for entry in pairs:
             pick = entry["pick"]
@@ -337,7 +338,7 @@ def build_relate():
                     for option in entry["options"]
                     if rule_of(option) == name
                 )
-            rule = {"name": name, "from": "*", "to": "*"}
+            rule = {"name": name, "source": "*", "target": "*"}
             if either:
                 rule["either"] = True
             relations.append(rule)
@@ -363,10 +364,10 @@ def build_relate():
             "requests": cache,
             "pairs": len(entries),
             "exchanges": [],
+            "form": form,
             "expect": {"edges": derived},
         }
         if form == "per-subject":
-            case["form"] = "per-subject"
             case["note"] = (
                 "measured per-subject form; the ruled relate asks pairs, and this "
                 "text's pairs recording (R04) is what the stand-in serves"

@@ -1613,13 +1613,13 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      },
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -1682,13 +1682,13 @@
     "relations": [
      {
       "name": "founded",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      },
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -1922,8 +1922,8 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      }
     ],
     "threshold": 0.5,
@@ -2018,13 +2018,13 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      },
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -2072,13 +2072,13 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      },
      {
       "name": "founded",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      }
     ],
     "threshold": 0.5,
@@ -2132,8 +2132,8 @@
     "relations": [
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -2189,13 +2189,13 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      },
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -2382,8 +2382,8 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      }
     ],
     "threshold": 0.5,
@@ -2451,8 +2451,8 @@
     "relations": [
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -2524,8 +2524,8 @@
     "relations": [
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -2653,8 +2653,8 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      }
     ],
     "threshold": 0.5,
@@ -2722,8 +2722,8 @@
     "relations": [
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -2771,8 +2771,8 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      }
     ],
     "threshold": 0.5,
@@ -2892,8 +2892,8 @@
     "relations": [
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -2974,8 +2974,8 @@
     "relations": [
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -3054,8 +3054,8 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      }
     ],
     "threshold": 0.5,
@@ -3193,8 +3193,8 @@
     "relations": [
      {
       "name": "located_in",
-      "from": "*",
-      "to": "place"
+      "source": "*",
+      "target": "place"
      }
     ],
     "threshold": 0.5,
@@ -3346,18 +3346,18 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      },
      {
       "name": "based_in",
-      "from": "organization",
-      "to": "place"
+      "source": "organization",
+      "target": "place"
      },
      {
       "name": "founded",
-      "from": "person",
-      "to": "organization"
+      "source": "person",
+      "target": "organization"
      }
     ],
     "threshold": 0.5,
@@ -3501,13 +3501,13 @@
     "relations": [
      {
       "name": "caused_by",
-      "from": "*",
-      "to": "*"
+      "source": "*",
+      "target": "*"
      },
      {
       "name": "same_as",
-      "from": "*",
-      "to": "*",
+      "source": "*",
+      "target": "*",
       "either": true
      }
     ],
@@ -3519,6 +3519,7 @@
    ],
    "pairs": 6,
    "exchanges": [],
+   "form": "pairs",
    "expect": {
     "edges": [
      {
@@ -3582,13 +3583,13 @@
     "relations": [
      {
       "name": "founded",
-      "from": "*",
-      "to": "*"
+      "source": "*",
+      "target": "*"
      },
      {
       "name": "works_for",
-      "from": "*",
-      "to": "*"
+      "source": "*",
+      "target": "*"
      }
     ],
     "threshold": 0.5
@@ -3598,6 +3599,7 @@
    ],
    "pairs": 12,
    "exchanges": [],
+   "form": "pairs",
    "expect": {
     "edges": [
      {
@@ -3689,8 +3691,8 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "*",
-      "to": "*"
+      "source": "*",
+      "target": "*"
      }
     ],
     "threshold": 0.5
@@ -3700,6 +3702,7 @@
    ],
    "pairs": 5,
    "exchanges": [],
+   "form": "per-subject",
    "expect": {
     "edges": [
      {
@@ -3734,7 +3737,6 @@
      }
     ]
    },
-   "form": "per-subject",
    "note": "measured per-subject form; the ruled relate asks pairs, and this text's pairs recording (R04) is what the stand-in serves"
   },
   {
@@ -3757,8 +3759,8 @@
     "relations": [
      {
       "name": "works_for",
-      "from": "*",
-      "to": "*"
+      "source": "*",
+      "target": "*"
      }
     ],
     "threshold": 0.5
@@ -3768,6 +3770,7 @@
    ],
    "pairs": 25,
    "exchanges": [],
+   "form": "pairs",
    "expect": {
     "edges": [
      {
@@ -3831,8 +3834,7 @@
       "probability": 0.93
      }
     ]
-   },
-   "form": "pairs"
+   }
   }
  ]
 }
