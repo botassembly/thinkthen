@@ -136,7 +136,7 @@
             "answers": {
               "q1": {
                 "type": "noul",
-                "noul": 0.55
+                "noul": 0.2
               }
             },
             "usage": {
@@ -157,7 +157,7 @@
               "details": {
                 "answer": {
                   "kind": "yes_no",
-                  "probability": 0.55
+                  "probability": 0.2
                 },
                 "model": "jev-latest",
                 "question_sha256": "140d9dec19d7747dbc4cf3dc254dfb0e4b0eac5c0cd5426506eb0eb20789f3c3",
@@ -189,7 +189,7 @@
             "answers": {
               "q1": {
                 "type": "noul",
-                "noul": 0.91
+                "noul": 0.8
               }
             },
             "usage": {
@@ -210,7 +210,7 @@
               "details": {
                 "answer": {
                   "kind": "yes_no",
-                  "probability": 0.91
+                  "probability": 0.8
                 },
                 "model": "jev-latest",
                 "question_sha256": "140d9dec19d7747dbc4cf3dc254dfb0e4b0eac5c0cd5426506eb0eb20789f3c3",

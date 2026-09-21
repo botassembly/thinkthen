@@ -424,7 +424,9 @@ impl Judging<'_> {
         let answer = answer.clone();
         let (value, outcome) = answer.read(self.threshold);
         let probability = answer.yes();
-        let printed = if self.view.details {
+        let printed = if self.view.details
+            && (self.keeping != Keeping::Passing || outcome == Outcome::Yes)
+        {
             let meta = Meta::new(
                 env!("CARGO_PKG_VERSION"),
                 question_sha256(&sending.question, self.threshold)?,

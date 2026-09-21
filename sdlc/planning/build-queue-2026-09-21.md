@@ -8,6 +8,7 @@ Ian can overturn any placement here.
 
 - Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).
 - Landed: 0055, the move to one package through the private engine. Its final review accepted the repaired engine ownership, conformance proof, worker lifetime, doctests, and core boundary enforcement.
+- Landed: 0056. Detailed filtering now keeps only passing records, ranked details keep the same `--top` membership, and a band's exact low edge is `not sure`.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
@@ -16,10 +17,12 @@ Ian can overturn any placement here.
 
 **A1. The command-layer fixes. Safe beside 0055 only where they avoid the files 0055 changed. Otherwise first after it.**
 
+Ticket 0056 completed the first two rows below. The remaining rows keep their order.
+
 | Fix | Source issue | Product ruling |
 | --- | --- | --- |
 | `filter --details` prints only the kept records | `2026-09-21-filter-details-must-still-filter` | Ruled by Ian. Details never change which records print. Wave 1.5 checked 30 cells and found no other command with this fault |
-| The low edge of a band includes the value that reaches it | `the-low-edge-of-a-band-excludes-the-value-that-reaches-it` | The specification's "boundaries are inclusive" sentence wins. 0.1 under band 0.1:0.9 answers the same as under cut 0.1 |
+| The low edge of a band includes the value that reaches it | `the-low-edge-of-a-band-excludes-the-value-that-reaches-it` | The specification's "boundaries are inclusive" sentence wins. A probability at the low edge is `not sure`; one below it is `no` |
 | Exit 6 is told one way | `exit-6-and-partial-failure-are-told-two-ways` | The binary and the three pages win. Exit 6 means some questions failed and the good answers printed. Fix the one page that says the code is unused, and add 6 to every exit-code table |
 | Record mode and exit 0 | `record-mode-always-exits-0-and-the-help-never-says-so` | Keep it. With many records no single yes or no exists to report, so 0 means every record got an answer. The help says so in the first screen for `decide`, and the `set -e` warning names it. A gate belongs on one text or on `filter` plus a count. A how-to shows both |
 | The help shows its defaults | `the-help-hides-the-defaults-a-user-assumes-wrong` | Threshold 0.5, jobs 4, and the other three appear in `--help` |

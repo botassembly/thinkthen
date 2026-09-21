@@ -14,11 +14,11 @@ Let p be the probability of yes.
 | --- | --- | --- | --- | --- |
 | none given | | p ≥ 0.5 | p < 0.5 | never |
 | `--threshold T` | 0 < T ≤ 1 | p ≥ T | p < T | never |
-| `--threshold LOW:HIGH` | 0 ≤ LOW < HIGH ≤ 1 | p ≥ HIGH | p ≤ LOW | LOW < p < HIGH |
+| `--threshold LOW:HIGH` | 0 ≤ LOW < HIGH ≤ 1 | p ≥ HIGH | p < LOW | LOW ≤ p < HIGH |
 
-Boundaries are inclusive. A value meets its mark when it reaches it.
+The high boundary is inclusive. The low boundary belongs to the unresolved side, so a value below LOW is no and a value at LOW is unresolved.
 
-A cut of 0 is refused because every probability would reach it and every answer would be yes. A band low of 0 is accepted because the low side is inclusive, so a probability of exactly 0 is still a no.
+A cut of 0 is refused because every probability would reach it and every answer would be yes. A band low of 0 is accepted because a probability of exactly 0 is unresolved unless it also reaches HIGH.
 
 A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. `--threshold 0.5` and no threshold at all name the same rule.
 
@@ -29,12 +29,12 @@ The rule has a second home. A question file holds it under `threshold`, and a `-
 | p | none given | `--threshold 0.9` | `--threshold 0.1:0.9` |
 | --- | --- | --- | --- |
 | 0 | no | no | no |
-| 0.1 | no | no | no |
+| 0.1 | no | no | unresolved |
 | 0.5 | yes | no | unresolved |
 | 0.9 | yes | yes | yes |
 | 1 | yes | yes | yes |
 
-Under `--threshold 0.1:0.9`, p of 0.1 is a no because the low side is inclusive, and p of 0.5 is unresolved because it sits strictly inside the band.
+Under `--threshold 0.1:0.9`, p of 0.1 is unresolved because it reaches the low edge, and p of 0.5 is unresolved because it sits inside the band.
 
 ## A single cut never says the model is sure
 

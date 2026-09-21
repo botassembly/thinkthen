@@ -54,8 +54,8 @@ impl Outcome {
 /// The rule a judgment is read under.
 ///
 /// A single cut answers yes or no and never leaves an answer unresolved. A band
-/// answers yes at or above the high side, no at or below the low side, and
-/// leaves the middle unresolved. Boundaries are inclusive.
+/// answers yes at or above the high side, no below the low side, and leaves
+/// the middle unresolved. The low edge is unresolved and the high edge is yes.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Threshold(Rule);
 
@@ -136,7 +136,7 @@ impl Threshold {
             Rule::Band { low, high } => {
                 if probability >= high {
                     Outcome::Yes
-                } else if probability <= low {
+                } else if probability < low {
                     Outcome::No
                 } else {
                     Outcome::Unresolved
@@ -216,7 +216,7 @@ mod tests {
             (0.9, cut, Outcome::Yes),
             (1.0, cut, Outcome::Yes),
             (0.0, band, Outcome::No),
-            (0.1, band, Outcome::No),
+            (0.1, band, Outcome::Unresolved),
             (0.5, band, Outcome::Unresolved),
             (0.9, band, Outcome::Yes),
             (1.0, band, Outcome::Yes),
@@ -325,10 +325,10 @@ mod tests {
             };
             let outcome = threshold.judge(answer(probability));
             prop_assert_eq!(outcome == Outcome::Yes, probability >= high);
-            prop_assert_eq!(outcome == Outcome::No, probability <= low);
+            prop_assert_eq!(outcome == Outcome::No, probability < low);
             prop_assert_eq!(
                 outcome == Outcome::Unresolved,
-                probability > low && probability < high
+                probability >= low && probability < high
             );
         }
 

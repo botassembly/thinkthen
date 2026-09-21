@@ -20,7 +20,7 @@ A stream of records. `filter` requires `--lines`, `--jsonl`, `--csv`, or `--tsv`
 
 Each kept line or JSONL record prints as it arrived, in input order. A kept CSV or TSV row prints as one compact JSON object in header order. A record that did not reach the mark prints nothing.
 
-`--details` prints the object in [result.md](result.md) for every record, kept or not, in input order. A pipeline that must keep every record uses `--details` and splits with `jq`.
+`--details` prints the object in [result.md](result.md) for each kept record, in input order. It does not change which records `filter` keeps. A pipeline that needs every record with its answer uses `decide --details` and splits with `jq`.
 
 ## Options
 
@@ -29,7 +29,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | `--threshold T` | A single cut on the probability of yes. The band form is a usage error. See [threshold.md](threshold.md) | `0.5` |
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing. One of the four is required | None. Its absence is a usage error |
 | `--field POINTER` | The part of each record the model sees. See [records.md](records.md) | The whole record |
-| `--details` | Prints one result object per record in place of the kept records | Off |
+| `--details` | Prints one result object per kept record in place of the kept records | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
@@ -59,7 +59,7 @@ thinkthen filter 'This mentions an unresolved action.' --lines --threshold 0.9 <
 ```
 
 ```sh
-thinkthen filter 'This reports a payment failure.' --jsonl --field /body --details < tickets.jsonl |
+thinkthen decide 'This reports a payment failure.' --jsonl --field /body --details < tickets.jsonl |
   jq -c 'select(.answer.probability < 0.9)'
 ```
 
