@@ -162,7 +162,7 @@ pub(crate) fn recognize(ask: &Recognize, text: &str) -> Result<Recognized, Error
             kind: entity.kind.clone(),
             start: entity.start,
             end: entity.end,
-            number: entity.confidence,
+            strength: entity.confidence,
         })
         .collect();
     let mut relations = Vec::new();

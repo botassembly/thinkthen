@@ -870,16 +870,14 @@ pub struct Entity {
     pub start: usize,
     /// One past the last code point of the name.
     pub end: usize,
-    /// The number on a name, computed from several of Jev's numbers: the
-    /// least of the word probabilities times the mean of the kind
-    /// probabilities, per the rule of
+    /// The strength of a name: a number we compute — the least of the word
+    /// probabilities times the mean of the kind probabilities — defined once
+    /// in the manual, with its parts under details, per
     /// `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`.
-    /// The interim field name; the end state may be a true `probability` —
-    /// the lowest reported number behind the name — if the recognize team's
-    /// free comparison gates as well, and the field may change by one word.
-    /// The vendor's own `confidence` passes through under details only,
-    /// under its own name, and nothing gates on it.
-    pub number: f64,
+    /// Settled by Ian on 2026-09-21: the field is `strength`. The vendor's
+    /// own `confidence` passes through under details only, under its own
+    /// name, and nothing gates on it.
+    pub strength: f64,
 }
 
 /// One relation between two names, by entity id.
@@ -1998,7 +1996,7 @@ mod tests {
                 kind: "person".into(),
                 start: 0,
                 end: 10,
-                number: 0.98,
+                strength: 0.98,
             }],
             relations: vec![super::Relation {
                 name: "works_for".into(),
@@ -2011,7 +2009,7 @@ mod tests {
         assert!(json.contains("\"source\":1"), "{json}");
         assert!(json.contains("\"target\":2"), "{json}");
         assert!(json.contains("\"probability\":0.94"), "{json}");
-        assert!(json.contains("\"number\":0.98"), "{json}");
+        assert!(json.contains("\"strength\":0.98"), "{json}");
         assert!(!json.contains("\"from\""), "{json}");
         assert!(!json.contains("\"to\""), "{json}");
         assert!(!json.contains("\"confidence\""), "the restricted word stays out: {json}");

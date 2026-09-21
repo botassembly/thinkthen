@@ -1639,7 +1639,7 @@
       "kind": "person",
       "start": 0,
       "end": 10,
-      "number": 0.98
+      "strength": 0.98
      },
      {
       "id": 2,
@@ -1647,7 +1647,7 @@
       "kind": "organization",
       "start": 18,
       "end": 35,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 3,
@@ -1655,7 +1655,7 @@
       "kind": "place",
       "start": 39,
       "end": 46,
-      "number": 0.6693
+      "strength": 0.6693
      }
     ],
     "relations": [
@@ -1708,7 +1708,7 @@
       "kind": "person",
       "start": 0,
       "end": 12,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -1716,7 +1716,7 @@
       "kind": "organization",
       "start": 21,
       "end": 33,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": [
@@ -1755,7 +1755,7 @@
       "kind": "organization",
       "start": 4,
       "end": 23,
-      "number": 0.9801
+      "strength": 0.9801
      }
     ],
     "relations": []
@@ -1813,7 +1813,7 @@
       "kind": "other",
       "start": 18,
       "end": 34,
-      "number": 0.98
+      "strength": 0.98
      },
      {
       "id": 2,
@@ -1821,7 +1821,7 @@
       "kind": "organization",
       "start": 60,
       "end": 74,
-      "number": 0.7524
+      "strength": 0.7524
      }
     ],
     "relations": []
@@ -1854,7 +1854,7 @@
       "kind": "person",
       "start": 17,
       "end": 29,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -1862,7 +1862,7 @@
       "kind": "organization",
       "start": 54,
       "end": 65,
-      "number": 0.5523
+      "strength": 0.5523
      }
     ],
     "relations": []
@@ -1895,7 +1895,7 @@
       "kind": "place",
       "start": 0,
       "end": 7,
-      "number": 0.8277
+      "strength": 0.8277
      },
      {
       "id": 2,
@@ -1903,7 +1903,7 @@
       "kind": "place",
       "start": 40,
       "end": 47,
-      "number": 0.8613
+      "strength": 0.8613
      }
     ],
     "relations": []
@@ -1966,7 +1966,7 @@
       "kind": "organization",
       "start": 193,
       "end": 209,
-      "number": 0.7194
+      "strength": 0.7194
      }
     ],
     "relations": []
@@ -1998,7 +1998,7 @@
       "kind": "person",
       "start": 0,
       "end": 12,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": []
@@ -2044,7 +2044,7 @@
       "kind": "person",
       "start": 0,
       "end": 4,
-      "number": 0.88
+      "strength": 0.88
      },
      {
       "id": 2,
@@ -2052,7 +2052,7 @@
       "kind": "organization",
       "start": 34,
       "end": 51,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": []
@@ -2098,7 +2098,7 @@
       "kind": "person",
       "start": 0,
       "end": 5,
-      "number": 0.8712
+      "strength": 0.8712
      },
      {
       "id": 2,
@@ -2106,7 +2106,7 @@
       "kind": "organization",
       "start": 15,
       "end": 27,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": [
@@ -2153,7 +2153,7 @@
       "kind": "organization",
       "start": 0,
       "end": 17,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -2161,7 +2161,7 @@
       "kind": "place",
       "start": 42,
       "end": 48,
-      "number": 0.5015
+      "strength": 0.5015
      }
     ],
     "relations": [
@@ -2215,7 +2215,7 @@
       "kind": "person",
       "start": 0,
       "end": 10,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -2223,7 +2223,7 @@
       "kind": "organization",
       "start": 14,
       "end": 32,
-      "number": 0.8681
+      "strength": 0.8681
      },
      {
       "id": 3,
@@ -2231,7 +2231,7 @@
       "kind": "person",
       "start": 37,
       "end": 48,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 4,
@@ -2239,7 +2239,7 @@
       "kind": "place",
       "start": 52,
       "end": 58,
-      "number": 0.9009
+      "strength": 0.9009
      }
     ],
     "relations": [
@@ -2280,7 +2280,7 @@
       "kind": "other",
       "start": 19,
       "end": 31,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 2,
@@ -2288,7 +2288,7 @@
       "kind": "organization",
       "start": 50,
       "end": 64,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": []
@@ -2321,7 +2321,7 @@
       "kind": "organization",
       "start": 0,
       "end": 13,
-      "number": 0.89
+      "strength": 0.89
      },
      {
       "id": 2,
@@ -2329,7 +2329,7 @@
       "kind": "place",
       "start": 30,
       "end": 39,
-      "number": 0.96
+      "strength": 0.96
      }
     ],
     "relations": []
@@ -2362,7 +2362,7 @@
       "kind": "place",
       "start": 0,
       "end": 7,
-      "number": 0.9801
+      "strength": 0.9801
      }
     ],
     "relations": []
@@ -2403,7 +2403,7 @@
       "kind": "person",
       "start": 0,
       "end": 14,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -2411,7 +2411,7 @@
       "kind": "person",
       "start": 19,
       "end": 30,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 3,
@@ -2419,7 +2419,7 @@
       "kind": "organization",
       "start": 38,
       "end": 50,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": [
@@ -2471,7 +2471,7 @@
       "kind": "organization",
       "start": 0,
       "end": 17,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": []
@@ -2504,7 +2504,7 @@
       "kind": "place",
       "start": 29,
       "end": 33,
-      "number": 0.96
+      "strength": 0.96
      }
     ],
     "relations": []
@@ -2545,7 +2545,7 @@
       "kind": "organization",
       "start": 0,
       "end": 12,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 2,
@@ -2553,7 +2553,7 @@
       "kind": "place",
       "start": 33,
       "end": 42,
-      "number": 0.7
+      "strength": 0.7
      },
      {
       "id": 3,
@@ -2561,7 +2561,7 @@
       "kind": "organization",
       "start": 44,
       "end": 62,
-      "number": 0.99
+      "strength": 0.99
      }
     ],
     "relations": []
@@ -2594,7 +2594,7 @@
       "kind": "person",
       "start": 4,
       "end": 16,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 2,
@@ -2602,7 +2602,7 @@
       "kind": "other",
       "start": 26,
       "end": 40,
-      "number": 0.9867
+      "strength": 0.9867
      }
     ],
     "relations": []
@@ -2634,7 +2634,7 @@
       "kind": "place",
       "start": 19,
       "end": 31,
-      "number": 0.95
+      "strength": 0.95
      }
     ],
     "relations": []
@@ -2674,7 +2674,7 @@
       "kind": "person",
       "start": 0,
       "end": 11,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -2682,7 +2682,7 @@
       "kind": "person",
       "start": 16,
       "end": 30,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 3,
@@ -2690,7 +2690,7 @@
       "kind": "organization",
       "start": 45,
       "end": 57,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": [
@@ -2742,7 +2742,7 @@
       "kind": "organization",
       "start": 0,
       "end": 12,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 2,
@@ -2750,7 +2750,7 @@
       "kind": "organization",
       "start": 25,
       "end": 43,
-      "number": 0.9751
+      "strength": 0.9751
      }
     ],
     "relations": []
@@ -2791,7 +2791,7 @@
       "kind": "person",
       "start": 0,
       "end": 12,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -2799,7 +2799,7 @@
       "kind": "place",
       "start": 23,
       "end": 32,
-      "number": 0.98
+      "strength": 0.98
      }
     ],
     "relations": []
@@ -2832,7 +2832,7 @@
       "kind": "organization",
       "start": 61,
       "end": 75,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": []
@@ -2865,7 +2865,7 @@
       "kind": "organization",
       "start": 0,
       "end": 17,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 2,
@@ -2873,7 +2873,7 @@
       "kind": "person",
       "start": 149,
       "end": 161,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": []
@@ -2912,7 +2912,7 @@
       "kind": "place",
       "start": 31,
       "end": 39,
-      "number": 0.5978
+      "strength": 0.5978
      }
     ],
     "relations": []
@@ -2946,7 +2946,7 @@
       "kind": "organization",
       "start": 4,
       "end": 8,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -2954,7 +2954,7 @@
       "kind": "place",
       "start": 22,
       "end": 34,
-      "number": 0.9702
+      "strength": 0.9702
      }
     ],
     "relations": []
@@ -2995,7 +2995,7 @@
       "kind": "place",
       "start": 11,
       "end": 17,
-      "number": 0.91
+      "strength": 0.91
      },
      {
       "id": 2,
@@ -3003,7 +3003,7 @@
       "kind": "organization",
       "start": 23,
       "end": 35,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": []
@@ -3035,7 +3035,7 @@
       "kind": "organization",
       "start": 4,
       "end": 18,
-      "number": 0.985
+      "strength": 0.985
      }
     ],
     "relations": []
@@ -3075,7 +3075,7 @@
       "kind": "person",
       "start": 0,
       "end": 12,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 2,
@@ -3083,7 +3083,7 @@
       "kind": "person",
       "start": 14,
       "end": 28,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 3,
@@ -3091,7 +3091,7 @@
       "kind": "person",
       "start": 34,
       "end": 45,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 4,
@@ -3099,7 +3099,7 @@
       "kind": "organization",
       "start": 57,
       "end": 69,
-      "number": 1.0
+      "strength": 1.0
      }
     ],
     "relations": [
@@ -3150,7 +3150,7 @@
       "kind": "organization",
       "start": 4,
       "end": 28,
-      "number": 0.8877
+      "strength": 0.8877
      }
     ],
     "relations": []
@@ -3214,7 +3214,7 @@
       "kind": "place",
       "start": 14,
       "end": 18,
-      "number": 0.93
+      "strength": 0.93
      },
      {
       "id": 2,
@@ -3222,7 +3222,7 @@
       "kind": "place",
       "start": 22,
       "end": 27,
-      "number": 0.94
+      "strength": 0.94
      }
     ],
     "relations": []
@@ -3254,7 +3254,7 @@
       "kind": "person",
       "start": 0,
       "end": 14,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 2,
@@ -3262,7 +3262,7 @@
       "kind": "person",
       "start": 30,
       "end": 44,
-      "number": 0.99
+      "strength": 0.99
      }
     ],
     "relations": []
@@ -3294,7 +3294,7 @@
       "kind": "organization",
       "start": 0,
       "end": 14,
-      "number": 0.8979
+      "strength": 0.8979
      }
     ],
     "relations": []
@@ -3326,7 +3326,7 @@
       "kind": "person",
       "start": 10,
       "end": 22,
-      "number": 0.99
+      "strength": 0.99
      }
     ],
     "relations": []
@@ -3377,7 +3377,7 @@
       "kind": "person",
       "start": 0,
       "end": 12,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 2,
@@ -3385,7 +3385,7 @@
       "kind": "organization",
       "start": 21,
       "end": 33,
-      "number": 1.0
+      "strength": 1.0
      },
      {
       "id": 3,
@@ -3393,7 +3393,7 @@
       "kind": "place",
       "start": 37,
       "end": 46,
-      "number": 0.73
+      "strength": 0.73
      },
      {
       "id": 4,
@@ -3401,7 +3401,7 @@
       "kind": "person",
       "start": 48,
       "end": 62,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 5,
@@ -3409,7 +3409,7 @@
       "kind": "person",
       "start": 96,
       "end": 107,
-      "number": 0.99
+      "strength": 0.99
      },
      {
       "id": 6,
@@ -3417,7 +3417,7 @@
       "kind": "organization",
       "start": 111,
       "end": 129,
-      "number": 0.9065
+      "strength": 0.9065
      },
      {
       "id": 7,
@@ -3425,7 +3425,7 @@
       "kind": "place",
       "start": 152,
       "end": 158,
-      "number": 0.93
+      "strength": 0.93
      }
     ],
     "relations": [
@@ -3480,7 +3480,7 @@
       "kind": "person",
       "start": 10,
       "end": 20,
-      "number": 0.94
+      "strength": 0.94
      }
     ],
     "relations": []
@@ -3831,7 +3831,8 @@
       "probability": 0.93
      }
     ]
-   }
+   },
+   "form": "pairs"
   }
  ]
 }

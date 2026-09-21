@@ -90,7 +90,7 @@ fn expect_entity(value: &Value) -> Entity {
         kind: value["kind"].as_str().unwrap().to_owned(),
         start: value["start"].as_u64().unwrap() as usize,
         end: value["end"].as_u64().unwrap() as usize,
-        number: value["number"].as_f64().unwrap(),
+        strength: value["strength"].as_f64().unwrap(),
     }
 }
 
@@ -218,7 +218,7 @@ fn the_door_json_carries_the_ruled_names() {
     assert!(json.contains("\"source\":1"), "{json}");
     assert!(json.contains("\"target\":2"), "{json}");
     assert!(json.contains("\"probability\""), "{json}");
-    assert!(json.contains("\"number\""), "{json}");
+    assert!(json.contains("\"strength\""), "{json}");
     assert!(!json.contains("\"from\""), "{json}");
     assert!(!json.contains("\"to\""), "{json}");
     assert!(!json.contains("\"confidence\""), "{json}");
