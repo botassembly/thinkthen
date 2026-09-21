@@ -21,11 +21,13 @@ The command list reads best as one short line each. Two lines today are long and
 
 Both cautions are true and they matter. They belong in the long help, under the first line.
 
-Suggested first lines. Each doubles as the slide title and the table cell on the site:
+One rule for every first line, from Ian's reading of `choose` on 2026-09-21: "Pick one label from a fixed list makes sense. The print it part's weird." **A first line says what the verb does with the text. It never says "print", "return", or "set the exit code".** Every command prints, and the same line must serve the function in Python, SQL, and C, where nothing prints. What a surface prints or returns is the second line of that surface's help.
+
+Suggested first lines. Each doubles as the slide title, the table cell on the site, and the first line of each library's documentation:
 
 | Verb | Today | Suggested |
 | --- | --- | --- |
-| `decide` | Answer a yes/no question about the evidence and set the exit code | Answer one yes or no question about a text, and set the exit code |
+| `decide` | Answer a yes/no question about the evidence and set the exit code | Answer one yes or no question about a text |
 | `filter` | Keep the records that reach the mark | Keep the records where the answer is yes |
 | `rank` | The long line above | Sort records by how likely the answer is yes |
 | `choose` | Pick one label from a fixed list and print it | Pick one option from your list |
