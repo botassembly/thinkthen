@@ -20,7 +20,7 @@ One rule: **what goes in decides what comes out.** No new function names and no 
 - `recognize` on a DataFrame returns a long frame: one row per name, with the source row number. `relate` returns one row per edge.
 - `filter` and `rank` take a DataFrame with `on=` and return a DataFrame.
 - The install line is `pip install thinkthen[polars]`. Plain `pip install thinkthen` still works, and lists still work without Polars.
-- pandas is not supported and no page names it.
+- pandas: Ian ruled it is supported if it actually works. The checks that prove it are in `sdlc/issues/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md`. No public page names pandas until they pass.
 
 ## The slide's code
 
