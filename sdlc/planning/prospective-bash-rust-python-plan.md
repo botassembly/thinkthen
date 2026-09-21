@@ -16,15 +16,12 @@ The public surface stays eight verbs, question setup, and required types. Bash u
 
 ## Current state and accepted order
 
-Nineteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The correction pass, duplicate-cache coalescing, `find`, and the flagship triage page are complete. The remaining order is:
+Nineteen how-tos are green. The commands, JSONL output, CSV and TSV input, corrections, duplicate-cache coalescing, flagship page, and transforms are complete. Ticket 0050 declines a `report` verb and defers a read-only transform catalog until after the crate move. Ticket 0051 records the ADR 0017 build review. Job 2's DuckDB interrupt proof inside Python is complete. The order at this boundary is the amendment, Job 3's conformance cases, then the one-crate merge.
 
-1. **Finish `find`.** Done in ticket 0040. The preregistered 100- to 250-unit comparison passed, and how-to 15 is green from two reviewed recordings.
-2. **Finish transforms.** Tickets 0042 through 0049 built comparison, broad and grouped sweeps, repeated trials, monitoring, and human-label checks for `tag` and named `annotate` answers. Ticket 0050 records the verdict: the agent declines the separate `report` verb from the completed evidence, and Ian can overturn that decision. Release preparation will add a read-only transform catalog after the one-crate move. The behavior is complete.
-3. **Review accepted ADR 0017.** The experiment team applied Ian's interface, one-crate, engine, performance, fork, and release rulings after the blocking-engine run in `experiments/211-thinkthen-blocking-engine/` answered its four questions. Ian accepted the whole rewrite on 2026-09-21. The build team records and addresses its findings in ADR 0017, then Job 3 lands the conformance cases and Job 2 proves the DuckDB interrupt inside Python.
-4. **Build the engine in four steps.** After the review, Job 3, and Job 2, fold to one crate and move machinery without behavior changes; expose small Rust functions and shared replay cases; add process-wide width, cancellation, fork repair, and fast failure; then make cache locks and counters engine settings. The command remains the first caller. Every gate stays green after each step.
-5. **Prepare the command release.** Complete help, the manual, installation, the agent skill, and how-to 18.
+1. **Build the engine in four steps.** Step 1 folds to one crate through a private bounded event and error bridge. The command keeps arguments, credentials, framing, its detached reader, output, diagnostics, and exit codes. The engine owns scoped workers, scheduling, transport, recording, and cache locks. The move preserves retries and every command contract. Its gates plant the two core-purity failures, make every CLI dependency optional including `csv-core`, inspect a standalone no-default-features package and graph, keep core doctests, prove library unwind and command-only abort, and prove that no engine worker survives a call. Later steps expose Rust functions, add width, cancellation, fork repair, and fast failure, then move cache and counters into settings.
+2. **Prepare the command release.** Complete help, the manual, installation, the agent skill, how-to 18, and the read-only transform catalog.
 
-Stay with the blocking client and at most 32 request threads unless the step-three benchmark disproves it. A cancel starts no new request and lets sent requests finish. One record remains one logical judgment; equal digests send once when they share a cache. ADR review must land before the one-crate merge.
+Stay blocking and at no more than 32 request threads unless the step-three benchmark disproves it. A cancel starts no new request and lets sent requests finish. One record stays one judgment; equal digests send once when they share a cache.
 
 ## Libraries and extensions
 
