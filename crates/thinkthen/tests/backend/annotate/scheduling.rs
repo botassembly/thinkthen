@@ -44,7 +44,17 @@ fn folder(name: &str) -> PathBuf {
 }
 
 fn entries(path: &Path) -> usize {
-    fs::read_dir(path).map_or(0, Iterator::count)
+    fs::read_dir(path).map_or(0, |entries| {
+        entries
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .path()
+                    .extension()
+                    .is_some_and(|value| value == "json")
+            })
+            .count()
+    })
 }
 
 #[test]
@@ -221,6 +231,42 @@ fn a_cache_can_mix_replayed_and_live_groups_with_checked_usage() {
     );
     assert!(row.contains(r#""replayed":false"#), "{row}");
     assert_eq!(listener.requests().len(), 2);
+}
+
+#[test]
+fn annotate_equal_groups_share_one_cache_request() {
+    let cache = folder("annotate-equal-cache-digest");
+    let named = cache.to_string_lossy();
+    let file = grouped("one-shared-group", 1);
+    let answer = yes("local-1", 10, 2);
+    let listener = Listener::answering(move |_| Canned::ok(&answer).after(30)).expect("a listener");
+    let input = format!("{}\n{}\n", grouped_input(1, 1), grouped_input(1, 1));
+    let output = spawn(
+        &[
+            "annotate",
+            &file.to_string_lossy(),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--jsonl",
+            "--details",
+            "--cache",
+            &named,
+            "--jobs",
+            "32",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        input.as_bytes(),
+    )
+    .expect("annotate run");
+
+    assert_eq!(output.status.code(), Some(0));
+    let rows = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(rows.lines().count(), 2);
+    assert_eq!(rows.matches(r#""replayed":false"#).count(), 1);
+    assert_eq!(rows.matches(r#""replayed":true"#).count(), 1);
+    assert_eq!(listener.requests().len(), 1);
 }
 
 #[test]

@@ -18,6 +18,7 @@ use thinkthen_core::{
 };
 
 use crate::args::Common;
+use crate::cache_lock;
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::{Client, Exchange};
@@ -489,20 +490,28 @@ pub(crate) fn ask(
     let body = built_in::encode(plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let recorded = Recorded::new(backend.url(), &body);
-    if let Some(response) = recorder.replayed(&recorded)? {
-        return Ok((built_in::decode(plan, &response)?, true));
-    }
-    let key = edge::key()?;
-    let answered = client.post(&Exchange {
-        url: backend.url().as_str(),
-        body: &body,
-        key: &key,
-        max_retries: common.max_retries,
-        retry_wait: environment.retry_wait(),
-    })?;
-    let reply = built_in::decode(plan, &answered)?;
-    recorder.record(&recorded, &answered)?;
-    Ok((reply, false))
+    cache_lock::coalesce(
+        || {
+            let replayed = recorder.replayed(&recorded)?;
+            replayed
+                .map(|response| built_in::decode(plan, &response).map_err(Failure::from))
+                .transpose()
+        },
+        || recorder.lock(&recorded),
+        || {
+            let key = edge::key()?;
+            let answered = client.post(&Exchange {
+                url: backend.url().as_str(),
+                body: &body,
+                key: &key,
+                max_retries: common.max_retries,
+                retry_wait: environment.retry_wait(),
+            })?;
+            let reply = built_in::decode(plan, &answered)?;
+            recorder.record(&recorded, &answered)?;
+            Ok(reply)
+        },
+    )
 }
 
 /// Turn the outcome into the exit code `specification/channels.md` fixes.

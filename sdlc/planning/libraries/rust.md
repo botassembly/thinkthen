@@ -42,7 +42,7 @@ let dated: Vec<Note> = tt::filter("Names a delivery date.", notes)
 - **Generics all the way down.** A verb generic at every layer compiles the engine again at each call site. Keep it outermost over one inner function that is not generic.
 - **Rust has no barrier, so the waste is shape.** A slice, any `IntoIterator`, and any `Stream` reach the engine as borrowed `&str`. The widest container is the one the caller already holds.
 - **One future at a time.** `for` with `.await` inside sends one request and waits. The streaming verbs keep `jobs` futures in flight. `buffered` holds the width in input order, and `buffer_unordered` yields as answers land. Memory follows the width and not the length of the input, so an endless `Stream` runs flat.
-- **A map built before the call.** The engine asks an equal pair of question and evidence once inside a batch, and it answers from the cache with no request. A caller who de-duplicates first pays for a hash table and saves nothing.
+- **A map built before the call.** The engine sends an equal pair of question and evidence once when the batch shares a cache, and it answers an existing entry with no request. A caller who de-duplicates first pays for a hash table and saves nothing.
 - **Width set twice.** `jobs` is one number for the whole process, the engine's scheduler owns it, and two clients in one process share it.
 - **The one-at-a-time form is serial.** `tt::filter` and the `Stream` form are the bulk forms, and the documents show them first.
 

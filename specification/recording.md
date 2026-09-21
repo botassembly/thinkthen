@@ -41,8 +41,12 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
 - A `DIR` the tool creates is readable by its owner alone, and so is every entry the tool writes, because a recording holds the evidence. On Unix that is mode `0700` for the folder and `0600` for each file, whatever the umask says. A `DIR` that already exists keeps the mode it has.
 - The first complete entry installed for a digest stays there until the user removes it. Recording the same stored JSON response again succeeds without changing the entry. Whitespace outside the backend's JSON value and formatting around a valid version-one envelope do not distinguish responses. A different stored response is a local failure at exit 5. The message names the entry and repeats neither response. A damaged existing entry keeps its current safe refusal and is never replaced.
 - New writes require hard-link support in `DIR`. A filesystem that refuses hard links returns a local recording failure at exit 5 and leaves an existing entry untouched.
+- A cache miss takes an exclusive operating-system lock for its digest, then checks the entry again. Concurrent callers that share a cache send one backend request when the owner installs a complete entry. Waiters replay that entry and report `meta.replayed: true`. Record-only runs do not take this lock.
+- Empty lock files stay under the private `.locks` directory. They carry only the lowercase digest as their name and contain no data. On Unix the directory has mode `0700` and files created by the tool have mode `0600`. Closing a file releases its lock after success, failure, or process death. No owner record or recovery step exists.
 
 A successful recorded run can replay the answers it printed. A run that receives different responses for one digest stops at the conflict instead of saving a history that would replay differently. A repeated trial that wants another backend answer uses a fresh folder.
+
+If a cache owner dies after the backend accepts the request and before it installs the entry, a waiter sends again because no durable answer exists. Closing that interruption window would require pending state and a recovery protocol.
 
 The first live answers on 2026-09-19 returned the same probability for two identical requests. ADR 0010 holds the measurement.
 

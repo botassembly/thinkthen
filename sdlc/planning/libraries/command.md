@@ -40,7 +40,7 @@ done
 - **A buffered standard output.** Held lines make a `coproc` caller wait forever. One flush per record.
 - **Standard input is the widest container a shell has.** `--lines` takes it as a stream. Reading it all first delays the first answer and grows memory without bound. The reader stays lazy, the engine holds `--jobs` records in flight, and an endless pipe runs at full width with flat memory.
 - **`--jobs` is the width of the whole process.** Two record streams in one process share the one number, and several copies of the command multiply it.
-- **Work the engine skips.** Equal pairs of question and evidence inside one batch are asked once, and a cached answer costs nothing. No caller de-duplicates in shell first.
+- **Work the engine skips.** Equal pairs of question and evidence send once when the batch shares a cache, and a cached answer costs nothing. No caller de-duplicates in shell first.
 - **A one-record call is serial.** `--lines` is the bulk form, and every page shows it first.
 
 ## How little code

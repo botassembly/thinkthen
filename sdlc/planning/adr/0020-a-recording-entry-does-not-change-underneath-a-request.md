@@ -21,3 +21,9 @@ Every existing entry remains readable and keeps its name and schema. It becomes 
 This keeps recording and cache storage content-addressed. It does not create an ordered transcript or add occurrence numbers. Exact replay means every successful recorded request resolves to the immutable response stored for its digest. It does not mean a failed run with conflicting duplicate answers becomes replayable as if it had succeeded.
 
 New recording writes now require hard-link support in the recording folder. A filesystem that allowed rename but refuses hard links returns the ordinary local recording failure, exit 5, and leaves the existing entry untouched. Every returned write path attempts to remove its private temporary name. A process crash can leave a complete private dot-prefixed temporary file, as it could before this decision.
+
+## Amendment on 2026-09-20: cache misses wait by digest
+
+Ticket 0039 preserves the immutable-entry decision and changes what happens before a cache sends. A cache caller that misses takes an operating-system file lock for the request digest and reads the entry again. One owner sends and installs a valid response. Concurrent waiters then replay that entry. Record-only runs keep the conflict rule above.
+
+The cache keeps one empty private lock file per attempted digest under `.locks`. The open file holds the lock, so normal return, failure, and process death release it without an owner record or recovery command. The path remains because removing it could split callers across two file identities. A process that dies after the backend accepts its request and before the entry is installed leaves no answer to replay, so the next waiter sends again.

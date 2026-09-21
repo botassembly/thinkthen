@@ -10,6 +10,7 @@ mod harness;
 mod address;
 mod annotate;
 mod asked;
+mod cache_locking;
 mod choosing;
 mod distribution_total;
 mod exchange;

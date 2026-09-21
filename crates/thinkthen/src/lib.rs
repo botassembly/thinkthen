@@ -7,6 +7,7 @@ mod annotate_schedule;
 mod args;
 mod asked;
 mod asking;
+mod cache_lock;
 mod edge;
 mod failure;
 mod http;

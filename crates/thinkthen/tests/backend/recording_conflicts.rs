@@ -3,9 +3,6 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Barrier};
-use std::thread;
 
 use crate::harness::{Canned, Listener, spawn};
 
@@ -80,6 +77,7 @@ fn entry(folder: &Path) -> io::Result<PathBuf> {
 fn temporary_names(folder: &Path) -> io::Result<Vec<String>> {
     Ok(fs::read_dir(folder)?
         .filter_map(Result::ok)
+        .filter(|found| found.file_type().is_ok_and(|kind| kind.is_file()))
         .map(|found| found.file_name().to_string_lossy().into_owned())
         .filter(|name| name.starts_with('.'))
         .collect())
@@ -177,81 +175,6 @@ fn whitespace_padded_responses_with_different_values_conflict() {
             .expect("the folder is readable")
             .is_empty()
     );
-}
-
-#[test]
-fn two_processes_racing_to_fill_one_cache_keep_exactly_one_response() {
-    let folder = folder("recording-process-race");
-    let release = Arc::new(Barrier::new(2));
-    let next = Arc::new(AtomicUsize::new(0));
-    let listener = Listener::answering({
-        let release = Arc::clone(&release);
-        move |_| {
-            let body = if next.fetch_add(1, Ordering::SeqCst) == 0 {
-                FALSE
-            } else {
-                TRUE
-            };
-            Canned::ok(body).after_release(Arc::clone(&release))
-        }
-    })
-    .expect("a loopback listener");
-    let base = listener.base().to_owned();
-    let named = folder.to_string_lossy().into_owned();
-
-    let outputs = thread::scope(|scope| {
-        let run = || {
-            spawn(
-                &[
-                    "decide", QUESTION, "--url", &base, "--model", "local-1", "--cache", &named,
-                    "--lines", "--jobs", "1",
-                ],
-                &[("THINKTHEN_API_KEY", "sk-test-value")],
-                format!("{EVIDENCE}\n").as_bytes(),
-            )
-            .expect("the binary runs")
-        };
-        let first = scope.spawn(run);
-        let second = scope.spawn(run);
-        [
-            first.join().expect("the first run joins"),
-            second.join().expect("the second run joins"),
-        ]
-    });
-
-    let winners = outputs
-        .iter()
-        .filter(|output| output.status.code() == Some(0))
-        .collect::<Vec<_>>();
-    let losers = outputs
-        .iter()
-        .filter(|output| output.status.code() == Some(5))
-        .collect::<Vec<_>>();
-    assert_eq!(winners.len(), 1, "{outputs:?}");
-    assert_eq!(losers.len(), 1, "{outputs:?}");
-    assert!(String::from_utf8_lossy(&losers[0].stderr).contains(CONFLICT));
-    let kept = fs::read_to_string(entry(&folder).expect("one entry")).expect("the entry is text");
-    let won = String::from_utf8_lossy(&winners[0].stdout);
-    assert_eq!(kept.contains(r#""noul":0.9"#), won == "true\n");
-    assert_eq!(listener.requests().len(), 2, "both cache reads missed");
-    assert!(
-        temporary_names(&folder)
-            .expect("the folder is readable")
-            .is_empty()
-    );
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        assert_eq!(
-            fs::metadata(entry(&folder).expect("one entry"))
-                .expect("entry metadata")
-                .permissions()
-                .mode()
-                & 0o777,
-            0o600
-        );
-    }
 }
 
 #[test]

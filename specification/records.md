@@ -91,7 +91,7 @@ Settled by ADR 0008, accepted in ADR 0010. One request carries one piece of evid
 | `find` | 1 |
 | `--dry-run`, `--replay` | 0 |
 
-`rank` sorts locally and makes no pairwise calls. Every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept.
+`rank` sorts locally and makes no pairwise calls. Without a cache, every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept. With a cache, equal request digests share one backend call and each record still receives its own logical judgment in input order.
 
 ## Empty input
 
@@ -117,7 +117,7 @@ thinkthen decide 'This reports a payment failure.' --jsonl --field /body --recor
 
 A first run that stops at record 400 leaves 399 entries. The same command run again replays those 399 and pays for the rest.
 
-Each digest keeps the first complete response installed in the folder. A cache miss can race with another worker or process, but only one response can win the entry name. A loser with the same stored JSON response succeeds. Whitespace outside the backend's JSON value does not distinguish responses. A loser holding another stored response stops at exit 5. The winner stays intact, so every successful run can replay the answers it printed.
+Each digest keeps the first complete response installed in the folder. Concurrent cache misses for that digest wait on one operating-system file lock. The owner checks again, sends only if the entry remains absent, and installs the complete response. Waiters replay it. A failed or stopped owner releases the lock automatically; the next waiter sends if no entry was installed. Record-only writers remain independent, and a later writer holding another stored response stops at exit 5. The winner stays intact, so every successful run can replay the answers it printed.
 
 ## `jobs`
 

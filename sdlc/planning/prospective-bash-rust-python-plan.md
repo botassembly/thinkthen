@@ -16,16 +16,15 @@ The public surface stays eight verbs, question setup, and required types. Bash u
 
 ## Current state and accepted order
 
-Eighteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The correction pass is complete. The remaining order is:
+Eighteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The correction pass and duplicate-cache coalescing are complete. The remaining order is:
 
-1. **Coalesce duplicate cache misses.** One bounded per-digest lock stops equal concurrent requests from paying twice or recording conflicting replies.
-2. **Build `find`.** Repeat its comparison with `rank --top 1` on 100- to 250-line documents. Build the command and how-to 15 if the result holds.
-3. **Finish page 16 and the transforms.** Land the flagship triage policy, then comparison, sweep, monitors, grouped sweep, and the check against human labels.
-4. **Rewrite and review ADR 0017.** The experiment team applies Ian's interface, one-crate, engine, performance, fork, and release rulings. The build team reviews it before the merge chooses public modules.
-5. **Build the engine in four steps.** Fold to one crate and move machinery without behavior changes; expose small Rust functions and shared replay cases; add process-wide width, cancellation, fork repair, and fast failure; then make cache locks and counters engine settings. The command remains the first caller. Every gate stays green after each step.
-6. **Prepare the command release.** Complete help, the manual, installation, the agent skill, and how-to 18.
+1. **Build `find`.** Repeat its comparison with `rank --top 1` on 100- to 250-line documents. Build the command and how-to 15 if the result holds.
+2. **Finish page 16 and the transforms.** Land the flagship triage policy, then comparison, sweep, monitors, grouped sweep, and the check against human labels.
+3. **Rewrite and review ADR 0017.** The experiment team applies Ian's interface, one-crate, engine, performance, fork, and release rulings. The build team reviews it before the merge chooses public modules.
+4. **Build the engine in four steps.** Fold to one crate and move machinery without behavior changes; expose small Rust functions and shared replay cases; add process-wide width, cancellation, fork repair, and fast failure; then make cache locks and counters engine settings. The command remains the first caller. Every gate stays green after each step.
+5. **Prepare the command release.** Complete help, the manual, installation, the agent skill, and how-to 18.
 
-Stay with the blocking client and at most 32 request threads unless the step-three benchmark disproves it. A cancel starts no new request and lets sent requests finish. One record remains one request. Cache locking must land before `find`; ADR review must land before the one-crate merge.
+Stay with the blocking client and at most 32 request threads unless the step-three benchmark disproves it. A cancel starts no new request and lets sent requests finish. One record remains one logical judgment; equal digests send once when they share a cache. ADR review must land before the one-crate merge.
 
 ## Libraries and extensions
 

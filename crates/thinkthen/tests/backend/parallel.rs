@@ -95,7 +95,17 @@ fn folder(name: &str) -> PathBuf {
 
 /// How many entries the folder holds.
 fn entries(folder: &Path) -> usize {
-    fs::read_dir(folder).map_or(0, Iterator::count)
+    fs::read_dir(folder).map_or(0, |entries| {
+        entries
+            .filter_map(Result::ok)
+            .filter(|entry| {
+                entry
+                    .path()
+                    .extension()
+                    .is_some_and(|value| value == "json")
+            })
+            .count()
+    })
 }
 
 #[test]
@@ -372,4 +382,60 @@ fn records_that_are_byte_for_byte_alike_write_one_entry_and_race_with_nobody() {
     assert_eq!(output.status.code(), Some(0), "{}", said(&output));
     assert_eq!(printed(&output).lines().count(), 16);
     assert_eq!(entries(&folder), 1);
+}
+
+#[test]
+fn equal_cache_misses_send_once_at_every_supported_width() {
+    let same: String = (0..16)
+        .map(|_| "{\"id\":\"R-1\",\"body\":\"record 1\"}\n".to_owned())
+        .collect();
+    for jobs in ["1", "4", "32"] {
+        let cache = folder(&format!("same-cache-digest-{jobs}"));
+        let named = cache.to_string_lossy();
+        let listener = Listener::answering(|_| Canned::ok(&answered(1)).after(20))
+            .expect("a loopback listener");
+        let output = decide(
+            listener.base(),
+            &[
+                "--jsonl",
+                "--field",
+                "/body",
+                "--details",
+                "--cache",
+                &named,
+                "--jobs",
+                jobs,
+            ],
+            &same,
+        )
+        .expect("the compiled binary runs");
+
+        assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+        let rows = printed(&output);
+        assert_eq!(rows.lines().count(), 16);
+        assert_eq!(rows.matches(r#""replayed":false"#).count(), 1);
+        assert_eq!(rows.matches(r#""replayed":true"#).count(), 15);
+        assert_eq!(listener.requests().len(), 1, "jobs {jobs}");
+        assert_eq!(entries(&cache), 1);
+    }
+}
+
+#[test]
+fn different_cache_digests_do_not_share_a_lock() {
+    let cache = folder("different-cache-digests");
+    let named = cache.to_string_lossy();
+    let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))).after(50))
+        .expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &[
+            "--jsonl", "--field", "/body", "--cache", &named, "--jobs", "2",
+        ],
+        &records(2),
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.peak(), 2);
 }

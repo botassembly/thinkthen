@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use thinkthen_core::recording::{Entry, Exchange};
 
+use crate::cache_lock::{self, CacheLock};
 use crate::failure::Failure;
 
 /// How many entries this process has begun to write.
@@ -75,6 +76,23 @@ impl Recorder {
         Entry::replayed(&bytes, exchange)
             .map(Some)
             .map_err(|error| Failure::Entry(name, error.to_string()))
+    }
+
+    /// Wait until this cache caller owns the exchange digest.
+    ///
+    /// Record-only and replay-only runs need no lock. A cache caller keeps the
+    /// returned guard through its second read, request, decode, and recording.
+    pub(crate) fn lock(&self, exchange: &Exchange<'_>) -> Result<Option<CacheLock>, Failure> {
+        let Some(folder) = self
+            .folder
+            .as_ref()
+            .filter(|_| self.recording && self.replaying)
+        else {
+            return Ok(None);
+        };
+        cache_lock::acquire(folder, exchange.digest().as_str())
+            .map(Some)
+            .map_err(Failure::Recording)
     }
 
     /// Write this exchange into the folder without replacing an existing response.

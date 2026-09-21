@@ -109,7 +109,10 @@ fn plant(folder: &Path, response: &str) -> Option<String> {
 pub(crate) fn only_entry(folder: &Path) -> io::Result<(String, String)> {
     let mut entries = Vec::new();
     for entry in fs::read_dir(folder)? {
-        entries.push(entry?.path());
+        let path = entry?.path();
+        if path.extension().is_some_and(|value| value == "json") {
+            entries.push(path);
+        }
     }
     entries.sort();
     let [file] = entries.as_slice() else {
