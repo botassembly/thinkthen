@@ -92,6 +92,12 @@ One JSON object per edge, one per line, so the output pipes:
 
 `--details` prints the standard result object, `thinkthen.result/1`, with this function's value in `value` and the same `question`, `answer`, and `meta` keys as the other functions. The question file grammar, the exit-code table, the cache, and the recording are the same. A caller that handles one function's result handles this one. A question that fails inside a request that otherwise succeeded is marked on that answer and counted in `meta`. It never prints `null`, because `null` means "not sure".
 
+## Ruled 2026-09-21: `relate` reads records, and names the user already has are records
+
+The recognize team's closing note says `relate` works "over records or provided entities". The product side rules one form. `relate` reads records. A user who already has names passes each name as a record, with its kind in the field `--kind-field` points at, and the relation rules apply to those kinds. No second input form exists.
+
+One case is different: names inside one text, where the sentence around them decides the relation. That is `recognize` given names the user already found. It stays in the backlog, in `sdlc/issues/2026-09-21-candidates-for-a-tenth-function-relate-and-find-in.md`. Ian can overturn this.
+
 ## What Ian can overturn
 
 All of it. He has ruled: `relate` is built with `recognize`, and it asks by choices over the legal pairs.

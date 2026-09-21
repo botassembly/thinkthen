@@ -36,3 +36,27 @@ The method is final: three passes, each a pick-one question. The confirmed numbe
 ## Added later the same day: Polars
 
 Python's data frame is Polars, by Ian's ruling. What goes in decides what comes out: a Series returns a Series, an expression returns an expression, and a DataFrame with `on=` returns a DataFrame. The full table is `sdlc/issues/2026-09-21-the-polars-shape-as-the-deck-shows-it.md`. The `recognize` and `relate` frame forms in `recognize-surfaces.md` now take and return Polars frames.
+
+## Added 2026-09-21, after the surfaces experiment closed: the brief for both functions
+
+The surfaces team is cleared to start. The job is **two functions, `recognize` and `relate`**, on all nine surfaces and the Polars door, on branch `surfaces`, against the stand-in engine. No paid call.
+
+Read in this order:
+
+1. `sdlc/planning/recognize-design.md` and `sdlc/planning/relate-design.md`. They rule what a user types and what comes back. Each now ends with a rulings section dated 2026-09-21.
+2. `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`. Every call written out for both functions. It is the acceptance test.
+3. `experiments/225-recognize-harvest-package/cases/`. Forty recorded cases in the ruled shape, and the `relate` set beside them. The stand-in answers from these. They become conformance cases for both functions.
+4. `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`, section on public shapes. Follow its result shapes: the `requests` list, the failed marker, and the record that comes back with its answer.
+
+What to prove, beyond "the calls run as written":
+
+- Character offsets are right in each host's own string indexing, on a text with an accent and an emoji.
+- A result of no fixed size crosses the C door as one returned string with one free function.
+- DuckDB returns a list of structs that `unnest` turns into rows. SQLite and PostgreSQL return rows. The "Names become rows" slide runs as drawn.
+- Python spells a relation's ends `source` and `target`. A Polars frame in gives a long Polars frame out, one row per name and one row per edge.
+- `relate` takes every record at once. A database gives it a table or a query. It refuses more than 255 records with a usage error on every surface.
+- The any-kind end is the one-character string `"*"` everywhere except Rust.
+
+What to leave alone: the method itself, how a long text is cut, and the question count per request. Those are the engine's, and the build team owns them. The number on a relation is `probability` and the number on a recognized name is `confidence`. Both teams recommend that, and Ian's approval of the build team's five choices settles it.
+
+This work does not touch the build team. It stays on the `surfaces` branch against the stand-in. The merge of `surfaces` into main remains the build team's gate.

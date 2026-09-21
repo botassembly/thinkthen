@@ -167,6 +167,20 @@ The planner never knows a function costs money. Every database page carries that
 3. Whether `thinkthen_relations` should exist, or whether one function should return both and let SQL pick. Two functions read better in SQL. One costs less when a user wants both.
 4. Whether `recognize` belongs in `annotate`'s question set as a fifth question type. The suggestion is no for the first release.
 
+## Ruled 2026-09-21: where the design page and the method page disagree, this page wins on what a user sees
+
+An audit of `experiments/RECOGNIZE-PRODUCT-SPEC.md` against this page found five differences. The method page is older. `experiments/225-recognize-harvest-package/` already follows this page, and it is what a builder reads first.
+
+| The method page says | The ruling |
+| --- | --- |
+| A `depth` dial: spans, labels, relations | No depth option. A relation rule turns relations on. Nothing else changes how deep the command goes. A caller who wants names without kinds gives one kind |
+| Kinds `PER`, `ORG`, `LOC`, `MISC` by default | `person`, `organization`, `place`. No fourth catch-all kind by default. A user who wants one names it |
+| `head`, `tail`, `type` | `from`, `to`, `name` |
+| Word positions in the main object | Under `--details` only |
+| A margin term in the confidence formula | The harvest package's formula, the least of the word probabilities times the mean of the kind probabilities, with connector words left out. It is what every recorded case used |
+
+The internal rules stay internal and have no option: the connector list with its bar of 0.3, how overlapping names are settled, and the possessive rule. Their home is `experiments/225-recognize-harvest-package/rules/rules.md`, each with a test. The manual describes them in one paragraph, because they explain why "Nathan der Weise" comes back whole.
+
 ## One tool, ten functions
 
 `--details` prints the standard result object, `thinkthen.result/1`, with this function's value in `value` and the same `question`, `answer`, and `meta` keys as the other functions. The question file grammar, the exit-code table, the cache, and the recording are the same. A caller that handles one function's result handles this one. A question that fails inside a request that otherwise succeeded is marked on that answer and counted in `meta`. It never prints `null`, because `null` means "not sure".
