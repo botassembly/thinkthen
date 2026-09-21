@@ -28,6 +28,14 @@ Two things would make it serve as the page the README, the talk, and the site le
 
 The blocking-engine run is in `experiments/211-thinkthen-blocking-engine/`. Its engine lane matched the bench at 9.666 s and held 32 in flight, and its two binding lanes were running on 2026-09-21. Its report has not landed.
 
+## Added 2026-09-21, after ticket 0042
+
+The marketing side ran the landed `compare.jq` over the two runs in `experiments/212-thinkthen-repeat/`. It reported 96 the same, four flips, 59 small movements summarized, and `probability_delta_over_tolerance: false` on every flip. That one field is what lets a reader tell wobble at the cut from a real change. The per-question comparison inside `annotate` rows is the right next ticket.
+
+One stumble from that run. The first try used `jq -s` where the header says `jq -n`. The transform did not fail. It printed a tidy report with zero rows in the later run and all 100 ids under `only_in_before`. A reader who skims sees a report and trusts it. Every transform that takes `--slurpfile` shares the trap. A first line that refuses any input other than `null`, with a sentence naming `-n`, closes it for all of them.
+
+The blocking-engine report landed on 2026-09-21 in `experiments/211-thinkthen-blocking-engine/FINDINGS.md`, and the experiment team now drafts the ADR 0017 rewrite first. The transforms go on until that draft arrives for review.
+
 ## What Ian can overturn
 
 All of it.
