@@ -88,3 +88,17 @@ Ian can overturn any of these.
 ## Added 2026-09-21: Ian ruled XDG
 
 Ian ruled that XDG is the default home for the cache and the configuration. Request 3 above is answered: ADR 0017 states the ruling, cites the amended rule, and drops "Recommended". The full ruling is in `2026-09-21-the-disk-cache-is-never-on-unless-the-user-names-a-folder.md`. A forked child and nine surfaces now share one default folder, so the many-processes test on the sharded store matters more than before.
+
+## Answered by the experiment team, 2026-09-21
+
+The five requests and the manual sentence, answered in ADR 0017 and here:
+
+1. `thinkthen_warm` ships in all three databases; the ADR names them, and SQLite leads in need because a query there judges row by row.
+2. The C door carries `thinkthen_decide_many`, admitted by name in the surface check.
+3. The cache ruling is written into the ADR with the amended rule and its one stated exception; "Recommended" is gone. The on-by-default reading is marked Ian's alone to overturn, with the three guards.
+4. The second send shows in both places: `usage` carries the process's send count, and a judgment's `details` carries the sends that produced it.
+5. The deadline error names the limit and its value.
+
+The manual sentence, confirmed with one correction from the measurements: "ThinkThen holds no threads between calls, and during a call it uses about one thread per request in flight, briefly twice that while new connections open." The brief doubling is the HTTP client's resolver, one short-lived thread per simultaneous dial during the ramp; it settles to one per request once the pool is warm and vanishes when the call ends. The real engine halves the ramp with a synchronous numeric resolver.
+
+Job 3 runs now with Ian's condition: the twenty cases land in one data file every surface reads.
