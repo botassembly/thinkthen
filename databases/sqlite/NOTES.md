@@ -95,3 +95,19 @@ Relations and edges carry `probability`; names carry `strength`; the vendor's ow
 **Not run, honestly:** the beta `thinkthen_relations` line in the deck's SQL block — the build team's page leaves open whether relations ride `thinkthen_recognize` or a separate function, nothing was invented for it, and the literal `'*'` any-kind spelling lives in that question-file form, so it is not exercised through this call shape (bare relation names are the any-to-any rule by construction); the other error kinds through these two functions offline (the replay produces usage errors only; backend and cancelled arrive with the real engine's wire); SQL forms beyond the deck's (a JOIN expression as the source, extra arguments).
 
 **A stale line on the design page:** `relate-design.md`'s database table still says the rows are `(name, from_id, to_id, probability)`. The deck's own note and the update brief rule `source`/`target` on every surface, and this surface emits `source`/`target`. Flagged here so the page can be corrected in one edit.
+
+## 2026-09-21 — the fix wave: ruling 2 and the relate guard at this door
+
+**The defect mapping, ruling 2.** A unit test constructs the contract's defect error at the shim level and asserts SQLite's own error surface carries it — the `thinkthen defect:` message and the generic error code. No public door gains a fault hook.
+
+```
+$ cargo test --release --quiet --lib
+running 1 test
+test result: ok. 1 passed; 0 failed
+```
+
+The check runs that test after the build.
+
+**The relate guard's home is now one place.** Before, this door called the engine's `relate_opts` directly and relied on the stand-in repeating the 255 guard; after, it enters through `thinkthen_contract::relate_checked`, so the guard lives only in the contract and this door inherits it the way every other door does. Behavior is unchanged and the door's 255 test still proves the refusal.
+
+**The working shape for relations on this engine:** this surface has no `thinkthen_relations` call shape yet — the beta companion is unbuilt here, and nothing was invented for it; the working relate shape is the table call `SELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'caused_by');`. The deck's drawn `thinkthen_relations` form cannot run on SQLite as written; the finding goes to the deck's owner from another lane.

@@ -11,6 +11,9 @@ echo "== sqlite surface: build the extension"
 cargo build --release --quiet
 cp target/release/libthinkthen0.so thinkthen.so
 
+echo "== sqlite surface: the error-mapping test"
+cargo test --release --quiet --lib
+
 echo "== sqlite surface: the slide, as drawn, in the stock CLI"
 if [ ! -x .runtimes/sqlite3 ]; then
     echo "   (no stock CLI in .runtimes; fetch it per README)"

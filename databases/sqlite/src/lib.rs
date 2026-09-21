@@ -928,8 +928,7 @@ unsafe impl VTabCursor for RelateCursor {
         }
         let (ids, texts) = read_records(self.db, table, id_col, body_col).map_err(failure)?;
         let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
-        let edges: Vec<Edge> = engine()
-            .relate_opts(&ask, &refs, Options::new())
+        let edges: Vec<Edge> = thinkthen_contract::relate_checked(engine(), &ask, &refs, Options::new())
             .map_err(failure)?;
         let mut rows = Vec::with_capacity(edges.len());
         for edge in &edges {
@@ -1046,4 +1045,24 @@ pub extern "C" fn sqlite3_thinkthen_init(
     DB.store(db as usize, Ordering::Relaxed);
     // SAFETY: this is the contract of extension_init2; init only registers.
     unsafe { Connection::extension_init2(db, message, api, init) }
+}
+
+#[cfg(test)]
+mod mapping_tests {
+    use super::*;
+
+    /// Ruling 2 of the product rulings: the defect kind maps to SQLite's
+    /// own error surface, with the kind named in the message. No public
+    /// door carries a fault hook; this proves the mapping at the shim level.
+    #[test]
+    fn the_defect_kind_maps_to_the_engines_error() {
+        match failure(thinkthen_contract::Error::defect("the plan lost its bind data")) {
+            Error::SqliteFailure(inner, Some(message)) => {
+                assert_eq!(inner.code, ffi::Error::new(ffi::SQLITE_ERROR).code);
+                assert!(message.contains("thinkthen defect:"), "{message}");
+                assert!(message.contains("the plan lost its bind data"), "{message}");
+            }
+            other => panic!("expected a SqliteFailure, got {other:?}"),
+        }
+    }
 }
