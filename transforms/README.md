@@ -20,7 +20,7 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | --- | --- | --- |
 | `counts/` | How many yes, how many no, how many unresolved | [25](../demos/25-check-the-judge/) |
 | `score/` | Accuracy, precision, recall, and F1 at a cut | [25](../demos/25-check-the-judge/) |
-| `sweep/` | What every cut would have done, globally or per record group | [13](../demos/13-pick-a-threshold/) |
+| `sweep/` | What every cut would have done globally, per record group, tag label, or mapped annotation | [13](../demos/13-pick-a-threshold/) and [14](../demos/14-grade-a-batch/) |
 | `band/` | Accuracy beside coverage for a band | [13](../demos/13-pick-a-threshold/) |
 | `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
 | `compare/` | What changed between two scalar or annotated runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
@@ -80,6 +80,21 @@ jq -n -f sweep/sweep.jq \
 Neither report picks a cut automatically. Choice has a coverage trade-off. Every score boundary names a different operational question.
 
 A decision sweep can instead fit each string-valued record group on its own. Pass the group's JSON Pointer as `--arg group POINTER`. The report keeps each group's counts and pick separate. It prints no pooled pick.
+
+## Sweep tags and named annotations against human labels
+
+Keep trusted labels under meaningful names in the case file. Pass one RFC 6901 pointer for a `tag` run, or map annotation names to pointers. Missing or null truth stays visible as unlabeled. Present malformed truth stops the report.
+
+```bash
+set -euo pipefail
+
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep/sweep.jq ../probes/annotate-0015/howto-14.jsonl \
+  | jq -c '.questions.correct | {rows,labeled,cut:.pick.cut,accuracy:.pick.accuracy,f1:.pick.f1}' \
+  | mustmatch '{"rows":6,"labeled":6,"cut":0.6,"accuracy":1,"f1":1}'
+```
+
+Each mapped decision, choice, or tag answer reuses its ordinary sweep report. A tag gets one decision report per label. The transform never averages questions or labels into one score.
 
 ## Monitor a policy against reviewed actions
 

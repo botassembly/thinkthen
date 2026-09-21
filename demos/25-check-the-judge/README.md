@@ -92,6 +92,8 @@ sh ../../transforms/monitor/example.sh \
 
 For a running policy, review the uncertain queue and sample automated draft and block rows. Store the person's decision as `reviewed_action`. The monitor reports coverage per action and lists changes. It cannot prove the sample was random.
 
+For `tag` or `annotate`, point `sweep.jq` at the human fields instead of renaming them to `input.label`. A tag gets one decision sweep per label. An annotation gets one established report per mapped question. Each question or label chooses independently, and the report prints no combined score.
+
 ## What can go wrong
 
 - **A transform stops with exit 5.** The input is malformed or lacks a required field. The error names the file and line.
