@@ -64,6 +64,9 @@ impl Case {
         if self.exchanges.is_empty() {
             return Err(format!("{} has no successful exchange", self.id));
         }
+        if self.operation.is_some() {
+            return Err(format!("{} carries a fault injection on success", self.id));
+        }
         let expected = match self.verb.as_str() {
             "filter" => "filter",
             "rank" => "rank",
@@ -261,7 +264,7 @@ pub(crate) fn find(raw: &RawValue, found: &FindAnswer, answer: &Answer) -> Resul
         .ok_or_else(|| "find selection differs".to_owned())
 }
 
-const PRIVATE_KEYS: [&str; 13] = [
+const PRIVATE_KEYS: [&str; 14] = [
     "accesstoken",
     "apikey",
     "apitoken",
@@ -275,6 +278,7 @@ const PRIVATE_KEYS: [&str; 13] = [
     "headers",
     "thinkthenapikey",
     "token",
+    "xapikey",
 ];
 
 fn private_key(key: &str) -> bool {

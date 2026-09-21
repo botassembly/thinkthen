@@ -1,10 +1,5 @@
 //! The shared compatibility cases, checked through the production pure core.
 
-#![allow(
-    clippy::disallowed_types,
-    reason = "fixture-only structural comparisons must ignore JSON formatting"
-)]
-
 #[path = "support/conformance.rs"]
 mod conformance_support;
 
@@ -179,6 +174,10 @@ fn expected<'a>(
         .ok_or_else(|| format!("exchange {exchange} has no expected answer `{name}`"))
 }
 
+#[allow(
+    clippy::disallowed_types,
+    reason = "fixture-only structural comparisons must ignore JSON formatting"
+)]
 fn same_json(one: &str, other: &str) -> Result<bool, String> {
     let one: serde_json::Value = serde_json::from_str(one).map_err(|error| error.to_string())?;
     let other: serde_json::Value =
@@ -390,6 +389,7 @@ fn focused_mutations_are_refused() {
         duplicate_backend_fault,
         CASES.replacen('{', "{\"authorization\":\"secret\",", 1),
         CASES.replacen('{', "{\"api_key\":\"secret\",", 1),
+        CASES.replacen('{', "{\"x-api-key\":\"secret\",", 1),
         CASES.replacen("\"kind\": \"filter\"", "\"kind\": \"single\"", 1),
         CASES.replacen(
             "\"operation\": {\n            \"indexes\"",
@@ -399,6 +399,11 @@ fn focused_mutations_are_refused() {
         CASES.replacen(
             "\"kind\": \"single\",\n          \"answers\"",
             "\"kind\": \"single\",\n          \"operation\": {},\n          \"answers\"",
+            1,
+        ),
+        CASES.replacen(
+            "      \"exchanges\": [",
+            "      \"operation\": {\"injection\":\"cancel_token\"},\n      \"exchanges\": [",
             1,
         ),
         CASES.replacen(
