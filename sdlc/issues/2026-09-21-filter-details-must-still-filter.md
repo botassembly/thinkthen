@@ -28,3 +28,5 @@ A user who wants every record with its answer already has the tool: `decide --li
 The filter slide no longer shows `--details`. Its second example raises the threshold to 0.95 and one record passes.
 
 Ian can overturn this ruling.
+
+Two places already lean on the old behavior and need a look: `demos/03-grep-for-meaning/README.md` and `demos/43-lint-a-change/record.sh`.
