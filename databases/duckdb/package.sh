@@ -16,7 +16,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION=$(cat ../../VERSION)
+VERSION=$(tail -1 ../../VERSION)
 CONTAINER=dbpkg211-duckdb
 cleanup() {
   docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true

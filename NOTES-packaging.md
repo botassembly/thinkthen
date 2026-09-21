@@ -257,3 +257,35 @@ containers left under dbpkg211-*: 0
 Warm says 5, the WHERE kept rows 1, 3, 4, the count says 3 — the shape the surface's own NOTES recorded, now proven from the packaged file in a clean container.
 
 Two traps recorded for the next packaging run: `cargo zigbuild` writes to `target/<triple without the glibc suffix>/`, so the glibc pin belongs in the target argument only, never in the artifact path; and the first runs of both database containers omitted `ENGINE_NULL=1` and the sample failed `Connection refused` against the real address — the null backend is a container environment variable, and no key or paid call is ever involved in these rehearsals.
+
+### PostgreSQL
+
+Package: `dist/thinkthen-pg16-0.0.1-linux-amd64.tar.gz`, sha256 `86abd7a9860ab2fa4fe63e3820ebf30088904d4f779a6779e892944dc8c4ae67`, holding the pgrx package tree for PostgreSQL 16:
+
+```
+usr/lib/postgresql/16/lib/thinkthen.so
+usr/share/postgresql/16/extension/thinkthen.control
+usr/share/postgresql/16/extension/thinkthen--0.0.1.sql
+```
+
+`cargo pgrx package --pg-config /usr/bin/pg_config` is the build; the install lines ship in the tarball's README: copy the library and the two extension files into a PostgreSQL 16 tree, then `CREATE EXTENSION thinkthen;` per database.
+
+Container: `postgres:16`, already present (digest `postgres@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94`). The image is Debian trixie, glibc 2.41, so the host-built extension (glibc 2.39) loads; an older PostgreSQL image on glibc 2.36 would refuse it, and pgrx does not produce a glibc-pinned artifact from this box — that exposure is recorded here as the open item, unchecked rather than fixed, unlike DuckDB and SQLite which carry the zig pin.
+
+The sample runs exactly as drawn, extracted verbatim from the deck by the package script:
+
+```
+== postgres package: the slide sample, as drawn
+ id |                                 body
+  2 | maybe this is on our side, but the charge looks wrong. Can you check?
+
+ id | team | urgency
+  1 |      |     1.7
+  2 |      |     1.05
+  3 |      |     0.99
+slide sample green: the maybe row reads, urgency ordered 1.7/1.05/0.99
+```
+
+`CREATE EXTENSION` is instant, `@refund.json` and `form.json` resolve from the backend's working directory (the fixtures are copied there, as the surface's own checks do), and the container is removed afterwards: `containers left under dbpkg211-*: 0`.
+
+One trap the first run exposed and the notes keep: `VERSION` holds a comment line above the number, so `cat ../../VERSION` smuggled the comment into artifact names and README titles. All three database package scripts now use `tail -1 ../../VERSION`, and the mangled artifacts were rebuilt.

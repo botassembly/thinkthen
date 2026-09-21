@@ -5,3 +5,4 @@
 /tmp*.json
 /tests/tmp*
 dist
+thinkthen.so

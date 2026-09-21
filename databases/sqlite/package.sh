@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION=$(cat ../../VERSION)
+VERSION=$(tail -1 ../../VERSION)
 CONTAINER=dbpkg211-sqlite
 IMAGE=ubuntu:24.04
 TARGET=x86_64-unknown-linux-gnu.2.28
