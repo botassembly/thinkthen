@@ -105,3 +105,38 @@ rank[0] -> {"index":0,"record":"I want a refund for order 9","probability":0.97}
 
 `tag` returning `[]` is the stand-in's rule (no option text carries a keyword); the deck's `["billing", "shipping", "urgent"]` is the real backend's answer. The package installs from the tarball, loads its prebuilt `.node`, and answers all three verbs. Registry use: the tarball came from the local file; nothing was published. Pull recorded: `node:22-slim`. Containers: `--rm`, none left.
 
+## Ruby
+
+Build, from `libraries/ruby` (no Ruby on this host; `build.sh` runs inside a locally built Debian trixie image, `ruby:3.4-trixie` plus `libclang-dev`, mounting the host's Rust toolchain read-only; the image is never pushed and is removed below):
+
+```
+$ ./build.sh
+built: thinkthen-0.0.1.gem and lib/thinkthen/thinkthen.so
+$ ls -la thinkthen-0.0.1.gem
+-rw-r--r-- 1 root root 1718272 thinkthen-0.0.1.gem   (sha256 b05dd4d5b40d2cc8…)
+```
+
+Clean container, no Rust toolchain present, installing the gem from the local file into a clean `ruby:3.4-trixie` account:
+
+```
+$ docker run --rm --name pkg211-ruby \
+    -v /tmp/pkg211/ruby:/work -v libraries/ruby:/pkg:ro ruby:3.4-trixie bash -c \
+    "which cargo rustc gem ruby; gem install --local --quiet /pkg/thinkthen-0.0.1.gem \
+     && gem list thinkthen && cd /tmp && ENGINE_NULL=1 ruby /work/slide_sample.rb"
+/usr/local/bin/ruby
+Successfully installed thinkthen-0.0.1
+1 gem installed
+thinkthen (0.0.1)
+finding: score returned 1.7, the slide comment says 2.0; nearest level is 'Immediate.'
+3 of 8 are complaints
+I want a refund for order 9
+The refund never arrived
+maybe escalate this one
+Where is my order?
+Hello team
+slide sample green
+```
+
+No `cargo` or `rustc` was found in the container; the gem carries the compiled extension and installs from the local file alone. The slide sample is the deck's Ruby section run as drawn: filter keeps 3 of 8, rank returns the deck's five, score returns 1.7 with "Immediate." nearest — the score-comment finding is the sample's own, already filed for the slide owner in the marketing repo. Registry use: none; the gem came from the local file. Pulls recorded this section: none new (`ruby:3.4-trixie` was already local from the surface's own work). The builder image `thinkthen-ruby-builder:local` was rebuilt by `build.sh` and removed after the gem was built: `docker rmi thinkthen-ruby-builder:local`.
+
+
