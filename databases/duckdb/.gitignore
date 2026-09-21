@@ -1,0 +1,13 @@
+/target
+build
+configure
+.idea
+duckdb_unittest_tempdir
+/test/bin
+venv
+duckdb-bin
+duckdb.zip
+tools/null-cut.json
+tools/slide-run
+tools/wire-run
+.cargo/registry
