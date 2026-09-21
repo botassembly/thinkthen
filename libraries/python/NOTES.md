@@ -121,3 +121,99 @@ $ grep -c "deno\|polars" ~/.zshrc
 ```
 
 **Not run in this lane (unchecked).** The plugin expression and the version pin (experiment 216); the gate against Polars' own parallelism (213); fork with a warm Polars pool (214); deadline and interrupt inside an expression (215); `filter`, `rank`, and `find` over Polars containers — they still take lists, the door is ready for them; the optional extra `pip install thinkthen[polars]` is declared in `pyproject.toml` but was not exercised from an index.
+
+## pandas checks
+
+The five checks from `repos/thinkthen/sdlc/issues/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md`, run on the stand-in engine: no pandas door, no pandas import, no paid call. Versions: pandas 3.0.6, 2.3.3, and 2.2.3; pyarrow 25.0.1; Polars 1.44.2; Python 3.13.5. New artifacts: `tests/test_pandas_checks.py` (9 tests, wired into `check.sh` as "== the pandas checks, null backend / 9 passed"), `tests/bench_width_pandas.py`, `tests/bench_cost_pandas.py`.
+
+### Check 5 first: the frame call raises, and the sentence names no fix — the issue's bar is not met
+
+```
+$ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_pandas_checks.py -q
+.........                                                                [100%]
+9 passed in 0.36s
+
+$ .venv/bin/python - <<'PY'
+import pandas as pd, thinkthen as tt
+df = pd.DataFrame({"body": ["a", "b"], "id": [1, 2]})
+tt.annotate("tests/fixture/form.json", df, on="body")
+PY
+ValueError : DataFrame constructor not properly called!
+```
+
+The wrapper takes the capsule path (every tested pandas frame carries `__arrow_c_stream__`, back to 2.2.3), Rust reads the frame and appends its columns, and the refusal lands at `type(records)(frame)` — pandas' own constructor error. Two facts from the run: it never half works (the frame is untouched, no columns appear, and the column-names-judged hazard does not occur because the frame takes the capsule path on every tested version), and the sentence names no fix, so the issue's "refuses with a sentence that names the fix" bar is not met. pandas 2.3.3 and 2.2.3 refuse the same way, same message, checked in their venvs. Per the task, the library was not bent; the product side rules on the refusal sentence.
+
+### Check 1: object-dtype answers equal the list, on every tested pandas
+
+```
+pandas 3.0.6  object capsule: True   answers equal: True   (the Arrow door; every Series exports)
+pandas 2.3.3  object capsule: False  answers equal: True   (the list door)
+pandas 2.2.3  object capsule: False  answers equal: True   (the list door)
+```
+
+On pandas 3 the object column takes the Arrow door and re-converts on every export (check 2's table); on pandas 2 it crosses as an iterable, list speed. One crossing and 32 in flight are proven by the width bench below: 1,000 requests and `max_in_flight` 32 for every container, one `decide_many` call each.
+
+### Check 2: the fast path is a pandas-major story, and the issue's spelling is wrong
+
+```
+pandas 2.2.3  str[pyarrow]      -> accepted, dtype string[pyarrow]
+pandas 2.3.3  str[pyarrow]      -> TypeError: data type 'str[pyarrow]' not understood
+pandas 3.0.6  str[pyarrow]      -> TypeError: data type 'str[pyarrow]' not understood
+```
+
+The issue's spelling works only on 2.2.3 (as an alias). The valid spellings are the default `str` (Arrow-backed on pandas 3) and `string[pyarrow]`. The address form, 205's, single process:
+
+```
+polars             fmt vu  exports stable: True   walk(data,off) == probe(vals,views): True
+pd default str     fmt U   exports stable: True   match: True
+pd string[pyarrow] fmt U   exports stable: True   match: True
+pd object          fmt u   exports stable: False  match: False (fresh buffers every export)
+```
+
+So the 205 form holds for the Arrow-backed pandas columns on pandas 3.0.6 and the door reads exactly those buffers. An object column's exporter converts on every call, so no address form can hold for it; its answers are check 1's. On pandas 2.2.3 and 2.3.3 a `string[pyarrow]` Series carries no capsule at all — the fast path exists only on pandas 3 in this matrix, and pandas 2 columns all cross at list speed and still work.
+
+### Check 3: equal on the wire, an export constant on tiny batches
+
+Width bench, 1,000 records at a 300 ms stub, jobs 32 (`ENGINE_BASE_URL=http://127.0.0.1:8211/v1 ENGINE_WIDTH=32 .venv/bin/python tests/bench_width_pandas.py`):
+
+```
+list             wall 9.651 s  stats {'connections': 33, 'max_in_flight': 32, 'requests': 1000}
+pd object        wall 9.669 s  stats {'connections': 1, 'max_in_flight': 32, 'requests': 1000}
+pd str (arrow)   wall 9.659 s  stats {'connections': 1, 'max_in_flight': 32, 'requests': 1000}
+polars           wall 9.669 s  stats {'connections': 1, 'max_in_flight': 32, 'requests': 1000}
+slowest pd object 9.669 s | fastest list 9.651 s | spread 0.18%
+```
+
+Null backend cost, 10,000 records, three passes in two orders: all four containers land at 2.3–2.6 µs a record and the differences move with run order, not with the container. Where the containers do separate is the one-record-at-a-time loop, 2,000 calls each:
+
+```
+single-record call: list             51.07 us/call
+single-record call: polars           55.42 us/call
+single-record call: pd str (arrow)   98.82 us/call
+single-record call: pd object       115.76 us/call
+```
+
+That ~45–65 µs is the Arrow export setup per call, worst on the object column, invisible in a bulk batch. The manual's slow-one/fast-one statement, from these numbers: bulk batches are indistinguishable across the four containers; in a one-row-at-a-time loop the list and Polars are cheapest, and a pandas column pays an export per call.
+
+### Check 4: what comes back is a plain list of booleans, for every container
+
+`decide_many` returns judgments, not a re-created column: `type(out) is list` for the list, both pandas forms, and Polars; the one conversion line is `pd.Series(out)`, which the test runs and which comes back bool. The test states each returned type.
+
+### The pin, and the absent-pandas run
+
+Oldest pandas the checks ran on: 2.2.3 (the oldest release with Python 3.13 wheels; pandas 2.0 and 2.1 cannot install on this interpreter and are unchecked). On 2.2.3 everything crosses as a list and the frame refuses the same way. The zero-copy path exists only on pandas 3.0.6 in this matrix — so the product sentence "one astype line makes it fast" is true on pandas 3 (`astype("string[pyarrow]")`, or the default) and has no fast path to point at on pandas 2.
+
+pandas absent, from the built wheel in a clean venv:
+
+```
+$ maturin build --release    # thinkthen-0.0.1-cp310-abi3-manylinux_2_39_x86_64.whl
+$ uv venv /tmp/tt-nopd && uv pip install --python /tmp/tt-nopd/bin/python target/wheels/thinkthen-0.0.1-cp310-abi3-manylinux_2_39_x86_64.whl
+$ cd /tmp && /tmp/tt-nopd/bin/python -c "..."
+wheel install from /tmp: [True, False]
+thinkthen from: /tmp/tt-nopd/lib/python3.13/site-packages/thinkthen/__init__.py
+pandas findable: False
+```
+
+`pandas`, `polars`, and `pyarrow` were absent from `sys.modules` after `import thinkthen`, and a `decide_many` ran on the null backend. The in-tree test pins the same claim for pandas and Polars (subprocess import check).
+
+Unchecked: pandas below 2.2.3 (no wheels for this interpreter; the older-major frame hazard could not be tested, and all tested majors refuse the frame); categorical, nullable, and other dtype spellings beyond the five checks; the reproduction venvs (`.venv-pd2`, `.venv-pd22`) were removed after the runs; the commands above recreate them.
