@@ -15,6 +15,7 @@ export const decide_many = cjs.decide_many;
 export const details = cjs.details;
 export const filter = cjs.filter;
 export const find = cjs.find;
+export const probe = cjs.probe;
 export const question = cjs.question;
 export const rank = cjs.rank;
 export const reset_usage = cjs.reset_usage;

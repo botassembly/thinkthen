@@ -135,6 +135,9 @@ export function annotate<T extends object = { record: string }>(
   options?: CallOptions,
 ): Promise<AnnotatedRow<T>[]>;
 
+/** Return the text unchanged, for testing. */
+export function probe(text: string, options?: CallOptions): Promise<string>;
+
 /** One judgment plus the audit trail, with the sends that produced it. */
 export function details(question: string | Question, text: string, options?: CallOptions): Promise<DetailsAnswer>;
 

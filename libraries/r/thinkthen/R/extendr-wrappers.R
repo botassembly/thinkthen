@@ -17,6 +17,9 @@ NULL
 #' Build a question through the one file grammar, any verb, any threshold.
 tt_question_grammared <- function(body) .Call(wrap__tt_question_grammared, body)
 
+#' Return the text unchanged, for testing.
+tt_probe_native <- function(body) .Call(wrap__tt_probe_native, body)
+
 #' `decide` over a column: one crossing, every judgment in input order.
 tt_decide_column <- function(question, records) .Call(wrap__tt_decide_column, question, records)
 

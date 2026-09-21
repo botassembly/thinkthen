@@ -552,6 +552,12 @@ fn details(
     Ok(dict.into_any().unbind())
 }
 
+/// Return the text unchanged, for testing.
+#[pyfunction]
+fn probe(py: Python<'_>, text: String) -> PyResult<String> {
+    engine().probe(&text).map_err(|error| python_error(py, error))
+}
+
 /// The counters since the last reset. `requests` counts sends, so a
 /// retried send shows twice, the same as the bill.
 #[pyfunction]
@@ -586,6 +592,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(find, module)?)?;
     module.add_function(wrap_pyfunction!(annotate_rows, module)?)?;
     module.add_function(wrap_pyfunction!(details, module)?)?;
+    module.add_function(wrap_pyfunction!(probe, module)?)?;
     module.add_function(wrap_pyfunction!(usage, module)?)?;
     module.add_function(wrap_pyfunction!(reset_usage, module)?)?;
     module.add("ThinkThenError", py.get_type::<ThinkThenError>())?;

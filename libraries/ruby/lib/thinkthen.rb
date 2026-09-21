@@ -153,6 +153,11 @@ module ThinkThen
       @engine.details(built(question), evidence.to_s, cancel, deadline)
     end
 
+    # Return the text unchanged, for testing.
+    def probe(text)
+      @engine.probe(text.to_s)
+    end
+
     def usage
       @engine.usage
     end

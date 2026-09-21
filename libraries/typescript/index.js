@@ -214,6 +214,12 @@ async function details(questionOrText, text, options) {
   };
 }
 
+// Return the text unchanged, for testing.
+async function probe(text, options) {
+  checkEvidence(text);
+  return invoke('probe', null, text, options);
+}
+
 function usage() {
   return JSON.parse(native.usage());
 }
@@ -231,6 +237,7 @@ module.exports = {
   details,
   filter,
   find,
+  probe,
   question,
   rank,
   reset_usage,

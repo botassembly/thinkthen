@@ -161,6 +161,12 @@ fn tt_decide_column(
     Ok(list!(ans = answers, prob = probabilities))
 }
 
+/// Return the text unchanged, for testing.
+#[extendr]
+fn tt_probe_native(body: String) -> String {
+    body
+}
+
 /// One `decide` of one evidence.
 #[extendr]
 fn tt_decide_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<List, String> {
@@ -384,6 +390,7 @@ fn tt_question_parts(question: ExternalPtr<Question>) -> List {
 extendr_module! {
     mod thinkthen;
     fn tt_question_grammared;
+    fn tt_probe_native;
     fn tt_decide_column;
     fn tt_decide_one;
     fn tt_choose_one;
