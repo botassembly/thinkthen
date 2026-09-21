@@ -1,0 +1,116 @@
+#!/bin/sh
+# Run ticket 0040's staged find reach check through today's choose and rank paths.
+set -eu
+
+probe=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+mode=${1:-}
+case "$mode" in
+feasibility | comparison) ;;
+*)
+	printf 'find-0040: the mode is feasibility or comparison\n' >&2
+	exit 2
+	;;
+esac
+
+cd -- "$probe"
+sha256sum -c hashes.sha256 >/dev/null
+python3 fixture.py verify
+
+base=https://api.typesafe.ai/v1
+cache=${FIND0040_CACHE:-$probe/recording}
+out=${FIND0040_OUT:-$probe/results}
+scratch=$(mktemp -d)
+trap 'rm -rf -- "$scratch"' EXIT HUP INT TERM
+mkdir -p "$cache" "$out"
+failures=$out/failures.jsonl
+: >"$failures"
+
+stop() {
+	stop_case=$1
+	stop_arm=$2
+	stop_status=$3
+	printf '{"stage":"%s","case":"%s","arm":"%s","exit":%s}\n' \
+		"$mode" "$stop_case" "$stop_arm" "$stop_status" >>"$failures"
+	printf 'find-0040: %s stopped at %s/%s with exit %s\n' \
+		"$mode" "$stop_case" "$stop_arm" "$stop_status" >&2
+	exit "$stop_status"
+}
+
+publish_summary() {
+	summary_name=$1
+	shift
+	temporary=$scratch/summary
+	if "$@" >"$temporary"; then
+		mv -- "$temporary" "$out/$summary_name"
+		cat -- "$out/$summary_name"
+	else
+		summary_status=$?
+		stop analysis "$summary_name" "$summary_status"
+	fi
+}
+
+find_one() {
+	find_case=$1
+	find_policy=$2
+	find_rows=$3
+	python3 fixture.py state "$find_case" >"$scratch/state"
+	find_question=$(python3 fixture.py question "$find_case")
+	if [ "$find_policy" = none ]; then
+		set -- $(python3 fixture.py options "$find_case" none)
+	else
+		set -- $(python3 fixture.py options "$find_case")
+	fi
+	thinkthen choose "$find_question" "$@" --details --url "$base" \
+		--cache "$cache" --max-retries 0 \
+		<"$scratch/state" >"$scratch/result" 2>"$scratch/error" && find_status=0 || find_status=$?
+	case "$find_status" in
+	0 | 3) ;;
+	*) stop "$find_case" "$find_policy" "$find_status" ;;
+	esac
+	python3 fixture.py find-row "$find_case" "$find_policy" "$scratch/result" \
+		>>"$find_rows" || stop "$find_case" "$find_policy-result" 2
+}
+
+rank_one() {
+	rank_case=$1
+	rank_rows=$2
+	python3 fixture.py rank-input "$rank_case" >"$scratch/rank-input"
+	rank_question=$(python3 fixture.py rank-question "$rank_case")
+	thinkthen rank "$rank_question" --jsonl --field /text --details --jobs 3 \
+		--url "$base" --cache "$cache" --max-retries 0 \
+		<"$scratch/rank-input" >"$scratch/result" 2>"$scratch/error" && rank_status=0 || rank_status=$?
+	[ "$rank_status" = 0 ] || stop "$rank_case" rank "$rank_status"
+	python3 fixture.py rank-row "$rank_case" "$scratch/result" \
+		>>"$rank_rows" || stop "$rank_case" rank-result 2
+}
+
+if [ "$mode" = feasibility ]; then
+	rm -f -- "$out/feasibility-summary.json"
+	rows=$out/feasibility.jsonl
+	: >"$rows"
+	find_one s100-a1 plain "$rows"
+	find_one s100-b1 none "$rows"
+	find_one s175-a1 plain "$rows"
+	find_one s175-b1 none "$rows"
+	find_one s250-a1 plain "$rows"
+	find_one s250-b1 none "$rows"
+	find_one b255-a1 plain "$rows"
+	find_one b254-b1 none "$rows"
+	publish_summary feasibility-summary.json python3 analyse.py feasibility "$rows"
+	exit 0
+fi
+
+rm -f -- "$out/comparison-find-gate.json" "$out/comparison-summary.json"
+find_rows=$out/comparison-find.jsonl
+rank_rows=$out/comparison-rank.jsonl
+: >"$find_rows"
+: >"$rank_rows"
+for find_case in s100-a1 s100-a2 s100-b1 s175-a1 s175-a2 s175-b1 s250-a1 s250-a2 s250-b1; do
+	find_one "$find_case" plain "$find_rows"
+	find_one "$find_case" none "$find_rows"
+done
+publish_summary comparison-find-gate.json python3 analyse.py find-gate "$find_rows" >/dev/null
+for rank_case in s100-a1 s100-a2 s175-a1 s175-a2 s250-a1 s250-a2; do
+	rank_one "$rank_case" "$rank_rows"
+done
+publish_summary comparison-summary.json python3 analyse.py comparison "$find_rows" "$rank_rows"

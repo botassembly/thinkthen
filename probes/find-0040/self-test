@@ -1,0 +1,269 @@
+#!/bin/sh
+# Prove the staged job, gates, counts, and secrecy without a key or network.
+set -eu
+
+probe=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo=$(CDPATH= cd -- "$probe/../.." && pwd)
+scratch=$(mktemp -d)
+trap 'rm -rf -- "$scratch"' EXIT HUP INT TERM
+unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+export PYTHONDONTWRITEBYTECODE=1
+
+cat >"$scratch/thinkthen" <<'PY'
+#!/usr/bin/env python3
+import json
+import hashlib
+import os
+import pathlib
+import re
+import sys
+
+
+def flag(args, name):
+    places = [place for place, value in enumerate(args) if value == name]
+    if len(places) != 1 or places[0] + 1 >= len(args):
+        raise ValueError(f"{name} must appear once with a value")
+    return args[places[0] + 1]
+
+
+args = sys.argv[1:]
+if not args or args[0] not in {"choose", "rank"}:
+    raise SystemExit(90)
+try:
+    if flag(args, "--max-retries") != "0":
+        raise ValueError("retries are not zero")
+    if flag(args, "--url") != "https://api.typesafe.ai/v1":
+        raise ValueError("the hosted URL is not pinned")
+    cache = flag(args, "--cache")
+    if cache != os.environ["FAKE_EXPECT_CACHE"]:
+        raise ValueError("the cache path changed")
+    if any(name in args for name in ("--record", "--replay", "--dry-run", "--top", "--threshold")):
+        raise ValueError("the probe bypassed its cache")
+    if args.count("--details") != 1:
+        raise ValueError("details must appear once")
+except (KeyError, ValueError) as error:
+    print(f"fake: {error}", file=sys.stderr)
+    raise SystemExit(90) from None
+
+counter = pathlib.Path(os.environ["FAKE_COUNT"])
+number = int(counter.read_text()) + 1
+counter.write_text(f"{number}\n")
+if number == int(os.environ.get("FAKE_FAIL_AT", "0")):
+    print("private evidence TARGET-SECRET and key sk-secret-value", file=sys.stderr)
+    raise SystemExit(4)
+
+command = args[0]
+question = args[1]
+marker = re.search(r"TARGET-[A-Z0-9-]+", question)
+marker = marker.group(0) if marker else ""
+body = sys.stdin.read()
+if command == "choose":
+    stop = next((place for place, value in enumerate(args[2:], start=2) if value.startswith("--")), len(args))
+    options = args[2:stop]
+    state = json.loads(body)
+    ids = [row["id"] for row in state]
+    if options not in (ids, ids + ["none"]):
+        print("fake: choice ids do not match the state", file=sys.stderr)
+        raise SystemExit(90)
+    expected = ["choose", question, *options, "--details", "--url",
+                "https://api.typesafe.ai/v1", "--cache", cache, "--max-retries", "0"]
+    if args != expected:
+        print("fake: choose arguments differ from the exact probe shape", file=sys.stderr)
+        raise SystemExit(90)
+    found = next((row["id"] for row in state if marker in row["evidence"]), None)
+    wrong = set(filter(None, os.environ.get("FAKE_WRONG_CASES", "").split(",")))
+    case = marker.removeprefix("TARGET-").lower()
+    pick = "u001" if case in wrong else found
+    if pick is None:
+        pick = "none" if "none" in options else "u001"
+    probabilities = {option: (1.0 if option == pick else 0.0) for option in options}
+    cache_key = hashlib.sha256((question + "\0" + body + "\0".join(options)).encode()).hexdigest()
+    cache_file = pathlib.Path(cache) / f"fake-{cache_key}"
+    replayed = cache_file.exists()
+    cache_file.touch()
+    result = {
+        "schema": "thinkthen.result/1", "value": "IGNORED-BY-PROBE",
+        "question": {"verb": "choose", "text": question, "options": options},
+        "answer": {"kind": "choice", "pick": pick, "probabilities": probabilities},
+        "threshold": None,
+        "meta": {"usage": {"input_tokens": len(body) // 4 + 100}, "replayed": replayed},
+    }
+    live_requests = 0 if replayed else 1
+    judgments = 1
+    replayed_judgments = int(replayed)
+    choices = len(options)
+    rendered = [result]
+else:
+    records = [json.loads(line) for line in body.splitlines() if line]
+    expected = ["rank", question, "--jsonl", "--field", "/text", "--details",
+                "--jobs", "3", "--url", "https://api.typesafe.ai/v1", "--cache",
+                cache, "--max-retries", "0"]
+    if args != expected:
+        print("fake: rank arguments differ from the exact probe shape", file=sys.stderr)
+        raise SystemExit(90)
+    rendered = []
+    for row in records:
+        probability = 0.99 if marker in row["text"] else 0.01
+        rendered.append({
+            "schema": "thinkthen.result/1", "value": None, "input": row,
+            "question": {"verb": "decide", "text": question},
+            "answer": {"kind": "yes_no", "probability": probability},
+            "threshold": None,
+            "meta": {"usage": {"input_tokens": 200}, "replayed": False},
+        })
+    live_requests = len(records)
+    judgments = len(records)
+    replayed_judgments = 0
+    choices = None
+
+with pathlib.Path(os.environ["FAKE_LOG"]).open("a") as log:
+    log.write(json.dumps({
+        "command": command, "live_requests": live_requests,
+        "judgments": judgments, "replayed_judgments": replayed_judgments,
+        "choices": choices,
+        "retries": 0, "cache": cache,
+    }, separators=(",", ":")) + "\n")
+for result in rendered:
+    print(json.dumps(result, separators=(",", ":")))
+PY
+chmod +x "$scratch/thinkthen"
+
+run_fake() {
+	fake_mode=$1
+	fake_out=$2
+	fake_cache=$3
+	shift 3
+	mkdir -p "$fake_out" "$fake_cache"
+	FAKE_COUNT=$scratch/count FAKE_LOG=$scratch/log \
+		FAKE_EXPECT_CACHE=$fake_cache PATH="$scratch:$PATH" \
+		"$@" "$probe/run" "$fake_mode"
+}
+
+cd -- "$probe"
+sha256sum -c hashes.sha256 >/dev/null
+python3 fixture.py verify
+
+# The probe derives find's value from ordered probabilities, never choose's value.
+python3 - <<'PY'
+import fixture
+
+case = fixture.cases()["s100-a1"]
+options = fixture.expected_options(case, True)
+
+def result(leaders):
+    probabilities = {option: (0.5 if option in leaders else 0.0) for option in options}
+    return {
+        "value": "u099",
+        "question": {"options": options},
+        "answer": {"kind": "choice", "probabilities": probabilities},
+        "meta": {"usage": {"input_tokens": 1}, "replayed": False},
+    }
+
+assert fixture.find_row(case, True, result({"u001", "u002"}))["value"] == "u001"
+assert fixture.find_row(case, True, result({"u001", "none"}))["value"] == "none"
+PY
+
+# The real binary builds the exact aggregate state and ordered choice list.
+python3 fixture.py state b255-a1 >"$scratch/state"
+question=$(python3 fixture.py question b255-a1)
+set -- $(python3 fixture.py options b255-a1)
+"$repo/target/debug/thinkthen" choose "$question" "$@" --dry-run \
+	<"$scratch/state" >"$scratch/plain-plan"
+python3 fixture.py state b254-b1 >"$scratch/none-state"
+question=$(python3 fixture.py question b254-b1)
+set -- $(python3 fixture.py options b254-b1 none)
+"$repo/target/debug/thinkthen" choose "$question" "$@" --dry-run \
+	<"$scratch/none-state" >"$scratch/none-plan"
+jq -e --rawfile state "$scratch/state" \
+	'.request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
+	 and (.request.questions.q1.criteria | keys_unsorted | first) == "u001"
+	 and (.request.questions.q1.criteria | keys_unsorted | last) == "u255"' \
+	"$scratch/plain-plan" >/dev/null
+jq -e --rawfile state "$scratch/none-state" \
+	'.request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
+	 and (.request.questions.q1.criteria | keys_unsorted | first) == "u001"
+	 and (.request.questions.q1.criteria | keys_unsorted | last) == "none"' \
+	"$scratch/none-plan" >/dev/null
+
+printf '0\n' >"$scratch/count"
+: >"$scratch/log"
+FIND0040_OUT=$scratch/feasibility FIND0040_CACHE=$scratch/cache \
+	run_fake feasibility "$scratch/feasibility" "$scratch/cache" \
+	env >"$scratch/feasibility-summary"
+test "$(cat "$scratch/count")" = 8
+jq -e '.stage == "feasibility" and .logical_judgments == 8
+       and .live_backend_requests == 8 and .replayed_judgments == 0 and .accepted == 8
+       and .unit_appearances == 1559 and .largest_without_none == 255
+       and .largest_with_none == 254' "$scratch/feasibility-summary" >/dev/null
+jq -s -e 'length == 8 and (map(.command) | all(. == "choose"))
+          and map(.choices) == [100,101,175,176,250,251,255,255]
+          and (map(.live_requests) | add) == 8
+          and (map(.retries) | all(. == 0))' "$scratch/log" >/dev/null
+python3 analyse.py reservation "$scratch/feasibility-summary" >"$scratch/reservation"
+jq -e '.comparison_max_tokens <= 525000' "$scratch/reservation" >/dev/null
+! grep -R -E 'TARGET-|amber checklist|sk-secret' "$scratch/feasibility" >/dev/null
+
+printf '0\n' >"$scratch/count"
+: >"$scratch/log"
+FIND0040_OUT=$scratch/comparison FIND0040_CACHE=$scratch/cache \
+	run_fake comparison "$scratch/comparison" "$scratch/cache" \
+	env >"$scratch/comparison-summary"
+test "$(cat "$scratch/count")" = 24
+jq -e '.stage == "comparison"
+       and .find_traffic.logical_judgments == 18
+       and .find_traffic.live_backend_requests == 12
+       and .find_traffic.replayed_judgments == 6
+       and .arms.without_none.hits == 6 and .arms.with_none.hits == 6
+       and .blank_none_hits == 3 and .false_none == 0
+       and .rank.hits == 6 and .rank.logical_judgments == 1050
+       and .rank.live_backend_requests == 1050 and .rank.replayed_judgments == 0
+       and .rank.hits_by_size["100"].hits == 2
+       and .rank.hits_by_size["175"].hits == 2
+       and .rank.hits_by_size["250"].hits == 2' \
+	"$scratch/comparison-summary" >/dev/null
+jq -s -e 'map(select(.command == "choose")) | length == 18' "$scratch/log" >/dev/null
+jq -s -e 'map(select(.command == "rank")) as $rank
+          | ($rank | length) == 6 and ($rank | map(.live_requests) | add) == 1050
+          and ($rank | map(.judgments) | add) == 1050' \
+	"$scratch/log" >/dev/null
+
+printf '0\n' >"$scratch/count"
+: >"$scratch/log"
+set +e
+FAKE_FAIL_AT=3 FIND0040_OUT=$scratch/stopped FIND0040_CACHE=$scratch/stopped-cache \
+	FAKE_COUNT=$scratch/count FAKE_LOG=$scratch/log \
+	FAKE_EXPECT_CACHE=$scratch/stopped-cache PATH="$scratch:$PATH" \
+	"$probe/run" feasibility >"$scratch/stopped.out" 2>"$scratch/stopped.err"
+status=$?
+set -e
+test "$status" = 4
+test "$(cat "$scratch/count")" = 3
+test ! -s "$scratch/stopped.out"
+grep -Fx 'find-0040: feasibility stopped at s175-a1/plain with exit 4' \
+	"$scratch/stopped.err" >/dev/null
+! grep -E 'TARGET-SECRET|sk-secret-value|private evidence' "$scratch/stopped.err" >/dev/null
+jq -e '.stage == "feasibility" and .case == "s175-a1" and .arm == "plain" and .exit == 4' \
+	"$scratch/stopped/failures.jsonl" >/dev/null
+
+printf '0\n' >"$scratch/count"
+: >"$scratch/log"
+mkdir -p "$scratch/gated"
+printf '{"stale":true}\n' >"$scratch/gated/comparison-summary.json"
+set +e
+FAKE_WRONG_CASES=s100-a1,s100-a2 FIND0040_OUT=$scratch/gated \
+	FIND0040_CACHE=$scratch/gated-cache FAKE_COUNT=$scratch/count FAKE_LOG=$scratch/log \
+	FAKE_EXPECT_CACHE=$scratch/gated-cache PATH="$scratch:$PATH" \
+	"$probe/run" comparison >"$scratch/gated.out" 2>"$scratch/gated.err"
+status=$?
+set -e
+test "$status" = 2
+test "$(cat "$scratch/count")" = 18
+jq -s -e 'map(select(.command == "rank")) | length == 0' "$scratch/log" >/dev/null
+grep -Fx 'find-0040: an answerable find arm did not hit at least 5 of 6' \
+	"$scratch/gated.err" >/dev/null
+test ! -e "$scratch/gated/comparison-summary.json"
+jq -e '.stage == "comparison" and .case == "analysis"
+       and .arm == "comparison-find-gate.json" and .exit == 2' \
+	"$scratch/gated/failures.jsonl" >/dev/null
+
+printf 'find-0040-self-test: 4 cases pass\n'

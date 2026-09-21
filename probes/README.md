@@ -17,6 +17,7 @@ Two checks cannot be replayed, and their folders say so at the top of the script
 | `07-true-and-false-texts/` | Does saying what true and what false mean move the answer |
 | `08-option-descriptions/` | Does a description under each option pick better than a bare label |
 | `09-evidence-shape/` | Does evidence from several pointers judge better as a JSON object than as the string the tool flattens it into |
+| `find-0040/` | Does the accepted one-request find shape hold from 100 through 255 choices before the public command is built |
 | `token-budget/` | Which of the vendor's two published request budgets is real. Written and not yet run, because a request that tests a 32,000 token ceiling costs more than 32,000 tokens |
 
 ## Running one again

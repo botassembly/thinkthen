@@ -8,6 +8,7 @@ cd -- "$REPO"
 cargo test --locked --workspace --all-targets --all-features
 cargo test --locked --workspace --doc --all-features
 sh probes/probability-total-0038/self-test
+sh probes/find-0040/self-test
 
 if [ "$(uname -s)" = Linux ]; then
 	sdlc/live-test
