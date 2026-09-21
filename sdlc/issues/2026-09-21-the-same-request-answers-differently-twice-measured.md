@@ -2,7 +2,7 @@
 
 Status: Open
 
-Item 5 of `2026-09-21-where-a-user-could-lose-trust-a-first-list.md` asked whether one request sent twice gets one answer. It does not. `experiments/211-thinkthen-repeat/` holds the probe, and Ian authorized probes on 2026-09-21. One capped job sent 100 SMS messages twice, minutes apart, with one bare question, no cache, and no retries. Fifty messages were picked because they sat near 0.5 the day before, and fifty were taken in sample order. Every answer came from `jev-1.13.0`.
+Item 5 of `2026-09-21-where-a-user-could-lose-trust-a-first-list.md` asked whether one request sent twice gets one answer. It does not. `experiments/212-thinkthen-repeat/` holds the probe, and Ian authorized probes on 2026-09-21. One capped job sent 100 SMS messages twice, minutes apart, with one bare question, no cache, and no retries. Fifty messages were picked because they sat near 0.5 the day before, and fifty were taken in sample order. Every answer came from `jev-1.13.0`.
 
 | Compared | Probabilities that differ, of 100 | Largest difference | Flips at a 0.5 cut |
 | --- | --- | --- | --- |
