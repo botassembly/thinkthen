@@ -62,12 +62,16 @@ Re-score if implementation exposes a command change, shared state, or a new publ
 ## Review
 
 - Design review: accepted after two rejections. The first revision gives the three files one publication boundary, puts page 16 first in the repository's front window, retains the collision lesson, fixes the example vocabulary, and raises State and timing to 2. The second adds every opened path. The reviewer accepted the final design with no remaining finding.
-- Code review: pending
+- Code review: rejected once. The reviewer required exact answer names, found that GNU `mv` can nest the temporary directory if the destination appears after the precheck, separated the coordinator's live wrapper from the recording job, and found a stale README ordering sentence. The answer-name, recording, and README findings are remediated. Atomic no-replace directory publication needs a revised design before its implementation changes.
 
 ## Implementation
 
 The local draft adds six fictional TSV tickets, a three-question set over `/body`, the fail-closed `triage` policy, and an atomic pipeline that publishes three complete JSONL files with one directory rename. The policy test first failed because `triage.jq` did not exist, then passed eight routing cases and five safe refusals. The pipeline self-test covers the exact command, a single policy application, all three populated outputs, full rows, reviewed-action agreement, disclosure, an existing destination, the final rename, and cleanup after an injected split failure.
 
 The exact midpoint is urgency 1. It routes to `review` with reason `urgent`. The agent chose that inclusive boundary because the middle written level says a delay can cause a concrete problem. Ian can overturn it before the live recording.
+
+The accepted publication assumption is disproved. POSIX shell has no portable operation that atomically renames a directory while refusing any existing destination. GNU `mv` can nest the temporary directory, and a direct rename can replace an empty destination. A symlink commit is portable but leaves a hidden backing directory and makes ordinary cleanup surprising. The agent recommends a small Linux/macOS no-replace rename helper if the actual-directory contract holds. A design reviewer must settle this before implementation continues.
+
+The coordinator alone will invoke `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`. The recording job uses a temporary output directory, cleans it on every exit, and writes only the shared cache. A direct keyless replay runs `triage` with `--replay recording/` and needs no new live reservation.
 
 Pages 04 and 07 remain until page 16 is green. The draft now carries their review pile, explicit null, complete flat input row, table-input/JSONL-output, atomic publication, disclosure, and collision lessons.

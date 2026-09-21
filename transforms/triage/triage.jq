@@ -11,6 +11,8 @@ elif (has_value("credential_request") | not)
   or (has_value("queue") | not)
   or (has_value("urgency") | not) then
   refuse("the row is missing a required answer")
+elif (.value | keys | . != ["credential_request", "queue", "urgency"]) then
+  refuse("the row has an unknown answer")
 elif (.value.credential_request != null
       and (.value.credential_request | type) != "boolean") then
   refuse("credential_request is not true, false, or null")

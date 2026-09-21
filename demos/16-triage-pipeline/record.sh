@@ -3,9 +3,11 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
-output=demos/16-triage-pipeline/live-output
-sdlc/scripts/live --max-tokens 5000 \
-	demos/16-triage-pipeline/triage demos/16-triage-pipeline/live-output \
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+output=$work/output
+
+demos/16-triage-pipeline/triage "$output" \
 	--cache demos/16-triage-pipeline/recording \
 	--url https://api.typesafe.ai/v1
 

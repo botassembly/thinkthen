@@ -27,9 +27,10 @@ check_bad() {
 }
 
 check_bad missing '{"value":{"credential_request":false,"queue":"billing"}}'
+check_bad extra '{"value":{"credential_request":false,"queue":"billing","urgency":0,"surprise":true}}'
 check_bad credential '{"value":{"credential_request":"false","queue":"billing","urgency":0}}'
 check_bad queue '{"value":{"credential_request":false,"queue":"sales","urgency":0}}'
 check_bad urgency '{"value":{"credential_request":false,"queue":"billing","urgency":3}}'
 check_bad unknown '{"value":{"credential_request":false,"queue":"billing","urgency":"low"}}'
 
-printf '%s\n' 'triage policy: 8 routes and 5 refusals pass'
+printf '%s\n' 'triage policy: 8 routes and 6 refusals pass'

@@ -14,10 +14,14 @@ The agent set urgency 1, the middle of the three-level scale, as the inclusive `
 
 ## Red and green evidence
 
-`sh transforms/triage/test.sh` first failed because `transforms/triage/triage.jq` did not exist. After the transform was written, it passed eight routing cases and five malformed-input refusals. The cases cover every rule, precedence, a null for each answer kind, the exact midpoint, an unknown queue, hostile strings, and exact preservation of the input row.
+`sh transforms/triage/test.sh` first failed because `transforms/triage/triage.jq` did not exist. After the transform was written, it passed eight routing cases and six malformed-input refusals. The cases cover every rule, precedence, a null for each answer kind, the exact midpoint, missing and extra answer names, an unknown queue, hostile strings, and exact preservation of the input row.
 
 `demos/16-triage-pipeline/self-test` passes the exact command shape, one policy application, three populated JSONL outputs, full-row preservation, agreement with six pre-registered `reviewed_action` values, a request disclosure check through the real binary's dry run, an existing destination, one final rename, and cleanup after an injected failure.
 
 ## Still pending
 
 Page 16 remains red. A cold marketing reader and an independent code reviewer inspect this pushed draft next. After both accept it, one authorized run uses the ticket's 5,000-token cap to create the recording. The result then gets checked for request count, digests, model agreement, modes, credentials, and keyless replay before the page turns green. Pages 04 and 07 remain until then.
+
+The first code review rejected four findings. Exact answer-name validation, the recording job boundary, and the README order sentence were corrected. The review disproved the accepted publication assumption: shell `mv` does not portably combine an atomic directory rename with no replacement. The proposed symlink commit meets those two properties but gives surprising cleanup. A design review must choose a platform helper, a platform-bound command, or a revised artifact contract before the pipeline changes. The cold-read issue remains expected and closes only after the recording exists.
+
+The later paid command is `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`. The job itself contains no live wrapper and cleans its temporary output. Keyless cache replay calls the pipeline directly and reserves nothing.
