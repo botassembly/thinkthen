@@ -56,7 +56,7 @@ Ian can overturn any placement here.
 
 **A9. The C door.** Proposed ticket 12. One JSON result, one free function.
 
-**A10. How the command gets installed.** New, from `2026-09-21-nothing-says-how-the-command-gets-installed`. The product side recommends one Homebrew line and one download script for the first release. The build team costs it first.
+**A10. How the command gets installed.** Ruled by Ian: one Homebrew line from a public tap repository and one download script, copied from BioMCP's working pair. The release ticket works from `../issues/2026-09-20-lessons-from-biomcp-for-release-install-ci-and-docs.md`, which is the best-practices checklist for release, install, CI, and the docs site.
 
 **A11. The promise findings.** Proposed ticket 15: public examples, pipeline outcomes, vocabulary, and `printed-speed-and-cost-numbers-name-no-measuring-record`.
 
@@ -83,7 +83,7 @@ The surfaces are built over `contract/` and the stand-in engine, so none of this
 
 Not for the library team: anything on main, publishing, the spreadsheet bridge, and a serve mode. Those wait for Ian.
 
-Then each surface ships on its own, every one proven against the shared conformance cases, in this order:
+Everything ships together. Ian ruled on 2026-09-20 that the first release is 0.1 on the command, every library, and every extension at once (`../issues/2026-09-20-the-first-release-is-0-1-on-every-surface.md`). The table below is only the order the library team finishes and proves them in, and Ian can reorder it freely:
 
 | # | Surface | Notes |
 | --- | --- | --- |
@@ -96,9 +96,9 @@ Then each surface ships on its own, every one proven against the shared conforma
 | 7 | R | |
 | 8 | SQLite | Limited by `rusqlites-loadable-headers-stop-at-sqlite-3-34`. `thinkthen_warm` is the way around row-by-row asking |
 | 9 | PostgreSQL | `jsonb` results, cancel through the server's own tools |
-| 10 | Polars, the plugin expression | Later and optional. Pinned to a Polars release, with its support window documented |
+| 10 | Polars, the plugin expression | Ruled by Ian 2026-09-21: not in 0.1. The column form ships alone. The plugin comes later, pinned to a Polars release, with its support window documented |
 
-The databases were ruled in as a fast follow. The product side placed DuckDB ahead of Ruby and R because the data audience is the larger one. Ian can reorder these freely. Nothing depends on the order except Python before Polars and pandas.
+Nothing depends on this order except Python before Polars and pandas. A surface with a blocker that cannot be cleared (DuckDB and SQLite each have one filed) is the only reason a surface would miss 0.1, and that would come back to Ian.
 
 ## Lane C: spreadsheets, after the libraries
 
@@ -116,7 +116,7 @@ Experiment `229-thinkthen-spreadsheets` is closed. Its verdict replaces the prod
 - Claim the names: crates.io, npm and its scope, PyPI, RubyGems, the handle on X, and the trademark search. Eight open todos in the vault, dated 2026-09-20. These come before anything public names the product.
 - Ruled 2026-09-21: Polars is an optional extra. `pip install thinkthen` never pulls Polars in, and `pip install thinkthen[polars]` does.
 - Ruled 2026-09-21: the spend record ships in 0.1 if it is easy and waits if it is not. The product side's reading: the showing half is easy once the default cache lands in A4, and the limiting half is not needed. So A4 adds it. `thinkthen status` prints requests sent, tokens billed, and answers served from the cache, for this month and in total, from plain count rows kept beside the default cache. A row holds counts and never a text. No ceiling and no refusal in 0.1. If the build team finds the showing half is not easy, it says why and the item goes back to the backlog.
-- Still open: the Polars plugin expression beside the Series door, how the command gets installed, and the two gaps in the first article.
+- Ruled 2026-09-21: the Polars column form ships alone in 0.1, and the command installs by Homebrew and a download script. Nothing else is waiting on Ian except the names.
 
 ## Not in this queue
 

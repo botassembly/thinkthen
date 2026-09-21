@@ -1,6 +1,6 @@
 # Nothing says how the command gets installed
 
-Status: Open. Found by the product side on 2026-09-21 while planning the deck's closing slide. For the build team.
+Status: Ruled by Ian on 2026-09-21: one Homebrew line and one download script for the first release, and a public GitHub repository for the Homebrew formula is approved. BioMCP already ships this way (`curl -fsSL https://biomcp.org/install.sh | bash`, and the tap `genomoncology/homebrew-biomcp`), and it is MIT and Ian's own, so its installer and tap can be copied outright. The checklist of what to take from BioMCP is `2026-09-20-lessons-from-biomcp-for-release-install-ci-and-docs.md`, and the release ticket works from it. Found by the product side on 2026-09-21 while planning the deck's closing slide. For the build team.
 
 ## The gap
 
