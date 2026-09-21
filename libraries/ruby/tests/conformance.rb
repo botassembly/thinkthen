@@ -49,6 +49,10 @@ def check_error(verb, question_text, evidence, records, kind)
 
     raise "FAIL: expected the #{kind} kind, got #{e.kind}"
   end
+  if kind == "deadline"
+    error = raise_kind { ThinkThen.decide(question, evidence, deadline: 0.0) }
+    return ok_if(error == kind, "expected the #{kind} kind, got #{error || 'an answer'}")
+  end
   error = case verb
           when "filter" then raise_kind { ThinkThen.filter(question, records) }
           when "decide" then raise_kind { ThinkThen.decide(question, evidence) }
@@ -147,6 +151,10 @@ failed = 0
 file["cases"].each do |one|
   id = one["id"]
   verb = one["verb"]
+  if one["question_file"]
+    puts "skip     #{id}: the local kind needs a file door this surface does not carry"
+    next
+  end
   question_text = JSON.generate(one["question"])
   evidence = one["evidence"].to_s
   records = one["records"].to_a

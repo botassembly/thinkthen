@@ -105,18 +105,25 @@ def run(case):
 def expect_error(case, kind):
     """Run a case that must fail, and return whether it failed rightly."""
     verb = case["verb"]
+    if "question_file" in case:
+        return None, "the local kind needs a file door this surface does not carry"
     body = case.get("question", {})
     try:
         question = built(body)
-    except tt.UsageError as error:
-        return error.kind == "usage", None
+    except tt.UsageError:
+        # The builder refused the question, which is the usage kind itself.
+        return kind == "usage", None
     try:
-        if verb == "decide":
+        if kind == "deadline":
+            tt.decide(question, case.get("evidence", ""), deadline=0.0)
+        elif verb == "decide":
             tt.decide(question, case.get("evidence", ""))
         elif verb == "filter":
             tt.filter(question, case.get("records", []))
         elif verb == "choose":
             tt.choose(question, case.get("evidence", ""))
+        elif verb == "rank":
+            tt.rank(question, case.get("records", []))
         else:
             return None, f"no error runner for verb {verb}"
     except tt.ThinkThenError as error:

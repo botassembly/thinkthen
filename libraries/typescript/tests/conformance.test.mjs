@@ -25,6 +25,10 @@ function note(id, text) {
 
 async function runCase(held) {
   const { verb, question, evidence, records, expect } = held;
+  if (held.question_file) {
+    note(held.id, 'skip: the local kind needs a file door this surface does not carry');
+    return;
+  }
   const spec = JSON.parse(JSON.stringify(question));
   if (Array.isArray(spec.threshold)) spec.threshold = spec.threshold.join(':');
   const text = evidence ?? '';
@@ -37,6 +41,13 @@ async function runCase(held) {
 
   if (expect?.error) {
     const wanted = expect.error.kind;
+    if (wanted === 'deadline') {
+      note(
+        held.id,
+        'skip: the spent-budget case runs on the wire, where this surface’s own deadline test freezes the stub; a positive deadlineMs answers inside the null backend',
+      );
+      return;
+    }
     await assert.rejects(
       () => runVerb(held, spec, text, list),
       (raised) => raised instanceof tt.ThinkThenError && raised.kind === wanted,
@@ -101,6 +112,24 @@ async function runVerb(held, spec, text, list) {
       const labels = await tt.tag(spec, text);
       const wanted = expect.labels ?? expect.answer ?? [];
       assert.deepEqual(labels, wanted);
+      return;
+    }
+    case 'rank': {
+      const ranked = await tt.rank(spec, list);
+      assert.deepEqual(
+        ranked.map((one) => one.index),
+        expect.ranking ?? [],
+        `expected order ${JSON.stringify(expect.ranking)}, got ${JSON.stringify(ranked.map((one) => one.index))}`,
+      );
+      return;
+    }
+    case 'find': {
+      if (held.none) {
+        note(held.id, 'diverge: this surface’s find has no none arm; the none case is real-engine data');
+        return;
+      }
+      const found = await tt.find(spec, list);
+      assert.equal(found.index, expect.answer, `expected unit ${expect.answer}, got ${found.index}`);
       return;
     }
     case 'annotate': {

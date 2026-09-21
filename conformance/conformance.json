@@ -1,6 +1,6 @@
 {
   "schema": "thinkthen.conformance/1",
-  "case_count": 20,
+  "case_count": 27,
   "error_kinds": [
     "usage",
     "backend",
@@ -1241,6 +1241,361 @@
       "expect": {
         "error": {
           "kind": "backend"
+        }
+      }
+    },
+    {
+      "id": "21-rank-orders-by-yes",
+      "source": "conformance growth, 2026-09-21",
+      "verb": "rank",
+      "question": {
+        "decide": "Is this a complaint?",
+        "true": "The record is a complaint.",
+        "false": "The record is anything else."
+      },
+      "records": [
+        "maybe so",
+        "maybe later",
+        "refund now",
+        "good morning"
+      ],
+      "exchanges": [
+        {
+          "captured": "stub",
+          "request": {
+            "state": "maybe so",
+            "model": "jev-latest",
+            "questions": {
+              "q1": {
+                "type": "noul",
+                "instructions": "Is this a complaint?"
+              }
+            }
+          },
+          "reply": {
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.55
+              }
+            },
+            "model": "jev-latest",
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 2
+            }
+          }
+        },
+        {
+          "captured": "stub",
+          "request": {
+            "state": "maybe later",
+            "model": "jev-latest",
+            "questions": {
+              "q1": {
+                "type": "noul",
+                "instructions": "Is this a complaint?"
+              }
+            }
+          },
+          "reply": {
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.55
+              }
+            },
+            "model": "jev-latest",
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 2
+            }
+          }
+        },
+        {
+          "captured": "stub",
+          "request": {
+            "state": "refund now",
+            "model": "jev-latest",
+            "questions": {
+              "q1": {
+                "type": "noul",
+                "instructions": "Is this a complaint?"
+              }
+            }
+          },
+          "reply": {
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.97
+              }
+            },
+            "model": "jev-latest",
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 2
+            }
+          }
+        },
+        {
+          "captured": "stub",
+          "request": {
+            "state": "good morning",
+            "model": "jev-latest",
+            "questions": {
+              "q1": {
+                "type": "noul",
+                "instructions": "Is this a complaint?"
+              }
+            }
+          },
+          "reply": {
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.03
+              }
+            },
+            "model": "jev-latest",
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 2
+            }
+          }
+        }
+      ],
+      "expect": {
+        "ranking": [
+          2,
+          0,
+          1,
+          3
+        ],
+        "probabilities": [
+          0.55,
+          0.55,
+          0.97,
+          0.03
+        ]
+      }
+    },
+    {
+      "id": "22-rank-refuses-threshold",
+      "source": "conformance growth, 2026-09-21",
+      "verb": "rank",
+      "question": {
+        "decide": "Is this a complaint?",
+        "threshold": 0.5
+      },
+      "records": [
+        "one",
+        "two"
+      ],
+      "exchanges": [],
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "23-rank-refuses-blank-question",
+      "source": "conformance growth, 2026-09-21",
+      "verb": "rank",
+      "question": {
+        "decide": "   "
+      },
+      "records": [
+        "one",
+        "two"
+      ],
+      "exchanges": [],
+      "expect": {
+        "error": {
+          "kind": "usage"
+        }
+      }
+    },
+    {
+      "id": "24-find-picks-best-unit",
+      "source": "conformance growth, 2026-09-21",
+      "verb": "find",
+      "question": "Which unit states where refunds are handled?",
+      "records": [
+        "good morning",
+        "refund now",
+        "maybe so"
+      ],
+      "exchanges": [
+        {
+          "captured": "shaped-to-contract",
+          "request": {
+            "state": "[{\"id\":\"u001\",\"evidence\":\"good morning\"},{\"id\":\"u002\",\"evidence\":\"refund now\"},{\"id\":\"u003\",\"evidence\":\"maybe so\"}]",
+            "model": "jev-latest",
+            "questions": {
+              "q1": {
+                "type": "choice",
+                "instructions": "Which unit states where refunds are handled?",
+                "criteria": {
+                  "u001": null,
+                  "u002": null,
+                  "u003": null
+                }
+              }
+            }
+          },
+          "reply": {
+            "model": "jev-latest",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "probabilities": {
+                  "u001": 0.02,
+                  "u002": 0.93,
+                  "u003": 0.05
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 36,
+              "output_tokens": 4
+            }
+          }
+        }
+      ],
+      "expect": {
+        "answer": 1,
+        "details": {
+          "kind": "find",
+          "pick": "u002",
+          "probabilities": {
+            "u001": 0.02,
+            "u002": 0.93,
+            "u003": 0.05
+          },
+          "model": "jev-latest",
+          "question_sha256": "24fa7518bb7d6bb4ae84d85394e5b1a103b4787c218e3d98a132077ae41d6d4e"
+        }
+      }
+    },
+    {
+      "id": "25-find-none-fits",
+      "source": "conformance growth, 2026-09-21",
+      "verb": "find",
+      "question": "Which unit names the on-call engineer?",
+      "none": true,
+      "records": [
+        "good morning",
+        "maybe so"
+      ],
+      "exchanges": [
+        {
+          "captured": "shaped-to-contract",
+          "request": {
+            "state": "[{\"id\":\"u001\",\"evidence\":\"good morning\"},{\"id\":\"u002\",\"evidence\":\"maybe so\"}]",
+            "model": "jev-latest",
+            "questions": {
+              "q1": {
+                "type": "choice",
+                "instructions": "Which unit names the on-call engineer?",
+                "criteria": {
+                  "u001": null,
+                  "u002": null,
+                  "none": null
+                }
+              }
+            }
+          },
+          "reply": {
+            "model": "jev-latest",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "probabilities": {
+                  "u001": 0.05,
+                  "u002": 0.05,
+                  "none": 0.9
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 30,
+              "output_tokens": 3
+            }
+          }
+        }
+      ],
+      "expect": {
+        "answer": null,
+        "none": true,
+        "details": {
+          "kind": "find",
+          "pick": "none",
+          "probabilities": {
+            "u001": 0.05,
+            "u002": 0.05,
+            "none": 0.9
+          },
+          "model": "jev-latest",
+          "question_sha256": "462a2d9e99caaec8498e87ee850927817f4aca9ca439ea8a2ecf8a9052a15bfd"
+        }
+      }
+    },
+    {
+      "id": "26-local-missing-question-file",
+      "source": "conformance growth, 2026-09-21",
+      "verb": "decide",
+      "question_file": "@/no/such/question.json",
+      "evidence": "anything at all",
+      "exchanges": [],
+      "expect": {
+        "error": {
+          "kind": "local"
+        }
+      }
+    },
+    {
+      "id": "27-deadline-spent-budget",
+      "source": "conformance growth, 2026-09-21",
+      "verb": "decide",
+      "question": {
+        "decide": "Does the writer ask for a refund?",
+        "threshold": 0.9
+      },
+      "evidence": "i want a refund",
+      "budget_ms": 0,
+      "exchanges": [
+        {
+          "captured": "stub",
+          "request": {
+            "state": "i want a refund",
+            "model": "jev-latest",
+            "questions": {
+              "q1": {
+                "type": "noul",
+                "instructions": "Does the writer ask for a refund?"
+              }
+            }
+          },
+          "reply": {
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.97
+              }
+            },
+            "model": "jev-latest",
+            "usage": {
+              "input_tokens": 10,
+              "output_tokens": 2
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "deadline"
         }
       }
     }

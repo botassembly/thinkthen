@@ -57,6 +57,12 @@ def main() -> int:
         verb = case["verb"]
         evidence = case.get("evidence")
         records = case.get("records")
+        if "question_file" in case:
+            print(f"skip     {name}: the local kind needs a file door")
+            continue
+        if verb in ("rank", "find"):
+            print(f"skip     {name}: {verb} is not this surface's SQL shape; the surface check owns it")
+            continue
         question = case["question"]
         expect = case["expect"]
         kind = question.get("choose", question.get("score", question.get("tag", question.get("decide"))))
@@ -66,6 +72,9 @@ def main() -> int:
         if "error" in expect:
             if verb == "cancel":
                 print(f"diverge  {name}: the CLI's Ctrl-C owns cancel; see NOTES")
+                continue
+            if expect["error"]["kind"] == "deadline":
+                print(f"skip     {name}: the spent-budget case needs a deadline door this driver does not carry")
                 continue
             wanted = f"thinkthen {expect['error']['kind']}"
             text = evidence or (records[0] if records else "")

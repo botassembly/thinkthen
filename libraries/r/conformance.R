@@ -32,6 +32,10 @@ same_number <- function(one, two) isTRUE(all.equal(one, two, tolerance = 1e-9))
 for (case in cases) {
   id <- case$id
   expect <- case$expect
+  if (!is.null(case$question_file)) {
+    say(paste0("skip     ", id, ": the local kind needs a file door this surface does not carry"))
+    next
+  }
   outcome <- tryCatch({
     kind <- expect$error$kind
     if (!is.null(kind)) {
@@ -39,6 +43,8 @@ for (case in cases) {
         paste0("diverge  ", id, ": the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement")
       } else if (kind == "backend" && !wire) {
         paste0("skip     ", id, ": the backend kind needs the wire or a dead address; the null backend answers")
+      } else if (kind == "deadline") {
+        paste0("skip     ", id, ": the spent-budget case needs a deadline option this surface does not carry")
       } else {
         run <- function() {
           question <- built(case)
@@ -46,6 +52,7 @@ for (case in cases) {
             decide = tt_decide(question, case$evidence),
             filter = tt_filter(question, unlist(case$records)),
             choose = tt_choose(question, case$evidence),
+            rank = tt_rank(question, unlist(case$records)),
             NULL
           )
         }
@@ -54,7 +61,7 @@ for (case in cases) {
           paste0("FAIL     ", id, ": expected the ", kind, " kind, got ", held)
       }
     } else {
-      question <- built(case)
+      question <- if (identical(case$verb, "find")) NULL else built(case)
       switch(case$verb,
         decide = {
           held <- tt_details(question, case$evidence)
@@ -140,6 +147,24 @@ for (case in cases) {
           }, logical(1))
           if (identical(answers, wanted)) paste0("ok       ", id) else
             paste0("FAIL     ", id, ": the column's answers diverged")
+        },
+        rank = {
+          records <- unlist(case$records)
+          held <- tt_rank(question, records)
+          wanted <- records[unlist(expect$ranking) + 1]
+          if (identical(held, wanted)) paste0("ok       ", id) else
+            paste0("FAIL     ", id, ": the ranked order diverged")
+        },
+        find = {
+          units <- unlist(case$records)
+          if (isTRUE(case$none)) {
+            paste0("diverge  ", id, ": the surface's find has no none arm; the none case is real-engine data")
+          } else {
+            held <- tt_find(case$question, units)
+            wanted <- units[[expect$answer + 1]]
+            if (identical(held, wanted)) paste0("ok       ", id) else
+              paste0("FAIL     ", id, ": expected ", wanted, ", got ", held)
+          }
         },
         paste0("skip     ", id, ": the ", case$verb, " case is not one this runner expresses")
       )

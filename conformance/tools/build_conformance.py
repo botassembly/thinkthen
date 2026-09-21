@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# One-shot builder of the original twenty cases (2026-09-21). The file is now
+# grown by hand under validate_conformance.py; rerunning this script would
+# erase the growth. History, not a tool: see conformance/DIVERGENCES.md.
 """Build cases2/conformance.json: the twenty shared cases in one data file.
 
 Digest logic implements the canonical form of specification/question-file.md

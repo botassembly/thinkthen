@@ -11,8 +11,8 @@ import sys
 
 KINDS = {"usage", "backend", "local", "cancelled", "deadline", "defect"}
 VERB_KEYS = {"decide", "choose", "tag", "score"}
-CASE_KEYS = {"id", "source", "verb", "question", "evidence", "records", "jobs", "set",
-             "calls", "cancel_after_replies", "exchanges", "expect"}
+CASE_KEYS = {"id", "source", "verb", "question", "question_file", "evidence", "records", "jobs", "set",
+             "calls", "cancel_after_replies", "budget_ms", "none", "exchanges", "expect"}
 GRANT = {"decide": {"decide", "true", "false", "threshold", "on", "model"},
          "choose": {"choose", "options", "threshold", "on", "model"},
          "tag": {"tag", "labels", "threshold", "on", "model"},
@@ -23,8 +23,9 @@ def canon(question):
     obj = {"verb": verb, "text": question[verb]}
     if verb == "decide":
         obj.update({k: question[k] for k in ("true", "false") if k in question})
-        t = question["threshold"]
-        obj["threshold"] = t if isinstance(t, str) else float(t)
+        if "threshold" in question:
+            t = question["threshold"]
+            obj["threshold"] = t if isinstance(t, str) else float(t)
     elif verb in ("choose", "tag"):
         key = "options" if verb == "choose" else "labels"
         items = question[key]
@@ -36,6 +37,15 @@ def canon(question):
         obj["levels"] = question["levels"]
     line = json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
     return line, hashlib.sha256(line.encode("utf-8")).hexdigest()
+
+def find_digest(text, none):
+    """The find canonical form thinkthen-core pins: verb, text, none."""
+    line = json.dumps({"verb": "find", "text": text, "none": none},
+                      separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(line.encode("utf-8")).hexdigest()
+
+def unit_id(place):
+    return f"u{place + 1:03d}"
 
 def band(threshold):
     low, high = (float(x) for x in threshold.split(":"))
@@ -59,7 +69,7 @@ def check(cond, msg):
 data = json.load(open("conformance.json"))
 check(data["schema"] == "thinkthen.conformance/1", "schema")
 check(set(data["error_kinds"]) == KINDS, "error_kinds must be the six")
-check(data["case_count"] == len(data["cases"]) == 20, "case_count")
+check(data["case_count"] == len(data["cases"]), "case_count")
 
 def check_question(q, verb_of_case, where=""):
     keys = set(q)
@@ -131,8 +141,14 @@ def check_reply_shape(request, reply, status=None):
 
 def replay(c):
     """Recompute the expected answer from question plus recorded exchange."""
-    q = c["question"]
-    verb = [k for k in VERB_KEYS if k in q][0]
+    q = c.get("question")
+    if q is None:
+        # A question_file case: the named file failed before anything was sent.
+        check("question_file" in c, f"{c['id']} has neither question nor question_file")
+        check(c["expect"].get("error", {}).get("kind") == "local",
+              f"{c['id']} is the local shape")
+        return
+    verb = "find" if isinstance(q, str) else [k for k in VERB_KEYS if k in q][0]
     exp = c["expect"]
     if "error" in exp:
         check(exp["error"]["kind"] in KINDS, f"{c['id']} kind in six")
@@ -140,7 +156,10 @@ def replay(c):
             global errors
             saved = errors
             errors = []
-            check_question(q, c["verb"], where=f"{c['id']}: ")
+            if isinstance(q, str):
+                check(q.strip() == "", f"{c['id']} expected a usage refusal but the text is legal")
+            else:
+                check_question(q, c["verb"], where=f"{c['id']}: ")
             captured = errors
             errors = saved
             check(len(captured) > 0,
@@ -148,6 +167,10 @@ def replay(c):
         if exp["error"]["kind"] == "backend":
             ex = c["exchanges"][0]
             check(ex.get("status") == 422, f"{c['id']} backend refusal needs the 422 exchange")
+        if exp["error"]["kind"] == "deadline":
+            check("budget_ms" in c and c["budget_ms"] >= 0, f"{c['id']} deadline states its budget")
+            check(len(c["exchanges"]) >= 1,
+                  f"{c['id']} deadline case records the exchange the budget cuts off")
         return
     ex = c["exchanges"][0] if c["exchanges"] else None
     if c["verb"] == "usage" and "requests" in exp:
@@ -159,6 +182,42 @@ def replay(c):
               f"{c['id']} needs an exchange")
         return
     check("status" not in ex, f"{c['id']} success case carries a refusal exchange")
+    if c["verb"] == "find":
+        check(len(c["exchanges"]) == 1, f"{c['id']} find is one aggregate request")
+        units = c["records"]
+        none = bool(c.get("none", False))
+        ids = [unit_id(i) for i in range(len(units))]
+        want_state = json.dumps([{"id": i, "evidence": e} for i, e in zip(ids, units)],
+                                separators=(",", ":"), ensure_ascii=False)
+        check(ex["request"]["state"] == want_state, f"{c['id']} state is the units with ids")
+        crit = list(ex["request"]["questions"]["q1"]["criteria"])
+        check(crit == ids + (["none"] if none else []), f"{c['id']} options are the unit ids")
+        ps = ex["reply"]["answers"]["q1"]["probabilities"]
+        ordered = [(k, ps[k]) for k in crit]
+        highest = max(p for _, p in ordered)
+        leaders = [k for k, p in ordered if p == highest]
+        det = exp.get("details", {})
+        check(det.get("pick") == leaders[0], f"{c['id']} pick is the first leader")
+        if "none" in leaders:
+            check(exp.get("answer") is None and exp.get("none") is True,
+                  f"{c['id']} none leads: the answer is null and none is true")
+        else:
+            check(exp.get("answer") == ids.index(leaders[0]),
+                  f"{c['id']} answer is the winner's input index")
+            check(exp.get("none", False) is False, f"{c['id']} a winner means no none flag")
+        check(det.get("probabilities") == {k: ps[k] for k in crit},
+              f"{c['id']} probabilities in input order")
+        if "question_sha256" in det:
+            check(det["question_sha256"] == find_digest(q, none), f"{c['id']} find digest")
+        check(det.get("model") == ex["reply"]["model"], f"{c['id']} model")
+        return
+    if c["verb"] == "rank":
+        ps = [e["reply"]["answers"]["q1"]["noul"] for e in c["exchanges"]]
+        check(len(c["exchanges"]) == len(c["records"]), f"{c['id']} one exchange a record")
+        order = sorted(range(len(ps)), key=lambda i: (-ps[i], i))
+        check(exp.get("ranking") == order, f"{c['id']} ranking, best first, ties in input order")
+        check(exp.get("probabilities") == ps, f"{c['id']} probabilities in input order")
+        return
     reply = ex["reply"]
     det = exp.get("details", {})
     _, dig = canon(q)
@@ -216,7 +275,19 @@ def replay(c):
 for c in data["cases"]:
     check(set(c) <= CASE_KEYS, f"{c.get('id')} unknown keys {set(c) - CASE_KEYS}")
     is_usage_refusal = "error" in c["expect"] and c["expect"]["error"].get("kind") == "usage"
-    if not is_usage_refusal:
+    if "question_file" in c:
+        named = c["question_file"]
+        check(isinstance(named, str) and named.startswith("@") and len(named) > 1,
+              f"{c.get('id')} question_file is @ and a path")
+        check(c["exchanges"] == [], f"{c['id']} a local failure sends nothing")
+        check(c["expect"].get("error", {}).get("kind") == "local",
+              f"{c['id']} a named file that fails is the local kind")
+    elif c["verb"] == "find":
+        check(isinstance(c["question"], str) and c["question"].strip() != "",
+              f"{c['id']} find takes its question as text")
+        check(2 <= len(c["records"]) <= (254 if c.get("none") else 255),
+              f"{c['id']} find takes 2 to 255 units, 254 with none")
+    elif not is_usage_refusal:
         check_question(c["question"], c["verb"], where=f"{c['id']}: ")
     if c["verb"] == "annotate":
         for name, member in c.get("set", {}).items():

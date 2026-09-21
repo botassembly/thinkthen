@@ -87,6 +87,9 @@ def main():
     for case in cases:
         case_id = case["id"]
         verb = case["verb"]
+        if "question_file" in case:
+            print(f"skip     {case_id}: the local kind needs a file door")
+            continue
         question = case["question"]
         evidence = case.get("evidence")
         expect = case["expect"]
@@ -94,6 +97,8 @@ def main():
 
         if "error" in expect and expect["error"]["kind"] == "backend":
             line = f"skip     {case_id}: the backend kind needs the wire or a dead address"
+        elif "error" in expect and expect["error"]["kind"] == "deadline":
+            line = f"skip     {case_id}: the spent-budget case needs a deadline door this driver does not carry"
         elif verb == "decide":
             code, outcome, _ = typed_decide(lib, engine, json.dumps(question), evidence)
             wanted_kind = expect.get("error", {}).get("kind")

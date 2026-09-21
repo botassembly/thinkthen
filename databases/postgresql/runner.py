@@ -58,6 +58,12 @@ def main() -> int:
     for case in cases:
         verb, ident = case["verb"], case["id"]
         expect = case["expect"]
+        if "question_file" in case:
+            print(f"skip     {ident}: the local kind needs a file door")
+            continue
+        if "error" in expect and expect["error"].get("kind") == "deadline":
+            print(f"skip     {ident}: the spent-budget case needs a deadline door this driver does not carry")
+            continue
         try:
             if verb == "decide":
                 got = sql(f"SELECT thinkthen_decide({question_arg(case)}, {literal(case['evidence'])})")

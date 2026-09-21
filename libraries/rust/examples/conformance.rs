@@ -9,14 +9,16 @@
 //! Two case families cannot run on the stand-in and are skipped with their
 //! reasons printed: the backend-refusal cases need the wire or a dead
 //! address, and the usage case's cache half needs the disk cache, which
-//! the stand-in does not carry.
+//! the stand-in does not carry. The local case names a missing question
+//! file, and this surface has no file door, so it skips too; the deadline
+//! case runs as the spent-budget shape.
 
 use std::path::Path;
 
 use serde_json::Value;
 
 use thinkthen::{
-    Annotated, Answer, Details, Engine, Error, Question, QuestionSet,
+    Annotated, Answer, Details, Engine, Error, Options, Question, QuestionSet,
 };
 
 fn main() {
@@ -89,6 +91,25 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
                 "the backend kind needs the wire or a dead address; the null backend answers"
                     .to_owned(),
             ));
+        }
+        if kind == "local" {
+            return Err(Outcome::Skip(
+                "the local kind needs a file door this surface does not carry"
+                    .to_owned(),
+            ));
+        }
+        if kind == "deadline" {
+            let question = built(question_text)?;
+            let budget = case["budget_ms"].as_u64().unwrap_or_default();
+            let spent = std::time::Duration::from_millis(budget);
+            let error = tt
+                .decide_opts(&question, evidence(case), Options::new().deadline_in(spent))
+                .err()
+                .ok_or_else(|| Outcome::Fail("expected the deadline kind, got an answer".to_owned()))?;
+            return ok_if(
+                format!("{:?}", error.kind).to_lowercase() == kind,
+                format!("expected the {kind} kind, got {:?}", error.kind),
+            );
         }
         return check_error(tt, verb, question_text, case, kind);
     }
@@ -168,6 +189,52 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
                 })
                 .unwrap_or_default();
             ok_if(labels == wanted, format!("expected {wanted:?}, got {labels:?}"))
+        }
+        "rank" => {
+            let question = built(question_text)?;
+            let records = records(case);
+            let ranked = tt.rank(&question, &records).map_err(fail)?;
+            let got: Vec<usize> = ranked.iter().map(|one| one.index).collect();
+            let wanted: Vec<usize> = expect["ranking"]
+                .as_array()
+                .map(|order| order.iter().filter_map(Value::as_u64).map(|n| n as usize).collect())
+                .unwrap_or_default();
+            ok_if(got == wanted, format!("expected order {wanted:?}, got {got:?}"))?;
+            let mut by_input = vec![0.0_f64; records.len()];
+            for one in &ranked {
+                by_input[one.index] = one.probability;
+            }
+            let wanted: Vec<f64> = expect["probabilities"]
+                .as_array()
+                .map(|numbers| numbers.iter().filter_map(|number| number.as_f64()).collect())
+                .unwrap_or_default();
+            ok_if(
+                by_input.iter().zip(&wanted).all(|(one, two)| (one - two).abs() < 1e-9),
+                format!("expected probabilities {wanted:?}, got {by_input:?}"),
+            )
+        }
+        "find" => {
+            if case.get("none").is_some() {
+                return Err(Outcome::Diverge(
+                    "the contract's find has no none flag yet; the none case is real-engine data"
+                        .to_owned(),
+                ));
+            }
+            let text = case["question"]
+                .as_str()
+                .ok_or_else(|| Outcome::Fail("the find question arrives as text".to_owned()))?;
+            let units = records(case);
+            let found = tt.find(text, &units).map_err(fail)?;
+            match expect["answer"].as_u64() {
+                Some(index) => ok_if(
+                    found.index == Some(index as usize),
+                    format!("expected unit {index}, got {:?}", found.index),
+                ),
+                None => ok_if(
+                    found.index.is_none(),
+                    format!("expected no unit, got {:?}", found.index),
+                ),
+            }
         }
         "annotate" => {
             let wrapped = serde_json::json!({ "questions": case["set"] });
@@ -259,6 +326,7 @@ fn check_error(
         ("filter", Some(question)) => tt.filter(&question, &records(case)).err(),
         ("decide", Some(question)) => tt.decide(&question, evidence(case)).err(),
         ("choose", Some(question)) => tt.choose(&question, evidence(case)).err(),
+        ("rank", Some(question)) => tt.rank(&question, &records(case)).err(),
         _ => None,
     };
     match error {
