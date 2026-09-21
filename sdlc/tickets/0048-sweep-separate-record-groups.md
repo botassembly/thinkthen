@@ -6,7 +6,7 @@ opens: transforms/sweep transforms/README.md demos/13-pick-a-threshold sdlc/plan
 
 # 0048: Sweep decision rows by record group
 
-Status: proposed
+Status: in progress
 
 ## Outcome
 
@@ -66,4 +66,3 @@ Re-score if implementation adds another transform, duplicates sweep arithmetic, 
 ## Review
 
 The independent design review rejected the first draft because it left the earlier `tag` and `annotate` sweep promise unowned, described two absent validations as existing behavior, rejected the valid empty JSON Pointer, proposed an independence test that would trip the repeated-id guard, and tried to add words to a page already near its limit. This rewrite assigns answer-group sweeps to the next ticket and both plans, treats the `jq -n` guard as new work, matches RFC 6901, gives added rows fresh ids, and requires the page to replace or trim text.
-
