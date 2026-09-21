@@ -179,7 +179,7 @@ An audit of `experiments/RECOGNIZE-PRODUCT-SPEC.md` against this page found five
 | Word positions in the main object | Under `--details` only |
 | A margin term in the confidence formula | The harvest package's formula, the least of the word probabilities times the mean of the kind probabilities, with connector words left out. It is what every recorded case used |
 
-The internal rules stay internal and have no option: the connector list with its bar of 0.3, how overlapping names are settled, and the possessive rule. Their home is `experiments/225-recognize-harvest-package/rules/rules.md`, each with a test. The manual describes them in one paragraph, because they explain why "Nathan der Weise" comes back whole.
+The internal rules stay internal and have no option: how overlapping names are settled (highest total probability, then leftmost-longest) and the trailing possessive rule. Their home is `experiments/225-recognize-harvest-package/rules/rules.md`, each with a test. Ian ruled on 2026-09-21 that the connector word list is deleted, at a measured price of 0.93 F1 on one corpus and nothing on the other (`experiments/229-listless/`). The pipeline now holds no word list, no dictionary, and no template, so every member word counts toward a name's strength. A name joined by a lowercase connector may come back in two parts, and the manual says so in one sentence.
 
 ## One tool, ten functions
 

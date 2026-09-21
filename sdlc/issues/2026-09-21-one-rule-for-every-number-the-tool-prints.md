@@ -40,7 +40,7 @@ The recognize team ran the free comparison on both full corpora from recordings 
 
 The computed number wins on one corpus and ties on the other. No plain model probability gates as well, so a name cannot carry `probability`.
 
-The product side rules the field name: **`strength`**. It is a plain word, it claims nothing about chance, and the vendor does not use it. The manual defines it once: the lowest word probability behind the name times the average kind probability, with connector words left out. `--details` prints those parts beside it. `--threshold` on `recognize` is the bar a name's strength must reach.
+The product side rules the field name: **`strength`**. It is a plain word, it claims nothing about chance, and the vendor does not use it. The manual defines it once: the lowest word probability behind the name times the average kind probability, with every word of the name counting. (The connector word list was deleted by Ian's ruling on 2026-09-21, so nothing is left out.) `--details` prints those parts beside it. `--threshold` on `recognize` is the bar a name's strength must reach.
 
 What changes: the `recognize` output object, the harvest package's expected objects and its rules six and seven, the demo output, the method page, and the library team's conformance cases. The recognize team's report lists the files. The vendor's own `confidence` field keeps its name wherever it is the literal field.
 
