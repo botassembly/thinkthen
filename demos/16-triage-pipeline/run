@@ -6,6 +6,9 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT HUP INT TERM
 
 "$HERE/triage" "$work/output" "$@"
+jq -s -r 'sort_by(.input.id)[]
+  | [.input.id, .input.subject, .policy.action, .policy.reason]
+  | @tsv' "$work/output"/*.jsonl
 for action in draft block review; do
 	printf '%s=' "$action"
 	wc -l < "$work/output/$action.jsonl" | tr -d ' '

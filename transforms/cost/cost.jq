@@ -29,7 +29,10 @@ reduce inputs as $row (
     replayed: {rows: 0, input_tokens: 0, output_tokens: 0}
   };
   .rows += 1
-  | ($row.input.id // "with no id") as $id
+  | (if ($row.input | type) == "object"
+     then ($row.input.id // "with no id")
+     else "with no id"
+     end) as $id
   | (if $row.meta.replayed == true then "replayed" else "charged" end) as $side
   | .[$side].rows += 1
   | if $row.meta | has("usage") | not then .no_usage += [$id]

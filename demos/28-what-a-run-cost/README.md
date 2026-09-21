@@ -82,7 +82,16 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq "$w
 
 The replayed tokens are reported and never priced. Counting them would put a bill on every gate that replays a recording, and a gate pays nothing.
 
-That block is also the loop that made the runs, one case wide. `../../transforms/rows/record.sh` is the whole of it, and it writes `input` into the row itself because record mode is not built yet.
+## A text record with no usage
+
+`--lines` keeps the original text in `input`, so a cost report cannot assume every input has an id. Missing usage stays visible and the text is not echoed.
+
+```bash
+printf '%s\n' '{"input":"do not echo this text","meta":{}}' \
+  | jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
+  | jq -c '{rows, no_usage, charged, usd}' \
+  | mustmatch '{"rows":1,"no_usage":["with no id"],"charged":{"rows":1,"input_tokens":0,"output_tokens":0},"usd":0}'
+```
 
 ## The same line, kept as a file
 

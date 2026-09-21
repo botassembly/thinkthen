@@ -6,7 +6,7 @@ opens: demos/16-triage-pipeline transforms/cost demos/28-what-a-run-cost sdlc/pl
 
 # 0044: Show the triage result and fix string-input costs
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
