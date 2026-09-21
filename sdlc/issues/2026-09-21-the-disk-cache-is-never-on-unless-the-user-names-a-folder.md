@@ -25,7 +25,7 @@ Three reasons hold the disk cache off by default:
 2. A cache entry holds the text that was judged. A default folder would copy a user's messages or records to a place they never chose.
 3. `jev-latest` is an alias. A saved answer outlives a model change, and a user who never asked for a cache would not know to clear one.
 
-Every surface spells the setting its own way: `--cache DIR` in the command, a `cache` setting on the engine value in a library, and a session setting in a database. No surface picks a folder on its own, and no environment variable turns a cache on silently.
+Every surface spells the setting its own way: `--cache DIR` in the command, a `cache` setting on the engine value in a library, and a session setting in a database. No surface picks a folder on its own. The section on always-on below adds one variable, and the user sets it.
 
 ## What this changes in the database pages
 
@@ -44,6 +44,33 @@ Ian asked on 2026-09-21 how the cache works, how fast it is, how large it grows,
 This design suits the command. An entry diffs in a pull request, a test folder is plain files, and deleting a file is the whole expiry rule.
 
 It stops suiting a database somewhere. A million judged rows is a million files and about 4 GB in one folder. Nothing here has measured that. Before the database extensions promise "answers stay on disk" at that size, the experiment team measures a folder of a million entries: the time to find one, the time to fill, and the disk used. If it fails, the engine gets a second store behind the same setting, one file in place of a folder, and the recording folder stays as it is for tests. No code changes before that number exists.
+
+## Size, age, and always-on
+
+Ian said on 2026-09-21 that a cache with no size rule and no expiry is not tenable, and he asked four things: how entries leave, whether leaving slows a request, how a user turns the cache on for good, and what sits in the XDG folders. A recommendation follows. It needs an ADR before any ticket.
+
+**What sits in the XDG folders today: nothing.** The tool reads two variables, `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL`, and no file. `specification/roadmap.md` records that Ian took the configuration file at `$XDG_CONFIG_HOME/thinkthen/config.json` out of version one on 2026-09-19, because a variable in front of the command already said everything it held.
+
+**Always-on is a third variable, `THINKTHEN_CACHE=DIR`.** The user writes it in a shell profile once, and the user still names the folder. It follows the ruling of 2026-09-19 and brings no file back. `--cache DIR` overrides it, and `--no-cache` turns it off for one run. `--replay` and `--record` ignore it, because a test must never read a personal cache. The engine reads it for the libraries and the databases the way it reads the other two, and an explicit setting on the engine value wins. If a default folder is ever wanted, it is `$XDG_CACHE_HOME/thinkthen`. The state folder is wrong for it, because a cache must be safe to delete.
+
+**No request ever deletes anything.** A request reads one file or writes one file. Removal is its own command, `thinkthen cache prune DIR`, with `--older-than 30d` and `--max-size 1G`. A person, a cron line, or a host program runs it. No request pays for another entry's removal, and there is no background thread to reason about in a forked host.
+
+**The oldest-written entry leaves first.** Least-recently-used needs a write on every read, and it turns the fast path into the slow one. The file's own modification time is the age, and it costs nothing to keep.
+
+**A recording is never pruned by accident.** The cache and a test recording share one format. `prune` runs only on the folder a person names, and the how-tos say never to point it at a recording.
+
+**The model behind an alias.** Each entry already stores the model that answered, `jev-1.13.0` in the how-to recordings, beside the alias that was asked. `prune --answered-by-other-than MODEL` clears what an older model said. Asking the backend which model is current on every cached read would defeat the cache.
+
+**A million entries.** A folder sharded by the first two characters of the digest, the way Git stores objects, is the cheap fix, and it keeps plain files. The experiment team measures the flat folder, the sharded folder, and one SQLite file at a million entries before anything is chosen.
+
+Other concerns the ADR must answer:
+
+- A cache holds the judged text at rest. The folder is private to its owner. The pages say so plainly for anyone with regulated text, and they say that backups copy it.
+- A cached answer is frozen. A live model may answer 0.79 today and 0.81 tomorrow. The cache makes a run repeatable and hides that drift. `--details` already marks a replayed answer.
+- The threshold is outside the key. Changing a threshold re-reads the cache for free, and this is worth teaching.
+- A failure is never saved, so a bad minute at the backend cannot poison the folder.
+- The per-digest lock needs a file system with working locks. A network share may lack them, and the page says so.
+- A prune that runs beside a live job is safe. A reader that loses its file asks again.
 
 ## What Ian can overturn
 
