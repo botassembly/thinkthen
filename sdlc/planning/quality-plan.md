@@ -21,6 +21,7 @@ The ladder stays `install`, `lint`, `test`, `spec`. Wave 1 found nineteen issues
 | Result-object parity: every function's `--details` carries the same keys; a key one function has and another lacks fails the test (wave 1's caller found `annotate`'s request digest) | the caller-review area, README addition 2026-09-21 | seconds |
 | Dry-run parity: `--dry-run` accepts and refuses exactly what the live run does, and prints the request count | same | seconds |
 | Sizes battery: 40 bytes, 3 KB, 16 KB, 100 KB, 1.4 MB through each function against a loopback stand-in; nothing is sent that could never be answered | same | under a minute |
+| Membership invariance: for every function and every output-shaping flag (`--details`, `--raw`, `--quiet`, `--top`), the set of output units is identical with and without the flag; only the shape of a unit may change. The check runs each function both ways over the same mixed input and compares which records appear. Guards the `filter --details` ruling of 2026-09-21, found by a marketing reader of the deck after wave 1 missed it | the filter ruling, `sdlc/issues/2026-09-21-filter-details-must-still-filter.md` | seconds |
 | SIGINT: a spawned record run stopped by SIGINT exits 130, prints the stopped-at line, and leaves every entry complete (needs a process spawn; skip on hosts that cannot signal) | issue 11 (silent stop) | ~2 s |
 
 ### `lint` (policy, pages, size, format; today ~1 minute)
@@ -76,6 +77,14 @@ A standing brief for one agent that pokes around after each release and on a sch
 ## The two reviews, both gates
 
 A review by someone who types commands and a review by someone who calls the tool from a program find different classes of fault, and the plan names both as gates. The typing review is the how-to and demo ladder above. The caller review is the parity, dry-run, sizes, and refused-question tests, and it joins the exploring tester's rotation. (Standing rule added 2026-09-21 from the caller's review that found four things wave 1 missed.)
+
+## Three rules that outrank every page
+
+Added 2026-09-21 after the `filter --details` miss. A marketing reader of the deck caught what wave 1's 345 checks did not: `filter --details` printed the records the filter had refused, because one spec page said to and the testers graded against the page.
+
+1. **A flag that adds information never changes membership.** A flag may change what is printed about a unit of output. It never changes which units print. Any flag that widens, narrows, or reorders the set of output units is a finding, whatever the page says.
+2. **The page never outranks the stranger.** The standard is a careful new user. When behavior makes that user say "what the hell," it is filed against the page that permits it, not excused by it. A page is a claim, not a standard.
+3. **Two pages that disagree are a finding on their own.** When two specification pages describe the same behavior differently (`filter.md` said kept-or-not while `result.md` said same records as the bare values), the contradiction is filed the day it is found, even if the binary matches one of them and every printed example runs.
 
 ## The first bounds, from wave 1
 
