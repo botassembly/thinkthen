@@ -9,29 +9,32 @@ draws the beta relations call for all three databases as
 SELECT * FROM thinkthen_relations(body, '@names.json');
 ```
 
-No public door can run that line as drawn. The three database lanes each
-found it and recorded the working shape beside the drawn one:
+No database can run that line as drawn, and each engine needs a different
+shape. The three lanes recorded each one:
 
-- **DuckDB.** The stable C API registers no table-in-out function and its
-  table functions take literal parameters only, so a function cannot take
-  a text column as its argument. The working form is the scalar
-  `thinkthen_relations('@names.json', body)` returning a LIST of structs
-  that `unnest()` turns into rows — the same shape `thinkthen_recognize`
-  takes. Evidence: `databases/duckdb/NOTES.md` (the relate acceptance and
-  the C-API limitation), commits `ab360f4`/`4aa35b2`.
-- **PostgreSQL.** The drawn form needs the set-returning function called
-  with `LATERAL`, not `SELECT * FROM` alone, because the function reads
-  the body per row. Working shape: `FROM tickets t, LATERAL
-  thinkthen_relations('@names.json', t.body) r`. Evidence:
-  `databases/postgresql/NOTES.md`.
-- **SQLite.** Not run; the lane invented nothing for the beta line and
-  said so. A table-valued function taking a per-row body is the open
-  question there. Evidence: `databases/sqlite/NOTES.md` ("Not run,
-  honestly").
+- **DuckDB.** `body` resolves against no FROM, and the stable C API's table
+  functions take literal parameters only, so the correlated form also
+  fails (`does not support lateral join column parameters`). The working
+  call is the scalar list shape, `unnest` in the SELECT list:
+  `SELECT t.id, unnest(thinkthen_relations(t.body, '@names.json')) AS r FROM tickets t;`
+  Evidence: `databases/duckdb/NOTES.md` finding 2 and its working-shape
+  section; commits `ab360f4`/`4aa35b2`.
+- **PostgreSQL.** `body` is an unresolved identifier in the drawn line.
+  The working form passes the text: `FROM thinkthen_relations('...',
+  '@names.json')`, which the check runs; a per-row body rides a join
+  beside the table, like the recognize call. Evidence:
+  `databases/postgresql/NOTES.md` and `check.sh`.
+- **SQLite.** The beta companion is unbuilt on this surface; no
+  `thinkthen_relations` call shape exists there yet, and the lane invented
+  none. The working relate shape is the table call
+  `SELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'caused_by');`.
+  Evidence: `databases/sqlite/NOTES.md`.
 
-Nothing bent: the beta function exists and is proven in DuckDB and
-PostgreSQL in the shapes above; the deck's single line covers three
-different argument rules, and one drawn line cannot. The product side
-redraws the page once this finding says what shape can run.
+Nothing bent: the beta function is proven in DuckDB and PostgreSQL in the
+shapes above, the question-file spelling (including the `"*"` any-kind
+ends) is verified there, and the one drawn line cannot carry three
+argument rules. The product side redraws the page once this finding names
+the shapes that run.
 
-What Ian can overturn: the redraw, or the beta function's shape itself.
+What Ian can overturn: the redraw, or whether the beta remains public at
+all.
