@@ -24,4 +24,6 @@ export const details = cjs.details;
 export const usage = cjs.usage;
 export const question = cjs.question;
 export const reset_usage = cjs.reset_usage;
+export const recognize = cjs.recognize;
+export const relate = cjs.relate;
 export default cjs;

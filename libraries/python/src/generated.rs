@@ -21,5 +21,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(crate::usage, module)?)?;
     module.add_function(wrap_pyfunction!(crate::question, module)?)?;
     module.add_function(wrap_pyfunction!(crate::reset_usage, module)?)?;
+    module.add_function(wrap_pyfunction!(crate::recognize, module)?)?;
+    module.add_function(wrap_pyfunction!(crate::relate, module)?)?;
     Ok(())
 }

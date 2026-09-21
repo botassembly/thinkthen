@@ -93,3 +93,15 @@ name = "reset_usage"
 inputs = "none"
 output = "nothing"
 help = "Zero the counters"
+
+[[function]]
+name = "recognize"
+inputs = "kinds and relation rules, text"
+output = "the names with their kinds, and the relations between them"
+help = "Find every name in a text and say what kind it is"
+
+[[function]]
+name = "relate"
+inputs = "relation rules, records"
+output = "the edges between records"
+help = "Say how the records relate to each other"
