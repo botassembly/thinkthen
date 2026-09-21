@@ -73,6 +73,17 @@ Other concerns the ADR must answer:
 - A cache folder keeps one lock file per entry under `.locks/`, seen on 2026-09-21: 19 entries and 19 lock files after a `--cache` run. A million entries is then two million files. `prune` clears the lock of every entry it removes, the million-entry measurement counts both, and a user who commits a recording needs the `.locks/` ignore rule this repository already has.
 - A prune that runs beside a live job is safe. A reader that loses its file asks again.
 
+## A cache library as a fourth arm, 2026-09-21
+
+Ian asked experiment 211 to add foyer, a Rust cache with a memory tier, a disk tier, a byte capacity, and first-in-first-out eviction, as a fourth arm beside the flat folder, the sharded folder, and SQLite. The run already asks whether it fits a blocking engine and whether it survives a fork. Four more questions decide it as much as speed does:
+
+1. **Many processes on one folder.** The command is a new process on every call, and `xargs`, cron, and PostgreSQL backends put many of them on one cache at once. The plain-files store is built for that: an entry lands by hard link, and a per-digest lock stops a double send. A store that expects one owning process fails here, however fast it is inside that process.
+2. **The cost of opening.** One whole `decide --replay` run takes about 1.5 ms today, process start included. A store with a recovery step pays it on every command.
+3. **One format or two.** A cache entry and a test recording are the same file today, and `--cache` resumes a record run for that reason. An opaque store splits them: recordings stay plain files for tests and pull requests, and the cache becomes something a person cannot list, read, or delete by entry. Pruning by the model that answered then needs its own index.
+4. **The dependency.** It brings an async runtime into a tree that holds zero threads between calls, and every crate passes `deny.toml` and the size ratchet.
+
+A long-lived host may still want answers in memory. A small map in front of the plain files gives it that with no new dependency, and the run can measure that arm too.
+
 ## What Ian can overturn
 
 All of it. The wider choice is a disk cache on by default in the databases alone, under a folder the extension documents. It saves a second bill for a user who never read the page, and it breaks the three points above.
