@@ -39,7 +39,7 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
-jq -n -f trials/trials.jq \
+jq -n -c -f trials/trials.jq \
   ../probes/07-true-and-false-texts/runs/plain.jsonl \
   ../probes/07-true-and-false-texts/runs/plain.jsonl > "$work/cases.jsonl"
 

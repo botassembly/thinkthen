@@ -1,7 +1,7 @@
 # trials.jq — average repeated observations once per case before a metric.
 #
 # Reads: detailed scalar decide, choose, or score rows. Run it with
-#   `jq -n -f trials.jq RUN...`.
+#   `jq -n -c -f trials.jq RUN...`.
 # Several files may follow the filter. Rows with one `input.id` are trials of
 # one case, wherever they occur in those files.
 # Arguments: none.
@@ -49,7 +49,7 @@ def distribution_complete($names):
   and (. as $row
        | all($names[]; . as $name | $row.answer.probabilities[$name] | valid_probability))
   and (([$names[] as $name | .answer.probabilities[$name]] | add) - 1 | fabs)
-      <= 0.010000000000001;
+      <= (0.01 + (($names | length) * 2.220446049250313e-16));
 
 def valid_probabilities:
   if .answer.kind == "yes_no" then .answer.probability | valid_probability

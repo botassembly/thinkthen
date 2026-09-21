@@ -3,4 +3,4 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 
-jq -n -f trials.jq ../../probes/07-true-and-false-texts/runs/plain.jsonl
+jq -n -c -f trials.jq ../../probes/07-true-and-false-texts/runs/plain.jsonl

@@ -46,7 +46,7 @@ def rate($top; $bottom):
   if $bottom == 0 then null else $top / $bottom | round4 end;
 
 def has_repeated_ids($rows):
-  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+  [$rows[] | select((.input? | type) == "object" and (.input | has("id")))
    | .input.id]
   | group_by(.) | any(.[]; length > 1);
 

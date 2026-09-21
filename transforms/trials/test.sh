@@ -14,15 +14,25 @@ yes_row='def row($id;$label;$probability;$threshold;$replayed;$value):
 
 jq -n -c "$yes_row
   row(\"many\";true;0.4;0.6;false;false),
+  row(\"band-low\";false;0.125;\"0.25:0.75\";false;false),
+  row(\"band-inside\";true;0.25;\"0.25:0.75\";false;false),
+  row(\"band-high\";true;0.625;\"0.25:0.75\";false;false),
   row(\"one\";false;0.49;0.5;false;false),
   row(\"many\";true;0.6;0.6;true;true),
+  row(\"band-low\";false;0.375;\"0.25:0.75\";true;false),
+  row(\"band-inside\";true;0.75;\"0.25:0.75\";true;true),
+  row(\"band-high\";true;0.875;\"0.25:0.75\";true;true),
   row(\"many\";true;0.8;0.6;false;true)" > "$work/yes.jsonl"
 
-jq -n -f trials.jq "$work/yes.jsonl" > "$work/yes-derived.jsonl"
+jq -n -c -f trials.jq "$work/yes.jsonl" > "$work/yes-derived.jsonl"
+test "$(wc -l < "$work/yes-derived.jsonl")" -eq 5
 jq -c '{schema,input,value,question,answer,threshold,trials,meta,has_usage:(.meta|has("usage")),has_replayed:(.meta|has("replayed"))}' \
   "$work/yes-derived.jsonl" > "$work/yes-report.jsonl"
 cat > "$work/yes-expected.jsonl" <<'EOF'
 {"schema":"thinkthen.trials/1","input":{"id":"many","label":true,"body":"fixture"},"value":true,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.6},"threshold":0.6,"trials":{"count":3,"live":2,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials/1","input":{"id":"band-low","label":false,"body":"fixture"},"value":false,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.25},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials/1","input":{"id":"band-inside","label":true,"body":"fixture"},"value":null,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.5},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials/1","input":{"id":"band-high","label":true,"body":"fixture"},"value":true,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.75},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
 {"schema":"thinkthen.trials/1","input":{"id":"one","label":false,"body":"fixture"},"value":false,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.49},"threshold":0.5,"trials":{"count":1,"live":1,"replayed":0},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
 EOF
 cmp "$work/yes-expected.jsonl" "$work/yes-report.jsonl"
@@ -40,7 +50,7 @@ jq -n -c '
   row("tie";{red:0.25,blue:0.75,other:0};null;true),
   row("cut";{red:0.25,blue:0.75,other:0};0.6;true)
 ' > "$work/choice.jsonl"
-jq -n -f trials.jq "$work/choice.jsonl" \
+jq -n -c -f trials.jq "$work/choice.jsonl" \
   | jq -c '{id:.input.id,value,answer,threshold,trials}' > "$work/choice-report.jsonl"
 cat > "$work/choice-expected.jsonl" <<'EOF'
 {"id":"winner","value":"blue","answer":{"kind":"choice","pick":"blue","probabilities":{"red":0.375,"blue":0.5,"other":0.125}},"threshold":null,"trials":{"count":2,"live":1,"replayed":1}}
@@ -58,17 +68,29 @@ jq -n -c '
   row({low:0.5,middle:0.25,high:0.25};false),
   row({low:0.25,middle:0.625,high:0.125};true)
 ' > "$work/score.jsonl"
-jq -n -f trials.jq "$work/score.jsonl" \
+jq -n -c -f trials.jq "$work/score.jsonl" \
   | jq -c '{value,answer,trials}' > "$work/score-report.json"
 printf '%s\n' '{"value":0.8125,"answer":{"kind":"score","level":"middle","probabilities":{"low":0.375,"middle":0.4375,"high":0.1875}},"trials":{"count":2,"live":1,"replayed":1}}' \
   > "$work/score-expected.json"
 cmp "$work/score-expected.json" "$work/score-report.json"
 
+jq -n -c '
+  [range(0;255) | "option-\(.)"] as $options
+  | reduce $options[] as $name ({}; .[$name]=0)
+  | .[$options[0]]=1 | .[$options[1]]=0.01000000000002
+  | {schema:"thinkthen.result/1",input:{id:"tolerance"},value:null,
+     question:{verb:"choose",text:"Fixture choice",options:$options},
+     answer:{kind:"choice",pick:$options[0],probabilities:.},threshold:null,
+     meta:{tool:"thinkthen 0.0.1",question_sha256:("d"*64),url:"https://example.invalid",model:"fixture",replayed:false}}
+' > "$work/tolerance.jsonl"
+jq -n -c -f trials.jq "$work/tolerance.jsonl" \
+  | jq -e '.trials.count == 1 and .answer.pick == "option-0"' > /dev/null
+
 expect_failure() {
 	name=$1
 	expected=$2
 	file=$3
-	if jq -n -f trials.jq "$file" > "$work/out" 2> "$work/error"; then
+	if jq -n -c -f trials.jq "$file" > "$work/out" 2> "$work/error"; then
 		echo "trials accepted $name" >&2
 		exit 1
 	fi
@@ -117,7 +139,7 @@ printf '%s\n' "$private_row" > "$work/mixed.jsonl"
 head -n 1 "$work/choice.jsonl" >> "$work/mixed.jsonl"
 expect_failure mixed 'trials: one input must carry one answer kind' "$work/mixed.jsonl"
 
-if jq -s -f trials.jq "$work/yes.jsonl" > "$work/out" 2> "$work/error"; then
+if jq -s -c -f trials.jq "$work/yes.jsonl" > "$work/out" 2> "$work/error"; then
 	echo 'trials accepted ordinary input' >&2
 	exit 1
 fi
@@ -137,6 +159,15 @@ done
 if jq -n --argjson cut 0.5 -f ../score/score.jq "$work/yes.jsonl" > "$work/out" 2> "$work/error"; then exit 1; fi
 sed -n 's/^jq: error (at .*): //p' "$work/error" > "$work/message"
 printf '%s\n' "$duplicate_guard" > "$work/expected-message"
+cmp "$work/expected-message" "$work/message"
+
+jq -n -c "$yes_row row(7;true;0.6;0.5;false;true), row(7;true;0.7;0.5;false;true)" \
+  > "$work/numeric-duplicate.jsonl"
+if jq -n -f ../counts/counts.jq "$work/numeric-duplicate.jsonl" > "$work/out" 2> "$work/error"; then
+	echo 'counts accepted a repeated numeric id' >&2
+	exit 1
+fi
+sed -n 's/^jq: error (at .*): //p' "$work/error" > "$work/message"
 cmp "$work/expected-message" "$work/message"
 if jq -n --argjson band '[0.2,0.8]' -f ../band/band.jq "$work/yes.jsonl" > "$work/out" 2> "$work/error"; then exit 1; fi
 sed -n 's/^jq: error (at .*): //p' "$work/error" > "$work/message"

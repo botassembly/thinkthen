@@ -27,7 +27,7 @@ def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 def slot($p): $p * 10 | floor | if . > 9 then 9 elif . < 0 then 0 else . end;
 
 def has_repeated_ids($rows):
-  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+  [$rows[] | select((.input? | type) == "object" and (.input | has("id")))
    | .input.id]
   | group_by(.) | any(.[]; length > 1);
 

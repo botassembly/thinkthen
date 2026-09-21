@@ -15,7 +15,7 @@
 #   - Repeated case ids must pass through trials.jq before this metric.
 
 def has_repeated_ids($rows):
-  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+  [$rows[] | select((.input? | type) == "object" and (.input | has("id")))
    | .input.id]
   | group_by(.) | any(.[]; length > 1);
 

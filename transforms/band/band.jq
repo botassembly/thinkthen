@@ -31,7 +31,7 @@ def verdict($p):
   if $p >= $band[1] then "yes" elif $p <= $band[0] then "no" else "unresolved" end;
 
 def has_repeated_ids($rows):
-  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+  [$rows[] | select((.input? | type) == "object" and (.input | has("id")))
    | .input.id]
   | group_by(.) | any(.[]; length > 1);
 
