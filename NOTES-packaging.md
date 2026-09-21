@@ -218,3 +218,42 @@ containers left under dbpkg211-*: 0
 The sample runs exactly as drawn; the `choose` column reads NULL against the offline stand-in, the same divergence the surface's `NOTES.md` already records (the stand-in cannot distinguish options). The glibc-2.28 rebuild is the packaging fix that remains for the real artifact; this rehearsal is its first proof.
 
 One trap for the next person: `set -e` plus `docker start -ai` exits non-zero when the sample errors, so cleanup must be a `trap` (the script now has one), not a final line. The first run left `dbpkg211-duckdb` behind because of it; it was removed by hand and the trap added.
+
+### SQLite
+
+Package: `dist/thinkthen.so`, the loadable extension under the name the slide's `.load ./thinkthen` resolves. Built with the same glibc pin as DuckDB:
+
+```
+$ RUSTFLAGS="-L /usr/lib/x86_64-linux-gnu" cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.28
+    Finished `release` profile [optimized] target(s) in 22.30s
+$ objdump -T target/x86_64-unknown-linux-gnu/release/libthinkthen0.so | grep -o 'GLIBC_[0-9.]*' | sort -V | uniq | tail -1
+GLIBC_2.28
+$ sha256sum dist/thinkthen.so
+37ed53e547cdd7972668fdd3d2f8852eb30cc55d2b6821da86cfc53b054c3a34  dist/thinkthen.so
+```
+
+The `RUSTFLAGS -L` is load-bearing: the extension links the host's `libsqlite3` for its interrupt call (`#[link(name = "sqlite3")]`), and zig has no stub for it. The artifact still demands only `libsqlite3.so.0` at runtime, which every SQLite host has.
+
+Container: `ubuntu:24.04`, already present on this box (digest `ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3`); stock sqlite3 installed from the distro:
+
+```
+$ docker exec dbpkg211-sqlite sqlite3 --version
+3.45.1 2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1 (64-bit)
+```
+
+3.45.1 is above the 3.41 support floor the surface states. `databases/sqlite/package.sh` is the whole flow (build, stage, container, sample, cleanup); the sample runs as drawn from the slide file itself:
+
+```
+== sqlite package: the slide sample, as drawn, in the container
+5
+1|i want a refund now
+3|refund, please
+4|maybe later
+3
+== sqlite package: cleanup
+containers left under dbpkg211-*: 0
+```
+
+Warm says 5, the WHERE kept rows 1, 3, 4, the count says 3 — the shape the surface's own NOTES recorded, now proven from the packaged file in a clean container.
+
+Two traps recorded for the next packaging run: `cargo zigbuild` writes to `target/<triple without the glibc suffix>/`, so the glibc pin belongs in the target argument only, never in the artifact path; and the first runs of both database containers omitted `ENGINE_NULL=1` and the sample failed `Connection refused` against the real address — the null backend is a container environment variable, and no key or paid call is ever involved in these rehearsals.
