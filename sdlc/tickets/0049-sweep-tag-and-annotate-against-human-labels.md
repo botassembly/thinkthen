@@ -6,7 +6,7 @@ opens: transforms/sweep transforms/README.md demos/14-grade-a-batch demos/25-che
 
 # 0049: Sweep tag and annotate against human labels
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -68,3 +68,11 @@ Re-score if implementation duplicates metric arithmetic, adds aggregate scores, 
 ## Review
 
 The independent design review rejected the first draft because it left nested report keys ambiguous, validated human tag truth without validating the saved tag result, left argument combinations undefined, allowed a merely nonempty question-set digest, and used scores outside the routing rubric. This rewrite fixes every output key, validates the complete stored tag shape, defines the dispatch matrix, requires a 64-character lowercase hexadecimal digest, and records the corrected level-3 score. A second pass required the settled coherence rule between each outer named value and its nested detail, including agreement between the question verb and answer kind.
+
+The independent code review rejected three validation gaps across three repair passes. The first required mapped decisions and choices to prove their saved probability, threshold, question, and value before using them. The second restored the valid null-threshold choice behavior from the specification and moved structural checks ahead of indexing so hostile labels cannot reach jq diagnostics. The third refused the exact zero choice cut. The same reviewer directly probed each repair and accepted the final code with no remaining finding.
+
+## Result
+
+`sweep.jq` now reads standalone detailed `tag` runs with one human-label pointer and detailed `annotate` runs with an ordered map from question names to human fields. Tag labels, named decisions, and named choices reuse the existing sweep reports independently. Missing or null truth remains visibly unlabeled, while malformed truth and corrupt saved results fail with fixed data-free messages.
+
+Page 14 replaces its four-row equality count with a sweep over all six human-labeled correctness cases. The stored probabilities pick cut 0.6 with accuracy and F1 of 1. Page 14 is 72 lines and 443 words; page 25 is 111 lines and 821 words. Focused tests, executable examples, all four repository rungs, and `git diff --check` pass on the rebased branch. No live or paid call ran.
