@@ -34,7 +34,7 @@ Excluded: selecting a review sample, state or history, time windows, alerts, thr
 
 ## Acceptance
 
-- Synthetic rows prove all three policy actions, reviewed and unreviewed rows, one disagreement in each direction needed to cover all action names, input-order changes, top-level and per-action denominators, zero denominators, exact four-decimal rates, and empty input.
+- Synthetic rows prove all three policy actions, reviewed and unreviewed rows, and the disagreement cycle `draft` to `block`, `block` to `review`, and `review` to `draft` in that input order. They pin top-level and per-action denominators, zero denominators, exact four-decimal rates, change order, and empty input.
 - Missing, null, and valid `reviewed_action` values behave as specified. Duplicate ids, non-string ids, unknown policy or reviewed actions, malformed containers, and non-null ordinary input fail once with exact data-free diagnostics.
 - The page-16 rows after `triage.jq` report six rows, two drafts, one block, three reviews, full review coverage, six agreed rows, no overturns, an agreement rate of 1, and no changes.
 - The executable transform page and page 25 run without a key or network. Page 25 stays at no more than 120 lines and 900 words and uses `reviewed_action` for the person's decision everywhere.
@@ -61,4 +61,4 @@ Re-score if the transform gains stored history, alerting, sampling, or configura
 
 ## Review
 
-The independent design review rejected the first draft because `agreement` did not say whether it was a count or a rate, review coverage cannot prove random sampling, and a score of six routes to level 3 rather than level 2. The corrected report names `agreed` and `overturned` as counts and `agreement_rate` as the rate over reviewed rows. It states the sampling limit plainly and uses the level-3 Sol Medium route.
+The independent design review rejected the first draft because `agreement` did not say whether it was a count or a rate, review coverage cannot prove random sampling, and a score of six routes to level 3 rather than level 2. Its second pass required an exact three-action disagreement cycle instead of the phrase "each direction." The corrected report names `agreed` and `overturned` as counts and `agreement_rate` as the rate over reviewed rows. It states the sampling limit plainly, pins every source and target action in order, and uses the level-3 Sol Medium route.
