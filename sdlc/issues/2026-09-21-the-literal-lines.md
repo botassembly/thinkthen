@@ -4,6 +4,8 @@ Status: Open
 
 The talk and the site copy these lines, so each is complete enough to paste: imports or setup included where the experiment's own file shows them. Every line ran as written in the experiment folders, against the loopback stub, and the source file is named under each. The question text is the refund question the benches used; the wording varies by language because the benches were written independently, and that is faithful to what ran.
 
+> The ruled C bulk spelling is `thinkthen_decide_many` (ADR 0017, pick 8). The C section below shows the literal line as it ran on 2026-09-21 under the older spelling `thinkthen_filter_many`; the ruled name lands with the contract.
+
 ## Python
 
 From `experiments/205-thinkthen-libs/python/bench_width.py`:
