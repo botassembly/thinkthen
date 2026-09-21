@@ -10,40 +10,41 @@ Status: proposed
 
 ## Outcome
 
-One language-neutral file fixes the cases that the command and every future library and database surface must answer alike. An offline test validates the file through the production question grammar, digest, wire adapter, and answer rules. No runner reaches a backend, reads a key, or invents a second product grammar.
+One language-neutral file fixes the cases that the command and every future surface must answer alike. An offline Rust test validates present product semantics through the production grammar, digest, wire adapter, and answer rules. Future engine faults remain explicit fixture contracts until the merge ticket supplies their runner.
 
 ## Current facts and decisions
 
-Experiments 205 and 207 produced one twenty-case file and an offline validator. The useful evidence is real, but the file is not ready to become the contract. It names paths outside this repository, marks five exchanges as shaped rather than captured, uses `details`, `usage`, `cancel`, and `decide_many` as verbs, omits `rank` and `find`, tests only two decisions inside `annotate`, and has no case for `local`, `deadline`, or `defect` errors. Its Python validator copies product grammar and digest logic that already live in Rust.
+Experiments 205 and 207 produced twenty cases and an offline validator. The file carries useful evidence, but it names experiment paths, treats helper operations as verbs, omits `rank` and `find`, tests only decisions inside `annotate`, and copies product rules into Python. Five exchanges were shaped rather than captured. It has no `local`, `deadline`, or `defect` case.
 
-Product recording entries intentionally store only successful decoded exchanges. A backend refusal cannot pass through `--replay`, and weakening that rule would make the conformance fixture less trustworthy.
+Product recordings intentionally store only successful decoded exchanges. A backend refusal cannot pass through `--replay`. The fixture must preserve that rule.
 
 This ticket makes these decisions. Ian can overturn any of them.
 
-1. `conformance/cases.json` is the single source of truth. It starts with the twenty experiment cases, replaces the annotate case with one mixed `decide`/`choose`/`score`/`tag` set, adds `rank` and `find`, and adds deterministic `local`, `deadline`, and `defect` faults. The file has twenty-five cases and covers all eight verbs and all six error kinds.
-2. `verb` is always one of the eight product verbs. Bulk form, details, repeats for usage, cancellation, deadline, and fault injection live in explicit arguments. They are not extra verbs.
-3. A successful case embeds the exact System One request and response needed to replay it. Each exchange says `captured` or `synthetic_contract`. Synthetic data must satisfy the same wire decoder and is never described as a live measurement. Cases carry no path into an experiment.
-4. A failure case names one of the six error kinds and the deterministic fault the future runner injects. Backend, local, cancellation, deadline, and defect cases do not masquerade as product recording entries.
-5. A Rust integration test in the pure core owns validation because the production parser, canonical digest, adapter, and answer rules already live there. It checks the file's schema, exact count, unique ids, eight-verb and six-error coverage, question and set grammar, request byte identity, reply shape, model consistency, expected bare answer and details, provenance, and absence of credential or header fields.
-6. This ticket lands data and validates its meaning. It does not build a temporary command runner around private modules. The section 8 step-1 merge ticket adds the first command runner over its private engine boundary. Successful cases then use their embedded exchanges; faults use deterministic in-process injection. Every later surface reads the same file.
-7. No experiment builder or duplicated Python grammar enters the repository. `conformance/README.md` documents the schema, provenance, runner rules, and the command that validates the file.
+1. `conformance/cases.json` is the single case contract. The initial file has twenty-five cases: the twenty experiment cases with a mixed `annotate` case, plus `rank`, `find`, `local`, `deadline`, and `defect`. The schema does not freeze that number. Its declared count must equal its array length, and coverage must include all eight verbs and all six error kinds.
+2. `verb` is always one of the eight verbs. Bulk form, details, repeated calls for usage, cancellation, deadlines, and fault injection live under explicit operation arguments.
+3. The shared `rank` expectation is an ordered list of input indexes beside their yes probabilities. The shared `find` expectation is the selected input index or null beside every candidate probability in stable input order, with `none` last when present. A host maps indexes back to its own container. ADR 0017 records these meanings; the command keeps its current printed records.
+4. A success exchange stores the request body as a JSON string, so the test compares its UTF-8 bytes with the production encoder. The response remains structured and must pass the production decoder.
+5. `synthetic_contract` means the exchange came from a stub or was shaped to the accepted wire contract. `captured` requires a public, stable repository recording named by a relative path, and the embedded request and response must equal it. The validator recursively refuses headers and credential fields. No case points into an experiment.
+6. A fault case names one accepted error kind and a deterministic future injection. This ticket validates the schema for `local`, `deadline`, and `defect`; the merge-ticket runner validates their behavior. Faults never masquerade as product recording entries.
+7. A pure-core integration test validates the schema, unique ids, required coverage, question and set grammar, request bytes, replies, model agreement, expected bare answers and details, provenance, and privacy. It calls production Rust and contains no second canonicalizer or probability formula.
+8. This ticket lands the fixture and validator. The section 8 step-1 merge ticket adds the command runner over its private engine boundary. Successes use embedded exchanges; faults use deterministic in-process injection. No experiment builder or duplicated Python grammar enters the repository.
 
 ## Scope
 
-Add `conformance/cases.json`, its README, and one pure-core integration test. Amend ADR 0017 section 7 and both active plans to state the successful-replay and injected-fault split and the runner timing. Update the test rung only if Cargo does not already discover the integration test.
+Add `conformance/cases.json`, its README, and one pure-core integration test. Amend ADR 0017 with the host-neutral `rank` and `find` meanings, successful-exchange and injected-fault split, and runner timing. Update both active plans. Change the test rung only if Cargo does not already discover the integration test.
 
-Excluded: network or paid calls, a command runner, public engine functions, the one-crate move, bindings, database extensions, new dependencies, product recording changes, and generated experiment scripts.
+Excluded: network or paid calls, a command runner, public engine functions, the one-crate move, bindings, database extensions, dependencies, product recording changes, and experiment builders.
 
 ## Acceptance
 
-- The single file has schema `thinkthen.conformance/1`, twenty-five unique cases, all eight product verbs, and all six error kinds. `verb` contains no helper operation.
-- The mixed annotate case exercises all four question types. Rank and find each have a successful case with the output shape ADR 0017 assigns them.
-- Every success exchange is marked `captured` or `synthetic_contract`, passes the production adapter, carries no header or credential, and reproduces the expected bare answer and details.
-- Every fault case names a deterministic future injection and one accepted error kind. None is written as a product recording entry.
-- The validator uses production Rust types for question parsing, digests, request encoding, response decoding, and answer reading. It contains no second canonicalizer or probability formula.
-- A focused mutation test proves that a wrong expected answer, wrong request, duplicate id, unknown verb, missing error kind, credential field, and malformed mixed question set each fail validation.
-- ADR 0017 and both plans put the command runner in the merge ticket and keep Job 3 before that merge.
-- The focused conformance test, all four repository rungs, and `git diff --check` pass with the key unset and no network request.
+- The initial `thinkthen.conformance/1` file declares its actual length, has unique ids, and covers all eight verbs and all six error kinds without helper operations under `verb`.
+- Mixed `annotate`, `rank`, and `find` carry the host-neutral expectations above.
+- Every success request is a string whose bytes equal production encoding. Every response passes production decoding and reproduces the expected bare answer and details.
+- Every exchange has valid provenance. `captured` content matches its public repository recording; synthetic content says so. No header or credential field occurs anywhere.
+- Future `local`, `deadline`, and `defect` cases validate as schema contracts and are not claimed as executed behavior.
+- Focused mutations prove rejection of a wrong expected answer, wrong request byte, duplicate id, unknown verb, missing error-kind coverage while count still matches, credential field, and malformed mixed set.
+- ADR 0017 and both plans put the first command runner in the merge ticket and keep Job 3 before that merge.
+- The focused test, all four repository rungs, and `git diff --check` pass with the key unset and no network request.
 
 ## Dependencies
 
@@ -59,11 +60,11 @@ Ticket 0051 and the experiment 205/207 conformance evidence.
 - Total: 7
 - Minimum level floor: none
 - Final level: 3
-- Reasons: the fixture becomes a compatibility contract for ten future surfaces. It is local data, but the proof must cover every verb, every error kind, wire bytes, and hostile mutations without copying product semantics.
+- Reasons: the fixture becomes a compatibility contract for ten surfaces. The proof covers every verb and error kind, exact request bytes, and hostile mutations without copying product semantics.
 - Selected model: `gpt-5.6-sol` with medium reasoning.
 
-Re-score if implementation needs a new product hook, public type, dependency, or network call.
+Re-score if implementation needs a product hook, public type, dependency, or network call.
 
 ## Review
 
-Pending independent design review.
+Independent design review rejected the first proposal because `rank` and `find` lacked host-neutral meanings, parsed JSON could not prove request bytes, provenance and future-fault limits were vague, and the case count looked permanent. This rewrite fixes those boundaries and keeps the runner in the merge ticket.
