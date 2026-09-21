@@ -15,7 +15,7 @@ Written by the product side for Ian to give the build team after ticket 0053. It
 | Topic | The ruling | Page |
 | --- | --- | --- |
 | The number on a relation | `probability`. Approved as recommended | `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md` |
-| The number on a recognized name | **Held.** The vendor already uses `confidence` for a different number. The recognize team is running one free comparison. Freeze no field name for it yet | The same page |
+| The number on a recognized name | **Settled: `strength`.** The comparison showed no plain model probability gates as well, so the computed number stays under a name that claims nothing about chance. `--details` prints its parts | The same page |
 | The vendor's `confidence` | Passes through under `--details` only, under the vendor's name. No function gates on it and no bare output prints it | The same page |
 | A relation's two ends | `source` and `target` on every surface, in the command's JSON, and in the question file. The command-line rule stays `--relation NAME=FROM:TO` | Both design pages, last ruling section |
 | `recognize` options | No depth option. A relation rule turns relations on. Default kinds are `person`, `organization`, `place` | `sdlc/planning/recognize-design.md`, rulings table |

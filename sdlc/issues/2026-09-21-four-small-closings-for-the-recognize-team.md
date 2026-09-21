@@ -12,3 +12,5 @@ Written 2026-09-21 by the product side. The harvest package at `experiments/225-
 Not asked: the 222 demo file stays as it is. The deck's `recognize` slide now reads case C01 from the harvest package.
 
 Ruled by the product side, for the team to know: `relate` reads records only, and names a user already has are passed as records with a kind field. No `depth` option exists on the command. Both rulings are on the two design pages, and Ian can overturn them.
+
+Closed 2026-09-21. All five items are done with no paid run. Item 5's answer: no plain model probability gates as well as the computed number, so the product side named the computed number `strength`. The record is `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`. The recognize program is closed.

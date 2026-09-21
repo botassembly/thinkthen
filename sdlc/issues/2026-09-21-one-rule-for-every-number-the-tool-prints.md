@@ -28,9 +28,21 @@ The vendor defines its `confidence` as a number "computed from how `probabilitie
 - The cleanest end state has no computed number at all on a name. The name carries `probability`, the lowest probability among the model's answers that produced it. It is a real reported number and it reads plainly: "the answer we were least sure of, behind this name". Whether it gates as well as the computed number is a measurement. The recognize team holds recordings of every run, so the comparison costs nothing. It is item 5 on their closing list.
 - If the plain number gates worse, the computed number stays, under a name that says it is computed, with its parts under `--details`. The product side picks that name then.
 
-## Until the measurement lands
+## The comparison came back, 2026-09-21: the computed number stays, and its name is `strength`
 
-The library team builds with the field as the harvest cases have it. One field name on one object is a small change for them, and the brief tells them it may change.
+The recognize team ran the free comparison on both full corpora from recordings (`experiments/227-name-number/report.md`). How well each number separates right names from wrong ones:
+
+| Number | WikiGold | CoNLL04 |
+| --- | --- | --- |
+| The computed number | 0.840 | 0.761 |
+| The lowest reported word probability | 0.761 | 0.722 |
+| The lowest of all reported probabilities | 0.824 | 0.761 |
+
+The computed number wins on one corpus and ties on the other. No plain model probability gates as well, so a name cannot carry `probability`.
+
+The product side rules the field name: **`strength`**. It is a plain word, it claims nothing about chance, and the vendor does not use it. The manual defines it once: the lowest word probability behind the name times the average kind probability, with connector words left out. `--details` prints those parts beside it. `--threshold` on `recognize` is the bar a name's strength must reach.
+
+What changes: the `recognize` output object, the harvest package's expected objects and its rules six and seven, the demo output, the method page, and the library team's conformance cases. The recognize team's report lists the files. The vendor's own `confidence` field keeps its name wherever it is the literal field.
 
 ## What Ian can overturn
 

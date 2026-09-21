@@ -18,7 +18,7 @@ Relations are the second answer: how two names relate. Relations are beta, and e
 | kind | What a name is: `person`, `organization`, `place`, or the user's own | The output carries the user's word. It never carries a code such as `PER` |
 | relation | A named link from one name to another | Always has a direction |
 | relation rule | One row that says which kinds a relation may join | |
-| confidence | The number on a name or a relation | The one place the public copy says "confidence". It is computed from several probabilities and is no single probability. The manual says so once. `--details` carries the raw probabilities |
+| strength | The number on a name | Ours, computed from several of the model's probabilities: the lowest word probability times the average kind probability. It is no probability and the manual says so once. The vendor uses "confidence" for a different number, so this page never does. `--details` carries the parts. The number on a relation is the model's own `probability` |
 
 ## The command
 
@@ -40,7 +40,7 @@ With no kind given, the kinds are `person`, `organization`, and `place`. A kind 
 | --- | --- |
 | `--kind KIND=DESCRIPTION` | One kind and what it means. Once per kind |
 | `--relation NAME=FROM:TO` | One relation rule. Once per rule. Turns relations on |
-| `--threshold T` | The bar a name must reach. Default 0.5 |
+| `--threshold T` | The bar a name's strength must reach. Default 0.5 |
 | `--relation-threshold T` | The bar a relation must reach. Default 0.5 |
 | `--details` | The full result, with each word's probabilities |
 | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`, `--dry-run`, `--cache`, `--replay`, `--no-cache` | As on every function |
@@ -96,9 +96,9 @@ One JSON object per text:
 
 ```json
 {"entities": [
-   {"id": 1, "text": "Maria Chen", "kind": "person", "start": 0, "end": 10, "confidence": 0.98},
-   {"id": 2, "text": "Northwind Freight", "kind": "organization", "start": 18, "end": 35, "confidence": 1.0},
-   {"id": 3, "text": "Chicago", "kind": "place", "start": 39, "end": 46, "confidence": 0.7154}],
+   {"id": 1, "text": "Maria Chen", "kind": "person", "start": 0, "end": 10, "strength": 0.98},
+   {"id": 2, "text": "Northwind Freight", "kind": "organization", "start": 18, "end": 35, "strength": 1.0},
+   {"id": 3, "text": "Chicago", "kind": "place", "start": 39, "end": 46, "strength": 0.7154}],
  "relations": [
    {"name": "works_for", "source": 1, "target": 2, "probability": 1.0}]}
 ```
@@ -143,10 +143,10 @@ A database user wants names as rows, because rows join.
 
 | Engine | The function | Returns |
 | --- | --- | --- |
-| DuckDB | `thinkthen_recognize(body, ['person', 'organization'])` | A list of structs `(text, kind, start, end, confidence)`. `unnest()` makes rows |
+| DuckDB | `thinkthen_recognize(body, ['person', 'organization'])` | A list of structs `(text, kind, start, end, strength)`. `unnest()` makes rows |
 | SQLite | `thinkthen_recognize(body, 'person,organization')` as a table-valued function | Rows with those five columns |
 | PostgreSQL | `thinkthen_recognize(body, ARRAY['person', 'organization'])` as a set-returning function, used with `LATERAL` | The same five columns |
-| All three | `thinkthen_relations(body, '@names.json')` | Rows `(name, source_text, source_kind, target_text, target_kind, confidence)`. Relations need the question file. Beta |
+| All three | `thinkthen_relations(body, '@names.json')` | Rows `(name, source_text, source_kind, target_text, target_kind, probability)`. Relations need the question file. Beta |
 
 **The join rule, for the manual and the how-to.** A join by meaning, `JOIN ... ON thinkthen_decide(...)`, asks one question for every pair of rows. A thousand tickets against a thousand incidents is a million requests. The deck's join use case works because it joins two rows to two rows. The manual must give the three ways to keep a join affordable, in this order:
 

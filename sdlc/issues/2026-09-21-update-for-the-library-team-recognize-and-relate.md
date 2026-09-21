@@ -57,6 +57,6 @@ What to prove, beyond "the calls run as written":
 - `relate` takes every record at once. A database gives it a table or a query. It refuses more than 255 records with a usage error on every surface.
 - The any-kind end is the one-character string `"*"` everywhere except Rust.
 
-What to leave alone: the method itself, how a long text is cut, and the question count per request. Those are the engine's, and the build team owns them. The number on a relation is `probability`. The number on a recognized name may change its field name after one free comparison by the recognize team. Build it as the harvest cases have it and expect a one-word change. The rule is `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`.
+What to leave alone: the method itself, how a long text is cut, and the question count per request. Those are the engine's, and the build team owns them. The number on a relation is `probability`. The number on a recognized name is `strength`, settled after the recognize team's comparison. The harvest cases say `confidence`, and the rename in the conformance file is mechanical. The rule is `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`.
 
 This work does not touch the build team. It stays on the `surfaces` branch against the stand-in. The merge of `surfaces` into main remains the build team's gate.
