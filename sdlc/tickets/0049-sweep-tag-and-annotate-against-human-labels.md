@@ -68,4 +68,3 @@ Re-score if implementation duplicates metric arithmetic, adds aggregate scores, 
 ## Review
 
 The independent design review rejected the first draft because it left nested report keys ambiguous, validated human tag truth without validating the saved tag result, left argument combinations undefined, allowed a merely nonempty question-set digest, and used scores outside the routing rubric. This rewrite fixes every output key, validates the complete stored tag shape, defines the dispatch matrix, requires a 64-character lowercase hexadecimal digest, and records the corrected level-3 score.
-
