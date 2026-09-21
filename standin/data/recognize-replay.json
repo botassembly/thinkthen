@@ -1,0 +1,2285 @@
+{
+ "schema": "thinkthen.replay/1",
+ "source": "experiments/225-recognize-harvest-package, harvested 2026-09-21; C41 synthesized for the offset proofs",
+ "recognize": [
+  {
+   "id": "C01",
+   "text": "Maria Chen joined Northwind Freight in Chicago last spring.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Maria Chen",
+     "kind": "person",
+     "start": 0,
+     "end": 10,
+     "confidence": 0.98
+    },
+    {
+     "id": 2,
+     "text": "Northwind Freight",
+     "kind": "organization",
+     "start": 18,
+     "end": 35,
+     "confidence": 1.0
+    },
+    {
+     "id": 3,
+     "text": "Chicago",
+     "kind": "place",
+     "start": 39,
+     "end": 46,
+     "confidence": 0.6693
+    }
+   ],
+   "rules": [
+    "works_for",
+    "based_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "works_for_AB": 1.0,
+      "NO_RELATION": 0.0
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "options": {
+      "based_in_AB": 0.17,
+      "NO_RELATION": 0.83
+     },
+     "pick": "NO_RELATION"
+    }
+   ],
+   "requests": [
+    "d216388840d42456f2606bda0e1e4639e1705be419127bdabadaaffa6b4ea8ac",
+    "f1a49c9dd02333e26455ca287e1fae6bc8759c7ef76a2ef1830dd09a937cd1b0"
+   ],
+   "pairs_count": 2,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C02",
+   "text": "Amara Okafor founded Kestrel Labs in 2015.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 0,
+     "end": 12,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 21,
+     "end": 33,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "founded",
+    "based_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "founded_AB": 1.0,
+      "NO_RELATION": 0.0
+     },
+     "pick": "founded_AB"
+    }
+   ],
+   "requests": [
+    "44852240b7079c0204ee6fc9e236c566782e3d73bc406243fb2c19e6e99a4c6e",
+    "57d32401028fc1aae19fc458f856dbff8091d31d73f4333592fe6d9213f359c8"
+   ],
+   "pairs_count": 1,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C03",
+   "text": "The Millbrook Athletics won the county final on Saturday.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Millbrook Athletics",
+     "kind": "organization",
+     "start": 4,
+     "end": 23,
+     "confidence": 0.9801
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "f0d596d49b39834a26d2955bc01e8374d5d1ecb6b1854c8e5547099cac946a6a"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C04",
+   "text": "Athletics is her favorite subject at school.",
+   "entities": [],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "ced4f4b0075c03e02a799eab143c5ad627fb92090f3c2d8e47bb92fb3c6f66b6"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C05",
+   "text": "The band recorded The Hollow Crown in a single afternoon at Fenwick Studio.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "The Hollow Crown",
+     "kind": "other",
+     "start": 18,
+     "end": 34,
+     "confidence": 0.98
+    },
+    {
+     "id": 2,
+     "text": "Fenwick Studio",
+     "kind": "organization",
+     "start": 60,
+     "end": 74,
+     "confidence": 0.7524
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "7f3c26563006d1f7bc675100dfb0729cbbd9763b3a746474cdd91e7be77c69ad"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C06",
+   "text": "the night nurse, june adeyemi, logged the handover at st. bruno's.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "june adeyemi",
+     "kind": "person",
+     "start": 17,
+     "end": 29,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "st. bruno's",
+     "kind": "organization",
+     "start": 54,
+     "end": 65,
+     "confidence": 0.5523
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "86b00e226a117b122bb83b08249714ee19120afcec1a08c73c7290027995fc01"
+   ],
+   "pairs_count": 0,
+   "note": "known-divergent: st. bruno's typed organization; a person would call it a place",
+   "synthesized": null
+  },
+  {
+   "id": "C07",
+   "text": "Chicago sent a delegation in March, and Chicago hosted the reply in June.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Chicago",
+     "kind": "place",
+     "start": 0,
+     "end": 7,
+     "confidence": 0.8277
+    },
+    {
+     "id": 2,
+     "text": "Chicago",
+     "kind": "place",
+     "start": 40,
+     "end": 47,
+     "confidence": 0.8613
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "5d27504d4a3c36e412c7c83273a503ff7d982d767b9b9f1d533cec476548a293"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C08",
+   "text": "The meeting ran long and the coffee went cold by noon.",
+   "entities": [],
+   "rules": [
+    "works_for"
+   ],
+   "pairs": [],
+   "requests": [
+    "8c6c39b3a98a6645597309e79649235991c5b3702d942eaef5ff2eadad58d61a"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C09",
+   "text": "The season opened with a short review. The board met twice in April. Nothing was decided. A second meeting followed in May. The minutes stayed private. The final decision sat with the board of Karst and Vellum.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Karst and Vellum",
+     "kind": "organization",
+     "start": 193,
+     "end": 209,
+     "confidence": 0.7194
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "a05ce2b48ebe7530ca351e251578486dfd33f294b9653cff8a1c82ba4e650cbf"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C10",
+   "text": "Amara Okafor opened the session at nine.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 0,
+     "end": 12,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "6c5757728b1aadf6e8ceb34f288e850021b1c326bf067a0eab806ceadb63527e"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C11",
+   "text": "Dana toured the Chicago office of Northwind Freight last week.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Dana",
+     "kind": "person",
+     "start": 0,
+     "end": 4,
+     "confidence": 0.88
+    },
+    {
+     "id": 2,
+     "text": "Northwind Freight",
+     "kind": "organization",
+     "start": 34,
+     "end": 51,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "works_for",
+    "based_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "works_for_AB": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    }
+   ],
+   "requests": [
+    "4778b1e77b61f0777b796bcd50aa88c807fbe3be62d3344d2ffb7aa332771d24",
+    "96d3bae49335c867372675d468e250d278b448dd269db7f8f0617e808fc6405a"
+   ],
+   "pairs_count": 1,
+   "note": "known-divergent: Chicago missed (the place inside 'the Chicago office')",
+   "synthesized": null
+  },
+  {
+   "id": "C12",
+   "text": "Amara works at Kestrel Labs.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara",
+     "kind": "person",
+     "start": 0,
+     "end": 5,
+     "confidence": 0.8712
+    },
+    {
+     "id": 2,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 15,
+     "end": 27,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "works_for",
+    "founded"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "works_for_AB": 1.0,
+      "founded_AB": 0.0,
+      "NO_RELATION": 0.0
+     },
+     "pick": "works_for_AB"
+    }
+   ],
+   "requests": [
+    "4503c74cc6640f7398ad088396ae38924ce514e06a337cac67d97846f8a52718",
+    "8c4b4051e481d2271f9c4350bf045346825fb930d8ec390ba75826eab04e64e4"
+   ],
+   "pairs_count": 1,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C13",
+   "text": "Northwind Freight is based in Chicago and Denver.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Northwind Freight",
+     "kind": "organization",
+     "start": 0,
+     "end": 17,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Denver",
+     "kind": "place",
+     "start": 42,
+     "end": 48,
+     "confidence": 0.5015
+    }
+   ],
+   "rules": [
+    "based_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "based_in_AB": 1.0,
+      "NO_RELATION": 0.0
+     },
+     "pick": "based_in_AB"
+    }
+   ],
+   "requests": [
+    "6d35ac7a239ba5cfd29e81141645119e0e299840e4501ae8871d5cdc9d8eed72",
+    "bedf003353bb7c2ae6f5e441b82b1903903e481d1849bd8196783e74f7bf443b"
+   ],
+   "pairs_count": 1,
+   "note": "known-divergent: Chicago missed; the second based_in relation is lost with it",
+   "synthesized": null
+  },
+  {
+   "id": "C14",
+   "text": "Elif Demir of Brookline Shipping met Tomas Reyes in Boston.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Elif Demir",
+     "kind": "person",
+     "start": 0,
+     "end": 10,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Brookline Shipping",
+     "kind": "organization",
+     "start": 14,
+     "end": 32,
+     "confidence": 0.8681
+    },
+    {
+     "id": 3,
+     "text": "Tomas Reyes",
+     "kind": "person",
+     "start": 37,
+     "end": 48,
+     "confidence": 0.99
+    },
+    {
+     "id": 4,
+     "text": "Boston",
+     "kind": "place",
+     "start": 52,
+     "end": 58,
+     "confidence": 0.9009
+    }
+   ],
+   "rules": [
+    "works_for",
+    "based_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "works_for_AB": 0.9,
+      "NO_RELATION": 0.1
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "options": {
+      "works_for_BA": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "options": {
+      "based_in_AB": 0.01,
+      "NO_RELATION": 0.99
+     },
+     "pick": "NO_RELATION"
+    }
+   ],
+   "requests": [
+    "3f4dd220f25d27aa35140acd3ebcd135b1199c8b7c726cf08b14531fdfe26c3f",
+    "9249b4a76d0a72efa8d7519f545a4e6b542b37580aa5e0efae49237ffe9590f5"
+   ],
+   "pairs_count": 3,
+   "note": "reviewable: 'of' read as works_for at 0.9; a person may call that a judgment call",
+   "synthesized": null
+  },
+  {
+   "id": "C15",
+   "text": "The report, titled Harbor Light, was filed by the Grayline Trust.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Harbor Light",
+     "kind": "other",
+     "start": 19,
+     "end": 31,
+     "confidence": 1.0
+    },
+    {
+     "id": 2,
+     "text": "Grayline Trust",
+     "kind": "organization",
+     "start": 50,
+     "end": 64,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "21cf555ab92888bb0fa30b92a41d7287462c8cae9938a8337fbed59acd58077b"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C16",
+   "text": "Kestrel Labs' founder visited Rotterdam.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Kestrel Labs'",
+     "kind": "organization",
+     "start": 0,
+     "end": 13,
+     "confidence": 0.89
+    },
+    {
+     "id": 2,
+     "text": "Rotterdam",
+     "kind": "place",
+     "start": 30,
+     "end": 39,
+     "confidence": 0.96
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "1c3076ee3ddf02a71e870f6e3a4113be7bce6247ff5fde81422691115ba3ae4c"
+   ],
+   "pairs_count": 0,
+   "note": "observed: the possessive stays in the span text (Kestrel Labs'); repairs are off by default",
+   "synthesized": null
+  },
+  {
+   "id": "C17",
+   "text": "Pier 39 drew crowds, and the Sausalito Ferry ran late.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Pier 39",
+     "kind": "place",
+     "start": 0,
+     "end": 7,
+     "confidence": 0.9801
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "7fffe04eed4b9b73bae9620c7c0b667d73d09040466ab1e7e410e821a70e6f81"
+   ],
+   "pairs_count": 0,
+   "note": "known-divergent: Sausalito Ferry missed (organization)",
+   "synthesized": null
+  },
+  {
+   "id": "C18",
+   "text": "Dana Whitfield and Marcus Bell joined Kestrel Labs.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Dana Whitfield",
+     "kind": "person",
+     "start": 0,
+     "end": 14,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Marcus Bell",
+     "kind": "person",
+     "start": 19,
+     "end": 30,
+     "confidence": 0.99
+    },
+    {
+     "id": 3,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 38,
+     "end": 50,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "works_for"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "options": {
+      "works_for_AB": 0.94,
+      "NO_RELATION": 0.06
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "options": {
+      "works_for_AB": 0.94,
+      "NO_RELATION": 0.06
+     },
+     "pick": "works_for_AB"
+    }
+   ],
+   "requests": [
+    "170e3aff8c1fdeb77c93b9e18c9f3ff05c9a7613726cd094105c7a268101e36d",
+    "f6fb44d16d2b78f1b739119134e5f94004995038d110d4cef71a1b51f4b74225"
+   ],
+   "pairs_count": 2,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C19",
+   "text": "Northwind Freight, based in Lisbon, announced a new route.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Northwind Freight",
+     "kind": "organization",
+     "start": 0,
+     "end": 17,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "based_in"
+   ],
+   "pairs": [],
+   "requests": [
+    "d6afab46e68699290391f7ceb7e2e18313b17e51e9aa5a71254090840c9a1fc2"
+   ],
+   "pairs_count": 0,
+   "note": "known-divergent: Lisbon missed; the based_in relation is lost with it",
+   "synthesized": null
+  },
+  {
+   "id": "C20",
+   "text": "The Norwegian crew docked at Hull on Tuesday.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Hull",
+     "kind": "place",
+     "start": 29,
+     "end": 33,
+     "confidence": 0.96
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "3cfcebb3a9bf14f6c901cbea34322d4897959fa6dd4fc845a9fbde87df051370"
+   ],
+   "pairs_count": 0,
+   "note": "known-divergent: Norwegian not detected (nationality; the named weak class)",
+   "synthesized": null
+  },
+  {
+   "id": "C21",
+   "text": "Kestrel Labs opened an office in Rotterdam. Brookline Shipping did the same a month later.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 0,
+     "end": 12,
+     "confidence": 1.0
+    },
+    {
+     "id": 2,
+     "text": "Rotterdam",
+     "kind": "place",
+     "start": 33,
+     "end": 42,
+     "confidence": 0.7
+    },
+    {
+     "id": 3,
+     "text": "Brookline Shipping",
+     "kind": "organization",
+     "start": 44,
+     "end": 62,
+     "confidence": 0.99
+    }
+   ],
+   "rules": [
+    "based_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "based_in_AB": 0.46,
+      "NO_RELATION": 0.54
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "options": {
+      "based_in_BA": 0.18,
+      "NO_RELATION": 0.82
+     },
+     "pick": "NO_RELATION"
+    }
+   ],
+   "requests": [
+    "8ce5f95a5616704e4a02fbd12a9944a005341f9b8a362da5c026d679cc6fb98b",
+    "b4f5d50dc502676a9e953e5c44b21a16cee3b4c389daac1a7797f2cef4800b9a"
+   ],
+   "pairs_count": 2,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C22",
+   "text": "Dr. Amara Okafor reviewed The Quiet Ward for the journal.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 4,
+     "end": 16,
+     "confidence": 1.0
+    },
+    {
+     "id": 2,
+     "text": "The Quiet Ward",
+     "kind": "other",
+     "start": 26,
+     "end": 40,
+     "confidence": 0.9867
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "df78ca169644fc694ab11a0093905f4675d3022e173385a45275368969cbf25b"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C23",
+   "text": "the ferry docks at port angeles before dawn.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "port angeles",
+     "kind": "place",
+     "start": 19,
+     "end": 31,
+     "confidence": 0.95
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "665f6b5494d2c41925d47f23134222e70c252b4241f9013ef11ad0c0c60c4d3f"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C24",
+   "text": "Marcus Bell and Dana Whitfield both work for Kestrel Labs.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Marcus Bell",
+     "kind": "person",
+     "start": 0,
+     "end": 11,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Dana Whitfield",
+     "kind": "person",
+     "start": 16,
+     "end": 30,
+     "confidence": 0.99
+    },
+    {
+     "id": 3,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 45,
+     "end": 57,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "works_for"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "options": {
+      "works_for_AB": 1.0,
+      "NO_RELATION": 0.0
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "options": {
+      "works_for_AB": 1.0,
+      "NO_RELATION": 0.0
+     },
+     "pick": "works_for_AB"
+    }
+   ],
+   "requests": [
+    "7e9ce598528c58794c5153808987fdd75ada2e6e9851fbab79d4dd055c4cc8e0",
+    "9634d667660e8bf49213c1de5e4896ea5442c673386924f6f66272b7671c428d"
+   ],
+   "pairs_count": 2,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C25",
+   "text": "Kestrel Labs merged with Brookline Shipping.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 0,
+     "end": 12,
+     "confidence": 1.0
+    },
+    {
+     "id": 2,
+     "text": "Brookline Shipping",
+     "kind": "organization",
+     "start": 25,
+     "end": 43,
+     "confidence": 0.9751
+    }
+   ],
+   "rules": [
+    "based_in"
+   ],
+   "pairs": [],
+   "requests": [
+    "388a0c9abf5ab68806f4331632b556bebc61f9bb7c891510ab38410bde595032"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C26",
+   "text": "Amara Okafor landed in Reykjavik at dawn.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 0,
+     "end": 12,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Reykjavik",
+     "kind": "place",
+     "start": 23,
+     "end": 32,
+     "confidence": 0.98
+    }
+   ],
+   "rules": [
+    "works_for"
+   ],
+   "pairs": [],
+   "requests": [
+    "6ec53dc87d6b5ba5ca4349d12397de177d9a6021aa29956486de2ca16fe49447"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C27",
+   "text": "They waited. Then the lights went out. Everyone listened for Grayline Trust.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Grayline Trust",
+     "kind": "organization",
+     "start": 61,
+     "end": 75,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "9221f108e8d919c7aec26623bda8debb1cebc52338ff30e562a51f5cfb7c4c70"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C28",
+   "text": "Northwind Freight opened the season with a short notice. The crews trained through April. Nothing moved until the ice cleared. The last word went to Amara Okafor.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Northwind Freight",
+     "kind": "organization",
+     "start": 0,
+     "end": 17,
+     "confidence": 1.0
+    },
+    {
+     "id": 2,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 149,
+     "end": 161,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "aef6451ae18535cf97d24137152df42d527891fb32cc6a8afe521f69f696a0cf"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C29",
+   "text": "the Northwind Freight depot in montreal stayed open.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "montreal",
+     "kind": "place",
+     "start": 31,
+     "end": 39,
+     "confidence": 0.5978
+    }
+   ],
+   "rules": [
+    "based_in"
+   ],
+   "pairs": [],
+   "requests": [
+    "dd84e36399102a525a4b50835566c97a87bc21e5f0d2373d1ccce107af324fe4"
+   ],
+   "pairs_count": 0,
+   "note": "known-divergent: Northwind Freight missed in the lowercase sentence",
+   "synthesized": null
+  },
+  {
+   "id": "C30",
+   "text": "The NTSB report cited Hull Harbour.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "NTSB",
+     "kind": "organization",
+     "start": 4,
+     "end": 8,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Hull Harbour",
+     "kind": "place",
+     "start": 22,
+     "end": 34,
+     "confidence": 0.9702
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "16827047ff56d3a1d593855ded5aa475ce3e6fa0389a736db2936ebce90e91e3"
+   ],
+   "pairs_count": 0,
+   "note": "reviewable: Hull Harbour typed place; a habour name can read either way",
+   "synthesized": null
+  },
+  {
+   "id": "C31",
+   "text": "At noon in Lisbon, the Kestrel Labs team met.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Lisbon",
+     "kind": "place",
+     "start": 11,
+     "end": 17,
+     "confidence": 0.91
+    },
+    {
+     "id": 2,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 23,
+     "end": 35,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "based_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "based_in_BA": 0.02,
+      "NO_RELATION": 0.98
+     },
+     "pick": "NO_RELATION"
+    }
+   ],
+   "requests": [
+    "119c811c878b0f491ba01406dad5d7c312739a67464018ad1fd5a795a4aa699e",
+    "acd184496324122aa9cb8a443714bac1861888e7bb3810199c0ebdb64e85394e"
+   ],
+   "pairs_count": 1,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C32",
+   "text": "The Grayline Trust funded the pier repairs.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Grayline Trust",
+     "kind": "organization",
+     "start": 4,
+     "end": 18,
+     "confidence": 0.985
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "af742f582f038322875a4600f204b276a415576b99e9e0780e83440583c022b3"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C33",
+   "text": "Amara Okafor, Dana Whitfield, and Marcus Bell signed for Kestrel Labs.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 0,
+     "end": 12,
+     "confidence": 1.0
+    },
+    {
+     "id": 2,
+     "text": "Dana Whitfield",
+     "kind": "person",
+     "start": 14,
+     "end": 28,
+     "confidence": 0.99
+    },
+    {
+     "id": 3,
+     "text": "Marcus Bell",
+     "kind": "person",
+     "start": 34,
+     "end": 45,
+     "confidence": 0.99
+    },
+    {
+     "id": 4,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 57,
+     "end": 69,
+     "confidence": 1.0
+    }
+   ],
+   "rules": [
+    "works_for"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "options": {
+      "works_for_AB": 0.9,
+      "NO_RELATION": 0.1
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "options": {
+      "works_for_AB": 0.91,
+      "NO_RELATION": 0.09
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "options": {
+      "works_for_AB": 0.89,
+      "NO_RELATION": 0.11
+     },
+     "pick": "works_for_AB"
+    }
+   ],
+   "requests": [
+    "1145e5042b7caa31419a22a1b9e4b3270e98d98282484dbd37a3f3b90f29b5e3",
+    "e269eb26f8fb6e665446ef43036fd7a988eba0e98394fb77b8f56677f8b0346e"
+   ],
+   "pairs_count": 3,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C34",
+   "text": "The Rotterdam Port Authority approved the plan.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Rotterdam Port Authority",
+     "kind": "organization",
+     "start": 4,
+     "end": 28,
+     "confidence": 0.8877
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "849f4e3fd3709dcd04db7cb62cc0ca574ad0d532ef824d139d08e88064341979"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C35",
+   "text": "Shipping delays hurt the spring schedule.",
+   "entities": [],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "cad5c182d01732ac98ba413c91091402485f61a99b939bc338e6f6ac6b3d84eb"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C36",
+   "text": "The road from Hull to Leeds was closed.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Hull",
+     "kind": "place",
+     "start": 14,
+     "end": 18,
+     "confidence": 0.93
+    },
+    {
+     "id": 2,
+     "text": "Leeds",
+     "kind": "place",
+     "start": 22,
+     "end": 27,
+     "confidence": 0.94
+    }
+   ],
+   "rules": [
+    "located_in"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "located_in_AB": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    }
+   ],
+   "requests": [
+    "39f334c2afa4883ab201677961e09398b24b6a2b67a6eb67bc225a7582443ba6",
+    "6976bb411d324595e1478196502fe9e73a144b67c5bcb8fb391585350f262f49"
+   ],
+   "pairs_count": 1,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C37",
+   "text": "Dana Whitfield called. Later, Dana Whitfield wrote.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Dana Whitfield",
+     "kind": "person",
+     "start": 0,
+     "end": 14,
+     "confidence": 1.0
+    },
+    {
+     "id": 2,
+     "text": "Dana Whitfield",
+     "kind": "person",
+     "start": 30,
+     "end": 44,
+     "confidence": 0.99
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "1eb218ddf76322782ac92d675363913f4bd5c18cdccfd0342e7c42ba132a7b7f"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C38",
+   "text": "Karst & Vellum hired a new editor.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Karst & Vellum",
+     "kind": "organization",
+     "start": 0,
+     "end": 14,
+     "confidence": 0.8979
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "a884fedb523de0304e1dd7956468f37741b9aae6e40d15e6c4384dc7bb936b07"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C39",
+   "text": "Yesterday Amara Okafor chaired the review.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 10,
+     "end": 22,
+     "confidence": 0.99
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [
+    "4f71dff3d02faea70c23f5f597639001f2841c043fa7f1620cd0aa04bf9cfa03"
+   ],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C40",
+   "text": "Amara Okafor founded Kestrel Labs in Rotterdam. Dana Whitfield joined the firm two years later. Marcus Bell of Brookline Shipping visited the office in Boston.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Amara Okafor",
+     "kind": "person",
+     "start": 0,
+     "end": 12,
+     "confidence": 0.99
+    },
+    {
+     "id": 2,
+     "text": "Kestrel Labs",
+     "kind": "organization",
+     "start": 21,
+     "end": 33,
+     "confidence": 1.0
+    },
+    {
+     "id": 3,
+     "text": "Rotterdam",
+     "kind": "place",
+     "start": 37,
+     "end": 46,
+     "confidence": 0.73
+    },
+    {
+     "id": 4,
+     "text": "Dana Whitfield",
+     "kind": "person",
+     "start": 48,
+     "end": 62,
+     "confidence": 0.99
+    },
+    {
+     "id": 5,
+     "text": "Marcus Bell",
+     "kind": "person",
+     "start": 96,
+     "end": 107,
+     "confidence": 0.99
+    },
+    {
+     "id": 6,
+     "text": "Brookline Shipping",
+     "kind": "organization",
+     "start": 111,
+     "end": 129,
+     "confidence": 0.9065
+    },
+    {
+     "id": 7,
+     "text": "Boston",
+     "kind": "place",
+     "start": 152,
+     "end": 158,
+     "confidence": 0.93
+    }
+   ],
+   "rules": [
+    "works_for",
+    "based_in",
+    "founded"
+   ],
+   "pairs": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "works_for_AB": 0.0,
+      "founded_AB": 1.0,
+      "NO_RELATION": 0.0
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      1,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.0,
+      "founded_AB": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "options": {
+      "based_in_AB": 0.92,
+      "NO_RELATION": 0.08
+     },
+     "pick": "based_in_AB"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "options": {
+      "works_for_BA": 0.94,
+      "founded_BA": 0.0,
+      "NO_RELATION": 0.06
+     },
+     "pick": "works_for_BA"
+    },
+    {
+     "pair": [
+      2,
+      5
+     ],
+     "options": {
+      "works_for_BA": 0.0,
+      "founded_BA": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      7
+     ],
+     "options": {
+      "based_in_AB": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      3,
+      6
+     ],
+     "options": {
+      "based_in_BA": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      4,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.0,
+      "founded_AB": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      5,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.64,
+      "founded_AB": 0.0,
+      "NO_RELATION": 0.36
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      6,
+      7
+     ],
+     "options": {
+      "based_in_AB": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    }
+   ],
+   "requests": [
+    "5d81084bedcd3bcf23cdbb38ea4a4a936848723122cb01b23a18d66e0bbc71b3",
+    "8a16f9c7a51a8c82b7e0245d8fe76e205ef3d1958b83eec89d014a75ed7b02ec"
+   ],
+   "pairs_count": 10,
+   "note": null,
+   "synthesized": null
+  },
+  {
+   "id": "C41",
+   "text": "Le café 😀 Maria Chen arrived.",
+   "entities": [
+    {
+     "id": 1,
+     "text": "Maria Chen",
+     "kind": "person",
+     "start": 10,
+     "end": 20,
+     "confidence": 0.94
+    }
+   ],
+   "rules": [],
+   "pairs": [],
+   "requests": [],
+   "pairs_count": 0,
+   "note": null,
+   "synthesized": "no recording: built from the package rules for the per-host offset proofs, with the accented letter and the emoji before the name"
+  }
+ ],
+ "relate": [
+  {
+   "id": "R01-demo",
+   "form": "pairs",
+   "text": "Alert 1: Checkout returns 500 at the payment step.\nAlert 2: Card charges are failing for every customer.\nAlert 3: The nightly export ran two hours late.\nAlert 4: The payments database ran out of disk space.",
+   "records": [
+    "Checkout returns 500 at the payment step.",
+    "Card charges are failing for every customer.",
+    "The nightly export ran two hours late.",
+    "The payments database ran out of disk space."
+   ],
+   "rules": [
+    "caused_by",
+    "same_as"
+   ],
+   "entries": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "same_as": 0.31,
+      "caused_by_AB": 0.59,
+      "caused_by_BA": 0.03,
+      "NO_RELATION": 0.07
+     },
+     "pick": "caused_by_AB"
+    },
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "options": {
+      "same_as": 0.0,
+      "caused_by_AB": 0.01,
+      "caused_by_BA": 0.01,
+      "NO_RELATION": 0.98
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "options": {
+      "same_as": 0.0,
+      "caused_by_AB": 0.94,
+      "caused_by_BA": 0.01,
+      "NO_RELATION": 0.05
+     },
+     "pick": "caused_by_AB"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "options": {
+      "same_as": 0.0,
+      "caused_by_AB": 0.01,
+      "caused_by_BA": 0.03,
+      "NO_RELATION": 0.96
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "options": {
+      "same_as": 0.0,
+      "caused_by_AB": 0.94,
+      "caused_by_BA": 0.01,
+      "NO_RELATION": 0.05
+     },
+     "pick": "caused_by_AB"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "options": {
+      "same_as": 0.0,
+      "caused_by_AB": 0.84,
+      "caused_by_BA": 0.01,
+      "NO_RELATION": 0.15
+     },
+     "pick": "caused_by_AB"
+    }
+   ],
+   "requests": [
+    ".locks",
+    "a715975d50cfbc2b5b8d4108c62cdd0ea771f62b7a3bbeb056ecabf8efaf0894"
+   ],
+   "pairs_count": 6
+  },
+  {
+   "id": "R02-pickone",
+   "form": "pairs",
+   "text": "Record 1: Amara Okafor founded Kestrel Labs and still leads its research team.\nRecord 2: Kestrel Labs, a freight brokerage.\nRecord 3: Dana Whitfield started Brookline Shipping and manages its Boston desk.\nRecord 4: Brookline Shipping, a coastal carrier.\nRecord 5: Marcus Bell co-founded Grayline Trust and chairs its board.\nRecord 6: Grayline Trust, a small foundation.\nRecord 7: Elif Demir established Fenwick Studio and runs its design desk.\nRecord 8: Fenwick Studio, a print shop.\nRecord 9: June Adeyemi founded Hull Harbour Analytics and heads its data team.\nRecord 10: Hull Harbour Analytics, a consultancy.\nRecord 11: Tomas Reyes set up Pier 39 Logistics and directs its night operations.\nRecord 12: Pier 39 Logistics, a warehouse operator.\nRecord 13: Priya Nair founded Rotterdam Port Services and manages its scheduling.\nRecord 14: Rotterdam Port Services, a stevedoring firm.\nRecord 15: Oskar Lind started Karst and Vellum and leads its editorial board.\nRecord 16: Karst and Vellum, a publisher.\nRecord 17: Sofia Marino founded Sausalito Ferry Lines and captains its flagship.\nRecord 18: Sausalito Ferry Lines, a ferry operator.\nRecord 19: Ahmed Farouk established Cedar Point Advisors and heads its audit team.\nRecord 20: Cedar Point Advisors, an accounting firm.\nRecord 21: Lena Fischer founded Millbrook Rowing Club and coaches its senior squad.\nRecord 22: Millbrook Rowing Club, a sports club.\nRecord 23: Grace Otieno founded Quiet Ward Press and edits its poetry list.\nRecord 24: Quiet Ward Press, a small press.",
+   "records": [
+    "Amara Okafor founded Kestrel Labs and still leads its research team.",
+    "Kestrel Labs, a freight brokerage.",
+    "Dana Whitfield started Brookline Shipping and manages its Boston desk.",
+    "Brookline Shipping, a coastal carrier.",
+    "Marcus Bell co-founded Grayline Trust and chairs its board.",
+    "Grayline Trust, a small foundation.",
+    "Elif Demir established Fenwick Studio and runs its design desk.",
+    "Fenwick Studio, a print shop.",
+    "June Adeyemi founded Hull Harbour Analytics and heads its data team.",
+    "Hull Harbour Analytics, a consultancy.",
+    "Tomas Reyes set up Pier 39 Logistics and directs its night operations.",
+    "Pier 39 Logistics, a warehouse operator.",
+    "Priya Nair founded Rotterdam Port Services and manages its scheduling.",
+    "Rotterdam Port Services, a stevedoring firm.",
+    "Oskar Lind started Karst and Vellum and leads its editorial board.",
+    "Karst and Vellum, a publisher.",
+    "Sofia Marino founded Sausalito Ferry Lines and captains its flagship.",
+    "Sausalito Ferry Lines, a ferry operator.",
+    "Ahmed Farouk established Cedar Point Advisors and heads its audit team.",
+    "Cedar Point Advisors, an accounting firm.",
+    "Lena Fischer founded Millbrook Rowing Club and coaches its senior squad.",
+    "Millbrook Rowing Club, a sports club.",
+    "Grace Otieno founded Quiet Ward Press and edits its poetry list.",
+    "Quiet Ward Press, a small press."
+   ],
+   "rules": [
+    "founded",
+    "works_for"
+   ],
+   "entries": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "options": {
+      "works_for_AB": 0.06,
+      "founded_AB": 0.87,
+      "NO_RELATION": 0.07
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "options": {
+      "works_for_AB": 0.06,
+      "founded_AB": 0.85,
+      "NO_RELATION": 0.09
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      5,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.51,
+      "founded_AB": 0.28,
+      "NO_RELATION": 0.21
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      7,
+      8
+     ],
+     "options": {
+      "works_for_AB": 0.18,
+      "founded_AB": 0.5,
+      "NO_RELATION": 0.32
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      9,
+      10
+     ],
+     "options": {
+      "works_for_AB": 0.28,
+      "founded_AB": 0.49,
+      "NO_RELATION": 0.23
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      11,
+      12
+     ],
+     "options": {
+      "works_for_AB": 0.12,
+      "founded_AB": 0.82,
+      "NO_RELATION": 0.06
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      13,
+      14
+     ],
+     "options": {
+      "works_for_AB": 0.33,
+      "founded_AB": 0.52,
+      "NO_RELATION": 0.15
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      15,
+      16
+     ],
+     "options": {
+      "works_for_AB": 0.18,
+      "founded_AB": 0.74,
+      "NO_RELATION": 0.08
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      17,
+      18
+     ],
+     "options": {
+      "works_for_AB": 0.18,
+      "founded_AB": 0.73,
+      "NO_RELATION": 0.09
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      19,
+      20
+     ],
+     "options": {
+      "works_for_AB": 0.06,
+      "founded_AB": 0.92,
+      "NO_RELATION": 0.02
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      21,
+      22
+     ],
+     "options": {
+      "works_for_AB": 0.06,
+      "founded_AB": 0.91,
+      "NO_RELATION": 0.03
+     },
+     "pick": "founded_AB"
+    },
+    {
+     "pair": [
+      23,
+      24
+     ],
+     "options": {
+      "works_for_AB": 0.21,
+      "founded_AB": 0.7,
+      "NO_RELATION": 0.09
+     },
+     "pick": "founded_AB"
+    }
+   ],
+   "requests": [
+    "c3929298692154204796935d2b087eff871cfa27fcaa062491ec4c899ea705f1"
+   ],
+   "pairs_count": 12
+  },
+  {
+   "id": "R03-persubject-10",
+   "form": "per-subject",
+   "text": "Record 1: Iris Vangelis works for Kestrel Logistics, handling regional accounts.\nRecord 2: Noor Haddad works for Brookline Freight, handling regional accounts.\nRecord 3: Petr Novak works for Grayline Foundation, handling regional accounts.\nRecord 4: Rosa Iglesias works for Fenwick Press, handling regional accounts.\nRecord 5: Tariq Mensah works for Hull Analytics, handling regional accounts.\nRecord 6: Kestrel Logistics, a freight and logistics firm.\nRecord 7: Brookline Freight, a freight and logistics firm.\nRecord 8: Grayline Foundation, a freight and logistics firm.\nRecord 9: Fenwick Press, a freight and logistics firm.\nRecord 10: Hull Analytics, a freight and logistics firm.",
+   "records": [
+    "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
+    "Noor Haddad works for Brookline Freight, handling regional accounts.",
+    "Petr Novak works for Grayline Foundation, handling regional accounts.",
+    "Rosa Iglesias works for Fenwick Press, handling regional accounts.",
+    "Tariq Mensah works for Hull Analytics, handling regional accounts.",
+    "Kestrel Logistics, a freight and logistics firm.",
+    "Brookline Freight, a freight and logistics firm.",
+    "Grayline Foundation, a freight and logistics firm.",
+    "Fenwick Press, a freight and logistics firm.",
+    "Hull Analytics, a freight and logistics firm."
+   ],
+   "rules": [
+    "works_for"
+   ],
+   "entries": [
+    {
+     "subject": 1,
+     "options": {
+      "r_6": 1.0,
+      "r_7": 0.0,
+      "r_8": 0.0,
+      "r_9": 0.0,
+      "r_10": 0.0,
+      "NONE_OF_THESE": 0.0
+     },
+     "pick": "r_6",
+     "rule": "works_for"
+    },
+    {
+     "subject": 2,
+     "options": {
+      "r_6": 0.0,
+      "r_7": 1.0,
+      "r_8": 0.0,
+      "r_9": 0.0,
+      "r_10": 0.0,
+      "NONE_OF_THESE": 0.0
+     },
+     "pick": "r_7",
+     "rule": "works_for"
+    },
+    {
+     "subject": 3,
+     "options": {
+      "r_6": 0.0,
+      "r_7": 0.0,
+      "r_8": 1.0,
+      "r_9": 0.0,
+      "r_10": 0.0,
+      "NONE_OF_THESE": 0.0
+     },
+     "pick": "r_8",
+     "rule": "works_for"
+    },
+    {
+     "subject": 4,
+     "options": {
+      "r_6": 0.0,
+      "r_7": 0.0,
+      "r_8": 0.0,
+      "r_9": 1.0,
+      "r_10": 0.0,
+      "NONE_OF_THESE": 0.0
+     },
+     "pick": "r_9",
+     "rule": "works_for"
+    },
+    {
+     "subject": 5,
+     "options": {
+      "r_6": 0.0,
+      "r_7": 0.0,
+      "r_8": 0.0,
+      "r_9": 0.0,
+      "r_10": 1.0,
+      "NONE_OF_THESE": 0.0
+     },
+     "pick": "r_10",
+     "rule": "works_for"
+    }
+   ],
+   "requests": [
+    "698672897dc14a9066cf957a926eab8582dd7ee1456f0aad0be2607c73e4133e"
+   ],
+   "pairs_count": 5
+  },
+  {
+   "id": "R04-pairs-10",
+   "form": "pairs",
+   "text": "Record 1: Iris Vangelis works for Kestrel Logistics, handling regional accounts.\nRecord 2: Noor Haddad works for Brookline Freight, handling regional accounts.\nRecord 3: Petr Novak works for Grayline Foundation, handling regional accounts.\nRecord 4: Rosa Iglesias works for Fenwick Press, handling regional accounts.\nRecord 5: Tariq Mensah works for Hull Analytics, handling regional accounts.\nRecord 6: Kestrel Logistics, a freight and logistics firm.\nRecord 7: Brookline Freight, a freight and logistics firm.\nRecord 8: Grayline Foundation, a freight and logistics firm.\nRecord 9: Fenwick Press, a freight and logistics firm.\nRecord 10: Hull Analytics, a freight and logistics firm.",
+   "records": [
+    "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
+    "Noor Haddad works for Brookline Freight, handling regional accounts.",
+    "Petr Novak works for Grayline Foundation, handling regional accounts.",
+    "Rosa Iglesias works for Fenwick Press, handling regional accounts.",
+    "Tariq Mensah works for Hull Analytics, handling regional accounts.",
+    "Kestrel Logistics, a freight and logistics firm.",
+    "Brookline Freight, a freight and logistics firm.",
+    "Grayline Foundation, a freight and logistics firm.",
+    "Fenwick Press, a freight and logistics firm.",
+    "Hull Analytics, a freight and logistics firm."
+   ],
+   "rules": [
+    "works_for"
+   ],
+   "entries": [
+    {
+     "pair": [
+      1,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.99,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.01
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      1,
+      7
+     ],
+     "options": {
+      "works_for_AB": 0.01,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.99
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      1,
+      8
+     ],
+     "options": {
+      "works_for_AB": 0.57,
+      "works_for_BA": 0.01,
+      "NO_RELATION": 0.42
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      1,
+      9
+     ],
+     "options": {
+      "works_for_AB": 0.09,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.91
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      1,
+      10
+     ],
+     "options": {
+      "works_for_AB": 0.21,
+      "works_for_BA": 0.01,
+      "NO_RELATION": 0.78
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.01,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.99
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      7
+     ],
+     "options": {
+      "works_for_AB": 0.97,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.03
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      2,
+      8
+     ],
+     "options": {
+      "works_for_AB": 0.78,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.22
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      2,
+      9
+     ],
+     "options": {
+      "works_for_AB": 0.04,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.96
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      2,
+      10
+     ],
+     "options": {
+      "works_for_AB": 0.13,
+      "works_for_BA": 0.01,
+      "NO_RELATION": 0.86
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      3,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.01,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.99
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      3,
+      7
+     ],
+     "options": {
+      "works_for_AB": 0.0,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      3,
+      8
+     ],
+     "options": {
+      "works_for_AB": 0.98,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.02
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      3,
+      9
+     ],
+     "options": {
+      "works_for_AB": 0.09,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.91
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      3,
+      10
+     ],
+     "options": {
+      "works_for_AB": 0.3,
+      "works_for_BA": 0.01,
+      "NO_RELATION": 0.69
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      4,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.02,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.98
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      4,
+      7
+     ],
+     "options": {
+      "works_for_AB": 0.0,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 1.0
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      4,
+      8
+     ],
+     "options": {
+      "works_for_AB": 0.83,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.17
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      4,
+      9
+     ],
+     "options": {
+      "works_for_AB": 0.94,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.06
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      4,
+      10
+     ],
+     "options": {
+      "works_for_AB": 0.11,
+      "works_for_BA": 0.01,
+      "NO_RELATION": 0.88
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      5,
+      6
+     ],
+     "options": {
+      "works_for_AB": 0.07,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.93
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      5,
+      7
+     ],
+     "options": {
+      "works_for_AB": 0.01,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.99
+     },
+     "pick": "NO_RELATION"
+    },
+    {
+     "pair": [
+      5,
+      8
+     ],
+     "options": {
+      "works_for_AB": 0.58,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.42
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      5,
+      9
+     ],
+     "options": {
+      "works_for_AB": 0.94,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.06
+     },
+     "pick": "works_for_AB"
+    },
+    {
+     "pair": [
+      5,
+      10
+     ],
+     "options": {
+      "works_for_AB": 0.93,
+      "works_for_BA": 0.0,
+      "NO_RELATION": 0.07
+     },
+     "pick": "works_for_AB"
+    }
+   ],
+   "requests": [
+    "13fb7f0fefa8c21d699f46ee7fdbce4ecf682747680055ac6acc0484e5ca1dae"
+   ],
+   "pairs_count": 25
+  }
+ ]
+}

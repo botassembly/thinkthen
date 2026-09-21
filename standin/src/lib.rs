@@ -34,11 +34,15 @@ use std::thread;
 use std::time::Duration;
 
 use thinkthen_contract::{
-    Annotated, AnnotatedRecord, Answer, Cancel, Details, Error, Found, Judgment, Options,
-    Question, QuestionKind, QuestionSet, Ranked, Scored, Settings, Usage,
+    Annotated, AnnotatedRecord, Answer, Cancel, Details, Edge, Error, Found, Judgment, Options,
+    Question, QuestionKind, QuestionSet, Ranked, Recognize, Recognized, Relate, Scored, Settings,
+    Usage,
 };
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{Backend, Evidence, ModelName, Plan, Reply, Value};
+
+/// The recognize and relate replay over the recorded cases.
+mod replay;
 
 /// Re-exported so a surface names one crate and reaches the whole shape.
 pub use thinkthen_contract::Engine;
@@ -501,6 +505,27 @@ impl Engine for BlockingEngine {
             digest: question.digest(),
             sends,
         })
+    }
+
+    fn recognize_opts(
+        &self,
+        ask: &Recognize,
+        text: &str,
+        options: Options<'_>,
+    ) -> Result<Recognized, Error> {
+        Error::guard(&options)?;
+        replay::recognize(ask, text)
+    }
+
+    fn relate_opts(
+        &self,
+        ask: &Relate,
+        records: &[&str],
+        options: Options<'_>,
+    ) -> Result<Vec<Edge>, Error> {
+        Error::guard(&options)?;
+        thinkthen_contract::guard_relate_records(records.len())?;
+        replay::relate(ask, records)
     }
 
     fn usage(&self) -> Usage {
