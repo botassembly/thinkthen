@@ -29,14 +29,14 @@ The question comes first and the text second, as in every other surface. The tex
 | `thinkthen_decide(question, text)` | A boolean, and `NULL` for "not sure" | SQL already has three-valued logic. `WHERE thinkthen_decide(...)` keeps the yes rows, and `IS NULL` finds the rows for a person |
 | `thinkthen_probability(question, text)` | A double | `ORDER BY` it and the query is `rank`. Add `LIMIT 1` and it is `find` over rows |
 | `thinkthen_choose(question, text, options)` | Text, and `NULL` under the threshold | |
-| `thinkthen_score(question, text, levels)` | A double | |
+| `thinkthen_score(question, text, levels)` | A double — the specification's probability-weighted position from 0 to K−1. The nearest level's name rides in `thinkthen_details` (ADR 0017 pick 6) | |
 | `thinkthen_tag(question, text, labels)` | A list of text. JSON text in SQLite | One request for all the labels |
 | `thinkthen_annotate(question_set, text)` | A struct, `jsonb`, or JSON text, one member per question | One request for every question about one row. This is the 20.8 times saving measured on 2026-09-20 |
-| `thinkthen_details(question, text)` | The `--details` object | The probability, the model version, and the request digest. This is the audit trail the others lack |
+| `thinkthen_details(question, text)` | The `--details` object | The probability, the model version, the request digest, and the number of sends that produced the judgment, so a bill showing two requests never meets a tool showing one (ADR 0017 section 3) |
 | `thinkthen_usage()` | A table | Requests, answers from the cache, and tokens for this session |
 | `thinkthen_warm(question, text)` | A count | An aggregate. It judges the rows the database already scans at full width and fills the cache on disk. The query that follows reads the cache. It changes no answer |
 
-`filter`, `rank`, and `find` get no functions. `WHERE`, `ORDER BY`, and `LIMIT` are those verbs, and SQL users already know them. Nine functions are the whole surface. The review of 2026-09-20 added the ninth, `thinkthen_warm`, as the one bulk form all three databases can spell. The name comes from "warming a cache": filling it before it is needed, so the next read is fast. PostgreSQL ships a module named `pg_prewarm` for its own cache, so the word is known there. How it takes the options for `choose`, `score`, and `tag` is open. The JSON form of a question can carry them.
+`filter`, `rank`, and `find` get no functions. `WHERE`, `ORDER BY`, and `LIMIT` are those verbs, and SQL users already know them. Nine functions are the whole surface. The review of 2026-09-20 added the ninth, `thinkthen_warm`, as the one bulk form all three databases can spell. Experiment 207 proved it in all three databases, and all three ship it (ADR 0017 pick 10); SQLite needs it most, because a query there judges row by row. The name comes from "warming a cache": filling it before it is needed, so the next read is fast. PostgreSQL ships a module named `pg_prewarm` for its own cache, so the word is known there. How it takes the options for `choose`, `score`, and `tag` is open. The JSON form of a question can carry them.
 
 A question is either the bare sentence or JSON text with the keys a question file uses, such as `{"decide": "...", "threshold": 0.9}`. That form works in all three databases and adds no new grammar. The per-database pages may offer a native struct beside it. They may not drop it.
 
@@ -46,14 +46,14 @@ A question is either the bare sentence or JSON text with the keys a question fil
 2. **Every bulk form the database offers is used.** Ian ruled on 2026-09-20 that each surface maximizes performance with whatever its engine supports: vectors, batches, or any other scheme. `../libraries/README.md` has the rule for all ten surfaces. DuckDB hands a function up to 2,048 rows at a time, and the whole chunk crosses into the engine once and runs at full width there. DuckDB's stable C API does not say whether a vector is constant or a dictionary, read on 2026-09-20. The shim groups each chunk by the pair of question and text instead, and a repeated value costs one judgment. DuckDB's worker threads share one pool, so the width is one number for the process. SQLite and PostgreSQL call a scalar function one row at a time, and their pages call that form serial. The bulk form all three share is the aggregate `thinkthen_warm`. PostgreSQL adds a second bulk form, array overloads of the same names, and `postgres.md` says why. Equal pairs of question and text are asked once. Each page lists every such mechanism its database has, and each experiment measures rows a second beside the engine's own number.
 3. **The key never appears in SQL text.** No function takes it as an argument. Statement logs, `pg_stat_statements`, and shell history would hold it. PostgreSQL uses a setting that only a superuser sets and that no view shows. SQLite reads the environment variable. DuckDB's secret store is out of reach for a Rust extension on the stable C API, read on 2026-09-20. Its key path is open between a setting and the environment variable, and `duckdb.md` holds the question. The environment variable is the safe default, because a `SET` statement puts the key into SQL text.
 4. **The question is checked when the query is planned** wherever the database allows it, so a bad threshold fails before the first paid request.
-5. **Answers are kept on disk.** The engine's immutable cache is keyed by the whole request. The same call in `WHERE` and in `SELECT` is asked once. Tomorrow's run of the same query costs nothing. A recording folder makes a SQL test run with no network and no key.
+5. **Answers are kept on disk, in the XDG cache home by default.** Ian ruled on 2026-09-21 that "XDG is definitely the strategy for storing configuration and caching by default", and ADR 0017 section 5 carries the ruling: the cache lives at `$XDG_CACHE_HOME/thinkthen` (the platform equivalent elsewhere), a folder the user names always wins, the 1 GiB cap and the prune ship with the location, and the on-by-default reading carries three guards. The engine's cache is keyed by the whole request. The same call in `WHERE` and in `SELECT` is asked once. Tomorrow's run of the same query costs nothing, because the folder exists by default. A recording folder makes a SQL test run with no network and no key.
 6. **A failure is an error, never a `NULL`.** `NULL` means "not sure". A setting may turn a failed row into `NULL` for a long query, and it is off by default.
 7. **A query can be cancelled.** A wait on the network checks for the database's interrupt, and a statement timeout is honored.
 8. **The function is marked volatile** unless a page proves a weaker marking safe. The cache stops a second bill. The planner cannot be trusted to. In PostgreSQL every judging function is also `PARALLEL RESTRICTED`. Each parallel worker is its own process and would open its own width, and four workers would run four times past the vendor's limit.
 
 ## The engine under these pages
 
-The engine today is a blocking client with a set of threads and no async runtime, read from `Cargo.toml` on 2026-09-20. The stand-in engine in the experiments assumed an async runtime. Where a page says "runtime", read "the engine's pool of threads and connections". The fork hazard in `postgres.md` holds for threads alike.
+The engine stays a blocking client with scoped threads and no async runtime. ADR 0017 section 2 rules it on experiment 211's numbers: the width bench matched the async stand-in at 9.66 s through Rust, Python, and PostgreSQL, all at 32 in flight; zero threads are held between calls where the stand-in parked 16; the process-ID check rebuilds the pool in a forked child, which is the fork story a PostgreSQL backend needs; and a poll callback on the calling thread carries each database's interrupt, `pg_cancel_backend` returning in 0.22 s with the wire frozen. Where an older page says "runtime", read "the engine's pool of threads and connections".
 
 ## Rows in one request: measured, and one record per request stays the rule
 
@@ -79,7 +79,7 @@ So packing keeps the totals and loses the single answers. It also breaks replay,
 - No whole-row sending, and no function that reads a table the caller did not name.
 - No text generation, no embeddings, no vector search. Other extensions do those.
 - No function that writes to a table or a file.
-- No background worker, queue table, or daemon in the first version.
+- No background worker, queue table, or daemon in the first release.
 - No difference in names or meanings between the three databases beyond what a type system forces. PostgreSQL's array overloads are the one forced difference so far: SQLite has no array type.
 
 ## The order
