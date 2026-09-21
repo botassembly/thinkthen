@@ -128,7 +128,7 @@ One rule for all six: `recognize` takes the text and the kinds, returns the obje
 
 | Surface | The call | Returns |
 | --- | --- | --- |
-| Python | `tt.recognize(text, kinds=["person", "organization"], relations={"works_for": ("person", "organization")})` | An object with `.entities` and `.relations`, each a list of small records. `tt.recognize(df, on="body")` returns a long DataFrame: one row per name, with the source row's index |
+| Python | `tt.recognize(text, kinds=["person", "organization"], relations={"works_for": ("person", "organization")})` | An object with `.entities` and `.relations`, each a list of small records. `tt.recognize(df, on="body")` takes a Polars DataFrame and returns a long one: one row per name, with the source row number |
 | TypeScript | `await tt.recognize(text, { kinds, relations: { works_for: ["person", "organization"] }, signal })` | `{ entities, relations }`, typed |
 | Ruby | `ThinkThen.recognize(text, kinds: %w[person organization], relations: { works_for: %i[person organization] })` | A struct with `entities` and `relations` |
 | R | `tt_recognize(body, kinds)` | A list column of data frames. `tidyr::unnest()` makes one row per name |

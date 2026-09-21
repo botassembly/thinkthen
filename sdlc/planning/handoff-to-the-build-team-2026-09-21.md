@@ -105,6 +105,7 @@ Earlier the same day, from the limit probes and the second backend: `a-refused-r
 
 - **The surfaces rehearsal.** Worktree `thinkthen-surfaces` holds a contract, a stand-in engine, six libraries, three database extensions, and a checker. The real engine replaces the stand-in with one changed dependency. Its brief for the two new functions is `sdlc/issues/2026-09-21-the-recognize-brief-for-the-experiment-team.md`.
 - **The library team.** Its update is `sdlc/issues/2026-09-21-update-for-the-library-team-recognize-and-relate.md`.
+- **Polars.** Ian ruled that Python's data frame is Polars and that all scaling runs in Rust. The plan is `sdlc/planning/polars-plan.md`. What a user types is `sdlc/issues/2026-09-21-the-polars-shape-as-the-deck-shows-it.md`. It asks the engine for nothing new. It rides the same bulk call the lists use.
 - **The quality team.** Wave 2 starts when the rebuilt libraries pass their own cases.
 
 ## 8. What Ian can overturn

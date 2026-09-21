@@ -32,3 +32,7 @@ The names, one crossing for a list or a column, the six error kinds, cancel, the
 ## What the recognize experiments closed on, for context
 
 The method is final: three passes, each a pick-one question. The confirmed numbers and the list of claims nobody may make are in `experiments/222-recognize-demo/MARKETING-SCORECARD.md`. Relations are beta on every page.
+
+## Added later the same day: Polars
+
+Python's data frame is Polars, by Ian's ruling. What goes in decides what comes out: a Series returns a Series, an expression returns an expression, and a DataFrame with `on=` returns a DataFrame. The full table is `sdlc/issues/2026-09-21-the-polars-shape-as-the-deck-shows-it.md`. The `recognize` and `relate` frame forms in `recognize-surfaces.md` now take and return Polars frames.
