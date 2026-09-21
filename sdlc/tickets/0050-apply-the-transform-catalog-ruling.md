@@ -6,7 +6,7 @@ opens: sdlc/planning specification/roadmap.md transforms/README.md
 
 # 0050: Apply the transform catalog ruling
 
-Status: proposed
+Status: landed
 
 ## Outcome
 
@@ -59,4 +59,6 @@ Re-score if review requires command code, catalog membership, transform relocati
 
 ## Review
 
-Independent design review rejected the first proposal because it duplicated ADR 0015 and prematurely made every current transform a catalog promise. This rewrite applies ADR 0015, defers the catalog boundary, and restores the required review before the one-crate move.
+Independent design review rejected the first proposal because it duplicated ADR 0015 and prematurely made every current transform a catalog promise. The rewrite applied ADR 0015, deferred the catalog boundary, and restored the required review before the one-crate move.
+
+Independent implementation review then found two planning errors. The first draft skipped ADR 0017's conformance and DuckDB interrupt jobs. It also treated the evidence-based refusal of `report` as Ian's accepted ruling. The repair restored the four-step order and names the refusal as an agent decision Ian can overturn. The same reviewer accepted the repaired result.
