@@ -2,7 +2,7 @@
 
 Date: 2026-09-21
 
-Status: recording complete; closure review and landing pending
+Status: landed
 
 ## Built locally
 
@@ -28,4 +28,4 @@ The cold read found that the first result exposed temporary-directory setup and 
 
 The authorized coordinator ran `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh` once. The six mode-0600 recordings have schema `thinkthen.recording/1`, model `jev-1.13.0`, the hosted System One URL, 2,916 input tokens, and 468 output tokens. The job matched all six recorded decisions. The shared ledger moved from 20,497,918 to 20,502,918 charged tokens.
 
-A direct replay with the key and base-address variables unset printed `draft=2`, `block=1`, and `review=3`. Schema, digest, and request checks passed through replay. A credential-marker scan found none, and the recording job left no live output. Page 16 is green. Pages 04 and 07 left only after pages 19, 13, 14, and 16 demonstrably held every named lesson. Closure review and landing remain.
+A direct replay with the key and base-address variables unset printed `draft=2`, `block=1`, `review=3`, and `agreement=6/6`. Schema, digest, and request checks passed through replay. A credential-marker scan found none, and the recording job left no live output. Page 16 is green. Pages 04 and 07 left only after pages 19, 13, 14, and 16 demonstrably held every named lesson. Independent closure review accepted the recordings, page, deletion, plans, and final prose. The install, lint, test, and specification rungs passed on the exact landing tree.

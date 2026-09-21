@@ -6,7 +6,7 @@ opens: README.md demos transforms sdlc/issues sdlc/planning
 
 # 0041: Build the flagship triage pipeline
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -42,7 +42,7 @@ No Rust, command option, output format, question-set rule language, CSV output, 
 
 ## Dependencies
 
-None. `annotate`, TSV input, detailed rows, replay, and bounded jobs are on main. The live call waits for accepted design, implementation, code review, and the cold marketing read.
+None. `annotate`, TSV input, detailed rows, replay, and bounded jobs were on main before this ticket began.
 
 ## Complexity
 
@@ -62,7 +62,7 @@ Re-score if implementation exposes a command change, shared state, or a new publ
 ## Review
 
 - Design review: accepted after two initial rejections and one implementation correction. The first revisions defined the page, vocabulary, paths, and proof. Implementation showed that ordinary `mv` can silently nest the run under a destination created after the precheck. The corrected portable design reserves the destination with `mkdir`, cleans handled failures, and defines successful process completion as the publication boundary. The reviewer accepted it without a new ADR.
-- Code review: accepted after one rejection and remediation. The reviewer required exact answer names, found that GNU `mv` can nest the temporary directory if the destination appears after the precheck, separated the coordinator's live wrapper from the recording job, and found a stale README ordering sentence. The corrected reservation design and durable record passed re-review. Closure review remains before landing.
+- Code review: accepted after one rejection and remediation. The reviewer required exact answer names, found that GNU `mv` can nest the temporary directory if the destination appears after the precheck, separated the coordinator's live wrapper from the recording job, and found a stale README ordering sentence. The corrected reservation design and durable record passed re-review. Closure review independently checked every recording, deleted-page lesson, gate, live total, and current-state sentence, then accepted the final tree.
 
 ## Implementation
 
@@ -76,4 +76,4 @@ The coordinator alone invoked `sdlc/scripts/live --max-tokens 5000 demos/16-tria
 
 The one authorized command, `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`, completed once. Six mode-0600 entries use `thinkthen.recording/1`, `jev-1.13.0`, and the System One URL. They report 2,916 input and 468 output tokens. The durable reservation moved the shared ledger from 20,497,918 to 20,502,918 charged tokens. The recording job matched all six `reviewed_action` values, and a direct keyless replay printed two drafts, one block, and three reviews. No credential marker or live output remained.
 
-Page 16 is green. Pages 19 and 13 hold page 04's band and coverage lessons, page 14 holds page 07's several judged columns, and page 16 holds the review pile, explicit null, complete flat input row, TSV-input/JSONL-output rule, disclosure boundary, and collision caution. Pages 04 and 07 therefore left. Ticket closure review and landing remain.
+Page 16 is green. Pages 19 and 13 hold page 04's band and coverage lessons, page 14 holds page 07's several judged columns, and page 16 holds the review pile, explicit null, complete flat input row, TSV-input/JSONL-output rule, disclosure boundary, and collision caution. Pages 04 and 07 therefore left. Closure review accepted the final tree, and all four repository rungs passed before landing.
