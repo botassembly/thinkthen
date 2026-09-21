@@ -49,6 +49,7 @@ jq -c '
       answer:{kind:"tag",probabilities:(if .input.human_correct then {safe:0.9,wrong:0.1} else {safe:0.1,wrong:0.9} end)},
       threshold:0.5,request:"synthetic"
     }
+  | .answers.failure_kind.threshold = 0.5
 ' ../../probes/annotate-0015/howto-14.jsonl > "$work/annotate.jsonl"
 
 truth='{"correct":"/input/human_correct","failure_kind":"/input/human_failure","topics":"/input/human_tags"}'
@@ -162,3 +163,33 @@ expect_failure annotate-id 'sweep: annotate rows must carry a string case id' \
 jq -c '.input.id="same"' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure annotate-duplicate 'sweep: annotate case ids must be unique' \
   -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+
+jq -c '.answers.correct.answer.probability=2' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure decision-probability 'sweep: mapped decision probability must be a number from zero through one' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c 'del(.answers.correct.threshold)' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure missing-decision-threshold 'sweep: mapped decision threshold must be one legal rule' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.correct.threshold="0.8:0.2"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure invalid-decision-threshold 'sweep: mapped decision threshold must be one legal rule' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c 'del(.answers.correct.question.text)' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure decision-question 'sweep: mapped decision question is malformed' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.correct.value=(.answers.correct.value|not) | .value.correct=.answers.correct.value' \
+  "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure decision-derived-value 'sweep: mapped decision value must follow its probability and threshold' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c 'del(.answers.failure_kind.threshold)' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-threshold 'sweep: mapped choice threshold must be one cut' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.failure_kind.answer.probabilities={none:0.4,wrong_fact:0.3,unsupported:0.2,incomplete:0.1}
+       | .answers.failure_kind.answer.pick="none" | .answers.failure_kind.value="none"
+       | .value.failure_kind="none"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-below-cut 'sweep: mapped choice value must follow its probabilities and threshold' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.failure_kind.answer.probabilities={none:0.5,wrong_fact:0.5,unsupported:0,incomplete:0}
+       | .answers.failure_kind.answer.pick="none" | .answers.failure_kind.value="none"
+       | .value.failure_kind="none"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-tie 'sweep: mapped choice value must follow its probabilities and threshold' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
