@@ -162,3 +162,71 @@ Ruling 1 aftermath: the wrapper's relation rules build `source`/`target` keys, a
 Smaller item: `relate_body` now calls the contract's `relate_checked`, so the 255-record guard is inherited through the function the other doors use rather than resting on the stand-in's own repeat of it.
 
 Ruling 2: two `#[cfg(test)]` unit tests in `src/lib.rs`: `the_defect_kind_names_its_error_class` (the name table maps `Defect` to `DefectError`) and `a_panic_inside_the_shim_becomes_the_defect_kind` (the shim's own `guarded` path produces the defect). They run in the builder container in `check.sh`: 2 passed. The host side asserts `ThinkThen::DefectError.new(..., "defect", false)` carries `kind` and `retryable` in `tests/test_surface.rb`.
+
+## 2026-09-21 — the shapes from lane B item 2 (languages lane)
+
+The three shapes `e44d492` landed in `contract/` and `standin/`, carried
+into this surface and proven offline, plus the fast-backend cancel proof
+and the examples file. Commands and output as they happened, all inside
+the builder container.
+
+**`Details.requests` and `failed_questions` (0053, 0054).** `ThinkThen.details`
+now carries both beside the trail it already had:
+
+```
+$ ENGINE_NULL=1 ruby -I lib -e "...ThinkThen.details('Is this a complaint?', 'i want a refund')..."
+{"probability" => 0.97, "answer" => true, "model" => "jev-latest", ..., "requests" => ["d3476c41..."], "failed_questions" => 0}
+```
+
+**The failed marker, this host's spelling: a Hash.** `ThinkThen.annotate`
+returns the ruled `{"failed" => {"kind" => ..., "cause" => ...}}` for a
+field whose question failed while its neighbours answered:
+
+```
+$ ENGINE_NULL=1 ruby -I lib -e "...ThinkThen._parse_set(...); ThinkThen.annotate(set, ['order 4471: charged twice, please refund'])..."
+{refund: true, topic: {"failed" => {"kind" => "backend", "cause" => "missing_answer"}}}
+```
+
+**The record row (go-ahead item 4).** The conformance slice builds the
+ruled `{"input" => record, "value" => answer}` Hash from the surface's own
+outputs and checks it where the cases carry rows (`05`, `06`, `19`); no
+Ruby method was added. Cases 73 and 74 run green:
+
+```
+ok       73-details-carries-requests
+ok       74-annotate-preserves-good-answers
+conformance slice green for the Ruby surface
+```
+
+Case 73 checks the audit's identity fields (the null backend's own rule
+cannot reproduce its recorded probability); case 74 checks the marker and
+its count.
+
+**A real bug found and fixed while proving the tick.** `ThinkThen.with_tick`
+is the documented interrupt path, and it stored its block in an `@tick`
+ivar that no native code ever read — the only working shape was passing
+the tick as the fifth positional argument to `Native::Engine` directly.
+`src/lib.rs` now falls back to the ivar when the argument is nil:
+
+```
+$ ENGINE_NULL=1 ruby -I lib tests/test_cancel_fast.rb
+raised: Interrupt after 1.074 s (interrupt set at 1.0 s, 18 ticks)
+the fast-backend tick raise holds
+```
+
+The test runs a two-million-record null batch (about 4.3 s deaf), raises
+from the tick one second in, and requires the interrupt within 1.5 s.
+
+**The examples file.** `examples.json` holds all ten functions keyed by
+name, each a runnable call and the answer the null backend gives;
+`tests/examples.rb` runs each in a fresh process (a private directory for
+the question files) and `check.sh` calls it:
+
+```
+10 of 10 examples ok
+```
+
+**Full check, `./check.sh`:** build, the shim tests, 27 surface tests (74
+assertions), the fast cancel proof, the examples, the conformance slice
+green (73 and 74 included), and the slide sample. The wire interrupt proof
+skips with no stub on 8214; exit 0.

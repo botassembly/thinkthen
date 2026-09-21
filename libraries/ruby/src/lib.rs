@@ -23,7 +23,7 @@ use std::time::Duration;
 use magnus::prelude::*;
 use magnus::{
     class, define_module, exception, function, method, DataTypeFunctions, Error, ExceptionClass,
-    IntoValue, RArray, RClass, RHash, TypedData, Value,
+    IntoValue, RArray, RClass, RHash, TryConvert, TypedData, Value,
 };
 use thinkthen_contract::{
     edges_json, relate_checked, Annotated, Answer, Cancel, Details, Edge, Engine as ContractEngine,
@@ -402,6 +402,16 @@ fn optional_tick(value: Value) -> Option<Value> {
     (!value.is_nil()).then_some(value)
 }
 
+/// The tick a bulk call runs: the caller's block, or the engine's own
+/// `@tick` set by `ThinkThen.with_tick`, or none. The documented helper
+/// stores its block in the ivar; the argument wins when both are given.
+fn tick_from(rb_self: Value, tick: Value) -> Result<Value, Error> {
+    if !tick.is_nil() {
+        return Ok(tick);
+    }
+    rb_self.funcall("instance_variable_get", ("@tick",))
+}
+
 impl EngineValue {
     fn new_engine() -> Self {
         Self { engine: BlockingEngine::from_env() }
@@ -562,36 +572,39 @@ impl EngineValue {
     }
 
     fn decide_many(
-        &self,
+        rb_self: Value,
         question: &QuestionValue,
         records: Vec<String>,
         cancel: Value,
         deadline: Value,
         tick: Value,
     ) -> Result<Value, Error> {
-        self.bulk(Bulk::DecideMany, question, records, cancel, deadline, tick)
+        let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
+        engine.bulk(Bulk::DecideMany, question, records, cancel, deadline, tick_from(rb_self, tick)?)
     }
 
     fn filter(
-        &self,
+        rb_self: Value,
         question: &QuestionValue,
         records: Vec<String>,
         cancel: Value,
         deadline: Value,
         tick: Value,
     ) -> Result<Value, Error> {
-        self.bulk(Bulk::Filter, question, records, cancel, deadline, tick)
+        let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
+        engine.bulk(Bulk::Filter, question, records, cancel, deadline, tick_from(rb_self, tick)?)
     }
 
     fn rank(
-        &self,
+        rb_self: Value,
         question: &QuestionValue,
         records: Vec<String>,
         cancel: Value,
         deadline: Value,
         tick: Value,
     ) -> Result<Value, Error> {
-        self.bulk(Bulk::Rank, question, records, cancel, deadline, tick)
+        let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
+        engine.bulk(Bulk::Rank, question, records, cancel, deadline, tick_from(rb_self, tick)?)
     }
 
     fn choose(
@@ -660,20 +673,21 @@ impl EngineValue {
     }
 
     fn annotate(
-        &self,
+        rb_self: Value,
         set: &SetValue,
         records: Vec<String>,
         cancel: Value,
         deadline: Value,
         tick: Value,
     ) -> Result<RArray, Error> {
+        let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
         let job = AnnotateJob {
-            engine: &self.engine,
+            engine: &engine.engine,
             set: set.set.clone(),
             records,
             token: optional_cancel(cancel)?,
             deadline: optional_deadline(deadline),
-            tick: optional_tick(tick),
+            tick: optional_tick(tick_from(rb_self, tick)?),
         };
         let (answer, raised): (Crossing<Vec<Vec<(String, Annotated)>>>, Option<Error>) =
             without_gvl(job, annotate_body);
@@ -729,10 +743,43 @@ fn annotated_value(field: &Annotated) -> Result<Value, Error> {
             }
             list.as_value()
         }
+        // The ruled failed-question marker (0054), this host's spelling: a
+        // Hash with string keys, the host's own shape for structured data,
+        // never `nil`.
+        Annotated::Failed(failed) => {
+            let inner = RHash::new();
+            inner.aset("kind", kind_word(failed.kind)).map_err(|error| error)?;
+            inner.aset("cause", cause_word(failed.cause)).map_err(|error| error)?;
+            let outer = RHash::new();
+            outer.aset("failed", inner).map_err(|error| error)?;
+            outer.as_value()
+        }
     })
 }
 
-/// The audit trail as a Ruby hash.
+/// The failure kind's own word; `backend` today.
+const fn kind_word(kind: thinkthen_contract::FailureKind) -> &'static str {
+    use thinkthen_contract::FailureKind;
+    match kind {
+        FailureKind::Backend => "backend",
+    }
+}
+
+/// The closed cause list's own words, spelled once.
+const fn cause_word(cause: thinkthen_contract::Cause) -> &'static str {
+    use thinkthen_contract::Cause;
+    match cause {
+        Cause::MissingAnswer => "missing_answer",
+        Cause::WrongKind => "wrong_kind",
+        Cause::MissingProbability => "missing_probability",
+        Cause::InvalidProbability => "invalid_probability",
+        Cause::InvalidDistribution => "invalid_distribution",
+        Cause::UnexpectedProbability => "unexpected_probability",
+    }
+}
+
+/// The audit trail as a Ruby hash, with the logical requests' digests
+/// (0053) and the failed-question count (0054).
 fn details_hash(ruby: &magnus::Ruby, details: &Details) -> Result<RHash, Error> {
     let hash = RHash::new();
     hash.aset("probability", details.probability).map_err(|error| error)?;
@@ -740,6 +787,12 @@ fn details_hash(ruby: &magnus::Ruby, details: &Details) -> Result<RHash, Error> 
     hash.aset("model", details.model.clone()).map_err(|error| error)?;
     hash.aset("digest", details.digest.clone()).map_err(|error| error)?;
     hash.aset("sends", details.sends).map_err(|error| error)?;
+    let requests = RArray::with_capacity(details.requests.len());
+    for digest in &details.requests {
+        requests.push(digest.clone()).map_err(|error| error)?;
+    }
+    hash.aset("requests", requests).map_err(|error| error)?;
+    hash.aset("failed_questions", details.failed_questions).map_err(|error| error)?;
     let _ = ruby;
     Ok(hash)
 }

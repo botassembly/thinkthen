@@ -33,6 +33,12 @@ docker_run 'cargo test --quiet --lib'
 echo "== ruby surface: surface tests, null backend"
 docker_run 'ruby -I lib -I tests tests/test_surface.rb'
 
+echo "== ruby surface: fast-backend cancel, the poll-bug shape"
+docker_run 'ruby -I lib tests/test_cancel_fast.rb'
+
+echo "== ruby surface: the function examples"
+docker_run 'ruby -I lib tests/examples.rb'
+
 echo "== ruby surface: conformance slice, offline"
 docker_run 'ruby -I lib tests/conformance.rb'
 

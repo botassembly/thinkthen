@@ -110,6 +110,36 @@ class TestSurface < Minitest::Test
     assert_equal 1, details["sends"]
   end
 
+  def test_details_carries_the_requests_list_and_the_failure_count
+    # 0053 and 0054: one 64-figure digest a logical request, and
+    # failed_questions always present, zero for one good question.
+    details = ThinkThen.details("Does the customer ask for a refund?", "I want a refund for order 9")
+    assert_kind_of Array, details["requests"]
+    assert_equal 1, details["requests"].length
+    details["requests"].each { |digest| assert_match(/\A[0-9a-f]{64}\z/, digest) }
+    assert_equal 0, details["failed_questions"]
+  end
+
+  def test_annotate_preserves_the_good_answers_and_marks_the_failed_one
+    # The stand-in's one synthesized partial failure (0054): the reply
+    # answers one question and omits the last in name order, so its field
+    # carries the ruled marker in this host's spelling (a Hash), never
+    # nil.
+    set = ThinkThen._parse_set(JSON.generate(
+      "version" => 1,
+      "questions" => {
+        "refund" => { "decide" => "Is this a refund request?", "threshold" => 0.5 },
+        "topic" => { "decide" => "Is this a billing problem?", "threshold" => 0.5 }
+      }
+    ))
+    rows = ThinkThen.annotate(set, ["order 4471: charged twice, please refund"])
+    assert_equal true, rows[0][:refund]
+    assert_equal({ "failed" => { "kind" => "backend", "cause" => "missing_answer" } },
+                 rows[0][:topic])
+    clean = ThinkThen.annotate(set, ["I want a refund for order 4471"])
+    assert_equal true, clean[0][:topic]
+  end
+
   def test_usage_counts_sends
     before = ThinkThen.usage["requests"]
     ThinkThen.decide("Does the customer ask for a refund?", "I want a refund for order 9")

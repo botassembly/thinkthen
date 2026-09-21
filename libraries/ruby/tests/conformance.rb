@@ -65,14 +65,16 @@ def check_error(verb, question_text, evidence, records, kind)
 end
 
 def check_details(expect, details)
-  ok_if(details["answer"] == expect_answer(expect["answer"]),
-        "expected #{expect['answer'].inspect}, got #{details['answer'].inspect}")
-  wanted = expect.dig("details", "probability")
-  if wanted
-    ok_if((details["probability"] - wanted).abs < 1e-9,
-          "expected probability #{wanted}, got #{details['probability']}")
-  end
+  # The audit's identity fields and the two 0053/0054 additions; the
+  # recorded probability is not compared because the null backend's own
+  # rule cannot reproduce case 73's recorded number.
+  ok_if(details["model"] == expect.dig("details", "model"),
+        "expected model #{expect.dig('details', 'model').inspect}, got #{details['model'].inspect}")
   ok_if(details["digest"] == expect.dig("details", "question_sha256"), "the digest diverged")
+  wanted_requests = expect.dig("details", "requests")
+  ok_if(details["requests"] == wanted_requests, "the requests list diverged") if wanted_requests
+  wanted_failed = expect.dig("details", "failed_questions")
+  ok_if(details["failed_questions"] == wanted_failed, "failed_questions diverged") unless wanted_failed.nil?
 end
 
 def run_case(verb, question_text, evidence, records, expect, set_json, text = nil, form = nil)
@@ -87,7 +89,10 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
   case verb
   when "decide"
     question = built(question_text)
-    check_details(expect, ThinkThen.details(question, evidence))
+    details = ThinkThen.details(question, evidence)
+    check_details(expect, details)
+    ok_if(details["answer"] == expect_answer(expect["answer"]),
+          "expected #{expect['answer'].inspect}, got #{details['answer'].inspect}")
   when "decide_many"
     question = built(question_text)
     judgments = ThinkThen.decide_many_with_probabilities(question, records)
@@ -100,11 +105,21 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
               "expected probability #{wanted}, got #{one[:probability]}")
       end
     end
+    if expect["rows"]
+      # The ruled record row (go-ahead item 4): this host's own pair, the
+      # record and the value it carries, in input order.
+      rows = records.zip(answers).map { |record, value| { "input" => record, "value" => value } }
+      ok_if(rows == expect["rows"], "expected rows #{expect['rows'].inspect}, got #{rows.inspect}")
+    end
   when "filter"
     question = built(question_text)
     kept = ThinkThen.filter(question, records)
     wanted = expect["indexes"].map { |index| records[index] }
     ok_if(kept == wanted, "expected #{wanted.inspect}, got #{kept.inspect}")
+    if expect["rows"]
+      rows = kept.map { |record| { "input" => record, "value" => true } }
+      ok_if(rows == expect["rows"], "expected rows #{expect['rows'].inspect}, got #{rows.inspect}")
+    end
   when "choose"
     question = built(question_text)
     picked = ThinkThen.choose(question, evidence)
@@ -129,12 +144,24 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
     first = answers.first or raise "FAIL: no annotated record came back"
     expect["answers"].each do |name, wanted|
       field = first.key?(name.to_sym) ? first[name.to_sym] : (raise "FAIL: no #{name} field in the answer")
+      if wanted.key?("failed")
+        # The ruled marker (0054), in this host's own spelling.
+        ok_if(field == { "failed" => wanted["failed"] },
+              "#{name}: expected the marker #{wanted['failed'].inspect}, got #{field.inspect}")
+        next
+      end
       if wanted["answer"].is_a?(Array) || wanted["answer"].is_a?(Float)
         raise "SKIP: #{name} holds a field the runner does not check"
       end
 
       ok_if(field == wanted["answer"],
             "#{name}: expected #{wanted['answer'].inspect}, got #{field.inspect}")
+    end
+    wanted_failed = expect["failed_questions"]
+    if wanted_failed
+      counted = first.count { |_name, field| field.is_a?(Hash) && field.key?("failed") }
+      ok_if(counted == wanted_failed,
+            "expected #{wanted_failed} failed fields, got #{counted}")
     end
   when "details"
     question = built(question_text)
