@@ -6,7 +6,7 @@ opens: transforms/sweep transforms/README.md demos/13-pick-a-threshold sdlc/plan
 
 # 0045: Sweep decisions, picks, and scores
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
