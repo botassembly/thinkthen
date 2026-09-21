@@ -66,3 +66,21 @@ Everything that needs the real engine waits: a third round of bindings, packagin
 All of it. Skipping item 1 is the cheap overturn. The cost is that the build team learns at step 3 of the plan whether blocking holds.
 
 2026-09-21: job 1 has landed. The four answers and the five checks added today are in `experiments/211-thinkthen-blocking-engine/FINDINGS.md`, with the commands and output in that folder's lane notes. Blocking holds; the ADR 0017 rewrite can be drafted from it.
+
+## Added 2026-09-21, after the ADR 0017 rewrite and the foyer verdict
+
+The marketing side checked the rewritten ADR 0017 (`9b52ea9`) against the ten picks and against the slide code in the marketing repository. All ten picks are adopted, and the slide code matches the ADR on names, argument order, the empty value, `Engine::from_env`, `.band(0.2, 0.8)`, and `'@refund.json'`. The foyer verdict is accepted: a forked child that hangs and a 430 ms cost on every open each rule it out for a command that starts fresh on every call.
+
+Five requests before or during job 3:
+
+1. **Which databases get `thinkthen_warm`.** The ADR says experiment 207 answered it and names the DuckDB page. The slides show it on SQLite, where a query judges row by row and needs the warm pass most. The ADR names each engine that ships it and says why.
+2. **The bulk spelling in C.** The ADR admits `decide_many` by name on Python, TypeScript, and Ruby only. The C slide shows `thinkthen_decide_many`, because every binding that loads the C library needs one bulk entry point. The ADR either admits it for C or names C's bulk spelling.
+3. **The cache location against the written rule.** The repository rule says the tool "never writes a file the user did not name". The ADR recommends the platform cache home when the cache is on with no folder named, and it never cites that rule. The ADR states which exact setting turns the cache on without a folder, and it says plainly that accepting the recommendation amends the rule. Ian rules on it.
+4. **A retried send reaches the user.** The counters count two sends for one judgment. The ADR says where a user sees the second send: `details`, `usage`, or both. A bill that shows two requests and a tool that shows one is a trust problem.
+5. **The deadline message.** The error names the limit that ran out and its value, so a reader knows which setting to raise.
+
+One request for job 3: the twenty shared cases live in one data file that every surface reads. The ADR is Proposed, and a changed pick is then one edit.
+
+One sentence wanted for the manual, from the thread finding: "ThinkThen holds no threads between calls, and during a call it uses about one per request in flight." The experiment team confirms or corrects it.
+
+Ian can overturn any of these.
