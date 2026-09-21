@@ -629,9 +629,10 @@ impl Recognize {
     }
 
     /// Read the question file's `recognize` section: kinds as an object of
-    /// descriptions or a list of names, relations with `from`, `to`, and
-    /// `either`, and both thresholds. A `reads` phrase is accepted and
-    /// carried by no field here; it is the model-facing wording.
+    /// descriptions or a list of names, relations with `source`, `target`,
+    /// and `either`, and both thresholds. A `reads` phrase is accepted and
+    /// carried by no field here; it is the model-facing wording. The old
+    /// `from`/`to` spelling is refused with the ruled spelling named.
     ///
     /// # Errors
     ///
@@ -694,8 +695,10 @@ impl Recognize {
     }
 }
 
-/// Read one relation rule from a JSON value: `from` and `to` required, `*`
-/// meaning any kind, `either` optional.
+/// Read one relation rule from a JSON value: `source` and `target` required,
+/// `*` meaning any kind, `either` optional. The old `from`/`to` spelling is
+/// refused with the ruled spelling named: one spelling on every door, and
+/// nothing has shipped that an alias would need to keep.
 fn relation_from_value(entry: &serde_json::Value) -> Result<RelationRule, Error> {
     let object = entry
         .as_object()
@@ -704,6 +707,11 @@ fn relation_from_value(entry: &serde_json::Value) -> Result<RelationRule, Error>
         .get("name")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| Error::usage("a relation rule has no name"))?;
+    if object.contains_key("from") || object.contains_key("to") {
+        return Err(Error::usage(format!(
+            "the relation rule {name} uses from/to; the ruled spelling is source and target"
+        )));
+    }
     let end = |key: &str| -> Result<Kind, Error> {
         let raw = object
             .get(key)
@@ -716,7 +724,7 @@ fn relation_from_value(entry: &serde_json::Value) -> Result<RelationRule, Error>
         }
         Ok(if raw == "*" { Kind::Any } else { Kind::named(raw) })
     };
-    let rule = RelationRule::new(name, end("from")?, end("to")?)?;
+    let rule = RelationRule::new(name, end("source")?, end("target")?)?;
     let either = object.get("either").and_then(serde_json::Value::as_bool).unwrap_or(false);
     Ok(rule.either(either))
 }
@@ -1928,9 +1936,9 @@ mod tests {
             r#"{"kinds":{"person":"A human being, by name.",
                  "organization":"A company.","place":"A city."},
                 "relations":[
-                  {"name":"works_for","from":"person","to":"organization","reads":"works for"},
-                  {"name":"located_in","from":"*","to":"place"},
-                  {"name":"married_to","from":"person","to":"person","either":true}],
+                  {"name":"works_for","source":"person","target":"organization","reads":"works for"},
+                  {"name":"located_in","source":"*","target":"place"},
+                  {"name":"married_to","source":"person","target":"person","either":true}],
                 "threshold":0.4,"relation_threshold":0.6}"#,
         )
         .expect("the file parses");
@@ -1940,6 +1948,25 @@ mod tests {
         assert!(ask.relations[2].either);
         assert!((ask.threshold - 0.4).abs() < f64::EPSILON);
         assert!((ask.relation_threshold - 0.6).abs() < f64::EPSILON);
+    }
+
+    /// The old `from`/`to` spelling is refused, and the sentence names the
+    /// ruled spelling; nothing has shipped, so no alias is kept.
+    #[test]
+    fn the_old_relation_spelling_is_refused() {
+        let old = super::Recognize::from_json(
+            r#"{"kinds":["person"],"relations":[{"name":"works_for","from":"person","to":"organization"}]}"#,
+        )
+        .expect_err("from/to is refused");
+        assert_eq!(old.kind, ErrorKind::Usage);
+        assert!(old.message.contains("source and target"), "{old}");
+
+        let half = super::Relate::from_json(
+            r#"{"relations":[{"name":"covers","source":"test","to":"requirement"}]}"#,
+        )
+        .expect_err("a to key with a source key is refused");
+        assert_eq!(half.kind, ErrorKind::Usage);
+        assert!(half.message.contains("source and target"), "{half}");
     }
 
     /// A missing end, a kind outside the asked kinds, and a threshold out of
@@ -1952,7 +1979,7 @@ mod tests {
         assert!(missing.message.contains("missing end"), "{missing}");
 
         let outside = super::Recognize::from_json(
-            r#"{"kinds":["person"],"relations":[{"name":"works_for","from":"person","to":"vessel"}]}"#,
+            r#"{"kinds":["person"],"relations":[{"name":"works_for","source":"person","target":"vessel"}]}"#,
         )
         .expect_err("a kind outside the asked kinds is refused");
         assert!(outside.message.contains("vessel"), "{outside}");
@@ -1965,7 +1992,7 @@ mod tests {
     #[test]
     fn the_relate_file_reads() {
         let ask = super::Relate::from_json(
-            r#"{"relations":["caused_by",{"name":"covers","from":"test","to":"requirement"}],
+            r#"{"relations":["caused_by",{"name":"covers","source":"test","target":"requirement"}],
                 "either":["same_as"],"kind_field":"/type","threshold":0.9}"#,
         )
         .expect("the file parses");

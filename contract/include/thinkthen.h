@@ -113,7 +113,8 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * what failed.
  *
  * The ends of a relation carry `source` and `target` on every surface,
- * this returned JSON included; the wire keeps `from` and `to`. */
+ * this returned JSON and the question file included; `from` and `to` are
+ * refused with the ruled spelling named. */
 int thinkthen_recognize(const thinkthen_engine *engine, const char *spec_json,
                         const char *text, unsigned long text_len, char **out,
                         unsigned long *out_len);
