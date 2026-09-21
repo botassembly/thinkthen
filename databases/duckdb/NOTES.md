@@ -223,3 +223,43 @@ ok       the 255-record refusal is in the log
 ok       05-filter-keeps-some-of-five rows
 ok       19-decide-many-judgments rows
 ```
+
+## 2026-09-21 — lane B item 8: the scalar-bind road, found and proven
+
+The issue asked whether a road exists around the broken bind surface while staying on the stable C API. The answer, with a runtime probe behind it: **the road exists in the unstable C API this extension already compiles against, and it works at runtime on v1.5.5. Our pinned Rust binding cannot reach it today; three unlock paths are named below. The first-row check stays the working road meanwhile.**
+
+### What the headers actually expose
+
+Read from the vendored source under the extension's build inputs (`libduckdb-sys 1.10505.0/duckdb.tar.gz`, the DuckDB v1.5.5 tree):
+
+- `duckdb_extension.h:723-732`, the unstable block "New functions around scalar function binding": `duckdb_scalar_function_set_bind` (723), `duckdb_scalar_function_bind_set_error` (724), `duckdb_scalar_function_get_client_context` (725), `duckdb_scalar_function_bind_get_extra_info` (729), **`duckdb_scalar_function_bind_get_argument_count` (730)**, **`duckdb_scalar_function_bind_get_argument` (731)**.
+- `duckdb.h:5534-5545` (stable header): `duckdb_expression_is_foldable` and `duckdb_expression_fold(context, expr, out_value)`.
+- `duckdb/src/main/capi/scalar_function-c.cpp:62-80` — `CScalarFunctionInternalBindInfo` holds the bind `arguments`; `:128-133` the cast helpers; `:160-172` `CScalarFunctionBind` runs the callback at plan time and a set error becomes a `BinderException`.
+- `duckdb/src/main/capi/table_function-c.cpp:348-357` — where the generic `duckdb_bind_get_parameter_count`/`_get_parameter` live; they cast the info to the **table-function** bind info, which is the different layout 207 hit as `-7` and segfaults. The 207 verdict was about that family; the scalar-specific accessors were not tried.
+
+### The runtime probe, verbatim
+
+A temporary raw-ffi scalar, `thinkthen_bindprobe(question)`, registered from `src/bindprobe.rs` (removed after the run): its bind callback read the argument through the scalar accessors, folded it through the client context, and refused a question without the word "refund" via `duckdb_scalar_function_bind_set_error`; its invoke wrote `ok` and read nothing.
+
+```
+$ ./duckdb-bin/duckdb -unsigned :memory: -c "LOAD '...'; SELECT thinkthen_bindprobe('Does the customer ask for a refund?');"
+ ok
+$ ./duckdb-bin/duckdb -unsigned :memory: -c "LOAD '...'; SELECT thinkthen_bindprobe('Is this a complaint?') FROM range(0);"
+Binder Error: probe: the question must mention a refund; got "Is this a complaint?"
+$ ... CREATE TABLE q AS SELECT 'Is this a complaint?' AS t; SELECT thinkthen_bindprobe(t) FROM q;
+ ok
+```
+
+Zero rows proves plan time: no row executed, and the error is ours, raised through the scalar error setter. The column case proves the non-foldable path: the check skips and the invoke runs.
+
+### Why our extension cannot attach it today
+
+`duckdb-rs 1.10505.0` (the pinned crate): the `VScalar` trait has no bind hook and `Connection::register_scalar_function` builds its `ScalarFunctionSet` internally (`src/vscalar/mod.rs:195-233`); `ScalarFunction` keeps its pointer private with no `set_bind` and `ScalarFunctionSet::register_with_connection` is `pub(crate)` (`src/vscalar/function.rs:30,43-45`); and `DataChunkHandle::new_unowned` is `pub(crate)` (`src/core/data_chunk.rs:43`), so a self-written trampoline cannot wrap the callback's chunk to reuse the existing invoke bodies. The loadable bindings themselves carry every accessor (`libduckdb-sys .../bindgen_bundled_version_loadable.rs:11280-11416, 10614-10670`), so the gap is the crate's surface, not the C API.
+
+### The unlock paths, with costs
+
+1. **Patch or vendor the crate (smallest):** add `ScalarFunction::set_bind` and one registration variant that takes the bind callback (~20 lines), then the extension's bind callback calls the ffi accessors directly. Cost: a forked dependency to carry per release. The probe above is the acceptance test for the patch.
+2. **Upstream it to duckdb-rs:** the same patch, once. Nobody opens anything upstream without Ian's word.
+3. **The C++ API fork** already before the build team (the issue's sharpened section).
+
+Until one lands, the first-row check remains: zero requests wasted, reported one row late, proven on the stub.
