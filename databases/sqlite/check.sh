@@ -22,6 +22,9 @@ ENGINE_NULL=1 .runtimes/sqlite3 :memory: < tests/slide.sql \
 echo "== sqlite surface: null suite"
 ENGINE_NULL=1 python3 tests/null_suite.py
 
+echo "== sqlite surface: the table-valued functions"
+ENGINE_NULL=1 python3 tests/tvf_suite.py
+
 echo "== sqlite surface: conformance slice, offline"
 ENGINE_NULL=1 python3 tests/conformance_driver.py
 

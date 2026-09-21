@@ -5,14 +5,21 @@ Runs each case as SQL: the decide family through thinkthen_decide, the
 filter cases through the ruled SQL pattern (warm the table, then WHERE
 thinkthen_decide reads the saved answers), choose, score, and tag through
 their JSON question grammar, annotate through a set, details and usage
-directly. Prints one line a case — ok, diverge with its reason, skip with
-its reason — and exits nonzero on any divergence. Run through ./check.sh.
+directly, recognize through the table-valued function's five columns, and
+relate through the table-valued call every record at once. Prints one line
+a case — ok, diverge with its reason, skip with its reason — and exits
+nonzero on any divergence. Run through ./check.sh.
 
 Skips, with their reasons: the backend-refusal cases need the wire or a
 dead address (the wire suite proves the backend kind there), and the
 cancel case diverges on the stand-in, which conformance/DIVERGENCES.md
 records as a real-engine requirement: the pre-fired token is ignored, and
-this surface proves the mid-flight interrupt on the wire instead.
+this surface proves the mid-flight interrupt on the wire instead. The
+relate per-subject arm is skipped: it is an engine-internal form, and the
+surface serves the ruled pairs form that case 72 covers. Recognize cases
+that ask relation rules assert their names only here: relations as rows
+ride the beta question-file function, which the build team's page leaves
+open.
 """
 
 import json
@@ -269,6 +276,90 @@ def main():
                 wanted = [outcome_of(answer) for answer in expect["answers"]]
                 if held == wanted:
                     report(case_id, "warm is the bulk spine, answers in order")
+                else:
+                    report(case_id, f"held {held}, expected {wanted}", failed=True)
+            elif verb == "recognize":
+                kinds = case["question"].get("kinds") or []
+                kinds_arg = ",".join(kinds) if kinds else None
+                held = conn.execute(
+                    "SELECT text, kind, start, end, strength "
+                    "FROM thinkthen_recognize(?, ?)",
+                    (case["text"], kinds_arg),
+                ).fetchall()
+                wanted = [
+                    (e["text"], e["kind"], e["start"], e["end"], e["strength"])
+                    for e in expect["entities"]
+                ]
+                same = len(held) == len(wanted) and all(
+                    h[0] == w[0]
+                    and h[1] == w[1]
+                    and h[2] == w[2]
+                    and h[3] == w[3]
+                    and abs(h[4] - w[4]) < 1e-9
+                    for h, w in zip(held, wanted)
+                )
+                note = "names"
+                if expect.get("relations"):
+                    note += "; relations ride the beta question-file function"
+                if same:
+                    report(case_id, f"{len(held)} {note}")
+                else:
+                    report(case_id, f"held {held}, expected {wanted}", failed=True)
+            elif verb == "relate":
+                if case.get("form") == "per-subject":
+                    print(
+                        f"skip     {case_id}: the per-subject form is an "
+                        "engine-internal arm; the surface serves the ruled "
+                        "pairs form, which case 72 covers"
+                    )
+                    continue
+                if case["question"].get("threshold", 0.5) != 0.5:
+                    print(
+                        f"skip     {case_id}: the SQLite call takes no "
+                        "threshold argument"
+                    )
+                    continue
+                if any(
+                    rule.get("from") != "*" or rule.get("to") != "*"
+                    for rule in case["question"]["relations"]
+                ):
+                    print(
+                        f"skip     {case_id}: the recordings carry no kinds "
+                        "for relate's records, so a named end is refused"
+                    )
+                    continue
+                fresh_conn = fresh()
+                fresh_conn.execute(
+                    "CREATE TABLE rs(id INTEGER PRIMARY KEY, body TEXT)"
+                )
+                fresh_conn.executemany(
+                    "INSERT INTO rs(body) VALUES (?)",
+                    [(text,) for text in case["records"]],
+                )
+                names = [rule["name"] for rule in case["question"]["relations"]]
+                sql = (
+                    "SELECT name, source, target, probability FROM "
+                    "thinkthen_relate('rs', 'id', 'body', "
+                    + ",".join("?" * len(names))
+                    + ")"
+                )
+                held = sorted(
+                    (row[0], row[1], row[2], row[3])
+                    for row in fresh_conn.execute(sql, names)
+                )
+                wanted = sorted(
+                    (e["name"], e["source"], e["target"], e["probability"])
+                    for e in expect["edges"]
+                )
+                same = len(held) == len(wanted) and all(
+                    h[0] == w[0]
+                    and h[1] == w[1]
+                    and h[2] == w[2]
+                    and abs(h[3] - w[3]) < 1e-9
+                    for h, w in zip(held, wanted)
+                )
+                if same:
+                    report(case_id, f"{len(held)} edges")
                 else:
                     report(case_id, f"held {held}, expected {wanted}", failed=True)
             else:
