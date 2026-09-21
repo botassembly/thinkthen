@@ -1084,6 +1084,18 @@ pub trait Engine: Send + Sync {
         options: Options<'_>,
     ) -> Result<Details, Error>;
 
+    /// Return the text unchanged, for testing.
+    ///
+    /// The maintainability test's ninth function: it is added to every
+    /// surface to count the files a function touches, and removed with the
+    /// test. Nothing is sent, so there is no cancel token and no deadline.
+    ///
+    /// # Errors
+    ///
+    /// Returns no kind on the stand-in; the signature carries the error
+    /// type so a ninth real function could fail like the eight.
+    fn probe(&self, text: &str) -> Result<String, Error>;
+
     /// The counters since the last reset.
     fn usage(&self) -> Usage;
 

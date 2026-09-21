@@ -98,8 +98,10 @@ int thinkthen_decide_many(const thinkthen_engine *engine, const char *question_j
  * carries the question file's own shape with the evidence beside it. This
  * is how a host reaches choose, score, tag, filter, rank, find, and
  * annotate before it grows a typed door, and how a test replays a
- * recording. Returns NULL on failure, with the code as the return of the
- * next `thinkthen_error_message` on the engine. */
+ * recording. The request `{"probe": true, "evidence": "..."}` returns the
+ * evidence unchanged, for the maintainability test. Returns NULL on
+ * failure, with the code as the return of the next
+ * `thinkthen_error_message` on the engine. */
 char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
 
 /* Free a string `thinkthen_call` returned. NULL is accepted and ignored. */
