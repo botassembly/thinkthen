@@ -50,13 +50,13 @@ Ian ruled the method on 2026-09-21: it is organized around choices.
 One JSON object per edge, one per line, so the output pipes:
 
 ```
-{"name":"caused_by","from":1,"to":4,"probability":0.94}
-{"name":"caused_by","from":2,"to":4,"probability":0.94}
+{"name":"caused_by","source":1,"target":4,"probability":0.94}
+{"name":"caused_by","source":2,"target":4,"probability":0.94}
 ```
 
-- `from` and `to` are record numbers, counted from 1 in input order. `from` is the subject and `to` is the object: record 1 was caused by record 4.
+- `source` and `target` are record numbers, counted from 1 in input order. `source` is the subject and `target` is the object: record 1 was caused by record 4.
 - `--details` adds both records' text and every option's probability.
-- An `--either` edge prints once, with the lower record number in `from`.
+- An `--either` edge prints once, with the lower record number in `source`.
 - `probability` is the probability of the picked option. It is a plain probability, so the vocabulary's word holds.
 
 **One thing to reconcile.** `recognize-design.md` calls the number on a relation `confidence`, because the recognize specification discounts it by the margin. One engine path should print one number under one name. The suggestion: relations print `probability` in both functions, and the margin discount stays on names only.
@@ -97,6 +97,10 @@ One JSON object per edge, one per line, so the output pipes:
 The recognize team's closing note says `relate` works "over records or provided entities". The product side rules one form. `relate` reads records. A user who already has names passes each name as a record, with its kind in the field `--kind-field` points at, and the relation rules apply to those kinds. No second input form exists.
 
 One case is different: names inside one text, where the sentence around them decides the relation. That is `recognize` given names the user already found. It stays in the backlog, in `sdlc/issues/2026-09-21-candidates-for-a-tenth-function-relate-and-find-in.md`. Ian can overturn this.
+
+## Ruled 2026-09-21: a relation's ends are `source` and `target`, everywhere
+
+`from` is a reserved word in Python and in SQL, so four of the nine surfaces could never say it. The library team chose `source` and `target` for every host. The product side extends that to the command's own JSON and to the question file, so no door converts anything and a user sees one pair of words on every surface. The rule on the command line is unchanged, `--relation NAME=FROM:TO`, because it names no field. This section overrides any older line on this page that says `from`, `to`, `head`, or `tail`. Ian can overturn it.
 
 ## What Ian can overturn
 

@@ -78,9 +78,9 @@ In the question file:
       "place": "A city, region, or country."
     },
     "relations": [
-      { "name": "works_for", "from": "person", "to": "organization", "reads": "works for" },
-      { "name": "located_in", "from": "*", "to": "place", "reads": "is located in" },
-      { "name": "married_to", "from": "person", "to": "person", "either": true, "reads": "is married to" }
+      { "name": "works_for", "source": "person", "target": "organization", "reads": "works for" },
+      { "name": "located_in", "source": "*", "target": "place", "reads": "is located in" },
+      { "name": "married_to", "source": "person", "target": "person", "either": true, "reads": "is married to" }
     ]
   },
   "threshold": 0.5,
@@ -100,12 +100,12 @@ One JSON object per text:
    {"id": 2, "text": "Northwind Freight", "kind": "organization", "start": 18, "end": 35, "confidence": 1.0},
    {"id": 3, "text": "Chicago", "kind": "place", "start": 39, "end": 46, "confidence": 0.7154}],
  "relations": [
-   {"name": "works_for", "from": 1, "to": 2, "confidence": 1.0}]}
+   {"name": "works_for", "source": 1, "target": 2, "probability": 1.0}]}
 ```
 
 - `start` and `end` count characters in the text the user gave, so `text[start:end]` is the name, on every surface, in that surface's own string indexing. Each library converts once and documents it.
 - `relations` is present only when a rule was given. It is `[]` when none was found.
-- `from` and `to` are entity ids, because one text can name "Chicago" twice.
+- `source` and `target` are entity ids, because one text can name "Chicago" twice.
 - The specification's `token_start` and `token_end` move to `--details`. A user never sees our word splitting unless they ask.
 - The relation field is `name`, to match the rule that made it. The demo says `type`.
 - Names below the bar are left out. `--threshold 0` returns every candidate with its number.
@@ -146,7 +146,7 @@ A database user wants names as rows, because rows join.
 | DuckDB | `thinkthen_recognize(body, ['person', 'organization'])` | A list of structs `(text, kind, start, end, confidence)`. `unnest()` makes rows |
 | SQLite | `thinkthen_recognize(body, 'person,organization')` as a table-valued function | Rows with those five columns |
 | PostgreSQL | `thinkthen_recognize(body, ARRAY['person', 'organization'])` as a set-returning function, used with `LATERAL` | The same five columns |
-| All three | `thinkthen_relations(body, '@names.json')` | Rows `(name, from_text, from_kind, to_text, to_kind, confidence)`. Relations need the question file. Beta |
+| All three | `thinkthen_relations(body, '@names.json')` | Rows `(name, source_text, source_kind, target_text, target_kind, confidence)`. Relations need the question file. Beta |
 
 **The join rule, for the manual and the how-to.** A join by meaning, `JOIN ... ON thinkthen_decide(...)`, asks one question for every pair of rows. A thousand tickets against a thousand incidents is a million requests. The deck's join use case works because it joins two rows to two rows. The manual must give the three ways to keep a join affordable, in this order:
 
@@ -175,7 +175,7 @@ An audit of `experiments/RECOGNIZE-PRODUCT-SPEC.md` against this page found five
 | --- | --- |
 | A `depth` dial: spans, labels, relations | No depth option. A relation rule turns relations on. Nothing else changes how deep the command goes. A caller who wants names without kinds gives one kind |
 | Kinds `PER`, `ORG`, `LOC`, `MISC` by default | `person`, `organization`, `place`. No fourth catch-all kind by default. A user who wants one names it |
-| `head`, `tail`, `type` | `from`, `to`, `name` |
+| `head`, `tail`, `type` | `source`, `target`, `name` |
 | Word positions in the main object | Under `--details` only |
 | A margin term in the confidence formula | The harvest package's formula, the least of the word probabilities times the mean of the kind probabilities, with connector words left out. It is what every recorded case used |
 
@@ -184,6 +184,10 @@ The internal rules stay internal and have no option: the connector list with its
 ## One tool, ten functions
 
 `--details` prints the standard result object, `thinkthen.result/1`, with this function's value in `value` and the same `question`, `answer`, and `meta` keys as the other functions. The question file grammar, the exit-code table, the cache, and the recording are the same. A caller that handles one function's result handles this one. A question that fails inside a request that otherwise succeeded is marked on that answer and counted in `meta`. It never prints `null`, because `null` means "not sure".
+
+## Ruled 2026-09-21: a relation's ends are `source` and `target`, everywhere
+
+`from` is a reserved word in Python and in SQL, so four of the nine surfaces could never say it. The library team chose `source` and `target` for every host. The product side extends that to the command's own JSON and to the question file, so no door converts anything and a user sees one pair of words on every surface. The rule on the command line is unchanged, `--relation NAME=FROM:TO`, because it names no field. This section overrides any older line on this page that says `from`, `to`, `head`, or `tail`. Ian can overturn it.
 
 ## What Ian can overturn
 
