@@ -177,3 +177,22 @@ exit 0
 ok       05-filter-keeps-some-of-five rows
 ok       19-decide-many-judgments rows
 ```
+
+## 2026-09-21 — lane B item 8: the SQLite roads, and the load-time floor check
+
+The issue asked for the road around the stale routed headers. Three roads evaluated with the numbers; the chosen one is implemented.
+
+**The roads, evaluated.**
+1. **Vendor `sqlite3.c` at our floor** — rejected. A loadable extension is loaded into a process that already holds SQLite (the CLI, Python's module, an app); a vendored amalgamation puts a second SQLite in that process, invites symbol interposition between the two copies, and adds roughly 1.5–2 MB to a 4.4 MB artifact for zero behavior gain. The entry-point rule is unaffected either way; the point of a loadable extension is to ride the host's own routines.
+2. **System link with a version check at load** — chosen and implemented (below). The direct link is already the build's shape; the check turns a cryptic loader failure into a named refusal.
+3. **The direct link alone (status quo)** — kept as the link shape, superseded by road 2 for the failure mode.
+
+**The check, implemented.** `init` now calls the routed `sqlite3_libversion_number()` (present in the routed bindings — it predates 3.34) and refuses a host below the floor by name through the load error:
+
+```
+thinkthen needs SQLite 3.41.0 or newer (the interrupt check uses sqlite3_is_interrupted); this host is 3.40.0 (3040000)
+```
+
+The message is built by a pure `version_refusal(host)` so the failure path is unit-tested without an old SQLite; the live call sits in `init` where the loadable API is initialized and is exercised by the stock-CLI load in `check.sh` (host 3.53.4 passes). An old-host live test is not possible on this box — no 3.40 binary exists here; recorded, not pretended.
+
+**Numbers.** `libthinkthen0.so`: 4,654,056 bytes, `DT_NEEDED libsqlite3.so.0` resolving from `/lib/x86_64-linux-gnu/libsqlite3.so.0`; check host: SQLite 3.53.4 (`.runtimes/sqlite3`); floor: 3.41.0. Tests: 3 passed (the mapping test, the new refusal test, and the existing suite). The full check runs green through the stock-CLI slide load.

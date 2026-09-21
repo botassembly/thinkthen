@@ -1019,9 +1019,38 @@ unsafe extern "C" {
     fn sqlite3_is_interrupted(db: *mut ffi::sqlite3) -> c_int;
 }
 
+/// The support floor, SQLite 3.41.0: where `sqlite3_is_interrupted`
+/// appears, the interrupt check's one host call the routed headers lack.
+const FLOOR: c_int = 3_041_000;
+
+/// The refusal for a host below the floor, or `None` when the host is
+/// new enough. Pure so the message is testable without an old SQLite.
+fn version_refusal(host: c_int) -> Option<String> {
+    if host >= FLOOR {
+        return None;
+    }
+    let major = host / 1_000_000;
+    let minor = host / 1_000 % 1_000;
+    let patch = host % 1_000;
+    Some(format!(
+        "thinkthen needs SQLite 3.41.0 or newer (the interrupt check uses sqlite3_is_interrupted); \
+         this host is {major}.{minor}.{patch} ({host})"
+    ))
+}
+
 /// Register the eight-function surface. Returns false: not loaded
 /// permanently.
 fn init(connection: Connection) -> Result<bool, Error> {
+    // Refuse an old host by name at load time. Without this, the first
+    // call that needs `sqlite3_is_interrupted` meets a loader error that
+    // names no floor; the support statement is 3.41 with visible symbols.
+    let host = unsafe { ffi::sqlite3_libversion_number() };
+    if let Some(refusal) = version_refusal(host) {
+        return Err(Error::SqliteFailure(
+            ffi::Error::new(ffi::SQLITE_ERROR),
+            Some(refusal),
+        ));
+    }
     let volatile = FunctionFlags::SQLITE_UTF8;
     let plain = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC;
     connection.create_scalar_function("thinkthen_decide", 2, volatile, decide)?;
@@ -1059,6 +1088,21 @@ mod mapping_tests {
     /// Ruling 2 of the product rulings: the defect kind maps to SQLite's
     /// own error surface, with the kind named in the message. No public
     /// door carries a fault hook; this proves the mapping at the shim level.
+    /// The load-time floor check: an old host is refused by name, and a
+    /// host at or above 3.41.0 passes. The failure message names both the
+    /// floor and the host, so a user reads what to upgrade.
+    #[test]
+    fn an_old_host_is_refused_by_name_and_a_new_one_passes() {
+        let refusal = version_refusal(3_040_000).expect("3.40 is below the floor");
+        assert!(refusal.contains("3.41.0"), "{refusal}");
+        assert!(refusal.contains("3.40.0 (3040000)"), "{refusal}");
+        assert!(version_refusal(3_041_000).is_none(), "the floor itself passes");
+        assert!(version_refusal(3_045_000).is_none(), "a newer host passes");
+        // The live `sqlite3_libversion_number()` call lives in `init`,
+        // where the loadable API is initialized; a unit test cannot call
+        // the routed symbol. The stock-CLI load in check.sh exercises it.
+    }
+
     #[test]
     fn the_defect_kind_maps_to_the_engines_error() {
         match failure(thinkthen_contract::Error::defect("the plan lost its bind data")) {
