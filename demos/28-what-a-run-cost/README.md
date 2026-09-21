@@ -82,7 +82,7 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq "$w
 
 The replayed tokens are reported and never priced. Counting them would put a bill on every gate that replays a recording, and a gate pays nothing.
 
-## A text record with no usage
+### A text record with no usage
 
 `--lines` keeps the original text in `input`, so a cost report cannot assume every input has an id. Missing usage stays visible and the text is not echoed.
 
