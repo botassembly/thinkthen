@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use thinkthen_core::{
     Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, Meta, PlanDocument, Pointer, QuestionText,
-    Reading, Record, Reply, json_line,
+    Reading, Record, Reply, RequestMeta, json_line,
 };
 
 use crate::args::{Common, FindArguments};
@@ -182,8 +182,7 @@ fn rendered(
             backend.url().clone(),
             reply.model().clone(),
             reply.usage(),
-            replayed,
-            vec![request.to_owned()],
+            RequestMeta::new(replayed, vec![request.to_owned()]),
         );
         Some(json_line(&find.result(value, selected, meta))?)
     } else {

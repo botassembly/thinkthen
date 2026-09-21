@@ -1,8 +1,6 @@
 //! One record to one request, and one reply to one row.
 //!
-//! This module knows how a record becomes a request and how the answer becomes
-//! the line that prints. It knows nothing of which verb was typed. `judge.rs`
-//! decides what a run keeps and what view it prints in, and hands both here.
+//! `judge.rs` decides what a run keeps and what view it prints in.
 
 use std::io::{Read, Write};
 use std::path::Path;
@@ -12,7 +10,7 @@ use std::time::Duration;
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{
     Backend, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, Resolved, Sources, Threshold, Value, json_line,
+    QuestionText, Reading, Record, RequestMeta, Resolved, Sources, Threshold, Value, json_line,
     question_sha256,
 };
 
@@ -430,8 +428,10 @@ impl Judging<'_> {
                 self.backend.url().clone(),
                 answered.reply.model().clone(),
                 answered.reply.usage(),
-                answered.replayed,
-                vec![answered.request.as_str().to_owned()],
+                RequestMeta::new(
+                    answered.replayed,
+                    vec![answered.request.as_str().to_owned()],
+                ),
             );
             // `rank` orders and never selects, so a ranked row carries no
             // value. A value here would be a cut at 0.5 that nobody named.

@@ -52,7 +52,7 @@ pub use crate::records::{
 pub use crate::render::{RenderError, json_line};
 pub use crate::reply::Reply;
 pub use crate::result::{
-    AnnotateMeta, AnnotateResult, AnnotatedAnswer, DecisionResult, Meta, Usage,
+    AnnotateMeta, AnnotateResult, AnnotatedAnswer, DecisionResult, Meta, RequestMeta, Usage,
 };
 pub use crate::text::{BlankTextError, Evidence, Meaning, ModelName, QuestionText, Url};
 pub use crate::threshold::{Outcome, Threshold, ThresholdError};

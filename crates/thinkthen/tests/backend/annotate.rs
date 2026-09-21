@@ -37,6 +37,7 @@ fn questions() -> PathBuf {
         .clone()
 }
 
+mod request_identity;
 mod scheduling;
 
 #[test]

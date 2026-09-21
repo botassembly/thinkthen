@@ -45,6 +45,21 @@ impl Usage {
     }
 }
 
+/// Whether recordings answered and which logical requests made one result.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RequestMeta {
+    replayed: bool,
+    requests: Vec<String>,
+}
+
+impl RequestMeta {
+    /// Take the replay fact and ordered recording digests for one result.
+    #[must_use]
+    pub const fn new(replayed: bool, requests: Vec<String>) -> Self {
+        Self { replayed, requests }
+    }
+}
+
 /// One named answer inside an annotated detailed row.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct AnnotatedAnswer {
@@ -97,9 +112,9 @@ impl AnnotateMeta {
         url: Url,
         model: ModelName,
         usage: Option<Usage>,
-        replayed: bool,
-        requests: Vec<String>,
+        request_meta: RequestMeta,
     ) -> Self {
+        let RequestMeta { replayed, requests } = request_meta;
         Self {
             tool: crate::version_line(version),
             questions_sha256,
@@ -191,9 +206,9 @@ impl Meta {
         url: Url,
         model: ModelName,
         usage: Option<Usage>,
-        replayed: bool,
-        requests: Vec<String>,
+        request_meta: RequestMeta,
     ) -> Self {
+        let RequestMeta { replayed, requests } = request_meta;
         Self {
             tool: crate::version_line(version),
             question_sha256,
@@ -257,7 +272,7 @@ impl DecisionResult {
 
 #[cfg(test)]
 mod tests {
-    use super::{DecisionResult, Meta, SCHEMA, Usage};
+    use super::{DecisionResult, Meta, RequestMeta, SCHEMA, Usage};
     use crate::answer::{Answer, Value};
     use crate::probability::Probability;
     use crate::question::{Labels, Question};
@@ -312,8 +327,7 @@ mod tests {
                 Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
-                false,
-                vec![REQUEST.to_owned()],
+                RequestMeta::new(false, vec![REQUEST.to_owned()]),
             ),
         )
     }
@@ -342,8 +356,7 @@ mod tests {
             Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
             ModelName::new("local-1").expect("not empty"),
             None,
-            true,
-            vec![REQUEST.to_owned()],
+            RequestMeta::new(true, vec![REQUEST.to_owned()]),
         );
         let rendered = serde_json::to_string(&meta).expect("meta serializes");
         assert_eq!(
@@ -376,8 +389,7 @@ mod tests {
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
-                false,
-                vec![REQUEST.to_owned()],
+                RequestMeta::new(false, vec![REQUEST.to_owned()]),
             ),
         );
         let rendered = serde_json::to_string(&result).expect("a result serializes");
@@ -417,8 +429,7 @@ mod tests {
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
-                false,
-                vec![REQUEST.to_owned()],
+                RequestMeta::new(false, vec![REQUEST.to_owned()]),
             ),
         );
         let rendered = serde_json::to_string(&result).expect("a result serializes");

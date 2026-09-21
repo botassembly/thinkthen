@@ -9,7 +9,8 @@ use std::time::Duration;
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, Backend, Framing, ModelName, Outcome, Plan,
-    PlanDocument, Pointer, QuestionSet, Reading, Record, Reply, Usage, Value, json_line,
+    PlanDocument, Pointer, QuestionSet, Reading, Record, Reply, RequestMeta, Usage, Value,
+    json_line,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -323,8 +324,7 @@ impl Judging<'_> {
                 self.backend.url().clone(),
                 model.ok_or(Failure::Defect("no group reported a model"))?,
                 usage,
-                replayed,
-                requests,
+                RequestMeta::new(replayed, requests),
             );
             json_line(&AnnotateResult::new(
                 record,
