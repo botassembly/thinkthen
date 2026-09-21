@@ -275,7 +275,7 @@ Added by the databases lane (DuckDB, SQLite, PostgreSQL), sharing this file with
 
 Names become rows is not rehearsed here: that slide is the `recognize` slide, and `recognize` is not built yet; none of the three database samples shows the pattern, so that proof waits for the recognize wave.
 
-## DuckDB
+### DuckDB
 
 Container image: `duckdb/duckdb:1.5.5`, the official image at the pinned version. Pulled once this session:
 
