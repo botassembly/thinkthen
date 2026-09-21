@@ -2,11 +2,11 @@
 
 Date: 2026-09-21
 
-Status: draft complete; cold read, code review, recording, and landing pending
+Status: draft and code review complete; recording and landing pending
 
 ## Built locally
 
-The draft has six fictional support tickets in TSV, one question set with three questions on `/body`, one fail-closed `jq` policy, and one Bash pipeline. The pipeline asks once per ticket, keeps detailed JSONL audit rows, applies policy once, fills `draft.jsonl`, `block.jsonl`, and `review.jsonl` in one temporary sibling, then publishes that directory with one rename.
+The draft has six fictional support tickets in TSV, one question set with three questions on `/body`, one fail-closed `jq` policy, and one Bash pipeline. The pipeline reserves the caller's output directory before it asks once per ticket. It applies policy once and builds detailed JSONL audit rows in hidden staging inside that directory. After every row and split succeeds, three final file moves place `draft.jsonl`, `block.jsonl`, and `review.jsonl` in the reserved directory. Successful return marks publication.
 
 The public policy vocabulary is fixed by the accepted ticket. Actions are `draft`, `block`, and `review`. Reasons are `unresolved`, `credential_request`, `out_of_scope`, `urgent`, and `routine`. Queues are `billing`, `shipping`, `account`, and `other`. `reviewed_action` is only a person's recorded decision.
 
@@ -16,11 +16,11 @@ The agent set urgency 1, the middle of the three-level scale, as the inclusive `
 
 `sh transforms/triage/test.sh` first failed because `transforms/triage/triage.jq` did not exist. After the transform was written, it passed eight routing cases and six malformed-input refusals. The cases cover every rule, precedence, a null for each answer kind, the exact midpoint, missing and extra answer names, an unknown queue, hostile strings, and exact preservation of the input row.
 
-`demos/16-triage-pipeline/self-test` passes the exact command shape, one policy application, three populated JSONL outputs, full-row preservation, agreement with six pre-registered `reviewed_action` values, a request disclosure check through the real binary's dry run, an existing destination, one final rename, and cleanup after an injected failure.
+`demos/16-triage-pipeline/self-test` passes the exact command shape, one policy application, three populated JSONL outputs, full-row preservation, agreement with six pre-registered `reviewed_action` values, and a request disclosure check through the real binary's dry run. It also proves destination reservation, one judging winner, three final file moves, exact failure statuses, and cleanup after judgment, validation, move, and signal failures.
 
 ## Still pending
 
-Page 16 remains red. A cold marketing reader and an independent code reviewer inspect this pushed draft next. After both accept it, one authorized run uses the ticket's 5,000-token cap to create the recording. The result then gets checked for request count, digests, model agreement, modes, credentials, and keyless replay before the page turns green. Pages 04 and 07 remain until then.
+Page 16 remains red. The cold marketing read completed and filed [`2026-09-21-page-16-first-result-is-not-runnable.md`](../issues/2026-09-21-page-16-first-result-is-not-runnable.md). The code reviewer accepted the corrected behavior and tests; this record correction was its only remaining finding. One authorized run still uses the ticket's 5,000-token cap to create the recording. The result then gets checked for request count, digests, model agreement, modes, credentials, and keyless replay before the page turns green. Pages 04 and 07 remain until then.
 
 The first code review rejected four findings. Exact answer-name validation, the recording job boundary, and the README order sentence were corrected. The review disproved the first publication assumption: shell `mv` does not portably combine an atomic directory rename with no replacement. The accepted revision reserves the caller's name with `mkdir`, stages inside that owned directory, removes it after handled failures and catchable interruptions, and makes successful return the publication boundary. Two synchronized runs prove that only the reservation winner judges. Separate failures during judgment, validation, and each final file move preserve their status and remove the owned output. The cold-read issue remains expected and closes only after the recording exists.
 
