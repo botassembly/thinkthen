@@ -431,6 +431,555 @@ pub enum Annotated {
 /// name order.
 pub type AnnotatedRecord = Vec<(String, Annotated)>;
 
+/// One end of a relation rule: a named kind or any kind.
+///
+/// A question file writes `"*"` for the any kind and every string surface
+/// writes it the same way; the Rust builders take [`Kind::Any`] itself. One
+/// parser in the core checks the rule, and no binding checks it again. A
+/// named end must be one of the caller's kinds; the check is
+/// [`RelationRule::check_kinds`].
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Kind {
+    /// Any kind.
+    Any,
+    /// One kind, by the user's own word.
+    Named(String),
+}
+
+impl Kind {
+    /// One kind, by the user's own word.
+    #[must_use]
+    pub fn named(name: impl Into<String>) -> Self {
+        Self::Named(name.into())
+    }
+}
+
+impl std::fmt::Display for Kind {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Any => formatter.write_str("*"),
+            Self::Named(name) => formatter.write_str(name),
+        }
+    }
+}
+
+/// One relation rule: the name, the kind it comes from, the kind it goes
+/// to, and whether it reads the same both ways.
+///
+/// The answer carries the rule's own name. A one-way rule reads from the
+/// left of the colon to the right; `either` asks a both-ways relation once
+/// per pair. A blank name or a blank named end is a usage error, and an end
+/// that names a kind the call did not ask for is a usage error naming that
+/// kind.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RelationRule {
+    /// The relation's own name; the answer carries this word.
+    pub name: String,
+    /// The kind the relation comes from.
+    pub from: Kind,
+    /// The kind the relation goes to.
+    pub to: Kind,
+    /// Ask once per pair, both ways.
+    pub either: bool,
+}
+
+impl RelationRule {
+    /// Build one rule; a blank name or a blank named end is a usage error.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the name or a named end is blank.
+    pub fn new(name: &str, from: Kind, to: Kind) -> Result<Self, Error> {
+        if name.trim().is_empty() {
+            return Err(Error::usage("a relation rule has a blank name"));
+        }
+        for end in [&from, &to] {
+            if let Kind::Named(kind) = end {
+                if kind.trim().is_empty() {
+                    return Err(Error::usage(format!(
+                        "the relation rule {name} has a missing end"
+                    )));
+                }
+            }
+        }
+        Ok(Self { name: name.to_owned(), from, to, either: false })
+    }
+
+    /// Ask this rule once per pair with both directions as one question.
+    #[must_use]
+    pub fn either(mut self, yes: bool) -> Self {
+        self.either = yes;
+        self
+    }
+
+    /// Check every named end against the kinds a call carries.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind naming the first end that is not among the kinds.
+    pub fn check_kinds(&self, kinds: &[String]) -> Result<(), Error> {
+        for end in [&self.from, &self.to] {
+            if let Kind::Named(kind) = end {
+                if !kinds.iter().any(|asked| asked == kind) {
+                    return Err(Error::usage(format!(
+                        "the relation rule {} names the kind {kind}, which is not among the asked kinds",
+                        self.name
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Check a threshold against its fraction range, zero included because
+/// `--threshold 0` returns every candidate with its number.
+fn check_threshold(what: &str, threshold: f64) -> Result<(), Error> {
+    if (0.0..=1.0).contains(&threshold) {
+        Ok(())
+    } else {
+        Err(Error::usage(format!("the {what} {threshold} is outside 0 to 1")))
+    }
+}
+
+/// The kinds a recognize call asks about when none are named.
+fn default_kinds() -> Vec<String> {
+    ["person", "organization", "place"].map(str::to_owned).to_vec()
+}
+
+/// What `recognize` looks for, and which relations it may find.
+///
+/// The defaults are the three kinds `person`, `organization`, and `place`,
+/// no relation rules, and a 0.5 bar on names and relations. Naming kinds
+/// replaces the defaults; the command's own rule is one to twenty kinds.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Recognize {
+    /// The kinds to look for, in the user's own words.
+    pub kinds: Vec<String>,
+    /// The relation rules that turn relations on.
+    pub relations: Vec<RelationRule>,
+    /// The bar a name must reach.
+    pub threshold: f64,
+    /// The bar a relation must reach.
+    pub relation_threshold: f64,
+}
+
+impl Default for Recognize {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Recognize {
+    /// The three default kinds, no rules, both bars at 0.5.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            kinds: default_kinds(),
+            relations: Vec::new(),
+            threshold: 0.5,
+            relation_threshold: 0.5,
+        }
+    }
+
+    /// Name the kinds to look for; an empty list keeps the defaults.
+    #[must_use]
+    pub fn kinds<I, S>(mut self, kinds: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let kinds: Vec<String> = kinds.into_iter().map(Into::into).collect();
+        if !kinds.is_empty() {
+            self.kinds = kinds;
+        }
+        self
+    }
+
+    /// Add one one-way relation rule.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the rule's name or a named end is blank.
+    pub fn relation(mut self, name: &str, from: Kind, to: Kind) -> Result<Self, Error> {
+        self.relations.push(RelationRule::new(name, from, to)?);
+        Ok(self)
+    }
+
+    /// Set the bar a name must reach, 0 to 1.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the threshold is outside 0 to 1.
+    pub fn threshold(mut self, threshold: f64) -> Result<Self, Error> {
+        check_threshold("threshold", threshold)?;
+        self.threshold = threshold;
+        Ok(self)
+    }
+
+    /// Set the bar a relation must reach, 0 to 1.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the threshold is outside 0 to 1.
+    pub fn relation_threshold(mut self, threshold: f64) -> Result<Self, Error> {
+        check_threshold("relation threshold", threshold)?;
+        self.relation_threshold = threshold;
+        Ok(self)
+    }
+
+    /// Read the question file's `recognize` section: kinds as an object of
+    /// descriptions or a list of names, relations with `from`, `to`, and
+    /// `either`, and both thresholds. A `reads` phrase is accepted and
+    /// carried by no field here; it is the model-facing wording.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind for a shape the grammar refuses, a blank or missing
+    /// end, more than twenty kinds, or a named end outside the kinds.
+    pub fn from_json(spec: &str) -> Result<Self, Error> {
+        let value: serde_json::Value = serde_json::from_str(spec).map_err(|error| {
+            Error::usage(format!("the recognize spec is not JSON: {error}"))
+        })?;
+        let object = value
+            .as_object()
+            .ok_or_else(|| Error::usage("the recognize spec is not a JSON object"))?;
+        let mut ask = Self::new();
+        if let Some(kinds) = object.get("kinds") {
+            let names: Vec<String> = match kinds {
+                serde_json::Value::Object(map) => map.keys().cloned().collect(),
+                serde_json::Value::Array(items) => items
+                    .iter()
+                    .map(|item| {
+                        item.as_str().map(str::to_owned).ok_or_else(|| {
+                            Error::usage("a kind in the spec is not a string")
+                        })
+                    })
+                    .collect::<Result<Vec<String>, Error>>()?,
+                _ => return Err(Error::usage("the spec's kinds are not an object or a list")),
+            };
+            if names.len() > 20 {
+                return Err(Error::usage(format!(
+                    "the spec carries {} kinds, and 20 is the limit",
+                    names.len()
+                )));
+            }
+            ask = ask.kinds(names);
+        }
+        if let Some(relations) = object.get("relations") {
+            let entries = relations
+                .as_array()
+                .ok_or_else(|| Error::usage("the spec's relations are not a list"))?;
+            for entry in entries {
+                let rule = relation_from_value(entry)?;
+                ask.relations.push(rule);
+            }
+        }
+        if let Some(threshold) = object.get("threshold") {
+            let threshold = threshold
+                .as_f64()
+                .ok_or_else(|| Error::usage("the spec's threshold is not a number"))?;
+            ask = ask.threshold(threshold)?;
+        }
+        if let Some(threshold) = object.get("relation_threshold") {
+            let threshold = threshold
+                .as_f64()
+                .ok_or_else(|| Error::usage("the spec's relation_threshold is not a number"))?;
+            ask = ask.relation_threshold(threshold)?;
+        }
+        for rule in &ask.relations {
+            rule.check_kinds(&ask.kinds)?;
+        }
+        Ok(ask)
+    }
+}
+
+/// Read one relation rule from a JSON value: `from` and `to` required, `*`
+/// meaning any kind, `either` optional.
+fn relation_from_value(entry: &serde_json::Value) -> Result<RelationRule, Error> {
+    let object = entry
+        .as_object()
+        .ok_or_else(|| Error::usage("a relation rule is not a JSON object"))?;
+    let name = object
+        .get("name")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| Error::usage("a relation rule has no name"))?;
+    let end = |key: &str| -> Result<Kind, Error> {
+        let raw = object
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| Error::usage(format!("the relation rule {name} has no {key} end")))?;
+        if raw.is_empty() {
+            return Err(Error::usage(format!(
+                "the relation rule {name} has a missing end"
+            )));
+        }
+        Ok(if raw == "*" { Kind::Any } else { Kind::named(raw) })
+    };
+    let rule = RelationRule::new(name, end("from")?, end("to")?)?;
+    let either = object.get("either").and_then(serde_json::Value::as_bool).unwrap_or(false);
+    Ok(rule.either(either))
+}
+
+/// What `relate` asks over records: the relation rules, where a record's
+/// kind sits, and the bar an edge must reach.
+///
+/// The recordings behind the stand-in carry no kinds, so a named end is a
+/// usage error there; the real engine takes the kind field pointer. The
+/// threshold defaults to 0.5.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Relate {
+    /// The rules to ask; a name alone means the any kind to the any kind.
+    pub relations: Vec<RelationRule>,
+    /// The JSON pointer to each record's kind, when the records carry one.
+    pub kind_field: Option<String>,
+    /// The bar an edge must reach.
+    pub threshold: f64,
+}
+
+impl Default for Relate {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Relate {
+    /// No rules yet, no kind field, the bar at 0.5.
+    #[must_use]
+    pub fn new() -> Self {
+        Self { relations: Vec::new(), kind_field: None, threshold: 0.5 }
+    }
+
+    /// Add one one-way relation rule.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the rule's name or a named end is blank.
+    pub fn relation(mut self, name: &str, from: Kind, to: Kind) -> Result<Self, Error> {
+        self.relations.push(RelationRule::new(name, from, to)?);
+        Ok(self)
+    }
+
+    /// Add one both-ways rule between the same kind at both ends.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the rule's name is blank.
+    pub fn either(mut self, name: &str, kind: Kind) -> Result<Self, Error> {
+        self.relations
+            .push(RelationRule::new(name, kind.clone(), kind)?.either(true));
+        Ok(self)
+    }
+
+    /// Name the JSON pointer where each record keeps its kind.
+    #[must_use]
+    pub fn kind_field(mut self, pointer: impl Into<String>) -> Self {
+        self.kind_field = Some(pointer.into());
+        self
+    }
+
+    /// Set the bar an edge must reach, 0 to 1.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the threshold is outside 0 to 1.
+    pub fn threshold(mut self, threshold: f64) -> Result<Self, Error> {
+        check_threshold("threshold", threshold)?;
+        self.threshold = threshold;
+        Ok(self)
+    }
+
+    /// Read the question file's `relate` section: `relations` entries in
+    /// the same shape as `recognize`'s or as bare names, an `either` list of
+    /// bare names, an optional `kind_field`, and the threshold.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind for a shape the grammar refuses.
+    pub fn from_json(spec: &str) -> Result<Self, Error> {
+        let value: serde_json::Value = serde_json::from_str(spec).map_err(|error| {
+            Error::usage(format!("the relate spec is not JSON: {error}"))
+        })?;
+        let object = value
+            .as_object()
+            .ok_or_else(|| Error::usage("the relate spec is not a JSON object"))?;
+        let mut ask = Self::new();
+        if let Some(relations) = object.get("relations") {
+            let entries = relations
+                .as_array()
+                .ok_or_else(|| Error::usage("the spec's relations are not a list"))?;
+            for entry in entries {
+                match entry {
+                    serde_json::Value::String(name) => ask
+                        .relations
+                        .push(RelationRule::new(name, Kind::Any, Kind::Any)?),
+                    _ => ask.relations.push(relation_from_value(entry)?),
+                }
+            }
+        }
+        if let Some(either) = object.get("either") {
+            let names = either
+                .as_array()
+                .ok_or_else(|| Error::usage("the spec's either is not a list"))?;
+            for name in names {
+                let name = name
+                    .as_str()
+                    .ok_or_else(|| Error::usage("an either entry is not a string"))?;
+                ask.relations
+                    .push(RelationRule::new(name, Kind::Any, Kind::Any)?.either(true));
+            }
+        }
+        if let Some(pointer) = object.get("kind_field") {
+            let pointer = pointer
+                .as_str()
+                .ok_or_else(|| Error::usage("the spec's kind_field is not a string"))?;
+            ask.kind_field = Some(pointer.to_owned());
+        }
+        if let Some(threshold) = object.get("threshold") {
+            let threshold = threshold
+                .as_f64()
+                .ok_or_else(|| Error::usage("the spec's threshold is not a number"))?;
+            ask = ask.threshold(threshold)?;
+        }
+        Ok(ask)
+    }
+}
+
+/// One name `recognize` found: the user's own kind word and where the name
+/// sits in the text the user gave.
+///
+/// `start` and `end` count code points of the text, so `text[start:end]` is
+/// the name in a host whose indexing is code points. Every other host
+/// converts once: JavaScript to UTF-16 units, Rust and C to bytes. The
+/// number field is the interim name for the number on a name: the
+/// marketing vocabulary page (`repos/mktg/products/thinkthen/vocabulary.md`,
+/// "The words for numbers") restricts `confidence` to the literal field Jev
+/// returns in detailed output, and this number is computed from several of
+/// Jev's numbers, so it may not carry that word; the recognize team's free
+/// comparison — whether the lowest Jev probability behind a name filters as
+/// well as our computed number — settles the final name.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Entity {
+    /// The name's id within the answer; relations point at it.
+    pub id: u64,
+    /// The name's text, sliced from the original exactly.
+    pub text: String,
+    /// The user's own kind word; never a code such as `PER`.
+    pub kind: String,
+    /// The first code point of the name in the original text.
+    pub start: usize,
+    /// One past the last code point of the name.
+    pub end: usize,
+    /// The number on a name, computed from several of Jev's numbers. The
+    /// interim field name; see the struct's note and the open comparison.
+    pub number: f64,
+}
+
+/// One relation between two names, by entity id.
+///
+/// The ruled name for the number on a relation is `probability`, and the
+/// host-facing spelling of the ends is `source` and `target` on every
+/// surface, C's returned JSON included. The wire keeps `from` and `to`.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Relation {
+    /// The rule's own name.
+    pub name: String,
+    /// The id of the name the relation comes from.
+    pub source: u64,
+    /// The id of the name the relation goes to.
+    pub target: u64,
+    /// The probability of the picked relation.
+    pub probability: f64,
+}
+
+/// What `recognize` returned: the names, and the relations when a rule was
+/// given.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Recognized {
+    /// The names found, in text order.
+    pub entities: Vec<Entity>,
+    /// The relations found; empty when no rule was given or none was found.
+    pub relations: Vec<Relation>,
+}
+
+impl Recognized {
+    /// The answer as one JSON string, the shape the C door returns and
+    /// every other host parses into its own records.
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("a recognized answer is JSON-clean")
+    }
+}
+
+/// One edge `relate` found, by record numbers counted from 1 in input
+/// order. `source` is the subject and `target` the object; an `either` edge
+/// prints once with the lower number in `source`.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Edge {
+    /// The rule's own name.
+    pub name: String,
+    /// The record the edge comes from, counted from 1.
+    pub source: u64,
+    /// The record the edge goes to, counted from 1.
+    pub target: u64,
+    /// The probability of the picked relation.
+    pub probability: f64,
+    /// The source record's kind, when the rule names one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_kind: Option<String>,
+    /// The target record's kind, when the rule names one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_kind: Option<String>,
+}
+
+/// The edges as one JSON object, `{"edges": [...]}`, the shape the C door
+/// returns for `relate`.
+#[must_use]
+pub fn edges_json(edges: &[Edge]) -> String {
+    #[derive(Serialize)]
+    struct Edges<'a> {
+        edges: &'a [Edge],
+    }
+    serde_json::to_string(&Edges { edges }).expect("an edge list is JSON-clean")
+}
+
+/// The `find` limit, reused for `relate`: one call takes at most 255
+/// records, and the refusal is a usage error naming the limit.
+pub const MAX_RELATE_RECORDS: usize = 255;
+
+/// Refuse a relate call that outnumbers its record limit, before anything
+/// else happens.
+///
+/// # Errors
+///
+/// The usage kind when `count` is past [`MAX_RELATE_RECORDS`].
+pub fn guard_relate_records(count: usize) -> Result<(), Error> {
+    if count > MAX_RELATE_RECORDS {
+        Err(Error::usage(format!(
+            "relate takes at most {MAX_RELATE_RECORDS} records and {count} came"
+        )))
+    } else {
+        Ok(())
+    }
+}
+
+/// Call `relate` through the contract: the record limit is checked here, so
+/// every surface that enters through this function inherits it.
+///
+/// # Errors
+///
+/// The usage kind past the record limit, then the same kinds as
+/// [`Engine::relate_opts`].
+pub fn relate_checked(
+    engine: &dyn Engine,
+    ask: &Relate,
+    records: &[&str],
+    options: Options<'_>,
+) -> Result<Vec<Edge>, Error> {
+    guard_relate_records(records.len())?;
+    engine.relate_opts(ask, records, options)
+}
+
 /// The settled settings an engine value carries, with one spelling each.
 ///
 /// The defaults come from ADR 0017's settings table: the built-in address,
@@ -1084,6 +1633,44 @@ pub trait Engine: Send + Sync {
         options: Options<'_>,
     ) -> Result<Details, Error>;
 
+    /// Find every name in one text, and the relations the rules allow.
+    ///
+    /// A text the recordings do not hold is a usage error naming the text;
+    /// a rule the recordings do not hold is a usage error naming the rule.
+    /// The stand-in answers from its replay table, so nothing is invented.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind for a missing text, an unrecorded rule, a blank
+    /// relation end, or a named end outside the asked kinds; otherwise the
+    /// backend, deadline, or cancelled kind.
+    fn recognize_opts(
+        &self,
+        ask: &Recognize,
+        text: &str,
+        options: Options<'_>,
+    ) -> Result<Recognized, Error>;
+
+    /// Say how every record relates to the others: one pick-one question
+    /// per legal pair, all records crossing at once.
+    ///
+    /// More than [`MAX_RELATE_RECORDS`] records is a usage error before
+    /// anything happens; [`relate_checked`] enforces that for every caller
+    /// that enters through it.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind past the record limit, for a missing text, an
+    /// unrecorded rule, a kind field the recordings cannot honour, or a
+    /// blank relation end; otherwise the backend, deadline, or cancelled
+    /// kind.
+    fn relate_opts(
+        &self,
+        ask: &Relate,
+        records: &[&str],
+        options: Options<'_>,
+    ) -> Result<Vec<Edge>, Error>;
+
     /// The counters since the last reset.
     fn usage(&self) -> Usage;
 
@@ -1216,6 +1803,31 @@ pub trait Engine: Send + Sync {
     fn details(&self, question: &Question, evidence: &str) -> Result<Details, Error> {
         self.details_opts(question, evidence, Options::new())
     }
+
+    /// Find every name in one text, with neither a token nor a deadline.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind for a missing text, an unrecorded rule, a blank
+    /// relation end, or a named end outside the asked kinds; otherwise the
+    /// backend, deadline, or cancelled kind.
+    fn recognize(&self, ask: &Recognize, text: &str) -> Result<Recognized, Error> {
+        self.recognize_opts(ask, text, Options::new())
+    }
+
+    /// Say how every record relates to the others, with neither a token nor
+    /// a deadline; the record limit is checked through [`relate_checked`].
+    ///
+    /// # Errors
+    ///
+    /// The usage kind past the record limit, for a missing text, an
+    /// unrecorded rule, a kind field the recordings cannot honour, or a
+    /// blank relation end; otherwise the backend, deadline, or cancelled
+    /// kind.
+    fn relate(&self, ask: &Relate, records: &[&str]) -> Result<Vec<Edge>, Error> {
+        guard_relate_records(records.len())?;
+        self.relate_opts(ask, records, Options::new())
+    }
 }
 
 #[cfg(test)]
@@ -1300,5 +1912,111 @@ mod tests {
     fn the_public_word_is_unsure() {
         assert_eq!(Answer::Unsure.to_string(), "unsure");
         assert_eq!(Answer::Unsure.value(), None);
+    }
+
+    /// The design page's question file example reads whole.
+    #[test]
+    fn the_recognize_file_reads() {
+        let ask = super::Recognize::from_json(
+            r#"{"kinds":{"person":"A human being, by name.",
+                 "organization":"A company.","place":"A city."},
+                "relations":[
+                  {"name":"works_for","from":"person","to":"organization","reads":"works for"},
+                  {"name":"located_in","from":"*","to":"place"},
+                  {"name":"married_to","from":"person","to":"person","either":true}],
+                "threshold":0.4,"relation_threshold":0.6}"#,
+        )
+        .expect("the file parses");
+        assert_eq!(ask.kinds, ["organization", "person", "place"]);
+        assert_eq!(ask.relations.len(), 3);
+        assert_eq!(ask.relations[1].from, super::Kind::Any);
+        assert!(ask.relations[2].either);
+        assert!((ask.threshold - 0.4).abs() < f64::EPSILON);
+        assert!((ask.relation_threshold - 0.6).abs() < f64::EPSILON);
+    }
+
+    /// A missing end, a kind outside the asked kinds, and a threshold out of
+    /// range are usage errors.
+    #[test]
+    fn the_rule_shape_holds() {
+        let missing = super::RelationRule::new("works_for", super::Kind::named("person"), super::Kind::named(""))
+            .expect_err("a blank end is refused");
+        assert_eq!(missing.kind, ErrorKind::Usage);
+        assert!(missing.message.contains("missing end"), "{missing}");
+
+        let outside = super::Recognize::from_json(
+            r#"{"kinds":["person"],"relations":[{"name":"works_for","from":"person","to":"vessel"}]}"#,
+        )
+        .expect_err("a kind outside the asked kinds is refused");
+        assert!(outside.message.contains("vessel"), "{outside}");
+
+        let range = super::Recognize::new().threshold(1.5).expect_err("out of range");
+        assert_eq!(range.kind, ErrorKind::Usage);
+    }
+
+    /// The relate file reads bare names and either lists.
+    #[test]
+    fn the_relate_file_reads() {
+        let ask = super::Relate::from_json(
+            r#"{"relations":["caused_by",{"name":"covers","from":"test","to":"requirement"}],
+                "either":["same_as"],"kind_field":"/type","threshold":0.9}"#,
+        )
+        .expect("the file parses");
+        assert_eq!(ask.relations.len(), 3);
+        assert_eq!(ask.relations[0].from, super::Kind::Any);
+        assert!(ask.relations[2].either);
+        assert_eq!(ask.kind_field.as_deref(), Some("/type"));
+        assert!((ask.threshold - 0.9).abs() < f64::EPSILON);
+    }
+
+    /// The record limit refuses at 256 and passes at 255.
+    #[test]
+    fn the_relate_limit_holds() {
+        assert!(super::guard_relate_records(255).is_ok());
+        let over = super::guard_relate_records(256).expect_err("past the limit");
+        assert_eq!(over.kind, ErrorKind::Usage);
+        assert!(over.message.contains("255"), "{over}");
+    }
+
+    /// The host-facing JSON spells the ends source and target, and never
+    /// from and to; the numbers carry their ruled names.
+    #[test]
+    fn the_door_json_spells_source_and_target() {
+        let answer = super::Recognized {
+            entities: vec![super::Entity {
+                id: 1,
+                text: "Maria Chen".into(),
+                kind: "person".into(),
+                start: 0,
+                end: 10,
+                number: 0.98,
+            }],
+            relations: vec![super::Relation {
+                name: "works_for".into(),
+                source: 1,
+                target: 2,
+                probability: 0.94,
+            }],
+        };
+        let json = answer.to_json();
+        assert!(json.contains("\"source\":1"), "{json}");
+        assert!(json.contains("\"target\":2"), "{json}");
+        assert!(json.contains("\"probability\":0.94"), "{json}");
+        assert!(json.contains("\"number\":0.98"), "{json}");
+        assert!(!json.contains("\"from\""), "{json}");
+        assert!(!json.contains("\"to\""), "{json}");
+        assert!(!json.contains("\"confidence\""), "the restricted word stays out: {json}");
+
+        let edges = super::edges_json(&[super::Edge {
+            name: "caused_by".into(),
+            source: 1,
+            target: 4,
+            probability: 0.94,
+            source_kind: None,
+            target_kind: None,
+        }]);
+        assert!(edges.starts_with("{\"edges\":["), "{edges}");
+        assert!(edges.contains("\"source\":1"), "{edges}");
+        assert!(!edges.contains("kind"), "the ends' kinds stay out when a rule names none: {edges}");
     }
 }

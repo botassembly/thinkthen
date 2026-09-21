@@ -102,7 +102,36 @@ int thinkthen_decide_many(const thinkthen_engine *engine, const char *question_j
  * next `thinkthen_error_message` on the engine. */
 char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
 
-/* Free a string `thinkthen_call` returned. NULL is accepted and ignored. */
+/* Find every name in one text, and the relations the rules allow. The
+ * result has no fixed size, so it crosses as one JSON string written to
+ * `*out` (freed with `thinkthen_free_string`) with its length in `*out_len`:
+ * `{"entities": [...], "relations": [...]}` with `start` and `end`
+ * counting code points of `text`. `spec_json` is the recognize section of
+ * the question file (`kinds`, `relations`, `threshold`, `relation_threshold`);
+ * a text the recordings do not hold is refused with the usage kind. Returns
+ * 0 on success and -1 on failure, with `thinkthen_error_message` naming
+ * what failed.
+ *
+ * The ends of a relation carry `source` and `target` on every surface,
+ * this returned JSON included; the wire keeps `from` and `to`. */
+int thinkthen_recognize(const thinkthen_engine *engine, const char *spec_json,
+                        const char *text, unsigned long text_len, char **out,
+                        unsigned long *out_len);
+
+/* Say how every record relates to the others, as one JSON object written
+ * to `*out` (freed with `thinkthen_free_string`): `{"edges": [...]}`.
+ * `texts` carries `count` records and `lengths` their lengths; `count` past
+ * 255 is a usage refusal before anything else. `spec_json` is the relate
+ * section (`relations` entries or bare names, `either`, optional
+ * `kind_field`, `threshold`). Each edge carries `name`, `source`, `target`,
+ * and `probability`. Returns 0 on success and -1 on failure, with
+ * `thinkthen_error_message` naming what failed. */
+int thinkthen_relate(const thinkthen_engine *engine, const char *spec_json,
+                     const char *const *texts, const unsigned long *lengths,
+                     unsigned long count, char **out, unsigned long *out_len);
+
+/* Free a string `thinkthen_call`, `thinkthen_recognize`, or
+ * `thinkthen_relate` returned. NULL is accepted and ignored. */
 void thinkthen_free_string(char *text);
 
 #ifdef __cplusplus
