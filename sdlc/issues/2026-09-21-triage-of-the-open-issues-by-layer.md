@@ -64,7 +64,7 @@ The design-capture ideas, the label-tuning survey, the triage-pipeline question,
 1. Close the seven stale issues.
 2. The two small defects: `cost.jq` and the live script's refusal.
 3. One ticket for the help and message wording: the help issue and findings 2 to 10 together.
-4. The spend cap and the request count in `--dry-run`. It is small, every surface inherits it, and a stranger meets it first.
+4. `thinkthen status`, the request count in `--dry-run`, and the stateless `--max-requests`, per the recommendation in the status issue. No ledger.
 5. The ADRs the engine needs before the merge: ADR 0017, and one for the cache.
 6. The engine's four steps, with the error shape, the deadline, and the ranking from `find` folded into step 2.
 7. The release workflow and the how-to pages, in release preparation.

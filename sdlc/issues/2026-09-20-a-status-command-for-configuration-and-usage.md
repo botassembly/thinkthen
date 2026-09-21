@@ -41,3 +41,25 @@ So the provider can tell the tool what one request used. Everything across reque
 - No credential or value derived from one appears in the output, the ledger, or an error.
 - The command changes nothing. A `config set` stays held.
 - The ledger format is plain rows, so the existing transforms read it.
+
+## A recommendation, 2026-09-21
+
+Ian asked on 2026-09-21 what the status and configuration commands are, and whether a user controls a spending cap. He added that he may not care about a cap. The marketing side's answer, for the builder to weigh:
+
+**No ledger and no budget across runs in 0.1.** It needs a store, a lock across processes, and a file the user never named. The price argues against the weight: 3,000 short records cost 3.6 US cents, and a wrong file of 100,000 lines costs a little over a dollar. The account-level control is the vendor's own. Item 1 of `2026-09-21-where-a-user-could-lose-trust-a-first-list.md` ranked this too high for the command.
+
+**One stateless limit, as an engine setting.** `--max-requests N` refuses a run before its first request when the input holds more than `N` records, and the default is no limit. It keeps no state and writes nothing. It earns its place in the databases, where one `WHERE` over a hundred million rows is a bill of a thousand dollars. `--dry-run` prints the number of requests the run would make.
+
+**The whole command tree when the plan is done:**
+
+| Command | Does | Network |
+| --- | --- | --- |
+| The eight verbs | Judge | Yes, unless `--replay` or `--dry-run` |
+| `thinkthen status` | Prints the version, the address and where it came from, the model and where it came from, whether the key is set, and the cache folder with its entry count and size when `THINKTHEN_CACHE` names one. `--json` for scripts | Never |
+| `thinkthen cache prune DIR` | Removes entries by age, size, or answering model | Never |
+| `thinkthen help` | Help | Never |
+
+No `config` command exists, and nothing is set through the tool. Three variables are the whole configuration: `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `THINKTHEN_CACHE`. Ian removed the configuration file on 2026-09-19, and `specification/roadmap.md` holds the shape to return to.
+
+**Usage comes from two places and no store.** One run's usage is the `usage` object on every `--details` row, and `transforms/cost/cost.jq` sums it. A library process reads the engine's `usage()` counters: requests, cache answers, and tokens since the process began. `status` prints no usage, because the command keeps none between runs.
+
