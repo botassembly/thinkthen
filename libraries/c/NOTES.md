@@ -308,3 +308,75 @@ Ruling 1 aftermath: `tests/door.rs`'s specs, `examples/recognize.c`, and `confor
 Ruling 2: the `src/lib.rs` unit test constructs a contract `Error` with kind `defect`, runs it through the engine's `fail`, and asserts code 6, the message through `thinkthen_error_message`, and the zero retry signal. `check.sh` now runs `cargo test --lib` beside `--test door`: 1 passed.
 
 Smaller item: `thinkthen_call`'s doc no longer promises a numeric code the door never returns, and `thinkthen_recognize`/`thinkthen_relate` say the kind's code 1..6 rather than `-1` — the header now matches `code_of`.
+
+## 2026-09-21 — the shapes from lane B item 2 (languages lane)
+
+The three shapes `e44d492` landed in `contract/` and `standin/`, carried
+into this door, plus the fast-backend deadline proof and the examples
+file. Commands and output as they happened.
+
+**`Details.requests` and `failed_questions` (0053, 0054).** The JSON
+door's `details` reply carries both beside the trail it already had:
+
+```
+$ ENGINE_NULL=1 cargo build --release --quiet && python3 - <<'PY' ...
+"requests": ["d3476c41..."], "failed_questions": 0
+```
+
+`tests/door.rs` pins one 64-figure digest and the zero count on the audit,
+and `the_new_shapes_ride_the_json_door` pins the failed marker and the
+record row.
+
+**The failed marker, this host's spelling: the ruled JSON object.** An
+`annotate` field whose question failed comes back as
+`{"failed":{"kind":"backend","cause":"missing_answer"}}`, never `null`,
+while the neighbour's good answer rides beside it:
+
+```
+$ ENGINE_NULL=1 ./build/functions   (annotate line for the synthesized record)
+{"answer":[{"refund":true,"topic":{"failed":{"kind":"backend","cause":"missing_answer"}}}]}
+```
+
+**The record row (go-ahead item 4).** The conformance driver builds the
+ruled `{"input", "value"}` objects from the door's own outputs and checks
+them where the cases carry rows (`05`, `06`, `19`); no C function was
+added.
+
+**Conformance, offline: 73 and 74 run green.**
+
+```
+ok       73-details-carries-requests
+ok       74-annotate-preserves-good-answers
+```
+
+Case 73 checks the audit's identity fields (the null backend's own rule
+cannot reproduce its recorded probability); case 74 checks the marker and
+its count through the JSON door.
+
+**The fast-backend deadline.** The C header exposes no cancel token and no
+deadline (finding 3, above), so `tests/deadline_fast.rs` drives the same
+engine the door calls — `thinkthen_standin::BlockingEngine` through the
+contract — and proves the shape the door inherits when the header grows a
+budget: a one-second deadline spent mid-way through a two-million-record
+null batch (about 5.6 s deaf) surfaces with the deadline kind within 1.5 s.
+
+```
+$ ENGINE_NULL=1 cargo test --quiet --test deadline_fast
+test result: ok. 1 passed   (1.31 s)
+```
+
+**The examples file.** `examples.json` holds all ten functions keyed by
+name; `examples/functions.c` runs every one of them through the door, and
+`examples.py` checks that every snippet appears in the C file verbatim,
+compiles it with a plain cc against the built library, runs it offline,
+and compares each expected line:
+
+```
+$ ENGINE_NULL=1 python3 examples.py
+10 of 10 examples ok
+```
+
+**Full check, `./check.sh`:** the build, the slide and the recognize
+example as drawn, the leak check, the null suite (12 door tests), the
+deadline proof, the examples, and the conformance slice — all green; the
+wire twin skips with no stub on 8216; exit 0.

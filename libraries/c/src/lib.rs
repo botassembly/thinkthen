@@ -549,7 +549,8 @@ fn object_question(
     Question::from_json(&text)
 }
 
-/// The audit view as the door returns it.
+/// The audit view as the door returns it, with the logical requests'
+/// digests (0053) and the failed-question count (0054).
 fn details_json(
     engine: &thinkthen_engine,
     question: &Question,
@@ -561,6 +562,8 @@ fn details_json(
         model,
         digest,
         sends,
+        requests,
+        failed_questions,
     } = engine
         .engine
         .details_opts(question, evidence, Options::new())?;
@@ -570,6 +573,8 @@ fn details_json(
         "model": model,
         "digest": digest,
         "sends": sends,
+        "requests": requests,
+        "failed_questions": failed_questions,
     }))
 }
 
@@ -605,6 +610,9 @@ fn annotated_json(records: &[Vec<(String, Annotated)>]) -> serde_json::Value {
                                     "nearest": nearest,
                                 }),
                                 Annotated::Tags(labels) => serde_json::json!(labels),
+                                Annotated::Failed(failed) => {
+                                    serde_json::json!({ "failed": failed })
+                                }
                             };
                             (name.clone(), value)
                         })

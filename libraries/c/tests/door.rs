@@ -148,8 +148,7 @@ fn a_broken_question_is_the_usage_code_with_nothing_sent() {
 }
 
 #[test]
-fn the_json_door_answers_every_verb_it_carries() {
-    unsafe {
+fn the_json_door_answers_every_verb_it_carries() {    unsafe {
         let engine = engine();
 
         let decide = take(json(
@@ -204,6 +203,56 @@ fn the_json_door_answers_every_verb_it_carries() {
         assert_eq!(audit["answer"], serde_json::json!(true));
         assert!(audit["model"].is_string());
         assert!(audit["digest"].is_string());
+        // 0053 and 0054: one 64-figure digest a logical request, and
+        // failed_questions always present, zero for one good question.
+        let requests = audit["requests"].as_array().expect("requests is an array");
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].as_str().unwrap_or_default().len(), 64);
+        assert_eq!(audit["failed_questions"], serde_json::json!(0));
+
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+/// The shapes `e44d492` landed: the ruled record rows on the bulk forms,
+/// and the failed marker on an annotate field (0054), never `null`.
+#[test]
+fn the_new_shapes_ride_the_json_door() {
+    unsafe {
+        let engine = engine();
+
+        // The ruled record row (go-ahead item 4): the door's own two
+        // fields, `input` and `value`, in input order.
+        let kept = take(json(
+            engine,
+            r#"{"decide": "Is this a complaint?", "records": ["good morning", "I demand a refund today"]}"#,
+        ));
+        let indexes = kept["indexes"].as_array().expect("indexes is an array");
+        let records = ["good morning", "I demand a refund today"];
+        let rows: Vec<serde_json::Value> = indexes
+            .iter()
+            .map(|index| {
+                let place = index.as_u64().unwrap_or(0) as usize;
+                serde_json::json!({ "input": records[place], "value": true })
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            vec![serde_json::json!({ "input": "I demand a refund today", "value": true })]
+        );
+
+        // The failed marker on the one synthesized partial record: the
+        // ruled JSON object, and the good answer beside it.
+        let annotated = take(json(
+            engine,
+            r#"{"annotate": {"questions": {"refund": {"decide": "Is this a refund request?", "threshold": 0.5}, "topic": {"decide": "Is this a billing problem?", "threshold": 0.5}}}, "records": ["order 4471: charged twice, please refund"]}"#,
+        ));
+        let row = &annotated["answer"][0];
+        assert_eq!(row["refund"], serde_json::json!(true));
+        assert_eq!(
+            row["topic"],
+            serde_json::json!({"failed": {"kind": "backend", "cause": "missing_answer"}})
+        );
 
         thinkthen::thinkthen_engine_free(engine);
     }

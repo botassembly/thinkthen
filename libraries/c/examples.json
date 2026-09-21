@@ -1,0 +1,48 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "c",
+  "language": "c",
+  "install": "cc app.c -lthinkthen   # thinkthen.h and both libraries beside it",
+  "examples": {
+    "decide": {
+      "c": "int rc = thinkthen_decide(tt, \"Is this a complaint?\", evidence, strlen(evidence), &answer);",
+      "expected": "decide: yes 0.97"
+    },
+    "choose": {
+      "c": "door(tt, \"choose\", \"{\\\"choose\\\":\\\"Which team owns this?\\\",\\\"options\\\":[\\\"the refund desk\\\",\\\"the maybe desk\\\",\\\"anywhere else\\\"],\\\"evidence\\\":\\\"please route this ticket\\\"}\");",
+      "expected": "choose: {\"answer\":\"the refund desk\"}"
+    },
+    "tag": {
+      "c": "door(tt, \"tag\", \"{\\\"tag\\\":\\\"Which words appear?\\\",\\\"labels\\\":[\\\"refund\\\",\\\"shipping\\\"],\\\"evidence\\\":\\\"the refund and the shipping\\\"}\");",
+      "expected": "tag: {\"answer\":[\"refund\"]}"
+    },
+    "score": {
+      "c": "door(tt, \"score\", \"{\\\"score\\\":\\\"How urgent is this?\\\",\\\"levels\\\":[\\\"Routine.\\\",\\\"Soon.\\\",\\\"Immediate.\\\"],\\\"evidence\\\":\\\"maybe later\\\"}\");",
+      "expected": "score: {\"answer\":1.05,\"nearest\":\"Soon.\"}"
+    },
+    "filter": {
+      "c": "door(tt, \"filter\", \"{\\\"decide\\\":\\\"Is this a complaint?\\\",\\\"records\\\":[\\\"good morning\\\",\\\"I demand a refund today\\\"]}\");",
+      "expected": "filter: {\"indexes\":[1]}"
+    },
+    "rank": {
+      "c": "door(tt, \"rank\", \"{\\\"decide\\\":\\\"Is this a complaint?\\\",\\\"rank\\\":true,\\\"records\\\":[\\\"good morning\\\",\\\"I demand a refund today\\\"]}\");",
+      "expected": "rank: {\"answer\":[{\"index\":1,\"probability\":0.97},{\"index\":0,\"probability\":0.03}]}"
+    },
+    "find": {
+      "c": "door(tt, \"find\", \"{\\\"find\\\":\\\"Which line asks for money back?\\\",\\\"units\\\":[\\\"good morning\\\",\\\"I want a refund\\\"]}\");",
+      "expected": "find: {\"answer\":1,\"probability\":0.97}"
+    },
+    "annotate": {
+      "c": "door(tt, \"annotate\", \"{\\\"annotate\\\":{\\\"questions\\\":{\\\"refund\\\":{\\\"decide\\\":\\\"Does the customer ask for a refund?\\\"},\\\"complaint\\\":{\\\"decide\\\":\\\"Is this a complaint?\\\",\\\"threshold\\\":0.5}}},\\\"records\\\":[\\\"maybe later\\\"]}\");",
+      "expected": "annotate: {\"answer\":[{\"complaint\":true,\"refund\":true}]}"
+    },
+    "recognize": {
+      "c": "rc = thinkthen_recognize(tt, \"{\\\"kinds\\\":[\\\"person\\\",\\\"organization\\\",\\\"place\\\"]}\", sentence, strlen(sentence), &found, &found_len);",
+      "expected": "recognize: {\"entities\":[{\"id\":1,\"text\":\"Maria Chen\",\"kind\":\"person\",\"start\":0,\"end\":10,\"strength\":0.98}"
+    },
+    "relate": {
+      "c": "rc = thinkthen_relate(tt, \"{\\\"relations\\\":[{\\\"name\\\":\\\"caused_by\\\",\\\"source\\\":\\\"*\\\",\\\"target\\\":\\\"*\\\"}]}\", alerts, lengths, 4, &edges, &edges_len);",
+      "expected": "relate: {\"edges\":[{\"name\":\"caused_by\",\"source\":1,\"target\":2,\"probability\":0.59}"
+    }
+  }
+}

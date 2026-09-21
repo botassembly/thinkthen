@@ -42,6 +42,12 @@ fi
 echo "== c surface: null suite"
 ENGINE_NULL=1 cargo test --quiet --lib --test door -- --test-threads=1
 
+echo "== c surface: fast-backend deadline, the poll-bug shape"
+ENGINE_NULL=1 cargo test --quiet --test deadline_fast
+
+echo "== c surface: the function examples"
+python3 examples.py
+
 echo "== c surface: conformance slice through ctypes"
 ENGINE_NULL=1 python3 conformance_driver.py
 

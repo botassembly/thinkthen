@@ -207,6 +207,19 @@ def main():
             if code != 0 or held != wanted:
                 line = f"FAIL     {case_id}: {held}, expected {wanted}"
                 failures += 1
+            elif expect.get("rows"):
+                # The ruled record row (go-ahead item 4): this host's own
+                # object, the record and its verdict, checked through the
+                # door's own outputs.
+                rows = [
+                    {"input": record, "value": outcome == YES}
+                    for record, outcome in zip(records, held)
+                ]
+                if rows != expect["rows"]:
+                    line = f"FAIL     {case_id}: rows {rows}"
+                    failures += 1
+                else:
+                    line = f"ok       {case_id}"
             else:
                 line = f"ok       {case_id}"
         elif verb == "filter":
@@ -228,6 +241,17 @@ def main():
             elif reply.get("indexes") != expect.get("indexes"):
                 line = f"FAIL     {case_id}: {reply.get('indexes')}, expected {expect.get('indexes')}"
                 failures += 1
+            elif expect.get("rows"):
+                records = case["records"]
+                rows = [
+                    {"input": records[index], "value": True}
+                    for index in reply.get("indexes", [])
+                ]
+                if rows != expect["rows"]:
+                    line = f"FAIL     {case_id}: rows {rows}"
+                    failures += 1
+                else:
+                    line = f"ok       {case_id}"
             else:
                 line = f"ok       {case_id}"
         elif verb in ("choose", "score", "tag"):
@@ -257,15 +281,24 @@ def main():
             else:
                 record = reply["answer"][0]
                 wanted = expect["answers"]
-                held = {}
-                for name, value in record.items():
-                    held[name] = value
-                diverged = [
-                    name for name, want in wanted.items()
-                    if held.get(name) != want["answer"]
-                ]
+                diverged = []
+                for name, want in wanted.items():
+                    held = record.get(name)
+                    if "failed" in want:
+                        # The ruled marker (0054), this host's spelling:
+                        # the JSON object `{"failed": {"kind", "cause"}}`.
+                        if held != {"failed": want["failed"]}:
+                            diverged.append(f"{name}: {held!r}")
+                    elif held != want["answer"]:
+                        diverged.append(f"{name}: {held!r}")
+                counted = sum(
+                    1 for value in record.values()
+                    if isinstance(value, dict) and "failed" in value
+                )
+                if "failed_questions" in expect and counted != expect["failed_questions"]:
+                    diverged.append(f"failed_questions: {counted}")
                 if diverged:
-                    line = f"FAIL     {case_id}: {held}"
+                    line = f"FAIL     {case_id}: {' '.join(diverged)}"
                     failures += 1
                 else:
                     line = f"ok       {case_id}"
@@ -277,11 +310,26 @@ def main():
             if reply is None:
                 line = f"FAIL     {case_id}: {message}"
                 failures += 1
-            elif reply.get("answer") != expect.get("answer"):
-                line = f"FAIL     {case_id}: {reply.get('answer')}"
-                failures += 1
             else:
-                line = f"ok       {case_id}"
+                # The audit's identity fields and the two 0053/0054
+                # additions; the recorded probability is not compared
+                # because the null backend's own rule cannot reproduce
+                # case 73's recorded number.
+                want = expect.get("details", {})
+                diverged = []
+                if reply.get("model") != want.get("model"):
+                    diverged.append(f"model {reply.get('model')!r}")
+                if reply.get("digest") != want.get("question_sha256"):
+                    diverged.append(f"digest {reply.get('digest')!r}")
+                if "requests" in want and reply.get("requests") != want["requests"]:
+                    diverged.append(f"requests {reply.get('requests')!r}")
+                if "failed_questions" in want and reply.get("failed_questions") != want["failed_questions"]:
+                    diverged.append(f"failed_questions {reply.get('failed_questions')!r}")
+                if diverged:
+                    line = f"FAIL     {case_id}: {' '.join(diverged)}"
+                    failures += 1
+                else:
+                    line = f"ok       {case_id}"
         elif verb == "recognize":
             found, message = recognize(lib, engine, question, case["text"])
             if found is None:
