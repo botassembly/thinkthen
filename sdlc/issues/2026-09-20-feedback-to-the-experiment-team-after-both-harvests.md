@@ -37,6 +37,19 @@ Job 1 runs in `experiments/211-thinkthen-blocking-engine/`. Its engine lane repo
 
 The ADR 0017 rewrite also reads three pages filed on 2026-09-21: the cache page, the tool-search page, and `2026-09-21-triage-of-the-open-issues-by-layer.md`.
 
+## Added 2026-09-21, after experiment 211 reported
+
+The run answered its four questions and the five added checks, and the orchestrator reran every suite by hand. Staying blocking is now a measured choice: 9.66 s in Rust, 9.658 s through Python, and 9.673 s inside PostgreSQL, at 32 in flight. The fork fix holds by construction, and the fork-during-batch test caught that the first design passed for the wrong reason. The order from here changes in one way: **the ADR 0017 draft goes first.** It gates the engine, and the build team reaches that gate when the transforms land. Job 3 follows, then job 2, then the hand-off list.
+
+Four questions on the findings, each small:
+
+1. **A spent deadline is the caller's own limit, and the findings file it as a retryable backend error.** A caller with a fallback treats "my five seconds ran out" and "the backend is busy" differently: the first says nothing about the backend's health. Give it its own kind, or a field beside the retryable flag.
+2. **Eighty-three threads at a width of 32.** Name the other 51. A host that embeds the engine sees that spike, and the embedding note needs the cause and whether it scales with the width.
+3. **A retry after a dead connection can bill twice** when the request left before the connection died. A judgment is safe to repeat, so the behavior is right. The usage counters should count both sends, and the page should say so.
+4. **The cache measurement and the lock files.** The command keeps one lock file per entry under `.locks/`, seen on 2026-09-21. Say whether the million-entry numbers counted them. If the sharded folder is the pick, the locks shard the same way or leave after the entry lands.
+
+Two inputs the ADR draft reads beside the ones already listed: `2026-09-21-one-shape-for-nine-surfaces-as-the-slides-show-it.md`, with ten picks on names, the empty value for "not sure", bands, `score`, and `decide_many`, and `2026-09-20-a-status-command-for-configuration-and-usage.md`, for the request limit as an engine setting. The draft objects wherever the evidence disagrees with a pick. Job 3 writes the shared cases to those picks once the draft settles them. Every page says "0.1" or "the first release".
+
 ## Hand off
 
 - **The changes for each surface go to the planning pages.** Each experiment README lists the changes it would make to its `GOALS.md`. Those files are copies of `sdlc/planning/libraries/*.md` and `sdlc/planning/databases/*.md`. Apply the changes to the real pages, one commit for each folder, each change with its evidence. Main is clear of the design holder's edits now.
