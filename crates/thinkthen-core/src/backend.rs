@@ -319,12 +319,16 @@ mod tests {
             ("http://localhost:99999999999/v1", BackendError::InvalidPort),
             ("https://host:65536/v1", BackendError::InvalidPort),
             ("http://[::1]:+80/v1", BackendError::InvalidPort),
+            ("https:///v1", BackendError::NotAnAddress),
         ];
         for (base, expected) in refused {
             let error =
                 resolve(None, Some(base)).expect_err("a base that names no address is refused");
             assert_eq!(error, expected, "{base}");
-            assert!(!error.to_string().contains("host"), "{error}");
+            assert!(!error.to_string().contains(base), "{error}");
+            if expected == BackendError::NotAnAddress {
+                assert_eq!(error.to_string(), "a base address has a host");
+            }
         }
     }
 

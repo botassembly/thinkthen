@@ -30,7 +30,7 @@ The code reviewer accepted the production behavior and rejected the first proof.
 
 Ian can overturn these choices.
 
-- **The tolerance grows with member count.** Binary parsing and addition can each leave representation residue. The limit is about `5.7e-14` at 255 choice labels and about `2.3e-15` at ten score levels. All 497 stored distributions are closer to one than `1.2e-16`.
+- **The tolerance grows with member count.** Binary parsing and addition can each leave representation residue. The limit is about `5.7e-14` at 255 choice labels and about `2.3e-15` at ten score levels. All 493 distributions in recordings plus four standalone fixtures are closer to one than `1.2e-16`.
 - **The common answer type owns the total.** Every adapter must produce the same valid internal value. The System One adapter owns its wire keys because another adapter may name labels differently.
 - **Accepted probabilities are retained while score arithmetic uses their measured total.** Rewriting the members would make the result claim the backend reported different values. Dividing only the weighted sum preserves the evidence and the score range.
 - **Bad total and extra label have separate safe errors.** Both name the question and the broken rule. Neither repeats a label or value from the reply.

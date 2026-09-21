@@ -206,7 +206,9 @@ fn dry_run(
     let Some(bytes) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let record = base.annotation_record(&bytes)?;
+    let record = base
+        .annotation_record(&bytes)
+        .map_err(|error| Failure::record(error, base.streams()))?;
     dry_run_record(set, backend, base, Some(record), writer)
 }
 
@@ -260,7 +262,9 @@ impl Judging<'_> {
         input: crate::annotate_schedule::Input,
     ) -> Result<Record, Failure> {
         let record = match input {
-            crate::annotate_schedule::Input::Bytes(bytes) => base.annotation_record(&bytes)?,
+            crate::annotate_schedule::Input::Bytes(bytes) => base
+                .annotation_record(&bytes)
+                .map_err(|error| Failure::record(error, base.streams()))?,
             crate::annotate_schedule::Input::Record(record) => record,
         };
         collisions(&self.set, &record)?;

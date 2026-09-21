@@ -69,7 +69,7 @@ printf '%s\n' '{"id":"S-8","state":"Nothing has happened yet.","moves":["look_up
   | thinkthen choose 'Which of these actions should be taken next?' \
       --jsonl --field /state --options /actions --replay recording/ 2>&1 >/dev/null \
   | mustmatch "thinkthen: the record holds nothing at \`/actions\`
-thinkthen: stopped at record 1; 0 records finished, 0 from a recording"
+thinkthen: stopped at record 1; 0 records finished, 0 records from a recording"
 ```
 
 - **An action name holding a control character is refused before any request.** A record comes from somewhere else, and a name holding a line feed would write a line of its own into the caller's output. The message never quotes the name.
@@ -81,7 +81,7 @@ printf '%s\n' '{"id":"S-7","state":"Nothing has happened yet.","actions":["look_
   | thinkthen choose 'Which of these actions should be taken next?' \
       --jsonl --field /state --options /actions --replay recording/ 2>&1 >/dev/null \
   | mustmatch "thinkthen: an option is one line of printable text
-thinkthen: stopped at record 1; 0 records finished, 0 from a recording"
+thinkthen: stopped at record 1; 0 records finished, 0 records from a recording"
 ```
 
 - **Nothing here takes an action.** The tool printed a name, and the script that reads it is the only thing that could act. A name it does not know belongs in a default branch that stops.

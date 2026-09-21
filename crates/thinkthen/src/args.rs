@@ -174,14 +174,14 @@ pub(crate) struct Common {
 
     /// Take each line as one text record.
     ///
-    /// One value prints per record, in input order. The bare values alone tie
+    /// One value prints per record, in the order the command defines. The bare values alone tie
     /// no line to a record, so a script that names records reads --details.
     #[arg(long, conflicts_with_all = ["jsonl", "csv", "tsv"])]
     pub(crate) lines: bool,
 
     /// Take each line as one JSON record.
     ///
-    /// One value prints per record, in input order. The bare values alone tie
+    /// One value prints per record, in the order the command defines. The bare values alone tie
     /// no line to a record, so a script that names records reads --details.
     #[arg(long, conflicts_with_all = ["csv", "tsv"])]
     pub(crate) jsonl: bool,
@@ -203,8 +203,8 @@ pub(crate) struct Common {
     /// Send only the part of each record this RFC 6901 pointer names.
     ///
     /// Give it more than once to send an object of the named parts, keyed by
-    /// the last part of each pointer. Without a record framing it reads the
-    /// whole input as one JSON value. The pointer is the disclosure boundary:
+    /// the last part of each pointer. On a command that accepts one document,
+    /// no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary:
     /// only the pointed value leaves the machine.
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,
@@ -260,7 +260,7 @@ pub(crate) struct Common {
     /// How many requests are in flight at once, from 1 to 32.
     ///
     /// It acts in record mode and on `annotate`, where one document can make
-    /// several grouped requests. Output stays in input order.
+    /// several grouped requests. Output follows the order the command defines.
     #[arg(
         long,
         value_name = "N",
@@ -296,6 +296,10 @@ pub(crate) struct DecideArguments {
     /// Print nothing on standard output. The exit code still carries the answer.
     #[arg(long)]
     pub(crate) quiet: bool,
+
+    /// Taken so the command can name the command that prints a raw label.
+    #[arg(long, hide = true)]
+    pub(crate) raw: bool,
 
     /// The options every judging verb takes.
     #[command(flatten)]
@@ -342,6 +346,10 @@ pub(crate) struct FilterArguments {
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 
+    /// Taken so the command can explain that only an order can be cut.
+    #[arg(long, value_name = "N", hide = true, allow_negative_numbers = true)]
+    pub(crate) top: Option<String>,
+
     /// What a yes and a no mean.
     #[command(flatten)]
     pub(crate) meanings: Meanings,
@@ -368,8 +376,8 @@ pub(crate) struct RankArguments {
     ///
     /// It saves no request, because every record is judged before anything is
     /// sorted.
-    #[arg(long, value_name = "N")]
-    pub(crate) top: Option<usize>,
+    #[arg(long, value_name = "N", allow_negative_numbers = true)]
+    pub(crate) top: Option<String>,
 
     /// Taken so that the tool refuses it in its own words. `rank` has no rule.
     #[arg(long, value_name = "T", hide = true, allow_negative_numbers = true)]
@@ -480,6 +488,14 @@ pub(crate) struct ScoreArguments {
     /// usage line that read as if `--record` were required.
     #[arg(long, value_name = "T", hide = true, allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
+
+    /// Taken so the command can explain that a number has no answer exit code.
+    #[arg(long, hide = true)]
+    pub(crate) quiet: bool,
+
+    /// Taken so the command can name the command that prints a raw label.
+    #[arg(long, hide = true)]
+    pub(crate) raw: bool,
 
     /// The options every judging verb takes.
     #[command(flatten)]

@@ -222,7 +222,7 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
     let message = said(&output);
     assert!(message.contains("status 500"), "{message}");
     assert!(
-        message.contains("stopped at record 3; 2 records finished, 0 from a recording"),
+        message.contains("stopped at record 3; 2 records finished, 0 records from a recording"),
         "{message}"
     );
     assert_eq!(listener.requests().len(), 4);

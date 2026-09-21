@@ -14,7 +14,7 @@ Status: landed
 
 ## Current Facts
 
-The decoder validates each member and requires every requested label, but it neither checks the total nor refuses extra labels. Three score members of `1.0` are accepted and produce `3.0` on a scale whose valid positions are 0 through 2. ADR 0019 defines exact label membership and a total within `member count × f64::EPSILON`. All 497 saved choice and score probability objects fit; the largest measured distance from one is `1.1102230246251565e-16`.
+The decoder validates each member and requires every requested label, but it neither checks the total nor refuses extra labels. Three score members of `1.0` are accepted and produce `3.0` on a scale whose valid positions are 0 through 2. ADR 0019 defines exact label membership and a total within `member count × f64::EPSILON`. All 493 distributions in recordings plus four standalone fixtures fit; the largest measured distance from one is `1.1102230246251565e-16`.
 
 ## Scope
 

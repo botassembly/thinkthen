@@ -11,6 +11,7 @@ mod edge;
 mod failure;
 mod http;
 mod judge;
+mod normalize;
 mod recorder;
 mod schedule;
 mod table;
@@ -26,7 +27,7 @@ use clap::Parser as _;
 /// Parse the process inputs, run one command, and report its exit code.
 #[must_use]
 pub fn entry() -> ExitCode {
-    let cli = Cli::parse();
+    let cli = Cli::parse_from(normalize::arguments(std::env::args_os()));
     let stdout = io::stdout();
     let stderr = io::stderr();
     match run(&cli, stdout.lock()) {

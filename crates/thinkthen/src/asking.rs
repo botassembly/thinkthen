@@ -274,7 +274,9 @@ fn plan(
     let Some(bytes) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let record = reading.record(&bytes)?;
+    let record = reading
+        .record(&bytes)
+        .map_err(|error| Failure::record(error, reading.streams()))?;
     plan_record(backend, reading, planning, Some(record), writer)
 }
 
@@ -387,7 +389,9 @@ impl Judging<'_> {
     /// Nothing here touches the writer, so a worker thread may call it and the
     /// one thread that owns standard output prints the lines in input order.
     fn row(&self, reading: &Reading, bytes: &[u8]) -> Result<Judged, Failure> {
-        let record = reading.record(bytes)?;
+        let record = reading
+            .record(bytes)
+            .map_err(|error| Failure::record(error, reading.streams()))?;
         self.finish_row(reading, record, Some(bytes))
     }
 

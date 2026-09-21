@@ -44,6 +44,7 @@ fn fields(common: &Common) -> Option<Vec<String>> {
 /// question file. They differ in the rule each one can act on, which
 /// [`Cutting`] carries, and in what each one prints.
 fn yes_no(
+    caller: &'static str,
     question: &str,
     meanings: &Meanings,
     threshold: Option<&String>,
@@ -60,17 +61,27 @@ fn yes_no(
         cutting,
         ..Typed::default()
     };
-    Ok(resolve(
+    resolve(
         Verb::Decide,
         typed_text(question, file.is_some()),
         file.as_ref(),
         &typed,
-    )?)
+    )
+    .map_err(|error| match error {
+        thinkthen_core::QuestionFileError::VerbMismatch { held, .. } if caller != "decide" => {
+            Failure::QuestionKind {
+                command: caller,
+                held: held.word(),
+            }
+        }
+        other => Failure::Question(other),
+    })
 }
 
 /// Settle everything `decide` was asked.
 pub(crate) fn decide(arguments: &DecideArguments) -> Result<Resolved, Failure> {
     yes_no(
+        "decide",
         &arguments.question,
         &arguments.meanings,
         arguments.threshold.as_ref(),
@@ -82,6 +93,7 @@ pub(crate) fn decide(arguments: &DecideArguments) -> Result<Resolved, Failure> {
 /// Settle everything `filter` was asked, which takes a single cut alone.
 pub(crate) fn filter(arguments: &FilterArguments) -> Result<Resolved, Failure> {
     yes_no(
+        "filter",
         &arguments.question,
         &arguments.meanings,
         arguments.threshold.as_ref(),
@@ -93,6 +105,7 @@ pub(crate) fn filter(arguments: &FilterArguments) -> Result<Resolved, Failure> {
 /// Settle everything `rank` was asked, which reads no rule at all.
 pub(crate) fn rank(arguments: &RankArguments) -> Result<Resolved, Failure> {
     yes_no(
+        "rank",
         &arguments.question,
         &arguments.meanings,
         arguments.threshold.as_ref(),

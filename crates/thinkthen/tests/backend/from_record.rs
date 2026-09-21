@@ -190,7 +190,7 @@ fn a_candidate_list_the_verb_refuses_stops_the_run_and_sends_nothing_for_itself(
         let message = said(&output);
         assert!(message.contains(said_part), "{message}");
         assert!(
-            message.contains("stopped at record 2; 1 records finished, 0 from a recording"),
+            message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
             "{message}"
         );
         assert!(!message.contains("parcel"), "{message}");

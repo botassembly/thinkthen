@@ -161,3 +161,32 @@ fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
         assert!(message.contains(said), "{message}");
     }
 }
+
+#[test]
+fn stopped_counts_use_record_only_at_one() {
+    let cases = [
+        (
+            1,
+            1,
+            "thinkthen: stopped at record 2; 1 record finished, 1 record from a recording\n",
+        ),
+        (
+            2,
+            0,
+            "thinkthen: stopped at record 3; 2 records finished, 0 records from a recording\n",
+        ),
+    ];
+    for (finished, replayed, summary) in cases {
+        let failure = Failure::Stopped {
+            at: finished + 1,
+            finished,
+            replayed,
+            held: false,
+            cause: Box::new(Failure::Record(RecordError::TooLarge)),
+        };
+        let mut written = Vec::new();
+        report(&failure, &mut written);
+        let said = String::from_utf8(written).expect("a diagnostic is text");
+        assert!(said.ends_with(summary), "{said}");
+    }
+}

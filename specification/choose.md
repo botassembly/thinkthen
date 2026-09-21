@@ -28,7 +28,7 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 | `--raw` | Prints the label without quotation marks for a document, `--lines`, or `--jsonl`; CSV and TSV refuse it | Off |
 | `--option LABEL=DESCRIPTION` | One option and what it means, and it may repeat. See below | None. The positional options carry no description |
 | `--options POINTER` | Takes the options from each record. Requires `--jsonl`. See below | None. The options come from the arguments |
-| `--quiet` | Prints nothing on standard output | Off |
+| `--quiet` | On one document, prints nothing on standard output. Record mode refuses it | Off |
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |

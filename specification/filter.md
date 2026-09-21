@@ -36,7 +36,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
 | Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
-`filter` takes no `--quiet` and no `--raw`. Each is refused by name, and the message says which command carries that view. A missing framing is a usage error, because one document is not a stream.
+`filter` takes no `--quiet`, no `--raw`, and no `--top`. Each is refused by name. `--top` belongs to `rank`, because `filter` keeps records and has no order to cut. A missing framing is a usage error, because one document is not a stream.
 
 A band is refused wherever it came from. A band typed on the command line is a usage error at exit 2, and a band a question file holds is a local failure at exit 5, which is the rule [question-file.md](question-file.md) already fixes for every value.
 

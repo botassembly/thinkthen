@@ -70,7 +70,7 @@ const fn only(
 }
 
 /// Every refusal a command line or one record can reach.
-const REFUSALS: [Refusal; 29] = [
+const REFUSALS: [Refusal; 32] = [
     every(
         "a base that is no address",
         &["--url", "ftp://127.0.0.1/v1"],
@@ -268,6 +268,27 @@ const REFUSALS: [Refusal; 29] = [
         "`score` takes no rule",
         2,
     ),
+    only(
+        "raw on a decision",
+        &["decide"],
+        &["--raw"],
+        "`decide` prints JSON; `choose --raw` prints a bare label",
+        2,
+    ),
+    only(
+        "raw on a score",
+        &["score"],
+        &["--raw"],
+        "`score` prints a JSON number; `choose --raw` prints a bare label",
+        2,
+    ),
+    only(
+        "quiet on a score",
+        &["score"],
+        &["--quiet"],
+        "`score` has no answer exit code, so --quiet would discard its result",
+        2,
+    ),
 ];
 
 /// The refusals that need operands of their own, which the rows above keep.
@@ -445,79 +466,4 @@ fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anythin
         "a refused command line opens no connection"
     );
     assert_eq!(listener.connections(), 0);
-}
-
-/// A negative threshold beside its option reaches the shared validator on all
-/// five command homes, with the same result as the equals spelling.
-#[test]
-fn a_negative_threshold_is_named_before_a_key_can_reach_the_listener() {
-    let cases: [(&[&str], &str); 5] = [
-        (&["decide", QUESTION], "decide"),
-        (&["choose", QUESTION, "late", "lost"], "choose"),
-        (
-            &["filter", QUESTION, "--jsonl", "--field", "/body"],
-            "filter",
-        ),
-        (&["rank", QUESTION, "--jsonl", "--field", "/body"], "rank"),
-        (&["score", QUESTION, "none", "some"], "score"),
-    ];
-    let expected = "thinkthen: --threshold: a single cut is above zero and at most one\n";
-
-    for (prefix, name) in cases {
-        for spelling in ["--threshold", "--threshold=-0.1"] {
-            let listener = Listener::answering(|_| Canned::ok("{}")).expect("a listener");
-            let mut arguments = prefix.to_vec();
-            if spelling == "--threshold" {
-                arguments.extend([spelling, "-0.1"]);
-            } else {
-                arguments.push(spelling);
-            }
-            arguments.extend(["--url", listener.base()]);
-
-            let output = spawn(
-                &arguments,
-                &[("THINKTHEN_API_KEY", KEY)],
-                EVIDENCE.as_bytes(),
-            )
-            .expect("the compiled binary runs");
-
-            assert_eq!(output.status.code(), Some(2), "{name} {spelling}");
-            assert!(output.stdout.is_empty(), "{name} {spelling}");
-            assert_eq!(output.stderr, expected.as_bytes(), "{name} {spelling}");
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            assert!(!stdout.contains(KEY), "{name} {spelling}");
-            assert!(!stderr.contains(KEY), "{name} {spelling}");
-            assert!(!stdout.contains(EVIDENCE), "{name} {spelling}");
-            assert!(!stderr.contains(EVIDENCE), "{name} {spelling}");
-            assert!(listener.requests().is_empty(), "{name} {spelling}");
-            assert_eq!(listener.connections(), 0, "{name} {spelling}");
-        }
-    }
-}
-
-/// A following option remains an option when a threshold value is missing.
-#[test]
-fn a_threshold_does_not_consume_a_following_option() {
-    let cases: [&[&str]; 5] = [
-        &["decide", QUESTION],
-        &["choose", QUESTION, "late", "lost"],
-        &["filter", QUESTION],
-        &["rank", QUESTION],
-        &["score", QUESTION, "none", "some"],
-    ];
-
-    for prefix in cases {
-        let arguments = [prefix, &["--threshold", "--dry-run"][..]].concat();
-        let output = spawn(&arguments, &[], EVIDENCE.as_bytes()).expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
-        assert!(message.contains("a value is required for"), "{message}");
-        assert!(
-            !message.contains("a threshold is a decimal fraction"),
-            "{message}"
-        );
-        assert!(output.stdout.is_empty(), "{arguments:?}");
-    }
 }

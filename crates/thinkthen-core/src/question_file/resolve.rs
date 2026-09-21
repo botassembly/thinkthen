@@ -118,6 +118,7 @@ pub struct Sources {
     no: Source,
     labels: Source,
     threshold: Source,
+    takes_threshold: bool,
     on: Source,
     model: Source,
 }
@@ -140,7 +141,7 @@ impl Serialize for Sources {
             Verb::Tag => named.push(("labels", self.labels)),
             Verb::Score => named.push(("levels", self.labels)),
         }
-        if self.verb != Verb::Score {
+        if self.takes_threshold {
             named.push(("threshold", self.threshold));
         }
         named.extend([("on", self.on), ("model", self.model)]);
@@ -216,6 +217,7 @@ pub fn resolve(
             no: no_source,
             labels: labels_source,
             threshold: threshold_source,
+            takes_threshold: verb != Verb::Score && typed.cutting != Cutting::NoRule,
             on: on_source,
             model: model_source,
         },
@@ -348,6 +350,12 @@ fn threshold_of(
     typed: &Typed,
     file: Option<&QuestionFile>,
 ) -> Result<(Option<Threshold>, Source), QuestionFileError> {
+    if typed.threshold.is_some() && verb == Verb::Score {
+        return Err(QuestionFileError::RuleOnScore(Source::CommandLine));
+    }
+    if typed.threshold.is_some() && typed.cutting == Cutting::NoRule {
+        return Err(QuestionFileError::RuleOnRank(Source::CommandLine));
+    }
     let (rule, source) = match (typed.threshold.as_deref(), file.and_then(|f| f.threshold)) {
         (Some(typed), _) => (
             Some(

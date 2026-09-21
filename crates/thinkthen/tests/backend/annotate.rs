@@ -167,7 +167,7 @@ fn a_collision_and_dry_run_send_no_request() {
         String::from_utf8_lossy(&collided.stderr),
         concat!(
             "thinkthen: the record already holds `risky`, so that question cannot be appended\n",
-            "thinkthen: stopped at record 1; 0 records finished, 0 from a recording\n",
+            "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n",
         )
     );
 

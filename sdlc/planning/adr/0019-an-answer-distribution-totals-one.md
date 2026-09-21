@@ -16,6 +16,6 @@
 
 ## Evidence and consequences
 
-The repository holds 497 recorded choice or score probability objects. Their largest measured distance from one is `1.1102230246251565e-16`, so every saved reply remains valid. At the largest choice list of 255 members, the admitted total error is at most about `5.7e-14`. A score has at most ten levels, so its tolerance is at most about `2.3e-15`; at position 9, an uncorrected total-mass drift is at most about `2.1e-14`. Dividing by the measured total removes that drift before the existing twelve-decimal rounding.
+The repository holds 493 distributions in recordings plus four standalone fixtures. Their largest measured distance from one is `1.1102230246251565e-16`, so every saved reply remains valid. At the largest choice list of 255 members, the admitted total error is at most about `5.7e-14`. A score has at most ten levels, so its tolerance is at most about `2.3e-15`; at position 9, an uncorrected total-mass drift is at most about `2.1e-14`. Dividing by the measured total removes that drift before the existing twelve-decimal rounding.
 
 The generic answer model owns the total-one invariant. An adapter owns the exact match between its wire keys and the labels it sent. A later adapter therefore cannot construct an invalid distribution, while each wire format remains responsible for its own names.

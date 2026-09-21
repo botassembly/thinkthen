@@ -114,6 +114,10 @@ fn each_address_rule_refusal_names_only_the_rule_that_failed() {
             "thinkthen: a base address carries no user information\n",
         ),
         (
+            "https:///private-marker".to_owned(),
+            "thinkthen: a base address has a host\n",
+        ),
+        (
             "http://127.0.0.1:/v1".to_owned(),
             "thinkthen: a port is digits naming a number from 0 to 65535\n",
         ),

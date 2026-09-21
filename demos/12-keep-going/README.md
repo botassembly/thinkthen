@@ -27,7 +27,7 @@ set -eu
 thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --input queue.jsonl --cache recording/ 2>&1 >/dev/null \
   | mustmatch "thinkthen: the record holds nothing at \`/body\`
-thinkthen: stopped at record 3; 2 records finished, 2 from a recording"
+thinkthen: stopped at record 3; 2 records finished, 2 records from a recording"
 ```
 
 ## Step 2: read the exit code before the file moves

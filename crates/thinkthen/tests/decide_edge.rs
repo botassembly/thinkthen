@@ -395,6 +395,26 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
 }
 
 #[test]
+fn shared_help_defers_order_and_document_rules_to_each_command() {
+    for command in ["decide", "filter", "rank"] {
+        let output = run(&[command, "--help"], &[], b"").expect("the compiled binary runs");
+        let help = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            help.contains("Output follows the order the command defines."),
+            "{command}: {help}"
+        );
+        assert!(
+            help.contains("On a command that accepts one document"),
+            "{command}: {help}"
+        );
+    }
+    let output = run(&["rank", "--help"], &[], b"").expect("the compiled binary runs");
+    let help = String::from_utf8_lossy(&output.stdout);
+    assert!(help.contains("most likely yes first"), "{help}");
+    assert!(help.contains("An exact tie keeps input order."), "{help}");
+}
+
+#[test]
 fn an_unknown_word_is_a_usage_error_and_never_an_instruction() {
     for arguments in [
         &["decide", "a", "b"][..],
@@ -405,4 +425,16 @@ fn an_unknown_word_is_a_usage_error_and_never_an_instruction() {
 
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
     }
+}
+
+#[test]
+fn decide_names_choose_as_the_home_of_raw_labels() {
+    let output =
+        run(&["decide", "q", "--raw"], &[], b"evidence").expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: `decide` prints JSON; `choose --raw` prints a bare label\n"
+    );
 }

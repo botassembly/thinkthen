@@ -95,6 +95,11 @@ pub(crate) fn decide(
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    if arguments.raw {
+        return Err(Failure::Usage(
+            "`decide` prints JSON; `choose --raw` prints a bare label",
+        ));
+    }
     let settled = asked::decide(arguments)?;
     let view = View {
         quiet: arguments.quiet,
@@ -129,6 +134,11 @@ pub(crate) fn filter(
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     views(&arguments.refused, Keeping::Passing)?;
+    if arguments.top.is_some() {
+        return Err(Failure::Usage(
+            "`filter` keeps records and has no order to cut, so --top belongs to `rank`",
+        ));
+    }
     let settled = asked::filter(arguments)?;
     over_kept(
         Keeping::Passing,
@@ -155,15 +165,23 @@ pub(crate) fn rank(
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     views(&arguments.refused, Keeping::Ordered)?;
-    if arguments.top == Some(0) {
-        return Err(Failure::TopIsZero);
-    }
+    let top = arguments
+        .top
+        .as_deref()
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .ok()
+                .filter(|number| *number > 0)
+                .ok_or(Failure::TopIsZero)
+        })
+        .transpose()?;
     let settled = asked::rank(arguments)?;
     over_kept(
         Keeping::Ordered,
         &arguments.common,
         &settled,
-        arguments.top,
+        top,
         environment,
         input,
         writer,
@@ -329,6 +347,16 @@ pub(crate) fn score(
     input: impl Read + Send + 'static,
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    if arguments.raw {
+        return Err(Failure::Usage(
+            "`score` prints a JSON number; `choose --raw` prints a bare label",
+        ));
+    }
+    if arguments.quiet {
+        return Err(Failure::Usage(
+            "`score` has no answer exit code, so --quiet would discard its result",
+        ));
+    }
     let settled = asked::score(arguments)?;
     let view = View {
         quiet: false,

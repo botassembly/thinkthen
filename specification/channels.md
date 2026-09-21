@@ -39,7 +39,7 @@ Without `--input FILE` the evidence comes from standard input. When standard inp
 
 Standard output holds a bare JSON value. `true`, `"bug"`, and `1.6` are whole outputs. [result.md](result.md) gives the value for each command and the object that `--details` prints in its place.
 
-`--quiet` suppresses standard output on `decide` and `choose`. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error. `--dry-run` may be added to any command line that is valid without it, and it prints the plan whatever view option stands beside it.
+`--quiet` suppresses standard output on `decide` and `choose` over one document. Record mode refuses it because no record's answer sets the exit code. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error. `--dry-run` may be added to any command line that is valid without it, and it prints the plan whatever view option stands beside it.
 
 `--raw` prints a `choose` label without its quotation marks and prints nothing for `null`. No other command takes it.
 
@@ -97,7 +97,7 @@ In record mode `--dry-run` prints the plan for the first record and stops. It re
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
 ```
 
-A run that read a question file carries one more field, `from`, between `input` and `request`. It names each setting's source as `file`, `command line`, or `default`, so a confused user can see what won. A run with no question file carries no `from`, and [question-file.md](question-file.md) gives the rest.
+A run that read a question file carries one more field, `from`, between `input` and `request`. It names only settings the verb takes, and gives each source as `file`, `command line`, or `default`, so a confused user can see what won. A run with no question file carries no `from`, and [question-file.md](question-file.md) gives the rest.
 
 ```json
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","from":{"question":"file","true":"file","false":"file","threshold":"command line","on":"default","model":"file"},"request":{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this message ask for a refund?","criteria":{"true":"The writer asks for money back.","false":"The writer asks for anything else."}}}}}

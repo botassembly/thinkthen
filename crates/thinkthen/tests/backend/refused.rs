@@ -91,6 +91,46 @@ fn a_band_is_refused_by_filter_in_either_home_and_names_the_way_to_three_piles()
 }
 
 #[test]
+fn record_verbs_name_their_own_required_question_kind() -> io::Result<()> {
+    let file = written(
+        "wrong-kind-question.json",
+        r#"{"choose":"Which team?","options":["a","b"]}"#,
+    )?;
+    let question = format!("@{}", file.display());
+    for command in ["filter", "rank"] {
+        let output = refused(&[command, &question, "--lines"])?;
+        assert_eq!(code(&output), 2, "{command}");
+        assert_eq!(
+            said(&output),
+            format!(
+                "thinkthen: `{command}` reads a `decide` question, but the question file holds a `choose` question\n"
+            )
+        );
+        assert!(printed(&output).is_empty());
+    }
+    Ok(())
+}
+
+#[test]
+fn a_rank_plan_names_only_sources_rank_takes() -> io::Result<()> {
+    let file = written(
+        "rank-plan-question.json",
+        r#"{"decide":"Does this report a payment failure?","true":"yes side","false":"no side"}"#,
+    )?;
+    let question = format!("@{}", file.display());
+    let output = refused(&["rank", &question, "--lines", "--dry-run"])?;
+    assert_eq!(code(&output), 0);
+    let plan = printed(&output);
+    assert!(
+        plan.contains(r#""from":{"question":"file","true":"file","false":"file","on":"default","model":"default"}"#),
+        "{plan}"
+    );
+    assert!(!plan.contains(r#""threshold":"default""#), "{plan}");
+    assert!(said(&output).is_empty());
+    Ok(())
+}
+
+#[test]
 fn rank_refuses_a_rule_from_either_home_and_names_the_command_that_cuts() -> io::Result<()> {
     let output = refused(&[
         "rank",
@@ -183,26 +223,51 @@ fn each_view_and_the_missing_framing_are_refused_in_the_tools_own_words() -> io:
 
 #[test]
 fn top_takes_a_whole_number_of_one_or_more_and_says_so() -> io::Result<()> {
-    let cases = [
-        (
-            "0",
-            "thinkthen: --top prints the first N of the order, and N is 1 or more",
-        ),
-        (
-            "half",
-            "error: invalid value 'half' for '--top <N>': invalid digit found in string",
-        ),
-        // A negative number is not a value at all to the parser, which reads
-        // the leading dash as the start of another option.
-        ("-1", "error: unexpected argument '-1' found"),
-    ];
-    for (asked, message) in cases {
-        let output = refused(&[
-            "rank", QUESTION, "--jsonl", "--field", "/body", "--top", asked,
-        ])?;
-        assert_eq!(code(&output), 2, "--top {asked}");
-        assert_eq!(said(&output).lines().next(), Some(message), "--top {asked}");
-        assert_eq!(printed(&output), "", "--top {asked}");
+    for asked in ["0", "half", "-1", ""] {
+        for spelling in [
+            vec![format!("--top={asked}")],
+            vec!["--top".into(), asked.into()],
+        ] {
+            let listener = Listener::answering(|_| Canned::ok("{}"))?;
+            let mut arguments = vec![
+                "rank".to_owned(),
+                QUESTION.to_owned(),
+                "--jsonl".to_owned(),
+                "--field".to_owned(),
+                "/body".to_owned(),
+            ];
+            arguments.extend(spelling);
+            arguments.extend(["--url".to_owned(), listener.base().to_owned()]);
+            let borrowed = arguments.iter().map(String::as_str).collect::<Vec<_>>();
+            let output = refused(&borrowed)?;
+            assert_eq!(code(&output), 2, "--top {asked}");
+            assert_eq!(
+                said(&output),
+                "thinkthen: `--top` prints the first N of the order, and N is a whole number of 1 or more\n",
+                "--top {asked}"
+            );
+            assert_eq!(printed(&output), "", "--top {asked}");
+            assert_eq!(listener.connections(), 0, "--top {asked}");
+            assert!(listener.requests().is_empty(), "--top {asked}");
+        }
+    }
+
+    for spelling in [["--top", "3"], ["--top", "-1"], ["--top=-1", ""]] {
+        let listener = Listener::answering(|_| Canned::ok("{}"))?;
+        let mut arguments = vec!["filter", QUESTION, "--jsonl"];
+        arguments.push(spelling[0]);
+        if !spelling[1].is_empty() {
+            arguments.push(spelling[1]);
+        }
+        arguments.extend(["--url", listener.base()]);
+        let output = refused(&arguments)?;
+        assert_eq!(code(&output), 2);
+        assert_eq!(
+            said(&output),
+            "thinkthen: `filter` keeps records and has no order to cut, so --top belongs to `rank`\n"
+        );
+        assert_eq!(listener.connections(), 0);
+        assert!(listener.requests().is_empty());
     }
     Ok(())
 }

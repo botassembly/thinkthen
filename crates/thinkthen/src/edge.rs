@@ -70,10 +70,17 @@ pub(crate) fn source<'a>(
     reader: impl Read + Send + 'a,
 ) -> Result<Box<dyn BufRead + Send + 'a>, Failure> {
     match path {
-        Some(path) => Ok(Box::new(BufReader::new(
-            File::open(path).map_err(Failure::OpenInput)?,
-        ))),
+        Some(path) => opened(File::open(path).map_err(Failure::OpenInput)?),
         None => Ok(Box::new(BufReader::new(reader))),
+    }
+}
+
+/// Classify and buffer the handle that `source` opened.
+fn opened<'a>(file: File) -> Result<Box<dyn BufRead + Send + 'a>, Failure> {
+    if file.metadata().map_err(Failure::OpenInput)?.is_dir() {
+        Err(Failure::InputDirectory)
+    } else {
+        Ok(Box::new(BufReader::new(file)))
     }
 }
 
@@ -221,8 +228,9 @@ pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<bool, Fai
 
 #[cfg(test)]
 mod tests {
-    use super::{Chunks, write_line};
+    use super::{Chunks, opened, write_line};
     use crate::failure::Failure;
+    use std::fs::{self, File};
     use std::io::{Error, ErrorKind, Read as _, Write};
 
     /// A writer that fails every write with the kind the case names.
@@ -272,6 +280,33 @@ mod tests {
             write_line(Failing(ErrorKind::PermissionDenied), "{}"),
             Err(Failure::Output(_))
         ));
+    }
+
+    #[test]
+    fn input_kind_follows_the_opened_handle_when_the_path_changes() {
+        let path = std::env::temp_dir().join(format!(
+            "thinkthen-opened-input-kind-{}",
+            std::process::id()
+        ));
+        let _absent = fs::remove_file(&path);
+        let _absent = fs::remove_dir(&path);
+
+        fs::write(&path, "opened file").expect("a file");
+        let file = File::open(&path).expect("the file opens");
+        fs::remove_file(&path).expect("the old name leaves");
+        fs::create_dir(&path).expect("a directory takes the name");
+        let mut reader = opened(file).expect("the opened file stays a file");
+        let mut text = String::new();
+        reader.read_to_string(&mut text).expect("the file reads");
+        assert_eq!(text, "opened file");
+
+        fs::remove_dir(&path).expect("the replacement leaves");
+        fs::create_dir(&path).expect("a directory");
+        let directory = File::open(&path).expect("the directory opens");
+        fs::remove_dir(&path).expect("the old name leaves");
+        fs::write(&path, "replacement file").expect("a file takes the name");
+        assert!(matches!(opened(directory), Err(Failure::InputDirectory)));
+        fs::remove_file(path).expect("the fixture leaves");
     }
 
     /// A record with no end in sight is read no further than the refusal needs.

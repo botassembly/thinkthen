@@ -25,7 +25,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 | `--true TEXT` | What a yes means, in the words the model reads. See below | No text |
 | `--false TEXT` | What a no means, in the words the model reads. See below | No text |
 | `--threshold T\|LOW:HIGH` | The rule in [threshold.md](threshold.md). `decide` is the one verb that takes both forms | `0.5` |
-| `--quiet` | Prints nothing on standard output. The exit code still carries the answer | Off |
+| `--quiet` | On one document, prints nothing on standard output. Record mode refuses it because no record's answer sets the exit code | Off |
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |

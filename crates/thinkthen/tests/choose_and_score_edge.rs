@@ -120,12 +120,20 @@ fn a_band_on_a_pick_is_a_usage_error_and_a_cut_is_not() {
 
 #[test]
 fn a_rule_on_a_placement_is_a_usage_error_because_score_takes_none() {
-    for arguments in [&["--quiet"][..], &["--raw"][..]] {
+    for (arguments, expected) in [
+        (
+            &["--quiet"][..],
+            "thinkthen: `score` has no answer exit code, so --quiet would discard its result\n",
+        ),
+        (
+            &["--raw"][..],
+            "thinkthen: `score` prints a JSON number; `choose --raw` prints a bare label\n",
+        ),
+    ] {
         let output = verb("score", &LEVELS, arguments).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
-        assert!(message.contains("unexpected argument"), "{message}");
+        assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
     }
 
     // `--threshold` is taken and then refused by the tool, because clap

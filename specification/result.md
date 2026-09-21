@@ -26,8 +26,8 @@ Every value is compact and sits on one line, so one answer is also one record fo
 {"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Does this ask for a refund?"},"answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f...88","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"replayed":false}}
 ```
 
-- `value` is the bare value the command would have printed.
-- `question` names the verb and the text the model received.
+- `value` is the bare judgment. For `filter --details`, it is the cut's boolean; `filter` keeps the record when that boolean is true.
+- `question` names the question kind and the text the model received. `filter` and `rank` ask a `decide` question, so their `question.verb` is `decide`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
 - `meta` carries the run. Every field is always present, and `usage` alone may be absent.

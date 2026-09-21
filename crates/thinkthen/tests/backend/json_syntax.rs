@@ -123,7 +123,7 @@ fn jsonl_syntax_keeps_the_record_sentence_and_sends_nothing() {
         said(&output),
         concat!(
             "thinkthen: the record is not valid JSON\n",
-            "thinkthen: stopped at record 1; 0 records finished, 0 from a recording\n",
+            "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n",
         )
     );
     assert_eq!(listener.connections(), 0);
@@ -169,5 +169,68 @@ fn syntax_diagnostics_repeat_no_input_bytes() {
         assert!(!message.contains("\"a\""), "{name}: {message}");
         assert_eq!(listener.connections(), 0, "{name}");
         assert!(listener.requests().is_empty(), "{name}");
+    }
+}
+
+#[test]
+fn a_directory_is_not_an_input_file_and_no_record_was_framed() {
+    let listener = listener().expect("a loopback listener");
+    let directory = Path::new(env!("CARGO_TARGET_TMPDIR")).join("input-is-directory");
+    fs::create_dir_all(&directory).expect("a test directory");
+    let named = directory.to_string_lossy();
+    let output = spawn(
+        &[
+            "decide",
+            QUESTION,
+            "--lines",
+            "--input",
+            named.as_ref(),
+            "--url",
+            listener.base(),
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"ignored",
+    )
+    .expect("the compiled binary runs");
+    assert_refused(
+        &output,
+        &listener,
+        5,
+        "`--input` names a directory, and a directory is not an input file",
+    );
+    assert!(!said(&output).contains("stopped at record"));
+}
+
+#[test]
+fn invalid_utf8_names_a_stream_record_and_a_whole_document_as_evidence() {
+    for (framing, noun, summary) in [
+        (Some("--lines"), "record", true),
+        (Some("--jsonl"), "record", true),
+        (None, "evidence", false),
+    ] {
+        let listener = listener().expect("a loopback listener");
+        let mut arguments = vec!["decide", QUESTION, "--url", listener.base()];
+        if let Some(flag) = framing {
+            arguments.push(flag);
+        }
+        let output = spawn(
+            &arguments,
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            b"private\xff\n",
+        )
+        .expect("the compiled binary runs");
+        let expected = if summary {
+            format!(
+                "thinkthen: the {noun} is not valid UTF-8\nthinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n"
+            )
+        } else {
+            format!("thinkthen: the {noun} is not valid UTF-8\n")
+        };
+        assert_eq!(output.status.code(), Some(5));
+        assert_eq!(said(&output), expected);
+        assert!(output.stdout.is_empty());
+        assert_eq!(listener.connections(), 0);
+        assert!(listener.requests().is_empty());
+        assert!(!said(&output).contains("private"));
     }
 }

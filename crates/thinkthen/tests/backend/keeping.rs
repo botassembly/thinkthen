@@ -374,7 +374,7 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
         said(&output),
         concat!(
             "thinkthen: the backend answered with status 500\n",
-            "thinkthen: stopped at record 2; 1 records finished, 0 from a recording\n",
+            "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n",
         )
     );
 
@@ -403,7 +403,7 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
         said(&output),
         concat!(
             "thinkthen: the backend answered with status 500\n",
-            "thinkthen: stopped at record 2; 1 records finished, 0 from a recording,",
+            "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording,",
             " and nothing was printed because an order needs every record\n",
         )
     );

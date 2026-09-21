@@ -6,6 +6,8 @@ Verbs: `filter`
 
 A house rule that no linter can check is checked by asking one yes/no question of every changed hunk. `filter` keeps the hunks that break it, the kept hunks are the report, and the build step fails when any came back.
 
+The question is “Does the changed code break the house rule?” True means the change holds money in a floating-point number. False means it holds no money, or holds money only as whole pence in an integer.
+
 ```bash
 set -euo pipefail
 

@@ -20,7 +20,7 @@ That is the gate. The rest of this page is how `receipt.json` earned it.
 
 `claims.jsonl` holds twenty-four made-up expense claims with a trusted answer in `label`. The office rule: a claim needs a receipt over 25 pounds, or from an outside supplier whatever the amount.
 
-`draft.json` is the first wording of the question and `receipt.json` is the tuned one. `recording/` holds the forty-eight live exchanges this page replays, and `record.sh` made them through `sdlc/scripts/live`.
+`draft.json` is the first wording of the question and `receipt.json` is the tuned one. `recording/` holds the forty-eight live exchanges this page replays, and `record.sh` made them through `sdlc/scripts/live`. The repository's `transforms/` tree is an additional input because the commands below read its score transform.
 
 ## Step 1: judge the claims with the draft
 

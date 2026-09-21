@@ -30,7 +30,7 @@ These were real correctness or budget-control defects. The hands-on passes still
 ### Accepted contracts with missing operating evidence
 
 - A live response is received and paid for before a divergent recording conflict is known. Parallel duplicate cache misses can both run and then conflict. The first entry remains intact, as ADR 0020 requires. Document the consequence and measure exact response stability before considering single-flight cache misses or another contract.
-- Probability members must total one within `member_count * f64::EPSILON`. All 497 choice and score objects in the 1,059 tracked recordings pass, and none totals 0.99 or 1.01. The repository contains no provider rounding promise. Keep the strict rule until an authoritative source or live response establishes a valid rounded distribution, then define an adapter-specific tolerance instead of guessing one.
+- Probability members must total one within `member_count * f64::EPSILON`. All 493 distributions in recordings plus four standalone fixtures pass, and none totals 0.99 or 1.01. The repository contains no provider rounding promise. Keep the strict rule until an authoritative source or live response establishes a valid rounded distribution, then define an adapter-specific tolerance instead of guessing one.
 
 ## Feedback not accepted as defects
 

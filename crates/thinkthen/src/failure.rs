@@ -85,6 +85,15 @@ pub(crate) enum Failure {
     Table(table::Error),
     /// The file the records were to be read from could not be opened.
     OpenInput(io::Error),
+    /// `--input` named a directory rather than a file.
+    InputDirectory,
+    /// Input bytes were not UTF-8; the noun depends on the framing.
+    InvalidUtf8 { record: bool },
+    /// A record command read a question file of the wrong kind.
+    QuestionKind {
+        command: &'static str,
+        held: &'static str,
+    },
     /// A record failed, and the run stopped there.
     Stopped {
         /// The record the run stopped at, counted from one.
@@ -140,6 +149,16 @@ pub(crate) enum Failure {
     Render(RenderError),
 }
 
+impl Failure {
+    /// Name invalid text by its framing while preserving every other record error.
+    pub(crate) fn record(error: RecordError, streamed: bool) -> Self {
+        match error {
+            RecordError::NotUtf8 => Self::InvalidUtf8 { record: streamed },
+            other => Self::Record(other),
+        }
+    }
+}
+
 /// Say what failed and give the exit code `specification/channels.md` fixes.
 ///
 /// Every message a user reads is written here. No message carries a key or any
@@ -159,7 +178,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     if let Some(code) = stopped(failure, writer) {
         return code;
     }
-    if let Some((code, message)) = annotate_failure(failure) {
+    if let Some((code, message)) = special_failure(failure) {
         let _unwritten = writeln!(writer, "{}: {message}", thinkthen_core::NAME);
         return code;
     }
@@ -257,15 +276,17 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     } else {
         ""
     };
+    let finished_noun = if *finished == 1 { "record" } else { "records" };
+    let replayed_noun = if *replayed == 1 { "record" } else { "records" };
     let _unwritten = writeln!(
         writer,
-        "{}: stopped at record {at}; {finished} records finished, {replayed} from a recording{withheld}",
+        "{}: stopped at record {at}; {finished} {finished_noun} finished, {replayed} {replayed_noun} from a recording{withheld}",
         thinkthen_core::NAME
     );
     Some(code)
 }
 
-fn annotate_failure(failure: &Failure) -> Option<(u8, String)> {
+fn special_failure(failure: &Failure) -> Option<(u8, String)> {
     Some(match failure {
         Failure::QuestionSet(error) => (5, error.to_string()),
         Failure::OpenQuestionSet(error) => {
@@ -286,6 +307,25 @@ fn annotate_failure(failure: &Failure) -> Option<(u8, String)> {
         Failure::UsageOverflow => (
             4,
             "the backend reported token counts whose total is too large".to_owned(),
+        ),
+        Failure::InputDirectory => (
+            5,
+            "`--input` names a directory, and a directory is not an input file".to_owned(),
+        ),
+        Failure::InvalidUtf8 { record } => (
+            5,
+            if *record {
+                "the record is not valid UTF-8"
+            } else {
+                NOT_TEXT
+            }
+            .to_owned(),
+        ),
+        Failure::QuestionKind { command, held } => (
+            2,
+            format!(
+                "`{command}` reads a `decide` question, but the question file holds a `{held}` question"
+            ),
         ),
         _ => return None,
     })
@@ -337,7 +377,9 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
         Failure::JobsOutsideRecords => {
             "--jobs bounds the requests in flight, and one document sends one request"
         }
-        Failure::TopIsZero => "--top prints the first N of the order, and N is 1 or more",
+        Failure::TopIsZero => {
+            "`--top` prints the first N of the order, and N is a whole number of 1 or more"
+        }
         Failure::Usage(message) => message,
         _ => return None,
     })

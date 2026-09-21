@@ -1,40 +1,37 @@
-# Prospective plan for the command line and libraries
+# Prospective plan for the command, engine, and libraries
 
-Date: 2026-09-20. Status: temporary, prospective. Character budget: 4,000.
+Date: 2026-09-20. Status: temporary, prospective. Budget: 4,000 characters.
 
-Tickets are written as work begins. The [main plan](plan.md) records current work. The [repair-tranche review](../issues/2026-09-20-the-live-guard-grew-past-its-job.md) explains this revised order.
+Write tickets as work begins. The [main plan](plan.md) records landed work. Ian can revise it.
 
 ## Destination
 
-Version one adds `find` to the seven built commands. Bash uses the command-line tool. Rust, Python, JavaScript, and Ruby use libraries named `thinkthen`. All interfaces share questions, rules, request bytes, results, and recordings. Ian ruled the libraries and public name in.
+One `thinkthen` crate has three layers:
 
-The core keeps judgment rules. Hosts own files, credentials, retries, and concurrency. Policy stays in the caller or a `jq` transform.
+1. **Pure core rules.** Questions, thresholds, wire shapes, digests, and judgments touch no file, socket, process, clock, or environment variable.
+2. **One Rust engine.** Sending, retries, scheduling, cancellation, cache, record, replay, and counters are written once.
+3. **Thin interfaces.** The command owns arguments, terminal I/O, exit codes, and messages. Language and database shims convert native types and call the engine. Host languages copy no rule, retry, or scheduler.
 
-## Current state
+The public surface stays eight verbs, question setup, and required types. Bash uses the command. Rust, Python, JavaScript/TypeScript, Ruby, R, and C use libraries named `thinkthen`. DuckDB, SQLite, and PostgreSQL extensions follow without holding launch.
 
-Tickets 0024 through 0027 fixed an interactive hang, unbounded paid dispatch, invalid answers, replay corruption, and false comparisons. Ticket 0035 replaced ticket 0034's supervisor with one append-only ledger and deleted its Rust harness. Eighteen how-tos are green. Ticket 0036 built `tag` and replaced page 39 with its recorded workflow.
+## Current state and accepted order
 
-Ticket 0015 built `annotate`, turned how-tos 39 and 14 green, and deleted absorbed page 08. Its mixed-question measurement kept the same values while reducing billed input from 915 tokens to 371. Its borderline measurement moved one of six answers from `false` to unresolved, which confirms the reference warning to keep a comparison's question group fixed.
+Eighteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The remaining order is:
 
-## Next work
+1. **Finish the correction pass.** One focused ticket captures the total behind the live refusals, sets the probability-total rule from evidence, and documents it.
+2. **Coalesce duplicate cache misses.** One bounded per-digest lock stops equal concurrent requests from paying twice or recording conflicting replies.
+3. **Build `find`.** Repeat its comparison with `rank --top 1` on 100- to 250-line documents. Build the command and how-to 15 if the result holds.
+4. **Finish page 16 and the transforms.** Land the flagship triage policy, then comparison, sweep, monitors, grouped sweep, and the check against human labels.
+5. **Rewrite and review ADR 0017.** The experiment team applies Ian's interface, one-crate, engine, performance, fork, and release rulings. The build team reviews it before the merge chooses public modules.
+6. **Build the engine in four steps.** Fold to one crate and move machinery without behavior changes; expose small Rust functions and shared replay cases; add process-wide width, cancellation, fork repair, and fast failure; then make cache locks and counters engine settings. The command remains the first caller. Every gate stays green after each step.
+7. **Prepare the command release.** Complete help, the manual, installation, the agent skill, and how-to 18.
 
-1. **Add CSV and TSV input. Done in ticket 0037.** These are input framings only. Every record the tool prints remains JSONL; no CSV or TSV writer or output transform enters the plan.
-2. **Make one small correction pass. Next.** Pin the hostless-address sentence, make every negative threshold spelling reach the same parser, correct `493 recorded distributions plus four standalone fixtures`, and correct stale pages.
-3. **Coalesce duplicate cache misses.** One bounded per-digest lock prevents repeated rows under `--jobs` and separate writers from paying twice or failing on divergent replies.
-4. **Build `find`.** Repeat the `rank --top 1` comparison on documents of 100 to 250 lines, then build the command and how-to 15 if the evidence holds.
-5. **Write page 16 and finish the transforms.** Land the flagship triage workflow and its policy before library restructuring.
-6. **Merge to one crate.** Make the command-line tool the first caller of the public Rust library shape.
-7. **Prepare the release.** Complete help, the manual, installation, the agent skill, and how-to 18.
+Stay with the blocking client and at most 32 request threads unless the step-three benchmark disproves it. A cancel starts no new request and lets sent requests finish. One record remains one request. Cache locking must land before `find`; ADR review must land before the one-crate merge.
 
-Document the cache limitation until step 3 lands. Keep the strict probability-total rule and collect rounding evidence during an authorized product probe. Drop the commit-message checker and separate response-stability experiment.
+## Libraries and extensions
 
-## After version one
+Build six libraries in this order: Rust, Python, JavaScript/TypeScript for Node, Ruby, R, then C. Each ships a prebuilt artifact, runs the recorded conformance cases, releases the host lock while Rust waits, and tests its thread, interrupt, and fork boundary where present. Bulk calls cross into Rust once and use full engine width. C owns its exported symbols and header; the engine exports none.
 
-The libraries are committed work. Before implementation, rewrite ADR 0017 whole around Ian's rulings: Rust, Python, JavaScript, and Ruby; one public name; bare answers by default and details on request; one `thinkthen` crate preferred, with a `thinkthen-cli` crate as the accepted fallback. Then:
+Then build DuckDB, SQLite, and PostgreSQL extensions in order. They reuse the engine, cache, recordings, cancellation, and conformance data. SQL functions receive explicit text values and never send an unnamed row. PostgreSQL remains `PARALLEL RESTRICTED` unless evidence supports another marking.
 
-1. Expose the pure rules through the `thinkthen` Rust library and make the binary its first caller. Shared cases prove the public behavior and a second test adapter proves the seam.
-2. Spike one Python `decide` binding and install its wheel on a machine without Rust, then build Python fully.
-3. Build JavaScript and TypeScript for Node first, then Ruby.
-4. Verify all five interfaces against the same questions, recordings, failures, and installed artifacts.
-
-R remains open. Claiming registry names remains Ian's outward action.
+The first public release is 0.1.0 on every surface. Earlier builds use 0.0.N. All shipped surfaces share one current version; a surface added later joins that version. One check holds crate, packages, C header, and extension metadata to it. Registry-name claims remain Ian's outward action.
