@@ -46,6 +46,17 @@ check("works_for, 1 to 2", identical(rel$name, "works_for") &&
 check("a relation's number is its probability",
       isTRUE(all.equal(rel$probability, 1.0)))
 
+# A saved question file goes where the kinds go.
+spec_file <- tempfile(fileext = ".json")
+writeLines(paste0('{"recognize": {"kinds": ["person", "organization"], ',
+                  '"relations": [{"name": "works_for", "from": "person", ',
+                  '"to": "organization"}]}}'), spec_file)
+from_file <- tt_recognize(sentence, paste0("@", spec_file))
+check("a question file named where the kinds go",
+      identical(from_file[[1]]$text, c("Maria Chen", "Northwind Freight")))
+check("the file's rule turns the relation on",
+      identical(attr(from_file[[1]], "relations")$name, "works_for"))
+
 # The any-kind end is the one-character string "*".
 any_kind <- tt_recognize("The road from Hull to Leeds was closed.",
                          "place", relations = "located_in=*:place")
