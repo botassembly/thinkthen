@@ -211,9 +211,9 @@ def choice_report($rows; $cuts):
   | ($rows[0].question.options) as $options
   | if ($options | valid_names) and all($rows[]; .question.options == $options)
     then . else error("sweep: choice rows must carry one shared ordered option list") end
-  | if all($rows[];
-      (.answer.probabilities | type) == "object"
-      and ((.answer.probabilities | keys) == ($options | sort)))
+  | if all($rows[]; (.answer.probabilities | type) == "object")
+    then . else error("sweep: choice probabilities must have exactly the option keys") end
+  | if all($rows[]; (.answer.probabilities | keys) == ($options | sort))
     then . else error("sweep: choice probabilities must have exactly the option keys") end
   | if all($rows[];
       .answer.probabilities as $p
@@ -381,7 +381,8 @@ def annotate_answer_rows($rows; $name; $path):
    | pointer_value(.; $path) as $truth
    | .answers[$name] as $nested
    | {input:(.input + {label:$truth}), value:$nested.value,
-      question:$nested.question, threshold:$nested.threshold, answer:$nested.answer}];
+      question:$nested.question, threshold:$nested.threshold,
+      threshold_present:($nested | has("threshold")), answer:$nested.answer}];
 
 def valid_question_text:
   type == "string" and length > 0 and (test("[[:cntrl:]]") | not);
@@ -433,14 +434,17 @@ def validate_mapped_decisions($rows):
     then . else error("sweep: mapped decision value must follow its probability and threshold") end;
 
 def validate_mapped_choices($rows):
-  if all($rows[]; (.threshold | type) == "number" and .threshold > 0 and .threshold <= 1)
-    then $rows else error("sweep: mapped choice threshold must be one cut") end
+  if all($rows[]; .threshold_present
+                 and (.threshold == null or
+                      ((.threshold | type) == "number" and .threshold >= 0 and .threshold <= 1)))
+    then $rows else error("sweep: mapped choice threshold must be present and null or one cut") end
   | if all($rows[];
       .question.options as $options
       | .answer.probabilities as $probabilities
       | ($options | map($probabilities[.]) | max) as $maximum
       | [$options[] | select($probabilities[.] == $maximum)] as $leaders
-      | .value == (if ($leaders | length) == 1 and $maximum >= .threshold
+      | .value == (if ($leaders | length) == 1
+                        and (.threshold == null or $maximum >= .threshold)
                    then .answer.pick else null end))
     then . else error("sweep: mapped choice value must follow its probabilities and threshold") end;
 
@@ -488,7 +492,9 @@ def annotate_report($rows; $cuts; $truth):
             if all($adapted[]; .input.label as $label
                  | $label == null or
                    (($label | type) == "string" and (($first.question.options | index($label)) != null)))
-            then {verb:"choose"} + (choice_report(validate_mapped_choices($adapted); $cuts) | del(.mode))
+            then choice_report($adapted; $cuts) as $report
+                 | validate_mapped_choices($adapted)
+                 | {verb:"choose"} + ($report | del(.mode))
             else error("sweep: choice truth must name a listed option") end
           elif $first.answer.kind == "tag" then
             {verb:"tag"} + tag_report($adapted; $cuts; $mapping.value; true)

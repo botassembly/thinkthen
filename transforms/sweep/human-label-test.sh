@@ -52,6 +52,7 @@ jq -c '
 ' ../../probes/annotate-0015/howto-14.jsonl > "$work/annotate.jsonl"
 
 truth='{"correct":"/input/human_correct","failure_kind":"/input/human_failure","topics":"/input/human_tags"}'
+jq -s -e 'all(.[]; .answers.failure_kind.threshold == null)' "$work/annotate.jsonl" > /dev/null
 jq -n --argjson truth "$truth" -f sweep.jq "$work/annotate.jsonl" > "$work/annotate-report.json"
 jq -c '{keys:(keys_unsorted),mode,truth,rows,
         questions:(.questions|to_entries|map({name:.key,keys:(.value|keys_unsorted),
@@ -180,7 +181,7 @@ jq -c '.answers.correct.value=(.answers.correct.value|not) | .value.correct=.ans
 expect_failure decision-derived-value 'sweep: mapped decision value must follow its probability and threshold' \
   -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
 jq -c 'del(.answers.failure_kind.threshold)' "$work/annotate.jsonl" > "$work/bad.jsonl"
-expect_failure choice-threshold 'sweep: mapped choice threshold must be one cut' \
+expect_failure choice-threshold 'sweep: mapped choice threshold must be present and null or one cut' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
 jq -c '.answers.failure_kind.answer.probabilities="private-marker"' \
   "$work/annotate.jsonl" > "$work/bad.jsonl"
