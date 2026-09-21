@@ -6,7 +6,7 @@ opens: sdlc/planning sdlc/issues
 
 # 0051: Set the one-crate engine boundary
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -71,5 +71,7 @@ Re-score if implementation begins or a public type is fixed in this ticket.
 ## Review
 
 Independent design review rejected the first proposal because it would join a deliberately detached command reader, treated completed Job 2 as future work, omitted release panic and optional-dependency proofs, and left purity enforcement too vague. The corrected design keeps the command reader, scopes engine workers, records Job 2, and makes each package and purity proof mechanical. Independent re-review accepted the corrected ticket for implementation.
+
+Independent implementation review found that module checks alone lost the old core crate's dependency allowlist and that ADR 0017 still carried the stale Job 2 order. The repair preserves the four allowed core runtime dependencies, adds a planted outer-dependency failure, and explicitly supersedes the stale sentence. The same reviewer accepted the repaired result.
 
 Implementation review found that the first amendment preserved the API bans and dependency direction but not the old core crate's dependency boundary. The repair adds the exact runtime allowlist and a third planted-failure proof. It also says explicitly that the amendment replaces section 8's stale Job 2 order sentence.
