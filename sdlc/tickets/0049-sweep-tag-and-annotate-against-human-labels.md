@@ -6,7 +6,7 @@ opens: transforms/sweep transforms/README.md demos/14-grade-a-batch demos/25-che
 
 # 0049: Sweep tag and annotate against human labels
 
-Status: proposed
+Status: in progress
 
 ## Outcome
 
