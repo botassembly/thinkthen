@@ -39,7 +39,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 | 43 | Lint a change by meaning and fail the build | 8 | green |
 | 06 | Put the best matches first | 8 | green |
 | 12 | Resume a long run that stopped | 7 | green |
-| 15 | Find the line that answers a question | 11 | coming, slice 11 |
+| 15 | Find the line that answers a question | 11 | green |
 
 ## Many questions at once
 

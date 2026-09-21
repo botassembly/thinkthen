@@ -16,9 +16,9 @@ The public surface stays eight verbs, question setup, and required types. Bash u
 
 ## Current state and accepted order
 
-Eighteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The correction pass and duplicate-cache coalescing are complete. The remaining order is:
+Nineteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The correction pass and duplicate-cache coalescing are complete. The remaining order is:
 
-1. **Finish `find`.** Its preregistered 100- to 250-unit comparison passed. Finish review and record the two how-to 15 requests.
+1. **Finish `find`.** Done in ticket 0040. The preregistered 100- to 250-unit comparison passed, and how-to 15 is green from two reviewed recordings.
 2. **Finish page 16 and the transforms.** Land the flagship triage policy, then comparison, sweep, monitors, grouped sweep, and the check against human labels.
 3. **Rewrite and review ADR 0017.** The experiment team applies Ian's interface, one-crate, engine, performance, fork, and release rulings. The build team reviews it before the merge chooses public modules.
 4. **Build the engine in four steps.** Fold to one crate and move machinery without behavior changes; expose small Rust functions and shared replay cases; add process-wide width, cancellation, fork repair, and fast failure; then make cache locks and counters engine settings. The command remains the first caller. Every gate stays green after each step.

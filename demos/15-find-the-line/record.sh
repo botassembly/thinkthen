@@ -10,4 +10,5 @@ thinkthen find 'When does a refund reach the customer?' --lines \
   --cache recording/ --input policy.txt
 thinkthen find 'How long is the manufacturer warranty?' --lines --none \
   --url https://api.typesafe.ai/v1 --model jev-1.13.0 --max-retries 0 \
-  --cache recording/ --input policy.txt
+  --cache recording/ --input policy.txt && status=0 || status=$?
+test "$status" -eq 3

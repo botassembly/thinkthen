@@ -1,6 +1,6 @@
 # 0040: Measure and build `find`
 
-Ticket 0040 remains in progress. Its two paid stages prove that the one-request shape reaches the hosted backend at both accepted choice ceilings and passes the preregistered long-document comparison. The public command and local proof passed independent code review. Two exact how-to recordings remain.
+Ticket 0040 landed. Its two paid probe stages prove that the one-request shape reaches the hosted backend at both accepted choice ceilings and passes the preregistered long-document comparison. The public command and local proof passed independent code review. The two exact how-to responses are recorded and page 15 is green.
 
 ## Feasibility evidence
 
@@ -32,7 +32,7 @@ Rank judged all 1,050 units in the six answerable documents. It used 1,050 live 
 
 The comparison created 1,062 recordings: 12 new find exchanges and 1,050 rank exchanges. They report 417,937 input tokens and 43,344 output tokens. Across both stages, all 1,070 recordings report 488,202 input and 59,118 output tokens. Every new entry passed the same schema, endpoint, question-answer key, model, usage, digest-link, permission, and credential-marker checks as feasibility. Every response names model `jev-1.13.0`. A keyless local replay reproduced 18 find and 1,050 rank judgments with zero live requests. Saved failures are empty; summaries contain only safe fixed ids and derived facts.
 
-Phase two adds a pure core constructor and mapper plus a thin public command over the existing reader, adapter, transport, cache, recording, and output paths. Focused core and compiled tests cover the request, mapping, framings, preflight refusals, aggregate byte boundary, and safe input failures. The page 15 structure and its exact two-call recording script are ready. Those recordings remain pending.
+Phase two adds a pure core constructor and mapper plus a thin public command over the existing reader, adapter, transport, cache, recording, and output paths. Focused core and compiled tests cover the request, mapping, framings, preflight refusals, aggregate byte boundary, and safe input failures. Page 15 and its exact two-call recording script replay the committed responses without a key.
 
 ## Phase-two local implementation
 
@@ -40,10 +40,24 @@ The first compiled red test found no public `find` command. The green implementa
 
 Core tests cover every valid count, all four count edges, hostile JSON text, both tie classes, digest scope, and reply mapping. Compiled and loopback tests cover lines, JSONL pointers, exact one-request bytes, original-unit output, dedicated details, none, dry-run, empty input, count and byte boundaries, table and jobs refusals, invalid JSON and UTF-8 secrecy, backend secrecy, and a keyless cache replay with one request. The full test rung passed 438 tests. Lint, spec, install, and diff checks passed locally. The Rust ratchet moved from 22,336 to 23,755 nonblank lines for the public command, pure core module, focused tests, and the split of an existing oversized test module; phase-two net growth is 1,419 lines.
 
-Page 15 remains red until independent code review and its two exact hosted responses. The prepared launch is `sdlc/scripts/live --max-tokens 3000 demos/15-find-the-line/record.sh`. It makes one cached, zero-retry request for the refund line and one for the absent warranty under `--none`, pinned to the reviewed hosted URL and model. No phase-two network call has run.
+Page 15 is green from one cached, zero-retry request for the refund line and one for the absent warranty under `--none`, pinned to the reviewed hosted URL and model. The live evidence appears below.
 
 ## Phase-two review remediation
 
 The first phase-two review rejected the misleading inherited help, incomplete aggregate secrecy and edge coverage, partial request and digest proof, byte-for-byte output claim, and late recorder-option validation. A red parser test first observed Clap’s unexpected-argument output where the old test expected the custom CSV sentence. The remediation gives `find` its supported parser surface while adapting into the shared request settings, runs bare and detailed `find` through all 17 shared backend and recording routes, pins the complete System One request fixture and canonical question digest, adds keyed zero-request and filesystem/output edges, and constructs Recorder before reading. CSV, TSV, and `--jobs` now receive Clap’s ordinary unexpected-argument response and never appear in help. The same reviewer accepted the remediation after the focused suites and all four repository rungs passed. No phase-two paid call had run at review time.
 
 The two short how-to requests are estimated at about 1,106 input tokens from the prior 553-token average. Their durable reservation is reduced to 3,000 tokens, over twice that estimate.
+
+## Page 15 live evidence
+
+The reviewed command ran once after its implementation commit was pushed:
+
+```sh
+sdlc/scripts/live --max-tokens 3000 demos/15-find-the-line/record.sh
+```
+
+The first request selected the exact refund line. The second selected `none`, printed no output, and returned the documented exit 3. The two entries report model `jev-1.13.0`, 1,341 input tokens, and 286 output tokens. Both files have mode `0600`, use schema `thinkthen.recording/1`, name the reviewed System One endpoint, and contain matching `q1` answers. The 3,000-token reservation moved the ledger from 20,139,118 to 20,142,118 charged tokens. The recording script now treats the second command's documented exit 3 as success; rerunning it uses the committed cache rather than buying either request again.
+
+## Closure
+
+The final tree passes lint at exactly 23,755 Rust lines, all 438 tests, the specification rung with 19 green pages and every committed probe replay, installation, and `git diff --check`. The closure reviewer regenerated both exact requests, recomputed their recording names, checked their schema, model, usage, mode, and secrecy, and replayed both without a key. The first closure pass found ticket 0040 absent from the live-testing table. The correction records 1,072 requests and 489,543 measured input tokens, bringing the table total to 929,212. The same reviewer accepted the corrected tree with no remaining finding.

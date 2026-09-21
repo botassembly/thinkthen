@@ -1,13 +1,13 @@
 # How to find the line that answers a question
 
-Status: red
+Status: green
 
 Use `find` when one bounded document has several units and the best unit must answer one question. Every unit leaves together in one request and can affect the choice.
 
 ```bash
 set -euo pipefail
 env -u THINKTHEN_API_KEY thinkthen find 'When does a refund reach the customer?' \
-  --lines --input policy.txt --replay recording/ \
+  --lines --model jev-1.13.0 --input policy.txt --replay recording/ \
   | mustmatch 'Refunds reach the original payment method within five working days.'
 ```
 
@@ -42,7 +42,7 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 thinkthen find 'How long is the manufacturer warranty?' \
-  --lines --none --input policy.txt --replay recording/ \
+  --lines --none --model jev-1.13.0 --input policy.txt --replay recording/ \
   > "$work/hit.txt" && rc=0 || rc=$?
 printf 'rc=%s bytes=%s\n' "$rc" "$(wc -c < "$work/hit.txt" | tr -d ' ')" \
   | mustmatch 'rc=3 bytes=0'
@@ -52,8 +52,10 @@ A script can branch on that outcome and send the question to a person.
 
 ```bash
 set -euo pipefail
-if answer=$(thinkthen find 'How long is the manufacturer warranty?' \
-              --lines --none --input policy.txt --replay recording/)
+if answer=$(
+  thinkthen find 'How long is the manufacturer warranty?' \
+    --lines --none --model jev-1.13.0 --input policy.txt --replay recording/
+)
 then
   printf 'quote: %s\n' "$answer"
 else
@@ -65,7 +67,7 @@ fi | mustmatch 'ask a person'
 
 Exit 2 means the count, aggregate size, framing, pointer, or command line is invalid. `find` accepts 2 to 255 units, or 2 to 254 with `--none`, and at most 16 MiB of original input. Exit 4 means the backend failed. Exit 5 means an input file or recording failed. A strict `none` lead or any top tie involving `none` exits 3. A tie among real units returns the first one.
 
-This page stays red until the two exact requests in `record.sh` have reviewed recordings. Do not run that script outside `sdlc/scripts/live`.
+The committed recordings came from the exact two requests in `record.sh`. Run that script only through `sdlc/scripts/live`.
 
 ## Related how-tos
 
