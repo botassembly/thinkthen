@@ -121,3 +121,69 @@ repository's own crates. Nothing this lane ran wrote to any rc file.
 - The interrupt proof ran with the default R handler; a user-installed
   signal handler after `library(thinkthen)` keeps firing (R's own
   chaining), not re-proven here.
+
+## 2026-09-21 — recognize and relate, the two new functions
+
+**Tried:** `tt_recognize` and `tt_relate` through the R surface, against
+the stand-in and the recordings only: no paid call, no key, no wire.
+The acceptance is the R sections of `recognize-surfaces.md`, run as
+written by `recognize_check.R`; the conformance slice now carries the 45
+recognize and relate cases.
+
+**Saw:** both acceptance calls run as drawn. `tt_recognize(body, kinds)`
+comes back as a list column of data frames — `text`, `kind`, `start`,
+`end`, `strength` — and `tidyr::unnest()` makes one row per name; the
+relations ride in the frame's `relations` attribute. Offsets are R's own
+indexing: `substr(text, start, end)` is the name, and the emoji case
+(`Le café 😀 Maria Chen arrived.`) carries `start 11, end 20`.
+`tt_relate(records, relations, either)` returns a four-column data frame
+of edges — `name`, `source`, `target`, `probability` — and the 0.9 bar
+keeps the 0.94 edge, mirroring the deck's Python comment.
+
+**The outputs, as printed:**
+
+```
+recognize acceptance: 30 checks passed
+conformance slice green for the R surface   (64 ok, 3 diverge, 5 skip)
+width: 1000 records, wall 9.662 s
+stub: requests 1000 max_in_flight 32 connections 33
+```
+
+**The refusals, proven:** 256 records refuse with the usage kind naming
+255 and the count; an unrecorded text, an unrecorded rule, and a named
+end outside the asked kinds each answer the usage condition; NA evidence
+gives an empty frame and keeps the column's length; relate refuses NA
+records with a host-side sentence. The six kinds keep their R condition
+classes from the earlier round.
+
+**Two quirks found and fixed, recorded for the next surface:** R's
+`substr(text, start, end)` slices one text per call, so a per-name check
+over a column must map over the rows (`mapply(substr, ...)`); a
+length-one text with vector start/end returns only the first slice. The
+offsets themselves were right on the first run — the quirk was in the
+check, not the surface. And a one-element `kinds` vector must keep its
+array shape across `jsonlite::toJSON(auto_unbox = TRUE)` (`I()`), or the
+contract refuses the spec.
+
+**The incident, recorded:** the C lane's `git add -A` swept this lane's
+in-flight files into its commit `692ccbf` (the C lane flagged the same
+incident in its own notes). The content is intact on the branch; this
+lane's remaining fixes landed after, as their own commit.
+
+## 2026-09-21 — the vocabulary sweep
+
+Every changed file and user-facing string, grepped against the
+restricted and banned lists:
+
+```
+$ grep -rniE "confidence|certainty|likelihood|cutoff|gray zone|accuracy|calibrated" \
+    thinkthen/R thinkthen/src/rust/src thinkthen/DESCRIPTION *.R check.sh README.md | grep -v rlib
+(no output; exit 1)
+```
+
+Zero hits: the vendor's own word for distribution shape appears nowhere
+in this surface, and the number on a recognized name is `strength`, a
+number the tool computes — the least of the word probabilities times the
+mean of the kind probabilities — said in the package's own words. The
+relation's number stays `probability`, a model-reported number passed
+through.

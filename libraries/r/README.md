@@ -1,12 +1,19 @@
 # The R surface
 
-Landed 2026-09-21. The package `thinkthen`: the eight verbs with a `tt_`
-prefix, a column in and a column out, `NA` as "not sure", and the six error
-kinds as R conditions carrying the retry signal. One engine under the
-contract, built with extendr from `contract/` and `standin/`, installed
-into the folder-local `rlib/`. Run `./check.sh` for the null suite, the
-conformance slice, the slide sample, and the wire suite when the stub is up
-on 8215. Findings and quirks are in `NOTES.md`.
+Landed 2026-09-21. The package `thinkthen`: the eight verbs and the two
+newer functions (`recognize`, `relate`) with a `tt_` prefix, a column in and
+a column out, `NA` as "not sure", and the six error kinds as R conditions
+carrying the retry signal. One engine under the contract, built with extendr
+from `contract/` and `standin/`, installed into the folder-local `rlib/`.
+Run `./check.sh` for the null suite, the conformance slice, the recognize
+and relate acceptance, the slide sample, and the wire suite when the stub is
+up on 8215. Findings and quirks are in `NOTES.md`.
+
+`tt_recognize(body, kinds)` returns a list column of data frames, one row per
+name under `tidyr::unnest()`; a relation's ends are `source` and `target`,
+and a name's computed number is its `strength`. `tt_relate(records,
+relations, either)` returns a data frame of edges ready for a graph library.
+Both run as written in the acceptance page, offline from the recordings.
 
 The acceptance sample, drawn in
 `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`,
