@@ -68,7 +68,7 @@ Re-score if implementation exposes a command change, shared state, or a new publ
 
 The local draft adds six fictional TSV tickets, a three-question set over `/body`, the fail-closed `triage` policy, and a pipeline that reserves a fresh destination and publishes three complete JSONL files on successful return. The policy test first failed because `triage.jq` did not exist, then passed eight routing cases and six safe refusals. The pipeline self-test covers the exact command, a single policy application, all three populated outputs, full rows, reviewed-action agreement, disclosure, destination ownership, and cleanup after handled failures.
 
-The exact midpoint is urgency 1. It routes to `review` with reason `urgent`. The agent chose that inclusive boundary because the middle written level says a delay can cause a concrete problem. Changing it now requires a new question measurement and new page recordings.
+The exact midpoint is urgency 1. It routes to `review` with reason `urgent`. The agent chose that inclusive boundary because the middle written level says a delay can cause a concrete problem. Ian can overturn this boundary; doing so now requires a new question measurement and new page recordings.
 
 Implementation disproved the first publication assumption. POSIX shell has no portable operation that atomically renames a directory while refusing any existing destination. The accepted correction creates the destination with `mkdir` before judgment, stages files inside it, removes it on handled failure, and defines successful return as publication. Callers must not read the directory while the process runs.
 

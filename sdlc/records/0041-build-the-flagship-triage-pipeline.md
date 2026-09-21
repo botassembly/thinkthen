@@ -10,7 +10,7 @@ The draft has six fictional support tickets in TSV, one question set with three 
 
 The public policy vocabulary is fixed by the accepted ticket. Actions are `draft`, `block`, and `review`. Reasons are `unresolved`, `credential_request`, `out_of_scope`, `urgent`, and `routine`. Queues are `billing`, `shipping`, `account`, and `other`. `reviewed_action` is only a person's recorded decision.
 
-The agent set urgency 1, the middle of the three-level scale, as the inclusive `urgent` boundary. The middle level says delay can cause a concrete customer problem. Changing this boundary now requires a new question measurement and new page recordings.
+The agent set urgency 1, the middle of the three-level scale, as the inclusive `urgent` boundary. The middle level says delay can cause a concrete customer problem. Ian can overturn this boundary; doing so now requires a new question measurement and new page recordings.
 
 ## Red and green evidence
 
