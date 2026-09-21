@@ -102,7 +102,7 @@ recognize rows, offsets, the no-request join, relate edges, and the relations ro
 the 256th record refuses with the usage kind and SQLSTATE 22023
 ```
 
-It proves, in order: the deck's LATERAL call as drawn (five rows over the three inbox texts); a `mentions` table built from `recognize`; the offsets slicing the name back out (`substring` on the café/emoji text); the equality join to `accounts` with the usage counter frozen across it (`requests before join 0` / `requests after join 0` — the no-request proof); the deck's `thinkthen_relate` call as drawn (the four recorded edges with their id values and probabilities); and the beta `thinkthen_relations` row from `@names.json` (the ruled question-file spelling with `source`/`target` keys).
+The any-kind end is proven through the question-file door too: `names-star.json` spells the `works_for` rule `"*"` to `"*"` and the same relation row comes back. It proves, in order: the deck's LATERAL call as drawn (five rows over the three inbox texts); a `mentions` table built from `recognize`; the offsets slicing the name back out (`substring` on the café/emoji text); the equality join to `accounts` with the usage counter frozen across it (`requests before join 0` / `requests after join 0` — the no-request proof); the deck's `thinkthen_relate` call as drawn (the four recorded edges with their id values and probabilities); and the beta `thinkthen_relations` row from `@names.json` (the ruled question-file spelling with `source`/`target` keys).
 
 **Lines.** 526 code lines against the 299 ceiling `postgres.md` records (207's measure). The two functions plus the beta companion are the growth; the ceiling is a planning-page statement, not a gate, and the number is recorded here for the build team.
 

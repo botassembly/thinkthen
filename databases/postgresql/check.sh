@@ -93,6 +93,7 @@ echo "== postgres surface: recognize and relate, as drawn"
 docker cp fixtures/inbox.sql "$NAME:/inbox.sql"
 docker cp fixtures/alerts.sql "$NAME:/alerts.sql"
 docker cp fixtures/names.json "$NAME:/var/lib/postgresql/data/names.json"
+docker cp fixtures/names-star.json "$NAME:/var/lib/postgresql/data/names-star.json"
 psql_in -f /inbox.sql -f /alerts.sql >/dev/null
 psql_in << 'SQL' > .tmp-recognize.out
 -- the deck's PostgreSQL call, as drawn
@@ -126,6 +127,11 @@ ORDER BY source, target;
 SELECT name, source_text, source_kind, target_text, target_kind, probability
 FROM thinkthen_relations(
     'Maria Chen joined Northwind Freight in Chicago last spring.', '@names.json');
+
+-- the any-kind end is the one-character string '*' in the question file
+SELECT name, source_text, target_text
+FROM thinkthen_relations(
+    'Maria Chen joined Northwind Freight in Chicago last spring.', '@names-star.json');
 SQL
 must() { grep -qE "$1" .tmp-recognize.out || { echo "recognize check failed: $1" >&2; exit 1; }; }
 must '^ *1 \| Maria Chen +\| person'
@@ -137,6 +143,7 @@ must '^ *lee +\| *1'
 must '^ *caused_by \| *1 \| *2 \| *0\.59'
 must '^ *caused_by \| *3 \| *4 \| *0\.84'
 must '^ *works_for \| Maria Chen +\| person +\| Northwind Freight \| organization \| *1'
+must '^ *works_for \| Maria Chen +\| Northwind Freight *$'
 before=$(grep "requests before join" .tmp-recognize.out | awk '{print $NF}')
 after=$(grep "requests after join" .tmp-recognize.out | awk '{print $NF}')
 [ "$before" = "$after" ] || { echo "the join moved the usage counter: $before -> $after" >&2; exit 1; }
