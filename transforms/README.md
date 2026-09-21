@@ -20,7 +20,7 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | --- | --- | --- |
 | `counts/` | How many yes, how many no, how many unresolved | [25](../demos/25-check-the-judge/) |
 | `score/` | Accuracy, precision, recall, and F1 at a cut | [25](../demos/25-check-the-judge/) |
-| `sweep/` | What every cut would have done, and which one to pick | [13](../demos/13-pick-a-threshold/) |
+| `sweep/` | What every cut would have done, globally or per record group | [13](../demos/13-pick-a-threshold/) |
 | `band/` | Accuracy beside coverage for a band | [13](../demos/13-pick-a-threshold/) |
 | `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
 | `compare/` | What changed between two scalar or annotated runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
@@ -78,6 +78,8 @@ jq -n -f sweep/sweep.jq \
 ```
 
 Neither report picks a cut automatically. Choice has a coverage trade-off. Every score boundary names a different operational question.
+
+A decision sweep can instead fit each string-valued record group on its own. Pass the group's JSON Pointer as `--arg group POINTER`. The report keeps each group's counts and pick separate. It prints no pooled pick.
 
 ## Monitor a policy against reviewed actions
 

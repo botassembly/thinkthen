@@ -36,7 +36,8 @@ jq -c '.groups[] | select(.value == "alpha")' "$work/grouped-report.json" \
 jq -n -c '
   range(1; 31) as $n
   | {cohort:"beta",
-     input:{id:("extra-" + ($n|tostring)),document_type:"beta",label:($n % 2 == 0)},
+     input:{id:("extra-" + ($n|tostring)),document_type:"beta",
+            "type/name":"beta","type~name":"beta",label:($n % 2 == 0)},
      value:($n % 3 == 0),question:{verb:"decide"},
      answer:{kind:"yes_no",probability:(($n % 10) / 10)}}
 ' >> "$work/grouped.jsonl"

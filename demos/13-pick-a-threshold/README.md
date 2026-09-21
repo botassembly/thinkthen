@@ -17,7 +17,7 @@ jq -n -f ../../transforms/sweep/sweep.jq <(jq -c 'select(.input.id <= "C-24")' "
 
 ## Input
 
-`../../transforms/rows/runs/run-a.jsonl` holds forty judged cases, one row per case. Each row is the `decide --details` object with `input` holding the whole case: the `id`, the `body` that was sent, and the `label` a person gave. The ids run from `C-01` to `C-40` at a fixed width, so a string comparison splits them and any reader can repeat it.
+`../../transforms/rows/runs/run-a.jsonl` holds forty judged cases. Each `decide --details` row keeps the case id, body, and human label under `input`. Fixed-width ids make the split repeatable.
 
 The transforms are `../../transforms/sweep/sweep.jq`, `../../transforms/score/score.jq`, and `../../transforms/band/band.jq`. Each states its policies in its header, and each reads the saved probabilities, so another cut costs nothing and asks the model nothing.
 
@@ -72,17 +72,19 @@ The band gets every row it answers right, and it pays with four rows a person no
 
 Note what is counted where. The three labeled refusals are `unresolved`, counted apart and scored neither right nor wrong. The unlabeled `C-12` is in `refused` because somebody must read it, and it is in no rate at all.
 
-## Step 4: run the same lines from the transform folders
+## Step 4: fit separate record groups only when they differ
 
-Each transform folder holds its pipeline line, so a reader of `transforms/` runs one command and sees the shape of the output. These two read the whole run rather than the split, so the sweep picks a different cut.
+One global cut is the simpler default. Separate cuts make sense when record groups have different operating needs and enough labeled cases of their own. Here the example adds a sample document type, then fits each type independently.
 
 ```bash
 set -euo pipefail
 
-sh ../../transforms/sweep/example.sh | jq -c '.pick | {cut, f1}' | mustmatch '{"cut":0.65,"f1":1}'
-sh ../../transforms/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
-  | mustmatch '{"coverage":0.9231,"accuracy_resolved":1}'
+sh ../../transforms/sweep/example.sh \
+  | jq -c '{rows,groups:[.groups[]|{value,rows,labeled,cut:.pick.cut}]}' \
+  | mustmatch '{"rows":40,"groups":[{"value":"chat","rows":20,"labeled":20,"cut":0.4},{"value":"email","rows":20,"labeled":19,"cut":0.7}]}'
 ```
+
+The report has no pooled pick. A large group cannot choose the cut for a small group.
 
 ## What can go wrong
 

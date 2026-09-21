@@ -2,7 +2,10 @@
 #
 # Reads: one detailed decide, choose, or score run, one JSON object per line.
 # Run it with `jq -n -f sweep.jq ROWS`. The whole run is held in memory.
-# Arguments: none. The grid is the 19 cuts from 0.05 to 0.95, a twentieth
+# Argument: optional `--arg group POINTER`. It fits one decision cut inside
+#   each string-valued record group at that RFC 6901 JSON Pointer. Groups are
+#   ordered by name. Choice and score rows do not have an automatic cut to fit.
+# The grid is the 19 cuts from 0.05 to 0.95, a twentieth
 #   apart. jq has no optional argument, so a grid given on the command line
 #   would have to be given on every call. Another grid is a one-line edit here.
 # Decide policies:
@@ -57,6 +60,28 @@ def verdict($p; $cut):
     if $p >= $cut then "yes" else "no" end
   end;
 
+def pointer_path($pointer):
+  if $pointer == "" then []
+  elif ($pointer | startswith("/")) | not then
+    error("sweep: group must be an RFC 6901 JSON Pointer")
+  else
+    ($pointer[1:] | split("/")) as $parts
+    | if any($parts[]; test("~([^01]|$)")) then
+        error("sweep: group must be an RFC 6901 JSON Pointer")
+      else
+        [$parts[] | gsub("~1"; "/") | gsub("~0"; "~")]
+      end
+  end;
+
+def pointer_value($row; $path):
+  reduce $path[] as $part ($row;
+    if type == "object" then .[$part]
+    elif type == "array" and ($part | test("^(0|[1-9][0-9]*)$")) then
+      .[$part | tonumber]
+    else null
+    end
+  );
+
 def decision_metrics($rows; $cut):
   reduce $rows[] as $row (
     {unlabeled: [], unresolved: 0, tp: 0, fp: 0, tn: 0, fn: 0};
@@ -93,13 +118,17 @@ def decision_metrics($rows; $cut):
       )
     };
 
-def decision_report($rows; $cuts):
-  if all($rows[]; (.input | type) == "object")
-  then . else error("sweep: decision rows must carry an input object") end
+def validate_decision_rows($rows):
+  $rows
+  | if all(.[]; (.input | type) == "object")
+    then . else error("sweep: decision rows must carry an input object") end
   | if all($rows[]; (.question | type) == "object")
     then . else error("sweep: decision rows must carry a question object") end
   | if all($rows[]; (.answer.probability | type) == "number")
-    then . else error("sweep: decision rows must carry a numeric probability") end
+    then . else error("sweep: decision rows must carry a numeric probability") end;
+
+def decision_report($rows; $cuts):
+  validate_decision_rows($rows) as $rows
   | [$cuts[] | decision_metrics($rows; .)] as $sweep
   | ($sweep | map(select(.f1 != null)) | max_by(.f1) | .f1) as $best
   | {
@@ -122,6 +151,27 @@ def decision_report($rows; $cuts):
       ),
       sweep: [$sweep[] | {cut, coverage, unresolved, accuracy, precision, recall, f1}]
     };
+
+def grouped_decision_report($rows; $cuts; $pointer):
+  pointer_path($pointer) as $path
+  | if ($rows | length) == 0 then
+      {mode: "grouped_decide", group: $pointer, rows: 0, groups: []}
+    else
+      validate_decision_rows($rows) as $rows
+      | [$rows[] | {value: pointer_value(.; $path), row: .}] as $grouped
+      | if all($grouped[]; (.value | type) == "string")
+        then . else error("sweep: every row must resolve group to a string") end
+      | {
+          mode: "grouped_decide",
+          group: $pointer,
+          rows: ($rows | length),
+          groups: [
+            $grouped | group_by(.value)[]
+            | .[0].value as $value
+            | {value: $value} + decision_report([.[].row]; $cuts)
+          ]
+        }
+    end;
 
 def valid_names:
   type == "array" and length >= 2 and all(.[]; type == "string")
@@ -228,18 +278,30 @@ def score_report($rows):
   | {mode: "score", rows: ($rows | length), labeled: ($labeled | length), unlabeled: $unlabeled,
      levels: $levels, sweep: [range(1; $count) | score_metrics($labeled; .)]};
 
-[inputs] as $rows
-| [range(1; 20) | . / 20 | . * 100 | round | . / 100] as $cuts
-| if has_repeated_ids($rows) then error("metric: repeated case ids; run trials.jq first")
-  elif ($rows | length) == 0 then decision_report($rows; $cuts)
-  elif all($rows[]; type == "object") | not then error("sweep: every row must be an object")
-  elif all($rows[]; (.answer | type) == "object") | not then error("sweep: every row must carry an answer object")
-  else
-    [$rows[].answer.kind] | unique as $kinds
-    | if ($kinds | length) != 1 then error("sweep: one run must carry one answer kind")
-      elif $kinds[0] == "yes_no" then decision_report($rows; $cuts)
-      elif $kinds[0] == "choice" then choice_report($rows; $cuts)
-      elif $kinds[0] == "score" then score_report($rows)
-      else error("sweep: one run must carry one answer kind")
+if . != null then error("sweep: read rows from files with jq -n")
+else
+  [inputs] as $rows
+  | [range(1; 20) | . / 20 | . * 100 | round | . / 100] as $cuts
+  | ($ARGS.named | has("group")) as $is_grouped
+  | if has_repeated_ids($rows) then error("metric: repeated case ids; run trials.jq first")
+    elif ($rows | length) > 0 and (all($rows[]; type == "object") | not) then
+      error("sweep: every row must be an object")
+    elif ($rows | length) > 0 and (all($rows[]; (.answer | type) == "object") | not) then
+      error("sweep: every row must carry an answer object")
+    elif $is_grouped then
+      if ($rows | length) > 0 and
+         (([$rows[].answer.kind] | unique) != ["yes_no"])
+      then error("sweep: grouped mode accepts decision rows only")
+      else grouped_decision_report($rows; $cuts; $ARGS.named.group)
       end
-  end
+    elif ($rows | length) == 0 then decision_report($rows; $cuts)
+    else
+      [$rows[].answer.kind] | unique as $kinds
+      | if ($kinds | length) != 1 then error("sweep: one run must carry one answer kind")
+        elif $kinds[0] == "yes_no" then decision_report($rows; $cuts)
+        elif $kinds[0] == "choice" then choice_report($rows; $cuts)
+        elif $kinds[0] == "score" then score_report($rows)
+        else error("sweep: one run must carry one answer kind")
+        end
+    end
+end
