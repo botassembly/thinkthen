@@ -22,6 +22,23 @@ tick each wait interval with the VM lock taken, and a raise inside the
 tick cancels the engine, lets sent requests finish, and re-raises; the
 proof is `tests/test_cancel.rb`.
 
+## Question helpers, and the names the check allows
+
+Beyond the fourteen ruled functions, the module carries exactly these
+documented helpers, and `scripts/check_public_names.py` fails the tree on
+any other public name:
+
+- `ThinkThen.question(**keywords)` and `ThinkThen.set(path)` build the same
+  question value from keywords and from a question file, and
+  `ThinkThen.built(value)` wraps a question already built.
+- `ThinkThen.with_tick(&tick)` is the interrupt path a host with its own
+  signal handling uses: the block runs each wait interval with the VM lock
+  taken, and a raise cancels the call as the section above says.
+- `ThinkThen.score_with_level(question, evidence, levels:)` and
+  `ThinkThen.decide_many_with_probabilities(question, records)` are the
+  level-carrying and probability-carrying forms the slide check and the
+  conformance runner read; the plain verbs return the bare answers.
+
 Ruby is not installed on this machine; `./build.sh` and `./check.sh` run
 everything inside the `ruby:3.4-trixie` container (removed after each
 run) with the host Rust toolchain mounted read-only. The gem builds from

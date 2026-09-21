@@ -48,8 +48,8 @@ from ._thinkthen import (
 __all__ = [
     "annotate", "Cancelled", "choose", "decide", "decide_many",
     "details", "Edge", "Entity", "find", "filter", "question", "rank",
-    "recognize", "recognize_stream", "Relation",
-    "relate", "relate_stream", "Recognized", "score",
+    "recognize", "Relation",
+    "relate", "Recognized", "score",
     "tag", "usage",
     "ThinkThenError", "UsageError", "BackendError", "DeadlineError",
     "LocalError", "DefectError",
