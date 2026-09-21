@@ -51,6 +51,8 @@ Three parts of the item stand:
 
 The count matters more than this page first said. `recognize` and `relate` both send many questions in one request, and both designs depend on a printed request count and pair count. `2026-09-20-a-status-command-for-configuration-and-usage.md` already asks for the count in one place. A caller that must bound its own spend needs it in the dry run.
 
+Wave 1.5 reproduced this concretely: `--dry-run` accepts a JSONL file whose third record is invalid (exit 0) where the live run refuses at record 3 (exit 2). Found by experiment 218, wave 1.5.
+
 ### 4. A cut cannot travel inside a `score` question
 
 `specification/roadmap.md` holds a threshold on `score` because `jq -e '. >= 2'` covers one script, and it names the trigger: a demo where the cut has to travel inside a saved question file.
