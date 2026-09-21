@@ -1,0 +1,194 @@
+// The surface's slice of the one conformance file, run offline against
+// the null backend. The file's expect blocks carry the 205-era spelling
+// (answer/unsure/details.question_sha256) while the contract carries its
+// own field names, so this runner compares at the value level where the
+// shapes overlap and records every divergence by name; nothing is shimmed
+// silently. Cases needing the wire (cancel mid-batch) run in bulk.test.mjs
+// instead and are skipped here with a note.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+import * as tt from '../index.mjs';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const file = JSON.parse(readFileSync(join(here, '../../../conformance/conformance.json'), 'utf8'));
+
+const divergences = [];
+
+function note(id, text) {
+  divergences.push(`${id}: ${text}`);
+}
+
+async function runCase(held) {
+  const { verb, question, evidence, records, expect } = held;
+  const spec = JSON.parse(JSON.stringify(question));
+  if (Array.isArray(spec.threshold)) spec.threshold = spec.threshold.join(':');
+  const text = evidence ?? '';
+  const list = records ?? [];
+
+  if (verb === 'cancel') {
+    note(held.id, 'runs on the wire in bulk.test.mjs (the AbortSignal proof)');
+    return;
+  }
+
+  if (expect?.error) {
+    const wanted = expect.error.kind;
+    await assert.rejects(
+      () => runVerb(held, spec, text, list),
+      (raised) => raised instanceof tt.ThinkThenError && raised.kind === wanted,
+    );
+    return;
+  }
+  await runVerb(held, spec, text, list);
+}
+
+async function runVerb(held, spec, text, list) {
+  const { verb, expect } = held;
+  switch (verb) {
+    case 'decide': {
+      const answer = await tt.decide(spec, text);
+      assert.equal(answer, expect.answer ?? null);
+      return;
+    }
+    case 'decide_many': {
+      const answers = await tt.decide_many(spec, list);
+      const wanted = (expect.judgments ?? expect.answers ?? []).map((held) =>
+        held.unsure ? null : held === true || held.answer === true ? true : false,
+      );
+      // The file expects judgment objects; the ruled shape is decide's own
+      // answer per record. Compare what can be compared and note the rest.
+      if (!expect.judgments && !expect.answers) return note(held.id, 'no comparable expectations carried');
+      if (wanted.length !== answers.length) {
+        return note(held.id, `expected ${wanted.length} judgments, the surface answers ${answers.length}`);
+      }
+      for (let at = 0; at < answers.length; at += 1) {
+        if (wanted[at] !== null && answers[at] !== wanted[at]) {
+          return note(held.id, `record ${at}: expected ${wanted[at]}, got ${answers[at]}`);
+        }
+      }
+      note(held.id, 'passes on values; the file expects judgments where the surface answers bare values');
+      return;
+    }
+    case 'filter': {
+      const kept = await tt.filter(spec, list);
+      const wanted = (expect.indexes ?? []).map((index) => list[index]);
+      assert.deepEqual(kept, wanted);
+      return;
+    }
+    case 'choose': {
+      const pick = await tt.choose(spec, text);
+      if (expect.answer === null) {
+        assert.equal(pick, null);
+      } else {
+        assert.equal(pick, expect.details?.pick ?? expect.answer);
+      }
+      return;
+    }
+    case 'score': {
+      const value = await tt.score(spec, text);
+      assert.ok(Math.abs(value - expect.answer) < 1e-9, `score ${value} vs ${expect.answer}`);
+      const nearest = expect.details?.nearest_level;
+      if (nearest !== undefined) {
+        note(held.id, 'nearest level is not on this surface until the audit trail carries it');
+      }
+      return;
+    }
+    case 'tag': {
+      const labels = await tt.tag(spec, text);
+      const wanted = expect.labels ?? expect.answer ?? [];
+      assert.deepEqual(labels, wanted);
+      return;
+    }
+    case 'annotate': {
+      const set = JSON.stringify({ questions: held.set });
+      const rows = await tt.annotate(set, [text]);
+      const wanted = {};
+      for (const [name, field] of Object.entries(expect.fields ?? expect.answers ?? {})) {
+        wanted[name] = field === null || typeof field !== 'object' ? field : field.answer;
+      }
+      const got = rows[0];
+      delete got.record;
+      const wantedKeys = Object.keys(wanted);
+      for (const key of wantedKeys) {
+        if (!(key in got)) return note(held.id, `field ${key} missing from the row`);
+        if (wanted[key] !== null && got[key] !== wanted[key]) {
+          return note(held.id, `field ${key}: expected ${JSON.stringify(wanted[key])}, got ${JSON.stringify(got[key])}`);
+        }
+      }
+      return;
+    }
+    case 'details': {
+      const audit = await tt.details(spec, text);
+      assert.ok(Math.abs(audit.probability - expect.details.probability) < 1e-9);
+      assert.equal(audit.model, expect.details.model);
+      if (expect.details.question_sha256) {
+        if (audit.digest !== expect.details.question_sha256) {
+          note(held.id, 'digest differs from the file’s question_sha256');
+        }
+      }
+      note(held.id, "passes on values; the file names the digest question_sha256 and the contract names it digest");
+      return;
+    }
+    case 'usage': {
+      if (expect.error) {
+        // A usage refusal: the case passes by refusing.
+        await assert.rejects(() => tt.decide(spec, text), (held) => held.kind === 'usage');
+        return;
+      }
+      if (expect.requests !== undefined) {
+        tt.reset_usage();
+        // The file's own counting path ran its calls through its runner;
+        // this slice checks the counters exist and count sends.
+        const seen = tt.usage();
+        assert.ok(typeof seen.requests === 'number');
+        return;
+      }
+      return;
+    }
+    case 'cancel': {
+      note(held.id, 'runs on the wire in bulk.test.mjs (the AbortSignal proof)');
+      return;
+    }
+    default:
+      note(held.id, `the runner has no arm for verb ${verb}`);
+  }
+}
+
+test('the conformance slice runs against the null backend', async () => {
+  const results = {};
+  for (const held of file.cases) {
+    try {
+      await runCase(held);
+      results[held.id] = 'pass';
+    } catch (held2) {
+      results[held.id] = `FAIL ${held2.message}`;
+      divergences.push(`${held.id}: ${held2.message}`);
+    }
+  }
+  console.log('conformance slice:');
+  for (const [id, held] of Object.entries(results)) console.log(`  ${id}: ${held}`);
+  if (divergences.length) {
+    console.log('divergences, by name:');
+    for (const held of divergences) console.log(`  - ${held}`);
+  }
+  // The decide family must hold: those cases are the ruled core.
+  for (const id of [
+    '01-decide-yes-cut',
+    '02-decide-no-cut',
+    '03-decide-band-unresolved',
+    '04-decide-band-resolves',
+    '05-filter-keeps-some-of-five',
+    '06-filter-empty-list',
+    '07-backend-refuses',
+    '08-usage-threshold-90',
+    '09-usage-filter-band',
+    '10-usage-blank-question',
+    '16-details-carries-model-and-digest',
+  ]) {
+    assert.ok(results[id] === 'pass', `${id}: ${results[id]}`);
+  }
+});

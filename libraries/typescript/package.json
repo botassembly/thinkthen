@@ -1,0 +1,34 @@
+{
+  "name": "thinkthen",
+  "version": "0.0.1",
+  "description": "The thinkthen surface for Node: eight verbs, one bound engine. Not published.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.mjs",
+    "index.d.ts",
+    "loader.cjs",
+    "*.node"
+  ],
+  "private": true,
+  "scripts": {
+    "build": "napi build --release --platform --cargo-cwd ./addon --js loader.cjs --dts loader.d.ts .",
+    "test": "node --test tests/"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
