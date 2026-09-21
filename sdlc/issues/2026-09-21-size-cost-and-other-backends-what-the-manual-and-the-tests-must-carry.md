@@ -1,0 +1,53 @@
+# Size, cost, and other backends: what the manual and the tests must carry
+
+Status: Open
+
+Ian asked on 2026-09-21 that the facts about text size, cost, and context length be captured, and said other models will be supported later "as long as they support the system one API, or we can adapt to whatever their API is". This page gathers the facts that already have a record, lists what a user is never told today, and says what a second backend must state. The windowing design question is the experiment team's to file, and this page does not repeat it.
+
+## What is measured, with its record
+
+| Fact | Value | Record |
+| --- | --- | --- |
+| The vendor's price for input tokens | 0.042 US dollars a million | `sdlc/records/0011-the-live-probe.md` |
+| What one short record bills | 290.4 input tokens on average, from 277 to 301, over 3,000 records | `sdlc/issues/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` |
+| The fixed part of every request | near 256 input tokens | the same page |
+| What a thousand short judgments cost | about 1.2 US cents (3,000 records cost 3.6 cents) | the same page |
+| The text in one request | about 32,000 tokens | `specification/records.md` |
+| One whole request, text plus every question | about 64,000 tokens, confirmed by one live request of 33,663 tokens | `specification/records.md`, `sdlc/records/0017-every-question-option-has-two-homes.md` |
+| The local size limit for one record | 16 MiB, refused before any request with exit code 2 | `crates/thinkthen-core/src/records.rs` |
+| `find` in one request | 2 to 255 lines or records | `probes/find-0040/README.md` |
+
+Three rules of thumb follow, and each is safe to print:
+
+1. **Requests are the bill.** A short text pays almost only for the fixed part. Many questions about one text pay the fixed part once, which is what `annotate` does. Many texts pay it once each.
+2. **The tool never splits a text.** The text crosses whole. No word, sentence, or punctuation handling exists. A text over the vendor's limit is refused by the backend with exit code 4.
+3. **The limit is two numbers.** One question and its text fit in about 32,000 tokens. The text and all the questions together fit in about 64,000. A 30,000-token document with ten short questions fits. A 40,000-token document does not.
+
+One number is not safe to print: experiment 208 declared 1,301,000 tokens and was billed 645,840. The first number is the sum of the caps reserved for the runs, and the second is what the vendor billed. The gap is unused reservation. It does not measure a saving from packing.
+
+## What a user is never told today
+
+- No help page or manual page states the 32,000 and 64,000 limits, or that the measure is the vendor's tokens and not words or bytes.
+- Nothing tells a user before a run that a record is too large for the backend. The 16 MiB check is far above the real limit, so the first news is an exit code 4 from the backend, after the request was sent.
+- No page states what a judgment costs, or that the fixed part dominates.
+- `rank` says an endless stream is cut into windows upstream, and no how-to shows a user how.
+
+The documentation plan should carry one page, "Size and cost", with the table and the three rules above. The trust list already asks for the request count before a big run.
+
+## Other backends
+
+ADR 0004 makes a backend a URL and an adapter. Ian's direction: a second model qualifies when it answers the three kinds of question the functions use, which are yes or no, pick one, and place on a scale, and returns probabilities. Ian's note `Jev context length.md` in his notes folder surveys several open implementations of that interface. Its numbers come from a chat assistant's web reading on 2026-09-21. Nobody here has verified them, and they are recorded only as a reason for the rules below. The survey's useful finding is that the context limit differs by more than a hundred times between implementations, from about 512 tokens to about 32,000 per question, and that the limit of the underlying model is often far above what the decision layer was trained or served for.
+
+What an adapter page must state before its backend ships, each with the check that measured it:
+
+1. The limit for one question with its text, and the limit for a whole request, in that backend's own tokens.
+2. Whether many questions about one text ride in one request, and the most questions in one request.
+3. Which of the three kinds of question it answers. A backend that lacks one makes the functions built on it refuse by name.
+4. Whether answers to packed questions are independent of each other.
+5. The price, the fixed part of a request, and the documented request rate.
+
+What the conformance cases gain, so that one file tests every backend: a text just under and just over each stated limit, a question set at the stated maximum, and the same twenty cases run through each adapter with the measured agreement against the first backend reported beside the results.
+
+## What Ian can overturn
+
+All of it. The "Size and cost" page and the adapter rules are recommendations to the build team for the documentation and engine work already planned.
