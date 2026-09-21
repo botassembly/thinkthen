@@ -6,13 +6,15 @@ under the rules of specification/{decide,choose,tag,score,question-file}.md,
 so the file is self-checking evidence, not prose.
 """
 import hashlib
+import re
 import json
 import sys
 
 KINDS = {"usage", "backend", "local", "cancelled", "deadline", "defect"}
 VERB_KEYS = {"decide", "choose", "tag", "score"}
 CASE_KEYS = {"id", "source", "verb", "question", "question_file", "evidence", "records", "jobs", "set",
-             "calls", "cancel_after_replies", "budget_ms", "none", "exchanges", "expect"}
+             "calls", "cancel_after_replies", "budget_ms", "none", "exchanges", "expect",
+             "text", "requests", "pairs", "form", "note"}
 GRANT = {"decide": {"decide", "true", "false", "threshold", "on", "model"},
          "choose": {"choose", "options", "threshold", "on", "model"},
          "tag": {"tag", "labels", "threshold", "on", "model"},
@@ -139,8 +141,204 @@ def check_reply_shape(request, reply, status=None):
             check(set(ps) == want, f"{name} score keyed by level numbers")
             check(abs(sum(ps.values()) - 1) <= 0.01 + 1e-9, f"{name} score sums to 1")
 
+def case_text(c):
+    """The text a recognize case judges or a relate case's records join."""
+    if c["verb"] == "recognize":
+        return c["text"]
+    return "\n".join(c["records"])
+
+
+def replay_row(data, c):
+    """The replay-table row a case answers from; per-subject relate rows
+    give way to a pairs row on the same text, matching the stand-in."""
+    key = case_text(c).rstrip("\n")
+    rows = [
+        row
+        for row in data["relate"] if row["text"].rstrip("\n") == key or "\n".join(row["records"]).rstrip("\n") == key
+    ] if c["verb"] == "relate" else [row for row in data["recognize"] if row["text"] == c["text"]]
+    if c["verb"] == "relate":
+        rows.sort(key=lambda row: row.get("form") == "per-subject")
+    check(bool(rows), f"{c['id']} has no replay-table row")
+    return rows[0] if rows else None
+
+
+def pick_rule(pick):
+    return re.sub(r"_(AB|BA)$", "", pick)
+
+
+def pick_direction(pick, first, second):
+    if pick.endswith("_AB"):
+        return first, second
+    if pick.endswith("_BA"):
+        return second, first
+    return min(first, second), max(first, second)
+
+
+def replay_recognize(c, row):
+    """Recompute the expected object from the recorded row and the case's ask."""
+    q = c["question"]
+    entities = [
+        e for e in row["entities"]
+        if e["kind"] in q["kinds"] and e["confidence"] >= q["threshold"]
+    ]
+    asked = {rule["name"]: rule for rule in q["relations"]}
+    ids = {e["id"] for e in entities}
+    relations = []
+    for entry in row["pairs"]:
+        pick = entry["pick"]
+        if pick in ("NO_RELATION", "NONE_OF_THESE"):
+            continue
+        name = pick_rule(pick)
+        if name not in asked:
+            continue
+        if entry["options"][pick] < q["relation_threshold"]:
+            continue
+        if entry["pair"][0] not in ids or entry["pair"][1] not in ids:
+            continue
+        source, target = pick_direction(pick, entry["pair"][0], entry["pair"][1])
+        if asked[name].get("either"):
+            source, target = min(source, target), max(source, target)
+        relations.append(
+            {"name": name, "source": source, "target": target,
+             "probability": entry["options"][pick]}
+        )
+    relations.sort(key=lambda edge: (edge["source"], edge["target"], edge["name"]))
+    return entities, relations
+
+
+def replay_relate(c, row):
+    """Recompute the expected edges from the recorded row and the ask."""
+    q = c["question"]
+    asked = {rule["name"]: rule for rule in q["relations"]}
+    edges = []
+    for entry in row["entries"]:
+        pick = entry["pick"]
+        if pick in ("NO_RELATION", "NONE_OF_THESE"):
+            continue
+        name = entry.get("rule") if "pair" not in entry else pick_rule(pick)
+        if name not in asked:
+            continue
+        if entry["options"][pick] < q["threshold"]:
+            continue
+        if "pair" in entry:
+            source, target = pick_direction(pick, entry["pair"][0], entry["pair"][1])
+        else:
+            source, target = entry["subject"], int(pick[2:])
+        edges.append(
+            {"name": name, "source": source, "target": target, "probability": entry["options"][pick]}
+        )
+    edges.sort(key=lambda edge: (edge["source"], edge["target"], edge["name"]))
+    return edges
+
+
+def check_recognize_case(c):
+    q = c["question"]
+    check(set(q) == {"kinds", "relations", "threshold", "relation_threshold"},
+          f"{c['id']} question keys")
+    check(isinstance(c["text"], str) and c["text"].strip() != "", f"{c['id']} text")
+    check(isinstance(q["kinds"], list) and 1 <= len(q["kinds"]) <= 20, f"{c['id']} kinds 1..20")
+    check(len(set(q["kinds"])) == len(q["kinds"]), f"{c['id']} kinds repeat")
+    for rule in q["relations"]:
+        check(set(rule) <= {"name", "from", "to", "either"}, f"{c['id']} rule keys")
+        check(bool(rule.get("name")), f"{c['id']} rule name")
+        for end in (rule.get("from", ""), rule.get("to", "")):
+            check(isinstance(end, str) and end != "", f"{c['id']} rule end written")
+            check(end == "*" or end in q["kinds"], f"{c['id']} rule end among the kinds")
+    for key in ("threshold", "relation_threshold"):
+        check(0 <= q[key] <= 1, f"{c['id']} {key} range")
+    expect = c["expect"]
+    check(set(expect) == {"entities", "relations"}, f"{c['id']} expect keys")
+    ids = []
+    for entity in expect["entities"]:
+        check(set(entity) == {"id", "text", "kind", "start", "end", "number"},
+              f"{c['id']} entity keys carry the interim `number`, never confidence")
+        check(entity["kind"] in q["kinds"], f"{c['id']} entity kind asked")
+        check(entity["start"] < entity["end"] <= len(c["text"]), f"{c['id']} offsets in bounds")
+        check(c["text"][entity["start"]:entity["end"]] == entity["text"],
+              f"{c['id']} offsets slice the name out")
+        check(0 <= entity["number"] <= 1 and entity["number"] >= q["threshold"],
+              f"{c['id']} number above the bar")
+        ids.append(entity["id"])
+    check(ids == list(range(1, len(ids) + 1)), f"{c['id']} entity ids count from 1 in order")
+    names = {rule["name"] for rule in q["relations"]}
+    last = None
+    for relation in expect["relations"]:
+        check(set(relation) == {"name", "source", "target", "probability"},
+              f"{c['id']} relation keys: source and target, probability")
+        check(relation["name"] in names, f"{c['id']} relation name asked")
+        check(relation["source"] in ids and relation["target"] in ids, f"{c['id']} relation ends are ids")
+        check(relation["probability"] >= q["relation_threshold"], f"{c['id']} relation above the bar")
+        order = (relation["source"], relation["target"], relation["name"])
+        check(last is None or last <= order, f"{c['id']} relations sorted")
+        last = order
+    check(isinstance(c["requests"], list), f"{c['id']} requests list")
+    for digest in c["requests"]:
+        check(isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest), f"{c['id']} digest shape")
+    check(isinstance(c["pairs"], int) and c["pairs"] >= 0, f"{c['id']} pairs pinned")
+
+
+def check_relate_case(c):
+    q = c["question"]
+    check(set(q) == {"relations", "threshold"}, f"{c['id']} question keys")
+    check(isinstance(c["records"], list) and 1 <= len(c["records"]) <= 255, f"{c['id']} records 1..255")
+    names = set()
+    for rule in q["relations"]:
+        check(set(rule) <= {"name", "from", "to", "either"}, f"{c['id']} rule keys")
+        check(bool(rule.get("name")), f"{c['id']} rule name")
+        for end in (rule.get("from", ""), rule.get("to", "")):
+            check(end == "*", f"{c['id']} relate rules are any-kind against these recordings")
+        names.add(rule["name"])
+    check(0 <= q["threshold"] <= 1, f"{c['id']} threshold range")
+    expect = c["expect"]
+    check(set(expect) == {"edges"}, f"{c['id']} expect keys")
+    last = None
+    for edge in expect["edges"]:
+        check(set(edge) <= {"name", "source", "target", "probability", "source_kind", "target_kind"},
+              f"{c['id']} edge keys: source and target, probability")
+        check("from" not in edge and "to" not in edge, f"{c['id']} never spells from and to")
+        check(edge["name"] in names, f"{c['id']} edge name asked")
+        check(1 <= edge["source"] <= len(c["records"]), f"{c['id']} edge source in range")
+        check(1 <= edge["target"] <= len(c["records"]), f"{c['id']} edge target in range")
+        check(edge["source"] != edge["target"], f"{c['id']} a record never pairs with itself")
+        check(edge["probability"] >= q["threshold"], f"{c['id']} edge above the bar")
+        order = (edge["source"], edge["target"], edge["name"])
+        check(last is None or last <= order, f"{c['id']} edges sorted")
+        last = order
+    check(isinstance(c["requests"], list), f"{c['id']} requests list")
+    check(isinstance(c["pairs"], int) and c["pairs"] >= 0, f"{c['id']} pairs pinned")
+    if len({"\n".join(c["records"])}) and c.get("form") == "per-subject":
+        check("note" in c and "per-subject" in c["note"], f"{c['id']} the per-subject skip is noted")
+
+
+def replay_recognize_and_relate(c):
+    """Prove the case against the replay table the stand-in serves."""
+    table = json.load(open("../standin/data/recognize-replay.json"))
+    row = replay_row(table, c)
+    if row is None:
+        return
+    if c["verb"] == "recognize":
+        entities, relations = replay_recognize(c, row)
+        want_entities = [
+            {"id": e["id"], "text": e["text"], "kind": e["kind"], "start": e["start"],
+             "end": e["end"], "number": e["confidence"]}
+            for e in entities
+        ]
+        check(want_entities == c["expect"]["entities"], f"{c['id']} entities replay exactly")
+        check(relations == c["expect"]["relations"], f"{c['id']} relations replay exactly")
+    else:
+        if c.get("form") == "per-subject":
+            # The pairs recording on the same text is what the stand-in
+            # serves; the per-subject case is pinned for the record.
+            return
+        edges = replay_relate(c, row)
+        check(edges == c["expect"]["edges"], f"{c['id']} edges replay exactly")
+
+
 def replay(c):
     """Recompute the expected answer from question plus recorded exchange."""
+    if c["verb"] in ("recognize", "relate"):
+        replay_recognize_and_relate(c)
+        return
     q = c.get("question")
     if q is None:
         # A question_file case: the named file failed before anything was sent.
@@ -287,12 +485,16 @@ for c in data["cases"]:
               f"{c['id']} find takes its question as text")
         check(2 <= len(c["records"]) <= (254 if c.get("none") else 255),
               f"{c['id']} find takes 2 to 255 units, 254 with none")
-    elif not is_usage_refusal:
+    elif not is_usage_refusal and c["verb"] not in ("recognize", "relate"):
         check_question(c["question"], c["verb"], where=f"{c['id']}: ")
     if c["verb"] == "annotate":
         for name, member in c.get("set", {}).items():
             check_question(member, member and [k for k in VERB_KEYS if k in member][0],
                            where=f"{c['id']}/{name}: ")
+    if c["verb"] == "recognize":
+        check_recognize_case(c)
+    if c["verb"] == "relate":
+        check_relate_case(c)
     for ex in c["exchanges"]:
         check_reply_shape(ex["request"], ex.get("reply", {}), ex.get("status"))
     replay(c)

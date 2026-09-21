@@ -63,3 +63,57 @@ now equals the length of the cases array.
 `tools/build_conformance.py` wrote the original twenty once and is history:
 rerunning it would erase this growth. The file is grown by hand under
 `tools/validate_conformance.py`, which recomputes every expectation offline.
+
+## R1: recognize and relate, 2026-09-21
+
+The forty recorded cases, the relate arms, and the one synthesized case that
+joined the file. What diverges, and why, from the recordings and the design
+pages:
+
+- **The entity number's field name is interim.** The marketing vocabulary
+  page (`repos/mktg/products/thinkthen/vocabulary.md`, "The words for
+  numbers") restricts `confidence` to the literal field Jev returns in
+  detailed output, and this number is computed from several of Jev's
+  numbers. The contract, the stand-in, and every expectation here carry the
+  neutral field `number`; the recordings keep their own field name in the
+  replay table and the stand-in maps it at replay. The recognize team's free
+  comparison — whether the lowest Jev probability behind a name filters as
+  well as our computed number — settles the final name. Ian can overturn.
+- **`located_in` is recorded nowhere.** Every recording that asks the
+  organization-to-place rule (the 222 demo, the 225 harvest, C13, C19,
+  C36) names it `based_in`; the design page's examples and the deck's
+  Python, TypeScript, and Rust recognize samples ask `located_in`. The
+  replay is strict: a rule the recording does not hold is a usage error
+  naming the rule and the covered set, so the deck's samples as written
+  cannot run against the stand-in until the deck or a new recording aligns
+  the name. The finding is the name, not the shape.
+- **The per-subject relate arm is pinned, not replayed.** R03 and R04 share
+  one text byte for byte; the stand-in serves the pairs recording (the ruled
+  method), so the R03 case carries `"form": "per-subject"` and a note, and
+  both the validator and the Rust replay test skip it after asserting the
+  marking. Every other relate case replays exactly.
+- **The recordings carry no failed-question cases**, so the build team's
+  failed marker (`{"failed": {"kind", "cause"}}`) is unexercised by the
+  replay; nothing here fabricates one.
+- **`requests` pins digests, not construction order.** The cache file names
+  are the logical request digests; the order they were built in is not
+  recoverable from the recordings, so the lists are sorted and the count is
+  the pin.
+- **Rule ends are reconstructed.** The package records rule names only;
+  `works_for` and `founded` are person:organization and `based_in` is
+  organization:place from the 222 demo's `relation_map.json`, and
+  `located_in` is *:place from the design page. Coverage reads names, so the
+  ends change no recorded answer.
+- **C41 is synthesized, not recorded.** It exists for the per-host offset
+  proofs (accent and emoji before the name), is marked `synthesized`, and
+  carries no request digests.
+- **The brief's arithmetic.** The task said the file grows to sixty-seven
+  cases (27 + 40); with the four relate arms and the synthesized case it is
+  seventy-two. One file, additive keys, schema unchanged.
+- **The R surface's runner needs a guard.** Its conformance slice parses
+  every case's question before switching on the verb, so the 45 new cases
+  fail with "a question file holds one of decide, choose, tag, or score".
+  The fix is one line in `libraries/r/conformance.R` — skip a verb the
+  runner does not express before building the question — and it belongs to
+  the R surface lane, whose recognize work will touch that file anyway. R1
+  touched no surface folder.

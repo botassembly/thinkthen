@@ -1,1603 +1,3837 @@
 {
-  "schema": "thinkthen.conformance/1",
-  "case_count": 27,
-  "error_kinds": [
-    "usage",
-    "backend",
-    "local",
-    "cancelled",
-    "deadline",
-    "defect"
-  ],
-  "unsure_marker": null,
-  "public_word_for_unsure": "unsure",
-  "cases": [
+ "schema": "thinkthen.conformance/1",
+ "case_count": 72,
+ "error_kinds": [
+  "usage",
+  "backend",
+  "local",
+  "cancelled",
+  "deadline",
+  "defect"
+ ],
+ "unsure_marker": null,
+ "public_word_for_unsure": "unsure",
+ "cases": [
+  {
+   "id": "01-decide-yes-cut",
+   "source": "../../205-thinkthen-libs/shared/cases/01-decide-yes-cut.json",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "true": "The writer asks for money back.",
+    "false": "The writer asks for anything else.",
+    "threshold": 0.9
+   },
+   "evidence": "I have asked three times and I still want a refund.",
+   "exchanges": [
     {
-      "id": "01-decide-yes-cut",
-      "source": "../../205-thinkthen-libs/shared/cases/01-decide-yes-cut.json",
-      "verb": "decide",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "true": "The writer asks for money back.",
-        "false": "The writer asks for anything else.",
-        "threshold": 0.9
+     "captured": "stub",
+     "request": {
+      "state": "I have asked three times and I still want a refund.",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?",
+        "criteria": {
+         "true": "The writer asks for money back.",
+         "false": "The writer asks for anything else."
+        }
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
       },
-      "evidence": "I have asked three times and I still want a refund.",
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "I have asked three times and I still want a refund.",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?",
-                "criteria": {
-                  "true": "The writer asks for money back.",
-                  "false": "The writer asks for anything else."
-                }
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": true,
-        "details": {
-          "kind": "yes_no",
-          "probability": 0.97,
-          "model": "jev-latest",
-          "question_sha256": "05dd1d303f389aebffa23e0337ce842a6953402a58206ca389a93757c000654f"
-        }
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
       }
-    },
-    {
-      "id": "02-decide-no-cut",
-      "source": "../../205-thinkthen-libs/shared/cases/02-decide-no-cut.json",
-      "verb": "decide",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.9
-      },
-      "evidence": "Good morning, the package arrived on Tuesday.",
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "Good morning, the package arrived on Tuesday.",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": false,
-        "details": {
-          "kind": "yes_no",
-          "probability": 0.03,
-          "model": "jev-latest",
-          "question_sha256": "fea449240a9d87cafd1fe844153250a70c161edd89518b95d35fab8e83b2f356"
-        }
-      }
-    },
-    {
-      "id": "03-decide-band-unresolved",
-      "source": "../../205-thinkthen-libs/shared/cases/03-decide-band-unresolved.json",
-      "verb": "decide",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": "0.2:0.8"
-      },
-      "evidence": "Maybe I will ask for my money back, maybe not.",
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "Maybe I will ask for my money back, maybe not.",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.55,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": null,
-        "unsure": true,
-        "details": {
-          "kind": "yes_no",
-          "probability": 0.55,
-          "model": "jev-latest",
-          "question_sha256": "adbc0a2cfaea25614af8f4ddd769e864679f2b3ffb9837c98d1f7359b708d5e4"
-        }
-      }
-    },
-    {
-      "id": "04-decide-band-resolves",
-      "source": "../../205-thinkthen-libs/shared/cases/04-decide-band-resolves.json",
-      "verb": "decide",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": "0.2:0.9"
-      },
-      "evidence": "I demand a full refund immediately.",
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "I demand a full refund immediately.",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": true,
-        "details": {
-          "kind": "yes_no",
-          "probability": 0.97,
-          "model": "jev-latest",
-          "question_sha256": "f15f317d88f67409dacf10df995eed4024386d2db49e106f366f94d6f227dc1d"
-        }
-      }
-    },
-    {
-      "id": "05-filter-keeps-some-of-five",
-      "source": "../../205-thinkthen-libs/shared/cases/05-filter-keeps-some-of-five.json",
-      "verb": "filter",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.5
-      },
-      "records": [
-        "i want a refund now",
-        "good morning",
-        "refund, please",
-        "maybe later",
-        "see you"
-      ],
-      "jobs": 3,
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "i want a refund now",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "good morning",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "refund, please",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "maybe later",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.55,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "see you",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "indexes": [
-          0,
-          2,
-          3
-        ],
-        "details": {
-          "kind": "yes_no",
-          "model": "jev-latest",
-          "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
-        }
-      }
-    },
-    {
-      "id": "06-filter-empty-list",
-      "source": "../../205-thinkthen-libs/shared/cases/06-filter-empty-list.json",
-      "verb": "filter",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.5
-      },
-      "records": [],
-      "jobs": 3,
-      "exchanges": [],
-      "expect": {
-        "indexes": [],
-        "details": {
-          "kind": "yes_no",
-          "model": "jev-latest",
-          "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
-        }
-      }
-    },
-    {
-      "id": "07-backend-refuses",
-      "source": "../../205-thinkthen-libs/shared/cases/07-backend-refuses.json",
-      "verb": "decide",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.9
-      },
-      "evidence": "This malformed line is not a request the backend takes.",
-      "exchanges": [
-        {
-          "captured": "stub",
-          "status": 422,
-          "request": {
-            "state": "This malformed line is not a request the backend takes.",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "error": "malformed"
-          }
-        }
-      ],
-      "expect": {
-        "error": {
-          "kind": "backend"
-        }
-      }
-    },
-    {
-      "id": "08-usage-threshold-90",
-      "source": "../../205-thinkthen-libs/shared/cases/08-usage-threshold-90.json",
-      "verb": "decide",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 90
-      },
-      "evidence": "I want a refund.",
-      "exchanges": [],
-      "expect": {
-        "error": {
-          "kind": "usage"
-        }
-      }
-    },
-    {
-      "id": "09-usage-filter-band",
-      "source": "../../205-thinkthen-libs/shared/cases/09-usage-filter-band.json",
-      "verb": "filter",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": "0.2:0.8"
-      },
-      "records": [
-        "I want a refund now",
-        "Maybe later"
-      ],
-      "jobs": 2,
-      "exchanges": [],
-      "expect": {
-        "error": {
-          "kind": "usage"
-        }
-      }
-    },
-    {
-      "id": "10-usage-blank-question",
-      "source": "../../205-thinkthen-libs/shared/cases/10-usage-blank-question.json",
-      "verb": "decide",
-      "question": {
-        "decide": "   "
-      },
-      "evidence": "I want a refund.",
-      "exchanges": [],
-      "expect": {
-        "error": {
-          "kind": "usage"
-        }
-      }
-    },
-    {
-      "id": "11-choose-picks-refund",
-      "source": "cases2/01-choose-picks-refund.json",
-      "verb": "choose",
-      "question": {
-        "choose": "Which team owns this?",
-        "options": [
-          "the refund desk",
-          "the maybe desk",
-          "anywhere else"
-        ],
-        "threshold": 0.5
-      },
-      "evidence": "please route this ticket",
-      "exchanges": [
-        {
-          "captured": "shaped-to-contract",
-          "request": {
-            "state": "please route this ticket",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "choice",
-                "instructions": "Which team owns this?",
-                "criteria": {
-                  "the refund desk": null,
-                  "the maybe desk": null,
-                  "anywhere else": null
-                }
-              }
-            }
-          },
-          "reply": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
-                "type": "choice",
-                "probabilities": {
-                  "the refund desk": 0.62,
-                  "the maybe desk": 0.31,
-                  "anywhere else": 0.07
-                }
-              }
-            },
-            "usage": {
-              "input_tokens": 14,
-              "output_tokens": 3
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": "the refund desk",
-        "details": {
-          "kind": "choice",
-          "pick": "the refund desk",
-          "probabilities": {
-            "the refund desk": 0.62,
-            "the maybe desk": 0.31,
-            "anywhere else": 0.07
-          },
-          "model": "jev-latest",
-          "question_sha256": "a888aaf62a01f35907318921589a6f545df4788b351f78a1aca6f5d96d5d477c"
-        }
-      }
-    },
-    {
-      "id": "12-choose-under-threshold-null",
-      "source": "cases2/02-choose-under-threshold-null.json",
-      "verb": "choose",
-      "question": {
-        "choose": "Which team owns this?",
-        "options": [
-          "somewhere",
-          "elsewhere"
-        ],
-        "threshold": 0.9
-      },
-      "evidence": "a plain note about nothing",
-      "exchanges": [
-        {
-          "captured": "shaped-to-contract",
-          "request": {
-            "state": "a plain note about nothing",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "choice",
-                "instructions": "Which team owns this?",
-                "criteria": {
-                  "somewhere": null,
-                  "elsewhere": null
-                }
-              }
-            }
-          },
-          "reply": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
-                "type": "choice",
-                "probabilities": {
-                  "somewhere": 0.55,
-                  "elsewhere": 0.45
-                }
-              }
-            },
-            "usage": {
-              "input_tokens": 12,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": null,
-        "unsure": true,
-        "details": {
-          "kind": "choice",
-          "pick": "somewhere",
-          "probabilities": {
-            "somewhere": 0.55,
-            "elsewhere": 0.45
-          },
-          "model": "jev-latest",
-          "question_sha256": "ceab0bb6766d3f9f5f28949f6005804b43490b46b7de8a40616f92bb774e7ae8"
-        }
-      }
-    },
-    {
-      "id": "13-score-levels",
-      "source": "cases2/03-score-levels.json",
-      "verb": "score",
-      "question": {
-        "score": "How strong is the refund claim?",
-        "levels": [
-          "low",
-          "mid",
-          "high"
-        ]
-      },
-      "evidence": "maybe later",
-      "exchanges": [
-        {
-          "captured": "shaped-to-contract",
-          "request": {
-            "state": "maybe later",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "score",
-                "instructions": "How strong is the refund claim?",
-                "criteria": [
-                  "low",
-                  "mid",
-                  "high"
-                ]
-              }
-            }
-          },
-          "reply": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
-                "type": "score",
-                "probabilities": {
-                  "0": 0.2,
-                  "1": 0.55,
-                  "2": 0.25
-                }
-              }
-            },
-            "usage": {
-              "input_tokens": 11,
-              "output_tokens": 3
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": 1.05,
-        "details": {
-          "kind": "score",
-          "nearest_level": "mid",
-          "probabilities": {
-            "low": 0.2,
-            "mid": 0.55,
-            "high": 0.25
-          },
-          "model": "jev-latest",
-          "question_sha256": "3cde880a45b1330466a18bc0a35668da6aa3c327329e1b3e15b152b3477ce472"
-        }
-      }
-    },
-    {
-      "id": "14-tag-holds-some",
-      "source": "cases2/04-tag-holds-some.json",
-      "verb": "tag",
-      "question": {
-        "tag": "Does this line show the word?",
-        "labels": [
-          "the refund word",
-          "the maybe word",
-          "nothing at all"
-        ]
-      },
-      "evidence": "a plain line",
-      "exchanges": [
-        {
-          "captured": "shaped-to-contract",
-          "request": {
-            "state": "a plain line",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does this line show the word?\n\nDetermine whether the label \"the refund word\" applies to this item."
-              },
-              "q2": {
-                "type": "noul",
-                "instructions": "Does this line show the word?\n\nDetermine whether the label \"the maybe word\" applies to this item."
-              },
-              "q3": {
-                "type": "noul",
-                "instructions": "Does this line show the word?\n\nDetermine whether the label \"nothing at all\" applies to this item."
-              }
-            }
-          },
-          "reply": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
-                "type": "noul",
-                "noul": 0.72
-              },
-              "q2": {
-                "type": "noul",
-                "noul": 0.55
-              },
-              "q3": {
-                "type": "noul",
-                "noul": 0.03
-              }
-            },
-            "usage": {
-              "input_tokens": 18,
-              "output_tokens": 4
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": [
-          "the refund word",
-          "the maybe word"
-        ],
-        "details": {
-          "kind": "tag",
-          "probabilities": {
-            "the refund word": 0.72,
-            "the maybe word": 0.55,
-            "nothing at all": 0.03
-          },
-          "model": "jev-latest",
-          "question_sha256": "3c44c98ea8dfac770bf4e05d183f4915d748e20fbbc182dc97f3aecde3ce4836"
-        }
-      }
-    },
-    {
-      "id": "15-annotate-assembles",
-      "source": "cases2/05-annotate-assembles.json",
-      "verb": "annotate",
-      "question": {
-        "decide": "Is this spam?",
-        "threshold": 0.5
-      },
-      "evidence": "maybe later",
-      "set": {
-        "spam": {
-          "decide": "Is this spam?",
-          "threshold": 0.5
-        },
-        "band": {
-          "decide": "Refund?",
-          "threshold": "0.2:0.8"
-        }
-      },
-      "exchanges": [
-        {
-          "captured": "shaped-to-contract",
-          "request": {
-            "state": "maybe later",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Is this spam?"
-              },
-              "q2": {
-                "type": "noul",
-                "instructions": "Refund?"
-              }
-            }
-          },
-          "reply": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
-                "type": "noul",
-                "noul": 0.55
-              },
-              "q2": {
-                "type": "noul",
-                "noul": 0.55
-              }
-            },
-            "usage": {
-              "input_tokens": 16,
-              "output_tokens": 4
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answers": {
-          "spam": {
-            "answer": true,
-            "probability": 0.55
-          },
-          "band": {
-            "answer": null,
-            "unsure": true,
-            "probability": 0.55
-          }
-        }
-      }
-    },
-    {
-      "id": "16-details-carries-model-and-digest",
-      "source": "cases2/06-details-carries-model-and-digest.json",
-      "verb": "details",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.9
-      },
-      "evidence": "i want a refund",
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "i want a refund",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": true,
-        "details": {
-          "kind": "yes_no",
-          "probability": 0.97,
-          "model": "jev-latest",
-          "question_sha256": "fea449240a9d87cafd1fe844153250a70c161edd89518b95d35fab8e83b2f356"
-        }
-      }
-    },
-    {
-      "id": "17-usage-and-cache",
-      "source": "cases2/07-usage-and-cache.json",
-      "verb": "usage",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.5
-      },
-      "evidence": "refund now",
-      "calls": 2,
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "refund now",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "requests": 1,
-        "cache_answers": 1,
-        "after_reset": {
-          "requests": 0,
-          "cache_answers": 0
-        }
-      }
-    },
-    {
-      "id": "18-cancel-mid-batch",
-      "source": "cases2/08-cancel-mid-batch.json",
-      "verb": "cancel",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.5
-      },
-      "records": [
-        "one",
-        "two",
-        "three",
-        "four"
-      ],
-      "jobs": 2,
-      "cancel_after_replies": 2,
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "one",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "two",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "three",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "four",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "error": {
-          "kind": "cancelled"
-        }
-      }
-    },
-    {
-      "id": "19-decide-many-judgments",
-      "source": "cases2/09-decide-many-judgments.json",
-      "verb": "decide_many",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.5
-      },
-      "records": [
-        "refund now",
-        "good morning",
-        "maybe so",
-        "refund again",
-        "bye"
-      ],
-      "jobs": 3,
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "refund now",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "good morning",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "maybe so",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.55,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "refund again",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.97,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "bye",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "noul": 0.03,
-                "type": "noul"
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answers": [
-          true,
-          false,
-          true,
-          true,
-          false
-        ],
-        "probabilities": [
-          0.97,
-          0.03,
-          0.55,
-          0.97,
-          0.03
-        ],
-        "details": {
-          "kind": "yes_no",
-          "model": "jev-latest",
-          "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
-        }
-      }
-    },
-    {
-      "id": "20-choose-backend-refuses",
-      "source": "cases2/10-choose-backend-refuses.json",
-      "verb": "choose",
-      "question": {
-        "choose": "Which team owns this?",
-        "options": [
-          "one desk",
-          "other desk"
-        ],
-        "threshold": 0.5
-      },
-      "evidence": "this malformed line",
-      "exchanges": [
-        {
-          "captured": "stub",
-          "status": 422,
-          "request": {
-            "state": "this malformed line",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "choice",
-                "instructions": "Which team owns this?",
-                "criteria": {
-                  "one desk": null,
-                  "other desk": null
-                }
-              }
-            }
-          },
-          "reply": {
-            "error": "malformed"
-          }
-        }
-      ],
-      "expect": {
-        "error": {
-          "kind": "backend"
-        }
-      }
-    },
-    {
-      "id": "21-rank-orders-by-yes",
-      "source": "conformance growth, 2026-09-21",
-      "verb": "rank",
-      "question": {
-        "decide": "Is this a complaint?",
-        "true": "The record is a complaint.",
-        "false": "The record is anything else."
-      },
-      "records": [
-        "maybe so",
-        "maybe later",
-        "refund now",
-        "good morning"
-      ],
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "maybe so",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Is this a complaint?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "type": "noul",
-                "noul": 0.55
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "maybe later",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Is this a complaint?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "type": "noul",
-                "noul": 0.55
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "refund now",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Is this a complaint?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "type": "noul",
-                "noul": 0.97
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "captured": "stub",
-          "request": {
-            "state": "good morning",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Is this a complaint?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "type": "noul",
-                "noul": 0.03
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "ranking": [
-          2,
-          0,
-          1,
-          3
-        ],
-        "probabilities": [
-          0.55,
-          0.55,
-          0.97,
-          0.03
-        ]
-      }
-    },
-    {
-      "id": "22-rank-refuses-threshold",
-      "source": "conformance growth, 2026-09-21",
-      "verb": "rank",
-      "question": {
-        "decide": "Is this a complaint?",
-        "threshold": 0.5
-      },
-      "records": [
-        "one",
-        "two"
-      ],
-      "exchanges": [],
-      "expect": {
-        "error": {
-          "kind": "usage"
-        }
-      }
-    },
-    {
-      "id": "23-rank-refuses-blank-question",
-      "source": "conformance growth, 2026-09-21",
-      "verb": "rank",
-      "question": {
-        "decide": "   "
-      },
-      "records": [
-        "one",
-        "two"
-      ],
-      "exchanges": [],
-      "expect": {
-        "error": {
-          "kind": "usage"
-        }
-      }
-    },
-    {
-      "id": "24-find-picks-best-unit",
-      "source": "conformance growth, 2026-09-21",
-      "verb": "find",
-      "question": "Which unit states where refunds are handled?",
-      "records": [
-        "good morning",
-        "refund now",
-        "maybe so"
-      ],
-      "exchanges": [
-        {
-          "captured": "shaped-to-contract",
-          "request": {
-            "state": "[{\"id\":\"u001\",\"evidence\":\"good morning\"},{\"id\":\"u002\",\"evidence\":\"refund now\"},{\"id\":\"u003\",\"evidence\":\"maybe so\"}]",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "choice",
-                "instructions": "Which unit states where refunds are handled?",
-                "criteria": {
-                  "u001": null,
-                  "u002": null,
-                  "u003": null
-                }
-              }
-            }
-          },
-          "reply": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
-                "type": "choice",
-                "probabilities": {
-                  "u001": 0.02,
-                  "u002": 0.93,
-                  "u003": 0.05
-                }
-              }
-            },
-            "usage": {
-              "input_tokens": 36,
-              "output_tokens": 4
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": 1,
-        "details": {
-          "kind": "find",
-          "pick": "u002",
-          "probabilities": {
-            "u001": 0.02,
-            "u002": 0.93,
-            "u003": 0.05
-          },
-          "model": "jev-latest",
-          "question_sha256": "24fa7518bb7d6bb4ae84d85394e5b1a103b4787c218e3d98a132077ae41d6d4e"
-        }
-      }
-    },
-    {
-      "id": "25-find-none-fits",
-      "source": "conformance growth, 2026-09-21",
-      "verb": "find",
-      "question": "Which unit names the on-call engineer?",
-      "none": true,
-      "records": [
-        "good morning",
-        "maybe so"
-      ],
-      "exchanges": [
-        {
-          "captured": "shaped-to-contract",
-          "request": {
-            "state": "[{\"id\":\"u001\",\"evidence\":\"good morning\"},{\"id\":\"u002\",\"evidence\":\"maybe so\"}]",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "choice",
-                "instructions": "Which unit names the on-call engineer?",
-                "criteria": {
-                  "u001": null,
-                  "u002": null,
-                  "none": null
-                }
-              }
-            }
-          },
-          "reply": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
-                "type": "choice",
-                "probabilities": {
-                  "u001": 0.05,
-                  "u002": 0.05,
-                  "none": 0.9
-                }
-              }
-            },
-            "usage": {
-              "input_tokens": 30,
-              "output_tokens": 3
-            }
-          }
-        }
-      ],
-      "expect": {
-        "answer": null,
-        "none": true,
-        "details": {
-          "kind": "find",
-          "pick": "none",
-          "probabilities": {
-            "u001": 0.05,
-            "u002": 0.05,
-            "none": 0.9
-          },
-          "model": "jev-latest",
-          "question_sha256": "462a2d9e99caaec8498e87ee850927817f4aca9ca439ea8a2ecf8a9052a15bfd"
-        }
-      }
-    },
-    {
-      "id": "26-local-missing-question-file",
-      "source": "conformance growth, 2026-09-21",
-      "verb": "decide",
-      "question_file": "@/no/such/question.json",
-      "evidence": "anything at all",
-      "exchanges": [],
-      "expect": {
-        "error": {
-          "kind": "local"
-        }
-      }
-    },
-    {
-      "id": "27-deadline-spent-budget",
-      "source": "conformance growth, 2026-09-21",
-      "verb": "decide",
-      "question": {
-        "decide": "Does the writer ask for a refund?",
-        "threshold": 0.9
-      },
-      "evidence": "i want a refund",
-      "budget_ms": 0,
-      "exchanges": [
-        {
-          "captured": "stub",
-          "request": {
-            "state": "i want a refund",
-            "model": "jev-latest",
-            "questions": {
-              "q1": {
-                "type": "noul",
-                "instructions": "Does the writer ask for a refund?"
-              }
-            }
-          },
-          "reply": {
-            "answers": {
-              "q1": {
-                "type": "noul",
-                "noul": 0.97
-              }
-            },
-            "model": "jev-latest",
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        }
-      ],
-      "expect": {
-        "error": {
-          "kind": "deadline"
-        }
-      }
+     }
     }
-  ]
+   ],
+   "expect": {
+    "answer": true,
+    "details": {
+     "kind": "yes_no",
+     "probability": 0.97,
+     "model": "jev-latest",
+     "question_sha256": "05dd1d303f389aebffa23e0337ce842a6953402a58206ca389a93757c000654f"
+    }
+   }
+  },
+  {
+   "id": "02-decide-no-cut",
+   "source": "../../205-thinkthen-libs/shared/cases/02-decide-no-cut.json",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.9
+   },
+   "evidence": "Good morning, the package arrived on Tuesday.",
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "Good morning, the package arrived on Tuesday.",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": false,
+    "details": {
+     "kind": "yes_no",
+     "probability": 0.03,
+     "model": "jev-latest",
+     "question_sha256": "fea449240a9d87cafd1fe844153250a70c161edd89518b95d35fab8e83b2f356"
+    }
+   }
+  },
+  {
+   "id": "03-decide-band-unresolved",
+   "source": "../../205-thinkthen-libs/shared/cases/03-decide-band-unresolved.json",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": "0.2:0.8"
+   },
+   "evidence": "Maybe I will ask for my money back, maybe not.",
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "Maybe I will ask for my money back, maybe not.",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.55,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": null,
+    "unsure": true,
+    "details": {
+     "kind": "yes_no",
+     "probability": 0.55,
+     "model": "jev-latest",
+     "question_sha256": "adbc0a2cfaea25614af8f4ddd769e864679f2b3ffb9837c98d1f7359b708d5e4"
+    }
+   }
+  },
+  {
+   "id": "04-decide-band-resolves",
+   "source": "../../205-thinkthen-libs/shared/cases/04-decide-band-resolves.json",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": "0.2:0.9"
+   },
+   "evidence": "I demand a full refund immediately.",
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "I demand a full refund immediately.",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": true,
+    "details": {
+     "kind": "yes_no",
+     "probability": 0.97,
+     "model": "jev-latest",
+     "question_sha256": "f15f317d88f67409dacf10df995eed4024386d2db49e106f366f94d6f227dc1d"
+    }
+   }
+  },
+  {
+   "id": "05-filter-keeps-some-of-five",
+   "source": "../../205-thinkthen-libs/shared/cases/05-filter-keeps-some-of-five.json",
+   "verb": "filter",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.5
+   },
+   "records": [
+    "i want a refund now",
+    "good morning",
+    "refund, please",
+    "maybe later",
+    "see you"
+   ],
+   "jobs": 3,
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "i want a refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund, please",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "maybe later",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.55,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "see you",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "indexes": [
+     0,
+     2,
+     3
+    ],
+    "details": {
+     "kind": "yes_no",
+     "model": "jev-latest",
+     "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
+    }
+   }
+  },
+  {
+   "id": "06-filter-empty-list",
+   "source": "../../205-thinkthen-libs/shared/cases/06-filter-empty-list.json",
+   "verb": "filter",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.5
+   },
+   "records": [],
+   "jobs": 3,
+   "exchanges": [],
+   "expect": {
+    "indexes": [],
+    "details": {
+     "kind": "yes_no",
+     "model": "jev-latest",
+     "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
+    }
+   }
+  },
+  {
+   "id": "07-backend-refuses",
+   "source": "../../205-thinkthen-libs/shared/cases/07-backend-refuses.json",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.9
+   },
+   "evidence": "This malformed line is not a request the backend takes.",
+   "exchanges": [
+    {
+     "captured": "stub",
+     "status": 422,
+     "request": {
+      "state": "This malformed line is not a request the backend takes.",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "error": "malformed"
+     }
+    }
+   ],
+   "expect": {
+    "error": {
+     "kind": "backend"
+    }
+   }
+  },
+  {
+   "id": "08-usage-threshold-90",
+   "source": "../../205-thinkthen-libs/shared/cases/08-usage-threshold-90.json",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 90
+   },
+   "evidence": "I want a refund.",
+   "exchanges": [],
+   "expect": {
+    "error": {
+     "kind": "usage"
+    }
+   }
+  },
+  {
+   "id": "09-usage-filter-band",
+   "source": "../../205-thinkthen-libs/shared/cases/09-usage-filter-band.json",
+   "verb": "filter",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": "0.2:0.8"
+   },
+   "records": [
+    "I want a refund now",
+    "Maybe later"
+   ],
+   "jobs": 2,
+   "exchanges": [],
+   "expect": {
+    "error": {
+     "kind": "usage"
+    }
+   }
+  },
+  {
+   "id": "10-usage-blank-question",
+   "source": "../../205-thinkthen-libs/shared/cases/10-usage-blank-question.json",
+   "verb": "decide",
+   "question": {
+    "decide": "   "
+   },
+   "evidence": "I want a refund.",
+   "exchanges": [],
+   "expect": {
+    "error": {
+     "kind": "usage"
+    }
+   }
+  },
+  {
+   "id": "11-choose-picks-refund",
+   "source": "cases2/01-choose-picks-refund.json",
+   "verb": "choose",
+   "question": {
+    "choose": "Which team owns this?",
+    "options": [
+     "the refund desk",
+     "the maybe desk",
+     "anywhere else"
+    ],
+    "threshold": 0.5
+   },
+   "evidence": "please route this ticket",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "please route this ticket",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "choice",
+        "instructions": "Which team owns this?",
+        "criteria": {
+         "the refund desk": null,
+         "the maybe desk": null,
+         "anywhere else": null
+        }
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "choice",
+        "probabilities": {
+         "the refund desk": 0.62,
+         "the maybe desk": 0.31,
+         "anywhere else": 0.07
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 14,
+       "output_tokens": 3
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": "the refund desk",
+    "details": {
+     "kind": "choice",
+     "pick": "the refund desk",
+     "probabilities": {
+      "the refund desk": 0.62,
+      "the maybe desk": 0.31,
+      "anywhere else": 0.07
+     },
+     "model": "jev-latest",
+     "question_sha256": "a888aaf62a01f35907318921589a6f545df4788b351f78a1aca6f5d96d5d477c"
+    }
+   }
+  },
+  {
+   "id": "12-choose-under-threshold-null",
+   "source": "cases2/02-choose-under-threshold-null.json",
+   "verb": "choose",
+   "question": {
+    "choose": "Which team owns this?",
+    "options": [
+     "somewhere",
+     "elsewhere"
+    ],
+    "threshold": 0.9
+   },
+   "evidence": "a plain note about nothing",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "a plain note about nothing",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "choice",
+        "instructions": "Which team owns this?",
+        "criteria": {
+         "somewhere": null,
+         "elsewhere": null
+        }
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "choice",
+        "probabilities": {
+         "somewhere": 0.55,
+         "elsewhere": 0.45
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 12,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": null,
+    "unsure": true,
+    "details": {
+     "kind": "choice",
+     "pick": "somewhere",
+     "probabilities": {
+      "somewhere": 0.55,
+      "elsewhere": 0.45
+     },
+     "model": "jev-latest",
+     "question_sha256": "ceab0bb6766d3f9f5f28949f6005804b43490b46b7de8a40616f92bb774e7ae8"
+    }
+   }
+  },
+  {
+   "id": "13-score-levels",
+   "source": "cases2/03-score-levels.json",
+   "verb": "score",
+   "question": {
+    "score": "How strong is the refund claim?",
+    "levels": [
+     "low",
+     "mid",
+     "high"
+    ]
+   },
+   "evidence": "maybe later",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "maybe later",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "score",
+        "instructions": "How strong is the refund claim?",
+        "criteria": [
+         "low",
+         "mid",
+         "high"
+        ]
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "score",
+        "probabilities": {
+         "0": 0.2,
+         "1": 0.55,
+         "2": 0.25
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 11,
+       "output_tokens": 3
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": 1.05,
+    "details": {
+     "kind": "score",
+     "nearest_level": "mid",
+     "probabilities": {
+      "low": 0.2,
+      "mid": 0.55,
+      "high": 0.25
+     },
+     "model": "jev-latest",
+     "question_sha256": "3cde880a45b1330466a18bc0a35668da6aa3c327329e1b3e15b152b3477ce472"
+    }
+   }
+  },
+  {
+   "id": "14-tag-holds-some",
+   "source": "cases2/04-tag-holds-some.json",
+   "verb": "tag",
+   "question": {
+    "tag": "Does this line show the word?",
+    "labels": [
+     "the refund word",
+     "the maybe word",
+     "nothing at all"
+    ]
+   },
+   "evidence": "a plain line",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "a plain line",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the refund word\" applies to this item."
+       },
+       "q2": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the maybe word\" applies to this item."
+       },
+       "q3": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"nothing at all\" applies to this item."
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.72
+       },
+       "q2": {
+        "type": "noul",
+        "noul": 0.55
+       },
+       "q3": {
+        "type": "noul",
+        "noul": 0.03
+       }
+      },
+      "usage": {
+       "input_tokens": 18,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": [
+     "the refund word",
+     "the maybe word"
+    ],
+    "details": {
+     "kind": "tag",
+     "probabilities": {
+      "the refund word": 0.72,
+      "the maybe word": 0.55,
+      "nothing at all": 0.03
+     },
+     "model": "jev-latest",
+     "question_sha256": "3c44c98ea8dfac770bf4e05d183f4915d748e20fbbc182dc97f3aecde3ce4836"
+    }
+   }
+  },
+  {
+   "id": "15-annotate-assembles",
+   "source": "cases2/05-annotate-assembles.json",
+   "verb": "annotate",
+   "question": {
+    "decide": "Is this spam?",
+    "threshold": 0.5
+   },
+   "evidence": "maybe later",
+   "set": {
+    "spam": {
+     "decide": "Is this spam?",
+     "threshold": 0.5
+    },
+    "band": {
+     "decide": "Refund?",
+     "threshold": "0.2:0.8"
+    }
+   },
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "maybe later",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this spam?"
+       },
+       "q2": {
+        "type": "noul",
+        "instructions": "Refund?"
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.55
+       },
+       "q2": {
+        "type": "noul",
+        "noul": 0.55
+       }
+      },
+      "usage": {
+       "input_tokens": 16,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answers": {
+     "spam": {
+      "answer": true,
+      "probability": 0.55
+     },
+     "band": {
+      "answer": null,
+      "unsure": true,
+      "probability": 0.55
+     }
+    }
+   }
+  },
+  {
+   "id": "16-details-carries-model-and-digest",
+   "source": "cases2/06-details-carries-model-and-digest.json",
+   "verb": "details",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.9
+   },
+   "evidence": "i want a refund",
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "i want a refund",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": true,
+    "details": {
+     "kind": "yes_no",
+     "probability": 0.97,
+     "model": "jev-latest",
+     "question_sha256": "fea449240a9d87cafd1fe844153250a70c161edd89518b95d35fab8e83b2f356"
+    }
+   }
+  },
+  {
+   "id": "17-usage-and-cache",
+   "source": "cases2/07-usage-and-cache.json",
+   "verb": "usage",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.5
+   },
+   "evidence": "refund now",
+   "calls": 2,
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "requests": 1,
+    "cache_answers": 1,
+    "after_reset": {
+     "requests": 0,
+     "cache_answers": 0
+    }
+   }
+  },
+  {
+   "id": "18-cancel-mid-batch",
+   "source": "cases2/08-cancel-mid-batch.json",
+   "verb": "cancel",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.5
+   },
+   "records": [
+    "one",
+    "two",
+    "three",
+    "four"
+   ],
+   "jobs": 2,
+   "cancel_after_replies": 2,
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "one",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "two",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "three",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "four",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "error": {
+     "kind": "cancelled"
+    }
+   }
+  },
+  {
+   "id": "19-decide-many-judgments",
+   "source": "cases2/09-decide-many-judgments.json",
+   "verb": "decide_many",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.5
+   },
+   "records": [
+    "refund now",
+    "good morning",
+    "maybe so",
+    "refund again",
+    "bye"
+   ],
+   "jobs": 3,
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "maybe so",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.55,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund again",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "bye",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answers": [
+     true,
+     false,
+     true,
+     true,
+     false
+    ],
+    "probabilities": [
+     0.97,
+     0.03,
+     0.55,
+     0.97,
+     0.03
+    ],
+    "details": {
+     "kind": "yes_no",
+     "model": "jev-latest",
+     "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3"
+    }
+   }
+  },
+  {
+   "id": "20-choose-backend-refuses",
+   "source": "cases2/10-choose-backend-refuses.json",
+   "verb": "choose",
+   "question": {
+    "choose": "Which team owns this?",
+    "options": [
+     "one desk",
+     "other desk"
+    ],
+    "threshold": 0.5
+   },
+   "evidence": "this malformed line",
+   "exchanges": [
+    {
+     "captured": "stub",
+     "status": 422,
+     "request": {
+      "state": "this malformed line",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "choice",
+        "instructions": "Which team owns this?",
+        "criteria": {
+         "one desk": null,
+         "other desk": null
+        }
+       }
+      }
+     },
+     "reply": {
+      "error": "malformed"
+     }
+    }
+   ],
+   "expect": {
+    "error": {
+     "kind": "backend"
+    }
+   }
+  },
+  {
+   "id": "21-rank-orders-by-yes",
+   "source": "conformance growth, 2026-09-21",
+   "verb": "rank",
+   "question": {
+    "decide": "Is this a complaint?",
+    "true": "The record is a complaint.",
+    "false": "The record is anything else."
+   },
+   "records": [
+    "maybe so",
+    "maybe later",
+    "refund now",
+    "good morning"
+   ],
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "maybe so",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a complaint?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.55
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "maybe later",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a complaint?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.55
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a complaint?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.97
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a complaint?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.03
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "ranking": [
+     2,
+     0,
+     1,
+     3
+    ],
+    "probabilities": [
+     0.55,
+     0.55,
+     0.97,
+     0.03
+    ]
+   }
+  },
+  {
+   "id": "22-rank-refuses-threshold",
+   "source": "conformance growth, 2026-09-21",
+   "verb": "rank",
+   "question": {
+    "decide": "Is this a complaint?",
+    "threshold": 0.5
+   },
+   "records": [
+    "one",
+    "two"
+   ],
+   "exchanges": [],
+   "expect": {
+    "error": {
+     "kind": "usage"
+    }
+   }
+  },
+  {
+   "id": "23-rank-refuses-blank-question",
+   "source": "conformance growth, 2026-09-21",
+   "verb": "rank",
+   "question": {
+    "decide": "   "
+   },
+   "records": [
+    "one",
+    "two"
+   ],
+   "exchanges": [],
+   "expect": {
+    "error": {
+     "kind": "usage"
+    }
+   }
+  },
+  {
+   "id": "24-find-picks-best-unit",
+   "source": "conformance growth, 2026-09-21",
+   "verb": "find",
+   "question": "Which unit states where refunds are handled?",
+   "records": [
+    "good morning",
+    "refund now",
+    "maybe so"
+   ],
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "[{\"id\":\"u001\",\"evidence\":\"good morning\"},{\"id\":\"u002\",\"evidence\":\"refund now\"},{\"id\":\"u003\",\"evidence\":\"maybe so\"}]",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "choice",
+        "instructions": "Which unit states where refunds are handled?",
+        "criteria": {
+         "u001": null,
+         "u002": null,
+         "u003": null
+        }
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "choice",
+        "probabilities": {
+         "u001": 0.02,
+         "u002": 0.93,
+         "u003": 0.05
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 36,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": 1,
+    "details": {
+     "kind": "find",
+     "pick": "u002",
+     "probabilities": {
+      "u001": 0.02,
+      "u002": 0.93,
+      "u003": 0.05
+     },
+     "model": "jev-latest",
+     "question_sha256": "24fa7518bb7d6bb4ae84d85394e5b1a103b4787c218e3d98a132077ae41d6d4e"
+    }
+   }
+  },
+  {
+   "id": "25-find-none-fits",
+   "source": "conformance growth, 2026-09-21",
+   "verb": "find",
+   "question": "Which unit names the on-call engineer?",
+   "none": true,
+   "records": [
+    "good morning",
+    "maybe so"
+   ],
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "[{\"id\":\"u001\",\"evidence\":\"good morning\"},{\"id\":\"u002\",\"evidence\":\"maybe so\"}]",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "choice",
+        "instructions": "Which unit names the on-call engineer?",
+        "criteria": {
+         "u001": null,
+         "u002": null,
+         "none": null
+        }
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "choice",
+        "probabilities": {
+         "u001": 0.05,
+         "u002": 0.05,
+         "none": 0.9
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 30,
+       "output_tokens": 3
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": null,
+    "none": true,
+    "details": {
+     "kind": "find",
+     "pick": "none",
+     "probabilities": {
+      "u001": 0.05,
+      "u002": 0.05,
+      "none": 0.9
+     },
+     "model": "jev-latest",
+     "question_sha256": "462a2d9e99caaec8498e87ee850927817f4aca9ca439ea8a2ecf8a9052a15bfd"
+    }
+   }
+  },
+  {
+   "id": "26-local-missing-question-file",
+   "source": "conformance growth, 2026-09-21",
+   "verb": "decide",
+   "question_file": "@/no/such/question.json",
+   "evidence": "anything at all",
+   "exchanges": [],
+   "expect": {
+    "error": {
+     "kind": "local"
+    }
+   }
+  },
+  {
+   "id": "27-deadline-spent-budget",
+   "source": "conformance growth, 2026-09-21",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.9
+   },
+   "evidence": "i want a refund",
+   "budget_ms": 0,
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "i want a refund",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.97
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "error": {
+     "kind": "deadline"
+    }
+   }
+  },
+  {
+   "id": "28-recognize-C01",
+   "source": "experiments/225-recognize-harvest-package cases/C01 (recording; expected/C01.json)",
+   "verb": "recognize",
+   "text": "Maria Chen joined Northwind Freight in Chicago last spring.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     },
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "d216388840d42456f2606bda0e1e4639e1705be419127bdabadaaffa6b4ea8ac",
+    "f1a49c9dd02333e26455ca287e1fae6bc8759c7ef76a2ef1830dd09a937cd1b0"
+   ],
+   "pairs": 2,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Maria Chen",
+      "kind": "person",
+      "start": 0,
+      "end": 10,
+      "number": 0.98
+     },
+     {
+      "id": 2,
+      "text": "Northwind Freight",
+      "kind": "organization",
+      "start": 18,
+      "end": 35,
+      "number": 1.0
+     },
+     {
+      "id": 3,
+      "text": "Chicago",
+      "kind": "place",
+      "start": 39,
+      "end": 46,
+      "number": 0.6693
+     }
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 2,
+      "probability": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "id": "29-recognize-C02",
+   "source": "experiments/225-recognize-harvest-package cases/C02 (recording; expected/C02.json)",
+   "verb": "recognize",
+   "text": "Amara Okafor founded Kestrel Labs in 2015.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "founded",
+      "from": "person",
+      "to": "organization"
+     },
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "44852240b7079c0204ee6fc9e236c566782e3d73bc406243fb2c19e6e99a4c6e",
+    "57d32401028fc1aae19fc458f856dbff8091d31d73f4333592fe6d9213f359c8"
+   ],
+   "pairs": 1,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 0,
+      "end": 12,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 21,
+      "end": 33,
+      "number": 1.0
+     }
+    ],
+    "relations": [
+     {
+      "name": "founded",
+      "source": 1,
+      "target": 2,
+      "probability": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "id": "30-recognize-C03",
+   "source": "experiments/225-recognize-harvest-package cases/C03 (recording; expected/C03.json)",
+   "verb": "recognize",
+   "text": "The Millbrook Athletics won the county final on Saturday.",
+   "question": {
+    "kinds": [
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "f0d596d49b39834a26d2955bc01e8374d5d1ecb6b1854c8e5547099cac946a6a"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Millbrook Athletics",
+      "kind": "organization",
+      "start": 4,
+      "end": 23,
+      "number": 0.9801
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "31-recognize-C04",
+   "source": "experiments/225-recognize-harvest-package cases/C04 (recording; expected/C04.json)",
+   "verb": "recognize",
+   "text": "Athletics is her favorite subject at school.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "ced4f4b0075c03e02a799eab143c5ad627fb92090f3c2d8e47bb92fb3c6f66b6"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [],
+    "relations": []
+   }
+  },
+  {
+   "id": "32-recognize-C05",
+   "source": "experiments/225-recognize-harvest-package cases/C05 (recording; expected/C05.json)",
+   "verb": "recognize",
+   "text": "The band recorded The Hollow Crown in a single afternoon at Fenwick Studio.",
+   "question": {
+    "kinds": [
+     "organization",
+     "other"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "7f3c26563006d1f7bc675100dfb0729cbbd9763b3a746474cdd91e7be77c69ad"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "The Hollow Crown",
+      "kind": "other",
+      "start": 18,
+      "end": 34,
+      "number": 0.98
+     },
+     {
+      "id": 2,
+      "text": "Fenwick Studio",
+      "kind": "organization",
+      "start": 60,
+      "end": 74,
+      "number": 0.7524
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "33-recognize-C06",
+   "source": "experiments/225-recognize-harvest-package cases/C06 (recording; expected/C06.json)",
+   "verb": "recognize",
+   "text": "the night nurse, june adeyemi, logged the handover at st. bruno's.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "86b00e226a117b122bb83b08249714ee19120afcec1a08c73c7290027995fc01"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "june adeyemi",
+      "kind": "person",
+      "start": 17,
+      "end": 29,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "st. bruno's",
+      "kind": "organization",
+      "start": 54,
+      "end": 65,
+      "number": 0.5523
+     }
+    ],
+    "relations": []
+   },
+   "note": "known-divergent: st. bruno's typed organization; a person would call it a place"
+  },
+  {
+   "id": "34-recognize-C07",
+   "source": "experiments/225-recognize-harvest-package cases/C07 (recording; expected/C07.json)",
+   "verb": "recognize",
+   "text": "Chicago sent a delegation in March, and Chicago hosted the reply in June.",
+   "question": {
+    "kinds": [
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "5d27504d4a3c36e412c7c83273a503ff7d982d767b9b9f1d533cec476548a293"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Chicago",
+      "kind": "place",
+      "start": 0,
+      "end": 7,
+      "number": 0.8277
+     },
+     {
+      "id": 2,
+      "text": "Chicago",
+      "kind": "place",
+      "start": 40,
+      "end": 47,
+      "number": 0.8613
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "35-recognize-C08",
+   "source": "experiments/225-recognize-harvest-package cases/C08 (recording; expected/C08.json)",
+   "verb": "recognize",
+   "text": "The meeting ran long and the coffee went cold by noon.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "8c6c39b3a98a6645597309e79649235991c5b3702d942eaef5ff2eadad58d61a"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [],
+    "relations": []
+   },
+   "note": "recording ran no relation pass: no legal pair for the declared rules"
+  },
+  {
+   "id": "36-recognize-C09",
+   "source": "experiments/225-recognize-harvest-package cases/C09 (recording; expected/C09.json)",
+   "verb": "recognize",
+   "text": "The season opened with a short review. The board met twice in April. Nothing was decided. A second meeting followed in May. The minutes stayed private. The final decision sat with the board of Karst and Vellum.",
+   "question": {
+    "kinds": [
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "a05ce2b48ebe7530ca351e251578486dfd33f294b9653cff8a1c82ba4e650cbf"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Karst and Vellum",
+      "kind": "organization",
+      "start": 193,
+      "end": 209,
+      "number": 0.7194
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "37-recognize-C10",
+   "source": "experiments/225-recognize-harvest-package cases/C10 (recording; expected/C10.json)",
+   "verb": "recognize",
+   "text": "Amara Okafor opened the session at nine.",
+   "question": {
+    "kinds": [
+     "person"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "6c5757728b1aadf6e8ceb34f288e850021b1c326bf067a0eab806ceadb63527e"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 0,
+      "end": 12,
+      "number": 1.0
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "38-recognize-C11",
+   "source": "experiments/225-recognize-harvest-package cases/C11 (recording; expected/C11.json)",
+   "verb": "recognize",
+   "text": "Dana toured the Chicago office of Northwind Freight last week.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     },
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "4778b1e77b61f0777b796bcd50aa88c807fbe3be62d3344d2ffb7aa332771d24",
+    "96d3bae49335c867372675d468e250d278b448dd269db7f8f0617e808fc6405a"
+   ],
+   "pairs": 1,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Dana",
+      "kind": "person",
+      "start": 0,
+      "end": 4,
+      "number": 0.88
+     },
+     {
+      "id": 2,
+      "text": "Northwind Freight",
+      "kind": "organization",
+      "start": 34,
+      "end": 51,
+      "number": 1.0
+     }
+    ],
+    "relations": []
+   },
+   "note": "known-divergent: Chicago missed (the place inside 'the Chicago office')"
+  },
+  {
+   "id": "39-recognize-C12",
+   "source": "experiments/225-recognize-harvest-package cases/C12 (recording; expected/C12.json)",
+   "verb": "recognize",
+   "text": "Amara works at Kestrel Labs.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     },
+     {
+      "name": "founded",
+      "from": "person",
+      "to": "organization"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "4503c74cc6640f7398ad088396ae38924ce514e06a337cac67d97846f8a52718",
+    "8c4b4051e481d2271f9c4350bf045346825fb930d8ec390ba75826eab04e64e4"
+   ],
+   "pairs": 1,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara",
+      "kind": "person",
+      "start": 0,
+      "end": 5,
+      "number": 0.8712
+     },
+     {
+      "id": 2,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 15,
+      "end": 27,
+      "number": 1.0
+     }
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 2,
+      "probability": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "id": "40-recognize-C13",
+   "source": "experiments/225-recognize-harvest-package cases/C13 (recording; expected/C13.json)",
+   "verb": "recognize",
+   "text": "Northwind Freight is based in Chicago and Denver.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "6d35ac7a239ba5cfd29e81141645119e0e299840e4501ae8871d5cdc9d8eed72",
+    "bedf003353bb7c2ae6f5e441b82b1903903e481d1849bd8196783e74f7bf443b"
+   ],
+   "pairs": 1,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Northwind Freight",
+      "kind": "organization",
+      "start": 0,
+      "end": 17,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Denver",
+      "kind": "place",
+      "start": 42,
+      "end": 48,
+      "number": 0.5015
+     }
+    ],
+    "relations": [
+     {
+      "name": "based_in",
+      "source": 1,
+      "target": 2,
+      "probability": 1.0
+     }
+    ]
+   },
+   "note": "known-divergent: Chicago missed; the second based_in relation is lost with it"
+  },
+  {
+   "id": "41-recognize-C14",
+   "source": "experiments/225-recognize-harvest-package cases/C14 (recording; expected/C14.json)",
+   "verb": "recognize",
+   "text": "Elif Demir of Brookline Shipping met Tomas Reyes in Boston.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     },
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "3f4dd220f25d27aa35140acd3ebcd135b1199c8b7c726cf08b14531fdfe26c3f",
+    "9249b4a76d0a72efa8d7519f545a4e6b542b37580aa5e0efae49237ffe9590f5"
+   ],
+   "pairs": 3,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Elif Demir",
+      "kind": "person",
+      "start": 0,
+      "end": 10,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Brookline Shipping",
+      "kind": "organization",
+      "start": 14,
+      "end": 32,
+      "number": 0.8681
+     },
+     {
+      "id": 3,
+      "text": "Tomas Reyes",
+      "kind": "person",
+      "start": 37,
+      "end": 48,
+      "number": 0.99
+     },
+     {
+      "id": 4,
+      "text": "Boston",
+      "kind": "place",
+      "start": 52,
+      "end": 58,
+      "number": 0.9009
+     }
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 2,
+      "probability": 0.9
+     }
+    ]
+   },
+   "note": "reviewable: 'of' read as works_for at 0.9; a person may call that a judgment call"
+  },
+  {
+   "id": "42-recognize-C15",
+   "source": "experiments/225-recognize-harvest-package cases/C15 (recording; expected/C15.json)",
+   "verb": "recognize",
+   "text": "The report, titled Harbor Light, was filed by the Grayline Trust.",
+   "question": {
+    "kinds": [
+     "organization",
+     "other"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "21cf555ab92888bb0fa30b92a41d7287462c8cae9938a8337fbed59acd58077b"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Harbor Light",
+      "kind": "other",
+      "start": 19,
+      "end": 31,
+      "number": 1.0
+     },
+     {
+      "id": 2,
+      "text": "Grayline Trust",
+      "kind": "organization",
+      "start": 50,
+      "end": 64,
+      "number": 1.0
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "43-recognize-C16",
+   "source": "experiments/225-recognize-harvest-package cases/C16 (recording; expected/C16.json)",
+   "verb": "recognize",
+   "text": "Kestrel Labs' founder visited Rotterdam.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "1c3076ee3ddf02a71e870f6e3a4113be7bce6247ff5fde81422691115ba3ae4c"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Kestrel Labs'",
+      "kind": "organization",
+      "start": 0,
+      "end": 13,
+      "number": 0.89
+     },
+     {
+      "id": 2,
+      "text": "Rotterdam",
+      "kind": "place",
+      "start": 30,
+      "end": 39,
+      "number": 0.96
+     }
+    ],
+    "relations": []
+   },
+   "note": "observed: the possessive stays in the span text (Kestrel Labs'); repairs are off by default"
+  },
+  {
+   "id": "44-recognize-C17",
+   "source": "experiments/225-recognize-harvest-package cases/C17 (recording; expected/C17.json)",
+   "verb": "recognize",
+   "text": "Pier 39 drew crowds, and the Sausalito Ferry ran late.",
+   "question": {
+    "kinds": [
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "7fffe04eed4b9b73bae9620c7c0b667d73d09040466ab1e7e410e821a70e6f81"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Pier 39",
+      "kind": "place",
+      "start": 0,
+      "end": 7,
+      "number": 0.9801
+     }
+    ],
+    "relations": []
+   },
+   "note": "known-divergent: Sausalito Ferry missed (organization)"
+  },
+  {
+   "id": "45-recognize-C18",
+   "source": "experiments/225-recognize-harvest-package cases/C18 (recording; expected/C18.json)",
+   "verb": "recognize",
+   "text": "Dana Whitfield and Marcus Bell joined Kestrel Labs.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "170e3aff8c1fdeb77c93b9e18c9f3ff05c9a7613726cd094105c7a268101e36d",
+    "f6fb44d16d2b78f1b739119134e5f94004995038d110d4cef71a1b51f4b74225"
+   ],
+   "pairs": 2,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Dana Whitfield",
+      "kind": "person",
+      "start": 0,
+      "end": 14,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Marcus Bell",
+      "kind": "person",
+      "start": 19,
+      "end": 30,
+      "number": 0.99
+     },
+     {
+      "id": 3,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 38,
+      "end": 50,
+      "number": 1.0
+     }
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 3,
+      "probability": 0.94
+     },
+     {
+      "name": "works_for",
+      "source": 2,
+      "target": 3,
+      "probability": 0.94
+     }
+    ]
+   }
+  },
+  {
+   "id": "46-recognize-C19",
+   "source": "experiments/225-recognize-harvest-package cases/C19 (recording; expected/C19.json)",
+   "verb": "recognize",
+   "text": "Northwind Freight, based in Lisbon, announced a new route.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "d6afab46e68699290391f7ceb7e2e18313b17e51e9aa5a71254090840c9a1fc2"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Northwind Freight",
+      "kind": "organization",
+      "start": 0,
+      "end": 17,
+      "number": 1.0
+     }
+    ],
+    "relations": []
+   },
+   "note": "known-divergent: Lisbon missed; the based_in relation is lost with it; recording ran no relation pass: no legal pair for the declared rules"
+  },
+  {
+   "id": "47-recognize-C20",
+   "source": "experiments/225-recognize-harvest-package cases/C20 (recording; expected/C20.json)",
+   "verb": "recognize",
+   "text": "The Norwegian crew docked at Hull on Tuesday.",
+   "question": {
+    "kinds": [
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "3cfcebb3a9bf14f6c901cbea34322d4897959fa6dd4fc845a9fbde87df051370"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Hull",
+      "kind": "place",
+      "start": 29,
+      "end": 33,
+      "number": 0.96
+     }
+    ],
+    "relations": []
+   },
+   "note": "known-divergent: Norwegian not detected (nationality; the named weak class)"
+  },
+  {
+   "id": "48-recognize-C21",
+   "source": "experiments/225-recognize-harvest-package cases/C21 (recording; expected/C21.json)",
+   "verb": "recognize",
+   "text": "Kestrel Labs opened an office in Rotterdam. Brookline Shipping did the same a month later.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "8ce5f95a5616704e4a02fbd12a9944a005341f9b8a362da5c026d679cc6fb98b",
+    "b4f5d50dc502676a9e953e5c44b21a16cee3b4c389daac1a7797f2cef4800b9a"
+   ],
+   "pairs": 2,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 0,
+      "end": 12,
+      "number": 1.0
+     },
+     {
+      "id": 2,
+      "text": "Rotterdam",
+      "kind": "place",
+      "start": 33,
+      "end": 42,
+      "number": 0.7
+     },
+     {
+      "id": 3,
+      "text": "Brookline Shipping",
+      "kind": "organization",
+      "start": 44,
+      "end": 62,
+      "number": 0.99
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "49-recognize-C22",
+   "source": "experiments/225-recognize-harvest-package cases/C22 (recording; expected/C22.json)",
+   "verb": "recognize",
+   "text": "Dr. Amara Okafor reviewed The Quiet Ward for the journal.",
+   "question": {
+    "kinds": [
+     "person",
+     "other"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "df78ca169644fc694ab11a0093905f4675d3022e173385a45275368969cbf25b"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 4,
+      "end": 16,
+      "number": 1.0
+     },
+     {
+      "id": 2,
+      "text": "The Quiet Ward",
+      "kind": "other",
+      "start": 26,
+      "end": 40,
+      "number": 0.9867
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "50-recognize-C23",
+   "source": "experiments/225-recognize-harvest-package cases/C23 (recording; expected/C23.json)",
+   "verb": "recognize",
+   "text": "the ferry docks at port angeles before dawn.",
+   "question": {
+    "kinds": [
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "665f6b5494d2c41925d47f23134222e70c252b4241f9013ef11ad0c0c60c4d3f"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "port angeles",
+      "kind": "place",
+      "start": 19,
+      "end": 31,
+      "number": 0.95
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "51-recognize-C24",
+   "source": "experiments/225-recognize-harvest-package cases/C24 (recording; expected/C24.json)",
+   "verb": "recognize",
+   "text": "Marcus Bell and Dana Whitfield both work for Kestrel Labs.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "7e9ce598528c58794c5153808987fdd75ada2e6e9851fbab79d4dd055c4cc8e0",
+    "9634d667660e8bf49213c1de5e4896ea5442c673386924f6f66272b7671c428d"
+   ],
+   "pairs": 2,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Marcus Bell",
+      "kind": "person",
+      "start": 0,
+      "end": 11,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Dana Whitfield",
+      "kind": "person",
+      "start": 16,
+      "end": 30,
+      "number": 0.99
+     },
+     {
+      "id": 3,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 45,
+      "end": 57,
+      "number": 1.0
+     }
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 3,
+      "probability": 1.0
+     },
+     {
+      "name": "works_for",
+      "source": 2,
+      "target": 3,
+      "probability": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "id": "52-recognize-C25",
+   "source": "experiments/225-recognize-harvest-package cases/C25 (recording; expected/C25.json)",
+   "verb": "recognize",
+   "text": "Kestrel Labs merged with Brookline Shipping.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "388a0c9abf5ab68806f4331632b556bebc61f9bb7c891510ab38410bde595032"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 0,
+      "end": 12,
+      "number": 1.0
+     },
+     {
+      "id": 2,
+      "text": "Brookline Shipping",
+      "kind": "organization",
+      "start": 25,
+      "end": 43,
+      "number": 0.9751
+     }
+    ],
+    "relations": []
+   },
+   "note": "recording ran no relation pass: no legal pair for the declared rules"
+  },
+  {
+   "id": "53-recognize-C26",
+   "source": "experiments/225-recognize-harvest-package cases/C26 (recording; expected/C26.json)",
+   "verb": "recognize",
+   "text": "Amara Okafor landed in Reykjavik at dawn.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "6ec53dc87d6b5ba5ca4349d12397de177d9a6021aa29956486de2ca16fe49447"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 0,
+      "end": 12,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Reykjavik",
+      "kind": "place",
+      "start": 23,
+      "end": 32,
+      "number": 0.98
+     }
+    ],
+    "relations": []
+   },
+   "note": "recording ran no relation pass: no legal pair for the declared rules"
+  },
+  {
+   "id": "54-recognize-C27",
+   "source": "experiments/225-recognize-harvest-package cases/C27 (recording; expected/C27.json)",
+   "verb": "recognize",
+   "text": "They waited. Then the lights went out. Everyone listened for Grayline Trust.",
+   "question": {
+    "kinds": [
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "9221f108e8d919c7aec26623bda8debb1cebc52338ff30e562a51f5cfb7c4c70"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Grayline Trust",
+      "kind": "organization",
+      "start": 61,
+      "end": 75,
+      "number": 1.0
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "55-recognize-C28",
+   "source": "experiments/225-recognize-harvest-package cases/C28 (recording; expected/C28.json)",
+   "verb": "recognize",
+   "text": "Northwind Freight opened the season with a short notice. The crews trained through April. Nothing moved until the ice cleared. The last word went to Amara Okafor.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "aef6451ae18535cf97d24137152df42d527891fb32cc6a8afe521f69f696a0cf"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Northwind Freight",
+      "kind": "organization",
+      "start": 0,
+      "end": 17,
+      "number": 1.0
+     },
+     {
+      "id": 2,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 149,
+      "end": 161,
+      "number": 1.0
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "56-recognize-C29",
+   "source": "experiments/225-recognize-harvest-package cases/C29 (recording; expected/C29.json)",
+   "verb": "recognize",
+   "text": "the Northwind Freight depot in montreal stayed open.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "dd84e36399102a525a4b50835566c97a87bc21e5f0d2373d1ccce107af324fe4"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "montreal",
+      "kind": "place",
+      "start": 31,
+      "end": 39,
+      "number": 0.5978
+     }
+    ],
+    "relations": []
+   },
+   "note": "known-divergent: Northwind Freight missed in the lowercase sentence; recording ran no relation pass: no legal pair for the declared rules"
+  },
+  {
+   "id": "57-recognize-C30",
+   "source": "experiments/225-recognize-harvest-package cases/C30 (recording; expected/C30.json)",
+   "verb": "recognize",
+   "text": "The NTSB report cited Hull Harbour.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "16827047ff56d3a1d593855ded5aa475ce3e6fa0389a736db2936ebce90e91e3"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "NTSB",
+      "kind": "organization",
+      "start": 4,
+      "end": 8,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Hull Harbour",
+      "kind": "place",
+      "start": 22,
+      "end": 34,
+      "number": 0.9702
+     }
+    ],
+    "relations": []
+   },
+   "note": "reviewable: Hull Harbour typed place; a habour name can read either way"
+  },
+  {
+   "id": "58-recognize-C31",
+   "source": "experiments/225-recognize-harvest-package cases/C31 (recording; expected/C31.json)",
+   "verb": "recognize",
+   "text": "At noon in Lisbon, the Kestrel Labs team met.",
+   "question": {
+    "kinds": [
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "119c811c878b0f491ba01406dad5d7c312739a67464018ad1fd5a795a4aa699e",
+    "acd184496324122aa9cb8a443714bac1861888e7bb3810199c0ebdb64e85394e"
+   ],
+   "pairs": 1,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Lisbon",
+      "kind": "place",
+      "start": 11,
+      "end": 17,
+      "number": 0.91
+     },
+     {
+      "id": 2,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 23,
+      "end": 35,
+      "number": 1.0
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "59-recognize-C32",
+   "source": "experiments/225-recognize-harvest-package cases/C32 (recording; expected/C32.json)",
+   "verb": "recognize",
+   "text": "The Grayline Trust funded the pier repairs.",
+   "question": {
+    "kinds": [
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "af742f582f038322875a4600f204b276a415576b99e9e0780e83440583c022b3"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Grayline Trust",
+      "kind": "organization",
+      "start": 4,
+      "end": 18,
+      "number": 0.985
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "60-recognize-C33",
+   "source": "experiments/225-recognize-harvest-package cases/C33 (recording; expected/C33.json)",
+   "verb": "recognize",
+   "text": "Amara Okafor, Dana Whitfield, and Marcus Bell signed for Kestrel Labs.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "1145e5042b7caa31419a22a1b9e4b3270e98d98282484dbd37a3f3b90f29b5e3",
+    "e269eb26f8fb6e665446ef43036fd7a988eba0e98394fb77b8f56677f8b0346e"
+   ],
+   "pairs": 3,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 0,
+      "end": 12,
+      "number": 1.0
+     },
+     {
+      "id": 2,
+      "text": "Dana Whitfield",
+      "kind": "person",
+      "start": 14,
+      "end": 28,
+      "number": 0.99
+     },
+     {
+      "id": 3,
+      "text": "Marcus Bell",
+      "kind": "person",
+      "start": 34,
+      "end": 45,
+      "number": 0.99
+     },
+     {
+      "id": 4,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 57,
+      "end": 69,
+      "number": 1.0
+     }
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 4,
+      "probability": 0.9
+     },
+     {
+      "name": "works_for",
+      "source": 2,
+      "target": 4,
+      "probability": 0.91
+     },
+     {
+      "name": "works_for",
+      "source": 3,
+      "target": 4,
+      "probability": 0.89
+     }
+    ]
+   }
+  },
+  {
+   "id": "61-recognize-C34",
+   "source": "experiments/225-recognize-harvest-package cases/C34 (recording; expected/C34.json)",
+   "verb": "recognize",
+   "text": "The Rotterdam Port Authority approved the plan.",
+   "question": {
+    "kinds": [
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "849f4e3fd3709dcd04db7cb62cc0ca574ad0d532ef824d139d08e88064341979"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Rotterdam Port Authority",
+      "kind": "organization",
+      "start": 4,
+      "end": 28,
+      "number": 0.8877
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "62-recognize-C35",
+   "source": "experiments/225-recognize-harvest-package cases/C35 (recording; expected/C35.json)",
+   "verb": "recognize",
+   "text": "Shipping delays hurt the spring schedule.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "cad5c182d01732ac98ba413c91091402485f61a99b939bc338e6f6ac6b3d84eb"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [],
+    "relations": []
+   }
+  },
+  {
+   "id": "63-recognize-C36",
+   "source": "experiments/225-recognize-harvest-package cases/C36 (recording; expected/C36.json)",
+   "verb": "recognize",
+   "text": "The road from Hull to Leeds was closed.",
+   "question": {
+    "kinds": [
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "located_in",
+      "from": "*",
+      "to": "place"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "39f334c2afa4883ab201677961e09398b24b6a2b67a6eb67bc225a7582443ba6",
+    "6976bb411d324595e1478196502fe9e73a144b67c5bcb8fb391585350f262f49"
+   ],
+   "pairs": 1,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Hull",
+      "kind": "place",
+      "start": 14,
+      "end": 18,
+      "number": 0.93
+     },
+     {
+      "id": 2,
+      "text": "Leeds",
+      "kind": "place",
+      "start": 22,
+      "end": 27,
+      "number": 0.94
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "64-recognize-C37",
+   "source": "experiments/225-recognize-harvest-package cases/C37 (recording; expected/C37.json)",
+   "verb": "recognize",
+   "text": "Dana Whitfield called. Later, Dana Whitfield wrote.",
+   "question": {
+    "kinds": [
+     "person"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "1eb218ddf76322782ac92d675363913f4bd5c18cdccfd0342e7c42ba132a7b7f"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Dana Whitfield",
+      "kind": "person",
+      "start": 0,
+      "end": 14,
+      "number": 1.0
+     },
+     {
+      "id": 2,
+      "text": "Dana Whitfield",
+      "kind": "person",
+      "start": 30,
+      "end": 44,
+      "number": 0.99
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "65-recognize-C38",
+   "source": "experiments/225-recognize-harvest-package cases/C38 (recording; expected/C38.json)",
+   "verb": "recognize",
+   "text": "Karst & Vellum hired a new editor.",
+   "question": {
+    "kinds": [
+     "organization"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "a884fedb523de0304e1dd7956468f37741b9aae6e40d15e6c4384dc7bb936b07"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Karst & Vellum",
+      "kind": "organization",
+      "start": 0,
+      "end": 14,
+      "number": 0.8979
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "66-recognize-C39",
+   "source": "experiments/225-recognize-harvest-package cases/C39 (recording; expected/C39.json)",
+   "verb": "recognize",
+   "text": "Yesterday Amara Okafor chaired the review.",
+   "question": {
+    "kinds": [
+     "person"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "4f71dff3d02faea70c23f5f597639001f2841c043fa7f1620cd0aa04bf9cfa03"
+   ],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 10,
+      "end": 22,
+      "number": 0.99
+     }
+    ],
+    "relations": []
+   }
+  },
+  {
+   "id": "67-recognize-C40",
+   "source": "experiments/225-recognize-harvest-package cases/C40 (recording; expected/C40.json)",
+   "verb": "recognize",
+   "text": "Amara Okafor founded Kestrel Labs in Rotterdam. Dana Whitfield joined the firm two years later. Marcus Bell of Brookline Shipping visited the office in Boston.",
+   "question": {
+    "kinds": [
+     "person",
+     "organization",
+     "place"
+    ],
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "person",
+      "to": "organization"
+     },
+     {
+      "name": "based_in",
+      "from": "organization",
+      "to": "place"
+     },
+     {
+      "name": "founded",
+      "from": "person",
+      "to": "organization"
+     }
+    ],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [
+    "5d81084bedcd3bcf23cdbb38ea4a4a936848723122cb01b23a18d66e0bbc71b3",
+    "8a16f9c7a51a8c82b7e0245d8fe76e205ef3d1958b83eec89d014a75ed7b02ec"
+   ],
+   "pairs": 10,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Amara Okafor",
+      "kind": "person",
+      "start": 0,
+      "end": 12,
+      "number": 0.99
+     },
+     {
+      "id": 2,
+      "text": "Kestrel Labs",
+      "kind": "organization",
+      "start": 21,
+      "end": 33,
+      "number": 1.0
+     },
+     {
+      "id": 3,
+      "text": "Rotterdam",
+      "kind": "place",
+      "start": 37,
+      "end": 46,
+      "number": 0.73
+     },
+     {
+      "id": 4,
+      "text": "Dana Whitfield",
+      "kind": "person",
+      "start": 48,
+      "end": 62,
+      "number": 0.99
+     },
+     {
+      "id": 5,
+      "text": "Marcus Bell",
+      "kind": "person",
+      "start": 96,
+      "end": 107,
+      "number": 0.99
+     },
+     {
+      "id": 6,
+      "text": "Brookline Shipping",
+      "kind": "organization",
+      "start": 111,
+      "end": 129,
+      "number": 0.9065
+     },
+     {
+      "id": 7,
+      "text": "Boston",
+      "kind": "place",
+      "start": 152,
+      "end": 158,
+      "number": 0.93
+     }
+    ],
+    "relations": [
+     {
+      "name": "founded",
+      "source": 1,
+      "target": 2,
+      "probability": 1.0
+     },
+     {
+      "name": "based_in",
+      "source": 2,
+      "target": 3,
+      "probability": 0.92
+     },
+     {
+      "name": "works_for",
+      "source": 4,
+      "target": 2,
+      "probability": 0.94
+     },
+     {
+      "name": "works_for",
+      "source": 5,
+      "target": 6,
+      "probability": 0.64
+     }
+    ]
+   }
+  },
+  {
+   "id": "68-recognize-C41",
+   "source": "synthesized from experiments/225-recognize-harvest-package rules for the offset proofs",
+   "verb": "recognize",
+   "text": "Le café 😀 Maria Chen arrived.",
+   "question": {
+    "kinds": [
+     "person"
+    ],
+    "relations": [],
+    "threshold": 0.5,
+    "relation_threshold": 0.5
+   },
+   "requests": [],
+   "pairs": 0,
+   "exchanges": [],
+   "expect": {
+    "entities": [
+     {
+      "id": 1,
+      "text": "Maria Chen",
+      "kind": "person",
+      "start": 10,
+      "end": 20,
+      "number": 0.94
+     }
+    ],
+    "relations": []
+   },
+   "note": "no recording: built from the package rules for the per-host offset proofs, with the accented letter and the emoji before the name"
+  },
+  {
+   "id": "69-relate-R01-demo",
+   "source": "experiments/225-recognize-harvest-package relate/cases/R01-demo (recording)",
+   "verb": "relate",
+   "records": [
+    "Checkout returns 500 at the payment step.",
+    "Card charges are failing for every customer.",
+    "The nightly export ran two hours late.",
+    "The payments database ran out of disk space."
+   ],
+   "question": {
+    "relations": [
+     {
+      "name": "caused_by",
+      "from": "*",
+      "to": "*"
+     },
+     {
+      "name": "same_as",
+      "from": "*",
+      "to": "*",
+      "either": true
+     }
+    ],
+    "threshold": 0.5
+   },
+   "requests": [
+    ".locks",
+    "a715975d50cfbc2b5b8d4108c62cdd0ea771f62b7a3bbeb056ecabf8efaf0894"
+   ],
+   "pairs": 6,
+   "exchanges": [],
+   "expect": {
+    "edges": [
+     {
+      "name": "caused_by",
+      "source": 1,
+      "target": 2,
+      "probability": 0.59
+     },
+     {
+      "name": "caused_by",
+      "source": 1,
+      "target": 4,
+      "probability": 0.94
+     },
+     {
+      "name": "caused_by",
+      "source": 2,
+      "target": 4,
+      "probability": 0.94
+     },
+     {
+      "name": "caused_by",
+      "source": 3,
+      "target": 4,
+      "probability": 0.84
+     }
+    ]
+   }
+  },
+  {
+   "id": "70-relate-R02-pickone",
+   "source": "experiments/225-recognize-harvest-package relate/cases/R02-pickone (recording)",
+   "verb": "relate",
+   "records": [
+    "Amara Okafor founded Kestrel Labs and still leads its research team.",
+    "Kestrel Labs, a freight brokerage.",
+    "Dana Whitfield started Brookline Shipping and manages its Boston desk.",
+    "Brookline Shipping, a coastal carrier.",
+    "Marcus Bell co-founded Grayline Trust and chairs its board.",
+    "Grayline Trust, a small foundation.",
+    "Elif Demir established Fenwick Studio and runs its design desk.",
+    "Fenwick Studio, a print shop.",
+    "June Adeyemi founded Hull Harbour Analytics and heads its data team.",
+    "Hull Harbour Analytics, a consultancy.",
+    "Tomas Reyes set up Pier 39 Logistics and directs its night operations.",
+    "Pier 39 Logistics, a warehouse operator.",
+    "Priya Nair founded Rotterdam Port Services and manages its scheduling.",
+    "Rotterdam Port Services, a stevedoring firm.",
+    "Oskar Lind started Karst and Vellum and leads its editorial board.",
+    "Karst and Vellum, a publisher.",
+    "Sofia Marino founded Sausalito Ferry Lines and captains its flagship.",
+    "Sausalito Ferry Lines, a ferry operator.",
+    "Ahmed Farouk established Cedar Point Advisors and heads its audit team.",
+    "Cedar Point Advisors, an accounting firm.",
+    "Lena Fischer founded Millbrook Rowing Club and coaches its senior squad.",
+    "Millbrook Rowing Club, a sports club.",
+    "Grace Otieno founded Quiet Ward Press and edits its poetry list.",
+    "Quiet Ward Press, a small press."
+   ],
+   "question": {
+    "relations": [
+     {
+      "name": "founded",
+      "from": "*",
+      "to": "*"
+     },
+     {
+      "name": "works_for",
+      "from": "*",
+      "to": "*"
+     }
+    ],
+    "threshold": 0.5
+   },
+   "requests": [
+    "c3929298692154204796935d2b087eff871cfa27fcaa062491ec4c899ea705f1"
+   ],
+   "pairs": 12,
+   "exchanges": [],
+   "expect": {
+    "edges": [
+     {
+      "name": "founded",
+      "source": 1,
+      "target": 2,
+      "probability": 0.87
+     },
+     {
+      "name": "founded",
+      "source": 3,
+      "target": 4,
+      "probability": 0.85
+     },
+     {
+      "name": "works_for",
+      "source": 5,
+      "target": 6,
+      "probability": 0.51
+     },
+     {
+      "name": "founded",
+      "source": 7,
+      "target": 8,
+      "probability": 0.5
+     },
+     {
+      "name": "founded",
+      "source": 11,
+      "target": 12,
+      "probability": 0.82
+     },
+     {
+      "name": "founded",
+      "source": 13,
+      "target": 14,
+      "probability": 0.52
+     },
+     {
+      "name": "founded",
+      "source": 15,
+      "target": 16,
+      "probability": 0.74
+     },
+     {
+      "name": "founded",
+      "source": 17,
+      "target": 18,
+      "probability": 0.73
+     },
+     {
+      "name": "founded",
+      "source": 19,
+      "target": 20,
+      "probability": 0.92
+     },
+     {
+      "name": "founded",
+      "source": 21,
+      "target": 22,
+      "probability": 0.91
+     },
+     {
+      "name": "founded",
+      "source": 23,
+      "target": 24,
+      "probability": 0.7
+     }
+    ]
+   }
+  },
+  {
+   "id": "71-relate-R03-persubject-10",
+   "source": "experiments/225-recognize-harvest-package relate/cases/R03-persubject-10 (recording)",
+   "verb": "relate",
+   "records": [
+    "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
+    "Noor Haddad works for Brookline Freight, handling regional accounts.",
+    "Petr Novak works for Grayline Foundation, handling regional accounts.",
+    "Rosa Iglesias works for Fenwick Press, handling regional accounts.",
+    "Tariq Mensah works for Hull Analytics, handling regional accounts.",
+    "Kestrel Logistics, a freight and logistics firm.",
+    "Brookline Freight, a freight and logistics firm.",
+    "Grayline Foundation, a freight and logistics firm.",
+    "Fenwick Press, a freight and logistics firm.",
+    "Hull Analytics, a freight and logistics firm."
+   ],
+   "question": {
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "*",
+      "to": "*"
+     }
+    ],
+    "threshold": 0.5
+   },
+   "requests": [
+    "698672897dc14a9066cf957a926eab8582dd7ee1456f0aad0be2607c73e4133e"
+   ],
+   "pairs": 5,
+   "exchanges": [],
+   "expect": {
+    "edges": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 6,
+      "probability": 1.0
+     },
+     {
+      "name": "works_for",
+      "source": 2,
+      "target": 7,
+      "probability": 1.0
+     },
+     {
+      "name": "works_for",
+      "source": 3,
+      "target": 8,
+      "probability": 1.0
+     },
+     {
+      "name": "works_for",
+      "source": 4,
+      "target": 9,
+      "probability": 1.0
+     },
+     {
+      "name": "works_for",
+      "source": 5,
+      "target": 10,
+      "probability": 1.0
+     }
+    ]
+   },
+   "form": "per-subject",
+   "note": "measured per-subject form; the ruled relate asks pairs, and this text's pairs recording (R04) is what the stand-in serves"
+  },
+  {
+   "id": "72-relate-R04-pairs-10",
+   "source": "experiments/225-recognize-harvest-package relate/cases/R04-pairs-10 (recording)",
+   "verb": "relate",
+   "records": [
+    "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
+    "Noor Haddad works for Brookline Freight, handling regional accounts.",
+    "Petr Novak works for Grayline Foundation, handling regional accounts.",
+    "Rosa Iglesias works for Fenwick Press, handling regional accounts.",
+    "Tariq Mensah works for Hull Analytics, handling regional accounts.",
+    "Kestrel Logistics, a freight and logistics firm.",
+    "Brookline Freight, a freight and logistics firm.",
+    "Grayline Foundation, a freight and logistics firm.",
+    "Fenwick Press, a freight and logistics firm.",
+    "Hull Analytics, a freight and logistics firm."
+   ],
+   "question": {
+    "relations": [
+     {
+      "name": "works_for",
+      "from": "*",
+      "to": "*"
+     }
+    ],
+    "threshold": 0.5
+   },
+   "requests": [
+    "13fb7f0fefa8c21d699f46ee7fdbce4ecf682747680055ac6acc0484e5ca1dae"
+   ],
+   "pairs": 25,
+   "exchanges": [],
+   "expect": {
+    "edges": [
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 6,
+      "probability": 0.99
+     },
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 8,
+      "probability": 0.57
+     },
+     {
+      "name": "works_for",
+      "source": 2,
+      "target": 7,
+      "probability": 0.97
+     },
+     {
+      "name": "works_for",
+      "source": 2,
+      "target": 8,
+      "probability": 0.78
+     },
+     {
+      "name": "works_for",
+      "source": 3,
+      "target": 8,
+      "probability": 0.98
+     },
+     {
+      "name": "works_for",
+      "source": 4,
+      "target": 8,
+      "probability": 0.83
+     },
+     {
+      "name": "works_for",
+      "source": 4,
+      "target": 9,
+      "probability": 0.94
+     },
+     {
+      "name": "works_for",
+      "source": 5,
+      "target": 8,
+      "probability": 0.58
+     },
+     {
+      "name": "works_for",
+      "source": 5,
+      "target": 9,
+      "probability": 0.94
+     },
+     {
+      "name": "works_for",
+      "source": 5,
+      "target": 10,
+      "probability": 0.93
+     }
+    ]
+   }
+  }
+ ]
 }
