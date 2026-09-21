@@ -100,3 +100,15 @@ The four questions above, answered in order:
 4. **The dependency:** an async runtime with resident threads inside a tree that holds zero threads between calls, plus exposure to the size ratchet and `deny.toml`.
 
 Verdict: the sharded plain-files store stays the default and SQLite stays the fallback; foyer does not ship for this engine. It is the measured candidate if the extensions ever need a store that enforces its own byte budget in-process, and these numbers say what that costs. The memory tier's warm read is available with no dependency: the engine's always-on per-call memory already gives one, and a plain map in front of the files covers a long-lived host.
+
+## Ruling by Ian, 2026-09-21: XDG by default
+
+Ian ruled: "XDG is definitely the strategy for storing configuration and caching by default." This overturns the marketing recommendation on this page that the disk cache needs a named folder, and it accepts the ADR 0017 recommendation.
+
+- The cache lives at `$XDG_CACHE_HOME/thinkthen`, falling back to `~/.cache/thinkthen`, with the platform equivalent on macOS and Windows. A named folder (`--cache DIR`, `THINKTHEN_CACHE=DIR`) always wins.
+- Configuration lives at `$XDG_CONFIG_HOME/thinkthen`, falling back to `~/.config/thinkthen`. This brings back a configuration file, which Ian removed on 2026-09-19. The build team designs the smallest file that serves: address, model, cache on or off, cache size limit.
+- The repository rule "never writes a file the user did not name" gains one stated exception: the tool's own XDG cache and configuration folders. `CLAUDE.md` and the specification change in the same commit as the code.
+- A default cache folder makes the size limit mandatory. The limit and the pruning from this page ship with the default location, never after it.
+- `thinkthen status` prints both folders, the cache size, and the entry count.
+
+Read as written, the ruling also turns the cache on by default. The marketing side recommends that reading with three guards: a default size limit, `--no-cache` and a configuration switch to turn it off, and a first-line note in the manual that answers and the texts behind them are saved on disk. Ian can overturn the on-by-default reading. The key never enters either folder.

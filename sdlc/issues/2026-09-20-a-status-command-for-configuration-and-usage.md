@@ -63,3 +63,15 @@ No `config` command exists, and nothing is set through the tool. Three variables
 
 **Usage comes from two places and no store.** One run's usage is the `usage` object on every `--details` row, and `transforms/cost/cost.jq` sums it. A library process reads the engine's `usage()` counters: requests, cache answers, and tokens since the process began. `status` prints no usage, because the command keeps none between runs.
 
+
+## Ruling by Ian, 2026-09-21: XDG by default
+
+Ian ruled: "XDG is definitely the strategy for storing configuration and caching by default." This overturns the marketing recommendation on this page that the disk cache needs a named folder, and it accepts the ADR 0017 recommendation.
+
+- The cache lives at `$XDG_CACHE_HOME/thinkthen`, falling back to `~/.cache/thinkthen`, with the platform equivalent on macOS and Windows. A named folder (`--cache DIR`, `THINKTHEN_CACHE=DIR`) always wins.
+- Configuration lives at `$XDG_CONFIG_HOME/thinkthen`, falling back to `~/.config/thinkthen`. This brings back a configuration file, which Ian removed on 2026-09-19. The build team designs the smallest file that serves: address, model, cache on or off, cache size limit.
+- The repository rule "never writes a file the user did not name" gains one stated exception: the tool's own XDG cache and configuration folders. `CLAUDE.md` and the specification change in the same commit as the code.
+- A default cache folder makes the size limit mandatory. The limit and the pruning from this page ship with the default location, never after it.
+- `thinkthen status` prints both folders, the cache size, and the entry count.
+
+Read as written, the ruling also turns the cache on by default. The marketing side recommends that reading with three guards: a default size limit, `--no-cache` and a configuration switch to turn it off, and a first-line note in the manual that answers and the texts behind them are saved on disk. Ian can overturn the on-by-default reading. The key never enters either folder.

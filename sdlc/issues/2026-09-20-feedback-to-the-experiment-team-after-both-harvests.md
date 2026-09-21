@@ -84,3 +84,7 @@ One request for job 3: the twenty shared cases live in one data file that every 
 One sentence wanted for the manual, from the thread finding: "ThinkThen holds no threads between calls, and during a call it uses about one per request in flight." The experiment team confirms or corrects it.
 
 Ian can overturn any of these.
+
+## Added 2026-09-21: Ian ruled XDG
+
+Ian ruled that XDG is the default home for the cache and the configuration. Request 3 above is answered: ADR 0017 states the ruling, cites the amended rule, and drops "Recommended". The full ruling is in `2026-09-21-the-disk-cache-is-never-on-unless-the-user-names-a-folder.md`. A forked child and nine surfaces now share one default folder, so the many-processes test on the sharded store matters more than before.
