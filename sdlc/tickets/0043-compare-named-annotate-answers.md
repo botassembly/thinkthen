@@ -62,3 +62,11 @@ Re-score if implementation changes saved result rows, accepts more than the docu
 ## Review
 
 The independent design review rejected the first draft because it left the nested report fields and empty-run mode implicit, allowed inconsistent question sets inside one run, described malformed rows too loosely, and misnamed the zeroed probability summary. A second pass found that the exact per-question shape omitted `compared`. The accepted design fixes the top-level and per-question shapes, makes mode inference exact, pins every field the transform reads and every supported answer-kind/value pairing, and gives the exact non-yes-or-no probability object. The reviewer accepted the invocation guard, scope, tag ordering, record mismatch rules, secrecy requirements, and the decision to leave page 16 for its next ticket.
+
+## Implementation
+
+The focused test first failed because `jq -s` produced a report. It now covers all six yes-or-no flip directions inside a named answer, probability movement below, at, and above the tolerance, ordered tag changes, choice and score changes, record exclusions, question-set differences, one-sided questions, empty runs, malformed-row secrecy, mixed shapes, and all three wrong invocation forms.
+
+`compare.jq` pairs records once and feeds each shared question through the same value summary used by scalar rows. A direct comparison against the ticket 0042 transform produced byte-for-byte identical JSON for its committed scalar fixture. How-to 14 replays the same safe grading run twice and shows the `correct` question's comparison. No live call was made.
+
+The focused test and executable transform page pass. The `install`, `lint`, `test`, and `spec` rungs pass. The lint rung reports the unchanged Rust ceiling at 23,755 of 23,755. The spec rung reports 26 specification checks, two transform-page checks, and 19 green how-tos with none red. `git diff --check` passes.
