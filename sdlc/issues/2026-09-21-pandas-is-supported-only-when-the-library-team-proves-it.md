@@ -32,3 +32,5 @@ The library team, inside the Polars work, after the surfaces experiment closes. 
 ## What Ian can overturn
 
 All of it. The cheap one: naming pandas on the Python slide once the checks pass.
+
+2026-09-21, closed: the five checks ran on the stand-in inside the surfaces work (branch `surfaces`, `libraries/python/NOTES.md` under "pandas checks"; the experiment's findings page is `FINDINGS.md` at the branch root). Checks 1, 3, and 4 pass on pandas 2.2.3 through 3.0.6. Check 5's bar is met by `1ac9250`: the frame call refuses with both remedies named — pass the column, or convert the returned Arrow frame with the one line the test runs. Two corrections to this page: the spelling `str[pyarrow]` is not valid past 2.2.3 (the valid forms are `string[pyarrow]` and, on pandas 3, the default `str`), and the fast path is pandas-3-only — a pandas 2 column crosses at list speed and still works, one crossing, 32 in flight. The live sentence for the product side should say both.
