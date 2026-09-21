@@ -1,0 +1,84 @@
+#!/bin/sh
+# Prove the capture job's free and fake-binary paths without a key or network.
+set -eu
+
+probe=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo=$(CDPATH= cd -- "$probe/../.." && pwd)
+scratch=$(mktemp -d)
+trap 'rm -rf -- "$scratch"' EXIT HUP INT TERM
+unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+
+PATH="$repo/target/debug:$PATH" "$probe/run" --dry-run >"$scratch/dry.json"
+jq -e '.attempts == 50 and .accepted == 50 and .refusals == 0 and .measurements == []' \
+	"$scratch/dry.json" >/dev/null
+
+cat >"$scratch/thinkthen" <<'FAKE'
+#!/bin/sh
+set -eu
+retries=0
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+	--cache | --record | --replay | --dry-run)
+		printf '%s\n' 'fake: a live attempt was not an independent no-cache call' >&2
+		exit 90
+		;;
+	--max-retries)
+		if [ "$#" -lt 2 ] || [ "$2" != 0 ]; then
+			printf '%s\n' 'fake: --max-retries must carry zero' >&2
+			exit 90
+		fi
+		retries=$((retries + 1))
+		shift 2
+		continue
+		;;
+	esac
+	shift
+done
+if [ "$retries" != 1 ]; then
+	printf '%s\n' 'fake: --max-retries 0 must appear exactly once' >&2
+	exit 90
+fi
+count=$(cat "$FAKE_COUNT")
+count=$((count + 1))
+printf '%s\n' "$count" >"$FAKE_COUNT"
+case "${FAKE_MODE}:$count" in
+mixed:*0 | mixed:*5)
+	printf '%s\n' 'thinkthen: the reply was refused: the answer to question `q1` has probability total 1.2, member count 17, and tolerance 0.000000000000003774758283725532; the total differs from one by more than the tolerance' >&2
+	exit 4
+	;;
+other:3)
+	printf '%s\n' 'private unrelated response body marker' >&2
+	exit 4
+	;;
+*)
+	printf '%s\n' 'private accepted label marker'
+	exit 0
+	;;
+esac
+FAKE
+chmod +x "$scratch/thinkthen"
+
+printf '0\n' >"$scratch/count"
+FAKE_COUNT=$scratch/count FAKE_MODE=mixed PATH="$scratch:$PATH" \
+	"$probe/run" >"$scratch/mixed.json"
+test "$(cat "$scratch/count")" = 50
+jq -e '.attempts == 50 and .accepted == 40 and .refusals == 10
+       and (.measurements | length) == 10
+       and .distinct == [{"total":1.2,"members":17,"tolerance":0.000000000000003774758283725532}]' \
+	"$scratch/mixed.json" >/dev/null
+! grep -q 'private accepted label marker' "$scratch/mixed.json"
+
+printf '0\n' >"$scratch/count"
+set +e
+FAKE_COUNT=$scratch/count FAKE_MODE=other PATH="$scratch:$PATH" \
+	"$probe/run" >"$scratch/other.out" 2>"$scratch/other.err"
+status=$?
+set -e
+test "$status" = 4
+test "$(cat "$scratch/count")" = 3
+test ! -s "$scratch/other.out"
+grep -Fx 'probability-total-0038: attempt 3 stopped with unrelated exit 4' \
+	"$scratch/other.err" >/dev/null
+! grep -q 'private unrelated response body marker' "$scratch/other.err"
+
+printf 'probability-total-0038-self-test: 3 cases pass\n'

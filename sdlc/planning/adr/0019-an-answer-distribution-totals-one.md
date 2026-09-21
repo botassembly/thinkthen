@@ -19,3 +19,9 @@
 The repository holds 493 distributions in recordings plus four standalone fixtures. Their largest measured distance from one is `1.1102230246251565e-16`, so every saved reply remains valid. At the largest choice list of 255 members, the admitted total error is at most about `5.7e-14`. A score has at most ten levels, so its tolerance is at most about `2.3e-15`; at position 9, an uncorrected total-mass drift is at most about `2.1e-14`. Dividing by the measured total removes that drift before the existing twelve-decimal rounding.
 
 The generic answer model owns the total-one invariant. An adapter owns the exact match between its wire keys and the labels it sent. A later adapter therefore cannot construct an invalid distribution, while each wire format remains responsible for its own names.
+
+## Amendment on 2026-09-20: System One decimal rounding
+
+The strict generic decision above remains the default. Later live evidence showed System One returning 17-member distributions whose computed total was `0.9900000000000001`. A capped 50-request capture saw that same total in all ten refusals; 40 requests answered. The ledger moved from 18,440,118 to 18,524,118 for the authorized reservation. The safe result is under `probes/probability-total-0038/`.
+
+System One therefore supplies a tolerance of `0.01 + member count × f64::EPSILON`. The hundredth covers the observed decimal rounding, and the epsilon term makes decimal `0.99` and `1.01` inclusive after binary parsing and addition. The adapter still refuses `0.98`, `1.02`, `0.85`, `1.15`, zero, and three ones. It preserves every member. Score still divides by the measured accepted total. Another adapter keeps the strict default until evidence supports its own exception.

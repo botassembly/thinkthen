@@ -11,6 +11,7 @@ mod address;
 mod annotate;
 mod asked;
 mod choosing;
+mod distribution_total;
 mod exchange;
 mod from_record;
 mod json_syntax;

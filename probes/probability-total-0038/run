@@ -1,0 +1,57 @@
+#!/bin/sh
+# Capture the exact totals behind probability-distribution refusals.
+set -eu
+
+probe=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+mode=${1:-live}
+case "$mode" in
+live) extra= ;;
+--dry-run) extra=--dry-run ;;
+*)
+	printf 'probability-total-0038: the one argument is --dry-run\n' >&2
+	exit 2
+	;;
+esac
+
+scratch=$(mktemp -d)
+trap 'rm -rf -- "$scratch"' EXIT HUP INT TERM
+measurements=$scratch/measurements.jsonl
+: >"$measurements"
+accepted=0
+attempt=1
+while [ "$attempt" -le 50 ]; do
+	# No cache or recording option belongs here: every attempt must be a call.
+	# shellcheck disable=SC2086
+	thinkthen choose "@$probe/question.json" --url https://api.typesafe.ai/v1 \
+		--max-retries 0 $extra \
+		<"$probe/evidence.txt" >"$scratch/answer" 2>"$scratch/error" && status=0 || status=$?
+	case "$status" in
+	0 | 3)
+		accepted=$((accepted + 1))
+		;;
+	4)
+		measurement=$(sed -nE \
+			's/^thinkthen: the reply was refused: the answer to question `q1` has probability total ([0-9.eE+-]+), member count ([0-9]+), and tolerance ([0-9.eE+-]+); the total differs from one by more than the tolerance$/\1 \2 \3/p' \
+			"$scratch/error")
+		if [ -z "$measurement" ] || [ "$(printf '%s\n' "$measurement" | wc -l | tr -d ' ')" != 1 ]; then
+			printf 'probability-total-0038: attempt %s stopped with unrelated exit 4\n' "$attempt" >&2
+			exit 4
+		fi
+		set -- $measurement
+		printf '{"attempt":%s,"total":%s,"members":%s,"tolerance":%s}\n' \
+			"$attempt" "$1" "$2" "$3" >>"$measurements"
+		;;
+	*)
+		printf 'probability-total-0038: attempt %s stopped with exit %s\n' \
+			"$attempt" "$status" >&2
+		exit "$status"
+		;;
+	esac
+	attempt=$((attempt + 1))
+done
+
+jq -c -s --argjson accepted "$accepted" \
+	'{attempts: 50, accepted: $accepted, refusals: length,
+	  measurements: ., distinct: (unique_by([.total, .members, .tolerance])
+	                             | map({total, members, tolerance}))}' \
+	"$measurements"

@@ -1,0 +1,1 @@
+{"command":"sdlc/scripts/live --max-tokens 84000 probes/probability-total-0038/run","ledger_before":18440118,"ledger_after":18524118,"attempts":50,"answered":40,"refusals":10,"distinct":[{"total":0.9900000000000001,"members":17,"tolerance":3.774758283725532e-15}]}

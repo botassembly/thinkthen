@@ -1,4 +1,4 @@
-use super::{Answer, Distribution, Value};
+use super::{Answer, Distribution, DistributionError, Value};
 use crate::probability::Probability;
 
 fn odds(entries: &[(&str, f64)]) -> Distribution {
@@ -21,8 +21,10 @@ fn a_distribution_accepts_only_one_within_member_count_epsilon() {
     let cases = [
         (&[1.0, 0.0, 0.0][..], true),
         (&[1.0 - 2.0 * f64::EPSILON, 0.0, 0.0][..], true),
+        (&[1.0 - 3.0 * f64::EPSILON, 0.0, 0.0][..], true),
         (&[1.0 - 4.0 * f64::EPSILON, 0.0, 0.0][..], false),
         (&[1.0, 2.0 * f64::EPSILON, 0.0][..], true),
+        (&[1.0, 3.0 * f64::EPSILON, 0.0][..], true),
         (&[1.0, 4.0 * f64::EPSILON, 0.0][..], false),
         (&[1.0, 1.0, 1.0][..], false),
     ];
@@ -38,6 +40,33 @@ fn a_distribution_accepts_only_one_within_member_count_epsilon() {
             })
             .collect();
         assert_eq!(Distribution::new(entries).is_ok(), accepted, "{values:?}");
+    }
+}
+
+#[test]
+fn a_rejected_distribution_retains_its_round_trip_measurement() {
+    let entries = [0.2, 0.2, 0.2, 0.2]
+        .into_iter()
+        .enumerate()
+        .map(|(place, value)| {
+            (
+                place.to_string(),
+                Probability::new(value).expect("a probability"),
+            )
+        })
+        .collect();
+    let DistributionError::Total {
+        total,
+        members,
+        tolerance,
+    } = Distribution::new(entries).expect_err("the total is short");
+
+    assert_eq!(total, 0.8);
+    assert_eq!(members, 4);
+    assert_eq!(tolerance, 4.0 * f64::EPSILON);
+    for measured in [total, tolerance] {
+        let text = measured.to_string();
+        assert_eq!(text.parse::<f64>(), Ok(measured), "{text}");
     }
 }
 

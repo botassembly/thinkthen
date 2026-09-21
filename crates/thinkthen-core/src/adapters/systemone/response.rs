@@ -13,6 +13,9 @@ use crate::reply::Reply;
 use crate::result::Usage;
 use crate::text::ModelName;
 
+/// Decimal rounding observed in System One probability distributions.
+const DISTRIBUTION_ROUNDING: f64 = 0.01;
+
 /// The body one response carries.
 #[derive(Debug, Deserialize)]
 struct Response {
@@ -177,8 +180,18 @@ fn spread(
     {
         return Err(DecodeError::UnexpectedProbability(place));
     }
-    Distribution::new(entries).map_err(|error| match error {
-        DistributionError::Total => DecodeError::DistributionTotal(place),
+    let tolerance = DISTRIBUTION_ROUNDING + entries.len() as f64 * f64::EPSILON;
+    Distribution::with_tolerance(entries, tolerance).map_err(|error| match error {
+        DistributionError::Total {
+            total,
+            members,
+            tolerance,
+        } => DecodeError::DistributionTotal {
+            place,
+            total: total.to_string(),
+            members,
+            tolerance: tolerance.to_string(),
+        },
     })
 }
 
@@ -191,6 +204,10 @@ fn probability(value: f64, place: usize) -> Result<Probability, DecodeError> {
 fn reported(value: Option<f64>, place: usize) -> Result<Option<Probability>, DecodeError> {
     value.map(|value| probability(value, place)).transpose()
 }
+
+#[cfg(test)]
+#[path = "response_distribution_tests.rs"]
+mod distribution_tests;
 
 #[cfg(test)]
 mod tests {
@@ -414,53 +431,22 @@ mod tests {
     }
 
     #[test]
-    fn a_choice_and_score_refuse_a_total_outside_member_count_epsilon() {
-        let choice = concat!(
-            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
-            r#""probabilities":{"billing":1.0,"shipping":1.0,"account":1.0,"other":1.0}}}}"#,
-        );
-        let score = concat!(
-            r#"{"model":"jev-latest","answers":{"q1":{"type":"score","#,
-            r#""probabilities":{"0":1.0,"1":1.0,"2":1.0}}}}"#,
-        );
-        let choice_below = concat!(
-            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
-            r#""probabilities":{"billing":0.0,"shipping":0.0,"account":0.0,"other":0.0}}}}"#,
-        );
-        let score_below = concat!(
-            r#"{"model":"jev-latest","answers":{"q1":{"type":"score","#,
-            r#""probabilities":{"0":0.0,"1":0.0,"2":0.0}}}}"#,
-        );
-        assert_eq!(
-            decode(&team_plan(), choice.as_bytes()),
-            Err(DecodeError::DistributionTotal(0))
-        );
-        assert_eq!(
-            decode(&disruption_plan(), score.as_bytes()),
-            Err(DecodeError::DistributionTotal(0))
-        );
-        assert_eq!(
-            decode(&team_plan(), choice_below.as_bytes()),
-            Err(DecodeError::DistributionTotal(0))
-        );
-        assert_eq!(
-            decode(&disruption_plan(), score_below.as_bytes()),
-            Err(DecodeError::DistributionTotal(0))
-        );
-    }
-
-    #[test]
     fn a_distribution_total_error_names_the_rule_without_reply_values() {
-        let body = concat!(
-            r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
-            r#""probabilities":{"billing":0.2,"shipping":0.2,"account":0.2,"other":0.2}}}}"#,
-        );
-        let error = decode(&team_plan(), body.as_bytes()).expect_err("an invalid total");
-        assert_eq!(
-            error.to_string(),
-            "the answer to question `q1` has probabilities whose total differs from one by more than member count × f64::EPSILON"
-        );
-        assert!(!error.to_string().contains("0.2"));
+        for (member, total) in [("0.2", "0.8"), ("0.3", "1.2")] {
+            let body = concat!(
+                r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","#,
+                r#""probabilities":{"billing":VALUE,"shipping":VALUE,"account":VALUE,"other":VALUE}}}}"#,
+            )
+            .replace("VALUE", member);
+            let error = decode(&team_plan(), body.as_bytes()).expect_err("an invalid total");
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "the answer to question `q1` has probability total {total}, member count 4, and tolerance 0.010000000000000888; the total differs from one by more than the tolerance"
+                )
+            );
+            assert!(!error.to_string().contains(member));
+        }
     }
 
     #[test]

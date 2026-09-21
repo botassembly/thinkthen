@@ -1,8 +1,8 @@
 # The strict probability total refused two live replies in about thirty
 
-Status: Open
+Status: Resolved by ticket 0038
 
-A live run on 2026-09-20 died twice on the same refusal. The run was arm A of `experiments/209-thinkthen-nlp/`: `annotate` with a question set of one `choose` question, 17 options, a description on each. The first attempt was refused at request 19. The resume replayed those and was refused at request 30. Twenty-nine replies were accepted and two were refused. `experiments/209-thinkthen-nlp/NOTES.md` has the log.
+An authorized live evaluation on 2026-09-20 died twice on the same refusal. It used `annotate` with a question set of one `choose` question, 17 options, and a description on each. The first attempt was refused at request 19. The resume replayed those and was refused at request 30. Twenty-nine replies were accepted and two were refused.
 
 The refusal, word for word:
 
@@ -12,6 +12,16 @@ The refusal, word for word:
 
 The check is `crates/thinkthen-core/src/answer.rs:37`. The prospective plan says to keep the strict rule and "collect rounding evidence during an authorized product probe". This is the first evidence.
 
+## Further live evidence
+
+Later authorized checks brought the request-level total to 58: 33 requests with 17-option answers and 25 requests with 5-option answers. Thirty of the 17-option requests answered and three were refused. Twenty-three of the 5-option requests answered and two were refused. The five refusals are about one in twelve requests.
+
+The later three refusals ran through a temporary experiment binary that compared the binary distance directly with `0.01`. That did not prove a decimal miss greater than one hundredth: `abs(0.99 - 1.0)` is `0.010000000000000009` in binary floating point and fails that comparison, while `0.9900000000000001` passes. The temporary change did not enter this repository.
+
+The largest recorded input usage for the same one-question, 17-option request shape is 1,330 tokens. A 50-attempt capture job therefore needs 66,500 input tokens before headroom; a reservation of 84,000 supplies slightly more than 25 percent. One such job has about a one-percent chance of seeing no refusal at the observed rate.
+
+Ticket 0038 then ran that one job. It made 50 independent calls with retries disabled. Forty answered and ten were refused. Every refused distribution had 17 members and the same computed total, `0.9900000000000001`; the active tolerance was `3.774758283725532e-15`. The ledger moved from 18,440,118 to 18,524,118 charged tokens, exactly the 84,000-token reservation. No second job ran.
+
 ## What is known
 
 - The refusal moves. Request 19 was refused once and accepted on the next try. The same request bytes got a reply that passed.
@@ -20,20 +30,16 @@ The check is `crates/thinkthen-core/src/answer.rs:37`. The prospective plan says
 
 ## What is not known
 
-How far off the two refused totals were. A refused reply is never recorded, and the message does not print the total. The experiment's notes guess at decimal rounding by the service and propose a tolerance of one hundredth. No reply was seen, and that guess is unproven. A miss of a few units in the last place and a miss of one hundredth call for different fixes.
+The five earlier refused totals remain unknown because those replies were not recorded and their diagnostic omitted the total. The capture result and the floating-point edge explain those observations without evidence of a miss greater than one decimal hundredth.
 
 ## Why it matters
 
-A user with a list of ten to twenty options loses about one request in fifteen to exit code 4, at random, and a stream stops at the first one. Every surface inherits it. The guard charges a job's whole cap when the job dies, and this run lost two caps to it.
+A user with five or seventeen options lost five of 58 live requests to exit code 4, and a stream stops at the first one. Every surface inherits it. The guard charges a job's whole cap when the job dies.
 
-## Recommendation
+## Resolution
 
-1. **Print the measured total and the member count in the refusal.** Both are numbers the tool computed, and neither is evidence text. Every refusal then becomes the evidence the plan asked for.
-2. **Capture the refused totals before choosing a tolerance.** One small probe under the guard repeats a 17-option request until a refusal shows its total. The cost is a fraction of a cent.
-3. **Then set the rule from the numbers.** If the misses are a few units in the last place, a fixed floor under the tolerance ends them and still refuses a total of 0.85. If the service rounds its decimals, the rule needs a different shape, and `specification/result.md` says so in the same commit.
-
-This belongs in the correction pass, ahead of the cache locks. It stops paid runs today.
+Ticket 0038 added the safe measurement, ran the one capped capture, and found the same computed total of `0.9900000000000001` in all ten refusals. System One now receives the evidence-backed tolerance `0.01 + member count × f64::EPSILON`. The generic rule remains strict. Exact boundary tests keep `0.99` and `1.01` while refusing `0.98`, `1.02`, `0.85`, `1.15`, zero, and three ones. The correction pass is complete; cache locking follows.
 
 ## What Ian can overturn
 
-The placement in the correction pass. The builder owns the tolerance.
+The System One exception and its place before cache locking. The generic strict rule remains the default.

@@ -107,10 +107,19 @@ pub enum DecodeError {
     ProbabilityOutOfRange(usize),
     /// The answer's probabilities do not make a complete distribution.
     #[error(
-        "the answer to question `{}` has probabilities whose total differs from one by more than member count × f64::EPSILON",
-        wire_name(*.0)
+        "the answer to question `{}` has probability total {total}, member count {members}, and tolerance {tolerance}; the total differs from one by more than the tolerance",
+        wire_name(*place)
     )]
-    DistributionTotal(usize),
+    DistributionTotal {
+        /// The zero-based question place used to derive its wire name.
+        place: usize,
+        /// The computed sum in its shortest round-trip decimal form.
+        total: String,
+        /// The number of members in that sum.
+        members: usize,
+        /// The accepted distance in its shortest round-trip decimal form.
+        tolerance: String,
+    },
     /// The answer names a probability for a label the question did not send.
     #[error(
         "the answer to question `{}` has a probability for an option or level the question did not send",

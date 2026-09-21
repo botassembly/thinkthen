@@ -1,7 +1,6 @@
 //! The answer a backend gave, in thinkthen's own words.
 
 use serde::{Serialize, Serializer};
-use thiserror::Error;
 
 use crate::probability::Probability;
 use crate::threshold::{Outcome, Threshold};
@@ -9,10 +8,7 @@ use crate::threshold::{Outcome, Threshold};
 /// The decimal place a weighted score is rounded at, to drop summation noise.
 const ROUNDING: f64 = 1e12;
 
-/// The odds of every label, in the order the labels were sent.
-///
-/// The backend may answer in any key order. The order here is the user's own,
-/// so a reader of a result sees the list they typed.
+/// The odds of every label in user order, replacing backend key order.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Distribution {
     entries: Vec<(String, Probability)>,
@@ -20,23 +16,39 @@ pub(crate) struct Distribution {
 }
 
 /// Why a set of probabilities is not a complete distribution.
-#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum DistributionError {
     /// The members do not total one within the permitted floating-point error.
-    #[error("probabilities must total one within member count times f64::EPSILON")]
-    Total,
+    Total {
+        /// The sum computed from the reported members.
+        total: f64,
+        /// The number of members in that sum.
+        members: usize,
+        /// The current accepted distance from one.
+        tolerance: f64,
+    },
 }
 
 impl Distribution {
     /// Take one probability per label, in label order.
+    #[allow(dead_code, reason = "generic default for later adapters")]
     pub(crate) fn new(entries: Vec<(String, Probability)>) -> Result<Self, DistributionError> {
-        let total = entries
-            .iter()
-            .map(|(_, probability)| probability.as_f64())
-            .sum::<f64>();
         let tolerance = entries.len() as f64 * f64::EPSILON;
+        Self::with_tolerance(entries, tolerance)
+    }
+
+    /// Take one probability per label under an adapter's evidenced tolerance.
+    pub(crate) fn with_tolerance(
+        entries: Vec<(String, Probability)>,
+        tolerance: f64,
+    ) -> Result<Self, DistributionError> {
+        let total = entries.iter().map(|(_, value)| value.as_f64()).sum::<f64>();
         if (total - 1.0).abs() > tolerance {
-            return Err(DistributionError::Total);
+            return Err(DistributionError::Total {
+                total,
+                members: entries.len(),
+                tolerance,
+            });
         }
         Ok(Self { entries, total })
     }
@@ -72,11 +84,8 @@ impl Distribution {
         })
     }
 
-    /// The probability-weighted position on the labels, lowest first.
-    ///
-    /// Adding ten fractions leaves a remainder in the last bits that no reader
-    /// of a score means, so the sum is rounded at the twelfth decimal. A score
-    /// runs from 0 to 9, so the rounding drops that remainder and nothing else.
+    /// The weighted position, rounded at twelve decimals to remove sum noise.
+    /// A score runs from 0 to 9, so this drops no meaningful value.
     fn position(&self) -> f64 {
         let weighted: f64 = self
             .probabilities()
@@ -180,9 +189,7 @@ impl Answer {
         Self(Shape::YesNo { probability })
     }
 
-    /// Take the odds of every option as the answer to a pick.
-    ///
-    /// Returns `None` when no option carries odds, which no plan asks for.
+    /// Take the odds of every option, or `None` when none carries odds.
     pub(crate) fn new_choice(
         probabilities: Distribution,
         confidence: Option<Probability>,
