@@ -26,6 +26,16 @@ cat > "$work/tag-expected.json" <<'EOF'
 {"keys":["mode","truth","rows","labels"],"mode":"tag","truth":"/input/human_tags","rows":4,"labels":[{"keys":["label","rows","labeled","unlabeled","pick","sweep"],"label":"billing","rows":4,"labeled":3,"unlabeled":["four"],"pick":{"cut":0.9,"accuracy":1,"f1":1,"tied_cuts":[0.85,0.9],"rule":"the highest F1, and the middle cut of the cuts that tie"}},{"keys":["label","rows","labeled","unlabeled","pick","sweep"],"label":"urgent","rows":4,"labeled":3,"unlabeled":["four"],"pick":{"cut":0.55,"accuracy":1,"f1":1,"tied_cuts":[0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7],"rule":"the highest F1, and the middle cut of the cuts that tie"}}]}
 EOF
 cmp "$work/tag-expected.json" "$work/tag-summary.json"
+jq -e '.labels[] | select(.label == "billing")
+       | .sweep[] | select(.cut == 0.95)
+       | .precision == null and .recall == 0 and .f1 == null' \
+  "$work/tag-report.json" > /dev/null
+
+# Escaped pointer tokens resolve against the whole saved row.
+jq -c '.input["human/tags"] = .input.human_tags | del(.input.human_tags)' \
+  "$work/tag.jsonl" > "$work/escaped-tag.jsonl"
+jq -n --arg truth /input/human~1tags -f sweep.jq "$work/escaped-tag.jsonl" \
+  | jq -e '.labels[0].labeled == 3' > /dev/null
 
 # Build detailed annotate rows from the committed page-14 replay, then map one
 # choice and one synthetic tag beside the existing decision.
@@ -105,3 +115,50 @@ expect_failure unknown-name 'sweep: annotate truth names an unknown question' \
   -n --argjson truth '{"private":"/input/human_correct"}' -f sweep.jq "$work/annotate.jsonl"
 expect_failure score-name 'sweep: annotate truth accepts decide, choose, or tag answers only' \
   -n --argjson truth '{"severity":"/input/human_correct"}' -f sweep.jq "$work/annotate.jsonl"
+
+jq -c 'if .input.id=="two" then .question.text="private" else . end' "$work/tag.jsonl" > "$work/bad.jsonl"
+expect_failure changed-tag-question 'sweep: tag rows must carry one shared ordered label list' \
+  -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
+jq -c '.threshold=1.1' "$work/tag.jsonl" > "$work/bad.jsonl"
+expect_failure tag-threshold 'sweep: tag rows must carry one shared numeric threshold' \
+  -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
+jq -c '.answer.probabilities += {private:0}' "$work/tag.jsonl" > "$work/bad.jsonl"
+expect_failure tag-keys 'sweep: tag probabilities must have exactly the label keys' \
+  -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
+jq -c '.answer.probabilities.billing=1.1' "$work/tag.jsonl" > "$work/bad.jsonl"
+expect_failure tag-probability 'sweep: tag probabilities must be numbers from zero through one' \
+  -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
+jq -c '.input.id=7' "$work/tag.jsonl" > "$work/bad.jsonl"
+expect_failure tag-id 'sweep: tag rows must carry a string case id' \
+  -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
+jq -c '.input.id="same"' "$work/tag.jsonl" > "$work/bad.jsonl"
+expect_failure tag-duplicate 'sweep: tag case ids must be unique' \
+  -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
+
+jq -c 'if .input.id=="E-01" then del(.input.human_correct) else . end' \
+  "$work/annotate.jsonl" > "$work/missing-truth.jsonl"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep.jq "$work/missing-truth.jsonl" \
+  | jq -e '.questions.correct.labeled == 5 and .questions.correct.unlabeled == ["E-01"]' > /dev/null
+jq -c '.input.human_correct="private"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure decision-truth 'sweep: decision truth must be boolean' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.input.human_failure="private"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-truth 'sweep: choice truth must name a listed option' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.input.human_tags=["private"]' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure annotate-tag-truth 'sweep: tag truth must contain unique known labels' \
+  -n --argjson truth '{"topics":"/input/human_tags"}' -f sweep.jq "$work/bad.jsonl"
+jq -c 'if .input.id=="E-02" then .answers.correct.question.text="private" else . end' \
+  "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure changed-definition 'sweep: a mapped annotate answer must keep one definition' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.correct.question.verb="choose"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure verb-kind 'sweep: an annotate question verb must match its answer kind' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.input.id=7' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure annotate-id 'sweep: annotate rows must carry a string case id' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.input.id="same"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure annotate-duplicate 'sweep: annotate case ids must be unique' \
+  -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
