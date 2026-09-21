@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "questions": {
+    "credential_request": {
+      "decide": "Does the customer ask the support agent to provide or reveal a password, login code, security code, token, or other credential?",
+      "on": "/body",
+      "threshold": "0.2:0.8"
+    },
+    "queue": {
+      "choose": "Which support queue owns this request?",
+      "options": {
+        "billing": "Charges, refunds, invoices, or payments.",
+        "shipping": "Orders, delivery, tracking, or saved delivery addresses.",
+        "account": "Sign-in, account access, profiles, or account settings.",
+        "other": "Anything outside billing, shipping, and account support."
+      },
+      "on": "/body",
+      "threshold": 0.8
+    },
+    "urgency": {
+      "score": "How soon does this request need action?",
+      "levels": [
+        "Routine: normal handling is enough.",
+        "Soon: delay could cause a concrete customer problem.",
+        "Immediate: delay is already causing serious harm or loss."
+      ],
+      "on": "/body"
+    }
+  }
+}

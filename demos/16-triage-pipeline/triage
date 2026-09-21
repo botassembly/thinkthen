@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if (($# < 1)); then
+	printf '%s\n' 'usage: triage OUTPUT_DIRECTORY [thinkthen backend options]' >&2
+	exit 2
+fi
+
+output=$1
+shift
+if [[ -e $output ]]; then
+	printf '%s\n' 'triage: the output directory already exists' >&2
+	exit 2
+fi
+parent=$(dirname -- "$output")
+name=$(basename -- "$output")
+if [[ ! -d $parent ]]; then
+	printf '%s\n' 'triage: the output parent is not a directory' >&2
+	exit 2
+fi
+tmp=$(mktemp -d "$parent/.${name}.tmp.XXXXXX")
+trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
+
+thinkthen annotate "$HERE/questions.json" --tsv --details --jobs 4 \
+	--input "$HERE/tickets.tsv" --max-retries 0 "$@" \
+	| jq -c -f "$HERE/../../transforms/triage/triage.jq" > "$tmp/all.jsonl"
+
+for action in draft block review; do
+	jq -c --arg action "$action" \
+		'select(.policy.action == $action)' "$tmp/all.jsonl" \
+		> "$tmp/$action.jsonl"
+done
+rm -- "$tmp/all.jsonl"
+mv -- "$tmp" "$output"
+trap - EXIT HUP INT TERM

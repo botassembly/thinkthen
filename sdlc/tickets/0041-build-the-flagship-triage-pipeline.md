@@ -6,7 +6,7 @@ opens: README.md demos transforms sdlc/issues sdlc/planning
 
 # 0041: Build the flagship triage pipeline
 
-Status: proposed
+Status: in progress
 
 ## Outcome
 
@@ -63,3 +63,11 @@ Re-score if implementation exposes a command change, shared state, or a new publ
 
 - Design review: accepted after two rejections. The first revision gives the three files one publication boundary, puts page 16 first in the repository's front window, retains the collision lesson, fixes the example vocabulary, and raises State and timing to 2. The second adds every opened path. The reviewer accepted the final design with no remaining finding.
 - Code review: pending
+
+## Implementation
+
+The local draft adds six fictional TSV tickets, a three-question set over `/body`, the fail-closed `triage` policy, and an atomic pipeline that publishes three complete JSONL files with one directory rename. The policy test first failed because `triage.jq` did not exist, then passed eight routing cases and five safe refusals. The pipeline self-test covers the exact command, a single policy application, all three populated outputs, full rows, reviewed-action agreement, disclosure, an existing destination, the final rename, and cleanup after an injected split failure.
+
+The exact midpoint is urgency 1. It routes to `review` with reason `urgent`. The agent chose that inclusive boundary because the middle written level says a delay can cause a concrete problem. Ian can overturn it before the live recording.
+
+Pages 04 and 07 remain until page 16 is green. The draft now carries their review pile, explicit null, complete flat input row, table-input/JSONL-output, atomic publication, disclosure, and collision lessons.

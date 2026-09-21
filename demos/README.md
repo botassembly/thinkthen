@@ -64,7 +64,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
 | 39 | [Screen one message for several hazards](39-screen-a-message/) | `tag` | green |
-| 16 | Build a triage pipeline that drafts, blocks, or asks a person | `annotate` | coming, slice 9 |
+| 16 | [Build a triage pipeline that drafts, blocks, or asks a person](16-triage-pipeline/) | `annotate` | coming, ticket 0041 |
 
 ## Evals
 

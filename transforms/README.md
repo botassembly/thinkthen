@@ -1,6 +1,6 @@
 # transforms/
 
-A transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. All seven transforms here are metrics. The names table in [`README.md`](../README.md) holds the four names.
+A transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. Seven transforms here are metrics, and `triage` is a policy. The names table in [`README.md`](../README.md) holds the four names.
 
 A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a header that states what it reads, what arguments it takes, and what it does at every edge, and one short `example.sh` with the pipeline line. The page that teaches it is a green demo, so the gate runs the transform against committed rows and no transform can drift from what it claims.
 
@@ -25,6 +25,7 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
 | `compare/` | What changed between two runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
 | `cost/` | The input tokens a run spent and what they cost | [28](../demos/28-what-a-run-cost/) |
+| `triage/` | Whether a support ticket is drafted, blocked, or reviewed, and why | [16](../demos/16-triage-pipeline/) |
 
 ## A comparison that hides nothing
 

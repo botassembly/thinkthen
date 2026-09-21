@@ -16,7 +16,7 @@ The public surface stays eight verbs, question setup, and required types. Bash u
 
 ## Current state and accepted order
 
-Nineteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The correction pass and duplicate-cache coalescing are complete. The remaining order is:
+Nineteen how-tos are green. `annotate`, `tag`, CSV input, and TSV input are built. Tables emit JSONL. The correction pass and duplicate-cache coalescing are complete. Page 16's tested local draft awaits its cold read and recording. The remaining order is:
 
 1. **Finish `find`.** Done in ticket 0040. The preregistered 100- to 250-unit comparison passed, and how-to 15 is green from two reviewed recordings.
 2. **Finish page 16 and the transforms.** Land the flagship triage policy, then comparison, sweep, monitors, grouped sweep, and the check against human labels.

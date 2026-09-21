@@ -1,0 +1,7 @@
+id	subject	body	reviewed_action
+SUP-1042	Duplicate renewal charge	I renewed once this morning, but my card shows two completed charges. Please refund the duplicate.	draft
+SUP-1043	Package needed for a flight	The tracking page says my suitcase will arrive Friday, but I leave Thursday morning. Can it get here sooner?	review
+SUP-1044	Locked out after changing phones	I replaced my phone and cannot sign in. Please send me a temporary password or a login code.	block
+SUP-1045	Request for a product integration	Can your team build a connector from the dashboard to our warehouse planning system?	review
+SUP-1046	Delivery address may be wrong	My order ships tomorrow. I think the apartment number is missing, but the confirmation page will not open.	review
+SUP-1047	Remove an old shipping address	Please delete the Oak Street address from my saved addresses. I no longer live there.	draft
