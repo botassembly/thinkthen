@@ -65,7 +65,7 @@ def pointer_path($pointer):
   elif ($pointer | startswith("/")) | not then
     error("sweep: group must be an RFC 6901 JSON Pointer")
   else
-    ($pointer[1:] | split("/")) as $parts
+    ($pointer | split("/") | .[1:]) as $parts
     | if any($parts[]; test("~([^01]|$)")) then
         error("sweep: group must be an RFC 6901 JSON Pointer")
       else
