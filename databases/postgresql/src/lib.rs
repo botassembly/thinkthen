@@ -218,7 +218,8 @@ fn recognizer_of(arg: Option<&str>) -> Recognize {
 }
 
 /// One annotate answer as JSON: a decision is true, false, or null; a
-/// choice is the label or null; a score is its number; tags are a list.
+/// choice is the label or null; a score is its number; tags are a list; a
+/// failed logical question carries the ruled marker in its place (0054).
 fn annotated_as_json(held: &Annotated) -> serde_json::Value {
     match held {
         Annotated::Decision(answer) => serde_json::json!(answer.value()),
@@ -226,6 +227,9 @@ fn annotated_as_json(held: &Annotated) -> serde_json::Value {
         Annotated::Choice(None) => serde_json::Value::Null,
         Annotated::Score(scored) => serde_json::json!(scored.value),
         Annotated::Tags(labels) => serde_json::json!(labels),
+        // The ruled failed marker, in the same place a value would sit:
+        // `{"failed":{"kind":"backend","cause":CAUSE}}` (0054).
+        Annotated::Failed(failed) => serde_json::json!({ "failed": failed }),
     }
 }
 

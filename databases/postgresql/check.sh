@@ -6,8 +6,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-NAME=thinkthen-pg
-WIRE_NAME=thinkthen-pg-wire
+NAME=laneb-pg
+WIRE_NAME=laneb-pg-wire
 
 # Sibling sessions on this box start and stop their own postgres containers,
 # so a fixed port is a race. Take the first free port from a quiet range.
@@ -173,6 +173,45 @@ grep -q "22023" .tmp-255.out
 grep -q "relate takes at most 255 records and 256 came" .tmp-255.out
 rm .tmp-255.out
 echo "the 256th record refuses with the usage kind and SQLSTATE 22023"
+
+echo "== postgres surface: fast-backend cancel, the poll-bug shape"
+# The batch paths run on a worker thread while the backend thread polls the
+# interrupt flag (run_batch); a fast backend never idles, so this is the
+# discriminating shape. The full run is about 3.6 s (1M elements on the
+# null backend, measured 2026-09-21); the cancel must land within about a
+# tick, not after the batch drains.
+psql_in -c "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', (SELECT array_agg('refund ' || g) FROM generate_series(1, 1000000) g));" > .tmp-cancel.out 2>&1 &
+cancel_bg=$!
+sleep 1.2
+victim=$(psql_in -Atqc "SELECT pid FROM pg_stat_activity WHERE query LIKE '%thinkthen_decide%' AND pid <> pg_backend_pid() ORDER BY backend_start DESC LIMIT 1")
+cancel_start=$(date +%s.%N)
+psql_in -Atqc "SELECT pg_cancel_backend($victim)" >/dev/null
+wait "$cancel_bg" || true
+cancel_end=$(date +%s.%N)
+cancel_elapsed=$(awk -v a="$cancel_start" -v b="$cancel_end" 'BEGIN { printf "%.2f", b - a }')
+grep -q "canceling statement due to user request" .tmp-cancel.out \
+  || { echo "FAILED   the cancel did not land" >&2; cat .tmp-cancel.out >&2; exit 1; }
+awk -v e="$cancel_elapsed" 'BEGIN { exit !(e <= 1.5) }' \
+  || { echo "FAILED   the cancel waited ${cancel_elapsed}s; the batch was not stoppable" >&2; exit 1; }
+echo "ok       pg_cancel_backend stopped the batch ${cancel_elapsed}s past the signal (full run about 3.6 s)"
+rm -f .tmp-cancel.out
+
+timeout_start=$(date +%s.%N)
+if psql_in -c "SET statement_timeout='1s'; SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', (SELECT array_agg('refund ' || g) FROM generate_series(1, 1000000) g));" > .tmp-timeout.out 2>&1; then
+  echo "FAILED   the statement_timeout run completed" >&2; exit 1
+fi
+timeout_end=$(date +%s.%N)
+timeout_elapsed=$(awk -v a="$timeout_start" -v b="$timeout_end" 'BEGIN { printf "%.2f", b - a }')
+grep -q "statement timeout" .tmp-timeout.out \
+  || { echo "FAILED   the timeout error is missing" >&2; cat .tmp-timeout.out >&2; exit 1; }
+awk -v e="$timeout_elapsed" 'BEGIN { exit !(e <= 2.5) }' \
+  || { echo "FAILED   the timeout run took ${timeout_elapsed}s" >&2; exit 1; }
+echo "ok       statement_timeout returned ${timeout_elapsed}s in (1 s timeout; full run about 3.6 s)"
+rm -f .tmp-timeout.out
+
+echo "== postgres surface: the function examples"
+docker cp fixtures/names.json "$NAME:/var/lib/postgresql/data/names.json"
+python3 tests/examples.py "$NAME"
 
 if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   echo "== postgres surface: wire suite against the stub on 8219"

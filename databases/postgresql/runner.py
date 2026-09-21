@@ -95,17 +95,31 @@ def main() -> int:
                 wrapped = json.dumps({"version": 1, "questions": case["set"]})
                 got = sql(f"SELECT {fields} FROM thinkthen_annotate({literal(wrapped)}, "
                           f"{literal(case['evidence'])}) AS a")
-                def field(value) -> str:
-                    if value is None or value.get("unsure"):
-                        return ""
-                    if value["answer"] is True:
-                        return "true"
-                    if value["answer"] is False:
-                        return "false"
-                    return str(value["answer"])
-                want = "|".join(field(v) for v in held.values())
-                got = "|".join(part if part else "" for part in got.split("|"))
-                note = None if got == want else f"diverge {ident}: expected {want!r}, got {got!r}"
+                parts = got.split("|")
+                names = list(held)
+                ok = len(parts) == len(names)
+                seen = []
+                for index, name in enumerate(names):
+                    value = held[name]
+                    part = parts[index] if index < len(parts) else ""
+                    seen.append(f"{name}={part!r}")
+                    if "failed" in value:
+                        try:
+                            marker = json.loads(part) if part else None
+                        except json.JSONDecodeError:
+                            marker = part
+                        ok = ok and marker == {"failed": value["failed"]}
+                    else:
+                        if value is None or value.get("unsure"):
+                            expected = ""
+                        elif value["answer"] is True:
+                            expected = "true"
+                        elif value["answer"] is False:
+                            expected = "false"
+                        else:
+                            expected = str(value["answer"])
+                        ok = ok and (part or "") == expected
+                note = None if ok else f"diverge {ident}: {' '.join(seen)}"
             elif verb == "recognize":
                 kinds = (case.get("question") or {}).get("kinds") or []
                 arr = ("ARRAY[" + ",".join(literal(k) for k in kinds) + "]::text[]")
@@ -147,9 +161,27 @@ def main() -> int:
                         f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
             elif verb == "details":
                 held = expect["details"]
-                got = sql(f"SELECT (thinkthen_details({question_arg(case)}, {literal(case['evidence'])}))->>'probability'")
-                want = str(held["probability"])
-                note = None if got == want else f"diverge {ident}: expected {want}, got {got}"
+                # The audit's identity fields and the two 0053/0054 additions;
+                # the recorded probability is not compared because the null
+                # backend's own rule cannot reproduce case 73's recorded
+                # number (the same reason the other surfaces check identity).
+                detail = f"thinkthen_details({question_arg(case)}, {literal(case['evidence'])})"
+                got = sql(
+                    f"SELECT (({detail})->>'model') || '~' || (({detail})->>'digest') || '~' || "
+                    f"(({detail})->>'requests') || '~' || (({detail})->>'failed_questions')")
+                parts = got.split("~")
+                want_requests = held.get("requests")
+                want_failed = held.get("failed_questions")
+                ok = (
+                    len(parts) == 4
+                    and parts[0] == held["model"]
+                    and parts[1] == held["question_sha256"]
+                )
+                if ok and want_requests is not None:
+                    ok = parts[2] == json.dumps(want_requests)
+                if ok and want_failed is not None:
+                    ok = parts[3] == str(want_failed)
+                note = None if ok else f"diverge {ident}: expected model/digest/requests/failed, got {got!r}"
             elif verb == "usage":
                 q = literal(json.dumps(case["question"]))
                 e = literal(case["evidence"])

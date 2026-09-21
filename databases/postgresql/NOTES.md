@@ -168,3 +168,39 @@ ok       from/to refused, source and target named
 == postgres surface: wire suite against the stub on 8219
 exit 0
 ```
+
+## Lane B items 2, 5, and 6 on the PostgreSQL surface, 2026-09-21
+
+**Item 2, the new shapes.** `thinkthen_annotate` carries the ruled failed marker where a value would sit, and `thinkthen_details` (jsonb, serialized from the contract's `Details`) gained `requests` (0053) and `failed_questions` (0054). The conformance runner was repaired on the way: its details branch compared the recorded probability, which the null backend's own rule cannot reproduce for case 73, so it now checks the audit's identity fields and the two additions; its annotate branch crashed on a failed member and now matches the marker.
+
+```
+$ python3 runner.py laneb-pg | tail -3
+ok 73-details-carries-requests
+ok 74-annotate-preserves-good-answers
+73 of 74 cases ok, 1 diverged      (17-usage-and-cache, the named stand-in gap; exit 0)
+```
+
+```
+$ psql -c "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"kind\":{\"decide\":\"Is this a complaint?\"},\"topic\":{\"decide\":\"Is this about a refund?\"}}}', 'order 4471: charged twice, please refund');"
+{"kind": true, "topic": {"failed": {"kind": "backend", "cause": "missing_answer"}}}
+```
+
+**Item 5, the fast-backend cancel.** The batch paths (`thinkthen_decide`'s array overload and `thinkthen_warm`'s finalize) run on a worker thread while the backend thread polls PostgreSQL's `InterruptPending` flag in `run_batch`'s 100 ms loop — a fast backend never idles, so the batch shape is the discriminating one here (a per-row query is covered by PostgreSQL's own executor checks). Full run: about 3.6 s (1M elements, null backend, measured 2026-09-21). Measured on the packaged extension:
+
+```
+ok       pg_cancel_backend stopped the batch 0.33s past the signal (full run about 3.6 s)
+ok       statement_timeout returned 1.33s in (1 s timeout; full run about 3.6 s)
+```
+
+**Item 6, the examples file.** `examples.json` is keyed by function — twelve entries, every public function on this surface — and `tests/examples.py <container>` runs each through its own psql invocation (one fresh backend, so the usage counters start at zero) and checks its answer.
+
+```
+$ python3 tests/examples.py laneb-pg
+ok       decide
+...       (twelve lines)
+12 of 12 examples ok
+```
+
+**Containers.** The check's disposable containers are now named `laneb-pg` and `laneb-pg-wire`; both are removed with `docker rm -f -v` by the check's exit trap, and the measurement/debug containers used while sizing the cancel test (`laneb-pg-measure`, `laneb-pg-dbg`) were removed the same way. `docker ps -a | grep laneb` prints nothing after a run.
+
+**Fixed on the way:** the packaged `thinkthen.so` under `target/release/thinkthen-pg16/usr` had gone stale against the contract's new fields — the check repackages on every run, so the committed flow was fine, but any manual probe must run `cargo pgrx package` first (recorded here because it cost a confusing probe).
