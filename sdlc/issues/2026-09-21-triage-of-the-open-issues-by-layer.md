@@ -53,7 +53,7 @@ The design-capture ideas, the label-tuning survey, the triage-pipeline question,
 | --- | --- |
 | A release workflow, an installer, and trusted publishing. `.github/workflows/` holds `gate.yml` alone | `2026-09-20-launch-gaps-found-in-marketing-prep`, `2026-09-20-lessons-from-biomcp-for-release-install-ci-and-docs` |
 | Fifteen how-to pages that no ticket owns: six from the coverage pass and nine from the notes | `2026-09-20-second-coverage-pass-no-new-verb-and-six-soft-spots`, `2026-09-20-use-cases-from-the-notes-that-no-page-teaches` |
-| A mechanical check for the ceiling rule on commit messages | `2026-09-20-full-project-review`, if the builder still wants it |
+| A mechanical check for the ceiling rule on commit messages | `2026-09-20-full-project-review-and-follow-up`, if the builder still wants it |
 
 ## The experiment team's
 
