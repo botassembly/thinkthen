@@ -1,6 +1,6 @@
 # Spreadsheet surfaces need a spike: Google Sheets and Excel
 
-Status: Open. Backlog. Asked by Ian on 2026-09-21: "Is there a way we can make this work in Excel? In Google Sheets?" Nothing here is authorized work.
+Status: Answered by experiment `229-thinkthen-spreadsheets` on 2026-09-21. The verdict and what remains are in `../planning/build-queue-2026-09-21.md`, lane C: both hosts need a bridge over HTTP, Sheets needs a hosted endpoint and some form of `--serve`, Excel needs a signed native add-in built on Windows, and neither live run has happened. The guesses below are kept as the record of what was asked. Backlog. Asked by Ian on 2026-09-21: "Is there a way we can make this work in Excel? In Google Sheets?" Nothing here is authorized work.
 
 ## Why it matters
 

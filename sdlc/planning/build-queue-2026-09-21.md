@@ -1,0 +1,107 @@
+# The build queue: everything left, in order
+
+Written 2026-09-21 by the product side at Ian's request. It folds the quality wave 1.5 findings, the product rulings, and every surface into one queue. It replaces nothing: `build-team-response-to-handoff-2026-09-21.md` holds the ticket plan and `go-ahead-for-the-build-team-2026-09-21.md` holds the approval. This page is the order and the map. The build team creates each ticket when its turn begins, and every ticket keeps its independent review. Ticket 0055's first pass was green on every test and the reviewer still rejected it for real gaps, which is the review working.
+
+Ian can overturn any placement here.
+
+## Where things stand
+
+- Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).
+- Active: 0055, the move to one crate, in its worktree. Main has not received it. It is under repair after review.
+- Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
+
+## Lane A: the build team, on main
+
+**A0. Finish 0055.** Nothing that touches the scheduler, the cache, recording, or retries starts before it lands. Those files are moving.
+
+**A1. The command-layer fixes. Safe beside 0055 only where they avoid the files 0055 changed. Otherwise first after it.**
+
+| Fix | Source issue | Product ruling |
+| --- | --- | --- |
+| `filter --details` prints only the kept records | `2026-09-21-filter-details-must-still-filter` | Ruled by Ian. Details never change which records print. Wave 1.5 checked 30 cells and found no other command with this fault |
+| The low edge of a band includes the value that reaches it | `the-low-edge-of-a-band-excludes-the-value-that-reaches-it` | The specification's "boundaries are inclusive" sentence wins. 0.1 under band 0.1:0.9 answers the same as under cut 0.1 |
+| Exit 6 is told one way | `exit-6-and-partial-failure-are-told-two-ways` | The binary and the three pages win. Exit 6 means some questions failed and the good answers printed. Fix the one page that says the code is unused, and add 6 to every exit-code table |
+| Record mode and exit 0 | `record-mode-always-exits-0-and-the-help-never-says-so` | Keep it. With many records no single yes or no exists to report, so 0 means every record got an answer. The help says so in the first screen for `decide`, and the `set -e` warning names it. A gate belongs on one text or on `filter` plus a count. A how-to shows both |
+| The help shows its defaults | `the-help-hides-the-defaults-a-user-assumes-wrong` | Threshold 0.5, jobs 4, and the other three appear in `--help` |
+| Statuses 400 and 500 carry a phrase | `statuses-400-and-500-carry-no-phrase` | Agreed as filed |
+| Messages a stranger can parse | `several-messages-cannot-be-parsed-by-a-stranger`, plus the older wording issues (`question-file-refusals-name-the-wrong-thing`, `the-empty-evidence-refusal-names-the-rule-backwards`, `the-probability-total-refusal-prints-float-noise`, `the-set-e-warning-names-only-no`, `transport-failure-messages-paste-the-http-clients-own-words`, `a-refused-request-hides-the-backends-reason`) | One wording ticket. Each message pinned by its exact sentence |
+| Four specification sentences the binary refuses | `four-spec-sentences-promise-what-the-binary-refuses` | Decide each one in the ticket: the specification is the contract, so the binary moves unless the sentence was wrong |
+
+**A2. Backend profiles, the local size check, and the threshold warning.** Proposed ticket 4. Also closes `windows-over-long-text` as a refusal with a clear message. The mismatch warning goes in `meta` too (product addition E).
+
+**A3. Each record comes back with its answer.** Proposed ticket 5. Closes `two-function-flows-lose-the-record-between-stages`. `recognize` and `relate` follow the same rule (addition D). A single text still prints a bare answer, pinned by a test (addition C). The deck's triage and leads slides wait on this.
+
+**A4. The cache, and the money bugs with it.** Proposed tickets 6, 7, and 14 together, because a cache that is on by default puts these bugs in front of every user. They are one body of work in the files 0055 just moved:
+
+- Engine settings for the cache and the counters.
+- The default bounded cache, the smallest config file, `--no-cache`, prune, and `thinkthen status` (`the-disk-cache-is-never-on-unless-the-user-names-a-folder`, `a-status-command-for-configuration-and-usage`).
+- **A corrupt recording entry bills every retry and never repairs itself.** The worst wave 1.5 finding. A bad entry is replaced on the next good answer, never trusted and never fatal.
+- A cache resumed under a different address silently bills everything again.
+- A cache write that hits a size limit kills the process.
+- A write failure after a good exchange throws away the paid answer.
+- Lock files stay after their entries land.
+- A `Retry-After` wait is bounded by `--timeout`.
+- A closed connection costs the whole timeout.
+- A retried send is visible to the user, and the usage counter counts what left the machine.
+- A run stopped by Ctrl-C prints its stopped-at line.
+- Ask the product side before freezing the field name `meta.replayed`. Ian dislikes the word. The product side proposes `meta.cached`.
+
+**A5. The probability tolerance, and shared instructions packed once per request.** Proposed ticket 8. It changes request bytes and the cost record, so it lands before `recognize` makes any cost claim.
+
+**A6. `recognize` and `relate`.** Proposed ticket 9. The method is final. Read `experiments/225-recognize-harvest-package/README.md`, then its rules and words files, then `recognize-design.md` and `relate-design.md`. Settled: `source` and `target`, `strength` on a name, `probability` on a relation, no word list of any kind, forty recorded cases that replay with no key. The vendor's `confidence` field is never used.
+
+**A7. The public Rust library over all ten functions.** Proposed ticket 10.
+
+**A8. Width, cancellation, fork repair, and fast failure on a dead address.** Proposed ticket 11. The library team's lesson applies here: an interrupt or a spent deadline surfaces within one poll tick even when the backend never idles. `jobs-opens-one-connection-per-in-flight-request` and `a-process-that-forks-after-its-first-call-hangs` close here.
+
+**A9. The C door.** Proposed ticket 12. One JSON result, one free function.
+
+**A10. How the command gets installed.** New, from `2026-09-21-nothing-says-how-the-command-gets-installed`. The product side recommends one Homebrew line and one download script for the first release. The build team costs it first.
+
+**A11. The promise findings.** Proposed ticket 15: public examples, pipeline outcomes, vocabulary, and `printed-speed-and-cost-numbers-name-no-measuring-record`.
+
+**A12. The rest of the quality findings, quality waves 2 to 4, then the release pass.** Proposed ticket 16. The wave 1.5 standing rules stay: the matrix for membership, the pages for contradictions, the stranger with only the binary for everything else.
+
+## Lane B: the library team, on the `surfaces` branch
+
+1. Finish the fix wave: the poll loop, `source` and `target` in the question file, `reset_usage` removed, the counter, the generator's `strength` key, the stale prose, the gate rung, the public-name check.
+2. Write the merge note for the build team: one conformance file, the union of cases, the engine-only defect case, the rulings issue both sides edited, the ratchet.
+3. The merge ticket belongs to the build team and comes after A7, when the public Rust library exists for the surfaces to sit on.
+
+Then each surface ships on its own, every one proven against the shared conformance cases, in this order:
+
+| # | Surface | Notes |
+| --- | --- | --- |
+| 1 | Python, plain lists | The first library. The site's Python page goes live with it |
+| 2 | Polars, the Series door | Experiment 228's verdict: ship the Series door first. It is 5 to 8 times cheaper than the list door, copies nothing, and releases the interpreter lock. Known traps go in the manual: fork after a warm Polars pool hangs, and no cancel hook exists inside an expression |
+| 3 | pandas | The same Series door. The five checks are closed. The fast path is pandas 3 only. A short page under Python |
+| 4 | TypeScript | `AbortSignal` cancels a batch |
+| 5 | DuckDB | Blocked today by `the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api`. `thinkthen_relations` cannot run as drawn, and the library team's finding says what can |
+| 6 | Ruby | |
+| 7 | R | |
+| 8 | SQLite | Limited by `rusqlites-loadable-headers-stop-at-sqlite-3-34`. `thinkthen_warm` is the way around row-by-row asking |
+| 9 | PostgreSQL | `jsonb` results, cancel through the server's own tools |
+| 10 | Polars, the plugin expression | Later and optional. Pinned to a Polars release, with its support window documented |
+
+The databases were ruled in as a fast follow. The product side placed DuckDB ahead of Ruby and R because the data audience is the larger one. Ian can reorder these freely. Nothing depends on the order except Python before Polars and pandas.
+
+## Lane C: spreadsheets, after the libraries
+
+Experiment `229-thinkthen-spreadsheets` is closed. Its verdict replaces the product side's guesses in `../issues/2026-09-21-spreadsheet-surfaces-need-a-spike.md`:
+
+- **Both need a bridge over HTTP.** Neither host can load the engine the way a library does.
+- **Google Sheets:** the script file is written. It needs an endpoint Google's cloud can reach, which means a small deployed service wrapping the engine, some form of `thinkthen --serve`. It also needs a ruling on a token per sheet, and one live run in a real sheet.
+- **Excel:** a native add-in (an XLL) built on Windows against the Excel kit, a code-signing certificate because Excel blocks unsigned add-ins, the engine shipped beside it, and one live run. Windows is the only blocker. The web add-in road is described and not written.
+- Neither live run has happened.
+
+**This needs Ian before any build work.** A `--serve` mode makes ThinkThen a network service, which is a new kind of thing for a tool whose rules say it never acts and never starts a service. A hosted endpoint also commits money and operations. The product side recommends Excel first if Ian wants one of them, because it keeps the engine on the user's machine. Both stay out of the first release.
+
+## Lane D: only Ian
+
+- Claim the names: crates.io, npm and its scope, PyPI, RubyGems, the handle on X, and the trademark search. Eight open todos in the vault, dated 2026-09-20. These come before anything public names the product.
+- Rule on `--serve` and the spreadsheet surfaces.
+- Still open from earlier: whether the spend ledger ships in 0.1, the plugin door beside the Series door, and the optional `[polars]` extra.
+
+## Not in this queue
+
+Linking, coreference, and decomposition (`../issues/2026-09-21-three-next-language-problems-linking-coreference-decomposition.md`), widening `rank`, and a second vendor. All backlog.
