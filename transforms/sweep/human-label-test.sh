@@ -49,7 +49,7 @@ jq -c '
       answer:{kind:"tag",probabilities:(if .input.human_correct then {safe:0.9,wrong:0.1} else {safe:0.1,wrong:0.9} end)},
       threshold:0.5,request:"synthetic"
     }
-  | .answers.failure_kind.threshold = 0.5
+  | .answers.failure_kind.threshold = 0.01
 ' ../../probes/annotate-0015/howto-14.jsonl > "$work/annotate.jsonl"
 
 truth='{"correct":"/input/human_correct","failure_kind":"/input/human_failure","topics":"/input/human_tags"}'
@@ -185,7 +185,7 @@ expect_failure choice-threshold 'sweep: mapped choice threshold must be one cut'
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
 jq -c '.answers.failure_kind.answer.probabilities={none:0.4,wrong_fact:0.3,unsupported:0.2,incomplete:0.1}
        | .answers.failure_kind.answer.pick="none" | .answers.failure_kind.value="none"
-       | .value.failure_kind="none"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+       | .answers.failure_kind.threshold=0.5 | .value.failure_kind="none"' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-below-cut 'sweep: mapped choice value must follow its probabilities and threshold' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
 jq -c '.answers.failure_kind.answer.probabilities={none:0.5,wrong_fact:0.5,unsupported:0,incomplete:0}

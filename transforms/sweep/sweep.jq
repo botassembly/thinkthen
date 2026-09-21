@@ -383,6 +383,67 @@ def annotate_answer_rows($rows; $name; $path):
    | {input:(.input + {label:$truth}), value:$nested.value,
       question:$nested.question, threshold:$nested.threshold, answer:$nested.answer}];
 
+def valid_question_text:
+  type == "string" and length > 0 and (test("[[:cntrl:]]") | not);
+
+def valid_decision_question:
+  type == "object"
+  and .verb == "decide"
+  and (.text | valid_question_text)
+  and ((keys - ["false","text","true","verb"]) | length) == 0
+  and ((has("true") | not) or (.true | valid_question_text))
+  and ((has("false") | not) or (.false | valid_question_text));
+
+def decision_rule($threshold):
+  if ($threshold | type) == "number" and $threshold > 0 and $threshold <= 1 then
+    {kind:"cut", cut:$threshold}
+  elif ($threshold | type) == "string" then
+    ($threshold | split(":")) as $parts
+    | if ($parts | length) != 2 then null
+      else
+        (try ($parts[0] | tonumber) catch null) as $low
+        | (try ($parts[1] | tonumber) catch null) as $high
+        | if ($low | type) == "number" and ($high | type) == "number"
+             and $low >= 0 and $high <= 1 and $low < $high
+          then {kind:"band", low:$low, high:$high}
+          else null
+          end
+      end
+  else null
+  end;
+
+def decision_value($probability; $rule):
+  if $rule.kind == "cut" then $probability >= $rule.cut
+  elif $probability >= $rule.high then true
+  elif $probability <= $rule.low then false
+  else null
+  end;
+
+def validate_mapped_decisions($rows):
+  if all($rows[]; .question | valid_decision_question)
+  then $rows else error("sweep: mapped decision question is malformed") end
+  | if all($rows[]; (.answer.probability | type) == "number"
+                    and .answer.probability >= 0 and .answer.probability <= 1)
+    then . else error("sweep: mapped decision probability must be a number from zero through one") end
+  | if all($rows[]; decision_rule(.threshold) != null)
+    then . else error("sweep: mapped decision threshold must be one legal rule") end
+  | if all($rows[];
+      decision_rule(.threshold) as $rule
+      | .value == decision_value(.answer.probability; $rule))
+    then . else error("sweep: mapped decision value must follow its probability and threshold") end;
+
+def validate_mapped_choices($rows):
+  if all($rows[]; (.threshold | type) == "number" and .threshold > 0 and .threshold <= 1)
+    then $rows else error("sweep: mapped choice threshold must be one cut") end
+  | if all($rows[];
+      .question.options as $options
+      | .answer.probabilities as $probabilities
+      | ($options | map($probabilities[.]) | max) as $maximum
+      | [$options[] | select($probabilities[.] == $maximum)] as $leaders
+      | .value == (if ($leaders | length) == 1 and $maximum >= .threshold
+                   then .answer.pick else null end))
+    then . else error("sweep: mapped choice value must follow its probabilities and threshold") end;
+
 def validate_annotate_answer($rows; $name):
   if all($rows[]; (.answers[$name] | type) == "object"
                   and (.answers[$name].question | type) == "object"
@@ -421,13 +482,13 @@ def annotate_report($rows; $cuts; $truth):
       | .[$mapping.key] = (
           if $first.answer.kind == "yes_no" then
             if all($adapted[]; .input.label == null or (.input.label | type) == "boolean")
-            then {verb:"decide"} + decision_report($adapted; $cuts)
+            then {verb:"decide"} + decision_report(validate_mapped_decisions($adapted); $cuts)
             else error("sweep: decision truth must be boolean") end
           elif $first.answer.kind == "choice" then
             if all($adapted[]; .input.label as $label
                  | $label == null or
                    (($label | type) == "string" and (($first.question.options | index($label)) != null)))
-            then {verb:"choose"} + (choice_report($adapted; $cuts) | del(.mode))
+            then {verb:"choose"} + (choice_report(validate_mapped_choices($adapted); $cuts) | del(.mode))
             else error("sweep: choice truth must name a listed option") end
           elif $first.answer.kind == "tag" then
             {verb:"tag"} + tag_report($adapted; $cuts; $mapping.value; true)
