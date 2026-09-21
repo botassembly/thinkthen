@@ -38,11 +38,17 @@
 #     Neighboring cuts can therefore have identical reports.
 #   - One nonempty run carries one answer kind and one ordered option or level
 #     list. Fields used by the report are validated with data-free errors.
+#   - Repeated case ids must pass through trials.jq before this metric.
 
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 
 def rate($top; $bottom):
   if $bottom == 0 then null else $top / $bottom | round4 end;
+
+def has_repeated_ids($rows):
+  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+   | .input.id]
+  | group_by(.) | any(.[]; length > 1);
 
 def verdict($p; $cut):
   if ($cut | type) == "array" then
@@ -224,7 +230,8 @@ def score_report($rows):
 
 [inputs] as $rows
 | [range(1; 20) | . / 20 | . * 100 | round | . / 100] as $cuts
-| if ($rows | length) == 0 then decision_report($rows; $cuts)
+| if has_repeated_ids($rows) then error("metric: repeated case ids; run trials.jq first")
+  elif ($rows | length) == 0 then decision_report($rows; $cuts)
   elif all($rows[]; type == "object") | not then error("sweep: every row must be an object")
   elif all($rows[]; (.answer | type) == "object") | not then error("sweep: every row must carry an answer object")
   else

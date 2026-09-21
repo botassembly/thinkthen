@@ -1,6 +1,6 @@
 # transforms/
 
-A transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. Seven transforms here are metrics, and `triage` is a policy. The names table in [`README.md`](../README.md) holds the four names.
+A report transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. Seven transforms here are metrics, and `triage` is a policy. `trials` prepares repeated observations for a metric and prints derived rows. The names table in [`README.md`](../README.md) holds the four names.
 
 A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a header that states what it reads, what arguments it takes, and what it does at every edge, and one short `example.sh` with the pipeline line. The page that teaches it is a green demo, so the gate runs the transform against committed rows and no transform can drift from what it claims.
 
@@ -25,7 +25,30 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
 | `compare/` | What changed between two scalar or annotated runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
 | `cost/` | The input tokens a run spent and what they cost | [28](../demos/28-what-a-run-cost/) |
+| `trials/` | Average repeated observations once per case before a metric | This page |
 | `triage/` | Whether a support ticket is drafted, blocked, or reviewed, and why | [16](../demos/16-triage-pipeline/) |
+
+## Average repeated trials once per case
+
+Concatenate detailed runs, then prepare one derived row per case before reading a metric. The transform averages stored probabilities and reapplies the saved rule. A case tried five times then has the same weight as a case tried once. The five metric transforms refuse repeated ids until this step runs.
+
+This example repeats the committed run twice. It still produces forty cases, each with two trials, and the score stays the same.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+
+jq -n -f trials/trials.jq \
+  ../probes/07-true-and-false-texts/runs/plain.jsonl \
+  ../probes/07-true-and-false-texts/runs/plain.jsonl > "$work/cases.jsonl"
+
+jq -s -c '{cases:length, trial_counts:([.[].trials.count] | unique)}' "$work/cases.jsonl" \
+  | mustmatch '{"cases":40,"trial_counts":[2]}'
+jq -n --argjson cut 0.5 -f score/score.jq "$work/cases.jsonl" \
+  | jq -c '{rows,labeled,accuracy,precision,recall,f1}' \
+  | mustmatch '{"rows":40,"labeled":40,"accuracy":1,"precision":1,"recall":1,"f1":1}'
+```
 
 ## Sweep a pick or a score
 

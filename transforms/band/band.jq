@@ -23,13 +23,22 @@
 #   - A row with no probability stops the transform. jq reads a missing number as
 #     below the low side, so an unguarded band would score it a no.
 #   - Counts are exact. Every rate is rounded to four decimals.
+#   - Repeated case ids must pass through trials.jq before this metric.
 
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 
 def verdict($p):
   if $p >= $band[1] then "yes" elif $p <= $band[0] then "no" else "unresolved" end;
 
-reduce inputs as $row (
+def has_repeated_ids($rows):
+  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+   | .input.id]
+  | group_by(.) | any(.[]; length > 1);
+
+[inputs] as $rows
+| if has_repeated_ids($rows)
+  then error("metric: repeated case ids; run trials.jq first")
+  else reduce $rows[] as $row (
   {rows: 0, unlabeled: [], refused: [], right: 0, wrong: 0, refused_right: 0, refused_wrong: 0};
   .rows += 1
   | ($row.input.id // "with no id") as $id
@@ -44,7 +53,7 @@ reduce inputs as $row (
     elif ($said == "yes") == $label then .right += 1
     else .wrong += 1
     end
-)
+  )
 | (.right + .wrong) as $resolved
 | (.refused_right + .refused_wrong) as $unresolved
 | {
@@ -65,3 +74,4 @@ reduce inputs as $row (
     ),
     refused
   }
+  end

@@ -12,8 +12,17 @@
 #     broken run rather than an unresolved one.
 #   - `thresholds` and `questions` report what the file holds, so a file that
 #     concatenates two runs cannot pass as one.
+#   - Repeated case ids must pass through trials.jq before this metric.
 
-reduce inputs as $row (
+def has_repeated_ids($rows):
+  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+   | .input.id]
+  | group_by(.) | any(.[]; length > 1);
+
+[inputs] as $rows
+| if has_repeated_ids($rows)
+  then error("metric: repeated case ids; run trials.jq first")
+  else reduce $rows[] as $row (
   {rows: 0, yes: 0, no: 0, unresolved: 0, thresholds: [], questions: []};
   .rows += 1
   | if $row | has("value") | not then
@@ -25,4 +34,5 @@ reduce inputs as $row (
     end
   | .thresholds = (.thresholds + [$row.threshold] | unique)
   | .questions = (.questions + [$row.question.text] | unique)
-)
+  )
+  end

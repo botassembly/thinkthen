@@ -21,6 +21,7 @@
 #     when both are zero.
 #   - Counts are exact. Every rate is rounded to four decimals.
 #   - A row with no probability stops the transform.
+#   - Repeated case ids must pass through trials.jq before this metric.
 
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 
@@ -32,7 +33,15 @@ def verdict($p):
   else error("cut is a number, or a pair [low, high]")
   end;
 
-reduce inputs as $row (
+def has_repeated_ids($rows):
+  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+   | .input.id]
+  | group_by(.) | any(.[]; length > 1);
+
+[inputs] as $rows
+| if has_repeated_ids($rows)
+  then error("metric: repeated case ids; run trials.jq first")
+  else reduce $rows[] as $row (
   {rows: 0, unlabeled: [], unresolved: 0, tp: 0, fp: 0, tn: 0, fn: 0};
   .rows += 1
   | ($row.input.id // "with no id") as $id
@@ -49,7 +58,7 @@ reduce inputs as $row (
         else .tn += 1
         end
     end
-)
+  )
 | (.tp + .fp + .tn + .fn) as $resolved
 | ($resolved + .unresolved) as $labeled
 | (if .tp + .fp == 0 then null else .tp / (.tp + .fp) end) as $precision
@@ -74,3 +83,4 @@ reduce inputs as $row (
       end
     )
   }
+  end

@@ -20,12 +20,21 @@
 #     leaves most bands empty, and an empty band is not evidence.
 #   - A row with no probability stops the transform, and the message names the row.
 #   - Counts are exact. Every rate is rounded to four decimals.
+#   - Repeated case ids must pass through trials.jq before this metric.
 
 def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 
 def slot($p): $p * 10 | floor | if . > 9 then 9 elif . < 0 then 0 else . end;
 
-reduce inputs as $row (
+def has_repeated_ids($rows):
+  [$rows[] | select((.input? | type) == "object" and (.input.id? | type) == "string")
+   | .input.id]
+  | group_by(.) | any(.[]; length > 1);
+
+[inputs] as $rows
+| if has_repeated_ids($rows)
+  then error("metric: repeated case ids; run trials.jq first")
+  else reduce $rows[] as $row (
   {
     rows: 0,
     unlabeled: [],
@@ -45,7 +54,7 @@ reduce inputs as $row (
       .bands[$i].labeled += 1
       | if $label then .bands[$i].truly_yes += 1 else . end
     end
-)
+  )
 | {
     rows,
     unlabeled,
@@ -63,3 +72,4 @@ reduce inputs as $row (
         }
     ]
   }
+  end

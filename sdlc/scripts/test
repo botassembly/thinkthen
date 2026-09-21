@@ -11,6 +11,7 @@ sh probes/probability-total-0038/self-test
 sh probes/find-0040/self-test
 sh transforms/compare/test.sh
 sh transforms/sweep/test.sh
+sh transforms/trials/test.sh
 sh transforms/triage/test.sh
 demos/16-triage-pipeline/self-test
 
