@@ -14,7 +14,7 @@ The completed transform stage records that ADR 0015's trigger has fired. Three t
 
 ## Current facts and decisions
 
-ADR 0010 named five possible outcomes for `report`. Ian accepted the fifth in ADR 0015 once three transform families existed: a general way to carry transforms inside the tool. They now exist as whole-run metrics, a row policy, and a reviewed-action monitor. Ten `.jq` files total 1,408 lines. Seven transform checks and nineteen green how-tos run them without a model call. Comparison and human-label sweeps have awkward invocations, but their output contracts work as files. A `report` command would duplicate several distinct reports and their validation.
+ADR 0010 named five possible outcomes for `report`. Ian accepted the fifth in ADR 0015 once three transform families existed: a general way to carry transforms inside the tool. They now exist as whole-run metrics, a row policy, and a reviewed-action monitor. Ten `.jq` files total 1,408 lines. The transform index contains seven executable Bash blocks, and nineteen green how-tos run them without a model call. Comparison and human-label sweeps have awkward invocations, but their output contracts work as files. A `report` command would duplicate several distinct reports and their validation.
 
 This ticket applies the accepted ruling. Ian can overturn the implementation timing; the catalog surface and the decision to decline `report` are already accepted.
 
@@ -36,7 +36,7 @@ Excluded: implementing the catalog, choosing its membership or public names, add
 - `specification/roadmap.md`, ADRs 0010, 0012, and 0015 tell one story: `report` remains held; transforms remain executable files; the later command only lists and prints selected transforms; it never runs them.
 - Both active plans mark slice 10b complete, correct the stale claim that ADR 0017 still needs a rewrite, name the required build-team review, name the catalog in release preparation, and put ADR 0017 section 8 step 1 after that review. They do not create the future implementation ticket early.
 - `transforms/README.md` states that repository files are the current distribution and that a read-only catalog follows the one-crate move. It makes no present-tense command claim and no promise that every current file becomes built in.
-- Counts of ten `.jq` files, 1,408 lines, seven transform checks, and nineteen green how-tos are reproduced by command. Documentation checks, all four repository rungs, and `git diff --check` pass.
+- Counts of ten `.jq` files, 1,408 lines, seven executable Bash blocks in the transform index, and nineteen green how-tos are reproduced by command. Documentation checks, all four repository rungs, and `git diff --check` pass.
 
 ## Dependencies
 

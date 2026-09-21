@@ -72,7 +72,9 @@ One test decides between them. The transforms are written and tried on real rows
 
 The fifth outcome carries a rule of its own. It enters only when several transforms exist that people would otherwise copy and paste. One transform does not earn it.
 
-An idea for that fifth outcome: the cheapest form is a command that prints a named transform on standard output for `jq -f`, and it adds no dependency.
+The transform stage completed on 2026-09-21. It now has ten `.jq` files totaling 1,408 lines, seven executable Bash blocks in its index, and nineteen green how-tos. The files cover whole-run metrics, a row policy, and a reviewed-action monitor. Comparison and human-label sweeps remain ordinary `jq` pipelines, and their output contracts work without a combined report.
+
+The fifth outcome is selected for release preparation: a read-only `thinkthen transform list` and `thinkthen transform show NAME` surface. It lists or prints selected transforms for `jq -f`; it never starts `jq`, interprets a transform, reads user files, or combines reports. The separate `report` verb remains declined. The catalog's membership, public names, and package location wait for the implementation ticket after ADR 0017's one-crate move.
 
 The earlier `specification/report.md` holds what the command knew about accuracy at coverage and about the fixed JSON shape of a report. It stays in the git history.
 

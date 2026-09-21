@@ -51,3 +51,9 @@ After the pages change, a second agent reads the whole repository once and repor
 ## Consequences
 
 Ticket 0016 carries the rename, the page edits that ADR 0014 names, the license, and the check. The tickets for features stay held until Ian lifts the hold.
+
+## Implementation note — 2026-09-21
+
+The trigger in item 2 has fired. The repository now has three transform families: whole-run metrics, a row policy, and a reviewed-action monitor. Ten `.jq` files total 1,408 lines, the transform index has seven executable Bash blocks, and nineteen how-tos are green. The transform stage therefore stays as files and closes without a `report` command.
+
+The fifth outcome still enters at release preparation as the read-only `thinkthen transform list` and `thinkthen transform show NAME` surface. It lists or prints selected embedded transforms, never starts `jq`, interprets a transform, reads user files, or combines reports. The catalog's membership, names, and package location remain for its implementation ticket after ADR 0017's one-crate move. Ian can overturn that timing.

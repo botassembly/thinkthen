@@ -6,6 +6,8 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 
 `thinkthen` runs none of this. The tool obtains the judgments and keeps the evidence. `jq` does the arithmetic.
 
+These repository files are the current distribution. During release preparation, after the one-crate move, a read-only catalog will let an installed `thinkthen` list and print selected transforms for `jq -f`. The catalog's membership and public names are still for that later implementation ticket. The tool will not run `jq`, interpret a transform, or combine reports.
+
 ## The rows every transform reads
 
 `rows/` holds the run these transforms were written against. `cases.jsonl` is forty made-up support messages with a stable `id`, a `body`, and a trusted `label` a person gave. One case carries no label on purpose, because a real case file has one.
