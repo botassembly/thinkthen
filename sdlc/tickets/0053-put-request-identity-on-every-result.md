@@ -6,7 +6,7 @@ opens: crates specification conformance sdlc/planning
 
 # 0053: Put request identity on every result
 
-Status: proposed
+Status: landed
 
 ## Outcome
 
@@ -79,3 +79,5 @@ Re-score if implementation changes a request, introduces another digest implemen
 ## Review
 
 Independent design review rejected the first proposal because it omitted the required ADR amendment, left the conformance mapping and URL unspecified, excluded public constructor changes that the scope requires, and could not enforce its claim that the digest is computed once. This rewrite defines those boundaries and requires one prepared identity through every path.
+
+Independent code review found one blocker: the source ceiling was three lines below the measured total inherited from the rebased starting point. The ceiling now equals the measured total. The same reviewer accepted the repair and found the prepared-request flow, eight command paths, annotate ordering, conformance contract, and public metadata change coherent.
