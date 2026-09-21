@@ -161,3 +161,12 @@ The check runs that test after the build.
 **The ci-tools tree, recorded truthfully.** `extension-ci-tools/` is vendored into this branch as ordinary tracked files (committed with the surface landing, `7dd3c31`), not as a submodule and not as an unversioned sweep risk: `git ls-files` lists its files as plain blobs, which is what makes `make release` work with no network. The directory does hold a dangling `.git` pointer file (`gitdir: ../.git/modules/extension-ci-tools`) left from a clone that was never a submodule here; it is untracked, and `git -C extension-ci-tools` commands fail on it. No commit pin is recoverable from this tree, so a future re-pin should clone `https://github.com/duckdb/extension-ci-tools` cleanly, record the commit, and copy the `makefiles/` tree the Makefile includes. No `.gitignore` line was added: the files are tracked and needed by the build, and ignoring tracked files changes nothing while misleading the next reader.
 
 **The working shape for `thinkthen_relations` on this engine:** the scalar list form, the same as `thinkthen_recognize` — `SELECT t.id, unnest(thinkthen_relations(t.body, '@names.json')) AS r FROM tickets t;`. The deck's drawn `SELECT * FROM thinkthen_relations(body, '@names.json')` cannot run here; the finding goes to the deck's owner from another lane.
+
+The check, end to end, with the loopback stub up:
+
+```
+$ ./check.sh
+== duckdb surface: the error-mapping test
+== duckdb surface: wire suite against the stub on 8217
+exit 0    (diverge 18-cancel-mid-batch is the stand-in's recorded real-engine requirement)
+```

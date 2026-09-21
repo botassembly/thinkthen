@@ -111,3 +111,13 @@ The check runs that test after the build.
 **The relate guard's home is now one place.** Before, this door called the engine's `relate_opts` directly and relied on the stand-in repeating the 255 guard; after, it enters through `thinkthen_contract::relate_checked`, so the guard lives only in the contract and this door inherits it the way every other door does. Behavior is unchanged and the door's 255 test still proves the refusal.
 
 **The working shape for relations on this engine:** this surface has no `thinkthen_relations` call shape yet — the beta companion is unbuilt here, and nothing was invented for it; the working relate shape is the table call `SELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'caused_by');`. The deck's drawn `thinkthen_relations` form cannot run on SQLite as written; the finding goes to the deck's owner from another lane.
+
+The check, end to end, with the loopback stub up:
+
+```
+$ ./check.sh
+== sqlite surface: the error-mapping test
+== sqlite surface: wire suite against the stub on 8218
+wire suite done
+exit 0
+```

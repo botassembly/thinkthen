@@ -158,3 +158,13 @@ test result: ok. 1 passed; 0 failed
 The check runs that test before packaging. No public door gains a fault hook.
 
 **The working shape for `thinkthen_relations` on this engine:** `SELECT * FROM tickets t, LATERAL thinkthen_relations(t.body, '@names.json');` — the deck's drawn form needs the `LATERAL` join to a table alias; the finding with this line goes to the deck's owner from another lane.
+
+The check, end to end, with the loopback stub up:
+
+```
+$ ./check.sh
+== postgres surface: from and to are refused
+ok       from/to refused, source and target named
+== postgres surface: wire suite against the stub on 8219
+exit 0
+```
