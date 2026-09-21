@@ -46,7 +46,7 @@ jq -n --slurpfile before rows/runs/run-a.jsonl -f compare/compare.jq "$work/doct
 
 A case in one run alone is listed rather than dropped, so a run that stopped early cannot pass as a smaller run that finished. A changed label is named, because it means somebody moved the target between the two measurements. `repeated_ids` holds the ids a run carries twice, which are repeated trials and are paired in nothing.
 
-This fixture proves the comparison partition, digest choice, legacy fallback, and empty-run result. The two mismatched pairs remain in both mismatch lists where applicable, but neither reaches `same` or `flips`.
+This fixture proves scalar comparison, the comparison partition, digest choice, legacy fallback, and empty-run result. The two mismatched pairs remain in both mismatch lists where applicable, but neither reaches `same`, `changed_values`, or `flips`.
 
 ```bash
 set -euo pipefail
@@ -60,6 +60,7 @@ jq -n -c '
      meta: {model: "same", question_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}};
   [row("same"; "same"; true; true),
    row("flip"; "same"; false; false),
+   row("pick"; "same"; true; "old"),
    row("input"; "old"; true; true),
    row("both"; "old"; true; false),
    row("gone"; "same"; true; true),
@@ -73,6 +74,7 @@ jq -n -c '
      meta: {model: "same", question_sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}};
   [row("same"; "same"; true; true),
    row("flip"; "same"; false; true),
+   row("pick"; "same"; true; "new"),
    row("input"; "new"; true; true),
    row("both"; "new"; false; true),
    row("new"; "same"; true; true),
@@ -80,11 +82,12 @@ jq -n -c '
    row("repeat"; "same"; true; true)] | .[]' > "$work/after.jsonl"
 
 jq -n --slurpfile before "$work/before.jsonl" -f compare/compare.jq "$work/after.jsonl" \
-  | jq -c '{paired, compared, mismatched_input, mismatched_label, same, flips,
+  | jq -c '{paired, compared, mismatched_input, mismatched_label, same, changed_values, flips,
+            changes: [.changes[] | {id, before_value, after_value}],
             both_in_flips: ([.flips[]? | .[]] | index("both") != null),
-            partition: (.compared == (.same + ([.flips[]? | length] | add // 0))),
+            partition: (.compared == .same + .changed_values),
             changed}' \
-  | mustmatch '{"paired":4,"compared":2,"mismatched_input":["both","input"],"mismatched_label":["both"],"same":1,"flips":{"no to yes":["flip"]},"both_in_flips":false,"partition":true,"changed":{"question":true,"question_by":"digest","model":false,"threshold":false}}'
+  | mustmatch '{"paired":5,"compared":3,"mismatched_input":["both","input"],"mismatched_label":["both"],"same":1,"changed_values":2,"flips":{"no to yes":["flip"]},"changes":[{"id":"flip","before_value":false,"after_value":true},{"id":"pick","before_value":"old","after_value":"new"}],"both_in_flips":false,"partition":true,"changed":{"question":true,"question_by":"digest","model":false,"threshold":false}}'
 
 jq -n -c '{input:{id:"legacy",body:"same",label:true},value:true,
            question:{text:"old question"},threshold:0.5,meta:{model:"same"}}' > "$work/legacy-before.jsonl"
@@ -126,10 +129,10 @@ jq -n --slurpfile before "$work/before.jsonl" -f compare/compare.jq "$work/empty
 
 ## The rules every transform follows
 
-- **Three answers, never two.** true is yes, false is no, and null is unresolved. Every transform tests all three explicitly. `.value // false` turns an unresolved answer into a no, and no transform here uses it.
+- **Three yes-or-no answers, never two.** true is yes, false is no, and null is unresolved. `.value // false` turns unresolved into no, and no transform uses it.
 - **Unresolved rows are counted apart.** They are never scored right or wrong and never folded into no.
 - **A metric states its definition.** The header names the label set, what each rate divides by, and what a zero denominator yields, which is null.
 - **A case with no label is reported.** It is listed by id and scored in nothing. No row is dropped silently.
 - **A cut is an argument.** `--argjson` carries it, so one saved run is read at any cut with no second request.
-- **A comparison checks more than an id.** It checks the evidence and the label of every pair, counts only matching pairs in `compared`, `same`, and `flips`, and reads the rows to say whether the question, the model, or the threshold changed. A complete nonempty run uses `meta.question_sha256`; a legacy or mixed run names its text fallback, and an empty side makes question change unavailable.
+- **A comparison checks more than an id.** It checks each pair's evidence and label, then compares scalar values. `changes` always shows changed values. For valid yes-or-no answers it also shows same-value probability movement above the active tolerance. The default 0.08 comes from one limited repeated run. A complete modern run compares question digests; legacy rows fall back to text.
 - **Counts are exact and rates are rounded.** Four decimals for a rate, six for money.

@@ -86,8 +86,10 @@ thinkthen decide @receipt.json --jsonl --field /body --details \
   --replay recording/ < claims.jsonl > "$work/tuned.jsonl"
 
 jq -n --slurpfile before "$work/draft.jsonl" -f ../../transforms/compare/compare.jq \
-  "$work/tuned.jsonl" | jq -c '{paired, compared, same, flips, mismatched_label, changed}' \
-  | mustmatch '{"paired":24,"compared":24,"same":21,"flips":{"yes to no":["C-06","C-12","C-18"]},"mismatched_label":[],"changed":{"question":true,"question_by":"digest","model":false,"threshold":false}}'
+  "$work/tuned.jsonl" | jq -c '{paired,compared,same,changed_values,flips,
+    value_changes:[.changes[]|select(.before_value != .after_value)|{id,before_value,after_value,probability_delta_over_tolerance}],
+    yes_no_probability,mismatched_label,changed}' \
+  | mustmatch '{"paired":24,"compared":24,"same":21,"changed_values":3,"flips":{"yes to no":["C-06","C-12","C-18"]},"value_changes":[{"id":"C-06","before_value":true,"after_value":false,"probability_delta_over_tolerance":true},{"id":"C-12","before_value":true,"after_value":false,"probability_delta_over_tolerance":true},{"id":"C-18","before_value":true,"after_value":false,"probability_delta_over_tolerance":true}],"yes_no_probability":{"tolerance":0.08,"compared":24,"changed":24,"summarized_same_value":2,"largest_summarized_delta":0.06},"mismatched_label":[],"changed":{"question":true,"question_by":"digest","model":false,"threshold":false}}'
 
 jq -s -r '[.[0].meta.question_sha256[0:8]] | join("")' "$work/draft.jsonl" > "$work/a"
 jq -s -r '[.[0].meta.question_sha256[0:8]] | join("")' "$work/tuned.jsonl" > "$work/b"
@@ -97,17 +99,18 @@ c2c9a714"
 sh ../../transforms/compare/example.sh | jq -c '{paired, same}' | mustmatch '{"paired":40,"same":36}'
 ```
 
-Twenty-four compared rows share ids and labels, and three claims moved from yes to no. Both runs print the same `question.text`, but complete digests make `changed.question` true. The last line runs the file transform.
+Twenty-four rows compare, and three values moved from yes to no. `changes` shows those values and same-value probability movements above 0.08. Both runs print the same question text, but their digests differ. The last line runs the transform.
+
+A fair pair is two live runs or two replays over the same cases. Never mix a live run with a replay. The 0.08 default is the largest movement observed in one repeated yes-or-no run over one model, question, set, and day. It is a reporting tolerance, not a regression boundary. A move just above it does not prove a regression.
 
 ## What can go wrong
 
-- **Tuning against the cases you then report on.** Twenty-four claims show the direction. Hold cases back before anyone quotes the accuracy.
-- **Editing the wording on the command line.** Then the gate and the measurement are two questions, and no row says so.
-- **Reading `changed.question` from the comparison.** A complete run uses `meta.question_sha256`, so true and false description changes are visible. A legacy or mixed run says `question_by: text`; an empty side makes it unavailable. `changed` also names the model and cut. Rerun when two move.
+- **Tuning against reported cases.** These claims show direction. Hold cases back before quoting accuracy.
+- **Editing wording on the command line.** Then the gate and measurement ask different questions.
+- **Reading `changed.question` alone.** `changed` also names model and cut. Rerun when two move. Modern rows use the complete question digest; legacy rows name their text fallback.
 - **Reading the flips before the pairing.** `paired`, `only_in_before`, `only_in_after`, `repeated_ids`, and the two mismatch lists say the runs measured the same cases. A run that stopped early is listed there, not passed off as a smaller run.
-- **Folding unresolved into no.** A case that moved into the band then reads as a regression. The six directions stay apart, and `compare.jq` states each rule in its header.
-- **A tuned file that misses the recording.** A changed text is a changed request, so `--replay` names the entry it cannot find.
-- **A gate that reads the exit code loosely.** Word the question so that yes permits the action, and treat any code but 0 as a refusal.
+- **Folding unresolved into no.** The six directions stay separate.
+- **A gate that reads exit codes loosely.** Word the question so yes permits the action. Treat every other code as refusal.
 
 ## Related how-tos
 

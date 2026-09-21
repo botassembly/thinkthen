@@ -4,4 +4,5 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 
-jq -n --slurpfile before ../rows/runs/run-a.jsonl -f compare.jq ../rows/runs/run-b.jsonl
+jq -n --argjson probability_tolerance 0.08 \
+  --slurpfile before ../rows/runs/run-a.jsonl -f compare.jq ../rows/runs/run-b.jsonl
