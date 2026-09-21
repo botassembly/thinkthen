@@ -1,4 +1,4 @@
-//! The SQLite surface of thinkthen: eight SQL functions over one engine.
+//! The SQLite surface of thinkthen: ten SQL functions over one engine.
 //!
 //! The ruled names carry the `thinkthen_` prefix, `NULL` is "not sure", and
 //! a question is a plain string, a JSON question, or a question file named
@@ -8,7 +8,10 @@
 //! answers row by row at no further cost. In SQL, `filter` is the
 //! `WHERE thinkthen_decide` pattern the slide draws, and ordering answers
 //! ride in `thinkthen_details`; the container verbs' aggregate forms are
-//! the database ADR's to rule.
+//! the database ADR's to rule. `thinkthen_recognize` and
+//! `thinkthen_relate` are table-valued functions: `recognize` answers one
+//! text with one row per name, and `relate` reads a whole table at once
+//! and answers one row per edge, because it needs every record together.
 //!
 //! Nothing here sends, retries, or schedules: the engine behind the
 //! [`Engine`] trait owns all of that. Load-time init registers the
@@ -16,15 +19,20 @@
 //! call, and a fork is repaired by the engine's process check.
 
 use std::collections::HashMap;
-use std::ffi::{c_char, c_int};
+use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
+use rusqlite::vtab::{
+    Context as VtabContext, Filters, IndexConstraintOp, IndexInfo, Module, VTab,
+    VTabConfig, VTabConnection, VTabCursor,
+};
 use rusqlite::{Connection, Error, ffi};
 use thinkthen_contract::{
-    Annotated, Cancel, Engine, ErrorKind, Options, Question, QuestionSet,
+    Annotated, Cancel, Edge, Engine, Entity, ErrorKind, Kind, MAX_RELATE_RECORDS,
+    Options, Question, QuestionSet, Recognize, Relate,
 };
 use thinkthen_standin::BlockingEngine;
 
@@ -443,6 +451,560 @@ fn flush(state: &mut WarmState) -> Result<(), Error> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------
+// `thinkthen_recognize` and `thinkthen_relate`: the two table-valued
+// functions. Each is an eponymous-only virtual table — usable straight
+// from a FROM clause — with its arguments declared as hidden columns and
+// bound through xBestIndex, the shape SQLite rules for a table-valued
+// function. `recognize` answers one text with one row per name;
+// `relate` reads a whole table (or query) and answers one row per edge,
+// because it needs every record at once.
+// ---------------------------------------------------------------------
+
+/// One record's identity, as the named id column held it.
+#[derive(Clone)]
+enum RecordId {
+    /// An INTEGER id.
+    Int(i64),
+    /// A TEXT id.
+    Text(String),
+}
+
+/// The message SQLite holds for the connection, for an error that names
+/// what the SQL did.
+fn sqlite_message(db: *mut ffi::sqlite3) -> String {
+    // SAFETY: errmsg returns a valid C string for a live connection.
+    unsafe { CStr::from_ptr(ffi::sqlite3_errmsg(db)) }
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// Read the text of column `i` on the current row.
+fn column_text(stmt: *mut ffi::sqlite3_stmt, i: c_int) -> Option<String> {
+    // SAFETY: the row is live and the column holds TEXT.
+    let text = unsafe { ffi::sqlite3_column_text(stmt, i) };
+    if text.is_null() {
+        return None;
+    }
+    let len = unsafe { ffi::sqlite3_column_bytes(stmt, i) } as usize;
+    // SAFETY: text points at len bytes owned by the live statement.
+    let bytes = unsafe { std::slice::from_raw_parts(text, len) };
+    String::from_utf8(bytes.to_vec()).ok()
+}
+
+/// Read a whole table's `(id, body)` rows for `thinkthen_relate`.
+///
+/// The read is a nested read-only `SELECT id, body FROM table` on the
+/// same connection, materialized before any row is served because the
+/// engine needs every record at once. It stops one row past the ruled
+/// record limit, so a refusal costs a bounded read. Input order is the
+/// order the SELECT reads the table; for a rowid table that is rowid
+/// order.
+fn read_records(
+    db: *mut ffi::sqlite3,
+    table: &str,
+    id_col: &str,
+    body_col: &str,
+) -> Result<(Vec<RecordId>, Vec<String>), thinkthen_contract::Error> {
+    use thinkthen_contract::Error as ContractError;
+    if db.is_null() {
+        return Err(ContractError::defect("relate ran with no database handle"));
+    }
+    let quote = |name: &str| format!("\"{}\"", name.replace('"', "\"\""));
+    let sql = format!(
+        "SELECT {}, {} FROM {}",
+        quote(id_col),
+        quote(body_col),
+        quote(table)
+    );
+    let Ok(sql) = CString::new(sql) else {
+        return Err(ContractError::usage(
+            "the table or column name holds a NUL byte",
+        ));
+    };
+    let mut stmt: *mut ffi::sqlite3_stmt = std::ptr::null_mut();
+    // SAFETY: db is live, sql is NUL-terminated, and stmt receives the
+    // new statement or stays null.
+    let rc = unsafe {
+        ffi::sqlite3_prepare_v2(db, sql.as_ptr(), -1, &mut stmt, std::ptr::null_mut())
+    };
+    if rc != ffi::SQLITE_OK {
+        return Err(ContractError::usage(format!(
+            "cannot read the table or query given: {}",
+            sqlite_message(db)
+        )));
+    }
+    let mut ids: Vec<RecordId> = Vec::new();
+    let mut texts: Vec<String> = Vec::new();
+    let mut outcome: Result<(), thinkthen_contract::Error> = Ok(());
+    loop {
+        // SAFETY: stmt is live and not finalized.
+        let rc = unsafe { ffi::sqlite3_step(stmt) };
+        if rc == ffi::SQLITE_ROW {
+            // SAFETY: the row is live; the type checks guard the reads.
+            let id_type = unsafe { ffi::sqlite3_column_type(stmt, 0) };
+            let id = if id_type == ffi::SQLITE_INTEGER {
+                // SAFETY: the column holds INTEGER.
+                RecordId::Int(unsafe { ffi::sqlite3_column_int64(stmt, 0) })
+            } else if id_type == ffi::SQLITE_TEXT {
+                match column_text(stmt, 0) {
+                    Some(id) => RecordId::Text(id),
+                    None => {
+                        outcome = Err(ContractError::usage(
+                            "the id column holds text that is not UTF-8",
+                        ));
+                        RecordId::Int(0)
+                    }
+                }
+            } else {
+                outcome = Err(ContractError::usage(
+                    "the id column must hold integers or text",
+                ));
+                RecordId::Int(0)
+            };
+            // SAFETY: the row is live; the type checks guard the reads.
+            let body_type = unsafe { ffi::sqlite3_column_type(stmt, 1) };
+            let body = if body_type == ffi::SQLITE_TEXT {
+                column_text(stmt, 1).unwrap_or_default()
+            } else {
+                outcome = Err(ContractError::usage(format!(
+                    "record {} has no text; every record needs one string",
+                    ids.len() + 1
+                )));
+                String::new()
+            };
+            ids.push(id);
+            texts.push(body);
+            if outcome.is_err() || ids.len() > MAX_RELATE_RECORDS {
+                break;
+            }
+        } else if rc == ffi::SQLITE_DONE {
+            break;
+        } else {
+            outcome = Err(ContractError::usage(format!(
+                "reading the table or query failed: {}",
+                sqlite_message(db)
+            )));
+            break;
+        }
+    }
+    // SAFETY: stmt was prepared here and is finalized exactly once.
+    unsafe { ffi::sqlite3_finalize(stmt) };
+    outcome?;
+    Ok((ids, texts))
+}
+
+/// `thinkthen_recognize` column numbers.
+const RECOGNIZE_TEXT: c_int = 0;
+const RECOGNIZE_KIND: c_int = 1;
+const RECOGNIZE_START: c_int = 2;
+const RECOGNIZE_END: c_int = 3;
+const RECOGNIZE_STRENGTH: c_int = 4;
+const RECOGNIZE_BODY: usize = 5;
+const RECOGNIZE_KINDS: usize = 6;
+const RECOGNIZE_COLUMNS: usize = 7;
+
+/// The `thinkthen_recognize` virtual table: one text in, one row per name
+/// out, with the five ruled columns.
+#[repr(C)]
+struct RecognizeTab {
+    /// Base class. Must be first.
+    base: ffi::sqlite3_vtab,
+}
+
+// SAFETY: the connect body registers a well-formed module; the cursor
+// answers from owned rows.
+unsafe impl<'vtab> VTab<'vtab> for RecognizeTab {
+    type Aux = ();
+    type Cursor = RecognizeCursor;
+
+    fn connect(
+        db: &mut VTabConnection,
+        _aux: Option<&()>,
+        _module_name: &[u8],
+        _database_name: &[u8],
+        _table_name: &[u8],
+        _args: &[&[u8]],
+    ) -> rusqlite::Result<(std::borrow::Cow<'static, CStr>, Self)> {
+        db.config(VTabConfig::Innocuous)?;
+        Ok((
+            std::borrow::Cow::Borrowed(
+                c"CREATE TABLE x(text,kind,start,end,strength,body hidden,kinds hidden)",
+            ),
+            RecognizeTab { base: ffi::sqlite3_vtab::default() },
+        ))
+    }
+
+    fn best_index(&self, info: &mut IndexInfo) -> rusqlite::Result<bool> {
+        let mut present = [false; RECOGNIZE_COLUMNS];
+        let mut constraint = [usize::MAX; RECOGNIZE_COLUMNS];
+        for (i, held) in info.constraints().enumerate() {
+            let column = held.column() as usize;
+            if column < RECOGNIZE_BODY || column >= RECOGNIZE_COLUMNS {
+                continue;
+            }
+            if !held.is_usable()
+                || held.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
+            {
+                return Ok(false);
+            }
+            present[column] = true;
+            constraint[column] = i;
+        }
+        if !present[RECOGNIZE_BODY] {
+            return Ok(false);
+        }
+        let mut mask: c_int = 0;
+        let mut argv: c_int = 0;
+        for column in RECOGNIZE_BODY..RECOGNIZE_COLUMNS {
+            if present[column] {
+                argv += 1;
+                mask |= 1 << column;
+                let mut usage = info.constraint_usage(constraint[column]);
+                usage.set_argv_index(argv);
+                usage.set_omit(true);
+            }
+        }
+        info.set_idx_num(mask);
+        info.set_estimated_cost(50.0);
+        info.set_estimated_rows(4);
+        Ok(true)
+    }
+
+    fn open(&'vtab mut self) -> rusqlite::Result<Self::Cursor> {
+        Ok(RecognizeCursor {
+            base: ffi::sqlite3_vtab_cursor::default(),
+            rows: Vec::new(),
+            row: 0,
+        })
+    }
+}
+
+/// The cursor for `thinkthen_recognize`: the entities of one text.
+#[repr(C)]
+struct RecognizeCursor {
+    /// Base class. Must be first.
+    base: ffi::sqlite3_vtab_cursor,
+    rows: Vec<Entity>,
+    row: usize,
+}
+
+// SAFETY: the cursor serves owned rows and does no unsafe work of its
+// own beyond the module plumbing.
+unsafe impl VTabCursor for RecognizeCursor {
+    fn filter(
+        &mut self,
+        idx_num: c_int,
+        _idx_str: Option<&str>,
+        args: &Filters<'_>,
+    ) -> rusqlite::Result<()> {
+        let mut arg = 0;
+        let body = if idx_num & (1 << RECOGNIZE_BODY) != 0 {
+            let held: Option<String> = args.get(arg)?;
+            arg += 1;
+            held
+        } else {
+            None
+        };
+        let kinds = if idx_num & (1 << RECOGNIZE_KINDS) != 0 {
+            let held: Option<String> = args.get(arg)?;
+            held
+        } else {
+            None
+        };
+        let body = body.ok_or_else(|| {
+            failure(thinkthen_contract::Error::usage(
+                "thinkthen_recognize: the text argument is required",
+            ))
+        })?;
+        let kinds: Vec<String> = match kinds.as_deref().map(str::trim) {
+            None | Some("") => Vec::new(),
+            Some(list) => list.split(',').map(|kind| kind.trim().to_string()).collect(),
+        };
+        let ask = if kinds.is_empty() {
+            Recognize::new()
+        } else {
+            Recognize::new().kinds(kinds)
+        };
+        let recognized = engine()
+            .recognize_opts(&ask, &body, Options::new())
+            .map_err(failure)?;
+        self.rows = recognized.entities;
+        self.row = 0;
+        Ok(())
+    }
+
+    fn next(&mut self) -> rusqlite::Result<()> {
+        self.row += 1;
+        Ok(())
+    }
+
+    fn eof(&self) -> bool {
+        self.row >= self.rows.len()
+    }
+
+    fn column(&self, ctx: &mut VtabContext, i: c_int) -> rusqlite::Result<()> {
+        let entity = &self.rows[self.row];
+        match i {
+            RECOGNIZE_TEXT => ctx.set_result(&entity.text),
+            RECOGNIZE_KIND => ctx.set_result(&entity.kind),
+            RECOGNIZE_START => ctx.set_result(&(entity.start as i64)),
+            RECOGNIZE_END => ctx.set_result(&(entity.end as i64)),
+            RECOGNIZE_STRENGTH => ctx.set_result(&entity.strength),
+            _ => Ok(()),
+        }
+    }
+
+    fn rowid(&self) -> rusqlite::Result<i64> {
+        Ok(self.row as i64 + 1)
+    }
+}
+
+/// `thinkthen_relate` column numbers.
+const RELATE_NAME: c_int = 0;
+const RELATE_SOURCE: c_int = 1;
+const RELATE_TARGET: c_int = 2;
+const RELATE_PROBABILITY: c_int = 3;
+const RELATE_TABLE: usize = 4;
+const RELATE_ID: usize = 5;
+const RELATE_BODY: usize = 6;
+const RELATE_R1: usize = 7;
+const RELATE_R4: usize = 10;
+const RELATE_COLUMNS: usize = 11;
+
+/// The `thinkthen_relate` virtual table: a whole table (or query) in, one
+/// row per edge out.
+#[repr(C)]
+struct RelateTab {
+    /// Base class. Must be first.
+    base: ffi::sqlite3_vtab,
+    /// The connection the module connected to, for the nested read.
+    db: *mut ffi::sqlite3,
+}
+
+// SAFETY: the connect body registers a well-formed module; the nested
+// read is read-only and bounded.
+unsafe impl<'vtab> VTab<'vtab> for RelateTab {
+    type Aux = ();
+    type Cursor = RelateCursor;
+
+    fn connect(
+        db: &mut VTabConnection,
+        _aux: Option<&()>,
+        _module_name: &[u8],
+        _database_name: &[u8],
+        _table_name: &[u8],
+        _args: &[&[u8]],
+    ) -> rusqlite::Result<(std::borrow::Cow<'static, CStr>, Self)> {
+        db.config(VTabConfig::Innocuous)?;
+        // SAFETY: the handle belongs to this connection and outlives the
+        // virtual table; the nested read is read-only.
+        let handle = unsafe { db.handle() };
+        Ok((
+            std::borrow::Cow::Borrowed(
+                c"CREATE TABLE x(name,source,target,probability,table_name hidden,id_column hidden,body_column hidden,relation_1 hidden,relation_2 hidden,relation_3 hidden,relation_4 hidden)",
+            ),
+            RelateTab { base: ffi::sqlite3_vtab::default(), db: handle },
+        ))
+    }
+
+    fn best_index(&self, info: &mut IndexInfo) -> rusqlite::Result<bool> {
+        let mut present = [false; RELATE_COLUMNS];
+        let mut constraint = [usize::MAX; RELATE_COLUMNS];
+        for (i, held) in info.constraints().enumerate() {
+            let column = held.column() as usize;
+            if column < RELATE_TABLE || column >= RELATE_COLUMNS {
+                continue;
+            }
+            if !held.is_usable()
+                || held.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
+            {
+                return Ok(false);
+            }
+            present[column] = true;
+            constraint[column] = i;
+        }
+        if !present[RELATE_TABLE] || !present[RELATE_ID] || !present[RELATE_BODY] {
+            return Ok(false);
+        }
+        let mut mask: c_int = 0;
+        let mut argv: c_int = 0;
+        for column in RELATE_TABLE..RELATE_COLUMNS {
+            if present[column] {
+                argv += 1;
+                mask |= 1 << column;
+                let mut usage = info.constraint_usage(constraint[column]);
+                usage.set_argv_index(argv);
+                usage.set_omit(true);
+            }
+        }
+        info.set_idx_num(mask);
+        info.set_estimated_cost(200.0);
+        info.set_estimated_rows(8);
+        Ok(true)
+    }
+
+    fn open(&'vtab mut self) -> rusqlite::Result<Self::Cursor> {
+        Ok(RelateCursor {
+            base: ffi::sqlite3_vtab_cursor::default(),
+            db: self.db,
+            rows: Vec::new(),
+            row: 0,
+        })
+    }
+}
+
+/// One row of `thinkthen_relate`: an edge, with the ids the id column
+/// held.
+struct RelateRow {
+    name: String,
+    source: RecordId,
+    target: RecordId,
+    probability: f64,
+}
+
+/// The cursor for `thinkthen_relate`: the edges of one record set.
+#[repr(C)]
+struct RelateCursor {
+    /// Base class. Must be first.
+    base: ffi::sqlite3_vtab_cursor,
+    db: *mut ffi::sqlite3,
+    rows: Vec<RelateRow>,
+    row: usize,
+}
+
+// SAFETY: the cursor serves owned rows; the nested read is read-only and
+// bounded.
+unsafe impl VTabCursor for RelateCursor {
+    fn filter(
+        &mut self,
+        idx_num: c_int,
+        _idx_str: Option<&str>,
+        args: &Filters<'_>,
+    ) -> rusqlite::Result<()> {
+        let mut values: Vec<Option<String>> = Vec::new();
+        for column in RELATE_TABLE..RELATE_COLUMNS {
+            if idx_num & (1 << column) != 0 {
+                values.push(args.get(values.len())?);
+            }
+        }
+        let mut rank = [usize::MAX; RELATE_COLUMNS];
+        let mut n = 0;
+        for column in RELATE_TABLE..RELATE_COLUMNS {
+            if idx_num & (1 << column) != 0 {
+                rank[column] = n;
+                n += 1;
+            }
+        }
+        let get = |column: usize| -> Option<&str> {
+            if rank[column] == usize::MAX {
+                None
+            } else {
+                values[rank[column]].as_deref()
+            }
+        };
+        let table = get(RELATE_TABLE).ok_or_else(|| {
+            failure(thinkthen_contract::Error::usage(
+                "thinkthen_relate: the table name argument is required",
+            ))
+        })?;
+        let id_col = get(RELATE_ID).ok_or_else(|| {
+            failure(thinkthen_contract::Error::usage(
+                "thinkthen_relate: the id column argument is required",
+            ))
+        })?;
+        let body_col = get(RELATE_BODY).ok_or_else(|| {
+            failure(thinkthen_contract::Error::usage(
+                "thinkthen_relate: the body column argument is required",
+            ))
+        })?;
+        let mut ask = Relate::new();
+        for column in RELATE_R1..=RELATE_R4 {
+            if let Some(name) = get(column) {
+                if !name.is_empty() {
+                    ask = ask.relation(name, Kind::Any, Kind::Any).map_err(failure)?;
+                }
+            }
+        }
+        let (ids, texts) = read_records(self.db, table, id_col, body_col).map_err(failure)?;
+        let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+        let edges: Vec<Edge> = engine()
+            .relate_opts(&ask, &refs, Options::new())
+            .map_err(failure)?;
+        let mut rows = Vec::with_capacity(edges.len());
+        for edge in &edges {
+            let source = edge
+                .source
+                .checked_sub(1)
+                .and_then(|i| ids.get(i as usize))
+                .cloned()
+                .ok_or_else(|| {
+                    failure(thinkthen_contract::Error::defect(format!(
+                        "the edge names record {}, and only {} records came in",
+                        edge.source,
+                        ids.len()
+                    )))
+                })?;
+            let target = edge
+                .target
+                .checked_sub(1)
+                .and_then(|i| ids.get(i as usize))
+                .cloned()
+                .ok_or_else(|| {
+                    failure(thinkthen_contract::Error::defect(format!(
+                        "the edge names record {}, and only {} records came in",
+                        edge.target,
+                        ids.len()
+                    )))
+                })?;
+            rows.push(RelateRow {
+                name: edge.name.clone(),
+                source,
+                target,
+                probability: edge.probability,
+            });
+        }
+        self.rows = rows;
+        self.row = 0;
+        Ok(())
+    }
+
+    fn next(&mut self) -> rusqlite::Result<()> {
+        self.row += 1;
+        Ok(())
+    }
+
+    fn eof(&self) -> bool {
+        self.row >= self.rows.len()
+    }
+
+    fn column(&self, ctx: &mut VtabContext, i: c_int) -> rusqlite::Result<()> {
+        let held = &self.rows[self.row];
+        match i {
+            RELATE_NAME => ctx.set_result(&held.name),
+            RELATE_SOURCE => match &held.source {
+                RecordId::Int(id) => ctx.set_result(id),
+                RecordId::Text(id) => ctx.set_result(id),
+            },
+            RELATE_TARGET => match &held.target {
+                RecordId::Int(id) => ctx.set_result(id),
+                RecordId::Text(id) => ctx.set_result(id),
+            },
+            RELATE_PROBABILITY => ctx.set_result(&held.probability),
+            _ => Ok(()),
+        }
+    }
+
+    fn rowid(&self) -> rusqlite::Result<i64> {
+        Ok(self.row as i64 + 1)
+    }
+}
+
+/// The two table-valued module registrations.
+const RECOGNIZE_MODULE: Module<'static, RecognizeTab> =
+    Module::eponymous_only_module();
+const RELATE_MODULE: Module<'static, RelateTab> = Module::eponymous_only_module();
+
 // rusqlite's loadable headers stop at SQLite 3.34, so this 3.41 call is
 // declared against the host's own library and linked directly. The host
 // process has libsqlite3 loaded, so the symbol resolves; a host that
@@ -466,6 +1028,8 @@ fn init(connection: Connection) -> Result<bool, Error> {
     connection.create_scalar_function("thinkthen_details", 2, volatile, details)?;
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
     connection.create_aggregate_function("thinkthen_warm", 2, plain, Warm)?;
+    connection.create_module(c"thinkthen_recognize", &RECOGNIZE_MODULE, None)?;
+    connection.create_module(c"thinkthen_relate", &RELATE_MODULE, None)?;
     Ok(false)
 }
 

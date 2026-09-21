@@ -5,7 +5,7 @@ Landed 2026-09-21. The acceptance sample, drawn in
 as drawn against the stand-in: `thinkthen_warm` fills the answers in one
 pass at the process width, and the queries read them row by row.
 
-## The eight functions
+## The ten functions
 
 `thinkthen_decide`, `thinkthen_choose`, `thinkthen_score`, `thinkthen_tag`,
 `thinkthen_annotate`, `thinkthen_details`, `thinkthen_usage`,
@@ -14,6 +14,18 @@ pass at the process width, and the queries read them row by row.
 question file named with the command's spelling `'@refund.json'`, resolved
 relative to the process working directory. `thinkthen_usage('reset')`
 zeroes the counters and clears the session's saved answers.
+
+`thinkthen_recognize` and `thinkthen_relate` are table-valued functions
+over the same engine. `SELECT t.id, n.text, n.kind FROM tickets t,
+thinkthen_recognize(t.body, 'person,organization') n` answers one row per
+name with the five columns `(text, kind, start, end, strength)`, the
+offsets indexing the text the way SQLite's own `substr` counts, so
+`substr(body, start + 1, end - start)` is the name. `SELECT * FROM
+thinkthen_relate('alerts', 'id', 'body', 'caused_by')` reads the whole
+named table at once — the one function a database cannot run row by row —
+and answers one row per edge `(name, source, target, probability)`, with
+the id column's values riding as `source` and `target`. More than 255
+records is refused with a usage error naming the limit.
 
 In SQL, `filter` is the `WHERE thinkthen_decide` pattern the slide draws,
 and the slide's second and third queries are that pattern reading the
