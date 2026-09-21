@@ -150,3 +150,15 @@ The build review required before the one-crate move found that section 8 step 1 
 6. **Bound only engine-owned lifetimes.** Engine request workers and internal feeders are scoped and joined before its call returns. The command-owned input reader may remain detached because it lets a blocked standard-input read coexist with completed output and an early closed-pipe exit. A test calls the engine inside a process that remains alive and proves that no engine worker remains. Section 8 step 2 may replace the private bridge when it fixes the public iterator design.
 
 The remaining order is this amendment, Job 3's shared conformance cases, then the section 8 step-1 merge. Job 2's DuckDB interrupt proof inside Python is already complete in `sdlc/planning/databases/duckdb.md` and experiment 207. It supplies evidence for the accepted interrupt design and no longer sits in the remaining order. This sentence supersedes section 8's earlier final sentence that placed Job 2 after Job 3; the accepted history stays above.
+
+## Amendment, 2026-09-21: the shared case contract
+
+Ticket 0052 turns Job 3's experiment evidence into `conformance/cases.json`. This amendment fixes the meanings that every later runner uses. Ian can overturn any item.
+
+1. The initial file has twenty-five cases. It covers the eight verbs and the six error kinds. The schema declares its actual length without fixing a permanent count.
+2. A `rank` result is an ordered list of zero-based input indexes beside their yes probabilities. A `find` result is a zero-based selected input index or null beside every candidate probability in stable input order, with `none` last. Each host maps those indexes back to its own container.
+3. A successful exchange embeds its exact request bytes as a JSON string and its response as structured JSON. `captured` names a stable repository recording whose request and response match. `synthetic_contract` names a stubbed or shaped exchange. Neither kind carries headers or credentials.
+4. A fault case names one of the six public error kinds and a deterministic injection. `local`, `deadline`, and `defect` remain schema contracts in this ticket. The section 8 step-1 runner proves their behavior through its private engine boundary. Faults do not pretend to be replayable product recordings.
+5. The offline pure-core integration test uses the production question grammar, request encoder, response decoder, digest, answer rules, ranking, and find selector. It contains no second product canonicalizer or probability formula. The section 8 step-1 merge adds the first command runner over the same file.
+
+Job 3 is complete. Section 8 step 1 is next.
