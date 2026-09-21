@@ -46,3 +46,52 @@ Means: the interrupt shape is the poll callback the ADR rules, proven here with 
 - No parallel writers on one database file; the session map is per process, as the cache page rules for a database with no folder named.
 - No packaging: no `sqlite3` package, no clean-container install; the packaging rehearsal owns that.
 - No `rank` or `find` aggregate; the ADR rules their SQL shapes and this lane left the names unclaimed.
+
+## Entry 6: `recognize` and `relate` land as the table-valued functions (2026-09-21)
+
+Tried: the two new functions in the ruled SQLite shape — `thinkthen_recognize(text, 'person,organization')` as an eponymous table-valued function over rusqlite's vtab API (the `vtab` feature joined the manifest), answering the five columns `(text, kind, start, end, strength)` from the replay recordings, and `thinkthen_relate('alerts', 'id', 'body', 'caused_by')`, which reads the whole named table through a nested read-only SELECT on the same connection, stops one row past the ruled record limit, and answers `(name, source, target, probability)` with the id column's values riding as `source`/`target` (INTEGER or TEXT ids).
+
+Saw:
+
+```
+$ ENGINE_NULL=1 python3 tests/tvf_suite.py
+15 of 15 ok — the deck's calls as drawn, the five columns, the default kinds,
+the emoji offsets, the no-names text, the repeated name, both refusals, the
+255 limit, and the join pattern with usage requests 0 -> 0
+
+$ ./check.sh
+the slide in the stock CLI, null suite 19/19, tvf suite 15/15,
+conformance slice: 94 ok, 2 diverge (the two recorded real-engine
+requirements: the band-on-filter verb rule and the pre-fired token),
+1 skip (the per-subject relate arm; the ruled pairs form is case 72),
+wire suite skipped (no stub on 8218), exit 0
+```
+
+The conformance slice now runs all forty-one `recognize` cases through the TVF (names; the seven cases that ask relation rules carry the "relations ride the beta question-file function" note) and three of the four `relate` cases (`R01-demo` 4 edges, `R02-pickone` 11, `R04-pairs-10` 10); the per-subject arm is skipped with its reason.
+
+**One real defect found and fixed on the way.** The first build segfaulted at the first TVF call: a rusqlite cursor struct must carry `ffi::sqlite3_vtab_cursor` as its first field, or SQLite's write of `pVtab` lands in the next field — in this module's case, the rows vector. The instrumented run showed `cap=343406448`, the vtab pointer, where a capacity belonged; both cursors now carry the required base field, and the gdb trace is reproducible from this entry's story.
+
+**Offsets in SQLite's own indexing.** The recorded offsets are code points; SQLite's `substr` and `length` count characters; no conversion exists and none is needed. The proof, on the synthesized accent-and-emoji row:
+
+```
+substr('Le café 😀 Maria Chen arrived.', start + 1, end - start) -> 'Maria Chen'   (start 10, end 20)
+```
+
+Note for the build team: this lane's brief said "offsets are byte counts"; the contract's `Entity` docs ("count code points"), the design page ("in that surface's own string indexing"), the recordings, and SQLite's own character counting all agree on characters. The emoji test pins the character path; byte-offset columns would break SQL-side slicing and the deck.
+
+**The vocabulary sweep, pasted from this folder:**
+
+```
+$ grep -rniE "certainty|likelihood|cutoff|gray zone|confidence|calibrated|accuracy" src/ tests/ NOTES.md README.md
+(no output)
+```
+
+Relations and edges carry `probability`; names carry `strength`; the vendor's own field name appears nowhere in this folder. The vendor's `confidence` passes under details only — the recordings carry it, and the details door for these two functions arrives with the real engine.
+
+**The page section for the manual, relate's whole-table form** (for the build team to lift):
+
+> `relate` needs every record at once, so a database call takes a table or a query, never a single row. In SQLite, name the table, the id column, the body column, and one or more relation names: `SELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'caused_by');`. Each row of the table is one record, counted from 1 in the order the SELECT reads it; the edges come back as rows `(name, source, target, probability)`, and `source`/`target` carry the values of the id column, so the edges join straight back to the table. More than 255 records is refused with a usage error naming the limit, because pair counts grow with the square of the records. Read a table once and join by equality, or walk the edges with a recursive query.
+
+**Not run, honestly:** the beta `thinkthen_relations` line in the deck's SQL block — the build team's page leaves open whether relations ride `thinkthen_recognize` or a separate function, nothing was invented for it, and the literal `'*'` any-kind spelling lives in that question-file form, so it is not exercised through this call shape (bare relation names are the any-to-any rule by construction); the other error kinds through these two functions offline (the replay produces usage errors only; backend and cancelled arrive with the real engine's wire); SQL forms beyond the deck's (a JOIN expression as the source, extra arguments).
+
+**A stale line on the design page:** `relate-design.md`'s database table still says the rows are `(name, from_id, to_id, probability)`. The deck's own note and the update brief rule `source`/`target` on every surface, and this surface emits `source`/`target`. Flagged here so the page can be corrected in one edit.
