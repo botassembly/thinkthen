@@ -1,5 +1,5 @@
 #!/bin/sh
-# Compare two runs over the same cases.
+# Compare two scalar or annotated runs over the same cases.
 # The page is demos/41-tune-a-question-file/README.md.
 set -eu
 cd -- "$(dirname -- "$0")"

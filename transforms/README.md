@@ -23,7 +23,7 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | `sweep/` | What every cut would have done, and which one to pick | [13](../demos/13-pick-a-threshold/) |
 | `band/` | Accuracy beside coverage for a band | [13](../demos/13-pick-a-threshold/) |
 | `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
-| `compare/` | What changed between two runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
+| `compare/` | What changed between two scalar or annotated runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
 | `cost/` | The input tokens a run spent and what they cost | [28](../demos/28-what-a-run-cost/) |
 | `triage/` | Whether a support ticket is drafted, blocked, or reviewed, and why | [16](../demos/16-triage-pipeline/) |
 
@@ -135,4 +135,5 @@ jq -n --slurpfile before "$work/before.jsonl" -f compare/compare.jq "$work/empty
 - **A case with no label is reported.** It is listed by id and scored in nothing. No row is dropped silently.
 - **A cut is an argument.** `--argjson` carries it, so one saved run is read at any cut with no second request.
 - **A comparison checks more than an id.** It checks each pair's evidence and label, then compares scalar values. `changes` always shows changed values. For valid yes-or-no answers it also shows same-value probability movement above the active tolerance. The default 0.08 comes from one limited repeated run. A complete modern run compares question digests; legacy rows fall back to text.
+- **An annotation compares by name.** Record pairing happens once. Each shared question then gets its own counts, changes, flips, and probability summary. Added and removed question names are listed without turning every record into a change. Run this transform with `jq -n`; it refuses ordinary input and `jq -s`.
 - **Counts are exact and rates are rounded.** Four decimals for a rate, six for money.

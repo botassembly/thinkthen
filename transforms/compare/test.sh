@@ -134,7 +134,7 @@ for invocation in slurp ordinary literal-null; do
 		printf 'compare accepted %s primary input\n' "$invocation" >&2
 		exit 1
 	fi
-	sed 's/^jq: error (at [^)]*): //' "$work/error" | mustmatch 'compare: run with jq -n'
+	grep -F 'compare: run with jq -n' "$work/error" > /dev/null
 done
 
 annotate_rows() {
@@ -195,6 +195,18 @@ jq -n --slurpfile before "$work/annotate-before.jsonl" -f "$REPO/transforms/comp
 	          score:(.questions.score|{compared,same,changed_values,ids:[.changes[].id],yes_no_probability})}' \
 	| mustmatch '{"mode":"annotate","before":{"rows":11,"question_sets":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"models":["old-model"]},"after":{"rows":11,"question_sets":["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],"models":["new-model"]},"changed":{"question_set":true,"model":true},"repeated_ids":{"before":["repeat"],"after":["repeat"]},"only_in_before":["gone"],"only_in_after":["new"],"paired":8,"compared":6,"mismatched_input":["input"],"mismatched_label":["label"],"questions_only_in_before":[],"questions_only_in_after":[],"question_names":["choose","decide","score","tag"],"decide":{"compared":6,"same":0,"changed_values":6,"flips":{"no to yes":["a"],"no to unresolved":["b"],"unresolved to no":["c"],"unresolved to yes":["d"],"yes to no":["e"],"yes to unresolved":["f"]},"ids":["a","b","c","d","e","f"],"yes_no_probability":{"tolerance":0.08,"compared":6,"changed":4,"summarized_same_value":0,"largest_summarized_delta":null}},"choose":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}},"tag":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}},"score":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}}}'
 
+jq -n --slurpfile before "$work/annotate-before.jsonl" -f "$REPO/transforms/compare/compare.jq" "$work/annotate-after.jsonl" \
+	| jq -c '[.questions.decide.changes[] | select(.id == "a" or .id == "b" or .id == "c")
+	          | {id,probability_delta,probability_delta_over_tolerance}]' \
+	| mustmatch '[{"id":"a","probability_delta":0.07,"probability_delta_over_tolerance":false},{"id":"b","probability_delta":0.08,"probability_delta_over_tolerance":false},{"id":"c","probability_delta":0.09,"probability_delta_over_tolerance":true}]'
+
+# Each named question reports definition and threshold changes independently.
+jq -c '(.answers.decide.question.text) = "revised question" | (.answers.decide.threshold) = 0.6' \
+	"$work/annotate-after.jsonl" > "$work/annotate-after-revised.jsonl"
+jq -n --slurpfile before "$work/annotate-before.jsonl" -f "$REPO/transforms/compare/compare.jq" "$work/annotate-after-revised.jsonl" \
+	| jq -c '{decide:.questions.decide.changed,choose:.questions.choose.changed}' \
+	| mustmatch '{"decide":{"question":true,"threshold":true},"choose":{"question":false,"threshold":false}}'
+
 # Question names present in one whole run are reported once and compared nowhere.
 jq -c 'del(.value.score,.answers.score)' "$work/annotate-after.jsonl" > "$work/annotate-after-without-score.jsonl"
 jq -n --slurpfile before "$work/annotate-before.jsonl" -f "$REPO/transforms/compare/compare.jq" "$work/annotate-after-without-score.jsonl" \
@@ -209,8 +221,12 @@ jq -n --slurpfile before "$work/annotate-before.jsonl" -f "$REPO/transforms/comp
 
 # Every malformed annotate diagnostic is fixed and echoes no row field.
 for mutation in \
+	'del(.value)' \
+	'del(.answers)' \
 	'del(.answers.score)' \
 	'.answers.score.value = 99' \
+	'.input.id = 7' \
+	'.meta.model = null' \
 	'.answers.decide.question = "hostile question text"' \
 	'.answers.decide.threshold = []' \
 	'.answers.decide.answer = {kind:"unknown",secret:"hostile answer"}' \

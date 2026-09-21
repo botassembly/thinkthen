@@ -31,11 +31,19 @@ env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --dry-run \
 ```bash
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --details \
-  --replay recording --input cases.jsonl > "$work/run.jsonl"
-jq -s -c '{rows:length, definition:([.[].meta.questions_sha256]|unique|length), request_groups:([.[0].answers[].request]|unique|length)}' "$work/run.jsonl" \
+for run in a b; do
+  env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --details \
+    --replay recording --input cases.jsonl > "$work/run-$run.jsonl"
+done
+jq -s -c '{rows:length, definition:([.[].meta.questions_sha256]|unique|length), request_groups:([.[0].answers[].request]|unique|length)}' "$work/run-a.jsonl" \
   | mustmatch '{"rows":6,"definition":1,"request_groups":2}'
+jq -n --slurpfile before "$work/run-a.jsonl" \
+  -f ../../transforms/compare/compare.jq "$work/run-b.jsonl" \
+  | jq -c '.questions.correct | {compared,same,changed_values}' \
+  | mustmatch '{"compared":6,"same":6,"changed_values":0}'
 ```
+
+The comparison pairs the six records once, then compares `correct` and every other named check independently. A changed, added, or removed check stays visible without making every record look changed.
 
 ## Compare the judge with human labels
 
