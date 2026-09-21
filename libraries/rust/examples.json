@@ -1,0 +1,51 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "rust",
+  "language": "rust",
+  "install": "cargo add thinkthen",
+  "examples": {
+    "decide": {
+      "rust": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\")?.value().unwrap_or(false)",
+      "expected": "true"
+    },
+    "choose": {
+      "rust": "tt.choose(&question, \"please route this ticket\")?.unwrap_or_default()",
+      "expected": "the refund desk"
+    },
+    "tag": {
+      "rust": "tt.tag(&question, \"the refund and the shipping\")?.join(\", \")",
+      "expected": "refund"
+    },
+    "score": {
+      "rust": "tt.score(&question, \"maybe later\")?.value",
+      "expected": "1.05"
+    },
+    "filter": {
+      "rust": "tt.filter(\"Is this a complaint?\", &records)?.join(\" | \")",
+      "expected": "I demand a refund today"
+    },
+    "rank": {
+      "rust": "tt.rank(\"Is this a complaint?\", &records)?",
+      "expected": "I demand a refund today | good morning"
+    },
+    "find": {
+      "rust": "tt.find(\"Which line asks for money back?\", &units)?",
+      "expected": "I want a refund"
+    },
+    "annotate": {
+      "files": {
+        "form.json": "{\"version\":1,\"questions\":{\"wants_refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"team\":{\"choose\":\"Which team owns this?\",\"options\":[\"billing\",\"shipping\",\"account\"]},\"urgency\":{\"score\":\"How urgent is this?\",\"levels\":[\"Routine.\",\"Soon.\",\"Immediate.\"]}}}"
+      },
+      "rust": "tt.annotate(\"form.json\", &[\"maybe later\"])?",
+      "expected": "team=null urgency=1.05 wants_refund=true"
+    },
+    "recognize": {
+      "rust": "tt.recognize(&Recognize::from_json(\"{\\\"kinds\\\":[\\\"person\\\",\\\"organization\\\",\\\"place\\\"]}\")?, \"Maria Chen joined Northwind Freight in Chicago last spring.\")?",
+      "expected": "Maria Chen|person Northwind Freight|organization Chicago|place"
+    },
+    "relate": {
+      "rust": "tt.relate(&Relate::from_json(\"{\\\"relations\\\":[{\\\"name\\\":\\\"caused_by\\\",\\\"source\\\":\\\"*\\\",\\\"target\\\":\\\"*\\\"}]}\")?, &alerts)?",
+      "expected": "caused_by 1 2 0.59"
+    }
+  }
+}

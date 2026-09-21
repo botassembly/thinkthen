@@ -128,3 +128,67 @@ Ruling 2: `tests/defect.rs` constructs a contract `Error` with kind `defect` and
 Ruling 1 aftermath: `tests/recognize.rs`'s spec uses `source`/`target`.
 
 Prose fix: the interim-`number` line above is history now; the settled field is `strength`.
+
+## 2026-09-21 — the shapes from lane B item 2 (languages lane)
+
+The three shapes `e44d492` landed in `contract/` and `standin/`, carried
+into this surface, plus the fast-backend deadline proof and the examples
+file. Commands and output as they happened.
+
+**`Details.requests` and `failed_questions` (0053, 0054).** The typed
+`Details` already carries both; the null suite now pins them:
+
+```
+$ ENGINE_NULL=1 cargo test --quiet --test verbs
+test result: ok. 15 passed; 0 failed
+```
+
+`details_carries_the_audit_trail` asserts one 64-figure digest and
+`failed_questions == 0`; `annotate_preserves_the_good_answers_and_marks_the_failed_one`
+asserts the typed marker `Annotated::Failed(Failed { kind, cause })`
+serializes to the ruled
+`{"failed":{"kind":"backend","cause":"missing_answer"}}`, the neighbour
+keeps its `Decision(Yes)`, and `failed_questions(&rows)` counts one.
+`the_record_row_is_the_ruled_shape` pins `Row`/`rows_json`. The crate
+re-exports `Cause`, `Failed`, `FailureKind`, `Row`, `rows_json`, and
+`failed_questions` so a caller spells the shapes in Rust's own types.
+
+**The record row (go-ahead item 4).** The conformance example builds
+`Row<Option<bool>>` from the surface's own outputs and checks its
+serialization where the cases carry rows (`05`, `06`, `19`).
+
+**Conformance, offline: 73 and 74 run green.**
+
+```
+ok       73-details-carries-requests
+ok       74-annotate-preserves-good-answers
+conformance slice green for the Rust surface
+```
+
+Case 73 checks the audit's identity fields (the null backend's own rule
+cannot reproduce its recorded probability); case 74 checks the typed
+marker and its count.
+
+**The fast-backend deadline.** Rust has no signal handler, so the stop
+gesture is a spent budget: `tests/deadline_fast.rs` runs a
+two-million-record null batch (about 5.6 s deaf) with a one-second
+deadline and requires the deadline kind within 1.5 s:
+
+```
+$ ENGINE_NULL=1 cargo test --quiet --test deadline_fast
+test result: ok. 1 passed   (1.28 s)
+```
+
+**The examples file.** `examples.json` holds all ten functions keyed by
+name, each a call and the answer the null backend gives;
+`tests/examples.rs` requires every snippet to appear verbatim in its own
+source (Rust cannot evaluate a string) and runs the compiled call beside
+it, comparing the file's expected answer:
+
+```
+$ ENGINE_NULL=1 cargo test --quiet --test examples
+test result: ok. 1 passed
+```
+
+**Full check, `./check.sh`:** every suite green including the new two;
+the wire suite skips with no stub on 8213; exit 0.

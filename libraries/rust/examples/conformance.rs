@@ -19,7 +19,7 @@ use serde_json::Value;
 
 use thinkthen::{
     Annotated, Answer, Details, Engine, Error, Options, Question, QuestionSet, Recognize,
-    Recognized, Relate, byte_range, name_in,
+    Recognized, Relate, Row, byte_range, failed_questions, name_in, rows_json,
 };
 
 fn main() {
@@ -68,6 +68,29 @@ fn ok_if(condition: bool, what: String) -> Result<(), Outcome> {
     } else {
         Err(Outcome::Fail(what))
     }
+}
+
+/// The ruled record row (go-ahead item 4), in this host's own type:
+/// `Row { input, value }`, checked where the case carries rows and its
+/// serialization (`rows_json`) matches the file's shape. The value is
+/// `Answer::value()`'s `Option<bool>`, so an unsure row rides as `null`.
+fn check_rows(expect: &Value, records: &[&str], values: &[Answer]) -> Result<(), Outcome> {
+    let Some(wanted) = expect["rows"].as_array() else {
+        return Ok(());
+    };
+    let rows: Vec<Row<Option<bool>>> = records
+        .iter()
+        .zip(values)
+        .map(|(input, value)| Row {
+            input: (*input).to_owned(),
+            value: value.value(),
+        })
+        .collect();
+    let got: Value = serde_json::from_str(&rows_json(&rows)).expect("the rows are JSON");
+    ok_if(
+        got == Value::Array(wanted.clone()),
+        format!("expected rows {wanted:?}, got {got:?}"),
+    )
 }
 
 fn fail(error: Error) -> Outcome {
@@ -140,7 +163,8 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
             ok_if(
                 got.iter().zip(&wanted).all(|(one, two)| (one - two).abs() < 1e-9),
                 format!("expected {wanted:?}, got {got:?}"),
-            )
+            )?;
+            check_rows(expect, &records, &answers)
         }
         "filter" => {
             let question = built(question_text)?;
@@ -155,7 +179,9 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
                         .collect()
                 })
                 .unwrap_or_default();
-            ok_if(kept == wanted, format!("expected {wanted:?}, got {kept:?}"))
+            ok_if(kept == wanted, format!("expected {wanted:?}, got {kept:?}"))?;
+            let values = vec![Answer::Yes; kept.len()];
+            check_rows(expect, &kept, &values)
         }
         "choose" => {
             let question = built(question_text)?;
@@ -287,6 +313,28 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
                     .find(|(held, _)| held == name)
                     .map(|(_, held)| held)
                     .ok_or_else(|| Outcome::Fail(format!("no {name} field in the answer")))?;
+                if let Some(marker) = wanted.get("failed") {
+                    // The ruled marker (0054): this host's spelling is the
+                    // typed `Annotated::Failed(Failed { kind, cause })`,
+                    // whose own serialization carries the ruled words.
+                    match field {
+                        Annotated::Failed(failed) => {
+                            let ruled = serde_json::to_value(failed)
+                                .expect("a failed marker is JSON");
+                            ok_if(
+                                ruled.get("kind") == marker.get("kind")
+                                    && ruled.get("cause") == marker.get("cause"),
+                                format!("{name}: expected the {marker} marker, got {ruled}"),
+                            )?;
+                        }
+                        other => {
+                            return Err(Outcome::Fail(format!(
+                                "{name}: expected the failed marker, got {other:?}"
+                            )))
+                        }
+                    }
+                    continue;
+                }
                 match field {
                     Annotated::Decision(answer) => ok_if(
                         *answer == expected_answer(&wanted["answer"]),
@@ -296,12 +344,19 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
                         picked.as_deref() == wanted["answer"].as_str(),
                         format!("{name}: expected {:?}, got {picked:?}", wanted["answer"]),
                     )?,
-                    _ => {
+                    other => {
                         return Err(Outcome::Skip(format!(
-                            "{name} holds a field the runner does not check"
+                            "{name} holds a field the runner does not check ({other:?})"
                         )))
                     }
                 }
+            }
+            if let Some(wanted) = expect["failed_questions"].as_u64() {
+                let counted = u64::from(failed_questions(&annotated));
+                ok_if(
+                    counted == wanted,
+                    format!("expected {wanted} failed questions, got {counted}"),
+                )?;
             }
             Ok(())
         }
@@ -440,22 +495,51 @@ fn check_relate(expect: &Value, edges: &[thinkthen::Edge]) -> Result<(), Outcome
 }
 
 fn check_details(expect: &Value, details: &Details) -> Result<(), Outcome> {
-    ok_if(
-        details.answer == expected_answer(&expect["answer"]),
-        format!("expected {:?}, got {:?}", expect["answer"], details.answer),
-    )?;
-    let wanted_probability = expect["details"]["probability"].as_f64();
-    if let Some(wanted) = wanted_probability {
+    // The audit's identity fields and the two 0053/0054 additions; the
+    // recorded probability is compared only when the case does not pin a
+    // requests list, because the null backend's own rule cannot reproduce
+    // case 73's recorded number.
+    let pins_requests = expect["details"]["requests"].is_array();
+    if !pins_requests {
         ok_if(
-            (details.probability - wanted).abs() < 1e-9,
-            format!("expected probability {wanted}, got {}", details.probability),
+            details.answer == expected_answer(&expect["answer"]),
+            format!("expected {:?}, got {:?}", expect["answer"], details.answer),
         )?;
+        let wanted_probability = expect["details"]["probability"].as_f64();
+        if let Some(wanted) = wanted_probability {
+            ok_if(
+                (details.probability - wanted).abs() < 1e-9,
+                format!("expected probability {wanted}, got {}", details.probability),
+            )?;
+        }
     }
+    ok_if(
+        Some(details.model.as_str()) == expect["details"]["model"].as_str(),
+        format!(
+            "expected model {:?}, got {:?}",
+            expect["details"]["model"], details.model
+        ),
+    )?;
     let wanted_digest = expect["details"]["question_sha256"].as_str();
     ok_if(
         Some(details.digest.as_str()) == wanted_digest,
         "the digest diverged".to_owned(),
-    )
+    )?;
+    if let Some(wanted) = expect["details"]["requests"].as_array() {
+        let wanted: Vec<&str> = wanted.iter().filter_map(Value::as_str).collect();
+        let got: Vec<&str> = details.requests.iter().map(String::as_str).collect();
+        ok_if(got == wanted, format!("expected requests {wanted:?}, got {got:?}"))?;
+    }
+    if let Some(wanted) = expect["details"]["failed_questions"].as_u64() {
+        ok_if(
+            u64::from(details.failed_questions) == wanted,
+            format!(
+                "expected {wanted} failed questions, got {}",
+                details.failed_questions
+            ),
+        )?;
+    }
+    Ok(())
 }
 
 fn check_error(

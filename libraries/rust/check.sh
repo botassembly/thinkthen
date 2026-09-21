@@ -9,6 +9,12 @@ cd "$(dirname "$0")"
 echo "== rust surface: build and null suite"
 ENGINE_NULL=1 cargo test --quiet
 
+echo "== rust surface: fast-backend deadline, the poll-bug shape"
+ENGINE_NULL=1 cargo test --quiet --test deadline_fast
+
+echo "== rust surface: the function examples"
+ENGINE_NULL=1 cargo test --quiet --test examples
+
 echo "== rust surface: conformance slice"
 ENGINE_NULL=1 cargo run --quiet --example conformance
 

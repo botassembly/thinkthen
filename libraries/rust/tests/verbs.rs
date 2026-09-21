@@ -4,7 +4,10 @@
 //! these assertions are the same expectations the conformance runner
 //! checks. Run through `./check.sh`, which sets `ENGINE_NULL=1`.
 
-use thinkthen::{Annotated, Answer, Engine, ErrorKind, Options, Question, QuestionSet};
+use thinkthen::{
+    Annotated, Answer, Engine, ErrorKind, Options, Question, QuestionSet, Row, failed_questions,
+    rows_json,
+};
 
 fn engine() -> Engine {
     Engine::from_env().expect("the stand-in never fails to build")
@@ -179,6 +182,63 @@ fn details_carries_the_audit_trail() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(details.model, "jev-latest");
     assert_eq!(details.digest.len(), 64, "the digest is 64 hex figures");
     assert_eq!(details.sends, 1, "one send produced this judgment");
+    // 0053: one 64-figure digest a logical request, in construction order.
+    assert_eq!(details.requests.len(), 1);
+    assert_eq!(details.requests[0].len(), 64);
+    // 0054: always present, zero for one good question.
+    assert_eq!(details.failed_questions, 0);
+    Ok(())
+}
+
+#[test]
+fn annotate_preserves_the_good_answers_and_marks_the_failed_one()
+-> Result<(), Box<dyn std::error::Error>> {
+    // The stand-in's one synthesized partial failure (0054): the reply
+    // answers one question and omits the last in name order, so its field
+    // carries the ruled typed marker while its neighbour answers, and the
+    // count helper sees one.
+    let tt = engine();
+    let set = QuestionSet::from_json(
+        r#"{"questions":{"refund":{"decide":"Is this a refund request?","threshold":0.5},"topic":{"decide":"Is this a billing problem?","threshold":0.5}}}"#,
+    )?;
+    let annotated = tt.annotate(&set, &["order 4471: charged twice, please refund"])?;
+    let topic = annotated[0]
+        .iter()
+        .find(|(name, _)| name == "topic")
+        .map(|(_, held)| held);
+    match topic {
+        Some(Annotated::Failed(failed)) => {
+            let ruled = serde_json::to_string(&Annotated::Failed(*failed))?;
+            assert_eq!(
+                ruled,
+                r#"{"failed":{"kind":"backend","cause":"missing_answer"}}"#
+            );
+        }
+        other => panic!("expected the failed marker, got {other:?}"),
+    }
+    let refund = annotated[0]
+        .iter()
+        .find(|(name, _)| name == "refund")
+        .map(|(_, held)| held);
+    assert!(matches!(refund, Some(Annotated::Decision(Answer::Yes))));
+    assert_eq!(failed_questions(&annotated), 1);
+    let clean = tt.annotate(&set, &["I want a refund for order 4471"])?;
+    assert_eq!(failed_questions(&clean), 0);
+    Ok(())
+}
+
+#[test]
+fn the_record_row_is_the_ruled_shape() -> Result<(), Box<dyn std::error::Error>> {
+    // The ruled `{"input","value"}` row (go-ahead item 4) in this host's
+    // own type, serialized by the contract's `rows_json`.
+    let rows = vec![
+        Row { input: "refund now".to_owned(), value: Some(true) },
+        Row { input: "good morning".to_owned(), value: Some(false) },
+    ];
+    assert_eq!(
+        rows_json(&rows),
+        r#"[{"input":"refund now","value":true},{"input":"good morning","value":false}]"#
+    );
     Ok(())
 }
 

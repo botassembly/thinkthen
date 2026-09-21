@@ -25,9 +25,10 @@
 use std::ops::Range;
 
 pub use thinkthen_contract::{
-    Annotated, AnnotatedRecord, Answer, Cancel, Details, Edge, Entity, Error, ErrorKind, Found,
-    Judgment, Kind, MAX_RELATE_RECORDS, Options, Question, QuestionKind, QuestionSet, Ranked,
-    Recognize, Recognized, Relate, Relation, RelationRule, Scored, Settings, Usage,
+    Annotated, AnnotatedRecord, Answer, Cancel, Cause, Details, Edge, Entity, Error, ErrorKind,
+    Failed, FailureKind, Found, Judgment, Kind, MAX_RELATE_RECORDS, Options, Question,
+    QuestionKind, QuestionSet, Ranked, Recognize, Recognized, Relate, Relation, RelationRule, Row,
+    Scored, Settings, Usage, failed_questions, rows_json,
 };
 
 use thinkthen_contract::Engine as ContractEngine;
