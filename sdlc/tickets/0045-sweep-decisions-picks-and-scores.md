@@ -6,7 +6,7 @@ opens: transforms/sweep transforms/README.md demos/13-pick-a-threshold sdlc/plan
 
 # 0045: Sweep decisions, picks, and scores
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -62,3 +62,11 @@ Re-score if implementation changes the decision report, needs a custom grid, or 
 ## Review
 
 The independent design review rejected the first draft because it left choice denominators undefined, could have scored an exact tie through an arbitrary stored leader, and mixed partial validation decisions with broader acceptance claims. The accepted design makes every choice denominator explicit, reports ties while excluding them from both accuracy rates, fully validates the choice fields it reads, and narrows score validation to the weighted value and level list the score sweep uses. The reviewer accepted the trusted product validation boundary, score boundary, probe counts, exclusions, page-limit approach, and level-3 Sol Medium route.
+
+The independent code review rejected the first implementation because one old decision diagnostic still echoed a row id, malformed containers could reach jq's native errors, and the choice proof did not pin equality at a cut. The repair gives every read container a fixed diagnostic before dereferencing it, removes row data from the decision probability error, and proves that a 0.55 leader resolves at a 0.55 cut. It also pins both numeric bounds for choice probabilities and score values. The same reviewer accepted the repair with no remaining finding.
+
+## Result
+
+`sweep.jq` now preserves the decision report exactly, including empty input and its automatic highest-F1 pick. Choice runs report accuracy beside coverage at nineteen winning-probability cuts, keep exact ties unresolved and outside both accuracy rates, and make no automatic pick. Score runs report binary accuracy, precision, recall, and F1 at every boundary between named levels, with no automatic pick.
+
+The focused test freezes the old decision reports, proves the choice and score arithmetic and validation boundaries, and checks the committed outside probes. The choice probe has 60 labeled rows and 58 correct at full coverage; at 0.95 it resolves 53 rows at 0.9623 accuracy. The score probe reports 0.925 accuracy, 1.0 precision, 0.875 recall, and 0.9333 F1 at cut 2. How-to 13 is 100 lines and 887 words. The focused checks, all four repository rungs, and `git diff --check` pass. No live or paid call ran.
