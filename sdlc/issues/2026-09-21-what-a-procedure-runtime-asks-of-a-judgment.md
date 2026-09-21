@@ -39,11 +39,17 @@ The shape that fits the existing rulings: a `ledger.jsonl` under `$XDG_STATE_HOM
 
 **This is the item that decides whether a loop can call the tool at all.** Each other item is a convenience for a caller that already works.
 
-### 3. `--dry-run` prints a plan, not the bytes
+### 3. The dry run shows the first record's request only, and prints no count
 
-Item 11 of `2026-09-21-where-a-user-could-lose-trust-a-first-list.md` names `--dry-run` and `--field` as the honest answer to what leaves the machine. `--dry-run` names the pointers and the request count and never shows the request. A user then trusts a boundary and cannot verify it.
+Corrected 2026-09-21. This item first said the dry run never shows the request, and that was wrong. Verified against the release binary at `9fd4dcf`: `decide --dry-run` and `filter --dry-run` over three records both printed `url`, `model`, `key_env`, the framing, the pointers, and the full request body with the text and the questions.
 
-`specification/fixtures/systemone/` already pins exact request bytes and `encode` is already deterministic. Printing those same bytes under `--dry-run` costs a print, and it closes a rule that `2026-09-21-a-refused-request-hides-the-backends-reason.md` found broken: a dry run accepted `--jobs 1` that the live run refused at exit 2. A dry run that prints the bytes it would post is a dry run a caller can trust.
+Three parts of the item stand:
+
+- **It prints one request and never the rest.** Three records in, one request out, with nothing naming the number that was left.
+- **It prints no request count.** A caller cannot see the size of the job before it starts.
+- **It accepts a `--jobs` value the live run refuses**, which `2026-09-21-a-refused-request-hides-the-backends-reason.md` already records.
+
+The count matters more than this page first said. `recognize` and `relate` both send many questions in one request, and both designs depend on a printed request count and pair count. `2026-09-20-a-status-command-for-configuration-and-usage.md` already asks for the count in one place. A caller that must bound its own spend needs it in the dry run.
 
 ### 4. A cut cannot travel inside a `score` question
 
@@ -51,11 +57,15 @@ Item 11 of `2026-09-21-where-a-user-could-lose-trust-a-first-list.md` names `--d
 
 A tuning tool is that demo. The roadmap already names the question file as the unit a tuning tool improves against labeled cases, and Optimizer is a sibling of this tool. When a degree-shaped judge keeps its cut in the gate script, the tuner edits two artifacts in step and the question file stops being the complete declaration described above. A `score` question inside a question set has the same hole.
 
-### 5. One advisory question discards the essential answers
+### 5. A failed question inside a good request needs its own marker
 
-A question set is one request and a failure ends the record. For a set with one essential question and four advisory ones, a backend refusal on an advisory question throws away the answer that mattered.
+Corrected 2026-09-21. This item first asked for a `null`, and that was wrong. `null` already means "not sure", and a caller branches on it, so a `null` that also meant "failed" could never be taken back.
 
-The rule that a failure is never a `null` should hold, as `specification/annotate.md` says. What is missing is the middle case, a question that failed inside a request that otherwise succeeded. A `null` for that field plus a failure count, with a transport or auth failure still ending the run, keeps the safety rule and stops one weak question from taking the set with it.
+A question set is one request, and today a failure ends the record. For a set with one essential question and four advisory ones, one backend refusal throws away the answers that worked.
+
+What is needed is a marker of its own on that answer, plus a failure count in `meta`, with a transport or auth failure still ending the run. The rule that a failure is never a `null` holds and gets sharper: a failure is a third thing, distinct from yes, no, and not sure.
+
+This is more urgent than a robustness nicety. `recognize` and `relate` send many questions in one request, so one refused question inside a good request is their everyday case, and the recognize experiments found that one refused word loses the whole name. For the frequency, `2026-09-20-the-strict-probability-total-refused-two-live-replies-in-about-thirty.md` refused about two live replies in thirty, which is about one in fifteen.
 
 ## What this does not ask for
 
@@ -98,3 +108,81 @@ Questions for the caller's team:
 3. A sealed record that holds only the digest points at a recording the default cache may prune at its 100 MB limit. Does the runtime name its own `--cache` folder inside the run's record? It should, and the manual should say so.
 4. Must the digest cover the text after `--field` picked it, or the whole record?
 5. Which per-question failures has the team seen in practice, and how often?
+
+## The caller's team reply, 2026-09-21
+
+Both corrections accepted. Item 3 was checked against the release binary at `9fd4dcf` and the product side is right: `decide --dry-run` and `filter --dry-run` print the address, the model, the key variable, the framing, the pointers, and the full request body. Item 5 was checked against `specification/annotate.md` and the product side is right again: `null` already means "not sure", so a failure needs a third marker on the answer and a count in `meta`. Both items are amended above.
+
+## Where the caller's team stands on timing
+
+Ian's position: do it now if it changes the shape of anything, because after launch is worse.
+
+**Shape-changing, and worth doing before the surface freezes:**
+
+- **Item 1, the request digest.** One field now reaches every surface. Later it is nine changes. The product side's argument settles it.
+- **Item 5, the marker for a failed question.** This is the largest shape decision on the page. A `null` that means two things is a contract a caller cannot leave, and `recognize` and `relate` multiply how often it happens.
+- **Question 3 below, where the judged evidence lives.** This one is the caller's own shape and the product side found it. A run record that keeps only a digest whose entry the cache may prune breaks the promise that a sealed record can be re-read. The run directory gains a folder, and a published record layout is a compatibility surface.
+
+**Not shape-changing, and it can wait:**
+
+- **Item 2, the ledger.** Plain out-of-band rows. A running total added later changes no result and no record. Three rulings are cheap now: a row holds counts and never text, the ceiling is off unless the user sets one, and the count belongs in the engine so a library and a database inherit it. The build can wait.
+- **Item 4, the score cut.** Deferrable, with one ruling worth taking now on the caller's side: a cut lives in the question file where the verb supports one and in the gate script where it does not. That keeps the gate examples from being rewritten later.
+- **Item 3, the dry-run count.** Deferrable for this caller and a dependency for `recognize` and `relate`. Not this caller's shape.
+
+## Answers to the five questions
+
+### 1. Judgments per run, and runs a day
+
+Measured from this machine's own home at `~/.local/share/bot/runs` on 2026-09-21. It holds 2,040 runs from 2026-08-06 to 2026-09-16.
+
+| Measure | Value |
+| --- | --- |
+| Runs in the home | 2,040 over 42 days |
+| Runs a day | 206 at the peak, and about 49 across the whole span |
+| Stage attempts in one run | median 5, p90 7, max 9, mean 4.0 (120-run sample) |
+| Stage attempts that are a retry | 18.8% (208 attempts in 60 runs) |
+| Checks in one stage attempt | 1 to 4, mean 3.33 (193 attempts) |
+
+So one run makes 4 to 13 judgments if every check became one, and a peak day makes 800 to 2,700. At the measured price of about 1.2 cents per thousand judgments, that is 1 to 3 cents a day. A ceiling sized on requests should sit well above 2,700 and well below anything that would surprise a user.
+
+### 2. Requests is not enough. It must be tokens, and it must be a per-request guard
+
+Measured stage output sizes, which are the evidence a gate would judge (136 outputs across 40 runs):
+
+| Measure | Bytes |
+| --- | --- |
+| min | 40 |
+| median | 2,750 |
+| p90 | 16,253 |
+| max | 1,433,440 |
+| mean | 54,365 |
+
+The spread is 40 bytes to 1.4 MB, a range of about 36,000 to 1. One request at 1.4 MB is roughly 350,000 tokens, five times over the vendor's 64,000 limit, and a count-based ceiling lets that call through.
+
+So the ceiling needs two parts: a running count for the loop, and an input-size guard that refuses before the send. The second is the one that matters, and it is the pre-flight check `2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md` already asks for.
+
+This also settles a caller-side design rule. A gate must never pipe a raw stage output at a judge, because the p90 is 16 KB and the tail is 1.4 MB. The manifest has to select and bound, the way the `thruwire/foreman` experiment bounds a diff at 20,000 characters and each output tail at 12,000.
+
+### 3. The run does not name its own recording folder today, and it must
+
+Two halves, and the first is better news than the question suggests.
+
+**The details row already lands.** `specification/elements/record.md:393` retains a gate's exit code, its executable file, its hash, and its exact evidence capture, and `check.capture` holds the exact output. A gate that prints a `--details` row therefore puts that row in the sealed record with no new mechanism anywhere.
+
+**The evidence behind the row has no home.** The run should name its own `--record DIR` inside the stage attempt directory and must never point a judgment the sealed record depends on at the shared XDG cache, because a cache is prunable and a run record is not. The digest then resolves for as long as the record exists, which is the promise this caller makes.
+
+This is a change to the record layout, so it is a shape decision and it belongs before the layout is published. The manual should say the same thing, which is what the product side asked for.
+
+### 4. After `--field`, and the whole record is a different field
+
+The digest covers the text after `--field` picked it. That is forced by the recording design and needs no new decision. The recording key is `sha256(adapter, address, request bytes)`, and the request bytes carry the post-`--field` state. `request` is "the digest that also names the recording entry" (`specification/result.md:113`), so it can only be the digest of what was sent.
+
+The whole record is already a separate field. In record mode, `--details` carries `input`, "the whole record, including parts that were never sent" (`specification/result.md:94`). Keep the two apart. `request` proves what left the machine, `input` proves what the caller held, and merging them would lose the boundary property. A single document has no record, so `request` is the only digest it can have.
+
+### 5. No per-question failures seen, because no judgment has ever run
+
+The honest answer is none. Botassembly has never run a judgment. The b03 experiment found no `chose`, `loop_done`, `subflow_call`, or `fanout_done` event in 2,039 records, and every check in the 2,040 runs measured above is a checklist, a schema, or a gate script.
+
+The nearest real number is on the ThinkThen side, and it argues for the product side's position. `2026-09-20-the-strict-probability-total-refused-two-live-replies-in-about-thirty.md` refused about two live replies in thirty, about one in fifteen, and that is a whole-reply refusal. If one bad question kills the reply, a ten-question `recognize` request fails about one time in fifteen.
+
+That is the everyday case, and it is why the marker for a failed question belongs before `recognize` and `relate` land and not after.
