@@ -22,3 +22,9 @@ ThinkThen holds no state, no windows, and no delivery promise. The pages say so 
 ## What Ian can overturn
 
 The order, and whether any of these enters the first release. The marketing side recommends candidate 1 for the announcement and the talk, and candidates 2 and 3 for the site.
+
+## The probe ran, 2026-09-21: `filter` prints while the pipe is open
+
+Four lines went into `filter --lines --replay` one second apart through a pipe that stayed open two more seconds. No paid call was made. The kept line sent at 1.0 s printed at 1.00 s. The kept line sent at 3.0 s printed at 3.01 s. Output does not wait for the end of input, so candidate 4 works today on a replayed answer.
+
+Still unmeasured: a live backend, where a slow early answer may hold back a fast later one to keep order. The specification does not state the streaming promise. A sentence in `records.md` would let the how-to quote it: each record prints as soon as its answer and every earlier record's answer are ready.
