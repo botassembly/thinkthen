@@ -137,8 +137,9 @@ for invocation in slurp ordinary literal-null; do
 	mustmatch 'compare: run with jq -n' < "$work/error"
 done
 
+head -n 2 "$work/after.jsonl" > "$work/two-rows.jsonl"
 if jq --slurpfile before "$work/before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
-	"$work/after.jsonl" > "$work/out" 2> "$work/error"
+	"$work/two-rows.jsonl" > "$work/out" 2> "$work/error"
 then
 	printf '%s\n' 'compare accepted two-row ordinary input' >&2
 	exit 1
