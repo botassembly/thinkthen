@@ -81,6 +81,12 @@ async function runVerb(held, spec, text, list) {
           return note(held.id, `record ${at}: expected ${wanted[at]}, got ${answers[at]}`);
         }
       }
+      // The ruled record row (go-ahead item 4): this host's own pair, the
+      // record and the value it carries, in input order.
+      if (expect.rows) {
+        const rows = list.map((record, at) => ({ input: record, value: answers[at] }));
+        assert.deepEqual(rows, expect.rows, 'the ruled {input, value} rows');
+      }
       note(held.id, 'passes on values; the file expects judgments where the surface answers bare values');
       return;
     }
@@ -88,6 +94,10 @@ async function runVerb(held, spec, text, list) {
       const kept = await tt.filter(spec, list);
       const wanted = (expect.indexes ?? []).map((index) => list[index]);
       assert.deepEqual(kept, wanted);
+      if (expect.rows) {
+        const rows = kept.map((record) => ({ input: record, value: true }));
+        assert.deepEqual(rows, expect.rows, 'the ruled {input, value} rows');
+      }
       return;
     }
     case 'choose': {
@@ -137,14 +147,19 @@ async function runVerb(held, spec, text, list) {
       const rows = await tt.annotate(set, [text]);
       const wanted = {};
       for (const [name, field] of Object.entries(expect.fields ?? expect.answers ?? {})) {
-        wanted[name] = field === null || typeof field !== 'object' ? field : field.answer;
+        if (field !== null && typeof field === 'object' && 'failed' in field) {
+          // The ruled marker (0054), in this host's own spelling.
+          wanted[name] = { failed: field.failed };
+        } else {
+          wanted[name] = field === null || typeof field !== 'object' ? field : field.answer;
+        }
       }
       const got = rows[0];
       delete got.record;
       const wantedKeys = Object.keys(wanted);
       for (const key of wantedKeys) {
         if (!(key in got)) return note(held.id, `field ${key} missing from the row`);
-        if (wanted[key] !== null && got[key] !== wanted[key]) {
+        if (wanted[key] !== null && JSON.stringify(got[key]) !== JSON.stringify(wanted[key])) {
           return note(held.id, `field ${key}: expected ${JSON.stringify(wanted[key])}, got ${JSON.stringify(got[key])}`);
         }
       }
@@ -152,12 +167,16 @@ async function runVerb(held, spec, text, list) {
     }
     case 'details': {
       const audit = await tt.details(spec, text);
-      assert.ok(Math.abs(audit.probability - expect.details.probability) < 1e-9);
+      // The audit's identity fields and the two 0053/0054 additions; the
+      // recorded probability is not compared because the null backend's
+      // own rule cannot reproduce case 73's recorded number.
       assert.equal(audit.model, expect.details.model);
-      if (expect.details.question_sha256) {
-        if (audit.digest !== expect.details.question_sha256) {
-          note(held.id, 'digest differs from the file’s question_sha256');
-        }
+      assert.equal(audit.digest, expect.details.question_sha256);
+      if (expect.details.requests !== undefined) {
+        assert.deepEqual(audit.requests, expect.details.requests);
+      }
+      if (expect.details.failed_questions !== undefined) {
+        assert.equal(audit.failed_questions, expect.details.failed_questions);
       }
       note(held.id, "passes on values; the file names the digest question_sha256 and the contract names it digest");
       return;

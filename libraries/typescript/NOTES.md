@@ -140,3 +140,65 @@ $ grep -rn "reset_usage\|resetUsage" addon/src index.js index.d.ts index.mjs loa
 Ruling 1 aftermath: the wrapper's spec build and its messages use `source`/`target`; `tests/conformance.test.mjs` reads the re-keyed rules.
 
 Ruling 2: `the_defect_kind_maps_into_the_failure_envelope` constructs a contract `Error` with kind `defect` and asserts the envelope carries `"kind":"defect"`, `retryable: false`, and the message. The envelope moved into a named `failure_envelope` so the mapping has one home. Runs in `check.sh` (`cd addon && cargo test --quiet --lib`): 1 passed.
+
+## 2026-09-21 — the shapes from lane B item 2 (languages lane)
+
+The three shapes `e44d492` landed in `contract/` and `standin/`, carried
+into this surface and proven offline.
+
+**`Details.requests` and `failed_questions` (0053, 0054).** `tt.details`
+now carries both beside the trail it already had:
+
+```
+$ ENGINE_NULL=1 node -e "require('./index.js').details('Is this a complaint?', 'I demand a refund today').then((d) => console.log(JSON.stringify(d)))"
+{"probability":0.97,"value":true,"model":"jev-latest","digest":"0b3e8345...","sends":1,"requests":["d3476c41..."],"failed_questions":0}
+```
+
+**The failed marker, this host's spelling: a plain object.** The wrapper's
+`annotatedField` now returns `{ failed: { kind, cause } }` for the door's
+`{"failed":...}` field, with the key order fixed in the wrapper because
+the engine's own JSON map sorts its keys. `index.d.ts` names the type
+(`FailedField`, `FailureCause`) and widens `AnnotatedField`:
+
+```
+$ ENGINE_NULL=1 node -e "...annotate(set, ['order 4471: charged twice, please refund'])..."
+{"refund":true,"topic":{"failed":{"kind":"backend","cause":"missing_answer"}}}
+```
+
+**The record row (go-ahead item 4).** The conformance slice builds the
+ruled `{ input, value }` objects from the surface's own outputs and checks
+them where the cases carry rows (`05`, `06`, `19`); no function was added.
+
+**Conformance, offline: 73 and 74 run green.**
+
+```
+#   73-details-carries-requests: pass
+#   74-annotate-preserves-good-answers: pass
+# pass 1  fail 0
+```
+
+The two standing divergences (the find none arm, the per-subject relate
+case) are unchanged; case 73 checks the audit's identity fields because
+the null backend's own rule cannot reproduce its recorded probability.
+
+**The fast-backend cancel.** `tests/cancel_fast.test.mjs` starts a
+two-million-record null batch, aborts its `AbortSignal` one second in, and
+requires the rejection within 1.5 s; the batch runs about 9.7 s deaf:
+
+```
+$ ENGINE_NULL=1 node --test tests/cancel_fast.test.mjs
+ok 1 - a fast backend hears an AbortSignal within a tick   (1458 ms)
+```
+
+**The examples file.** `examples.json` holds all ten functions keyed by
+name, each an awaited call and the answer the null backend gives;
+`tests/examples.test.mjs` evaluates every call with `tt` in scope and
+`check.sh`'s offline suite runs it:
+
+```
+ok 20 - every function example answers as the file says
+```
+
+**Full check, `./check.sh`:** build, the addon unit test, the offline
+suites (46 tests: 40 pass, 6 skipped wire tests), the dead-address child,
+and `tsc` — all green, exit 0.

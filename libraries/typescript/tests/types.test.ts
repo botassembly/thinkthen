@@ -35,8 +35,19 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const ranked = await tt.rank('Is this a complaint?', reviews, { top: 2, deadlineMs: 5_000 });
   const found = await tt.find('Which unit answers best?', reviews);
   const audit = await tt.details('Refund?', text);
+  const digests: string[] = audit.requests;
+  const failures: number = audit.failed_questions;
   const many = await tt.decide_many('Refund?', reviews);
   const counters = tt.usage();
+
+  // The failed marker's own type, exercised: a field is a FailedField
+  // when its question failed inside a good reply.
+  const rowsWithMarker = await tt.annotate('form.json', reviews);
+  const firstField: tt.AnnotatedField | undefined = rowsWithMarker[0]?.spare;
+  if (firstField && typeof firstField === 'object' && 'failed' in firstField) {
+    const cause: tt.FailureCause = firstField.failed.cause;
+    void cause;
+  }
 
   return {
     team,
@@ -52,6 +63,8 @@ export async function sample(text: string, message: string, inbox: string[], rev
     ranked,
     found,
     audit,
+    digests,
+    failures,
     many,
     counters,
   };

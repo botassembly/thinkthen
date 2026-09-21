@@ -105,6 +105,31 @@ test('details: probability, value, model, digest, sends', async () => {
   assert.equal(held.sends, 1);
 });
 
+test('details: the requests list and the failure count (0053, 0054)', async () => {
+  const held = await tt.details('Does the customer ask for a refund?', 'I want a refund for order 9');
+  assert.ok(Array.isArray(held.requests), 'requests is always an array');
+  assert.equal(held.requests.length, 1, 'one logical request, one digest');
+  assert.match(held.requests[0], /^[0-9a-f]{64}$/);
+  assert.equal(held.failed_questions, 0, 'always present, including zero');
+});
+
+test('annotate: a failed question carries the ruled marker, never null (0054)', async () => {
+  const set = JSON.stringify({
+    version: 1,
+    questions: {
+      refund: { decide: 'Is this a refund request?', threshold: 0.5 },
+      topic: { decide: 'Is this a billing problem?', threshold: 0.5 },
+    },
+  });
+  const rows = await tt.annotate(set, ['order 4471: charged twice, please refund']);
+  assert.deepEqual(rows[0].topic, {
+    failed: { kind: 'backend', cause: 'missing_answer' },
+  });
+  assert.equal(rows[0].refund, true, 'the good answer rides beside the failure');
+  const clean = await tt.annotate(set, ['I want a refund for order 4471']);
+  assert.equal(clean[0].topic, true);
+});
+
 test('usage counts sends', async () => {
   // No reset exists (ruling 4): the test takes the difference across one
   // send; a caller who wants fresh counters builds a new engine.

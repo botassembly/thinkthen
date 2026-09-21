@@ -258,6 +258,12 @@ function annotatedField(held) {
     if ('Choice' in held) return held.Choice ?? null;
     if ('Score' in held) return held.Score.value;
     if ('Tags' in held) return held.Tags;
+    // The ruled failed-question marker (0054): this host's spelling is the
+    // plain object, `{ failed: { kind, cause } }`, never `null`. The order
+    // is fixed here because the engine's own JSON map sorts its keys.
+    if ('failed' in held) {
+      return { failed: { kind: held.failed.kind, cause: held.failed.cause } };
+    }
   }
   throw new ThinkThenError('defect', `the door carried an unknown field ${JSON.stringify(held)}`, false);
 }
@@ -287,6 +293,12 @@ async function details(questionOrText, text, options) {
     model: held.model,
     digest: held.digest,
     sends: held.sends,
+    // The ordered recording digests of the logical requests (0053): always
+    // an array, one element for a one-request result; a retry adds none.
+    requests: held.requests ?? [],
+    // The failed logical questions in this result (0054); zero here by
+    // construction, because a failed single question is a whole-call error.
+    failed_questions: held.failed_questions ?? 0,
   };
 }
 

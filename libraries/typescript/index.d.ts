@@ -74,6 +74,13 @@ export interface DetailsAnswer {
   model: string;
   digest: string;
   sends: number;
+  /** The ordered recording digests of the logical requests (0053): always
+   * an array, one element for a one-request result, in construction order;
+   * a retry adds no element. */
+  requests: string[];
+  /** Failed logical questions in this result (0054); always present,
+   * including zero. */
+  failed_questions: number;
 }
 
 /** One record's place and probability, most likely yes first. */
@@ -91,9 +98,25 @@ export interface FoundAnswer {
   probability: number;
 }
 
+/** Why one logical question failed while its neighbours answered (0054).
+ * The list is closed; `kind` is `backend` today. */
+export type FailureCause =
+  | 'missing_answer'
+  | 'wrong_kind'
+  | 'missing_probability'
+  | 'invalid_probability'
+  | 'invalid_distribution'
+  | 'unexpected_probability';
+
+/** The ruled failed-question marker (0054), this host's spelling: a plain
+ * object, never `null`, which already means "not sure". */
+export interface FailedField {
+  failed: { kind: 'backend'; cause: FailureCause };
+}
+
 /** The fields `annotate` adds: a decision's answer, a choice's label or
- * `null`, a score's position, or a tag's held labels. */
-export type AnnotatedField = Answer | string | null | number | readonly string[];
+ * `null`, a score's position, a tag's held labels, or the failed marker. */
+export type AnnotatedField = Answer | string | null | number | readonly string[] | FailedField;
 
 /** One name `recognize` found. `start` and `end` slice the name out of the
  * original text in JavaScript's own indexing (UTF-16 units); the contract
