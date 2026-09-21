@@ -6,7 +6,7 @@ opens: conformance crates/thinkthen-core/tests sdlc/planning
 
 # 0052: Land the shared conformance cases
 
-Status: proposed
+Status: landed
 
 ## Outcome
 
@@ -68,3 +68,5 @@ Re-score if implementation needs a product hook, public type, dependency, or net
 ## Review
 
 Independent design review rejected the first proposal because `rank` and `find` lacked host-neutral meanings, parsed JSON could not prove request bytes, provenance and future-fault limits were vague, and the case count looked permanent. This rewrite fixes those boundaries and keeps the runner in the merge ticket.
+
+Independent code review rejected the first implementation because bulk results were optional, ordinary credential keys escaped the privacy check, one mutation did not reach case coverage, and a handwritten JSON compactor duplicated library behavior. Re-review found a broad lint exception, one missing `x-api-key` spelling, and fault metadata allowed on successful cases. The repairs made every result shape explicit, narrowed the lint exception to one comparison, strengthened the hostile mutations, and reused `serde_json` for structural equality. The reviewer accepted the final implementation.
