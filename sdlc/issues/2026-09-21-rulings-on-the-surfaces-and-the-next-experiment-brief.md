@@ -10,9 +10,9 @@ Status: Open
 4. **Linux and macOS first.** Windows is out of the first release.
 5. **The registry names are Ian's.** His list is at the root of his notes folder.
 
-## Open: the default cache limit
+## Ruled: the default cache limit is 100 MB
 
-Ian said "let's just do a 10 MB limit" and asked whether 10 MB is enough. Measured on the 19 recorded entries behind the slides: an entry averages 554 bytes and takes one 4 KB block on disk. 10 MB holds about 2,500 answers by disk use. That serves a shell user. It does not serve a database: `thinkthen_warm` fills the cache and the query then reads it, so a table over 2,500 rows would evict its own warm answers before the query reads them. The marketing side recommends a 100 MB default, about 25,000 answers, as a setting in the configuration file, and a line in each database page that tells the reader to raise it for a large table. The ADR's 1 GiB stays in the text until Ian answers.
+Ian said "let's just do a 10 MB limit" and asked whether 10 MB is enough. Measured on the 19 recorded entries behind the slides: an entry averages 554 bytes and takes one 4 KB block on disk. 10 MB holds about 2,500 answers by disk use. That serves a shell user. It does not serve a database: `thinkthen_warm` fills the cache and the query then reads it, so a table over 2,500 rows would evict its own warm answers before the query reads them. The marketing side recommends a 100 MB default, about 25,000 answers, as a setting in the configuration file, and a line in each database page that tells the reader to raise it for a large table. Ian ruled 100 MB on 2026-09-21: "That's a good compromise." ADR 0017 carries it.
 
 ## The goal
 
@@ -42,4 +42,4 @@ No paid call is needed. Every check runs against the stand-in or a recording.
 
 ## What Ian can overturn
 
-The brief's order and scope. The 100 MB recommendation.
+The brief's order and scope.
