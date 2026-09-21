@@ -14,6 +14,12 @@ echo "== r surface: the defect kind crosses as its own kind (shim unit test)"
 echo "== r surface: null suite"
 ENGINE_NULL=1 Rscript tests_null.R
 
+echo "== r surface: fast-backend interrupt, the poll-bug shape"
+./interrupt_fast.sh
+
+echo "== r surface: the function examples"
+ENGINE_NULL=1 Rscript examples.R
+
 echo "== r surface: conformance slice"
 ENGINE_NULL=1 Rscript conformance.R
 

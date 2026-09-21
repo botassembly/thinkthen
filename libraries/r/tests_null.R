@@ -119,6 +119,41 @@ check("blank question is usage", identical(
 check("the kind classes stack", inherits(malformed, "thinkthen_error") && inherits(malformed, "error"))
 check("details carries the sends", identical(tt_details("Q?", "refund me")$sends, 1))
 
+# 0053 and 0054 on the details list: the ordered requests digests (one
+# 64-figure digest a logical request) and failed_questions, always
+# present, zero for one good question.
+trail <- tt_details("Q?", "refund me")
+check("details carries the requests list",
+      is.character(trail$requests) && length(trail$requests) == 1L &&
+        grepl("^[0-9a-f]{64}$", trail$requests[[1]]))
+check("details carries failed_questions as zero",
+      identical(as.integer(trail$failed_questions), 0L))
+
+# The stand-in's one synthesized partial failure (0054): the reply answers
+# one question and omits the last in name order, so its column widens to a
+# list whose failed cell is the ruled marker `list(failed = ...)`, never
+# NA, while the good answer rides beside it.
+partial_file <- tempfile(fileext = ".json")
+writeLines(paste0(
+  "{\"version\":1,\"questions\":{",
+  "\"refund\":{\"decide\":\"Is this a refund request?\",\"threshold\":0.5},",
+  "\"topic\":{\"decide\":\"Is this a billing problem?\",\"threshold\":0.5}}}"
+), partial_file)
+partial <- tt_annotate(
+  partial_file,
+  data.frame(body = "order 4471: charged twice, please refund", stringsAsFactors = FALSE),
+  on = "body"
+)
+check("the failed field carries the ruled marker",
+      identical(partial$topic[[1]], list(failed = list(kind = "backend", cause = "missing_answer"))))
+check("the good answer rides beside the failure", identical(partial$refund[[1]], TRUE))
+clean <- tt_annotate(
+  partial_file,
+  data.frame(body = "I want a refund for order 4471", stringsAsFactors = FALSE),
+  on = "body"
+)
+check("a clean row keeps its plain column", identical(clean$topic[[1]], TRUE))
+
 # the counters count sends. No reset exists (ruling 4): the difference
 # across the three sends carries the same proof.
 before <- tt_usage()$requests

@@ -63,7 +63,8 @@ tt_rank_all <- function(question, records) .Call(wrap__tt_rank_all, question, re
 #' in the set's own order, each field typed by its question's verb.
 tt_annotate_file <- function(path, records) .Call(wrap__tt_annotate_file, path, records)
 
-#' The audit view of one judgment.
+#' The audit view of one judgment, with the logical requests' digests
+#' (0053) and the failed-question count (0054).
 tt_details_one <- function(question, evidence) .Call(wrap__tt_details_one, question, evidence)
 
 #' The process counters.

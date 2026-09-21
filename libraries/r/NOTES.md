@@ -204,3 +204,85 @@ $ grep -rn tt_reset_usage rlib/thinkthen/R
 Ruling 1 aftermath: `.tt_rule_entry` builds `source`/`target` keys; `recognize_check.R`'s question files use the ruled spelling.
 
 Ruling 2: `the_defect_kind_crosses_as_its_own_kind` — a `#[cfg(test)]` unit test in the Rust shim — constructs a contract `Error` with kind `defect` and asserts `carry` packs `defect`, `false`, and the message around the separator; `tests_null.R` then asserts `tt_raise` raises the `thinkthen_defect` condition with the message and retry signal. Both run in `check.sh`: shim test 1 passed, null suite green.
+
+## 2026-09-21 — the shapes from lane B item 2 (languages lane)
+
+The three shapes `e44d492` landed in `contract/` and `standin/`, carried
+into this surface, plus the fast-backend interrupt proof, the examples
+file, and the conformance slices for cases 73 and 74. Commands and output
+as they happened on this machine.
+
+**`Details.requests` and `failed_questions` (0053, 0054).** `tt_details`
+now carries both beside the trail it already had:
+
+```
+$ ENGINE_NULL=1 Rscript -e ".libPaths(c('rlib', .libPaths())); library(thinkthen); str(tt_details('Q?', 'refund me')$requests)"
+ chr "150735edb1a23c1f94e868c1b93992f06f39058d0f270e0f802b7e1c451870ee"
+```
+
+**The failed marker, this host's spelling: a named list.** A question
+that failed for any record widens its `tt_annotate` column to a list
+whose failed cell carries `list(failed = list(kind = ..., cause = ...))`,
+never `NA`, while good answers keep their bare shape in the same column:
+
+```r
+str(tt_annotate(partial_file, data.frame(body = "order 4471: charged twice, please refund"), on = "body"))
+# $ topic :List of 1
+#  ..$ :List of 1
+#  .. ..$ failed:List of 2
+#  .. .. ..$ kind : chr "backend"
+#  .. .. ..$ cause: chr "missing_answer"
+```
+
+**The record row (go-ahead item 4).** The conformance slice builds the
+ruled `list(input = ..., value = ...)` from the surface's own outputs and
+checks it where the cases carry rows (`05`, `06`, `19`); no R function
+was added. Cases 73 and 74 run green:
+
+```
+ok       05-filter-keeps-some-of-five
+ok       06-filter-empty-list
+ok       19-decide-many-judgments
+ok       73-details-carries-requests
+ok       74-annotate-preserves-good-answers
+conformance slice green for the R surface
+```
+
+Case 73 checks the audit's identity fields (the null backend's own rule
+cannot reproduce its recorded probability); case 74 checks the marker and
+its count.
+
+**A pre-existing red the slice hid, found and fixed.** `check.sh`'s
+conformance step was failing on every case: ruling 4 un-exported the
+internal `tt_*` wrappers from the NAMESPACE, and `conformance.R` still
+called them by bare name, so every case read
+`could not find function "tt_question_grammared"` (66 failures at
+baseline). The calls are qualified `thinkthen:::` now, and the slice is
+green. This is why the R surface's full check had not been runnable since
+the rulings wave.
+
+**The fast-backend interrupt.** `interrupt_fast.sh` backgrounds
+`interrupt_fast_child.R`, sends SIGINT one second into a two-million-row
+null-backend column (about 9 s deaf), and requires the interrupt to land
+within 1.5 s:
+
+```
+outcome: interrupt
+elapsed: 0.919
+OK: the interrupt landed at 0.919 s, within a tick of the signal
+```
+
+**The examples file.** `examples.json` holds all ten functions keyed by
+name, each a runnable call and the answer the null backend gives;
+`examples.R` runs each in a fresh Rscript (a private directory for the
+question files) and `check.sh` calls it:
+
+```
+10 of 10 examples ok
+```
+
+**Null suite growth:** 40 checks passed (the requests/failed_questions
+checks and the marker's list shape are new). The full `./check.sh` is
+green end to end: shim test, null suite, fast interrupt, examples,
+conformance (73 and 74 included), the recognize acceptance (34 checks),
+and the slide sample; the wire suite skips with no stub on 8215.

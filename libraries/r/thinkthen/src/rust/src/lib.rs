@@ -132,6 +132,9 @@ enum Field {
     Choice(Option<String>),
     Score(f64, String),
     Tags(Vec<String>),
+    /// The ruled failed-question marker (0054): the kind and the closed
+    /// cause, carried as this host's named list.
+    Failed(String, String),
 }
 
 /// Build a question through the one file grammar, any verb, any threshold.
@@ -275,6 +278,9 @@ fn tt_annotate_file(path: String, records: Vec<String>) -> StdResult<List, Strin
                                     Field::Score(scored.value, scored.nearest.clone())
                                 }
                                 Annotated::Tags(labels) => Field::Tags(labels.clone()),
+                                Annotated::Failed(failed) => {
+                                    Field::Failed(kind_word(failed.kind), cause_word(failed.cause))
+                                }
                             };
                             (name.clone(), held)
                         })
@@ -299,6 +305,11 @@ fn tt_annotate_file(path: String, records: Vec<String>) -> StdResult<List, Strin
                     Field::Tags(labels) => {
                         Robj::from(labels.iter().map(String::as_str).collect::<Vec<_>>())
                     }
+                    // The marker as this host's own named list:
+                    // `list(failed = list(kind = ..., cause = ...))`.
+                    Field::Failed(kind, cause) => {
+                        list!(failed = list!(kind = kind, cause = cause)).into()
+                    }
                 })
                 .collect();
             List::from_names_and_values(names, values)
@@ -308,29 +319,56 @@ fn tt_annotate_file(path: String, records: Vec<String>) -> StdResult<List, Strin
     Ok(List::from_values(built))
 }
 
-/// The audit view of one judgment.
+/// The failure kind's own word; `backend` today.
+fn kind_word(kind: thinkthen_contract::FailureKind) -> String {
+    use thinkthen_contract::FailureKind;
+    match kind {
+        FailureKind::Backend => "backend".to_owned(),
+    }
+}
+
+/// The closed cause list's own words, spelled once.
+fn cause_word(cause: thinkthen_contract::Cause) -> String {
+    use thinkthen_contract::Cause;
+    match cause {
+        Cause::MissingAnswer => "missing_answer".to_owned(),
+        Cause::WrongKind => "wrong_kind".to_owned(),
+        Cause::MissingProbability => "missing_probability".to_owned(),
+        Cause::InvalidProbability => "invalid_probability".to_owned(),
+        Cause::InvalidDistribution => "invalid_distribution".to_owned(),
+        Cause::UnexpectedProbability => "unexpected_probability".to_owned(),
+    }
+}
+
+/// The audit view of one judgment, with the logical requests' digests
+/// (0053) and the failed-question count (0054).
 #[extendr]
 fn tt_details_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<List, String> {
     let question = take(question);
-    let (probability, code, model, digest, sends) = call(move |engine| {
-        engine
-            .details_opts(&question, &evidence, Options::new())
-            .map(|details| {
-                (
-                    details.probability,
-                    answer_code(details.answer),
-                    details.model,
-                    details.digest,
-                    details.sends,
-                )
-            })
-    })?;
+    let (probability, code, model, digest, sends, requests, failed_questions) =
+        call(move |engine| {
+            engine
+                .details_opts(&question, &evidence, Options::new())
+                .map(|details| {
+                    (
+                        details.probability,
+                        answer_code(details.answer),
+                        details.model,
+                        details.digest,
+                        details.sends,
+                        details.requests,
+                        details.failed_questions,
+                    )
+                })
+        })?;
     Ok(list!(
         probability = probability,
         answer = code_robj(code),
         model = model,
         digest = digest,
-        sends = sends
+        sends = sends,
+        requests = requests,
+        failed_questions = failed_questions
     ))
 }
 

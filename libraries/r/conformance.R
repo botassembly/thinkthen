@@ -18,7 +18,7 @@ say <- function(line) cat(line, "\n", sep = "")
 
 built <- function(case) {
   structure(
-    thinkthen:::.tt_call(tt_question_grammared(jsonlite::toJSON(case$question, auto_unbox = TRUE))),
+    thinkthen:::.tt_call(thinkthen:::tt_question_grammared(jsonlite::toJSON(case$question, auto_unbox = TRUE))),
     class = c("thinkthen_question", "externalptr")
   )
 }
@@ -82,7 +82,14 @@ for (case in cases) {
           records <- unlist(case$records)
           kept <- tt_filter(question, records)
           wanted <- if (length(expect$indexes)) records[unlist(expect$indexes) + 1] else character()
-          if (identical(kept, wanted)) paste0("ok       ", id) else
+          rows <- if (is.null(expect$rows)) TRUE else {
+            # The ruled record row (go-ahead item 4): this host's own
+            # list pair, `input` and `value`, in input order.
+            want <- lapply(expect$rows, function(row) list(input = row$input, value = row$value))
+            got <- lapply(kept, function(record) list(input = record, value = TRUE))
+            identical(got, want)
+          }
+          if (identical(kept, wanted) && rows) paste0("ok       ", id) else
             paste0("FAIL     ", id, ": expected ", length(wanted), " kept, got ", length(kept))
         },
         choose = {
@@ -112,20 +119,39 @@ for (case in cases) {
           wanted <- expect$answers
           good <- all(vapply(names(wanted), function(name) {
             one <- held[[name]][[1]]
+            if (!is.null(wanted[[name]]$failed)) {
+              # The ruled marker (0054), in this host's own spelling.
+              return(identical(one, list(failed = wanted[[name]]$failed)))
+            }
             two <- answer_of(wanted[[name]]$answer)
             (is.na(one) && is.na(two)) || isTRUE(identical(one, two)) || same_number(one, two)
           }, logical(1)))
+          if (good && !is.null(expect$failed_questions)) {
+            counted <- sum(vapply(held, function(column) {
+              is.list(column) && any(vapply(column, function(cell) {
+                is.list(cell) && !is.null(cell$failed)
+              }, logical(1)))
+            }, logical(1)))
+            good <- isTRUE(counted == expect$failed_questions)
+          }
           if (good) paste0("ok       ", id) else
             paste0("FAIL     ", id, ": the assembled answers diverged")
         },
         details = {
           held <- tt_details(question, case$evidence)
-          if (identical(held$model, expect$details$model) &&
-              same_number(held$probability, expect$details$probability)) {
-            paste0("ok       ", id)
-          } else {
-            paste0("FAIL     ", id, ": the details diverged")
+          # The audit's identity fields and the two 0053/0054 additions;
+          # the recorded probability is not compared because the null
+          # backend's own rule cannot reproduce case 73's recorded number.
+          good <- identical(held$model, expect$details$model) &&
+            identical(held$digest, expect$details$question_sha256)
+          if (good && !is.null(expect$details$requests)) {
+            good <- identical(as.character(held$requests), as.character(unlist(expect$details$requests)))
           }
+          if (good && !is.null(expect$details$failed_questions)) {
+            good <- identical(as.integer(held$failed_questions), as.integer(expect$details$failed_questions))
+          }
+          if (good) paste0("ok       ", id) else
+            paste0("FAIL     ", id, ": the details diverged")
         },
         usage = {
           before <- tt_usage()
@@ -145,14 +171,20 @@ for (case in cases) {
         },
         decide_many = {
           records <- unlist(case$records)
-          judgments <- thinkthen:::.tt_call(tt_decide_column(question, records))
+          judgments <- thinkthen:::.tt_call(thinkthen:::tt_decide_column(question, records))
           answers <- vapply(judgments$ans, function(one) {
             if (is.null(one)) NA else one == 1
           }, logical(1))
           wanted <- vapply(expect$answers, function(one) {
             if (is.null(one)) NA else one
           }, logical(1))
-          if (identical(answers, wanted)) paste0("ok       ", id) else
+          rows <- if (is.null(expect$rows)) TRUE else {
+            want <- lapply(expect$rows, function(row) list(input = row$input, value = row$value))
+            got <- Map(function(record, value) list(input = record, value = value),
+                       records, as.list(answers))
+            identical(unname(got), want)
+          }
+          if (identical(answers, wanted) && rows) paste0("ok       ", id) else
             paste0("FAIL     ", id, ": the column's answers diverged")
         },
         rank = {
@@ -175,8 +207,8 @@ for (case in cases) {
         },
         recognize = {
           spec <- jsonlite::toJSON(case$question, auto_unbox = TRUE)
-          ask <- thinkthen:::.tt_call(tt_recognize_grammared(spec))
-          found <- thinkthen:::.tt_call(tt_recognize_column(ask, case$text))[[1]]
+          ask <- thinkthen:::.tt_call(thinkthen:::tt_recognize_grammared(spec))
+          found <- thinkthen:::.tt_call(thinkthen:::tt_recognize_column(ask, case$text))[[1]]
           ents <- expect$entities
           good <- identical(length(found$text), length(ents))
           if (good && length(ents)) {
@@ -217,8 +249,8 @@ for (case in cases) {
         },
         relate = {
           spec <- jsonlite::toJSON(case$question, auto_unbox = TRUE)
-          ask <- thinkthen:::.tt_call(tt_relate_grammared(spec))
-          edges <- thinkthen:::.tt_call(tt_relate_records(ask, unlist(case$records)))
+          ask <- thinkthen:::.tt_call(thinkthen:::tt_relate_grammared(spec))
+          edges <- thinkthen:::.tt_call(thinkthen:::tt_relate_records(ask, unlist(case$records)))
           want <- expect$edges
           good <- identical(length(edges$name), length(want))
           if (good && length(want)) {

@@ -231,7 +231,14 @@ tt_find <- function(question, units) {
 
 # annotate: a question set file over a data frame, one request a row, a new
 # column a question. Decision columns read TRUE/FALSE/NA; choose columns
-# character with NA; score columns numeric; tag columns hold lists.
+# character with NA; score columns numeric; tag columns hold lists. A
+# question that failed for any record widens its column to a list whose
+# cells are the bare answer or the ruled marker `list(failed = ...)`, so a
+# failure never reads as NA (0054).
+.tt_marker <- function(field) {
+  is.list(field) && !is.null(field$failed)
+}
+
 tt_annotate <- function(file, data, on) {
   column <- as.character(data[[on]])
   rows <- .tt_call(tt_annotate_file(as.character(file), column))
@@ -241,6 +248,18 @@ tt_annotate <- function(file, data, on) {
   added <- list()
   for (name in names(rows[[1]])) {
     fields <- lapply(rows, function(row) row[[name]])
+    if (any(vapply(fields, .tt_marker, logical(1)))) {
+      # The widened column: good answers keep their own shape, the failed
+      # cells carry the marker list.
+      added[[name]] <- lapply(fields, function(field) {
+        if (.tt_marker(field)) return(field)
+        if (is.list(field)) return(field$value)
+        if (is.character(field) && length(field) > 1L) return(field)
+        if (is.character(field)) return(if (length(field) == 0L) NA_character_ else field[[1L]])
+        if (length(field) == 0L) NA else field == 1L
+      })
+      next
+    }
     shape <- if (is.list(fields[[1]])) {
       "score"
     } else if (is.character(fields[[1]]) && length(fields[[1]]) > 1L) {
