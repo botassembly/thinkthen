@@ -35,3 +35,30 @@ Write here as you go. A note written later is a guess. Newest entry last.
 ## Removals and footprint
 
 `npm install` twice (devDependencies: `@napi-rs/cli`, `typescript`), removed with `rm -rf node_modules`. The stub ran on 8212 and is down. No key, no paid call, nothing published, no sudo, nothing outside this folder touched.
+
+## 2026-09-21 — the last-object shape fix
+
+The packaging rehearsal found it: the binding treated the last argument as call options only (`signal`, `deadlineMs`) and built the question from the first argument alone, so the rebuilt deck's samples could not run as drawn. Before, from `NOTES-packaging.md`:
+
+```
+choose {options}-last  -> ERROR defect | a choose reply carried no choice
+choose question-object -> "the refund team"
+tag {labels}-last      -> ERROR defect | a tag reply carried no labels
+tag question-object    -> []
+rank {top,signal}-last -> 3 rows returned for { top: 2 }   (top ignored)
+rank question-object   -> 3 rows
+```
+
+After the fix: the last object carries the question's inputs and the call's options together, per the one-shape ruling and ADR pick 2. `options` (choose), `labels` (tag), and `top` (rank, a slice of the ordered result, the same shape Ruby and Python ship) build the answer; `signal` and `deadlineMs` ride the call (the existing typed spellings; the deck shows `signal` only); any other key is a usage error naming the key. A question value or spec still carries its own inputs, and combining a question value with `options`/`labels` is refused as ambiguous. `top` is validated before any request. A bare `choose`/`tag` question string with no inputs in the last object is a usage error rather than an engine defect.
+
+The deck's TypeScript section, as of today, runs as drawn (`tests/slide.test.mjs`):
+
+```
+urgent.length === 5, urgent[0] = "I want a refund for order 9"
+team  = null   (stand-in: uniform option spread; the comment's "billing" is the real backend's)
+topics = []    (stand-in: no keywordless label holds; the comment's three labels are the real backend's)
+```
+
+The two comment mismatches are the stand-in's rule, the same class as finding 2 above, and are asserted with comments saying so. New tests: the ruled shape for choose/tag/rank (question string plus the last object), `top` with a question value, `top` slicing, and five usage-error tests (unknown key, cross-verb key, bare choose, bare tag, non-positive `top`, question-value conflict).
+
+Counts: offline `29 pass, 0 fail, 6 skipped`; the surface's own `check.sh` green (build, offline, wire on 8212, dead address, types); `scripts/check_surfaces.sh` green end to end, `all landed checks green`. The rc guard: no installer ran; `grep -c deno ~/.zshrc` = 0.
