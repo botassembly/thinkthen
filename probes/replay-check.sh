@@ -7,8 +7,9 @@
 # It runs the job with --replay into a fresh folder and compares every row
 # against the committed one. Historical metadata fields are set aside, and
 # every other byte must match. `meta.replayed` is true where the live row is
-# false. `meta.tool`, `meta.question_sha256`, and `meta.requests` arrived after
-# these rows were written, so they are dropped from both sides.
+# false. `meta.tool`, `meta.question_sha256`, `meta.requests`, and
+# `meta.failed_questions` arrived after these rows were written, so they are
+# dropped from both sides.
 set -eu
 
 probe=${1:?name the probe folder}
@@ -36,8 +37,8 @@ for committed in "$probe"/runs/*.jsonl; do
 		status=1
 		continue
 	fi
-	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests) | .meta.replayed = "set aside"' "$committed" >"$scratch/committed.norm"
-	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests) | .meta.replayed = "set aside"' "$replayed" >"$scratch/replayed.norm"
+	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests, .meta.failed_questions) | .meta.replayed = "set aside"' "$committed" >"$scratch/committed.norm"
+	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests, .meta.failed_questions) | .meta.replayed = "set aside"' "$replayed" >"$scratch/replayed.norm"
 	if diff -q "$scratch/committed.norm" "$scratch/replayed.norm" >/dev/null; then
 		printf 'replay-check: %s reproduced %s rows\n' "$name" "$(wc -l <"$committed" | tr -d ' ')"
 	else

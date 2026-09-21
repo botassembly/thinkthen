@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 36
-opens: crates specification conformance sdlc/planning
+opens: crates specification conformance probes sdlc/planning
 ---
 
 # 0054: Preserve good answers when one question fails
