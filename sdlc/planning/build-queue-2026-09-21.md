@@ -109,13 +109,14 @@ Experiment `229-thinkthen-spreadsheets` is closed. Its verdict replaces the prod
 - **Excel:** a native add-in (an XLL) built on Windows against the Excel kit, a code-signing certificate because Excel blocks unsigned add-ins, the engine shipped beside it, and one live run. Windows is the only blocker. The web add-in road is described and not written.
 - Neither live run has happened.
 
-**This needs Ian before any build work.** A `--serve` mode makes ThinkThen a network service, which is a new kind of thing for a tool whose rules say it never acts and never starts a service. A hosted endpoint also commits money and operations. The product side recommends Excel first if Ian wants one of them, because it keeps the engine on the user's machine. Both stay out of the first release.
+**Ruled by Ian on 2026-09-21: paused.** No serve mode, no HTTP bridge, no Google Sheets, and no Windows work for now. Sheets is a poor fit. Excel might work later and waits until Ian wants to deal with Windows. Nothing in lanes A or B plans for either.
 
 ## Lane D: only Ian
 
 - Claim the names: crates.io, npm and its scope, PyPI, RubyGems, the handle on X, and the trademark search. Eight open todos in the vault, dated 2026-09-20. These come before anything public names the product.
-- Rule on `--serve` and the spreadsheet surfaces.
-- Still open from earlier: whether the spend ledger ships in 0.1, the plugin door beside the Series door, and the optional `[polars]` extra.
+- Ruled 2026-09-21: Polars is an optional extra. `pip install thinkthen` never pulls Polars in, and `pip install thinkthen[polars]` does.
+- Ruled 2026-09-21: the spend record ships in 0.1 if it is easy and waits if it is not. The product side's reading: the showing half is easy once the default cache lands in A4, and the limiting half is not needed. So A4 adds it. `thinkthen status` prints requests sent, tokens billed, and answers served from the cache, for this month and in total, from plain count rows kept beside the default cache. A row holds counts and never a text. No ceiling and no refusal in 0.1. If the build team finds the showing half is not easy, it says why and the item goes back to the backlog.
+- Still open: the Polars plugin expression beside the Series door, how the command gets installed, and the two gaps in the first article.
 
 ## Not in this queue
 
