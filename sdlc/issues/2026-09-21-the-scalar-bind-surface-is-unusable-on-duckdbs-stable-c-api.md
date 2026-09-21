@@ -27,3 +27,11 @@ No bind-time question check on the stable C API. The extension checks the questi
 ## The decision that is Ian's
 
 Whether to report this to DuckDB, work around it indefinitely, or push the wiring upstream through `duckdb-rs`. Nobody opens an issue upstream without his word.
+
+## Sharpened by external comparison and official guidance, 2026-09-21
+
+Two inputs landed today. A third-party extension over the same backend (colliber/duckdb-jev, read-only comparison preserved on the surfaces branch records) solves the key problem with DuckDB's Secret Manager - a jev secret type, redacted from duckdb_secrets(), failing at plan time when absent - and derives return types from the criteria constant at bind, both through the C++ API our stable-C path cannot reach. And the official guidance recommends the C++ template over the stable C API for exactly a paid-network extension's two hard requirements: secret integration and parallel or non-blocking control - the same two places this issue records the stable C API as broken or thin.
+
+The fork, stated for the build team: stay on the stable C API with the first-row check and a settings-or-environment key, or move to the C++ API and gain bind-time typing, the secret manager, and the parallel controls, paying a rebuild per DuckDB release and one binary per version. Also adopted from the comparison regardless of the fork: token counters parsed from the reply's usage block, failure injection at the wire seam in the test stub, sqllogictests with DESCRIBE type assertions, and the README line the guidance requires - persistent secrets are stored unencrypted.
+
+Two independent implementations now state one text per request as the API's floor; see 2026-09-21-one-state-per-request-caps-table-scale-classification.md.
