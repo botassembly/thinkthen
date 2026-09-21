@@ -2,3 +2,5 @@
 /build
 /.runtimes
 /thinkthen
+/tmp*.json
+/tests/tmp*
