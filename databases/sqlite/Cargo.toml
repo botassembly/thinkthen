@@ -1,0 +1,36 @@
+[package]
+name = "thinkthen-sqlite"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.93.1"
+description = "The SQLite surface: thinkthen_warm fills the answers in one pass at the process width, and the queries read them row by row. Version 0.1.0 is the first release"
+license = "MIT"
+publish = false
+
+# A workspace of its own, so the root workspace's gates and profile stay
+# untouched.
+[workspace]
+
+[lib]
+# The entry-point rule: SQLite derives sqlite3_thinkthen_init from the
+# basename, and a trailing digit group is stripped (the sqlite-vec0
+# convention), so the artifact is libthinkthen0.so and the entry stays
+# sqlite3_thinkthen_init. The slide's `.load ./thinkthen` is this file
+# copied under the name the sample names.
+name = "thinkthen0"
+crate-type = ["cdylib"]
+
+[dependencies]
+serde_json = "1"
+thinkthen-contract = { path = "../../contract" }
+# The one dependency that changes when the real engine lands.
+thinkthen-standin = { path = "../../standin" }
+rusqlite = { version = "0.40", features = ["loadable_extension", "functions"] }
+
+[profile.release]
+# A library lives inside someone else's process, and an abort there kills
+# the host. The command's own profile stays as the root workspace sets it.
+panic = "unwind"
+
+[lints.rust]
+missing_docs = "warn"
