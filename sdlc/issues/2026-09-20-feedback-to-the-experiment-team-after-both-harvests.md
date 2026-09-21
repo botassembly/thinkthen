@@ -51,3 +51,5 @@ Everything that needs the real engine waits: a third round of bindings, packagin
 ## What Ian can overturn
 
 All of it. Skipping item 1 is the cheap overturn. The cost is that the build team learns at step 3 of the plan whether blocking holds.
+
+2026-09-21: job 1 has landed. The four answers and the five checks added today are in `experiments/211-thinkthen-blocking-engine/FINDINGS.md`, with the commands and output in that folder's lane notes. Blocking holds; the ADR 0017 rewrite can be drafted from it.
