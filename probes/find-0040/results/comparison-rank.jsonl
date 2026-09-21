@@ -1,0 +1,6 @@
+{"case":"s100-a1","size":100,"trusted":"u007","value":"u007","probability":0.89,"logical_judgments":100,"live_requests":100,"replayed_judgments":0,"billed_input_tokens":30754}
+{"case":"s100-a2","size":100,"trusted":"u083","value":"u083","probability":0.91,"logical_judgments":100,"live_requests":100,"replayed_judgments":0,"billed_input_tokens":30754}
+{"case":"s175-a1","size":175,"trusted":"u031","value":"u031","probability":0.9,"logical_judgments":175,"live_requests":175,"replayed_judgments":0,"billed_input_tokens":53822}
+{"case":"s175-a2","size":175,"trusted":"u149","value":"u149","probability":0.92,"logical_judgments":175,"live_requests":175,"replayed_judgments":0,"billed_input_tokens":53822}
+{"case":"s250-a1","size":250,"trusted":"u063","value":"u063","probability":0.9,"logical_judgments":250,"live_requests":250,"replayed_judgments":0,"billed_input_tokens":76892}
+{"case":"s250-a2","size":250,"trusted":"u227","value":"u227","probability":0.9,"logical_judgments":250,"live_requests":250,"replayed_judgments":0,"billed_input_tokens":76891}

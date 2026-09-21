@@ -1,6 +1,6 @@
 # 0040: Measure and build `find`
 
-Ticket 0040 remains in progress. Its first paid stage proves that the planned one-request shape reaches the hosted backend at both accepted choice ceilings. The accuracy comparison remains unrun, and no public `find` command exists yet.
+Ticket 0040 remains in progress. Its two paid stages prove that the planned one-request shape reaches the hosted backend at both accepted choice ceilings and passes the preregistered long-document comparison. No public `find` command exists yet.
 
 ## Feasibility evidence
 
@@ -20,10 +20,16 @@ All eight recording files have schema `thinkthen.recording/1`, adapter `systemon
 
 Feasibility measured 45.07055805003207 billed input tokens per unit appearance. The preregistered calculation keeps the larger old find rate, combines it with the old rank rate for the fixed 1,050 judgments, estimates 451,157.32217573223 tokens, adds 15 percent headroom, and rounds up to 519,000. That is below the accepted 525,000 stop ceiling.
 
-The exact next command is committed before use:
+The comparison command was committed before use and ran once:
 
 ```sh
 sdlc/scripts/live --max-tokens 519000 probes/find-0040/run comparison
 ```
 
-The comparison has not run. Its 519,000-token reservation has not entered the ledger. Phase two stays blocked until both find arms meet the accepted hit gates, `none` finds all three blank documents with no false refusal, and neither find arm trails rank.
+The 519,000-token reservation moved the live ledger from 19,620,118 to 20,139,118 charged tokens. Find completed 18 logical judgments as 12 live requests and 6 feasibility replays. Both policies hit all 6 answerable documents, including 2 of 2 at 100, 175, and 250 units. `none` found all 3 blank documents and falsely refused 0 of 6 answerable documents. Find billed 95,002 input tokens. Its minimum correct winning probability was 0.99, and no wrong result existed from which to infer a useful floor.
+
+Rank judged all 1,050 units in the six answerable documents. It used 1,050 live requests, replayed none, billed 322,935 input tokens, and hit all 6 trusted units, including 2 of 2 at each size. Both find policies met every accepted gate.
+
+The comparison created 1,062 recordings: 12 new find exchanges and 1,050 rank exchanges. They report 417,937 input tokens and 43,344 output tokens. Across both stages, all 1,070 recordings report 488,202 input and 59,118 output tokens. Every new entry passed the same schema, endpoint, question-answer key, model, usage, digest-link, permission, and credential-marker checks as feasibility. Every response names model `jev-1.13.0`. A keyless local replay reproduced 18 find and 1,050 rank judgments with zero live requests. Saved failures are empty; summaries contain only safe fixed ids and derived facts.
+
+Both paid gates now permit phase two. The public command still requires the core, binary, tests, specifications, and how-to work in the ticket.

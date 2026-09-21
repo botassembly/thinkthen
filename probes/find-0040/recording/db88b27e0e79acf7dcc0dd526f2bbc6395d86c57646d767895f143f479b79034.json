@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Marker OTHER-S250-A1-092 uses an amber checklist reviewed every 18 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This unit states the cobalt permit duration for marker TARGET-S250-A1."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03}},"usage":{"input_tokens":308,"output_tokens":21}}
+}

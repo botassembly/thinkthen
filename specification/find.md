@@ -1,16 +1,16 @@
 # `find`
 
-Status: **Settled**. A live run compared `find` with `rank --top 1` on the same units, and ADR 0015 accepted `find` on that evidence. `sdlc/records/0011-the-live-probe.md` holds every number. `find` is slice 11 of `sdlc/planning/plan.md`.
+Status: **Settled** by ADRs 0015 and 0030. Both accepted live gates passed. The public command is not built yet.
 
 Picks the unit that best answers a question, out of a set the model sees all at once.
 
 ```text
-thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--details] [BACKEND]
+thinkthen find QUESTION [--lines|--jsonl] [--field POINTER] [--none] [--details] [BACKEND]
 ```
 
 ## What it reads
 
-Up to 255 lines or records on standard input. `--input FILE` reads a file instead. More than 255 units is a usage error before any request. [records.md](records.md) gives the framing and the pointer rules.
+From 2 to 255 lines or records on standard input, or 2 to 254 with `--none`. `--input FILE` reads a file instead. Empty input succeeds without output or a request. One unit and either overflow are usage errors before any request. The whole original input may contain at most 16 MiB. [records.md](records.md) gives the framing and pointer rules.
 
 `QUESTION` states what the best unit answers.
 
@@ -20,11 +20,13 @@ Up to 255 lines or records on standard input. `--input FILE` reads a file instea
 
 The answer is relative. `find` picks the best unit present, and `filter` judges each unit alone against a fixed mark. The units see each other, and a user accepts that by choosing this verb. A job that needs each unit judged on its own merits uses `filter` or `rank`.
 
-## What one run measured
+## What the live checks measured
 
 The live run judged twenty made-up documents of 11 to 14 numbered lines, with 12 to 14 options. The cases are few and they are made up. `find` named the answering line on 16 of 16 answerable documents and `rank --top 1` named it on 15 of 16. `find` sent 20 requests and 11,063 input tokens. `rank --top 1` sent 239 requests and 69,143 input tokens.
 
-Those documents run far under the 255 units this page allows, so nothing here says how the pick behaves on a long document. The ticket that builds `find` first repeats the comparison on documents of 100 to 250 lines. This page then states the largest size that held, and the limit drops to that size when the larger documents fail.
+Ticket 0040 then used made-up documents of 100, 175, and 250 units. Both find policies named the trusted unit on 6 of 6 answerable documents, with 2 of 2 at each size. `rank --top 1` also found all 6. `none` found all 3 blank documents and falsely refused 0 of 6 answerable documents. The reach stage also accepted 255 units without `none` and 254 with it. These samples are small and made up; they establish the accepted gate rather than a general accuracy rate.
+
+The comparison made 12 live find requests and reused 6 reach recordings, billing 95,002 input tokens. Rank made 1,050 live requests and billed 322,935. Every correct find winner had probability at least 0.99. No find answer was wrong, so the run supplies no error from which to choose a probability floor.
 
 ## Saying that nothing fits
 
@@ -36,7 +38,7 @@ On the same twenty documents, a `none` option answered `none` on 4 of 4 document
 
 The chosen unit as it arrived, byte for byte, the way [filter.md](filter.md) prints a kept record. Under `--jsonl` that is the whole record. `find` prints one unit and never a list.
 
-`--details` prints the object in [result.md](result.md). The answer kind is an open point below, because no kind in `result.md` carries a pick over units.
+`--details` prints the object in [result.md](result.md). Its question verb and answer kind are `find`. The answer holds the selected generated unit id or `none` and every probability in input order. The value holds the original selected unit or `null`, and the threshold is `null`.
 
 ## Options
 
@@ -64,7 +66,6 @@ thinkthen find 'This passage explains the login timeout.' --lines < passages.txt
 thinkthen find 'This ticket should be worked next.' --jsonl --field /body < queue.jsonl
 ```
 
-## Open points
+## Selection rule
 
-- Which answer kind does `find` print under `--details`? `yes_no` carries one probability and `choice` carries one per option, and neither names a unit that arrived on standard input. Recommendation: a kind that names the chosen unit's id and carries a probability per unit.
-- Does `find` print more than one unit? Demo 15 wanted the three best lines and found the option free, because one request already answered the whole page. No ADR names such an option, so `find` prints one unit until one does.
+Equal top probabilities among real units select the first input unit. A strict `none` lead or any top tie involving `none` produces the unresolved result. The command prints one unit and has no threshold or top-count option.
