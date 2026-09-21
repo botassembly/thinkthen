@@ -1,6 +1,6 @@
 # ADR 0017: Ten surfaces over one bound engine
 
-- Status: Proposed. It becomes Accepted on Ian's word. The build team reviews this rewrite before the merge ticket
+- Status: Accepted by Ian on 2026-09-21: "We can always fix it." The build team still reviews this page before the merge ticket, and a review finding amends it
 - Date: 2026-09-21. This page rewrites the 2026-09-19 draft whole, on the strength of experiments 205 (six language bindings), 207 (three database extensions), and 211 (a blocking engine bound into Python and PostgreSQL)
 
 ## Context
