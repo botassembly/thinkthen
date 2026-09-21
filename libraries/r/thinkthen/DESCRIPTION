@@ -4,10 +4,13 @@ Title: The ThinkThen Verbs for R
 Version: 0.0.1
 Authors@R: person("Ian", "Maurer", role = c("aut", "cre"), email = "imaurer@gmail.com")
 Description: One engine under ten surfaces: the eight verbs (decide,
-    choose, score, tag, filter, rank, find, annotate) with a tt_ prefix.
-    A column goes in and a column comes out. NA is "not sure". A bulk
-    call crosses into the engine once and runs at the engine's width.
-    Errors carry one of six kinds and a retry signal.
+    choose, score, tag, filter, rank, find, annotate) plus recognize and
+    relate, with a tt_ prefix. A column goes in and a column comes out.
+    NA is "not sure". A bulk call crosses into the engine once and runs
+    at the engine's width. A recognized name carries its strength: a
+    number the tool computes, the least of the word probabilities times
+    the mean of the kind probabilities. Errors carry one of six kinds
+    and a retry signal.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends:

@@ -7,8 +7,9 @@
 //! dependency changes and nothing here does.
 //!
 //! The door follows the header's lifetime rules exactly: an engine lives
-//! until `thinkthen_engine_free`, a string from `thinkthen_call` lives
-//! until `thinkthen_free_string`, and the message from
+//! until `thinkthen_engine_free`, a string from `thinkthen_call`,
+//! `thinkthen_recognize`, or `thinkthen_relate` lives until
+//! `thinkthen_free_string`, and the message from
 //! `thinkthen_error_message` lives until the next call on the same engine.
 //!
 //! Two findings from the slide, filed in `NOTES.md`, shape the code: the
@@ -25,7 +26,7 @@ use std::sync::Mutex;
 
 use thinkthen_contract::{
     Annotated, Answer, Details, Engine as _, Error, ErrorKind, Options, Question,
-    QuestionSet, Ranked, Scored,
+    QuestionSet, Ranked, Recognize, Relate, Scored, edges_json,
 };
 use thinkthen_standin::BlockingEngine;
 
@@ -614,7 +615,128 @@ fn annotated_json(records: &[Vec<(String, Annotated)>]) -> serde_json::Value {
     )
 }
 
-/// Free a string [`thinkthen_call`] returned. Null is accepted and ignored.
+/// Find every name in one text, and the relations the rules allow, as one
+/// JSON string the caller frees with [`thinkthen_free_string`].
+/// `spec_json` is the recognize section of the question file; `text` and
+/// `text_len` are its bytes. In the answer, `start` and `end` count code
+/// points of `text`, so a C host converts once to byte offsets before it
+/// slices. The return is zero on success and the kind code on a failure,
+/// with the out parameters left alone.
+///
+/// # Safety
+///
+/// `engine` is a value this door returned, `spec_json` is a readable
+/// null-terminated string, `text` is readable for `text_len` bytes, and
+/// `out` and `out_len` are writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_recognize(
+    engine: *const thinkthen_engine,
+    spec_json: *const c_char,
+    text: *const c_char,
+    text_len: usize,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+) -> i32 {
+    let engine = unsafe { engine.as_ref().expect("engine is not null") };
+    match run_recognize(engine, spec_json, text, text_len) {
+        Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
+        Err(error) => engine.fail(error),
+    }
+}
+
+/// The shared body of `thinkthen_recognize`, safe on the Rust side.
+fn run_recognize(
+    engine: &thinkthen_engine,
+    spec_json: *const c_char,
+    text: *const c_char,
+    text_len: usize,
+) -> Result<String, Error> {
+    let spec = unsafe { CStr::from_ptr(spec_json) }
+        .to_str()
+        .map_err(|_| Error::usage("the spec is not UTF-8"))?;
+    let ask = Recognize::from_json(spec)?;
+    let text = str_from(text, text_len)?;
+    Ok(engine.engine.recognize(&ask, text)?.to_json())
+}
+
+/// Say how every record relates to the others, as one JSON object the
+/// caller frees with [`thinkthen_free_string`]: `{"edges": [...]}`.
+/// `texts` holds `count` pointers and `lengths` their byte lengths; more
+/// than 255 records is refused with the usage kind before anything else.
+/// The return is zero on success and the kind code on a failure, with the
+/// out parameters left alone.
+///
+/// # Safety
+///
+/// `engine` is a value this door returned, `spec_json` is a readable
+/// null-terminated string, the arrays are readable for `count` entries,
+/// and `out` and `out_len` are writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_relate(
+    engine: *const thinkthen_engine,
+    spec_json: *const c_char,
+    texts: *const *const c_char,
+    lengths: *const usize,
+    count: usize,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+) -> i32 {
+    let engine = unsafe { engine.as_ref().expect("engine is not null") };
+    match run_relate(engine, spec_json, texts, lengths, count) {
+        Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
+        Err(error) => engine.fail(error),
+    }
+}
+
+/// The shared body of `thinkthen_relate`, safe on the Rust side.
+fn run_relate(
+    engine: &thinkthen_engine,
+    spec_json: *const c_char,
+    texts: *const *const c_char,
+    lengths: *const usize,
+    count: usize,
+) -> Result<String, Error> {
+    let spec = unsafe { CStr::from_ptr(spec_json) }
+        .to_str()
+        .map_err(|_| Error::usage("the spec is not UTF-8"))?;
+    let ask = Relate::from_json(spec)?;
+    let mut records = Vec::with_capacity(count);
+    for index in 0..count {
+        let pointer = unsafe { *texts.add(index) };
+        let length = unsafe { *lengths.add(index) };
+        records.push(str_from(pointer, length)?);
+    }
+    let edges = engine.engine.relate(&ask, &records)?;
+    Ok(edges_json(&edges))
+}
+
+/// Hand one JSON answer to the caller: the string and its byte length land
+/// in the out parameters on zero, and nothing is written on a failure.
+///
+/// # Safety
+///
+/// `out` and `out_len` are writable.
+unsafe fn hand_over(
+    engine: &thinkthen_engine,
+    json: String,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+) -> i32 {
+    match CString::new(json) {
+        Ok(body) => {
+            let length = body.as_bytes().len();
+            unsafe {
+                *out = body.into_raw();
+                *out_len = length;
+            }
+            0
+        }
+        Err(_) => engine.fail(Error::defect("the answer held a NUL")),
+    }
+}
+
+/// Free a string [`thinkthen_call`], [`thinkthen_recognize`], or
+/// [`thinkthen_relate`] returned. Null is accepted and ignored.
 ///
 /// # Safety
 ///

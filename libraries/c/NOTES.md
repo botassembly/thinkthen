@@ -125,3 +125,155 @@ $ grep -c deno ~/.zshrc
 ```
 
 Nothing changed in any rc file.
+
+## 2026-09-21: the two semantic functions, recognize and relate
+
+The library-team brief's C job: `thinkthen_recognize` and
+`thinkthen_relate` in the header's out-param shapes, one returned string
+each with the one free function, the JSON carrying `source`, `target`,
+`probability`, and `strength` natively, offsets counted in code points
+with the C byte conversion proven, `relate` refusing past 255 records,
+the existing leak check over the two new strings. The stand-in answers
+both from the harvest recordings; no paid call, no key.
+
+### The door
+
+`src/lib.rs` gained the two exports, each a pointer-marshalling wrap over
+a safe body (`run_recognize`, `run_relate`), plus one `hand_over` that
+writes the returned string and its byte length. The spec parses through
+the contract's own `Recognize::from_json` / `Relate::from_json`; the door
+checks nothing the core already checks. Exports, all `thinkthen_`:
+
+```
+$ nm -D --defined-only target/release/libthinkthen.so | awk '$2=="T"{print $3}'
+thinkthen_call
+thinkthen_decide
+thinkthen_decide_many
+thinkthen_engine_free
+thinkthen_engine_new
+thinkthen_error_message
+thinkthen_error_retryable
+thinkthen_free_string
+thinkthen_recognize
+thinkthen_relate
+```
+
+### The example, as drawn
+
+`examples/recognize.c` runs both deck sections. `cc -std=c11 -Wall
+-Wextra`, no warnings:
+
+```
+$ cc -std=c11 -Wall -Wextra -I../../contract/include examples/recognize.c \
+      -o build/recognize -Ltarget/release -lthinkthen -Wl,-rpath,.../target/release
+$ ENGINE_NULL=1 ./build/recognize
+recognize: {"entities":[{"id":1,"text":"Maria Chen","kind":"person","start":0,"end":10,"strength":0.98},{"id":2,"text":"Northwind Freight","kind":"organization","start":18,"end":35,"strength":1.0},{"id":3,"text":"Chicago","kind":"place","start":39,"end":46,"strength":0.6693}],"relations":[{"name":"works_for","source":1,"target":2,"probability":1.0}]}
+recognize (the deck's located_in rule): refused, no recorded answer for the rule located_in on this text; the recording covers works_for, based_in
+offsets: code points 10..20 -> bytes 14..24 -> "Maria Chen"
+relate: {"edges":[{"name":"caused_by","source":1,"target":4,"probability":0.94},{"name":"caused_by","source":2,"target":4,"probability":0.94}]}
+recognize and relate ok
+```
+
+The offsets line is the byte arithmetic: the answer's code points 10..20
+become C's byte offsets 14..24 through the one documented conversion, and
+`memcmp` proves the slice is the name with the emoji and accent ahead of
+it. The deck's `located_in` rule stays pinned: the C01 recording covers
+`works_for` and `based_in`, the stand-in refuses an unrecorded rule, and
+the example prints the refusal naming what the recording covers.
+
+### The door's null suite, serialized
+
+`cargo test --test door -- --test-threads=1` runs the suite on one thread
+because several tests prove "a refusal sends nothing" against the
+stand-in's process-global request counter; parallel tests made that
+assertion racy (the counter read 10 where 0 was expected). Six tests were
+added: the recording's answer, the deck's unrecorded-rule refusal with
+the covered rules named, an unrecorded text refused, the emoji offset
+proof, the relate answer at the 0.9 bar, and the 255 refusal.
+
+```
+$ ENGINE_NULL=1 cargo test --quiet --test door -- --test-threads=1
+test result: ok. 11 passed; 0 failed
+```
+
+### The conformance slice
+
+`conformance_driver.py` gained the two routes through ctypes. 60 of the
+72 cases now pass, up from 16; the recognize and relate cases that were
+skipped as unrouted now run, each with the byte-slice proof built into
+the recognize route (a case passes only if the answer's code points
+slice the name out of the case's text).
+
+```
+$ ENGINE_NULL=1 python3 conformance_driver.py  (tail)
+ok       70-relate-R02-pickone
+skip     71-relate-R03-persubject-10: the per-subject arm shares its input with the pairs arm and the stand-in serves the ruled pairs form; a conformance-data finding for the build team
+ok       72-relate-R04-pairs-10
+exit 0
+```
+
+The remaining skips are the recorded ones: the backend cases (wire or
+dead address), the usage-and-cache case (no cache in the door), cancel
+(finding 3), and `rank`/`find` (the driver has no routes for them; the
+door itself carries both through the JSON door).
+
+### The leak check
+
+The address and leak sanitizers, the instrument this folder already
+uses because valgrind is absent, over the example's two new returned
+strings:
+
+```
+$ clang -std=c11 -Wall -Wextra -fsanitize=address -I../../contract/include \
+      examples/recognize.c -o build/recognize_asan -Ltarget/release \
+      -lthinkthen -Wl,-rpath,.../target/release
+$ ENGINE_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/recognize_asan >/dev/null
+(no sanitizer output; exit 0)
+```
+
+`check.sh` now compiles and runs the example after the slide and runs the
+sanitizer pass when `clang` is present. The whole check ends
+`recognize and relate ok` and both suites green, exit 0.
+
+### Findings for the contract, not worked around here
+
+4. **The deck and the design page name the free function
+   `thinkthen_string_free`; the header and this library name it
+   `thinkthen_free_string`.** The deck's recognize snippet cannot link as
+   written on that one line; the example calls the real name and the
+   divergence is pinned for the deck's owner. Neither page was edited,
+   and no alias export was added: the door owns one name per symbol.
+5. **The two new functions' header docs say "Returns 0 on success and -1
+   on failure"; the header's own return-codes block says one code per
+   error kind, and this door returns the kind code (1..6), as the typed
+   doors already do.** Returning `-1` would leave the six kinds
+   unretrievable, which the acceptance brief rules out; following the
+   block keeps the kinds addressable through `thinkthen_error_message`
+   and the retryable flag. One line per function should be corrected, or
+   a ruling made.
+6. **The question file's relation ends are `source`/`target` on the
+   design pages, and the contract's spec parser reads `from`/`to` keys**
+   (the conformance cases carry `from`/`to` too). The door hands
+   `spec_json` to the core parser unchanged — one parser in the core
+   checks the shape — so a question file written with `source`/`target`
+   is refused as a missing `from` end today. One of the two must change;
+   the door will follow the core either way.
+
+### The vocabulary sweep
+
+Over the user-facing strings this lane owns — the door's error messages
+(`src/lib.rs` doc comments and messages), the example's prints
+(`examples/recognize.c`), the driver's lines (`conformance_driver.py`),
+and `README.md`:
+
+```
+$ grep -rinE "certainty|likelihood|confidence|accuracy|calibrated|cutoff|gray zone|uncertain" \
+      src/lib.rs examples/recognize.c conformance_driver.py README.md
+examples/recognize.c:137:    ok &= !contains(out, "\"confidence\"");
+```
+
+The single line is an assertion that the returned JSON does NOT contain
+the vendor's word — a guard, not a use. The door's messages say `strength`
+on names and `probability` on relations; `not sure` stays `UNSURE`; the
+restricted and banned words appear nowhere else. `test door` also asserts
+`confidence` stays out of both returned shapes.

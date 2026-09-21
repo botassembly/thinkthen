@@ -13,6 +13,9 @@ ENGINE_NULL=1 Rscript tests_null.R
 echo "== r surface: conformance slice"
 ENGINE_NULL=1 Rscript conformance.R
 
+echo "== r surface: recognize and relate acceptance"
+ENGINE_NULL=1 Rscript recognize_check.R
+
 echo "== r surface: slide sample, as drawn, on the null backend"
 ENGINE_NULL=1 Rscript slide_check.R
 

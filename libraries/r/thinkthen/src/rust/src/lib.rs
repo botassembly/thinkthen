@@ -29,7 +29,8 @@ use std::sync::{LazyLock, Mutex, mpsc};
 use std::time::Duration;
 
 use thinkthen_contract::{
-    Annotated, Answer, Cancel, Engine, Options, Question, QuestionSet,
+    Annotated, Answer, Cancel, Engine, Options, Question, QuestionSet, Recognize, Recognized,
+    Relate,
 };
 use thinkthen_standin::BlockingEngine;
 
@@ -380,10 +381,132 @@ fn tt_question_parts(question: ExternalPtr<Question>) -> List {
     )
 }
 
+/// Build a recognize ask through the question file's own section grammar.
+#[extendr]
+fn tt_recognize_grammared(spec: String) -> StdResult<ExternalPtr<Recognize>, String> {
+    let ask = Recognize::from_json(&spec).map_err(carry)?;
+    Ok(ExternalPtr::new(ask))
+}
+
+/// Build a relate ask through the question file's own section grammar.
+#[extendr]
+fn tt_relate_grammared(spec: String) -> StdResult<ExternalPtr<Relate>, String> {
+    let ask = Relate::from_json(&spec).map_err(carry)?;
+    Ok(ExternalPtr::new(ask))
+}
+
+/// `recognize` over a column: one crossing, every record in input order.
+///
+/// Each record becomes the plain data for a data frame of names — text,
+/// kind, and the offsets in R's own string indexing, so `substr(text,
+/// start, end)` is the name — plus the relations when any were found.
+#[extendr]
+fn tt_recognize_column(
+    ask: ExternalPtr<Recognize>,
+    texts: Vec<String>,
+) -> StdResult<List, String> {
+    let ask = (*ask).clone();
+    let answers: Vec<Recognized> = call(move |engine| {
+        texts
+            .iter()
+            .map(|text| engine.recognize(&ask, text))
+            .collect::<StdResult<Vec<_>, thinkthen_contract::Error>>()
+    })?;
+    let entries: Vec<Robj> = answers
+        .iter()
+        .map(|found| {
+            let text: Vec<&str> = found.entities.iter().map(|entity| entity.text.as_str()).collect();
+            let kind: Vec<&str> = found.entities.iter().map(|entity| entity.kind.as_str()).collect();
+            // R's own string indexing: substr counts code points from one,
+            // so start is one-based and end is inclusive.
+            let start: Vec<i32> = found.entities.iter().map(|entity| entity.start as i32 + 1).collect();
+            let end: Vec<i32> = found.entities.iter().map(|entity| entity.end as i32).collect();
+            let strength: Vec<f64> = found.entities.iter().map(|entity| entity.strength).collect();
+            let relations: Robj = if found.relations.is_empty() {
+                Robj::from(Nullable::<i32>::Null)
+            } else {
+                let name: Vec<&str> = found.relations.iter().map(|held| held.name.as_str()).collect();
+                let source: Vec<i32> = found.relations.iter().map(|held| held.source as i32).collect();
+                let target: Vec<i32> = found.relations.iter().map(|held| held.target as i32).collect();
+                let probability: Vec<f64> =
+                    found.relations.iter().map(|held| held.probability).collect();
+                list!(
+                    name = Robj::from(name),
+                    source = source,
+                    target = target,
+                    probability = probability
+                )
+                .into()
+            };
+            list!(
+                text = Robj::from(text),
+                kind = Robj::from(kind),
+                start = start,
+                end = end,
+                strength = strength,
+                relations = relations
+            )
+            .into()
+        })
+        .collect();
+    Ok(List::from_values(entries))
+}
+
+/// `relate` over records: every record crosses at once; the answer is the
+/// plain data for a data frame of edges, with the kind fields when a rule
+/// named kinds.
+#[extendr]
+fn tt_relate_records(
+    ask: ExternalPtr<Relate>,
+    records: Vec<String>,
+) -> StdResult<List, String> {
+    let ask = (*ask).clone();
+    let edges = call(move |engine| {
+        let slices: Vec<&str> = records.iter().map(String::as_str).collect();
+        engine.relate(&ask, &slices)
+    })?;
+    let name: Vec<&str> = edges.iter().map(|edge| edge.name.as_str()).collect();
+    let source: Vec<i32> = edges.iter().map(|edge| edge.source as i32).collect();
+    let target: Vec<i32> = edges.iter().map(|edge| edge.target as i32).collect();
+    let probability: Vec<f64> = edges.iter().map(|edge| edge.probability).collect();
+    let named_kinds = edges
+        .iter()
+        .any(|edge| edge.source_kind.is_some() || edge.target_kind.is_some());
+    if named_kinds {
+        let source_kind: Vec<&str> = edges
+            .iter()
+            .map(|edge| edge.source_kind.as_deref().unwrap_or(""))
+            .collect();
+        let target_kind: Vec<&str> = edges
+            .iter()
+            .map(|edge| edge.target_kind.as_deref().unwrap_or(""))
+            .collect();
+        Ok(list!(
+            name = Robj::from(name),
+            source = source,
+            target = target,
+            probability = probability,
+            source_kind = Robj::from(source_kind),
+            target_kind = Robj::from(target_kind)
+        ))
+    } else {
+        Ok(list!(
+            name = Robj::from(name),
+            source = source,
+            target = target,
+            probability = probability
+        ))
+    }
+}
+
 // Macro to generate exports.
 extendr_module! {
     mod thinkthen;
     fn tt_question_grammared;
+    fn tt_recognize_grammared;
+    fn tt_relate_grammared;
+    fn tt_recognize_column;
+    fn tt_relate_records;
     fn tt_decide_column;
     fn tt_decide_one;
     fn tt_choose_one;

@@ -20,8 +20,27 @@ cc -std=c11 -Wall -Wextra -I../../contract/include examples/slide.c \
 echo "== c surface: the slide, as drawn, on the null backend"
 ENGINE_NULL=1 ./build/slide
 
+echo "== c surface: compile the recognize and relate example with a plain cc"
+cc -std=c11 -Wall -Wextra -I../../contract/include examples/recognize.c \
+    -o build/recognize -Ltarget/release -lthinkthen \
+    -Wl,-rpath,"$PWD/target/release"
+
+echo "== c surface: the deck's recognize and relate sections, as drawn"
+ENGINE_NULL=1 ./build/recognize
+
+if command -v clang >/dev/null 2>&1; then
+    echo "== c surface: the leak check (address sanitizer) over the two new strings"
+    clang -std=c11 -Wall -Wextra -fsanitize=address -I../../contract/include \
+        examples/recognize.c -o build/recognize_asan -Ltarget/release \
+        -lthinkthen -Wl,-rpath,"$PWD/target/release"
+    ENGINE_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/recognize_asan >/dev/null
+    echo "asan and lsan clean"
+else
+    echo "== c surface: leak check skipped, no clang"
+fi
+
 echo "== c surface: null suite"
-ENGINE_NULL=1 cargo test --quiet --test door
+ENGINE_NULL=1 cargo test --quiet --test door -- --test-threads=1
 
 echo "== c surface: conformance slice through ctypes"
 ENGINE_NULL=1 python3 conformance_driver.py

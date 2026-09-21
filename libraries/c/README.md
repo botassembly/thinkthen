@@ -24,9 +24,14 @@ thinkthen_decide_many(tt, q, texts, lens, COUNT, out);
 thinkthen_engine_free(tt);
 ```
 
-Three findings for the contract are recorded in `NOTES.md`: the header's
-doc promises the question-file grammar where the slide passes a bare
-string (the door accepts both), the JSON door's failure code is not
-retrievable through the current header, and the header carries no cancel
-token, deadline, or poll callback. The ruled bulk spelling is
-`thinkthen_decide_many`.
+Findings for the contract are recorded in `NOTES.md`: the header's doc
+promises the question-file grammar where the slide passes a bare string
+(the door accepts both), the JSON door's failure code is not retrievable
+through the current header, the header carries no cancel token, deadline,
+or poll callback, the deck and the design page name the free function
+`thinkthen_string_free` where the header and this library say
+`thinkthen_free_string`, the two new functions' header docs say `-1` on
+failure where the return-codes block and this door use the kind codes,
+and the design pages' question-file relation ends are `source`/`target`
+where the core parser and the conformance cases read `from`/`to`. The
+ruled bulk spelling is `thinkthen_decide_many`.

@@ -230,3 +230,231 @@ unsafe fn usage_of(engine: *const thinkthen_engine) -> u64 {
     let usage = take(reply);
     usage["requests"].as_u64().unwrap_or(0)
 }
+
+/// One `thinkthen_recognize` call: the code and the JSON string, freed.
+unsafe fn recognize(
+    engine: *const thinkthen_engine,
+    spec: &str,
+    text: &str,
+) -> (i32, String) {
+    let spec = CString::new(spec).expect("no NUL");
+    let mut out: *mut c_char = std::ptr::null_mut();
+    let mut out_len: usize = 0;
+    let code = thinkthen::thinkthen_recognize(
+        engine,
+        spec.as_ptr(),
+        text.as_ptr() as *const c_char,
+        text.as_bytes().len(),
+        &mut out,
+        &mut out_len,
+    );
+    if code != 0 {
+        return (code, message(engine));
+    }
+    let json = std::ffi::CStr::from_ptr(out).to_string_lossy().into_owned();
+    assert_eq!(
+        json.as_bytes().len(),
+        out_len,
+        "the length is the returned string's own"
+    );
+    thinkthen::thinkthen_free_string(out);
+    (code, json)
+}
+
+/// One `thinkthen_relate` call: the code and the JSON string, freed.
+unsafe fn relate(
+    engine: *const thinkthen_engine,
+    spec: &str,
+    records: &[&str],
+) -> (i32, String) {
+    let spec = CString::new(spec).expect("no NUL");
+    let texts: Vec<CString> = records
+        .iter()
+        .map(|record| CString::new(*record).expect("no NUL"))
+        .collect();
+    let lengths: Vec<usize> = texts.iter().map(|text| text.as_bytes().len()).collect();
+    let pointers: Vec<*const c_char> = texts.iter().map(|text| text.as_ptr()).collect();
+    let mut out: *mut c_char = std::ptr::null_mut();
+    let mut out_len: usize = 0;
+    let code = thinkthen::thinkthen_relate(
+        engine,
+        spec.as_ptr(),
+        pointers.as_ptr(),
+        lengths.as_ptr(),
+        records.len(),
+        &mut out,
+        &mut out_len,
+    );
+    if code != 0 {
+        return (code, message(engine));
+    }
+    let json = std::ffi::CStr::from_ptr(out).to_string_lossy().into_owned();
+    assert_eq!(json.as_bytes().len(), out_len);
+    thinkthen::thinkthen_free_string(out);
+    (code, json)
+}
+
+/// The C host's one conversion: walk the text, count code points, keep the
+/// byte positions of `start` and one past `end`, the way the example does.
+fn byte_range(text: &str, start: usize, end: usize) -> (usize, usize) {
+    let mut points = 0usize;
+    let mut from = 0usize;
+    let mut to = text.len();
+    for (byte, _) in text.char_indices() {
+        if points == start {
+            from = byte;
+        }
+        if points == end {
+            to = byte;
+            return (from, to);
+        }
+        points += 1;
+    }
+    (from, to)
+}
+
+#[test]
+fn recognize_answers_from_the_recording() {
+    unsafe {
+        let engine = engine();
+        let spec = r#"{"kinds": ["person", "organization", "place"],
+            "relations": [{"name": "works_for", "from": "person", "to": "organization"}]}"#;
+        let (code, json) = recognize(
+            engine,
+            spec,
+            "Maria Chen joined Northwind Freight in Chicago last spring.",
+        );
+        assert_eq!(code, 0, "{json}");
+        let answer: serde_json::Value = serde_json::from_str(&json).expect("JSON");
+        let names = answer["entities"].as_array().expect("names");
+        assert_eq!(names.len(), 3, "{json}");
+        assert_eq!(names[0]["text"], "Maria Chen");
+        assert_eq!(names[0]["kind"], "person");
+        assert_eq!(names[0]["start"], 0);
+        assert_eq!(names[0]["end"], 10);
+        assert_eq!(names[0]["strength"], 0.98);
+        assert_eq!(names[2]["text"], "Chicago");
+        assert_eq!(names[2]["strength"], 0.6693);
+        let relations = answer["relations"].as_array().expect("relations");
+        assert_eq!(relations.len(), 1, "{json}");
+        assert_eq!(relations[0]["name"], "works_for");
+        assert_eq!(relations[0]["source"], 1);
+        assert_eq!(relations[0]["target"], 2);
+        assert_eq!(relations[0]["probability"], 1.0);
+        assert!(!json.contains("confidence"), "the vendor's word stays out: {json}");
+        assert!(!json.contains("\"from\""), "the ruled ends are source and target: {json}");
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+/// The deck's rules on the Maria Chen sentence, pinned: the C01 recording
+/// covers `works_for` and `based_in`, and the deck also asks `located_in`,
+/// so the call refuses and names what the recording covers.
+#[test]
+fn recognize_refuses_the_decks_unrecorded_rule() {
+    unsafe {
+        let engine = engine();
+        let spec = r#"{"kinds": ["person", "organization", "place"],
+            "relations": [{"name": "works_for", "from": "person", "to": "organization"},
+                          {"name": "located_in", "from": "*", "to": "place"}]}"#;
+        let usage_before = usage_of(engine);
+        let (code, text) = recognize(
+            engine,
+            spec,
+            "Maria Chen joined Northwind Freight in Chicago last spring.",
+        );
+        assert_eq!(code, 1, "the usage kind: {text}");
+        assert!(text.contains("located_in"), "{text}");
+        assert!(text.contains("works_for, based_in"), "{text}");
+        assert_eq!(
+            usage_of(engine),
+            usage_before,
+            "a refusal sends nothing"
+        );
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+#[test]
+fn a_text_with_no_recording_is_refused() {
+    unsafe {
+        let engine = engine();
+        let (code, text) = recognize(engine, r#"{"kinds": ["person"]}"#, "unrecorded.");
+        assert_eq!(code, 1, "{text}");
+        assert!(text.contains("no recorded answer for the text"), "{text}");
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+/// The C offset proof: the contract counts code points, C slices bytes,
+/// and the emoji case makes the two units disagree by the emoji's width.
+#[test]
+fn recognize_offsets_slice_in_bytes_on_the_emoji_text() {
+    unsafe {
+        let engine = engine();
+        let text = "Le café 😀 Maria Chen arrived.";
+        let (code, json) = recognize(engine, r#"{"kinds": ["person"]}"#, text);
+        assert_eq!(code, 0, "{json}");
+        let answer: serde_json::Value = serde_json::from_str(&json).expect("JSON");
+        let name = &answer["entities"][0];
+        assert_eq!(name["text"], "Maria Chen");
+        assert_eq!(name["strength"], 0.94);
+        let start = name["start"].as_u64().expect("a number") as usize;
+        let end = name["end"].as_u64().expect("a number") as usize;
+        assert_eq!((start, end), (10, 20), "code points: {json}");
+        let (from, to) = byte_range(text, start, end);
+        assert_eq!((from, to), (14, 24), "bytes, the emoji is four wide");
+        assert_eq!(&text[from..to], "Maria Chen", "the slice is the name");
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+#[test]
+fn relate_answers_from_the_recording() {
+    unsafe {
+        let engine = engine();
+        let alerts = [
+            "Alert 1: Checkout returns 500 at the payment step.",
+            "Alert 2: Card charges are failing for every customer.",
+            "Alert 3: The nightly export ran two hours late.",
+            "Alert 4: The payments database ran out of disk space.",
+        ];
+        let spec = r#"{"relations": [{"name": "caused_by", "from": "*", "to": "*"}],
+            "either": ["same_as"], "threshold": 0.9}"#;
+        let (code, json) = relate(engine, spec, &alerts);
+        assert_eq!(code, 0, "{json}");
+        let answer: serde_json::Value = serde_json::from_str(&json).expect("JSON");
+        let edges = answer["edges"].as_array().expect("edges");
+        assert_eq!(edges.len(), 2, "the 0.9 bar keeps two: {json}");
+        assert_eq!(edges[0]["name"], "caused_by");
+        assert_eq!(edges[0]["source"], 1);
+        assert_eq!(edges[0]["target"], 4);
+        assert!(
+            (edges[0]["probability"].as_f64().expect("a number") - 0.94).abs() < 1e-9,
+            "{json}"
+        );
+        assert_eq!(edges[1]["source"], 2);
+        assert_eq!(edges[1]["target"], 4);
+        assert!(!json.contains("\"from\""), "source and target: {json}");
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+#[test]
+fn relate_refuses_more_than_255_records() {
+    unsafe {
+        let engine = engine();
+        let records: Vec<String> = (0..256).map(|index| format!("record {index}")).collect();
+        let borrowed: Vec<&str> = records.iter().map(String::as_str).collect();
+        let usage_before = usage_of(engine);
+        let (code, text) = relate(
+            engine,
+            r#"{"relations": [{"name": "caused_by", "from": "*", "to": "*"}]}"#,
+            &borrowed,
+        );
+        assert_eq!(code, 1, "the usage kind: {text}");
+        assert!(text.contains("255"), "{text}");
+        assert_eq!(usage_of(engine), usage_before, "a refusal sends nothing");
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}

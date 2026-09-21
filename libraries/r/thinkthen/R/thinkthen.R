@@ -272,6 +272,157 @@ tt_annotate <- function(file, data, on) {
   base
 }
 
+# One rule string as the file grammar's entry: "name" means any kind to
+# any kind, "name=from:to" names the ends, and "*" is the any kind.
+.tt_rule_entry <- function(one, either) {
+  one <- as.character(one)[[1L]]
+  name <- one
+  from <- "*"
+  to <- "*"
+  if (grepl("=", one, fixed = TRUE)) {
+    halves <- strsplit(one, "=", fixed = TRUE)[[1L]]
+    if (length(halves) != 2L || !nzchar(halves[[1L]])) {
+      stop("a relation rule reads NAME or NAME=FROM:TO", call. = FALSE)
+    }
+    name <- halves[[1L]]
+    ends <- strsplit(halves[[2L]], ":", fixed = TRUE)[[1L]]
+    if (length(ends) != 2L || !nzchar(ends[[1L]]) || !nzchar(ends[[2L]])) {
+      stop("a relation rule's ends read FROM:TO; a missing end is a usage error",
+           call. = FALSE)
+    }
+    from <- ends[[1L]]
+    to <- ends[[2L]]
+  }
+  entry <- list(name = name, from = from, to = to)
+  if (either) entry$either <- TRUE
+  entry
+}
+
+# The rule entries from the vectors a caller gives.
+.tt_rules <- function(relations, either = NULL) {
+  entries <- list()
+  if (length(relations)) {
+    entries <- c(entries, lapply(as.character(relations), .tt_rule_entry, either = FALSE))
+  }
+  if (length(either)) {
+    entries <- c(entries, lapply(as.character(either), .tt_rule_entry, either = TRUE))
+  }
+  entries
+}
+
+# Is this one string a question file rather than a single kind or rule?
+# The command's own "@file.json" spelling, or a path that exists.
+.tt_is_file <- function(one) {
+  length(one) == 1L && (startsWith(one, "@") ||
+    (grepl("\\.json$", one) && file.exists(one)))
+}
+
+# The named section of a question file, as the file grammar reads it.
+.tt_section <- function(path_like, section_name) {
+  path <- sub("^@", "", path_like)
+  if (!file.exists(path)) {
+    stop(paste0("no question file at ", path), call. = FALSE)
+  }
+  parsed <- jsonlite::fromJSON(path, simplifyVector = FALSE)
+  section <- parsed[[section_name]]
+  if (is.null(section)) {
+    stop(paste0("the question file carries no ", section_name, " section"), call. = FALSE)
+  }
+  section
+}
+
+# The recognize section's JSON from the parts a caller gives. A question
+# file named where the kinds go carries the whole spec; explicit parts
+# override the file's.
+.tt_recognize_spec <- function(kinds, relations, threshold, relation_threshold) {
+  if (.tt_is_file(kinds)) {
+    spec <- .tt_section(kinds, "recognize")
+  } else {
+    spec <- list(kinds = as.character(kinds))
+  }
+  rules <- .tt_rules(relations)
+  if (length(rules)) spec$relations <- rules
+  if (!is.null(threshold)) spec$threshold <- as.numeric(threshold)[[1L]]
+  if (!is.null(relation_threshold)) {
+    spec$relation_threshold <- as.numeric(relation_threshold)[[1L]]
+  }
+  jsonlite::toJSON(spec, auto_unbox = TRUE)
+}
+
+# The relate section's JSON from the parts a caller gives.
+.tt_relate_spec <- function(relations, either, kind_field, threshold) {
+  if (.tt_is_file(relations)) {
+    spec <- .tt_section(relations, "relate")
+  } else {
+    spec <- list()
+    rules <- .tt_rules(relations)
+    if (length(rules)) spec$relations <- rules
+  }
+  extra <- .tt_rules(NULL, either)
+  if (length(extra)) {
+    held <- if (is.null(spec$relations)) list() else spec$relations
+    spec$relations <- c(held, extra)
+  }
+  if (!is.null(kind_field)) spec$kind_field <- as.character(kind_field)[[1L]]
+  if (!is.null(threshold)) spec$threshold <- as.numeric(threshold)[[1L]]
+  jsonlite::toJSON(spec, auto_unbox = TRUE)
+}
+
+# recognize: every name in each text with its kind, and the relations the
+# rules turn on. A column crosses once; each record comes back as a data
+# frame of names (text, kind, start, end, strength) with the relations in
+# the frame's "relations" attribute, so tidyr::unnest() makes one row per
+# name. Offsets are R's own: substr(text, start, end) is the name.
+# "Strength" is the tool's own computed number: the least of the word
+# probabilities times the mean of the kind probabilities.
+tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
+                         relations = NULL, threshold = NULL,
+                         relation_threshold = NULL) {
+  spec <- .tt_recognize_spec(kinds, relations, threshold, relation_threshold)
+  ask <- .tt_call(tt_recognize_grammared(spec))
+  evidence <- as.character(evidence)
+  held <- vector("list", length(evidence))
+  live <- which(!is.na(evidence))
+  if (length(live)) {
+    found <- .tt_call(tt_recognize_column(ask, evidence[live]))
+    for (i in seq_along(live)) {
+      one <- found[[i]]
+      frame <- as.data.frame(one[c("text", "kind", "start", "end", "strength")],
+                             stringsAsFactors = FALSE)
+      if (!is.null(one$relations)) {
+        attr(frame, "relations") <- as.data.frame(one$relations, stringsAsFactors = FALSE)
+      }
+      held[[live[[i]]]] <- frame
+    }
+  }
+  for (i in which(is.na(evidence))) {
+    held[[i]] <- as.data.frame(
+      list(text = character(), kind = character(), start = integer(),
+           end = integer(), strength = numeric()),
+      stringsAsFactors = FALSE)
+  }
+  held
+}
+
+# relate: the edges between records, as a data frame ready for
+# igraph::graph_from_data_frame. Every record crosses at once; more than
+# 255 records is a usage error before anything else.
+tt_relate <- function(records, relations = NULL, either = NULL,
+                      kind_field = NULL, threshold = NULL) {
+  if (!length(relations) && !length(either) && !.tt_is_file(relations)) {
+    stop("relate needs at least one relation rule", call. = FALSE)
+  }
+  spec <- .tt_relate_spec(relations, either, kind_field, threshold)
+  ask <- .tt_call(tt_relate_grammared(spec))
+  records <- as.character(records)
+  if (anyNA(records)) {
+    stop("relate takes no NA records; tt_recognize answers NA for those rows",
+         call. = FALSE)
+  }
+  held <- .tt_call(tt_relate_records(ask, records))
+  as.data.frame(held, stringsAsFactors = FALSE)
+}
+
 # The audit view of one judgment: probability, answer, model, digest, and
 # the sends that produced it, so the caller sees what the bill sees.
 tt_details <- function(question, evidence, threshold = NULL) {

@@ -2,16 +2,19 @@
 """The C surface's slice of the conformance file, run offline.
 
 Drives the built door (target/release/libthinkthen.so) through ctypes: the
-typed decide doors for the decide family, and the JSON door for the rest.
-Prints one line a case — ok, skip with a reason — and exits nonzero on any
-divergence. Run through ./check.sh; the door is the surface under test and
-this driver is scaffolding.
+typed decide doors for the decide family, the out-param recognize and
+relate doors for the two semantic functions, and the JSON door for the
+rest. Prints one line a case — ok, skip with a reason — and exits nonzero
+on any divergence. Run through ./check.sh; the door is the surface under
+test and this driver is scaffolding.
 
 Skips, with their reasons: the backend-refusal cases need the wire or a
 dead address (tests/wire.rs proves the backend kind there), the usage case
-needs a cache and a reset the door does not carry, and the cancel case
-needs a token the C header does not expose — a finding recorded in
-NOTES.md.
+needs a cache and a reset the door does not carry, the cancel case needs a
+token the C header does not expose (a finding in NOTES.md), and the
+per-subject relate arm shares its input with the pairs arm while the
+stand-in serves the ruled pairs form (a conformance-data finding for the
+build team).
 """
 
 import ctypes
@@ -47,7 +50,77 @@ def load():
     lib.thinkthen_call.restype = ctypes.c_void_p
     lib.thinkthen_free_string.argtypes = [ctypes.c_void_p]
     lib.thinkthen_error_retryable.restype = ctypes.c_int
+    lib.thinkthen_recognize.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t),
+    ]
+    lib.thinkthen_recognize.restype = ctypes.c_int
+    lib.thinkthen_relate.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p),
+        ctypes.POINTER(ctypes.c_size_t), ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t),
+    ]
+    lib.thinkthen_relate.restype = ctypes.c_int
     return lib
+
+
+def recognize(lib, engine, spec, text):
+    """One thinkthen_recognize call: the parsed answer or the message."""
+    out = ctypes.c_void_p()
+    out_len = ctypes.c_size_t()
+    encoded = text.encode()
+    code = lib.thinkthen_recognize(
+        engine, json.dumps(spec).encode(), encoded, len(encoded),
+        ctypes.byref(out), ctypes.byref(out_len),
+    )
+    if code != 0:
+        return None, lib.thinkthen_error_message(engine).decode()
+    body = ctypes.string_at(out, out_len.value).decode()
+    lib.thinkthen_free_string(out)
+    return json.loads(body), None
+
+
+def relate(lib, engine, spec, records):
+    """One thinkthen_relate call over `records`: the parsed answer or the
+    message."""
+    out = ctypes.c_void_p()
+    out_len = ctypes.c_size_t()
+    encoded = [record.encode() for record in records]
+    pointers = (ctypes.c_char_p * len(encoded))(*encoded)
+    lengths = (ctypes.c_size_t * len(encoded))(
+        *[len(record) for record in encoded]
+    )
+    code = lib.thinkthen_relate(
+        engine, json.dumps(spec).encode(), pointers, lengths, len(encoded),
+        ctypes.byref(out), ctypes.byref(out_len),
+    )
+    if code != 0:
+        return None, lib.thinkthen_error_message(engine).decode()
+    body = ctypes.string_at(out, out_len.value).decode()
+    lib.thinkthen_free_string(out)
+    return json.loads(body), None
+
+
+def byte_slice(text, start, end):
+    """The answer's offsets are code points; walk the text to the C-style
+    byte range the way the example does, and return those bytes."""
+    encoded = text.encode()
+    points = 0
+    from_byte = 0
+    to_byte = len(encoded)
+    byte = 0
+    sizes = [(0x80, 1), (0xE0, 2), (0xF0, 3), (0x100, 4)]
+    while byte < len(encoded):
+        if points == start:
+            from_byte = byte
+        if points == end:
+            to_byte = byte
+            break
+        lead = encoded[byte]
+        width = next(size for limit, size in sizes if lead < limit)
+        byte += width
+        points += 1
+    return encoded[from_byte:to_byte]
 
 
 def typed_decide(lib, engine, question, evidence):
@@ -209,6 +282,76 @@ def main():
                 failures += 1
             else:
                 line = f"ok       {case_id}"
+        elif verb == "recognize":
+            found, message = recognize(lib, engine, question, case["text"])
+            if found is None:
+                line = f"FAIL     {case_id}: {message}"
+                failures += 1
+            else:
+                want = case["expect"]
+                diverged = None
+                names = found.get("entities", [])
+                if names != want.get("entities", []):
+                    diverged = f"entities {names}"
+                if diverged is None:
+                    # The offset proof for C's indexing: the answer's code
+                    # points must slice the name out of the byte string.
+                    for name in names:
+                        sliced = byte_slice(
+                            case["text"], name["start"], name["end"]
+                        ).decode()
+                        if sliced != name["text"]:
+                            diverged = (
+                                f"offsets {name['start']}..{name['end']} "
+                                f"slice {sliced!r}, not {name['text']!r}"
+                            )
+                            break
+                if diverged is None and (
+                    found.get("relations", []) != want.get("relations", [])
+                ):
+                    diverged = f"relations {found.get('relations')}"
+                if diverged is not None:
+                    line = f"FAIL     {case_id}: {diverged}"
+                    failures += 1
+                else:
+                    line = f"ok       {case_id}"
+        elif verb == "relate":
+            if case.get("form") == "per-subject":
+                # R03 per-subject and R04 pairs hold the identical ten
+                # records, and the stand-in serves the ruled pairs form.
+                line = (
+                    f"skip     {case_id}: the per-subject arm shares its "
+                    "input with the pairs arm and the stand-in serves the "
+                    "ruled pairs form; a conformance-data finding for the "
+                    "build team"
+                )
+            else:
+                spec = {}
+                rules = [
+                    {"name": rule["name"], "from": rule["from"], "to": rule["to"]}
+                    for rule in question.get("relations", [])
+                    if not rule.get("either")
+                ]
+                either = [
+                    rule["name"]
+                    for rule in question.get("relations", [])
+                    if rule.get("either")
+                ]
+                if rules:
+                    spec["relations"] = rules
+                if either:
+                    spec["either"] = either
+                if "threshold" in question:
+                    spec["threshold"] = question["threshold"]
+                edges, message = relate(lib, engine, spec, case["records"])
+                if edges is None:
+                    line = f"FAIL     {case_id}: {message}"
+                    failures += 1
+                elif edges.get("edges") != case["expect"]["edges"]:
+                    line = f"FAIL     {case_id}: {edges.get('edges')}, expected {case['expect']['edges']}"
+                    failures += 1
+                else:
+                    line = f"ok       {case_id}"
         elif verb == "usage":
             line = f"skip     {case_id}: the cache half and the reset need machinery the door does not carry"
         elif verb == "cancel":

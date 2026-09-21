@@ -36,6 +36,11 @@ for (case in cases) {
     say(paste0("skip     ", id, ": the local kind needs a file door this surface does not carry"))
     next
   }
+  if (identical(case$verb, "relate") && identical(case$form, "per-subject")) {
+    say(paste0("skip     ", id,
+      ": the per-subject arm is pinned, not replayed; the stand-in serves the pairs recording (conformance/DIVERGENCES.md)"))
+    next
+  }
   outcome <- tryCatch({
     kind <- expect$error$kind
     if (!is.null(kind)) {
@@ -165,6 +170,68 @@ for (case in cases) {
             if (identical(held, wanted)) paste0("ok       ", id) else
               paste0("FAIL     ", id, ": expected ", wanted, ", got ", held)
           }
+        },
+        recognize = {
+          spec <- jsonlite::toJSON(case$question, auto_unbox = TRUE)
+          ask <- thinkthen:::.tt_call(tt_recognize_grammared(spec))
+          found <- thinkthen:::.tt_call(tt_recognize_column(ask, case$text))[[1]]
+          ents <- expect$entities
+          good <- identical(length(found$text), length(ents))
+          if (good && length(ents)) {
+            for (j in seq_along(ents)) {
+              e <- ents[[j]]
+              good <- good &&
+                identical(found$text[[j]], e$text) &&
+                identical(found$kind[[j]], e$kind) &&
+                identical(as.integer(found$start[[j]]), as.integer(e$start) + 1L) &&
+                identical(as.integer(found$end[[j]]), as.integer(e$end)) &&
+                same_number(found$strength[[j]], e$strength) &&
+                identical(substr(case$text, as.integer(e$start) + 1L, as.integer(e$end)), e$text)
+              if (!good) break
+            }
+          }
+          rels <- expect$relations
+          if (good) {
+            held_rels <- found$relations
+            if (length(rels)) {
+              good <- !is.null(held_rels) && identical(length(held_rels$name), length(rels))
+              if (good) {
+                for (j in seq_along(rels)) {
+                  e <- rels[[j]]
+                  good <- good &&
+                    identical(held_rels$name[[j]], e$name) &&
+                    identical(as.integer(held_rels$source[[j]]), as.integer(e$source)) &&
+                    identical(as.integer(held_rels$target[[j]]), as.integer(e$target)) &&
+                    same_number(held_rels$probability[[j]], e$probability)
+                  if (!good) break
+                }
+              }
+            } else {
+              good <- is.null(held_rels) || length(held_rels$name) == 0L
+            }
+          }
+          if (good) paste0("ok       ", id) else
+            paste0("FAIL     ", id, ": the recognized shape diverged")
+        },
+        relate = {
+          spec <- jsonlite::toJSON(case$question, auto_unbox = TRUE)
+          ask <- thinkthen:::.tt_call(tt_relate_grammared(spec))
+          edges <- thinkthen:::.tt_call(tt_relate_records(ask, unlist(case$records)))
+          want <- expect$edges
+          good <- identical(length(edges$name), length(want))
+          if (good && length(want)) {
+            for (j in seq_along(want)) {
+              e <- want[[j]]
+              good <- good &&
+                identical(edges$name[[j]], e$name) &&
+                identical(as.integer(edges$source[[j]]), as.integer(e$source)) &&
+                identical(as.integer(edges$target[[j]]), as.integer(e$target)) &&
+                same_number(edges$probability[[j]], e$probability)
+              if (!good) break
+            }
+          }
+          if (good) paste0("ok       ", id) else
+            paste0("FAIL     ", id, ": the edges diverged")
         },
         paste0("skip     ", id, ": the ", case$verb, " case is not one this runner expresses")
       )
