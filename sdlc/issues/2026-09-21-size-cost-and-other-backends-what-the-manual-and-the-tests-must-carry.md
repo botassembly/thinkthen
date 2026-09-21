@@ -54,7 +54,7 @@ The first half works today and is already decided. ADR 0004 makes a backend a UR
 | Whether many questions in one request change each other's answers | Partly known. The packing and tagging probes found agreement on short texts. Not measured on long ones | the same page |
 | How a user learns a text is too large before paying for the request | Not built. The tool counts no tokens. The only local check is 16 MiB | `crates/thinkthen-core/src/records.rs` |
 | Any other model's limits, price, or format | Not known first-hand. Ian's note holds a web survey, unverified. Its lesson: limits run from about 512 tokens to about 32,000 per question, and the underlying model's window is often far larger than the decision layer's | `Jev context length.md` |
-| Whether any other server accepts our exact request bytes | Not known. No request has been sent to one | |
+| Whether any other server accepts our exact request bytes | Known, once. On 2026-09-21 a local `laya-mlx` model answered every example through `THINKTHEN_BASE_URL` alone, with no change to the tool. Its budget is 512 tokens for the whole request and 16 questions | `sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md` |
 
 The cheapest probes that turn "not known" into "known", each a handful of requests under `sdlc/scripts/live`: the two edges of each limit with the reply recorded, one long text with the twenty conformance questions asked alone and then together, and one accuracy check at 1,000, 10,000, and 30,000 tokens on a public set with long documents. The second-server check waits until a compatible server is chosen, and running one locally needs no paid call.
 
