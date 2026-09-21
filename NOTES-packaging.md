@@ -47,3 +47,61 @@ $ python -c 'import thinkthen; print(thinkthen.__file__)'
 ```
 
 Registry use: the wheel came from the local file; `pandas` came from PyPI inside the container. Nothing was published. Pull recorded: `python:3.12-slim`. Containers: `--rm`, none left.
+
+## TypeScript
+
+Build, from `libraries/typescript` (napi CLI from the folder's own dev-dependencies):
+
+```
+$ npm run build
+> napi build --release --platform --cargo-cwd ./addon --js loader.cjs --dts loader.d.ts .
+$ npm pack
+thinkthen-0.0.1.tgz
+$ tar tzf thinkthen-0.0.1.tgz
+package/loader.cjs
+package/index.js
+package/package.json
+package/README.md
+package/index.mjs
+package/index.linux-x64-gnu.node
+package/index.d.ts
+```
+
+Clean container: `docker pull node:22-slim` (Node v22.23.2). Install from the tarball, then run the deck's TypeScript sample exactly as drawn:
+
+```
+$ docker run --rm --name pkg211-typescript \
+    -v /tmp/pkg211/typescript:/work -v libraries/typescript:/pkg:ro node:22-slim bash -c \
+    "mkdir -p /app && cd /app && npm init -y >/dev/null && npm install --silent /pkg/thinkthen-0.0.1.tgz \
+     && cp /work/sample.mjs . && ENGINE_NULL=1 node sample.mjs"
+ThinkThenError: a choose reply carried no choice
+    at invoke (/app/node_modules/thinkthen/index.js:104:11)
+    at async Module.choose (/app/node_modules/thinkthen/index.js:144:11)
+  kind: 'defect',
+  retryable: false
+```
+
+**Finding, the deck's TypeScript sample cannot run as drawn.** The one-shape ruling of 2026-09-21 (`sdlc/issues/2026-09-21-one-shape-for-nine-surfaces-as-the-slides-show-it.md:32`) says "TypeScript takes one options object last: `tt.choose(question, text, { options })`, `tt.tag(question, text, { labels })`, `tt.rank(question, records, { top, signal })`". The binding implements the last object as call options only (`signal`, deadline) and builds the question from the first argument alone; a bare string first argument becomes a `decide` question, so `choose` and `tag` raise `defect` and `rank` ignores `top`. Host probe, null backend and wire stub both:
+
+```
+choose {options}-last  -> ERROR defect | a choose reply carried no choice
+choose question-object -> "the refund team"
+tag {labels}-last      -> ERROR defect | a tag reply carried no labels
+tag question-object    -> []
+rank {top,signal}-last -> 3 rows returned for { top: 2 }   (top ignored)
+rank question-object   -> 3 rows
+```
+
+The transport works: `signal` in the last object reached the engine (the lane's cancel test used it). The gap is the merge of question options (`options`, `labels`, `top`) from the ruled last object into the question. This is a TypeScript surface defect, not a packaging defect; the packaging lane records it and does not fix it. The lane that landed the surface ran the deck section as it stood then (decide/band/filter/annotate); the current section (choose/tag/rank) is new, and this run is its first.
+
+**The installed package answers, through the shape the binding implements** (question object first, call options last), in the same container:
+
+```
+$ ENGINE_NULL=1 node sample-supported.mjs
+choose -> "the refund team"
+tag -> []
+rank[0] -> {"index":0,"record":"I want a refund for order 9","probability":0.97}
+```
+
+`tag` returning `[]` is the stand-in's rule (no option text carries a keyword); the deck's `["billing", "shipping", "urgent"]` is the real backend's answer. The package installs from the tarball, loads its prebuilt `.node`, and answers all three verbs. Registry use: the tarball came from the local file; nothing was published. Pull recorded: `node:22-slim`. Containers: `--rm`, none left.
+
