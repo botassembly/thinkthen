@@ -6,7 +6,7 @@ opens: transforms/compare transforms/README.md demos/41-tune-a-question-file sdl
 
 # 0042: Compare scalar values and honest probability movement
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -63,4 +63,4 @@ Re-score if implementation needs a non-scalar value, a probability rule for choi
 ## Review
 
 - Design review: accepted after one rejection and one implementation clarification. The first draft understated compatibility proof, left the summary field names implicit, and would have let an explicit null look absent. The corrected ticket raises the route to level 3, fixes every summary name and count, and distinguishes an omitted argument from invalid null. The later clarification adds a per-change boolean so a visible value flip does not imply that its probability movement crossed the reporting tolerance.
-- Code review: the first pass rejected scalar-value errors that interpolated `input.id`. The remediation uses one fixed message for missing, array, and object values. Focused cases put hostile markers in the id and body and prove that neither reaches the diagnostic. Re-review is pending.
+- Code review: accepted after one rejection. The first pass rejected scalar-value errors that interpolated `input.id` and found that the prospective plan omitted the `annotate` comparison follow-up. The remediation uses one fixed message, proves hostile id, body, and answer markers stay out of diagnostics, and names the follow-up in both active plans. The same reviewer accepted the corrected implementation and its focused, executable-page, and outside-experiment evidence.
