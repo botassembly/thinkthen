@@ -70,6 +70,7 @@ Other concerns the ADR must answer:
 - The threshold is outside the key. Changing a threshold re-reads the cache for free, and this is worth teaching.
 - A failure is never saved, so a bad minute at the backend cannot poison the folder.
 - The per-digest lock needs a file system with working locks. A network share may lack them, and the page says so.
+- A cache folder keeps one lock file per entry under `.locks/`, seen on 2026-09-21: 19 entries and 19 lock files after a `--cache` run. A million entries is then two million files. `prune` clears the lock of every entry it removes, the million-entry measurement counts both, and a user who commits a recording needs the `.locks/` ignore rule this repository already has.
 - A prune that runs beside a live job is safe. A reader that loses its file asks again.
 
 ## What Ian can overturn
