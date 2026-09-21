@@ -115,3 +115,25 @@ Cleanup: the scratch container `dbpkg211-pgscratch` removed with `docker rm -f -
 - The wire path for `recognize`, `relate`, and `thinkthen_relations`: they answer from the recordings, offline, and make no request; there is nothing on the wire to prove for them in this lane.
 - `either` rules and named-kind ends through `thinkthen_relate`'s array: the ruled SQL call carries bare names; the question file carries the richer rules.
 - `thinkthen_relations`' final fate: the design page lists it beta and open (question 3 for the build team).
+
+## Page-section text for the manual: `relate` over a table (PostgreSQL)
+
+For the build team to lift:
+
+> ### relate over a table
+>
+> `relate` reads every record at once, because every pair is one pick-one question. Give it a query and the relation rules:
+>
+> ```sql
+> SELECT * FROM thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by']);
+> ```
+>
+> The query selects two columns: the record's id first, its text second. Each row comes back as `(name, source, target, probability)`, with `source` and `target` carrying those id values, so the edges join straight back to your table, and a recursive query can walk them. One call takes at most 255 records; past that is a usage error, because the pair count grows with the square of the records. The planner never knows a function costs money: one call is one request for every pair.
+>
+> For relations as rows from a question file, the beta companion:
+>
+> ```sql
+> SELECT * FROM tickets t, LATERAL thinkthen_relations(t.body, '@names.json');
+> ```
+>
+> It returns `(name, source_text, source_kind, target_text, target_kind, probability)`.
