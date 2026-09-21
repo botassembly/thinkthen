@@ -43,6 +43,7 @@ use thinkthen_contract::Answer;
 use thinkthen_contract::Cancel;
 use thinkthen_contract::Details;
 use thinkthen_contract::Edge as ContractEdge;
+use thinkthen_contract::Failed;
 use thinkthen_contract::Engine;
 use thinkthen_contract::Error;
 use thinkthen_contract::ErrorKind;
@@ -514,7 +515,28 @@ fn find(
     })
 }
 
+/// The failed-question marker as Python data: the ruled shape
+/// `{"failed": {"kind": KIND, "cause": CAUSE}}`, never `None`.
+///
+/// The words come from the contract's own serialization, so the two
+/// spellings cannot drift apart; the conformance case
+/// `74-annotate-preserves-good-answers` pins the marker in a row.
+fn failed_marker(py: Python<'_>, failed: &Failed) -> PyResult<Py<PyAny>> {
+    let held = serde_json::to_value(failed)
+        .map_err(|error| UsageError::new_err(format!("the failed marker: {error}")))?;
+    let inner = PyDict::new(py);
+    inner.set_item("kind", held["kind"].as_str().unwrap_or("backend"))?;
+    inner.set_item("cause", held["cause"].as_str().unwrap_or(""))?;
+    let outer = PyDict::new(py);
+    outer.set_item("failed", inner)?;
+    Ok(outer.into_any().unbind())
+}
+
 /// One record's fields as a plain dictionary, in the set's name order.
+///
+/// A field whose logical question failed while its neighbours answered
+/// carries the failed marker instead of a bare value, so good answers and
+/// the failure ride one row (0054).
 fn annotated_row(py: Python<'_>, fields: Vec<(String, Annotated)>) -> PyResult<Py<PyAny>> {
     let dict = PyDict::new(py);
     for (name, field) in fields {
@@ -529,6 +551,7 @@ fn annotated_row(py: Python<'_>, fields: Vec<(String, Annotated)>) -> PyResult<P
                 .map_err(python_error_of)?
                 .unbind()
                 .into_any(),
+            Annotated::Failed(failed) => failed_marker(py, &failed)?,
         };
         dict.set_item(name, value)?;
     }
@@ -576,7 +599,12 @@ fn annotate_stream(
     Ok(arrow::ArrowFrame::new(out))
 }
 
-/// One judgment plus the audit trail, with the sends that produced it.
+/// One judgment plus the audit trail, with the sends that produced it and
+/// the recording digests of the logical requests (0053).
+///
+/// `requests` is always a list, one element for a one-request result, in
+/// construction order; a retry adds no element. `failed_questions` is
+/// always present, including zero.
 #[pyfunction(signature = (question, evidence, *, deadline = None))]
 fn details(
     py: Python<'_>,
@@ -585,7 +613,7 @@ fn details(
     deadline: Option<f64>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
-    let Details { probability, answer, model, digest, sends } = py
+    let Details { probability, answer, model, digest, sends, requests, failed_questions } = py
         .detach(move || engine().details_opts(&asked, &evidence, call_options(deadline)))
         .map_err(|error| python_error(py, error))?;
     let dict = PyDict::new(py);
@@ -594,6 +622,8 @@ fn details(
     dict.set_item("model", model)?;
     dict.set_item("digest", digest)?;
     dict.set_item("sends", sends)?;
+    dict.set_item("requests", requests)?;
+    dict.set_item("failed_questions", failed_questions)?;
     Ok(dict.into_any().unbind())
 }
 

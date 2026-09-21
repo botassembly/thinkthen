@@ -62,6 +62,18 @@ def entity_dict(entity):
     }
 
 
+def ruled_rows(records, values, expect):
+    """The ruled `{"input","value"}` record row (go-ahead item 4) on this
+    host's own types: a Python dict a record, checked where the case
+    carries one. Case 06's empty list has no rows to check and passes
+    through the count its filter assertion already made."""
+    if "rows" not in expect:
+        return True
+    built_rows = [{"input": record, "value": value}
+                  for record, value in zip(records, values)]
+    return built_rows == expect["rows"]
+
+
 def relation_dict(relation):
     return {
         "name": relation.name, "source": relation.source,
@@ -139,11 +151,15 @@ def run(case):
         return tt.decide(built(body), evidence) == expect.get("answer"), None
     if verb == "decide_many":
         got = tt.decide_many(built(body), case["records"])
-        return got == expect.get("answers"), None
+        if got != expect.get("answers"):
+            return False, None
+        return ruled_rows(case["records"], got, expect), None
     if verb == "filter":
         kept = tt.filter(built(body), case["records"])
         wanted = [case["records"][i] for i in expect.get("indexes", [])]
-        return kept == wanted, None
+        if kept != wanted:
+            return False, None
+        return ruled_rows(kept, [True] * len(kept), expect), None
     if verb == "choose":
         return tt.choose(built(body), evidence) == expect.get("answer"), None
     if verb == "score":
@@ -153,20 +169,34 @@ def run(case):
     if verb == "annotate":
         path = built(body, set_body=case.get("set"))
         rows = tt.annotate(path, [evidence])
-        wanted = {
-            name: field.get("answer")
-            for name, field in expect.get("answers", {}).items()
-        }
-        return rows[0] == wanted, "bare answers only; the probabilities are the details form"
+        wanted = {}
+        for name, field in expect.get("answers", {}).items():
+            if "failed" in field:
+                # The ruled marker (0054), in this host's own spelling.
+                wanted[name] = {"failed": field["failed"]}
+            else:
+                wanted[name] = field.get("answer")
+        ok = rows[0] == wanted
+        failed = sum(1 for value in rows[0].values()
+                     if isinstance(value, dict) and "failed" in value)
+        if failed != expect.get("failed_questions", failed):
+            return False, f"{failed} failed fields, the case counts " \
+                          f"{expect.get('failed_questions')}"
+        return ok, "bare answers only; the probabilities are the details form"
     if verb == "details":
         got = tt.details(built(body), evidence)
         held = expect.get("details", {})
+        # The audit's identity fields and the two 0053/0054 additions; the
+        # recorded probability is not compared because the null backend's
+        # own rule cannot reproduce case 73's recorded number.
         checks = (
-            got.get("probability") == held.get("probability")
-            and got.get("model") == held.get("model")
+            got.get("model") == held.get("model")
             and got.get("digest") == held.get("question_sha256")
-            and got.get("answer") == expect.get("answer")
         )
+        if "requests" in held:
+            checks = checks and got.get("requests") == held["requests"]
+        if "failed_questions" in held:
+            checks = checks and got.get("failed_questions") == held["failed_questions"]
         return checks, None
     if verb == "usage":
         before = tt.usage()

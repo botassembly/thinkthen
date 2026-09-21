@@ -544,16 +544,29 @@ pub(crate) fn build_frame(
     let mut schema_children: Vec<Box<ArrowSchema>> = Vec::with_capacity(total);
     let mut formats_for_new: Vec<&'static str> = Vec::with_capacity(names.len());
     for name in names {
-        let format = match rows.first().and_then(|row| {
+        // A failed member widens the question's whole column to text: a
+        // marker is neither a bool nor a number, so the string layout
+        // carries the good answers and the ruled marker beside them, and
+        // no failed cell can read as `false` or `null`.
+        let any_failed = rows.iter().any(|row| {
             row.iter()
-                .find(|(held, _)| held == name)
-                .map(|(_, field)| field)
-        }) {
-            Some(Annotated::Decision(_)) => "b",
-            Some(Annotated::Choice(_)) => "u",
-            Some(Annotated::Score(_)) => "g",
-            Some(Annotated::Tags(_)) => "u",
-            None => "u",
+                .any(|(held, field)| held == name && matches!(field, Annotated::Failed(_)))
+        });
+        let format = if any_failed {
+            "u"
+        } else {
+            match rows.first().and_then(|row| {
+                row.iter()
+                    .find(|(held, _)| held == name)
+                    .map(|(_, field)| field)
+            }) {
+                Some(Annotated::Decision(_)) => "b",
+                Some(Annotated::Choice(_)) => "u",
+                Some(Annotated::Score(_)) => "g",
+                Some(Annotated::Tags(_)) => "u",
+                Some(Annotated::Failed(_)) => "u",
+                None => "u",
+            }
         };
         formats_for_new.push(format);
     }
@@ -646,7 +659,12 @@ pub(crate) fn build_frame(
                         nulls.push(false);
                         values_bool.push(value.unwrap_or(false));
                         values_num.push(0.0);
-                        values_str.push(None);
+                        // Only the widened text layout reads this; the
+                        // bool layout keeps its bits.
+                        values_str.push(match (*format, value) {
+                            ("u", Some(held)) => Some(held.to_string()),
+                            _ => None,
+                        });
                     }
                     Some(Annotated::Choice(picked)) => {
                         flags.push(picked.is_some());
@@ -660,7 +678,11 @@ pub(crate) fn build_frame(
                         nulls.push(false);
                         values_bool.push(false);
                         values_num.push(scored.value);
-                        values_str.push(None);
+                        values_str.push(if *format == "u" {
+                            Some(scored.value.to_string())
+                        } else {
+                            None
+                        });
                     }
                     Some(Annotated::Tags(tags)) => {
                         flags.push(true);
@@ -669,6 +691,18 @@ pub(crate) fn build_frame(
                         values_num.push(0.0);
                         values_str.push(Some(
                             serde_json::to_string(tags).unwrap_or_else(|_| "[]".into()),
+                        ));
+                    }
+                    Some(Annotated::Failed(failed)) => {
+                        // The ruled marker as its JSON text (0054): never
+                        // `false`, never a `null`.
+                        flags.push(true);
+                        nulls.push(false);
+                        values_bool.push(false);
+                        values_num.push(0.0);
+                        values_str.push(Some(
+                            serde_json::to_string(&Annotated::Failed(*failed))
+                                .expect("a failed marker is JSON-clean"),
                         ));
                     }
                     None => {

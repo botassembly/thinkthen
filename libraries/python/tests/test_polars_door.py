@@ -5,6 +5,7 @@ lives in tests/bench_width_polars.py and runs against the loopback stub.
 """
 
 import ctypes
+import json
 import subprocess
 import sys
 
@@ -74,6 +75,21 @@ def buffers_of(series):
     length = array.length
     _RELEASE(array.release)(ctypes.byref(array))
     return values, views, length
+
+
+def test_a_failed_question_widens_its_column_to_text():
+    """0054 on the frame door: a question with a failed member comes back
+    as a text column carrying the ruled marker JSON, so good answers and
+    the failure ride the same column and no failed cell reads as `false`
+    or a bare `null`."""
+    row = "order 4471: charged twice, please refund"
+    rows = tt.annotate("tests/fixture/form.json", [row])
+    marker = rows[0]["wants_refund"]
+    frame = pl.DataFrame({"body": [row, "I want a refund today"]})
+    out = tt.annotate("tests/fixture/form.json", frame, on="body")
+    assert out.schema["wants_refund"] == pl.String
+    assert out["wants_refund"][0] == json.dumps(marker, separators=(",", ":"))
+    assert out["wants_refund"][1] == "true"
 
 
 def test_decide_many_parity():

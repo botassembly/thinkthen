@@ -49,6 +49,9 @@ ENGINE_NULL=1 .venv/bin/python tests/test_cancel_fast.py
 echo "== recognize and relate at the scale the recordings carry"
 ENGINE_NULL=1 .venv/bin/python tests/bench_recognize_scale.py
 
+echo "== the function examples, run as one test"
+ENGINE_NULL=1 .venv/bin/python tests/examples.py
+
 echo "== conformance slice, offline"
 ENGINE_NULL=1 .venv/bin/python tests/conformance.py
 

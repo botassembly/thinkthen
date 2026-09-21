@@ -368,3 +368,86 @@ test result: ok. 1 passed
 ```
 
 The crate's `extension-module` feature moved to the default feature list so the test binary links libpython; `check.sh` computes `LIBDIR`/`BASEP` from the venv's own interpreter. The dead `options` binding the review named is not present in this tree, and a fresh test build prints zero warnings.
+
+## 2026-09-21 — the shapes from lane B item 2 (languages lane)
+
+The three shapes `e44d492` landed in `contract/` and `standin/`, carried
+into this surface and proven offline. Commands and output as they
+happened.
+
+**`Details.requests` and `failed_questions` (0053, 0054).** The `details`
+dictionary now carries the ordered recording digests and the failure
+count beside the trail it already had:
+
+```
+$ ENGINE_NULL=1 .venv/bin/python -c "import thinkthen as tt; print(tt.details(tt.question(decide='Is this a complaint?', threshold=0.5), 'i want a refund'))"
+{'probability': 0.97, 'answer': True, 'model': 'jev-latest', 'digest': '0b3e8345...', 'sends': 1, 'requests': ['d3476c41e74ad2e0321e6510e6aa5c9b28e9d67f8dc35790683a9bdf5de71bc6'], 'failed_questions': 0}
+```
+
+**The failed marker, this host's spelling: a dict.** `annotate` rows carry
+the ruled `{"failed":{"kind":...,"cause":...}}` mapping for a field whose
+logical question failed while its neighbours answered; the words come from
+the contract's own serialization, so the two spellings cannot drift:
+
+```
+$ ENGINE_NULL=1 .venv/bin/python -c "import thinkthen as tt; print(tt.annotate('tests/fixture/form.json', ['order 4471: charged twice, please refund']))"
+[{'team': None, 'urgency': 1.7, 'wants_refund': {'failed': {'kind': 'backend', 'cause': 'missing_answer'}}}]
+```
+
+The Polars door widens a question's whole column to text when any member
+failed, because a marker is neither a bool nor a number: the good answers
+ride as `true`/`false` text and the failed cell carries the marker JSON.
+No failed cell can read as `false` or a bare `null`.
+
+```
+$ ENGINE_NULL=1 .venv/bin/python -c "...pl.DataFrame({'body': [row, 'I demand a refund today']})..."
+Schema({'body': String, 'team': String, 'urgency': Float64, 'wants_refund': String})
+```
+
+**The record row (go-ahead item 4).** The conformance slice builds the
+ruled `{"input","value"}` dicts from the surface's own outputs and checks
+them where the cases carry rows (`05`, `06`, `19`), the same shape the
+database slices assert with their two columns; no Python function was
+added.
+
+**Conformance, offline: 73 and 74 run green.**
+
+```
+67 passed, 0 failed, 6 skipped
+known divergence: 17-usage-and-cache waits on the disk cache
+```
+
+The skip list is the pre-existing six; case 73 checks the audit's identity
+fields (the null backend's own rule cannot reproduce its recorded
+probability) and case 74 checks the marker and the count.
+
+**The fast-backend cancel, still green.**
+
+```
+$ ENGINE_NULL=1 .venv/bin/python tests/test_cancel_fast.py
+elapsed 0.819
+OK  the interrupt landed at 0.819 s, within a tick of the signal
+```
+
+**The examples file.** `examples.json` holds all ten functions keyed by
+name, each a runnable call and the answer the null backend gives;
+`tests/examples.py` runs each in a fresh process (a private directory for
+the question files) and `check.sh` calls it:
+
+```
+10 of 10 examples ok
+```
+
+**The StringView path, re-proven.** Polars 1.44 crosses the `vu` layout
+(checked with the ctypes schema walk), the door's `Text::View` reader
+handles inline and referenced strings, and buffer-address equality through
+the view path still holds:
+
+```
+$ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_polars_door.py tests/test_pandas_checks.py -q
+20 passed in 2.64s
+```
+
+The pandas checks run through the same door and pass unchanged; the full
+suite (`tests/ -q`) is 56 passed. The slide sample still reports the
+pre-existing band finding; `check.sh` exits 0.

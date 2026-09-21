@@ -1,0 +1,51 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "python",
+  "language": "python",
+  "install": "pip install thinkthen",
+  "examples": {
+    "decide": {
+      "python": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\")",
+      "expected": "True"
+    },
+    "choose": {
+      "python": "tt.choose(\"Which team owns this?\", \"please route this ticket\", options=[\"the refund desk\", \"the maybe desk\", \"anywhere else\"])",
+      "expected": "'the refund desk'"
+    },
+    "tag": {
+      "python": "tt.tag(\"Which words appear?\", \"the refund and the shipping\", labels=[\"refund\", \"shipping\"])",
+      "expected": "['refund']"
+    },
+    "score": {
+      "python": "tt.score(\"How urgent is this?\", \"maybe later\", levels=[\"Routine.\", \"Soon.\", \"Immediate.\"])",
+      "expected": "1.05"
+    },
+    "filter": {
+      "python": "tt.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "['I demand a refund today']"
+    },
+    "rank": {
+      "python": "tt.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "['I demand a refund today', 'good morning']"
+    },
+    "find": {
+      "python": "tt.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"])",
+      "expected": "'I want a refund'"
+    },
+    "annotate": {
+      "files": {
+        "form.json": "{\"version\":1,\"questions\":{\"wants_refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"team\":{\"choose\":\"Which team owns this?\",\"options\":[\"billing\",\"shipping\",\"account\"]},\"urgency\":{\"score\":\"How urgent is this?\",\"levels\":[\"Routine.\",\"Soon.\",\"Immediate.\"]}}}"
+      },
+      "python": "tt.annotate(\"form.json\", [\"maybe later\"])",
+      "expected": "[{'team': None, 'urgency': 1.05, 'wants_refund': True}]"
+    },
+    "recognize": {
+      "python": "[(one.text, one.kind) for one in tt.recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds=[\"person\", \"organization\", \"place\"]).entities]",
+      "expected": "[('Maria Chen', 'person'), ('Northwind Freight', 'organization'), ('Chicago', 'place')]"
+    },
+    "relate": {
+      "python": "[(one.name, one.source, one.target, one.probability) for one in tt.relate([\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"], relations=[{\"name\": \"caused_by\", \"source\": \"*\", \"target\": \"*\"}])]",
+      "expected": "[('caused_by', 1, 2, 0.59), ('caused_by', 1, 4, 0.94), ('caused_by', 2, 4, 0.94), ('caused_by', 3, 4, 0.84)]"
+    }
+  }
+}

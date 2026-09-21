@@ -1,7 +1,10 @@
 """The Python surface's own checks, offline on the null backend."""
 
+import json
+import pathlib
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -14,6 +17,21 @@ def band_question():
 
 def cut_question():
     return tt.question(decide="Does the writer ask for a refund?", threshold=0.5)
+
+
+def _partial_set():
+    """The conformance case 74's set, built from parts so the test needs
+    no file: the stand-in fails the last name-order question for exactly
+    one record (SYNTHETIC_PARTIAL_RECORD)."""
+    path = pathlib.Path(tempfile.mkdtemp()) / "partial.json"
+    path.write_text(json.dumps({
+        "version": 1,
+        "questions": {
+            "refund": {"decide": "Is this a refund request?", "threshold": 0.5},
+            "topic": {"decide": "Is this a billing problem?", "threshold": 0.5},
+        },
+    }))
+    return str(path)
 
 
 def test_unsure_is_none():
@@ -113,6 +131,44 @@ def test_details_carries_the_trail():
     assert held["model"] == "jev-latest"
     assert len(held["digest"]) == 64
     assert held["sends"] >= 1
+
+
+def test_details_carries_the_requests_list_and_the_failure_count():
+    """0053 and 0054 on the details shape: the ordered requests list
+    (one 64-figure digest a logical request, a retry adds no element) and
+    `failed_questions`, always present, zero for one good question."""
+    held = tt.details(cut_question(), "i want a refund")
+    assert isinstance(held["requests"], list)
+    assert len(held["requests"]) == 1
+    assert all(len(digest) == 64 for digest in held["requests"])
+    assert held["failed_questions"] == 0
+
+
+def test_annotate_preserves_the_good_answers_and_marks_the_failed_one():
+    """The stand-in's one synthesized partial failure (0054): the reply
+    answers one question and omits the last in name order, so its field
+    carries the ruled marker in this host's spelling (a dict), never
+    `None`, while the good fields answer as usual."""
+    rows = tt.annotate(
+        _partial_set(), ["order 4471: charged twice, please refund"]
+    )
+    assert rows[0] == {
+        "refund": True,
+        "topic": {
+            "failed": {"kind": "backend", "cause": "missing_answer"}
+        },
+    }
+
+
+def test_annotate_answers_everything_when_nothing_failed():
+    rows = tt.annotate(
+        _partial_set(), ["I want a refund for order 4471"]
+    )
+    assert rows[0] == {"refund": True, "topic": True}
+    assert all(
+        not (isinstance(value, dict) and "failed" in value)
+        for value in rows[0].values()
+    )
 
 
 def test_usage_counts_sends():
