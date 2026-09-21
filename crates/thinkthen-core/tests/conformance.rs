@@ -1,5 +1,10 @@
 //! The shared compatibility cases, checked through the production pure core.
 
+#![allow(
+    clippy::disallowed_types,
+    reason = "fixture-only structural comparisons must ignore JSON formatting"
+)]
+
 #[path = "support/conformance.rs"]
 mod conformance_support;
 
@@ -174,8 +179,11 @@ fn expected<'a>(
         .ok_or_else(|| format!("exchange {exchange} has no expected answer `{name}`"))
 }
 
-fn same_json(one: &str, other: &str) -> bool {
-    conformance_support::compact(one) == conformance_support::compact(other)
+fn same_json(one: &str, other: &str) -> Result<bool, String> {
+    let one: serde_json::Value = serde_json::from_str(one).map_err(|error| error.to_string())?;
+    let other: serde_json::Value =
+        serde_json::from_str(other).map_err(|error| error.to_string())?;
+    Ok(one == other)
 }
 
 fn validate_exchange(
@@ -221,13 +229,13 @@ fn validate_exchange(
         if !same_json(
             &serde_json::to_string(&value).map_err(|error| error.to_string())?,
             held.bare.get(),
-        ) {
+        )? {
             return Err(format!("{} answer `{name}` has wrong bare value", case.id));
         }
         if !same_json(
             &serde_json::to_string(answer).map_err(|error| error.to_string())?,
             held.details.answer.get(),
-        ) {
+        )? {
             return Err(format!("{} answer `{name}` has wrong details", case.id));
         }
         let digest = asked
@@ -363,6 +371,13 @@ fn shared_cases_match_the_production_core() {
 
 #[test]
 fn focused_mutations_are_refused() {
+    let duplicate_backend_fault = CASES
+        .replacen(
+            "\"injection\": \"recording_read_failure\"",
+            "\"injection\": \"response_refusal\"",
+            1,
+        )
+        .replacen("\"kind\": \"local\"", "\"kind\": \"backend\"", 1);
     let mutations = [
         CASES.replacen("\"bare\": true", "\"bare\": false", 1),
         CASES.replacen("{\\\"state\\\":\\\"From:", "{\\\"state\\\":\\\"XFrom:", 1),
@@ -372,8 +387,20 @@ fn focused_mutations_are_refused() {
             1,
         ),
         CASES.replacen("\"verb\": \"decide\"", "\"verb\": \"guess\"", 1),
-        CASES.replacen("    \"deadline\",\n    \"defect\"", "    \"deadline\"", 1),
+        duplicate_backend_fault,
         CASES.replacen('{', "{\"authorization\":\"secret\",", 1),
+        CASES.replacen('{', "{\"api_key\":\"secret\",", 1),
+        CASES.replacen("\"kind\": \"filter\"", "\"kind\": \"single\"", 1),
+        CASES.replacen(
+            "\"operation\": {\n            \"indexes\"",
+            "\"ignored\": {\n            \"indexes\"",
+            1,
+        ),
+        CASES.replacen(
+            "\"kind\": \"single\",\n          \"answers\"",
+            "\"kind\": \"single\",\n          \"operation\": {},\n          \"answers\"",
+            1,
+        ),
         CASES.replacen(
             "\"refund\": {\n            \"decide\":",
             "\"refund\": {\n            \"choose\":",
@@ -397,8 +424,8 @@ impl conformance_support::Provenance {
                 }
                 let recorded: conformance_support::Recording =
                     serde_json::from_str(CAPTURED_REFUND).map_err(|error| error.to_string())?;
-                if !same_json(recorded.request.get(), &exchange.request)
-                    || !same_json(recorded.response.get(), exchange.response.get())
+                if !same_json(recorded.request.get(), &exchange.request)?
+                    || !same_json(recorded.response.get(), exchange.response.get())?
                 {
                     return Err("captured exchange differs from its recording".to_owned());
                 }

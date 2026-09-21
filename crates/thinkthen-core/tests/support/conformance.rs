@@ -45,16 +45,10 @@ pub(crate) struct Case {
 
 impl Case {
     pub(crate) fn validate_shape(&self) -> Result<(), String> {
-        if self.expect.error.is_some() {
-            let injection = self
-                .operation
-                .as_ref()
-                .ok_or_else(|| format!("{} has no injection", self.id))?;
-            if !self.exchanges.is_empty() || injection.injection.is_empty() {
-                return Err(format!("{} is not a schema-only fault", self.id));
-            }
-        } else if self.exchanges.is_empty() {
-            return Err(format!("{} has no successful exchange", self.id));
+        match (&self.expect.success, &self.expect.error) {
+            (Some(success), None) => self.validate_success(success)?,
+            (None, Some(_)) => self.validate_fault()?,
+            _ => return Err(format!("{} has more or less than one outcome", self.id)),
         }
         if self.verb == "annotate" {
             if self.question_set.is_none() || self.question.is_some() {
@@ -62,6 +56,38 @@ impl Case {
             }
         } else if self.question.is_none() || self.question_set.is_some() {
             return Err(format!("{} has the wrong question shape", self.id));
+        }
+        Ok(())
+    }
+
+    fn validate_success(&self, success: &Success) -> Result<(), String> {
+        if self.exchanges.is_empty() {
+            return Err(format!("{} has no successful exchange", self.id));
+        }
+        let expected = match self.verb.as_str() {
+            "filter" => "filter",
+            "rank" => "rank",
+            "find" => "find",
+            "annotate" => "annotate",
+            _ => "single",
+        };
+        if success.kind != expected {
+            return Err(format!("{} has success kind `{}`", self.id, success.kind));
+        }
+        let takes_operation = matches!(self.verb.as_str(), "filter" | "rank" | "find");
+        if success.operation.is_some() != takes_operation {
+            return Err(format!("{} has the wrong operation shape", self.id));
+        }
+        Ok(())
+    }
+
+    fn validate_fault(&self) -> Result<(), String> {
+        let injection = self
+            .operation
+            .as_ref()
+            .ok_or_else(|| format!("{} has no injection", self.id))?;
+        if !self.exchanges.is_empty() || injection.injection.is_empty() {
+            return Err(format!("{} is not a schema-only fault", self.id));
         }
         Ok(())
     }
@@ -100,6 +126,7 @@ pub(crate) struct ExpectedError {
 
 #[derive(Deserialize)]
 pub(crate) struct Success {
+    pub(crate) kind: String,
     pub(crate) answers: Vec<ExpectedAnswer>,
     pub(crate) operation: Option<Box<RawValue>>,
 }
@@ -234,38 +261,30 @@ pub(crate) fn find(raw: &RawValue, found: &FindAnswer, answer: &Answer) -> Resul
         .ok_or_else(|| "find selection differs".to_owned())
 }
 
-pub(crate) fn compact(text: &str) -> String {
-    let mut in_string = false;
-    let mut escaped = false;
-    text.chars()
-        .filter(|character| {
-            if in_string {
-                if escaped {
-                    escaped = false;
-                } else if *character == '\\' {
-                    escaped = true;
-                } else if *character == '"' {
-                    in_string = false;
-                }
-                true
-            } else if *character == '"' {
-                in_string = true;
-                true
-            } else {
-                !character.is_whitespace()
-            }
-        })
-        .collect()
-}
-
-const PRIVATE_KEYS: [&str; 6] = [
+const PRIVATE_KEYS: [&str; 13] = [
+    "accesstoken",
+    "apikey",
+    "apitoken",
+    "authtoken",
     "authorization",
+    "bearertoken",
+    "clientsecret",
     "credential",
     "credentials",
     "header",
     "headers",
-    "thinkthen_api_key",
+    "thinkthenapikey",
+    "token",
 ];
+
+fn private_key(key: &str) -> bool {
+    let normalized = key
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .flat_map(char::to_lowercase)
+        .collect::<String>();
+    PRIVATE_KEYS.contains(&normalized.as_str())
+}
 
 pub(crate) fn privacy(text: &str) -> Result<(), String> {
     let mut decoder = serde_json::Deserializer::from_str(text);
@@ -289,7 +308,7 @@ impl<'de> Visitor<'de> for Keys {
     }
     fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<(), M::Error> {
         while let Some(key) = map.next_key::<String>()? {
-            if PRIVATE_KEYS.contains(&key.to_ascii_lowercase().as_str()) {
+            if private_key(&key) {
                 return Err(serde::de::Error::custom(
                     "a credential or header field is forbidden",
                 ));
