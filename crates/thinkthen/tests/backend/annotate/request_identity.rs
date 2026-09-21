@@ -1,7 +1,7 @@
 use super::scheduling::{folder, grouped, grouped_input, yes};
 use super::set;
 use crate::harness::{Canned, Listener, spawn};
-use thinkthen_core::{Url, recording::Exchange as Recorded};
+use crate::support::digest;
 
 #[test]
 fn detailed_requests_follow_group_order_when_groups_finish_in_reverse() {
@@ -35,17 +35,13 @@ fn detailed_requests_follow_group_order_when_groups_finish_in_reverse() {
 
     assert_eq!(output.status.code(), Some(0));
     let row = String::from_utf8_lossy(&output.stdout);
-    let url = Url::new(listener.url()).expect("the listener URL is valid");
     let requests = listener.requests();
     let digest_for = |group: &str| {
         let request = requests
             .iter()
             .find(|request| String::from_utf8_lossy(&request.body).contains(group))
             .expect("the group was requested");
-        Recorded::new(&url, &request.body)
-            .digest()
-            .as_str()
-            .to_owned()
+        digest(listener.url(), &request.body)
     };
     let ordered = format!(
         r#""requests":["{}","{}"]"#,
@@ -90,9 +86,8 @@ fn equal_logical_group_requests_keep_both_positions() {
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request = requests.first().expect("one request").body.clone();
-    let url = Url::new(listener.url()).expect("the listener URL is valid");
-    let digest = Recorded::new(&url, &request).digest();
-    let duplicated = format!(r#""requests":["{0}","{0}"]"#, digest.as_str());
+    let digest = digest(listener.url(), &request);
+    let duplicated = format!(r#""requests":["{0}","{0}"]"#, digest);
     let row = String::from_utf8_lossy(&output.stdout);
     assert!(row.contains(&duplicated), "{row}");
 }

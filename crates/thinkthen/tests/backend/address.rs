@@ -5,9 +5,7 @@ use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::recordings::{folder, only_entry};
-use thinkthen_core::adapters::built_in;
-use thinkthen_core::recording::Exchange;
-use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url};
+use crate::support::{digest, encoded_decide};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -309,19 +307,8 @@ fn dns_host_case_spellings_share_one_recording_identity() {
         written.contains(&format!(r#""url": "{canonical}""#)),
         "{written}"
     );
-    let plan = Plan::new(
-        Evidence::new("Refund me please.").expect("evidence is not blank"),
-        ModelName::new("local-1").expect("model is not blank"),
-        vec![Question::Decide {
-            text: QuestionText::new("asks for a refund").expect("question is not blank"),
-            yes: None,
-            no: None,
-        }],
-    )
-    .expect("one question is a plan");
-    let request = built_in::encode(&plan).expect("a plan is writable");
-    let url = Url::new(&canonical).expect("the canonical URL is not blank");
-    assert_eq!(name, Exchange::new(&url, &request).digest().file_name());
+    let request = encoded_decide("Refund me please.", "local-1", "asks for a refund");
+    assert_eq!(name, format!("{}.json", digest(&canonical, &request)));
 
     let replayed = decide(
         &[

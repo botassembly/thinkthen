@@ -174,7 +174,7 @@ fn committed_reach_recordings_replay_the_selected_line_and_none() {
 
 #[test]
 fn aggregate_byte_limit_refuses_one_byte_over_before_a_key() {
-    let half = thinkthen_core::MAX_RECORD_BYTES / 2;
+    let half = 16 * 1024 * 1024 / 2;
     let mut input = vec![b'a'; half - 1];
     input.push(b'\n');
     input.extend(std::iter::repeat_n(b'b', half));
@@ -189,7 +189,7 @@ fn aggregate_byte_limit_refuses_one_byte_over_before_a_key() {
 
 #[test]
 fn aggregate_byte_limit_accepts_the_exact_boundary() {
-    let half = thinkthen_core::MAX_RECORD_BYTES / 2;
+    let half = 16 * 1024 * 1024 / 2;
     let mut input = vec![b'a'; half - 1];
     input.push(b'\n');
     input.extend(std::iter::repeat_n(b'b', half));
@@ -309,7 +309,7 @@ fn recorder_option_conflict_is_validated_before_empty_input_returns() {
 
 #[test]
 fn one_oversized_unit_gets_the_safe_aggregate_diagnostic() {
-    let input = vec![b'x'; thinkthen_core::MAX_RECORD_BYTES + 1];
+    let input = vec![b'x'; 16 * 1024 * 1024 + 1];
     let output = run(&["find", "Which?"], &input).expect("binary runs");
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(

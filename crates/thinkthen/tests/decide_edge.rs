@@ -3,7 +3,7 @@
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
-use thinkthen_core::adapters::built_in::DEFAULT_MODEL;
+const DEFAULT_MODEL: &str = "jev-latest";
 
 /// A port nothing listens on, so a connection would be refused at once.
 const CLOSED: &str = "http://127.0.0.1:1/v1";

@@ -1,0 +1,83 @@
+//! Structured failures produced below the command boundary.
+
+use std::io;
+
+use crate::core::adapters::built_in::DecodeError;
+
+/// The stable class a host-facing error will use in a later ticket.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[allow(
+    dead_code,
+    reason = "the private bridge fixes all six accepted kinds before public engine errors land"
+)]
+pub(crate) enum Kind {
+    Usage,
+    Local,
+    Backend,
+    Cancelled,
+    Deadline,
+    Defect,
+}
+
+/// One exact engine failure. The command maps it to its existing diagnostics.
+#[derive(Debug)]
+#[allow(
+    dead_code,
+    reason = "deterministic conformance injections exercise kinds absent from the current command"
+)]
+pub(crate) enum Error {
+    Transport(String),
+    Status(u16),
+    Reply(DecodeError),
+    ReplayMiss(String),
+    Entry(String, String),
+    RecordingConflict(String),
+    Recording(io::Error),
+    Defect(&'static str),
+    Usage(&'static str),
+    Cancelled,
+    Deadline,
+}
+
+#[allow(
+    dead_code,
+    reason = "the command runner reads kinds while normal command paths preserve exact causes"
+)]
+impl Error {
+    pub(crate) const fn kind(&self) -> Kind {
+        match self {
+            Self::Transport(_) | Self::Status(_) | Self::Reply(_) => Kind::Backend,
+            Self::ReplayMiss(_)
+            | Self::Entry(_, _)
+            | Self::RecordingConflict(_)
+            | Self::Recording(_) => Kind::Local,
+            Self::Defect(_) => Kind::Defect,
+            Self::Usage(_) => Kind::Usage,
+            Self::Cancelled => Kind::Cancelled,
+            Self::Deadline => Kind::Deadline,
+        }
+    }
+}
+
+#[allow(
+    dead_code,
+    reason = "the offline command runner compares the accepted kind spellings"
+)]
+impl Kind {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Usage => "usage",
+            Self::Local => "local",
+            Self::Backend => "backend",
+            Self::Cancelled => "cancelled",
+            Self::Deadline => "deadline",
+            Self::Defect => "defect",
+        }
+    }
+}
+
+impl From<DecodeError> for Error {
+    fn from(error: DecodeError) -> Self {
+        Self::Reply(error)
+    }
+}

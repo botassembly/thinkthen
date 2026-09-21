@@ -8,7 +8,7 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
 
-use thinkthen_core::adapters::built_in::ENDPOINT_PATH;
+use crate::support::ENDPOINT_PATH;
 
 /// One response the listener will serve, in the order the script gives.
 pub(crate) struct Canned {

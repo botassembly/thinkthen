@@ -13,10 +13,11 @@ Written 2026-09-18 from a survey of the ten Rust repositories in Ian's workspace
 
 ## Layout
 
-- One Cargo workspace, resolver 3, edition 2024, an exact `rust-version`. The lint table sits at the workspace root and every crate inherits it. Enforced by: `lint` verifies that each crate sets `lints.workspace = true`.
-- Two crates, split on a real dependency direction.
-  - `crates/thinkthen-core` is a pure library. It holds the question types, the wire format, the plan, the acceptance policy, the framing parsers, and the question-file grammar. It touches no file, no environment variable, no socket, no clock, and no process. Enforced by: a `clippy.toml` in that crate bans those methods and types, and the crate root forbids the lints. Clippy reads the first `clippy.toml` it finds walking up from a crate, so each crate carries its own file.
-  - `crates/thinkthen` is the binary. It owns arguments, files, the environment, HTTP, time, and exit codes. It parses at the edge and hands typed values inward.
+- One Cargo workspace, resolver 3, edition 2024, an exact `rust-version`, and one package named `thinkthen`. The package has a library and a binary. The binary requires the default `cli` feature. Enforced by: `policy.py` checks the workspace, targets, and features.
+- Three private modules follow one dependency direction.
+  - `core` holds the question types, wire format, plan, acceptance policy, framing parsers, and question-file grammar. It touches no file, environment variable, socket, clock, or process. Its module attributes forbid the accepted lint groups. `policy.py` scans every core source, refuses references to `engine`, `cli`, and outer-only dependencies, and plants one failure of each kind in its self-check.
+  - `engine` owns prepared request identity, transport, retries, recording, cache locks, both scheduling state machines, bounded work queues, stop metadata, and scoped request workers. It accepts typed framed-input events and returns typed ordered results and structured private errors. Its worker scope joins every request worker before returning.
+  - `cli` owns arguments, credential and environment lookup, input framing, CSV and TSV, the detached input reader, output, diagnostics, `Failure`, and exit codes. It maps private engine errors to the existing command contract.
 - `rust-toolchain.toml` pins one exact release with the `minimal` profile and exactly `clippy` and `rustfmt`. Enforced by: `lint` parses the file.
 - `rustfmt.toml` holds `style_edition = "2024"` and nothing else.
 
@@ -30,7 +31,7 @@ Clippy settings: functions up to 90 lines, 6 arguments, cognitive complexity 20,
 
 The binary writes to standard output through one locked writer passed down as a value. It never calls the print macros.
 
-Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- -D warnings`, and `lint` compares the tables in `Cargo.toml` and `clippy.toml` against the accepted copies so nobody weakens them quietly.
+Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- -D warnings`, and `lint` compares the tables in `Cargo.toml` and `clippy.toml` against the accepted copies so nobody weakens them quietly. The package allows the disallowed-path lint groups at its root and the private core forbids them, because Clippy reads one configuration for the whole package. `policy.py` also checks every core source and dependency root.
 
 ## Size
 
@@ -40,13 +41,13 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 
 ## Errors and types
 
-- The core crate defines its own error enums with `thiserror`. No public signature returns a string error or a boxed unknown error. The binary adds context at the top and maps each error to one exit code in one place.
+- The core module defines its own error enums with `thiserror`. No public signature returns a string error or a boxed unknown error. The private engine error carries one of six accepted kinds with its structured cause. The command adds context at the top and maps each error to one exit code in one place.
 - A fixed set of choices is an enum. A validated value gets its own type: a probability, a threshold, a JSON Pointer, an option name, a model name. A constructor that can fail returns a result.
-- No dynamic JSON inside the core. Wire bodies decode into typed structs. Enforced by: the core's `clippy.toml` bans `serde_json::Value`, `serde_json::Map`, the `Value` access methods, `to_value`, `from_value`, and the `json!` macro. Ticket 0001 planted each kind and watched `lint` refuse it.
+- No dynamic JSON inside the core. Wire bodies decode into typed structs. Enforced by: the core module attributes keep the lint group forbidden, and `policy.py` holds the accepted purity table. Ticket 0001 planted each dynamic JSON kind and watched `lint` refuse it.
 
 ## Dependencies
 
-- Few, and each one argued. The starting set: `serde` and `serde_json` for the wire format, `thiserror` for errors, `clap` with derive for the command line, `ureq` for blocking HTTP, `csv-core` for bounded table grammar at the binary edge. Parallel requests use threads and a bounded channel. No async runtime enters until a measurement asks for one.
+- Few, and each one argued. `serde`, `serde_json`, `sha2`, `thiserror`, and the engine's `ureq` form the library-only graph. The default `cli` feature adds optional `clap` and `csv-core`. Parallel requests use threads and bounded channels. No async runtime enters until a measurement asks for one. The package rung builds and inspects the default-features-off graph.
 - Every dependency resolves from crates.io with a checksum, under MIT, Apache-2.0, Unicode-3.0, or Unlicense. HTTPS forced three more: ISC, BSD-3-Clause, and CDLA-Permissive-2.0, each tied in `policy.py` to the crates that need it. No TLS stack exists in Rust without them. Enforced by: `lint` reads `cargo metadata` and `Cargo.lock`, and `cargo deny` reads the same seven licenses from `deny.toml` and fails on an advisory or on a license nothing in the tree offers.
 - Adding a dependency takes a second reviewing agent and a line in the commit message saying why the standard library would not do.
 
@@ -56,7 +57,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 - Unit tests sit beside pure code in the core and are table-driven.
 - Integration tests under `crates/thinkthen/tests/` run the compiled binary and see only arguments, standard input, standard output, standard error, and the exit code.
 - No gate touches the network. Tests replay recorded responses from a fixture directory. One test helper serves canned responses from a loopback listener to prove the request bytes. It uses the standard library only.
-- Property tests cover every parser and round trip: JSON Pointer, the question set, record framing, the wire format. Property tests also cover any total function over a numeric range, such as the threshold rule. `proptest` is a development dependency of the core.
+- Property tests cover every parser and round trip: JSON Pointer, the question set, record framing, the wire format. Property tests also cover any total function over a numeric range, such as the threshold rule. `proptest` is a development dependency of the package and exercises core parsers.
 - `spec/*.md` files are executable examples of the command line, run by `mustmatch`. They are the top rung, and they double as the user documentation.
 - The binary reads one hidden, test-only variable, `THINKTHEN_TEST_RETRY_WAIT_MS`, so a retry test never sleeps for real seconds. Help never shows it.
 - Live calls to a paid backend sit outside the ladder in `sdlc/scripts/live`. They run by hand, under a token cap, with Ian's authorization.
@@ -69,7 +70,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 | Rung | Script | What it runs |
 | --- | --- | --- |
 | 0 | `sdlc/scripts/install` | Verifies the pinned toolchain and the tools the other rungs need |
-| 1 | `sdlc/scripts/lint` | Policy checks, the ratchet, the file ceiling, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
+| 1 | `sdlc/scripts/lint` | Policy and package checks, the ratchet, the file ceiling, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
 | 2 | `sdlc/scripts/test` | `cargo test --locked --workspace --all-targets --all-features` |
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
 

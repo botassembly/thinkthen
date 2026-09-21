@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock crates conformance sdlc/scripts sdlc/planning sdlc/
 
 # 0055: Fold to one crate through the private engine
 
-Status: proposed
+Status: landed
 
 ## Outcome
 
@@ -67,3 +67,7 @@ Re-score if the move requires a public type, a changed command contract, a new d
 ## Review
 
 Independent design review rejected the first proposal because it omitted the shared conformance runner assigned to the merge by ticket 0052 and ADR 0017. The repair adds every successful shared case plus deterministic `local`, `deadline`, and `defect` injection through the private engine boundary. The same reviewer accepted the corrected design.
+
+Independent code review rejected the first implementation because the command still owned both scheduling state machines, the core policy had lost accepted bans, successful conformance cases did not check their answers, the worker-lifetime test bypassed the real scheduler, and two behavioral doctests had become privacy checks. The repair moved scheduling state into the engine, restored and mechanically checked every core ban, checked complete successful results and all six fault kinds through the engine, exercised the production scheduler, and restored the two behavior assertions without exposing a normal public surface.
+
+The reviewer then found import spellings that could evade the source policy. The final checker tokenizes Rust, skips comments and literals, understands use trees and raw identifiers, and rejects crate-root, ancestor, dependency, and wildcard paths that cross the core boundary. Its self-test plants each rejected form and allowed control. The same reviewer accepted the final repair and confirmed the earlier findings remained closed.

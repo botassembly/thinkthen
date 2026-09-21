@@ -28,6 +28,7 @@ mod scheduling;
 mod secrecy;
 mod secrecy_find;
 mod streaming;
+mod support;
 mod table;
 mod tag;
 mod terminal;

@@ -383,7 +383,7 @@ fn evidence_of(named: &str) -> Vec<u8> {
         "" => EVIDENCE.as_bytes().to_vec(),
         "{huge}" => {
             let mut bytes = EVIDENCE.as_bytes().to_vec();
-            bytes.resize(thinkthen_core::MAX_RECORD_BYTES + 1, b'x');
+            bytes.resize(crate::support::MAX_RECORD_BYTES + 1, b'x');
             bytes
         }
         "{binary}" => [EVIDENCE.as_bytes(), &[0xff, 0xfe]].concat(),

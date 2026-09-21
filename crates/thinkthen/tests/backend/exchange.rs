@@ -5,9 +5,7 @@ use std::process::Output;
 use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn};
-use thinkthen_core::adapters::built_in;
-use thinkthen_core::recording::Exchange as Recorded;
-use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url};
+use crate::support::{digest, encoded_decide};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -22,17 +20,7 @@ fn answered(probability: &str) -> String {
 
 /// The bytes the adapter writes for the plan the command was given.
 fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
-    let plan = Plan::new(
-        Evidence::new(evidence).ok()?,
-        ModelName::new("local-1").ok()?,
-        vec![Question::Decide {
-            text: QuestionText::new(question).ok()?,
-            yes: None,
-            no: None,
-        }],
-    )
-    .ok()?;
-    built_in::encode(&plan).ok()
+    Some(encoded_decide(evidence, "local-1", question))
 }
 
 /// The key a case sends when the case is not about the key itself.
@@ -153,8 +141,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     let viewed = detailed.requests();
     let viewed = viewed.first().expect("one request reached the listener");
     assert_eq!(sent.body, viewed.body, "the view changes no request byte");
-    let url = Url::new(detailed.url()).expect("the listener URL is valid");
-    let request = Recorded::new(&url, &viewed.body).digest();
+    let request = digest(detailed.url(), &viewed.body);
 
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
@@ -171,7 +158,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 "\n",
             ),
             url = detailed.url(),
-            request = request.as_str(),
+            request = request,
         )
     );
     assert_eq!(output.status.code(), Some(0));

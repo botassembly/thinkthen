@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/thinkthen", "crates/thinkthen-core"]
+members = ["crates/thinkthen"]
 resolver = "3"
 
 [workspace.package]
@@ -7,15 +7,15 @@ edition = "2024"
 rust-version = "1.93.1"
 
 [profile.release]
-# An overflow in release is a wrong number rather than a stop, and a wrong
-# number in a judgment is worse than a stop. A panic in a tool this small has
-# nothing to unwind to, so it ends the process.
+# A library must unwind through a host. The command's release build selects
+# abort through its dedicated build path.
 overflow-checks = true
-panic = "abort"
+panic = "unwind"
 
 [workspace.lints.rust]
 missing_debug_implementations = "forbid"
 missing_docs = "warn"
+unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
 unreachable_pub = "forbid"
 unsafe_code = "forbid"
 
@@ -23,6 +23,9 @@ unsafe_code = "forbid"
 allow_attributes_without_reason = "deny"
 cognitive_complexity = "warn"
 dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
 excessive_nesting = "warn"
 expect_used = "deny"
 indexing_slicing = "deny"

@@ -159,7 +159,7 @@ fn every_preflight_refusal_is_keyed_and_opens_no_connection() {
         .map(|place| format!("unit {place}\n"))
         .collect::<String>()
         .into_bytes();
-    let oversized = vec![b'x'; thinkthen_core::MAX_RECORD_BYTES + 1];
+    let oversized = vec![b'x'; crate::support::MAX_RECORD_BYTES + 1];
     let cases: Vec<Preflight> = vec![
         (vec![], b"one\n".to_vec(), 2),
         (vec![], many, 2),

@@ -1,6 +1,6 @@
 # Agent instructions for thinkthen
 
-The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read `README.md` first, then `specification/README.md`, then `sdlc/planning/rust-standards.md`. The specification is the contract, and code follows it.
+The package and binary are both `thinkthen`. Read `README.md` first, then `specification/README.md`, then `sdlc/planning/rust-standards.md`. The specification is the contract, and code follows it.
 
 ## Building
 
@@ -15,7 +15,7 @@ The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read
 
 ## The pure core
 
-`thinkthen-core` touches no file, no environment variable, no socket, no clock, and no process. Its `clippy.toml` bans them. The binary parses at the edge and hands typed values inward. Do not weaken either lint table. `lint` compares them against the accepted copies.
+`crates/thinkthen/src/core` touches no file, no environment variable, no socket, no clock, and no process. Module attributes and `policy.py` enforce the bans and the inward dependency direction. The command parses at the edge and hands typed values inward. Do not weaken the lint or policy tables. `lint` compares them against the accepted copies and runs planted policy failures.
 
 ## The tool judges and never acts
 
@@ -48,7 +48,7 @@ This repository will go public. Never name a private project or a customer. Desc
 
 ## Where things are
 
-`crates/thinkthen-core` and `crates/thinkthen` hold the code. `specification/` is the contract. `spec/` holds executable pages that `mustmatch` runs. `demos/` holds the how-tos, and each green one is also a test held to ADR 0016. `transforms/` holds `jq` files over saved rows. `probes/` holds the live measurements behind a ruling. `sdlc/` is the record: `planning/adr/` for decisions, `tickets/` for authorized work, `records/` for what landed and its review, `issues/` for problems found, and `scripts/` for the gate ladder. `README.md` holds the names: question file, question set, transform, how-to, pipeline.
+`crates/thinkthen` holds the `core`, `engine`, and `cli` modules and the binary. `specification/` is the contract. `spec/` holds executable pages that `mustmatch` runs. `demos/` holds the how-tos, and each green one is also a test held to ADR 0016. `transforms/` holds `jq` files over saved rows. `probes/` holds the live measurements behind a ruling. `sdlc/` is the record: `planning/adr/` for decisions, `tickets/` for authorized work, `records/` for what landed and its review, `issues/` for problems found, and `scripts/` for the gate ladder. `README.md` holds the names: question file, question set, transform, how-to, pipeline.
 
 ## Where decisions go
 

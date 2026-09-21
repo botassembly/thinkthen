@@ -6,9 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
-use thinkthen_core::adapters::built_in;
-use thinkthen_core::recording::{Entry, Exchange};
-use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url};
+use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -75,34 +73,9 @@ fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
 
 /// Write the entry the default address would record for this response.
 fn plant(folder: &Path, response: &str) -> Option<String> {
-    let plan = Plan::new(
-        Evidence::new(EVIDENCE).ok()?,
-        ModelName::new(built_in::DEFAULT_MODEL).ok()?,
-        vec![Question::Decide {
-            text: QuestionText::new("asks for a refund").ok()?,
-            yes: None,
-            no: None,
-        }],
-    )
-    .ok()?;
-    let request = built_in::encode(&plan).ok()?;
-    // The exchange is built here rather than pinned, so it takes the address
-    // from the adapter that owns it.
-    let url = Url::new(format!(
-        "{}/{}",
-        built_in::DEFAULT_BASE,
-        built_in::ENDPOINT_PATH
-    ))
-    .ok()?;
-    let exchange = Exchange::new(&url, &request);
-    let name = exchange.digest().file_name();
-    let written = Entry::of(&exchange, response.as_bytes())
-        .ok()?
-        .written()
-        .ok()?;
-    fs::create_dir_all(folder).ok()?;
-    fs::write(folder.join(&name), written).ok()?;
-    Some(name)
+    let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "asks for a refund");
+    let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
+    plant_recording(folder, &url, &request, response)
 }
 
 /// The one entry a folder holds, as the file name and the text inside it.

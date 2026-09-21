@@ -542,20 +542,12 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "csv-core",
- "serde_json",
- "thinkthen-core",
- "ureq",
-]
-
-[[package]]
-name = "thinkthen-core"
-version = "0.0.1"
-dependencies = [
  "proptest",
  "serde",
  "serde_json",
  "sha2",
  "thiserror",
+ "ureq",
 ]
 
 [[package]]

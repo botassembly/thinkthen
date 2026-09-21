@@ -3,7 +3,7 @@
 use std::io;
 use std::process::Output;
 
-use thinkthen_core::MAX_RECORD_BYTES;
+use crate::support::MAX_RECORD_BYTES;
 
 use crate::harness::{Canned, Listener, spawn};
 

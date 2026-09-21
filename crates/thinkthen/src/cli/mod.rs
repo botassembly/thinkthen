@@ -1,0 +1,61 @@
+//! Command parsing, input framing, output, diagnostics, and exit codes.
+
+pub(crate) mod annotate;
+pub(crate) mod annotate_schedule;
+pub(crate) mod args;
+pub(crate) mod asked;
+pub(crate) mod asking;
+pub(crate) mod edge;
+pub(crate) mod failure;
+pub(crate) mod find;
+pub(crate) mod judge;
+pub(crate) mod normalize;
+pub(crate) mod schedule;
+pub(crate) mod table;
+
+#[cfg(test)]
+mod conformance_tests;
+
+use std::io::{self, Write};
+use std::process::ExitCode;
+
+use crate::cli::args::{Cli, Command};
+use crate::cli::edge::Environment;
+use crate::cli::failure::Failure;
+use crate::core::version_line;
+use clap::Parser as _;
+
+/// Parse the process inputs, run one command, and report its exit code.
+#[must_use]
+pub fn entry() -> ExitCode {
+    let cli = Cli::parse_from(normalize::arguments(std::env::args_os()));
+    let stdout = io::stdout();
+    let stderr = io::stderr();
+    match run(&cli, stdout.lock()) {
+        Ok(code) => code,
+        Err(failure) => failure::report(&failure, stderr.lock()),
+    }
+}
+
+fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
+    if cli.version {
+        edge::write_line(writer, &version_line(env!("CARGO_PKG_VERSION")))?;
+        return Ok(ExitCode::SUCCESS);
+    }
+    let environment = Environment::read();
+    if let Some(command) = cli.command.as_ref() {
+        edge::waiting(command.input(), io::stderr().lock());
+    }
+    let input = io::stdin();
+    match &cli.command {
+        Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),
+        Some(Command::Choose(arguments)) => judge::choose(arguments, &environment, input, writer),
+        Some(Command::Tag(arguments)) => judge::tag(arguments, &environment, input, writer),
+        Some(Command::Score(arguments)) => judge::score(arguments, &environment, input, writer),
+        Some(Command::Filter(arguments)) => judge::filter(arguments, &environment, input, writer),
+        Some(Command::Rank(arguments)) => judge::rank(arguments, &environment, input, writer),
+        Some(Command::Find(arguments)) => find::run(arguments, &environment, input, writer),
+        Some(Command::Annotate(arguments)) => annotate::run(arguments, &environment, input, writer),
+        None => Err(Failure::Defect("no command and no version was parsed")),
+    }
+}

@@ -213,12 +213,12 @@ fn compiled_table_failures_pin_utf8_control_and_size() {
     .expect("control case runs");
 
     let mut header = b"marker-hostile".to_vec();
-    header.resize(thinkthen_core::MAX_RECORD_BYTES + 1, b'h');
+    header.resize(crate::support::MAX_RECORD_BYTES + 1, b'h');
     refused_table(&header, 2, "thinkthen: the CSV header is over 16 MiB\n")
         .expect("header size case runs");
 
     let mut row = b"body\nmarker-hostile".to_vec();
-    row.resize(b"body\n".len() + thinkthen_core::MAX_RECORD_BYTES + 1, b'x');
+    row.resize(b"body\n".len() + crate::support::MAX_RECORD_BYTES + 1, b'x');
     refused_table(
         &row,
         2,

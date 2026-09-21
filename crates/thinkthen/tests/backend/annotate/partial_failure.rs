@@ -5,8 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
-use thinkthen_core::Url;
-use thinkthen_core::recording::Exchange as Recorded;
+use crate::support::digest;
 
 fn questions(name: &str, body: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate-partial");
@@ -70,8 +69,7 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
 
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
-    let url = Url::new(listener.url()).map_err(|error| io::Error::other(error.to_string()))?;
-    let request = Recorded::new(&url, &requests[0].body).digest();
+    let request = digest(listener.url(), &requests[0].body);
     let request = request.as_str();
     assert_eq!(row["meta"]["requests"], serde_json::json!([request]));
     for name in ["good", "failed", "not_sure"] {
