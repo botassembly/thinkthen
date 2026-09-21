@@ -87,3 +87,16 @@ A long-lived host may still want answers in memory. A small map in front of the 
 ## What Ian can overturn
 
 All of it. The wider choice is a disk cache on by default in the databases alone, under a folder the extension documents. It saves a second bill for a user who never read the page, and it breaks the three points above.
+
+## The fourth arm's answers, 2026-09-21
+
+Foyer 0.22.6 ran at both payload sizes beside the other three arms (256 MiB memory tier, `FifoPicker`, a one-worker runtime; every number in `experiments/211-thinkthen-blocking-engine/cache/NOTES.md`). What it wins, measured: fills ten times faster (2.8 s against 30.2 s for a million 457-byte entries), a warm read at 0.31 µs from the memory tier, a hard byte capacity whose FIFO eviction lost no entry at the cap, and a million-entry delete in half a second. What it costs: no blocking API (build, recovery, every cold read, flush, and close are async), two resident threads when quiet and bursts of 14–129 during recovery and flush where the folders hold zero, best-effort writes that silently dropped 59% of an unpaced fill until the submit queue was paced, 428–439 ms of index recovery on every open, a cold read at 22.5 µs against the folder's 5.7 µs, and a fork smoke in which the child hangs on any read the memory tier cannot answer — a written-but-never-read key is a phantom, and the write queue's executor thread did not survive the fork.
+
+The four questions above, answered in order:
+
+1. **Many processes:** foyer expects one owning process; its region files carry no cross-process coordination. The plain-files store keeps the hard-link-and-per-digest-lock answer.
+2. **The cost of opening:** 428–439 ms of recovery on every open, against a whole `--replay` run at about 1.5 ms today. Disqualifying for the command's shape.
+3. **One format or two:** the regions are opaque. Recordings would stay plain files while the cache becomes unlistable, and pruning by the model that answered would need an index nobody owns. Two formats, as feared.
+4. **The dependency:** an async runtime with resident threads inside a tree that holds zero threads between calls, plus exposure to the size ratchet and `deny.toml`.
+
+Verdict: the sharded plain-files store stays the default and SQLite stays the fallback; foyer does not ship for this engine. It is the measured candidate if the extensions ever need a store that enforces its own byte budget in-process, and these numbers say what that costs. The memory tier's warm read is available with no dependency: the engine's always-on per-call memory already gives one, and a plain map in front of the files covers a long-lived host.
