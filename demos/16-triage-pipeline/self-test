@@ -105,7 +105,8 @@ if grep -E 'reviewed_action|SUP-1042|Duplicate renewal' "$work/dry-run.jsonl" >/
 fi
 test "$("$HERE/run" --replay fixture)" = "draft=2
 block=1
-review=3"
+review=3
+agreement=6/6"
 
 calls=$(wc -l < "$TRIAGE_CALL_LOG" | tr -d ' ')
 touch "$work/out-parent/existing-file"

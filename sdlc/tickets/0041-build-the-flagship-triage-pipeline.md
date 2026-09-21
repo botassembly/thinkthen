@@ -68,11 +68,11 @@ Re-score if implementation exposes a command change, shared state, or a new publ
 
 The local draft adds six fictional TSV tickets, a three-question set over `/body`, the fail-closed `triage` policy, and a pipeline that reserves a fresh destination and publishes three complete JSONL files on successful return. The policy test first failed because `triage.jq` did not exist, then passed eight routing cases and six safe refusals. The pipeline self-test covers the exact command, a single policy application, all three populated outputs, full rows, reviewed-action agreement, disclosure, destination ownership, and cleanup after handled failures.
 
-The exact midpoint is urgency 1. It routes to `review` with reason `urgent`. The agent chose that inclusive boundary because the middle written level says a delay can cause a concrete problem. Ian can overturn it before the live recording.
+The exact midpoint is urgency 1. It routes to `review` with reason `urgent`. The agent chose that inclusive boundary because the middle written level says a delay can cause a concrete problem. Changing it now requires a new question measurement and new page recordings.
 
 Implementation disproved the first publication assumption. POSIX shell has no portable operation that atomically renames a directory while refusing any existing destination. The accepted correction creates the destination with `mkdir` before judgment, stages files inside it, removes it on handled failure, and defines successful return as publication. Callers must not read the directory while the process runs.
 
-The coordinator alone will invoke `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`. The recording job uses a temporary output directory, cleans it on every exit, and writes only the shared cache. A direct keyless replay runs `triage` with `--replay recording/` and needs no new live reservation.
+The coordinator alone invoked `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh` once. The recording job used a temporary output directory, cleaned it on exit, and wrote only the shared cache. Direct keyless replay runs `triage` with `--replay recording/` and needs no new live reservation.
 
 The one authorized command, `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`, completed once. Six mode-0600 entries use `thinkthen.recording/1`, `jev-1.13.0`, and the System One URL. They report 2,916 input and 468 output tokens. The durable reservation moved the shared ledger from 20,497,918 to 20,502,918 charged tokens. The recording job matched all six `reviewed_action` values, and a direct keyless replay printed two drafts, one block, and three reviews. No credential marker or live output remained.
 

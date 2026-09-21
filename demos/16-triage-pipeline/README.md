@@ -9,7 +9,8 @@ Use this when one record needs several judgments before ordinary policy code can
 ```bash
 ./run --replay recording/ | mustmatch "draft=2
 block=1
-review=3"
+review=3
+agreement=6/6"
 ```
 
 ## Input

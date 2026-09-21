@@ -10,3 +10,7 @@ for action in draft block review; do
 	printf '%s=' "$action"
 	wc -l < "$work/output/$action.jsonl" | tr -d ' '
 done
+total=$(jq -s 'length' "$work/output"/*.jsonl)
+agreement=$(jq -s '[.[] | select(.policy.action == .input.reviewed_action)] | length' \
+	"$work/output"/*.jsonl)
+printf 'agreement=%s/%s\n' "$agreement" "$total"

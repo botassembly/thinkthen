@@ -20,4 +20,4 @@ Commit the reviewed recording before presenting this page as a runnable how-to, 
 
 ## Resolution
 
-Ticket 0041 added the six reviewed recording entries and a page-local runner that owns its temporary output. With the key and base-address variables unset, `PATH=target/debug:$PATH demos/16-triage-pipeline/run --replay demos/16-triage-pipeline/recording` now prints `draft=2`, `block=1`, and `review=3`. The green page's first block runs that same command without visible setup.
+Ticket 0041 added the six reviewed recording entries and a page-local runner that owns its temporary output. With the key and base-address variables unset, `PATH=target/debug:$PATH demos/16-triage-pipeline/run --replay demos/16-triage-pipeline/recording` now prints `draft=2`, `block=1`, `review=3`, and `agreement=6/6`. The agreement is computed from every output row's `policy.action` and `input.reviewed_action`. The green page's first block runs and asserts that same command without visible setup.

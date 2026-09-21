@@ -10,7 +10,7 @@ The draft has six fictional support tickets in TSV, one question set with three 
 
 The public policy vocabulary is fixed by the accepted ticket. Actions are `draft`, `block`, and `review`. Reasons are `unresolved`, `credential_request`, `out_of_scope`, `urgent`, and `routine`. Queues are `billing`, `shipping`, `account`, and `other`. `reviewed_action` is only a person's recorded decision.
 
-The agent set urgency 1, the middle of the three-level scale, as the inclusive `urgent` boundary. The middle level says delay can cause a concrete customer problem. Ian can overturn this before recording.
+The agent set urgency 1, the middle of the three-level scale, as the inclusive `urgent` boundary. The middle level says delay can cause a concrete customer problem. Changing this boundary now requires a new question measurement and new page recordings.
 
 ## Red and green evidence
 
@@ -22,7 +22,7 @@ The agent set urgency 1, the middle of the three-level scale, as the inclusive `
 
 The cold marketing read filed [`2026-09-21-page-16-first-result-is-not-runnable.md`](../issues/2026-09-21-page-16-first-result-is-not-runnable.md). The page-local runner and reviewed recording resolved it. The code reviewer accepted the corrected behavior and tests after the durable prose matched them.
 
-The first code review rejected four findings. Exact answer-name validation, the recording job boundary, and the README order sentence were corrected. The review disproved the first publication assumption: shell `mv` does not portably combine an atomic directory rename with no replacement. The accepted revision reserves the caller's name with `mkdir`, stages inside that owned directory, removes it after handled failures and catchable interruptions, and makes successful return the publication boundary. Two synchronized runs prove that only the reservation winner judges. Separate failures during judgment, validation, and each final file move preserve their status and remove the owned output. The cold-read issue remains expected and closes only after the recording exists.
+The first code review rejected four findings. Exact answer-name validation, the recording job boundary, and the README order sentence were corrected. The review disproved the first publication assumption: shell `mv` does not portably combine an atomic directory rename with no replacement. The accepted revision reserves the caller's name with `mkdir`, stages inside that owned directory, removes it after handled failures and catchable interruptions, and makes successful return the publication boundary. Two synchronized runs prove that only the reservation winner judges. Separate failures during judgment, validation, and each final file move preserve their status and remove the owned output. The recording and page-local runner resolved the cold-read issue.
 
 The cold read found that the first result exposed temporary-directory setup and could not run before the recording existed. The small page-local `run` script now owns and cleans that temporary output, leaving one command in the first block.
 
