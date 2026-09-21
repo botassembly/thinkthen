@@ -25,6 +25,18 @@ The ADR 0017 rewrite waits for these four answers and for nothing else.
 - The error kinds follow the command's classes: usage, backend with the network included, local file or recording, cancelled, defect.
 - Questions use the grammar in `specification/question-file.md`, for `choose` and `score` as well as `decide`.
 
+## Added 2026-09-21, while job 1 runs
+
+Job 1 runs in `experiments/211-thinkthen-blocking-engine/`. Its engine lane reported 9.666 s on the bench, 32 in flight on 33 connections for 100 calls at once, and a forked child that answers. Two finds already belong to the real engine: the connection pool is sized to the width gate, because the default of ten idle connections churned 488 connections where 33 serve, and a wait loop must end after a cancel. Five more checks fit this run, and none widens it past the two hosts:
+
+1. **Fork during a batch, as well as after a call.** A child forked while 32 threads run inherits the gate and the pool in whatever state they held, and none of those threads. The process-ID check must replace that state without taking an inherited lock. Test it on the wire, in Python.
+2. **What the engine holds between calls.** After a batch of 100,000 records: the thread count, the open connections and how long they stay open, and the resident memory against the start. A host that sleeps for an hour then calls again must not meet a dead pooled connection as an error.
+3. **A deadline for one call.** A host that answers a person gives a call five seconds. Show the shape beside the cancel token. `2026-09-21-what-a-tool-search-feature-asks-of-find-as-a-function.md` has the case.
+4. **An error that says whether a second try could help.** The same page. A busy backend and a refused reply are different to a caller with a fallback.
+5. **A million cache entries.** Time to find one entry, time to fill, and disk used, for the flat folder, a folder split by the first two characters of the digest, and one SQLite file. `2026-09-21-the-disk-cache-is-never-on-unless-the-user-names-a-folder.md` has the reasons. This one can follow job 1 and does not hold the ADR.
+
+The ADR 0017 rewrite also reads three pages filed on 2026-09-21: the cache page, the tool-search page, and `2026-09-21-triage-of-the-open-issues-by-layer.md`.
+
 ## Hand off
 
 - **The changes for each surface go to the planning pages.** Each experiment README lists the changes it would make to its `GOALS.md`. Those files are copies of `sdlc/planning/libraries/*.md` and `sdlc/planning/databases/*.md`. Apply the changes to the real pages, one commit for each folder, each change with its evidence. Main is clear of the design holder's edits now.
