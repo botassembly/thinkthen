@@ -43,3 +43,25 @@ No paid call is needed. Every check runs against the stand-in or a recording.
 ## What Ian can overturn
 
 The brief's order and scope.
+
+## Phase A landed, 2026-09-21, on branch `surfaces`
+
+The contract and the layout, in six commits on `surfaces` (worktree `worktrees/thinkthen-surfaces`), touching nothing under `crates/`:
+
+- `ef3767c` **The contract.** `contract/` holds one Rust crate and one C header (`contract/include/thinkthen.h`). The trait covers the eight verbs, `decide_many` as decide's bulk spelling, `details`, `usage`, a cancel token and a deadline in one options value, the six error kinds with the retry signal, and `Settings` reading `THINKTHEN_BASE_URL` and `THINKTHEN_CACHE`. The header carries the JSON door, `thinkthen_decide`, the ruled `thinkthen_decide_many`, engine new/free, the error codes, and `THINKTHEN_UNSURE`. Questions are built from parts through the one file grammar, so parts and files give the same digest; `from_file` fails with the local kind. Seven contract tests, green.
+- `db2eace` **The stand-in.** `standin/` is experiment 211's engine moved in and grown to the whole contract: every verb through the true core wire shapes, the null backend answering every verb with the conformance file's own numbers, the pid check behind the atomic slot, the process width gate (default 4, `ENGINE_WIDTH` overrides), sends counted per send, tokens counted from replies, the request limit refusing a bulk call before its first request. Null suite 4 green; wire suite 3 green against the stub (`cancel: 40 records, token set at tick 2: wall 312 ms, requests at return 32`; 100 single calls held at 32; the forked child answers).
+- `69e9385` **The layout.** `libraries/{python,typescript,ruby,r,rust,c}` and `databases/{duckdb,sqlite,postgresql}`, each README naming its slide sample; `VERSION` holds 0.0.1 for every surface.
+- `731a058` **The conformance file in.** `conformance/conformance.json` unchanged from job 3, the validator beside it, and `DIVERGENCES.md` giving the 12/3/5 record its named home. `python3 tools/validate_conformance.py conformance.json` → `OK: 20 cases validated`.
+- `7145073` **The one script.** `scripts/check_surfaces.sh` builds and tests the contract and the stand-in, runs the wire tests when the stub is up (and says `wire tests skipped: no stub on the loopback` when it is not), validates the conformance file offline, and calls each landed surface's `check.sh`. Green end to end both ways.
+- `b622e5a` **The page.** `SURFACES.md`: the layout, the acceptance rule (the slide samples as drawn), how to add a surface, how to add a function.
+
+One contract decision to name: `rank` refuses a question that itself names a threshold and takes the grammar's default cut as no rule at all, because the default lands on every decide question and rank would otherwise refuse them all. The distinction rides a `threshold_named` flag the contract records from the file's own JSON.
+
+What is unchecked, stated plainly:
+
+- `find` on the stand-in judges each unit alone and takes the best; the relative one-request form belongs to the real engine, and no slide sample draws find.
+- The five `shaped-to-contract` exchanges stay shaped until the real engine's first live run re-captures them.
+- The cache settings are carried (`Settings.cache`, `cache_bytes`) and unspent: the stand-in holds no disk cache, `cache_answers` stays zero, and the 100 MB cap is enforced by nothing in this tree yet.
+- `max_requests` refuses bulk calls only; single calls do not count against it.
+
+Phase B inherits: a trait to bind, a header to compile, one conformance file to read, a check script to hook into, and nine folders with their samples named. The Python band sample's `# None` comment will not reproduce against the stub's three-bucket rule (`I was charged twice` holds no keyword, so the stub answers 0.03 and a band calls it No): that is a finding to report when it fires, not a surprise.
