@@ -155,6 +155,17 @@ def test_text_layouts_across_the_view_rule():
         tt.decide_many(q, ["", "x"])
 
 
+def test_the_inline_view_bytes_are_read_as_the_string():
+    """The view layout's inline arm: a keyword string of 12 bytes or
+    fewer sits inside the 16-byte view, not in a data buffer, so a reader
+    that skipped it would judge these records on nothing. Every answer
+    must equal the list door's, and the keyword must win."""
+    texts = ["refund", "refund now", "maybe a refund", "no thanks"]
+    q = tt.question(decide="Does the customer ask for a refund?", threshold=0.9)
+    series = pl.Series("body", texts)
+    assert tt.decide_many(q, series) == tt.decide_many(q, texts) == [True, True, True, False]
+
+
 def test_nulls_are_refused_with_the_reason():
     series = pl.Series("body", ["please refund", None])
     q = tt.question(decide="Does the customer ask for a refund?")
