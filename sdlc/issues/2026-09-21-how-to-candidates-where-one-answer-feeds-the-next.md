@@ -28,3 +28,23 @@ The order, and whether any of these enters the first release. The marketing side
 Four lines went into `filter --lines --replay` one second apart through a pipe that stayed open two more seconds. No paid call was made. The kept line sent at 1.0 s printed at 1.00 s. The kept line sent at 3.0 s printed at 3.01 s. Output does not wait for the end of input, so candidate 4 works today on a replayed answer.
 
 Still unmeasured: a live backend, where a slow early answer may hold back a fast later one to keep order. The specification does not state the streaming promise. A sentence in `records.md` would let the how-to quote it: each record prints as soon as its answer and every earlier record's answer are ready.
+
+## Candidate 5, added 2026-09-21: map a week of incident reports
+
+Ian asked for a how-to that uses `recognize`, `relate`, and at least one other function. This one uses four, and it ends in plain SQL. It waits for both functions to exist, because a how-to is a green demo (ADR 0011).
+
+**The reader.** An engineering manager with a folder of incident write-ups and a question: what keeps breaking, and what breaks because of it?
+
+**The flow.**
+
+1. `filter 'Does this report describe a real outage?'` drops the drills and the false alarms. One request per report.
+2. `recognize --kind service='A named internal service or system.' --kind team='A named team.'` turns each report into rows of services and teams. One pass over the kept reports. The rows go in a `mentions` table.
+3. `relate caused_by --either same_as` over the kept reports' one-line summaries gives the edges: which outage caused which, and which reports are the same outage. The edges go in an `edges` table.
+4. `score 'How much did customers feel this?'` with three levels puts a weight on each report.
+5. Plain SQL from here, with no further request: join `mentions` to `edges`, count which service sits at the root of the most customer-felt outages, and walk a chain of causes with a recursive query.
+
+**What it teaches.** The model is asked once per report and once per pair. Every question after that is an ordinary query over rows, at no cost. That is the join rule from `sdlc/planning/recognize-design.md` and the graph idea from `sdlc/planning/relate-design.md` in one story.
+
+**What it must show honestly.** The relate demo in `experiments/225-relate-demo/` returned one unsupported edge at 0.84. The how-to sets a bar, shows what the bar dropped, and sends the middle to a person, the way the triage how-to does.
+
+**What it needs before it can be green.** Both functions in the tool. A made-up set of about twenty reports with a known answer. The request count printed by `--dry-run` for steps 2 and 3, stated in the how-to's first screen.
