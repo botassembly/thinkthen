@@ -27,7 +27,7 @@ The ladder stays `install`, `lint`, `test`, `spec`. Wave 1 found nineteen issues
 
 | Check | Guards | Cost |
 | --- | --- | --- |
-| Vocabulary lint over the built help: run `thinkthen --help` and all eight function helps, grep for the banned words (`document`, `row` in the record sense, `label` for `choose`'s options, `judgment`, `failed` alone, `rating`, `unresolved` once the outcome word is ruled); zero hits or the check names each hit | issue 17, issue 4 (outcome names) | seconds, needs a built binary |
+| Vocabulary lint over the built help: run `thinkthen --help` and all function helps, grep for the banned words (`document`, `row` in the record sense, `label` for `choose`'s options, `judgment`, `failed` alone for the broken outcome, `rating`, `unresolved`), and for the numbers words (`certainty`, `likelihood`, `cutoff`, `gray zone`, `score` as a name for a probability, `confidence` and `accuracy` and `calibrated` outside their sanctioned uses, a computed number called `probability`); zero hits or the check names each hit. The source is `products/thinkthen/vocabulary.md`, "The words for numbers", which overrides older lines | issue 17, issue 4 (outcome names) | seconds, needs a built binary |
 | README and demo pages join the same grep, source-side | issue 17 | seconds |
 
 The marketing repository's pages get the same script on its own side, run before a page or deck ships; thinkthen's gate never reads another repository.

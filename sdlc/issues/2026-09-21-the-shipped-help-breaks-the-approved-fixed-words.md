@@ -28,6 +28,8 @@ The vocabulary's own option row also says "One of the labels `choose` picks from
 
 One spelling per concept, per the vocabulary's fixed-words table.
 
+Added 2026-09-21 after "The words for numbers": the word "failed" now has a sanctioned use, a question the backend could not answer inside an otherwise good request. The two help rows above still want "broken", because those sentences name the outcome of a run that could not get an answer, not a refused question. The fixer reads both rules: "failed" names a refused question; "broken" names the broken outcome.
+
 ## How bad it is for a user
 
 Minor. The words confuse a reader moving between the deck, the help, and the manual, and nothing breaks.
