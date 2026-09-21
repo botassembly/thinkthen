@@ -217,6 +217,38 @@ The sample's match arms ran against the packaged crate: the refund ticket lands 
 
 macOS: the Rust package is source, not a binary artifact; cargo builds it on the target machine, so no macOS artifact is produced or needed here. Registry use: none; the `.crate` is local and was consumed from the local file. Pulls recorded: none new (cargo fetched from crates.io into the host cache, as every build does).
 
+## C
+
+Build, from `libraries/c`: the shared library, the static library, and the header beside them.
+
+```
+$ cargo build --release
+$ ls -l target/release/libthinkthen.so target/release/libthinkthen.a contract/include/thinkthen.h
+-rwxrwxr-x 4273760 target/release/libthinkthen.so
+-rw-rw-r--  37126320 target/release/libthinkthen.a
+-rw-rw-r--     5107 contract/include/thinkthen.h
+```
+
+Clean container: `docker pull ubuntu:24.04`, only `gcc` added from the distribution. The three files are copied in — no repository, no Rust toolchain, no build of the library — and the deck's C sample compiles with a plain `cc` and runs:
+
+```
+$ docker run --rm --name pkg211-c -v /tmp/pkg211/c:/work ubuntu:24.04 bash -c \
+    'apt-get install -y gcc && cc ... slide.c -L. -lthinkthen -Wl,-rpath,\$ORIGIN -o slide && ENGINE_NULL=1 ./slide'
+cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+	libthinkthen.so => /work/./libthinkthen.so (0x00007f8c89e00000)
+slide ok: decide YES at 0.97, decide_many YES NO YES
+```
+
+The static archive is complete too — the same sample linked against `./libthinkthen.a -lpthread -ldl -lm` runs with the identical answer:
+
+```
+$ cc ... slide.c ./libthinkthen.a -lpthread -ldl -lm -o slide-static && ENGINE_NULL=1 ./slide-static
+slide ok: decide YES at 0.97, decide_many YES NO YES
+```
+
+The C sample's answer classes match its slide comments under the stand-in: decide Yes at 0.97 (the comment promises 0.99 on the real backend), decide_many YES/NO/YES. Each surface's own section above carries its findings where a comment did not reproduce. macOS: the shared library cross-compilation is attempted in the macOS section below. Registry use: none; the three files were copied from the local build. Pulls recorded: `ubuntu:24.04`.
+
+
 
 
 ## Databases
