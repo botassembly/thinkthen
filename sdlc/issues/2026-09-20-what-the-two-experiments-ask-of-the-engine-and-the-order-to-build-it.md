@@ -81,3 +81,13 @@ Left for the database ADR: the DuckDB version pin and the PostgreSQL key channel
 ## What Ian can overturn
 
 Everything here except the release number, and that ruling is his own. Three reach widest: staying blocking, moving the ADR 0017 rewrite ahead of the merge, and the double for `thinkthen_score`.
+
+## The five answers checked, 2026-09-21
+
+The hand-off lane checked each parked answer against ADR 0017 and the 211 findings. All five stand; one gains a refinement and one gains its construction.
+
+1. **The token over a chunk ceiling — confirmed, now measured.** 211's poll callback carries the interrupt with no chunking: `KeyboardInterrupt` 0.207–0.209 s after the signal on a whole-list crossing in Python, the engine's own cancel returning in 303 ms with the eight in-flight requests drained and nothing new started. The whole container crosses once and stays interruptible; chunking is a memory lever only.
+2. **Fork policy — confirmed, and strengthened.** The process-ID check is proven by construction in 211: the state sits behind an atomic slot, the rebuild takes no lock a request path can hold, and the first mutex design is on record as passing its test for the wrong reason. Ten forks during live 32-wide batches all answered, and the PostgreSQL shared-preload arm answered from a backend that inherited the postmaster's stamp.
+3. **`thinkthen_warm` on a band — confirmed.** Never an error; the threshold never enters the request. The adjacent rule — `filter` refuses a band, at the case verb — is now encoded in the one conformance file as case `09-usage-filter-band`, so the two rules travel together.
+4. **The 256-row flush — confirmed, with the round-two refinement.** The flush bounds memory and the width gate sets the speed, as written. 207's round two adds that the flush is no longer the responsiveness lever either: the engine's token stops a warm one record deep, measured on SQLite, so 256 bounds memory alone.
+5. **The score double — confirmed, and now encoded.** A double in all three databases, the nearest level's name in `thinkthen_details`. The three measured shapes collapsed to this one in ADR 0017 pick 6, and the conformance file's case `13-score-levels` carries it: probabilities 0.20/0.55/0.25 over low/mid/high, expected answer 1.05, nearest level `mid` in details, validated offline.
