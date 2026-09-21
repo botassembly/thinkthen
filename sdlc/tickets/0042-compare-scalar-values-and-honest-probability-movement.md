@@ -6,7 +6,7 @@ opens: transforms/compare transforms/README.md demos/41-tune-a-question-file sdl
 
 # 0042: Compare scalar values and honest probability movement
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
