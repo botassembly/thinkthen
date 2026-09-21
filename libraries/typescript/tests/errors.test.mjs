@@ -63,3 +63,43 @@ test('a failure never reads as a value', async () => {
   assert.ok(held instanceof Error);
   assert.equal(held.name, 'ThinkThenError');
 });
+
+test('usage: an unknown key in the last object names the key', async () => {
+  const held = await kindOf(() => tt.decide('Refund?', 'some text', { urgent: true }));
+  assert.ok(held instanceof tt.ThinkThenError);
+  assert.equal(held.kind, 'usage');
+  assert.equal(held.retryable, false);
+  assert.match(held.message, /options\.urgent/);
+});
+
+test('usage: labels are not a choose key', async () => {
+  const held = await kindOf(() => tt.choose('Which team?', 'some text', { labels: ['billing'] }));
+  assert.equal(held.kind, 'usage');
+  assert.match(held.message, /options\.labels/);
+});
+
+test('usage: choose with a bare question string wants options last', async () => {
+  const held = await kindOf(() => tt.choose('Which team owns it?', 'some text'));
+  assert.equal(held.kind, 'usage');
+  assert.match(held.message, /options/);
+});
+
+test('usage: tag with a bare question string wants labels last', async () => {
+  const held = await kindOf(() => tt.tag('Which topics?', 'some text'));
+  assert.equal(held.kind, 'usage');
+  assert.match(held.message, /labels/);
+});
+
+test('usage: top is a positive whole number', async () => {
+  const held = await kindOf(() => tt.rank('Is this urgent?', ['one', 'two'], { top: 0 }));
+  assert.equal(held.kind, 'usage');
+  assert.match(held.message, /options\.top/);
+});
+
+test('usage: a question value carries its own options', async () => {
+  const held = await kindOf(() =>
+    tt.choose({ choose: 'Which team?', options: ['billing'] }, 'some text', { options: ['shipping'] }),
+  );
+  assert.equal(held.kind, 'usage');
+  assert.match(held.message, /options/);
+});

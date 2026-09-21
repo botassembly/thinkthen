@@ -69,6 +69,69 @@ function question(spec) {
   return held;
 }
 
+// The ruled shape of 2026-09-21: one options object last carries the
+// question's inputs and the call's options together. Each verb admits its
+// own question keys; `signal` and `deadlineMs` ride the call; any other
+// key is a usage error that names it.
+const CALL_KEYS = new Set(['signal', 'deadlineMs']);
+const QUESTION_KEYS = {
+  choose: new Set(['options']),
+  tag: new Set(['labels']),
+  rank: new Set(['top']),
+};
+
+// Split the last object into the question's inputs and the call's options.
+function splitLast(verb, options) {
+  const inputs = {};
+  const call = {};
+  if (options === undefined || options === null) return { inputs, call };
+  if (typeof options !== 'object' || Array.isArray(options)) {
+    throw usageError(`${verb} takes one options object last: question inputs and call options together`);
+  }
+  const admitted = QUESTION_KEYS[verb] ?? new Set();
+  for (const [key, value] of Object.entries(options)) {
+    if (CALL_KEYS.has(key)) {
+      call[key] = value;
+      continue;
+    }
+    if (admitted.has(key)) {
+      if (key === 'top' && (!Number.isInteger(value) || value < 1)) {
+        throw usageError('options.top is a positive whole number');
+      }
+      inputs[key] = value;
+      continue;
+    }
+    throw usageError(`options.${key} is not a ${verb} key`);
+  }
+  return { inputs, call };
+}
+
+// Build the question the verb asks: from a bare question string and the
+// last object's inputs, or from a question value or spec as before.
+function specFrom(verb, questionOrSpec, inputs) {
+  if (typeof questionOrSpec !== 'string') {
+    for (const key of ['options', 'labels']) {
+      if (key in inputs) {
+        throw usageError(`${verb}: a question value carries its own ${key}; the last object holds call options and top`);
+      }
+    }
+    return specOf(questionOrSpec);
+  }
+  if (verb === 'choose') {
+    if (!('options' in inputs)) {
+      throw usageError('choose takes its options in the last object: { options }');
+    }
+    return { choose: questionOrSpec, options: inputs.options };
+  }
+  if (verb === 'tag') {
+    if (!('labels' in inputs)) {
+      throw usageError('tag takes its labels in the last object: { labels }');
+    }
+    return { tag: questionOrSpec, labels: inputs.labels };
+  }
+  return specOf(questionOrSpec);
+}
+
 function callOptions(options) {
   const out = {};
   if (options === undefined || options === null) return out;
@@ -127,50 +190,59 @@ function checkRecords(records) {
 
 async function decide(questionOrText, text, options) {
   checkEvidence(text);
-  const spec = JSON.stringify(specOf(questionOrText));
-  return bare(await invoke('decide', spec, text, options));
+  const { inputs, call } = splitLast('decide', options);
+  const spec = JSON.stringify(specFrom('decide', questionOrText, inputs));
+  return bare(await invoke('decide', spec, text, call));
 }
 
 // decide's bulk spelling: the same answer, once per record, in order.
 async function decide_many(question, records, options) {
-  const spec = JSON.stringify(specOf(question));
-  const judgments = await invoke('decide_many', spec, JSON.stringify(checkRecords(records)), options);
+  const { inputs, call } = splitLast('decide_many', options);
+  const spec = JSON.stringify(specFrom('decide_many', question, inputs));
+  const judgments = await invoke('decide_many', spec, JSON.stringify(checkRecords(records)), call);
   return judgments.map((held) => bare(held.answer));
 }
 
 async function choose(questionOrSpec, text, options) {
   checkEvidence(text);
-  const spec = JSON.stringify(specOf(questionOrSpec));
-  return (await invoke('choose', spec, text, options)) ?? null;
+  const { inputs, call } = splitLast('choose', options);
+  const spec = JSON.stringify(specFrom('choose', questionOrSpec, inputs));
+  return (await invoke('choose', spec, text, call)) ?? null;
 }
 
 async function score(questionOrSpec, text, options) {
   checkEvidence(text);
-  const spec = JSON.stringify(specOf(questionOrSpec));
-  return (await invoke('score', spec, text, options)).value;
+  const { inputs, call } = splitLast('score', options);
+  const spec = JSON.stringify(specFrom('score', questionOrSpec, inputs));
+  return (await invoke('score', spec, text, call)).value;
 }
 
 async function tag(questionOrSpec, text, options) {
   checkEvidence(text);
-  const spec = JSON.stringify(specOf(questionOrSpec));
-  return invoke('tag', spec, text, options);
+  const { inputs, call } = splitLast('tag', options);
+  const spec = JSON.stringify(specFrom('tag', questionOrSpec, inputs));
+  return invoke('tag', spec, text, call);
 }
 
 async function filter(questionOrSpec, records, options) {
-  const spec = JSON.stringify(specOf(questionOrSpec));
-  const kept = await invoke('filter', spec, JSON.stringify(checkRecords(records)), options);
+  const { inputs, call } = splitLast('filter', options);
+  const spec = JSON.stringify(specFrom('filter', questionOrSpec, inputs));
+  const kept = await invoke('filter', spec, JSON.stringify(checkRecords(records)), call);
   return kept.map((index) => records[index]);
 }
 
 async function rank(questionOrSpec, records, options) {
-  const spec = JSON.stringify(specOf(questionOrSpec));
-  const ranked = await invoke('rank', spec, JSON.stringify(checkRecords(records)), options);
-  return ranked.map((held) => ({ index: held.index, record: records[held.index], probability: held.probability }));
+  const { inputs, call } = splitLast('rank', options);
+  const spec = JSON.stringify(specFrom('rank', questionOrSpec, inputs));
+  const ranked = await invoke('rank', spec, JSON.stringify(checkRecords(records)), call);
+  const ordered = ranked.map((held) => ({ index: held.index, record: records[held.index], probability: held.probability }));
+  return inputs.top === undefined ? ordered : ordered.slice(0, inputs.top);
 }
 
 async function find(questionOrSpec, units, options) {
-  const spec = JSON.stringify(specOf(questionOrSpec));
-  const held = await invoke('find', spec, JSON.stringify(checkRecords(units)), options);
+  const { inputs, call } = splitLast('find', options);
+  const spec = JSON.stringify(specFrom('find', questionOrSpec, inputs));
+  const held = await invoke('find', spec, JSON.stringify(checkRecords(units)), call);
   return {
     index: held.index ?? null,
     unit: held.index === null ? null : units[held.index],
@@ -192,7 +264,8 @@ async function annotate(set, records, options) {
   if (typeof set !== 'string' || set.length === 0) {
     throw usageError('annotate takes a question set: a file path or the set JSON');
   }
-  const rows = await invoke('annotate', set, JSON.stringify(checkRecords(records)), options);
+  const { call } = splitLast('annotate', options);
+  const rows = await invoke('annotate', set, JSON.stringify(checkRecords(records)), call);
   return rows.map((row, index) => {
     const fields = {};
     for (const [name, held] of row) fields[name] = annotatedField(held);
@@ -203,8 +276,9 @@ async function annotate(set, records, options) {
 
 async function details(questionOrText, text, options) {
   checkEvidence(text);
-  const spec = JSON.stringify(specOf(questionOrText));
-  const held = await invoke('details', spec, text, options);
+  const { inputs, call } = splitLast('details', options);
+  const spec = JSON.stringify(specFrom('details', questionOrText, inputs));
+  const held = await invoke('details', spec, text, call);
   return {
     probability: held.probability,
     value: bare(held.answer),

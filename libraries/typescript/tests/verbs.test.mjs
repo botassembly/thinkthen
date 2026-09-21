@@ -120,3 +120,34 @@ test('a question value is asked, not called, and never a string again', () => {
   assert.throws(() => refund(), /asked, not called/);
   assert.equal(typeof refund, 'function');
 });
+
+test('choose: the ruled shape, options in the last object', async () => {
+  const pick = await tt.choose('Which team owns this?', 'Whatever the evidence says', {
+    options: ['the refund team', 'somewhere else'],
+  });
+  assert.equal(pick, 'the refund team');
+});
+
+test('tag: the ruled shape, labels in the last object', async () => {
+  const held = await tt.tag('Name what applies', 'Whatever the evidence says', {
+    labels: ['a refund label', 'nothing here'],
+  });
+  assert.deepEqual(held, ['a refund label']);
+});
+
+test('rank: top holds the first n of the ordered result', async () => {
+  const records = ['Just saying hi', 'maybe later', 'I want a refund for order 9'];
+  const all = await tt.rank('Is this a complaint?', records);
+  const two = await tt.rank('Is this a complaint?', records, { top: 2 });
+  assert.equal(all.length, 3);
+  assert.deepEqual(two, all.slice(0, 2));
+  assert.equal(two.length, 2);
+});
+
+test('rank: top rides with a question value too', async () => {
+  const held = await tt.rank(tt.question({ decide: 'Is this a complaint?' }), ['one refund', 'nothing', 'maybe'], {
+    top: 1,
+  });
+  assert.equal(held.length, 1);
+  assert.equal(held[0].record, 'one refund');
+});

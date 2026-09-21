@@ -3,8 +3,23 @@
 // code is the test.
 import * as tt from '../index.js';
 
-export async function sample(text: string, reviews: string[], signal: AbortSignal) {
-  const first: boolean | null = await tt.decide('Does the customer ask for a refund?', text); // true
+export async function sample(text: string, message: string, inbox: string[], reviews: string[], signal: AbortSignal) {
+  // the deck's TypeScript sample, typed
+  const options = ['billing', 'shipping', 'account'];
+  const team: string | null = await tt.choose('Which team owns it?', text, { options });
+
+  const labels = ['billing', 'shipping', 'urgent', 'praise'];
+  const topics: string[] = await tt.tag('Which topics?', message, { labels });
+
+  const stop = new AbortController();
+  const urgent: tt.RankedAnswer[] = await tt.rank('Is this urgent?', inbox, {
+    top: 5,
+    signal: stop.signal,
+  });
+  const first: tt.RankedAnswer | undefined = urgent[0];
+
+  // the rest of the verbs stay typed
+  const answered: boolean | null = await tt.decide('Does the customer ask for a refund?', text); // true
 
   const refund = tt.question({
     decide: 'Does the customer ask for a refund?',
@@ -16,8 +31,8 @@ export async function sample(text: string, reviews: string[], signal: AbortSigna
   const rows = await tt.annotate('form.json', reviews, { signal });
   const held = await tt.choose({ choose: 'Which team owns this?', options: ['billing', 'shipping'] }, text);
   const urgency = await tt.score({ score: 'How urgent?', levels: ['Routine.', 'Soon.', 'Immediate.'] }, text);
-  const labels = await tt.tag({ tag: 'Name what applies', labels: ['refund'] }, text);
-  const ranked = await tt.rank('Is this a complaint?', reviews);
+  const alsoHeld: string[] = await tt.tag({ tag: 'Name what applies', labels: ['refund'] }, text);
+  const ranked = await tt.rank('Is this a complaint?', reviews, { top: 2, deadlineMs: 5_000 });
   const found = await tt.find('Which unit answers best?', reviews);
   const audit = await tt.details('Refund?', text);
   const many = await tt.decide_many('Refund?', reviews);
@@ -25,13 +40,16 @@ export async function sample(text: string, reviews: string[], signal: AbortSigna
   tt.reset_usage();
 
   return {
+    team,
+    topics,
     first,
+    answered,
     second,
     complaints,
     rows,
     held,
     urgency,
-    labels,
+    alsoHeld,
     ranked,
     found,
     audit,

@@ -6,13 +6,14 @@
 // package root beside this test.
 //
 // Two captures were added so the test can assert values the deck leaves
-// bare (`const first =`, `const second =`); every argument, call, and
-// shape is the deck's own.
+// bare (`const team =`, `const topics =`, `const firstUrgent =`); every
+// argument, call, and shape is the deck's own.
 //
-// One finding, recorded: the second call's comment says `null`, the real
-// backend's answer. The stand-in's keyword rule maps that text to 0.03,
-// under the band, so the sample's answer under the stand-in is `false`.
-// The sample runs; the comment does not reproduce against the stand-in.
+// The findings, recorded: the stand-in weighs an option's, a label's, or a
+// record's own text. The comment answers ("billing", the three labels) are
+// the real backend's and do not reproduce against the stand-in: its choose
+// spreads the option list uniformly and answers null, and its tag holds no
+// label. The sample runs as drawn; the comments do not.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,61 +24,54 @@ import { fileURLToPath } from 'node:url';
 import * as tt from '../index.mjs';
 
 test('the slide sample runs as drawn', async () => {
-  // The sample names `form.json` bare, so it runs from the folder holding
-  // it, exactly as the deck's Bash example did.
+  // Fixtures. The null rule is the stub's own: a record naming a refund
+  // scores 0.97, "maybe" 0.55, anything else 0.03.
   const was = cwd();
   chdir(dirname(fileURLToPath(import.meta.url)));
   try {
   const text = 'I want a refund for order 9';
-  const reviews = [
+  const message = 'I was charged twice and want a refund for order 9';
+  const inbox = [
+    'Where is my order?',
     'I want a refund for order 9',
-    'Just saying hi',
-    'Please refund my broken mug',
+    'Hello team',
+    'maybe escalate this one',
+    'The refund never arrived',
+    'Weekly summary attached',
   ];
-  const tickets = [
-    'I want a refund for order 9',
-    'Maybe refund it later',
-    'Just saying hi',
-  ];
-  const signal = AbortSignal.timeout(60_000);
 
   // --- the sample, as drawn -------------------------------------------
 
-  const first = await tt.decide("Does the customer ask for a refund?",
-    text);  // true
+  // pick one option: "billing"
+  const options = ["billing", "shipping", "account"];
+  const team = await tt.choose("Which team owns it?", text, { options });
 
-  const refund = tt.question({
-    decide: "Does the customer ask for a refund?",
-    threshold: [0.2, 0.8],
+  // every label that fits: ["billing", "shipping", "urgent"]
+  const labels = ["billing", "shipping", "urgent", "praise"];
+  const topics = await tt.tag("Which topics?", message, { labels });
+
+  // a batch you can cancel: abort() stops the requests
+  const stop = new AbortController();
+  const urgent = await tt.rank("Is this urgent?", inbox, {
+    top: 5,
+    signal: stop.signal,
   });
-  const second = await tt.decide(refund,
-    "I was charged twice. Can you fix this?");  // null
-
-  const complaints = await tt.filter("Is this a complaint?",
-    reviews);
-  const rows = await tt.annotate("form.json", tickets,
-    { signal });
+  const firstUrgent = urgent[0]; // console.log in the deck
 
   // ---------------------------------------------------------------------
 
-  assert.equal(first, true, 'the first call matches its comment');
-  // The finding: the stand-in answers false; the comment's null is the
-  // real backend's answer. See this file's header.
-  assert.equal(second, false, 'the stand-in maps the second text to 0.03, under the band');
-  assert.deepEqual(complaints, [
-    'I want a refund for order 9',
-    'Please refund my broken mug',
-  ]);
-  assert.equal(rows.length, 3);
-  // wants_refund follows the stub rule; the choose under the stand-in
-  // weighs its options' own text, the slide's three options name no
-  // keyword, the uniform spread clears no cut, and the field reads null —
-  // the real backend's answer is billing; urgency is the specification's
-  // weighted position.
-  assert.equal(rows[0].wants_refund, true);
-  assert.ok(rows[0].team === null || ['billing', 'shipping', 'account'].includes(rows[0].team));
-  assert.equal(typeof rows[0].urgency, 'number');
-  assert.equal(rows[2].wants_refund, false);
+  // The stand-in's choose weighs the options' own text; these three name
+  // no keyword, so the spread is uniform and the answer is null. The
+  // comment's "billing" is the real backend's answer — a finding for the
+  // slide owner, the same class as the band-decide finding.
+  assert.equal(team, null, 'the stand-in spreads equal options');
+  // The stand-in's tag weighs the labels' own text; none carries a
+  // keyword, so nothing holds. The comment's three labels are the real
+  // backend's answer.
+  assert.deepEqual(topics, [], 'the stand-in holds no keywordless label');
+  assert.equal(urgent.length, 5, 'top: 5 holds the top five of six');
+  assert.equal(firstUrgent.record, 'I want a refund for order 9');
+  assert.ok(firstUrgent.probability >= urgent[1].probability);
   } finally {
     chdir(was);
   }

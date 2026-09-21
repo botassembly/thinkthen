@@ -49,6 +49,21 @@ export interface CallOptions {
   deadlineMs?: number;
 }
 
+/** `choose`'s last object: the option list and the call options together. */
+export interface ChooseOptions extends CallOptions {
+  options: readonly string[];
+}
+
+/** `tag`'s last object: the label list and the call options together. */
+export interface TagOptions extends CallOptions {
+  labels: readonly string[];
+}
+
+/** `rank`'s last object: the top count and the call options together. */
+export interface RankOptions extends CallOptions {
+  top?: number;
+}
+
 /** `true`, `false`, or `null` when the answer is unsure. */
 export type Answer = boolean | null;
 
@@ -105,22 +120,26 @@ export function decide(question: string | Question, text: string, options?: Call
 /** `decide`'s bulk spelling: the same answer, once per record, in order. */
 export function decide_many(question: string | Question, records: readonly string[], options?: CallOptions): Promise<Answer[]>;
 
-/** Pick the option the evidence fits best, or `null` under the cut. */
+/** Pick the option the evidence fits best, or `null` under the cut. A
+ * bare question string takes its options in the last object. */
+export function choose(question: string, text: string, options: ChooseOptions): Promise<string | null>;
 export function choose(question: ChooseSpec | Question, text: string, options?: CallOptions): Promise<string | null>;
 
 /** Place the evidence on the question's levels: the position from 0 to
  * K−1. The nearest level's name rides in the audit trail. */
 export function score(question: ScoreSpec | Question, text: string, options?: CallOptions): Promise<number>;
 
-/** Name the labels that held, in the question's order. */
+/** Name the labels that held, in the question's order. A bare question
+ * string takes its labels in the last object. */
+export function tag(question: string, text: string, options: TagOptions): Promise<string[]>;
 export function tag(question: TagSpec | Question, text: string, options?: CallOptions): Promise<string[]>;
 
 /** Keep the records whose evidence reached the mark. A cut alone. */
 export function filter(question: string | Question, records: readonly string[], options?: CallOptions): Promise<string[]>;
 
 /** Order the records most likely yes first, ties in input order. No
- * threshold. */
-export function rank(question: string | Question, records: readonly string[], options?: CallOptions): Promise<RankedAnswer[]>;
+ * threshold. `top` holds the first n of the ordered result. */
+export function rank(question: string | Question, records: readonly string[], options?: RankOptions): Promise<RankedAnswer[]>;
 
 /** Pick the unit that best answers the question, out of two to 255 sent
  * together. */
