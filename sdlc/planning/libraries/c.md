@@ -10,21 +10,24 @@ Nobody writes C here. Rust exports the functions, `cbindgen` writes one header, 
 #include <thinkthen.h>
 
 thinkthen_outcome d;
-int rc = thinkthen_decide(NULL, "The command only reads files.", cmd, cmd_len, NULL, &d);
+int rc = thinkthen_decide("The command only reads files.", 34, cmd, cmd_len, NULL, &d);
 if (rc != THINKTHEN_OK) return 4;
 if (d == THINKTHEN_YES) run_it();
 else if (d == THINKTHEN_NO) refuse();
 else ask_a_person();
 ```
 
+No handle exists in the first release. The engine holds one process-wide pool behind a width gate and starts it on first use; a handle owning nothing only confuses, and one arrives when a second backend exists, not before (205). Every string carries a length: the typed call takes the question, its length, the evidence, its length, an optional probability, an optional error slot, and the outcome — seven arguments, not six.
+
 ## Goals
 
 - **The JSON door is the base.** `thinkthen_call` takes a request as UTF-8 text and returns the answer as UTF-8 text. Every verb rides it.
 - **Three typed calls sit beside it:** `thinkthen_decide`, `thinkthen_choose`, `thinkthen_score`. The cost is two paths and three frozen signatures.
-- **One memory rule.** The library allocates every buffer it returns and takes it back through `thinkthen_free`. Every string is UTF-8 with an explicit length.
-- **One opaque handle holds the pooled connection,** and a null handle means the common case. The header states thread safety at the top.
-- **Failure is a returned code plus a message call.** No `errno`, no thread-local last error. `thinkthen_abi_version` returns an integer checked at load.
-- **Blocking only in version one.** No callback and no pollable handle, because a batch already runs many requests at once inside Rust.
+- **The bulk form is `thinkthen_decide_many`** (ADR 0017 pick 8): an array of pointers and an array of lengths, with a caller-owned array of answers to fill, exactly `libpq`'s parameter shape. It ships beside the door not for speed — measured 12 to 19 percent of a null-backend bulk call at 1,000 to 10,000 records, inside noise at 100,000, about 0.1 percent of a width-limited wire run — but because pointer-and-length hosts (Zig, Java FFM, Go) consume records without building JSON at all. One export, about 80 lines, one kept-index buffer.
+- **One memory rule.** The library allocates every buffer it returns and takes it back through `thinkthen_free`. Every string is UTF-8 with an explicit length, and a trailing zero is appended for convenience; the length stays authoritative (205).
+- **Failure is a returned code plus an optional error slot** on the typed call, holding the failure as JSON text and freed by `thinkthen_free`. No `errno` and no thread-local last error, and a static-phrase call cannot carry the engine's message (205).
+- **`thinkthen_abi_version` returns an integer checked at load.**
+- **Blocking only in the first release.** No callback and no pollable handle, because a batch already runs many requests at once inside Rust.
 
 ## Anti-goals
 
@@ -36,16 +39,16 @@ else ask_a_person();
 
 ## Where this language wastes time
 
-- **A client per call.** Opening a handle builds an async runtime and a secure connection, so a binding holds one per process.
+- **A client per call.** Opening a handle builds a connection, so the engine holds the pool process-wide; 211 measured the gate holding 100 concurrent calls to 32 in flight.
 - **A terminator hunt.** `strlen` reads the whole buffer, and a length removes that read and the copy behind it.
-- **One call per record.** The barrier is cheap and the JSON encode is not. C has one wide container, and a record verb takes it: an array of pointers and an array of lengths, with a caller-owned array of answers to fill. `thinkthen_decide_many(h, question, const char *const *items, const size_t *lens, size_t n, thinkthen_outcome *out)`. `libpq` passes parameters in that same shape, so the form is already familiar. The library allocates nothing and the caller frees nothing.
+- **One call per record.** The barrier is cheap and the JSON encode is not. C has one wide container, and `thinkthen_decide_many` takes it. The library allocates nothing and the caller frees nothing.
 - **Hand escaping the request.** A binding uses its own JSON writer.
 - **Why the array call matters past C.** Every language that binds this header reaches the engine through it. With the JSON door alone, each binding builds request text per record in its own language, and the batching lives outside Rust. The array call hands them full width with no encoder.
-- **Work the binding must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No binding compares or sorts records first. The handle holds the pool and the scheduler, `jobs` is set on it once, and a binding opens one handle per process. The typed single calls are serial, the array call is the bulk form, and the header says so above the single form.
+- **Work the binding must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No binding compares or sorts records first. The engine holds the pool and the scheduler, `jobs` is one number for the process, and the typed single calls are serial while the array call is the bulk form. The header says so above the single form.
 
 ## How little code
 
-`cbindgen` writes `thinkthen.h` from a thin `thinkthen-ffi` crate. It reads the exports, so the header cannot drift. That crate is never published, because every public name is `thinkthen`. Only the libraries and the header ship.
+`cbindgen` writes `thinkthen.h` from a thin `thinkthen-ffi` crate. It reads the exports, so the header cannot drift. That crate is never published, because every public name is `thinkthen`. Only the libraries and the header ship. The engine exports no C symbol of its own (ADR 0017 section 8, step 2); the C binding owns every exported name, so the one-prefix promise holds on day one and the engine's internal doors are compiled out of the shipping crate (205).
 
 The shim holds those functions, the panic catch, the length and UTF-8 checks, the allocator behind `thinkthen_free`, the handle, and the code table. It holds no rule and no retry. A linker script and a module file keep every symbol under one prefix.
 
@@ -63,8 +66,8 @@ The crate builds a `cdylib` and a `staticlib`, and a release ships an archive pe
 
 ## Open questions for the ADR
 
-1. Do the typed calls ship in version one, or does the JSON door ship alone first?
+1. Do the typed calls ship in the first release, or does the JSON door ship alone first?
 2. Is the request text its own versioned schema, or the command's shape?
-3. Does a null handle open a default client per loaded copy, or must every caller open one? Two handles in one process would be two widths, and the shared rule says the width is one number.
-4. Do the array calls ship in version one? They cost three more frozen signatures. Leaving them out pushes per-record JSON building into every language that binds C.
+3. Answered by 205: no handle at all. The engine's process-wide pool and gate serve every caller in the process, and the width stays one number for the process, as the shared rule says.
+4. Answered: the array call ships, as `thinkthen_decide_many`, one export beside the door.
 5. How does the array form report a per-record failure? A parallel array of codes, a sentinel in the outcome array, and a single failed call are the candidates.

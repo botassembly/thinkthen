@@ -18,9 +18,9 @@ triaged |> filter(is.na(refund)) |> send_to_a_person()
 
 ## Goals
 
-- One `tt_decide()` over n rows crosses the barrier once and runs n requests at the `jobs` width.
-- Each verb returns R's own type: logical, `NA` under a band, a character vector from `tt_choose`, numeric from `tt_score`, a list column from `tt_tag`. Order and names match the input, and `NA` in returns `NA` with no request.
-- Ctrl-C during a long column returns control within one poll interval. Progress uses base R alone.
+- One `tt_decide()` over n rows crosses the barrier once and runs n requests at the `jobs` width. R keeps the vectorized `decide`, which is its habit (ADR 0017 pick 8); the engine's batch spine carries it (section 8).
+- Each verb returns R's own type: logical, `NA` under a band, a character vector from `tt_choose`, numeric from `tt_score` — the specification's position from 0 to K−1, with the nearest level's name in `tt_details` (ADR 0017 pick 6) — a list column from `tt_tag`. Order and names match the input, and `NA` evidence in returns `NA` with no request. `NA` evidence handed to `filter` is a usage error, as 205 measured; the two verbs differ on purpose and the page says so.
+- Ctrl-C during a long column returns control within one poll interval. The pattern is one plain worker thread, a channel, and a 100 ms `R_CheckUserInterrupt` poll on the main thread; the small receiver leak per interrupt is named in the shim's notes (205).
 - `Imports:` names nothing beyond base R, and the tests still run the verbs inside `dplyr`.
 - `install.packages("thinkthen")` on Windows and macOS installs a binary.
 
@@ -44,9 +44,9 @@ triaged |> filter(is.na(refund)) |> send_to_a_person()
 
 The binding tool is `extendr`: the `extendr-api` crate with the `rextendr` package. It generates the R wrappers, the `.Call` registration, and the `NAMESPACE`, and handles `SEXP` protection.
 
-The shim converts the column to string slices, maps arguments to engine options, builds the answer vector, raises a failure through `stop()`, polls for an interrupt, and draws progress. It never holds threshold math, JSON, retries, rate limit waits, the recording format, the key, or scheduling.
+The shim converts the column to string slices, maps arguments to engine options, builds the answer vector, raises a failure through `stop()` as an R condition class — `thinkthen_usage`, `thinkthen_backend`, `thinkthen_local`, `thinkthen_cancelled`, `thinkthen_deadline`, `thinkthen_defect`, the six of ADR 0017 section 3, so a runner reads the kind with `inherits` instead of grepping a message prefix (205) — polls for an interrupt, and draws progress. It never holds threshold math, JSON, retries, rate limit waits, the recording format, the key, or scheduling.
 
-`src/Makevars` builds the crate sources vendored under `src/rust/vendor`, so the build works offline on CRAN's machines. R-universe needs no review and publishes from GitHub, so it is the first home and CRAN second. Prebuilt binaries cover Windows and macOS. Linux coverage is unchecked, and so is Bioconductor.
+`src/Makevars` builds the crate sources vendored as one opaque tarball under `src/rust`, so the build works offline on CRAN's machines; a directory of sources rots and the tarball states the glibc bound on Linux binaries. R-universe needs no review and publishes from GitHub with `SystemRequirements: Cargo (Rust)`, so it is the first home and CRAN second. The measured costs belong beside the plans: 89 s to install from source, 8.8 MB installed (205). Prebuilt binaries cover Windows and macOS. Linux coverage is unchecked, and so is Bioconductor.
 
 ## Tests only this surface needs
 
@@ -60,5 +60,7 @@ The shim converts the column to string slices, maps arguments to engine options,
 
 1. Where does `details` live? One column per call is the whole R grammar. A spliced data frame and a `tt_details()` verb are the candidates.
 2. How is replay scoped with no dependency? A `tt_replaying(dir, expr)` wrapper, an `options()` entry, and an inherited environment variable nest differently.
-3. Does the Arrow path ship at all? It adds `arrow-extendr` to the crate and suggests `nanoarrow` in the package, and the character vector already reaches Rust with no copy. A bench says whether the second door earns its lines.
+3. Answered by measurement (205, round two): the Arrow door does not ship. The character vector already crosses with no copy, arrow's ALTREP hands its own column over with no pull step, and the per-row materialization tax (0.3–0.5 µs) is 0.03 percent of a wire call, while `arrow` costs a user 58.5 MB and 258–285 ms to load, 65 times the import budget. `Imports:` stays empty; `Suggests: nanoarrow` is the shape if a caller ever asks, loaded at call time.
 4. Does `tt_choose` return a character vector or a factor? The agreed grammar passes the answer to `switch()`, and `switch()` refuses a factor.
+5. `tt_choose`, `tt_score`, and `tt_tag` are designed here but unproven on a stand-in: the 205 engine resolved only the decide family. The real engine's conformance cases prove them, and until then they are unchecked, not promised.
+6. Progress for a long column hangs on the poll loop. 205 did not build it, staying under the line ceiling; it stays open.

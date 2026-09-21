@@ -4,7 +4,7 @@ Shared rules live in [README.md](README.md). This page holds only what is partic
 
 ## What really good looks like
 
-A Ruby programmer expects a gem to install in a second and disappear into the language. The question mark already means a predicate, so `ThinkThen.decide?` needs no explanation. A band drops the question mark, so `ThinkThen.decide` with a Range returns an `Outcome`. The best such gem releases the global VM lock for the whole network wait, so eight Sidekiq threads take about the time of one. It adds nothing to the lockfile and patches no class the user owns.
+A Ruby programmer expects a gem to install in a second and disappear into the language. The names are the command's names, so `decide` stays `decide` and the `decide?` spelling is gone (ADR 0017 pick 1). A band answers `true`, `false`, or `nil`, with `nil` for unsure (pick 3), and the example leads with the `nil` check. The best such gem releases the global VM lock for the whole network wait, so eight Sidekiq threads take about the time of one. It adds nothing to the lockfile and patches no class the user owns.
 
 ```ruby
 require "thinkthen"
@@ -17,12 +17,13 @@ dated.each { |note| schedule(note) }
 ## Goals
 
 - The lock is released for the whole wait. A bench of eight threads against a stub backend matches one call.
-- Control-C lands while Rust blocks. The unblocking function cancels, and the call raises `Interrupt`.
+- Control-C lands while Rust blocks. The engine's poll runs on the calling thread, the closure cancels the token, and the call raises `Interrupt`. The 205 finding it retires: a batch waited out the whole run, 8.07 s deaf; the engine token cut that to 0.23 s in the stand-in and the poll carries it with no chunking (ADR 0017 section 2).
 - `gem install thinkthen` runs no compiler where a prebuilt gem exists. The gemspec lists no runtime dependency.
-- A record verb crosses the barrier once per chunk. `filter` yields the caller's own objects, lazily.
-- Strings come back as UTF-8. A frozen one goes down without a copy where `magnus` allows it.
-- Threads are supported and tested. A `Fiber` under a fiber scheduler is unchecked.
+- A record verb crosses the barrier once and yields the caller's own objects, lazily. Ruby spells `decide`'s bulk form `decide_many` (ADR 0017 pick 8).
+- Strings come back as UTF-8. The no-GVL region must own its data, so the evidence text is copied into Rust-owned memory every call, frozen or not; the copy is microseconds-irrelevant and the page says so instead of promising a free ride (205).
+- Threads are supported and tested. A `Fiber` under a fiber scheduler stays unsupported, now with evidence (205).
 - The gem ships RBS signatures in `sig/` and no Sorbet RBI.
+- The extension's init symbol derives from the file's basename under Ruby 3.4, so the `.so` sits at `lib/thinkthen/thinkthen.so` with `Init_thinkthen`. rake-compiler's convention is forced, not chosen (205).
 
 ## Anti-goals
 
@@ -30,7 +31,7 @@ dated.each { |note| schedule(note) }
 - No HTTP, retry, JSON, or recording file in Ruby. Writing it here writes it once for every host language.
 - No `method_missing` and no `instance_eval` block. Both hide the surface from `ri`, editors, and RBS.
 - No Rails dependency and no railtie. The gem has to work in a plain script first.
-- No process-global client at load. A pool made before `fork` is dead in the child.
+- No process-global client at load. The engine owns the pool and rebuilds it after a fork on a process-ID mismatch, taking no inherited lock (ADR 0017 section 2). 205 confirmed no gem can fix the fork alone — rebuilding the question value in the child still landed on a dead process-global state — and 211 proved the engine-side fix. Until the real engine lands, prefork boots where the master never calls remain the safe shape for Puma and Sidekiq.
 
 ## Where this language wastes time
 
@@ -38,7 +39,7 @@ dated.each { |note| schedule(note) }
 - **A call per record.** Each crossing pays a conversion and an allocation. A chunk goes down in one call and comes back in one.
 - **String copies.** The widest containers Ruby has are an `Array`, any `Enumerable`, and an `Enumerator::Lazy`, and none of them reads many strings in one call. `RString::as_str` views Ruby's own memory with no copy. It is unsafe, it demands UTF-8 or US-ASCII, and it holds only while no other Ruby call runs. `RString::new_frozen` is the safe form and copies once. Whether `magnus` has a bulk string reader is unchecked.
 - **Pulling from a lazy enumerator costs the lock.** `first(n)` and `next` are Ruby method calls. The shim takes one chunk, releases the lock for that whole batch, then takes the next chunk. Memory holds at one chunk plus the width, so an endless enumerator runs flat.
-- **Work the shim must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No `uniq` and no hash of seen records in Ruby. `jobs` is one number for the process, and eight threads and two callers feed the one scheduler in Rust. A `decide?` inside `select` is serial, and `ThinkThen.filter` is the bulk form.
+- **Work the shim must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No `uniq` and no hash of seen records in Ruby. `jobs` is one number for the process, and eight threads and two callers feed the one scheduler in Rust. A `decide` inside `select` is serial, and `ThinkThen.filter` and `ThinkThen.decide_many` are the bulk forms.
 - **Load time.** A `require` that pulls a chain of Ruby files spends the budget first. This one loads a compiled file and a small Ruby file.
 
 ## How little code
@@ -62,8 +63,8 @@ It never holds threshold math, band rules, JSON, retries, the rate limit wait, r
 
 ## Open questions for the ADR
 
-1. Is `Outcome` a symbol (`:yes`, `:no`, `:unresolved`) or a value object equal to one? A symbol reads best in `case`.
-2. Are choices symbols or strings? `%i[billing shipping other]` reads better, and the homepage shows `%w[]`.
-3. How does the pool survive `fork` under Puma and Sidekiq? A pid check per call, a fork hook, or a rule that the child builds it.
-4. Does the fiber scheduler move from unchecked to supported before release?
+1. Answered by 205: `Outcome` is a plain symbol. It reads in `case` and costs nothing.
+2. Are choices symbols or strings? `%i[billing shipping other]` reads better, and the homepage shows `%w[]`. The stand-in carried only the decide family, so `choose` never ran; the real engine's conformance cases settle it.
+3. Answered by ADR 0017 section 2: the engine's process-ID check rebuilds the pool in the child, and 211 proved it on the wire and during live batches.
+4. The fiber scheduler stays unsupported, now with evidence (205).
 5. Does the shim borrow through the unsafe `as_str` or copy through `new_frozen`? Borrowing is free and demands UTF-8 and no Ruby call while the reference lives. One rule covers every verb.

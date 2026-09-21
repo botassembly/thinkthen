@@ -64,11 +64,11 @@ These numbers are proposals until a bench measures them. A bench runs against a 
 - An import or a `require` takes under 20 ms.
 - The command reaches its first request byte in under 10 ms from a cold start.
 - Each library has no runtime dependency in its host language.
-- Each shim has a line ceiling in `sdlc/ratchet.json`, as the source has today.
+- Each shim has a line ceiling in `sdlc/ratchet.json`, as the source has today. The experiments measured the honest floors: about 400 code lines for Python (330 was the floor without Arrow), 700–800 for the Rust user layer across all eight verbs set per module, 173 for the C runner, about 240 for the SQLite surface, 299 for PostgreSQL, and about 400 for DuckDB's provable functions.
 
 ## One set of tests
 
-- **The cases are data.** A `conformance/` folder holds one case per file: the verb, the arguments, the evidence, the recorded exchange, the expected bare answer, the expected details, and the expected failure kind. The recording format already exists and already replays with no network and no key.
+- **The cases are data.** A `conformance/` folder holds one data file that every surface reads, so a pick that changes in review is one edit (ADR 0017 section 7, Ian's condition of 2026-09-21). Each case carries the verb, the arguments, the evidence, the recorded exchange, the expected bare answer, the expected details, and the expected failure kind. The recording format already exists and already replays with no network and no key. The one file exists today at `experiments/207-thinkthen-db/engine/cases2/conformance.json`, twenty cases, validated offline.
 - **Every surface runs every case.** The command runs them too, so it is held to the same suite as the libraries. A runner is about a hundred lines per language.
 - **A new verb adds its cases once.** No language writes a test for a rule. A rule lives in the core, and its cases live in `conformance/`.
 - **A language tests only its shim**: the conversion of types, the mapping of errors, an interrupt from the keyboard while Rust waits, the release of the language's lock, and safety across threads and forks.
@@ -79,7 +79,8 @@ These numbers are proposals until a bench measures them. A bench runs against a 
 - Every surface gives the same answer for the same case, to the byte.
 - The names are the command's names. The options are the command's options.
 - A bare answer comes back by default, and details come on request.
-- No, not sure, and broken never read alike.
+- No, not sure, and broken never read alike. "Not sure" is the host's own empty value, and the public word is "unsure" (ADR 0017 picks 3 and 4): `None` in Python, `nil` in Ruby, `null` in JavaScript, `NA` in R. A band's three answers read through that empty value, and every page's band example leads with the empty-value check, the way the command's help shows `case $?`.
+- `score` returns a number on every surface, the specification's probability-weighted position from 0 to K−1, and the nearest level's name rides in `details` (ADR 0017 pick 6).
 - A user installs a prebuilt package. Nobody needs a Rust toolchain.
 - A recording made on one surface replays on every other.
 
@@ -138,6 +139,8 @@ Ian asked on 2026-09-20 what the library equivalent of the command's saved quest
 | `annotate` | a question set | `{"spam": q1, "folder": q2}` or a loaded file | `tt.annotate(questions, records)` |
 
 **No automatic currying.** A verb called with no evidence is an error. If it returned a function instead, a forgotten argument would hand `if` a function, and a function is true in JavaScript and in Ruby. That is the forgotten `await` bug again. Partial application stays free for anyone who wants it, because the question comes first: Python's `functools.partial(tt.decide, question)` already works.
+
+**The bulk spelling follows the host (ADR 0017 pick 8).** `filter`, `rank`, and `annotate` take the host's container and cross once. Python, TypeScript, and Ruby also spell `decide`'s bulk form `decide_many`, because a string is also a sequence there and guessing is a trap. R and SQL keep a vectorized `decide`, which is their habit. The C door carries `thinkthen_decide_many`. `decide_many` is `decide`'s bulk spelling, not a ninth verb, and the surface check admits it by name on those surfaces.
 
 **One speed trap, and the pages must name it.** A called question inside the host language's own `filter` or loop makes one judgment at a time. `tt.filter(q, records)` hands the whole list to the engine, and the engine runs it at full width. The documents show the record verb first.
 
