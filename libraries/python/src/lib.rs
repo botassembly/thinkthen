@@ -598,12 +598,12 @@ fn details(
 }
 
 /// One name `recognize` found: the user's own kind word and where the
-/// name sits in the text the user gave. `number` is the interim field
-/// name for the number on a name; the open comparison behind it is the
-/// recognize team's, and the marketing vocabulary page
+/// name sits in the text the user gave. `strength` is the settled field
+/// name for the number on a name, computed from several of the model's
+/// numbers; the marketing vocabulary page
 /// (`repos/mktg/products/thinkthen/vocabulary.md`, "The words for
-/// numbers") restricts `confidence` to the vendor's own literal field,
-/// so this number never carries that word here.
+/// numbers") reserves the vendor's own summary word, and `probability`,
+/// for reported numbers, so this computed number carries neither word.
 #[pyclass(frozen, skip_from_py_object)]
 #[derive(Clone)]
 struct Entity {
@@ -618,15 +618,15 @@ struct Entity {
     #[pyo3(get)]
     end: u64,
     #[pyo3(get)]
-    number: f64,
+    strength: f64,
 }
 
 #[pymethods]
 impl Entity {
     fn __repr__(&self) -> String {
         format!(
-            "Entity(id={}, text={:?}, kind={:?}, start={}, end={}, number={})",
-            self.id, self.text, self.kind, self.start, self.end, self.number
+            "Entity(id={}, text={:?}, kind={:?}, start={}, end={}, strength={})",
+            self.id, self.text, self.kind, self.start, self.end, self.strength
         )
     }
 }
@@ -908,7 +908,7 @@ fn recognized_record(found: thinkthen_contract::Recognized) -> Recognized {
                 kind: entity.kind,
                 start: entity.start as u64,
                 end: entity.end as u64,
-                number: entity.number,
+                strength: entity.strength,
             })
             .collect(),
         relations: found
@@ -982,7 +982,7 @@ fn recognize_stream(
         let mut kind_col: Vec<String> = Vec::new();
         let mut start_col: Vec<i64> = Vec::new();
         let mut end_col: Vec<i64> = Vec::new();
-        let mut number_col: Vec<f64> = Vec::new();
+        let mut strength_col: Vec<f64> = Vec::new();
         for (place, text) in references.iter().enumerate() {
             if let Some(poll) = poll.as_mut() {
                 poll();
@@ -994,20 +994,20 @@ fn recognize_stream(
                 kind_col.push(entity.kind);
                 start_col.push(entity.start as i64);
                 end_col.push(entity.end as i64);
-                number_col.push(entity.number);
+                strength_col.push(entity.strength);
             }
         }
-        Ok((row_col, text_col, kind_col, start_col, end_col, number_col))
+        Ok((row_col, text_col, kind_col, start_col, end_col, strength_col))
     })?;
     drop(frame);
-    let (row_col, text_col, kind_col, start_col, end_col, number_col) = rows;
+    let (row_col, text_col, kind_col, start_col, end_col, strength_col) = rows;
     let table = arrow::build_table(&[
         ("row", arrow::TableValue::Counts(row_col)),
         ("text", arrow::TableValue::Texts(text_col)),
         ("kind", arrow::TableValue::Texts(kind_col)),
         ("start", arrow::TableValue::Counts(start_col)),
         ("end", arrow::TableValue::Counts(end_col)),
-        ("number", arrow::TableValue::Numbers(number_col)),
+        ("strength", arrow::TableValue::Numbers(strength_col)),
     ])?;
     Ok(arrow::ArrowFrame::new(table))
 }

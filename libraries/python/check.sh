@@ -29,6 +29,12 @@ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_polars_door.py -q
 echo "== the pandas checks, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_pandas_checks.py -q
 
+echo "== recognize and relate, null backend"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
+
+echo "== recognize and relate at the scale the recordings carry"
+ENGINE_NULL=1 .venv/bin/python tests/bench_recognize_scale.py
+
 echo "== conformance slice, offline"
 ENGINE_NULL=1 .venv/bin/python tests/conformance.py
 

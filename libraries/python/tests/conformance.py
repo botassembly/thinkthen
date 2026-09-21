@@ -46,11 +46,94 @@ def built(body, set_body=None):
     return tt.question(**kwargs)
 
 
+def recognize_relations(body):
+    """The case's relation list as this surface's mapping shape."""
+    rules = body.get("relations") or []
+    if not rules:
+        return None
+    return {rule["name"]: (rule["from"], rule["to"]) for rule in rules}
+
+
+def entity_dict(entity):
+    return {
+        "id": entity.id, "text": entity.text, "kind": entity.kind,
+        "start": entity.start, "end": entity.end,
+        "strength": entity.strength,
+    }
+
+
+def relation_dict(relation):
+    return {
+        "name": relation.name, "source": relation.source,
+        "target": relation.target, "probability": relation.probability,
+    }
+
+
+def edge_dict(edge):
+    return {
+        "name": edge.name, "source": edge.source,
+        "target": edge.target, "probability": edge.probability,
+    }
+
+
+def run_recognize(case):
+    body = case["question"]
+    found = tt.recognize(
+        case["text"],
+        kinds=body.get("kinds"),
+        relations=recognize_relations(body),
+        threshold=body.get("threshold"),
+        relation_threshold=body.get("relation_threshold"),
+    )
+    want = case["expect"]
+    ok = (
+        [entity_dict(entity) for entity in found.entities] == want.get("entities", [])
+        and [relation_dict(relation) for relation in found.relations]
+        == want.get("relations", [])
+    )
+    return ok, None
+
+
+def run_relate(case):
+    if case.get("form") == "per-subject":
+        # R03 per-subject and R04 pairs hold the identical ten records,
+        # and the stand-in serves the ruled pairs form; a replay keyed on
+        # input cannot reach the per-subject expectation. Recorded as a
+        # conformance-data finding for the build team, not bent here.
+        return None, (
+            "the per-subject arm shares its input with the pairs arm and "
+            "the stand-in serves the ruled pairs form; a conformance-data "
+            "finding for the build team"
+        )
+    body = case["question"]
+    relations, either = [], []
+    for rule in body.get("relations", []):
+        if rule.get("either"):
+            either.append(rule["name"])
+        else:
+            relations.append(
+                {"name": rule["name"], "from": rule["from"], "to": rule["to"]}
+            )
+    edges = tt.relate(
+        case["records"],
+        relations=relations or None,
+        either=either or None,
+        threshold=body.get("threshold"),
+    )
+    want = case["expect"]["edges"]
+    return [edge_dict(edge) for edge in edges] == want, None
+
+
 def run(case):
     verb = case["verb"]
     body = case.get("question", {})
     expect = case["expect"]
     evidence = case.get("evidence", "")
+
+    if verb == "recognize":
+        return run_recognize(case)
+    if verb == "relate":
+        return run_relate(case)
 
     if verb == "decide":
         return tt.decide(built(body), evidence) == expect.get("answer"), None

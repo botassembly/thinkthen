@@ -706,13 +706,13 @@ pub(crate) fn build_frame(
                 }
                 _ => {
                     let mut offsets = Vec::with_capacity((length + 1) * 4);
-                    let mut values = vec![0u8; 1];
+                    let mut values = Vec::new();
                     offsets.extend_from_slice(&0i32.to_le_bytes());
                     for text in &values_str {
                         if let Some(text) = text {
                             values.extend_from_slice(text.as_bytes());
                         }
-                        offsets.extend_from_slice(&(values.len() as i32 - 1).to_le_bytes());
+                        offsets.extend_from_slice(&(values.len() as i32).to_le_bytes());
                     }
                     local.push(validity);
                     local.push(offsets);
@@ -890,11 +890,11 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         let n_buffers = match value {
             TableValue::Texts(texts) => {
                 let mut offsets = Vec::with_capacity((length + 1) * 4);
-                let mut values = vec![0u8; 1];
+                let mut values = Vec::new();
                 offsets.extend_from_slice(&0i32.to_le_bytes());
                 for text in texts {
                     values.extend_from_slice(text.as_bytes());
-                    offsets.extend_from_slice(&(values.len() as i32 - 1).to_le_bytes());
+                    offsets.extend_from_slice(&(values.len() as i32).to_le_bytes());
                 }
                 local.push(validity);
                 local.push(offsets);

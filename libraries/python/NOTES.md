@@ -255,3 +255,94 @@ PY
 pyarrow consuming the `ArrowFrame` through the C stream aborts the process: the exported schema capsule's release callback does not satisfy the C++ Arrow contract. Not reachable through the public pandas path (the refusal fires first) and not fixed here — recorded for a follow-up, because the likely blast radius is any C++ Arrow consumer of the stream (pyarrow; engines binding it). Polars consumes the same frame fine, which is the slide path.
 
 Tests: the two check-5 tests now pin the refusal and its message, and `test_check_5_both_remedies_run` runs both named lines. Full run: `ENGINE_NULL=1 .venv/bin/python -m pytest tests/ -q` → 38 passed; the pandas checks file alone → 10 passed.
+
+## 2026-09-21 — recognize and relate
+
+The two new functions, through the python surface, against the stand-in
+and the recordings only: no paid call, no key, no wire.
+
+What landed:
+
+- `tt.recognize(text, kinds=..., relations=..., threshold=...,
+  relation_threshold=..., deadline=...)` returns records with `.entities`
+  and `.relations`; a relation value is a `(from, to)` pair whose ends are
+  kinds or the one-character string `"*"`; `kinds` is a list or a path to
+  a question file whose `recognize` section carries the spec. Offsets
+  count Python code points, so `text[start:end]` is the name.
+- `tt.recognize(frame, on="column")` returns the ruled long frame: columns
+  `row` (the source row's number, counted from 1), `text`, `kind`, `start`,
+  `end`, `strength`; one row per name; relation rules refuse with a
+  sentence naming the text form.
+- `tt.relate(records, relations=..., either=..., threshold=...)` returns
+  edge records with `name`, `source`, `target`, `probability` (and the
+  kind fields when a rule names kinds); more than 255 records refuses
+  with a usage error before anything else; `tt.relate(frame, on=...)`
+  returns the edges as a four-column frame.
+- `tests/conformance.py` runs the 45 recognize and relate cases now:
+  `65 passed, 0 failed, 6 skipped` (five pre-existing skips and the
+  per-subject finding below).
+- `tests/test_recognize_relate.py`: 14 tests, the deck's calls as written.
+- `tests/bench_recognize_scale.py`: the frame door against one-call-per-row
+  at a thousand rows.
+
+The scale proofs, as printed:
+
+```
+frame:   1000 rows, one call,  wall 0.003 s, 3000 name rows
+per-row: 1000 calls, one each, wall 0.002 s, 3000 name rows
+identical answers: True
+relate list door:  [('caused_by', 1, 4, 0.94), ('caused_by', 2, 4, 0.94)]
+relate frame door: [('caused_by', 1, 4, 0.94), ('caused_by', 2, 4, 0.94)]
+relate doors agree: True
+```
+
+The two forms of each function answer identically; the frame path adds no
+Python-side row work, and the wall times sit beside each other. The 300 ms
+width bench does not apply to these two functions: they read the
+recordings and never touch the wire.
+
+A fixed defect found on the way, in this surface's own Arrow door:
+the new-string-column offsets were one byte off (a leading zero byte with
+`len - 1` offsets), so every real string value built into a frame came
+back shifted — `annotate`'s choose/tag columns were never exercised with
+a non-null value offline, and the wire stub cannot answer those verbs, so
+nothing had caught it. Proven with a tag question through the frame door
+(`'\\x00['` before, `'[]'` after), fixed to the standard cumulative
+offsets, and pinned by
+`test_a_real_string_result_column_rides_the_frame_door_whole`.
+
+Findings reported, not bent around:
+
+1. The deck's Python recognize sample asks the rule `located_in` on the
+   Maria Chen sentence; the recording covers `works_for` and `based_in`,
+   and the stand-in never invents an answer. The refusal names the
+   covered rules, and the gap is pinned in its own test for the deck's
+   owner.
+2. Case `71-relate-R03-persubject-10` shares its identical ten records
+   with `72-relate-R04-pairs-10`; the stand-in serves the ruled pairs
+   form, so the per-subject expectation cannot be reached by a replay
+   keyed on input. Recorded as a conformance-data finding for the build
+   team, same as the TypeScript lane.
+3. The contract's `Relation` doc says the question file spells
+   `source`/`target`, but the landed parser reads `from`/`to`, and the
+   conformance cases use them. The file door here converts nothing on its
+   own; the test uses the parser's spelling and names the gap.
+
+Vocabulary sweep against `repos/mktg/products/thinkthen/vocabulary.md`
+"The words for numbers" (restricted: the vendor's summary word, accuracy,
+calibrated; banned: certainty, likelihood, score-as-a-probability, cutoff,
+gray zone), over this folder's code, tests, notes, and scripts:
+
+```
+$ grep -rniE "confidence|accuracy|calibrated|certainty|likelihood|cutoff|gray zone" libraries/python
+--include="*.rs" --include="*.py" --include="*.md" --include="*.sh" --include="*.toml" \
+| grep -v /target/ | grep -v /.venv/ | grep -v __pycache__
+(no matches)
+```
+
+The name number is bound as `strength` (Ian's settled name, carried into
+the contract by `78204cb`); the relation and edge number is `probability`.
+
+Unchecked: nothing in these two functions against the wire — there is no
+wire path for them in the stand-in; the real engine's pair-questioning
+and text cutting are the build team's.

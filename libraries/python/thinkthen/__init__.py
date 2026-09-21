@@ -104,8 +104,8 @@ def recognize(text, *, kinds=None, relations=None, threshold=None,
     name. ``kinds`` is a list of the user's own kind words or a path to a
     question file; with none, person, organization, and place. A relation
     value is a ``(from, to)`` pair, each end a kind or the one-character
-    string ``"*"``. The number on a name is ``entity.number``; the field
-    name is interim and the recognize team's comparison settles it.
+    string ``"*"``. The number on a name is ``entity.strength``, the settled
+    field name for the value computed from several of the model's numbers.
 
     With ``on=`` the first argument is a frame's column: one row per name,
     with the source row's number counted from 1, as a long frame. Relation
