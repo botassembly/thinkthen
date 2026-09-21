@@ -86,3 +86,42 @@ What the conformance cases gain, so that one file tests every backend: a text ju
 ## What Ian can overturn
 
 All of it. The "Size and cost" page and the adapter rules are recommendations to the build team for the documentation and engine work already planned.
+
+## The probes ran, 2026-09-21
+
+Two paid probes under `sdlc/scripts/live` answered five of the rows above. The
+folder is `experiments/219-thinkthen-limit-edges/` in Ian's workspace, and its
+`RESULTS.md` holds the tables, the commands, and every saved reply. Eight jobs
+charged 472,500 tokens of cap and billed 250,390 input tokens, about one US
+cent.
+
+| Question | New state |
+| --- | --- |
+| Whether the two limits hold exactly at the edge | **Known as a bracket, not a cut.** One text with one question: 31,826 input tokens answered, and the next step up, about 33,150, was refused. A whole request: 61,819 answered, and about 66,000 was refused. Both documented figures sit inside their bracket |
+| What the service replies when a request is too large | **Known.** Exit code 4 and one line, `thinkthen: the backend answered with status 400`. The vendor's own message is not on record, because `--record` writes its folder only after a successful exchange. Nothing was written for either refusal |
+| How many questions one request may carry | **Still only bounded by size.** Twelve mixed questions and ten padded ones both rode in one request. No count limit appeared |
+| Whether many questions in one request change each other's answers | **Known on a long text.** Twelve questions of three kinds over a 10,763-token document, asked alone and then packed: no answer changed, and the largest probability difference was 0.01, below the 0.08 repeat noise that experiment 212 measured |
+| How a user learns a text is too large before paying for the request | **Still not built,** and the refusal is now measured to carry no size and no limit, so the case for a profile that checks before the request leaves is stronger than this page assumed |
+
+The 61,819-token request more than doubles the previous live high water mark of
+33,663 tokens in `sdlc/records/0017-every-question-option-has-two-homes.md`.
+
+Packing paid for itself again on a long text. Twelve questions asked alone
+billed 121,335 input tokens. The same twelve packed billed 10,763, which is 11.3
+times cheaper for the same twelve answers.
+
+Two findings for the build team, neither fixed here:
+
+1. **A refusal leaves no recording.** `--record DIR` creates `DIR` after the
+   exchange succeeds, so the one reply a user most needs to read is the one
+   reply never kept. The specification's exit code 4 is correct and the body
+   behind it is unreachable.
+2. **`--dry-run` does not validate `--jobs`.** `decide --jobs 1 --dry-run` over
+   one document printed a plan and exited 0. The same command without
+   `--dry-run` refused at exit 2 with `--jobs bounds the requests in flight, and
+   one document sends one request`. A dry run that passes is no promise that the
+   live run will.
+
+What is still not known: whether the limit differs by route, whether accuracy
+falls as a text grows toward the limit, and anything first-hand about a second
+backend. None of those was in this probe's scope.
