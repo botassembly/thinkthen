@@ -1,0 +1,28 @@
+# A run stopped by SIGINT prints no stopped-at line
+
+Status: Open
+
+A run stopped by a bad record prints a line on standard error naming the record and the resume path. A run stopped by Ctrl-C prints nothing.
+
+## Reproduction
+
+A 20-record `filter --cache` run against a local stand-in, interrupted after 2 seconds, 2026-09-21:
+
+    $ timeout -s INT 2 thinkthen filter 'Does this ask for a refund?' \
+        --url http://127.0.0.1:8806 --jsonl --field /body --cache resumecache2 --jobs 1 \
+        < resume.jsonl
+    (7 records printed on standard output, standard error empty, exit 130)
+
+For comparison, a bad record prints:
+
+    thinkthen: stopped at record 1; 0 records finished, 0 records from a recording
+
+## Expected
+
+The same stopped-at line with the resume hint, or a documented reason SIGINT differs. The resume itself works: the interrupted run's entries are all valid, and a rerun sends only the unfinished records.
+
+## How bad it is for a user
+
+Minor. The run is safe to resume and the exit code is 130, but a user who stopped a batch gets no count of what finished.
+
+Found by experiment 218, wave 1, areas 4 and 8.
