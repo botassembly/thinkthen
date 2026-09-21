@@ -25,6 +25,7 @@
 //! `except KeyboardInterrupt` catches both paths). Worst case is one tick
 //! plus one in-flight round, per the experiment 211 proof.
 
+mod arrow;
 mod generated;
 
 use std::sync::Arc;
@@ -373,14 +374,29 @@ fn decide(
 }
 
 /// Ask of every record, once, keeping every judgment in input order.
+/// A list or tuple crosses as strings; an object answering
+/// `__arrow_c_stream__` (a Polars Series) crosses zero-copy as Arrow.
 #[pyfunction(signature = (question, records, *, deadline = None))]
 fn decide_many(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
-    records: Vec<String>,
+    records: &Bound<'_, PyAny>,
     deadline: Option<f64>,
 ) -> PyResult<Vec<Py<PyAny>>> {
     let asked = settle_question(py, question)?;
+    if arrow::is_arrow(records)? {
+        let column = arrow::series_column(records)?;
+        let references: Vec<&str> = column.texts.clone();
+        let judgments = bulk(py, deadline, |armed, poll| {
+            engine().decide_many_opts(&asked, &references, armed, poll)
+        })?;
+        drop(column);
+        return judgments
+            .into_iter()
+            .map(|one| Ok(bare(py, one.answer)))
+            .collect();
+    }
+    let records: Vec<String> = records.extract()?;
     let references: Vec<&str> = records.iter().map(String::as_str).collect();
     let judgments = bulk(py, deadline, |armed, poll| {
         engine().decide_many_opts(&asked, &references, armed, poll)
@@ -533,6 +549,28 @@ fn annotate_rows(
     rows.into_iter().map(|fields| annotated_row(py, fields)).collect()
 }
 
+/// Annotate a frame's `on` column: the caller's own columns come back
+/// aliased and one new column a question is appended, all through the
+/// Arrow stream form. `type(records)(frame)` builds the host's frame.
+#[pyfunction(signature = (set, records, on, *, deadline = None))]
+fn annotate_stream(
+    py: Python<'_>,
+    set: &Bound<'_, PyAny>,
+    records: &Bound<'_, PyAny>,
+    on: String,
+    deadline: Option<f64>,
+) -> PyResult<arrow::ArrowFrame> {
+    let loaded = settle_set(py, set)?;
+    let frame = arrow::frame_column(records, &on)?;
+    let references: Vec<&str> = frame.texts.clone();
+    let rows = bulk(py, deadline, |armed, poll| {
+        engine().annotate_opts(&loaded, &references, armed, poll)
+    })?;
+    let names: Vec<String> = loaded.names().to_vec();
+    let out = arrow::build_frame(frame, &names, &rows)?;
+    Ok(arrow::ArrowFrame::new(out))
+}
+
 /// One judgment plus the audit trail, with the sends that produced it.
 #[pyfunction(signature = (question, evidence, *, deadline = None))]
 fn details(
@@ -577,6 +615,9 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = module.py();
     module.add_class::<Question>()?;
     module.add_class::<QuestionSetHolder>()?;
+    module.add_class::<arrow::ArrowFrame>()?;
+    module.add_function(wrap_pyfunction!(arrow::_arrow_probe, module)?)?;
+    module.add_function(wrap_pyfunction!(annotate_stream, module)?)?;
     generated::register(module)?;
     module.add("ThinkThenError", py.get_type::<ThinkThenError>())?;
     module.add("UsageError", py.get_type::<UsageError>())?;

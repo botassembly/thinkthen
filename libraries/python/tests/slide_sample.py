@@ -12,7 +12,7 @@ against the stub or the null backend.
 import pathlib
 import sys
 
-import pandas
+import polars
 
 import thinkthen as tt
 
@@ -28,7 +28,7 @@ reviews = [
     "Third time my order shows up late. Not okay.",
 ]
 
-df = pandas.DataFrame({"body": [text]})
+df = polars.DataFrame({"body": [text]})
 
 # The slide, verbatim from
 # repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md.
@@ -70,12 +70,12 @@ print(f"annotate        -> columns {list(df.columns)}")
 new = [name for name in df.columns if name != "body"]
 if len(new) == 3:
     print(f"  three new columns: {new}")
-    print(f"  first row: {df.iloc[0].to_dict()}")
+    print(f"  first row: {df.row(0, named=True)}")
 else:
     findings.append(f"annotate: expected three new columns, got {len(new)}")
 
 if "--json" in sys.argv:
-    print(df.to_json(orient="records"))
+    print(df.write_json())
 
 if findings:
     print()
