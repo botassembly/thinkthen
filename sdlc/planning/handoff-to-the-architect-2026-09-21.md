@@ -4,7 +4,7 @@ Written 2026-09-21 by the product side for the architect Ian is standing up. Unt
 
 ## The one rule for your first day
 
-**Do not touch the build team's work in flight.** Ticket 0055, the move to one crate, is active in its own worktree and under repair after an independent review rejected its first pass. Main has not received it. Let it finish. Read, survey, and plan until it lands. The library team is also mid-wave on the `surfaces` branch (`worktrees/thinkthen-surfaces`). Let that wave finish too. Ian's plan: you get your arms around everything now, and you take over coordination when 0055 is done.
+Ticket 0055 is done. The move to one package passed independent review after repairing the rejected first pass. The architect can now coordinate the next queue. The library team remains mid-wave on the `surfaces` branch (`worktrees/thinkthen-surfaces`); let that wave finish before merging it.
 
 ## What ThinkThen is, in four lines
 
@@ -22,8 +22,7 @@ Ten functions ask a classifier model (Jev, from TypeSafe) a bounded question abo
 
 ## Where things stand, observed 2026-09-21
 
-- Tickets 0001 to 0054 landed. 0053 put request identity on every result. 0054 keeps good answers when one question fails, with exit 6.
-- 0055 is active, as above.
+- Tickets 0001 to 0055 landed. 0053 put request identity on every result. 0054 keeps good answers when one question fails, with exit 6. 0055 put the private core, engine, and command in one package without changing command behavior.
 - Eight of the ten functions exist in the command. `recognize` and `relate` exist only as experiments.
 - No library and no extension is shipped. All nine surfaces exist as a rehearsal on the `surfaces` branch over a stand-in engine, with 72 shared conformance cases. Main has its own 27 cases. The merge must make one file.
 - Nothing is published anywhere. The package names are not claimed yet. That is Ian's todo, and it blocks every upload.
@@ -49,7 +48,7 @@ Quality wave 1.5 ran every function against every flag that adds information (30
 
 ## The tracks you will coordinate
 
-Roughly twelve can run side by side once 0055 lands. The queue page has the detail and the order.
+Roughly twelve can now run side by side where their files and dependencies do not overlap. The queue page has the detail and the order.
 
 | Track | What | Depends on |
 | --- | --- | --- |

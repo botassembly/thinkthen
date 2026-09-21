@@ -7,12 +7,12 @@ Ian can overturn any placement here.
 ## Where things stand
 
 - Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).
-- Active: 0055, the move to one crate, in its worktree. Main has not received it. It is under repair after review.
+- Landed: 0055, the move to one package through the private engine. Its final review accepted the repaired engine ownership, conformance proof, worker lifetime, doctests, and core boundary enforcement.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
 
-**A0. Finish 0055.** Nothing that touches the scheduler, the cache, recording, or retries starts before it lands. Those files are moving.
+**A0. Done.** Ticket 0055 moved the scheduler, cache locks, recording, and retries into the private engine. Work that depends on those files may now start in the order below.
 
 **A1. The command-layer fixes. Safe beside 0055 only where they avoid the files 0055 changed. Otherwise first after it.**
 
