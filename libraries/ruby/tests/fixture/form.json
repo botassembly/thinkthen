@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "questions": {
+    "refund": { "decide": "Does the customer ask for a refund?" },
+    "complaint": { "decide": "Is this a complaint?", "threshold": 0.5 }
+  }
+}

@@ -1,0 +1,173 @@
+# frozen_string_literal: true
+
+# The Ruby surface's slice of the conformance file, offline against the
+# null backend. One line a case: ok, skip with a reason, or FAIL. The exit
+# is nonzero after any FAIL. Ported from the Rust surface's runner, case
+# for case.
+#
+# Run with: ruby -I lib tests/conformance.rb  (ENGINE_NULL=1)
+
+require "json"
+require "thinkthen"
+
+PATH = File.expand_path("../../../conformance/conformance.json", __dir__)
+
+def wire_set?
+  ENV.key?("ENGINE_BASE_URL") || ENV.key?("THINKTHEN_BASE_URL")
+end
+
+def built(text)
+  ThinkThen._parse_question(text)
+rescue ThinkThen::UsageError => e
+  raise "the call failed: #{e.kind} (#{e.message})"
+end
+
+def ok_if(condition, what)
+  raise "FAIL: #{what}" unless condition
+end
+
+def expect_answer(value)
+  return true if value == true
+  return false if value == false
+
+  nil
+end
+
+def raise_kind
+  yield
+  nil
+rescue ThinkThen::UsageError, ThinkThen::BackendError, ThinkThen::DeadlineError,
+       ThinkThen::LocalError, ThinkThen::CancelledError, ThinkThen::DefectError => e
+  e.kind
+end
+
+def check_error(verb, question_text, evidence, records, kind)
+  begin
+    question = ThinkThen._parse_question(question_text)
+  rescue ThinkThen::UsageError => e
+    return if e.kind == kind
+
+    raise "FAIL: expected the #{kind} kind, got #{e.kind}"
+  end
+  error = case verb
+          when "filter" then raise_kind { ThinkThen.filter(question, records) }
+          when "decide" then raise_kind { ThinkThen.decide(question, evidence) }
+          when "choose" then raise_kind { ThinkThen.choose(question, evidence) }
+          when "decide_many" then raise_kind { ThinkThen.decide_many(question, records) }
+          when "rank" then raise_kind { ThinkThen.rank(question, records) }
+          else nil
+          end
+  ok_if(error == kind, "expected the #{kind} kind, got #{error || 'an answer'}")
+end
+
+def check_details(expect, details)
+  ok_if(details["answer"] == expect_answer(expect["answer"]),
+        "expected #{expect['answer'].inspect}, got #{details['answer'].inspect}")
+  wanted = expect.dig("details", "probability")
+  if wanted
+    ok_if((details["probability"] - wanted).abs < 1e-9,
+          "expected probability #{wanted}, got #{details['probability']}")
+  end
+  ok_if(details["digest"] == expect.dig("details", "question_sha256"), "the digest diverged")
+end
+
+def run_case(verb, question_text, evidence, records, expect, set_json)
+  if (error = expect["error"])
+    kind = error["kind"]
+    raise "SKIP: the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement" if verb == "cancel"
+    raise "SKIP: the backend kind needs the wire or a dead address; the null backend answers" if kind == "backend" && !wire_set?
+
+    return check_error(verb, question_text, evidence, records, kind)
+  end
+
+  case verb
+  when "decide"
+    question = built(question_text)
+    check_details(expect, ThinkThen.details(question, evidence))
+  when "decide_many"
+    question = built(question_text)
+    judgments = ThinkThen.decide_many_with_probabilities(question, records)
+    answers = judgments.map { |one| one[:answer] }
+    ok_if(answers == expect["answers"].map { |value| expect_answer(value) },
+          "expected #{expect['answers'].inspect}, got #{answers.inspect}")
+    if expect["probabilities"]
+      judgments.zip(expect["probabilities"]).each do |one, wanted|
+        ok_if((one[:probability] - wanted).abs < 1e-9,
+              "expected probability #{wanted}, got #{one[:probability]}")
+      end
+    end
+  when "filter"
+    question = built(question_text)
+    kept = ThinkThen.filter(question, records)
+    wanted = expect["indexes"].map { |index| records[index] }
+    ok_if(kept == wanted, "expected #{wanted.inspect}, got #{kept.inspect}")
+  when "choose"
+    question = built(question_text)
+    picked = ThinkThen.choose(question, evidence)
+    wanted = expect["answer"]
+    ok_if(wanted.nil? ? picked.nil? : picked == wanted,
+          "expected #{wanted.inspect}, got #{picked.inspect}")
+  when "score"
+    question = built(question_text)
+    value, level = ThinkThen.score_with_level(question, evidence)
+    ok_if((value - expect["answer"]).abs < 1e-9,
+          "expected #{expect['answer'].inspect}, got #{value}")
+    ok_if(level == expect.dig("details", "nearest_level"),
+          "expected level #{expect.dig('details', 'nearest_level').inspect}, got #{level.inspect}")
+  when "tag"
+    question = built(question_text)
+    labels = ThinkThen.tag(question, evidence)
+    ok_if(labels == expect["answer"], "expected #{expect['answer'].inspect}, got #{labels.inspect}")
+  when "annotate"
+    set = ThinkThen._parse_set(JSON.generate({ "questions" => set_json }))
+    held = records.empty? ? [evidence] : records
+    answers = ThinkThen.annotate(set, held)
+    first = answers.first or raise "FAIL: no annotated record came back"
+    expect["answers"].each do |name, wanted|
+      field = first.key?(name.to_sym) ? first[name.to_sym] : (raise "FAIL: no #{name} field in the answer")
+      if wanted["answer"].is_a?(Array) || wanted["answer"].is_a?(Float)
+        raise "SKIP: #{name} holds a field the runner does not check"
+      end
+
+      ok_if(field == wanted["answer"],
+            "#{name}: expected #{wanted['answer'].inspect}, got #{field.inspect}")
+    end
+  when "details"
+    question = built(question_text)
+    check_details(expect, ThinkThen.details(question, evidence))
+  when "usage"
+    raise "SKIP: the cache half needs the disk cache, which the stand-in does not carry"
+  else
+    raise "SKIP: no case shape for #{verb}"
+  end
+end
+
+file = JSON.parse(File.read(PATH))
+failed = 0
+file["cases"].each do |one|
+  id = one["id"]
+  verb = one["verb"]
+  question_text = JSON.generate(one["question"])
+  evidence = one["evidence"].to_s
+  records = one["records"].to_a
+  begin
+    run_case(verb, question_text, evidence, records, one["expect"], one["set"])
+    puts "ok       #{id}"
+  rescue RuntimeError => e
+    message = e.message.sub(/\AFAIL: /, "")
+    if message.start_with?("SKIP: ")
+      puts "skip     #{id}: #{message.sub('SKIP: ', '')}"
+    elsif message.start_with?("DIVERGE")
+      puts "diverge  #{id}: #{message}"
+    else
+      failed += 1
+      puts "FAIL     #{id}: #{message}"
+    end
+  end
+end
+
+if failed.positive?
+  warn "#{failed} conformance case(s) failed"
+  exit 1
+end
+puts "conformance slice green for the Ruby surface"

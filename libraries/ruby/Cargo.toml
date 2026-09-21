@@ -1,0 +1,24 @@
+[package]
+name = "thinkthen-ruby"
+version = "0.0.1"
+edition = "2021"
+publish = false
+description = "The Ruby surface over the thinkthen contract. Not the product."
+
+[lib]
+crate-type = ["cdylib"]
+name = "thinkthen_native"
+
+# A surface builds on its own, outside the crates workspace, so its
+# manifest carries its own profile: a library artifact unwinds, because an
+# abort inside a host kills someone else's process.
+[workspace]
+
+[dependencies]
+magnus = { version = "0.7", features = ["rb-sys"] }
+rb-sys = "0.9"
+thinkthen-contract = { path = "../../contract" }
+thinkthen-standin = { path = "../../standin" }
+
+[profile.release]
+panic = "unwind"

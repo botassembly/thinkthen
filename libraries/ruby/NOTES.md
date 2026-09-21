@@ -1,0 +1,126 @@
+# Notes
+
+Write as you go; a note written later is a guess. Newest entry last.
+
+## 2026-09-21 — lane start
+
+Ruby is not installed on the host (205 found the same). Everything Ruby
+runs in containers, removed after every run. No host install, no rc
+change; the rc guard greps `~/.zshrc` at the end.
+
+- **Tried:** `command -v ruby gem rbenv mise`
+- **Saw:** no output, exit 1.
+- **Means:** the same clean-machine start as 205; the container path is the
+  honest one for this surface.
+
+### Toolchain, decided after probing
+
+- The host has no rustup shims for cargo (`~/.cargo/bin` holds only extra
+  tools); the compiler lives in `~/.rustup/toolchains/stable-.../bin` and
+  `/usr/bin`.
+- The builder image is `ruby:3.4-trixie` plus one package, `libclang-dev`,
+  which rb-sys's bindgen step needs; the full bookworm image 205 used
+  carried it. A one-line `Dockerfile` bakes `thinkthen-ruby-builder:local`
+  (removed with `docker rmi thinkthen-ruby-builder:local`). The host
+  toolchain runs inside it mounted read-only (host glibc 2.39 < trixie
+  2.41, forward-compatible).
+- The cargo home is folder-local, `.runtimes/cargo` (gitignored), so the
+  registry cache persists across container runs and nothing writes to the
+  host.
+
+## The build, and one real bug the crash caught
+
+The extension follows 205's pattern: magnus 0.7, `rb_thread_call_without_gvl`
+around every engine call, the GVL re-taken by the tick through
+`rb_thread_call_with_gvl`. The contract types cross one way; no rule, no
+retry, no sending lives in Ruby or the shim.
+
+**Bug, found as a segfault, cause found by reading the C backtrace.** The
+first `decide` crashed inside `magnus::error::raise` reading a garbage
+string. The cause was mine: `single()` decoded the crossing's answer as a
+`(answer, raised)` tuple while `single_body` boxed only the answer, so the
+return read past the allocation. Single calls carry no tick and so no
+`raised`; the tuple was bulk-only thinking pasted onto the single path.
+Fixed by decoding exactly what the body boxed. Recorded here because the
+same shape will tempt the next shim: the boxed type and the decoded type
+must be spelled the same on both sides of `without_gvl`.
+
+### Fixture lesson
+
+The null backend answers by evidence substring, lowercase: "refund" 0.97,
+"maybe" 0.55, else 0.03. My first fixtures wrote "Maybe" capital and the
+band test read 0.03 as a no. The engine was right; the fixture was wrong.
+
+## Results, all commands run inside the container, stub on 8214 at 300 ms
+
+Surface tests (ENGINE_NULL=1):
+
+```
+20 runs, 48 assertions, 0 failures, 0 errors, 0 skips
+```
+
+Conformance slice, offline, ported case-for-case from the Rust runner:
+
+```
+12 ok, 4 skip with printed reasons (wire cases, the disk cache, the
+pre-fired token divergence), 0 FAIL
+```
+
+The skips and the one divergence match the sibling surfaces exactly.
+
+Slide sample, as drawn: green, with one finding reported, not hidden:
+
+```
+finding: score returned 1.7, the slide comment says 2.0; nearest level is 'Immediate.'
+3 of 8 are complaints   (the filter comment's promise)
+```
+
+**The finding, stated for the slide's owner:** the Ruby slide's comment
+promises 2.0 for `score`; the offline backend's level distribution puts
+the probability-weighted position at 1.7 with "Immediate." still the
+nearest level. The semantic promise holds — the top level wins — but the
+exact number depends on the reply's level distribution, which the offline
+backend synthesizes. The slide should say what it means without pinning
+the number, or pin the distribution. The sample asserts the range and the
+nearest level and reports the difference; the slide owns the change.
+
+Interrupt proof, brief item 7, on the wire (ENGINE_WIDTH=8, 1,000 records,
+watcher fires the token and Thread#raise(Interrupt) at 1.000 s):
+
+```
+raised: Interrupt
+wall:   1.207 s from start to raise (signal at 1.000 s)
+stub:   requests at return 32, after 2 s settle 32
+```
+
+The raise lands 0.207 s past the signal — inside the tick, which cancels
+the token, lets the one in-flight round finish (32 requests), and
+re-raises. Nothing served after the return. That is the 211 poll shape,
+ported: the tick runs with the VM lock taken each wait interval, so
+`Thread#raise` reaches a blocked bulk call.
+
+The one check script, end to end with the stub up:
+
+```
+== ruby surface: surface tests, null backend        20 runs, 0 failures
+== ruby surface: conformance slice, offline         green
+== ruby surface: slide sample, as drawn             green, one finding printed
+== ruby surface: interrupt proof on the wire        green
+```
+
+## Cleanup and the runtime guard
+
+Containers are `--rm`; none remain. The built image stays for the parent's
+check runs and is removed with `docker rmi thinkthen-ruby-builder:local`;
+the base it was built from is the official `ruby:3.4-trixie`. The stub is
+killed after each wire pass. The rc guard, after every install this lane
+made (all inside the folder or the container):
+
+```
+$ grep -c deno /home/ian/.zshrc
+0
+$ git -C repos/dotfiles status -s | wc -l
+0
+```
+
+Nothing on the host changed.
