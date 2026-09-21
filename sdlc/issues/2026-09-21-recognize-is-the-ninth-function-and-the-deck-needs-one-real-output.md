@@ -37,3 +37,4 @@ Ian asked the same day whether the `@` form is a special function. The marketing
 ## What Ian can overturn
 
 All of it.
+2026-09-21: the recognize demo landed. Final object: /home/ian/workspace/experiments/222-recognize-demo/output.json (pretty version and verification in report.md beside it). Recording: /home/ian/workspace/experiments/222-recognize-demo/arms/demo/cache/. Real spend 0.021 cents, run through sdlc/scripts/live under caps 5000+3000.
