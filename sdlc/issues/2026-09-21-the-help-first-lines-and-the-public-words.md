@@ -33,7 +33,7 @@ Suggested first lines. Each doubles as the slide title, the table cell on the si
 | `choose` | Pick one label from a fixed list and print it | Pick one option from your list |
 | `find` | The line above | Pick the one line or record that best answers a question |
 | `score` | Place the evidence on named levels and print the number | Place a text on a scale you name |
-| `tag` | Return every applicable label as one JSON array | Print every label that fits |
+| `tag` | Return every applicable label as one JSON array | Name every label that fits |
 | `annotate` | Ask every question in a saved set and print one annotated JSON object | Fill out a question set for every record |
 
 The list order today is decide, choose, tag, score, filter, rank, find, annotate. Every talk and page teaches by the model's three question types: decide, filter, rank, then choose, find, then score, then tag and annotate. The help in that order teaches the same map.
