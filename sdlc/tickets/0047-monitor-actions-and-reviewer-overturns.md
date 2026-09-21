@@ -6,7 +6,7 @@ opens: transforms demos/25-check-the-judge sdlc/planning
 
 # 0047: Monitor actions and reviewer overturns
 
-Status: proposed
+Status: landed
 
 ## Outcome
 
@@ -62,3 +62,11 @@ Re-score if the transform gains stored history, alerting, sampling, or configura
 ## Review
 
 The independent design review rejected the first draft because `agreement` did not say whether it was a count or a rate, review coverage cannot prove random sampling, and a score of six routes to level 3 rather than level 2. Its second pass required an exact three-action disagreement cycle instead of the phrase "each direction." The corrected report names `agreed` and `overturned` as counts and `agreement_rate` as the rate over reviewed rows. It states the sampling limit plainly, pins every source and target action in order, and uses the level-3 Sol Medium route.
+
+The independent code review accepted the implementation with no finding. It checked the exact report and action key order, every overall and per-action denominator, four-decimal rounding, null rates, the three-action disagreement cycle, missing and null reviews, duplicate ids, empty input, data-free errors, the `jq -n` trap, page-16 counts, and page 25's five executable blocks.
+
+## Result
+
+`monitor.jq` reports policy volume, human review coverage, agreements, and overturns overall and for `draft`, `block`, and `review`. It lists disagreements as id, policy action, and `reviewed_action` in input order and includes no message text. Missing and null human decisions remain visibly unreviewed.
+
+The page-16 outside rows report six rows, two drafts, one block, three reviews, full coverage, six agreements, and no change. Page 25 explains why a running policy needs reviews from the uncertain queue and samples from automated actions without claiming the monitor can prove random selection. It is 109 lines and 775 words. The focused checks, all four repository rungs, and `git diff --check` pass. No live or paid call ran.
