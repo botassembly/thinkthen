@@ -277,3 +277,26 @@ the vendor's word — a guard, not a use. The door's messages say `strength`
 on names and `probability` on relations; `not sure` stays `UNSURE`; the
 restricted and banned words appear nowhere else. `test door` also asserts
 `confidence` stays out of both returned shapes.
+
+### The repo-wide check, and one incident to report
+
+`scripts/check_surfaces.sh` (run without per-surface stubs) walks every
+surface; the C section runs its steps green, zero FAIL lines, and ends
+`== c surface: wire twin skipped, no stub on 8216` as expected in a run
+without a stub. The script's overall exit is 1, caused outside this
+surface: the R lane's conformance slice carries 44 failures against the
+new recognize/relate cases while that lane's runner is mid-landing, and
+the known `17-usage-and-cache` divergence (the stand-in holds no disk
+cache) prints in the Python section. Neither touches this folder.
+
+**Incident, reported for the orchestrator.** My closing commit
+(`692ccbf`) used `git add -A` and swept six of the R lane's in-flight
+files into it: `libraries/r/check.sh`, `conformance.R`,
+`recognize_check.R`, `thinkthen/DESCRIPTION`, `thinkthen/R/thinkthen.R`,
+and `thinkthen/src/rust/src/lib.rs`. The content is intact in both the
+tree and history — nothing was lost or rewritten, the branch was not
+force-pushed — but the R lane should be told before its next commit that
+its earlier work already landed under the C lane's commit message, and it
+should commit only what it changes from here. The root cause is mine:
+`git add -A` in a shared worktree. The remedy for the rest of this lane
+was explicit paths; that is what the commit below uses.
