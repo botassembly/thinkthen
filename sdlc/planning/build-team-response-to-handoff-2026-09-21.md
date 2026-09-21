@@ -1,6 +1,6 @@
 # Build-team response to the 2026-09-21 handoff
 
-Status: Prospective. No ticket below is authorized or created. The one-crate merge waits for Ian's answer.
+Status: Approved by Ian on 2026-09-21. Ticket 0053 starts the accepted order. The product-side additions are recorded in `../issues/2026-09-21-the-product-sides-reply-to-the-build-teams-response.md`.
 
 This response reviews `handoff-to-the-build-team-2026-09-21.md` against the current code, ADR 0017, the twenty-five conformance cases, the caller review, and the first quality wave. Ian can overturn every recommendation.
 
