@@ -46,17 +46,17 @@ Eight pages leave the list of 27 and page 43 enters, which is how 27 becomes 20.
 
 ## The front window
 
-The README features seven pages in this order. They show every command, and they run from the simplest use to the strongest.
+The README features seven pages in this order. Page 16 leads because it is the flagship used by the README, site, and talk. The remaining pages move from the simplest use to the supporting details.
 
 | # | How to | Shows |
 | --- | --- | --- |
+| 16 | Build a triage pipeline that drafts, blocks, or asks a person | the flagship |
 | 01 | Gate a script step on a yes/no answer | `decide`, the exit code |
 | 02 | Branch on a label with `choose` and `case` | `choose` |
 | 15 | Find the line that answers a question | `find`, and a clean "nothing fits" |
 | 43 | Lint a change by meaning and fail the build | `filter`, a question file, a build gate |
 | 06 | Put the best matches first | `rank --top` |
 | 14 | Grade an assistant's answers with a rubric | `annotate`, evals with no second model, all three question types |
-| 16 | Build a triage pipeline that drafts, blocks, or asks a person | the flagship |
 
 The study's window left `find` out and showed `filter` twice. This one shows each command once. Page 43 takes the `filter` seat from page 03, because the readers of this README are developers and a failing build is the use they will recognize first. Page 03 stays in the list as the plain introduction to `filter`, and page 43 links to it. Pages 13 and 41 sit just outside the window, and pages 14 and 43 link to them.
 
@@ -71,3 +71,7 @@ The study's window left `find` out and showed `filter` twice. This one shows eac
 ## Amendment, 2026-09-19, by ticket 0021
 
 The count above read "seven pages leave" and then named eight: 20, 24, 07, 30, 23, 37, 04, and 42. Eight leave and page 43 enters, so the list of 27 becomes 20. The list itself was always right. Ticket 0021 also found that two of the merges have not happened yet: 42's sentence is not on page 12, and page 25 holds no hostile case for 37. `documentation-plan.md` says so on each row, and a later ticket writes them.
+
+## Amendment, 2026-09-21, by ticket 0041
+
+Ian ruled that page 16 is the page the talk, site, and README lead with. It moves from seventh to first without changing the seven pages.

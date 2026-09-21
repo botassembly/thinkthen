@@ -1,6 +1,6 @@
 # ADR 0013: The question file is the one direct file
 
-- Status: Items 1 to 9 are accepted by Ian, in rulings of 2026-09-19. The last section, a block of rules, is open and carries the agent's recommendation. This page was written again whole on 2026-09-19, and git holds the earlier drafts
+- Status: Accepted by Ian, in rulings of 2026-09-19 and 2026-09-21. This page was written again whole on 2026-09-19, and git holds the earlier drafts
 - Date: 2026-09-19
 
 Ian's picture is the frame. The decider is a function. The evidence is its input. A question with its settings is its arguments. `decide`, `choose`, and `score` take the arguments for one question, and `annotate` takes the arguments for several. A user who has tuned a question and a cut wants to keep them and use them again, in a test and in a gate, without the two drifting apart. An assembly runtime such as botassembly wants one file per decision with no shell glue.
@@ -27,7 +27,7 @@ Ian's picture is the frame. The decider is a function. The evidence is its input
 
 Ian accepted the names "question file" and "question set" and said he does not love either. "Template" was declined, because evidence is never spliced into the question. He may return to the names.
 
-## Open: a block of rules in the question set
+## Declined for version 0.1: a block of rules in the question set
 
 A triage pipeline asks several questions with `annotate`, and something must then turn the answers into one action: draft a reply, block, or send to a person. Today that policy lives outside the tool, in a `jq` transform or in the script's own `case`. The idea is a small closed table inside the question set.
 
@@ -45,8 +45,8 @@ A triage pipeline asks several questions with `annotate`, and something must the
 - **Option 2. Compare on paper.** The flagship is written once for real, and a mock-up of the rules form sits beside it and does not run.
 - **Option 3. Build it and test it.** The rules block is built, the flagship is written twice, and the better page wins. This means a second small language inside the tool, with its own parser, refusals, page, and tests, and code to delete if `jq` wins.
 
-**The agent recommends option 1.** Rules are what a caller does with the answer, and they are no argument to the function, so they break the picture at the top of this page. Bash `case` and `jq` already do this job, and a shell user expects them to. The trap is already fenced: the policy ships as a tested transform that fails closed, and `AGENTS.md` bans the `jq` pattern that caused it. The cost is that the policy lives in a second file and the row's digest does not cover it. The idea returns if the reviewer who reads the flagship as a newcomer finds the `jq` policy hard to follow.
+Ian chose option 1 on 2026-09-21. Rules are what a caller does with the answer, and they are no argument to the function, so they break the picture at the top of this page. Bash `case` and `jq` already do this job, and a shell user expects them to. The trap is fenced: the policy ships as a tested transform that fails closed. The cost is that the policy lives in a second file and the row's digest does not cover it. The idea returns only with evidence that the tested transform cannot express a needed policy clearly.
 
 ## Consequences
 
-Ticket 0017 builds items 1 to 6 and writes `question-file.md`. Ticket 0015 builds item 7 over the same parser. The roadmap holds the block of rules until Ian rules on it. A note for the assembly runtime goes to its own repository when Ian takes up that work.
+Ticket 0017 builds items 1 to 6 and writes `question-file.md`. Ticket 0015 builds item 7 over the same parser. Ticket 0041 builds the tested policy transform and the flagship how-to. A note for the assembly runtime goes to its own repository when Ian takes up that work.
