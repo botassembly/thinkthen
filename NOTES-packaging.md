@@ -246,7 +246,25 @@ $ cc ... slide.c ./libthinkthen.a -lpthread -ldl -lm -o slide-static && ENGINE_N
 slide ok: decide YES at 0.97, decide_many YES NO YES
 ```
 
-The C sample's answer classes match its slide comments under the stand-in: decide Yes at 0.97 (the comment promises 0.99 on the real backend), decide_many YES/NO/YES. Each surface's own section above carries its findings where a comment did not reproduce. macOS: the shared library cross-compilation is attempted in the macOS section below. Registry use: none; the three files were copied from the local build. Pulls recorded: `ubuntu:24.04`.
+The C sample's answer classes match its slide comments under the stand-in: decide Yes at 0.97 (the comment promises 0.99 on the real backend), decide_many YES/NO/YES. Each surface's own section above carries its findings where a comment did not reproduce. Registry use: none; the three files were copied from the local build. Pulls recorded: `ubuntu:24.04`.
+
+## macOS
+
+Cross-compilation was attempted with `cargo-zigbuild` (already installed, v0.23.4; `zig` at `~/.local/bin/zig`) after `rustup target add aarch64-apple-darwin`. Results, honestly:
+
+| Surface | Attempt | Result |
+| --- | --- | --- |
+| C | `cargo zigbuild --release --target aarch64-apple-darwin` | **Real artifact.** `target/aarch64-apple-darwin/release/libthinkthen.dylib`, Mach-O 64-bit arm64 dynamically linked shared library (5,380,512 bytes), and `libthinkthen.a` (ar archive, 24,660,224 bytes) |
+| Python | `CARGO=cargo-zigbuild maturin build --release --target aarch64-apple-darwin` | **Real artifact.** `thinkthen-0.0.1-cp310-abi3-macosx_11_0_arm64.whl`; its `thinkthen/_thinkthen.abi3.so` is Mach-O arm64 |
+| Rust | `cargo zigbuild --release --target aarch64-apple-darwin` | The crate compiles for the target, but the package is source: the `.crate` is platform-neutral and no binary artifact is part of it |
+| TypeScript | `napi build --target aarch64-apple-darwin`, plain and with `CARGO=cargo-zigbuild` | **Failed.** napi-rs's own zig-linker script rejects the exported-symbols argument ("unsupported linker arg: /tmp/rustc…/list"); the plain path demands an Xcode SDK. No darwin `.node`; this one needs the Mac or a configured SDK |
+| Ruby | `cargo zigbuild --target aarch64-apple-darwin` | **Failed.** `rb-sys` panics (`ruby not found`) without a Ruby toolchain to read config from; no macOS gem artifact from this box |
+| R | not attempted | R source packages have no local cross path; R-universe's own builders are the macOS path, and the submission stays Ian's |
+
+So four of six have a stated macOS answer (C and Python produce real artifacts; Rust is source by design; R is R-universe), and two need the Mac or a fuller cross setup (TypeScript's `.node`, Ruby's gem).
+
+Incidental note: the Ruby builder container ran as root and left root-owned artifacts under `libraries/ruby/target/`; a host rebuild of that folder needs a fresh `CARGO_TARGET_DIR` (the macOS attempt above used `/tmp/pkg211/ruby-cross`) or a chown this session cannot do without sudo.
+
 
 
 
