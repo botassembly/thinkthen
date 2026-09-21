@@ -20,11 +20,11 @@ This ticket makes these decisions. Ian can overturn them:
 
 1. `transforms/monitor/monitor.jq` reads JSONL audit rows after a policy transform. Run it as `jq -n -f monitor.jq ROWS`. It takes no argument and makes no request.
 2. Every row has an object `input` with a unique string `id` and an object `policy` whose `action` is `draft`, `block`, or `review`. `input.reviewed_action` may be absent or null while no person has decided. A non-null reviewed action must use the same three words. Duplicate ids and malformed fields fail with fixed messages that echo no row data.
-3. The report has `rows`, `reviewed`, `unreviewed`, `review_coverage`, `overturned`, `agreement`, `actions`, and `changes`, in that order. Rates use reviewed rows as their stated denominator, round to four decimals, and are null when the denominator is zero.
-4. `actions` is an object with `draft`, `block`, and `review` in that order. Each holds `rows`, `reviewed`, `review_coverage`, `overturned`, and `agreement`. This makes a monitor that reviewed only the review queue visibly incomplete for automated draft and block actions.
+3. The report has `rows`, `reviewed`, `unreviewed`, `review_coverage`, `agreed`, `overturned`, `agreement_rate`, `actions`, and `changes`, in that order. `agreed` and `overturned` are counts of reviewed rows. `review_coverage` divides reviewed by all rows, and `agreement_rate` divides agreed by reviewed. Rates round to four decimals and are null when their denominator is zero.
+4. `actions` is an object with `draft`, `block`, and `review` in that order. Each holds `rows`, `reviewed`, `review_coverage`, `agreed`, `overturned`, and `agreement_rate` with the same denominators inside that policy action. This makes a monitor that reviewed only the review queue visibly incomplete for automated draft and block actions.
 5. `changes` lists each reviewed disagreement in input order as `{id,action,reviewed_action}`. The report contains no message body, subject, question, probability, or answer detail.
 6. Empty input succeeds with zero counts, null rates, the three zeroed action entries, and an empty changes list. Non-null ordinary input, including `jq -s`, fails once with a fixed message naming `jq -n`.
-7. Sampling stays policy outside this transform. Page 25 says to review the uncertain queue and a small sample of automated draft and block rows. The monitor reports whether that sampling happened; it does not invent randomness or choose work for a person.
+7. Sampling stays policy outside this transform. Page 25 says to review the uncertain queue and a small sample of automated draft and block rows. The monitor shows review coverage for each action, but it cannot prove that the rows were selected randomly. It does not invent randomness or choose work for a person.
 
 ## Scope
 
@@ -36,7 +36,7 @@ Excluded: selecting a review sample, state or history, time windows, alerts, thr
 
 - Synthetic rows prove all three policy actions, reviewed and unreviewed rows, one disagreement in each direction needed to cover all action names, input-order changes, top-level and per-action denominators, zero denominators, exact four-decimal rates, and empty input.
 - Missing, null, and valid `reviewed_action` values behave as specified. Duplicate ids, non-string ids, unknown policy or reviewed actions, malformed containers, and non-null ordinary input fail once with exact data-free diagnostics.
-- The page-16 rows after `triage.jq` report six rows, two drafts, one block, three reviews, full review coverage, six agreements, no overturns, and no changes.
+- The page-16 rows after `triage.jq` report six rows, two drafts, one block, three reviews, full review coverage, six agreed rows, no overturns, an agreement rate of 1, and no changes.
 - The executable transform page and page 25 run without a key or network. Page 25 stays at no more than 120 lines and 900 words and uses `reviewed_action` for the person's decision everywhere.
 - The focused test, all four repository rungs, and `git diff --check` pass.
 
@@ -53,8 +53,12 @@ Ticket 0046.
 - Cost of error: 1
 - Total: 6
 - Minimum level floor: none
-- Final level: 2
+- Final level: 3
 - Reasons: one pure jq summary reads one fixed three-action vocabulary and changes one existing page. It adds no state, network, dependency, product surface, or generic monitor language.
-- Selected model: `gpt-5.6-luna` with high reasoning.
+- Selected model: `gpt-5.6-sol` with medium reasoning.
 
 Re-score if the transform gains stored history, alerting, sampling, or configurable actions.
+
+## Review
+
+The independent design review rejected the first draft because `agreement` did not say whether it was a count or a rate, review coverage cannot prove random sampling, and a score of six routes to level 3 rather than level 2. The corrected report names `agreed` and `overturned` as counts and `agreement_rate` as the rate over reviewed rows. It states the sampling limit plainly and uses the level-3 Sol Medium route.
