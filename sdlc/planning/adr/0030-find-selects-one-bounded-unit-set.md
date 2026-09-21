@@ -16,3 +16,5 @@ Detailed output names `question.verb` and `answer.kind` as `find`. Its value is 
 One pure core module owns aggregate construction and reply-to-index mapping. It knows no command-line type, file, standard stream, `Failure`, or exit code. The command edge keeps original input and owns reading, transport setup, output, and diagnostics.
 
 Ticket 0040 first measures this exact request through the existing `choose` path. All planned requests must be accepted. Each find arm must hit at least five of six answerable documents and must not trail `rank --top 1`; `--none` must find all three blank documents and falsely refuse none. A failed gate returns to design and no public command is built.
+
+The feasibility stage accepted all eight requests on 2026-09-20, including 255 units without `none` and 254 with it. It billed 70,265 input tokens across 1,559 unit appearances. This settles request reach only. The comparison remains unrun, so implementation remains conditional.

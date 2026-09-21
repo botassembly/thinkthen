@@ -1,0 +1,8 @@
+{"case":"s100-a1","size":100,"trusted":"u007","none":false,"value":"u007","winning_probability":1.0,"replayed":false,"input_tokens":4645}
+{"case":"s100-b1","size":100,"trusted":null,"none":true,"value":"none","winning_probability":1.0,"replayed":false,"input_tokens":4652}
+{"case":"s175-a1","size":175,"trusted":"u031","none":false,"value":"u031","winning_probability":1.0,"replayed":false,"input_tokens":7913}
+{"case":"s175-b1","size":175,"trusted":null,"none":true,"value":"none","winning_probability":1.0,"replayed":false,"input_tokens":7921}
+{"case":"s250-a1","size":250,"trusted":"u063","none":false,"value":"u063","winning_probability":1.0,"replayed":false,"input_tokens":11183}
+{"case":"s250-b1","size":250,"trusted":null,"none":true,"value":"none","winning_probability":1.0,"replayed":false,"input_tokens":11190}
+{"case":"b255-a1","size":255,"trusted":"u251","none":false,"value":"u251","winning_probability":1.0,"replayed":false,"input_tokens":11399}
+{"case":"b254-b1","size":254,"trusted":null,"none":true,"value":"none","winning_probability":1.0,"replayed":false,"input_tokens":11362}
