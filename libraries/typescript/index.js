@@ -78,6 +78,8 @@ const QUESTION_KEYS = {
   choose: new Set(['options']),
   tag: new Set(['labels']),
   rank: new Set(['top']),
+  recognize: new Set(['kinds', 'relations', 'threshold', 'relationThreshold']),
+  relate: new Set(['relations', 'either', 'threshold']),
 };
 
 // Split the last object into the question's inputs and the call's options.
@@ -288,6 +290,112 @@ async function details(questionOrText, text, options) {
   };
 }
 
+function numberOption(name, value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw usageError(`options.${name} is a number`);
+  }
+  return value;
+}
+
+function nameList(name, value) {
+  if (!Array.isArray(value)) throw usageError(`options.${name} is an array of relation names`);
+  for (const held of value) {
+    if (typeof held !== 'string' || held.length === 0) {
+      throw usageError(`options.${name} is an array of relation names`);
+    }
+  }
+  return value;
+}
+
+// The recognize spec in the contract's grammar: kinds as a list, each
+// relation as a rule with a from end and a to end, and the two bars. The
+// any-kind end is the one-character string "*".
+function recognizeSpec(inputs) {
+  const spec = {};
+  if ('kinds' in inputs) {
+    if (!Array.isArray(inputs.kinds)) throw usageError('options.kinds is an array of kind words');
+    for (const kind of inputs.kinds) {
+      if (typeof kind !== 'string' || kind.length === 0) {
+        throw usageError('options.kinds is an array of kind words');
+      }
+    }
+    spec.kinds = inputs.kinds;
+  }
+  if ('relations' in inputs) {
+    const relations = inputs.relations;
+    if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
+      throw usageError('options.relations is an object: { name: [from, to] }');
+    }
+    spec.relations = [];
+    for (const [name, ends] of Object.entries(relations)) {
+      if (!Array.isArray(ends) || ends.length !== 2) {
+        throw usageError(`options.relations.${name} is [from, to]`);
+      }
+      for (const end of ends) {
+        if (typeof end !== 'string' || end.length === 0) {
+          throw usageError(`options.relations.${name} is [from, to], two kind words or "*"`);
+        }
+      }
+      spec.relations.push({ name, from: ends[0], to: ends[1] });
+    }
+  }
+  if ('threshold' in inputs) spec.threshold = numberOption('threshold', inputs.threshold);
+  if ('relationThreshold' in inputs) {
+    spec.relation_threshold = numberOption('relationThreshold', inputs.relationThreshold);
+  }
+  return spec;
+}
+
+// The relate spec: bare rule names (any kind to any kind), `either` names,
+// and the bar an edge must reach. The contract's one parser checks the
+// rules; this file only spells them.
+function relateSpec(inputs) {
+  const spec = {};
+  if ('relations' in inputs) spec.relations = nameList('relations', inputs.relations);
+  if ('either' in inputs) spec.either = nameList('either', inputs.either);
+  if ('threshold' in inputs) spec.threshold = numberOption('threshold', inputs.threshold);
+  return spec;
+}
+
+// The contract counts code points; JavaScript indexes UTF-16 units. One
+// conversion per boundary, so `text.slice(start, end)` is the name.
+function utf16Index(text, codePointIndex) {
+  let codePoint = 0;
+  let unit = 0;
+  for (const ch of text) {
+    if (codePoint === codePointIndex) return unit;
+    codePoint += 1;
+    unit += ch.length;
+  }
+  if (codePoint === codePointIndex) return unit;
+  throw new ThinkThenError('defect', `an offset of ${codePointIndex} is past the text`, false);
+}
+
+async function recognize(text, options) {
+  checkEvidence(text);
+  const { inputs, call } = splitLast('recognize', options);
+  const spec = JSON.stringify(recognizeSpec(inputs));
+  const found = await invoke('recognize', spec, text, call);
+  return {
+    entities: found.entities.map((held) => ({
+      id: held.id,
+      text: held.text,
+      kind: held.kind,
+      start: utf16Index(text, held.start),
+      end: utf16Index(text, held.end),
+      number: held.number,
+    })),
+    relations: found.relations,
+  };
+}
+
+async function relate(records, options) {
+  checkRecords(records);
+  const { inputs, call } = splitLast('relate', options);
+  const spec = JSON.stringify(relateSpec(inputs));
+  return invoke('relate', spec, JSON.stringify(records), call);
+}
+
 function usage() {
   return JSON.parse(native.usage());
 }
@@ -307,6 +415,8 @@ module.exports = {
   find,
   question,
   rank,
+  recognize,
+  relate,
   reset_usage,
   score,
   tag,

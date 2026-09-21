@@ -464,8 +464,9 @@ struct BatchKeep {
     buffers: Vec<Vec<*const c_void>>,
     owned: Vec<Vec<u8>>,
     /// The caller's frame, kept alive while any aliased original column
-    /// of this batch is alive.
-    hold: std::sync::Arc<FrameColumn>,
+    /// of this batch is alive. `None` for a table this surface built
+    /// whole, where every buffer is its own.
+    hold: Option<std::sync::Arc<FrameColumn>>,
 }
 
 /// The batch release: the consumer is done with the arrays and their
@@ -776,7 +777,7 @@ pub(crate) fn build_frame(
             child_ptrs,
             buffers,
             owned,
-            hold: std::sync::Arc::clone(&hold),
+            hold: Some(std::sync::Arc::clone(&hold)),
         }));
         base += length;
     }
@@ -795,6 +796,185 @@ pub(crate) fn build_frame(
         })
     });
 
+    Ok(OutFrame {
+        schema_children,
+        schema_strings,
+        batches,
+        root_template,
+        emitted: 0,
+        error: None,
+    })
+}
+
+/// One column of a table this surface builds whole: the ruled field
+/// names over owned buffers, because `recognize` and `relate` produce
+/// results with no fixed size and no caller frame to alias.
+pub(crate) enum TableValue {
+    /// A text column, the `u` layout: offsets over one UTF-8 buffer.
+    Texts(Vec<String>),
+    /// A whole-number column, the `l` layout.
+    Counts(Vec<i64>),
+    /// A number column, the `g` layout.
+    Numbers(Vec<f64>),
+}
+
+impl TableValue {
+    fn len(&self) -> usize {
+        match self {
+            Self::Texts(values) => values.len(),
+            Self::Counts(values) => values.len(),
+            Self::Numbers(values) => values.len(),
+        }
+    }
+
+    fn format(&self) -> &'static str {
+        match self {
+            Self::Texts(_) => "u",
+            Self::Counts(_) => "l",
+            Self::Numbers(_) => "g",
+        }
+    }
+}
+
+/// Build a whole frame from owned columns: the long frame `recognize`
+/// returns over a frame, and the edge frame `relate` returns. One batch,
+/// every buffer this surface's own, behind the same stream form Polars
+/// consumes through `__arrow_c_stream__`.
+pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> {
+    let length = columns.first().map_or(0, |(_, value)| value.len());
+    for (name, value) in columns {
+        if value.len() != length {
+            return Err(UsageError::new_err(format!(
+                "the column {name} carries {} rows beside a table of {length}",
+                value.len()
+            )));
+        }
+    }
+    let total = columns.len();
+    let mut schema_strings: Vec<CString> = Vec::with_capacity(total * 2 + 1);
+    schema_strings.push(CString::new("+s").expect("static format"));
+    let mut schema_children: Vec<Box<ArrowSchema>> = Vec::with_capacity(total);
+    for (name, value) in columns {
+        let owned = CString::new(*name)
+            .map_err(|_| UsageError::new_err("a column name holds a NUL byte"))?;
+        let name_ptr = owned.as_ptr();
+        schema_strings.push(owned);
+        let format = CString::new(value.format()).expect("static format");
+        let format_ptr = format.as_ptr();
+        schema_strings.push(format);
+        schema_children.push(Box::new(ArrowSchema {
+            format: format_ptr,
+            name: name_ptr,
+            metadata: std::ptr::null(),
+            flags: 2,
+            n_children: 0,
+            children: std::ptr::null_mut(),
+            dictionary: std::ptr::null_mut(),
+            release: Some(schema_tree_release),
+            private_data: std::ptr::null_mut(),
+        }));
+    }
+
+    let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);
+    let mut buffers: Vec<Vec<*const c_void>> = Vec::with_capacity(total);
+    let mut owned: Vec<Vec<u8>> = Vec::new();
+    for (_, value) in columns {
+        // Every value here is present, so the validity bitmap is all
+        // ones and the null count is zero; the array still carries the
+        // bitmap, the shape every Arrow reader accepts.
+        let mut validity = vec![0u8; length.div_ceil(8)];
+        for place in 0..length {
+            validity[place / 8] |= 1 << (place % 8);
+        }
+        let mut local: Vec<Vec<u8>> = Vec::new();
+        let n_buffers = match value {
+            TableValue::Texts(texts) => {
+                let mut offsets = Vec::with_capacity((length + 1) * 4);
+                let mut values = vec![0u8; 1];
+                offsets.extend_from_slice(&0i32.to_le_bytes());
+                for text in texts {
+                    values.extend_from_slice(text.as_bytes());
+                    offsets.extend_from_slice(&(values.len() as i32 - 1).to_le_bytes());
+                }
+                local.push(validity);
+                local.push(offsets);
+                local.push(values);
+                3i64
+            }
+            TableValue::Counts(counts) => {
+                let mut values = Vec::with_capacity(length * 8);
+                for count in counts {
+                    values.extend_from_slice(&count.to_le_bytes());
+                }
+                local.push(validity);
+                local.push(values);
+                2i64
+            }
+            TableValue::Numbers(numbers) => {
+                let mut values = Vec::with_capacity(length * 8);
+                for number in numbers {
+                    values.extend_from_slice(&number.to_le_bytes());
+                }
+                local.push(validity);
+                local.push(values);
+                2i64
+            }
+        };
+        let pointers: Vec<*const c_void> = local
+            .iter()
+            .enumerate()
+            .map(|(place, bytes)| {
+                if place == 0 {
+                    std::ptr::null()
+                } else {
+                    bytes.as_ptr() as *const c_void
+                }
+            })
+            .collect();
+        owned.extend(local);
+        buffers.push(pointers);
+        children.push(Box::new(ArrowArray {
+            length: length as i64,
+            null_count: 0,
+            offset: 0,
+            n_buffers,
+            n_children: 0,
+            buffers: std::ptr::null_mut(),
+            children: std::ptr::null_mut(),
+            dictionary: std::ptr::null_mut(),
+            release: Some(batch_release),
+            private_data: std::ptr::null_mut(),
+        }));
+    }
+    let child_ptrs: Vec<*mut ArrowArray> = children
+        .iter_mut()
+        .map(|child| child.as_mut() as *mut ArrowArray)
+        .collect();
+    for (place, pointers) in buffers.iter().enumerate() {
+        children[place].buffers = pointers.as_ptr() as *mut *const c_void;
+    }
+    let root_buffers: Vec<*const c_void> = vec![std::ptr::null()];
+    let root = Box::new(ArrowArray {
+        length: length as i64,
+        null_count: 0,
+        offset: 0,
+        n_buffers: 1,
+        n_children: total as i64,
+        buffers: root_buffers.as_ptr() as *mut *const c_void,
+        children: child_ptrs.as_ptr() as *mut *mut ArrowArray,
+        dictionary: std::ptr::null_mut(),
+        release: Some(batch_release),
+        private_data: std::ptr::null_mut(),
+    });
+    let root_template = Box::new(unsafe { std::ptr::read(root.as_ref()) });
+    let batches = vec![Some(BatchKeep {
+        root_buffers,
+        children,
+        child_ptrs,
+        buffers,
+        owned,
+        hold: None,
+    })];
     Ok(OutFrame {
         schema_children,
         schema_strings,

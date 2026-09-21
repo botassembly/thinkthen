@@ -42,12 +42,17 @@ use thinkthen_contract::Annotated;
 use thinkthen_contract::Answer;
 use thinkthen_contract::Cancel;
 use thinkthen_contract::Details;
+use thinkthen_contract::Edge as ContractEdge;
 use thinkthen_contract::Engine;
 use thinkthen_contract::Error;
 use thinkthen_contract::ErrorKind;
+use thinkthen_contract::Kind;
 use thinkthen_contract::Options;
 use thinkthen_contract::Question as ContractQuestion;
 use thinkthen_contract::QuestionSet;
+use thinkthen_contract::Recognize;
+use thinkthen_contract::Relate;
+use thinkthen_contract::RelationRule;
 use thinkthen_contract::Scored;
 use thinkthen_standin::BlockingEngine;
 
@@ -592,6 +597,488 @@ fn details(
     Ok(dict.into_any().unbind())
 }
 
+/// One name `recognize` found: the user's own kind word and where the
+/// name sits in the text the user gave. `number` is the interim field
+/// name for the number on a name; the open comparison behind it is the
+/// recognize team's, and the marketing vocabulary page
+/// (`repos/mktg/products/thinkthen/vocabulary.md`, "The words for
+/// numbers") restricts `confidence` to the vendor's own literal field,
+/// so this number never carries that word here.
+#[pyclass(frozen, skip_from_py_object)]
+#[derive(Clone)]
+struct Entity {
+    #[pyo3(get)]
+    id: u64,
+    #[pyo3(get)]
+    text: String,
+    #[pyo3(get)]
+    kind: String,
+    #[pyo3(get)]
+    start: u64,
+    #[pyo3(get)]
+    end: u64,
+    #[pyo3(get)]
+    number: f64,
+}
+
+#[pymethods]
+impl Entity {
+    fn __repr__(&self) -> String {
+        format!(
+            "Entity(id={}, text={:?}, kind={:?}, start={}, end={}, number={})",
+            self.id, self.text, self.kind, self.start, self.end, self.number
+        )
+    }
+}
+
+/// One relation between two names, by entity id. The ends are spelled
+/// `source` and `target` on every surface; the number is the model's own
+/// probability for the picked relation.
+#[pyclass(frozen, skip_from_py_object)]
+#[derive(Clone)]
+struct Relation {
+    #[pyo3(get)]
+    name: String,
+    #[pyo3(get)]
+    source: u64,
+    #[pyo3(get)]
+    target: u64,
+    #[pyo3(get)]
+    probability: f64,
+}
+
+#[pymethods]
+impl Relation {
+    fn __repr__(&self) -> String {
+        format!(
+            "Relation(name={:?}, source={}, target={}, probability={})",
+            self.name, self.source, self.target, self.probability
+        )
+    }
+}
+
+/// What `recognize` returned: the names, and the relations when a rule
+/// was given.
+#[pyclass(frozen, skip_from_py_object)]
+#[derive(Clone)]
+struct Recognized {
+    entities: Vec<Entity>,
+    relations: Vec<Relation>,
+}
+
+#[pymethods]
+impl Recognized {
+    #[getter]
+    fn entities(&self) -> Vec<Entity> {
+        self.entities.clone()
+    }
+
+    #[getter]
+    fn relations(&self) -> Vec<Relation> {
+        self.relations.clone()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Recognized(entities={}, relations={})",
+            self.entities.len(),
+            self.relations.len()
+        )
+    }
+}
+
+/// One edge `relate` found, by record numbers counted from 1 in input
+/// order. An `either` edge prints once, with the lower number in
+/// `source`.
+#[pyclass(frozen, skip_from_py_object)]
+#[derive(Clone)]
+struct Edge {
+    #[pyo3(get)]
+    name: String,
+    #[pyo3(get)]
+    source: u64,
+    #[pyo3(get)]
+    target: u64,
+    #[pyo3(get)]
+    probability: f64,
+    #[pyo3(get)]
+    source_kind: Option<String>,
+    #[pyo3(get)]
+    target_kind: Option<String>,
+}
+
+#[pymethods]
+impl Edge {
+    fn __repr__(&self) -> String {
+        format!(
+            "Edge(name={:?}, source={}, target={}, probability={})",
+            self.name, self.source, self.target, self.probability
+        )
+    }
+}
+
+/// The ruled question-file section for one function: the named section
+/// when the file nests one, with the file's top-level thresholds carried
+/// into the section when it lacks them, else the whole object. Reading
+/// the file is this surface's own; every grammar check is the core's.
+fn spec_from_file(path: &str, section: &str) -> Result<String, Error> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|error| Error::local(format!("{path}: {error}")))?;
+    let mut value: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|error| Error::usage(format!("the question file {path} is not JSON: {error}")))?;
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| Error::usage(format!("the question file {path} is not a JSON object")))?;
+    let spec = match object.get(section).and_then(serde_json::Value::as_object) {
+        Some(section) => {
+            let mut spec = section.clone();
+            for key in ["threshold", "relation_threshold"] {
+                if !spec.contains_key(key) {
+                    if let Some(carried) = object.get(key) {
+                        spec.insert(key.to_owned(), carried.clone());
+                    }
+                }
+            }
+            serde_json::Value::Object(spec)
+        }
+        None => value,
+    };
+    Ok(serde_json::to_string(&spec).expect("a JSON value serializes"))
+}
+
+/// One end of a relation rule: `"*"` is the any kind, any other string a
+/// kind of the user's own.
+fn end_kind(end: &str) -> Kind {
+    if end == "*" {
+        Kind::Any
+    } else {
+        Kind::named(end)
+    }
+}
+
+/// The pair a relation value must be: from, then to.
+fn ends_pair(name: &str, ends: &Bound<'_, PyAny>) -> PyResult<(Kind, Kind)> {
+    let pair: Vec<String> = ends.extract().map_err(|_| {
+        UsageError::new_err(format!(
+            "the relation {name} takes a pair of ends, from then to; each is a kind or \"*\""
+        ))
+    })?;
+    if pair.len() != 2 {
+        return Err(UsageError::new_err(format!(
+            "the relation {name} takes a pair of ends, from then to, and {} came",
+            pair.len()
+        )));
+    }
+    Ok((end_kind(&pair[0]), end_kind(&pair[1])))
+}
+
+/// Build a recognize ask from the ruled keyword shape: kinds as a list or
+/// a question file path, relations as a name-to-pair mapping, and the two
+/// bars. One parser in the core checks every rule; nothing is checked
+/// again here.
+fn build_recognize(
+    py: Python<'_>,
+    kinds: Option<&Bound<'_, PyAny>>,
+    relations: Option<&Bound<'_, PyAny>>,
+    threshold: Option<f64>,
+    relation_threshold: Option<f64>,
+) -> PyResult<Recognize> {
+    let mut ask = match kinds {
+        None => Recognize::new(),
+        Some(bound) => {
+            if let Ok(path) = bound.extract::<String>() {
+                let spec = spec_from_file(&path, "recognize").map_err(|error| python_error(py, error))?;
+                Recognize::from_json(&spec).map_err(|error| python_error(py, error))?
+            } else {
+                let names: Vec<String> = bound.extract().map_err(|_| {
+                    UsageError::new_err("kinds takes a list of kind names or a question file path")
+                })?;
+                if names.is_empty() {
+                    Recognize::new()
+                } else {
+                    Recognize::new().kinds(names)
+                }
+            }
+        }
+    };
+    if let Some(bound) = relations {
+        let dict = bound.cast::<PyDict>().map_err(|_| {
+            UsageError::new_err(
+                "relations takes a dictionary, one entry per rule: the name to a (from, to) pair",
+            )
+        })?;
+        for (name, ends) in dict.iter() {
+            let name: String = name
+                .extract()
+                .map_err(|_| UsageError::new_err("a relation name is a string"))?;
+            let (from, to) = ends_pair(&name, &ends)?;
+            let rule = RelationRule::new(&name, from, to).map_err(|error| python_error(py, error))?;
+            ask.relations.push(rule);
+        }
+    }
+    if let Some(value) = threshold {
+        ask = ask.threshold(value).map_err(|error| python_error(py, error))?;
+    }
+    if let Some(value) = relation_threshold {
+        ask = ask.relation_threshold(value).map_err(|error| python_error(py, error))?;
+    }
+    Ok(ask)
+}
+
+/// Build a relate ask from the ruled keyword shape: rules as bare names,
+/// as name-to-pair mappings, or as a question file path; `either` names
+/// the both-ways rules; one bar.
+fn build_relate(
+    py: Python<'_>,
+    relations: Option<&Bound<'_, PyAny>>,
+    either: Option<&Bound<'_, PyAny>>,
+    threshold: Option<f64>,
+) -> PyResult<Relate> {
+    let mut ask = Relate::new();
+    if let Some(bound) = relations {
+        if let Ok(path) = bound.extract::<String>() {
+            let spec = spec_from_file(&path, "relate").map_err(|error| python_error(py, error))?;
+            ask = Relate::from_json(&spec).map_err(|error| python_error(py, error))?;
+        } else {
+            let entries = bound.cast::<pyo3::types::PyList>().map_err(|_| {
+                UsageError::new_err(
+                    "relations takes a list of names or name-to-pair mappings, or a question file path",
+                )
+            })?;
+            for entry in entries.iter() {
+                if let Ok(name) = entry.extract::<String>() {
+                    let rule = RelationRule::new(&name, Kind::Any, Kind::Any)
+                        .map_err(|error| python_error(py, error))?;
+                    ask.relations.push(rule);
+                } else if let Ok(dict) = entry.cast::<PyDict>() {
+                    let held = |key: &str| -> PyResult<String> {
+                        dict.get_item(key)?
+                            .and_then(|value| value.extract::<String>().ok())
+                            .ok_or_else(|| {
+                                UsageError::new_err(format!(
+                                    "a relation mapping needs its {key} as a string"
+                                ))
+                            })
+                    };
+                    let name = held("name")?;
+                    let from = held("from")?;
+                    let to = held("to")?;
+                    let either = dict
+                        .get_item("either")?
+                        .and_then(|value| value.extract::<bool>().ok())
+                        .unwrap_or(false);
+                    let rule = RelationRule::new(&name, end_kind(&from), end_kind(&to))
+                        .map_err(|error| python_error(py, error))?
+                        .either(either);
+                    ask.relations.push(rule);
+                } else {
+                    return Err(UsageError::new_err(
+                        "a relation entry is a name or a mapping with name, from, to",
+                    ));
+                }
+            }
+        }
+    }
+    if let Some(bound) = either {
+        let names: Vec<String> = bound.extract().map_err(|_| {
+            UsageError::new_err("either takes a list of relation names")
+        })?;
+        for name in names {
+            let rule = RelationRule::new(&name, Kind::Any, Kind::Any)
+                .map_err(|error| python_error(py, error))?
+                .either(true);
+            ask.relations.push(rule);
+        }
+    }
+    if let Some(value) = threshold {
+        ask = ask.threshold(value).map_err(|error| python_error(py, error))?;
+    }
+    Ok(ask)
+}
+
+/// Carry the contract's recognized answer into this surface's records.
+fn recognized_record(found: thinkthen_contract::Recognized) -> Recognized {
+    Recognized {
+        entities: found
+            .entities
+            .into_iter()
+            .map(|entity| Entity {
+                id: entity.id,
+                text: entity.text,
+                kind: entity.kind,
+                start: entity.start as u64,
+                end: entity.end as u64,
+                number: entity.number,
+            })
+            .collect(),
+        relations: found
+            .relations
+            .into_iter()
+            .map(|relation| Relation {
+                name: relation.name,
+                source: relation.source,
+                target: relation.target,
+                probability: relation.probability,
+            })
+            .collect(),
+    }
+}
+
+/// Carry one contract edge into this surface's record.
+fn edge_record(edge: ContractEdge) -> Edge {
+    Edge {
+        name: edge.name,
+        source: edge.source,
+        target: edge.target,
+        probability: edge.probability,
+        source_kind: edge.source_kind,
+        target_kind: edge.target_kind,
+    }
+}
+
+/// Find every name in one text and say what kind it is. Relations are the
+/// second answer, on when a rule is given. `kinds` is a list of the user's
+/// own kind words or a path to a question file; `relations` is a mapping
+/// of rule name to a (from, to) pair, each end a kind or the one-character
+/// string `"*"`. Offsets count Python string positions, so
+/// `text[start:end]` is the name.
+#[pyfunction(signature = (text, *, kinds = None, relations = None, threshold = None, relation_threshold = None, deadline = None))]
+#[allow(clippy::too_many_arguments)]
+fn recognize(
+    py: Python<'_>,
+    text: String,
+    kinds: Option<&Bound<'_, PyAny>>,
+    relations: Option<&Bound<'_, PyAny>>,
+    threshold: Option<f64>,
+    relation_threshold: Option<f64>,
+    deadline: Option<f64>,
+) -> PyResult<Recognized> {
+    let asked = build_recognize(py, kinds, relations, threshold, relation_threshold)?;
+    let found = py
+        .detach(move || engine().recognize_opts(&asked, &text, call_options(deadline)))
+        .map_err(|error| python_error(py, error))?;
+    Ok(recognized_record(found))
+}
+
+/// `recognize` over a frame's `on` column: one row per name, with the
+/// source row's number counted from 1, in a long frame this surface
+/// builds whole. No relation rules here; ask them of the text form.
+#[pyfunction(signature = (records, on, *, kinds = None, threshold = None, relation_threshold = None, deadline = None))]
+fn recognize_stream(
+    py: Python<'_>,
+    records: &Bound<'_, PyAny>,
+    on: String,
+    kinds: Option<&Bound<'_, PyAny>>,
+    threshold: Option<f64>,
+    relation_threshold: Option<f64>,
+    deadline: Option<f64>,
+) -> PyResult<arrow::ArrowFrame> {
+    let asked = build_recognize(py, kinds, None, threshold, relation_threshold)?;
+    let frame = arrow::frame_column(records, &on)?;
+    let references: Vec<&str> = frame.texts.clone();
+    let rows = bulk(py, deadline, |armed, mut poll| {
+        let mut row_col: Vec<i64> = Vec::new();
+        let mut text_col: Vec<String> = Vec::new();
+        let mut kind_col: Vec<String> = Vec::new();
+        let mut start_col: Vec<i64> = Vec::new();
+        let mut end_col: Vec<i64> = Vec::new();
+        let mut number_col: Vec<f64> = Vec::new();
+        for (place, text) in references.iter().enumerate() {
+            if let Some(poll) = poll.as_mut() {
+                poll();
+            }
+            let found = engine().recognize_opts(&asked, text, armed)?;
+            for entity in found.entities {
+                row_col.push(place as i64 + 1);
+                text_col.push(entity.text);
+                kind_col.push(entity.kind);
+                start_col.push(entity.start as i64);
+                end_col.push(entity.end as i64);
+                number_col.push(entity.number);
+            }
+        }
+        Ok((row_col, text_col, kind_col, start_col, end_col, number_col))
+    })?;
+    drop(frame);
+    let (row_col, text_col, kind_col, start_col, end_col, number_col) = rows;
+    let table = arrow::build_table(&[
+        ("row", arrow::TableValue::Counts(row_col)),
+        ("text", arrow::TableValue::Texts(text_col)),
+        ("kind", arrow::TableValue::Texts(kind_col)),
+        ("start", arrow::TableValue::Counts(start_col)),
+        ("end", arrow::TableValue::Counts(end_col)),
+        ("number", arrow::TableValue::Numbers(number_col)),
+    ])?;
+    Ok(arrow::ArrowFrame::new(table))
+}
+
+/// Say how the records relate to each other: one pick-one question per
+/// legal pair, every record crossing at once. More than 255 records is a
+/// usage error before anything happens. `relations` is a list of names or
+/// name-to-pair mappings, or a question file path; `either` names the
+/// both-ways rules.
+#[pyfunction(signature = (records, *, relations = None, either = None, threshold = None, deadline = None))]
+#[allow(clippy::needless_pass_by_value)]
+fn relate(
+    py: Python<'_>,
+    records: Vec<String>,
+    relations: Option<&Bound<'_, PyAny>>,
+    either: Option<&Bound<'_, PyAny>>,
+    threshold: Option<f64>,
+    deadline: Option<f64>,
+) -> PyResult<Vec<Edge>> {
+    let asked = build_relate(py, relations, either, threshold)?;
+    let references: Vec<&str> = records.iter().map(String::as_str).collect();
+    let edges = bulk(py, deadline, |armed, mut poll| {
+        if let Some(poll) = poll.as_mut() {
+            poll();
+        }
+        thinkthen_contract::relate_checked(engine(), &asked, &references, armed)
+    })?;
+    Ok(edges.into_iter().map(edge_record).collect())
+}
+
+/// `relate` over a frame's `on` column: a frame of edges, one row per
+/// edge, the record numbers counted from 1 in input order.
+#[pyfunction(signature = (records, on, *, relations = None, either = None, threshold = None, deadline = None))]
+fn relate_stream(
+    py: Python<'_>,
+    records: &Bound<'_, PyAny>,
+    on: String,
+    relations: Option<&Bound<'_, PyAny>>,
+    either: Option<&Bound<'_, PyAny>>,
+    threshold: Option<f64>,
+    deadline: Option<f64>,
+) -> PyResult<arrow::ArrowFrame> {
+    let asked = build_relate(py, relations, either, threshold)?;
+    let frame = arrow::frame_column(records, &on)?;
+    let references: Vec<&str> = frame.texts.clone();
+    let edges = bulk(py, deadline, |armed, mut poll| {
+        if let Some(poll) = poll.as_mut() {
+            poll();
+        }
+        thinkthen_contract::relate_checked(engine(), &asked, &references, armed)
+    })?;
+    drop(frame);
+    let mut name_col: Vec<String> = Vec::with_capacity(edges.len());
+    let mut source_col: Vec<i64> = Vec::with_capacity(edges.len());
+    let mut target_col: Vec<i64> = Vec::with_capacity(edges.len());
+    let mut probability_col: Vec<f64> = Vec::with_capacity(edges.len());
+    for edge in edges {
+        name_col.push(edge.name);
+        source_col.push(edge.source as i64);
+        target_col.push(edge.target as i64);
+        probability_col.push(edge.probability);
+    }
+    let table = arrow::build_table(&[
+        ("name", arrow::TableValue::Texts(name_col)),
+        ("source", arrow::TableValue::Counts(source_col)),
+        ("target", arrow::TableValue::Counts(target_col)),
+        ("probability", arrow::TableValue::Numbers(probability_col)),
+    ])?;
+    Ok(arrow::ArrowFrame::new(table))
+}
+
 /// The counters since the last reset. `requests` counts sends, so a
 /// retried send shows twice, the same as the bill.
 #[pyfunction]
@@ -615,9 +1102,15 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = module.py();
     module.add_class::<Question>()?;
     module.add_class::<QuestionSetHolder>()?;
+    module.add_class::<Entity>()?;
+    module.add_class::<Relation>()?;
+    module.add_class::<Recognized>()?;
+    module.add_class::<Edge>()?;
     module.add_class::<arrow::ArrowFrame>()?;
     module.add_function(wrap_pyfunction!(arrow::_arrow_probe, module)?)?;
     module.add_function(wrap_pyfunction!(annotate_stream, module)?)?;
+    module.add_function(wrap_pyfunction!(recognize_stream, module)?)?;
+    module.add_function(wrap_pyfunction!(relate_stream, module)?)?;
     generated::register(module)?;
     module.add("ThinkThenError", py.get_type::<ThinkThenError>())?;
     module.add("UsageError", py.get_type::<UsageError>())?;

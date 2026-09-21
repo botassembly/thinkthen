@@ -95,6 +95,65 @@ export interface FoundAnswer {
  * `null`, a score's position, or a tag's held labels. */
 export type AnnotatedField = Answer | string | null | number | readonly string[];
 
+/** One name `recognize` found. `start` and `end` slice the name out of the
+ * original text in JavaScript's own indexing (UTF-16 units); the contract
+ * counts code points and the wrapper converts once. `number` is the
+ * interim field for the number on a name; its final name is an open item
+ * (never call it confidence). */
+export interface Entity {
+  id: number;
+  text: string;
+  kind: string;
+  start: number;
+  end: number;
+  number: number;
+}
+
+/** One relation between two names, by entity id. The number is
+ * `probability`, a Jev number passed through. */
+export interface Relation {
+  name: string;
+  source: number;
+  target: number;
+  probability: number;
+}
+
+/** What `recognize` returned: the names, and the relations when a rule
+ * was given. */
+export interface Recognized {
+  entities: Entity[];
+  relations: Relation[];
+}
+
+/** One edge `relate` found, by record numbers counted from 1 in input
+ * order. An `either` edge prints once with the lower number in `source`. */
+export interface Edge {
+  name: string;
+  source: number;
+  target: number;
+  probability: number;
+  source_kind?: string;
+  target_kind?: string;
+}
+
+/** `recognize`'s last object: the kinds, the relation rules, the bars,
+ * and the call options together. A rule's ends are kind words, and the
+ * any-kind end is the one-character string "*". */
+export interface RecognizeOptions extends CallOptions {
+  kinds?: readonly string[];
+  relations?: Record<string, readonly [string, string]>;
+  threshold?: number;
+  relationThreshold?: number;
+}
+
+/** `relate`'s last object: the rule names, the both-ways names, the bar,
+ * and the call options together. */
+export interface RelateOptions extends CallOptions {
+  relations?: readonly string[];
+  either?: readonly string[];
+  threshold?: number;
+}
+
 export type AnnotatedRow<T> = T & Record<string, AnnotatedField>;
 
 export interface UsageAnswer {
@@ -156,6 +215,15 @@ export function annotate<T extends object = { record: string }>(
 
 /** One judgment plus the audit trail, with the sends that produced it. */
 export function details(question: string | Question, text: string, options?: CallOptions): Promise<DetailsAnswer>;
+
+/** Find every name in a text and say what kind it is, with the relations
+ * between them when rules are given. `start` and `end` index the original
+ * text in UTF-16 units, so `text.slice(start, end)` is the name. */
+export function recognize(text: string, options?: RecognizeOptions): Promise<Recognized>;
+
+/** Say how the records relate to each other: one question per legal pair,
+ * every record crossing at once. More than 255 records is a usage error. */
+export function relate(records: readonly string[], options?: RelateOptions): Promise<Edge[]>;
 
 /** The counters since the last reset: sends, cache answers, tokens. */
 export function usage(): UsageAnswer;

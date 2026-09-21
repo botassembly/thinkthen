@@ -4,7 +4,7 @@
 //! engine function on a worker thread, and converts back. No rule, no
 //! retry, and no sending lives here.
 //!
-//! The ten calls cross through one `call` door with a small op name and a
+//! The twelve calls cross through one `call` door with a small op name and a
 //! JSON payload, because the repeated parts across surfaces belong to the
 //! wrapper and the contract, not to nine copies of Node-API scaffolding.
 //! Failures come back as data in a `{ err: { kind, retryable, message } }`
@@ -85,6 +85,8 @@ enum Op {
     Find,
     Annotate,
     Details,
+    Recognize,
+    Relate,
 }
 
 impl Op {
@@ -100,6 +102,8 @@ impl Op {
             "find" => Self::Find,
             "annotate" => Self::Annotate,
             "details" => Self::Details,
+            "recognize" => Self::Recognize,
+            "relate" => Self::Relate,
             other => {
                 return Err(napi::Error::new(
                     napi::Status::InvalidArg,
@@ -149,6 +153,20 @@ fn set(spec: &Option<String>) -> Result<tt::QuestionSet, tt::Error> {
     } else {
         tt::QuestionSet::from_file(std::path::Path::new(text))
     }
+}
+
+fn recognize_spec(spec: &Option<String>) -> Result<tt::Recognize, tt::Error> {
+    let text = spec
+        .as_deref()
+        .ok_or_else(|| tt::Error::usage("the call names no recognize spec"))?;
+    tt::Recognize::from_json(text)
+}
+
+fn relate_spec(spec: &Option<String>) -> Result<tt::Relate, tt::Error> {
+    let text = spec
+        .as_deref()
+        .ok_or_else(|| tt::Error::usage("the call names no relate spec"))?;
+    tt::Relate::from_json(text)
 }
 
 impl CallTask {
@@ -213,6 +231,20 @@ impl CallTask {
                 let question = question(&self.spec)?;
                 let details = engine.details_opts(&question, &self.payload, options)?;
                 serde_json::to_value(details).map_err(|error| tt::Error::defect(error.to_string()))
+            }
+            Op::Recognize => {
+                let ask = recognize_spec(&self.spec)?;
+                let found = engine.recognize_opts(&ask, &self.payload, options)?;
+                serde_json::to_value(found).map_err(|error| tt::Error::defect(error.to_string()))
+            }
+            Op::Relate => {
+                let ask = relate_spec(&self.spec)?;
+                let records = records(&self.payload)?;
+                let held = borrowed(&records);
+                // `relate_checked` carries the 255-record limit at the
+                // contract's own door, so this surface inherits it.
+                let edges = tt::relate_checked(engine, &ask, &held, options)?;
+                serde_json::to_value(&edges).map_err(|error| tt::Error::defect(error.to_string()))
             }
         }
     }

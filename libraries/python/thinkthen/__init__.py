@@ -1,12 +1,15 @@
 """The Python surface of ThinkThen: ``import thinkthen as tt``.
 
-The eight verbs as functions, ``None`` for "not sure", and a list or a
-Polars container crossing into the engine once. A list of strings crosses
-as strings; a Polars Series (or a frame column) crosses zero-copy through
+The ten functions, ``None`` for "not sure", and a list or a Polars
+container crossing into the engine once. A list of strings crosses as
+strings; a Polars Series (or a frame column) crosses zero-copy through
 the Arrow stream form, and ``annotate`` on a Polars frame returns the
 frame with its new columns attached — the wheel never imports Polars and
 never loops a row; the width and the vectorization live in Rust. The bulk
-spelling is ``decide_many``. Errors raise this package's own exception
+spelling is ``decide_many``. ``recognize`` reads one text or a frame's
+column and returns names with their kinds; ``relate`` reads every record
+at once and returns the edges. A relation's two ends are ``source`` and
+``target`` on every surface. Errors raise this package's own exception
 classes, each carrying ``kind`` and ``retryable``; a cancel during a bulk
 wait raises ``Cancelled``, a subclass of ``KeyboardInterrupt``.
 """
@@ -15,8 +18,12 @@ from ._thinkthen import (
     Cancelled,
     DeadlineError,
     DefectError,
+    Edge,
+    Entity,
     LocalError,
     BackendError,
+    Relation,
+    Recognized,
     ThinkThenError,
     UsageError,
     annotate_rows,
@@ -29,6 +36,10 @@ from ._thinkthen import (
     filter,
     question,
     rank,
+    recognize as _recognize_text,
+    recognize_stream,
+    relate as _relate_records,
+    relate_stream,
     reset_usage,
     score,
     tag,
@@ -37,8 +48,10 @@ from ._thinkthen import (
 
 __all__ = [
     "annotate", "Cancelled", "choose", "decide", "decide_many",
-    "details", "find", "filter", "question", "rank", "reset_usage",
-    "score", "tag", "usage",
+    "details", "Edge", "Entity", "find", "filter", "question", "rank",
+    "recognize", "recognize_stream", "Relation",
+    "relate", "relate_stream", "Recognized", "reset_usage", "score",
+    "tag", "usage",
     "ThinkThenError", "UsageError", "BackendError", "DeadlineError",
     "LocalError", "DefectError",
 ]
@@ -74,4 +87,96 @@ def annotate(set, records, *, on=None, deadline=None):
     raise UsageError(
         "annotate with on= takes a frame whose column crosses as Arrow "
         "(a Polars DataFrame); a plain list uses annotate with no on="
+    )
+
+
+def recognize(text, *, kinds=None, relations=None, threshold=None,
+              relation_threshold=None, on=None, deadline=None):
+    """Find every name in a text and say what kind it is.
+
+    The deck's call, as drawn::
+
+        found = tt.recognize(text, kinds=["person", "organization"],
+                             relations={"works_for": ("person", "organization")})
+        text[found.entities[0].start:found.entities[0].end]  # the name
+
+    Offsets count Python string positions, so ``text[start:end]`` is the
+    name. ``kinds`` is a list of the user's own kind words or a path to a
+    question file; with none, person, organization, and place. A relation
+    value is a ``(from, to)`` pair, each end a kind or the one-character
+    string ``"*"``. The number on a name is ``entity.number``; the field
+    name is interim and the recognize team's comparison settles it.
+
+    With ``on=`` the first argument is a frame's column: one row per name,
+    with the source row's number counted from 1, as a long frame. Relation
+    rules ride the text form.
+    """
+    if on is None:
+        return _recognize_text(
+            text, kinds=kinds, relations=relations, threshold=threshold,
+            relation_threshold=relation_threshold, deadline=deadline,
+        )
+    if relations is not None:
+        raise UsageError(
+            "recognize with on= returns one row per name and takes no "
+            "relation rules; ask them of the whole text — "
+            "tt.recognize(text, relations={...})"
+        )
+    if hasattr(text, "__arrow_c_stream__"):
+        frame = recognize_stream(text, on, kinds=kinds, threshold=threshold,
+                                 relation_threshold=relation_threshold,
+                                 deadline=deadline)
+        try:
+            return type(text)(frame)
+        except Exception as exc:
+            raise UsageError(
+                "recognize with on= cannot rebuild a pandas frame from the "
+                "Arrow stream it returns. Pass the column instead — "
+                "tt.recognize(df[column], kinds=...) — or convert once and "
+                "back — tt.recognize(pl.from_pandas(df), on=column)"
+            ) from exc
+    raise UsageError(
+        "recognize with on= takes a frame whose column crosses as Arrow "
+        "(a Polars DataFrame); a plain text uses recognize with no on="
+    )
+
+
+def relate(records, *, relations=None, either=None, threshold=None, on=None,
+           deadline=None):
+    """Say how the records relate to each other.
+
+    The deck's call, as drawn::
+
+        edges = tt.relate(alerts, relations=["caused_by"],
+                          either=["same_as"], threshold=0.9)
+        edges[0].name, edges[0].source, edges[0].target  # "caused_by", 1, 4
+
+    Every record crosses at once, and more than 255 records refuses with a
+    usage error before anything happens. ``relations`` is a list of names
+    (any kind to any kind) or ``{name, from, to}`` mappings, or a path to
+    a question file; ``either`` names the rules that read the same both
+    ways. ``source`` and ``target`` are record numbers counted from 1 in
+    input order.
+
+    With ``on=`` the first argument is a frame's column and the answer is
+    a frame of edges, one row per edge.
+    """
+    if on is None:
+        return _relate_records(records, relations=relations, either=either,
+                               threshold=threshold, deadline=deadline)
+    if hasattr(records, "__arrow_c_stream__"):
+        frame = relate_stream(records, on, relations=relations, either=either,
+                              threshold=threshold, deadline=deadline)
+        try:
+            return type(records)(frame)
+        except Exception as exc:
+            raise UsageError(
+                "relate with on= cannot rebuild a pandas frame from the "
+                "Arrow stream it returns. Pass the column instead — "
+                "tt.relate(df[column], relations=...) — or convert once and "
+                "back — tt.relate(pl.from_pandas(df), on=column)"
+            ) from exc
+    raise UsageError(
+        "relate with on= takes a frame whose column crosses as Arrow "
+        "(a Polars DataFrame); a plain list uses relate with no on="
     )

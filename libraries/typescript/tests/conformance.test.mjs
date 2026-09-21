@@ -182,6 +182,77 @@ async function runVerb(held, spec, text, list) {
       note(held.id, 'runs on the wire in bulk.test.mjs (the AbortSignal proof)');
       return;
     }
+    case 'recognize': {
+      const options = {};
+      if (spec.kinds) options.kinds = spec.kinds;
+      if (Array.isArray(spec.relations) && spec.relations.length) {
+        options.relations = {};
+        for (const rule of spec.relations) options.relations[rule.name] = [rule.from, rule.to];
+      }
+      if (typeof spec.threshold === 'number') options.threshold = spec.threshold;
+      if (typeof spec.relation_threshold === 'number') options.relationThreshold = spec.relation_threshold;
+      const source = held.text ?? text;
+      const found = await tt.recognize(source, options);
+      const wantedNames = expect.entities ?? [];
+      assert.equal(
+        found.entities.length,
+        wantedNames.length,
+        `expected ${wantedNames.length} names, got ${found.entities.length}`,
+      );
+      for (let at = 0; at < wantedNames.length; at += 1) {
+        const got = found.entities[at];
+        assert.equal(got.text, wantedNames[at].text);
+        assert.equal(got.kind, wantedNames[at].kind);
+        assert.equal(source.slice(got.start, got.end), got.text, 'the slice is the name');
+        assert.ok(Math.abs(got.number - wantedNames[at].number) < 1e-9, `number ${got.number}`);
+      }
+      const wantedRelations = expect.relations ?? [];
+      assert.equal(
+        found.relations.length,
+        wantedRelations.length,
+        `expected ${wantedRelations.length} relations, got ${found.relations.length}`,
+      );
+      for (let at = 0; at < wantedRelations.length; at += 1) {
+        const got = found.relations[at];
+        assert.deepEqual(
+          { name: got.name, source: got.source, target: got.target, probability: got.probability },
+          wantedRelations[at],
+        );
+      }
+      return;
+    }
+    case 'relate': {
+      if (held.id === '71-relate-R03-persubject-10') {
+        note(
+          held.id,
+          'diverge: the recordings hold two rows for these identical ten records (R03 per-subject and R04 pairs) and the stand-in serves the pairs form; the per-subject expectation cannot be served by a replay keyed on input — a conformance-data finding for the build team',
+        );
+        return;
+      }
+      const options = {};
+      const names = [];
+      const either = [];
+      for (const rule of spec.relations ?? []) {
+        if (typeof rule === 'string') names.push(rule);
+        else if (rule.either) either.push(rule.name);
+        else names.push(rule.name);
+      }
+      for (const rule of spec.either ?? []) either.push(typeof rule === 'string' ? rule : rule.name);
+      if (names.length) options.relations = names;
+      if (either.length) options.either = either;
+      if (typeof spec.threshold === 'number') options.threshold = spec.threshold;
+      const edges = await tt.relate(held.records ?? list, options);
+      assert.deepEqual(
+        edges.map((edge) => ({
+          name: edge.name,
+          source: edge.source,
+          target: edge.target,
+          probability: edge.probability,
+        })),
+        expect.edges ?? [],
+      );
+      return;
+    }
     default:
       note(held.id, `the runner has no arm for verb ${verb}`);
   }
