@@ -870,16 +870,25 @@ pub struct Entity {
     pub start: usize,
     /// One past the last code point of the name.
     pub end: usize,
-    /// The number on a name, computed from several of Jev's numbers. The
-    /// interim field name; see the struct's note and the open comparison.
+    /// The number on a name, computed from several of Jev's numbers: the
+    /// least of the word probabilities times the mean of the kind
+    /// probabilities, per the rule of
+    /// `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`.
+    /// The interim field name; the end state may be a true `probability` —
+    /// the lowest reported number behind the name — if the recognize team's
+    /// free comparison gates as well, and the field may change by one word.
+    /// The vendor's own `confidence` passes through under details only,
+    /// under its own name, and nothing gates on it.
     pub number: f64,
 }
 
 /// One relation between two names, by entity id.
 ///
 /// The ruled name for the number on a relation is `probability`, and the
-/// host-facing spelling of the ends is `source` and `target` on every
-/// surface, C's returned JSON included. The wire keeps `from` and `to`.
+/// spelling of the ends is `source` and `target` on every surface, C's
+/// returned JSON included, the command's own JSON, and the question file —
+/// no door converts anything. The harvest recordings still say `from` and
+/// `to`; the stand-in maps them at replay.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Relation {
     /// The rule's own name.
