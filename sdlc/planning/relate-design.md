@@ -1,0 +1,93 @@
+# `relate`: the design for the command and the nine surfaces
+
+Status: Proposed by the marketing side on 2026-09-21, which holds the product and library shape job by Ian's word. Ian ruled the same day: "Let's have them build relate at the same time." `relate` is the tenth function and is built with `recognize`. The build team reviews this page before any ticket. It authorizes no build and no paid run.
+
+Read `recognize-design.md` first. `relate` reuses its relation rule unchanged, and step three of `recognize` is `relate` run over the names found in a text. The engine holds one pair-asking path for both.
+
+## The one line
+
+**Say how the records relate to each other.**
+
+Beta, like the relations in `recognize`, and every page says so in the same sentence.
+
+## The command
+
+```
+thinkthen relate [OPTIONS] [RELATION]...
+thinkthen relate [OPTIONS] @links.json
+```
+
+The relations sit where `tag` puts its labels. A bare name is a one-way relation between any two records.
+
+```
+thinkthen relate caused_by --either same_as --lines < alerts.txt
+thinkthen relate covers=test:requirement --jsonl --kind-field /type < items.jsonl
+```
+
+| Option | Does |
+| --- | --- |
+| `RELATION` as `NAME` or `NAME=FROM:TO` | A one-way rule. `NAME` alone means `NAME=*:*`. `FROM` and `TO` are a kind or `*` |
+| `--either NAME` or `--either NAME=KIND:KIND` | A rule that reads the same both ways. Asked once per pair |
+| `--kind-field POINTER` | Where each JSON record keeps its kind. Without it every record is kind `*`, and a rule that names a kind is a usage error |
+| `--threshold T` | The bar an edge must reach. Default 0.5 |
+| `--details`, `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`, `--dry-run`, `--cache`, `--replay`, `--no-cache` | As on every function |
+
+A question file carries the same rules with a `reads` phrase for each, exactly as in `recognize-design.md`, under the key `relate`.
+
+Exit codes: 0 when the run finished, including no edges. 2, 4, 5, and 70 as everywhere.
+
+## How it asks
+
+Ian ruled the method on 2026-09-21: it is organized around choices.
+
+- The rules and the kinds give the list of legal pairs. A record is never paired with itself.
+- Each unordered pair is one pick-one question. The options are the relations that pair allows, each way round where the rule is one-way, plus "no relation". The user never writes "no relation".
+- All the records cross once, and as many pairs as the backend's question limit allows ride in each request.
+- `--dry-run` prints the pair count and the request count. Pairs grow with the square of the records. `relate` refuses more than 255 records, the `find` limit, with exit 2.
+
+## What comes back
+
+One JSON object per edge, one per line, so the output pipes:
+
+```
+{"name":"caused_by","from":1,"to":4,"probability":0.94}
+{"name":"caused_by","from":2,"to":4,"probability":0.94}
+```
+
+- `from` and `to` are record numbers, counted from 1 in input order. `from` is the subject and `to` is the object: record 1 was caused by record 4.
+- `--details` adds both records' text and every option's probability.
+- An `--either` edge prints once, with the lower record number in `from`.
+- `probability` is the probability of the picked option. It is a plain probability, so the vocabulary's word holds.
+
+**One thing to reconcile.** `recognize-design.md` calls the number on a relation `confidence`, because the recognize specification discounts it by the margin. One engine path should print one number under one name. The suggestion: relations print `probability` in both functions, and the margin discount stays on names only.
+
+## The first real output
+
+`experiments/225-relate-demo/`, run on 2026-09-21 through the live guard. Four made-up alerts, two rules, six pairs, one request, 1,365 input tokens. At the default bar the model returned four `caused_by` edges. Two were sound, at 0.94 each. One tied a late export to a full disk at 0.84, which the text does not support. One split between `caused_by` at 0.59 and `same_as` at 0.31. A bar of 0.9 kept the two sound edges. The deck slide shows both runs, because the number and the bar are the product.
+
+## The libraries and the databases
+
+| Surface | The call | Returns |
+| --- | --- | --- |
+| Python | `tt.relate(alerts, relations=["caused_by"], either=["same_as"])` | A list of edges. `tt.relate(df, on="body", ...)` returns a DataFrame of edges with the source indexes, ready for `networkx.from_pandas_edgelist` |
+| TypeScript | `await tt.relate(alerts, { relations: ["caused_by"], either: ["same_as"], signal })` | `Edge[]` |
+| Ruby | `ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])` | An array of structs |
+| R | `tt_relate(alerts$body, relations = "caused_by", either = "same_as")` | A data frame of edges, ready for `igraph::graph_from_data_frame` |
+| Rust | `tt.relate(&Relate::new().relation("caused_by", Kind::Any, Kind::Any)?.either("same_as", Kind::Any)?, &alerts)?` | `Vec<Edge>` |
+| C | `thinkthen_relate(tt, spec_json, texts, lens, count, &out_json, &out_len)` | The edges as a JSON string |
+| DuckDB | `SELECT * FROM thinkthen_relate((SELECT id, body FROM alerts), ['caused_by'])` | Rows `(name, from_id, to_id, probability)` |
+| SQLite | `thinkthen_relate('alerts', 'id', 'body', 'caused_by')`, table-valued | The same rows |
+| PostgreSQL | `thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by'])`, set-returning | The same rows |
+
+`relate` is the one function a database cannot run row by row, because it needs every record at once. Each engine therefore takes a table or a query. Edges as rows are what a recursive query walks, and the manual shows one.
+
+## What is open for the build team
+
+1. The `probability` and `confidence` question above.
+2. A pick-one question allows one relation per pair. The experiment brief measures how often that loses a true second relation.
+3. The one-question-per-subject form for a relation where a subject has one object. It costs one question per record. The brief measures it against pairs, and `find --in` is the same form.
+4. The record limit of 255 is a guess taken from `find`.
+
+## What Ian can overturn
+
+All of it. He has ruled: `relate` is built with `recognize`, and it asks by choices over the legal pairs.

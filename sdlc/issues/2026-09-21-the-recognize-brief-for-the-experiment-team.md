@@ -26,6 +26,17 @@ Build a stand-in command that matches the design page exactly, so the build team
 4. **The any-kind end** is the string `"*"` everywhere except Rust, where it is `Kind::Any`.
 5. **C returns the JSON string** and one free function. Prove no leak under the existing leak check.
 
+## `relate`, added the same day
+
+Ian ruled that `relate` is built with `recognize`. The shape is `sdlc/planning/relate-design.md`, and the first real output is `experiments/225-relate-demo/`.
+
+1. The recognize experiment builds the stand-in `relate` on the same pair-asking code as step three of `recognize`. One path, two commands.
+2. Test the four rule forms, `--either`, `--kind-field`, the 255-record refusal, and the pair count under `--dry-run`.
+3. Measure pick-one against a yes-or-no question per relation, on pairs that truly hold two relations.
+4. Measure pairs against one question per subject, at 10, 50, and 200 records: accuracy, requests, and tokens.
+5. Measure whether `same_as` groups come out the same when the record order changes.
+6. The surfaces experiment proves the three database forms, and one recursive query over the edges in each engine.
+
 ## What comes back
 
 One short report per experiment, the paths in this issue, and a list of every place the design page was wrong or unclear. The design page changes to match what was learned. The experiment never bends the shape quietly.
