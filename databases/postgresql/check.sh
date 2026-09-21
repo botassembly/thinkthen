@@ -41,6 +41,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo "== postgres surface: the error-mapping test"
+cargo test --release --quiet --lib
+
 echo "== postgres surface: package the extension"
 (cd . && cargo pgrx package --pg-config /usr/bin/pg_config) >/dev/null
 
@@ -149,6 +152,16 @@ after=$(grep "requests after join" .tmp-recognize.out | awk '{print $NF}')
 [ "$before" = "$after" ] || { echo "the join moved the usage counter: $before -> $after" >&2; exit 1; }
 rm .tmp-recognize.out
 echo "recognize rows, offsets, the no-request join, relate edges, and the relations rows are green"
+
+echo "== postgres surface: from and to are refused"
+docker cp fixtures/names-legacy.json "$NAME:/var/lib/postgresql/data/names-legacy.json"
+if psql_in -c "SELECT thinkthen_relations('Maria Chen joined Northwind Freight in Chicago last spring.', '@names-legacy.json');" > .tmp-legacy.out 2>&1; then
+  echo "FAILED   a from/to spec was accepted" >&2; cat .tmp-legacy.out >&2; exit 1
+fi
+grep -q "source" .tmp-legacy.out && grep -q "target" .tmp-legacy.out \
+  || { echo "FAILED   the refusal does not name the ruled spelling" >&2; cat .tmp-legacy.out >&2; exit 1; }
+echo "ok       from/to refused, source and target named"
+rm -f .tmp-legacy.out
 
 echo "== postgres surface: relate refuses more than 255 records"
 docker exec -i -e PGHOST=/run/postgresql "$NAME" \

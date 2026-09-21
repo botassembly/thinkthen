@@ -137,3 +137,24 @@ For the build team to lift:
 > ```
 >
 > It returns `(name, source_text, source_kind, target_text, target_kind, probability)`.
+
+## 2026-09-21 — the fix wave: ruling 1 and ruling 2 at this door
+
+**Ruling 1, before and after.** Before, this door rewrote a spec's `source`/`target` ends into the parser's old `from`/`to` pair, so it accepted both spellings while every other door accepted one — the quiet inconsistency the review named. After, the spec crosses to the one core parser unchanged and this door converts nothing; `from`/`to` is refused the way the other doors refuse it, with the ruled spelling named in the message. `fixtures/names-legacy.json` holds a `from`/`to` spec, and the check's new step proves the refusal and the named spelling in the container:
+
+```
+== postgres surface: from and to are refused
+ok       from/to refused, source and target named
+```
+
+**Ruling 2, the defect mapping.** `raise` now takes its code and text from a pure `surface(&Error)`, and a unit test constructs the contract's defect error at the shim level and asserts the engine's surface carries it:
+
+```
+$ cargo test --release --quiet --lib
+running 1 test
+test result: ok. 1 passed; 0 failed
+```
+
+The check runs that test before packaging. No public door gains a fault hook.
+
+**The working shape for `thinkthen_relations` on this engine:** `SELECT * FROM tickets t, LATERAL thinkthen_relations(t.body, '@names.json');` — the deck's drawn form needs the `LATERAL` join to a table alias; the finding with this line goes to the deck's owner from another lane.

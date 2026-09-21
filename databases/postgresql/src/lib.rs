@@ -89,6 +89,14 @@ where
 /// the retry signal, and a SQLSTATE that matches the kind. A failure never
 /// reads as a NULL.
 fn raise(error: Error) -> ! {
+    let (code, text) = surface(&error);
+    ereport!(ERROR, code, text.as_str());
+}
+
+/// The PostgreSQL surface of a contract failure: the SQLSTATE a caller
+/// sees and the message a reader sees. Pure, so the mapping is unit-tested
+/// without a running backend.
+fn surface(error: &Error) -> (PgSqlErrorCode, String) {
     let code = match error.kind {
         ErrorKind::Usage => PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
         ErrorKind::Backend => PgSqlErrorCode::ERRCODE_EXTERNAL_ROUTINE_EXCEPTION,
@@ -98,7 +106,7 @@ fn raise(error: Error) -> ! {
     };
     let retry = if error.retryable { "yes" } else { "no" };
     let text = format!("thinkthen {}: {error} (retryable: {retry})", error.kind);
-    ereport!(ERROR, code, text.as_str());
+    (code, text)
 }
 
 /// Resolve the question argument: `'@name'` names a file (the command's
@@ -173,11 +181,11 @@ fn read_spec(path: &str) -> String {
 /// file (the question file's `recognize` section is taken when present),
 /// and JSON text carries the spec itself.
 ///
-/// The ruled question file spells a relation's ends `source` and `target`
-/// (`sdlc/planning/recognize-design.md`, the ruling of 2026-09-21); the
-/// contract's spec parser reads `from` and `to` today, so this door accepts
-/// both spellings and normalizes to the parser's pair before the one core
-/// parser runs. Recorded for the contract's owner.
+/// The ruled spelling of a relation's ends is `source` and `target`
+/// (`sdlc/planning/recognize-design.md`, the ruling of 2026-09-21), and
+/// the spec crosses to the one core parser unchanged: this door converts
+/// nothing, so `from`/`to` is refused here the way every other door
+/// refuses it, with the ruled spelling named.
 fn recognizer_of(arg: Option<&str>) -> Recognize {
     let text = arg.unwrap_or_default();
     if text.trim().is_empty() {
@@ -205,17 +213,6 @@ fn recognizer_of(arg: Option<&str>) -> Recognize {
             }
         }
         value = section;
-    }
-    if let Some(relations) = value.get_mut("relations").and_then(serde_json::Value::as_array_mut) {
-        for rule in relations {
-            if let Some(object) = rule.as_object_mut() {
-                for (ruled, parser) in [("source", "from"), ("target", "to")] {
-                    if let Some(held) = object.remove(ruled) {
-                        object.entry(parser.to_owned()).or_insert(held);
-                    }
-                }
-            }
-        }
     }
     Recognize::from_json(&value.to_string()).unwrap_or_else(|error| raise(error))
 }
@@ -643,4 +640,21 @@ extern "C-unwind" fn _PG_init() {
         GucContext::Suset,
         GucFlags::NO_SHOW_ALL | GucFlags::SUPERUSER_ONLY | GucFlags::DISALLOW_IN_AUTO_FILE,
     );
+}
+
+#[cfg(test)]
+mod mapping_tests {
+    use super::*;
+
+    /// Ruling 2 of the product rulings: the defect kind maps to this
+    /// engine's own error surface, with the internal-error SQLSTATE and
+    /// the kind named in the message. No public door carries a fault hook;
+    /// this proves the mapping at the shim level.
+    #[test]
+    fn the_defect_kind_maps_to_the_engines_error() {
+        let (code, text) = surface(&Error::defect("the relate plan lost its bind data"));
+        assert_eq!(code, PgSqlErrorCode::ERRCODE_INTERNAL_ERROR);
+        assert!(text.contains("thinkthen defect:"), "{text}");
+        assert!(text.contains("the relate plan lost its bind data"), "{text}");
+    }
 }
