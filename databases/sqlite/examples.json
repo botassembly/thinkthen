@@ -1,0 +1,52 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "sqlite",
+  "language": "sql",
+  "install": "SELECT load_extension('libthinkthen0.so');",
+  "examples": {
+    "decide": {
+      "sql": "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now');",
+      "expected": "1"
+    },
+    "choose": {
+      "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now');",
+      "expected": "the refund desk"
+    },
+    "score": {
+      "sql": "SELECT thinkthen_score('{\"score\":\"How strong is the refund claim?\",\"levels\":[\"low\",\"mid\",\"high\"]}', 'maybe later');",
+      "expected": "1.05"
+    },
+    "tag": {
+      "sql": "SELECT thinkthen_tag('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', 'the refund and the shipping');",
+      "expected": "[\"refund\"]"
+    },
+    "annotate": {
+      "sql": "SELECT thinkthen_annotate('{\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",
+      "expected": "{\"band\":{\"answer\":null},\"spam\":{\"answer\":true}}"
+    },
+    "details": {
+      "sql": "SELECT json_array_length(thinkthen_details('Is this a complaint?', 'i want a refund now'), '$.requests');",
+      "expected": "1"
+    },
+    "usage": {
+      "sql": "SELECT thinkthen_usage();",
+      "expected": "\"requests\":0"
+    },
+    "warm": {
+      "sql": "SELECT thinkthen_warm('Is this a complaint?', t) FROM (SELECT 'refund now' AS t UNION ALL SELECT 'refund again');",
+      "expected": "2"
+    },
+    "recognize": {
+      "sql": "SELECT text, kind FROM thinkthen_recognize('Maria Chen joined Northwind Freight in Chicago last spring.', 'person,organization,place');",
+      "expected": "Maria Chen|person"
+    },
+    "relate": {
+      "setup": [
+        "CREATE TABLE alerts(id INTEGER PRIMARY KEY, body TEXT)",
+        "INSERT INTO alerts VALUES (1,'Checkout returns 500 at the payment step.'),(2,'Card charges are failing for every customer.'),(3,'The nightly export ran two hours late.'),(4,'The payments database ran out of disk space.')"
+      ],
+      "sql": "SELECT name, source, target, probability FROM thinkthen_relate('alerts','id','body','caused_by');",
+      "expected": "caused_by|1|4|0.94"
+    }
+  }
+}

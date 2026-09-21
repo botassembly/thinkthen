@@ -278,6 +278,9 @@ fn field_of(field: &Annotated) -> serde_json::Value {
             "answer": scored.value, "nearest": scored.nearest,
         }),
         Annotated::Tags(labels) => serde_json::json!({ "answer": labels }),
+        // The ruled failed marker (0054), in the same place a value
+        // would sit: `{"failed":{"kind":"backend","cause":CAUSE}}`.
+        Annotated::Failed(failed) => serde_json::json!({ "failed": failed }),
     }
 }
 
@@ -342,6 +345,8 @@ fn details(context: &Context<'_>) -> Result<Option<String>, Error> {
         "model": audit.model,
         "digest": audit.digest,
         "sends": audit.sends,
+        "requests": audit.requests,
+        "failed_questions": audit.failed_questions,
     });
     Ok(Some(
         serde_json::to_string(&object)
@@ -1064,5 +1069,93 @@ mod mapping_tests {
             }
             other => panic!("expected a SqliteFailure, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod cancel_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering as AtomicOrdering};
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    /// The fast-backend interrupt proof (lane B item 5, the poll-bug shape)
+    /// at the shape this surface wires: the poll reads SQLite's own
+    /// `sqlite3_is_interrupted` flag and sets the cancel token, and a fast
+    /// backend never idles the engine's wait, so the poll must run on the
+    /// busy arm. This test replicates `hear_interrupts` faithfully — a flag
+    /// set from another thread, a poll that turns it into a token cancel —
+    /// and asserts the call returns the cancelled kind within about a tick.
+    /// With the busy-arm tick missing, the flag would never be read (the
+    /// null wait never idles) and the 8M-record batch would run to
+    /// completion (~50 s), so the bound cannot be met by a batch that
+    /// finishes.
+    ///
+    /// End to end through SQLite cannot isolate this: on a fast backend
+    /// SQLite's own step loop aborts between warm flushes (measured
+    /// `interrupted` at the signal, 2026-09-21), and the stub-backed wire
+    /// suite proves the slow-backend shape where our poll carries the stop.
+    #[test]
+    fn a_fast_backend_runs_the_poll_within_a_tick() {
+        unsafe {
+            std::env::set_var("ENGINE_NULL", "1");
+            std::env::set_var("ENGINE_WIDTH", "1");
+        }
+        let engine = BlockingEngine::from_env();
+        let question = Question::from_json(r#"{"decide":"Is this a complaint?"}"#)
+            .expect("the question parses");
+        let texts: Vec<String> = (0..1_000_000).map(|i| format!("record {i}")).collect();
+        let records: Vec<&str> =
+            (0..8_000_000).map(|i| texts[i % texts.len()].as_str()).collect();
+        let token = Cancel::new();
+        let interrupted = Arc::new(AtomicBool::new(false));
+        let polls = Arc::new(AtomicUsize::new(0));
+        let fired_at: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
+        let setter = {
+            let interrupted = Arc::clone(&interrupted);
+            thread::spawn(move || {
+                thread::sleep(Duration::from_millis(150));
+                interrupted.store(true, AtomicOrdering::SeqCst);
+            })
+        };
+        let mut poll = {
+            let token = token.clone();
+            let interrupted = Arc::clone(&interrupted);
+            let polls = Arc::clone(&polls);
+            let fired_at = Arc::clone(&fired_at);
+            move || {
+                polls.fetch_add(1, AtomicOrdering::SeqCst);
+                if interrupted.load(AtomicOrdering::SeqCst) {
+                    token.cancel();
+                    let mut held = fired_at.lock().expect("the fired stamp");
+                    if held.is_none() {
+                        *held = Some(Instant::now());
+                    }
+                }
+            }
+        };
+        let outcome = engine.decide_many_opts(
+            &question,
+            &records,
+            Options::new().cancel(&token),
+            Some(&mut poll),
+        );
+        setter.join().expect("the setter joins");
+        let fired = fired_at
+            .lock()
+            .expect("the fired stamp")
+            .expect("the token fired");
+        let heard = Instant::now().duration_since(fired);
+        let error = outcome.expect_err("a cancelled batch returns the cancelled kind");
+        assert_eq!(error.kind.to_string(), "cancelled", "{}", error.message);
+        assert!(
+            heard <= Duration::from_millis(1_500),
+            "the interrupt waited {heard:?} past the token; a busy wait starved the poll"
+        );
+        let ran = polls.load(AtomicOrdering::SeqCst);
+        assert!(
+            ran >= 2,
+            "the poll ran {ran} time(s); the busy arm never ticked"
+        );
     }
 }

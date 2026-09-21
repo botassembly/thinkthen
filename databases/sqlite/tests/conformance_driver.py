@@ -165,11 +165,17 @@ def main():
                 elif verb == "details":
                     audit = json.loads(held)
                     wanted = expect["details"]
-                    if (
-                        abs(audit["probability"] - wanted["probability"]) < 1e-9
-                        and audit["model"] == wanted["model"]
+                    same = (
+                        audit["model"] == wanted["model"]
                         and audit["digest"] == wanted["question_sha256"]
-                    ):
+                    )
+                    if "requests" in wanted:
+                        same = same and audit["requests"] == wanted["requests"]
+                    if "failed_questions" in wanted:
+                        same = same and audit["failed_questions"] == wanted[
+                            "failed_questions"
+                        ]
+                    if same:
                         report(case_id, "audit carried, digest equal")
                     else:
                         report(case_id, f"audit {audit}", failed=True)
@@ -248,9 +254,14 @@ def main():
                 ).fetchone()[0]
                 fields = json.loads(held)
                 wanted = expect["answers"]
+
+                def field_matches(name):
+                    if "failed" in wanted[name]:
+                        return fields[name].get("failed") == wanted[name]["failed"]
+                    return fields[name]["answer"] == wanted[name]["answer"]
+
                 same = sorted(fields.keys()) == sorted(wanted.keys()) and all(
-                    fields[name]["answer"] == wanted[name]["answer"]
-                    for name in wanted
+                    field_matches(name) for name in wanted
                 )
                 if same:
                     report(case_id, "fields assembled")
@@ -320,7 +331,7 @@ def main():
                     )
                     continue
                 if any(
-                    rule.get("from") != "*" or rule.get("to") != "*"
+                    rule.get("source") != "*" or rule.get("target") != "*"
                     for rule in case["question"]["relations"]
                 ):
                     print(

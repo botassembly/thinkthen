@@ -25,6 +25,12 @@ ENGINE_NULL=1 .runtimes/sqlite3 :memory: < tests/slide.sql \
 echo "== sqlite surface: null suite"
 ENGINE_NULL=1 python3 tests/null_suite.py
 
+echo "== sqlite surface: fast-backend interrupt"
+python3 tests/cancel_fast.py
+
+echo "== sqlite surface: the function examples"
+python3 tests/examples.py
+
 echo "== sqlite surface: the table-valued functions"
 ENGINE_NULL=1 python3 tests/tvf_suite.py
 

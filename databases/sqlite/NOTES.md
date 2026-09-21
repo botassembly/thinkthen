@@ -121,3 +121,52 @@ $ ./check.sh
 wire suite done
 exit 0
 ```
+
+## Lane B items 2, 5, and 6 on the SQLite surface, 2026-09-21
+
+**Item 2, the new shapes.** `thinkthen_annotate` carries the ruled failed marker where a value would sit — `{"failed":{"kind":"backend","cause":"missing_answer"}}` — and `thinkthen_details` gained `requests` (the ordered recording digests, 0053) and `failed_questions` (0054). The conformance driver was repaired on the way: its details branch compared the recorded probability, which the null backend's own rule cannot reproduce for case 73 (evidence "I want my money back" → 0.03, recorded 0.97), and its annotate branch crashed on a failed member. It now checks the audit's identity fields — model, digest, and the two new fields — and matches failed members by their marker, and case 72's relate skip reads the ruled `source`/`target` spelling (the fix wave re-keyed the cases, and the old `from`/`to` probe had started skipping every relate case).
+
+```
+$ ENGINE_NULL=1 python3 tests/conformance_driver.py | tail -5
+skip     71-relate-R03-persubject-10: the per-subject form is an engine-internal arm; the surface serves the ruled pairs form, which case 72 covers
+ok       72-relate-R04-pairs-10: 10 edges
+ok       73-details-carries-requests: audit carried, digest equal
+ok       74-annotate-preserves-good-answers: fields assembled
+conformance slice done
+```
+
+```
+$ python3 -c "...annotate with the partial-failure record..."
+{"kind":{"answer":true},"topic":{"failed":{"cause":"missing_answer","kind":"backend"}}}
+```
+
+**Item 5, the fast-backend interrupt.** Two tests with their claims separated, as on DuckDB:
+
+- `cancel_tests::a_fast_backend_runs_the_poll_within_a_tick` (crate lib tests): the poll closure is wired exactly as `hear_interrupts` wires it — a flag set from another thread, the poll turning it into a token cancel — over 8M records at width 1 on the null backend. Measured discrimination: with the busy-arm tick removed from the stand-in the test fails in **53.74 s** (the batch ran to completion); with the tick it passes in 0.33 s.
+- `tests/cancel_fast.py` (end to end): `conn.interrupt()` at 0.5 s into a 1M-row null warm (5.5 s un-interrupted); the statement ends at 0.50 s. Stated limit: SQLite's own step loop aborts between warm flushes on a fast backend, so the message is SQLite's `interrupted`, not `thinkthen cancelled`, and this cannot isolate our tick; the stub-backed wire suite proves the slow-backend shape where our poll carries the stop.
+
+```
+$ python3 tests/cancel_fast.py
+ok  the stop is an error, not a count
+ok  the stop lands within about a tick, past 0.5s (0.50s)
+the fast-backend interrupt holds
+```
+
+**Item 6, the examples file.** `examples.json` is keyed by function — ten entries, every public function on this surface (decide, choose, score, tag, annotate, details, usage, warm, and the two table-valued functions) — and `tests/examples.py` runs each in its own fresh process on the null backend (the usage counters are process-wide) and checks its answer.
+
+```
+$ python3 tests/examples.py
+ok       decide
+...       (ten lines)
+10 of 10 examples ok
+```
+
+The check, end to end:
+
+```
+$ ./check.sh
+== sqlite surface: fast-backend interrupt
+== sqlite surface: the function examples
+== sqlite surface: wire suite skipped, no stub on 8218
+exit 0
+```
