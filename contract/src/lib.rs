@@ -163,6 +163,20 @@ impl Error {
         Self { kind: ErrorKind::Defect, retryable: false, message: message.into() }
     }
 
+    /// A backend failure a second try could not fix: a refused address, a
+    /// refused request, or a reply that cannot be trusted.
+    #[must_use]
+    pub fn backend_not_retryable(message: impl Into<String>) -> Self {
+        Self { kind: ErrorKind::Backend, retryable: false, message: message.into() }
+    }
+
+    /// A backend failure a second try could help with: busy, slow, or
+    /// reset.
+    #[must_use]
+    pub fn backend_retryable(message: impl Into<String>) -> Self {
+        Self { kind: ErrorKind::Backend, retryable: true, message: message.into() }
+    }
+
     /// A spent deadline, carrying the budget in its message so a reader
     /// knows which setting to raise.
     #[must_use]
@@ -294,6 +308,13 @@ impl<'a> Options<'a> {
     #[must_use]
     pub fn seconds(&self) -> f64 {
         self.seconds
+    }
+
+    /// The token this call carries, when one was given. Engines read it
+    /// after a batch wait to report a cancel that landed mid-flight.
+    #[must_use]
+    pub const fn cancel_token(&self) -> Option<&Cancel> {
+        self.cancel
     }
 
     /// The time left before the deadline, when one was set.
@@ -493,6 +514,7 @@ pub struct Question {
     asked: CoreQuestion,
     kind: QuestionKind,
     threshold: Option<Threshold>,
+    threshold_named: bool,
     model: String,
     members: Vec<String>,
 }
@@ -566,7 +588,8 @@ impl Question {
     pub fn from_json(text: &str) -> Result<Self, Error> {
         let file = QuestionFile::parse(text).map_err(|error: QuestionFileError| Error::usage(error.to_string()))?;
         let members = members_of(text).unwrap_or_default();
-        Self::settle(file.verb(), file, members)
+        let named = names_threshold(text);
+        Self::settle(file.verb(), file, members, named)
     }
 
     /// Read a question from a file the caller named.
@@ -610,6 +633,26 @@ impl Question {
         &self.model
     }
 
+    /// The core's own settled question, for the engine that builds a plan.
+    #[must_use]
+    pub const fn core(&self) -> &CoreQuestion {
+        &self.asked
+    }
+
+    /// The rule the answer is read under, when the question holds one.
+    #[must_use]
+    pub const fn threshold(&self) -> Option<Threshold> {
+        self.threshold
+    }
+
+    /// Whether the question itself named a threshold, against the default
+    /// the grammar supplies. `rank` refuses a named one and takes the
+    /// default as no rule at all.
+    #[must_use]
+    pub const fn threshold_named(&self) -> bool {
+        self.threshold_named
+    }
+
     /// The digest of this question with its threshold, the core's own.
     #[must_use]
     pub fn digest(&self) -> String {
@@ -644,11 +687,12 @@ impl Question {
         let text = serde_json::to_string(&body)
             .map_err(|error| Error::defect(error.to_string()))?;
         let file = QuestionFile::parse(&text).map_err(|error: QuestionFileError| Error::usage(error.to_string()))?;
-        Self::settle(verb, file, members_of(&text).unwrap_or_default())
+        let named = names_threshold(&text);
+        Self::settle(verb, file, members_of(&text).unwrap_or_default(), named)
     }
 
     /// Resolve a parsed file into the settled question.
-    fn settle(verb: Verb, file: QuestionFile, members: Vec<String>) -> Result<Self, Error> {
+    fn settle(verb: Verb, file: QuestionFile, members: Vec<String>, threshold_named: bool) -> Result<Self, Error> {
         let resolved = resolve(verb, None, Some(&file), &Typed::default())
             .map_err(|error: QuestionFileError| Error::usage(error.to_string()))?;
         let asked = resolved
@@ -665,10 +709,19 @@ impl Question {
             asked,
             kind,
             threshold: resolved.threshold(),
+            threshold_named,
             model: resolved.model().as_str().to_owned(),
             members,
         })
     }
+}
+
+/// Whether the question's own JSON named a `threshold` key.
+fn names_threshold(text: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(text)
+        .ok()
+        .and_then(|value| value.get("threshold").cloned())
+        .is_some()
 }
 
 /// The option, label, or level names a question's JSON carries, in order.
@@ -1069,6 +1122,99 @@ pub trait Engine: Send + Sync {
         cancel: Option<&Cancel>,
     ) -> Result<Answer, Error> {
         self.decide_opts(question, evidence, Options::new().maybe_cancel(cancel))
+    }
+
+    /// Pick the best option, with neither a token nor a deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::choose_opts`].
+    fn choose(&self, question: &Question, evidence: &str) -> Result<Option<String>, Error> {
+        self.choose_opts(question, evidence, Options::new())
+    }
+
+    /// Place the evidence on its levels, with neither a token nor a
+    /// deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::score_opts`].
+    fn score(&self, question: &Question, evidence: &str) -> Result<Scored, Error> {
+        self.score_opts(question, evidence, Options::new())
+    }
+
+    /// Name the labels that held, with neither a token nor a deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::tag_opts`].
+    fn tag(&self, question: &Question, evidence: &str) -> Result<Vec<String>, Error> {
+        self.tag_opts(question, evidence, Options::new())
+    }
+
+    /// Keep the records that reached the mark, with neither a token nor a
+    /// deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::filter_opts`].
+    fn filter(
+        &self,
+        question: &Question,
+        records: &[&str],
+        poll: Option<&mut dyn FnMut()>,
+    ) -> Result<Vec<usize>, Error> {
+        self.filter_opts(question, records, Options::new(), poll)
+    }
+
+    /// Order the records most likely yes first, with neither a token nor a
+    /// deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::rank_opts`].
+    fn rank(
+        &self,
+        question: &Question,
+        records: &[&str],
+        poll: Option<&mut dyn FnMut()>,
+    ) -> Result<Vec<Ranked>, Error> {
+        self.rank_opts(question, records, Options::new(), poll)
+    }
+
+    /// Pick the unit that best answers the question, with neither a token
+    /// nor a deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::find_opts`].
+    fn find(&self, question: &Question, units: &[&str]) -> Result<Found, Error> {
+        self.find_opts(question, units, Options::new())
+    }
+
+    /// Ask every question in the set of every record, with neither a token
+    /// nor a deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::annotate_opts`].
+    fn annotate(
+        &self,
+        set: &QuestionSet,
+        records: &[&str],
+        poll: Option<&mut dyn FnMut()>,
+    ) -> Result<Vec<AnnotatedRecord>, Error> {
+        self.annotate_opts(set, records, Options::new(), poll)
+    }
+
+    /// One judgment plus its audit trail, with neither a token nor a
+    /// deadline.
+    ///
+    /// # Errors
+    ///
+    /// Same kinds as [`Engine::details_opts`].
+    fn details(&self, question: &Question, evidence: &str) -> Result<Details, Error> {
+        self.details_opts(question, evidence, Options::new())
     }
 }
 

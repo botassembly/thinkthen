@@ -1,0 +1,31 @@
+[package]
+name = "thinkthen-standin"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.93.1"
+description = "The stand-in engine that implements the contract today. The real engine replaces it with one changed dependency. Version 0.1.0 is the first release"
+license = "MIT"
+publish = false
+
+# A workspace of its own, so the root workspace's gates and profile stay
+# untouched.
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+thinkthen-contract = { path = "../contract" }
+thinkthen-core = { path = "../crates/thinkthen-core" }
+ureq = "3"
+
+[dev-dependencies]
+libc = "0.2"
+
+[profile.release]
+# A library lives inside someone else's process, and an abort there kills
+# the host. The command's own profile stays as the root workspace sets it.
+panic = "unwind"
+
+[lints.rust]
+missing_docs = "warn"
