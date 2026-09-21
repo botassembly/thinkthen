@@ -6,7 +6,7 @@ opens: transforms sdlc/planning
 
 # 0046: Average repeated trials once per case
 
-Status: proposed
+Status: landed
 
 ## Outcome
 
@@ -63,3 +63,11 @@ Re-score if the implementation changes a metric report, adds another answer kind
 ## Review
 
 The independent design review rejected the first draft because it contradicted the transform by saying repeated ids fail, did not name experiment 206 as the third fixture source, left the public derived answer and provenance fields incomplete, and omitted the `jq -n` guard and exact validation boundary. Its second pass found that copied question and metadata fields still lacked types. The corrected contract makes duplicate ids the grouping key, fixes every derived field for all three supported answer kinds, validates every field it reads or copies, and makes all five metric guards apply to any duplicate input.
+
+The independent code review rejected the first implementation because its documented jq invocation printed pretty objects across many lines, its distribution allowance was narrower than the product's by a floating-point edge, and its decision test omitted band boundaries. The repair adds compact output and a line-count proof, uses the product's member-count allowance exactly, and pins the low, inside, and high band cases. The metric guards also detect repeated present ids of every JSON type. The same reviewer accepted the repair with no remaining finding.
+
+## Result
+
+`trials.jq` now turns detailed decision, choice, or score observations into one derived JSONL row per case in first-seen order. It averages stored probabilities, recomputes the answer under the shared rule, records live and replay counts, and keeps stable provenance without pretending that one backend call produced the average. The five metric transforms refuse duplicate case ids until this preparation step has run.
+
+The outside fixture turns 300 observations into 100 cases. At a cut of 0.5 it gives 11 true positives, 10 false positives, 74 true negatives, and 5 false negatives: accuracy 0.85, precision 0.5238, recall 0.6875, and F1 0.5946. The focused checks, all four repository rungs, and `git diff --check` pass. No live or paid call ran.
