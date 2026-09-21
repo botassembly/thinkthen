@@ -58,6 +58,17 @@ The first half works today and is already decided. ADR 0004 makes a backend a UR
 
 The cheapest probes that turn "not known" into "known", each a handful of requests under `sdlc/scripts/live`: the two edges of each limit with the reply recorded, one long text with the twenty conformance questions asked alone and then together, and one accuracy check at 1,000, 10,000, and 30,000 tokens on a public set with long documents. The second-server check waits until a compatible server is chosen, and running one locally needs no paid call.
 
+## A public leaderboard, read on 2026-09-21
+
+Ian pointed to a public benchmark page that compares about forty models and projects on decision tasks. A grunt agent read it once. These are the page's statements, not ours, and nothing here is verified.
+
+- **Most listed projects are marked compatible with the first vendor's request format,** several of them "inferred" and not confirmed. One family says it serves a `/v1/systemone` server. If true, those work with `THINKTHEN_BASE_URL` alone, and that is the first thing to test.
+- **A few are marked not compatible,** and one needs its own Python client. Those would need an adapter under ADR 0004, or stay out.
+- **Context limits are stated for only a handful, and they are small:** 512 tokens for two projects, 64 tokens of text for one, 8,192 for one. For every other entry the page says "not stated". The page also lists the questions a request may carry as unknown for most systems.
+- **Prices are mostly estimates,** and the page calls its adjusted speed figures "an assumption, not a measurement".
+
+What this changes: the adapter rules above stand, and rule 1 matters most. A user who points ThinkThen at a 512-token server and pipes in a contract must get a clear refusal that names the limit. Today the tool knows no backend's limit, so the refusal would be whatever that server sends back. A profile that carries its backend's stated limits, checked before the request leaves, is the smallest fix, and it also answers "how does a user learn a text is too large before paying" for the first backend.
+
 ## Other backends
 
 ADR 0004 makes a backend a URL and an adapter. Ian's direction: a second model qualifies when it answers the three kinds of question the functions use, which are yes or no, pick one, and place on a scale, and returns probabilities. Ian's note `Jev context length.md` in his notes folder surveys several open implementations of that interface. Its numbers come from a chat assistant's web reading on 2026-09-21. Nobody here has verified them, and they are recorded only as a reason for the rules below. The survey's useful finding is that the context limit differs by more than a hundred times between implementations, from about 512 tokens to about 32,000 per question, and that the limit of the underlying model is often far above what the decision layer was trained or served for.
