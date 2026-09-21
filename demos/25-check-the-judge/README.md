@@ -98,7 +98,7 @@ sh ../../transforms/calibration/example.sh \
 
 ## Related how-tos
 
-- [How to pick a threshold from labeled cases](../13-pick-a-threshold/)
+- [How to build a triage pipeline that drafts, blocks, or asks a person](../16-triage-pipeline/)
 - [How to tune a question file](../41-tune-a-question-file/)
 - [How to know what a run cost](../28-what-a-run-cost/)
-- [How to act only when the answer is sure, and send the rest to a person](../04-review-queue/)
+- [How to pick a threshold from labeled cases](../13-pick-a-threshold/)

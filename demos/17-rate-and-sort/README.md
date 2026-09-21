@@ -84,4 +84,4 @@ Those two numbers are three hundredths apart and do not mean the same thing. The
 
 - [How to branch on a label with `choose` and `case`](../02-route-a-ticket/) branches on a level instead of cutting on a number.
 - [How to gate a script step on a yes/no answer](../01-refund-gate/) is the gate that `score` is not.
-- [How to act only when the answer is sure, and send the rest to a person](../04-review-queue/) runs a cut over a whole file in one go.
+- [How to pick a threshold from labeled cases](../13-pick-a-threshold/) measures a cut before it runs over a whole file.

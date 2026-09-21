@@ -14,7 +14,7 @@ How-to 16 shows a believable support-ticket pipeline that fits on one slide. One
 
 ## Current facts and decisions
 
-Nineteen how-tos are green. Page 16 is the missing front-window page and the next item in the accepted plan. It is also the page the talk, site, and README lead with. Pages 04 and 07 remain only because page 16 has not absorbed their review-queue, flat-row, null, table-input, and collision lessons.
+Nineteen how-tos are green, and page 18 is the only page still coming. Page 16 now leads the README front window and is the page the talk and site consume. Pages 04 and 07 left after page 16 absorbed their review-queue, flat-row, null, table-input, and collision lessons.
 
 Ian chose a tested `jq` file over a rules block in a question set for version 0.1. ADR 0013 records that ruling. The policy uses `action` for its automated route. `reviewed_action` means a person's recorded decision and uses the same `draft`, `block`, or `review` words. The later monitor must keep that field name and meaning.
 
@@ -62,7 +62,7 @@ Re-score if implementation exposes a command change, shared state, or a new publ
 ## Review
 
 - Design review: accepted after two initial rejections and one implementation correction. The first revisions defined the page, vocabulary, paths, and proof. Implementation showed that ordinary `mv` can silently nest the run under a destination created after the precheck. The corrected portable design reserves the destination with `mkdir`, cleans handled failures, and defines successful process completion as the publication boundary. The reviewer accepted it without a new ADR.
-- Code review: rejected once. The reviewer required exact answer names, found that GNU `mv` can nest the temporary directory if the destination appears after the precheck, separated the coordinator's live wrapper from the recording job, and found a stale README ordering sentence. All four findings are remediated under the corrected reservation design and await re-review.
+- Code review: accepted after one rejection and remediation. The reviewer required exact answer names, found that GNU `mv` can nest the temporary directory if the destination appears after the precheck, separated the coordinator's live wrapper from the recording job, and found a stale README ordering sentence. The corrected reservation design and durable record passed re-review. Closure review remains before landing.
 
 ## Implementation
 
@@ -74,4 +74,6 @@ Implementation disproved the first publication assumption. POSIX shell has no po
 
 The coordinator alone will invoke `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`. The recording job uses a temporary output directory, cleans it on every exit, and writes only the shared cache. A direct keyless replay runs `triage` with `--replay recording/` and needs no new live reservation.
 
-Pages 04 and 07 remain until page 16 is green. The draft now carries their review pile, explicit null, complete flat input row, table-input/JSONL-output, atomic publication, disclosure, and collision lessons.
+The one authorized command, `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`, completed once. Six mode-0600 entries use `thinkthen.recording/1`, `jev-1.13.0`, and the System One URL. They report 2,916 input and 468 output tokens. The durable reservation moved the shared ledger from 20,497,918 to 20,502,918 charged tokens. The recording job matched all six `reviewed_action` values, and a direct keyless replay printed two drafts, one block, and three reviews. No credential marker or live output remained.
+
+Page 16 is green. Pages 19 and 13 hold page 04's band and coverage lessons, page 14 holds page 07's several judged columns, and page 16 holds the review pile, explicit null, complete flat input row, TSV-input/JSONL-output rule, disclosure boundary, and collision caution. Pages 04 and 07 therefore left. Ticket closure review and landing remain.

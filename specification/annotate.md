@@ -93,7 +93,7 @@ One record makes one request per distinct `on`, and the plan shows one request. 
 {"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}
 ```
 
-`--dry-run` reads the question set and the first record. A name that collides with a field on record two is invisible to it, as [demo 07](../demos/07-judged-columns/) shows.
+`--dry-run` reads the question set and the first record. A name that collides with a field on record two is invisible to it. [How-to 16](../demos/16-triage-pipeline/) keeps the collision caution beside its table-input pipeline.
 
 ## Requests
 

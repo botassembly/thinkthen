@@ -1,10 +1,10 @@
 # How to build a triage pipeline that drafts, blocks, or asks a person
 
-Status: red
+Status: green
 
 Verbs: `annotate`
 
-Use this when one record needs several judgments before ordinary policy code can choose an action. Six fictional support tickets become complete audit rows in three files. The reviewed recording is still pending, so this page stays red.
+Use this when one record needs several judgments before ordinary policy code can choose an action. Six fictional support tickets become complete audit rows in three files.
 
 ```bash
 ./run --replay recording/ | mustmatch "draft=2
@@ -17,6 +17,8 @@ review=3"
 `tickets.tsv` holds six made-up messages with an id, subject, body, and `reviewed_action`. That last field is a person's recorded decision. The policy uses the same `draft`, `block`, and `review` values, which lets the test compare them directly.
 
 `questions.json` asks whether the message requests a credential, which queue owns it, and how urgent it is. Every question points at `/body`. The id, subject, and `reviewed_action` stay local. `--details` restores the complete TSV row under `input`, and streamed table results remain JSONL.
+
+The six recording files hold one request per ticket. The three answers in each replayed row name the same request digest, which proves that the questions rode together.
 
 ## Step 1: judge once, then apply policy once
 
@@ -49,11 +51,23 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 ./triage "$work/triage" --replay recording/
+jq -s -e 'all(.[]; ([.answers[].request] | unique | length) == 1)' "$work/triage"/*.jsonl >/dev/null
 jq -c '{id: .input.id, values: .value, policy}' "$work/triage/block.jsonl" \
-  | mustmatch '{"id":"SUP-1044","values":{"credential_request":true,"queue":"account","urgency":2},"policy":{"action":"block","reason":"credential_request"}}'
+  | mustmatch '{"id":"SUP-1044","values":{"credential_request":true,"queue":"account","urgency":1.02},"policy":{"action":"block","reason":"credential_request"}}'
 ```
 
 The script reserves the output name before it judges, then builds inside a hidden staging directory. A failed judgment, malformed policy input, failed file write, or catchable interruption removes the directory. A caller reads it only after the script returns successfully. An unresolved value remains JSON `null` and fails closed into the review file.
+
+## Step 3: fail unresolved answers closed
+
+The policy checks null before every automated rule. A null in any of the three answer kinds goes to a person.
+
+```bash
+printf '%s\n' '{"value":{"credential_request":false,"queue":null,"urgency":0}}' \
+  | jq -c -f ../../transforms/triage/triage.jq \
+  | jq -c '.policy' \
+  | mustmatch '{"action":"review","reason":"unresolved"}'
+```
 
 ## What can go wrong
 

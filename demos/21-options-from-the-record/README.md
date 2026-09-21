@@ -94,4 +94,4 @@ thinkthen: stopped at record 1; 0 records finished, 0 records from a recording"
 
 - [How to branch on a label with `choose` and `case`](../02-route-a-ticket/) picks from one fixed list.
 - [How to resume a long run that stopped](../12-keep-going/) resumes a record run that failed partway.
-- [How to act only when the answer is sure, and send the rest to a person](../04-review-queue/) cuts a queue on a threshold.
+- [How to pick a threshold from labeled cases](../13-pick-a-threshold/) measures the cut before it controls a queue.

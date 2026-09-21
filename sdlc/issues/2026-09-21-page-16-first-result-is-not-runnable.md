@@ -1,6 +1,6 @@
 # Make page 16's first result runnable
 
-Status: Open
+Status: Resolved
 
 Found 2026-09-21 during a cold marketing read of `demos/16-triage-pipeline/README.md` at commit `1caae5a`.
 
@@ -17,3 +17,7 @@ Commit the reviewed recording before presenting this page as a runnable how-to, 
 - `demos/16-triage-pipeline/README.md:7-20` promises six rows and the three counts, then replays `recording/`.
 - `demos/16-triage-pipeline/` contains no `recording/` directory.
 - Local command: `PATH=target/debug:$PATH ./demos/16-triage-pipeline/triage <temp-output> --replay demos/16-triage-pipeline/recording/` exits 5 before processing record 1.
+
+## Resolution
+
+Ticket 0041 added the six reviewed recording entries and a page-local runner that owns its temporary output. With the key and base-address variables unset, `PATH=target/debug:$PATH demos/16-triage-pipeline/run --replay demos/16-triage-pipeline/recording` now prints `draft=2`, `block=1`, and `review=3`. The green page's first block runs that same command without visible setup.

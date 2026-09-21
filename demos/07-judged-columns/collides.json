@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "questions": {
-    "price": {
-      "decide": "Does the listing state a price for a single unit?",
-      "on": "/body"
-    }
-  }
-}

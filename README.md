@@ -52,7 +52,7 @@ The flagship leads these seven pages. The remaining pages move from the simplest
 
 | How to | The job | |
 | --- | --- | --- |
-| Build a triage pipeline that drafts, blocks, or asks a person | One request judges three facts about a support ticket, and a tested `jq` policy publishes complete audit rows | 16, coming |
+| Build a triage pipeline that drafts, blocks, or asks a person | One request judges three facts about a support ticket, and a tested `jq` policy publishes complete audit rows | [16](demos/16-triage-pipeline/) |
 | Gate a script step on a yes/no answer | A support desk sends every message that asks for money back to the refunds queue | [01](demos/01-refund-gate/) |
 | Branch on a label with `choose` and `case` | A ticket lands on one of four teams, and a folder of notes is filed the same way | [02](demos/02-route-a-ticket/) |
 | Find the line that answers a question | One line of a long handbook answers the question, or nothing does and the tool says so | [15](demos/15-find-the-line/) |

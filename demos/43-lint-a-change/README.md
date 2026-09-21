@@ -82,7 +82,7 @@ A clean change prints nothing and exits 0, which is what a build step is for.
 - **A cut nobody measured.** `0.7` here was read off five made-up hunks. Tune it on hunks a person judged before a build fails on it.
 - **A rule the model cannot see.** The hunk is all that leaves the machine, so a rule about the file it sits in, or about a function two hundred lines above, cannot be answered from it.
 - **A run that stops.** A failed hunk ends the run at exit 4 or 5 and prints a prefix, so a build that reads an empty report as a clean change would pass a branch nobody judged. `lint.sh` exits on the first failure, because `set -e` is on.
-- **A band.** `filter` takes a single cut. Three piles need `decide --details` and `jq`, which is the shape [how-to 04](../04-review-queue/) shows.
+- **A band.** `filter` takes a single cut. [How to pick a threshold from labeled cases](../13-pick-a-threshold/) measures the coverage trade, and [the triage pipeline](../16-triage-pipeline/) shows three policy outputs.
 
 ## Related how-tos
 

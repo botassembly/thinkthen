@@ -105,7 +105,7 @@ THINKTHEN_API_KEY=not-a-real-key thinkthen decide 'Does the message report a pay
 
 ## Related how-tos
 
-- [How to act only when the answer is sure, and send the rest to a person](../04-review-queue/) splits a judged queue three ways.
+- [How to build a triage pipeline that drafts, blocks, or asks a person](../16-triage-pipeline/) splits judged rows three ways.
 - [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) reads every failure code.
 - [How to test a script with no network](../27-test-with-no-network/) explains the recording folder.
 - [How to know what a run cost](../28-what-a-run-cost/) reads the token counts these rows carry.

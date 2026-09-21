@@ -46,7 +46,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 | # | How to | Slice | State |
 | --- | --- | --- | --- |
 | 39 | Screen one message for several hazards | Ticket 0036: `tag` | green |
-| 16 | Build a triage pipeline that drafts, blocks, or asks a person | 9 | coming, ticket 0041 |
+| 16 | Build a triage pipeline that drafts, blocks, or asks a person | 9 | green |
 
 ## Evals
 
@@ -70,22 +70,13 @@ Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An 
 | Local reporting and comparison, with thresholds changed without asking again | 25, 13, 41, 28 |
 | Validation of the judge itself | 25 |
 
-## Folders that stay and then leave
-
-A green page leaves only when the page that absorbs it is green, so no lesson is ever missing. These two folders are not in the list of 20 and are still on disk.
-
-| # | How to | Slice | State |
-| --- | --- | --- | --- |
-| 04 | Act only when the answer is sure, and send the rest to a person | Leaves when 16 is green | leaving, into 19, 16, and 13 |
-| 07 | Judged columns | Leaves when 14 and 16 are green | leaving, into 14 and 16 |
-
 ## Numbers that left
 
 | Number | Where its idea went |
 | --- | --- |
-| 04 | 19 for the band, 16 for the review pile, and 13 for the trade between coverage and accuracy. Its folder is still on disk |
+| 04 | 19 for the band, 16 for the review pile, and 13 for the trade between coverage and accuracy. Its folder left with ticket 0041 |
 | 05 | 02, as the closing section that files a folder |
-| 07 | 14 for several judged columns on one record, and 16 for the spreadsheet view. Its folder is still on disk |
+| 07 | 14 for several judged columns on one record, and 16 for the spreadsheet view. Its folder left with ticket 0041 |
 | 08 | 39. Its folder left with ticket 0015 |
 | 09 | 03, whose `--dry-run` block proves what leaves the machine. Its folder left with ticket 0014 |
 | 10, 11 | Left with the configuration file and `segment` under ADR 0010 |

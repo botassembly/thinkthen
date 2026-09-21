@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Is there a way to pause a plan instead of stopping it? Asking for next quarter.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the customer ask to end their subscription?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.08}},"usage":{"input_tokens":293,"output_tokens":21}}
-}

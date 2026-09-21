@@ -66,7 +66,7 @@ The header fixes the object key order. Every cell stays a string; the tool does 
 
 ## What can go wrong
 
-- **Three records went and nothing said so.** A single cut keeps or drops, and a run that finished says nothing on standard error, so two kept out of five and two out of two read alike. To see what went, ask `decide --jsonl --details` and split in `jq`, which is the shape [how-to 04](../04-review-queue/) uses.
+- **Three records went and nothing said so.** A single cut keeps or drops, and a run that finished says nothing on standard error, so two kept out of five and two out of two read alike. To keep a complete audit row and split it in `jq`, use [the triage pipeline](../16-triage-pipeline/).
 - **A band.** `filter` takes one cut. A third pile needs a flag to steer it, and `jq` already steers piles, so a band is a usage error that names `decide --details`.
 - **A pointer that finds nothing.** A record with no `/body` is an input error for that record at exit 2, before any request for it, and the run stops there with a prefix already printed.
 - **A paid request for every record.** `filter` judges each record, whether it keeps it or not, so a file of a million lines is a million paid requests. Cut the file with `grep` or `jq` before `filter`, and leave `filter` the records a word cannot separate.

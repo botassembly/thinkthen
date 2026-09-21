@@ -95,4 +95,4 @@ sh ../../transforms/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
 - [How to check the judge against human labels](../25-check-the-judge/)
 - [How to tune a question file](../41-tune-a-question-file/)
 - [How to know what a run cost](../28-what-a-run-cost/)
-- [How to act only when the answer is sure, and send the rest to a person](../04-review-queue/)
+- [How to build a triage pipeline that drafts, blocks, or asks a person](../16-triage-pipeline/)

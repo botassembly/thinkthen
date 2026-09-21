@@ -2,7 +2,7 @@
 
 Date: 2026-09-21
 
-Status: draft and code review complete; recording and landing pending
+Status: recording complete; closure review and landing pending
 
 ## Built locally
 
@@ -18,12 +18,14 @@ The agent set urgency 1, the middle of the three-level scale, as the inclusive `
 
 `demos/16-triage-pipeline/self-test` passes the exact command shape, one policy application, three populated JSONL outputs, full-row preservation, agreement with six pre-registered `reviewed_action` values, and a request disclosure check through the real binary's dry run. It also proves destination reservation, one judging winner, three final file moves, exact failure statuses, and cleanup after judgment, validation, move, and signal failures.
 
-## Still pending
+## Recording and closure
 
-Page 16 remains red. The cold marketing read completed and filed [`2026-09-21-page-16-first-result-is-not-runnable.md`](../issues/2026-09-21-page-16-first-result-is-not-runnable.md). The code reviewer accepted the corrected behavior and tests; this record correction was its only remaining finding. One authorized run still uses the ticket's 5,000-token cap to create the recording. The result then gets checked for request count, digests, model agreement, modes, credentials, and keyless replay before the page turns green. Pages 04 and 07 remain until then.
+The cold marketing read filed [`2026-09-21-page-16-first-result-is-not-runnable.md`](../issues/2026-09-21-page-16-first-result-is-not-runnable.md). The page-local runner and reviewed recording resolved it. The code reviewer accepted the corrected behavior and tests after the durable prose matched them.
 
 The first code review rejected four findings. Exact answer-name validation, the recording job boundary, and the README order sentence were corrected. The review disproved the first publication assumption: shell `mv` does not portably combine an atomic directory rename with no replacement. The accepted revision reserves the caller's name with `mkdir`, stages inside that owned directory, removes it after handled failures and catchable interruptions, and makes successful return the publication boundary. Two synchronized runs prove that only the reservation winner judges. Separate failures during judgment, validation, and each final file move preserve their status and remove the owned output. The cold-read issue remains expected and closes only after the recording exists.
 
-The cold read found that the first result still exposed temporary-directory setup and could not run before the recording existed. A small page-local `run` script now owns and cleans that temporary output, leaving one command in the first block. The issue stays open until the reviewed recording makes that command executable.
+The cold read found that the first result exposed temporary-directory setup and could not run before the recording existed. The small page-local `run` script now owns and cleans that temporary output, leaving one command in the first block.
 
-The later paid command is `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh`. The job itself contains no live wrapper and cleans its temporary output. Keyless cache replay calls the pipeline directly and reserves nothing.
+The authorized coordinator ran `sdlc/scripts/live --max-tokens 5000 demos/16-triage-pipeline/record.sh` once. The six mode-0600 recordings have schema `thinkthen.recording/1`, model `jev-1.13.0`, the hosted System One URL, 2,916 input tokens, and 468 output tokens. The job matched all six recorded decisions. The shared ledger moved from 20,497,918 to 20,502,918 charged tokens.
+
+A direct replay with the key and base-address variables unset printed `draft=2`, `block=1`, and `review=3`. Schema, digest, and request checks passed through replay. A credential-marker scan found none, and the recording job left no live output. Page 16 is green. Pages 04 and 07 left only after pages 19, 13, 14, and 16 demonstrably held every named lesson. Closure review and landing remain.

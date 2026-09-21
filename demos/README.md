@@ -22,7 +22,7 @@ A demo turns **green** when the `spec` rung runs it against a recording and it p
 
 It also holds every green page to the standard of ADR 0016, which ADR 0018 leaves unchanged: at most 120 lines and 900 words, the first asserting block by line 20 with nothing set up before it, at most six of them and every `bash` block asserting, one command unless the title names the contrast, at most four steps, no design argument, and at most four closing links. A failure names the page, the rule, and the measured number. `sdlc/scripts/demos-self-test` proves each check against a page that breaks it.
 
-The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and demo 10 left with the configuration file under the same ADR. Demos 05 and 38 left under ADR 0016, into 02 and 25. Demos 20, 24, 30, 23, 37, and 42 left under ADR 0018, and the table at the end of `documentation-plan.md` says where each idea went. `specification/roadmap.md` says what each retired number held.
+The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and demo 10 left with the configuration file under the same ADR. Demos 05 and 38 left under ADR 0016, into 02 and 25. Demos 20, 24, 30, 23, 37, and 42 left under ADR 0018. Demos 04 and 07 left when page 16 turned green. The table at the end of `documentation-plan.md` says where each idea went. `specification/roadmap.md` says what each retired number held.
 
 ## What a demo never asks
 
@@ -64,7 +64,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
 | 39 | [Screen one message for several hazards](39-screen-a-message/) | `tag` | green |
-| 16 | [Build a triage pipeline that drafts, blocks, or asks a person](16-triage-pipeline/) | `annotate` | coming, ticket 0041 |
+| 16 | [Build a triage pipeline that drafts, blocks, or asks a person](16-triage-pipeline/) | `annotate` | green |
 
 ## Evals
 
@@ -78,12 +78,3 @@ An eval is a reproducible workflow over the same commands as everything else. Th
 | 28 | [Know what a run cost](28-what-a-run-cost/) | `decide` | green |
 
 Demos 13, 25, 28, and 41 read the `jq` transforms in `transforms/` over committed rows, which is what `report` would have done inside the tool.
-
-## Folders that stay and then leave
-
-Each folder below holds a page that is not in the list of 20. It stays until the page that absorbs it is green, so no lesson is ever missing, and its first lines say which page that is. `sdlc/scripts/pages` refuses a folder here whose page does not say so.
-
-| # | How to | Verbs | Status |
-| --- | --- | --- | --- |
-| 04 | [Act only when the answer is sure, and send the rest to a person](04-review-queue/) | `decide` | leaving, into 19, 16, and 13 |
-| 07 | [Judged columns](07-judged-columns/) | `annotate` | leaving, into 14 and 16 |

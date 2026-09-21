@@ -153,7 +153,7 @@ fn every_recorded_demo_runs_and_every_demo_still_red_is_skipped() {
     assert!(said.contains(" green, "), "{said}");
     for page in [
         "01-refund-gate",
-        "04-review-queue",
+        "16-triage-pipeline",
         "12-keep-going",
         "19-no-or-could-not-ask",
         "21-options-from-the-record",
