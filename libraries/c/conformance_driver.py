@@ -328,7 +328,7 @@ def main():
             else:
                 spec = {}
                 rules = [
-                    {"name": rule["name"], "from": rule["from"], "to": rule["to"]}
+                    {"name": rule["name"], "source": rule["source"], "target": rule["target"]}
                     for rule in question.get("relations", [])
                     if not rule.get("either")
                 ]

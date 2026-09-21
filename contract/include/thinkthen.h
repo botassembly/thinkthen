@@ -98,8 +98,9 @@ int thinkthen_decide_many(const thinkthen_engine *engine, const char *question_j
  * carries the question file's own shape with the evidence beside it. This
  * is how a host reaches choose, score, tag, filter, rank, find, and
  * annotate before it grows a typed door, and how a test replays a
- * recording. Returns NULL on failure, with the code as the return of the
- * next `thinkthen_error_message` on the engine. */
+ * recording. Returns NULL on failure; `thinkthen_error_message` names
+ * what failed and `thinkthen_error_retryable` says whether a second try
+ * could help. */
 char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
 
 /* Find every name in one text, and the relations the rules allow. The
@@ -109,8 +110,9 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * counting code points of `text`. `spec_json` is the recognize section of
  * the question file (`kinds`, `relations`, `threshold`, `relation_threshold`);
  * a text the recordings do not hold is refused with the usage kind. Returns
- * 0 on success and -1 on failure, with `thinkthen_error_message` naming
- * what failed.
+ * THINKTHEN_OK on success and the kind's code (1..6, THINKTHEN_EUSAGE
+ * through THINKTHEN_EDEFECT) on failure, with `thinkthen_error_message`
+ * naming what failed.
  *
  * The ends of a relation carry `source` and `target` on every surface,
  * this returned JSON and the question file included; `from` and `to` are
@@ -125,7 +127,8 @@ int thinkthen_recognize(const thinkthen_engine *engine, const char *spec_json,
  * 255 is a usage refusal before anything else. `spec_json` is the relate
  * section (`relations` entries or bare names, `either`, optional
  * `kind_field`, `threshold`). Each edge carries `name`, `source`, `target`,
- * and `probability`. Returns 0 on success and -1 on failure, with
+ * and `probability`. Returns THINKTHEN_OK on success and the kind's code
+ * (1..6, THINKTHEN_EUSAGE through THINKTHEN_EDEFECT) on failure, with
  * `thinkthen_error_message` naming what failed. */
 int thinkthen_relate(const thinkthen_engine *engine, const char *spec_json,
                      const char *const *texts, const unsigned long *lengths,

@@ -8,6 +8,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+echo "== r surface: the defect kind crosses as its own kind (shim unit test)"
+(cd thinkthen/src/rust && cargo test --quiet --lib)
+
 echo "== r surface: null suite"
 ENGINE_NULL=1 Rscript tests_null.R
 

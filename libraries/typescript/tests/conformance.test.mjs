@@ -169,7 +169,6 @@ async function runVerb(held, spec, text, list) {
         return;
       }
       if (expect.requests !== undefined) {
-        tt.reset_usage();
         // The file's own counting path ran its calls through its runner;
         // this slice checks the counters exist and count sends.
         const seen = tt.usage();
@@ -187,7 +186,7 @@ async function runVerb(held, spec, text, list) {
       if (spec.kinds) options.kinds = spec.kinds;
       if (Array.isArray(spec.relations) && spec.relations.length) {
         options.relations = {};
-        for (const rule of spec.relations) options.relations[rule.name] = [rule.from, rule.to];
+        for (const rule of spec.relations) options.relations[rule.name] = [rule.source, rule.target];
       }
       if (typeof spec.threshold === 'number') options.threshold = spec.threshold;
       if (typeof spec.relation_threshold === 'number') options.relationThreshold = spec.relation_threshold;

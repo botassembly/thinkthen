@@ -128,17 +128,19 @@ for (case in cases) {
           }
         },
         usage = {
-          tt_reset_usage()
+          before <- tt_usage()
           for (i in seq_len(expect$request_calls %||% case$calls %||% 2)) NULL
           tt_decide(question, case$evidence)
           tt_decide(question, case$evidence)
           held <- tt_usage()
-          if (expect$cache_answers > 0 && held$cache_answers == 0) {
+          sent <- held$requests - before$requests
+          cached <- held$cache_answers - before$cache_answers
+          if (expect$cache_answers > 0 && cached == 0) {
             paste0("diverge  ", id, ": the stand-in carries no disk cache, so the second call sends again; conformance/DIVERGENCES.md and Phase A's record carry it")
-          } else if (identical(held$requests, expect$requests)) {
+          } else if (identical(sent, expect$requests)) {
             paste0("ok       ", id)
           } else {
-            paste0("FAIL     ", id, ": expected ", expect$requests, " requests, got ", held$requests)
+            paste0("FAIL     ", id, ": expected ", expect$requests, " requests, got ", sent)
           }
         },
         decide_many = {

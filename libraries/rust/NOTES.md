@@ -109,7 +109,7 @@ $ grep -rn "score" src/ tests/ examples/
 src/lib.rs: the verb's own name and the re-exported types; tests/verbs.rs and examples/conformance.rs use Question::score and the "score" verb arm.
 ```
 
-Every `score` hit is the ruled verb, never a probability's name. The number on an entity is documented as the interim `number` field with the open comparison named; the number on a relation is `probability`.
+Every `score` hit is the ruled verb, never a probability's name. The number on an entity was the interim `number` field, renamed to `strength` on 2026-09-21 (commits 78204cb, 14f418e, 2356976); the number on a relation is `probability`.
 
 ### Unchecked here
 
@@ -120,3 +120,11 @@ Every `score` hit is the ruled verb, never a probability's name. The number on a
 ## 2026-09-21 — the name number is settled: `strength`
 
 Ian settled the open item in `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md` ("The comparison came back"): the number on a recognized name is the field `strength` — ours, computed, defined once in the manual, with its parts under details. The relation number stays `probability`; the vendor's `confidence` passes through under details only. The contract, stand-in, conformance file, and validator already carried the rename (commits 78204cb, 14f418e); this surface followed: the `recognize` doc comment in `src/lib.rs` now states the settled rule instead of the open item, and the conformance example's entity comparison in `examples/conformance.rs` reads `strength`. Rerun: `./check.sh` with the stub on 8213 — conformance slice green for the Rust surface, wire suite 3 passed.
+
+## 2026-09-21 — the rulings wave (languages lane)
+
+Ruling 2: `tests/defect.rs` constructs a contract `Error` with kind `defect` and asserts the surface carries it whole — kind `Defect`, `retryable` false, the message, and the Display word `defect`. Part of `cargo test`: 1 passed.
+
+Ruling 1 aftermath: `tests/recognize.rs`'s spec uses `source`/`target`.
+
+Prose fix: the interim-`number` line above is history now; the settled field is `strength`.

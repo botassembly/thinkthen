@@ -115,13 +115,12 @@ def test_details_carries_the_trail():
     assert held["sends"] >= 1
 
 
-def test_usage_counts_sends_and_resets():
-    tt.reset_usage()
+def test_usage_counts_sends():
+    # No reset exists (ruling 4): a caller who wants fresh counters builds
+    # a new engine; this test takes the difference across one send.
+    before = tt.usage()["requests"]
     tt.decide(cut_question(), "i want a refund")
-    counted = tt.usage()
-    assert counted["requests"] == 1
-    tt.reset_usage()
-    assert tt.usage()["requests"] == 0
+    assert tt.usage()["requests"] - before == 1
 
 
 def test_cancelled_is_a_keyboard_interrupt():

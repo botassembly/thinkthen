@@ -329,14 +329,14 @@ function recognizeSpec(inputs) {
     spec.relations = [];
     for (const [name, ends] of Object.entries(relations)) {
       if (!Array.isArray(ends) || ends.length !== 2) {
-        throw usageError(`options.relations.${name} is [from, to]`);
+        throw usageError(`options.relations.${name} is [source, target]`);
       }
       for (const end of ends) {
         if (typeof end !== 'string' || end.length === 0) {
-          throw usageError(`options.relations.${name} is [from, to], two kind words or "*"`);
+          throw usageError(`options.relations.${name} is [source, target], two kind words or "*"`);
         }
       }
-      spec.relations.push({ name, from: ends[0], to: ends[1] });
+      spec.relations.push({ name, source: ends[0], target: ends[1] });
     }
   }
   if ('threshold' in inputs) spec.threshold = numberOption('threshold', inputs.threshold);
@@ -400,10 +400,6 @@ function usage() {
   return JSON.parse(native.usage());
 }
 
-function reset_usage() {
-  native.resetUsage();
-}
-
 module.exports = {
   ThinkThenError,
   annotate,
@@ -417,7 +413,6 @@ module.exports = {
   rank,
   recognize,
   relate,
-  reset_usage,
   score,
   tag,
   usage,

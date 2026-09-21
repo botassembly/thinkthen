@@ -110,7 +110,8 @@ The recorded-rule form is the passing test above; the deck form is pinned in its
 
 ```
 restricted: one line, index.d.ts:102, "(never call it confidence)" — the restriction
-  itself; no number of ours is named confidence, and the entity field is `number`
+  itself; no number of ours is named confidence, and the entity field (the
+  interim `number`, renamed to `strength` on 2026-09-21) never carried it
 banned: no hits (certainty, likelihood, cutoff, gray zone)
 "score" as a probability name: no hits; `score` appears only as the verb and the
   position's name
@@ -126,3 +127,16 @@ not-sure synonyms: "unknown answer"/"unknown field" are defect messages about an
 ## 2026-09-21 — the name number is settled: `strength`
 
 Ian settled the open item in `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md` ("The comparison came back"): the number on a recognized name is the field `strength` — ours, computed, defined once in the manual, with its parts under details. The relation number stays `probability`; the vendor's `confidence` passes through under details only. The contract, stand-in, conformance file, and validator already carried the rename (commits 78204cb, 14f418e); this surface followed: the typed declaration in `index.d.ts` (doc comment now states the settled rule), the wrapper conversion in `index.js` (`strength: held.strength`), and the conformance slice's assertion in `tests/conformance.test.mjs`. Rerun: `./check.sh` with the stub on 8212 — `typescript surface: all checks green`, the deck's recognize call and the conformance slice included.
+
+## 2026-09-21 — the rulings wave (languages lane)
+
+Ruling 4: `reset_usage` is removed — the addon's `#[napi]` export, `index.js`'s wrapper and export entry, the `index.d.ts` declaration, and the tests (`verbs.test.mjs`, `conformance.test.mjs`, `types.test.ts`). The generated name lists were regenerated from `functions.toml` (14 functions). Grep proof:
+
+```
+$ grep -rn "reset_usage\|resetUsage" addon/src index.js index.d.ts index.mjs loader.cjs loader.d.ts tests
+(no matches; the napi build regenerated loader.cjs and loader.d.ts, and the commit carries them)
+```
+
+Ruling 1 aftermath: the wrapper's spec build and its messages use `source`/`target`; `tests/conformance.test.mjs` reads the re-keyed rules.
+
+Ruling 2: `the_defect_kind_maps_into_the_failure_envelope` constructs a contract `Error` with kind `defect` and asserts the envelope carries `"kind":"defect"`, `retryable: false`, and the message. The envelope moved into a named `failure_envelope` so the mapping has one home. Runs in `check.sh` (`cd addon && cargo test --quiet --lib`): 1 passed.

@@ -20,6 +20,17 @@ fi
 source .venv/bin/activate
 maturin develop --release
 
+echo "== the defect kind maps to the host's error (shim unit test)"
+# The unit tests link libpython and construct a contract Error with kind
+# `defect`; the wheel build keeps `extension-module` through the crate's
+# default feature, so this step builds with --no-default-features.
+LIBDIR=$(.venv/bin/python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')
+BASEP=$(.venv/bin/python -c 'import sys; print(sys.base_prefix)')
+PYO3_PYTHON="$PWD/.venv/bin/python" \
+  LD_LIBRARY_PATH="${LIBDIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+  PYTHONHOME="$BASEP" \
+  cargo test --quiet --no-default-features --lib
+
 echo "== surface tests, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_surface.py -q
 

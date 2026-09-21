@@ -804,7 +804,7 @@ fn build_recognize(
     if let Some(bound) = relations {
         let dict = bound.cast::<PyDict>().map_err(|_| {
             UsageError::new_err(
-                "relations takes a dictionary, one entry per rule: the name to a (from, to) pair",
+                "relations takes a dictionary, one entry per rule: the name to a (source, target) pair",
             )
         })?;
         for (name, ends) in dict.iter() {
@@ -861,19 +861,19 @@ fn build_relate(
                             })
                     };
                     let name = held("name")?;
-                    let from = held("from")?;
-                    let to = held("to")?;
+                    let source = held("source")?;
+                    let target = held("target")?;
                     let either = dict
                         .get_item("either")?
                         .and_then(|value| value.extract::<bool>().ok())
                         .unwrap_or(false);
-                    let rule = RelationRule::new(&name, end_kind(&from), end_kind(&to))
+                    let rule = RelationRule::new(&name, end_kind(&source), end_kind(&target))
                         .map_err(|error| python_error(py, error))?
                         .either(either);
                     ask.relations.push(rule);
                 } else {
                     return Err(UsageError::new_err(
-                        "a relation entry is a name or a mapping with name, from, to",
+                        "a relation entry is a name or a mapping with name, source, target",
                     ));
                 }
             }
@@ -1091,12 +1091,6 @@ fn usage(py: Python<'_>) -> Py<PyAny> {
     dict.into_any().unbind()
 }
 
-/// Zero the counters.
-#[pyfunction]
-fn reset_usage() {
-    thinkthen_standin::reset_usage();
-}
-
 #[pymodule]
 fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = module.py();
@@ -1125,4 +1119,24 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
 /// A conversion failure pyo3 itself reports, as a defect of this shim.
 fn python_error_of(error: pyo3::PyErr) -> PyErr {
     error
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use thinkthen_contract::Error;
+
+    #[test]
+    fn the_defect_kind_maps_to_defect_error() {
+        Python::initialize();
+        Python::attach(|py| {
+            let raised = python_error(py, Error::defect("the engine broke its own contract"));
+            let name = raised.get_type(py).name().unwrap().to_string();
+            assert_eq!(name, "DefectError");
+            let value = raised.value(py);
+            let kind: String = value.getattr("kind").unwrap().extract().unwrap();
+            assert_eq!(kind, "defect");
+            assert!(!raised.value(py).getattr("retryable").unwrap().extract::<bool>().unwrap());
+        });
+    }
 }

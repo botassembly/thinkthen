@@ -144,7 +144,7 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
   when "recognize"
     spec = JSON.parse(question_text)
     rules = (spec["relations"] || []).to_h do |rule|
-      [rule["name"], { from: rule["from"], to: rule["to"], either: rule["either"] }]
+      [rule["name"], { source: rule["source"], target: rule["target"], either: rule["either"] }]
     end
     found = ThinkThen.recognize(text.to_s, kinds: spec["kinds"],
                                 relations: rules.empty? ? nil : rules,
@@ -177,7 +177,7 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
     end
     spec = JSON.parse(question_text)
     rules = (spec["relations"] || []).map do |rule|
-      rule.is_a?(Hash) ? { rule["name"] => [rule["from"], rule["to"]] } : rule
+      rule.is_a?(Hash) ? { rule["name"] => [rule["source"], rule["target"]] } : rule
     end
     edges = ThinkThen.relate(records, relations: rules.empty? ? nil : rules, either: spec["either"],
                              threshold: spec["threshold"], kind_field: spec["kind_field"])

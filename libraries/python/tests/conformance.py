@@ -51,7 +51,7 @@ def recognize_relations(body):
     rules = body.get("relations") or []
     if not rules:
         return None
-    return {rule["name"]: (rule["from"], rule["to"]) for rule in rules}
+    return {rule["name"]: (rule["source"], rule["target"]) for rule in rules}
 
 
 def entity_dict(entity):
@@ -112,7 +112,7 @@ def run_relate(case):
             either.append(rule["name"])
         else:
             relations.append(
-                {"name": rule["name"], "from": rule["from"], "to": rule["to"]}
+                {"name": rule["name"], "source": rule["source"], "target": rule["target"]}
             )
     edges = tt.relate(
         case["records"],
@@ -169,18 +169,20 @@ def run(case):
         )
         return checks, None
     if verb == "usage":
-        tt.reset_usage()
+        before = tt.usage()
         for _ in range(case.get("calls", 1)):
             tt.decide(built(body), case["evidence"])
         counted = tt.usage()
         wanted = expect.get("requests")
         cache = expect.get("cache_answers")
-        if counted.get("requests") == wanted and counted.get("cache_answers") == cache:
+        sent = counted.get("requests") - before.get("requests")
+        cached = counted.get("cache_answers") - before.get("cache_answers")
+        if sent == wanted and cached == cache:
             return True, None
         return False, (
             f"expected requests {wanted} cache {cache}, "
-            f"the stand-in counted {counted.get('requests')} sends and "
-            f"{counted.get('cache_answers')} cache answers: it holds no disk cache"
+            f"the stand-in counted {sent} sends and "
+            f"{cached} cache answers: it holds no disk cache"
         )
     return None, f"no runner for verb {verb}"
 

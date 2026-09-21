@@ -89,12 +89,6 @@ output = "a built question any verb accepts"
 help = "Build a question from parts, once, and pass it to any verb"
 
 [[function]]
-name = "reset_usage"
-inputs = "none"
-output = "nothing"
-help = "Zero the counters"
-
-[[function]]
 name = "recognize"
 inputs = "kinds and relation rules, text"
 output = "the names with their kinds, and the relations between them"

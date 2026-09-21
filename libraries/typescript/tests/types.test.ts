@@ -37,7 +37,6 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const audit = await tt.details('Refund?', text);
   const many = await tt.decide_many('Refund?', reviews);
   const counters = tt.usage();
-  tt.reset_usage();
 
   return {
     team,

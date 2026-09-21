@@ -300,3 +300,11 @@ its earlier work already landed under the C lane's commit message, and it
 should commit only what it changes from here. The root cause is mine:
 `git add -A` in a shared worktree. The remedy for the rest of this lane
 was explicit paths; that is what the commit below uses.
+
+## 2026-09-21 — the rulings wave (languages lane)
+
+Ruling 1 aftermath: `tests/door.rs`'s specs, `examples/recognize.c`, and `conformance_driver.py` use `source`/`target`.
+
+Ruling 2: the `src/lib.rs` unit test constructs a contract `Error` with kind `defect`, runs it through the engine's `fail`, and asserts code 6, the message through `thinkthen_error_message`, and the zero retry signal. `check.sh` now runs `cargo test --lib` beside `--test door`: 1 passed.
+
+Smaller item: `thinkthen_call`'s doc no longer promises a numeric code the door never returns, and `thinkthen_recognize`/`thinkthen_relate` say the kind's code 1..6 rather than `-1` — the header now matches `code_of`.

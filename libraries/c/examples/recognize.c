@@ -50,16 +50,16 @@ static const char *ALERTS[4] = {
  * own rule set also asks `located_in`, which no recording holds. */
 static const char SPEC_RECORDED[] =
     "{\"kinds\": [\"person\", \"organization\", \"place\"],"
-    " \"relations\": [{\"name\": \"works_for\", \"from\": \"person\","
-    " \"to\": \"organization\"}]}";
+    " \"relations\": [{\"name\": \"works_for\", \"source\": \"person\","
+    " \"target\": \"organization\"}]}";
 static const char SPEC_DECK[] =
     "{\"kinds\": [\"person\", \"organization\", \"place\"],"
-    " \"relations\": [{\"name\": \"works_for\", \"from\": \"person\","
-    " \"to\": \"organization\"},"
-    " {\"name\": \"located_in\", \"from\": \"*\", \"to\": \"place\"}]}";
+    " \"relations\": [{\"name\": \"works_for\", \"source\": \"person\","
+    " \"target\": \"organization\"},"
+    " {\"name\": \"located_in\", \"source\": \"*\", \"target\": \"place\"}]}";
 static const char SPEC_EMOJI[] = "{\"kinds\": [\"person\"]}";
 static const char SPEC_RELATE[] =
-    "{\"relations\": [{\"name\": \"caused_by\", \"from\": \"*\", \"to\": \"*\"}],"
+    "{\"relations\": [{\"name\": \"caused_by\", \"source\": \"*\", \"target\": \"*\"}],"
     " \"either\": [\"same_as\"], \"threshold\": 0.9}";
 
 static int contains(const char *haystack, const char *needle) {

@@ -49,8 +49,8 @@ check("a relation's number is its probability",
 # A saved question file goes where the kinds go.
 spec_file <- tempfile(fileext = ".json")
 writeLines(paste0('{"recognize": {"kinds": ["person", "organization"], ',
-                  '"relations": [{"name": "works_for", "from": "person", ',
-                  '"to": "organization"}]}}'), spec_file)
+                  '"relations": [{"name": "works_for", "source": "person", ',
+                  '"target": "organization"}]}}'), spec_file)
 from_file <- tt_recognize(sentence, paste0("@", spec_file))
 check("a question file named where the kinds go",
       identical(from_file[[1]]$text, c("Maria Chen", "Northwind Freight")))
@@ -109,8 +109,8 @@ check("the bar keeps the 0.94 edge", identical(as.integer(strict$source[[1]]), 1
 # A saved question file carries the relate spec too.
 links_file <- tempfile(fileext = ".json")
 writeLines(paste0('{"relate": {"relations": [',
-                  '{"name": "caused_by", "from": "*", "to": "*"}, ',
-                  '{"name": "same_as", "from": "*", "to": "*", "either": true}]}}'), links_file)
+                  '{"name": "caused_by", "source": "*", "target": "*"}, ',
+                  '{"name": "same_as", "source": "*", "target": "*", "either": true}]}}'), links_file)
 from_links <- tt_relate(alerts$body, relations = paste0("@", links_file))
 check("a links file answers the same four edges", nrow(from_links) == 4L)
 check("the links file's first edge", identical(from_links$name[[1]], "caused_by") &&

@@ -26,7 +26,7 @@ use magnus::{
     IntoValue, RArray, RClass, RHash, TypedData, Value,
 };
 use thinkthen_contract::{
-    edges_json, Annotated, Answer, Cancel, Details, Edge, Engine as ContractEngine,
+    edges_json, relate_checked, Annotated, Answer, Cancel, Details, Edge, Engine as ContractEngine,
     Error as ContractError, ErrorKind, Found, Judgment, Options, Question, QuestionSet, Ranked,
     Recognize, Recognized, Relate, Scored, Usage,
 };
@@ -97,16 +97,21 @@ fn guarded<T>(call: impl FnOnce() -> Crossing<T>) -> Crossing<T> {
     })
 }
 
-/// The error class of one kind, looked up where `init` defined it.
-fn exception_class(kind: ErrorKind) -> ExceptionClass {
-    let name = match kind {
+/// The error class name of one kind.
+const fn exception_name(kind: ErrorKind) -> &'static str {
+    match kind {
         ErrorKind::Usage => "UsageError",
         ErrorKind::Backend => "BackendError",
         ErrorKind::Deadline => "DeadlineError",
         ErrorKind::Local => "LocalError",
         ErrorKind::Cancelled => "CancelledError",
         ErrorKind::Defect => "DefectError",
-    };
+    }
+}
+
+/// The error class of one kind, looked up where `init` defined it.
+fn exception_class(kind: ErrorKind) -> ExceptionClass {
+    let name = exception_name(kind);
     let module = define_module("ThinkThen").expect("the ThinkThen module exists");
     let found = module.const_get(name).expect("the error class exists");
     ExceptionClass::from_value(found).expect("the error class is a class")
@@ -210,7 +215,8 @@ unsafe extern "C" fn relate_body(pointer: *mut c_void) -> *mut c_void {
     let engine = unsafe { &*job.engine };
     let options = options_for(job.token.as_deref(), job.deadline);
     let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
-    let answer: Crossing<Vec<Edge>> = guarded(|| engine.relate_opts(&job.ask, &records, options));
+    let answer: Crossing<Vec<Edge>> =
+        guarded(|| relate_checked(engine, &job.ask, &records, options));
     Box::into_raw(Box::new(answer)) as *mut c_void
 }
 
@@ -809,4 +815,27 @@ fn init() -> Result<(), Error> {
     module.define_module_function("_parse_question", function!(parse_question, 1))?;
     module.define_module_function("_parse_set", function!(parse_set, 1))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_defect_kind_names_its_error_class() {
+        assert_eq!(exception_name(ErrorKind::Defect), "DefectError");
+        assert_eq!(exception_name(ErrorKind::Usage), "UsageError");
+    }
+
+    #[test]
+    fn a_panic_inside_the_shim_becomes_the_defect_kind() {
+        let held = guarded(|| -> Crossing<()> { panic!("a shim bug") });
+        match held {
+            Err(error) => {
+                assert_eq!(error.kind, ErrorKind::Defect);
+                assert!(!error.retryable);
+            }
+            Ok(()) => panic!("the panic must not read as a value"),
+        }
+    }
 }

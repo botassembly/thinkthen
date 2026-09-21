@@ -310,9 +310,8 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { CancelHandle, usage, resetUsage, call } = nativeBinding
+const { CancelHandle, usage, call } = nativeBinding
 
 module.exports.CancelHandle = CancelHandle
 module.exports.usage = usage
-module.exports.resetUsage = resetUsage
 module.exports.call = call

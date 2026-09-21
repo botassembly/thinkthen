@@ -137,6 +137,12 @@ class TestSurface < Minitest::Test
     %w[UsageError BackendError DeadlineError LocalError CancelledError DefectError].each do |name|
       assert ThinkThen.const_defined?(name, false), "#{name} is missing"
     end
+    # The host error carries the kind and the retry signal the shim maps
+    # onto it. The Rust half's unit test constructs the contract Error with
+    # kind defect and asserts the class-name table (check.sh's shim test).
+    defect = ThinkThen::DefectError.new("the engine broke its own contract", "defect", false)
+    assert_equal "defect", defect.kind
+    refute defect.retryable
   end
 
   def test_cancel_token_object

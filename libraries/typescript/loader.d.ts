@@ -5,8 +5,6 @@
 
 /** The counters since the last reset, as the contract's JSON. */
 export declare function usage(): string
-/** Reset the counters. */
-export declare function resetUsage(): void
 /**
  * One call on a worker thread. `op` names the verb; `spec` is the
  * question's file-grammar JSON (or, for `annotate`, a set's path or

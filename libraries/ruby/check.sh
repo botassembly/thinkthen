@@ -27,6 +27,9 @@ docker_run() {
     bash -eu -c "export PATH=/root/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin:\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo; $1"
 }
 
+echo "== ruby surface: the defect kind maps to its error class (shim unit test)"
+docker_run 'cargo test --quiet --lib'
+
 echo "== ruby surface: surface tests, null backend"
 docker_run 'ruby -I lib -I tests tests/test_surface.rb'
 

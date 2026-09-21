@@ -70,8 +70,8 @@ fn the_recorded_shape_answers_fully() -> Result<(), Box<dyn std::error::Error>> 
     let tt = engine();
     let ask = Recognize::from_json(
         r#"{"kinds": ["person", "organization", "place"],
-            "relations": [{"name": "works_for", "from": "person", "to": "organization"},
-                          {"name": "based_in", "from": "organization", "to": "place"}],
+            "relations": [{"name": "works_for", "source": "person", "target": "organization"},
+                          {"name": "based_in", "source": "organization", "target": "place"}],
             "threshold": 0.5, "relation_threshold": 0.5}"#,
     )?;
     let found = tt.recognize(&ask, SENTENCE)?;

@@ -189,3 +189,18 @@ number the tool computes — the least of the word probabilities times the
 mean of the kind probabilities — said in the package's own words. The
 relation's number stays `probability`, a model-reported number passed
 through.
+
+## 2026-09-21 — the rulings wave (languages lane)
+
+Ruling 4: `tt_reset_usage` is removed — the R function, the extendr wrapper and module entry, and the generated `extendr-wrappers.R` line. The counter checks take differences instead (`tests_null.R`, `conformance.R`). Grep proof:
+
+```
+$ grep -rn reset_usage thinkthen/R thinkthen/src/rust/src tests_null.R conformance.R
+(no matches)
+$ grep -rn tt_reset_usage rlib/thinkthen/R
+(no matches, against the reinstalled package)
+```
+
+Ruling 1 aftermath: `.tt_rule_entry` builds `source`/`target` keys; `recognize_check.R`'s question files use the ruled spelling.
+
+Ruling 2: `the_defect_kind_crosses_as_its_own_kind` — a `#[cfg(test)]` unit test in the Rust shim — constructs a contract `Error` with kind `defect` and asserts `carry` packs `defect`, `false`, and the message around the separator; `tests_null.R` then asserts `tt_raise` raises the `thinkthen_defect` condition with the message and retry signal. Both run in `check.sh`: shim test 1 passed, null suite green.

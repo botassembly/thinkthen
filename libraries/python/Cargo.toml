@@ -11,12 +11,19 @@ crate-type = ["cdylib"]
 [dependencies]
 thinkthen-contract = { path = "../../contract" }
 thinkthen-standin = { path = "../../standin" }
-pyo3 = { version = "0.29", features = ["abi3-py310", "extension-module"] }
+pyo3 = { version = "0.29", features = ["abi3-py310"] }
 serde_json = "1"
 
 # A library artifact unwinds: an abort would kill the host's process.
 [profile.release]
 panic = "unwind"
+
+# `extension-module` is off by default so the unit tests link libpython
+# and can construct the host exception of each error kind; the wheel build
+# enables it through `[tool.maturin] features` in pyproject.toml.
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
 
 # A surface builds on its own, outside the crates workspace, so its
 # binding's profile and toolchain never leak into the command.

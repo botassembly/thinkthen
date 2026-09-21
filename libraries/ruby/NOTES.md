@@ -154,3 +154,11 @@ sweep:         no confidence, certainty, likelihood, cutoff, gray zone, calibrat
 **Finding, pre-existing, out of this change's scope:** the Ruby conformance runner has no arms for `rank` and `find`, so those three cases skip as "no case shape" even though the surface implements both verbs and its own tests cover them. The Python runner has a `rank` arm. A small follow-up for whichever lane owns the case runner shape.
 
 **Pinned divergence, deck-side:** the deck's Python, TypeScript, and Rust sections ask a `located_in` rule on the Maria Chen sentence; the C01 recording covers `works_for` and `based_in`, so that rule cannot run as recorded. The Ruby section does not use `located_in` and is unaffected; the divergence is filed with the deck's owner (`repos/mktg/sdlc/issues/2026-09-21-the-decks-located-in-rule-has-no-recording.md`). Not bent here.
+
+## 2026-09-21 — the rulings wave (languages lane)
+
+Ruling 1 aftermath: the wrapper's relation rules build `source`/`target` keys, and the Hash ends form reads `:source`/`:target`; `tests/conformance.rb` reads the re-keyed rules.
+
+Smaller item: `relate_body` now calls the contract's `relate_checked`, so the 255-record guard is inherited through the function the other doors use rather than resting on the stand-in's own repeat of it.
+
+Ruling 2: two `#[cfg(test)]` unit tests in `src/lib.rs`: `the_defect_kind_names_its_error_class` (the name table maps `Defect` to `DefectError`) and `a_panic_inside_the_shim_becomes_the_defect_kind` (the shim's own `guarded` path produces the defect). They run in the builder container in `check.sh`: 2 passed. The host side asserts `ThinkThen::DefectError.new(..., "defect", false)` carries `kind` and `retryable` in `tests/test_surface.rb`.

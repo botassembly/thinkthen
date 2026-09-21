@@ -105,14 +105,14 @@ test('details: probability, value, model, digest, sends', async () => {
   assert.equal(held.sends, 1);
 });
 
-test('usage counts sends and reset clears them', async () => {
-  tt.reset_usage();
+test('usage counts sends', async () => {
+  // No reset exists (ruling 4): the test takes the difference across one
+  // send; a caller who wants fresh counters builds a new engine.
+  const before = tt.usage().requests;
   await tt.decide('Does the customer ask for a refund?', 'I want a refund for order 9');
   const one = tt.usage();
-  assert.equal(one.requests, 1);
+  assert.equal(one.requests - before, 1);
   assert.equal(one.cache_answers, 0);
-  tt.reset_usage();
-  assert.equal(tt.usage().requests, 0);
 });
 
 test('a question value is asked, not called, and never a string again', () => {

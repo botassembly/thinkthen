@@ -12,6 +12,9 @@ step "build"
 npm install --no-audit --no-fund --silent
 npm run build --silent
 
+step "the defect kind maps into the failure envelope (shim unit test)"
+(cd addon && cargo test --quiet --lib)
+
 step "offline suites (null backend)"
 ENGINE_NULL=1 node --test tests/*.test.mjs
 

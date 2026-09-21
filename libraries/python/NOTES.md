@@ -13,8 +13,8 @@ The shim binds `thinkthen-contract`, never the stand-in beneath it:
 pyo3 0.29.2, `abi3-py310`, module `thinkthen._thinkthen` behind a
 `thinkthen` package whose `__init__` owns the data-frame arm of
 `annotate`. `panic = "unwind"` in the release profile, per the ADR. All
-eight verbs plus `decide_many`, `question`, `details`, `usage`,
-`reset_usage`; `deadline` in seconds on every entry point; the six kinds
+eight verbs plus `decide_many`, `question`, `details`, `usage`;
+`deadline` in seconds on every entry point; the six kinds
 map to exception classes that carry `kind` and `retryable`; `Cancelled`
 subclasses `KeyboardInterrupt` (pyo3 gives an exception one base, per
 the 211 shape); a bulk wait runs the signal poll and raises within a
@@ -346,3 +346,25 @@ the contract by `78204cb`); the relation and edge number is `probability`.
 Unchecked: nothing in these two functions against the wire — there is no
 wire path for them in the stand-in; the real engine's pair-questioning
 and text cutting are the build team's.
+
+## 2026-09-21 — the rulings wave (languages lane)
+
+Ruling 4: `reset_usage` is removed. The grep proof:
+
+```
+$ grep -rn reset_usage src tests thinkthen
+(no matches)
+```
+
+`functions.toml` lost the row and `src/generated.rs` was regenerated (14 functions). The counter tests take differences instead of resetting: `test_usage_counts_sends` and the conformance runner's usage case.
+
+Ruling 1 aftermath: the question-file fixture in `tests/test_recognize_relate.py` and the two runner sites in `tests/conformance.py` were re-keyed to `source`/`target`; the wrapper docstring says `(source, target)`.
+
+Ruling 2: `the_defect_kind_maps_to_defect_error` — a `#[cfg(test)]` unit test in `src/lib.rs` — constructs a contract `Error` with kind `defect` and asserts `python_error` raises `DefectError` with `kind="defect"` and `retryable=False`. It runs in `check.sh`:
+
+```
+$ cargo test --no-default-features --lib
+test result: ok. 1 passed
+```
+
+The crate's `extension-module` feature moved to the default feature list so the test binary links libpython; `check.sh` computes `LIBDIR`/`BASEP` from the venv's own interpreter. The dead `options` binding the review named is not present in this tree, and a fresh test build prints zero warnings.

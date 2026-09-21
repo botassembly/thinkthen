@@ -119,10 +119,23 @@ check("blank question is usage", identical(
 check("the kind classes stack", inherits(malformed, "thinkthen_error") && inherits(malformed, "error"))
 check("details carries the sends", identical(tt_details("Q?", "refund me")$sends, 1))
 
-# the counters count sends.
-tt_reset_usage()
+# the counters count sends. No reset exists (ruling 4): the difference
+# across the three sends carries the same proof.
+before <- tt_usage()$requests
 tt_decide("Q?", c("refund me", "thanks"))
 tt_decide("Q?", "refund me")
-check("three judgments are three sends", identical(tt_usage()$requests, 3))
+check("three judgments are three sends", identical(tt_usage()$requests - before, 3))
+
+# the defect kind raises its own R condition; the Rust half's unit test
+# constructs the contract Error with kind defect and packs it (check.sh).
+defect_cond <- tryCatch(
+  thinkthen:::tt_raise(paste0("defect", "\u001f", "false", "\u001f",
+                              "the engine broke its own contract")),
+  thinkthen_defect = function(e) e
+)
+check("the defect kind raises thinkthen_defect", inherits(defect_cond, "thinkthen_defect"))
+check("its retryable rides the condition", identical(defect_cond$retryable, FALSE))
+check("its message rides the condition",
+      identical(defect_cond$message, "the engine broke its own contract"))
 
 cat("null suite:", passed, "checks passed\n")

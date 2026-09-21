@@ -345,12 +345,6 @@ fn tt_usage_counters() -> List {
     )
 }
 
-/// Zero the counters.
-#[extendr]
-fn tt_reset_usage_counters() {
-    thinkthen_standin::reset_usage();
-}
-
 /// Stop the call in flight, when an interrupt jumped out of its frame.
 #[extendr]
 fn tt_cancel_active() -> bool {
@@ -518,8 +512,21 @@ extendr_module! {
     fn tt_annotate_file;
     fn tt_details_one;
     fn tt_usage_counters;
-    fn tt_reset_usage_counters;
     fn tt_cancel_active;
     fn tt_question_digest;
     fn tt_question_parts;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_defect_kind_crosses_as_its_own_kind() {
+        let carried = carry(thinkthen_contract::Error::defect(
+            "the engine broke its own contract",
+        ));
+        let parts: Vec<&str> = carried.split(ERROR_SEP).collect();
+        assert_eq!(parts, ["defect", "false", "the engine broke its own contract"]);
+    }
 }

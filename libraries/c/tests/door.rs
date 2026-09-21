@@ -318,7 +318,7 @@ fn recognize_answers_from_the_recording() {
     unsafe {
         let engine = engine();
         let spec = r#"{"kinds": ["person", "organization", "place"],
-            "relations": [{"name": "works_for", "from": "person", "to": "organization"}]}"#;
+            "relations": [{"name": "works_for", "source": "person", "target": "organization"}]}"#;
         let (code, json) = recognize(
             engine,
             spec,
@@ -355,8 +355,8 @@ fn recognize_refuses_the_decks_unrecorded_rule() {
     unsafe {
         let engine = engine();
         let spec = r#"{"kinds": ["person", "organization", "place"],
-            "relations": [{"name": "works_for", "from": "person", "to": "organization"},
-                          {"name": "located_in", "from": "*", "to": "place"}]}"#;
+            "relations": [{"name": "works_for", "source": "person", "target": "organization"},
+                          {"name": "located_in", "source": "*", "target": "place"}]}"#;
         let usage_before = usage_of(engine);
         let (code, text) = recognize(
             engine,
@@ -419,7 +419,7 @@ fn relate_answers_from_the_recording() {
             "Alert 3: The nightly export ran two hours late.",
             "Alert 4: The payments database ran out of disk space.",
         ];
-        let spec = r#"{"relations": [{"name": "caused_by", "from": "*", "to": "*"}],
+        let spec = r#"{"relations": [{"name": "caused_by", "source": "*", "target": "*"}],
             "either": ["same_as"], "threshold": 0.9}"#;
         let (code, json) = relate(engine, spec, &alerts);
         assert_eq!(code, 0, "{json}");
@@ -449,7 +449,7 @@ fn relate_refuses_more_than_255_records() {
         let usage_before = usage_of(engine);
         let (code, text) = relate(
             engine,
-            r#"{"relations": [{"name": "caused_by", "from": "*", "to": "*"}]}"#,
+            r#"{"relations": [{"name": "caused_by", "source": "*", "target": "*"}]}"#,
             &borrowed,
         );
         assert_eq!(code, 1, "the usage kind: {text}");

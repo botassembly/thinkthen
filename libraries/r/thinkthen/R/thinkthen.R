@@ -277,8 +277,8 @@ tt_annotate <- function(file, data, on) {
 .tt_rule_entry <- function(one, either) {
   one <- as.character(one)[[1L]]
   name <- one
-  from <- "*"
-  to <- "*"
+  source <- "*"
+  target <- "*"
   if (grepl("=", one, fixed = TRUE)) {
     halves <- strsplit(one, "=", fixed = TRUE)[[1L]]
     if (length(halves) != 2L || !nzchar(halves[[1L]])) {
@@ -290,10 +290,10 @@ tt_annotate <- function(file, data, on) {
       stop("a relation rule's ends read FROM:TO; a missing end is a usage error",
            call. = FALSE)
     }
-    from <- ends[[1L]]
-    to <- ends[[2L]]
+    source <- ends[[1L]]
+    target <- ends[[2L]]
   }
-  entry <- list(name = name, from = from, to = to)
+  entry <- list(name = name, source = source, target = target)
   if (either) entry$either <- TRUE
   entry
 }
@@ -437,11 +437,6 @@ tt_details <- function(question, evidence, threshold = NULL) {
 # twice; cache_answers and tokens report what the engine served.
 tt_usage <- function() {
   tt_usage_counters()
-}
-
-# Zero the counters.
-tt_reset_usage <- function() {
-  invisible(tt_reset_usage_counters())
 }
 
 print.thinkthen_question <- function(x, ...) {

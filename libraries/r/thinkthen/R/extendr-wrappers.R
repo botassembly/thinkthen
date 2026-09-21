@@ -69,9 +69,6 @@ tt_details_one <- function(question, evidence) .Call(wrap__tt_details_one, quest
 #' The process counters.
 tt_usage_counters <- function() .Call(wrap__tt_usage_counters)
 
-#' Zero the counters.
-tt_reset_usage_counters <- function() invisible(.Call(wrap__tt_reset_usage_counters))
-
 #' Stop the call in flight, when an interrupt jumped out of its frame.
 tt_cancel_active <- function() .Call(wrap__tt_cancel_active)
 

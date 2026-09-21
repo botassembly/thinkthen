@@ -260,17 +260,17 @@ module ThinkThen
       spec
     end
 
-    # A relations value — a Hash of name to [from, to] or to a Hash with
-    # from, to, and either — as the grammar's rule list.
+    # A relations value — a Hash of name to [source, target] or to a Hash
+    # with source, target, and either — as the grammar's rule list.
     def relation_rules(relations)
       relations.map do |name, ends|
         if ends.is_a?(Hash)
-          rule = { "name" => name.to_s, "from" => ends[:from].to_s, "to" => ends[:to].to_s }
+          rule = { "name" => name.to_s, "source" => ends[:source].to_s, "target" => ends[:target].to_s }
           rule["either"] = true if ends[:either]
           rule
         else
-          from, to = ends
-          { "name" => name.to_s, "from" => from.to_s, "to" => to.to_s }
+          source, target = ends
+          { "name" => name.to_s, "source" => source.to_s, "target" => target.to_s }
         end
       end
     end

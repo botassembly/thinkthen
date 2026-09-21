@@ -65,12 +65,6 @@ pub fn usage() -> String {
     serde_json::to_string(&engine().usage()).expect("the counters serialize")
 }
 
-/// Reset the counters.
-#[napi]
-pub fn reset_usage() {
-    thinkthen_standin::reset_usage();
-}
-
 /// The verbs the door carries. The wrapper names them; the contract owns
 /// their rules.
 #[derive(Clone, Copy)]
@@ -265,20 +259,27 @@ impl Task for CallTask {
         let run = self.run(engine(), options);
         Ok(match run {
             Ok(value) => serde_json::json!({ "ok": value }).to_string(),
-            Err(error) => serde_json::json!({
-                "err": {
-                    "kind": error.kind,
-                    "retryable": error.retryable,
-                    "message": error.message,
-                }
-            })
-            .to_string(),
+            Err(error) => failure_envelope(error),
         })
     }
 
     fn resolve(&mut self, env: Env, output: String) -> napi::Result<JsString> {
         env.create_string(&output)
     }
+}
+
+/// A contract failure as the envelope the wrapper raises: the kind and the
+/// retry signal ride as data, because a Node-API error object cannot carry
+/// them as fields.
+fn failure_envelope(error: tt::Error) -> String {
+    serde_json::json!({
+        "err": {
+            "kind": error.kind,
+            "retryable": error.retryable,
+            "message": error.message,
+        }
+    })
+    .to_string()
 }
 
 /// One call on a worker thread. `op` names the verb; `spec` is the
@@ -301,4 +302,21 @@ pub fn call(
         .filter(|seconds| *seconds > 0.0 && seconds.is_finite())
         .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds));
     Ok(AsyncTask::new(CallTask { op, spec, payload, token, deadline }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_defect_kind_maps_into_the_failure_envelope() {
+        let envelope = failure_envelope(tt::Error::defect("the engine broke its own contract"));
+        let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("the envelope is JSON");
+        assert_eq!(parsed["err"]["kind"], "defect");
+        assert_eq!(parsed["err"]["retryable"], false);
+        assert!(parsed["err"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("the engine broke its own contract"));
+    }
 }

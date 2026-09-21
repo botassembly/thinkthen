@@ -747,3 +747,30 @@ pub unsafe extern "C" fn thinkthen_free_string(text: *mut c_char) {
         drop(unsafe { CString::from_raw(text) });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use thinkthen_contract::Error as ContractError;
+
+    /// The defect kind is its own code, and its message and retry signal
+    /// ride the engine's last-failure slot. The construction stands in for
+    /// the injected fault main's engine-only case uses; no public fault
+    /// hook exists.
+    #[test]
+    fn the_defect_kind_carries_code_six() {
+        assert_eq!(code_of(&ErrorKind::Defect), 6);
+        let engine = unsafe { thinkthen_engine_new() };
+        assert!(!engine.is_null(), "the engine builds without a wire");
+        let held = unsafe { &*engine };
+        let code = held.fail(ContractError::defect("the engine broke its own contract"));
+        assert_eq!(code, 6);
+        let message = unsafe { CStr::from_ptr(thinkthen_error_message(engine)) };
+        assert!(message
+            .to_str()
+            .expect("the message is UTF-8")
+            .contains("the engine broke its own contract"));
+        assert_eq!(unsafe { thinkthen_error_retryable(engine) }, 0);
+        unsafe { thinkthen_engine_free(engine) };
+    }
+}

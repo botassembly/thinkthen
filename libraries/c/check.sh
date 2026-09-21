@@ -40,7 +40,7 @@ else
 fi
 
 echo "== c surface: null suite"
-ENGINE_NULL=1 cargo test --quiet --test door -- --test-threads=1
+ENGINE_NULL=1 cargo test --quiet --lib --test door -- --test-threads=1
 
 echo "== c surface: conformance slice through ctypes"
 ENGINE_NULL=1 python3 conformance_driver.py

@@ -230,5 +230,3 @@ export function relate(records: readonly string[], options?: RelateOptions): Pro
 /** The counters since the last reset: sends, cache answers, tokens. */
 export function usage(): UsageAnswer;
 
-/** Reset the counters. */
-export function reset_usage(): void;

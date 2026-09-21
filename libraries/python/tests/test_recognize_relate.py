@@ -111,12 +111,9 @@ def test_relate_refuses_more_than_255_records():
 def test_recognize_question_file_goes_where_the_kinds_go(tmp_path):
     """The design page's question file, through the file door.
 
-    Known gap, filed with the contract's owner: `recognize-design.md`
-    rules `source` and `target` in the question file, and the contract's
-    own `Relation` doc says so, but the landed parser still reads `from`
-    and `to` keys, and the conformance cases use them. This test uses the
-    parser's spelling until the contract takes the ruled keys; the file
-    door converts nothing on its own.
+    The ruled spelling, landed by the core lane: a relation's ends in the
+    question file are `source` and `target`, and `from` and `to` are
+    refused with the ruled spelling named.
     """
     path = tmp_path / "recognize.json"
     path.write_text(json.dumps({
@@ -125,10 +122,10 @@ def test_recognize_question_file_goes_where_the_kinds_go(tmp_path):
             "kinds": {"person": "A human being, by name.",
                       "organization": "A company.", "place": "A city."},
             "relations": [
-                {"name": "works_for", "from": "person",
-                 "to": "organization", "reads": "works for"},
-                {"name": "based_in", "from": "organization",
-                 "to": "place"},
+                {"name": "works_for", "source": "person",
+                 "target": "organization", "reads": "works for"},
+                {"name": "based_in", "source": "organization",
+                 "target": "place"},
             ],
         },
         "threshold": 0.4,
