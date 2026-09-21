@@ -38,9 +38,9 @@
 
 def scalar_value:
   if has("value") | not
-  then error("compare: row \(.input.id // "with no id") value must be null, boolean, string, or number")
+  then error("compare: value must be null, boolean, string, or number")
   elif ((.value | type) as $type | ["null", "boolean", "string", "number"] | index($type)) == null
-  then error("compare: row \(.input.id // "with no id") value must be null, boolean, string, or number")
+  then error("compare: value must be null, boolean, string, or number")
   else .value
   end;
 

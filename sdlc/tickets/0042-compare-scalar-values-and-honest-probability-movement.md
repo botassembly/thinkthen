@@ -37,7 +37,7 @@ Excluded: choice or score probability movement, arrays and objects such as `tag`
 - A red-green focused test covers null, boolean, string, and number values; every boolean and unresolved direction; exact lexical id order; and the partition `compared == same + changed_values`.
 - Existing duplicate-id, missing-row, changed-input, changed-label, changed-question, model, threshold, legacy, and empty-run behavior stays pinned.
 - A yes-or-no value change appears below, at, and above 0.08. Its `probability_delta_over_tolerance` is false below and at the tolerance and true above it. A same-value delta of 0.08 is summarized, 0.09 is listed with the field true, and tolerance zero lists every movement. The active tolerance appears in output, and invalid tolerances earn the fixed safe error.
-- Legacy rows with no answer still compare. Present malformed yes-or-no answers fail without echoing their contents. Choice and score value changes work without probability fields. Missing, array, and object values fail safely.
+- Legacy rows with no answer still compare. Present malformed yes-or-no answers fail without echoing their contents. Choice and score value changes work without probability fields. Missing, array, and object values fail with the fixed message `compare: value must be null, boolean, string, or number` and echo no row field.
 - The outside repeat check reports 100 comparable rows, 96 same values, four changed values and existing flips, and `yes_no_probability` with `compared: 100`, `changed: 63`, `summarized_same_value: 59`, and `largest_summarized_delta: 0.08`. All four flips carry `probability_delta_over_tolerance: false`, and no same-value movement exceeds the default.
 - How-to 41 demonstrates the new fields, explains the fair-pair rule and evidence limit, and passes its page limits. The transform page, focused test, all four repository rungs, and `git diff --check` pass.
 
@@ -63,4 +63,4 @@ Re-score if implementation needs a non-scalar value, a probability rule for choi
 ## Review
 
 - Design review: accepted after one rejection and one implementation clarification. The first draft understated compatibility proof, left the summary field names implicit, and would have let an explicit null look absent. The corrected ticket raises the route to level 3, fixes every summary name and count, and distinguishes an omitted argument from invalid null. The later clarification adds a per-change boolean so a visible value flip does not imply that its probability movement crossed the reporting tolerance.
-- Code review: pending
+- Code review: the first pass rejected scalar-value errors that interpolated `input.id`. The remediation uses one fixed message for missing, array, and object values. Focused cases put hostile markers in the id and body and prove that neither reaches the diagnostic. Re-review is pending.

@@ -77,7 +77,9 @@ for bad in null -0.1 1.1 '"0.08"' true; do
 	grep -F 'compare: probability_tolerance must be a number from 0 through 1' "$work/error" > /dev/null
 done
 
-row malformed true '{"kind":"yes_no","probability":{"secret":"do not echo"}}' > "$work/bad-before.jsonl"
+jq -n -c '{input:{id:"hostile probability id",body:"hostile probability body",label:true},value:true,
+           answer:{kind:"yes_no",probability:{secret:"hostile probability answer"}},
+           question:{text:"same"},threshold:0.5,meta:{model:"same"}}' > "$work/bad-before.jsonl"
 row malformed true '{"kind":"yes_no","probability":0.5}' > "$work/bad-after.jsonl"
 if jq -n --slurpfile before "$work/bad-before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
 	"$work/bad-after.jsonl" > "$work/out" 2> "$work/error"
@@ -86,24 +88,37 @@ then
 	exit 1
 fi
 grep -F 'compare: yes_no probability must be a number from 0 through 1' "$work/error" > /dev/null
-if grep -F 'do not echo' "$work/error" > /dev/null; then
-	printf '%s\n' 'compare echoed malformed answer contents' >&2
-	exit 1
-fi
+for marker in 'hostile probability id' 'hostile probability body' 'hostile probability answer'; do
+	if grep -F "$marker" "$work/error" > /dev/null; then
+		printf 'compare echoed malformed answer marker: %s\n' "$marker" >&2
+		exit 1
+	fi
+done
 
-for bad in missing '[]' '{}'; do
-	if [ "$bad" = missing ]; then
-		jq -n -c '{input:{id:"bad",body:"same",label:true},question:{text:"same"},threshold:0.5,meta:{model:"same"}}' > "$work/bad-before.jsonl"
+for kind in missing array object; do
+	if [ "$kind" = missing ]; then
+		jq -n -c --arg id "hostile $kind id" --arg body "hostile $kind body" \
+			'{input:{id:$id,body:$body,label:true},question:{text:"same"},threshold:0.5,meta:{model:"same"}}' > "$work/bad-before.jsonl"
 	else
-		row bad "$bad" null > "$work/bad-before.jsonl"
+		if [ "$kind" = array ]; then bad='[]'; else bad='{}'; fi
+		jq -n -c --arg id "hostile $kind id" --arg body "hostile $kind body" --argjson value "$bad" \
+			'{input:{id:$id,body:$body,label:true},value:$value,question:{text:"same"},threshold:0.5,meta:{model:"same"}}' > "$work/bad-before.jsonl"
 	fi
 	row bad true null > "$work/bad-after.jsonl"
 	if jq -n --slurpfile before "$work/bad-before.jsonl" -f "$REPO/transforms/compare/compare.jq" \
 		"$work/bad-after.jsonl" > "$work/out" 2> "$work/error"
 	then
-		printf 'compare accepted %s value\n' "$bad" >&2
+		printf 'compare accepted %s value\n' "$kind" >&2
 		exit 1
 	fi
+	sed 's/^jq: error (at [^)]*): //' "$work/error" \
+		| mustmatch 'compare: value must be null, boolean, string, or number'
+	for marker in "hostile $kind id" "hostile $kind body"; do
+		if grep -F "$marker" "$work/error" > /dev/null; then
+			printf 'compare echoed invalid value marker: %s\n' "$marker" >&2
+			exit 1
+		fi
 	done
+done
 
 printf '%s\n' 'compare transform tests pass'
