@@ -6,7 +6,7 @@ opens: crates specification conformance probes sdlc/scripts sdlc/planning
 
 # 0054: Preserve good answers when one question fails
 
-Status: proposed
+Status: landed
 
 ## Outcome
 
@@ -68,3 +68,5 @@ Re-score if implementation needs a new request, retry rule, engine API, dependen
 ## Review
 
 Independent design review rejected the first proposal because it changed the approved detailed key from `failure` to `failed`, recorded level 3 for a rubric total of 10, and did not make the unexpected-answer proof override an otherwise salvageable reply. This revision restores the approved key, records irreducible level 4 with Sol Medium, and makes the hostile extra-name case exact.
+
+Independent code review rejected the first implementation because its old successful-answer accessor could shift question alignment, it replaced the ordinary successful annotate conformance case, and its compiled JSON proof checked fragments instead of the complete result shape. The repair keeps only ordered answered-or-failed outcomes, retains both conformance cases, and parses the compiled result to pin the exact failed entry and metadata. The same reviewer accepted the repair.
