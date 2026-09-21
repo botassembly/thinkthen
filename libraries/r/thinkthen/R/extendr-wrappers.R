@@ -17,6 +17,24 @@ NULL
 #' Build a question through the one file grammar, any verb, any threshold.
 tt_question_grammared <- function(body) .Call(wrap__tt_question_grammared, body)
 
+#' Build a recognize ask through the question file's own section grammar.
+tt_recognize_grammared <- function(spec) .Call(wrap__tt_recognize_grammared, spec)
+
+#' Build a relate ask through the question file's own section grammar.
+tt_relate_grammared <- function(spec) .Call(wrap__tt_relate_grammared, spec)
+
+#' `recognize` over a column: one crossing, every record in input order.
+#'
+#' Each record becomes the plain data for a data frame of names — text,
+#' kind, and the offsets in R's own string indexing, so `substr(text,
+#' start, end)` is the name — plus the relations when any were found.
+tt_recognize_column <- function(ask, texts) .Call(wrap__tt_recognize_column, ask, texts)
+
+#' `relate` over records: every record crosses at once; the answer is the
+#' plain data for a data frame of edges, with the kind fields when a rule
+#' named kinds.
+tt_relate_records <- function(ask, records) .Call(wrap__tt_relate_records, ask, records)
+
 #' `decide` over a column: one crossing, every judgment in input order.
 tt_decide_column <- function(question, records) .Call(wrap__tt_decide_column, question, records)
 

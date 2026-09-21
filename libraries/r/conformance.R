@@ -66,7 +66,7 @@ for (case in cases) {
           paste0("FAIL     ", id, ": expected the ", kind, " kind, got ", held)
       }
     } else {
-      question <- if (identical(case$verb, "find")) NULL else built(case)
+      question <- if (case$verb %in% c("find", "recognize", "relate")) NULL else built(case)
       switch(case$verb,
         decide = {
           held <- tt_details(question, case$evidence)

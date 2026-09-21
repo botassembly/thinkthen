@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# The R surface's check: the null suite, the conformance slice, and the
-# slide sample against the null backend, then the wire suite when the stub
-# is up on this surface's port (8215). The wire stub is
+# The R surface's check: the null suite, the conformance slice, the
+# recognize and relate acceptance, and the slide sample against the null
+# backend, then the wire suite when the stub is up on this surface's port
+# (8215). The wire stub is
 # experiments/205-thinkthen-libs/shared running with STUB_PORT=8215
 # STUB_DELAY_MS=300.
 set -euo pipefail

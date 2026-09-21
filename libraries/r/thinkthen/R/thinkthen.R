@@ -338,7 +338,7 @@ tt_annotate <- function(file, data, on) {
   if (.tt_is_file(kinds)) {
     spec <- .tt_section(kinds, "recognize")
   } else {
-    spec <- list(kinds = as.character(kinds))
+    spec <- list(kinds = I(as.character(kinds)))
   }
   rules <- .tt_rules(relations)
   if (length(rules)) spec$relations <- rules

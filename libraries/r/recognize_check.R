@@ -29,7 +29,8 @@ check("the names, in text order",
 check("the kinds are the user's own words",
       identical(names_rows$kind, c("person", "organization")))
 check("the offsets slice in R's own indexing",
-      identical(substr(sentence, names_rows$start, names_rows$end), names_rows$text))
+      identical(mapply(substr, sentence, names_rows$start, names_rows$end,
+                       USE.NAMES = FALSE), names_rows$text))
 check("strength rides with each name",
       all(names_rows$strength > 0 & names_rows$strength <= 1))
 check("the list column holds data frames",
