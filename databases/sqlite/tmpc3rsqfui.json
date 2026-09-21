@@ -1,4 +1,0 @@
-{"questions": {
-            "spam": {"decide": "Is this spam?", "threshold": 0.5},
-            "band": {"decide": "Is this spam?", "threshold": "0.2:0.8"}
-        }}
