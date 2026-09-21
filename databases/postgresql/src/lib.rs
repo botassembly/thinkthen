@@ -193,6 +193,15 @@ fn thinkthen_probability(question: Option<&str>, evidence: Option<&str>) -> Opti
     }
 }
 
+/// Return the text unchanged, for testing.
+#[pg_extern(parallel_restricted)]
+fn thinkthen_probe(text: Option<&str>) -> Option<String> {
+    match engine().probe(text?) {
+        Ok(held) => Some(held),
+        Err(error) => raise(error),
+    }
+}
+
 #[pg_extern(parallel_restricted)]
 fn thinkthen_choose(
     question: Option<&str>,

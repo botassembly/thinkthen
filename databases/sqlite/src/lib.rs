@@ -198,6 +198,12 @@ fn decide(context: &Context<'_>) -> Result<Option<i64>, Error> {
     Ok(answer.value().map(|held| if held { 1 } else { 0 }))
 }
 
+/// `thinkthen_probe(text)`: the text back unchanged, for the
+/// maintainability test.
+fn probe(context: &Context<'_>) -> Result<Option<String>, Error> {
+    Ok(Some(context.get_raw(0).as_str()?.to_owned()))
+}
+
 /// `thinkthen_choose(question, text)`: the winning option's text, `NULL`
 /// when unresolved.
 fn choose(context: &Context<'_>) -> Result<Option<String>, Error> {
@@ -465,6 +471,7 @@ fn init(connection: Connection) -> Result<bool, Error> {
     connection.create_scalar_function("thinkthen_annotate", 2, volatile, annotate)?;
     connection.create_scalar_function("thinkthen_details", 2, volatile, details)?;
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
+    connection.create_scalar_function("thinkthen_probe", 1, plain, probe)?;
     connection.create_aggregate_function("thinkthen_warm", 2, plain, Warm)?;
     Ok(false)
 }
