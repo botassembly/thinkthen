@@ -35,7 +35,9 @@ Every buyer asks one thing the ten functions cannot answer: "How do I know it is
 
 The shape: the user gives records that carry a person's answer in one field. The command asks the question of each record, and prints how often the tool agreed, how many fell in "not sure", and what the numbers become at a few other thresholds. It asks through the same engine and the same cache, so a second run is free.
 
-It is a command like `status`. It is no eleventh function, because it judges the question and never a text. The libraries do not need it for the first release. A user can do it today with `decide --jsonl --details` and `jq`, and the first step is a how-to that does exactly that. The how-to tells us whether the command earns its place.
+Corrected the same day: the how-tos already exist and are green. `demos/13-pick-a-threshold`, `demos/25-check-the-judge`, and `demos/41-tune-a-question-file` do this with `--details` rows and the published `jq` transforms. So the tool side of the gap is closed for a person at a shell. Two parts stay open. The deck and the site never show it, and the buyer's first question goes unanswered in public. The libraries and databases have no equal of the transforms.
+
+A command is still a candidate. It would be a command like `status` and no eleventh function, because it judges the question and never a text. It waits until a user of the how-tos asks for it.
 
 ## Are the primitives mixed as well as they can be?
 
