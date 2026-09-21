@@ -289,3 +289,15 @@ slide sample green: the maybe row reads, urgency ordered 1.7/1.05/0.99
 `CREATE EXTENSION` is instant, `@refund.json` and `form.json` resolve from the backend's working directory (the fixtures are copied there, as the surface's own checks do), and the container is removed afterwards: `containers left under dbpkg211-*: 0`.
 
 One trap the first run exposed and the notes keep: `VERSION` holds a comment line above the number, so `cat ../../VERSION` smuggled the comment into artifact names and README titles. All three database package scripts now use `tail -1 ../../VERSION`, and the mangled artifacts were rebuilt.
+
+### macOS cross attempts (databases)
+
+None of the three database surfaces produces a macOS artifact from this box today. Each attempt is recorded with its exact blocker, and all three are unchecked-until-the-Mac rather than pretended.
+
+Prepared once: `rustup target add aarch64-apple-darwin` (rust-std for the pinned 1.93.1 toolchain; rustup recorded the component download). cargo-zigbuild 0.23.4 as in the preamble.
+
+- **SQLite.** `cargo zigbuild --release --target aarch64-apple-darwin` compiles the Rust for arm64 macOS and stops at the link: `error: unable to find dynamic system library 'sqlite3' using strategy 'paths_first'. searched paths: .../cargo-zigbuild/0.23.4/deps/libsqlite3.tbd`. The stub set cargo-zigbuild carries has `libiconv.tbd` and `libcharset.tbd`, not sqlite3; zig 0.15.2's Darwin libc carries `libSystem.tbd` and nothing more. The blocker is the macOS SDK stub for `libsqlite3`, which the Mac has and this box does not. A minimal hand-written `.tbd` could force a link, but it would be a fabricated stub whose load behavior is untestable here, so it was not done; the artifact is unchecked.
+- **DuckDB.** `DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 cargo zigbuild --release --target aarch64-apple-darwin` fails at the link: `error: unable to find framework 'CoreFoundation'. searched paths: none`. The same class of blocker: the macOS SDK's framework stubs are absent (`ring` on Apple reaches for CoreFoundation), and zig's Darwin set here is libSystem only. When this is built on the Mac, the metadata append takes `-p osx_arm64`.
+- **PostgreSQL.** `cargo pgrx package --pg-config /usr/bin/pg_config --target aarch64-apple-darwin` fails before any link, inside a dependency's C: `error: failed to run custom build command for \`ring v0.17.14\`` … `cc-rs: command did not execute successfully … "sccache" "cc" … "-arch" "arm64"`. pgrx drives the host `cc`, not a cross toolchain, and offers no cross path from this box.
+
+The path when the Mac is available: `make release` (DuckDB, then the metadata append), `cargo build --release` plus the metadata append (SQLite), and `cargo pgrx package` (PostgreSQL) run natively there; or revive the zig route by pointing it at a real macOS SDK. Both are recorded as the path, not done.
