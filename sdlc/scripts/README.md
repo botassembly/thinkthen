@@ -13,6 +13,7 @@ The repository gate and its hand-run support scripts.
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
 | `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json` |
+| `surfaces` | The surfaces rung on the surfaces branch: the offline checks (generated name lists, public names, the conformance file) always, `scripts/check_surfaces.sh` when the host toolchains are present |
 
 Build without the credential, then run a charged job:
 

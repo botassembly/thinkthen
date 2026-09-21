@@ -1,0 +1,34 @@
+#!/bin/sh
+# The surfaces rung: the offline checks always, the full surfaces check
+# when the host toolchains are present.
+#
+# Ruling 6 of 2026-09-21: the surfaces checks join the gate ladder on this
+# branch. The offline half needs only python3 and covers the generated
+# name lists, the public names, and the conformance file. The full half
+# builds the contract, the stand-in, and every landed surface, and needs
+# cargo and the per-surface toolchains; without them it skips with this
+# message rather than failing a machine that cannot run it.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+# A rung never answers to the shell that called it: a stray key or address
+# in the environment must not turn a check into a paid call.
+unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+
+if ! command -v python3 >/dev/null 2>&1; then
+	printf '%s\n' 'surfaces: python3 is not on PATH' >&2
+	exit 1
+fi
+
+python3 scripts/generate_functions.py --check
+python3 scripts/check_public_names.py
+(cd conformance && python3 tools/validate_conformance.py conformance.json)
+
+if ! command -v cargo >/dev/null 2>&1; then
+	printf '%s\n' 'surfaces: cargo is not on PATH; the offline checks above ran, the full surfaces check skipped'
+	exit 0
+fi
+
+exec bash -- scripts/check_surfaces.sh
