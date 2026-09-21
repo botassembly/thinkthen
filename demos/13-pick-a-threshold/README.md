@@ -2,7 +2,7 @@
 
 Status: green
 
-Verbs: `decide`
+Verbs: `decide`, `choose`, `score`
 
 Every other page types a threshold. This one says where the number comes from. Use it when a person has already answered the cases, you have judged them once, and you want a cut you can defend. A sweep over a file flatters that file, so the rows split in two: tune on the first twenty-four, check on the last sixteen.
 
@@ -23,7 +23,7 @@ The transforms are `../../transforms/sweep/sweep.jq`, `../../transforms/score/sc
 
 ## Step 1: read what the sweep says
 
-`sweep.jq` scores the tuning rows at the 19 cuts from 0.05 to 0.95. The pick is the highest F1, and the middle cut of the cuts that tie, because that one sits farthest from both edges of the gap. The rule travels in the output, so nobody has to remember it.
+`sweep.jq` follows the judgment kind. A decision uses 19 cuts from 0.05 to 0.95 and picks the middle cut among those with the highest F1. A choice shows coverage and accuracy at the same cuts. A score shows each boundary between named levels. Choice and score make no automatic pick because their cuts express different trades or questions.
 
 ```bash
 set -euo pipefail
@@ -51,6 +51,8 @@ jq -n --argjson cut 0.7 -f ../../transforms/score/score.jq \
 ```
 
 The holdout agrees with the pick. Sixteen rows are weak evidence, and the honest report is that nothing contradicted the cut rather than that the cut is proven.
+
+Current backend probabilities have two decimal places. A cut finer than 0.01 adds no resolution to these rows, and neighboring cuts often tie. This observed precision is not a backend promise.
 
 ## Step 3: use a band when a wrong answer costs more than a delay
 
@@ -84,11 +86,11 @@ sh ../../transforms/band/example.sh | jq -c '{coverage, accuracy_resolved}' \
 
 ## What can go wrong
 
-- **A transform stops with exit 5.** `jq` exits 5 both for a row it cannot parse and for an error a transform raises itself, such as a row that carries no `value`. The message names the file and the line. The `install` rung checks that `jq` is there at all.
+- **A transform stops with exit 5.** `jq` uses 5 for bad input and transform errors. The message names the file and line.
 - **`.value // false` quietly turns unresolved into no.** Every transform here tests the three answers explicitly, and `band.jq` keeps the refused rows in their own group. A transform of your own that reaches for `//` is scoring an unresolved row as a wrong no.
-- **Sweeping and reporting on one file.** The best cut on the file that chose it is not a measurement. Split first.
+- **Sweeping and reporting on one file.** A cut tested on the file that chose it is not a measurement. Split first.
 - **A cut does not travel.** It belongs to one question text and one model version. Change either and sweep again. The rows carry both under `question.text` and `meta.model`, and `compare.jq` reads them.
-- **Forty cases are few.** Every rate moves by a whole case at a time, and an unlabeled case is in no rate. A cut chosen on this much evidence is a starting point, not a finding.
+- **Forty cases are few.** Each case moves the rates. Treat the cut as a starting point.
 
 ## Related how-tos
 

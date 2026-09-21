@@ -27,6 +27,34 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | `cost/` | The input tokens a run spent and what they cost | [28](../demos/28-what-a-run-cost/) |
 | `triage/` | Whether a support ticket is drafted, blocked, or reviewed, and why | [16](../demos/16-triage-pipeline/) |
 
+## Sweep a pick or a score
+
+The sweep follows the judgment kind. A choice cut asks how much coverage remains when a winning probability must reach the cut. Ties stay unresolved and enter neither accuracy rate. This committed probe has 58 right picks among 60 labeled rows. At 0.95 it resolves 53 and sends seven to a person.
+
+```bash
+set -euo pipefail
+
+jq -n -f sweep/sweep.jq ../probes/02-confidence/runs/run.jsonl \
+  | jq -c '{mode, rows, labeled}, (.sweep[] | select(.cut == 0.5 or .cut == 0.95))' \
+  | mustmatch '{"mode":"choose","rows":60,"labeled":60}
+{"cut":0.5,"resolved":60,"unresolved":0,"ties":0,"coverage":1,"accuracy_resolved":0.9667,"accuracy_unresolved":null}
+{"cut":0.95,"resolved":53,"unresolved":7,"ties":0,"coverage":0.8833,"accuracy_resolved":0.9623,"accuracy_unresolved":1}'
+```
+
+A score cut names a boundary between levels. This probe stores the trusted level as `input.level`; the first filter copies it to the transform's `input.label` field. Cut 2 asks whether both the weighted score and the trusted level reach the third named level.
+
+```bash
+set -euo pipefail
+
+jq -n -f sweep/sweep.jq \
+  <(jq -c '.input.label = .input.level' ../probes/03-score/runs/score.jsonl) \
+  | jq -c '{mode, rows, labeled, levels}, (.sweep[] | select(.cut == 2))' \
+  | mustmatch '{"mode":"score","rows":40,"labeled":40,"levels":["none","minor","moderate","major","total"]}
+{"cut":2,"accuracy":0.925,"precision":1,"recall":0.875,"f1":0.9333}'
+```
+
+Neither report picks a cut automatically. Choice has a coverage trade-off. Every score boundary names a different operational question.
+
 ## A comparison that hides nothing
 
 `compare.jq` is the one transform whose useful answers are empty lists, and an empty list is easy to believe and easy to get wrong. This block doctors the later run, changing one trusted label and dropping one case, and makes the transform name both. The `spec` rung runs it.

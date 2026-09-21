@@ -1,0 +1,193 @@
+{
+  "rows": 40,
+  "labeled": 39,
+  "unlabeled": [
+    "C-12"
+  ],
+  "pick": {
+    "cut": 0.65,
+    "accuracy": 1,
+    "f1": 1,
+    "tied_cuts": [
+      0.55,
+      0.6,
+      0.65,
+      0.7,
+      0.75
+    ],
+    "rule": "the highest F1, and the middle cut of the cuts that tie"
+  },
+  "sweep": [
+    {
+      "cut": 0.05,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9231,
+      "precision": 0.8636,
+      "recall": 1,
+      "f1": 0.9268
+    },
+    {
+      "cut": 0.1,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9231,
+      "precision": 0.8636,
+      "recall": 1,
+      "f1": 0.9268
+    },
+    {
+      "cut": 0.15,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9487,
+      "precision": 0.9048,
+      "recall": 1,
+      "f1": 0.95
+    },
+    {
+      "cut": 0.2,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9487,
+      "precision": 0.9048,
+      "recall": 1,
+      "f1": 0.95
+    },
+    {
+      "cut": 0.25,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9487,
+      "precision": 0.9048,
+      "recall": 1,
+      "f1": 0.95
+    },
+    {
+      "cut": 0.3,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9487,
+      "precision": 0.9048,
+      "recall": 1,
+      "f1": 0.95
+    },
+    {
+      "cut": 0.35,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9744,
+      "precision": 0.95,
+      "recall": 1,
+      "f1": 0.9744
+    },
+    {
+      "cut": 0.4,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9744,
+      "precision": 0.95,
+      "recall": 1,
+      "f1": 0.9744
+    },
+    {
+      "cut": 0.45,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9744,
+      "precision": 0.95,
+      "recall": 1,
+      "f1": 0.9744
+    },
+    {
+      "cut": 0.5,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9744,
+      "precision": 0.95,
+      "recall": 1,
+      "f1": 0.9744
+    },
+    {
+      "cut": 0.55,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 1,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    {
+      "cut": 0.6,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 1,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    {
+      "cut": 0.65,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 1,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    {
+      "cut": 0.7,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 1,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    {
+      "cut": 0.75,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 1,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    {
+      "cut": 0.8,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.9744,
+      "precision": 1,
+      "recall": 0.9474,
+      "f1": 0.973
+    },
+    {
+      "cut": 0.85,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.8974,
+      "precision": 1,
+      "recall": 0.7895,
+      "f1": 0.8824
+    },
+    {
+      "cut": 0.9,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.8205,
+      "precision": 1,
+      "recall": 0.6316,
+      "f1": 0.7742
+    },
+    {
+      "cut": 0.95,
+      "coverage": 1,
+      "unresolved": 0,
+      "accuracy": 0.8205,
+      "precision": 1,
+      "recall": 0.6316,
+      "f1": 0.7742
+    }
+  ]
+}
