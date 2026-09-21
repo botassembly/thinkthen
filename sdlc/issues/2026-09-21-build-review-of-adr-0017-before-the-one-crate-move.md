@@ -61,4 +61,4 @@ Ian can overturn the order or any proposed boundary. The review recommends keepi
 
 ## Resolution
 
-Ticket 0051 incorporates the findings in a dated ADR 0017 amendment. The command keeps its detached input reader while the engine scopes and joins its own workers. The amendment also fixes the private bounded event and error boundary, unchanged step-1 retries and command contracts, mechanical core-purity self-tests, and standalone library package proofs. Job 2's DuckDB interrupt proof is complete, so the remaining order is Job 3 and then the one-crate merge.
+Ticket 0051 incorporates the findings in a dated ADR 0017 amendment. The command keeps its detached input reader while the engine scopes and joins its own workers. The amendment also fixes the private bounded event and error boundary, unchanged step-1 retries and command contracts, the former core crate's runtime dependency allowlist with three planted purity failures, and standalone library package proofs. Job 2's DuckDB interrupt proof is complete, so the remaining order is Job 3 and then the one-crate merge.
