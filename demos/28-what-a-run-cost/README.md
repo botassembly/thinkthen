@@ -87,9 +87,10 @@ The replayed tokens are reported and never priced. Counting them would put a bil
 `--lines` keeps the original text in `input`, so a cost report cannot assume every input has an id. Missing usage stays visible and the text is not echoed.
 
 ```bash
-printf '%s\n' '{"input":"do not echo this text","meta":{}}' \
-  | jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
-  | jq -c '{rows, no_usage, charged, usd}' \
+set -e
+result=$(printf '%s\n' '{"input":"do not echo this text","meta":{}}' | jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq)
+test "${result#*do not echo this text}" = "$result"
+printf '%s\n' "$result" | jq -c '{rows, no_usage, charged, usd}' \
   | mustmatch '{"rows":1,"no_usage":["with no id"],"charged":{"rows":1,"input_tokens":0,"output_tokens":0},"usd":0}'
 ```
 
