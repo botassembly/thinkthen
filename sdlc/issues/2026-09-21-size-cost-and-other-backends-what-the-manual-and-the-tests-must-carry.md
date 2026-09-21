@@ -34,6 +34,30 @@ One number is not safe to print: experiment 208 declared 1,301,000 tokens and wa
 
 The documentation plan should carry one page, "Size and cost", with the table and the three rules above. The trust list already asks for the request count before a big run.
 
+## The rule for other models, stated once
+
+Ian's direction on 2026-09-21: ThinkThen supports any service that speaks the System One request and reply format, and it adapts to a service whose format differs, provided the service answers the three kinds of question and returns probabilities.
+
+The first half works today and is already decided. ADR 0004 makes a backend a URL and an adapter, and the first adapter is `systemone`. `specification/backends.md` has the tool post to `BASE/systemone`, with the base taken from `THINKTHEN_BASE_URL` and the model from `--model`. A compatible server needs one environment variable and no code. The second half is ADR 0004's planned `chat-logprobs` adapter and its later subprocess adapter. No new decision is needed. What is missing is any test against a second server.
+
+## Context windows: what is known and what is not
+
+| Question | State | Where |
+| --- | --- | --- |
+| The first backend's limit for one text with one question | Known: about 32,000 tokens, from the vendor's table | `specification/records.md` |
+| The first backend's limit for a whole request | Known and checked live once: about 64,000 tokens, with a 33,663-token request accepted | `sdlc/records/0017-every-question-option-has-two-homes.md` |
+| Whether the two limits hold exactly at the edge | Not known. Nobody has sent a text just under and just over 32,000, or a request just under and just over 64,000 | |
+| What the service replies when a request is too large | Not known by test. The specification says exit code 4. No recording of that reply exists | |
+| Whether the limit differs by route, since a reseller may advertise a smaller one | Not known. Ian's note reports one reseller listing 32,000. Unverified | `Jev context length.md` in Ian's notes |
+| How many questions one request may carry | Not known. No count limit was found. Twenty-two `tag` labels worked. Only the 64,000-token total is documented | `2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` |
+| Whether accuracy falls as a text grows toward the limit | Not known. Every accuracy run used short texts | |
+| Whether many questions in one request change each other's answers | Partly known. The packing and tagging probes found agreement on short texts. Not measured on long ones | the same page |
+| How a user learns a text is too large before paying for the request | Not built. The tool counts no tokens. The only local check is 16 MiB | `crates/thinkthen-core/src/records.rs` |
+| Any other model's limits, price, or format | Not known first-hand. Ian's note holds a web survey, unverified. Its lesson: limits run from about 512 tokens to about 32,000 per question, and the underlying model's window is often far larger than the decision layer's | `Jev context length.md` |
+| Whether any other server accepts our exact request bytes | Not known. No request has been sent to one | |
+
+The cheapest probes that turn "not known" into "known", each a handful of requests under `sdlc/scripts/live`: the two edges of each limit with the reply recorded, one long text with the twenty conformance questions asked alone and then together, and one accuracy check at 1,000, 10,000, and 30,000 tokens on a public set with long documents. The second-server check waits until a compatible server is chosen, and running one locally needs no paid call.
+
 ## Other backends
 
 ADR 0004 makes a backend a URL and an adapter. Ian's direction: a second model qualifies when it answers the three kinds of question the functions use, which are yes or no, pick one, and place on a scale, and returns probabilities. Ian's note `Jev context length.md` in his notes folder surveys several open implementations of that interface. Its numbers come from a chat assistant's web reading on 2026-09-21. Nobody here has verified them, and they are recorded only as a reason for the rules below. The survey's useful finding is that the context limit differs by more than a hundred times between implementations, from about 512 tokens to about 32,000 per question, and that the limit of the underlying model is often far above what the decision layer was trained or served for.
