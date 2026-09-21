@@ -49,7 +49,6 @@ jq -c '
       answer:{kind:"tag",probabilities:(if .input.human_correct then {safe:0.9,wrong:0.1} else {safe:0.1,wrong:0.9} end)},
       threshold:0.5,request:"synthetic"
     }
-  | .answers.failure_kind.threshold = 0.01
 ' ../../probes/annotate-0015/howto-14.jsonl > "$work/annotate.jsonl"
 
 truth='{"correct":"/input/human_correct","failure_kind":"/input/human_failure","topics":"/input/human_tags"}'
@@ -182,6 +181,22 @@ expect_failure decision-derived-value 'sweep: mapped decision value must follow 
   -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
 jq -c 'del(.answers.failure_kind.threshold)' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-threshold 'sweep: mapped choice threshold must be one cut' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.failure_kind.answer.probabilities="private-marker"' \
+  "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-probabilities-object 'sweep: choice probabilities must have exactly the option keys' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c 'del(.answers.failure_kind.answer.probabilities.none)' \
+  "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-probabilities-keys 'sweep: choice probabilities must have exactly the option keys' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.failure_kind.answer.probabilities.none="private-marker"' \
+  "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-probability-member 'sweep: choice probabilities must be numbers from zero through one' \
+  -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
+jq -c '.answers.failure_kind.answer.pick="private-marker"' \
+  "$work/annotate.jsonl" > "$work/bad.jsonl"
+expect_failure choice-pick 'sweep: a choice pick must be the first option at the maximum probability' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
 jq -c '.answers.failure_kind.answer.probabilities={none:0.4,wrong_fact:0.3,unsupported:0.2,incomplete:0.1}
        | .answers.failure_kind.answer.pick="none" | .answers.failure_kind.value="none"
