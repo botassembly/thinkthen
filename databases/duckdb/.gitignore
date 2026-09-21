@@ -12,3 +12,4 @@ tools/slide-run
 tools/wire-run
 .cargo/registry
 dist
+tools/recognize-run

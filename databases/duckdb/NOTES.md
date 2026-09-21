@@ -58,3 +58,68 @@ $ grep -c deno ~/.zshrc
 ```
 
 **What was not run (unchecked):** the community-repository signing path (unsigned local LOAD only); `thinkthen_usage` under concurrent CLI processes; the 2,048-row width bench (207's D1 stands; the chunk path here is the same grouping); macOS packaging (the rehearsal's lane owns it).
+
+## 2026-09-21 — recognize, relations, and relate on this surface
+
+The brief: `repos/thinkthen/sdlc/issues/2026-09-21-update-for-the-library-team-recognize-and-relate.md`, the deck's `recognize-surfaces.md` as the acceptance test, the recordings in `experiments/225-recognize-harvest-package` (through the conformance file's cases), no paid call. Three functions landed:
+
+- **`thinkthen_recognize(body, kinds)`** — a scalar returning `LIST(STRUCT(text, kind, start, end, strength))`; `unnest()` makes rows. The deck's line runs as drawn.
+- **`thinkthen_relations(body, spec)`** (beta) — a scalar returning `LIST(STRUCT(name, source_text, source_kind, target_text, target_kind, probability))` from the question file's `recognize` section.
+- **`thinkthen_relate(query, rules)`** — a table function returning rows `(name, source, target, probability)`; the query's first column is the record id, the second its text; a `LIST` of rule names, or one `'@file'`/`'{...}'` entry, is the second argument. The 255-record guard rides in the contract's `relate_checked`, so the surface inherits it.
+
+### Findings for the deck's owner, pinned with the exact errors
+
+**1. The relate call cannot run as drawn.** The deck draws
+
+```sql
+SELECT * FROM thinkthen_relate((SELECT id, body FROM alerts), ['caused_by']);
+```
+
+The stock CLI answers:
+
+```
+Binder Error: Table function cannot contain subqueries
+```
+
+The binder refuses a subquery argument for every function but a table-in-out function (`bind_table_function.cpp`, "Only table-in-out functions can have subquery parameters"), and the stable C API registers no table-in-out function and no `TABLE`-typed parameter (checked against the v1.5.5 headers). The working call, the shape PostgreSQL's row takes, is the query as a string:
+
+```sql
+SELECT * FROM thinkthen_relate('SELECT id, body FROM alerts', ['caused_by']);
+```
+
+**2. The relations call cannot run as drawn either.** The deck draws `SELECT * FROM thinkthen_relations(body, '@names.json')`. A bare `body` has no FROM to resolve against, and the C API table functions take literal parameters only — the correlated form `FROM tickets t, thinkthen_relations(t.body, '@names.json')` answers `does not support lateral join column parameters`. The working call is the scalar list shape, the same as `thinkthen_recognize`:
+
+```sql
+SELECT t.id, unnest(thinkthen_relations(t.body, '@names.json')) AS r FROM tickets t;
+```
+
+**3. A kept connection is the engine-layer note.** The `get_database` pointer the extension access hands out points at a `DatabaseWrapper` owned by the load state (`extension_load.cpp`), so using it after init fails — the first run of the query form answered `thinkthen backend: relate could not open a connection for its query`. The surface now opens one connection at load and keeps it for the process lifetime, serialized by a mutex; the build team's engine note takes the same rule for any extension that runs a query of its own.
+
+### Offsets, proven in DuckDB's own indexing
+
+DuckDB counts characters, not bytes: `length('é😀x')` is 3, `'é😀x'[2:2]` is `😀`, and `'Le café 😀 Maria Chen arrived.'[11:20]` is `Maria Chen`. The recordings' code points are therefore DuckDB's own unit, and the conformance driver asserts `body[start + 1 : end] = text` for every entity of every case — the accent-and-emoji case included — not just the named one.
+
+### The acceptance run, and the join proof
+
+`tools/run_recognize.sh` extracts the three calls verbatim from the deck page and runs them in the stock CLI. The recognize line runs as drawn; the other two print their pinned binder errors and their working replacements. The "Names become rows" pattern runs after them: `mentions` is built from `thinkthen_recognize`, joined to `accounts` by equality, and `thinkthen_usage()` reads identical before and after the join — the stand-in replays, so nothing sends, and the join adds no request. On the real engine the recognize build is the one sending step and the join still adds nothing. The 255-record refusal prints `thinkthen usage: relate takes at most 255 records and 256 came`.
+
+### The conformance slice
+
+All 102 checks pass with zero failures; the divergences print with reasons: the relations half of a recognize case rides `thinkthen_relations` (the scalar is the kinds-only shape the deck draws), the per-subject relate arm is the engine's own (the ruled form is pairs and the stand-in serves it on a text collision), and the pre-existing three (filter-band, usage-and-cache, cancel).
+
+### Vocabulary sweep
+
+`grep -rniE "certainty|likelihood|calibrated|cutoff|gray zone"` over `src`, `tools`, `check.sh`, `README.md`: nothing. `confidence`: nothing — the vendor's field passes under details only, and this surface prints no details for these functions. `accuracy`: nothing. Relations and edges carry `probability`; names carry `strength`.
+
+### The shape decisions this lane made, stated for review
+
+- Ids come back from `thinkthen_relate` as text (any value renders as its text, so an integer id arrives as `1`); a join back needs one cast. Native id types would need the query executed at bind, which this lane did not do.
+- `thinkthen_relations` is a scalar list, not a table function, because the C API's literal-only parameters make the correlated row form impossible.
+- The kept connection serializes relate's scans through a mutex; parallel scans of one query plan wait, they do not race.
+
+### What was not run (unchecked)
+
+- The wire path for the three functions: the stand-in answers all three from the recordings, so no stub request is sent by them (the wire suite covers the eight verbs).
+- A relate query inside a user transaction (the kept connection sees committed state only).
+- More than 255 records through a *recorded* set (the guard fires before the recordings are consulted).
+- The plugin-style forms, text cutting, and question counts per request: the build team's, per the brief.

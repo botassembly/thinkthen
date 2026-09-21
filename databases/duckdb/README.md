@@ -1,12 +1,13 @@
 # The duckdb surface
 
-The nine SQL functions over the one engine, per ADR 0017 and the database
+The SQL functions over the one engine, per ADR 0017 and the database
 pages: `thinkthen_decide`, `thinkthen_probability`, `thinkthen_choose`,
 `thinkthen_score`, `thinkthen_tag`, `thinkthen_annotate`,
-`thinkthen_details`, `thinkthen_usage`, and `thinkthen_warm`. `filter`,
-`rank`, and `find` get no functions; `WHERE`, `ORDER BY`, and `LIMIT` are
-those verbs. `NULL` is "not sure", and a failure is an error that never
-reads as `NULL`.
+`thinkthen_details`, `thinkthen_usage`, `thinkthen_warm`, and the
+recognize pair `thinkthen_recognize` and `thinkthen_relations` (beta),
+beside `thinkthen_relate`. `filter`, `rank`, and `find` get no functions;
+`WHERE`, `ORDER BY`, and `LIMIT` are those verbs. `NULL` is "not sure",
+and a failure is an error that never reads as `NULL`.
 
 The acceptance sample, drawn in
 `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`,
@@ -20,6 +21,24 @@ the values await a backend that distinguishes options.
 
 ## The ruled shape this surface takes
 
+- `thinkthen_recognize(body, kinds)` returns a `LIST` of structs
+  `(text, kind, start, end, strength)`; `unnest()` makes rows. `start`
+  and `end` count code points — the recordings' unit and DuckDB's own
+  string indexing — so `body[start + 1 : end]` slices the name back out.
+- `thinkthen_relations(body, '@names.json')` (beta) returns a `LIST` of
+  structs `(name, source_text, source_kind, target_text, target_kind,
+  probability)` from the question file's `recognize` section; the spec is
+  a column argument, so the call sits in a `FROM` like
+  `thinkthen_recognize` and `unnest()` makes rows.
+- `thinkthen_relate(query, rules)` takes a query whose first column is
+  each record's id and whose second is its text, and returns rows
+  `(name, source, target, probability)`. The deck drew a raw subquery in
+  the first argument; the stable C API registers no table function that
+  takes one — the binder refuses subqueries for every function but a
+  table-in-out function, and the C API cannot register those — so the
+  query crosses as a string, the shape PostgreSQL's row takes. Ids come
+  back as their text, so an integer id joins with one cast. More than 255
+  records is a usage error before anything is asked.
 - A question argument is plain text under the grammar's default cut, a
   file named `'@refund.json'`, or the file grammar's own JSON. One door,
   one grammar; the surface adds no parser.

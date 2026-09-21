@@ -47,6 +47,9 @@ use thinkthen_contract::{
 };
 use thinkthen_standin::BlockingEngine;
 
+mod recognize;
+mod relate;
+mod relations;
 mod usage;
 mod warm;
 
@@ -949,15 +952,23 @@ unsafe fn init(
     connection.register_scalar_function::<TagScalar>("thinkthen_tag")?;
     connection.register_scalar_function::<AnnotateScalar>("thinkthen_annotate")?;
     connection.register_scalar_function::<DetailsScalar>("thinkthen_details")?;
+    connection.register_scalar_function::<recognize::RecognizeScalar>("thinkthen_recognize")?;
+    connection.register_scalar_function::<relations::RelationsScalar>("thinkthen_relations")?;
 
+    // The relate table function runs the query it is given. The database
+    // pointer `get_database` hands out belongs to the load state and can
+    // dangle after init, so the extension keeps this connection open for
+    // the process lifetime and runs the relate query on it instead.
     let mut raw: ffi::duckdb_connection = std::ptr::null_mut();
     if unsafe { ffi::duckdb_connect(database, &mut raw) } != ffi::DuckDBSuccess {
         return Err("the raw connection refused".into());
     }
     let table = unsafe { usage::register(raw) };
     let aggregate = unsafe { warm::register(raw) };
-    unsafe { ffi::duckdb_disconnect(&mut raw) };
+    let relate_function = unsafe { relate::register(raw) };
     table?;
     aggregate?;
+    relate_function?;
+    relate::remember_connection(raw);
     Ok(())
 }

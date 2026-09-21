@@ -60,6 +60,12 @@ def main() -> int:
         if "question_file" in case:
             print(f"skip     {name}: the local kind needs a file door")
             continue
+        if verb == "recognize":
+            check_recognize(name, case)
+            continue
+        if verb == "relate":
+            check_relate(name, case)
+            continue
         if verb in ("rank", "find"):
             print(f"skip     {name}: {verb} is not this surface's SQL shape; the surface check owns it")
             continue
@@ -137,6 +143,68 @@ def main() -> int:
         else:
             print(f"skip     {name}: {verb} has no SQL spelling on this surface")
     return 0
+
+
+def check_recognize(name: str, case: dict) -> None:
+    """One recognize case: the recorded entities as rows, in order, and
+    the slice invariant — `body[start + 1 : end]` must be the name, on
+    every case, the accent-and-emoji one included. The relation rules a
+    case carries ride through `thinkthen_relations`; the scalar takes the
+    kinds, the shape the deck draws."""
+    text = case["text"]
+    kinds = case["question"].get("kinds") or ["person", "organization", "place"]
+    listing = "[" + ",".join(sql_string(k) for k in kinds) + "]"
+    wanted = "|".join(
+        f"{e['text']}:{e['kind']}:{e['start']}:{e['end']}"
+        for e in sorted(case["expect"]["entities"], key=lambda e: e["id"])
+    )
+    check(
+        name,
+        f"SELECT string_agg(t.text || ':' || t.kind || ':' || t.start || ':' || t.end, '|' ORDER BY t.start) "
+        f"FROM (SELECT unnest(thinkthen_recognize({sql_string(text)}, {listing})) AS t);",
+        wanted,
+    )
+    if case["expect"].get("relations"):
+        print(
+            f"diverge  {name}: the relations half rides thinkthen_relations; the scalar is the kinds-only shape"
+        )
+    check(
+        name + " slice",
+        f"SELECT count(*) FROM (SELECT unnest(thinkthen_recognize({sql_string(text)}, {listing})) AS t) "
+        f"WHERE {sql_string(text)}[t.start + 1:t.end] <> t.text;",
+        "0",
+    )
+
+
+def check_relate(name: str, case: dict) -> None:
+    """One relate case: the recorded edges as rows over the query's own
+    ids. The ruled form is `pairs`; the per-subject arm is the engine's
+    own and the stand-in serves the pairs row when the texts collide."""
+    if case.get("form") == "per-subject":
+        print(
+            f"diverge  {name}: per-subject is the engine-internal arm; the ruled form is pairs and the stand-in serves it on a text collision"
+        )
+        return
+    records = case["records"]
+    values = ",".join(
+        f"({i + 1}, {sql_string(record)})" for i, record in enumerate(records)
+    )
+    rules = "[" + ",".join(
+        sql_string(rule["name"]) for rule in case["question"]["relations"]
+    ) + "]"
+    wanted = "|".join(
+        f"{e['name']}:{e['source']}:{e['target']}:{e['probability']}"
+        for e in case["expect"]["edges"]
+    )
+    check(
+        name,
+        "CREATE TABLE tt_case AS SELECT * FROM (VALUES "
+        + values
+        + ") AS t(id, body); "
+        + "SELECT string_agg(name || ':' || source || ':' || target || ':' || probability, '|' ORDER BY CAST(source AS BIGINT), CAST(target AS BIGINT), name) "
+        + f"FROM thinkthen_relate('SELECT id, body FROM tt_case', {rules});",
+        wanted,
+    )
 
 
 if __name__ == "__main__":
