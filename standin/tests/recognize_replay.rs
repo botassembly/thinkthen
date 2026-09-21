@@ -41,8 +41,8 @@ fn build_recognize(question: &Value) -> Recognize {
         let built = Recognize::new()
             .relation(
                 entry["name"].as_str().unwrap(),
-                kind_of(entry["from"].as_str().unwrap()),
-                kind_of(entry["to"].as_str().unwrap()),
+                kind_of(entry["source"].as_str().unwrap()),
+                kind_of(entry["target"].as_str().unwrap()),
             )
             .expect("a legal rule");
         for candidate in built.relations {
@@ -67,8 +67,8 @@ fn build_relate(question: &Value) -> Relate {
         let built = Relate::new()
             .relation(
                 entry["name"].as_str().unwrap(),
-                kind_of(entry["from"].as_str().unwrap()),
-                kind_of(entry["to"].as_str().unwrap()),
+                kind_of(entry["source"].as_str().unwrap()),
+                kind_of(entry["target"].as_str().unwrap()),
             )
             .expect("a legal rule");
         for candidate in built.relations {

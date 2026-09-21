@@ -8,6 +8,15 @@
 //! the whole contract: the eight verbs, `details`, and the counters, over
 //! the real `thinkthen-core` wire shapes.
 //!
+//! Two fork preconditions, stated because "by construction" alone cannot
+//! defend them: the settings are read once on first use (`config()`'s
+//! OnceLock), so a fork that lands while that first read is in flight
+//! leaves the child blocked on that lock — read the settings before any
+//! fork; and a forked child keeps the inherited pool's file descriptors
+//! for its lifetime, because the pid-check rebuild leaks the retired pool
+//! rather than tearing it down — the descriptors close when the child
+//! exits, and nothing else closes them.
+//!
 //! What is stand-in here, named so nothing mistakes it for product: the
 //! session has no disk cache (`cache_answers` stays zero and the cache
 //! settings are carried but unspent), `tokens` counts only what replies
@@ -32,6 +41,7 @@ use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 
 use thinkthen_contract::{
     Annotated, AnnotatedRecord, Answer, Cancel, Details, Edge, Error, Found, Judgment, Options,
@@ -265,25 +275,38 @@ impl BlockingEngine {
             drop(feed);
 
             let mut received = 0_usize;
+            // The poll must run on a busy channel too, or a fast backend
+            // starves it and a Ctrl-C waits for the whole batch (reproduced
+            // at 8.48 s on a three-million-record null batch). Gate the tick
+            // by elapsed time, not by the wait having idled.
+            let mut last_poll = Instant::now();
+            let mut maybe_tick = |poll: &mut Option<&mut dyn FnMut()>| {
+                if last_poll.elapsed() >= TICK {
+                    if let Some(poll) = poll.as_mut() {
+                        poll();
+                    }
+                    if Error::guard(&options).is_err() {
+                        stop.store(true, Ordering::Relaxed);
+                    }
+                    last_poll = Instant::now();
+                }
+            };
             while received < records.len() {
                 match done_rx.recv_timeout(TICK) {
                     Ok((place, Ok(judgment))) => {
                         answers[place] = Some(judgment);
                         received += 1;
+                        maybe_tick(&mut poll);
                     }
                     Ok((_, Err(error))) => {
                         if first_failure.is_none() {
                             first_failure = Some(error);
                         }
                         received += 1;
+                        maybe_tick(&mut poll);
                     }
                     Err(mpsc::RecvTimeoutError::Timeout) => {
-                        if let Some(poll) = poll.as_mut() {
-                            poll();
-                        }
-                        if Error::guard(&options).is_err() {
-                            stop.store(true, Ordering::Relaxed);
-                        }
+                        maybe_tick(&mut poll);
                     }
                     Err(mpsc::RecvTimeoutError::Disconnected) => break,
                 }
@@ -546,7 +569,8 @@ fn outcome_of((_, outcome): (Value, thinkthen_core::Outcome)) -> Answer {
     }
 }
 
-/// Wire sends and reported tokens this session.
+/// What left the machine this session: the counted sends and the vendor's
+/// reported tokens.
 static REQUESTS: AtomicU64 = AtomicU64::new(0);
 static TOKENS: AtomicU64 = AtomicU64::new(0);
 
@@ -707,15 +731,23 @@ fn post(
             .config()
             .timeout_per_call(Some(budget))
             .build();
-        // Every send counts, including the transparent retry after a dead
-        // pooled connection: the request left the process twice, and the
-        // backend may bill both.
-        REQUESTS.fetch_add(1, Ordering::Relaxed);
-        sends += 1;
+        // The counter counts what left the process. A send that left
+        // counts, and a retry that is sent counts again because the vendor
+        // bills each one. A connection refused before anything left counts
+        // nothing; a dead pooled connection is retried inside one send() by
+        // the client, so it counts once, because nothing was sent twice.
         let sent = request.send(&body);
         let mut response = match sent {
-            Ok(response) => response,
+            Ok(response) => {
+                REQUESTS.fetch_add(1, Ordering::Relaxed);
+                sends += 1;
+                response
+            }
             Err(error) => {
+                if left_the_machine(&error) {
+                    REQUESTS.fetch_add(1, Ordering::Relaxed);
+                    sends += 1;
+                }
                 if options.passed() {
                     return Err(Error::deadline(options.seconds()));
                 }
@@ -775,6 +807,20 @@ fn count_tokens(body: &[u8]) {
 }
 
 /// A transport failure, split by whether a second try could help.
+/// Whether a failed send left the process: a refusal, a failed connect,
+/// or a name that did not resolve never reached the wire, so the counter
+/// stays put for them. Every other transport failure may have left, and
+/// counts.
+fn left_the_machine(error: &ureq::Error) -> bool {
+    match error {
+        ureq::Error::Io(io) => io.kind() != std::io::ErrorKind::ConnectionRefused,
+        ureq::Error::ConnectionFailed
+        | ureq::Error::HostNotFound
+        | ureq::Error::BadUri(_) => false,
+        _ => true,
+    }
+}
+
 fn classify_transport(error: &ureq::Error) -> Error {
     let refused = match error {
         ureq::Error::Io(io) => io.kind() == std::io::ErrorKind::ConnectionRefused,
@@ -1099,6 +1145,28 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(3));
         let late = tt.decide_many_opts(&question, &records, spent, None);
         assert_eq!(late.unwrap_err().kind, ErrorKind::Deadline);
+    }
+
+    /// The poll runs while answers flow: a fast backend must not starve
+    /// the interrupt. Reproduced before the fix: SIGINT one second into a
+    /// three-million-record null batch raised at 8.48 s, after the batch.
+    #[test]
+    fn the_poll_runs_on_a_busy_channel() {
+        let _seat = null();
+        let tt = BlockingEngine::from_env();
+        let question = Question::from_json(CUT).expect("parses");
+        let owned: Vec<String> = (0..1_000_000).map(|i| format!("refund {i}")).collect();
+        let records: Vec<&str> = owned.iter().map(String::as_str).collect();
+        let token = thinkthen_contract::Cancel::new();
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let mut poll = || {
+            calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            token.cancel();
+        };
+        let options = Options::new().cancel(&token);
+        let stopped = tt.decide_many_opts(&question, &records, options, Some(&mut poll));
+        assert_eq!(stopped.unwrap_err().kind, ErrorKind::Cancelled);
+        assert!(calls.load(std::sync::atomic::Ordering::Relaxed) >= 1);
     }
 
     /// The request limit refuses a bulk call before its first request.

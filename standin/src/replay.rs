@@ -17,9 +17,9 @@
 //! - A rule's named end must be one of the asked kinds; the contract checks
 //!   that shape before anything else.
 //! - Nothing is invented: every entity, relation, and edge returned is a
-//!   recorded answer with the ruled field names (`confidence` on names,
+//!   recorded answer with the ruled field names (`strength` on names,
 //!   `probability` on relations and edges, `source` and `target` for the
-//!   ends).
+//!   ends; the recordings carry the vendor's own field names, mapped here).
 //! - The recordings carry no kinds for relate's records, so a kind field or
 //!   a named relation end is refused for relate with a usage error that
 //!   names the limit.
@@ -59,7 +59,7 @@ struct RawEntity {
     start: usize,
     end: usize,
     /// The recordings carry this number under Jev's own field name; the
-    /// ruled host-facing field is `number` (the interim name), and the
+    /// ruled host-facing field is `strength` (settled 2026-09-21), and the
     /// mapping happens at replay.
     confidence: f64,
 }

@@ -32,6 +32,9 @@ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_pandas_checks.py -q
 echo "== recognize and relate, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
 
+echo "== cancel on a fast backend"
+ENGINE_NULL=1 .venv/bin/python tests/test_cancel_fast.py
+
 echo "== recognize and relate at the scale the recordings carry"
 ENGINE_NULL=1 .venv/bin/python tests/bench_recognize_scale.py
 
