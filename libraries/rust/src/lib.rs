@@ -224,12 +224,13 @@ impl Engine {
     /// offsets, or an accent or an emoji before the name cuts the wrong
     /// bytes. The emoji case in the tests is the strict proof.
     ///
-    /// The number on an entity is the interim field `number`. The
-    /// marketing vocabulary (`repos/mktg/products/thinkthen/vocabulary.md`,
-    /// "The words for numbers") restricts one word to the literal field
-    /// Jev returns, and this number is computed from several of Jev's
-    /// numbers, so it may not carry that word; the recognize team's
-    /// comparison settles its final name. The number on a relation is
+    /// The number on an entity is `strength`: a number we compute — the
+    /// least of the word probabilities behind the name times the mean of
+    /// the kind probabilities — defined once in the manual, with its parts
+    /// under details, per the ruling of
+    /// `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`.
+    /// The vendor's `confidence` passes through under details only, under
+    /// its own name, and nothing gates on it. The number on a relation is
     /// `probability`, passed through unchanged.
     ///
     /// # Errors

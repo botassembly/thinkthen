@@ -204,7 +204,7 @@ async function runVerb(held, spec, text, list) {
         assert.equal(got.text, wantedNames[at].text);
         assert.equal(got.kind, wantedNames[at].kind);
         assert.equal(source.slice(got.start, got.end), got.text, 'the slice is the name');
-        assert.ok(Math.abs(got.number - wantedNames[at].number) < 1e-9, `number ${got.number}`);
+        assert.ok(Math.abs(got.strength - wantedNames[at].strength) < 1e-9, `strength ${got.strength}`);
       }
       const wantedRelations = expect.relations ?? [];
       assert.equal(

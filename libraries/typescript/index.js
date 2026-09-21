@@ -383,7 +383,7 @@ async function recognize(text, options) {
       kind: held.kind,
       start: utf16Index(text, held.start),
       end: utf16Index(text, held.end),
-      number: held.number,
+      strength: held.strength,
     })),
     relations: found.relations,
   };

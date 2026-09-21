@@ -97,16 +97,18 @@ export type AnnotatedField = Answer | string | null | number | readonly string[]
 
 /** One name `recognize` found. `start` and `end` slice the name out of the
  * original text in JavaScript's own indexing (UTF-16 units); the contract
- * counts code points and the wrapper converts once. `number` is the
- * interim field for the number on a name; its final name is an open item
- * (never call it confidence). */
+ * counts code points and the wrapper converts once. `strength` is a number
+ * we compute — the least of the word probabilities behind the name times
+ * the mean of the kind probabilities — defined once in the manual, with
+ * its parts under details. It is never the vendor's `confidence`, which
+ * passes through under details only. */
 export interface Entity {
   id: number;
   text: string;
   kind: string;
   start: number;
   end: number;
-  number: number;
+  strength: number;
 }
 
 /** One relation between two names, by entity id. The number is

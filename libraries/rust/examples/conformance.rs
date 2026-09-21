@@ -353,10 +353,10 @@ fn check_recognize(expect: &Value, text: &str, found: &Recognized) -> Result<(),
             ),
         )?;
         ok_if(
-            one["number"]
+            one["strength"]
                 .as_f64()
-                .is_some_and(|wanted| (wanted - two.number).abs() < 1e-9),
-            format!("number: expected {}, got {}", one["number"], two.number),
+                .is_some_and(|wanted| (wanted - two.strength).abs() < 1e-9),
+            format!("strength: expected {}, got {}", one["strength"], two.strength),
         )?;
         // The per-host offset proof, on every case: the name slices out of
         // the original text in Rust's byte indexing, the emoji case

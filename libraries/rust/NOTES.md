@@ -116,3 +116,7 @@ Every `score` hit is the ruled verb, never a probability's name. The number on a
 - The wire for the two functions: they answer from the recordings, so `check.sh`'s wire suite stays the other verbs' suite (stub up on 8213).
 - The backend and defect kinds through `recognize`/`relate`: the stand-in's replay answers usage, deadline, and cancelled offline; backend needs the wire and defect is not fabricable.
 - R03's per-subject case (finding 2).
+
+## 2026-09-21 — the name number is settled: `strength`
+
+Ian settled the open item in `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md` ("The comparison came back"): the number on a recognized name is the field `strength` — ours, computed, defined once in the manual, with its parts under details. The relation number stays `probability`; the vendor's `confidence` passes through under details only. The contract, stand-in, conformance file, and validator already carried the rename (commits 78204cb, 14f418e); this surface followed: the `recognize` doc comment in `src/lib.rs` now states the settled rule instead of the open item, and the conformance example's entity comparison in `examples/conformance.rs` reads `strength`. Rerun: `./check.sh` with the stub on 8213 — conformance slice green for the Rust surface, wire suite 3 passed.
