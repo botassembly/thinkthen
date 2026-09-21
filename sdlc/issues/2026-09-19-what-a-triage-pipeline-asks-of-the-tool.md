@@ -1,5 +1,7 @@
 # What a triage pipeline asks of the tool
 
+Status: Reference. The question is answered: no new verb. The flagship how-to carries the rest.
+
 Found 2026-09-19. Ian described a document triage pipeline and asked whether the tool as designed would serve it. The pipeline finds candidate items in a document with local code, sends one small packet per candidate, asks about twenty narrow questions of each packet across all three question types, and lets plain code turn the answers into one of three actions: draft, block, or send to a person for review. Every action keeps an audit row. Thresholds are tuned later from the reviewers' decisions.
 
 The design already covers the judging and the audit. One packet is one JSONL record. The question set is one `annotate` file. `on` with several pointers names exactly what leaves the machine. `--details` rows carry every probability, the model version, the digest of the question file, and a request digest. A band on a yes/no question turns a middling answer into `null`, and `null` is the review queue. No new verb or option is needed.

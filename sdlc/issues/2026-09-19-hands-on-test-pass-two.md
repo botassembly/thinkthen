@@ -1,5 +1,7 @@
 # thinkthen QA pass 2
 
+Status: Open. Finding 1 is fixed. Findings 2 to 10 are wording, and `2026-09-21-triage-of-the-open-issues-by-layer.md` groups them with the help issue.
+
 Worktree `the QA worktree`, level with main at `fcbe7fa`. Built with `cargo build --locked --release`. No tracked file changed (`git status --porcelain` empty at the end). Every command ran with `THINKTHEN_API_KEY` unset or set to the marker `MARKERKEY456`, and no live call was made. Scratch, the fake server, and output live under the session scratchpad.
 
 The backend was `--replay` over the committed recordings plus one throwaway Python server on `127.0.0.1`. The server reads a `P=<number>` marker out of the evidence text and answers with that probability, so exact ties, exact cuts, and any order were built to order. It counts requests at `/count` and zeroes them at `/reset`. Four instances ran, on 18181 (answers) and on 18402, 18422, and 18500 (a 402, a 422, and a 500 that quote the key and the evidence back in the body). All four were stopped; `ps -eo pid,args | grep server.py` returns nothing and all four ports are down.

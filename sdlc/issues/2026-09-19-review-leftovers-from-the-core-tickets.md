@@ -1,5 +1,7 @@
 # Review leftovers from the core tickets
 
+Status: Open. Items 7 to 13 have no ticket. See `2026-09-21-triage-of-the-open-issues-by-layer.md`.
+
 Filed 2026-09-19 by the steering agent from the second reviews of tickets 0001 and 0002. None blocks landing. Each is small and arguable, so no reviewer fixed it.
 
 1. Three decode errors carry the wire name of a question as a `String`. A place number rendered as the wire name would carry the same text and need no parsing.

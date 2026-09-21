@@ -1,5 +1,7 @@
 # `probes/replay-check.sh` fails on `meta.tool`
 
+Status: Closed on 2026-09-21. `probes/replay-check.sh` drops `meta.tool` on both sides before it compares.
+
 Found on 2026-09-19 while running the acceptance checks of ticket 0016.
 
 ## What happens

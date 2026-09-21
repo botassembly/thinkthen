@@ -1,6 +1,6 @@
 # `tag`: a fourth question type, for zero or more labels from a list
 
-Status: Open. Proposed for an ADR. No code is authorized by this page.
+Status: Closed by ticket 0036 and ADR 0029.
 
 Ian asked for it on 2026-09-20. His words: "I'd like to add tagging if that actually makes sense, and that would be a workable demo." He gave two jobs. A file of emails gets several tags at once: spam or not, important or not, and a bucket. A blog inventory has twenty topic tags, and each post gets every topic that applies.
 

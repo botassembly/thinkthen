@@ -1,5 +1,7 @@
 # Small leftovers from the security ticket
 
+Status: Open. Item 1 closed by ticket 0022. The control-character check remains.
+
 Found by the independent review of ticket 0019 on 2026-09-19. None is a hole. `sdlc/records/0019-safe-before-public.md` holds the full reasoning. The release pass picks these up.
 
 1. **Closed by ticket 0022: a refused port was reported as a scheme problem.** Empty, signed, and out-of-range ports now name the port rule without repeating the address.

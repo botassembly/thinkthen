@@ -1,5 +1,7 @@
 # Ideas carried from the design captures
 
+Status: Reference. A backlog of vetted ideas. No work is owed.
+
 Found 2026-09-19. The design captures that came before this repository were checked against every ADR, the roadmap, the plan, and the specification before they were retired. Every verb, option, file format, and exit code in them is accepted, held with a reason, or struck. What the records lacked is advice and a few small rules. Each item names the slice that should pick it up. None of it widens the command surface.
 
 ## Advice for help text and pages

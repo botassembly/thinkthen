@@ -1,5 +1,7 @@
 # Review leftovers from ticket 0006
 
+Status: Open. Unconfirmed by the sweep of 2026-09-21. The builder checks it.
+
 Found 2026-09-19 by the independent review of ticket 0006. The review said merge. These five points were left unfixed, and ticket 0007 checks each one it touches.
 
 1. `sdlc/scripts/live` reads `THINKTHEN_LIVE_LEDGER`, which lets any caller point the spend limit at a throwaway file. The variable exists only for the script's own test. The script should accept it only under the test, or the test should reach the ledger another way.

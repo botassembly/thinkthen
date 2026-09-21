@@ -1,6 +1,6 @@
 # Issue 0001: Two lint rules in rust-standards.md do not hold as written
 
-- Status: Open
+- Status: Closed on 2026-09-21. `sdlc/planning/rust-standards.md` now says the lint is denied across the workspace and forbidden in the core, and it records the `unwrap_used` gap.
 - Found: 2026-09-18, building slice 0
 - Affects: `sdlc/planning/rust-standards.md`, "Lint table"
 

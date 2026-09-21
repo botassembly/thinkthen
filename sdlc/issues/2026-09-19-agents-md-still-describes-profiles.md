@@ -1,5 +1,7 @@
 # AGENTS.md still describes a backend profile
 
+Status: Closed by ticket 0007. `AGENTS.md` names no profile, checked on 2026-09-21.
+
 Found 2026-09-19 by the independent review of ticket 0007.
 
 `AGENTS.md` says under "Credentials":

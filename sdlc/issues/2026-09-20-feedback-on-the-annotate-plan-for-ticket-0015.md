@@ -1,6 +1,6 @@
 # Feedback on the `annotate` plan for ticket 0015
 
-Status: Open. Two points change work inside the ticket. The rest can wait until it lands.
+Status: Closed by ticket 0015. `specification/annotate.md` reports both measurements this page asked for: mixed types in one request, and questions near the cut.
 
 Ian shared the builder's second plan for ticket 0015 on 2026-09-20 and asked the agent that holds the marketing and library-design job for feedback. The plan is sound and needs no change of direction. It fixes the contradictions in the old ticket, keeps the command consistent with the other verbs, and takes in the stumble register: the hint for a stray second file, the swapped-file test, and the cold pass with an empty environment. The internal library target with a thin command shim is the right step toward the one-crate ruling, and cases kept as data serve the shared tests later.
 
