@@ -972,3 +972,19 @@ unsafe fn init(
     relate::remember_connection(raw);
     Ok(())
 }
+
+#[cfg(test)]
+mod mapping_tests {
+    use super::*;
+
+    /// Ruling 2 of the product rulings: the defect kind maps to this
+    /// engine's own error surface, with the kind named in the message. No
+    /// public door carries a fault hook; this proves the mapping at the
+    /// shim level.
+    #[test]
+    fn the_defect_kind_maps_to_the_engines_error() {
+        let text = failure(EngineError::defect("the relate plan lost its bind data"));
+        assert!(text.contains("thinkthen defect:"), "{text}");
+        assert!(text.contains("the relate plan lost its bind data"), "{text}");
+    }
+}

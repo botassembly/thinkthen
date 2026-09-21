@@ -10,6 +10,9 @@ echo "== duckdb surface: build the extension"
 make release >/dev/null
 test -s build/release/thinkthen.duckdb_extension
 
+echo "== duckdb surface: the error-mapping test"
+cargo test --release --quiet --lib
+
 echo "== duckdb surface: null suite"
 tools/null_suite.sh
 
