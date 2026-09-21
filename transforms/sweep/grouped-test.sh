@@ -50,6 +50,13 @@ for pointer in /cohort /input/type~1name /input/type~0name; do
     | jq -e '.groups | map(.value) == ["alpha","beta"]' > /dev/null
 done
 
+jq -n -c '{"":"empty member",input:{id:"empty-key",label:true},value:true,
+           question:{verb:"decide"},answer:{kind:"yes_no",probability:0.9}}' \
+  > "$work/empty-member.jsonl"
+jq -n --arg group / -f sweep.jq "$work/empty-member.jsonl" \
+  | jq -e '.group == "/" and (.groups | map(.value)) == ["empty member"]' \
+  > /dev/null
+
 : > "$work/empty.jsonl"
 jq -n --arg group /input/document_type -f sweep.jq "$work/empty.jsonl" \
   | jq -c . > "$work/grouped-empty.json"
