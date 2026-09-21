@@ -1,0 +1,23 @@
+[package]
+name = "thinkthen-contract"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.93.1"
+description = "The written surface both engines meet: the eight verbs, one error shape, one conformance file. Version 0.1.0 is the first release"
+license = "MIT"
+publish = false
+
+# A workspace of its own, so the root workspace's gates and profile stay
+# untouched. The real engine replaces the stand-in as this crate's consumer
+# with one changed dependency.
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+thinkthen-core = { path = "../crates/thinkthen-core" }
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"

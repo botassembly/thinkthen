@@ -1,3 +1,5 @@
 target/
 .env
 **/.locks/
+/contract/target
+/standin/target
