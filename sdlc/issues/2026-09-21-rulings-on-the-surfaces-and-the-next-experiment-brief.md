@@ -55,3 +55,5 @@ Ian ruled: "Polars. The Rust-based data frame project that's similar to pandas, 
 - Open, not ruled: a native Polars door on the Rust surface (Polars is itself a Rust library, so the door is cheap if ever wanted). Nothing builds on this until asked.
 
 What Ian can overturn: the optional-dependency shape (a hard dependency instead), and the open Rust question.
+
+Clarified by Ian, 2026-09-21: the Python surface supports both pure Python and Polars DataFrame Python — both containers, first-class. All scalability and vectorization, whatever Polars offers, is done in Rust code, not Python code: Python never loops a row, never chunks, never bridges through a Python lambda. The proof is equality at the gate — the width bench through a Polars column must read the same wall time and the same 32 in flight as the plain-list form.
