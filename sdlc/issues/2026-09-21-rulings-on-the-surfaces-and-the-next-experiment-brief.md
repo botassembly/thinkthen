@@ -43,3 +43,15 @@ No paid call is needed. Every check runs against the stand-in or a recording.
 ## What Ian can overturn
 
 The brief's order and scope.
+
+## Ruled by Ian, 2026-09-21: the data frame is Polars
+
+Ian ruled: "Polars. The Rust-based data frame project that's similar to pandas, but let's just do Polars." Python's data frame container is Polars, not pandas. What follows:
+
+- The Python surface's `annotate` and `recognize` data-frame forms take and return Polars DataFrames; the bulk form accepts a Polars column. pandas leaves the surface entirely and the slide sample runs on Polars.
+- Polars is an optional dependency: the wheel does not carry it, the surface feature-detects it when a DataFrame arrives, and the install line is `pip install thinkthen[polars]`.
+- The slide sample's shape does not change — `tt.annotate("form.json", df, on="body")` — and no slide text names a data frame library, so the deck needs no change unless the marketing side wants Polars named.
+- R's data frame stays R's own; the databases are untouched.
+- Open, not ruled: a native Polars door on the Rust surface (Polars is itself a Rust library, so the door is cheap if ever wanted). Nothing builds on this until asked.
+
+What Ian can overturn: the optional-dependency shape (a hard dependency instead), and the open Rust question.

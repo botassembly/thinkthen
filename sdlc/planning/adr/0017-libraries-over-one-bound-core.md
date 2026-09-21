@@ -134,6 +134,10 @@ The registry names are Ian's alone and were on his list before this rewrite.
 - Items 3 and 9 of the 2026-09-19 draft are replaced by sections 1 and 9 here. The port-per-language design of the sdk study stays on record as the fallback if the merge fails, and nothing in it is built.
 - Exit codes, `--quiet`, and `--raw` stay in the command. A library returns values and raises its own errors.
 
+### Ruled after acceptance, 2026-09-21: the data frame is Polars
+
+Ian ruled on 2026-09-21 that Python's data frame container is Polars, not pandas: `annotate` and `recognize` take and return Polars DataFrames, the bulk form accepts a Polars column, Polars rides as an optional dependency behind `pip install thinkthen[polars]`, and pandas leaves the surface. The ruling is recorded with its reasons in `sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md`.
+
 ## What Ian can overturn
 
 All of it. Three reach widest. Staying blocking is measured now, and overturning it costs the fork story, the zero-thread holding, and the cheaper Python shim. Pick 3, the empty value for "not sure", is the one the one-shape page flagged for a second look, and its mitigation is teaching rather than code. The cache default, 100 MB by Ian's ruling and prune-enforced under plain files, changes with one number. The on-by-default reading of the cache ruling is Ian's alone to flip; the three guards stay either way. The registry names were his before this page and stay his.
