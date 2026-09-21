@@ -171,6 +171,53 @@ slide sample green: 2 rows kept, NA dropped by filter, choose NA on a tie
 
 The installed package ran the deck's R section as drawn: 2 rows kept, `NA` dropped by `filter()`, and the choose column `NA` on an exact tie — the sample's own assertions, green. macOS: no cross-compilation path exists for an R source package; R-universe's own builders are the macOS path, and the submission stays Ian's. Registry use: none; the tarball and the source install are local. Pulls recorded: `rocker/r-ver:4.3`.
 
+## Rust
+
+`cargo package --list` is clean — the manifest, sources, tests, examples, and the notes files only:
+
+```
+$ cargo package --list
+Cargo.toml
+Cargo.lock
+NOTES.md
+README.md
+check.sh
+examples/conformance.rs
+src/lib.rs
+tests/slide.rs
+tests/verbs.rs
+tests/wire.rs
+```
+
+**Finding fixed: the path dependencies had no versions.** `cargo package` refuses to package a crate whose dependencies carry a `path` without a `version` ("all dependencies must have a version requirement specified when packaging"). Added `version = "0.0.1"` beside the path in all three manifests — `libraries/rust/Cargo.toml`, `contract/Cargo.toml`, `standin/Cargo.toml` — which is the standard packaging fix and changes nothing for local builds (verified with `cargo check` and the surface's own `check.sh`).
+
+**The unpublished-dependency reality.** `cargo package` resolves the whole graph even with `--no-verify`, so with `thinkthen-contract`, `thinkthen-standin`, and `thinkthen-core` unpublished, packaging needs those crates in a resolvable source. The rehearsal built one:
+
+1. `cargo vendor --versioned-dirs /tmp/pkg211/vendor` collected the 61 registry crates.
+2. The three unpublished crates were placed beside them with their `path` deps stripped to version-only, workspace-inherited fields (`edition.workspace`, `rust-version.workspace`, `[lints] workspace`) resolved to literals for `thinkthen-core`, and `.cargo-checksum.json` files generated (excluding the checksum file itself, a trap the first attempt hit).
+3. `cargo package --no-verify --config 'source.crates-io.replace-with="vendored-sources"' --config 'source.vendored-sources.directory="/tmp/pkg211/vendor"'` produced the artifact:
+
+```
+$ cargo package --no-verify --config ...
+    Packaged 12 files, 61.0KiB (16.7KiB compressed)
+$ ls -la target/package/thinkthen-0.0.1.crate
+-rw-rw-r-- 1 ian ian 17104 thinkthen-0.0.1.crate
+```
+
+`--no-verify` skips cargo's verification build; without it cargo would try to fetch the unpublished dependencies from crates.io. The packaged `Cargo.toml` carries version-only deps, exactly as publishing would write them.
+
+**The scratch install.** A project at `/tmp/pkg211/rust-scratch` that has never seen the repository: `thinkthen = "0.0.1"` in its manifest, a `.cargo/config.toml` pointing crates.io at the vendored source, and the deck's Rust sample in `src/main.rs` — with the one filed fix, the `?` after `Question::decide`, which the lane's own record documents. The packaged `thinkthen-0.0.1.crate` was extracted into that source first, so the consumer resolves the artifact cargo built from the crate file.
+
+```
+$ ENGINE_NULL=1 cargo run
+refunds: 1, review: 0
+```
+
+The sample's match arms ran against the packaged crate: the refund ticket lands in `refunds` (the stand-in answers Yes at 0.97), `review` stays empty.
+
+macOS: the Rust package is source, not a binary artifact; cargo builds it on the target machine, so no macOS artifact is produced or needed here. Registry use: none; the `.crate` is local and was consumed from the local file. Pulls recorded: none new (cargo fetched from crates.io into the host cache, as every build does).
+
+
 
 ## Databases
 

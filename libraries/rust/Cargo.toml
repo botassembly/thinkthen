@@ -13,9 +13,9 @@ publish = false
 
 [dependencies]
 serde_json = "1"
-thinkthen-contract = { path = "../../contract" }
+thinkthen-contract = { version = "0.0.1", path = "../../contract" }
 # The one dependency that changes when the real engine lands.
-thinkthen-standin = { path = "../../standin" }
+thinkthen-standin = { version = "0.0.1", path = "../../standin" }
 
 [lints.rust]
 missing_docs = "warn"
