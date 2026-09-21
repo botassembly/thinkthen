@@ -436,7 +436,7 @@ def validate_mapped_decisions($rows):
 def validate_mapped_choices($rows):
   if all($rows[]; .threshold_present
                  and (.threshold == null or
-                      ((.threshold | type) == "number" and .threshold >= 0 and .threshold <= 1)))
+                      ((.threshold | type) == "number" and .threshold > 0 and .threshold <= 1)))
     then $rows else error("sweep: mapped choice threshold must be present and null or one cut") end
   | if all($rows[];
       .question.options as $options
