@@ -5,7 +5,15 @@ HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REAL_JQ=$(command -v jq)
 REAL_MV=$(command -v mv)
 work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+child=
+cleanup() {
+	if [[ -n $child ]] && kill -0 "$child" 2>/dev/null; then
+		kill "$child" 2>/dev/null || :
+		wait "$child" 2>/dev/null || :
+	fi
+	rm -rf -- "$work"
+}
+trap cleanup EXIT HUP INT TERM
 mkdir "$work/bin" "$work/out-parent"
 
 cat > "$work/bin/thinkthen" <<'SH'
@@ -16,6 +24,18 @@ test "$*" = "$expected" || {
 	printf 'fake thinkthen: unexpected arguments\nexpected: %s\nactual:   %s\n' "$expected" "$*" >&2
 	exit 64
 }
+printf '%s\n' called >> "$TRIAGE_CALL_LOG"
+case ${TRIAGE_FAKE_MODE:-answer} in
+	fail) exit 67 ;;
+	malformed)
+		printf '%s\n' '{"value":{"credential_request":false,"queue":"billing","urgency":0,"surprise":true}}'
+		exit 0
+		;;
+	wait)
+		: > "$TRIAGE_ENTERED"
+		while test ! -e "$TRIAGE_RELEASE"; do sleep 0.01; done
+		;;
+esac
 cat "$TRIAGE_HERE/fake-rows.jsonl"
 SH
 
@@ -24,31 +44,47 @@ cat > "$work/bin/jq" <<'SH'
 set -eu
 case " $* " in
 	*" -f $TRIAGE_HERE/../../transforms/triage/triage.jq "*)
-		printf '%s\n' policy >> "$TRIAGE_LOG"
+		printf '%s\n' policy >> "$TRIAGE_POLICY_LOG"
 		;;
 esac
-if test "${TRIAGE_FAIL_SPLIT:-}" = 1 && test "${1:-}" = -c && test "${2:-}" = --arg; then
-	exit 71
-fi
 exec "$REAL_JQ" "$@"
 SH
 
 cat > "$work/bin/mv" <<'SH'
 #!/bin/sh
 set -eu
-printf '%s\n' "$*" >> "$TRIAGE_MV_LOG"
+printf '%s\n' "$*" >> "$TRIAGE_MOVE_LOG"
+count=$(wc -l < "$TRIAGE_MOVE_LOG" | tr -d ' ')
+if test "${TRIAGE_FAIL_MOVE:-}" = "$count"; then
+	exit $((70 + count))
+fi
 exec "$REAL_MV" "$@"
 SH
 chmod +x "$work/bin/thinkthen" "$work/bin/jq" "$work/bin/mv"
 export PATH="$work/bin:$PATH"
 export TRIAGE_HERE="$HERE" REAL_JQ REAL_MV
-export TRIAGE_LOG="$work/policy.log" TRIAGE_MV_LOG="$work/mv.log"
+export TRIAGE_CALL_LOG="$work/calls.log" TRIAGE_POLICY_LOG="$work/policy.log"
+export TRIAGE_MOVE_LOG="$work/moves.log"
+: > "$TRIAGE_CALL_LOG"
+: > "$TRIAGE_POLICY_LOG"
+: > "$TRIAGE_MOVE_LOG"
+
+wait_for() {
+	path=$1
+	for _ in $(seq 1 200); do
+		test -e "$path" && return 0
+		sleep 0.01
+	done
+	printf 'triage self-test: timed out waiting for %s\n' "$path" >&2
+	return 1
+}
 
 output="$work/out-parent/result"
 "$HERE/triage" "$output" --replay fixture
-test "$(wc -l < "$TRIAGE_LOG" | tr -d ' ')" = 1
-test "$(wc -l < "$TRIAGE_MV_LOG" | tr -d ' ')" = 1
-test "$(find "$output" -maxdepth 1 -type f -printf '%f\n' | sort)" = "block.jsonl
+
+test "$(wc -l < "$TRIAGE_POLICY_LOG" | tr -d ' ')" = 1
+test "$(wc -l < "$TRIAGE_MOVE_LOG" | tr -d ' ')" = 3
+test "$(find "$output" -mindepth 1 -maxdepth 1 -exec basename {} \; | sort)" = "block.jsonl
 draft.jsonl
 review.jsonl"
 test "$(wc -l < "$output/draft.jsonl" | tr -d ' ')" = 2
@@ -67,25 +103,83 @@ if grep -E 'reviewed_action|SUP-1042|Duplicate renewal' "$work/dry-run.jsonl" >/
 	printf '%s\n' 'triage self-test: a local field entered the request' >&2
 	exit 1
 fi
+test "$("$HERE/run" --replay fixture)" = "draft=2
+block=1
+review=3"
 
-if "$HERE/triage" "$output" --replay fixture > "$work/existing.out" 2> "$work/existing.err"; then
-	printf '%s\n' 'triage self-test: existing destination succeeded' >&2
+calls=$(wc -l < "$TRIAGE_CALL_LOG" | tr -d ' ')
+touch "$work/out-parent/existing-file"
+mkdir "$work/out-parent/existing-directory"
+ln -s nowhere "$work/out-parent/existing-symlink"
+for existing in existing-file existing-directory existing-symlink; do
+	if "$HERE/triage" "$work/out-parent/$existing" --replay fixture \
+		> "$work/$existing.out" 2> "$work/$existing.err"; then
+		printf 'triage self-test: %s destination succeeded\n' "$existing" >&2
+		exit 1
+	fi
+	test ! -s "$work/$existing.out"
+	grep -Fx 'triage: the output directory already exists' "$work/$existing.err" >/dev/null
+done
+test "$(wc -l < "$TRIAGE_CALL_LOG" | tr -d ' ')" = "$calls"
+
+race="$work/out-parent/race"
+export TRIAGE_FAKE_MODE=wait TRIAGE_ENTERED="$work/race-entered" TRIAGE_RELEASE="$work/race-release"
+"$HERE/triage" "$race" --replay fixture > "$work/race-owner.out" 2> "$work/race-owner.err" &
+child=$!
+wait_for "$TRIAGE_ENTERED"
+test -d "$race"
+if "$HERE/triage" "$race" --replay fixture > "$work/race-loser.out" 2> "$work/race-loser.err"; then
+	printf '%s\n' 'triage self-test: the reservation loser succeeded' >&2
 	exit 1
 fi
-test ! -s "$work/existing.out"
-grep -Fx 'triage: the output directory already exists' "$work/existing.err" >/dev/null
+grep -Fx 'triage: the output directory already exists' "$work/race-loser.err" >/dev/null
+test "$(wc -l < "$TRIAGE_CALL_LOG" | tr -d ' ')" = "$((calls + 1))"
+touch "$TRIAGE_RELEASE"
+wait "$child"
+child=
+unset TRIAGE_FAKE_MODE TRIAGE_ENTERED TRIAGE_RELEASE
 
-failed="$work/out-parent/failed"
-export TRIAGE_FAIL_SPLIT=1
-if "$HERE/triage" "$failed" --replay fixture > "$work/failed.out" 2> "$work/failed.err"; then
-	printf '%s\n' 'triage self-test: injected failure succeeded' >&2
-	exit 1
-fi
-unset TRIAGE_FAIL_SPLIT
-test ! -e "$failed"
-if find "$work/out-parent" -maxdepth 1 -name '.failed.tmp.*' | grep . >/dev/null; then
-	printf '%s\n' 'triage self-test: temporary directory remains' >&2
-	exit 1
-fi
+expect_failure() {
+	name=$1
+	expected=$2
+	failed="$work/out-parent/$name"
+	set +e
+	"$HERE/triage" "$failed" --replay fixture > "$work/$name.out" 2> "$work/$name.err"
+	rc=$?
+	set -e
+	test "$rc" = "$expected"
+	test ! -e "$failed"
+}
 
-printf '%s\n' 'triage pipeline: exact command, policy, outputs, and atomic failure pass'
+export TRIAGE_FAKE_MODE=fail
+expect_failure judgment 67
+unset TRIAGE_FAKE_MODE
+
+export TRIAGE_FAKE_MODE=malformed
+expect_failure validation 5
+unset TRIAGE_FAKE_MODE
+
+for move in 1 2 3; do
+	: > "$TRIAGE_MOVE_LOG"
+	export TRIAGE_FAIL_MOVE=$move
+	expect_failure "move-$move" "$((70 + move))"
+done
+unset TRIAGE_FAIL_MOVE
+
+signal="$work/out-parent/signal"
+export TRIAGE_FAKE_MODE=wait TRIAGE_ENTERED="$work/signal-entered" TRIAGE_RELEASE="$work/signal-release"
+"$HERE/triage" "$signal" --replay fixture > "$work/signal.out" 2> "$work/signal.err" &
+child=$!
+wait_for "$TRIAGE_ENTERED"
+kill -TERM "$child"
+touch "$TRIAGE_RELEASE"
+set +e
+wait "$child"
+rc=$?
+set -e
+child=
+test "$rc" = 143
+test ! -e "$signal"
+unset TRIAGE_FAKE_MODE TRIAGE_ENTERED TRIAGE_RELEASE
+
+printf '%s\n' 'triage pipeline: reservation, exact flow, three outputs, and failure cleanup pass'

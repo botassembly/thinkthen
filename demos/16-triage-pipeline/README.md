@@ -7,15 +7,7 @@ Verbs: `annotate`
 Use this when one record needs several judgments before ordinary policy code can choose an action. Six fictional support tickets become complete audit rows in three files. The reviewed recording is still pending, so this page stays red.
 
 ```bash
-set -euo pipefail
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
-
-./triage "$work/triage" --replay recording/
-for action in draft block review; do
-  printf '%s=' "$action"
-  wc -l < "$work/triage/$action.jsonl" | tr -d ' '
-done | mustmatch "draft=2
+./run --replay recording/ | mustmatch "draft=2
 block=1
 review=3"
 ```
@@ -31,12 +23,18 @@ review=3"
 The script's complete flow is short enough to read as one pipeline. `annotate` packs the three questions into one request per ticket. The tested `jq` policy adds `policy.action` and `policy.reason` without removing any result field.
 
 ```sh
+mkdir "$output"
+tmp=$(mktemp -d "$output/.staging.XXXXXX")
 thinkthen annotate questions.json --tsv --details --jobs 4 --input tickets.tsv --max-retries 0 "$@" \
   | jq -c -f ../../transforms/triage/triage.jq > "$tmp/all.jsonl"
 for action in draft block review; do
   jq -c --arg action "$action" 'select(.policy.action == $action)' "$tmp/all.jsonl" > "$tmp/$action.jsonl"
 done
-mv -- "$tmp" "$output"
+rm -- "$tmp/all.jsonl"
+for action in draft block review; do
+  mv -- "$tmp/$action.jsonl" "$output/$action.jsonl"
+done
+rmdir -- "$tmp"
 ```
 
 The rules run in this order: an unresolved answer goes to `review`; a credential request goes to `block`; the `other` queue goes to `review`; an urgent request goes to `review`; everything else goes to `draft`. The exact reasons are `unresolved`, `credential_request`, `out_of_scope`, `urgent`, and `routine`.
@@ -55,7 +53,7 @@ jq -c '{id: .input.id, values: .value, policy}' "$work/triage/block.jsonl" \
   | mustmatch '{"id":"SUP-1044","values":{"credential_request":true,"queue":"account","urgency":2},"policy":{"action":"block","reason":"credential_request"}}'
 ```
 
-The script fills a temporary sibling and publishes the directory with one rename. A failed judgment, malformed policy input, or failed file write leaves no caller-named directory. An unresolved value remains JSON `null` and fails closed into the review file.
+The script reserves the output name before it judges, then builds inside a hidden staging directory. A failed judgment, malformed policy input, failed file write, or catchable interruption removes the directory. A caller reads it only after the script returns successfully. An unresolved value remains JSON `null` and fails closed into the review file.
 
 ## What can go wrong
 

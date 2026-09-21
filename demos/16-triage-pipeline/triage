@@ -9,18 +9,27 @@ fi
 
 output=$1
 shift
-if [[ -e $output ]]; then
-	printf '%s\n' 'triage: the output directory already exists' >&2
-	exit 2
-fi
 parent=$(dirname -- "$output")
-name=$(basename -- "$output")
 if [[ ! -d $parent ]]; then
 	printf '%s\n' 'triage: the output parent is not a directory' >&2
 	exit 2
 fi
-tmp=$(mktemp -d "$parent/.${name}.tmp.XXXXXX")
-trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
+if ! mkdir -- "$output" 2>/dev/null; then
+	printf '%s\n' 'triage: the output directory already exists' >&2
+	exit 2
+fi
+
+cleanup() {
+	status=$?
+	trap - EXIT HUP INT TERM
+	rm -rf -- "$output"
+	exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+tmp=$(mktemp -d "$output/.staging.XXXXXX")
 
 thinkthen annotate "$HERE/questions.json" --tsv --details --jobs 4 \
 	--input "$HERE/tickets.tsv" --max-retries 0 "$@" \
@@ -32,5 +41,8 @@ for action in draft block review; do
 		> "$tmp/$action.jsonl"
 done
 rm -- "$tmp/all.jsonl"
-mv -- "$tmp" "$output"
+for action in draft block review; do
+	mv -- "$tmp/$action.jsonl" "$output/$action.jsonl"
+done
+rmdir -- "$tmp"
 trap - EXIT HUP INT TERM

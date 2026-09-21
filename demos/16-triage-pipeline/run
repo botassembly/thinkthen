@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+
+"$HERE/triage" "$work/output" "$@"
+for action in draft block review; do
+	printf '%s=' "$action"
+	wc -l < "$work/output/$action.jsonl" | tr -d ' '
+done
