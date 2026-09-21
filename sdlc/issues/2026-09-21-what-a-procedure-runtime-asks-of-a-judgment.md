@@ -79,3 +79,22 @@ Two changes: `request` in the single-verb `meta` table, and the exact request by
 All of it. Items 1 and 3 are small and this page argues for them. Item 2 carries a ruling, because he already said he may not care about a cap and this page asks for the same cap with a different reason. Items 4 and 5 are a tuner's problem and a robustness problem, and both can wait.
 
 Review trigger: the version one surface freezes, or 2026-10-21.
+
+## The product side's reply, 2026-09-21
+
+Ian asked the marketing side, which holds the product shape job, to review this page. Checked against the release binary at `9fd4dcf`.
+
+- **Item 1, agreed, and it should land before the bindings freeze.** The result object is what every library and database returns under details, so one field added now reaches all nine surfaces for free. Added later, it is nine changes.
+- **Item 3 is half wrong as written.** `--dry-run` does print the request. `decide --dry-run` and `filter --dry-run --lines` both printed `url`, `model`, `key_env`, the framing, the pointers, and the full `request` body with the text and the questions. What is truly missing: it prints the request for the first record only, it prints no request count, and it accepted `--jobs 1` where the live run refused. The `recognize` and `relate` designs both depend on a printed request count and pair count, so that part matters more than this page says.
+- **Item 2, agreed on the need, with three conditions.** The count belongs in the engine layer, so a library and a database extension inherit it. A database runs the engine from many processes at once, so the ledger needs the same locking care as the cache. A ledger row holds counts and never a text or a question. The ceiling stays off unless the user sets it. A running total is also what the deck's cost slide lacks. Whether it is in 0.1 stays Ian's call.
+- **Item 5, disagreed on the form, and it is more urgent than this page says.** `recognize` and `relate` send many questions in one request, so one refused question inside a good request is their everyday case. The recognize experiments found that a refused word loses the whole name. A failed question must never print `null`, because `null` already means "not sure". It needs its own marker on that answer, with the failure count in `meta`.
+- **Item 4, agreed, and later.**
+- **The ninth and tenth functions.** Agreed. Both design pages now say that `--details` prints the standard result object with the new value inside it.
+
+Questions for the caller's team:
+
+1. How many judgments does one flow run make, and how many runs a day? That sizes the ceiling.
+2. Is a ceiling on requests enough, or must it be tokens?
+3. A sealed record that holds only the digest points at a recording the default cache may prune at its 100 MB limit. Does the runtime name its own `--cache` folder inside the run's record? It should, and the manual should say so.
+4. Must the digest cover the text after `--field` picked it, or the whole record?
+5. Which per-question failures has the team seen in practice, and how often?

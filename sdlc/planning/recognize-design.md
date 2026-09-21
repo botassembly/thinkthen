@@ -167,6 +167,10 @@ The planner never knows a function costs money. Every database page carries that
 3. Whether `thinkthen_relations` should exist, or whether one function should return both and let SQL pick. Two functions read better in SQL. One costs less when a user wants both.
 4. Whether `recognize` belongs in `annotate`'s question set as a fifth question type. The suggestion is no for the first release.
 
+## One tool, ten functions
+
+`--details` prints the standard result object, `thinkthen.result/1`, with this function's value in `value` and the same `question`, `answer`, and `meta` keys as the other functions. The question file grammar, the exit-code table, the cache, and the recording are the same. A caller that handles one function's result handles this one. A question that fails inside a request that otherwise succeeded is marked on that answer and counted in `meta`. It never prints `null`, because `null` means "not sure".
+
 ## What Ian can overturn
 
 All of it. He has ruled: `recognize` ships, relations have a direction, and each end is a kind or any kind.

@@ -88,6 +88,10 @@ One JSON object per edge, one per line, so the output pipes:
 3. The one-question-per-subject form for a relation where a subject has one object. It costs one question per record. The brief measures it against pairs, and `find --in` is the same form.
 4. The record limit of 255 is a guess taken from `find`.
 
+## One tool, ten functions
+
+`--details` prints the standard result object, `thinkthen.result/1`, with this function's value in `value` and the same `question`, `answer`, and `meta` keys as the other functions. The question file grammar, the exit-code table, the cache, and the recording are the same. A caller that handles one function's result handles this one. A question that fails inside a request that otherwise succeeded is marked on that answer and counted in `meta`. It never prints `null`, because `null` means "not sure".
+
 ## What Ian can overturn
 
 All of it. He has ruled: `relate` is built with `recognize`, and it asks by choices over the legal pairs.
