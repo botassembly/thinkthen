@@ -542,6 +542,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "csv-core",
+ "serde_json",
  "thinkthen-core",
  "ureq",
 ]
