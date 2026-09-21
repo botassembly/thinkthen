@@ -70,15 +70,19 @@ The forty recorded cases, the relate arms, and the one synthesized case that
 joined the file. What diverges, and why, from the recordings and the design
 pages:
 
-- **The entity number's field name is interim.** The marketing vocabulary
-  page (`repos/mktg/products/thinkthen/vocabulary.md`, "The words for
-  numbers") restricts `confidence` to the literal field Jev returns in
-  detailed output, and this number is computed from several of Jev's
-  numbers. The contract, the stand-in, and every expectation here carry the
-  neutral field `number`; the recordings keep their own field name in the
-  replay table and the stand-in maps it at replay. The recognize team's free
-  comparison — whether the lowest Jev probability behind a name filters as
-  well as our computed number — settles the final name. Ian can overturn.
+- **The entity number's field name, settled.** This bullet is history: R1
+  shipped the neutral field `number` while the name was open, and Ian
+  settled it as `strength` on 2026-09-21 (the rule of
+  `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`;
+  the rename landed in `78204cb`, `14f418e`, `2356976`, and the generator
+  and every expectation carry `strength` as of the fix wave). The
+  recordings keep their own field name in the replay table and the stand-in
+  maps it at replay.
+- **The question file's relation ends are `source` and `target`.** R1's
+  questions were re-keyed by the fix wave (`from`/`to` refused with the
+  ruled spelling named), and the validator's rule-key checks follow. The
+  harvest recordings still spell `from`/`to`; the stand-in maps them at
+  replay.
 - **`located_in` is recorded nowhere.** Every recording that asks the
   organization-to-place rule (the 222 demo, the 225 harvest, C13, C19,
   C36) names it `based_in`; the design page's examples and the deck's
