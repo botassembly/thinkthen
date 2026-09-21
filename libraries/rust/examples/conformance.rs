@@ -1,0 +1,301 @@
+//! The Rust surface's slice of the conformance file, run offline.
+//!
+//! Reads `conformance/conformance.json` from the repository root, replays
+//! every case the library can express against the null backend (which
+//! answers with the file's own numbers), and prints one line a case:
+//! `ok`, `skip` with a reason, or `FAIL` with what diverged. A nonzero exit
+//! follows any FAIL. Run through `./check.sh`.
+//!
+//! Two case families cannot run on the stand-in and are skipped with their
+//! reasons printed: the backend-refusal cases need the wire or a dead
+//! address, and the usage case's cache half needs the disk cache, which
+//! the stand-in does not carry.
+
+use std::path::Path;
+
+use serde_json::Value;
+
+use thinkthen::{
+    Annotated, Answer, Details, Engine, Error, Question, QuestionSet,
+};
+
+fn main() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../conformance/conformance.json");
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    let file: Value = serde_json::from_str(&text).expect("the file parses");
+    let cases = file["cases"].as_array().expect("the file holds cases");
+
+    let tt = Engine::from_env().expect("the stand-in never fails to build");
+    let mut failed = 0;
+
+    for case in cases {
+        let id = case["id"].as_str().unwrap_or("?");
+        let verb = case["verb"].as_str().unwrap_or("?");
+        let question_text =
+            serde_json::to_string(&case["question"]).expect("the question serializes");
+        match run(&tt, verb, &question_text, case) {
+            Ok(()) => println!("ok       {id}"),
+            Err(Outcome::Skip(reason)) => println!("skip     {id}: {reason}"),
+            Err(Outcome::Diverge(reason)) => println!("diverge  {id}: {reason}"),
+            Err(Outcome::Fail(what)) => {
+                failed += 1;
+                println!("FAIL     {id}: {what}");
+            }
+        }
+    }
+
+    if failed > 0 {
+        eprintln!("{failed} conformance case(s) failed");
+        std::process::exit(1);
+    }
+    println!("conformance slice green for the Rust surface");
+}
+
+enum Outcome {
+    Skip(String),
+    /// A stand-in divergence already recorded in conformance/DIVERGENCES.md.
+    Diverge(String),
+    Fail(String),
+}
+
+fn ok_if(condition: bool, what: String) -> Result<(), Outcome> {
+    if condition {
+        Ok(())
+    } else {
+        Err(Outcome::Fail(what))
+    }
+}
+
+fn fail(error: Error) -> Outcome {
+    Outcome::Fail(format!("the call failed: {:?} ({})", error.kind, error.message))
+}
+
+fn wire_is_set() -> bool {
+    std::env::var_os("ENGINE_BASE_URL").is_some() || std::env::var_os("THINKTHEN_BASE_URL").is_some()
+}
+
+fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(), Outcome> {
+    let expect = &case["expect"];
+    if let Some(kind) = expect["error"]["kind"].as_str() {
+        if verb == "cancel" {
+            return Err(Outcome::Diverge(
+                "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+                    .to_owned(),
+            ));
+        }
+        if kind == "backend" && !wire_is_set() {
+            return Err(Outcome::Skip(
+                "the backend kind needs the wire or a dead address; the null backend answers"
+                    .to_owned(),
+            ));
+        }
+        return check_error(tt, verb, question_text, case, kind);
+    }
+    match verb {
+        "decide" => {
+            let question = built(question_text)?;
+            let details = tt.details(&question, evidence(case)).map_err(fail)?;
+            check_details(expect, &details)
+        }
+        "decide_many" => {
+            let question = built(question_text)?;
+            let records = records(case);
+            let judgments = tt.decide_many(&question, &records).map_err(fail)?;
+            let answers: Vec<Answer> = judgments.iter().map(|judgment| judgment.answer).collect();
+            let wanted: Vec<Answer> = expected_answers(&expect["answers"]);
+            ok_if(answers == wanted, format!("expected {wanted:?}, got {answers:?}"))?;
+            let got: Vec<f64> = judgments.iter().map(|judgment| judgment.probability).collect();
+            let wanted: Vec<f64> = expect["probabilities"]
+                .as_array()
+                .map(|numbers| numbers.iter().filter_map(|number| number.as_f64()).collect())
+                .unwrap_or_default();
+            ok_if(
+                got.iter().zip(&wanted).all(|(one, two)| (one - two).abs() < 1e-9),
+                format!("expected {wanted:?}, got {got:?}"),
+            )
+        }
+        "filter" => {
+            let question = built(question_text)?;
+            let records = records(case);
+            let kept = tt.filter(&question, &records).map_err(fail)?;
+            let wanted: Vec<&str> = expect["indexes"]
+                .as_array()
+                .map(|indexes| {
+                    indexes
+                        .iter()
+                        .filter_map(|place| place.as_u64().map(|place| records[place as usize]))
+                        .collect()
+                })
+                .unwrap_or_default();
+            ok_if(kept == wanted, format!("expected {wanted:?}, got {kept:?}"))
+        }
+        "choose" => {
+            let question = built(question_text)?;
+            let picked = tt.choose(&question, evidence(case)).map_err(fail)?;
+            match expect["answer"].as_str() {
+                Some(wanted) => ok_if(
+                    picked.as_deref() == Some(wanted),
+                    format!("expected {wanted:?}, got {picked:?}"),
+                ),
+                None => ok_if(picked.is_none(), format!("expected no pick, got {picked:?}")),
+            }
+        }
+        "score" => {
+            let question = built(question_text)?;
+            let scored = tt.score(&question, evidence(case)).map_err(fail)?;
+            let wanted = expect["answer"].as_f64();
+            ok_if(
+                wanted.map_or(false, |wanted| (scored.value - wanted).abs() < 1e-9),
+                format!("expected {wanted:?}, got {}", scored.value),
+            )?;
+            let nearest = expect["details"]["nearest_level"].as_str();
+            ok_if(
+                Some(scored.nearest.as_str()) == nearest,
+                format!("expected level {nearest:?}, got {:?}", scored.nearest),
+            )
+        }
+        "tag" => {
+            let question = built(question_text)?;
+            let labels = tt.tag(&question, evidence(case)).map_err(fail)?;
+            let wanted: Vec<String> = expect["answer"]
+                .as_array()
+                .map(|labels| {
+                    labels
+                        .iter()
+                        .filter_map(|label| label.as_str().map(str::to_owned))
+                        .collect()
+                })
+                .unwrap_or_default();
+            ok_if(labels == wanted, format!("expected {wanted:?}, got {labels:?}"))
+        }
+        "annotate" => {
+            let wrapped = serde_json::json!({ "questions": case["set"] });
+            let set = QuestionSet::from_json(&wrapped.to_string()).map_err(fail)?;
+            let held = records(case);
+            let records: Vec<&str> = if held.is_empty() {
+                vec![evidence(case)]
+            } else {
+                held
+            };
+            let annotated = tt.annotate(&set, &records).map_err(fail)?;
+            let first = annotated
+                .first()
+                .ok_or_else(|| Outcome::Fail("no annotated record came back".to_owned()))?;
+            for (name, wanted) in expect["answers"].as_object().into_iter().flatten() {
+                let field = first
+                    .iter()
+                    .find(|(held, _)| held == name)
+                    .map(|(_, held)| held)
+                    .ok_or_else(|| Outcome::Fail(format!("no {name} field in the answer")))?;
+                match field {
+                    Annotated::Decision(answer) => ok_if(
+                        *answer == expected_answer(&wanted["answer"]),
+                        format!("{name}: expected {:?}, got {answer:?}", wanted["answer"]),
+                    )?,
+                    Annotated::Choice(picked) => ok_if(
+                        picked.as_deref() == wanted["answer"].as_str(),
+                        format!("{name}: expected {:?}, got {picked:?}", wanted["answer"]),
+                    )?,
+                    _ => {
+                        return Err(Outcome::Skip(format!(
+                            "{name} holds a field the runner does not check"
+                        )))
+                    }
+                }
+            }
+            Ok(())
+        }
+        "details" => {
+            let question = built(question_text)?;
+            let details = tt.details(&question, evidence(case)).map_err(fail)?;
+            check_details(expect, &details)
+        }
+        "usage" => Err(Outcome::Skip(
+            "the cache half needs the disk cache, which the stand-in does not carry".to_owned(),
+        )),
+        "cancel" => Err(Outcome::Diverge(
+            "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+                .to_owned(),
+        )),
+        other => Err(Outcome::Skip(format!("no case shape for {other}"))),
+    }
+}
+
+fn check_details(expect: &Value, details: &Details) -> Result<(), Outcome> {
+    ok_if(
+        details.answer == expected_answer(&expect["answer"]),
+        format!("expected {:?}, got {:?}", expect["answer"], details.answer),
+    )?;
+    let wanted_probability = expect["details"]["probability"].as_f64();
+    if let Some(wanted) = wanted_probability {
+        ok_if(
+            (details.probability - wanted).abs() < 1e-9,
+            format!("expected probability {wanted}, got {}", details.probability),
+        )?;
+    }
+    let wanted_digest = expect["details"]["question_sha256"].as_str();
+    ok_if(
+        Some(details.digest.as_str()) == wanted_digest,
+        "the digest diverged".to_owned(),
+    )
+}
+
+fn check_error(
+    tt: &Engine,
+    verb: &str,
+    question_text: &str,
+    case: &Value,
+    kind: &str,
+) -> Result<(), Outcome> {
+    // A question that cannot even build fails with the usage kind, which
+    // is the expected outcome for the blank-question case.
+    let built_question = match Question::from_json(question_text) {
+        Ok(question) => Some(question),
+        Err(error) if format!("{:?}", error.kind).to_lowercase() == kind => return Ok(()),
+        Err(error) => return Err(fail(error)),
+    };
+    let error = match (verb, built_question) {
+        ("filter", Some(question)) => tt.filter(&question, &records(case)).err(),
+        ("decide", Some(question)) => tt.decide(&question, evidence(case)).err(),
+        ("choose", Some(question)) => tt.choose(&question, evidence(case)).err(),
+        _ => None,
+    };
+    match error {
+        Some(error) => ok_if(
+            format!("{:?}", error.kind).to_lowercase() == kind,
+            format!("expected the {kind} kind, got {:?}", error.kind),
+        ),
+        None => Err(Outcome::Fail(format!("expected the {kind} kind, got an answer"))),
+    }
+}
+
+fn built(question_text: &str) -> Result<Question, Outcome> {
+    Question::from_json(question_text).map_err(fail)
+}
+
+fn evidence(case: &Value) -> &str {
+    case["evidence"].as_str().unwrap_or_default()
+}
+
+fn records(case: &Value) -> Vec<&str> {
+    case["records"]
+        .as_array()
+        .map(|records| records.iter().filter_map(|record| record.as_str()).collect())
+        .unwrap_or_default()
+}
+
+fn expected_answer(value: &Value) -> Answer {
+    match value {
+        Value::Bool(true) => Answer::Yes,
+        Value::Bool(false) => Answer::No,
+        _ => Answer::Unsure,
+    }
+}
+
+fn expected_answers(value: &Value) -> Vec<Answer> {
+    value
+        .as_array()
+        .map(|answers| answers.iter().map(expected_answer).collect())
+        .unwrap_or_default()
+}

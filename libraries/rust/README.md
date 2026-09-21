@@ -1,6 +1,13 @@
 # The Rust surface
 
-Lands in Phase B. The acceptance sample, drawn in
+Landed 2026-09-21. The crate `thinkthen`: an `Engine` value from the
+environment, every verb in the ruled shape, blocking calls returning
+`Result`, and the stand-in behind one dependency line. Run `./check.sh`
+for the null suite, the conformance slice, and the wire suite when the
+stub is up on 8213. Findings and quirks are in `NOTES.md`; the slide's
+one-character finding is filed there for the slide owner.
+
+The acceptance sample, drawn in
 `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`, runs
 as drawn against the stand-in when this folder holds the library:
 
