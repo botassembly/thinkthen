@@ -6,7 +6,7 @@ opens: transforms/compare transforms/README.md demos/14-grade-a-batch sdlc/plann
 
 # 0043: Compare named `annotate` answers
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -62,6 +62,8 @@ Re-score if implementation changes saved result rows, accepts more than the docu
 ## Review
 
 The independent design review rejected the first draft because it left the nested report fields and empty-run mode implicit, allowed inconsistent question sets inside one run, described malformed rows too loosely, and misnamed the zeroed probability summary. A second pass found that the exact per-question shape omitted `compared`. The accepted design fixes the top-level and per-question shapes, makes mode inference exact, pins every field the transform reads and every supported answer-kind/value pairing, and gives the exact non-yes-or-no probability object. The reviewer accepted the invocation guard, scope, tag ordering, record mismatch rules, secrecy requirements, and the decision to leave page 16 for its next ticket.
+
+The independent code review rejected missing-member validation and a refusal that repeated once per ordinary input row. The repair requires explicit nested `value` and `threshold` members and stops after one fixed safe message. The same reviewer accepted the repaired code, tests, scalar compatibility, annotate report, and honest empty-stream limitation with no remaining blocker.
 
 ## Implementation
 
