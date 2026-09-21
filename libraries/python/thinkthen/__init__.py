@@ -54,12 +54,23 @@ def annotate(set, records, *, on=None, deadline=None):
     batch in Rust, and the frame is rebuilt through the same stream form,
     so the slide's ``tt.annotate("form.json", df, on="body")`` returns
     the frame with its new columns attached and no Python row ever moves.
+    A pandas frame cannot be rebuilt from the Arrow stream; the refusal
+    names the two ways through — pass the column, or convert once and back.
     """
     if on is None:
         return annotate_rows(set, records, deadline=deadline)
     if hasattr(records, "__arrow_c_stream__"):
         frame = annotate_stream(set, records, on, deadline=deadline)
-        return type(records)(frame)
+        try:
+            return type(records)(frame)
+        except Exception as exc:
+            raise UsageError(
+                "annotate with on= cannot rebuild a pandas frame from the "
+                "Arrow stream it returns. Pass the column instead — "
+                "tt.annotate(set, df[column]) — which returns a list of "
+                "dictionaries, one per row, or convert once and back — "
+                "tt.annotate(set, pl.from_pandas(df), on=column).to_pandas()"
+            ) from exc
     raise UsageError(
         "annotate with on= takes a frame whose column crosses as Arrow "
         "(a Polars DataFrame); a plain list uses annotate with no on="

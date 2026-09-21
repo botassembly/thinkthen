@@ -31,19 +31,24 @@ QUESTION = tt.question(decide="Does the customer ask for a refund?", threshold=0
 
 # ---------------------------------------------------------------------------
 # Check 5 first, as the issue rules: a whole pandas frame into annotate.
-# The finding: it raises, so it never half works, but the sentence names no
-# fix — the issue's bar ("refuses with a sentence that names the fix") is not
-# met. Do not bend the library: this test pins the truth until the product
-# side rules on a fix-naming refusal.
+# It refuses — never half works — and the refusal is now the library's own
+# usage error naming the two remedies: pass the column, or convert once and
+# back. The remedy lines are run here, so the sentence stays true.
 # ---------------------------------------------------------------------------
 
 
 def test_check_5_pandas_frame_refuses_and_never_half_works():
     frame = pd.DataFrame({"body": TEXTS, "id": [1, 2, 3]})
-    with pytest.raises(ValueError) as caught:
+    with pytest.raises(tt.UsageError) as caught:
         tt.annotate("tests/fixture/form.json", frame, on="body")
-    # The message is pandas' own constructor error; it names no fix.
-    assert "constructor" in str(caught.value)
+    message = str(caught.value)
+    assert "Pass the column instead" in message
+    assert "df[column]" in message
+    assert "pl.from_pandas(df)" in message
+    assert ".to_pandas()" in message
+    # pandas' own constructor error is chained as the cause, never the shown
+    # sentence.
+    assert isinstance(caught.value.__cause__, ValueError)
     # No half work: the frame is untouched, no columns appeared, and the
     # judged text would not have been the column names.
     assert frame.columns.tolist() == ["body", "id"]
@@ -51,8 +56,25 @@ def test_check_5_pandas_frame_refuses_and_never_half_works():
 
 def test_check_5_single_column_frame_refuses_the_same_way():
     frame = pd.DataFrame({"body": TEXTS})
-    with pytest.raises(ValueError, match="constructor"):
+    with pytest.raises(tt.UsageError, match="Pass the column instead"):
         tt.annotate("tests/fixture/form.json", frame, on="body")
+
+
+def test_check_5_both_remedies_run():
+    frame = pd.DataFrame({"body": TEXTS, "id": [1, 2, 3]})
+    # Remedy 1: pass the column. It returns a list of dictionaries, one per
+    # row, keys the set's question names (the recorded returned type).
+    rows = tt.annotate("tests/fixture/form.json", frame["body"])
+    assert type(rows) is list
+    assert len(rows) == len(TEXTS)
+    assert set(rows[0]) == {"team", "urgency", "wants_refund"}
+    # Remedy 2: convert once and back — the exact line the refusal names.
+    back = tt.annotate(
+        "tests/fixture/form.json", pl.from_pandas(frame), on="body"
+    ).to_pandas()
+    assert type(back) is pd.DataFrame
+    assert back.columns.tolist() == ["body", "id", "team", "urgency", "wants_refund"]
+    assert back.shape == (3, 5)
 
 
 # ---------------------------------------------------------------------------

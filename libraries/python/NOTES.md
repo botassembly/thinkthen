@@ -217,3 +217,41 @@ pandas findable: False
 `pandas`, `polars`, and `pyarrow` were absent from `sys.modules` after `import thinkthen`, and a `decide_many` ran on the null backend. The in-tree test pins the same claim for pandas and Polars (subprocess import check).
 
 Unchecked: pandas below 2.2.3 (no wheels for this interpreter; the older-major frame hazard could not be tested, and all tested majors refuse the frame); categorical, nullable, and other dtype spellings beyond the five checks; the reproduction venvs (`.venv-pd2`, `.venv-pd22`) were removed after the runs; the commands above recreate them.
+
+### The refusal now names the fixes, 2026-09-21
+
+Before: `tt.annotate("form.json", pandas_df, on="body")` raised pandas' own `ValueError: DataFrame constructor not properly called!` from inside the return path — the issue's bar ("refuses with a sentence that names the fix") was not met, and the call never half worked.
+
+After: the wrapper catches the failed reconstruction of the input's own type and raises the library's own `UsageError`, chained from the original, naming the two remedies in order:
+
+```
+annotate with on= cannot rebuild a pandas frame from the Arrow stream it
+returns. Pass the column instead — tt.annotate(set, df[column]) — which
+returns a list of dictionaries, one per row, or convert once and back —
+tt.annotate(set, pl.from_pandas(df), on=column).to_pandas()
+```
+
+Both remedy lines were run before being named:
+
+- Remedy 1, recorded returned type: `tt.annotate("tests/fixture/form.json", df["body"])` returns a `list` of dicts, one per row, keys the set's question names (`{'team', 'urgency', 'wants_refund'}`).
+- Remedy 2: `tt.annotate("tests/fixture/form.json", pl.from_pandas(df), on="body").to_pandas()` returns a pandas DataFrame, shape (3, 5), columns `['body', 'id', 'team', 'urgency', 'wants_refund']`.
+
+The task's guessed line `pd.DataFrame(arrow_frame.to_pydict())` does not work and is not named: the stream door's `ArrowFrame` has no `to_pydict`, and the pyarrow route is unsafe (next finding). The catch is generic — any capsule frame whose reconstruction fails gets the same refusal; a pyarrow Table input returned a clean `TypeError` before and now gets the named refusal too, with the pandas wording. No pandas import entered the wheel; no per-value path; the existing final `UsageError` for a frame without the capsule is unchanged.
+
+**Finding, outside this fix: `pa.table(ArrowFrame)` aborts the process.** Minimal reproducer:
+
+```
+ENGINE_NULL=1 .venv/bin/python - <<'PY'
+import pandas as pd, pyarrow as pa
+from thinkthen._thinkthen import annotate_stream
+df = pd.DataFrame({"body": ["a", "b", "c"]})
+af = annotate_stream("tests/fixture/form.json", df, "body")
+pa.table(af)
+PY
+# /arrow/cpp/src/arrow/c/helpers.h:64:: ArrowSchemaRelease did not
+# cleanup release callback — exit code 134 (SIGABRT), core dumped
+```
+
+pyarrow consuming the `ArrowFrame` through the C stream aborts the process: the exported schema capsule's release callback does not satisfy the C++ Arrow contract. Not reachable through the public pandas path (the refusal fires first) and not fixed here — recorded for a follow-up, because the likely blast radius is any C++ Arrow consumer of the stream (pyarrow; engines binding it). Polars consumes the same frame fine, which is the slide path.
+
+Tests: the two check-5 tests now pin the refusal and its message, and `test_check_5_both_remedies_run` runs both named lines. Full run: `ENGINE_NULL=1 .venv/bin/python -m pytest tests/ -q` → 38 passed; the pandas checks file alone → 10 passed.
