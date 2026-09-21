@@ -10,6 +10,7 @@ cargo test --locked --workspace --doc --all-features
 sh probes/probability-total-0038/self-test
 sh probes/find-0040/self-test
 sh transforms/compare/test.sh
+sh transforms/monitor/test.sh
 sh transforms/sweep/test.sh
 sh transforms/trials/test.sh
 sh transforms/triage/test.sh
