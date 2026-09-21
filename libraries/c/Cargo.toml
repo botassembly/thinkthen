@@ -1,0 +1,36 @@
+[package]
+name = "thinkthen-c"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.93.1"
+description = "The C surface: the door every language that cannot bind Rust loads. One header, both libraries, and every exported symbol owned here. Version 0.1.0 is the first release"
+license = "MIT"
+publish = false
+
+# A workspace of its own, so the root workspace's gates and profile stay
+# untouched.
+[workspace]
+
+[lib]
+# The archive the slide names: libthinkthen.so and libthinkthen.a beside
+# thinkthen.h, plus the rlib the door's own tests link. This surface owns
+# every exported symbol; the engine exports none.
+name = "thinkthen"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+serde_json = "1"
+thinkthen-contract = { path = "../../contract" }
+# The one dependency that changes when the real engine lands.
+thinkthen-standin = { path = "../../standin" }
+
+[dev-dependencies]
+libc = "0.2"
+
+[profile.release]
+# A library lives inside someone else's process, and an abort there kills
+# the host. The command's own profile stays as the root workspace sets it.
+panic = "unwind"
+
+[lints.rust]
+missing_docs = "warn"
