@@ -4,6 +4,11 @@
 library(thinkthen)
 stopifnot(Sys.getenv("ENGINE_NULL") == "1")
 
+# The stand-in's one synthesized partial failure (0054) is armed only by
+# this test opt-in, and the engine reads it when its engine value is built,
+# so it is set before the first call.
+Sys.setenv(ENGINE_SYNTHETIC_PARTIAL = "1")
+
 passed <- 0
 fail <- function(what) stop(paste("failed:", what), call. = FALSE)
 check <- function(what, held) {
@@ -156,6 +161,69 @@ clean <- tt_annotate(
   on = "body"
 )
 check("a clean row keeps its plain column", identical(clean$topic[[1]], TRUE))
+
+# The review's finding 5: an answer column's type comes from its question's
+# kind, never from the shape of the first answer. The set below holds one
+# question of every kind, and the first record is the misleading one: its
+# decision answer is unsure (R's NULL) and its empty tag answer is R's
+# zero-length character. Every later answer must still come back in its
+# kind's own shape. The null backend answers a tag question the same for
+# every row (its rule reads the labels, not the evidence), so the tag
+# columns prove the cell shape rather than a per-row change of labels.
+kinded_file <- tempfile(fileext = ".json")
+writeLines(c(
+  "{\"version\":1,\"questions\":{",
+  "\"refund\":{\"decide\":\"Is a refund asked?\",\"threshold\":\"0.2:0.8\"},",
+  "\"topic\":{\"choose\":\"Which topic?\",\"options\":[\"refund\",\"billing\",\"other\"]},",
+  "\"labels\":{\"tag\":\"What is in this?\",\"labels\":[\"refund\",\"maybe\",\"billing\"]},",
+  "\"empty\":{\"tag\":\"What is in this?\",\"labels\":[\"billing\",\"other\"]},",
+  "\"urgency\":{\"score\":\"How urgent?\",\"levels\":[\"low\",\"soon\",\"high\"]}}}"
+), kinded_file)
+kinded <- tt_annotate(
+  kinded_file,
+  data.frame(body = c(
+    "maybe there is a problem",
+    "I want a refund and maybe more",
+    "thanks, all good"
+  ), stringsAsFactors = FALSE),
+  on = "body"
+)
+check("an unsure first answer leaves the decision column logical",
+      identical(kinded$refund, c(NA, TRUE, FALSE)))
+check("a tag column holds every label of a row",
+      is.list(kinded$labels) && identical(kinded$labels[[2]], c("refund", "maybe")))
+check("a tag column whose first answer holds no label stays a list of labels",
+      is.list(kinded$empty) && identical(kinded$empty[[2]], character(0)))
+check("a score column stays double with its decimal answers",
+      is.double(kinded$urgency) && isTRUE(all.equal(kinded$urgency, c(1.05, 1.7, 0.99))))
+check("a choose column stays character", is.character(kinded$topic))
+
+# The offline backend cannot vary a choose answer from row to row (its
+# null reply is one fixed distribution per question), so the
+# first-answer-unsure case is proven on the converter itself: R's NULL is
+# the engine's unsure, and the later cells must still come back as their
+# choices.
+chosen <- thinkthen:::.tt_answer_column(list(NULL, "refund", "billing"), "choose")
+check("a choose column with an unsure first answer keeps later choices",
+      identical(chosen, c(NA_character_, "refund", "billing")))
+
+# The contract owns the one checked deadline conversion (phase 1): zero
+# stays the spent deadline, the sentinel and NULL mean no deadline, and a
+# NaN, a negative other than the sentinel, or an oversized budget is a
+# usage error before any thread exists (the review's crash group).
+check("zero stays the spent deadline", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = 0), thinkthen_error = function(e) e$kind),
+  "deadline"))
+check("the sentinel means no deadline", isTRUE(tt_decide("Q?", "refund me", deadline = -1)))
+check("a NaN deadline is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = NaN), thinkthen_error = function(e) e$kind),
+  "usage"))
+check("a negative deadline is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = -2), thinkthen_error = function(e) e$kind),
+  "usage"))
+check("an oversized deadline is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = Inf), thinkthen_error = function(e) e$kind),
+  "usage"))
 
 # the counters count sends. No reset exists (ruling 4): the difference
 # across the three sends carries the same proof.

@@ -7,6 +7,11 @@
 .libPaths(c("rlib", .libPaths()))
 library(thinkthen)
 
+# Case 74 pins the stand-in's one synthesized partial failure (0054), armed
+# only by this test opt-in; the engine reads it when its engine value is
+# built, so it is set before the first call.
+Sys.setenv(ENGINE_SYNTHETIC_PARTIAL = "1")
+
 file <- jsonlite::fromJSON("../../conformance/conformance.json", simplifyVector = FALSE)
 cases <- file$cases
 wire <- Sys.getenv("ENGINE_BASE_URL") != "" || Sys.getenv("THINKTHEN_BASE_URL") != ""

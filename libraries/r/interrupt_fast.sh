@@ -20,6 +20,7 @@ wait "$CHILD" 2>/dev/null || true
 cat "$OUT"
 ELAPSED=$(sed -n 's/^elapsed: //p' "$OUT")
 OUTCOME=$(sed -n 's/^outcome: //p' "$OUT")
+AFTER=$(sed -n 's/^after: //p' "$OUT")
 rm -f "$OUT"
 
 if [ "$OUTCOME" != "interrupt" ]; then
@@ -30,4 +31,8 @@ if [ -z "$ELAPSED" ] || ! awk -v one="$ELAPSED" 'BEGIN { exit !(one < 1.5) }'; t
   echo "FAIL: the interrupt landed at ${ELAPSED:-unknown} s (the batch runs about 9 s deaf)"
   exit 1
 fi
-echo "OK: the interrupt landed at ${ELAPSED} s, within a tick of the signal"
+if [ "$AFTER" != "TRUE" ]; then
+  echo "FAIL: the call after the interrupt did not answer"
+  exit 1
+fi
+echo "OK: the interrupt landed at ${ELAPSED} s, within a tick of the signal, and the session answered after it"

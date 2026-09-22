@@ -63,12 +63,21 @@ tt_rank_all <- function(question, records, deadline) .Call(wrap__tt_rank_all, qu
 #' in the set's own order, each field typed by its question's verb.
 tt_annotate_file <- function(path, records, deadline) .Call(wrap__tt_annotate_file, path, records, deadline)
 
+#' The question set's names and kinds, in the set's own name order, so the
+#' R half types each answer column by its question rather than by the first
+#' answer it happens to see.
+tt_annotate_kinds <- function(path) .Call(wrap__tt_annotate_kinds, path)
+
 #' The audit view of one judgment, with the logical requests' digests
 #' (0053) and the failed-question count (0054).
 tt_details_one <- function(question, evidence, deadline) .Call(wrap__tt_details_one, question, evidence, deadline)
 
 #' The process counters.
 tt_usage_counters <- function() .Call(wrap__tt_usage_counters)
+
+#' Whether R holds a pending interrupt, for the R half's own checks before
+#' and after a call.
+tt_interrupt_pending <- function() .Call(wrap__tt_interrupt_pending)
 
 #' Stop the call in flight, when an interrupt jumped out of its frame.
 tt_cancel_active <- function() .Call(wrap__tt_cancel_active)

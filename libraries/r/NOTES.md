@@ -322,3 +322,58 @@ while the engine entry is pending). The full inventory is
 - `tt_tag` — same file (the `lapply` loop). -> future `tag_many`.
 - `tt_recognize_column` — `thinkthen/src/rust/src/lib.rs` (the `.map`
   calling `engine.recognize_opts` a record). -> future `recognize_many`.
+
+## 2026-09-22 — the review's R findings: typed columns, the checked deadline, the guarded interrupt
+
+Source: `sdlc/issues/2026-09-22-surfaces-branch-review-the-full-findings.md` (finding 5, the crash group's deadline, and the phase-1 adoptions). Commands and output as they happened on this machine.
+
+**Finding 5, an answer column's type from the first answer's shape.** The old `tt_annotate` typed each column by `fields[[1]]`: a tag column whose first cell held no label fell to the `choose` branch and every later cell kept only its first label or `NA`. Fixed by asking the question set its kinds once (`tt_annotate_kinds`, new shim export; `set.names()` and `question.kind()` in the set's own name order) and typing each column through `.tt_answer_column`/`.tt_bare` by its kind: decide logical, choose character, score double, tag a list of its labels. The widened failed-marker column keeps its ruled shape (0054) with the bare cells now kind-typed too.
+
+**The baseline, before the fix** (`ENGINE_NULL=1 Rscript /tmp/r-baseline-checks.R`, one check at a time so the first failure does not stop the rest):
+
+```
+FAIL  tag column whose first answer holds no label stays a list of labels
+FAIL  choose column with an unsure first answer keeps later choices
+FAIL  the sentinel means no deadline
+FAIL  a NaN deadline is usage
+FAIL  a negative deadline is usage
+FAIL  an oversized deadline is usage
+```
+
+**The same checks after** (`ENGINE_NULL=1 Rscript /tmp/r-after-checks.R`): all eleven pass, including the five that were already right (the decide band with an unsure first answer, the multi-label tag cell, the decimal score column, the character choose column, and zero as the spent deadline).
+
+**What the offline backend cannot vary, recorded honestly.** The null backend's choose weights read the question's options and its tag probabilities read the labels, so neither varies a row: a choose column cannot be made unsure on one row and decided on the next, and a tag column answers the same labels for every row. The first-answer-unsure choose case is therefore proven on the converter itself (`thinkthen:::.tt_answer_column(list(NULL, "refund", "billing"), "choose")` → `c(NA_character_, "refund", "billing")`, R's `NULL` being the engine's unsure), and the tag case end to end with a question whose labels all fall (`labels = ["billing", "other"]` → `character(0)` per cell). `NA` in the `on` column is refused by the shim's own `Vec<String>` conversion ("Must not be NA."), so it is not a path to an empty cell.
+
+**The checked deadline, adopted from the contract (phase 1).** `call` converts a host's deadline through `thinkthen_contract::deadline_from_seconds` before any thread exists: the sentinel `-1` and `NULL` mean no deadline, `0` stays the spent deadline (conformance case 27), and a NaN, a negative other than the sentinel, or a budget past 4294967295 s comes back as the usage kind. The old code clamped with `seconds.max(0.0)` and handed `Duration::from_secs_f64` a panic on an infinite budget — the worker thread died, the main thread saw the channel disconnect, and the caller got `defect` ("the call's worker ended without an answer"). The new checks pin each kind; `Inf` is now `usage` before a thread starts.
+
+**The interrupt guard: the jump never crosses a Rust frame.** The old poll called `R_CheckUserInterrupt` directly, and its longjmp unwound R's C stack across the shim's Rust frames — undefined behavior, with the cancel token registered only because `.tt_cleanup` ran during R's own unwind. The experiment, in `/tmp/tt-r-guard` (a throwaway C file, R 4.3.3):
+
+```
+$ R CMD SHLIB guard.c && Rscript -e 'dyn.load("guard.so"); cat("toplevel result:", .Call("tt_guard_probe"), "\n"); cat("script continued\n")'
+toplevel result: FALSE
+script continued
+exit: 0
+```
+
+`R_ToplevelExec` catches the interrupt's jump and answers FALSE; the session continues. The re-signal half, also checked:
+
+```
+$ Rscript -e 'res <- tryCatch(stop(structure(class = c("interrupt", "condition"), list(message = "", call = NULL))), interrupt = function(e) "caught as interrupt", error = function(e) "caught as error"); cat(res, "\n")'
+caught as interrupt
+$ Rscript -e 'stop(structure(class = c("interrupt", "condition"), list(message = "", call = NULL)))'; echo "uncaught exit: $?"
+Error:
+Execution halted
+uncaught exit: 1
+```
+
+R's own Ctrl-C in a script prints "Execution halted" and exits 1 as well (`Rscript -e 'Sys.sleep(30)'` with a SIGINT: "Execution halted", exit 1); the only difference is the bare `Error:` line an uncaught condition prints. So the shape is: `interrupt_pending()` runs `R_CheckUserInterrupt` inside `R_ToplevelExec`; the pre-check in `call`, the 100 ms tick in the wait, and the R half's checks before and after every `.tt_call` all use it; a pending interrupt cancels the token (no new request starts, the requests already sent finish), clears the slot, and returns the packed `interrupt` marker; `.tt_error` reads the marker and raises R's own interrupt condition (`tryCatch(interrupt = ...)` catches it, proven by `interrupt_fast.sh`). The worker is not waited for: it holds its own token clone and its requests finish on their own, so Ctrl-C stays answered within a tick instead of waiting on a slow send.
+
+**The panic guard.** extendr 0.8.2 already wraps every generated `#[extendr]` body in `std::panic::catch_unwind` and converts a panic to an R error (`extendr-macros-0.8.2/src/wrappers.rs:227-262`), so no panic can unwind across the R C API from this shim; the shim's own slot lock now recovers from poisoning (`PoisonError::into_inner`) instead of panicking every later call, and a panic on the worker thread lands as the `defect` kind through the channel disconnect. The `call` closure now names `&dyn Engine`, so the engine value comes from the contract's connector door (`StandinConnector.connect(&EngineConfig::from_env())`, phase 1) — the one line the real engine's connector replaces.
+
+**The stand-in's test opt-in, adopted (a pre-existing red, not this wave's).** Phase 1 armed the synthesized annotate failure only under `ENGINE_SYNTHETIC_PARTIAL` (`7acb3da`), and the R lane still ran without it: `null suite` died at "the failed field carries the ruled marker" and case 74 would have too. `tests_null.R` and `conformance.R` now set the opt-in themselves before the first call, like the Ruby lane does; the engine reads it when its engine value is built.
+
+**The evidence, full runs.** `./check.sh` with no stub: shim 2 tests, null suite 56 checks, the fast interrupt at 0.886 s with `after: TRUE` (the session answered after the interrupt; the parent now asserts it), fork check, 10 of 10 examples, the conformance slice green (67 ok, 3 diverge, 5 skip — unchanged), 34 recognize checks, 11 ownership checks, the slide sample. With the loopback stub on 8215 (`STUB_DELAY_MS=300`, stopped afterwards and the port checked closed): the wire suite too — `width: 1000 records, wall 9.664 s`, `stub: requests 1000 max_in_flight 32 connections 33` (the recorded baseline), and the wire interrupt at 2.907 s with the counter frozen at 320 through +1 s, +3 s, +5 s.
+
+**Residual windows, stated.** An interrupt is noticed at the next tick, so up to 100 ms after the signal (measured 0.886 s against a 1 s signal). A request already on the wire finishes before the engine stops (the engine's promise); the call returns without waiting for it, and the worker's own token clone keeps the batch stopped. An uncaught re-raised interrupt prints one `Error:` line before `Execution halted` where R's own interrupt prints none. `R_ToplevelExec` catches any jump from the interrupt check; the check is called on the main thread only. The `-1` deadline sentinel is the contract's one spelling for "no deadline"; R's `NULL` remains the natural one.
+
+**One side effect, stated:** with the kinds in hand, `tt_annotate` now names its columns from the set even when the frame has zero rows, where the old code errored on `names(rows[[1]])`; a zero-row frame comes back with the typed empty columns instead of stopping.

@@ -8,31 +8,39 @@
 //! dependency lines in this crate's manifest.
 //!
 //! R's own disciplines shape the threading. `R_CheckUserInterrupt` must
-//! run on R's main thread, and it may jump out of the call frame, so every
-//! engine call runs on a fresh plain worker thread while the main thread
-//! waits on a channel and checks for Ctrl-C every 100 ms; no thread is
-//! held between calls. R objects may only be touched on the main thread,
-//! so the worker returns plain Rust data and the main thread builds the
-//! R values from it. When the check jumps, R's `on.exit` cleanup
-//! (`.tt_cleanup`, which calls `tt_cancel_active`) sets the call's cancel
-//! token, and the engine keeps its promise: no new request starts, and the
-//! requests already sent finish.
+//! run on R's main thread, and it may jump out of the call frame; a jump
+//! across Rust frames is undefined behavior, so the jump is never allowed
+//! to cross one: the check runs inside `R_ToplevelExec`, which catches it
+//! and reports the pending interrupt instead. Every engine call runs on a
+//! fresh plain worker thread while the main thread waits on a channel and
+//! runs that guarded check every 100 ms; no thread is held between calls.
+//! R objects may only be touched on the main thread, so the worker returns
+//! plain Rust data and the main thread builds the R values from it.
+//!
+//! A pending interrupt stops the call where it stands: the token is
+//! cancelled (no new request starts, and the requests already sent
+//! finish), the call returns the interrupt marker, and the R half raises
+//! R's own interrupt condition from it. The checks before the call and
+//! after it catch an interrupt that landed while R was busy elsewhere, and
+//! R's `on.exit` cleanup (`.tt_cleanup`, which calls `tt_cancel_active`)
+//! still stops any call whose token is registered.
 //!
 //! Errors cross as one string, `kind`, a marker, `retryable`, a marker,
 //! and the message, so the R half can raise a condition carrying all
 //! three.
 
 use extendr_api::prelude::*;
+use std::ffi::c_void;
 use std::path::Path;
 use std::result::Result as StdResult;
-use std::sync::{LazyLock, Mutex, mpsc};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, mpsc};
 use std::time::Duration;
 
 use thinkthen_contract::{
-    relate_checked, Annotated, Answer, Cancel, Engine, Options, Question, QuestionSet, Recognize,
-    Recognized, Relate,
+    Annotated, Answer, Cancel, Connector, Engine, EngineConfig, Options, Question, QuestionSet,
+    Recognize, Recognized, Relate, deadline_from_seconds, relate_checked,
 };
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
 /// How long the main thread waits between interrupt checks. The engine's
 /// own wait tick is the same length, so a stop gesture lands within one
@@ -42,59 +50,126 @@ const POLL_MS: u64 = 100;
 /// The separator that carries an error's kind and retry signal to R.
 const ERROR_SEP: &str = "\u{1f}";
 
-// R's own interrupt check. It must run on the main thread, and it may jump
-// out of this frame when the user pressed Ctrl-C.
+// R's own interrupt check, and the top-level context that catches its
+// jump. The check must run on the main thread.
 extern "C" {
     fn R_CheckUserInterrupt();
+    fn R_ToplevelExec(check: extern "C" fn(*mut c_void), data: *mut c_void) -> i32;
 }
 
-/// The one engine value, built from the environment at the first call.
-static ENGINE: LazyLock<BlockingEngine> = LazyLock::new(BlockingEngine::from_env);
+/// The one engine value, built through the contract's connector door at the
+/// first call. The stand-in is the connector named today; pointing the
+/// surface at the real engine changes this line alone.
+static ENGINE: LazyLock<StdResult<Arc<dyn Engine>, String>> = LazyLock::new(|| {
+    StandinConnector.connect(&EngineConfig::from_env()).map_err(carry)
+});
 
-/// The cancel token of the call in flight, so R's `on.exit` cleanup can
-/// stop the batch after an interrupt jumped out of the frame. R runs one
-/// call at a time, so one slot serves.
+/// The engine value, or the connector's own failure, built once.
+fn engine() -> StdResult<Arc<dyn Engine>, String> {
+    ENGINE.clone()
+}
+
+/// The cancel token of the call in flight, so a stop gesture reaches it
+/// from the call's own thread. R runs one call at a time, so one slot
+/// serves. A poisoned lock is recovered rather than refused: the value
+/// inside is a token, and a token read after a panic is still a token.
 static ACTIVE: Mutex<Option<Cancel>> = Mutex::new(None);
+
+/// The slot, recovered from a panic that poisoned it.
+fn active_slot() -> MutexGuard<'static, Option<Cancel>> {
+    ACTIVE.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Forget the call in flight, once its token is spent or cancelled.
+fn clear_active() {
+    *active_slot() = None;
+}
 
 /// An engine error as the one string the R half parses.
 fn carry(error: thinkthen_contract::Error) -> String {
     format!("{}{ERROR_SEP}{}{ERROR_SEP}{}", error.kind, error.retryable, error.message)
 }
 
-/// One engine call on a fresh worker thread, R's interrupt check on the
-/// main thread while it runs, a fresh cancel token registered for the
-/// cleanup path, and plain data back for the main thread to convert.
+/// The marker the R half reads as R's own interrupt condition, packed like
+/// every other error: the kind word, the retry signal, and the message.
+fn interrupt_carried() -> String {
+    format!("interrupt{ERROR_SEP}false{ERROR_SEP}the call was interrupted")
+}
+
+/// Whether R holds a pending interrupt, checked without letting R's jump
+/// cross a Rust frame: `R_CheckUserInterrupt` runs inside `R_ToplevelExec`,
+/// which catches the jump and answers FALSE, so this frame stays whole and
+/// the interrupt is reported instead of unwound.
+fn interrupt_pending() -> bool {
+    extern "C" fn check(_: *mut c_void) {
+        unsafe { R_CheckUserInterrupt() }
+    }
+    unsafe { R_ToplevelExec(check, std::ptr::null_mut()) == 0 }
+}
+
+/// One engine call on a fresh worker thread, R's guarded interrupt check on
+/// the main thread while it runs, a fresh cancel token registered for the
+/// stop path, and plain data back for the main thread to convert.
 fn call<T>(
     deadline: Option<f64>,
-    work: impl for<'a> FnOnce(&BlockingEngine, Options<'a>) -> StdResult<T, thinkthen_contract::Error> + Send + 'static,
+    work: impl for<'a> FnOnce(&dyn Engine, Options<'a>) -> StdResult<T, thinkthen_contract::Error>
+        + Send
+        + 'static,
 ) -> StdResult<T, String>
 where
     T: Send + 'static,
 {
-    let token = Cancel::new();
-    {
-        let mut held = ACTIVE.lock().expect("the cancel slot locks");
-        *held = Some(token.clone());
+    // A pending interrupt stops the call before anything is sent.
+    if interrupt_pending() {
+        return Err(interrupt_carried());
     }
+    // The contract owns the one checked conversion of a host's deadline: a
+    // NaN, a negative other than the sentinel, or an oversized budget comes
+    // back as the usage kind before any thread exists. The sentinel and
+    // `None` both mean no deadline, and zero stays the spent deadline.
+    let budget = deadline
+        .map(deadline_from_seconds)
+        .transpose()
+        .map_err(carry)?
+        .flatten();
+    let engine = engine()?;
+    let token = Cancel::new();
+    *active_slot() = Some(token.clone());
+    let worker_token = token.clone();
     let (sender, receiver) = mpsc::channel::<StdResult<T, thinkthen_contract::Error>>();
-    let worker = std::thread::Builder::new()
-        .name("tt-r-call".to_owned())
-        .spawn(move || {
-            // The token this call registered in ACTIVE rides every engine
-            // call, so tt_cancel_active stops the batch, and a spent
-            // deadline (zero or less) is handed on to return the deadline
-            // kind naming the budget.
-            let mut options = Options::new().cancel(&token);
-            if let Some(seconds) = deadline {
-                options = options.deadline_in(Duration::from_secs_f64(seconds.max(0.0)));
-            }
-            let _ = sender.send(work(&ENGINE, options));
-        })
-        .expect("the call's worker thread starts");
+    let worker = match std::thread::Builder::new().name("tt-r-call".to_owned()).spawn(move || {
+        // The token this call registered rides every engine call, so a
+        // stop gesture reaches the batch, and the deadline (when the
+        // caller named one) is handed on to return the deadline kind
+        // naming the budget.
+        let mut options = Options::new().cancel(&worker_token);
+        if let Some(budget) = budget {
+            options = options.deadline_in(budget);
+        }
+        let _ = sender.send(work(&*engine, options));
+    }) {
+        Ok(worker) => worker,
+        Err(error) => {
+            clear_active();
+            return Err(carry(thinkthen_contract::Error::local(format!(
+                "the call's worker thread did not start: {error}"
+            ))));
+        }
+    };
     let answer = loop {
         match receiver.recv_timeout(Duration::from_millis(POLL_MS)) {
             Ok(answer) => break answer,
-            Err(mpsc::RecvTimeoutError::Timeout) => unsafe { R_CheckUserInterrupt() },
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                if interrupt_pending() {
+                    // Stop the call where it stands: no new request starts,
+                    // and the requests already sent finish. The worker
+                    // holds its own token clone, so the slot is cleared and
+                    // the interrupt is reported without waiting for it.
+                    token.cancel();
+                    clear_active();
+                    return Err(interrupt_carried());
+                }
+            }
             Err(mpsc::RecvTimeoutError::Disconnected) => {
                 let _ = worker.join();
                 break Err(thinkthen_contract::Error::defect(
@@ -104,12 +179,8 @@ where
         }
     };
     // The call is done, so its token is spent; clear the slot so a later
-    // cleanup cancels nothing. After an interrupt jump this line never
-    // runs, and the registered token is exactly what the cleanup wants.
-    {
-        let mut held = ACTIVE.lock().expect("the cancel slot locks");
-        *held = None;
-    }
+    // cleanup cancels nothing.
+    clear_active();
     answer.map_err(carry)
 }
 
@@ -333,6 +404,20 @@ fn tt_annotate_file(path: String, records: Vec<String>, deadline: Option<f64>) -
     Ok(List::from_values(built))
 }
 
+/// The question set's names and kinds, in the set's own name order, so the
+/// R half types each answer column by its question rather than by the first
+/// answer it happens to see.
+#[extendr]
+fn tt_annotate_kinds(path: String) -> StdResult<List, String> {
+    let set = QuestionSet::from_file(Path::new(&path)).map_err(carry)?;
+    let kinds: Vec<String> = set
+        .questions()
+        .iter()
+        .map(|question| question.kind().to_string())
+        .collect();
+    Ok(list!(names = set.names().to_vec(), kinds = kinds))
+}
+
 /// The failure kind's own word; `backend` today.
 fn kind_word(kind: thinkthen_contract::FailureKind) -> String {
     use thinkthen_contract::FailureKind;
@@ -394,20 +479,26 @@ fn tt_details_one(question: ExternalPtr<Question>, evidence: String, deadline: O
 
 /// The process counters.
 #[extendr]
-fn tt_usage_counters() -> List {
-    let usage = ENGINE.usage();
-    list!(
+fn tt_usage_counters() -> StdResult<List, String> {
+    let usage = engine()?.usage();
+    Ok(list!(
         requests = usage.requests,
         cache_answers = usage.cache_answers,
         tokens = usage.tokens
-    )
+    ))
+}
+
+/// Whether R holds a pending interrupt, for the R half's own checks before
+/// and after a call.
+#[extendr]
+fn tt_interrupt_pending() -> bool {
+    interrupt_pending()
 }
 
 /// Stop the call in flight, when an interrupt jumped out of its frame.
 #[extendr]
 fn tt_cancel_active() -> bool {
-    let mut held = ACTIVE.lock().expect("the cancel slot locks");
-    match held.take() {
+    match active_slot().take() {
         Some(token) => {
             token.cancel();
             true
@@ -570,8 +661,10 @@ extendr_module! {
     fn tt_filter_places;
     fn tt_rank_all;
     fn tt_annotate_file;
+    fn tt_annotate_kinds;
     fn tt_details_one;
     fn tt_usage_counters;
+    fn tt_interrupt_pending;
     fn tt_cancel_active;
     fn tt_question_digest;
     fn tt_question_parts;
@@ -588,5 +681,12 @@ mod tests {
         ));
         let parts: Vec<&str> = carried.split(ERROR_SEP).collect();
         assert_eq!(parts, ["defect", "false", "the engine broke its own contract"]);
+    }
+
+    #[test]
+    fn the_interrupt_marker_packs_as_an_interrupt() {
+        let carried = interrupt_carried();
+        let parts: Vec<&str> = carried.split(ERROR_SEP).collect();
+        assert_eq!(parts, ["interrupt", "false", "the call was interrupted"]);
     }
 }

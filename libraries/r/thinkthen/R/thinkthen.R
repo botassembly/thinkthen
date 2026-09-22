@@ -20,12 +20,38 @@ tt_raise <- function(text) {
   ))
 }
 
-# Every call runs through here: an engine failure raises as its condition,
-# and an interrupt's jump leaves the token registered so on.exit can stop
-# the batch.
+# Every call runs through here: the engine's failure raises as its
+# condition, a pending interrupt raises R's own interrupt condition, and
+# the cleanup stops any call still in flight. The Rust half never lets R's
+# interrupt jump cross its frames: it checks for a pending interrupt under
+# a guard before entering and on every tick of a wait, cancels the call's
+# token, and reports the marker this function raises.
 .tt_call <- function(expr) {
   on.exit(.tt_cleanup(), add = TRUE)
-  tryCatch(expr, error = function(e) tt_raise(conditionMessage(e)))
+  if (tt_interrupt_pending()) .tt_interrupt()
+  held <- tryCatch(expr, error = .tt_error)
+  if (tt_interrupt_pending()) .tt_interrupt()
+  held
+}
+
+# An engine call's error as its condition: the interrupt marker becomes
+# R's own interrupt condition, and anything else is one of the six kinds.
+.tt_error <- function(e) {
+  text <- conditionMessage(e)
+  parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
+  if (length(parts) == 3L && identical(parts[[1]], "interrupt")) {
+    .tt_interrupt()
+  }
+  tt_raise(text)
+}
+
+# R's own interrupt condition, raised where the guarded check caught the
+# jump: tryCatch(interrupt = ...) catches it exactly as it catches Ctrl-C.
+.tt_interrupt <- function() {
+  stop(structure(
+    class = c("interrupt", "condition"),
+    list(message = "", call = NULL)
+  ))
 }
 
 # The cleanup an interrupt's jump reaches: stop the call in flight so no
@@ -243,61 +269,66 @@ tt_find <- function(question, units, deadline = NULL) {
 }
 
 # annotate: a question set file over a data frame, one request a row, a new
-# column a question. Decision columns read TRUE/FALSE/NA; choose columns
-# character with NA; score columns numeric; tag columns hold lists. A
-# question that failed for any record widens its column to a list whose
-# cells are the bare answer or the ruled marker `list(failed = ...)`, so a
-# failure never reads as NA (0054).
+# column a question. Each column's type comes from its question's kind,
+# never from the first answer's shape: decision columns read TRUE/FALSE/NA,
+# choose columns character with NA, score columns numeric, tag columns hold
+# lists of their labels. A question that failed for any record widens its
+# column to a list whose cells are the bare answer or the ruled marker
+# `list(failed = ...)`, so a failure never reads as NA (0054).
 .tt_marker <- function(field) {
   is.list(field) && !is.null(field$failed)
 }
 
+# One answer cell as its kind's bare shape: a decision TRUE/FALSE/NA, a
+# choice its own string or NA, a score its number, a tag its labels.
+.tt_bare <- function(field, kind) {
+  switch(kind,
+    decide = if (length(field) == 0L) NA else field == 1L,
+    choose = if (length(field) == 0L) NA_character_ else as.character(field)[[1L]],
+    score = if (is.null(field)) NA_real_ else field$value,
+    tag = as.character(field),
+    stop("the question set carries a kind this surface does not know", call. = FALSE)
+  )
+}
+
+# One answer column, typed by its question's kind.
+.tt_answer_column <- function(fields, kind) {
+  switch(kind,
+    decide = vapply(fields, .tt_bare, logical(1), kind = "decide"),
+    choose = vapply(fields, .tt_bare, character(1), kind = "choose"),
+    score = vapply(fields, .tt_bare, numeric(1), kind = "score"),
+    tag = lapply(fields, .tt_bare, kind = "tag"),
+    stop("the question set carries a kind this surface does not know", call. = FALSE)
+  )
+}
+
 tt_annotate <- function(file, data, on, deadline = NULL) {
   column <- as.character(data[[on]])
+  kinds <- .tt_call(tt_annotate_kinds(as.character(file)))
   rows <- .tt_call(tt_annotate_file(as.character(file), column, deadline))
   if (!identical(length(rows), length(column))) {
     stop("annotate returned a row a record or nothing", call. = FALSE)
   }
+  held <- as.list(kinds$kinds)
+  names(held) <- kinds$names
+  column_names <- if (length(rows)) names(rows[[1]]) else kinds$names
   added <- list()
-  for (name in names(rows[[1]])) {
+  for (name in column_names) {
+    kind <- held[[name]]
+    if (is.null(kind)) {
+      stop("annotate returned a column the question set does not name", call. = FALSE)
+    }
     fields <- lapply(rows, function(row) row[[name]])
     if (any(vapply(fields, .tt_marker, logical(1)))) {
-      # The widened column: good answers keep their own shape, the failed
-      # cells carry the marker list.
+      # The widened column: good answers keep their kind's bare shape, the
+      # failed cells carry the marker list.
       added[[name]] <- lapply(fields, function(field) {
         if (.tt_marker(field)) return(field)
-        if (is.list(field)) return(field$value)
-        if (is.character(field) && length(field) > 1L) return(field)
-        if (is.character(field)) return(if (length(field) == 0L) NA_character_ else field[[1L]])
-        if (length(field) == 0L) NA else field == 1L
+        .tt_bare(field, kind)
       })
       next
     }
-    shape <- if (is.list(fields[[1]])) {
-      "score"
-    } else if (is.character(fields[[1]]) && length(fields[[1]]) > 1L) {
-      "tags"
-    } else if (is.character(fields[[1]])) {
-      "choose"
-    } else {
-      "decide"
-    }
-    added[[name]] <- switch(shape,
-      score = vapply(fields, function(field) field$value, numeric(1)),
-      tags = fields,
-      choose = vapply(fields, function(field) {
-        if (length(field) == 0L) NA_character_ else field[[1L]]
-      }, character(1)),
-      decide = {
-        held <- vapply(fields, function(field) {
-          if (length(field) == 0L) NA_integer_ else as.integer(field)
-        }, integer(1))
-        out <- rep(NA, length(held))
-        out[!is.na(held) & held == 1L] <- TRUE
-        out[!is.na(held) & held == 0L] <- FALSE
-        out
-      }
-    )
+    added[[name]] <- .tt_answer_column(fields, kind)
   }
   base <- as.data.frame(data, stringsAsFactors = FALSE)
   for (name in names(added)) base[[name]] <- added[[name]]
