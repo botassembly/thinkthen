@@ -9,13 +9,12 @@
 //! the real `thinkthen-core` wire shapes.
 //!
 //! Two fork preconditions, stated because "by construction" alone cannot
-//! defend them: the settings are read once on first use (`config()`'s
-//! OnceLock), so a fork that lands while that first read is in flight
-//! leaves the child blocked on that lock — read the settings before any
-//! fork; and a forked child keeps the inherited pool's file descriptors
-//! for its lifetime, because the pid-check rebuild leaks the retired pool
-//! rather than tearing it down — the descriptors close when the child
-//! exits, and nothing else closes them.
+//! defend them: the settings are read when an engine value is built
+//! (`ResolvedConfig::resolve`), so build the engine before any fork; and a
+//! forked child keeps the inherited pool's file descriptors for its
+//! lifetime, because the pid-check rebuild leaks the retired pool rather
+//! than tearing it down — the descriptors close when the child exits, and
+//! nothing else closes them.
 //!
 //! What is stand-in here, named so nothing mistakes it for product: the
 //! session has no disk cache (`cache_answers` stays zero and the cache
@@ -25,18 +24,18 @@
 //! backend answers every verb in-process with the conformance file's own
 //! numbers, so one set of cases runs against it and against recordings.
 //!
-//! Environment, read once on first use: `ENGINE_NULL` for the in-process
+//! Environment, read when an engine value is built and used only for what
+//! a [`EngineConfig`] leaves unset: `ENGINE_NULL` for the in-process
 //! backend, `ENGINE_BASE_URL` for the stub on the wire (the contract's
 //! `THINKTHEN_BASE_URL` wins over it), `ENGINE_TIMEOUT_SECS` (30),
-//! `ENGINE_MAX_RETRIES` (2), `ENGINE_WIDTH` (the settings' width, else 4).
-//! No key is read and none is sent.
+//! `ENGINE_MAX_RETRIES` (2), `ENGINE_WIDTH` (4). No key is read and none
+//! is sent.
 
 use std::ptr;
 use std::sync::Arc;
 use std::sync::Condvar;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
-use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::thread;
@@ -44,9 +43,9 @@ use std::time::Duration;
 use std::time::Instant;
 
 use thinkthen_contract::{
-    Annotated, AnnotatedRecord, Answer, Cancel, Cause, Details, Edge, Error, Failed,
-    FailureKind, Found, Judgment, Options, Question, QuestionKind, QuestionSet, Ranked,
-    Recognize, Recognized, Relate, Scored, Settings, Usage,
+    Annotated, AnnotatedRecord, Answer, Cancel, Cause, Details, Edge, EngineConfig, Error, Failed,
+    FailureKind, Found, Judgment, Options, Question, QuestionKind, QuestionSet, Ranked, Recognize,
+    Recognized, Relate, Scored, Settings, Usage,
 };
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{Backend, Evidence, ModelName, Plan, Reply, Value};
@@ -74,8 +73,10 @@ const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
 /// The most of one response body an attempt reads before it gives up.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 
-/// The settled knobs, read once on first use.
-struct Config {
+/// The settled knobs one engine value runs with, resolved from its
+/// [`EngineConfig`] first and the environment second.
+#[derive(Debug)]
+struct ResolvedConfig {
     null: bool,
     base: String,
     timeout: Duration,
@@ -83,38 +84,50 @@ struct Config {
     width: usize,
 }
 
-fn config() -> &'static Config {
-    static CONFIG: OnceLock<Config> = OnceLock::new();
-    CONFIG.get_or_init(|| {
-        let set = |name: &str| std::env::var(name).ok().filter(|value| !value.trim().is_empty());
-        Config {
-            null: set("ENGINE_NULL").is_some(),
-            base: set("THINKTHEN_BASE_URL")
-                .or_else(|| set("ENGINE_BASE_URL"))
+impl ResolvedConfig {
+    /// Resolve one engine value's knobs: every config field set wins, the
+    /// environment answers for what it leaves unset, and the built-in
+    /// defaults answer last.
+    fn resolve(config: &EngineConfig) -> Self {
+        let env = |name: &str| std::env::var(name).ok().filter(|value| !value.trim().is_empty());
+        let env_number = |name: &str| env(name).and_then(|value| value.parse::<u64>().ok());
+        Self {
+            null: env("ENGINE_NULL").is_some(),
+            base: config
+                .address
+                .clone()
+                .or_else(|| env("THINKTHEN_BASE_URL"))
+                .or_else(|| env("ENGINE_BASE_URL"))
                 .unwrap_or_else(|| "http://127.0.0.1:8091/v1".into()),
-            timeout: Duration::from_secs(
-                set("ENGINE_TIMEOUT_SECS")
-                    .and_then(|value| value.parse().ok())
-                    .unwrap_or(30),
-            ),
-            max_retries: set("ENGINE_MAX_RETRIES")
-                .and_then(|value| value.parse().ok())
-                .unwrap_or(2),
-            width: set("ENGINE_WIDTH")
-                .and_then(|value| value.parse().ok())
+            timeout: config
+                .timeout
+                .unwrap_or_else(|| Duration::from_secs(env_number("ENGINE_TIMEOUT_SECS").unwrap_or(30))),
+            max_retries: config
+                .max_retries
+                .unwrap_or_else(|| env_number("ENGINE_MAX_RETRIES").unwrap_or(2) as u32),
+            width: config
+                .width
+                .or_else(|| env_number("ENGINE_WIDTH").map(|value| value as usize))
                 .unwrap_or(4),
         }
-    })
+    }
+
+    /// The knobs as the environment alone reads them, for the helpers that
+    /// name a request without an engine value.
+    fn from_env() -> Self {
+        Self::resolve(&EngineConfig::from_env())
+    }
 }
 
 /// The engine every surface binds until the real one lands.
 ///
-/// Built from the environment or from [`Settings`], carrying the contract's
-/// settings and the stand-in's knobs. Holds no thread between calls.
+/// Built from the environment or from an [`EngineConfig`], carrying the
+/// resolved knobs. Holds no thread between calls.
 #[derive(Clone, Debug)]
 pub struct BlockingEngine {
     model: Option<String>,
     max_requests: Option<u64>,
+    config: Arc<ResolvedConfig>,
 }
 
 impl BlockingEngine {
@@ -128,7 +141,11 @@ impl BlockingEngine {
     /// Build an engine from settled settings.
     #[must_use]
     pub fn from_settings(settings: Settings) -> Self {
-        Self { model: settings.model, max_requests: settings.max_requests }
+        Self {
+            model: settings.model.clone(),
+            max_requests: settings.max_requests,
+            config: Arc::new(ResolvedConfig::resolve(&settings)),
+        }
     }
 
     /// The core's threshold for a contract question, when it holds one.
@@ -160,19 +177,19 @@ impl BlockingEngine {
         let model = ModelName::new(model_name).map_err(|error| Error::usage(error.to_string()))?;
         let plan = Plan::new(text, model, vec![question.core().clone()])
             .map_err(|error| Error::usage(error.to_string()))?;
-        let settings = config();
+        let settings = &self.config;
         let (body, sends) = if settings.null {
             // The null backend sends nothing, so it counts one a call, the
             // way a send would.
             REQUESTS.fetch_add(1, Ordering::Relaxed);
             (null_reply(question, evidence)?, 1)
         } else {
-            let inner = state(options)?;
+            let inner = state(options, &self.config)?;
             let _ticket = inner.gate.enter(options)?;
             let url = endpoint_of(settings, model_name)?;
             let wire =
                 built_in::encode(&plan).map_err(|error| Error::backend_not_retryable(error.to_string()))?;
-            post(&inner.agent, &url, wire, options)?
+            post(&inner.agent, &url, wire, options, &self.config)?
         };
         let reply: Reply = built_in::decode(&plan, &body)
             .map_err(|error| Error::backend_not_retryable(error.to_string()))?;
@@ -198,7 +215,7 @@ impl BlockingEngine {
         if records.is_empty() {
             return Ok(Vec::new());
         }
-        let width = config().width.max(1);
+        let width = self.config.width.max(1);
         let threads = width.min(records.len());
         let (task_tx, task_rx) = mpsc::sync_channel::<(usize, &str)>(threads);
         let task_rx = Arc::new(Mutex::new(task_rx));
@@ -326,6 +343,35 @@ impl BlockingEngine {
             .into_iter()
             .collect::<Option<Vec<_>>>()
             .ok_or_else(|| Error::defect("a worker stopped before its record was answered"))
+    }
+}
+
+/// The connector a surface names today: it builds stand-in engines, and
+/// pointing a surface at the real engine's connector is the one line the
+/// merge changes.
+///
+/// ```
+/// let connector = thinkthen_standin::StandinConnector;
+/// let engine = thinkthen_contract::Connector::connect(
+///     &connector,
+///     &thinkthen_contract::EngineConfig::from_env(),
+/// )?;
+/// # Ok::<(), thinkthen_contract::Error>(())
+/// ```
+#[derive(Clone, Copy, Debug, Default)]
+pub struct StandinConnector;
+
+impl thinkthen_contract::Connector for StandinConnector {
+    /// Build an engine value: every config field set wins over the
+    /// environment, and the environment answers for what it leaves unset.
+    ///
+    /// # Errors
+    ///
+    /// Never, on the stand-in: resolution has no failure path. The real
+    /// engine's connector returns the usage or local kind for a config it
+    /// cannot honor.
+    fn connect(&self, config: &EngineConfig) -> Result<Arc<dyn Engine>, Error> {
+        Ok(Arc::new(BlockingEngine::from_settings(config.clone())))
     }
 }
 
@@ -654,7 +700,7 @@ pub fn request_digest(
     evidence: &str,
 ) -> Result<String, Error> {
     let text = Evidence::new(evidence).map_err(|error| Error::usage(error.to_string()))?;
-    let settings = config();
+    let settings = ResolvedConfig::from_env();
     let model_name = model.unwrap_or(question.model());
     let model = ModelName::new(model_name).map_err(|error| Error::usage(error.to_string()))?;
     let plan = Plan::new(text, model, vec![question.core().clone()])
@@ -791,7 +837,7 @@ fn null_reply(question: &Question, evidence: &str) -> Result<Vec<u8>, Error> {
 }
 
 /// Where one request goes, with the endpoint path already on the base.
-fn endpoint_of(settings: &Config, model: &str) -> Result<String, Error> {
+fn endpoint_of(settings: &ResolvedConfig, model: &str) -> Result<String, Error> {
     let backend = Backend::resolve(None, Some(&settings.base), model)
         .map_err(|error| Error::usage(error.to_string()))?;
     Ok(backend.url().as_str().to_owned())
@@ -803,16 +849,17 @@ fn post(
     url: &str,
     body: Vec<u8>,
     options: &Options<'_>,
+    settings: &ResolvedConfig,
 ) -> Result<(Vec<u8>, u32), Error> {
-    let limit = config().max_retries;
+    let limit = settings.max_retries;
     let mut waited = Duration::from_secs(1);
     let mut attempt = 0_u32;
     let mut sends = 0_u32;
     loop {
         Error::guard(options)?;
         let budget = match options.remaining() {
-            Some(left) => config().timeout.min(left),
-            None => config().timeout,
+            Some(left) => settings.timeout.min(left),
+            None => settings.timeout,
         };
         let request = agent
             .post(url)
@@ -846,7 +893,7 @@ fn post(
                         Some(left) => waited.min(left),
                         None => waited,
                     };
-                    thread::sleep(nap);
+                    sleep_checked(nap, options)?;
                     waited = waited.saturating_mul(2);
                     continue;
                 }
@@ -861,7 +908,7 @@ fn post(
                 Some(left) => wait.min(left),
                 None => wait,
             };
-            thread::sleep(nap);
+            sleep_checked(nap, options)?;
             waited = waited.saturating_mul(2);
             continue;
         }
@@ -936,6 +983,29 @@ fn retry_wait(response: &ureq::http::Response<ureq::Body>) -> Option<Duration> {
     header("retry-after").map(Duration::from_secs)
 }
 
+/// How long one slice of a retry wait holds before the token and the
+/// deadline are checked again.
+const SLEEP_SLICE: Duration = Duration::from_millis(100);
+
+/// Wait out a retry backoff in slices, hearing a cancel and a spent
+/// deadline inside the wait.
+///
+/// A backoff may run to sixty seconds (`MAX_RETRY_WAIT`); a plain sleep
+/// would ignore a stop gesture for that whole time. The wait ends early
+/// with the cancelled kind when the token is set, and with the deadline
+/// kind when the budget passes.
+fn sleep_checked(nap: Duration, options: &Options<'_>) -> Result<(), Error> {
+    let end = Instant::now() + nap;
+    loop {
+        Error::guard(options)?;
+        let left = end.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return Ok(());
+        }
+        thread::sleep(left.min(SLEEP_SLICE));
+    }
+}
+
 /// The fixed phrase that follows a status, as `backends.md` sets each one.
 const fn phrase(status: u16) -> &'static str {
     match status {
@@ -949,10 +1019,13 @@ const fn phrase(status: u16) -> &'static str {
     }
 }
 
-/// The process state: one pool and one width gate, stamped with the pid it
-/// was built for.
+/// The process state: one pool and one width gate, stamped with the pid
+/// and the transport shape it was built for.
 struct Inner {
     pid: u32,
+    base: String,
+    width: usize,
+    timeout: Duration,
     agent: ureq::Agent,
     gate: Gate,
 }
@@ -1024,17 +1097,17 @@ fn lock<T>(held: &Mutex<T>) -> MutexGuard<'_, T> {
     held.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// Build fresh state for this pid.
-fn build_inner(pid: u32) -> Result<Inner, Error> {
-    let width = config().width.max(1);
-    let secure = Backend::resolve(None, Some(&config().base), "jev-latest")
+/// Build fresh state for this pid and transport shape.
+fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
+    let width = settings.width.max(1);
+    let secure = Backend::resolve(None, Some(&settings.base), "jev-latest")
         .map(|backend| backend.is_secure())
         .unwrap_or(false);
     // The pool must hold what the gate lets through: `ureq` pools 10 idle
     // connections overall and 3 per host by default, so a wide engine would
     // open a connection for nearly every request.
     let mut builder = ureq::Agent::config_builder()
-        .timeout_global(Some(config().timeout))
+        .timeout_global(Some(settings.timeout))
         .http_status_as_error(false)
         .max_redirects(0)
         .max_idle_connections(width)
@@ -1044,6 +1117,9 @@ fn build_inner(pid: u32) -> Result<Inner, Error> {
     }
     Ok(Inner {
         pid,
+        base: settings.base.clone(),
+        width,
+        timeout: settings.timeout,
         agent: builder.build().into(),
         gate: Gate {
             counts: Mutex::new(GateCounts { busy: 0, limit: width }),
@@ -1052,13 +1128,15 @@ fn build_inner(pid: u32) -> Result<Inner, Error> {
     })
 }
 
-/// The state for this process, rebuilt after a fork.
+/// The state for this process and transport shape, rebuilt after a fork
+/// and when an engine value with a different address, width, or timeout
+/// arrives.
 ///
 /// # Errors
 ///
 /// Returns the options' own failure when the call is already stopped, and
 /// an error of the backend kind when the pool cannot be built.
-fn state(options: &Options<'_>) -> Result<Arc<Inner>, Error> {
+fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>, Error> {
     let now = std::process::id();
     loop {
         let current = STATE.load(Ordering::Acquire);
@@ -1066,12 +1144,16 @@ fn state(options: &Options<'_>) -> Result<Arc<Inner>, Error> {
             // SAFETY: a stored pointer is never freed. Retirement leaks the
             // old value on purpose, so this read stays valid forever.
             let inner = unsafe { (*current).clone() };
-            if inner.pid == now {
+            if inner.pid == now
+                && inner.base == settings.base
+                && inner.width == settings.width.max(1)
+                && inner.timeout == settings.timeout
+            {
                 return Ok(inner);
             }
         }
         Error::guard(options)?;
-        let fresh = Arc::new(build_inner(now)?);
+        let fresh = Arc::new(build_inner(now, settings)?);
         let boxed = Box::into_raw(Box::new(Arc::clone(&fresh)));
         if STATE
             .compare_exchange(current, boxed, Ordering::AcqRel, Ordering::Acquire)
