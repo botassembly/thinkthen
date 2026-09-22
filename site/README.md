@@ -5,7 +5,7 @@ The site lives in this folder of the thinkthen repository, so the code and the s
 
 The site for ThinkThen. Astro, static output, served by GitHub Pages at `thinkthen.dev`.
 
-Tagline on every page: **ThinkThen: code that understands.**
+Tagline on every page: **ThinkThen: code that knows what you mean.**
 
 ## Build it
 

@@ -5,7 +5,7 @@
 // `repos/thinkthen/specification/`. Nothing here is an example: examples live
 // in `src/data/examples/` and are pulled by `scripts/pull-examples.mjs`.
 
-export const TAGLINE = 'ThinkThen: code that understands';
+export const TAGLINE = 'ThinkThen: code that knows what you mean';
 
 // Set to false the day the site is linked from anywhere.
 export const NOINDEX = true;

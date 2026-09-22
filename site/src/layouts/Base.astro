@@ -3,7 +3,7 @@ import '../styles/site.css';
 import { TAGLINE, NOINDEX } from '../data/catalog.mjs';
 
 const { title, description = 'Ten functions that process text by its meaning, in your scripts, your programs, and your queries.' } = Astro.props;
-const full = title === 'ThinkThen' ? 'ThinkThen: code that understands' : `${title} — ThinkThen`;
+const full = title === 'ThinkThen' ? 'ThinkThen: code that knows what you mean' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
 // One card for every page. The image is the wordmark on the light ground.
