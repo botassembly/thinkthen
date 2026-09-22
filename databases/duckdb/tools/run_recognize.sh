@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# The recognize and relate acceptance: the DuckDB calls in the deck's
-# `recognize-surfaces.md` are extracted verbatim and run in the stock
-# v1.5.5 CLI against the stand-in, and the two calls that cannot run as
-# drawn are pinned with their exact binder errors and the working
-# replacements. The fixture tables hold recorded texts so the replay can
+# The recognize and relate acceptance: the DuckDB calls the product deck's
+# `recognize-surfaces.md` page draws are run verbatim in the stock v1.5.5
+# CLI against the stand-in, and the two calls that cannot run as drawn are
+# pinned with their exact binder errors and the working replacements. The
+# deck stays the source of truth; its drawn lines are vendored at
+# `tools/drawn-calls/recognize.sql` so this check runs with no private
+# deck on disk. The fixture tables hold recorded texts so the replay can
 # answer. The "Names become rows" join runs with the usage counters
 # around it, and the 255-record refusal is proven.
 set -euo pipefail
 cd "$(dirname "$0")"
 ROOT=$(cd .. && pwd)
-DECK="${ROOT}/../../../../repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md"
-[ -f "$DECK" ] || DECK=/home/ian/workspace/repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md
 DUCKDB="$ROOT/duckdb-bin/duckdb"
 EXT="$ROOT/build/release/thinkthen.duckdb_extension"
 
@@ -21,20 +21,9 @@ cd recognize-run
 # for the pinned lines.
 exec > >(tee run.log) 2>&1
 
-# The calls, verbatim from the deck page: the line after each `-- DuckDB:`
-# marker and the line after the `-- all three` marker.
-python3 - "$DECK" > calls.sql << 'PY'
-import sys
-
-lines = open(sys.argv[1]).read().splitlines()
-calls = []
-for i, line in enumerate(lines):
-    stripped = line.strip()
-    if (stripped.startswith("-- DuckDB") or stripped.startswith("-- all three")) and i + 1 < len(lines):
-        calls.append(lines[i + 1].strip())
-for call in calls:
-    print(call)
-PY
+# The calls, verbatim: the vendored copy of the deck's drawn lines, one
+# per line, in the deck's order.
+grep -v "^--" "$ROOT/tools/drawn-calls/recognize.sql" > calls.sql
 echo "the calls as drawn:"
 sed 's/^/  /' calls.sql
 
