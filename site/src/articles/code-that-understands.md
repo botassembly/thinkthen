@@ -89,7 +89,7 @@ That file also diffs in a pull request like any other code.
 
 ## Ten functions you can compose
 
-The model answers three kinds of question: yes or no, one of a list, and a place on a scale. Diogo Almeida, TypeSafe's founder, puts them in code terms: "Choice is a switch on an enum. Noul is an if. Score is a sort or a threshold." ThinkThen turns those answers into ten functions. This article shows four of them; the site shows all ten. The functions read standard input and write standard output.
+The model answers three kinds of question: yes or no, one of a list, and a place on a scale. Diogo Almeida, TypeSafe's founder, puts them in code terms: "Choice maps into a switch statement on an enum. Nouls map to if statements. Scores map to sorting or thresholding." ThinkThen turns those answers into ten functions. This article shows four of them; the site shows all ten. The functions read standard input and write standard output.
 
 `decide` answers one yes or no. `choose` picks one option from your list. `score` places the evidence on named levels. `tag` names every label that fits. `filter` keeps the records that pass, byte for byte and in their original order. `rank` orders records by how likely a yes is. `find` picks the one line that best answers a question. `annotate` fills out a form of named questions for every record. `recognize` finds the names in the evidence, and `relate` says how records connect.
 
