@@ -135,8 +135,8 @@ fn table_rule_failures_are_exact_and_send_nothing() {
         (
             b"body,id\nyes\n",
             concat!(
-                "thinkthen: the CSV record has 1 fields; its header has 2\n",
-                "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n",
+                "thinkthen: the CSV record has 1 field; its header has 2\n",
+                "thinkthen: stopped at record 1; 0 records finished\n",
             ),
         ),
     ];
@@ -201,7 +201,7 @@ fn compiled_table_failures_pin_utf8_control_and_size() {
         5,
         concat!(
             "thinkthen: the CSV record is not valid UTF-8\n",
-            "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n",
+            "thinkthen: stopped at record 1; 0 records finished\n",
         ),
     )
     .expect("record UTF-8 case runs");
@@ -224,7 +224,7 @@ fn compiled_table_failures_pin_utf8_control_and_size() {
         2,
         concat!(
             "thinkthen: the CSV record is over 16 MiB\n",
-            "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n",
+            "thinkthen: stopped at record 1; 0 records finished\n",
         ),
     )
     .expect("record size case runs");
@@ -355,8 +355,8 @@ fn reverse_completion_keeps_table_order_and_a_bad_row_stops_the_tail() {
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
         concat!(
-            "thinkthen: the CSV record has 1 fields; its header has 2\n",
-            "thinkthen: stopped at record 4; 3 records finished, 0 records from a recording\n",
+            "thinkthen: the CSV record has 1 field; its header has 2\n",
+            "thinkthen: stopped at record 4; 3 records finished\n",
         )
     );
 }

@@ -10,6 +10,7 @@ Ian can overturn any placement here.
 - Landed: 0055, the move to one package through the private engine. Its final review accepted the repaired engine ownership, conformance proof, worker lifetime, doctests, and core boundary enforcement.
 - Landed: 0056. Detailed filtering now keeps only passing records, ranked details keep the same `--top` membership, and a band's exact low edge is `not sure`.
 - Landed: 0057. Help now states the record-mode exit boundary and visible defaults, `--url` appears in short help under ADR 0031, zero timeouts fail before input or network access, and the specification agrees with the binary.
+- Landed: 0058. Backend, transport, question-file, recording, table, and empty-input diagnostics now name the condition and a safe action. Dry runs apply the live one-document width rule.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
@@ -18,7 +19,7 @@ Ian can overturn any placement here.
 
 **A1. The command-layer fixes. Safe beside 0055 only where they avoid the files 0055 changed. Otherwise first after it.**
 
-Tickets 0056 and 0057 completed every row below except the two message rows. Those rows form the next diagnostics ticket.
+Tickets 0056 through 0058 completed every row below. Lane A continues with backend profiles.
 
 | Fix | Source issue | Product ruling |
 | --- | --- | --- |

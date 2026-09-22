@@ -15,6 +15,8 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 
 Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads nothing.
 
+A recording directory argument that names a regular file is a local failure at exit 5. The diagnostic says to choose another path or remove the file. It repeats neither the path nor an operating-system error.
+
 Both options on one folder are also the resume for a record run. [records.md](records.md) shows it.
 
 ## An entry

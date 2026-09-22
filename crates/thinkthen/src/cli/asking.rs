@@ -115,6 +115,7 @@ pub(crate) fn run(
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
+    let jobs = schedule::jobs_of(common.jobs, reading.streams())?;
     let source = edge::source(common.input.as_deref(), input)?;
     let configuration = JudgingInput {
         common,
@@ -133,7 +134,7 @@ pub(crate) fn run(
     };
 
     if let Some(kind) = table_kind(common) {
-        return over_table(configuration, &reading, source, kind, output);
+        return over_table(configuration, &reading, source, kind, jobs, output);
     }
 
     let mut chunks = edge::Chunks::new(source, reading.streams());
@@ -151,7 +152,7 @@ pub(crate) fn run(
         );
     }
 
-    let jobs = schedule::jobs_of(common.jobs, reading.streams())?;
+    let recording = configuration.folders.named();
     let judging = Judging::new(configuration)?;
     if !judging.streams {
         let bytes = chunks.next().transpose()?.unwrap_or_default();
@@ -164,6 +165,7 @@ pub(crate) fn run(
         &|bytes: &Vec<u8>| judging.row(&reading, bytes),
         chunks,
         jobs,
+        recording,
         output,
     )
 }
@@ -173,6 +175,7 @@ fn over_table(
     reading: &Reading,
     source: Box<dyn std::io::BufRead + Send>,
     kind: TableKind,
+    jobs: usize,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let mut rows = TableRows::new(source, kind)?;
@@ -188,12 +191,13 @@ fn over_table(
             output.writer(),
         );
     }
-    let jobs = schedule::jobs_of(configuration.common.jobs, true)?;
+    let recording = configuration.folders.named();
     let judging = Judging::new(configuration)?;
     schedule::over_records(
         &|record| judging.typed_row(reading, record),
         rows,
         jobs,
+        recording,
         output,
     )
 }

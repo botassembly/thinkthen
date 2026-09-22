@@ -102,7 +102,7 @@ An empty line or JSONL stream succeeds with no output and no request. CSV and TS
 
 Settled by ADR 0008 item 5, accepted in ADR 0010. A run stops at the first failed record. Rows already printed stay printed, and the run ends with the code the failure earns: 4 for a backend failure, 5 for a local failure, 2 for a record the tool refused before sending it. No failure ever becomes `false`, `null`, a label, or a zero.
 
-A run that stops early prints one line on standard error: the record it stopped at, how many records it finished, and how many of those came from a recording. A run that finishes prints nothing there. Printed output after a failure is a prefix of the input. It is not a finished dataset.
+A run that stops early prints one line on standard error with the record where it stopped and how many records it finished. When `--record`, `--replay`, or `--cache` made recordings relevant, the line also says how many finished records came from one. A run that finishes prints nothing there. Printed output after a failure is a prefix of the input. It is not a finished dataset.
 
 An unresolved answer is never retried. In record mode the exit code reports the run, and no record's answer sets it. A completed run exits 0 unless `annotate` preserves one or more failed questions beside good answers and exits 6. Codes 7 and 8 stay reserved.
 

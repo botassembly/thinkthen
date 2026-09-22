@@ -63,9 +63,7 @@ fn a_record_over_the_limit_stops_the_run_and_sends_nothing_for_itself() {
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        format!(
-            "{REFUSED}thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n"
-        )
+        format!("{REFUSED}thinkthen: stopped at record 2; 1 record finished\n")
     );
 }
 
@@ -122,8 +120,6 @@ fn the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record() {
     assert!(listener.requests().is_empty(), "the tail was sent");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        format!(
-            "{REFUSED}thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n"
-        )
+        format!("{REFUSED}thinkthen: stopped at record 1; 0 records finished\n")
     );
 }

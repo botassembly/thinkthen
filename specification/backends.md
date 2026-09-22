@@ -50,12 +50,16 @@ A failure after the last retry is exit code 4. The message gives the status code
 
 | Status | Phrase |
 | --- | --- |
+| 400 | the backend refused the request; check `--model` and the request size |
 | 401 | the key was refused |
 | 402 | the account has no credit |
 | 403 | the key may not use this model or address |
 | 404 | nothing answers at this address |
 | 422 | the backend refused the request as malformed or too large |
 | 429 | the backend's rate limit was reached |
+| 500 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
+
+A connection failure is reduced from the HTTP client's structured error before it reaches the command. The command prints fixed guidance and never the client text, operating-system text, address, key, evidence, or response body. A timeout says to increase `--timeout` or try again. A missing host says to check `--url` and the network. A refused connection says to check that the backend is running and that `--url` is correct. A connection that closes before a reply says to try again or change `--max-retries`. Every other transport failure says to check `--url` and the network.
 
 Status 402 was seen live on 2026-09-19, on an account with no credit left. The vendor's own pages list no 402 anywhere. `sdlc/records/0003-live-call.md` holds the calls that met it.
 

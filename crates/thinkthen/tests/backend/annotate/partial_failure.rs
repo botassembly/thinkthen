@@ -206,7 +206,7 @@ fn a_later_whole_run_failure_keeps_its_code_and_stop_boundary() -> io::Result<()
         String::from_utf8_lossy(&output.stderr),
         concat!(
             "thinkthen: the backend answered with status 401: the key was refused\n",
-            "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n",
+            "thinkthen: stopped at record 2; 1 record finished\n",
         )
     );
     assert_eq!(listener.requests().len(), 2);

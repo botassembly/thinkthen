@@ -10,7 +10,7 @@ pub(crate) enum BlankTextError {
     #[error("a question is text, not white space")]
     QuestionText,
     /// Evidence is what a judgment reads, so it carries text.
-    #[error("evidence is text, not white space")]
+    #[error("the evidence is empty or blank")]
     Evidence,
     /// A model name reports what answered, so it carries text.
     #[error("a model name is text, not white space")]

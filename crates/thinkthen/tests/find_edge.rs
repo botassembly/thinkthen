@@ -247,7 +247,7 @@ fn compiled_count_boundaries_accept_and_refuse_the_exact_edges() {
 }
 
 #[test]
-fn syntax_and_utf8_refusals_repeat_no_input() {
+fn syntax_and_no_recording_utf8_refusals_repeat_no_input() {
     let marker = "PRIVATE-FIND-MARKER";
     let invalid_json = run(
         &["find", "Which?", "--jsonl", "--field", "/body"],
@@ -260,6 +260,25 @@ fn syntax_and_utf8_refusals_repeat_no_input() {
     assert_eq!(invalid_utf8.status.code(), Some(5));
     assert_eq!(
         String::from_utf8_lossy(&invalid_utf8.stderr),
+        concat!(
+            "thinkthen: the record is not valid UTF-8\n",
+            "thinkthen: stopped at record 2; 0 records finished\n",
+        )
+    );
+}
+
+#[test]
+fn a_named_recording_appears_in_a_find_preflight_stop() {
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("find-stopped-recording");
+    let folder = folder.to_string_lossy();
+    let output = run(
+        &["find", "Which?", "--replay", &folder],
+        b"first\nsecond\xff\n",
+    )
+    .expect("binary runs");
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
         concat!(
             "thinkthen: the record is not valid UTF-8\n",
             "thinkthen: stopped at record 2; 0 records finished, 0 records from a recording\n",

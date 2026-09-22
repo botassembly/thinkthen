@@ -4,6 +4,16 @@ use std::io;
 
 use crate::core::adapters::built_in::DecodeError;
 
+/// A safe, stable description of why a backend connection failed.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum TransportKind {
+    Timeout,
+    NameLookup,
+    Refused,
+    PrematureClose,
+    Other,
+}
+
 /// The stable class a host-facing error will use in a later ticket.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[allow(
@@ -26,13 +36,14 @@ pub(crate) enum Kind {
     reason = "deterministic conformance injections exercise kinds absent from the current command"
 )]
 pub(crate) enum Error {
-    Transport(String),
+    Transport(TransportKind),
     Status(u16),
     Reply(DecodeError),
     ReplayMiss(String),
     Entry(String, String),
     RecordingConflict(String),
     Recording(io::Error),
+    RecordingPathIsFile,
     Defect(&'static str),
     Usage(&'static str),
     Cancelled,
@@ -50,7 +61,8 @@ impl Error {
             Self::ReplayMiss(_)
             | Self::Entry(_, _)
             | Self::RecordingConflict(_)
-            | Self::Recording(_) => Kind::Local,
+            | Self::Recording(_)
+            | Self::RecordingPathIsFile => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_) => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,

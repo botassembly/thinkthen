@@ -51,6 +51,7 @@ pub(crate) fn run(
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
+    let recording = folders.named();
     let recorder = (!common.dry_run)
         .then(|| Recorder::of(folders.record, folders.replay))
         .transpose()?;
@@ -60,6 +61,7 @@ pub(crate) fn run(
         edge::source(common.input.as_deref(), input)?,
         most,
         arguments.none,
+        recording,
     )?;
     if units.is_empty() {
         return Ok(ExitCode::SUCCESS);
@@ -119,6 +121,7 @@ fn read_units(
     source: Box<dyn std::io::BufRead + Send>,
     most: usize,
     none: bool,
+    recording: bool,
 ) -> Result<Vec<Unit>, Failure> {
     let mut chunks = edge::Chunks::new(source, true);
     let mut original = 0usize;
@@ -135,10 +138,10 @@ fn read_units(
         }
         let record = reading
             .record(&bytes)
-            .map_err(|error| stopped(units.len(), Failure::record(error, true)))?;
+            .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
         let evidence = reading
             .evidence(&record)
-            .map_err(|error| stopped(units.len(), Failure::record(error, true)))?;
+            .map_err(|error| stopped(units.len(), recording, Failure::record(error, true)))?;
         units.push((bytes, record, evidence));
     }
     Ok(units)
@@ -200,11 +203,12 @@ fn rendered(
     Ok((line, place.is_some()))
 }
 
-fn stopped(place: usize, cause: Failure) -> Failure {
+fn stopped(place: usize, recording: bool, cause: Failure) -> Failure {
     Failure::Stopped {
         at: place + 1,
         finished: 0,
         replayed: 0,
+        recording,
         held: false,
         cause: Box::new(cause),
     }

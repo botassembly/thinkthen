@@ -96,7 +96,7 @@ set -eu
 THINKTHEN_API_KEY=not-a-real-key thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --input queue.jsonl --url http://127.0.0.1:9/v1 \
   --model local-decider-3 --timeout 2 --max-retries 0 2>&1 >/dev/null \
-  | mustmatch like "could not be reached"
+  | mustmatch like "backend refused the connection"
 ```
 
 - **A record that answered after the stop is still recorded.** Several requests are in flight when one fails, and the answers that came back were billed. The rerun does not pay for them twice, and the stop always names the earliest failed record.

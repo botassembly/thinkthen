@@ -16,8 +16,8 @@ pub(crate) enum Command {
     ///
     /// The answer is a bare `true`, `false`, or `null`, and the exit code is 0
     /// for yes, 1 for no, and 3 for unresolved. Under `set -e` or `set -o
-    /// pipefail` a no ends the script, so put the command in an `if`, a `case`,
-    /// or a `||` list.
+    /// pipefail` a no or not sure answer ends the script, so put the command in
+    /// an `if`, a `case`, or a `||` list.
     ///
     /// A single cut answers no when the probability did not reach the mark. It
     /// never says the model is sure of no. A three-way gate takes a band, as

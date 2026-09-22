@@ -1,12 +1,13 @@
 //! One HTTP exchange with a backend, retried as `specification/backends.md` says.
 
 use std::fmt;
+use std::io;
 use std::thread;
 use std::time::Duration;
 
 use ureq::Agent;
 
-use crate::engine::error::Error;
+use crate::engine::error::{Error, TransportKind};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
 pub(crate) struct Key(String);
@@ -185,7 +186,7 @@ fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Attempt> {
         );
     let mut response = request
         .send(exchange.body)
-        .map_err(|error| Attempt::from(Error::Transport(error.to_string())))?;
+        .map_err(|error| Attempt::from(Error::Transport(transport(&error))))?;
     let status = response.status().as_u16();
     if !(200..300).contains(&status) {
         let header = |name: &str| {
@@ -205,7 +206,30 @@ fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Attempt> {
         .with_config()
         .limit(MAX_RESPONSE_BYTES)
         .read_to_vec()
-        .map_err(|error| Attempt::from(Error::Transport(error.to_string())))
+        .map_err(|error| Attempt::from(Error::Transport(transport(&error))))
+}
+
+/// Reduce an HTTP-library error to the safe class the command contract knows.
+fn transport(error: &ureq::Error) -> TransportKind {
+    match error {
+        ureq::Error::Timeout(_) => TransportKind::Timeout,
+        ureq::Error::HostNotFound => TransportKind::NameLookup,
+        ureq::Error::Io(error) => io_transport(error),
+        _ => TransportKind::Other,
+    }
+}
+
+/// Reduce an operating-system I/O error without preserving its text.
+fn io_transport(error: &io::Error) -> TransportKind {
+    match error.kind() {
+        io::ErrorKind::ConnectionRefused => TransportKind::Refused,
+        io::ErrorKind::UnexpectedEof
+        | io::ErrorKind::ConnectionReset
+        | io::ErrorKind::ConnectionAborted
+        | io::ErrorKind::BrokenPipe => TransportKind::PrematureClose,
+        io::ErrorKind::TimedOut => TransportKind::Timeout,
+        _ => TransportKind::Other,
+    }
 }
 
 /// Say whether this failure earns another attempt.
@@ -219,7 +243,9 @@ fn is_retried(failure: &Error) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::honored;
+    use super::{honored, io_transport, transport};
+    use crate::engine::error::TransportKind;
+    use std::io;
     use std::time::Duration;
 
     #[test]
@@ -253,6 +279,45 @@ mod tests {
         ];
         for (millis, seconds, expected) in cases {
             assert_eq!(honored(millis, seconds), expected, "{millis:?} {seconds:?}");
+        }
+    }
+
+    #[test]
+    fn structured_transport_errors_map_without_reading_their_display_text() {
+        let cases = [
+            (
+                ureq::Error::Timeout(ureq::Timeout::Global),
+                TransportKind::Timeout,
+            ),
+            (ureq::Error::HostNotFound, TransportKind::NameLookup),
+            (
+                ureq::Error::Io(io::Error::new(
+                    io::ErrorKind::ConnectionRefused,
+                    "hostile refused text",
+                )),
+                TransportKind::Refused,
+            ),
+            (
+                ureq::Error::Io(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "hostile close text",
+                )),
+                TransportKind::PrematureClose,
+            ),
+            (ureq::Error::ConnectionFailed, TransportKind::Other),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(transport(&error), expected, "{error:?}");
+        }
+        for kind in [
+            io::ErrorKind::ConnectionReset,
+            io::ErrorKind::ConnectionAborted,
+            io::ErrorKind::BrokenPipe,
+        ] {
+            assert_eq!(
+                io_transport(&io::Error::new(kind, "hostile close text")),
+                TransportKind::PrematureClose
+            );
         }
     }
 }

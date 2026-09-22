@@ -89,11 +89,14 @@ impl fmt::Display for Error {
                 kind,
                 expected,
                 found,
-            } => write!(
-                formatter,
-                "the {} record has {found} fields; its header has {expected}",
-                kind.name()
-            ),
+            } => {
+                let noun = if *found == 1 { "field" } else { "fields" };
+                write!(
+                    formatter,
+                    "the {} record has {found} {noun}; its header has {expected}",
+                    kind.name()
+                )
+            }
             Self::RecordTooLarge(kind) => {
                 write!(formatter, "the {} record is over 16 MiB", kind.name())
             }
@@ -330,7 +333,7 @@ mod tests {
                 b"a,\x01\n1,2\n",
                 "the CSV header has a name containing a control character",
             ),
-            (b"a,b\n1\n", "the CSV record has 1 fields; its header has 2"),
+            (b"a,b\n1\n", "the CSV record has 1 field; its header has 2"),
         ];
         for (input, expected) in cases {
             assert_eq!(

@@ -128,6 +128,7 @@ pub(crate) fn over_records<T, I>(
     row: &Asking<'_, T>,
     chunks: I,
     jobs: usize,
+    recording: bool,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
 where
@@ -166,6 +167,7 @@ where
             at,
             finished,
             replayed,
+            recording,
             held,
             cause: Box::new(cause),
         }),

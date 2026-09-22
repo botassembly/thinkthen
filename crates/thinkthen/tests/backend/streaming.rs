@@ -193,7 +193,7 @@ fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
         ("{\"body\":1e999}\n", "`NaN` and `Infinity`"),
         ("not json\n", "not valid JSON"),
         ("{\"other\":\"x\"}\n", "holds nothing at `/body`"),
-        ("{\"body\":\"   \"}\n", "evidence is text"),
+        ("{\"body\":\"   \"}\n", "the evidence is empty or blank"),
     ];
 
     for (bad, said_part) in cases {
@@ -208,7 +208,7 @@ fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
         let message = said(&output);
         assert!(message.contains(said_part), "{message}");
         assert!(
-            message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
+            message.contains("stopped at record 2; 1 record finished"),
             "{message}"
         );
         assert!(!message.contains("payout"), "{message}");
@@ -217,7 +217,7 @@ fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
                 message,
                 concat!(
                     "thinkthen: the record is not valid JSON\n",
-                    "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n",
+                    "thinkthen: stopped at record 2; 1 record finished\n",
                 )
             );
             assert!(!message.contains("not json"), "{message}");
@@ -254,7 +254,7 @@ fn a_record_that_is_not_text_stops_the_run_at_exit_five() {
     let message = said(&output);
     assert!(message.contains("not valid UTF-8"), "{message}");
     assert!(
-        message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
+        message.contains("stopped at record 2; 1 record finished"),
         "{message}"
     );
 }
@@ -286,7 +286,7 @@ fn a_backend_failure_stops_the_run_and_the_rows_before_it_stay_printed() {
     let message = said(&output);
     assert!(message.contains("status 500"), "{message}");
     assert!(
-        message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
+        message.contains("stopped at record 2; 1 record finished"),
         "{message}"
     );
 }

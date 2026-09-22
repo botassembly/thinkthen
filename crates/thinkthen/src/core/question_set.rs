@@ -32,6 +32,9 @@ pub(crate) enum QuestionSetError {
     /// The top level is not an object.
     #[error("the question set is one JSON object")]
     NotObject,
+    /// The required top-level question wrapper is absent.
+    #[error("the question set is missing its `questions` object")]
+    MissingQuestions,
     /// A key is not allowed at its path.
     #[error("the question set holds no key `{0}`")]
     UnknownKey(String),
@@ -140,6 +143,9 @@ impl QuestionSet {
         let Json::Object(members) = &value else {
             return Err(QuestionSetError::NotObject);
         };
+        if value.member("questions").is_none() {
+            return Err(QuestionSetError::MissingQuestions);
+        }
         for (key, _) in members {
             if !["version", "threshold", "questions"].contains(&key.as_str()) {
                 return Err(QuestionSetError::UnknownKey(key.clone()));

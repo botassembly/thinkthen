@@ -83,6 +83,7 @@ where
             at,
             finished,
             replayed,
+            recording: judging.recording_named(),
             held: false,
             cause: Box::new(cause),
         }),

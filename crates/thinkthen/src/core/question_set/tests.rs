@@ -98,6 +98,18 @@ fn grammar_errors_name_the_full_path() {
 }
 
 #[test]
+fn a_missing_questions_wrapper_precedes_unknown_top_level_keys() {
+    assert_eq!(
+        QuestionSet::parse(r#"{"version":1,"unresolved":{"decide":"x"}}"#),
+        Err(QuestionSetError::MissingQuestions)
+    );
+    assert_eq!(
+        QuestionSetError::MissingQuestions.to_string(),
+        "the question set is missing its `questions` object"
+    );
+}
+
+#[test]
 fn groups_keep_first_question_order() {
     let set = QuestionSet::parse(r#"{"version":1,"questions":{"a":{"decide":"a","on":"/x"},"b":{"score":"b","levels":["low","high"],"on":"/y"},"c":{"decide":"c","on":"/x"}}}"#).expect("valid set");
     assert_eq!(set.groups(), vec![vec![0, 2], vec![1]]);

@@ -379,6 +379,25 @@ fn two_different_folders_and_a_dry_run_that_records_are_usage_errors() {
     assert!(!folder.exists(), "a usage error writes no folder");
 }
 
+#[test]
+fn a_recording_path_that_is_a_file_gets_a_fixed_action() {
+    let folder = folder("recording-path-is-file");
+    fs::write(&folder, b"private path marker").expect("a file blocks the folder");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a listener");
+    let output = decide(
+        listener.base(),
+        &["--record", &folder.to_string_lossy()],
+        KEY,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the recording directory is a file; choose another path or remove the file\n"
+    );
+}
+
 /// The mode a path carries, on the one family of systems the tool targets.
 #[cfg(unix)]
 fn mode(path: &Path) -> io::Result<u32> {

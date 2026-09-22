@@ -308,6 +308,36 @@ fn an_error_status_that_is_not_retried_fails_at_once() {
 }
 
 #[test]
+fn common_request_statuses_name_fixed_actions_and_hide_the_body() {
+    let evidence = "private evidence marker";
+    let body = format!(r#"{{"error":"{evidence}"}}"#);
+    let cases = [
+        (
+            400,
+            "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size\n",
+        ),
+        (
+            500,
+            "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
+        ),
+    ];
+    for (status, expected) in cases {
+        let listener =
+            Listener::serving(vec![Canned::status(status, &body)]).expect("a loopback listener");
+        let output = decide(listener.base(), &["--max-retries", "0"], KEY, evidence)
+            .expect("the compiled binary runs");
+        assert_eq!(output.status.code(), Some(4), "{status}");
+        assert!(output.stdout.is_empty(), "{status}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            expected,
+            "{status}"
+        );
+        assert!(!String::from_utf8_lossy(&output.stderr).contains(evidence));
+    }
+}
+
+#[test]
 fn a_redirect_is_refused_so_no_key_and_no_evidence_reach_another_host() {
     let elsewhere = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
     let listener =
@@ -371,6 +401,10 @@ fn a_body_the_backend_cut_short_is_exit_four() {
 
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n"
+    );
 }
 
 #[test]
@@ -382,6 +416,10 @@ fn a_backend_that_answers_nothing_is_exit_four() {
 
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the backend refused the connection; check that it is running and that --url is correct\n"
+    );
 }
 
 #[test]

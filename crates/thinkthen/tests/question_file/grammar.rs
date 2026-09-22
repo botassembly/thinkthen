@@ -120,6 +120,23 @@ fn every_refusal_the_grammar_makes_names_its_key_and_its_exit_code() {
 }
 
 #[test]
+fn an_unknown_local_key_is_escaped_and_stays_on_one_line() {
+    let file = written(
+        "unknown-control-key",
+        r#"{"decide":"Does this pass?","line\nbreak":true}"#,
+    );
+    assert_eq!(
+        refused(&["decide", &file, "--dry-run"]),
+        (
+            r#"thinkthen: a question file holds no key `line\nbreak`
+"#
+            .to_owned(),
+            Some(5)
+        )
+    );
+}
+
+#[test]
 fn a_file_with_too_many_options_is_refused_by_the_same_sentence() {
     let names: Vec<String> = (0..256).map(|number| format!(r#""o{number}""#)).collect();
     let file = written(

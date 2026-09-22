@@ -58,9 +58,6 @@ const RECORD_VERBS: [(&str, &[&str], &str); 2] = [
     ("rank", &[], r#""type":"noul","noul":0.92"#),
 ];
 
-/// A reply the adapter refuses, whatever question was asked.
-const MALFORMED: &str = r#"{"model":"","answers":{}}"#;
-
 /// A recording entry a reader takes, whose every field is hostile text.
 ///
 /// It names another schema, so it is refused after it parses. No field of it
@@ -117,8 +114,6 @@ pub(crate) enum Answers {
     RateLimit,
     /// A rate limit that never lifts, past the one retry the run allows.
     RateLimited,
-    /// A reply the adapter refuses.
-    Malformed,
     /// A reply that is JSON no adapter reads, quoting the evidence back.
     Unreadable,
     /// Nothing at all, because the run must not reach the listener.
@@ -136,7 +131,6 @@ impl Answers {
                 Canned::status(429, &quoting()),
                 Canned::status(429, &quoting()),
             ],
-            Self::Malformed => vec![Canned::ok(MALFORMED)],
             Self::Unreadable => vec![Canned::ok(&unreadable())],
             Self::Nothing => Vec::new(),
         }
@@ -168,7 +162,6 @@ pub(crate) struct Route {
     pub(crate) keyed: bool,
 }
 
-/// Every path the backend and the recording folder can send a run down.
 pub(crate) const PATHS: [Route; 17] = [
     route("a success", &[], Answers::Good, 1, 0),
     route("a plan", &["--dry-run"], Answers::Nothing, 0, 0),
@@ -238,7 +231,7 @@ pub(crate) const PATHS: [Route; 17] = [
         0,
         4,
     ),
-    route("a refused key", &[], Answers::Status(401), 1, 4),
+    route("a refused request", &[], Answers::Status(400), 1, 4),
     route("a rate limit that lifts", &[], Answers::RateLimit, 2, 0),
     route(
         "a rate limit that stays",
@@ -247,7 +240,13 @@ pub(crate) const PATHS: [Route; 17] = [
         2,
         4,
     ),
-    route("a malformed answer", &[], Answers::Malformed, 1, 4),
+    route(
+        "an exhausted backend failure",
+        &["--max-retries", "0"],
+        Answers::Status(500),
+        1,
+        4,
+    ),
     route("an unreadable answer", &[], Answers::Unreadable, 1, 4),
     // The exchange succeeds and the entry cannot be written, which is the one
     // failure that happens after a key has already crossed the wire.

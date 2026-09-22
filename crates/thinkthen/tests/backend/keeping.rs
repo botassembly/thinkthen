@@ -367,8 +367,8 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
     assert_eq!(
         said(&output),
         concat!(
-            "thinkthen: the backend answered with status 500\n",
-            "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n",
+            "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
+            "thinkthen: stopped at record 2; 1 record finished\n",
         )
     );
 
@@ -396,8 +396,8 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
     assert_eq!(
         said(&output),
         concat!(
-            "thinkthen: the backend answered with status 500\n",
-            "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording,",
+            "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
+            "thinkthen: stopped at record 2; 1 record finished,",
             " and nothing was printed because an order needs every record\n",
         )
     );

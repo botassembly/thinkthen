@@ -142,12 +142,7 @@ const REFUSALS: [Refusal; 32] = [
     },
     Refusal {
         evidence: "   ",
-        ..every(
-            "blank evidence",
-            &[],
-            "evidence is text, not white space",
-            2,
-        )
+        ..every("blank evidence", &[], "the evidence is empty or blank", 2)
     },
     Refusal {
         evidence: "{huge}",

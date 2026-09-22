@@ -123,7 +123,7 @@ fn jsonl_syntax_keeps_the_record_sentence_and_sends_nothing() {
         said(&output),
         concat!(
             "thinkthen: the record is not valid JSON\n",
-            "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n",
+            "thinkthen: stopped at record 1; 0 records finished\n",
         )
     );
     assert_eq!(listener.connections(), 0);
@@ -221,7 +221,7 @@ fn invalid_utf8_names_a_stream_record_and_a_whole_document_as_evidence() {
         .expect("the compiled binary runs");
         let expected = if summary {
             format!(
-                "thinkthen: the {noun} is not valid UTF-8\nthinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n"
+                "thinkthen: the {noun} is not valid UTF-8\nthinkthen: stopped at record 1; 0 records finished\n"
             )
         } else {
             format!("thinkthen: the {noun} is not valid UTF-8\n")

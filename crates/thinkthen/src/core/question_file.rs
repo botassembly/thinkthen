@@ -126,7 +126,7 @@ pub(crate) enum QuestionFileError {
     #[error("a question file holds one question, and this one holds `{0}` and `{1}`")]
     TwoVerbs(&'static str, &'static str),
     /// The file holds a key no question file has.
-    #[error("a question file holds no key `{0}`")]
+    #[error("a question file holds no key `{}`", safe_key(.0))]
     UnknownKey(String),
     /// The file holds a key another verb takes.
     #[error("a `{verb}` question file takes no key `{key}`")]
@@ -210,6 +210,15 @@ pub(crate) enum QuestionFileError {
         /// Why it is not a JSON Pointer.
         error: PointerError,
     },
+}
+
+fn safe_key(key: &str) -> String {
+    let encoded = serde_json::to_string(key).unwrap_or_else(|_| "\"<unprintable>\"".to_owned());
+    encoded
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .unwrap_or("<unprintable>")
+        .to_owned()
 }
 
 /// Name malformed JSON by the question file while preserving other refusals.

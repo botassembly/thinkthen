@@ -42,7 +42,7 @@ fn a_distribution_total_error_names_the_rule_without_reply_values() {
         assert_eq!(
             error.to_string(),
             format!(
-                "the answer to question `q1` has probability total {total}, member count 4, and tolerance 0.010000000000000888; the total differs from one by more than the tolerance"
+                "the answer to question `q1` has probability total {total}, member count 4, and tolerance 0.01; the total differs from one by more than the tolerance"
             )
         );
         assert!(!error.to_string().contains(member));

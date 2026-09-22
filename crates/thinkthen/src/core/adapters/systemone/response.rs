@@ -248,12 +248,12 @@ fn spread(
         DistributionError::Total {
             total,
             members,
-            tolerance,
+            tolerance: _,
         } => DecodeError::DistributionTotal {
             place,
             total: total.to_string(),
             members,
-            tolerance: tolerance.to_string(),
+            tolerance: DISTRIBUTION_ROUNDING.to_string(),
         },
     })
 }

@@ -260,6 +260,10 @@ pub(crate) struct Judging<'a> {
 }
 
 impl Judging<'_> {
+    pub(crate) const fn recording_named(&self) -> bool {
+        self.recorder.named()
+    }
+
     pub(crate) fn record(
         &self,
         base: &Reading,

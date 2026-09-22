@@ -95,3 +95,13 @@ fn every_refusal_of_the_grammar_names_the_key_at_fault() {
         assert!(refusal.to_string().contains(said), "{refusal} :: {text}");
     }
 }
+
+#[test]
+fn an_unknown_key_is_json_escaped_inside_one_diagnostic_line() {
+    let error = refused(r#"{"decide":"a","line\nbreak":1}"#);
+    assert_eq!(
+        error.to_string(),
+        r#"a question file holds no key `line\nbreak`"#
+    );
+    assert_eq!(error.to_string().lines().count(), 1);
+}

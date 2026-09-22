@@ -1,6 +1,7 @@
 use super::{Failure, report};
 use crate::core::recording::{Entry, Exchange as Recorded};
 use crate::core::{QuestionSetError, RecordError, Url};
+use crate::engine::error::TransportKind;
 use std::process::ExitCode;
 use std::time::Duration;
 
@@ -77,7 +78,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
     let cases = [
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
-        Failure::Transport("connection refused".to_owned()),
+        Failure::Transport(TransportKind::Refused),
         Failure::Record(RecordError::NotUtf8),
         Failure::Record(RecordError::TooLarge),
         Failure::ReplayMiss("abc.json".to_owned()),
@@ -86,6 +87,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             at: 2,
             finished: 1,
             replayed: 0,
+            recording: false,
             held: false,
             cause: Box::new(Failure::Record(RecordError::TooLarge)),
         },
@@ -93,6 +95,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             at: 2,
             finished: 1,
             replayed: 0,
+            recording: false,
             held: true,
             cause: Box::new(Failure::Record(RecordError::TooLarge)),
         },
@@ -148,6 +151,68 @@ fn a_common_failure_status_carries_the_phrase_the_specification_fixes() {
 }
 
 #[test]
+fn common_request_statuses_give_fixed_actions() {
+    let cases = [
+        (
+            400,
+            "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size\n",
+        ),
+        (
+            500,
+            "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
+        ),
+    ];
+    for (status, expected) in cases {
+        let mut written = Vec::new();
+        assert_eq!(
+            report(&Failure::Status(status), &mut written),
+            ExitCode::from(4)
+        );
+        assert_eq!(
+            String::from_utf8(written).expect("diagnostic is text"),
+            expected
+        );
+    }
+}
+
+#[test]
+fn transport_kinds_give_fixed_actions() {
+    let cases = [
+        (
+            TransportKind::Timeout,
+            "thinkthen: the backend timed out; increase --timeout or try again\n",
+        ),
+        (
+            TransportKind::NameLookup,
+            "thinkthen: the backend's host could not be found; check --url and the network\n",
+        ),
+        (
+            TransportKind::Refused,
+            "thinkthen: the backend refused the connection; check that it is running and that --url is correct\n",
+        ),
+        (
+            TransportKind::PrematureClose,
+            "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n",
+        ),
+        (
+            TransportKind::Other,
+            "thinkthen: the backend could not be reached; check --url and the network\n",
+        ),
+    ];
+    for (kind, expected) in cases {
+        let mut written = Vec::new();
+        assert_eq!(
+            report(&Failure::Transport(kind), &mut written),
+            ExitCode::from(4)
+        );
+        assert_eq!(
+            String::from_utf8(written).expect("diagnostic is text"),
+            expected
+        );
+    }
+}
+
+#[test]
 fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
     let cases = [
         (Failure::Record(RecordError::NotUtf8), 5, "not valid UTF-8"),
@@ -189,6 +254,7 @@ fn stopped_counts_use_record_only_at_one() {
             at: finished + 1,
             finished,
             replayed,
+            recording: true,
             held: false,
             cause: Box::new(Failure::Record(RecordError::TooLarge)),
         };

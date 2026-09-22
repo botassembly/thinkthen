@@ -10,11 +10,16 @@ use crate::core::{
 };
 
 use crate::engine::error::Error as EngineError;
+use crate::engine::error::TransportKind;
 use crate::table;
 
 /// The phrases are fixed text written here. A backend can quote the evidence
 /// back in an error body, so nothing a backend sent ever reaches a message.
-const PHRASES: [(u16, &str); 6] = [
+const PHRASES: [(u16, &str); 8] = [
+    (
+        400,
+        "the backend refused the request; check --model and the request size",
+    ),
     (401, "the key was refused"),
     (402, "the account has no credit"),
     (403, "the key may not use this model or address"),
@@ -24,6 +29,10 @@ const PHRASES: [(u16, &str); 6] = [
         "the backend refused the request as malformed or too large",
     ),
     (429, "the backend's rate limit was reached"),
+    (
+        500,
+        "the backend failed after the allowed attempts; try again later or change --max-retries",
+    ),
 ];
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
@@ -103,6 +112,8 @@ pub(crate) enum Failure {
         finished: usize,
         /// How many of those a recording answered.
         replayed: usize,
+        /// Whether this run named a recording, replay, or cache folder.
+        recording: bool,
         /// True when the run held every row back and printed none.
         held: bool,
         /// What stopped the record, which sets the exit code.
@@ -115,7 +126,7 @@ pub(crate) enum Failure {
     /// The key variable the backend names holds nothing.
     NoKey(String),
     /// The backend could not be reached at all.
-    Transport(String),
+    Transport(TransportKind),
     /// The backend answered with a status that is not a success.
     Status(u16),
     /// The adapter refused what the backend answered.
@@ -148,6 +159,8 @@ pub(crate) enum Failure {
     RecordingConflict(String),
     /// The recording folder could not be read or written.
     Recording(io::Error),
+    /// A recording directory argument names a regular file.
+    RecordingPathIsFile,
     /// An invariant inside `thinkthen` broke.
     Defect(&'static str),
     /// A document `thinkthen` built could not be written as JSON.
@@ -217,7 +230,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             4,
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
         ),
-        Failure::Transport(what) => (4, format!("the backend could not be reached: {what}")),
+        Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::ReplayMiss(name) => (
@@ -232,6 +245,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Recording(error) => (
             5,
             format!("the recording folder could not be read or written: {error}"),
+        ),
+        Failure::RecordingPathIsFile => (
+            5,
+            "the recording directory is a file; choose another path or remove the file".to_owned(),
         ),
         Failure::OpenInput(error) => (5, format!("--input could not be opened: {error}")),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
@@ -272,6 +289,7 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
         at,
         finished,
         replayed,
+        recording,
         held,
         cause,
     } = failure
@@ -285,10 +303,15 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
         ""
     };
     let finished_noun = if *finished == 1 { "record" } else { "records" };
-    let replayed_noun = if *replayed == 1 { "record" } else { "records" };
+    let recording_clause = if *recording {
+        let replayed_noun = if *replayed == 1 { "record" } else { "records" };
+        format!(", {replayed} {replayed_noun} from a recording")
+    } else {
+        String::new()
+    };
     let _unwritten = writeln!(
         writer,
-        "{}: stopped at record {at}; {finished} {finished_noun} finished, {replayed} {replayed_noun} from a recording{withheld}",
+        "{}: stopped at record {at}; {finished} {finished_noun} finished{recording_clause}{withheld}",
         crate::core::NAME
     );
     Some(code)
@@ -402,6 +425,22 @@ fn said(status: u16) -> String {
     }
 }
 
+const fn transport_message(kind: TransportKind) -> &'static str {
+    match kind {
+        TransportKind::Timeout => "the backend timed out; increase --timeout or try again",
+        TransportKind::NameLookup => {
+            "the backend's host could not be found; check --url and the network"
+        }
+        TransportKind::Refused => {
+            "the backend refused the connection; check that it is running and that --url is correct"
+        }
+        TransportKind::PrematureClose => {
+            "the backend closed the connection before a reply; try again or change --max-retries"
+        }
+        TransportKind::Other => "the backend could not be reached; check --url and the network",
+    }
+}
+
 impl From<BackendError> for Failure {
     fn from(error: BackendError) -> Self {
         Self::Backend(error)
@@ -454,6 +493,7 @@ impl From<EngineError> for Failure {
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::Recording(error) => Self::Recording(error),
+            EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
             EngineError::Defect(message) => Self::Defect(message),
             EngineError::Usage(message) => Self::Usage(message),
             EngineError::Cancelled => {

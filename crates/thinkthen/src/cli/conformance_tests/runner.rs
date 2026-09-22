@@ -136,6 +136,7 @@ fn run_fault(case: &super::Case, expected: &str) {
         at: 1,
         finished: 0,
         replayed: 0,
+        recording: false,
         held: false,
         cause: Box::new(Failure::from(cause)),
     };

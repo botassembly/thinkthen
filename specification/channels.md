@@ -76,7 +76,7 @@ A gate is a command whose exit code decides whether something happens. Word the 
 
 ## `set -e` and `pipefail`
 
-`decide` exits 1 on a no and 3 on an unresolved answer. Under `set -e` a plain `thinkthen decide ...` ends the script on any no. Under `set -o pipefail` a `decide` inside a pipeline gives the whole pipeline a non-zero status for the same reason. Put the command in an `if`, a `case`, or a `||` list. The help says so.
+`decide` exits 1 on a no and 3 on a not sure answer. Under `set -e` a plain `thinkthen decide ...` ends the script on either one. Under `set -o pipefail` a `decide` inside a pipeline gives the whole pipeline a non-zero status for the same reason. Put the command in an `if`, a `case`, or a `||` list. The help says so.
 
 ## `--dry-run`
 

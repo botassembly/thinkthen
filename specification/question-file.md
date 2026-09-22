@@ -38,7 +38,7 @@ A question file holds exactly one question. The first key names the verb and car
 {"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME"}
 ```
 
-A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional.
+A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional.
 
 `options` and `labels` are lists, or maps from each label to its description. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is empty or holds only white space is no description.
 

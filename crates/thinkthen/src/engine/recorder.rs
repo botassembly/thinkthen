@@ -43,11 +43,22 @@ impl Recorder {
             (Some(named), _) | (_, Some(named)) => Some(named.to_owned()),
             (None, None) => None,
         };
+        if folder
+            .as_ref()
+            .and_then(|path| fs::metadata(path).ok())
+            .is_some_and(|metadata| metadata.is_file())
+        {
+            return Err(Error::RecordingPathIsFile);
+        }
         Ok(Self {
             folder,
             recording: record.is_some(),
             replaying: replay.is_some(),
         })
+    }
+
+    pub(crate) const fn named(&self) -> bool {
+        self.folder.is_some()
     }
 
     /// Answer this exchange from the folder, or say the folder cannot.
