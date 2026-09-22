@@ -184,15 +184,25 @@ def main():
                     if verb == "details"
                     else "SELECT thinkthen_decide(?, ?)"
                 )
+                params = (json.dumps(question), evidence)
+                if "budget_ms" in case:
+                    # The per-call deadline door: the ruled third argument
+                    # carries the case's budget (case 27). The shared skip
+                    # table still lists the deadline kind as a gap; when
+                    # that entry narrows, this driver runs the case.
+                    sql = sql[:-1] + ", ?)"
+                    params = (json.dumps(question), evidence, case["budget_ms"])
                 try:
-                    held = conn.execute(
-                        sql, (json.dumps(question), evidence)
-                    ).fetchone()[0]
+                    held = conn.execute(sql, params).fetchone()[0]
                 except sqlite3.OperationalError as failure:
-                    if expect.get("error", {}).get("kind") == "usage":
+                    kind = expect.get("error", {}).get("kind")
+                    text = str(failure)
+                    if kind == "usage":
+                        report(case_id, f"refused ({failure})")
+                    elif kind == "deadline" and "thinkthen deadline" in text:
                         report(case_id, f"refused ({failure})")
                     else:
-                        report(case_id, str(failure), failed=True)
+                        report(case_id, text, failed=True)
                     continue
                 if "error" in expect:
                     report(
