@@ -2,12 +2,12 @@
 import '../styles/site.css';
 import { TAGLINE, NOINDEX } from '../data/catalog.mjs';
 
-const { title, description = 'Ten functions that process text by its meaning, in your scripts, your programs, and your queries.' } = Astro.props;
+const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Ten functions, in your scripts, your programs, and your queries.' } = Astro.props;
 const full = title === 'ThinkThen' ? 'ThinkThen: code that knows what you mean' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
 // One card for every page. The image is the wordmark on the light ground.
-const social = 'Ten functions that answer questions about text. Command line, every library, every database.';
+const social = 'Simple functions that give your software the judgment to handle whatever comes its way. Command line, every library, every database.';
 const cardImage = new URL('/brand/thinkthen-card.png', Astro.site).href;
 const pageUrl = new URL(here, Astro.site).href;
 const nav = [
