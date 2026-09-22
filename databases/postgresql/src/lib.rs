@@ -43,7 +43,8 @@ use pgrx::prelude::*;
 use pgrx::{Aggregate, AggregateName, GucContext, GucFlags, GucRegistry, GucSetting, Spi};
 use thinkthen_contract::{
     Annotated, Connector as _, Engine, EngineConfig, Entity, Error, ErrorKind, Kind, Options,
-    Question, QuestionKind, QuestionSet, Recognize, Relate, relate_checked,
+    Question, QuestionKind, QuestionSet, Recognize, Relate, deadline_from_millis,
+    relate_checked,
 };
 use thinkthen_standin::StandinConnector;
 
@@ -115,36 +116,85 @@ fn call_options() -> Options<'static> {
     Options::new().with_deadline_millis(given).unwrap_or_else(|error| raise(error))
 }
 
-// PostgreSQL's interrupt flag, read only. The C layer raises the error;
-// this read only tells the poll loop to cancel the engine's token first.
+// PostgreSQL's interrupt flags, read only. The C layer raises the error;
+// these reads only tell the poll loop which interrupts are a cancel.
 unsafe extern "C" {
-    #[link_name = "InterruptPending"]
-    static INTERRUPT_PENDING: c_int;
+    #[link_name = "QueryCancelPending"]
+    static QUERY_CANCEL_PENDING: c_int;
+    #[link_name = "ProcDiePending"]
+    static PROC_DIE_PENDING: c_int;
 }
 
-fn interrupt_pending() -> bool {
-    unsafe { std::ptr::read_volatile(std::ptr::addr_of!(INTERRUPT_PENDING)) != 0 }
+/// Whether the backend has a real cancel pending: SIGINT (a
+/// `pg_cancel_backend` or a statement timeout) sets `QueryCancelPending`,
+/// and SIGTERM (`pg_terminate_backend`) sets `ProcDiePending`. Any other
+/// interrupt — a procsignal barrier, a memory-contexts request, a notify
+/// — sets `InterruptPending` alone and is serviced by
+/// `check_for_interrupts!` without ending anything.
+fn cancel_requested() -> bool {
+    let query = unsafe { std::ptr::read_volatile(std::ptr::addr_of!(QUERY_CANCEL_PENDING)) };
+    let die = unsafe { std::ptr::read_volatile(std::ptr::addr_of!(PROC_DIE_PENDING)) };
+    query != 0 || die != 0
+}
+
+/// The configured per-call deadline as the budget a batch carries: `-1`
+/// is no deadline, `0` a spent one, a positive value the budget. Pure, so
+/// the rule is unit-tested without a backend.
+fn budget_of(millis: i32) -> Result<Option<Duration>, Error> {
+    deadline_from_millis(f64::from(millis))
+}
+
+/// The deadline the setting names, resolved on the backend thread (the
+/// setting read panics off it). A refused value raises the usage kind
+/// before any worker spawns.
+fn batch_budget() -> Option<Duration> {
+    budget_of(DEADLINE_MS.get()).unwrap_or_else(|error| raise(error))
+}
+
+/// The options a batch carries: the host's cancel token and the resolved
+/// deadline budget.
+fn batch_options<'a>(
+    cancel: Option<&'a thinkthen_contract::Cancel>,
+    budget: Option<Duration>,
+) -> thinkthen_contract::Options<'a> {
+    let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
+    match budget {
+        Some(budget) => options.deadline_in(budget),
+        None => options,
+    }
 }
 
 /// Run one engine batch on a worker thread while the backend thread polls
-/// the interrupt flag. A pending interrupt cancels the token, the batch
-/// stops between requests, and the proper error then raises through the
-/// check.
+/// PostgreSQL's cancel flags. A real cancel first sets the engine's token
+/// — no new request starts, the sent ones finish — and the database's own
+/// error then raises through the check. Any other interrupt is left to
+/// `check_for_interrupts!`, which services it without ending the batch:
+/// before this gate every interrupt was treated as a cancel, so a benign
+/// one failed a paid batch (review 2).
+///
+/// The configured deadline rides the batch: the engine's guard stops it at
+/// the deadline between requests, and a spent budget sends nothing.
 ///
 /// A worker that panics — a defect, since every error a worker is meant to
-/// report comes back as a value — is contained here and reported as the
-/// defect kind carrying the panic's own message, so a bad question in a
-/// batch never reads as "the batch thread stopped" with the cause lost.
+/// report comes back as a value — is contained by the contract's shared
+/// boundary and reported as the defect kind carrying the panic's own
+/// words, so a bad question in a batch never reads as "the batch thread
+/// stopped" with the cause lost.
 fn run_batch<T, F>(work: F) -> Result<T, Error>
 where
-    F: FnOnce(Option<&thinkthen_contract::Cancel>) -> Result<T, Error> + Send + 'static,
+    F: FnOnce(Option<&thinkthen_contract::Cancel>, Option<Duration>) -> Result<T, Error>
+        + Send
+        + 'static,
     T: Send + 'static,
 {
     let token = thinkthen_contract::Cancel::new();
     let worker = token.clone();
-    let handle = std::thread::spawn(move || work(Some(&worker)));
+    let budget = batch_budget();
+    let handle = std::thread::spawn(move || {
+        thinkthen_contract::catch_panic("the batch thread", || work(Some(&worker), budget))
+    });
     while !handle.is_finished() {
-        if interrupt_pending() {
+        if cancel_requested() {
             token.cancel();
         }
         std::thread::sleep(Duration::from_millis(100));
@@ -153,7 +203,7 @@ where
         Ok(out) => out,
         Err(payload) => Err(Error::defect(format!(
             "the batch thread stopped: {}",
-            panic_text(payload.as_ref())
+            worker_panic_text(payload.as_ref())
         ))),
     };
     check_for_interrupts!();
@@ -161,18 +211,14 @@ where
 }
 
 /// The text a stopped worker thread carried: a pgrx error report keeps
-/// its PostgreSQL message, and a plain panic keeps its own text.
-fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
+/// its PostgreSQL message, and every other payload takes the contract's
+/// own formatter, so the spelling is the one every surface's boundary
+/// uses.
+fn worker_panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(report) = payload.downcast_ref::<pgrx::pg_sys::panic::ErrorReportWithLevel>() {
         return report.message().to_string();
     }
-    if let Some(text) = payload.downcast_ref::<&str>() {
-        return (*text).to_string();
-    }
-    if let Some(text) = payload.downcast_ref::<String>() {
-        return text.clone();
-    }
-    "a panic carrying no text".to_string()
+    thinkthen_contract::panic_text(payload)
 }
 
 /// Raise the engine's failure as the database's own error, with the kind,
@@ -201,33 +247,68 @@ fn surface(error: &Error) -> (PgSqlErrorCode, String) {
     (code, text)
 }
 
+/// The form a named argument takes: JSON text, or a file named with the
+/// command's `@name` spelling.
+#[derive(Debug, PartialEq, Eq)]
+enum ArgForm<'a> {
+    /// The path after `@`.
+    File(&'a str),
+    /// JSON text, the section or the whole grammar.
+    Json(&'a str),
+}
+
+/// Decide what a question, question-set, or spec argument names. Pure, so
+/// the rule is unit-tested without a backend.
+///
+/// A bare string that is not JSON never names a file: before this rule
+/// any text without `@` was read as a path, so a role holding EXECUTE
+/// could read server files with no `@` required (review 2, item 4). The
+/// refusal names the required form.
+fn arg_form<'a>(text: &'a str, what: &str) -> Result<ArgForm<'a>, Error> {
+    if let Some(path) = text.strip_prefix('@') {
+        return Ok(ArgForm::File(path));
+    }
+    if text.trim_start().starts_with('{') {
+        return Ok(ArgForm::Json(text));
+    }
+    Err(Error::usage(format!(
+        "a {what} file is named with the @ spelling: '@{text}'; bare text is never a path"
+    )))
+}
+
 /// Resolve the question argument: `'@name'` names a file (the command's
-/// spelling), JSON text carries the grammar, and a bare sentence is a
-/// decide question with the default cut.
+/// spelling), and JSON text carries the grammar. Bare text that is not
+/// JSON is a usage error naming the `@` form.
 fn question_of(arg: Option<&str>) -> Question {
     let text = arg.unwrap_or_default();
     if text.trim().is_empty() {
         raise(Error::usage("the question is empty"));
     }
-    match text.strip_prefix('@') {
-        Some(path) => Question::from_file(Path::new(path)).unwrap_or_else(|error| raise(error)),
-        None => Question::from_json(text).unwrap_or_else(|error| raise(error)),
+    match arg_form(text, "question").unwrap_or_else(|error| raise(error)) {
+        ArgForm::File(path) => {
+            Question::from_file(Path::new(path)).unwrap_or_else(|error| raise(error))
+        }
+        ArgForm::Json(text) => {
+            Question::from_json(text).unwrap_or_else(|error| raise(error))
+        }
     }
 }
 
-/// Resolve the question-set argument of `annotate`: `'@name'` or a bare
-/// path names a set file, and JSON text is the set itself.
+/// Resolve the question-set argument of `annotate`: `'@name'` names a set
+/// file, and JSON text is the set itself. Bare text that is not JSON is a
+/// usage error naming the `@` form.
 fn set_of(arg: Option<&str>) -> QuestionSet {
     let text = arg.unwrap_or_default();
     if text.trim().is_empty() {
         raise(Error::usage("the question set is empty"));
     }
-    match text.strip_prefix('@') {
-        Some(path) => QuestionSet::from_file(Path::new(path)).unwrap_or_else(|error| raise(error)),
-        None if text.trim_start().starts_with('{') => {
+    match arg_form(text, "question set").unwrap_or_else(|error| raise(error)) {
+        ArgForm::File(path) => {
+            QuestionSet::from_file(Path::new(path)).unwrap_or_else(|error| raise(error))
+        }
+        ArgForm::Json(text) => {
             QuestionSet::from_json(text).unwrap_or_else(|error| raise(error))
         }
-        None => QuestionSet::from_file(Path::new(text)).unwrap_or_else(|error| raise(error)),
     }
 }
 
@@ -269,9 +350,10 @@ fn read_spec(path: &str) -> String {
     })
 }
 
-/// Resolve the `recognize` spec argument: `'@name'` or a bare path names a
-/// file (the question file's `recognize` section is taken when present),
-/// and JSON text carries the spec itself.
+/// Resolve the `recognize` spec argument: `'@name'` names a file (the
+/// question file's `recognize` section is taken when present), and JSON
+/// text carries the spec itself. Bare text that is not JSON is a usage
+/// error naming the `@` form (review 2, item 4).
 ///
 /// The ruled spelling of a relation's ends is `source` and `target`
 /// (`sdlc/planning/recognize-design.md`, the ruling of 2026-09-21), and
@@ -283,10 +365,9 @@ fn recognizer_of(arg: Option<&str>) -> Recognize {
     if text.trim().is_empty() {
         raise(Error::usage("the recognize spec is empty"));
     }
-    let json = match text.strip_prefix('@') {
-        Some(path) => read_spec(path),
-        None if text.trim_start().starts_with('{') => text.to_owned(),
-        None => read_spec(text),
+    let json = match arg_form(text, "recognize spec").unwrap_or_else(|error| raise(error)) {
+        ArgForm::File(path) => read_spec(path),
+        ArgForm::Json(text) => text.to_owned(),
     };
     let mut value: serde_json::Value = serde_json::from_str(&json).unwrap_or_else(|error| {
         raise(Error::usage(format!("the recognize spec is not JSON: {error}")))
@@ -554,9 +635,9 @@ fn thinkthen_relate(
     let rows = rows.unwrap_or_else(|error| raise(error));
     let owned: Vec<String> = rows.iter().map(|(_, body)| body.clone()).collect();
     let engine = engine();
-    let edges = run_batch(move |cancel| {
+    let edges = run_batch(move |cancel, budget| {
         let texts: Vec<&str> = owned.iter().map(String::as_str).collect();
-        let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
+        let options = batch_options(cancel, budget);
         relate_checked(engine.as_ref(), &ask, &texts, options)
     })
     .unwrap_or_else(|error| raise(error));
@@ -641,9 +722,9 @@ fn thinkthen_decide_array(
     let distinct = distinct_of(rows.iter().map(|text| text.as_deref()));
     let owned = distinct.clone();
     let engine = engine();
-    let judged = run_batch(move |cancel| {
+    let judged = run_batch(move |cancel, budget| {
         let records: Vec<&str> = owned.iter().map(String::as_str).collect();
-        let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
+        let options = batch_options(cancel, budget);
         engine.decide_many_opts(&question, &records, options, None)
     });
     let by_text: HashMap<String, Option<bool>> = match judged {
@@ -716,9 +797,9 @@ impl Aggregate<Warm> for Warm {
             // (naming the file) instead of dying inside the worker.
             let question = question_of(Some(&question_text));
             let engine = engine();
-            let outcome = run_batch(move |cancel| {
+            let outcome = run_batch(move |cancel, budget| {
                 let records: Vec<&str> = distinct.iter().map(String::as_str).collect();
-                let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
+                let options = batch_options(cancel, budget);
                 engine.decide_many_opts(&question, &records, options, None)
             });
             match outcome {
@@ -765,11 +846,28 @@ extern "C-unwind" fn _PG_init() {
 // `thinkthen_warm` aggregate, and the aggregate's own support functions
 // (`REVOKE ... ON FUNCTION` accepts an aggregate's signature).
 //
-// The one-line grant an administrator runs to let an application role
+// The narrowed grant an administrator runs to let one application role
 // call the surface (which also grants the `@path` reads, so a role with
-// it is trusted):
+// it is trusted). It names the extension's own functions through
+// `pg_depend`, never `ALL FUNCTIONS IN SCHEMA public`, which would also
+// grant every other extension's functions (review 2, item 4):
 //
-//     GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO the_app_role;
+//     DO $thinkthen_grant$
+//     DECLARE signature text;
+//     BEGIN
+//         FOR signature IN
+//             SELECT p.oid::regprocedure::text
+//             FROM pg_proc p
+//             JOIN pg_depend d
+//               ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+//             JOIN pg_extension e
+//               ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+//             WHERE e.extname = 'thinkthen'
+//         LOOP
+//             EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO %I', signature, 'the_app_role');
+//         END LOOP;
+//     END
+//     $thinkthen_grant$;
 extension_sql!(
     r#"
 DO $thinkthen_revoke$
@@ -791,6 +889,48 @@ END
 $thinkthen_revoke$;
 "#,
     name = "revoke_public",
+    finalize,
+);
+
+// Keep every function this extension owns out of PUBLIC's hands, including
+// the ones a future `ALTER EXTENSION UPDATE` creates.
+//
+// The revoke above runs once, at CREATE EXTENSION. An update script that
+// creates a new function would hand it EXECUTE by PostgreSQL's default
+// grant, and an unchanged revoke block never appears in a diff-based
+// update script (review 2, item 4). This event trigger closes that path
+// mechanically: whenever a function, procedure, or aggregate is created
+// in this database, it revokes PUBLIC on every function the extension
+// owns. It is SECURITY DEFINER — the DDL may be run by a role that does
+// not own the functions — with its search path pinned, and it grants
+// nothing: the narrowed grant above is the administrator's act.
+extension_sql!(
+    r#"
+CREATE FUNCTION thinkthen_guard_public() RETURNS event_trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $thinkthen_guard$
+DECLARE
+    signature text;
+BEGIN
+    FOR signature IN
+        SELECT p.oid::regprocedure::text
+        FROM pg_proc p
+        JOIN pg_depend d
+          ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+        JOIN pg_extension e
+          ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+        WHERE e.extname = 'thinkthen'
+    LOOP
+        EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', signature);
+    END LOOP;
+END
+$thinkthen_guard$;
+
+CREATE EVENT TRIGGER thinkthen_guard_public
+    ON ddl_command_end
+    WHEN TAG IN ('CREATE FUNCTION', 'CREATE PROCEDURE', 'CREATE AGGREGATE')
+    EXECUTE FUNCTION thinkthen_guard_public();
+"#,
+    name = "guard_public",
     finalize,
 );
 
@@ -842,15 +982,50 @@ mod mapping_tests {
     /// A worker that panics keeps its own message: `run_batch` reports the
     /// defect kind with the payload's text, so a bad question in a batch
     /// never reads as "the batch thread stopped" with the cause lost.
-    /// Before the fix the payload was dropped on the floor.
+    /// Before the fix the payload was dropped on the floor; a plain
+    /// payload now takes the contract's shared spelling.
     #[test]
     fn a_stopped_worker_keeps_its_message() {
         let payload = std::panic::catch_unwind(|| panic!("the relate plan lost its bind data"))
             .expect_err("the probe panicked");
-        let text = panic_text(payload.as_ref());
+        let text = worker_panic_text(payload.as_ref());
         assert!(
             text.contains("the relate plan lost its bind data"),
             "{text}"
         );
+    }
+
+    /// A named argument is JSON text or the `@name` file spelling; bare
+    /// text is never a path. Before the rule (review 2, item 4) any text
+    /// without `@` was read as a server file, and the refusal now names
+    /// the required form.
+    #[test]
+    fn a_bare_path_is_refused_and_the_at_form_passes() {
+        assert_eq!(arg_form("@refund.json", "question"), Ok(ArgForm::File("refund.json")));
+        assert_eq!(
+            arg_form("  {\"decide\": \"Is this a complaint?\"}", "question"),
+            Ok(ArgForm::Json("  {\"decide\": \"Is this a complaint?\"}"))
+        );
+        let refusal = arg_form("/etc/passwd", "question").expect_err("a bare path refuses");
+        assert_eq!(refusal.kind, ErrorKind::Usage, "{refusal:?}");
+        assert!(refusal.message.contains("@/etc/passwd"), "{}", refusal.message);
+        assert!(refusal.message.contains("never a path"), "{}", refusal.message);
+        let refusal = arg_form("names.json", "recognize spec").expect_err("a bare name refuses");
+        assert!(refusal.message.contains("@names.json"), "{}", refusal.message);
+    }
+
+    /// The deadline setting's conversion: `-1` is no deadline, `0` is a
+    /// spent deadline, a positive value is the budget, and any other
+    /// negative is refused by the contract's one checked door.
+    #[test]
+    fn the_deadline_setting_converts_by_the_ruled_rule() {
+        assert_eq!(budget_of(-1).expect("the sentinel passes"), None);
+        assert_eq!(budget_of(0).expect("a spent budget is legal"), Some(Duration::ZERO));
+        assert_eq!(
+            budget_of(250).expect("a budget passes"),
+            Some(Duration::from_millis(250))
+        );
+        let refusal = budget_of(-2).expect_err("a negative below the sentinel refuses");
+        assert_eq!(refusal.kind, ErrorKind::Usage, "{refusal:?}");
     }
 }
