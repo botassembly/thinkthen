@@ -94,10 +94,15 @@ impl Client {
     ///
     /// Returns [`Error`] when the backend cannot be reached, when it answers
     /// with an error status, or when both still hold after the last retry.
-    pub(crate) fn post(&self, exchange: &Exchange<'_>) -> Result<Vec<u8>, Error> {
+    pub(crate) fn post_observed(
+        &self,
+        exchange: &Exchange<'_>,
+        before_attempt: impl Fn(),
+    ) -> Result<Vec<u8>, Error> {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
+            before_attempt();
             let attempt = match send(&self.0, exchange) {
                 Ok(body) => return Ok(body),
                 Err(attempt) => attempt,

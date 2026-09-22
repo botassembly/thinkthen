@@ -66,6 +66,7 @@ pub(crate) fn run(
                 folders.record.as_deref(),
                 folders.replay.as_deref(),
                 folders.private_default,
+                folders.cache_answers,
             )
         })
         .transpose()?;

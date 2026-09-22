@@ -106,6 +106,12 @@ impl CacheLock {
     }
 }
 
+impl FolderGate {
+    pub(crate) fn file(&self) -> &File {
+        &self._directory
+    }
+}
+
 /// Sync one directory after changing the names it contains.
 pub(crate) fn sync_directory(folder: &Path) -> io::Result<()> {
     File::open(folder)?.sync_all()

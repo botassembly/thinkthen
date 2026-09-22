@@ -2,6 +2,7 @@
 
 use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Barrier};
 use std::thread;
@@ -10,6 +11,7 @@ use std::time::{Duration, Instant};
 use crate::harness::{Canned, Listener, Observed};
 
 const QUESTION: &str = "Does this report a payment failure?";
+static CHILDREN: AtomicU64 = AtomicU64::new(0);
 
 fn record(place: usize) -> String {
     format!("{{\"id\":\"R-{place}\",\"body\":\"record {place}\"}}\n")
@@ -64,6 +66,11 @@ fn raw_child(
     jobs: Option<&str>,
     extra: &[&str],
 ) -> io::Result<(Child, ChildStdin, ChildStdout)> {
+    let cache_home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "scheduling-cache-{}-{}",
+        std::process::id(),
+        CHILDREN.fetch_add(1, Ordering::Relaxed)
+    ));
     let mut arguments = vec![
         "decide",
         QUESTION,
@@ -83,6 +90,7 @@ fn raw_child(
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("XDG_CACHE_HOME", cache_home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args(arguments)
         .stdin(Stdio::piped())

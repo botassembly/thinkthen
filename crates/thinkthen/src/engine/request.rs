@@ -8,6 +8,7 @@ use crate::engine::error::Error;
 use crate::engine::http::{Client, Exchange, Key};
 use crate::engine::prepared_request::{Answered, PreparedRequest};
 use crate::engine::recorder::{PreparedRecording, Recorder, WritePermit};
+use crate::engine::usage::Counters;
 
 #[cfg(test)]
 pub(crate) enum Injection {
@@ -34,6 +35,7 @@ pub(crate) struct Transport<'a> {
     pub(crate) client: &'a Client,
     pub(crate) max_retries: u32,
     pub(crate) retry_wait: Duration,
+    pub(crate) usage: &'a Counters,
 }
 
 pub(crate) fn ask_profile<E>(
@@ -48,18 +50,29 @@ where
     E: From<Error>,
 {
     let prepared = PreparedRequest::with_profile(backend, plan, profile).map_err(E::from)?;
-    ask_prepared(backend, plan, prepared, recorder, key, |prepared, key| {
-        transport
-            .client
-            .post(&Exchange {
-                url: backend.url().as_str(),
-                body: &prepared.body,
-                key,
-                max_retries: transport.max_retries,
-                retry_wait: transport.retry_wait,
-            })
-            .map_err(E::from)
-    })
+    ask_prepared(
+        backend,
+        plan,
+        prepared,
+        recorder,
+        transport.usage,
+        key,
+        |prepared, key| {
+            transport
+                .client
+                .post_observed(
+                    &Exchange {
+                        url: backend.url().as_str(),
+                        body: &prepared.body,
+                        key,
+                        max_retries: transport.max_retries,
+                        retry_wait: transport.retry_wait,
+                    },
+                    || transport.usage.request_sent(),
+                )
+                .map_err(E::from)
+        },
+    )
 }
 
 #[cfg(test)]
@@ -74,14 +87,20 @@ where
     E: From<Error>,
 {
     let prepared = PreparedRequest::new(backend, plan).map_err(E::from)?;
-    ask_prepared(backend, plan, prepared, recorder, key, send)
+    let usage = Counters::default();
+    ask_prepared(backend, plan, prepared, recorder, &usage, key, send)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one prepared request carries explicit transport, storage, and counter boundaries"
+)]
 pub(crate) fn ask_prepared<E>(
     backend: &Backend,
     plan: &Plan,
     prepared: PreparedRequest,
     recorder: &Recorder,
+    usage: &Counters,
     key: impl FnOnce() -> Result<Key, E>,
     send: impl FnOnce(&PreparedRequest, &Key) -> Result<Vec<u8>, E>,
 ) -> Result<Answered, E>
@@ -94,15 +113,25 @@ where
         .map_err(E::from)?;
     let (reply, replayed) = match operation {
         PreparedRecording::Replay(response) => (
-            built_in::decode(plan, &response)
-                .map_err(Error::from)
-                .map_err(E::from)?,
+            {
+                let reply = built_in::decode(plan, &response)
+                    .map_err(Error::from)
+                    .map_err(E::from)?;
+                if recorder.counts_cache_answers() {
+                    usage.cache_answer();
+                }
+                reply
+            },
             true,
         ),
         PreparedRecording::Live(permit) => {
             let (permit, key) = finish_or_cancel(permit, key())?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
-            let reply = match built_in::decode(plan, &answered) {
+            let decoded = built_in::decode_observed(plan, &answered);
+            if let Some(tokens) = decoded.usage {
+                usage.tokens(tokens);
+            }
+            let reply = match decoded.reply {
                 Ok(reply) => reply,
                 Err(error) => {
                     permit.cancel().map_err(E::from)?;

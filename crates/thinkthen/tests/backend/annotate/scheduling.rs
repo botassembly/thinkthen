@@ -61,6 +61,14 @@ fn entries(path: &Path) -> usize {
 fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
     let file = grouped("six-groups", 6);
     for jobs in [1_usize, 4, 32] {
+        let usage_home = folder(&format!("global-queue-usage-{jobs}"));
+        let environment = [
+            ("THINKTHEN_API_KEY", "sk-test-value"),
+            (
+                "XDG_CACHE_HOME",
+                usage_home.to_str().expect("usage cache home"),
+            ),
+        ];
         let answer = yes("local-1", 10, 2);
         let listener =
             Listener::answering(move |_| Canned::ok(&answer).after(25)).expect("a listener");
@@ -75,7 +83,7 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 "--jobs",
                 &jobs.to_string(),
             ],
-            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            &environment,
             grouped_input(1, 6).as_bytes(),
         )
         .expect("document run");
@@ -108,7 +116,7 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 "--jobs",
                 &jobs.to_string(),
             ],
-            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            &environment,
             input.as_bytes(),
         )
         .expect("stream run");
@@ -313,9 +321,11 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     let answer = yes("local-1", 1, 1);
     let listener = Listener::answering(move |_| Canned::ok(&answer).after(20)).expect("a listener");
     let file = grouped("broken-pipe", 2);
+    let usage_home = folder("broken-pipe-usage");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("XDG_CACHE_HOME", usage_home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
@@ -376,7 +386,7 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
         } else if body.contains("record 2") {
             Canned::ok(&yes("local-1", 1, 1)).after(40)
         } else {
-            Canned::status(500, "{}").after(100)
+            Canned::status(500, "{}").after(500)
         }
     })
     .expect("a listener");
@@ -384,6 +394,7 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("XDG_CACHE_HOME", cache.join(".platform"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
@@ -451,7 +462,11 @@ fn usage_overflow_fails_safely() {
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend reported token counts whose total is too large\n"
+        concat!(
+            "thinkthen: the backend reported token counts whose total is too large\n",
+            "thinkthen: usage counters could not be updated; ",
+            "check the usage folder permissions and free space\n",
+        )
     );
     assert!(output.stdout.is_empty());
 }

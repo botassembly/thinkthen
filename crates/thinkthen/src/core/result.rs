@@ -50,6 +50,10 @@ impl Usage {
             output_tokens,
         })
     }
+
+    pub(crate) const fn token_counts(self) -> (u64, u64) {
+        (self.input_tokens, self.output_tokens)
+    }
 }
 
 /// Whether recordings answered and which logical requests made one result.

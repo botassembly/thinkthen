@@ -2,6 +2,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
+use std::thread;
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
@@ -30,6 +31,15 @@ fn plant(folder: &Path, response: &str) -> Option<String> {
         &request,
         response,
     )
+}
+
+fn usage(status: &Output, name: &str) -> Option<u64> {
+    serde_json::from_slice::<serde_json::Value>(&status.stdout)
+        .ok()?
+        .get("usage")?
+        .get("this_month")?
+        .get(name)?
+        .as_u64()
 }
 
 #[test]
@@ -75,6 +85,14 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
         );
     }
     assert_eq!(listener.requests().len(), 2);
+
+    let status = run(&["status", "--json"], &environment).expect("status");
+    assert_eq!(status.status.code(), Some(0));
+    let value: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
+    assert_eq!(value["usage"]["this_month"]["requests_sent"], 3);
+    assert_eq!(value["usage"]["this_month"]["input_tokens"], 936);
+    assert_eq!(value["usage"]["this_month"]["output_tokens"], 144);
+    assert_eq!(value["usage"]["this_month"]["cache_answers"], 1);
 }
 
 #[test]
@@ -149,6 +167,9 @@ fn rejected_input_creates_no_default_cache() {
     assert_eq!(malformed.status.code(), Some(2));
     assert!(!root.join("thinkthen").exists());
 }
+
+#[path = "default_cache/usage.rs"]
+mod usage_tests;
 
 #[test]
 fn replay_of_a_missing_directory_is_a_miss_and_creates_nothing() {

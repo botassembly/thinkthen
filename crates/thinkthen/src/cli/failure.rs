@@ -28,21 +28,16 @@ const UNNAMED: &str = "defect: a usage error with no sentence";
 pub(crate) enum Failure {
     /// The flags and the environment name no backend.
     Backend(BackendError),
-    /// The selected profile file could not be opened.
     OpenProfile {
         path: PathBuf,
         error: io::Error,
     },
-    /// The selected profile file was refused.
     Profile {
         path: PathBuf,
         error: ProfileError,
     },
-    /// A prepared request exceeds an explicit profile limit.
     ProfileLimit(ProfileLimit),
-    /// Two views of one answer were asked for at once.
     QuietWithDetails,
-    /// A bare label was asked for beside another view of the same answer.
     RawWithAnotherView,
     /// The question file, or a value beside it, was refused.
     Question(QuestionFileError),
@@ -152,6 +147,7 @@ pub(crate) enum Failure {
     DefaultCachePrivate,
     Configuration(&'static str),
     CacheEntry,
+    StatusState,
     Defect(&'static str),
     /// A document `thinkthen` built could not be written as JSON.
     Render(RenderError),
@@ -364,6 +360,11 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         ),
         Failure::Configuration(message) => (5, (*message).to_owned()),
         Failure::CacheEntry => (5, "the cache contains a malformed final entry".to_owned()),
+        Failure::StatusState => (
+            5,
+            "status could not read the local cache or usage state; check its permissions and contents"
+                .to_owned(),
+        ),
         Failure::InvalidUtf8 { record } => (
             5,
             if *record {

@@ -9,4 +9,5 @@ pub(crate) mod prepared_request;
 pub(crate) mod recorder;
 pub(crate) mod request;
 pub(crate) mod schedule;
+pub(crate) mod usage;
 pub(crate) mod workers;

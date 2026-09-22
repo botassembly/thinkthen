@@ -1,8 +1,8 @@
 # A status command for configuration and usage
 
-Status: Open
+Status: Closed by ticket 0063 on 2026-09-22
 
-Ticket 0062 lands the read-only configuration and cache maintenance foundation on 2026-09-22. This issue stays open. The next cache ticket owns `status` and persistent numeric counters.
+Ticket 0062 landed the read-only configuration and cache maintenance foundation. Ticket 0063 adds offline `status` and persistent numeric counters under ADR 0034.
 
 Asked by Ian on 2026-09-20. He ran the repository's own spend wrapper and liked what it printed:
 

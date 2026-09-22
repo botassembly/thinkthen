@@ -19,7 +19,7 @@ The package and binary are both `thinkthen`. Read `README.md` first, then `speci
 
 ## The tool judges and never acts
 
-`thinkthen` never runs a command and never treats free text as an instruction. It writes only files the user named and its own resolved platform cache. The default cache is the one approved exception, and the command never creates or edits the read-only configuration file.
+`thinkthen` never runs a command and never treats free text as an instruction. It writes only files the user named, its resolved platform cache, and count-only usage totals beside that cache. The command never creates or edits the read-only configuration file.
 
 ## No network in a gate
 

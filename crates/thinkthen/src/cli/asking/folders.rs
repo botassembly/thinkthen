@@ -10,6 +10,7 @@ pub(crate) struct Folders {
     pub(crate) record: Option<std::path::PathBuf>,
     pub(crate) replay: Option<std::path::PathBuf>,
     pub(crate) private_default: bool,
+    pub(crate) cache_answers: bool,
 }
 
 impl Folders {
@@ -30,6 +31,7 @@ impl Folders {
                     record: common.record.clone(),
                     replay: common.replay.clone(),
                     private_default: false,
+                    cache_answers: false,
                 });
             }
             let default = environment
@@ -39,6 +41,7 @@ impl Folders {
                 record: Some(default.to_owned()),
                 replay: Some(default.to_owned()),
                 private_default: environment.cache_is_platform_default(),
+                cache_answers: true,
             });
         };
         if common.record.is_some() || common.replay.is_some() {
@@ -48,6 +51,7 @@ impl Folders {
             record: Some(cached.to_owned()),
             replay: Some(cached.to_owned()),
             private_default: false,
+            cache_answers: true,
         })
     }
 

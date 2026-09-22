@@ -7,7 +7,7 @@ use clap::{Args, Parser};
 
 mod command;
 mod find;
-pub(crate) use command::{CacheCommand, Command, PruneArguments};
+pub(crate) use command::{CacheCommand, Command, PruneArguments, StatusArguments};
 pub(crate) use find::FindArguments;
 
 /// Put a decider model in the shell.

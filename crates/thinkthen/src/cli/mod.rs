@@ -14,6 +14,7 @@ pub(crate) mod judge;
 pub(crate) mod normalize;
 pub(crate) mod profile;
 pub(crate) mod schedule;
+pub(crate) mod status;
 pub(crate) mod table;
 
 #[cfg(test)]
@@ -34,17 +35,30 @@ pub fn entry() -> ExitCode {
     let cli = Cli::parse_from(normalize::arguments(std::env::args_os()));
     let stdout = io::stdout();
     let stderr = io::stderr();
-    match run(&cli, stdout.lock()) {
+    if cli.version {
+        return match edge::write_line(stdout.lock(), &version_line(env!("CARGO_PKG_VERSION"))) {
+            Ok(_) => ExitCode::SUCCESS,
+            Err(failure) => failure::report(&failure, stderr.lock()),
+        };
+    }
+    let environment = match Environment::read() {
+        Ok(environment) => environment,
+        Err(failure) => return failure::report(&failure, stderr.lock()),
+    };
+    let result = run(&cli, &environment, stdout.lock());
+    let code = match result {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
+    };
+    if environment.usage().warning() {
+        let mut writer = stderr.lock();
+        let _unwritten = writeln!(writer, "thinkthen: usage counters could not be updated; check the usage folder permissions and free space")
+            .and_then(|()| writer.flush());
     }
+    code
 }
 
-fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
-    if cli.version {
-        edge::write_line(writer, &version_line(env!("CARGO_PKG_VERSION")))?;
-        return Ok(ExitCode::SUCCESS);
-    }
+fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitCode, Failure> {
     if cli
         .command
         .as_ref()
@@ -54,23 +68,23 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
             "--timeout takes a whole number of seconds greater than zero",
         ));
     }
-    let environment = Environment::read()?;
-    if let Some(command) = cli.command.as_ref() {
+    if let Some(command) = cli.command.as_ref().filter(|command| command.reads_input()) {
         edge::waiting(command.input(), io::stderr().lock());
     }
     let input = io::stdin();
     match &cli.command {
-        Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),
-        Some(Command::Choose(arguments)) => judge::choose(arguments, &environment, input, writer),
-        Some(Command::Tag(arguments)) => judge::tag(arguments, &environment, input, writer),
-        Some(Command::Score(arguments)) => judge::score(arguments, &environment, input, writer),
-        Some(Command::Filter(arguments)) => judge::filter(arguments, &environment, input, writer),
-        Some(Command::Rank(arguments)) => judge::rank(arguments, &environment, input, writer),
-        Some(Command::Find(arguments)) => find::run(arguments, &environment, input, writer),
-        Some(Command::Annotate(arguments)) => annotate::run(arguments, &environment, input, writer),
+        Some(Command::Decide(arguments)) => judge::decide(arguments, environment, input, writer),
+        Some(Command::Choose(arguments)) => judge::choose(arguments, environment, input, writer),
+        Some(Command::Tag(arguments)) => judge::tag(arguments, environment, input, writer),
+        Some(Command::Score(arguments)) => judge::score(arguments, environment, input, writer),
+        Some(Command::Filter(arguments)) => judge::filter(arguments, environment, input, writer),
+        Some(Command::Rank(arguments)) => judge::rank(arguments, environment, input, writer),
+        Some(Command::Find(arguments)) => find::run(arguments, environment, input, writer),
+        Some(Command::Annotate(arguments)) => annotate::run(arguments, environment, input, writer),
         Some(Command::Cache(arguments)) => match &arguments.command {
-            args::CacheCommand::Prune(arguments) => cache::prune(arguments, &environment, writer),
+            args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },
+        Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

@@ -1,8 +1,8 @@
 # The ruled cache surface is missing from the command
 
-Status: Open
+Status: Closed by tickets 0062 and 0063 on 2026-09-22
 
-Ticket 0062 is partial progress on 2026-09-22. The default platform folder, `THINKTHEN_CACHE`, `--no-cache`, the closed read-only configuration, the 100,000,000-byte prune target, and `cache prune DIR` now exist. This issue stays open for `status` and persistent numeric counters.
+Ticket 0062 added the default platform folder, `THINKTHEN_CACHE`, `--no-cache`, the closed read-only configuration, the 100,000,000-byte prune target, and `cache prune DIR`. Ticket 0063 adds `status` and persistent numeric counters.
 
 ADR 0017 rules a cache that is on by default, and the binary ships none of it. A user who reads the ruling or the manual expects answers saved on disk, a way to see the cache, a way to clear it, and a cap. The command offers only `--record DIR`, `--replay DIR`, and `--cache DIR`, exactly as `specification/recording.md` settles them. Everything ruled beyond those three is unbuilt.
 

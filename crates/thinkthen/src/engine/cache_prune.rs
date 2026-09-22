@@ -25,6 +25,48 @@ pub(crate) struct Pruned {
 }
 
 #[derive(Debug)]
+pub(crate) struct Inspected {
+    pub(crate) entries: u64,
+    pub(crate) bytes: u64,
+}
+
+pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> {
+    let metadata = match fs::symlink_metadata(folder) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Ok(Inspected {
+                entries: 0,
+                bytes: 0,
+            });
+        }
+        Err(error) => return Err(storage(error)),
+        Ok(metadata) => metadata,
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(Error::CacheEntry);
+    }
+    #[cfg(unix)]
+    if private {
+        use std::os::unix::fs::PermissionsExt as _;
+        if metadata.permissions().mode() & 0o777 != 0o700 {
+            return Err(Error::DefaultCachePrivate);
+        }
+    }
+    let gate = cache_lock::shared_folder(folder).map_err(storage)?;
+    let current = fs::symlink_metadata(folder).map_err(storage)?;
+    let opened = gate.file().metadata().map_err(storage)?;
+    if current.file_type().is_symlink() || !current.is_dir() || !same_identity(&current, &opened) {
+        return Err(Error::CacheEntry);
+    }
+    let found = scan(folder)?;
+    let entries = u64::try_from(found.len()).map_err(|_| Error::RecordingStorage)?;
+    let bytes = found
+        .iter()
+        .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
+        .ok_or(Error::RecordingStorage)?;
+    Ok(Inspected { entries, bytes })
+}
+
+#[derive(Debug)]
 struct Found {
     path: PathBuf,
     name: String,
@@ -152,7 +194,22 @@ fn scan(folder: &Path) -> Result<Vec<Found>, Error> {
         if !metadata.file_type().is_file() {
             return Err(Error::CacheEntry);
         }
-        let bytes = fs::read(item.path()).map_err(storage)?;
+        let file = fs::File::open(item.path()).map_err(storage)?;
+        let opened = file.metadata().map_err(storage)?;
+        if !same_identity(&metadata, &opened) {
+            return Err(Error::CacheEntry);
+        }
+        let bytes = {
+            use std::io::Read as _;
+            let mut file = file;
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).map_err(storage)?;
+            bytes
+        };
+        let final_metadata = fs::symlink_metadata(item.path()).map_err(storage)?;
+        if final_metadata.file_type().is_symlink() || !same_identity(&opened, &final_metadata) {
+            return Err(Error::CacheEntry);
+        }
         let (digest, model) = Entry::inspected(&bytes).map_err(|_| Error::CacheEntry)?;
         if digest.file_name() != name {
             return Err(Error::CacheEntry);
@@ -167,6 +224,17 @@ fn scan(folder: &Path) -> Result<Vec<Found>, Error> {
         });
     }
     Ok(found)
+}
+
+#[cfg(unix)]
+fn same_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt as _;
+    (left.dev(), left.ino()) == (right.dev(), right.ino())
+}
+
+#[cfg(not(unix))]
+fn same_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    left.len() == right.len() && left.file_type() == right.file_type()
 }
 
 fn digest_name(name: &str) -> bool {

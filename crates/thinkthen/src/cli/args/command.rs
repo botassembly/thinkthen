@@ -12,6 +12,9 @@ use super::{
 /// The verbs the tool answers to.
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
+    /// Report resolved local settings, cache size, and local usage counts.
+    Status(StatusArguments),
+
     /// Answer a yes/no question about the evidence and set the exit code. A
     /// record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
@@ -190,6 +193,10 @@ pub(crate) struct PruneArguments {
 }
 
 impl Command {
+    pub(crate) const fn reads_input(&self) -> bool {
+        !matches!(self, Self::Cache(_) | Self::Status(_))
+    }
+
     /// The input file one command named, if any.
     pub(crate) fn input(&self) -> Option<&std::path::Path> {
         match self {
@@ -202,6 +209,7 @@ impl Command {
             Self::Find(arguments) => arguments.common.input.as_deref(),
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Cache(_) => None,
+            Self::Status(_) => None,
         }
     }
 
@@ -217,6 +225,14 @@ impl Command {
             Self::Find(arguments) => arguments.common.timeout,
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Cache(_) => 1,
+            Self::Status(_) => 1,
         }
     }
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct StatusArguments {
+    /// Print one closed JSON object instead of name-value lines.
+    #[arg(long)]
+    pub(crate) json: bool,
 }

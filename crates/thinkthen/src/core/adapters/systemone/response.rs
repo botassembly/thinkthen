@@ -68,9 +68,19 @@ struct ResponseUsage {
 /// shape, when it leaves an option or a level without a probability, or when a
 /// probability falls outside zero to one, or when its probabilities do not
 /// make a complete distribution.
+mod observed;
+
+pub(crate) use observed::decode_observed;
+
 pub(crate) fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
-    let response: Response = serde_json::from_slice(body)
-        .map_err(|error| DecodeError::Malformed(error.line(), error.column()))?;
+    decode_observed(plan, body).reply
+}
+
+fn decode_response(
+    plan: &Plan,
+    response: Response,
+    usage: Option<Usage>,
+) -> Result<Reply, DecodeError> {
     let model = ModelName::new(response.model).map_err(|_| DecodeError::NoModel)?;
     let wire_count = plan
         .questions()
@@ -112,9 +122,6 @@ pub(crate) fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
     {
         return Err(first_error.unwrap_or(DecodeError::UnexpectedAnswer));
     }
-    let usage = response
-        .usage
-        .map(|usage| Usage::new(usage.input_tokens, usage.output_tokens));
     Ok(Reply::new(model, answers, usage))
 }
 
@@ -278,7 +285,7 @@ mod partial_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::decode;
+    use super::{decode, decode_observed};
     use crate::core::adapters::systemone::DecodeError;
     use crate::core::adapters::systemone::tests::{
         LEVELS, TEAMS, disruption_plan, tag_plan, team_plan, urgency_plan,
@@ -321,6 +328,14 @@ mod tests {
             r#"{"kind":"yes_no","probability":0.92}"#
         );
         assert_eq!(reply.usage(), Some(Usage::new(312, 48)));
+    }
+
+    #[test]
+    fn validated_usage_survives_when_every_answer_is_refused() {
+        let body = br#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","probabilities":{"a":1.0}}},"usage":{"input_tokens":17,"output_tokens":3}}"#;
+        let decoded = decode_observed(&urgency_plan(), body);
+        assert_eq!(decoded.usage, Some(Usage::new(17, 3)));
+        assert!(matches!(decoded.reply, Err(DecodeError::WrongKind(0))));
     }
 
     #[test]

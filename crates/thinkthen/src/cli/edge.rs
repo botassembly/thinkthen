@@ -30,17 +30,23 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
+    named_cache: bool,
     cache: Option<PathBuf>,
     cache_is_platform_default: bool,
     config: Config,
+    config_path: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
+    usage: crate::engine::usage::Counters,
+    usage_path: Option<PathBuf>,
 }
 
 impl Environment {
     /// Read the base address and the hidden test wait, which help never shows.
     pub(crate) fn read() -> Result<Self, Failure> {
         let named_cache = read("THINKTHEN_CACHE");
-        let config = Config::read(config::path().as_deref())?;
+        let config_path = config::path();
+        let config = Config::read(config_path.as_deref())?;
+        let usage_path = config::usage_path();
         Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
             cache: named_cache
@@ -48,8 +54,12 @@ impl Environment {
                 .map(PathBuf::from)
                 .or_else(config::cache_path),
             cache_is_platform_default: named_cache.is_none(),
+            named_cache: named_cache.is_some(),
             config,
+            config_path,
             retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
+            usage: crate::engine::usage::Counters::new(usage_path.clone()),
+            usage_path,
         })
     }
 
@@ -72,6 +82,28 @@ impl Environment {
 
     pub(crate) fn cache_bytes(&self) -> u64 {
         self.config.cache_bytes()
+    }
+
+    pub(crate) const fn config(&self) -> &Config {
+        &self.config
+    }
+    pub(crate) fn config_path(&self) -> Option<&Path> {
+        self.config_path.as_deref()
+    }
+    pub(crate) const fn base_url_is_environment(&self) -> bool {
+        self.base_url.is_some()
+    }
+    pub(crate) const fn named_cache(&self) -> bool {
+        self.named_cache
+    }
+    pub(crate) fn usage_path(&self) -> Option<&Path> {
+        self.usage_path.as_deref()
+    }
+    pub(crate) const fn usage(&self) -> &crate::engine::usage::Counters {
+        &self.usage
+    }
+    pub(crate) fn api_key_set(&self) -> bool {
+        read(KEY_VAR).is_some()
     }
 
     /// The base the request is posted under, or `None` when the variable is empty.

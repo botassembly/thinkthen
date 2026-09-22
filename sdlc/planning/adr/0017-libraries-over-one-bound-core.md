@@ -58,7 +58,7 @@ The engine has one public error with six kinds. The command wraps it in `Failure
 
 The `deadline` kind is Ian's ruling of 2026-09-21: a caller with a fallback treats "my five seconds ran out" and "the backend is busy" differently, so the spent budget never files as a backend error. The retryable reading inside `backend` comes from the tool-search page, whose caller falls back on a timeout and a rate limit and stops on a reply it cannot trust.
 
-The engine counts requests, cache answers, and tokens for the process. Requests counts every send. A retried send after a dead connection counts twice, because a judgment is safe to repeat and the bill pays for both; the pages say so. The second send reaches the user in two places: `usage` carries the process's send count, and a judgment's `details` carries the number of sends that produced it, so a bill showing two requests never meets a tool showing one. A library reads the counters through `usage`, and the command keeps none between runs.
+The engine counts requests, cache answers, and tokens for the process. Requests counts every send. A retried send after a dead connection counts twice, because a judgment is safe to repeat and the bill pays for both; the pages say so. The second send reaches the user in two places: `usage` carries the process's send count, and a judgment's `details` carries the number of sends that produced it, so a bill showing two requests never meets a tool showing one. A library reads the counters through `usage`. ADR 0034 amends the command side: the command also persists count-only monthly aggregates for `status`.
 
 ### 4. Call options
 

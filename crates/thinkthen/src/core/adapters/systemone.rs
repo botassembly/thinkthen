@@ -15,7 +15,7 @@ use thiserror::Error;
 
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::encode_raw;
-pub(crate) use crate::core::adapters::systemone::response::decode;
+pub(crate) use crate::core::adapters::systemone::response::{decode, decode_observed};
 
 /// The name this adapter answers to, in the recording key and the entry.
 ///

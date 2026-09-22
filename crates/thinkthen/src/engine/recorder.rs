@@ -27,6 +27,7 @@ pub(crate) struct Recorder {
     recording: bool,
     replaying: bool,
     private_default: bool,
+    cache_answers: bool,
     gate: Mutex<Option<FolderGate>>,
 }
 
@@ -62,13 +63,14 @@ enum Existing {
 impl Recorder {
     #[cfg(test)]
     pub(crate) fn of(record: Option<&Path>, replay: Option<&Path>) -> Result<Self, Error> {
-        Self::of_private(record, replay, false)
+        Self::of_private(record, replay, false, false)
     }
 
     pub(crate) fn of_private(
         record: Option<&Path>,
         replay: Option<&Path>,
         private_default: bool,
+        cache_answers: bool,
     ) -> Result<Self, Error> {
         let folder = match (record, replay) {
             (Some(recorded), Some(replayed)) if recorded != replayed => {
@@ -91,8 +93,13 @@ impl Recorder {
             recording: record.is_some(),
             replaying: replay.is_some(),
             private_default,
+            cache_answers,
             gate: Mutex::new(None),
         })
+    }
+
+    pub(crate) const fn counts_cache_answers(&self) -> bool {
+        self.cache_answers
     }
 
     fn ready(&self, name: &str) -> Result<(), Error> {

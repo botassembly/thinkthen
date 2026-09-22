@@ -398,6 +398,7 @@ impl Judging<'_> {
                 folders.record.as_deref(),
                 folders.replay.as_deref(),
                 folders.private_default,
+                folders.cache_answers,
             )?,
             backend,
             asks,

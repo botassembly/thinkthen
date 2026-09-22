@@ -14,7 +14,7 @@ Ian can overturn any placement here.
 - Landed: 0059. Explicit backend profiles enforce local byte and question limits before replay, cache, key lookup, or network access. Saved calibration names warn once at the ordered result boundary and appear in detailed metadata.
 - Landed: 0060. Default streamed value rows keep each parsed record under `input` beside its answer under `value`. Streamed annotation still enriches object records and wraps non-object records. One-document and explicit views stay unchanged.
 - Landed: 0061. Recording writers preflight storage, repair damaged entries atomically, handle file-size signals safely, sync complete entries, preserve valid old bytes, and remove new digest locks after a valid entry lands.
-- In progress: 0062 enables the bounded platform cache, its read-only configuration, `--no-cache`, and explicit prune. `status` and persistent numeric counters are the next cache ticket.
+- Done: tickets 0062 and 0063 enable the bounded platform cache, its read-only configuration, `--no-cache`, explicit prune, offline `status`, and persistent numeric counters.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main

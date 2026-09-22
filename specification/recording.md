@@ -15,7 +15,15 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 
 Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads nothing.
 
-With none of these options, normal commands use the platform answer cache: `$XDG_CACHE_HOME/thinkthen`, then `$HOME/.cache/thinkthen` on Linux, and `$HOME/Library/Caches/thinkthen` on macOS. `THINKTHEN_CACHE` selects another folder. `--no-cache` disables answer-cache lookup and writing for one run. Explicit `--record` or `--replay` suppresses the default cache. Dry runs, help, version, and `cache prune` create no default cache.
+With none of these options, normal commands use the platform answer cache: `$XDG_CACHE_HOME/thinkthen`, then `$HOME/.cache/thinkthen` on Linux, and `$HOME/Library/Caches/thinkthen` on macOS. `THINKTHEN_CACHE` selects another folder. `--no-cache` disables answer-cache lookup and writing for one run. Explicit `--record` or `--replay` suppresses the default cache. Dry runs, help, version, `status`, and `cache prune` create no default cache.
+
+`thinkthen status` is read-only and opens no connection. It reports the version, resolved configuration with provenance, key presence, answer-cache entry count and allocated bytes, and local usage for the current UTC month and all months. `status --json` emits the same facts as one closed `thinkthen.status/1` object. Status accepts no judgment overrides.
+
+Usage lives at `$XDG_CACHE_HOME/thinkthen-usage`, then `$HOME/.cache/thinkthen-usage` on Linux, and `$HOME/Library/Caches/thinkthen-usage` on macOS. `THINKTHEN_CACHE` never moves it, and `--no-cache` never disables it. One private `YYYY-MM.json` file holds checked aggregates for requests sent, input tokens, output tokens, and cache answers. A stable private `.lock` serializes atomic replacement across processes. The files contain no request, response, address, model, price, or key.
+
+Every HTTP attempt counts immediately before it is sent, including a retry or failed attempt. Validated provider token counts count once for each successful live response, including a response whose answer is later refused. Replayed response bytes add no tokens. A decoded hit in the platform cache, `THINKTHEN_CACHE`, or `--cache` counts as a cache answer. Explicit replay and an explicit record/replay pair do not. Packed `annotate` groups count as their actual exchanges.
+
+Usage persistence is best effort. Its first failure disables later updates in that process and prints one fixed warning after ordered results. It never changes a judgment, output order, or exit meaning. A crash can undercount tokens or overcount one precharged request. These totals describe local observations and are not a provider bill.
 
 An XDG home or `HOME` participates in these paths only when it is absolute. A relative or blank home is unusable and never resolves below the working directory.
 

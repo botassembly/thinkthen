@@ -30,6 +30,7 @@ pub(crate) fn ask(
             client,
             max_retries: common.max_retries,
             retry_wait: environment.retry_wait(),
+            usage: environment.usage(),
         },
         edge::key,
     )
@@ -53,16 +54,20 @@ pub(crate) fn ask_prepared(
         plan,
         prepared,
         recorder,
+        environment.usage(),
         edge::key,
         |prepared, key| {
             client
-                .post(&Exchange {
-                    url: backend.url().as_str(),
-                    body: &prepared.body,
-                    key,
-                    max_retries: common.max_retries,
-                    retry_wait: environment.retry_wait(),
-                })
+                .post_observed(
+                    &Exchange {
+                        url: backend.url().as_str(),
+                        body: &prepared.body,
+                        key,
+                        max_retries: common.max_retries,
+                        retry_wait: environment.retry_wait(),
+                    },
+                    || environment.usage().request_sent(),
+                )
                 .map_err(Failure::from)
         },
     )

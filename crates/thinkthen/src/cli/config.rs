@@ -13,6 +13,8 @@ pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Config {
+    #[serde(skip)]
+    present: bool,
     schema: String,
     url: Option<String>,
     model: Option<String>,
@@ -36,9 +38,10 @@ impl Config {
                 ));
             }
         };
-        let parsed: Self = serde_json::from_slice(&bytes).map_err(|_| {
+        let mut parsed: Self = serde_json::from_slice(&bytes).map_err(|_| {
             Failure::Configuration("the configuration file is not valid closed JSON")
         })?;
+        parsed.present = true;
         parsed.validate()?;
         Ok(parsed)
     }
@@ -76,6 +79,21 @@ impl Config {
     pub(crate) fn url(&self) -> Option<&str> {
         self.url.as_deref()
     }
+    pub(crate) const fn present(&self) -> bool {
+        self.present
+    }
+    pub(crate) const fn has_url(&self) -> bool {
+        self.url.is_some()
+    }
+    pub(crate) const fn has_model(&self) -> bool {
+        self.model.is_some()
+    }
+    pub(crate) const fn has_cache(&self) -> bool {
+        self.cache.is_some()
+    }
+    pub(crate) const fn has_cache_bytes(&self) -> bool {
+        self.cache_bytes.is_some()
+    }
     pub(crate) fn model(&self) -> Option<&str> {
         self.model.as_deref()
     }
@@ -109,6 +127,14 @@ pub(crate) fn cache_path() -> Option<PathBuf> {
     )
 }
 
+pub(crate) fn usage_path() -> Option<PathBuf> {
+    resolve_usage(
+        current_platform(),
+        variable("XDG_CACHE_HOME"),
+        variable("HOME"),
+    )
+}
+
 fn resolve_config(
     platform: Platform,
     xdg: Option<String>,
@@ -129,6 +155,15 @@ fn resolve_cache(platform: Platform, xdg: Option<String>, home: Option<String>) 
         Platform::Linux => absolute(xdg)
             .map(|home| home.join("thinkthen"))
             .or_else(|| absolute(home).map(|home| home.join(".cache/thinkthen"))),
+    }
+}
+
+fn resolve_usage(platform: Platform, xdg: Option<String>, home: Option<String>) -> Option<PathBuf> {
+    match platform {
+        Platform::Macos => absolute(home).map(|home| home.join("Library/Caches/thinkthen-usage")),
+        Platform::Linux => absolute(xdg)
+            .map(|home| home.join("thinkthen-usage"))
+            .or_else(|| absolute(home).map(|home| home.join(".cache/thinkthen-usage"))),
     }
 }
 
@@ -154,7 +189,7 @@ fn variable(name: &str) -> Option<String> {
 mod tests {
     use std::path::PathBuf;
 
-    use super::{Config, Platform, resolve_cache, resolve_config};
+    use super::{Config, Platform, resolve_cache, resolve_config, resolve_usage};
 
     #[test]
     fn the_closed_shape_requires_its_schema_and_positive_limit() {
@@ -222,6 +257,16 @@ mod tests {
             Some(PathBuf::from("/config/thinkthen/config.json"))
         );
         assert_eq!(resolve_cache(Platform::Linux, None, None), None);
+        assert_eq!(
+            resolve_usage(Platform::Linux, Some("/cache".to_owned()), None),
+            Some(PathBuf::from("/cache/thinkthen-usage"))
+        );
+        assert_eq!(
+            resolve_usage(Platform::Macos, None, Some("/Users/person".to_owned())),
+            Some(PathBuf::from(
+                "/Users/person/Library/Caches/thinkthen-usage"
+            ))
+        );
         for platform in [Platform::Linux, Platform::Macos] {
             for unusable in ["", "relative"] {
                 assert_eq!(
