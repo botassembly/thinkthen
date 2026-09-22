@@ -103,3 +103,19 @@ test('usage: a question value carries its own options', async () => {
   assert.equal(held.kind, 'usage');
   assert.match(held.message, /options/);
 });
+
+test('usage: a question value carries its own levels (settled 2026-09-21)', async () => {
+  const held = await kindOf(() =>
+    tt.score({ score: 'How urgent?', levels: ['low', 'high'] }, 'some text', { levels: ['one', 'two'] }),
+  );
+  assert.equal(held.kind, 'usage');
+  assert.match(held.message, /levels/);
+});
+
+test('a spent deadline is legal: zero rejects with the deadline kind naming the budget (settled 2026-09-21)', async () => {
+  const held = await kindOf(() =>
+    tt.decide('Does the customer ask for a refund?', 'I want a refund for order 9', { deadlineMs: 0 }),
+  );
+  assert.equal(held.kind, 'deadline');
+  assert.match(held.message, /0/);
+});

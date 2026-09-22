@@ -286,7 +286,8 @@ fn failure_envelope(error: tt::Error) -> String {
 /// question's file-grammar JSON (or, for `annotate`, a set's path or
 /// JSON); `payload` is one evidence text or a JSON array of records;
 /// `cancel` carries the wrapper's `AbortSignal`; `deadlineSec` bounds the
-/// whole call.
+/// whole call. A budget of zero or less is legal and spent immediately:
+/// the contract returns the deadline kind naming the budget.
 #[allow(clippy::needless_pass_by_value)]
 #[napi]
 pub fn call(
@@ -299,8 +300,8 @@ pub fn call(
     let op = Op::parse(&op)?;
     let token = cancel.map(|handle| handle.token.clone());
     let deadline = deadline_sec
-        .filter(|seconds| *seconds > 0.0 && seconds.is_finite())
-        .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds));
+        .filter(|seconds| seconds.is_finite())
+        .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds.max(0.0)));
     Ok(AsyncTask::new(CallTask { op, spec, payload, token, deadline }))
 }
 

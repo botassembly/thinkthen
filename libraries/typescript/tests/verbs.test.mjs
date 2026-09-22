@@ -113,6 +113,16 @@ test('details: the requests list and the failure count (0053, 0054)', async () =
   assert.equal(held.failed_questions, 0, 'always present, including zero');
 });
 
+test('details: nearest is the level on a score question, null elsewhere (settled 2026-09-21)', async () => {
+  const scored = await tt.details(
+    { score: 'How strong is the refund claim?', levels: ['low', 'mid', 'high'] },
+    'maybe later',
+  );
+  assert.equal(scored.nearest, 'mid');
+  const decided = await tt.details('Does the customer ask for a refund?', 'I want a refund for order 9');
+  assert.equal(decided.nearest, null, 'null on every non-score verb');
+});
+
 test('annotate: a failed question carries the ruled marker, never null (0054)', async () => {
   const set = JSON.stringify({
     version: 1,

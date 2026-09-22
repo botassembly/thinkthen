@@ -112,7 +112,7 @@ function splitLast(verb, options) {
 // last object's inputs, or from a question value or spec as before.
 function specFrom(verb, questionOrSpec, inputs) {
   if (typeof questionOrSpec !== 'string') {
-    for (const key of ['options', 'labels']) {
+    for (const key of ['options', 'labels', 'levels']) {
       if (key in inputs) {
         throw usageError(`${verb}: a question value carries its own ${key}; the last object holds call options and top`);
       }
@@ -153,9 +153,11 @@ function callOptions(options) {
   }
   if (deadlineMs !== undefined) {
     const held = Number(deadlineMs);
-    if (!Number.isFinite(held) || held <= 0) {
-      throw usageError('options.deadlineMs is positive milliseconds');
+    if (!Number.isFinite(held)) {
+      throw usageError('options.deadlineMs is milliseconds');
     }
+    // A budget of zero or less is legal: the deadline is spent before the
+    // call starts and the engine returns the deadline kind naming it.
     out.deadlineSec = held / 1000;
   }
   return out;
@@ -293,6 +295,9 @@ async function details(questionOrText, text, options) {
     model: held.model,
     digest: held.digest,
     sends: held.sends,
+    // The nearest level's name on a score question; null on every other
+    // verb (ADR 0017 pick 6, settled 2026-09-21).
+    nearest: held.nearest ?? null,
     // The ordered recording digests of the logical requests (0053): always
     // an array, one element for a one-request result; a retry adds none.
     requests: held.requests ?? [],

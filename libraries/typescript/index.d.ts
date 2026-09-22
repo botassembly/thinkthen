@@ -45,7 +45,9 @@ export type Question = {
 export interface CallOptions {
   /** Cancels the call: no new request starts, sent requests finish. */
   signal?: AbortSignal;
-  /** Bounds the whole call in positive milliseconds. */
+  /** Bounds the whole call in milliseconds. A budget of zero or less is
+   * legal and spent immediately: the call sends nothing and rejects with
+   * the `deadline` kind naming the budget. */
   deadlineMs?: number;
 }
 
@@ -74,6 +76,9 @@ export interface DetailsAnswer {
   model: string;
   digest: string;
   sends: number;
+  /** The nearest level's name on a score question; null on every other
+   * verb (ADR 0017 pick 6, settled 2026-09-21). */
+  nearest: string | null;
   /** The ordered recording digests of the logical requests (0053): always
    * an array, one element for a one-request result, in construction order;
    * a retry adds no element. */

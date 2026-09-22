@@ -10,7 +10,8 @@ export declare function usage(): string
  * question's file-grammar JSON (or, for `annotate`, a set's path or
  * JSON); `payload` is one evidence text or a JSON array of records;
  * `cancel` carries the wrapper's `AbortSignal`; `deadlineSec` bounds the
- * whole call.
+ * whole call. A budget of zero or less is legal and spent immediately:
+ * the contract returns the deadline kind naming the budget.
  */
 export declare function call(op: string, spec: string | undefined | null, payload: string, cancel?: CancelHandle | undefined | null, deadlineSec?: number | undefined | null): Promise<unknown>
 /**

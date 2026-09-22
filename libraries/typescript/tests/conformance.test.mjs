@@ -41,15 +41,13 @@ async function runCase(held) {
 
   if (expect?.error) {
     const wanted = expect.error.kind;
-    if (wanted === 'deadline') {
-      note(
-        held.id,
-        'skip: the spent-budget case runs on the wire, where this surface’s own deadline test freezes the stub; a positive deadlineMs answers inside the null backend',
-      );
-      return;
-    }
+    // A spent deadline is legal everywhere (settled 2026-09-21): the
+    // case's budget_ms of zero reaches the engine, which returns the
+    // deadline kind naming the budget without sending. Every other kind
+    // runs with no call options.
+    const call = wanted === 'deadline' ? { deadlineMs: held.budget_ms ?? 0 } : undefined;
     await assert.rejects(
-      () => runVerb(held, spec, text, list),
+      () => runVerb(held, spec, text, list, call),
       (raised) => raised instanceof tt.ThinkThenError && raised.kind === wanted,
     );
     return;
@@ -57,11 +55,11 @@ async function runCase(held) {
   await runVerb(held, spec, text, list);
 }
 
-async function runVerb(held, spec, text, list) {
+async function runVerb(held, spec, text, list, call) {
   const { verb, expect } = held;
   switch (verb) {
     case 'decide': {
-      const answer = await tt.decide(spec, text);
+      const answer = await tt.decide(spec, text, call);
       assert.equal(answer, expect.answer ?? null);
       return;
     }
