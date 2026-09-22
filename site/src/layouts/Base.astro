@@ -6,6 +6,10 @@ const { title, description = 'Ten functions that process text by its meaning, in
 const full = title === 'ThinkThen' ? 'ThinkThen: code that understands' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
+// One card for every page. The image is the wordmark on the light ground.
+const social = 'Ten functions that answer questions about text. Command line, every library, every database.';
+const cardImage = new URL('/brand/thinkthen-card.png', Astro.site).href;
+const pageUrl = new URL(here, Astro.site).href;
 const nav = [
   ['/functions/', 'Functions'],
   ['/surfaces/', 'Surfaces'],
@@ -27,6 +31,19 @@ const nav = [
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{full}</title>
 <meta name="description" content={description}>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ThinkThen">
+<meta property="og:url" content={pageUrl}>
+<meta property="og:title" content={full}>
+<meta property="og:description" content={social}>
+<meta property="og:image" content={cardImage}>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ThinkThen">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content={full}>
+<meta name="twitter:description" content={social}>
+<meta name="twitter:image" content={cardImage}>
 {NOINDEX && <meta name="robots" content="noindex">}
 <link rel="icon" href="/brand/thinkthen-mark-dark.svg" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="/brand/thinkthen-mark-light.svg" media="(prefers-color-scheme: light)">
