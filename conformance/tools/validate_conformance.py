@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""Validate conformance/conformance.json: schema, grammar, wire contract, offline replay.
+"""Validate the conformance file: schema, grammar, wire contract, offline replay.
 
-No network. Every expected answer is recomputed from the recorded exchange
-under the rules of specification/{decide,choose,tag,score,question-file}.md,
-so the file is self-checking evidence, not prose.
+The cases file is the first argument when one is given, and
+`<repo>/conformance/conformance.json` otherwise, resolved from this
+script's own place so the checker runs from any directory, the repository
+root included. No network. Every expected answer is recomputed from the
+recorded exchange under the rules of
+specification/{decide,choose,tag,score,question-file}.md, so the file is
+self-checking evidence, not prose.
 """
 import hashlib
+import pathlib
 import re
 import json
 import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+DEFAULT_CASES = ROOT / "conformance" / "conformance.json"
+REPLAY_TABLE = ROOT / "standin" / "data" / "recognize-replay.json"
 
 KINDS = {"usage", "backend", "local", "cancelled", "deadline", "defect"}
 CAUSES = {"missing_answer", "wrong_kind", "missing_probability", "invalid_probability",
@@ -70,7 +79,12 @@ def check(cond, msg):
     if not cond:
         errors.append(msg)
 
-data = json.load(open("conformance.json"))
+cases_path = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_CASES
+try:
+    data = json.loads(cases_path.read_text())
+except OSError as error:
+    print(f"cannot read the cases file: {error}")
+    sys.exit(1)
 check(data["schema"] == "thinkthen.conformance/1", "schema")
 check(set(data["error_kinds"]) == KINDS, "error_kinds must be the six")
 check(data["case_count"] == len(data["cases"]), "case_count")
@@ -320,7 +334,7 @@ def check_relate_case(c):
 
 def replay_recognize_and_relate(c):
     """Prove the case against the replay table the stand-in serves."""
-    table = json.load(open("../standin/data/recognize-replay.json"))
+    table = json.loads(REPLAY_TABLE.read_text())
     row = replay_row(table, c)
     if row is None:
         return
