@@ -52,12 +52,12 @@ const triageFile = `{
   <p>Two channels, neither built yet. Both arrive with 0.1.</p>
   <InstallLine line={shell.install[0][0]} status="planned" note={shell.install[0][1]} caption="Homebrew tap" />
   <InstallLine line={shell.install[1][0]} status="planned" note={shell.install[1][1]} caption="Download script" />
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key first, because a new user waits about a day for one. <code>--dry-run</code> needs no key, so you can read the plan while you wait. The <a href="/install/">install page</a> carries every other surface.</p>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key first. A new user waits for one. <code>--dry-run</code> needs no key, so you can read the plan while you wait. The <a href="/install/">install page</a> carries every other surface.</p>
 
   <h2>2. Ask one question</h2>
   <p>Put the evidence on standard in and the question in the arguments. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
   <Terminal run={plain} />
-  <p>The exit code is the answer, so a script branches on it the way it branches on <code>test</code>.</p>
+  <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
 
   <h2>3. Look at the number</h2>
   <p><code>true</code> hides a number. <code>--details</code> prints the whole result, and the model's probability sits under <code>.answer</code>.</p>
@@ -74,7 +74,7 @@ const triageFile = `{
   <h2>5. Leave a middle</h2>
   <p>Two numbers make a band. An answer under the low bar is no, an answer over the high bar is yes, and anything between is not sure.</p>
   <Terminal run={band} />
-  <p>Not sure prints <code>null</code> and exits 3. It is not a guess and not a failure. It is how a pipeline hands a person the calls it should not make alone.</p>
+  <p>Not sure prints <code>null</code> and exits 3. It is not a guess and not a failure. A pipeline uses it to hand a person the calls it should not make alone.</p>
 
   <h2>6. Save the question to a file</h2>
   <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
