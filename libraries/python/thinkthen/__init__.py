@@ -68,20 +68,20 @@ __all__ = [
 # Arrow stream hears. The probe raises them before any request runs, and
 # the fallback after a real construction keeps them the same words.
 _ANNOTATE_REBUILD_REFUSAL = (
-    "annotate with on= cannot rebuild a pandas frame from the "
+    "annotate with on= cannot rebuild this host's own frame from the "
     "Arrow stream it returns. Pass the column instead — "
     "tt.annotate(set, df[column]) — which returns a list of "
     "dictionaries, one per row, or convert once and back — "
     "tt.annotate(set, pl.from_pandas(df), on=column).to_pandas()"
 )
 _RECOGNIZE_REBUILD_REFUSAL = (
-    "recognize with on= cannot rebuild a pandas frame from the "
+    "recognize with on= cannot rebuild this host's own frame from the "
     "Arrow stream it returns. Pass the column instead — "
     "tt.recognize(df[column], kinds=...) — or convert once and "
     "back — tt.recognize(pl.from_pandas(df), on=column)"
 )
 _RELATE_REBUILD_REFUSAL = (
-    "relate with on= cannot rebuild a pandas frame from the "
+    "relate with on= cannot rebuild this host's own frame from the "
     "Arrow stream it returns. Pass the column instead — "
     "tt.relate(df[column], relations=...) — or convert once and "
     "back — tt.relate(pl.from_pandas(df), on=column)"
