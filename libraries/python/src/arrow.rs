@@ -319,12 +319,11 @@ impl BatchHold {
 
 /// A frame-shaped column: the `on` column's texts borrowed, every other
 /// column kept as a shallow batch hold for aliasing, and the schema held
-/// so `build_frame` can copy names and formats.
+/// so the output can deep-copy each column's own tree.
 pub(crate) struct FrameColumn {
     pub(crate) texts: Vec<&'static str>,
     on: usize,
     names: Vec<String>,
-    formats: Vec<Option<Vec<u8>>>,
     lengths: Vec<usize>,
     hold: Vec<BatchHold>,
     schema: Box<ArrowSchema>,
@@ -375,7 +374,6 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
         return Err(UsageError::new_err("the frame has no columns"));
     }
     let mut names = Vec::with_capacity(count);
-    let mut formats = Vec::with_capacity(count);
     let mut on_index = None;
     for place in 0..count {
         let child = unsafe { *schema.children.add(place) };
@@ -390,16 +388,10 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
                 .to_string_lossy()
                 .into_owned()
         };
-        let format = if child_ref.format.is_null() {
-            None
-        } else {
-            Some(unsafe { CStr::from_ptr(child_ref.format) }.to_bytes().to_vec())
-        };
         if name == on {
             on_index = Some(place);
         }
         names.push(name);
-        formats.push(format);
     }
     let Some(on_index) = on_index else {
         return Err(UsageError::new_err(format!(
@@ -416,7 +408,6 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
         texts: Vec::new(),
         on: on_index,
         names,
-        formats,
         lengths: Vec::new(),
         hold: Vec::new(),
         schema: std::mem::replace(&mut schema, Box::new(unsafe { std::mem::zeroed() })),
@@ -456,8 +447,16 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
 /// One batch's whole allocation, handed to the consumer with the array.
 /// The array's `release` drops this box, so the memory lives exactly as
 /// long as the consumer owns the batch, per the C interface.
+///
+/// Each batch carries its own root, because one stream may hand out
+/// several batches and every one must describe its own children: a shared
+/// root template would make the second batch alias the first batch's
+/// arrays, and the first batch's box is freed as soon as the consumer
+/// releases it.
 #[allow(dead_code)] // the fields anchor the pointers handed out in the array
 struct BatchKeep {
+    /// This batch's own root struct, read out on emission.
+    root: Box<ArrowArray>,
     root_buffers: Vec<*const c_void>,
     children: Vec<Box<ArrowArray>>,
     child_ptrs: Vec<*mut ArrowArray>,
@@ -470,8 +469,10 @@ struct BatchKeep {
 }
 
 /// The batch release: the consumer is done with the arrays and their
-/// buffers, so the whole allocation goes.
+/// buffers, so the whole allocation goes. The release pointer is cleared
+/// as the C data interface requires, so a second call cannot free again.
 unsafe extern "C" fn batch_release(out: *mut ArrowArray) {
+    (*out).release = None;
     let keep = (*out).private_data as *mut BatchKeep;
     if !keep.is_null() {
         (*out).private_data = std::ptr::null_mut();
@@ -479,17 +480,140 @@ unsafe extern "C" fn batch_release(out: *mut ArrowArray) {
     }
 }
 
-/// A schema tree handed to the consumer: its own boxes and strings, freed
-/// by the tree's release when the consumer is done with it.
-struct SchemaKeep {
-    children: Vec<Box<ArrowSchema>>,
-    child_ptrs: Vec<*mut ArrowSchema>,
+/// The owned pieces of one schema tree: every struct boxed, the
+/// child-pointer arrays, and the strings the structs point at. Every
+/// buffer lives on the heap, so pointers into them stay put when the tree
+/// moves.
+struct SchemaTree {
+    boxes: Vec<Box<ArrowSchema>>,
+    child_ptrs: Vec<Vec<*mut ArrowSchema>>,
     strings: Vec<CString>,
+    /// The tree's root struct, the last node built; every build path ends
+    /// with the root.
+    root: *mut ArrowSchema,
 }
 
-/// The schema release: free the tree the consumer was given.
+impl Default for SchemaTree {
+    fn default() -> Self {
+        Self {
+            boxes: Vec::new(),
+            child_ptrs: Vec::new(),
+            strings: Vec::new(),
+            root: std::ptr::null_mut(),
+        }
+    }
+}
+
+impl SchemaTree {
+    /// Copy one C string into the tree; a null stays null.
+    fn text(&mut self, value: *const c_char) -> *const c_char {
+        if value.is_null() {
+            return std::ptr::null();
+        }
+        let owned = CString::new(unsafe { CStr::from_ptr(value) }.to_bytes())
+            .unwrap_or_default();
+        let pointer = owned.as_ptr();
+        self.strings.push(owned);
+        pointer
+    }
+
+    /// One node over already-owned pieces; the child array is kept here so
+    /// its pointer stays valid.
+    fn node(
+        &mut self,
+        format: *const c_char,
+        name: *const c_char,
+        flags: i64,
+        children: Vec<*mut ArrowSchema>,
+        dictionary: *mut ArrowSchema,
+    ) -> *mut ArrowSchema {
+        let count = children.len();
+        let child_ptrs = if children.is_empty() {
+            std::ptr::null_mut()
+        } else {
+            self.child_ptrs.push(children);
+            self.child_ptrs.last_mut().expect("just pushed").as_mut_ptr()
+        };
+        self.boxes.push(Box::new(ArrowSchema {
+            format,
+            name,
+            metadata: std::ptr::null(),
+            flags,
+            n_children: count as i64,
+            children: child_ptrs,
+            dictionary,
+            release: Some(schema_tree_release),
+            private_data: std::ptr::null_mut(),
+        }));
+        let pointer = self.boxes.last_mut().expect("just pushed").as_mut() as *mut ArrowSchema;
+        self.root = pointer;
+        pointer
+    }
+
+    /// A leaf: one name and one format, no children.
+    fn leaf(&mut self, name: Option<&str>, format: &str, flags: i64) -> PyResult<*mut ArrowSchema> {
+        let name = match name {
+            Some(text) => Some(
+                CString::new(text)
+                    .map_err(|_| UsageError::new_err("a column name holds a NUL byte"))?,
+            ),
+            None => None,
+        };
+        let format =
+            CString::new(format).map_err(|_| UsageError::new_err("a column format holds a NUL"))?;
+        let name_ptr = match &name {
+            Some(text) => text.as_ptr(),
+            None => std::ptr::null(),
+        };
+        let format_ptr = format.as_ptr();
+        if let Some(text) = name {
+            self.strings.push(text);
+        }
+        self.strings.push(format);
+        Ok(self.node(format_ptr, name_ptr, flags, Vec::new(), std::ptr::null_mut()))
+    }
+
+    /// The struct node every frame hands out: the `+s` format, no name.
+    fn branch(&mut self, children: Vec<*mut ArrowSchema>) -> PyResult<*mut ArrowSchema> {
+        let format =
+            CString::new("+s").map_err(|_| UsageError::new_err("a column format holds a NUL"))?;
+        let format_ptr = format.as_ptr();
+        self.strings.push(format);
+        Ok(self.node(format_ptr, std::ptr::null(), 0, children, std::ptr::null_mut()))
+    }
+
+    /// Deep-copy one schema struct and its whole tree: names, formats,
+    /// children, and a dictionary when one is attached. Every node is this
+    /// tree's own, so the consumer's release frees exactly what it was
+    /// handed.
+    ///
+    /// # Safety
+    /// `source` must point at a live schema struct.
+    unsafe fn copy(&mut self, source: *const ArrowSchema) -> *mut ArrowSchema {
+        let format = self.text(unsafe { (*source).format });
+        let name = self.text(unsafe { (*source).name });
+        let count = unsafe { (*source).n_children }.max(0) as usize;
+        let mut children = Vec::with_capacity(count);
+        for place in 0..count {
+            let child = unsafe { *(*source).children.add(place) };
+            children.push(unsafe { self.copy(child) });
+        }
+        let dictionary = unsafe { (*source).dictionary };
+        let dictionary = if dictionary.is_null() {
+            std::ptr::null_mut()
+        } else {
+            unsafe { self.copy(dictionary) }
+        };
+        let flags = unsafe { (*source).flags };
+        self.node(format, name, flags, children, dictionary)
+    }
+}
+
+/// The schema release: free the tree the consumer was given, and clear the
+/// release pointer the C data interface requires to be cleared.
 unsafe extern "C" fn schema_tree_release(root: *mut ArrowSchema) {
-    let keep = (*root).private_data as *mut SchemaKeep;
+    (*root).release = None;
+    let keep = (*root).private_data as *mut SchemaTree;
     if !keep.is_null() {
         (*root).private_data = std::ptr::null_mut();
         drop(Box::from_raw(keep));
@@ -498,12 +622,12 @@ unsafe extern "C" fn schema_tree_release(root: *mut ArrowSchema) {
 
 /// The whole frame behind the output stream: the schema template to deep
 /// copy from, the batches not yet handed out, and the error phrase.
-#[allow(dead_code)] // the schema template anchors the pointers deep-copied out
 pub(crate) struct OutFrame {
-    schema_children: Vec<Box<ArrowSchema>>,
-    schema_strings: Vec<CString>,
+    /// The output schema template: the caller's columns' whole trees,
+    /// deep-copied, and the new columns' leaves. `hand_schema` clones it
+    /// for every take, starting from its root.
+    schema: SchemaTree,
     batches: Vec<Option<BatchKeep>>,
-    root_template: Box<ArrowArray>,
     emitted: usize,
     error: Option<CString>,
 }
@@ -539,9 +663,6 @@ pub(crate) fn build_frame(
     }
     let originals = frame.names.len();
     let total = originals + names.len();
-    let mut schema_strings: Vec<CString> = Vec::with_capacity(total * 2 + 1);
-    schema_strings.push(CString::new("+s").expect("static format"));
-    let mut schema_children: Vec<Box<ArrowSchema>> = Vec::with_capacity(total);
     let mut formats_for_new: Vec<&'static str> = Vec::with_capacity(names.len());
     for name in names {
         // A failed member widens the question's whole column to text: a
@@ -570,61 +691,33 @@ pub(crate) fn build_frame(
         };
         formats_for_new.push(format);
     }
-    for (place, name) in frame.names.iter().enumerate() {
-        let owned = CString::new(name.as_str())
-            .map_err(|_| UsageError::new_err("a column name holds a NUL byte"))?;
-        let name_ptr = owned.as_ptr();
-        schema_strings.push(owned);
-        let format = match &frame.formats[place] {
-            Some(bytes) => CString::new(bytes.clone())
-                .map_err(|_| UsageError::new_err("a column format holds a NUL"))?,
-            None => CString::new("u").expect("static format"),
-        };
-        let format_ptr = format.as_ptr();
-        schema_strings.push(format);
-        schema_children.push(Box::new(ArrowSchema {
-            format: format_ptr,
-            name: name_ptr,
-            metadata: std::ptr::null(),
-            flags: 2,
-            n_children: 0,
-            children: std::ptr::null_mut(),
-            dictionary: std::ptr::null_mut(),
-            release: Some(schema_tree_release),
-            private_data: std::ptr::null_mut(),
-        }));
+    let hold = std::sync::Arc::new(frame);
+    // The output schema: the caller's columns keep their own whole schema
+    // trees — a dictionary, a struct's fields, a list's element — deep
+    // copied so the output describes exactly the aliased arrays, and the
+    // new columns get one leaf each.
+    let mut schema = SchemaTree::default();
+    let mut schema_children: Vec<*mut ArrowSchema> = Vec::with_capacity(total);
+    for place in 0..originals {
+        let source = unsafe { *hold.schema.children.add(place) };
+        schema_children.push(unsafe { schema.copy(source) });
     }
     for (place, name) in names.iter().enumerate() {
-        let owned = CString::new(name.as_str())
-            .map_err(|_| UsageError::new_err("a question name holds a NUL byte"))?;
-        let name_ptr = owned.as_ptr();
-        schema_strings.push(owned);
-        let format = CString::new(formats_for_new[place]).expect("static format");
-        let format_ptr = format.as_ptr();
-        schema_strings.push(format);
-        schema_children.push(Box::new(ArrowSchema {
-            format: format_ptr,
-            name: name_ptr,
-            metadata: std::ptr::null(),
-            flags: 2,
-            n_children: 0,
-            children: std::ptr::null_mut(),
-            dictionary: std::ptr::null_mut(),
-            release: Some(schema_tree_release),
-            private_data: std::ptr::null_mut(),
-        }));
+        schema_children.push(schema.leaf(Some(name), formats_for_new[place], 2)?);
     }
-
-    let hold = std::sync::Arc::new(frame);
-    // One batch out per batch in, so aliased originals stay per-batch.
+    let schema_root = schema.branch(schema_children)?;
+    let _ = schema_root;
+    // One batch out per batch in, so aliased originals stay per-batch and
+    // every batch keeps its own root.
     let mut batches: Vec<Option<BatchKeep>> = Vec::with_capacity(hold.hold.len().max(1));
-    let mut root_template: Option<Box<ArrowArray>> = None;
     let mut base = 0usize;
     for (batch_place, length) in hold.lengths.iter().copied().enumerate() {
         let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);
         let mut buffers: Vec<Vec<*const c_void>> = Vec::with_capacity(total);
         let mut owned: Vec<Vec<u8>> = Vec::new();
-        // Originals, aliased from the hold.
+        // Originals, aliased from the hold: the whole struct comes across,
+        // including a dictionary's values and a nested column's children,
+        // because those pointers are part of the column's shape.
         for place in 0..originals {
             let child = unsafe { hold.hold[batch_place].child(place) };
             let buffers_ptr = child.buffers;
@@ -637,7 +730,7 @@ pub(crate) fn build_frame(
                 n_children: child.n_children,
                 buffers: buffers_ptr,
                 children: child.children,
-                dictionary: std::ptr::null_mut(),
+                dictionary: child.dictionary,
                 release: Some(batch_release),
                 private_data: std::ptr::null_mut(),
             }));
@@ -802,10 +895,8 @@ pub(crate) fn build_frame(
             release: Some(batch_release),
             private_data: std::ptr::null_mut(),
         });
-        if root_template.is_none() {
-            root_template = Some(Box::new(unsafe { std::ptr::read(root.as_ref()) }));
-        }
         batches.push(Some(BatchKeep {
+            root,
             root_buffers,
             children,
             child_ptrs,
@@ -815,26 +906,10 @@ pub(crate) fn build_frame(
         }));
         base += length;
     }
-    let root_template = root_template.unwrap_or_else(|| {
-        Box::new(ArrowArray {
-            length: 0,
-            null_count: 0,
-            offset: 0,
-            n_buffers: 1,
-            n_children: total as i64,
-            buffers: std::ptr::null_mut(),
-            children: std::ptr::null_mut(),
-            dictionary: std::ptr::null_mut(),
-            release: Some(batch_release),
-            private_data: std::ptr::null_mut(),
-        })
-    });
 
     Ok(OutFrame {
-        schema_children,
-        schema_strings,
+        schema,
         batches,
-        root_template,
         emitted: 0,
         error: None,
     })
@@ -885,29 +960,13 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         }
     }
     let total = columns.len();
-    let mut schema_strings: Vec<CString> = Vec::with_capacity(total * 2 + 1);
-    schema_strings.push(CString::new("+s").expect("static format"));
-    let mut schema_children: Vec<Box<ArrowSchema>> = Vec::with_capacity(total);
+    let mut schema = SchemaTree::default();
+    let mut schema_children: Vec<*mut ArrowSchema> = Vec::with_capacity(total);
     for (name, value) in columns {
-        let owned = CString::new(*name)
-            .map_err(|_| UsageError::new_err("a column name holds a NUL byte"))?;
-        let name_ptr = owned.as_ptr();
-        schema_strings.push(owned);
-        let format = CString::new(value.format()).expect("static format");
-        let format_ptr = format.as_ptr();
-        schema_strings.push(format);
-        schema_children.push(Box::new(ArrowSchema {
-            format: format_ptr,
-            name: name_ptr,
-            metadata: std::ptr::null(),
-            flags: 2,
-            n_children: 0,
-            children: std::ptr::null_mut(),
-            dictionary: std::ptr::null_mut(),
-            release: Some(schema_tree_release),
-            private_data: std::ptr::null_mut(),
-        }));
+        schema_children.push(schema.leaf(Some(name), value.format(), 2)?);
     }
+    let schema_root = schema.branch(schema_children)?;
+    let _ = schema_root;
 
     let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);
     let mut buffers: Vec<Vec<*const c_void>> = Vec::with_capacity(total);
@@ -1000,8 +1059,8 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         release: Some(batch_release),
         private_data: std::ptr::null_mut(),
     });
-    let root_template = Box::new(unsafe { std::ptr::read(root.as_ref()) });
     let batches = vec![Some(BatchKeep {
+        root,
         root_buffers,
         children,
         child_ptrs,
@@ -1010,76 +1069,22 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         hold: None,
     })];
     Ok(OutFrame {
-        schema_children,
-        schema_strings,
+        schema,
         batches,
-        root_template,
         emitted: 0,
         error: None,
     })
 }
 
-/// Deep-copy the schema template into a tree the consumer owns and
+/// Deep-copy the schema template into a fresh tree the consumer owns and
 /// releases through `schema_tree_release`.
 unsafe fn hand_schema(state: &OutFrame, out: *mut ArrowSchema) {
-    let mut strings: Vec<CString> = Vec::with_capacity(state.schema_strings.len());
-    for text in &state.schema_strings {
-        strings.push(text.clone());
-    }
-    let mut children: Vec<Box<ArrowSchema>> = Vec::with_capacity(state.schema_children.len());
-    for child in &state.schema_children {
-        let name = if child.name.is_null() {
-            std::ptr::null()
-        } else {
-            let bytes = CStr::from_ptr(child.name).to_bytes();
-            let owned = CString::new(bytes).unwrap_or_default();
-            let pointer = owned.as_ptr();
-            strings.push(owned);
-            pointer
-        };
-        let format = if child.format.is_null() {
-            std::ptr::null()
-        } else {
-            let bytes = CStr::from_ptr(child.format).to_bytes();
-            let owned = CString::new(bytes).unwrap_or_default();
-            let pointer = owned.as_ptr();
-            strings.push(owned);
-            pointer
-        };
-        children.push(Box::new(ArrowSchema {
-            format,
-            name,
-            metadata: std::ptr::null(),
-            flags: child.flags,
-            n_children: 0,
-            children: std::ptr::null_mut(),
-            dictionary: std::ptr::null_mut(),
-            release: Some(schema_tree_release),
-            private_data: std::ptr::null_mut(),
-        }));
-    }
-    let child_ptrs: Vec<*mut ArrowSchema> = children
-        .iter_mut()
-        .map(|child| child.as_mut() as *mut ArrowSchema)
-        .collect();
-    let keep = Box::new(SchemaKeep {
-        children,
-        child_ptrs,
-        strings,
-    });
-    let keep_ptr = Box::into_raw(keep);
-    let keep = &*keep_ptr;
-    *out = ArrowSchema {
-        format: keep.strings[0].as_ptr(),
-        name: std::ptr::null(),
-        metadata: std::ptr::null(),
-        flags: 0,
-        n_children: keep.children.len() as i64,
-        children: keep.child_ptrs.as_ptr() as *mut *mut ArrowSchema,
-        dictionary: std::ptr::null_mut(),
-        release: Some(schema_tree_release),
-        private_data: keep_ptr as *mut c_void,
-    };
+    let mut tree = SchemaTree::default();
+    let root = unsafe { tree.copy(state.schema.root) };
+    let keep = Box::into_raw(Box::new(tree));
+    *out = std::ptr::read(root);
+    (*out).private_data = keep as *mut c_void;
+    (*out).release = Some(schema_tree_release);
 }
 
 unsafe extern "C" fn frame_get_schema(
@@ -1097,7 +1102,9 @@ unsafe extern "C" fn frame_get_next(stream: *mut ArrowArrayStream, out: *mut Arr
         let keep = state.batches[state.emitted].take();
         state.emitted += 1;
         if let Some(keep) = keep {
-            *out = std::ptr::read(state.root_template.as_ref());
+            // The emitted root is this batch's own, so the second batch
+            // describes its own children rather than the first's.
+            *out = std::ptr::read(keep.root.as_ref());
             let keep_ptr = Box::into_raw(Box::new(keep));
             (*out).private_data = keep_ptr as *mut c_void;
             (*out).release = Some(batch_release);
@@ -1118,6 +1125,7 @@ unsafe extern "C" fn frame_last_error(stream: *mut ArrowArrayStream) -> *const c
 
 unsafe extern "C" fn frame_release(stream: *mut ArrowArrayStream) {
     let data = (*stream).private_data;
+    (*stream).release = None;
     if !data.is_null() {
         (*stream).private_data = std::ptr::null_mut();
         drop(Box::from_raw(data as *mut OutFrame));
@@ -1289,6 +1297,40 @@ impl ArrowSeries {
 
 #[pymethods]
 impl ArrowSeries {
+    /// The answers as a plain Python list, read without taking the Arrow
+    /// capsules: booleans with `None` for "not sure", or numbers. The
+    /// wrapper uses this for a host whose constructors do not consume the
+    /// array capsule (a pandas Series), so the caller still gets one
+    /// answer a row as the plain list the list door returns.
+    fn to_list(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let state = self.state.as_ref().ok_or_else(|| {
+            UsageError::new_err("the column's Arrow array was already taken")
+        })?;
+        let list = pyo3::types::PyList::empty(py);
+        match state.format {
+            "b" => {
+                for place in 0..state.length {
+                    let present = state.null_count == 0
+                        || state.validity[place / 8] & (1 << (place % 8)) != 0;
+                    if !present {
+                        list.append(py.None())?;
+                    } else {
+                        let set = state.values[place / 8] & (1 << (place % 8)) != 0;
+                        list.append(pyo3::types::PyBool::new(py, set))?;
+                    }
+                }
+            }
+            _ => {
+                for place in 0..state.length {
+                    let mut bytes = [0u8; 8];
+                    bytes.copy_from_slice(&state.values[place * 8..place * 8 + 8]);
+                    list.append(pyo3::types::PyFloat::new(py, f64::from_le_bytes(bytes)))?;
+                }
+            }
+        }
+        Ok(list.into_any().unbind())
+    }
+
     /// Mint the schema and array capsules the Arrow PyCapsule interface
     /// names; the host takes one pair per column construction.
     #[pyo3(signature = (requested_schema = None))]
@@ -1362,6 +1404,7 @@ impl ArrowSeries {
 }
 
 unsafe extern "C" fn column_schema_release(schema: *mut ArrowSchema) {
+    (*schema).release = None;
     let data = (*schema).private_data;
     if !data.is_null() {
         (*schema).private_data = std::ptr::null_mut();
@@ -1370,6 +1413,7 @@ unsafe extern "C" fn column_schema_release(schema: *mut ArrowSchema) {
 }
 
 unsafe extern "C" fn column_array_release(array: *mut ArrowArray) {
+    (*array).release = None;
     let data = (*array).private_data;
     if !data.is_null() {
         (*array).private_data = std::ptr::null_mut();

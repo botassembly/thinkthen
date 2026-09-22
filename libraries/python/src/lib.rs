@@ -31,7 +31,6 @@ mod generated;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 
 use pyo3::create_exception;
 use pyo3::exceptions::PyKeyboardInterrupt;
@@ -41,8 +40,10 @@ use pyo3::types::{PyAny, PyDict};
 use thinkthen_contract::Annotated;
 use thinkthen_contract::Answer;
 use thinkthen_contract::Cancel;
+use thinkthen_contract::Connector;
 use thinkthen_contract::Details;
 use thinkthen_contract::Edge as ContractEdge;
+use thinkthen_contract::EngineConfig;
 use thinkthen_contract::Failed;
 use thinkthen_contract::Engine;
 use thinkthen_contract::Error;
@@ -55,7 +56,7 @@ use thinkthen_contract::Recognize;
 use thinkthen_contract::Relate;
 use thinkthen_contract::RelationRule;
 use thinkthen_contract::Scored;
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
 // The exceptions, one a kind. `Cancelled` subclasses `KeyboardInterrupt`,
 // the host's own cancel gesture, so both interrupt paths land in one
@@ -127,19 +128,57 @@ struct QuestionSetHolder {
     inner: QuestionSet,
 }
 
-/// The engine this process shares, built from the environment on first
-/// use so a host can set its variables after the import.
-fn engine() -> &'static BlockingEngine {
-    static ENGINE: OnceLock<BlockingEngine> = OnceLock::new();
-    ENGINE.get_or_init(BlockingEngine::from_env)
+/// The engine this process shares, built through the contract's connector
+/// on first use so a host can set its variables after the import. The one
+/// line that will name the real engine's connector is the `StandinConnector`
+/// name below.
+fn engine() -> &'static Arc<dyn Engine> {
+    static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
+    ENGINE.get_or_init(|| {
+        StandinConnector
+            .connect(&EngineConfig::from_env())
+            .expect("the stand-in connector always connects")
+    })
 }
 
-/// The options a single call takes: a deadline from a budget in seconds.
-fn call_options(deadline: Option<f64>) -> Options<'static> {
-    match deadline {
-        Some(seconds) => Options::new().deadline_in(Duration::from_secs_f64(seconds.max(0.0))),
-        None => Options::new(),
+/// Run one engine step under a panic guard: a panic becomes the defect
+/// kind carrying the panic's own words, so a host hears an exception
+/// instead of losing its process to an unwinding engine.
+fn guarded<T>(step: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(step)) {
+        Ok(result) => result,
+        Err(payload) => Err(Error::defect(format!(
+            "the engine panicked: {}",
+            panic_words(payload)
+        ))),
     }
+}
+
+/// The text a panic payload carries, for the defect message.
+fn panic_words(payload: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(text) = payload.downcast_ref::<&str>() {
+        (*text).to_owned()
+    } else if let Some(text) = payload.downcast_ref::<String>() {
+        text.clone()
+    } else {
+        "without a message".to_owned()
+    }
+}
+
+/// Run one engine step on a detached call, with the panic guard armed.
+fn step<T: Send>(
+    py: Python<'_>,
+    run: impl FnOnce() -> Result<T, Error> + Send,
+) -> Result<T, Error> {
+    py.detach(move || guarded(run))
+}
+
+/// The options a single call takes: a deadline from a budget in seconds,
+/// converted by the contract's one checked door, so a NaN, a negative, or
+/// an oversized budget is a usage error rather than arithmetic that ends
+/// the host process.
+fn call_options(deadline: Option<f64>) -> Result<Options<'static>, Error> {
+    Options::new().with_deadline_seconds(deadline)
 }
 
 /// Map a contract error to the Python exception of its kind, carrying the
@@ -257,10 +296,11 @@ fn bulk<T: Send>(
     deadline: Option<f64>,
     call: impl FnOnce(Options<'_>, Option<&mut dyn FnMut()>) -> Result<T, Error> + Send,
 ) -> PyResult<T> {
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
     let flagged = Arc::new(AtomicBool::new(false));
     let token = Cancel::new();
     let war = token.clone();
-    let armed = call_options(deadline).maybe_cancel(Some(&token));
+    let armed = options.maybe_cancel(Some(&token));
     let result = {
         let flagged = Arc::clone(&flagged);
         py.detach(move || {
@@ -275,7 +315,7 @@ fn bulk<T: Send>(
                     }
                 });
             };
-            call(armed, Some(&mut poll as &mut dyn FnMut()))
+            guarded(|| call(armed, Some(&mut poll as &mut dyn FnMut())))
         })
     };
     match result {
@@ -407,8 +447,8 @@ fn decide(
             "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
         )
     })?;
-    let answer = py
-        .detach(move || engine().decide_opts(&asked, &evidence, call_options(deadline)))
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let answer = step(py, move || engine().decide_opts(&asked, &evidence, options))
         .map_err(|error| python_error(py, error))?;
     Ok(bare(py, answer))
 }
@@ -454,8 +494,8 @@ fn choose(
     deadline: Option<f64>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_verb_question(py, question, "choose", "options", options)?;
-    let picked = py
-        .detach(move || engine().choose_opts(&asked, &evidence, call_options(deadline)))
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let picked = step(py, move || engine().choose_opts(&asked, &evidence, options))
         .map_err(|error| python_error(py, error))?;
     Ok(plain(py, picked))
 }
@@ -479,15 +519,18 @@ fn score(
         let column = arrow::series_column(evidence)?;
         let texts: Vec<String> = column.texts.iter().map(|text| (*text).to_owned()).collect();
         drop(column);
-        let values = py
-            .detach(move || {
-                let mut values = Vec::with_capacity(texts.len());
-                for text in &texts {
-                    values.push(engine().score_opts(&asked, text, call_options(deadline))?.value);
-                }
-                Ok::<Vec<f64>, Error>(values)
-            })
-            .map_err(|error| python_error(py, error))?;
+        // One deadline for the whole column operation: the budget starts
+        // when the call does, and every row's call reads the same instant,
+        // so a column cannot outlive the caller's budget row after row.
+        let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+        let values = step(py, move || {
+            let mut values = Vec::with_capacity(texts.len());
+            for text in &texts {
+                values.push(engine().score_opts(&asked, text, options)?.value);
+            }
+            Ok::<Vec<f64>, Error>(values)
+        })
+        .map_err(|error| python_error(py, error))?;
         return Ok(Py::new(py, arrow::ArrowSeries::numbers("score", &values))?.into_any());
     }
     let evidence: String = evidence.extract().map_err(|_| {
@@ -495,8 +538,8 @@ fn score(
             "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
         )
     })?;
-    let value = py
-        .detach(move || engine().score_opts(&asked, &evidence, call_options(deadline)))
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let value = step(py, move || engine().score_opts(&asked, &evidence, options))
         .map(|Scored { value, .. }| value)
         .map_err(|error| python_error(py, error))?;
     Ok(pyo3::types::PyFloat::new(py, value).unbind().into_any())
@@ -512,7 +555,8 @@ fn tag(
     deadline: Option<f64>,
 ) -> PyResult<Vec<String>> {
     let asked = settle_verb_question(py, question, "tag", "labels", labels)?;
-    py.detach(move || engine().tag_opts(&asked, &evidence, call_options(deadline)))
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    step(py, move || engine().tag_opts(&asked, &evidence, options))
         .map_err(|error| python_error(py, error))
 }
 
@@ -571,8 +615,8 @@ fn find(
 ) -> PyResult<Option<(usize, f64)>> {
     let asked = settle_question(py, question)?;
     let references: Vec<&str> = units.iter().map(String::as_str).collect();
-    let found = py
-        .detach(move || engine().find_opts(&asked, &references, call_options(deadline)))
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let found = step(py, move || engine().find_opts(&asked, &references, options))
         .map_err(|error| python_error(py, error))?;
     Ok(found.index.map(|place| (place, found.probability)))
 }
@@ -675,8 +719,9 @@ fn details(
     deadline: Option<f64>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
     let Details { probability, answer, nearest, model, digest, sends, requests, failed_questions } =
-        py.detach(move || engine().details_opts(&asked, &evidence, call_options(deadline)))
+        step(py, move || engine().details_opts(&asked, &evidence, options))
             .map_err(|error| python_error(py, error))?;
     let dict = PyDict::new(py);
     dict.set_item("probability", probability)?;
@@ -1054,8 +1099,8 @@ fn recognize(
     deadline: Option<f64>,
 ) -> PyResult<Recognized> {
     let asked = build_recognize(py, kinds, relations, threshold, relation_threshold)?;
-    let found = py
-        .detach(move || engine().recognize_opts(&asked, &text, call_options(deadline)))
+    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let found = step(py, move || engine().recognize_opts(&asked, &text, options))
         .map_err(|error| python_error(py, error))?;
     Ok(recognized_record(found))
 }
@@ -1133,7 +1178,7 @@ fn relate(
         if let Some(poll) = poll.as_mut() {
             poll();
         }
-        thinkthen_contract::relate_checked(engine(), &asked, &references, armed)
+        thinkthen_contract::relate_checked(engine().as_ref(), &asked, &references, armed)
     })?;
     Ok(edges.into_iter().map(edge_record).collect())
 }
@@ -1157,7 +1202,7 @@ fn relate_stream(
         if let Some(poll) = poll.as_mut() {
             poll();
         }
-        thinkthen_contract::relate_checked(engine(), &asked, &references, armed)
+        thinkthen_contract::relate_checked(engine().as_ref(), &asked, &references, armed)
     })?;
     drop(frame);
     let mut name_col: Vec<String> = Vec::with_capacity(edges.len());
@@ -1182,13 +1227,14 @@ fn relate_stream(
 /// The counters since the last reset. `requests` counts sends, so a
 /// retried send shows twice, the same as the bill.
 #[pyfunction]
-fn usage(py: Python<'_>) -> Py<PyAny> {
-    let counted = engine().usage();
+fn usage(py: Python<'_>) -> PyResult<Py<PyAny>> {
+    let counted = guarded(|| Ok::<_, Error>(engine().usage()))
+        .map_err(|error| python_error(py, error))?;
     let dict = PyDict::new(py);
     let _ = dict.set_item("requests", counted.requests);
     let _ = dict.set_item("cache_answers", counted.cache_answers);
     let _ = dict.set_item("tokens", counted.tokens);
-    dict.into_any().unbind()
+    Ok(dict.into_any().unbind())
 }
 
 #[pymodule]
@@ -1238,5 +1284,32 @@ mod tests {
             assert_eq!(kind, "defect");
             assert!(!raised.value(py).getattr("retryable").unwrap().extract::<bool>().unwrap());
         });
+    }
+
+    #[test]
+    fn a_panicking_step_comes_back_as_the_defect_kind() {
+        let caught = guarded(|| -> Result<(), Error> { panic!("the engine broke") });
+        let error = caught.expect_err("a panic is an error, not an unwind past this door");
+        assert_eq!(error.kind, ErrorKind::Defect);
+        assert!(error.message.contains("the engine broke"), "{}", error.message);
+        assert!(!error.retryable);
+    }
+
+    #[test]
+    fn the_deadline_conversion_refuses_what_cannot_be_a_budget() {
+        // NaN, an infinity, and a negative other than the sentinel are
+        // usage errors at the one checked door, never arithmetic that
+        // ends the host.
+        for refused in [f64::NAN, f64::INFINITY, -2.0, 1e300] {
+            let error = match call_options(Some(refused)) {
+                Ok(_) => panic!("{refused} must be refused"),
+                Err(error) => error,
+            };
+            assert_eq!(error.kind, ErrorKind::Usage, "{refused}");
+        }
+        // The sentinel and `None` mean no deadline; zero is a spent one.
+        assert!(call_options(None).is_ok());
+        assert!(call_options(Some(-1.0)).is_ok());
+        assert!(call_options(Some(0.0)).is_ok());
     }
 }

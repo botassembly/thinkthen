@@ -32,13 +32,18 @@ PYO3_PYTHON="$PWD/.venv/bin/python" \
   cargo test --quiet --no-default-features --lib
 
 echo "== surface tests, null backend"
-ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_surface.py -q
+# The stand-in's one partial-failure fixture (finding 7) fires only under
+# its test-only opt-in, so the tests that pin the marker arm it here.
+ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 .venv/bin/python -m pytest tests/test_surface.py -q
 
 echo "== the Polars door, null backend"
-ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_polars_door.py -q
+ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 .venv/bin/python -m pytest tests/test_polars_door.py -q
 
 echo "== the pandas checks, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_pandas_checks.py -q
+
+echo "== one deadline for a whole column (this file's own loopback server)"
+.venv/bin/python -m pytest tests/test_deadline_column.py -q
 
 echo "== recognize and relate, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
@@ -56,7 +61,7 @@ echo "== the function examples, run as one test"
 ENGINE_NULL=1 .venv/bin/python tests/examples.py
 
 echo "== conformance slice, offline"
-ENGINE_NULL=1 .venv/bin/python tests/conformance.py
+ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 .venv/bin/python tests/conformance.py
 
 echo "== slide sample, as drawn, on the stand-in's offline backend"
 # The loopback stub answers one noul shape a request, so the choose, score,

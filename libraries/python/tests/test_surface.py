@@ -1,6 +1,7 @@
 """The Python surface's own checks, offline on the null backend."""
 
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -78,12 +79,26 @@ def test_deadline_names_the_limit():
 
 
 def test_a_past_deadline_is_spent_not_refused():
-    """A zero or negative budget is legal: the call sends nothing and
-    returns the deadline kind, per the settled rule."""
-    for budget in (0.0, -1.0, -0.001):
-        with pytest.raises(tt.DeadlineError) as seen:
+    """A zero budget is legal: the call sends nothing and returns the
+    deadline kind, per the settled rule (the contract's own conversion)."""
+    with pytest.raises(tt.DeadlineError) as seen:
+        tt.decide(cut_question(), "i want a refund now", deadline=0.0)
+    assert "deadline of" in str(seen.value)
+
+
+def test_the_sentinel_means_no_deadline():
+    """Minus one is the contract's no-deadline sentinel, so the call runs."""
+    assert tt.decide(cut_question(), "i want a refund now", deadline=-1.0) is True
+
+
+def test_deadlines_that_cannot_be_budgets_are_usage_errors():
+    """NaN, an infinity, and a negative other than the sentinel are usage
+    errors at the contract's one checked door. Before the review's fix the
+    same values reached `Duration::from_secs_f64` and raised an error that
+    `except ThinkThenError` did not catch."""
+    for budget in (float("nan"), float("inf"), -0.001, -2.0, 1e300):
+        with pytest.raises(tt.UsageError):
             tt.decide(cut_question(), "i want a refund now", deadline=budget)
-        assert "deadline of" in str(seen.value)
 
 
 def test_a_built_question_plus_members_refuses_as_ambiguous():
@@ -255,3 +270,33 @@ def test_fork_child_answers():
         timeout=30,
     )
     assert done.returncode == 0, done.stderr
+
+
+def test_the_fixture_failure_is_off_without_its_opt_in():
+    """Finding 7 from the Python side: no production process meets the
+    stand-in's synthesized partial failure. A fresh process with the
+    test-only opt-in unset answers the fixture record like any other
+    input."""
+    code = (
+        "import thinkthen as tt;"
+        "rows = tt.annotate('tests/fixture/form.json',"
+        " ['order 4471: charged twice, please refund']);"
+        "assert rows[0]['wants_refund'] is True, rows;"
+        "assert 'failed' not in str(rows[0]), rows;"
+        "print('answered')"
+    )
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key != "ENGINE_SYNTHETIC_PARTIAL"
+    }
+    env["ENGINE_NULL"] = "1"
+    done = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    assert "answered" in done.stdout

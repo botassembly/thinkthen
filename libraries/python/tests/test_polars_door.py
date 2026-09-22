@@ -252,3 +252,79 @@ def test_the_column_form_matches_the_list_form():
     column = tt.decide(ask, pl.Series("body", records))
     listed = tt.decide_many(ask, records)
     assert column.to_list() == listed
+
+
+# ---------------------------------------------------------------------------
+# The review of 2026-09-22, finding 3 and group 2: a frame arriving in
+# several pieces, and the C interface's release rule. Both tests fail on
+# the code before the fixes: the two-piece round trip came back as
+# [1, 2, 1, 2] (one answer a distinct text, written row by row) and a
+# pyarrow consumer aborted the process on an uncleared schema release.
+# ---------------------------------------------------------------------------
+
+
+def test_a_multi_piece_table_rides_out_whole():
+    """A 2 + 3 piece table comes back as five distinct rows, one per row,
+    through both consumers' own doors."""
+    import pyarrow as pa
+    from thinkthen import _thinkthen
+
+    first = pa.table({"body": ["please refund order 1", "short note"]})
+    second = pa.table({"body": ["please refund order 2", "second line", "third line"]})
+    pieces = pa.Table.from_batches([first.to_batches()[0], second.to_batches()[0]])
+    bodies = [
+        "please refund order 1",
+        "short note",
+        "please refund order 2",
+        "second line",
+        "third line",
+    ]
+
+    stream = _thinkthen.annotate_stream("tests/fixture/form.json", pieces, "body")
+    table = pa.RecordBatchReader.from_stream(stream).read_all()
+    assert table.num_rows == 5
+    assert len(table.to_batches()) == 2
+    assert table.column("body").to_pylist() == bodies
+
+    stream = _thinkthen.annotate_stream("tests/fixture/form.json", pieces, "body")
+    frame = pl.DataFrame(stream)
+    assert frame.shape == (5, 4)
+    assert frame["body"].to_list() == bodies
+
+
+def test_the_arrow_capsules_clear_the_release_pointer():
+    """pyarrow consumes the array capsule; its C++ helpers abort the
+    process when a release callback leaves the pointer set."""
+    import pyarrow as pa
+    from thinkthen import _thinkthen
+
+    ask = tt.question(decide="Does the customer ask for a refund?", threshold=0.9)
+    wrapper = _thinkthen.decide(ask, pl.Series("body", ["please refund this", "short"]))
+    values = pa.array(wrapper)
+    assert values.to_pylist() == [True, False]
+
+
+def test_annotate_keeps_categorical_struct_and_list_columns():
+    """The caller's other columns come back as themselves: a dictionary
+    keeps its values, a struct its fields, a list its elements, and a
+    null stays a null."""
+    frame = pl.DataFrame(
+        {
+            "body": ["please refund order 1", "short note"],
+            "id": [10, 11],
+            "cat": pl.Series(["a", "b"], dtype=pl.Categorical),
+            "st": pl.Series([{"x": 1}, {"x": 2}], dtype=pl.Struct({"x": pl.Int64})),
+            "li": pl.Series([[1, 2], [3]], dtype=pl.List(pl.Int64)),
+            "flag": [True, None],
+        }
+    )
+    out = tt.annotate("tests/fixture/form.json", frame, on="body")
+    assert out.columns[:6] == ["body", "id", "cat", "st", "li", "flag"]
+    assert out.shape == (2, 9)  # six originals plus the form's three questions
+    assert out["id"].to_list() == [10, 11]
+    assert out["cat"].dtype == pl.Categorical
+    assert out["cat"].to_list() == ["a", "b"]
+    assert out["st"].dtype == pl.Struct({"x": pl.Int64})
+    assert out["st"].to_list() == [{"x": 1}, {"x": 2}]
+    assert out["li"].to_list() == [[1, 2], [3]]
+    assert out["flag"].to_list() == [True, None]

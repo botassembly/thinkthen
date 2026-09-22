@@ -64,7 +64,9 @@ def decide(question, text, *, deadline=None):
     crosses zero-copy through the Arrow stream form, the engine runs the
     column 32 wide in Rust, and the answers come back as a column whose
     nulls are "not sure" — the deck's ``with_columns(complaint=...)`` line
-    runs as drawn.
+    runs as drawn. A pandas Series answers every row too, and comes back
+    as the plain list (pandas cannot rebuild its own column from the
+    Arrow capsule), so ``pd.Series(answers)`` is the one line back.
     """
     answer = _decide(question, text, deadline=deadline)
     return _column_or_value(text, answer)
@@ -75,24 +77,37 @@ def score(question, text, levels=None, *, deadline=None):
 
     A Polars column in returns a number column out, and the public call
     takes ``levels`` beside the text — ``tt.score(ask, df["body"], levels)``
-    runs as the deck draws.
+    runs as the deck draws. A pandas Series comes back as the plain list
+    of numbers, the same as ``decide``.
     """
     answer = _score(question, text, levels=levels, deadline=deadline)
     return _column_or_value(text, answer)
 
 
 def _column_or_value(text, answer):
-    """The host's own column when the answer is one, the value otherwise."""
-    if hasattr(answer, "__arrow_c_array__"):
-        try:
-            return type(text)(answer)
-        except Exception as exc:
-            raise UsageError(
-                "this host cannot rebuild its own column from the Arrow "
-                "array the engine returns; pass a Polars Series, or call "
-                "the verb once a text"
-            ) from exc
-    return answer
+    """The host's own column when the host consumes the Arrow array
+    capsule the engine returns, the bare answers otherwise.
+
+    Polars rebuilds its own column from the capsule — ``type(series)``
+    takes it — and that is the drawn ``with_columns`` path. A pandas
+    Series handed the same object would silently wrap it as one object
+    row, because pandas has no constructor over the Arrow PyCapsule
+    interface; a host that is not the Polars family gets the answers as
+    the plain list the list door returns, so the settled one-liner
+    ``pd.Series(answers)`` stays the way back to a pandas column.
+    """
+    if not hasattr(answer, "__arrow_c_array__"):
+        return answer
+    if type(text).__module__.split(".", 1)[0] != "polars":
+        return answer.to_list()
+    try:
+        return type(text)(answer)
+    except Exception as exc:
+        raise UsageError(
+            "this host cannot rebuild its own column from the Arrow "
+            "array the engine returns; pass a Polars Series, or call "
+            "the verb once a text"
+        ) from exc
 
 
 def rank(question, records, *, top=None, deadline=None):

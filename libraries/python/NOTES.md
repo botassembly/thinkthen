@@ -478,3 +478,117 @@ the full inventory with the R loops is `sdlc/records/2026-09-21-punch-list-repor
   loop calling `engine().score_opts` per record; it also runs without the
   poll, one more reason the bulk entry is where it belongs).
   Conversion-ready -> the engine's future `score_many`.
+
+## 2026-09-22 — the review wave on the Python surface
+
+The branch review (`sdlc/issues/2026-09-22-surfaces-branch-review-the-full-findings.md`)
+found six things here: the multi-piece annotate (finding 3), the damaged
+caller columns (finding 4), the Arrow release pointers (group 2), the
+pandas Series path (finding 6), the score column's per-row deadline
+(group 4), and the contract door to adopt (connector, checked deadline,
+panic guard). Every fix carries a test that fails on the code before it;
+the before/after evidence is from a scratch build of `HEAD`'s `src/` and
+`thinkthen/__init__.py`, run in this crate's venv, no key and no network.
+
+**The multi-piece annotate.** One root template was read out for every
+batch, so the second piece described the first piece's children — and the
+first piece's box is freed as soon as the consumer releases it. Each
+`BatchKeep` now carries its own root and `frame_get_next` reads that one.
+
+```
+$ (before) pl.DataFrame(stream) over a 2 + 3 piece table
+rows: (4, 4) ['please refund order 1', 'short note', 'please refund order 1', 'short note']
+$ (after) the same stream, both consumers
+pyarrow: rows 5, batches 2; polars: (5, 4), five distinct rows
+```
+
+**The caller's other columns.** The aliased child dropped its dictionary
+pointer and the output schema carried no nested children, so a categorical
+came back as codes, a struct came back empty, and a list panicked Polars
+(`assertion failed: index < self.n_children as usize`). The alias now
+carries `dictionary` and `children` whole, and the schema is a deep copy
+of each original column's own tree (`SchemaTree::copy`), including
+dictionaries and nested children. `test_annotate_keeps_categorical_struct_and_list_columns`
+pins categorical, struct, list, and a null column beside the answers.
+
+**The release pointers.** No release callback cleared its pointer, which
+the C data interface requires; pyarrow's helpers abort the process on it,
+and the stream's own release double-freed on the capsule destructor path.
+
+```
+$ (before) pa.RecordBatchReader.from_stream(frame)
+/arrow/cpp/src/arrow/c/helpers.h:64:: ArrowSchemaRelease did not
+cleanup release callback — SIGABRT, exit 134
+$ (after) the same call, and pa.array(wrapper) for the array capsules
+rows: 5, batches: 2; [True, False]
+```
+
+**The pandas Series (finding 6).** `decide`/`score` handed the Rust
+wrapper to `type(text)(answer)`, and pandas' Series constructor has no
+Arrow capsule door: the whole batch ran, then came back as one object row.
+
+```
+$ (before) tt.decide(ask, pd.Series([...]))
+type: Series len: 1 value: [<builtins.ArrowSeries object at 0x...>]
+$ (after)
+type: list len: 3 [True, False, True]
+```
+
+`ArrowSeries::to_list` reads the answers without taking the capsule, and
+the wrapper rebuilds the host's own column only for the Polars family;
+every other host gets the plain list the list door returns, so the settled
+`pd.Series(answers)` line stays the way back. `test_the_review_series_finding_answers_every_row`
+and `..._holds_for_score` compare against the list door.
+
+**One deadline for the score column.** The column loop rebuilt the
+options row by row, so every row got a fresh budget and the caller's
+deadline could never run out. The options are built once before the loop.
+`tests/test_deadline_column.py` serves the score shape from its own
+loopback server, one request a row, each sleeping 0.15 s, under a 0.25 s
+budget:
+
+```
+$ (before) .venv/bin/python -m pytest tests/test_deadline_column.py -q
+Failed: DID NOT RAISE DeadlineError — 1 failed in 1.16s
+$ (after)
+1 passed in 0.75s (the column stopped inside the budget)
+```
+
+**The contract door.** `engine()` builds through the contract's
+`Connector` (`StandinConnector` + `EngineConfig::from_env`), the one line
+the merge changes; `call_options` is the contract's checked
+`with_deadline_seconds`, so NaN, an infinity, or a negative other than the
+sentinel is a usage error instead of `Duration::from_secs_f64`'s panic;
+every engine step runs under `guarded`, so a panic comes back as the
+defect kind (unit test `a_panicking_step_comes_back_as_the_defect_kind`).
+The deadline rules follow the contract: zero is spent, -1 is the
+no-deadline sentinel, and the old negative clamp is gone —
+`test_the_sentinel_means_no_deadline` and
+`test_deadlines_that_cannot_be_budgets_are_usage_errors` pin the three
+arms.
+
+**Cross-side note for the merge.** The stand-in's partial-failure fixture
+(finding 7) fires only under `ENGINE_SYNTHETIC_PARTIAL=1`. `check.sh`
+arms it for the three runs that pin the marker (`test_surface.py`,
+`test_polars_door.py`, the conformance slice), and
+`test_the_fixture_failure_is_off_without_its_opt_in` proves in a fresh
+process, with the opt-in unset, that the fixture text answers like any
+other input.
+
+**Green by command.** `./check.sh` exit 0: 3 shim unit tests, 27 surface
+tests, 18 Polars-door tests, 12 pandas checks, the deadline-column test,
+15 recognize/relate tests, 4 ownership tests, the fast-cancel proof, 10 of
+10 examples, 69 passed / 0 failed / 4 skipped on the conformance slice,
+and the slide sample with its recorded band mismatch.
+
+**Memory checks.** The debug build (`maturin develop`, no `--release`)
+runs the suites green, and a 200-iteration stress of the multi-piece,
+rich-column, capsule, and pandas paths under
+`MALLOC_CHECK_=3 MALLOC_PERTURB_=165` is clean. Miri cannot run a pyo3
+extension, valgrind is not installed, and an ASan build was attempted with
+the nightly toolchain and refused at the dependency build
+(`error[E0463]: can't find crate for thiserror_impl` under
+`-Zsanitizer=address`); recorded rather than worked around. One build
+trap for the next lane: a scratch copy of this crate that shares its
+`target/` dir can leave a stale artifact under the same package name;
+`cargo clean --release -p thinkthen-python` clears it.

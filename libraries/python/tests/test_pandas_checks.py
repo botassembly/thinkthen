@@ -158,3 +158,30 @@ def test_import_does_not_pull_pandas_or_polars():
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
     )
     assert done.returncode == 0, done.stderr
+
+
+# ---------------------------------------------------------------------------
+# The review of 2026-09-22, finding 6: a pandas Series into a single call.
+# Before the fix the whole batch ran and came back as a one-row object
+# Series holding the Rust wrapper, because pandas' Series constructor has
+# no Arrow PyCapsule door. The settled answer is the plain list of one
+# answer a row, and `pd.Series(answers)` remains the one line back.
+# ---------------------------------------------------------------------------
+
+
+def test_the_review_series_finding_answers_every_row():
+    series = pd.Series(TEXTS)
+    answers = tt.decide(QUESTION, series)
+    assert type(answers) is list
+    assert len(answers) == len(TEXTS)
+    assert answers == tt.decide_many(QUESTION, TEXTS)
+    assert pd.Series(answers).tolist() == tt.decide_many(QUESTION, TEXTS)
+
+
+def test_the_review_series_finding_holds_for_score():
+    ask = tt.question(score="urgency", levels=["low", "medium", "high"])
+    series = pd.Series(TEXTS)
+    scored = tt.score(ask, series)
+    assert type(scored) is list
+    assert len(scored) == len(TEXTS)
+    assert scored == [tt.score(ask, text) for text in TEXTS]
