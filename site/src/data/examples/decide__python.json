@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "python",
+  "code": "import thinkthen as tt\n\n# one yes-or-no answer: True\ntt.decide(\"Does the customer ask for a refund?\", text)",
+  "function": "decide",
+  "surface": "python"
+}

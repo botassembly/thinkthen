@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "ruby",
+  "code": "edges = ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])",
+  "function": "relate",
+  "surface": "ruby"
+}

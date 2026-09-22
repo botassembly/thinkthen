@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "sql",
+  "code": "-- DuckDB: the function takes a query, because relate needs every record at once\nSELECT * FROM thinkthen_relate((SELECT id, body FROM alerts), ['caused_by']);",
+  "function": "relate",
+  "surface": "duckdb"
+}

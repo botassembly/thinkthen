@@ -1,6 +1,6 @@
 # `filter --details` must still filter
 
-Status: Open. Ruled by Ian on 2026-09-21. For the build team.
+Status: Closed on 2026-09-22. The fix landed in ticket 0056.
 
 ## What happens today
 

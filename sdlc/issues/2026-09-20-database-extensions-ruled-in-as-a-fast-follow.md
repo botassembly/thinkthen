@@ -1,6 +1,6 @@
 # Database extensions are ruled in as a fast follow
 
-Status: Open. A ruling and a study. No code is authorized.
+Status: Closed on 2026-09-22. The ruling is recorded.
 
 Ian ruled on 2026-09-20: "I want to make extensions for all three using Rust. That'll be the next set of experiments after the libraries are done. I won't hold up the launch for the database extensions, but I definitely want to do them as a fast follow." The three are DuckDB, SQLite, and PostgreSQL. He pointed at a public post from 2026-09-16 in which a well-known DuckDB developer announced a DuckDB extension for Jev that classifies about a thousand rows in ten seconds.
 

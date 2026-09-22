@@ -1,6 +1,6 @@
 # Feedback to the experiment team after both harvests
 
-Status: Open
+Status: Closed on 2026-09-22. The experiment team closed the brief, and the marketing side checked the closing commits and accepted them.
 
 Ian asked on 2026-09-20 whether the team behind `experiments/205-thinkthen-libs/` and `experiments/207-thinkthen-db/` should wait for the build team. Mostly yes. Three pieces of work do not wait, and the first is worth more than the rest. This page sits beside the plan in `2026-09-20-what-the-two-experiments-ask-of-the-engine-and-the-order-to-build-it.md`.
 

@@ -6,7 +6,7 @@ opens: crates/thinkthen specification sdlc/issues sdlc/planning sdlc/ratchet.jso
 
 # 0065: Bind a recording folder to one backend
 
-Status: landed
+Status: in progress
 
 ## Outcome
 
@@ -56,3 +56,7 @@ The core owns the closed identity value and comparison. The engine owns private 
 Excluded: changing `meta.replayed`, renaming `--replay`, changing entry contents or digests, inferring an identity from old entries, moving folders, automatically copying old entries, cache eviction, token accounting, retries, Ctrl-C, public library APIs, and paid calls.
 
 Complexity: Contract 2, state and timing 2, reach 1, proof 2, cost of error 1; total 8. Shared durable state, concurrent first use, compatibility, and the paid-call boundary set Level 3. Selected implementation model: `gpt-5.6-sol`, medium reasoning.
+
+## Landing review
+
+Ian transferred completion to the architect after the original owner stopped. Fresh independent code review found missing directory syncs on matching-marker reuse and concurrent-winner paths. Sol remediated them within this accepted durability contract; the same reviewer accepted the fix. Regression tests failed before the fix and passed afterward, including read-only exclusion. The coordinator's full combined ladder passed 568 Rust tests and nineteen green how-tos at an exact 33,839-line ceiling. Hosted verification and main landing remain pending; the matching record distinguishes original branch evidence from final integration evidence.

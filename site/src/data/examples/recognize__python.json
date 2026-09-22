@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "python",
+  "code": "found = tt.recognize(text, kinds=[\"person\", \"organization\", \"place\"],\n                     relations={\"works_for\": (\"person\", \"organization\"),\n                                \"located_in\": (\"*\", \"place\")})\nfound.entities[0].text        # \"Maria Chen\"\nfound.entities[0].kind        # \"person\"\ntext[found.entities[0].start:found.entities[0].end]   # \"Maria Chen\"\nfound.relations[0].name       # \"works_for\"\nnames = tt.recognize(df, on=\"body\")   # df is a Polars frame. One row per name, with the source row number",
+  "function": "recognize",
+  "surface": "python"
+}

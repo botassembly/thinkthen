@@ -1,6 +1,6 @@
 # Transport failure messages paste the HTTP client's own words
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 A backend that is too slow, a backend that never answers, and a connection that dies all print one identical message, and the message ends in the HTTP client library's own error-kind string. A stranger cannot tell the three apart, and no message names the `--timeout` or `--max-retries` levers.
 

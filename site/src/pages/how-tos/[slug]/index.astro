@@ -1,0 +1,41 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Terminal from '../../../components/Terminal.astro';
+import { HOWTOS, FUNCTIONS } from '../../../data/catalog.mjs';
+import { HOWTO_RUNS } from '../../../data/examples.mjs';
+
+export function getStaticPaths() {
+  return HOWTOS.map((h) => ({ params: { slug: h.slug }, props: { howto: h } }));
+}
+
+const { howto } = Astro.props;
+const data = HOWTO_RUNS[howto.slug];
+const first = data.steps[0];
+const input = { command: `cat ${data.inputFile}`, input: data.input, inputFile: null, output: null, exit: null };
+---
+<Base title={howto.title} description={howto.said}>
+  <div class="eyebrow">{howto.reader}</div>
+  <h1>{howto.title}</h1>
+  <p class="lede">{howto.said}</p>
+
+  <h2>The records</h2>
+  <div class="block">
+    <div class="caption"><span class="status run">run</span><span class="grow">The file the commands read.</span></div>
+    <pre>{data.input}</pre>
+  </div>
+
+  <h2>The flow</h2>
+  {data.steps.map((step) => <Terminal run={step} caption="Run against the shipped command and saved." />)}
+
+  <h2>The functions it uses</h2>
+  <div class="grid">
+    {howto.functions.map((name) => {
+      const fn = FUNCTIONS.find((f) => f.name === name);
+      return <a class="tile" href={`/functions/${fn.name}/`}><b>{fn.name}</b><span>{fn.line}</span></a>;
+    })}
+  </div>
+
+  <p>Every line above came from one run of the shipped command, saved and read back into this page. No command on this page was typed by hand.</p>
+
+  <p class="pagelinks"><a href="/how-tos/">Every how-to</a> · <a href="/shell/">The shell</a></p>
+</Base>

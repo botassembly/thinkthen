@@ -1,0 +1,29 @@
+---
+import Base from '../../layouts/Base.astro';
+import { CODE_FUNCTIONS, FUNCTIONS } from '../../data/catalog.mjs';
+const questionFile = FUNCTIONS.find((f) => f.notAFunction);
+---
+<Base title="Functions" description="The ten functions, simplest first.">
+  <h1>The ten functions</h1>
+  <p class="lede">The model answers three kinds of question: yes or no, pick one, and place on a scale. Each function is one of those, shaped for a job you already know. They run simplest first, and the ones that read many records come after the ones that read a single text.</p>
+
+  <table>
+    <tr><th>Function</th><th>What it does</th><th>Primitive</th></tr>
+    {CODE_FUNCTIONS.map((fn) => (
+      <tr>
+        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td>
+        <td>{fn.line}</td>
+        <td>{fn.primitive}</td>
+      </tr>
+    ))}
+    <tr>
+      <td><a href="/functions/question-file/"><code>@question</code></a></td>
+      <td>{questionFile.line}</td>
+      <td>Not a function</td>
+    </tr>
+  </table>
+
+  <p>A question file is not counted as a function. A function gives an answer. A question file gives none. It is a saved question every function accepts.</p>
+
+  <p class="pagelinks"><a href="/surfaces/">Every surface</a> · <a href="/how-tos/">How-tos</a></p>
+</Base>

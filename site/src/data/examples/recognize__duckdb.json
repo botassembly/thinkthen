@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "sql",
+  "code": "-- DuckDB: a list of structs, and unnest() makes rows\nSELECT id, unnest(thinkthen_recognize(body, ['person', 'organization'])) AS name FROM tickets;",
+  "function": "recognize",
+  "surface": "duckdb"
+}

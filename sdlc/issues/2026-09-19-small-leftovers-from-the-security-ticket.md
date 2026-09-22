@@ -1,6 +1,6 @@
 # Small leftovers from the security ticket
 
-Status: Open. Item 1 closed by ticket 0022. The control-character check remains.
+Status: Closed on 2026-09-22. Merged into 2026-09-22-small-leftovers-from-early-reviews.md.
 
 Found by the independent review of ticket 0019 on 2026-09-19. None is a hole. `sdlc/records/0019-safe-before-public.md` holds the full reasoning. The release pass picks these up.
 

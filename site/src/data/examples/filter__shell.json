@@ -1,0 +1,24 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "filter",
+      "command": "thinkthen filter 'Is this a complaint?' --lines < reviews.txt",
+      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThird time my order shows up late. Not okay.",
+      "inputFile": "reviews.txt",
+      "output": "The zipper broke the first time I used it.\nThird time my order shows up late. Not okay.",
+      "exit": 0
+    },
+    {
+      "name": "filter-strict",
+      "command": "thinkthen filter --threshold 0.95 'Is this a complaint?' --lines < reviews.txt",
+      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThird time my order shows up late. Not okay.",
+      "inputFile": "reviews.txt",
+      "output": "Third time my order shows up late. Not okay.",
+      "exit": 0
+    }
+  ],
+  "function": "filter",
+  "surface": "shell"
+}

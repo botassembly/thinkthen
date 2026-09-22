@@ -1,6 +1,6 @@
 # Live probe findings: packing, tagging, status, and the cost of one file
 
-Status: Open. Four measurements are done. Each one names a change for the builders below.
+Status: Closed on 2026-09-22. The four measurements are folded into the plan.
 
 Ian gave the direct go-ahead on 2026-09-20 with a ceiling of 50 US cents. A builder ran the four measurements from `2026-09-20-a-live-probe-plan-for-tagging-many-questions-and-status.md` as a spike outside this repository. Every launch went through `sdlc/scripts/live`. Every case is made-up text, and every trusted answer was fixed and hashed before the first paid call. One model answered everything: `jev-1.13.0` behind the alias `jev-latest`.
 

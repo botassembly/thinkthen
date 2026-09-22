@@ -1,0 +1,40 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "find",
+      "command": "thinkthen find 'Which line gives the refund deadline?' < policy.txt",
+      "input": "Returns need the original receipt.\nRefunds are issued within 30 days of purchase.\nShipping is free on orders over $50.\nGift cards cannot be exchanged for cash.",
+      "inputFile": "policy.txt",
+      "output": "Refunds are issued within 30 days of purchase.",
+      "exit": 0
+    },
+    {
+      "name": "find-answer",
+      "command": "thinkthen find --details 'Which line gives the refund deadline?' < policy.txt | jq -r '.answer.probabilities|tojson'",
+      "input": "Returns need the original receipt.\nRefunds are issued within 30 days of purchase.\nShipping is free on orders over $50.\nGift cards cannot be exchanged for cash.",
+      "inputFile": "policy.txt",
+      "output": "{\"u001\":0.0,\"u002\":1.0,\"u003\":0.0,\"u004\":0.0}",
+      "exit": 0
+    },
+    {
+      "name": "find-none",
+      "command": "thinkthen find --none 'Which line says how to cancel an order?' < policy.txt",
+      "input": "Returns need the original receipt.\nRefunds are issued within 30 days of purchase.\nShipping is free on orders over $50.\nGift cards cannot be exchanged for cash.",
+      "inputFile": "policy.txt",
+      "output": "",
+      "exit": 3
+    },
+    {
+      "name": "find-forced",
+      "command": "thinkthen find 'Which line says how to cancel an order?' < policy.txt",
+      "input": "Returns need the original receipt.\nRefunds are issued within 30 days of purchase.\nShipping is free on orders over $50.\nGift cards cannot be exchanged for cash.",
+      "inputFile": "policy.txt",
+      "output": "Returns need the original receipt.",
+      "exit": 0
+    }
+  ],
+  "function": "find",
+  "surface": "shell"
+}

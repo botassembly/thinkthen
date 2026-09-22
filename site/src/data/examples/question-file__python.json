@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "python",
+  "code": "import thinkthen as tt\n\n# build a question once. The band's middle is \"not sure\"\nrefund = tt.question(\n    decide=\"Does the customer ask for a refund?\",\n    threshold=(0.2, 0.8),\n)",
+  "function": "question-file",
+  "surface": "python"
+}

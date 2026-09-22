@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "sql",
+  "code": "-- PostgreSQL: a set-returning function\nSELECT t.id, n.text, n.kind FROM tickets t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n;",
+  "function": "recognize",
+  "surface": "postgresql"
+}

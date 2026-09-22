@@ -1,5 +1,7 @@
 # One rule for every number the tool prints
 
+Status: Closed on 2026-09-22. The rule is ruled, and the comparison settled the computed number's name as `strength`.
+
 Written 2026-09-21 by the product side. Ian's instruction: the words must match what the model really reports, "not making something up, and not turning it into something that it's not."
 
 ## What the model reports

@@ -1,0 +1,40 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "choose",
+      "command": "thinkthen choose 'Which team owns this?' billing shipping account < ticket.txt",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": "ticket.txt",
+      "output": "\"billing\"",
+      "exit": 0
+    },
+    {
+      "name": "choose-answer",
+      "command": "thinkthen choose --details 'Which team owns this?' billing shipping account < ticket.txt | jq '.answer.probabilities'",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": "ticket.txt",
+      "output": "{\n  \"billing\": 1.0,\n  \"shipping\": 0.0,\n  \"account\": 0.0\n}",
+      "exit": 0
+    },
+    {
+      "name": "choose-split",
+      "command": "thinkthen choose --details 'Which team owns this?' billing shipping account < both.txt | jq -r '.answer.probabilities|tojson'",
+      "input": "You charged me twice and the package still has not shipped.",
+      "inputFile": "both.txt",
+      "output": "{\"billing\":0.85,\"shipping\":0.1,\"account\":0.05}",
+      "exit": 0
+    },
+    {
+      "name": "choose-null",
+      "command": "thinkthen choose --threshold 0.9 'Which team owns this?' billing shipping account < both.txt",
+      "input": "You charged me twice and the package still has not shipped.",
+      "inputFile": "both.txt",
+      "output": "null",
+      "exit": 3
+    }
+  ],
+  "function": "choose",
+  "surface": "shell"
+}

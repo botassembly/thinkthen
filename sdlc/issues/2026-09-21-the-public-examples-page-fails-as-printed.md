@@ -1,6 +1,6 @@
 # The public examples page fails as printed
 
-Status: Open
+Status: Closed on 2026-09-22. The three blocks are corrected in the marketing repository at `6354fb4`, the page is marked planning only, and the marketing README rules that a public example lives only in the deck's recorded `examples/` and `usecases/` folders.
 
 The marketing repository's `products/thinkthen/examples.md` page promises "Before any example goes public it runs against the shipped binary." Two of its blocks fail as printed, and its header names the built state wrong. The fixes land in the marketing repository. This issue is the record.
 

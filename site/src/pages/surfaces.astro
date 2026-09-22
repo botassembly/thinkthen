@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+import { SURFACES } from '../data/catalog.mjs';
+---
+<Base title="Surfaces" description="The shell, six languages, data frames, and three databases.">
+  <h1>Every surface</h1>
+  <p class="lede">A reader comes in by either door and finds the same example. The command is the only shipped surface today. Every library and every extension is planned, and its page carries the code drawn from the design, so the build has a shape to match.</p>
+
+  <table>
+    <tr><th>Surface</th><th>Install</th><th>Not sure reads</th><th>Status</th></tr>
+    {SURFACES.map((s) => (
+      <tr>
+        <td><a href={`/${s.slug}/`}>{s.name}</a></td>
+        <td><code>{s.install[0][0]}</code></td>
+        <td><code>{s.unsureWord}</code></td>
+        <td><span class={`status ${s.status}`}>{s.status}</span></td>
+      </tr>
+    ))}
+  </table>
+
+  <h2>Not here yet</h2>
+  <p>pandas gets a short page under Python when the library team ships it. Excel and Google Sheets both need a bridge over HTTP, and neither has run. Each gets a page the day it works, and no page before then.</p>
+
+  <p class="pagelinks"><a href="/install/">Install</a> · <a href="/functions/">Every function</a></p>
+</Base>

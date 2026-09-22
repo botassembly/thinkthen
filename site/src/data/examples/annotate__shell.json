@@ -1,0 +1,16 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "annotate",
+      "command": "thinkthen annotate form.json",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": null,
+      "output": "{\"wants_refund\":true,\"team\":\"billing\",\"urgency\":0.91}",
+      "exit": 0
+    }
+  ],
+  "function": "annotate",
+  "surface": "shell"
+}

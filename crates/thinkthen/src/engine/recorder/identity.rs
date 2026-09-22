@@ -35,19 +35,32 @@ pub(super) fn require_private(_folder: &Path) -> Result<(), Error> {
 pub(super) fn check(folder: &Path, expected: &BackendIdentity, writing: bool) -> Result<(), Error> {
     let marker = folder.join(NAME);
     match read(&marker)? {
-        Some(found) => compare(&found, expected),
+        Some(found) => match_identity(folder, &found, expected, writing),
         None if !writing => Ok(()),
         None if has_entry(folder)? => Err(Error::RecordingFolderLegacy),
         None => publish(folder, &marker, expected),
     }
 }
 
-fn compare(found: &BackendIdentity, expected: &BackendIdentity) -> Result<(), Error> {
-    if found == expected {
-        Ok(())
-    } else {
-        Err(Error::RecordingBackendMismatch)
+fn match_identity(
+    folder: &Path,
+    found: &BackendIdentity,
+    expected: &BackendIdentity,
+    writing: bool,
+) -> Result<(), Error> {
+    if found != expected {
+        return Err(Error::RecordingBackendMismatch);
     }
+    if writing {
+        sync_directory(folder)
+    } else {
+        Ok(())
+    }
+}
+
+fn sync_directory(folder: &Path) -> Result<(), Error> {
+    maybe_fail_io(StorageStageName::IdentityDirectorySync).map_err(storage)?;
+    cache_lock::sync_directory(folder).map_err(storage)
 }
 
 fn read(path: &Path) -> Result<Option<BackendIdentity>, Error> {
@@ -130,12 +143,11 @@ fn publish_from(
     match fs::hard_link(partial, marker) {
         Ok(()) => {
             pause("after-install");
-            maybe_fail_io(StorageStageName::IdentityDirectorySync).map_err(storage)?;
-            cache_lock::sync_directory(folder).map_err(storage)
+            sync_directory(folder)
         }
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
             let found = read(marker)?.ok_or(Error::RecordingStorage)?;
-            compare(&found, expected)
+            match_identity(folder, &found, expected, true)
         }
         Err(error) => Err(storage(error)),
     }

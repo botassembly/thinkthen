@@ -1,6 +1,6 @@
 # A second backend tried through the `systemone` adapter
 
-Status: Open
+Status: Closed on 2026-09-22. The run happened and this page is the record of what it settled.
 
 On 2026-09-21 a second, local decider model answered the tool's exact request bytes with no change to this repository. The model is `laya-mlx` (Hugging Face `aac6fef/laya-mlx`, Apache-2.0, ModernBERT-large, Apple Silicon, English). A small shim server put its in-process API behind `POST BASE/systemone` on loopback, and `THINKTHEN_BASE_URL` alone pointed the released binary at it. No paid call was made.
 

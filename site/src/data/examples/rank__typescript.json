@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ts",
+  "code": "import * as tt from \"thinkthen\";\n\n// a batch you can cancel: abort() stops the requests\nconst stop = new AbortController();\nconst urgent = await tt.rank(\"Is this urgent?\", inbox, {\n  top: 5,\n  signal: stop.signal,\n});\nconsole.log(urgent[0]);",
+  "function": "rank",
+  "surface": "typescript"
+}

@@ -1,6 +1,6 @@
 # The candidate-6 flow goes red on its designed outcome
 
-Status: Open
+Status: Closed on 2026-09-22. The deck slide guards the pipe with `hit=$(thinkthen find ...) && echo "$hit" | thinkthen decide ...`, replayed by the deck build. The planning table records the guard.
 
 The marketing use cases print a `find --none | decide` pipe. The page promises that when nothing fits, "`find` prints nothing, exits 3, and `decide` never runs." A pipe stage always starts. `decide` runs, reads an empty pipe, and exits 2, and under `set -o pipefail` the whole flow reports 2. The designed "open a new incident" outcome reads as an error pipeline.
 

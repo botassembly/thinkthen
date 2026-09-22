@@ -1,6 +1,6 @@
 # Two-function flows lose the record between stages
 
-Status: Open
+Status: Closed on 2026-09-22. Closed by ticket 0060.
 
 The marketing side drafted ten use-case examples on 2026-09-21, each joining two or three functions with a pipe. Every stage ran under `--dry-run` at exit 0. The drafts are in the marketing repository under `decks/2026-09-21-thinkthen-semantic-commands/usecases/`. Composition is the product's promise, and these are the places where it cost the user something.
 

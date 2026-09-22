@@ -1,6 +1,6 @@
 # The help hides the defaults a user assumes wrong
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 Five values and behaviors a user meets on the first run are missing from the help text or hidden behind it. Each one sends a careful user in a wrong direction.
 

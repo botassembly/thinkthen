@@ -2,7 +2,15 @@
 
 Date: 2026-09-22
 
-Status: landed
+Status: Implementation and remediation independently accepted; integrated verification and landing in progress.
+
+## Landing continuation
+
+Ian transferred ownership after the original agent stopped. The original `landed` status described completed branch work: `6618694` had a passing hosted gate but was not an ancestor of main. The coordinator merged main `8336a2a` without discarding either branch's changes. The only textual conflict was the exact source ceiling; the combined pre-remediation measurement was 33,772.
+
+Fresh independent code review found a missing directory sync on matching existing-marker and concurrent-winner paths. Sol remediated the level-3 durability invariant with observed failing tests, a shared sync helper, and deterministic existing-marker, forced-winner, and read-only exclusion cases. The same reviewer accepted the repair. Focused identity tests pass ten cases with one intentional child-harness ignore; nine backend identity tests pass. The exact source ceiling is now 33,839, including 67 remediation lines. The coordinator ran all four gates on the integrated, repaired tree with the provider key empty and Cargo offline mode. All passed: 568 Rust tests, one intentional subprocess-harness ignore, doctests, replay checks, 27 specification checks, seven transform-page checks, and nineteen green how-tos. Policy, package checks, audit, formatting, clippy, docs, and both staged/unstaged diff checks passed. Hosted verification and landing remain pending.
+
+The original review and test evidence below describes the earlier branch, not the combined tree.
 
 ## Result
 

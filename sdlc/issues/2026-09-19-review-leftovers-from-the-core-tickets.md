@@ -1,6 +1,6 @@
 # Review leftovers from the core tickets
 
-Status: Open. Items 7 to 13 have no ticket. See `2026-09-21-triage-of-the-open-issues-by-layer.md`.
+Status: Closed on 2026-09-22. Merged into 2026-09-22-small-leftovers-from-early-reviews.md.
 
 Filed 2026-09-19 by the steering agent from the second reviews of tickets 0001 and 0002. None blocks landing. Each is small and arguable, so no reviewer fixed it.
 

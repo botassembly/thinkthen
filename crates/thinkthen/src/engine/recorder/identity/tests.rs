@@ -40,6 +40,68 @@ fn complete(folder: &Path, expected: &BackendIdentity) {
 }
 
 #[test]
+fn matching_write_capable_reuse_syncs_the_directory_before_success() {
+    let folder = folder("matching-reuse-sync");
+    let expected = identity("http://127.0.0.1:1/v1/systemone");
+    check(&folder, &expected, true).expect("first use binds");
+    let before = fs::read(marker(&folder)).expect("marker bytes");
+
+    STORAGE_FAULT.with(|fault| fault.set(Some(StorageStage::IdentityDirectorySync)));
+    assert!(matches!(
+        check(&folder, &expected, true),
+        Err(Error::RecordingStorage)
+    ));
+    STORAGE_FAULT.with(|fault| assert_eq!(fault.get(), None));
+    assert_eq!(fs::read(marker(&folder)).expect("unchanged marker"), before);
+    check(&folder, &expected, true).expect("a later use recovers");
+    assert_eq!(fs::read(marker(&folder)).expect("unchanged marker"), before);
+}
+
+#[test]
+fn matching_read_only_reuse_does_not_sync_the_directory() {
+    let folder = folder("matching-read-only");
+    let expected = identity("http://127.0.0.1:1/v1/systemone");
+    check(&folder, &expected, true).expect("first use binds");
+    let before = fs::read(marker(&folder)).expect("marker bytes");
+
+    STORAGE_FAULT.with(|fault| fault.set(Some(StorageStage::IdentityDirectorySync)));
+    check(&folder, &expected, false).expect("read-only use does not sync");
+    STORAGE_FAULT.with(|fault| {
+        assert_eq!(fault.get(), Some(StorageStage::IdentityDirectorySync));
+        fault.set(None);
+    });
+    assert_eq!(fs::read(marker(&folder)).expect("unchanged marker"), before);
+}
+
+#[test]
+fn matching_installed_winner_syncs_the_directory_before_success() {
+    let folder = folder("matching-installed-winner-sync");
+    let expected = identity("http://127.0.0.1:1/v1/systemone");
+    check(&folder, &expected, true).expect("winner binds");
+    let before = fs::read(marker(&folder)).expect("winner marker bytes");
+    let first = 8_000_000;
+
+    STORAGE_FAULT.with(|fault| fault.set(Some(StorageStage::IdentityDirectorySync)));
+    assert!(matches!(
+        publish_at(&folder, &marker(&folder), &expected, first),
+        Err(Error::RecordingStorage)
+    ));
+    STORAGE_FAULT.with(|fault| assert_eq!(fault.get(), None));
+    assert_eq!(fs::read(marker(&folder)).expect("unchanged winner"), before);
+    assert!(
+        !folder
+            .join(format!(
+                ".thinkthen-backend.{}.{first}.tmp",
+                std::process::id()
+            ))
+            .exists()
+    );
+    publish_at(&folder, &marker(&folder), &expected, first + 1)
+        .expect("a later contender recovers");
+    assert_eq!(fs::read(marker(&folder)).expect("unchanged winner"), before);
+}
+
+#[test]
 fn every_identity_storage_failure_recovers_from_an_absent_or_complete_marker() {
     let cases = [
         (StorageStage::IdentityCreate, false),

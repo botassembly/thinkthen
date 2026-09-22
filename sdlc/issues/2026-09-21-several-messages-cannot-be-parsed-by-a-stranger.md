@@ -1,6 +1,6 @@
 # Several messages cannot be parsed by a stranger
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 Five exact strings that a user meets on ordinary mistakes name everything except the thing. Each row gives the string, where it appears, and the one-line fix.
 

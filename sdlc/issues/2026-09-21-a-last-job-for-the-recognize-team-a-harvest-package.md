@@ -1,6 +1,6 @@
 # A last job for the recognize team: a harvest package
 
-Status: Open
+Status: Closed on 2026-09-22. The harvest package was delivered and accepted.
 
 The recognize program is closed and its method is final. Ian asked on 2026-09-21 whether that team should break out `relate`, or move its work into a worktree, or whether the build team should harvest from the experiments as they are.
 

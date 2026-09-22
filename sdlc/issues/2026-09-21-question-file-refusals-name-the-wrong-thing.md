@@ -1,6 +1,6 @@
 # Question file refusals name the wrong thing
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 Two refusal messages on the question-file path misdiagnose the failure. A single question file that holds the verb plus an unknown key is told it holds no verb. A question set without its wrapper is told it holds no key the user never wrote.
 

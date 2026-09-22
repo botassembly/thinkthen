@@ -1,5 +1,7 @@
 # Is there an eleventh function? A sweep of the three primitives
 
+Status: Closed on 2026-09-22. The sweep answered no, and the two widenings it found are backlog candidates.
+
 Written 2026-09-21 by the product side at Ian's request, before the marketing starts. The answer is no. The sweep found two widenings of functions we have and one command that is no function. All three are backlog candidates. Nothing here is authorized.
 
 ## The sweep

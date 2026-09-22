@@ -1,0 +1,17 @@
+---
+// One install line with a copy button, and the status it ships under.
+const { line, status = 'planned', note = null, caption = 'Install' } = Astro.props;
+const label = status === 'shipped' ? 'shipped' : status;
+const rows = [{ cls: 'p', text: '$ ' + line }];
+if (note) rows.push({ cls: 'cm', text: '# ' + note });
+---
+<div class="block">
+  <div class="caption">
+    <span class={`status ${status}`}>{label}</span>
+    <span class="grow">{caption}</span>
+    <button class="copy" type="button">Copy</button>
+  </div>
+  <pre data-copy={line}>{rows.map((r, i) => (
+    <Fragment><span class={r.cls}>{r.text}</span>{i < rows.length - 1 ? '\n' : ''}</Fragment>
+  ))}</pre>
+</div>

@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# your own scale: 0 is \"Routine.\", 2 is \"Immediate.\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nThinkThen.score(\"How urgent is this?\", outage, levels:)",
+  "function": "score",
+  "surface": "ruby"
+}

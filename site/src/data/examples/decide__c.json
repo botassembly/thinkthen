@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\nconst char *q = \"Does the customer ask for a refund?\";\n\n/* every call returns 0, or one of six error kinds.\n   one text: a.outcome is THINKTHEN_YES, at 0.99 */\nthinkthen_answer a;\nint rc = thinkthen_decide(tt, q, text, text_len, &a);",
+  "function": "decide",
+  "surface": "c"
+}

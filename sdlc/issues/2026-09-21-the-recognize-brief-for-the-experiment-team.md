@@ -1,6 +1,6 @@
 # The `recognize` brief for the experiment team
 
-Status: Open
+Status: Closed on 2026-09-22. Both experiments built against the brief and closed on it.
 
 Ian ruled on 2026-09-21 that `recognize` is the ninth function, and that the marketing side rules its shape. The shape is `sdlc/planning/recognize-design.md`. This page tells the recognize experiment and the surfaces experiment what to build against it. Every paid run goes through `sdlc/scripts/live` under a token cap. Nothing here touches the thinkthen source.
 

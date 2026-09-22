@@ -1,0 +1,18 @@
+---
+// A drawn code sample. It is labelled "drawn, not run" wherever it appears,
+// because no library ships yet.
+const { code, status = 'drawn', caption = null, copy = true } = Astro.props;
+const label = status === 'drawn' ? 'drawn, not run' : status;
+const lines = code.split('\n');
+const comment = /^\s*(#|\/\/|--|\/\*|\*)/;
+---
+<div class="block">
+  <div class="caption">
+    <span class={`status ${status}`}>{label}</span>
+    <span class="grow">{caption}</span>
+    {copy && <button class="copy" type="button">Copy</button>}
+  </div>
+  <pre data-copy={code}>{lines.map((l, i) => (
+    <Fragment><span class={comment.test(l) ? 'cm' : 'cmd'}>{l}</span>{i < lines.length - 1 ? '\n' : ''}</Fragment>
+  ))}</pre>
+</div>

@@ -430,7 +430,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
 #[test]
 fn record_capable_help_pins_run_exit_behavior() {
     const RECORD_EXIT: &str = "A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.";
-    const SHORT: &str = "Answer a yes/no question about the evidence and set the exit code. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers\n\nUsage:";
+    const SHORT: &str = "Answer one yes or no question about a text. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers\n\nUsage:";
     let output = run(&["decide", "-h"], &[], b"").expect("the compiled binary runs");
     let short = String::from_utf8_lossy(&output.stdout);
     assert!(short.starts_with(SHORT), "decide short help: {short}");

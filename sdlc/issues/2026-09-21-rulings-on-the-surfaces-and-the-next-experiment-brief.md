@@ -1,6 +1,6 @@
 # Ian's rulings on the surfaces, and the next experiment brief
 
-Status: Open
+Status: Closed on 2026-09-22. The rulings are recorded, and the surfaces experiment closed on all seven brief items.
 
 ## Rulings, 2026-09-21
 

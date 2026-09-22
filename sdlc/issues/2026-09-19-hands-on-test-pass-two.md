@@ -1,6 +1,6 @@
 # thinkthen QA pass 2
 
-Status: Open. Finding 1 is fixed. Findings 2 to 10 are wording, and `2026-09-21-triage-of-the-open-issues-by-layer.md` groups them with the help issue.
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 Worktree `the QA worktree`, level with main at `fcbe7fa`. Built with `cargo build --locked --release`. No tracked file changed (`git status --porcelain` empty at the end). Every command ran with `THINKTHEN_API_KEY` unset or set to the marker `MARKERKEY456`, and no live call was made. Scratch, the fake server, and output live under the session scratchpad.
 

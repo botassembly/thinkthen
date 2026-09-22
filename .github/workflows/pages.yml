@@ -1,0 +1,66 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      # Fails on a missing example, a cell with no status, or a broken link.
+      - run: npm run build
+        working-directory: site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy
+
+  prove:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      # A deploy can fail while the site keeps serving the old build. The
+      # deploy is finished when thinkthen.dev/version.json carries this commit.
+      - name: Poll version.json for this commit
+        run: |
+          for i in $(seq 1 30); do
+            got=$(curl -fsS "https://thinkthen.dev/version.json?t=$(date +%s)" | sed -n 's/.*"commit": "\([^"]*\)".*/\1/p' || true)
+            echo "attempt $i: $got"
+            if [ "$got" = "${{ github.sha }}" ]; then
+              echo "the site serves ${{ github.sha }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "the site never served ${{ github.sha }}"
+          exit 1

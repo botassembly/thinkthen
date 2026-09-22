@@ -1,0 +1,92 @@
+---
+import Base from '../layouts/Base.astro';
+import Terminal from '../components/Terminal.astro';
+import { OUTCOMES, FACTS, KEY_VARIABLE } from '../data/catalog.mjs';
+import { cell } from '../data/examples.mjs';
+
+const band = cell('decide', 'shell').runs.find((r) => r.name === 'decide-band');
+const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
+---
+<Base title="Trust" description="Outcomes, thresholds, the cache, what leaves the machine, and how to check a question against your own labeled records.">
+  <h1>Why a careful engineer trusts it</h1>
+  <p class="lede">A classifier has a fixed set of answers, a probability, and an error rate you can measure. That is the whole promise. It writes nothing.</p>
+
+  <h2>Four outcomes, four colors</h2>
+  <p>Learn the exit codes by looking. The same four colors run through this site, the terminal, and the diagrams.</p>
+  <div class="outcomes">
+    {OUTCOMES.map((o) => (
+      <div class={`outcome ${o.key}`}>
+        <b>{o.label}</b>
+        <span>exit {o.code} · prints <code>{o.prints}</code></span>
+      </div>
+    ))}
+  </div>
+
+  <h2>The threshold is yours</h2>
+  <p>The model reports a probability. Your threshold turns it into an answer, and nothing else does. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
+  <p>The same text, under two rules:</p>
+  <Terminal run={cut} />
+  <Terminal run={band} />
+  <p>The threshold is an input, never an output. The model never chooses it.</p>
+
+  <h2>Not sure is an answer</h2>
+  <p>A band is how a pipeline hands a person the calls it should not make alone. <code>null</code> and exit 3 mean the probability landed in the middle you set. It is not a guess and not a failure.</p>
+  <p>A question the backend could not answer is different. It is marked failed and counted, and it never turns into <code>null</code>. <code>annotate</code> exits 6 when a run finishes with failed questions.</p>
+
+  <h2>The words for the numbers</h2>
+  <table>
+    <tr><th>Word</th><th>What it is</th></tr>
+    <tr><td>probability</td><td>A number the model reported, passed through unchanged. For yes or no, the chance the answer is yes. For pick one and place on a scale, the share given to each option or level.</td></tr>
+    <tr><td>probabilities</td><td>The model's full list, one number per option or level, adding to 1. It shows under <code>--details</code>.</td></tr>
+    <tr><td>threshold</td><td>Your bar on a probability. An input.</td></tr>
+    <tr><td>band</td><td>A low bar and a high bar. The middle goes to a person.</td></tr>
+    <tr><td>position</td><td>The number <code>score</code> prints: where the text lands along your levels. It is the average of the level probabilities, and we compute it.</td></tr>
+    <tr><td>strength</td><td>The number on a recognized name. We compute it, and it claims nothing about chance.</td></tr>
+  </table>
+  <p>We do not print a confidence of our own. The one field named confidence is the vendor's number for how lopsided the probabilities are, it shows only under <code>--details</code>, and it failed as a gate in our tests.</p>
+
+  <h2>What leaves the machine</h2>
+  <ul>
+    <li>The question and the evidence go to the backend in one request. Nothing else does.</li>
+    <li>The evidence crosses whole. No word, sentence, or punctuation handling exists in the tool, so nothing is split and nothing is dropped.</li>
+    <li>The key comes from <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries one.</li>
+    <li><code>--dry-run</code> prints the plan and sends nothing.</li>
+  </ul>
+
+  <h2>Saved answers</h2>
+  <p>The tool saves what it asked and what came back. Ask the same question of the same text again and it reads the saved answer instead of sending a request, at no further cost. Saving is not on by default yet. On SQLite, <code>thinkthen_warm</code> judges a table in one pass and every query after that reads the saved answers.</p>
+
+  <h2>How big a text can be</h2>
+  <table>
+    <tr><th>Fact</th><th>Where it was measured</th></tr>
+    {FACTS.size.rows.map(([fact, where]) => <tr><td>{fact}</td><td>{where}</td></tr>)}
+  </table>
+
+  <h2>What it costs</h2>
+  <p>Requests are the bill. A short text pays almost only for the fixed part. Many questions about one text pay the fixed part once, which is what <code>annotate</code> does. Many texts pay it once each.</p>
+  <table>
+    <tr><th>Fact</th><th>Where it was measured</th></tr>
+    {FACTS.cost.rows.map(([fact, where]) => <tr><td>{fact}</td><td>{where}</td></tr>)}
+  </table>
+
+  <h2>Check a question against your own labeled records</h2>
+  <p>Do not take a question on trust. Take the records you have already labeled, run the question over them with <code>--details</code>, and compare the answer to your label. Then move the threshold and look again.</p>
+  <ol>
+    <li>Put your labeled records in a JSONL file, one object each, with your own label on a field.</li>
+    <li>Run <code>thinkthen decide --jsonl --details --field /text 'your question' &lt; labeled.jsonl</code>.</li>
+    <li>Compare <code>.value</code> to your label with <code>jq</code>, and count the misses.</li>
+    <li>Try a band. The pairs that land in the middle are the ones a person should read.</li>
+  </ol>
+  <p>Accuracy belongs to a named test, never to the tool. A number from your records is the only one that tells you anything about your work.</p>
+
+  <h2>What it will not do</h2>
+  <ul>
+    <li>It never writes text. Ten bounded questions, and nothing else.</li>
+    <li>It never decides. It judges, and your rules decide. Use an <code>if</code>, a <code>case</code>, or a queue.</li>
+    <li>It never holds a conversation. Each call stands alone.</li>
+    <li>It judges a text, not a person.</li>
+    <li>It promises no accuracy. Measure it on your own records.</li>
+  </ul>
+
+  <p class="pagelinks"><a href="/functions/decide/">decide</a> · <a href="/functions/question-file/">Question files</a> · <a href="/install/">Install</a></p>
+</Base>

@@ -4,6 +4,27 @@ Written 2026-09-21 by the product side at Ian's request. It folds the quality wa
 
 Ian can overturn any placement here.
 
+## Execution amendment, 2026-09-22
+
+Ian directed the architect to resume the reviewed plan, record this queue amendment, and drive bounded engine tickets with SWE-2 implementation and independent review. This order supersedes the A5–A8 sequence below; their scope remains in the queue. ADR 0017's execution-order amendment records the same dependency change.
+
+1. Finish and land ticket 0065. Ian subsequently confirmed its original owner had stopped and transferred completion and landing to the architect. Preserve the existing implementation and review record; reverify the integrated tree before landing. The library team's ownership of `surfaces` is unchanged.
+2. Recheck the forty command wording/help items against the current binary. Fix only surviving items in bounded reviewed tickets; leave unsettled wording or safety changes out of an otherwise independent correction.
+3. Reconcile shared settings and result metadata, including the planned `replayed` to `cached` change, against settled contracts. Preserve existing validation, durability, and accounting guarantees.
+4. Complete private engine controls: process-wide width, cancellation, deadlines, fast failure, fork recovery, and host signal ownership. Keep the command as the production caller and prove the behavior on local listeners before opening the public API.
+5. Settle recognition policies and the optional instruction-packing decision. Preserve the baseline when packing lacks authorized evidence. The conflicting relation request forms remain blocked pending an explicit ruling; this amendment chooses neither form.
+6. Build pure recognition/relation behavior and its engine/command callers after the relevant contracts are settled.
+7. Expose the public Rust API over all ten functions after controls and result shapes are stable. Then complete C and separately review real-engine surface integration.
+8. Finish installed-artifact QA and release checks. Publication, names, paid calls, and upstream reports retain their separate authorization boundaries.
+
+The library team remains the only writer on `surfaces`. Use SWE-2 for bounded research, accepted implementation, and remediation; use separate Sol sessions for design and code review. Keep complexity floors and escalate irreducible high-risk implementation. The architect's full plan and library handoff are `architect-engine-survey-and-plan.md` and `library-team-architecture-punch-list.md`.
+
+Observed at resumption: main `c29e445` and surfaces `7fdb1fa` match their remote branches and have passing code gates. Ticket 0065 `6618694` is not an ancestor of main. The library report is committed on `surfaces`; its passing stand-in checks do not prove real-engine integration. The separate Pages workflow on main failed at `actions/configure-pages`, outside this engine lane.
+
+Ian subsequently authorized creating bounded tickets within this plan as each stage begins, with independent review before each implementation. Ticket 0066 implements wording-list items 2 and 5: the root help introduction and tag/annotate example layout. Independent design and code reviews accepted it, and the coordinator's full local ladder passed. Hosted gate run `35742562545` passed on `42039dd`; that revision landed on main and was pushed. The remaining wording items stay open for verification or a separate ruling; this ticket does not close the forty-item issue.
+
+Ticket 0067 addresses wording-list items 3 and 4: the eight operation-oriented command introductions and teaching order. It keeps short-help safety disclosures, long-help result shapes, and the examples from 0066. Independent design/code reviews and the coordinator's full local ladder passed. Hosted gate run `35745327707` passed on `be078b7`, which landed on main and was pushed. The next command work must reconcile the outcome-word ruling and verify the remaining vocabulary/diagnostic items rather than assume all forty still fail. Shared engine settings/cache work waits for 0065's verified landing; Ian has transferred that completion to the architect. Its integrated review found and repaired a matching-marker directory-sync gap. Final gate and landing evidence belongs in the 0065 record.
+
 ## Where things stand
 
 - Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).

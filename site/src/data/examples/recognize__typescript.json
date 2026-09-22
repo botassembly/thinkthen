@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "ts",
+  "code": "const found = await tt.recognize(text, {\n  kinds: [\"person\", \"organization\", \"place\"],\n  relations: { works_for: [\"person\", \"organization\"], located_in: [\"*\", \"place\"] },\n  signal,\n});\nfound.entities[0].kind; // \"person\"",
+  "function": "recognize",
+  "surface": "typescript"
+}

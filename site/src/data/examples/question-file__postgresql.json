@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body\nFROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;",
+  "function": "question-file",
+  "surface": "postgresql"
+}

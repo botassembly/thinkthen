@@ -1,6 +1,6 @@
 # Review leftovers from ticket 0006
 
-Status: Open. Unconfirmed by the sweep of 2026-09-21. The builder checks it.
+Status: Closed on 2026-09-22. Merged into 2026-09-22-small-leftovers-from-early-reviews.md.
 
 Found 2026-09-19 by the independent review of ticket 0006. The review said merge. These five points were left unfixed, and ticket 0007 checks each one it touches.
 

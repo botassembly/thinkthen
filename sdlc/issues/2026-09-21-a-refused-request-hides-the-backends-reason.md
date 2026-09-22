@@ -1,6 +1,6 @@
 # A refused request hides the backend's reason
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 Experiment 219 sent two requests over the vendor's size limits on 2026-09-21. Both came back as exit code 4 with one line:
 

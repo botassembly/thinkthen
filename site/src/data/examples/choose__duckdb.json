@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "-- one option per row, most urgent rows first\nSELECT id,\n    thinkthen_choose('Which team owns this?', body,\n        ['billing', 'shipping', 'account']) AS team\nFROM 'tickets.parquet'\nORDER BY thinkthen_score('How urgent?', body,\n    ['Routine.', 'Soon.', 'Immediate.']) DESC;",
+  "function": "choose",
+  "surface": "duckdb"
+}

@@ -5,7 +5,7 @@
 The short help shows the everyday options. The long help adds the advanced ones and warns about `set -e`.
 
 ```bash
-thinkthen decide -h | head -1 | mustmatch like "Answer a yes/no question about the evidence and set the exit code"
+thinkthen decide -h | head -1 | mustmatch like "Answer one yes or no question about a text"
 for option in --threshold --quiet --details --dry-run --url --profile; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch not like "0"
 done
