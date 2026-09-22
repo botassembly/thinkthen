@@ -36,8 +36,11 @@ refusal, and the wire suite when the loopback stub is up on 8219, and
 removes the container afterwards. The running log is `NOTES.md`.
 
 The known divergences: the stand-in never credits its in-process memory in
-`cache_answers` (its own record says so; a real-engine requirement), and
-`details` on a score question carries no nearest level until the contract
-gains the field. Case 71's per-subject arm shares its input with the pairs
-arm and the stand-in serves the ruled pairs form: a conformance-data finding
-for the build team.
+`cache_answers` (its own record says so; a real-engine requirement). Case
+71's per-subject arm shares its input with the pairs arm and the stand-in
+serves the ruled pairs form: a conformance-data finding for the build team.
+The contract's settled `nearest` field rides `thinkthen_details` here like
+every other member — PostgreSQL serializes the contract's own `Details`
+struct, so the field needed no wiring in this shim — and the conformance
+slice proves it: case 13's `nearest_level` (`mid`) is compared against
+`(details->>'nearest')` in `runner.py`.

@@ -211,3 +211,9 @@ ok       decide
 ok       05-filter-keeps-some-of-five rows
 ok       19-decide-many-judgments rows
 ```
+
+## 2026-09-21, the settlement wiring (contract 1fe8173)
+
+- **`nearest` rides details here like every member.** PostgreSQL serializes the contract's own `Details` struct, so the settled field needed no wiring in this shim; what it needed was a proof and an honest page. The conformance runner's details branch now carries a fifth field — `(details->>'nearest')` — and compares it against the case's `nearest_level` when the case carries one; case 13 (`mid`) passes through it. The README's old line ("carries no nearest level until the contract gains the field") is replaced by the settled statement.
+- **One bug on the way, mine:** the first version of the runner change carried one extra closing parenthesis in the concatenated SQL, and case 73 caught it as "raised when no failure was expected". Fixed in one edit; the run below is after the fix.
+- **Evidence from the run after the fix:** `ok 13-score-levels`, `ok 73-details-carries-requests`, `73 of 74 cases ok, 1 diverged` (the named stand-in gap, 17-usage-and-cache: the stand-in never credits its in-process memory in `cache_answers`), `12 of 12 examples ok`, wire suite skipped by design without the stub on 8219, `check.sh` exit 0, and zero containers left (`docker ps -a` shows none).

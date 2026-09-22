@@ -187,12 +187,14 @@ def main() -> int:
                 detail = f"thinkthen_details({question_arg(case)}, {literal(case['evidence'])})"
                 got = sql(
                     f"SELECT (({detail})->>'model') || '~' || (({detail})->>'digest') || '~' || "
-                    f"(({detail})->>'requests') || '~' || (({detail})->>'failed_questions')")
+                    f"(({detail})->>'requests') || '~' || (({detail})->>'failed_questions') || '~' || "
+                    f"coalesce(({detail})->>'nearest', '')")
                 parts = got.split("~")
                 want_requests = held.get("requests")
                 want_failed = held.get("failed_questions")
+                want_nearest = held.get("nearest_level")
                 ok = (
-                    len(parts) == 4
+                    len(parts) == 5
                     and parts[0] == held["model"]
                     and parts[1] == held["question_sha256"]
                 )
@@ -200,7 +202,9 @@ def main() -> int:
                     ok = parts[2] == json.dumps(want_requests)
                 if ok and want_failed is not None:
                     ok = parts[3] == str(want_failed)
-                note = None if ok else f"diverge {ident}: expected model/digest/requests/failed, got {got!r}"
+                if ok and want_nearest is not None:
+                    ok = parts[4] == want_nearest
+                note = None if ok else f"diverge {ident}: expected model/digest/requests/failed/nearest, got {got!r}"
             elif verb == "usage":
                 q = literal(json.dumps(case["question"]))
                 e = literal(case["evidence"])
