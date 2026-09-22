@@ -1,9 +1,8 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import Terminal from '../../../components/Terminal.astro';
-import Code from '../../../components/Code.astro';
 import CrossView from '../../../components/CrossView.astro';
-import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
+import { FACTS, FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
 import { cell } from '../../../data/examples.mjs';
 
 export function getStaticPaths() {
@@ -17,13 +16,22 @@ const first = runs[0];
 const rest = runs.slice(1);
 const howtos = HOWTOS.filter((h) => fn.howtos.includes(h.slug));
 const title = fn.title || fn.name;
+const preview = fn.status === 'preview';
+const shipped = !preview && !fn.notAFunction;
+const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
+// The first cost row is the live probe's price for 1,000 short records.
+const [probe] = FACTS.cost.rows[0];
 ---
 <Base title={title} description={fn.line}>
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
-  <h1>{fn.line}</h1>
-  <p class="lede">{fn.takes} {fn.gives}</p>
-  {fn.status === 'preview' && (
-    <div class="note"><span class="status preview">preview</span> The command has no <code>{fn.name}</code> yet. Every sample below is drawn from the design and has not run.</div>
+  <h1><code>{title}</code>: {line}</h1>
+  {fn.lede ? (
+    <p class="lede" set:html={fn.lede} />
+  ) : (
+    <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{shipped && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p>
+  )}
+  {preview && (
+    <div class="note"><span class="status preview">preview</span> The command has no <code>{fn.name}</code> yet. The samples below show the design. None has run.</div>
   )}
 
   {first && (
@@ -33,8 +41,20 @@ const title = fn.title || fn.name;
     </>
   )}
 
-  <h2>On every surface</h2>
-  <p>The same call, wherever you write it. The shell ships today. Every library is planned, and its sample is drawn from the design.</p>
+  <h2>When it is not sure, and when it fails</h2>
+  <p>{fn.unsure}</p>
+  {fn.exits.length > 0 && (
+    <table>
+      <tr><th>Exit code</th><th>What it means</th></tr>
+      {fn.exits.map(([code, what]) => (
+        <tr><td><span class={`exit ${code === 0 ? 'yes' : code === 1 ? 'no' : code === 3 ? 'unsure' : 'broken'}`}>{code}</span></td><td>{what}</td></tr>
+      ))}
+    </table>
+  )}
+  {fn.toPerson && <p>Send the not-sure answers to a person.</p>}
+
+  <h2>Call it from your language</h2>
+  <p>{!preview && 'The Bash command works today. '}The libraries come with 0.1. Their samples show how the calls will read.</p>
   <CrossView fn={fn.name} />
 
   <h2>The options</h2>
@@ -42,7 +62,7 @@ const title = fn.title || fn.name;
     <p>The specification does not carry <code>{fn.name}</code> yet, so its options are not settled.</p>
   ) : (
     <>
-      <p>It takes <code>{fn.args}</code>.</p>
+      <p>It takes <code>{fn.args}</code>{fn.args.endsWith('.') ? '' : '.'}</p>
       <table>
         <tr><th>Option</th><th>What it does</th></tr>
         {fn.options.map(([opt, what]) => (
@@ -59,24 +79,13 @@ const title = fn.title || fn.name;
     </>
   )}
 
-  <h2>Not sure, and broken</h2>
-  <p>{fn.unsure}</p>
-  {fn.exits.length > 0 && (
-    <table>
-      <tr><th>Exit code</th><th>What it means</th></tr>
-      {fn.exits.map(([code, what]) => (
-        <tr><td><span class={`exit ${code === 0 ? 'yes' : code === 1 ? 'no' : code === 3 ? 'unsure' : 'broken'}`}>{code}</span></td><td>{what}</td></tr>
-      ))}
-    </table>
-  )}
-
   <h2>What it costs</h2>
+  <p>About a penny buys a thousand answers on short records. The live probe on 2026-09-20 measured {probe}.</p>
   <p>{fn.requests}</p>
-  <p>A short record runs about 290 input tokens, of which about 256 is the fixed part, at $0.042 per million. That is 1.2 cents for a thousand short records, measured in the live probe on 2026-09-20.</p>
 
-  <h2>The how-tos that use it</h2>
+  <h2>Jobs that use <code>{title}</code></h2>
   {howtos.length === 0 ? (
-    <p>No how-to uses <code>{fn.name}</code> yet.</p>
+    <p>No how-to uses <code>{title}</code> yet.</p>
   ) : (
     <div class="grid">
       {howtos.map((h) => (
@@ -85,5 +94,5 @@ const title = fn.title || fn.name;
     </div>
   )}
 
-  <p class="pagelinks"><a href="/functions/">Every function</a> · <a href="/shell/">The shell</a> · <a href="/trust/">Trust</a></p>
+  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/shell/">Use it from Bash</a> · <a href="/trust/">Test it before you trust it</a></p>
 </Base>
