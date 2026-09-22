@@ -21,9 +21,19 @@
 //! calling thread; the poll re-takes the interpreter lock and runs
 //! `PyErr_CheckSignals`. When a signal fires the poll sets the cancel
 //! token, no new request starts, the sent requests finish, and the call
-//! raises `Cancelled` (a subclass of `KeyboardInterrupt`, so one
-//! `except KeyboardInterrupt` catches both paths). Worst case is one tick
-//! plus one in-flight round, per the experiment 211 proof.
+//! raises `Cancelled` (a subclass of both `KeyboardInterrupt`, so one
+//! `except KeyboardInterrupt` catches both paths, and `ThinkThenError`, so
+//! one `except ThinkThenError` does too). A signal handler that raises
+//! anything else — a `SystemExit`, its own error — has that error raised
+//! when the call stops, never `Cancelled`. Worst case is one tick plus one
+//! in-flight round, per the experiment 211 proof.
+//!
+//! A caller can also stop a call from any thread: `tt.CancelToken` is a
+//! handle, `token.cancel()` sets it, and every verb takes `token=`. A
+//! token given to a bulk call is heard at the engine's ticks; a token
+//! given to a column verb is heard between rows. An interrupt never fires
+//! the caller's token, so a token shared by several calls is only stopped
+//! by its own `cancel`.
 
 mod arrow;
 mod generated;
@@ -31,17 +41,18 @@ mod generated;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 use pyo3::create_exception;
 use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict};
+use pyo3::sync::PyOnceLock;
+use pyo3::types::{PyAny, PyDict, PyTuple, PyType};
 
 use thinkthen_contract::Annotated;
 use thinkthen_contract::Answer;
 use thinkthen_contract::Cancel;
-use thinkthen_contract::Connector;
-use thinkthen_contract::Details;
+use thinkthen_contract::Connector;use thinkthen_contract::Details;
 use thinkthen_contract::Edge as ContractEdge;
 use thinkthen_contract::EngineConfig;
 use thinkthen_contract::Failed;
@@ -93,16 +104,83 @@ create_exception!(
 );
 create_exception!(
     thinkthen._thinkthen,
-    Cancelled,
-    PyKeyboardInterrupt,
-    "the wait was cancelled; no new request started and the sent requests finished"
-);
-create_exception!(
-    thinkthen._thinkthen,
     DefectError,
     ThinkThenError,
     "the engine broke its own contract"
 );
+
+/// The cancel gesture's own error, a subclass of both `KeyboardInterrupt`
+/// (the host's gesture) and `ThinkThenError` (this package's base), so
+/// either `except` catches it. pyo3's `create_exception!` gives an
+/// exception one base, so the class is built here with two.
+static CANCELLED: PyOnceLock<Py<PyType>> = PyOnceLock::new();
+
+/// The `Cancelled` class, built once per process.
+fn cancelled_type(py: Python<'_>) -> Bound<'_, PyType> {
+    CANCELLED
+        .get_or_init(py, || {
+            let namespace = PyDict::new(py);
+            namespace
+                .set_item("__doc__", "the wait was cancelled; no new request started and the sent requests finished")
+                .expect("a class dict takes the doc");
+            namespace
+                .set_item("__module__", "thinkthen._thinkthen")
+                .expect("a class dict takes the module");
+            let bases = PyTuple::new(
+                py,
+                [
+                    py.get_type::<PyKeyboardInterrupt>().into_any(),
+                    py.get_type::<ThinkThenError>().into_any(),
+                ],
+            )
+            .expect("a tuple takes two bases");
+            py.get_type::<PyType>()
+                .call1(("Cancelled", bases, namespace))
+                .expect("the class type builds a class")
+                .cast_into::<PyType>()
+                .expect("the class type builds a class")
+                .unbind()
+        })
+        .bind(py)
+        .clone()
+}
+
+/// One cancel error of the `Cancelled` class, with the given words.
+fn cancelled_error(py: Python<'_>, message: impl Into<String>) -> PyErr {
+    PyErr::from_type(cancelled_type(py), message.into())
+}
+
+/// The caller's own cancel handle: any thread holding it can stop a call
+/// that was handed it, and the call raises `Cancelled` with no new request
+/// started. One token may ride several calls; only `cancel` sets it, and
+/// an interrupt never fires it.
+#[pyclass(frozen)]
+struct CancelToken {
+    inner: Cancel,
+}
+
+#[pymethods]
+impl CancelToken {
+    #[new]
+    fn new() -> Self {
+        Self { inner: Cancel::new() }
+    }
+
+    /// Ask every call that was handed this token to stop.
+    fn cancel(&self) {
+        self.inner.cancel();
+    }
+
+    /// Whether `cancel` has been called.
+    #[getter]
+    fn cancelled(&self) -> bool {
+        self.inner.is_cancelled()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("CancelToken(cancelled={})", self.inner.is_cancelled())
+    }
+}
 
 /// One built question, from `tt.question` or a question file.
 #[pyclass(from_py_object)]
@@ -141,28 +219,12 @@ fn engine() -> &'static Arc<dyn Engine> {
     })
 }
 
-/// Run one engine step under a panic guard: a panic becomes the defect
-/// kind carrying the panic's own words, so a host hears an exception
-/// instead of losing its process to an unwinding engine.
+/// Run one engine step under the contract's shared panic guard: a panic
+/// from anywhere beneath the step comes back as the defect kind carrying
+/// the panic's own words, so a host hears an exception instead of losing
+/// its process to an unwinding engine.
 fn guarded<T>(step: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(step)) {
-        Ok(result) => result,
-        Err(payload) => Err(Error::defect(format!(
-            "the engine panicked: {}",
-            panic_words(payload)
-        ))),
-    }
-}
-
-/// The text a panic payload carries, for the defect message.
-fn panic_words(payload: Box<dyn std::any::Any + Send>) -> String {
-    if let Some(text) = payload.downcast_ref::<&str>() {
-        (*text).to_owned()
-    } else if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else {
-        "without a message".to_owned()
-    }
+    thinkthen_contract::catch_panic("the Python door", step)
 }
 
 /// Run one engine step on a detached call, with the panic guard armed.
@@ -173,29 +235,49 @@ fn step<T: Send>(
     py.detach(move || guarded(run))
 }
 
-/// The options a single call takes: a deadline from a budget in seconds,
-/// converted by the contract's one checked door, so a NaN, a negative, or
-/// an oversized budget is a usage error rather than arithmetic that ends
-/// the host process.
-fn call_options(deadline: Option<f64>) -> Result<Options<'static>, Error> {
-    Options::new().with_deadline_seconds(deadline)
+/// The options a call takes: a deadline from a budget in seconds,
+/// converted by the contract's one checked door, and the caller's cancel
+/// token when one was given.
+///
+/// No deadline is spelled `None` (or by omitting `deadline=`). A negative
+/// number is refused as a usage error — the contract's `-1` sentinel
+/// belongs to the C door, where a number has to stand for "none" — so a
+/// budget computed as `end - now` that lands below zero can never quietly
+/// disable the deadline. Zero stays what the contract settled: a spent
+/// deadline that sends nothing.
+fn call_options<'a>(
+    deadline: Option<f64>,
+    token: Option<&'a Bound<'a, CancelToken>>,
+) -> Result<Options<'a>, Error> {
+    if let Some(seconds) = deadline {
+        if seconds < 0.0 {
+            return Err(Error::usage(format!(
+                "the deadline of {seconds} s is negative; no deadline is spelled None, and a computed budget below zero is refused rather than silently disabling the deadline"
+            )));
+        }
+    }
+    let options = Options::new().with_deadline_seconds(deadline)?;
+    Ok(match token {
+        Some(token) => options.cancel(&token.get().inner),
+        None => options,
+    })
 }
 
 /// Map a contract error to the Python exception of its kind, carrying the
 /// kind's name and the retry signal on the instance.
 fn python_error(py: Python<'_>, error: Error) -> PyErr {
-    let class: fn(String) -> PyErr = match error.kind {
-        ErrorKind::Usage => UsageError::new_err,
-        ErrorKind::Backend => BackendError::new_err,
-        ErrorKind::Deadline => DeadlineError::new_err,
-        ErrorKind::Local => LocalError::new_err,
-        ErrorKind::Cancelled => Cancelled::new_err,
-        ErrorKind::Defect => DefectError::new_err,
+    let Error { kind, message, retryable } = error;
+    let raised = match kind {
+        ErrorKind::Usage => UsageError::new_err(message),
+        ErrorKind::Backend => BackendError::new_err(message),
+        ErrorKind::Deadline => DeadlineError::new_err(message),
+        ErrorKind::Local => LocalError::new_err(message),
+        ErrorKind::Cancelled => cancelled_error(py, message),
+        ErrorKind::Defect => DefectError::new_err(message),
     };
-    let raised = class(error.message);
     let value = raised.value(py);
-    let _ = value.setattr("kind", format!("{:?}", error.kind).to_lowercase());
-    let _ = value.setattr("retryable", error.retryable);
+    let _ = value.setattr("kind", format!("{kind:?}").to_lowercase());
+    let _ = value.setattr("retryable", retryable);
     raised
 }
 
@@ -291,26 +373,48 @@ fn plain(py: Python<'_>, value: Option<String>) -> Py<PyAny> {
 /// Run one bulk verb with the signal poll. `call` receives the armed
 /// options and the poll, all inside `detach`, so the interpreter lock is
 /// free while the engine works.
+///
+/// The engine is armed with this shim's own token; the poll bridges a
+/// caller's token to it at the engine's ticks, so a shared token's
+/// `cancel` stops exactly the calls it was handed, and an interrupt never
+/// fires the caller's token. A signal whose handler raises something
+/// other than `KeyboardInterrupt` — a `SystemExit`, the handler's own
+/// error — is carried out of the poll and raised when the call stops.
 fn bulk<T: Send>(
     py: Python<'_>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
     call: impl FnOnce(Options<'_>, Option<&mut dyn FnMut()>) -> Result<T, Error> + Send,
 ) -> PyResult<T> {
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, None).map_err(|error| python_error(py, error))?;
     let flagged = Arc::new(AtomicBool::new(false));
-    let token = Cancel::new();
-    let war = token.clone();
-    let armed = options.maybe_cancel(Some(&token));
+    let war = Cancel::new();
+    let armed_token = war.clone();
+    let armed = options.maybe_cancel(Some(&armed_token));
+    let caller = token.map(|held| held.get().inner.clone());
+    let escaped: Arc<Mutex<Option<PyErr>>> = Arc::new(Mutex::new(None));
     let result = {
         let flagged = Arc::clone(&flagged);
+        let escaped = Arc::clone(&escaped);
         py.detach(move || {
             let mut poll = move || {
                 if flagged.load(Ordering::Relaxed) {
                     return;
                 }
-                Python::attach(|py| {
-                    if py.check_signals().is_err() {
+                if caller.as_ref().is_some_and(Cancel::is_cancelled) {
+                    war.cancel();
+                    return;
+                }
+                Python::attach(|py| match py.check_signals() {
+                    Ok(()) => {}
+                    Err(signal) if signal.is_instance_of::<PyKeyboardInterrupt>(py) => {
                         flagged.store(true, Ordering::Relaxed);
+                        war.cancel();
+                    }
+                    Err(signal) => {
+                        if let Ok(mut slot) = escaped.lock() {
+                            *slot = Some(signal);
+                        }
                         war.cancel();
                     }
                 });
@@ -318,11 +422,19 @@ fn bulk<T: Send>(
             guarded(|| call(armed, Some(&mut poll as &mut dyn FnMut())))
         })
     };
+    let pending = escaped.lock().ok().and_then(|mut slot| slot.take());
     match result {
-        Ok(value) => Ok(value),
+        Ok(value) => match pending {
+            Some(signal) => Err(signal),
+            None => Ok(value),
+        },
         Err(error) => {
+            if let Some(signal) = pending {
+                return Err(signal);
+            }
             if error.kind == ErrorKind::Cancelled && flagged.load(Ordering::Relaxed) {
-                let raised = Cancelled::new_err(
+                let raised = cancelled_error(
+                    py,
                     "interrupted: no new request started, and every sent request finished",
                 );
                 let _ = raised.value(py).setattr("retryable", false);
@@ -422,18 +534,19 @@ fn question(
 /// wide in Rust, and the answers come back as a boolean column whose
 /// `None` rows are "not sure" — the wrapper rebuilds the host's own
 /// `Series` from it. A plain string stays one answer.
-#[pyfunction(signature = (question, evidence, *, deadline = None))]
+#[pyfunction(signature = (question, evidence, *, deadline = None, token = None))]
 fn decide(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     evidence: &Bound<'_, PyAny>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
     if arrow::is_arrow(evidence)? {
         let column = arrow::series_column(evidence)?;
         let references: Vec<&str> = column.texts.clone();
-        let judgments = bulk(py, deadline, |armed, poll| {
+        let judgments = bulk(py, deadline, token, |armed, poll| {
             engine().decide_many_opts(&asked, &references, armed, poll)
         })?;
         drop(column);
@@ -447,7 +560,7 @@ fn decide(
             "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
         )
     })?;
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
     let answer = step(py, move || engine().decide_opts(&asked, &evidence, options))
         .map_err(|error| python_error(py, error))?;
     Ok(bare(py, answer))
@@ -456,18 +569,19 @@ fn decide(
 /// Ask of every record, once, keeping every judgment in input order.
 /// A list or tuple crosses as strings; an object answering
 /// `__arrow_c_stream__` (a Polars Series) crosses zero-copy as Arrow.
-#[pyfunction(signature = (question, records, *, deadline = None))]
+#[pyfunction(signature = (question, records, *, deadline = None, token = None))]
 fn decide_many(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     records: &Bound<'_, PyAny>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<Py<PyAny>>> {
     let asked = settle_question(py, question)?;
     if arrow::is_arrow(records)? {
         let column = arrow::series_column(records)?;
         let references: Vec<&str> = column.texts.clone();
-        let judgments = bulk(py, deadline, |armed, poll| {
+        let judgments = bulk(py, deadline, token, |armed, poll| {
             engine().decide_many_opts(&asked, &references, armed, poll)
         })?;
         drop(column);
@@ -478,23 +592,24 @@ fn decide_many(
     }
     let records: Vec<String> = records.extract()?;
     let references: Vec<&str> = records.iter().map(String::as_str).collect();
-    let judgments = bulk(py, deadline, |armed, poll| {
+    let judgments = bulk(py, deadline, token, |armed, poll| {
         engine().decide_many_opts(&asked, &references, armed, poll)
     })?;
     judgments.into_iter().map(|one| Ok(bare(py, one.answer))).collect()
 }
 
 /// Pick the option the evidence fits best. `None` is unresolved.
-#[pyfunction(signature = (question, evidence, *, options = None, deadline = None))]
+#[pyfunction(signature = (question, evidence, *, options = None, deadline = None, token = None))]
 fn choose(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     evidence: String,
     options: Option<Vec<String>>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_verb_question(py, question, "choose", "options", options)?;
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
     let picked = step(py, move || engine().choose_opts(&asked, &evidence, options))
         .map_err(|error| python_error(py, error))?;
     Ok(plain(py, picked))
@@ -506,13 +621,14 @@ fn choose(
 /// no bulk score in the contract, so the column runs one call a record
 /// through this shim; the decide column next door takes the batch spine.
 /// The public wrapper takes `levels` beside the text, as the deck draws.
-#[pyfunction(signature = (question, evidence, *, levels = None, deadline = None))]
+#[pyfunction(signature = (question, evidence, *, levels = None, deadline = None, token = None))]
 fn score(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     evidence: &Bound<'_, PyAny>,
     levels: Option<Vec<String>>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_verb_question(py, question, "score", "levels", levels)?;
     if arrow::is_arrow(evidence)? {
@@ -522,10 +638,15 @@ fn score(
         // One deadline for the whole column operation: the budget starts
         // when the call does, and every row's call reads the same instant,
         // so a column cannot outlive the caller's budget row after row.
-        let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+        // The caller's token is read between rows, so a controller thread
+        // stops the column before the next row is sent.
+        let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
         let values = step(py, move || {
             let mut values = Vec::with_capacity(texts.len());
             for text in &texts {
+                if options.cancel_token().is_some_and(Cancel::is_cancelled) {
+                    return Err(Error::cancelled());
+                }
                 values.push(engine().score_opts(&asked, text, options)?.value);
             }
             Ok::<Vec<f64>, Error>(values)
@@ -538,7 +659,7 @@ fn score(
             "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
         )
     })?;
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
     let value = step(py, move || engine().score_opts(&asked, &evidence, options))
         .map(|Scored { value, .. }| value)
         .map_err(|error| python_error(py, error))?;
@@ -546,33 +667,35 @@ fn score(
 }
 
 /// Name the labels that held, in the question's order.
-#[pyfunction(signature = (question, evidence, *, labels = None, deadline = None))]
+#[pyfunction(signature = (question, evidence, *, labels = None, deadline = None, token = None))]
 fn tag(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     evidence: String,
     labels: Option<Vec<String>>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<String>> {
     let asked = settle_verb_question(py, question, "tag", "labels", labels)?;
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
     step(py, move || engine().tag_opts(&asked, &evidence, options))
         .map_err(|error| python_error(py, error))
 }
 
 /// Keep the records whose evidence reached the mark, in order. The caller
 /// gets back its own records.
-#[pyfunction(signature = (question, records, *, deadline = None))]
+#[pyfunction(signature = (question, records, *, deadline = None, token = None))]
 #[allow(clippy::needless_pass_by_value)]
 fn filter(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     records: Vec<String>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<String>> {
     let asked = settle_question(py, question)?;
     let references: Vec<&str> = records.iter().map(String::as_str).collect();
-    let kept = bulk(py, deadline, |armed, poll| {
+    let kept = bulk(py, deadline, token, |armed, poll| {
         engine().filter_opts(&asked, &references, armed, poll)
     })?;
     Ok(kept.into_iter().map(|place| records[place].clone()).collect())
@@ -584,17 +707,18 @@ fn filter(
 /// the probability — in ranked order (the contract's `Ranked`; no surface
 /// returns the bare unit alone). The wrapper fills the record and slices
 /// `top`; the settled shape takes `top` there.
-#[pyfunction(signature = (question, records, *, deadline = None))]
+#[pyfunction(signature = (question, records, *, deadline = None, token = None))]
 #[allow(clippy::needless_pass_by_value)]
 fn rank(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     records: Vec<String>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<(usize, f64)>> {
     let asked = settle_question(py, question)?;
     let references: Vec<&str> = records.iter().map(String::as_str).collect();
-    let ranked = bulk(py, deadline, |armed, poll| {
+    let ranked = bulk(py, deadline, token, |armed, poll| {
         engine().rank_opts(&asked, &references, armed, poll)
     })?;
     Ok(ranked.into_iter().map(|one| (one.index, one.probability)).collect())
@@ -605,17 +729,18 @@ fn rank(
 /// The answer is the ruled pair — the unit's place in the input and the
 /// probability — or `None` when nothing fits (case 25's null). The
 /// wrapper fills the unit text.
-#[pyfunction(signature = (question, units, *, deadline = None))]
+#[pyfunction(signature = (question, units, *, deadline = None, token = None))]
 #[allow(clippy::needless_pass_by_value)]
 fn find(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     units: Vec<String>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Option<(usize, f64)>> {
     let asked = settle_question(py, question)?;
     let references: Vec<&str> = units.iter().map(String::as_str).collect();
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
     let found = step(py, move || engine().find_opts(&asked, &references, options))
         .map_err(|error| python_error(py, error))?;
     Ok(found.index.map(|place| (place, found.probability)))
@@ -667,17 +792,18 @@ fn annotated_row(py: Python<'_>, fields: Vec<(String, Annotated)>) -> PyResult<P
 /// Ask every question in the set of every record, one dictionary a record
 /// in the set's name order. The wrapper in `thinkthen/__init__.py` hands a
 /// data frame's column over and attaches the new columns on the way back.
-#[pyfunction(signature = (set, records, *, deadline = None))]
+#[pyfunction(signature = (set, records, *, deadline = None, token = None))]
 #[allow(clippy::needless_pass_by_value)]
 fn annotate_rows(
     py: Python<'_>,
     set: &Bound<'_, PyAny>,
     records: Vec<String>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<Py<PyAny>>> {
     let loaded = settle_set(py, set)?;
     let references: Vec<&str> = records.iter().map(String::as_str).collect();
-    let rows = bulk(py, deadline, |armed, poll| {
+    let rows = bulk(py, deadline, token, |armed, poll| {
         engine().annotate_opts(&loaded, &references, armed, poll)
     })?;
     rows.into_iter().map(|fields| annotated_row(py, fields)).collect()
@@ -686,18 +812,19 @@ fn annotate_rows(
 /// Annotate a frame's `on` column: the caller's own columns come back
 /// aliased and one new column a question is appended, all through the
 /// Arrow stream form. `type(records)(frame)` builds the host's frame.
-#[pyfunction(signature = (set, records, on, *, deadline = None))]
+#[pyfunction(signature = (set, records, on, *, deadline = None, token = None))]
 fn annotate_stream(
     py: Python<'_>,
     set: &Bound<'_, PyAny>,
     records: &Bound<'_, PyAny>,
     on: String,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<arrow::ArrowFrame> {
     let loaded = settle_set(py, set)?;
     let frame = arrow::frame_column(records, &on)?;
     let references: Vec<&str> = frame.texts.clone();
-    let rows = bulk(py, deadline, |armed, poll| {
+    let rows = bulk(py, deadline, token, |armed, poll| {
         engine().annotate_opts(&loaded, &references, armed, poll)
     })?;
     let names: Vec<String> = loaded.names().to_vec();
@@ -711,15 +838,16 @@ fn annotate_stream(
 /// `requests` is always a list, one element for a one-request result, in
 /// construction order; a retry adds no element. `failed_questions` is
 /// always present, including zero.
-#[pyfunction(signature = (question, evidence, *, deadline = None))]
+#[pyfunction(signature = (question, evidence, *, deadline = None, token = None))]
 fn details(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     evidence: String,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
     let Details { probability, answer, nearest, model, digest, sends, requests, failed_questions } =
         step(py, move || engine().details_opts(&asked, &evidence, options))
             .map_err(|error| python_error(py, error))?;
@@ -1087,7 +1215,7 @@ fn edge_record(edge: ContractEdge) -> Edge {
 /// of rule name to a (from, to) pair, each end a kind or the one-character
 /// string `"*"`. Offsets count Python string positions, so
 /// `text[start:end]` is the name.
-#[pyfunction(signature = (text, *, kinds = None, relations = None, threshold = None, relation_threshold = None, deadline = None))]
+#[pyfunction(signature = (text, *, kinds = None, relations = None, threshold = None, relation_threshold = None, deadline = None, token = None))]
 #[allow(clippy::too_many_arguments)]
 fn recognize(
     py: Python<'_>,
@@ -1097,9 +1225,10 @@ fn recognize(
     threshold: Option<f64>,
     relation_threshold: Option<f64>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Recognized> {
     let asked = build_recognize(py, kinds, relations, threshold, relation_threshold)?;
-    let options = call_options(deadline).map_err(|error| python_error(py, error))?;
+    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
     let found = step(py, move || engine().recognize_opts(&asked, &text, options))
         .map_err(|error| python_error(py, error))?;
     Ok(recognized_record(found))
@@ -1108,7 +1237,7 @@ fn recognize(
 /// `recognize` over a frame's `on` column: one row per name, with the
 /// source row's number counted from 1, in a long frame this surface
 /// builds whole. No relation rules here; ask them of the text form.
-#[pyfunction(signature = (records, on, *, kinds = None, threshold = None, relation_threshold = None, deadline = None))]
+#[pyfunction(signature = (records, on, *, kinds = None, threshold = None, relation_threshold = None, deadline = None, token = None))]
 fn recognize_stream(
     py: Python<'_>,
     records: &Bound<'_, PyAny>,
@@ -1117,11 +1246,12 @@ fn recognize_stream(
     threshold: Option<f64>,
     relation_threshold: Option<f64>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<arrow::ArrowFrame> {
     let asked = build_recognize(py, kinds, None, threshold, relation_threshold)?;
     let frame = arrow::frame_column(records, &on)?;
     let references: Vec<&str> = frame.texts.clone();
-    let rows = bulk(py, deadline, |armed, mut poll| {
+    let rows = bulk(py, deadline, token, |armed, mut poll| {
         let mut row_col: Vec<i64> = Vec::new();
         let mut text_col: Vec<String> = Vec::new();
         let mut kind_col: Vec<String> = Vec::new();
@@ -1162,7 +1292,7 @@ fn recognize_stream(
 /// usage error before anything happens. `relations` is a list of names or
 /// name-to-pair mappings, or a question file path; `either` names the
 /// both-ways rules.
-#[pyfunction(signature = (records, *, relations = None, either = None, threshold = None, deadline = None))]
+#[pyfunction(signature = (records, *, relations = None, either = None, threshold = None, deadline = None, token = None))]
 #[allow(clippy::needless_pass_by_value)]
 fn relate(
     py: Python<'_>,
@@ -1171,10 +1301,11 @@ fn relate(
     either: Option<&Bound<'_, PyAny>>,
     threshold: Option<f64>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<Edge>> {
     let asked = build_relate(py, relations, either, threshold)?;
     let references: Vec<&str> = records.iter().map(String::as_str).collect();
-    let edges = bulk(py, deadline, |armed, mut poll| {
+    let edges = bulk(py, deadline, token, |armed, mut poll| {
         if let Some(poll) = poll.as_mut() {
             poll();
         }
@@ -1185,7 +1316,7 @@ fn relate(
 
 /// `relate` over a frame's `on` column: a frame of edges, one row per
 /// edge, the record numbers counted from 1 in input order.
-#[pyfunction(signature = (records, on, *, relations = None, either = None, threshold = None, deadline = None))]
+#[pyfunction(signature = (records, on, *, relations = None, either = None, threshold = None, deadline = None, token = None))]
 fn relate_stream(
     py: Python<'_>,
     records: &Bound<'_, PyAny>,
@@ -1194,11 +1325,12 @@ fn relate_stream(
     either: Option<&Bound<'_, PyAny>>,
     threshold: Option<f64>,
     deadline: Option<f64>,
+    token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<arrow::ArrowFrame> {
     let asked = build_relate(py, relations, either, threshold)?;
     let frame = arrow::frame_column(records, &on)?;
     let references: Vec<&str> = frame.texts.clone();
-    let edges = bulk(py, deadline, |armed, mut poll| {
+    let edges = bulk(py, deadline, token, |armed, mut poll| {
         if let Some(poll) = poll.as_mut() {
             poll();
         }
@@ -1242,12 +1374,14 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = module.py();
     module.add_class::<Question>()?;
     module.add_class::<QuestionSetHolder>()?;
+    module.add_class::<CancelToken>()?;
     module.add_class::<Entity>()?;
     module.add_class::<Relation>()?;
     module.add_class::<Recognized>()?;
     module.add_class::<Edge>()?;
     module.add_class::<arrow::ArrowFrame>()?;
     module.add_function(wrap_pyfunction!(arrow::_arrow_probe, module)?)?;
+    module.add_function(wrap_pyfunction!(arrow::_probe_frame_rebuild, module)?)?;
     module.add_function(wrap_pyfunction!(annotate_stream, module)?)?;
     module.add_function(wrap_pyfunction!(recognize_stream, module)?)?;
     module.add_function(wrap_pyfunction!(relate_stream, module)?)?;
@@ -1257,7 +1391,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("BackendError", py.get_type::<BackendError>())?;
     module.add("DeadlineError", py.get_type::<DeadlineError>())?;
     module.add("LocalError", py.get_type::<LocalError>())?;
-    module.add("Cancelled", py.get_type::<Cancelled>())?;
+    module.add("Cancelled", cancelled_type(py))?;
     module.add("DefectError", py.get_type::<DefectError>())?;
     Ok(())
 }
@@ -1297,19 +1431,18 @@ mod tests {
 
     #[test]
     fn the_deadline_conversion_refuses_what_cannot_be_a_budget() {
-        // NaN, an infinity, and a negative other than the sentinel are
-        // usage errors at the one checked door, never arithmetic that
-        // ends the host.
-        for refused in [f64::NAN, f64::INFINITY, -2.0, 1e300] {
-            let error = match call_options(Some(refused)) {
+        // NaN, an infinity, and every negative — the C door's sentinel
+        // included — are usage errors at this door, never arithmetic that
+        // ends the host and never a silent "no deadline".
+        for refused in [f64::NAN, f64::INFINITY, -1.0, -2.0, 1e300] {
+            let error = match call_options(Some(refused), None) {
                 Ok(_) => panic!("{refused} must be refused"),
                 Err(error) => error,
             };
             assert_eq!(error.kind, ErrorKind::Usage, "{refused}");
         }
-        // The sentinel and `None` mean no deadline; zero is a spent one.
-        assert!(call_options(None).is_ok());
-        assert!(call_options(Some(-1.0)).is_ok());
-        assert!(call_options(Some(0.0)).is_ok());
+        // `None` is the one no-deadline spelling; zero is a spent one.
+        assert!(call_options(None, None).is_ok());
+        assert!(call_options(Some(0.0), None).is_ok());
     }
 }

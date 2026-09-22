@@ -93,6 +93,48 @@ pub(crate) enum Text {
     View,
 }
 
+/// A producer's schema, released exactly once when the guard drops.
+///
+/// Every error path between a stream's `get_schema` and the value that
+/// keeps the schema (a `SeriesColumn`, a `FrameColumn`) runs through this
+/// guard, so a refused input releases the schema the producer handed over
+/// instead of leaking it.
+struct SchemaGuard(Option<ArrowSchema>);
+
+impl SchemaGuard {
+    fn empty() -> Self {
+        Self(Some(unsafe { std::mem::zeroed() }))
+    }
+
+    fn held(&self) -> &ArrowSchema {
+        self.0.as_ref().expect("the guard holds its schema until take")
+    }
+
+    /// The place a producer's `get_schema` fills.
+    fn pointer(&mut self) -> *mut ArrowSchema {
+        let schema = self.0.as_mut().expect("the guard holds its schema");
+        schema as *mut ArrowSchema
+    }
+
+    /// The schema, given up to its new owner.
+    fn take(&mut self) -> ArrowSchema {
+        std::mem::replace(
+            self.0.as_mut().expect("the guard holds its schema until take"),
+            unsafe { std::mem::zeroed() },
+        )
+    }
+}
+
+impl Drop for SchemaGuard {
+    fn drop(&mut self) {
+        if let Some(schema) = self.0.as_mut() {
+            if let Some(release) = schema.release {
+                unsafe { release(schema as *mut ArrowSchema) };
+            }
+        }
+    }
+}
+
 /// Check a schema is exactly a whole text column, and say what to do if not.
 unsafe fn require_text(schema: &ArrowSchema) -> PyResult<Text> {
     if !schema.dictionary.is_null() {
@@ -117,17 +159,33 @@ unsafe fn require_text(schema: &ArrowSchema) -> PyResult<Text> {
 
 /// Borrow one already-validated array's strings out of its buffers.
 ///
+/// `skip` is where the caller's rows begin and `count` how many there
+/// are. For a series-shaped array they are the array's own offset and
+/// length; for a frame's `on` column the struct root's offset and length
+/// are added, because the Arrow columnar format lets a sliced struct keep
+/// its slice on the root and leave the children whole — the reader
+/// applies the parent's offset when indexing.
+///
 /// # Safety
 /// `array` must point at a live `ArrowArray` of the given text layout,
 /// and the memory must outlive the returned strings.
-unsafe fn borrow_strings(array: *const ArrowArray, text: Text) -> PyResult<Vec<&'static str>> {
+unsafe fn borrow_strings(
+    array: *const ArrowArray,
+    text: Text,
+    skip: usize,
+    count: usize,
+) -> PyResult<Vec<&'static str>> {
     if (*array).null_count != 0 {
         return Err(UsageError::new_err(
             "the column holds nulls; the engine needs text, and NA rows are the caller's to drop",
         ));
     }
-    let count = (*array).length.max(0) as usize;
-    let skip = (*array).offset.max(0) as usize;
+    let carried = (*array).offset.max(0) as usize + (*array).length.max(0) as usize;
+    if skip.saturating_add(count) > carried {
+        return Err(UsageError::new_err(
+            "the frame's struct root asks for rows its column does not carry",
+        ));
+    }
     let mut texts = Vec::with_capacity(count);
     if let Text::View = text {
         if (*array).n_buffers < 2 {
@@ -276,13 +334,13 @@ pub(crate) fn series_column(records: &Bound<'_, PyAny>) -> PyResult<SeriesColumn
         schemas: Vec::new(),
     };
     unsafe {
-        let mut schema = std::mem::zeroed::<ArrowSchema>();
-        let got = (*stream).get_schema.map_or(-1, |get| get(stream, &mut schema));
+        let mut schema = SchemaGuard::empty();
+        let got = (*stream).get_schema.map_or(-1, |get| get(stream, schema.pointer()));
         if got != 0 {
             return Err(stream_error(stream, "the column stream would not name its schema"));
         }
-        let large = require_text(&schema)?;
-        column.schemas.push(schema);
+        let large = require_text(schema.held())?;
+        column.schemas.push(schema.take());
         loop {
             let mut array = std::mem::zeroed::<ArrowArray>();
             let got = (*stream).get_next.map_or(-1, |next| next(stream, &mut array));
@@ -292,9 +350,16 @@ pub(crate) fn series_column(records: &Bound<'_, PyAny>) -> PyResult<SeriesColumn
             if array.release.is_none() {
                 break;
             }
-            column.texts.append(&mut borrow_strings(&array, large)?);
+            // Own the batch before reading it, so a refusal below releases
+            // the producer's buffers together with the column instead of
+            // leaking them.
+            let skip = array.offset.max(0) as usize;
+            let count = array.length.max(0) as usize;
             column.batches.push(array);
-        }    }
+            let held = column.batches.last().expect("just pushed");
+            column.texts.append(&mut borrow_strings(held, large, skip, count)?);
+        }
+    }
     Ok(column)
 }
 
@@ -355,13 +420,13 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
     let capsule = records.call_method0("__arrow_c_stream__")?;
     let stream = unsafe { capsule_pointer(&capsule)? as *mut ArrowArrayStream };
 
-    let mut schema = Box::new(unsafe { std::mem::zeroed::<ArrowSchema>() });
+    let mut schema = SchemaGuard::empty();
     unsafe {
-        let got = (*stream).get_schema.map_or(-1, |get| get(stream, schema.as_mut()));
+        let got = (*stream).get_schema.map_or(-1, |get| get(stream, schema.pointer()));
         if got != 0 {
             return Err(stream_error(stream, "the frame stream would not name its schema"));
         }
-        let format = CStr::from_ptr(schema.format).to_bytes();
+        let format = CStr::from_ptr(schema.held().format).to_bytes();
         if format != b"+s" {
             return Err(UsageError::new_err(format!(
                 "the stream is '{}', not a frame (a struct); annotate with on= needs a data frame, and a plain column rides the series door",
@@ -369,14 +434,14 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
             )));
         }
     }
-    let count = schema.n_children.max(0) as usize;
+    let count = schema.held().n_children.max(0) as usize;
     if count == 0 {
         return Err(UsageError::new_err("the frame has no columns"));
     }
     let mut names = Vec::with_capacity(count);
     let mut on_index = None;
     for place in 0..count {
-        let child = unsafe { *schema.children.add(place) };
+        let child = unsafe { *schema.held().children.add(place) };
         if child.is_null() {
             return Err(UsageError::new_err("the frame named a column it did not carry"));
         }
@@ -400,7 +465,7 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
     };
     // The `on` column must be whole text, checked on its own schema.
     let large = unsafe {
-        let child = *schema.children.add(on_index);
+        let child = *schema.held().children.add(on_index);
         require_text(&*child)?
     };
 
@@ -410,7 +475,7 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
         names,
         lengths: Vec::new(),
         hold: Vec::new(),
-        schema: std::mem::replace(&mut schema, Box::new(unsafe { std::mem::zeroed() })),
+        schema: Box::new(schema.take()),
         owners: vec![capsule.unbind()],
     };
 
@@ -430,15 +495,25 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
                 ));
             }
             let child_ptrs = array.children;
-            let child = std::ptr::read(child_ptrs.add(column.on));
-            column
-                .texts
-                .append(&mut borrow_strings(child, large)?);
-            column.lengths.push(array.length.max(0) as usize);
+            let root_offset = array.offset.max(0) as usize;
+            let root_length = array.length.max(0) as usize;
+            // Own the batch before reading it, so a refusal below releases
+            // the producer's buffers together with the hold instead of
+            // leaking them.
+            column.lengths.push(root_length);
             column.hold.push(BatchHold {
                 root: array,
                 child_ptrs,
             });
+            let held = column.hold.last().expect("just pushed");
+            let child = held.child(column.on);
+            let child_offset = child.offset.max(0) as usize;
+            column.texts.append(&mut borrow_strings(
+                &child,
+                large,
+                root_offset + child_offset,
+                root_length,
+            )?);
         }
     }
     Ok(column)
@@ -719,13 +794,18 @@ pub(crate) fn build_frame(
         // including a dictionary's values and a nested column's children,
         // because those pointers are part of the column's shape.
         for place in 0..originals {
-            let child = unsafe { hold.hold[batch_place].child(place) };
+            let held = &hold.hold[batch_place];
+            let child = unsafe { held.child(place) };
             let buffers_ptr = child.buffers;
             buffers.push(Vec::new());
             children.push(Box::new(ArrowArray {
-                length: child.length,
+                // The caller's own rows, cut to this batch's length: a
+                // sliced struct may keep its slice on the root with whole
+                // children, so the root's offset is added here and the
+                // output's own root carries none.
+                length: length as i64,
                 null_count: child.null_count,
-                offset: child.offset,
+                offset: held.root.offset + child.offset,
                 n_buffers: child.n_buffers,
                 n_children: child.n_children,
                 buffers: buffers_ptr,
@@ -1204,6 +1284,22 @@ pub(crate) fn _arrow_probe(records: &Bound<'_, PyAny>) -> PyResult<(usize, usize
             (*batch).length.max(0) as usize,
         ))
     }
+}
+
+/// Probe whether a host can rebuild its own frame from the stream form the
+/// frame doors return, before any request runs.
+///
+/// An empty frame of the same shape (a struct stream) is handed to the
+/// host's own constructor. A host whose constructor cannot consume the
+/// stream form — pandas' `DataFrame`, pyarrow's `Table` — raises here, so
+/// the caller refuses before the batch runs and before the host's own
+/// stream is ever taken. The refusal keeps the constructor's error as the
+/// cause, so the wrapper can chain the host's own words.
+#[pyfunction]
+pub(crate) fn _probe_frame_rebuild(host: &Bound<'_, PyAny>) -> PyResult<()> {
+    let probe = build_table(&[("probe", TableValue::Texts(Vec::new()))])?;
+    let frame = ArrowFrame::new(probe);
+    host.get_type().call1((frame,)).map(|_| ())
 }
 
 /// The capsule names the Arrow PyCapsule interface fixes for a single

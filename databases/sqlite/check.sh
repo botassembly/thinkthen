@@ -11,6 +11,20 @@ echo "== sqlite surface: build the extension"
 cargo build --release --quiet
 cp target/release/libthinkthen0.so thinkthen.so
 
+# The floor is 3.50.0 (below it a CHECK constraint in an untrusted
+# database reaches the functions), so the Python tests run against a host
+# at or above the floor. A host already new enough (macOS 26 carries
+# 3.51.0) is used as-is; otherwise the amalgamation in .runtimes supplies
+# one (see tests/host_sqlite.sh for the one-time fetch).
+if ! python3 -c 'import sqlite3,sys; sys.exit(0 if tuple(int(x) for x in sqlite3.sqlite_version.split(".")) >= (3,50,0) else 1)'; then
+    HOST_DIR=$(tests/host_sqlite.sh)
+    export LD_LIBRARY_PATH="$HOST_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+HOST=$(python3 -c 'import sqlite3;print(sqlite3.sqlite_version)')
+python3 -c 'import sqlite3,sys; sys.exit(0 if tuple(int(x) for x in sqlite3.sqlite_version.split(".")) >= (3,50,0) else 1)' \
+    || { echo "FAILED   the test host is below the floor: $HOST" >&2; exit 1; }
+echo "   host SQLite $HOST"
+
 echo "== sqlite surface: the error-mapping test"
 cargo test --release --quiet --lib
 
@@ -25,8 +39,14 @@ ENGINE_NULL=1 .runtimes/sqlite3 :memory: < tests/slide.sql \
 echo "== sqlite surface: null suite"
 ENGINE_NULL=1 python3 tests/null_suite.py
 
-echo "== sqlite surface: the untrusted-schema refusals"
+echo "== sqlite surface: the untrusted-schema refusals, at the floor"
 python3 tests/schema_refusal.py
+
+echo "== sqlite surface: single-row deadline, offline"
+python3 tests/single_row_cancel.py null
+
+echo "== sqlite surface: single-row deadline and interrupt, loopback"
+python3 tests/single_row_cancel.py wire
 
 echo "== sqlite surface: two connections, one closed"
 python3 tests/two_connections.py
@@ -41,7 +61,8 @@ echo "== sqlite surface: volatile stays the flag"
 volatile_out=$(ENGINE_NULL=1 .runtimes/sqlite3 :memory: 2>&1 <<'SQL' || true
 .load ./thinkthen
 SELECT 'flagged', count(*) FROM pragma_function_list WHERE name LIKE 'thinkthen%' AND (flags & 0x800) != 0;
-SELECT 'known', count(*) FROM pragma_function_list WHERE name LIKE 'thinkthen%';
+SELECT 'known', count(DISTINCT name) FROM pragma_function_list WHERE name LIKE 'thinkthen%';
+SELECT 'registrations', count(*) FROM pragma_function_list WHERE name LIKE 'thinkthen%';
 CREATE TABLE t(body TEXT);
 CREATE INDEX idx ON t(thinkthen_decide('Is this a complaint?', body));
 SQL
@@ -50,7 +71,11 @@ printf '%s\n' "$volatile_out" | sed 's/^/   /'
 grep -q "^flagged|0$" <<<"$volatile_out" \
     || { echo "FAILED   a function carries SQLITE_DETERMINISTIC" >&2; exit 1; }
 grep -q "^known|8$" <<<"$volatile_out" \
-    || { echo "FAILED   the function list is not the eight" >&2; exit 1; }
+    || { echo "FAILED   the function names are not the eight" >&2; exit 1; }
+# The six judgment scalars carry a third arity, the deadline door; the
+# registration count is part of the surface's shape.
+grep -q "^registrations|14$" <<<"$volatile_out" \
+    || { echo "FAILED   the registrations are not the fourteen" >&2; exit 1; }
 grep -q "unsafe use of thinkthen_decide()" <<<"$volatile_out" \
     || { echo "FAILED   an index expression accepted the call" >&2; exit 1; }
 echo "ok       no deterministic flag on any of the eight; an index expression refuses"

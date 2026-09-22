@@ -11,11 +11,19 @@ column and returns names with their kinds; ``relate`` reads every record
 at once and returns the edges. A relation's two ends are ``source`` and
 ``target`` on every surface. Errors raise this package's own exception
 classes, each carrying ``kind`` and ``retryable``; a cancel during a bulk
-wait raises ``Cancelled``, a subclass of ``KeyboardInterrupt``.
+wait raises ``Cancelled``, a subclass of both ``KeyboardInterrupt`` and
+``ThinkThenError``.
+
+Every verb takes ``deadline`` — seconds from the moment of the call —
+and ``token``, a ``CancelToken`` any thread can set to stop the call.
+No deadline is spelled ``deadline=None``; a negative number is refused
+as a usage error, so a budget computed as ``end - now`` that lands below
+zero can never quietly disable the deadline.
 """
 
 from ._thinkthen import (
     Cancelled,
+    CancelToken,
     DeadlineError,
     DefectError,
     Edge,
@@ -26,6 +34,7 @@ from ._thinkthen import (
     Recognized,
     ThinkThenError,
     UsageError,
+    _probe_frame_rebuild,
     annotate_rows,
     annotate_stream,
     choose,
@@ -46,7 +55,7 @@ from ._thinkthen import (
 )
 
 __all__ = [
-    "annotate", "Cancelled", "choose", "decide", "decide_many",
+    "annotate", "Cancelled", "CancelToken", "choose", "decide", "decide_many",
     "details", "Edge", "Entity", "find", "filter", "question", "rank",
     "recognize", "Relation",
     "relate", "Recognized", "score",
@@ -55,8 +64,46 @@ __all__ = [
     "LocalError", "DefectError",
 ]
 
+# The sentences a frame host that cannot rebuild its own frame from the
+# Arrow stream hears. The probe raises them before any request runs, and
+# the fallback after a real construction keeps them the same words.
+_ANNOTATE_REBUILD_REFUSAL = (
+    "annotate with on= cannot rebuild a pandas frame from the "
+    "Arrow stream it returns. Pass the column instead — "
+    "tt.annotate(set, df[column]) — which returns a list of "
+    "dictionaries, one per row, or convert once and back — "
+    "tt.annotate(set, pl.from_pandas(df), on=column).to_pandas()"
+)
+_RECOGNIZE_REBUILD_REFUSAL = (
+    "recognize with on= cannot rebuild a pandas frame from the "
+    "Arrow stream it returns. Pass the column instead — "
+    "tt.recognize(df[column], kinds=...) — or convert once and "
+    "back — tt.recognize(pl.from_pandas(df), on=column)"
+)
+_RELATE_REBUILD_REFUSAL = (
+    "relate with on= cannot rebuild a pandas frame from the "
+    "Arrow stream it returns. Pass the column instead — "
+    "tt.relate(df[column], relations=...) — or convert once and "
+    "back — tt.relate(pl.from_pandas(df), on=column)"
+)
 
-def decide(question, text, *, deadline=None):
+
+def _refuse_if_not_rebuildable(records, sentence):
+    """Refuse a frame host that cannot rebuild its own frame from the
+    Arrow stream the frame doors return — before any request runs.
+
+    The probe builds an empty frame of the same shape and asks the host's
+    own constructor for it; pandas' ``DataFrame`` and pyarrow's ``Table``
+    raise there, so the refusal happens before the input's stream is ever
+    taken and before a paid batch could start.
+    """
+    try:
+        _probe_frame_rebuild(records)
+    except Exception as exc:
+        raise UsageError(sentence) from exc
+
+
+def decide(question, text, *, deadline=None, token=None):
     """Ask once. ``True``, ``False``, or ``None`` when the question's
     rule makes it "not sure".
 
@@ -68,19 +115,20 @@ def decide(question, text, *, deadline=None):
     as the plain list (pandas cannot rebuild its own column from the
     Arrow capsule), so ``pd.Series(answers)`` is the one line back.
     """
-    answer = _decide(question, text, deadline=deadline)
+    answer = _decide(question, text, deadline=deadline, token=token)
     return _column_or_value(text, answer)
 
 
-def score(question, text, levels=None, *, deadline=None):
+def score(question, text, levels=None, *, deadline=None, token=None):
     """Place the text on the question's levels: the position 0 to K-1.
 
     A Polars column in returns a number column out, and the public call
     takes ``levels`` beside the text — ``tt.score(ask, df["body"], levels)``
     runs as the deck draws. A pandas Series comes back as the plain list
-    of numbers, the same as ``decide``.
+    of numbers, the same as ``decide``. A token is read between rows, so
+    a controller thread stops the column before the next row is sent.
     """
-    answer = _score(question, text, levels=levels, deadline=deadline)
+    answer = _score(question, text, levels=levels, deadline=deadline, token=token)
     return _column_or_value(text, answer)
 
 
@@ -110,7 +158,7 @@ def _column_or_value(text, answer):
         ) from exc
 
 
-def rank(question, records, *, top=None, deadline=None):
+def rank(question, records, *, top=None, deadline=None, token=None):
     """Order the records most likely yes first, ties in input order.
 
     The answer is the ruled pair per record — its place in the input and
@@ -118,7 +166,7 @@ def rank(question, records, *, top=None, deadline=None):
     records, one shape with the other surfaces; ``top`` keeps the first
     entries.
     """
-    ranked = _rank(question, records, deadline=deadline)
+    ranked = _rank(question, records, deadline=deadline, token=token)
     ordered = [
         {"index": index, "record": records[index], "probability": probability}
         for index, probability in ranked
@@ -126,21 +174,21 @@ def rank(question, records, *, top=None, deadline=None):
     return ordered if top is None else ordered[:top]
 
 
-def find(question, units, *, deadline=None):
+def find(question, units, *, deadline=None, token=None):
     """Pick the unit that best answers the question; ``None`` fits nothing.
 
     The answer is the ruled pair — the unit's place in the input and the
     probability — as ``{"index", "unit", "probability"}``, or ``None``
     when nothing fits.
     """
-    found = _find(question, units, deadline=deadline)
+    found = _find(question, units, deadline=deadline, token=token)
     if found is None:
         return None
     index, probability = found
     return {"index": index, "unit": units[index], "probability": probability}
 
 
-def annotate(set, records, *, on=None, deadline=None):
+def annotate(set, records, *, on=None, deadline=None, token=None):
     """Ask every question in the set of every record.
 
     A list of records comes back as a list of dictionaries, one field a
@@ -150,23 +198,19 @@ def annotate(set, records, *, on=None, deadline=None):
     batch in Rust, and the frame is rebuilt through the same stream form,
     so the slide's ``tt.annotate("form.json", df, on="body")`` returns
     the frame with its new columns attached and no Python row ever moves.
-    A pandas frame cannot be rebuilt from the Arrow stream; the refusal
-    names the two ways through — pass the column, or convert once and back.
+    A pandas frame cannot be rebuilt from the Arrow stream; it is refused
+    before any request runs, and the refusal names the two ways through —
+    pass the column, or convert once and back.
     """
     if on is None:
-        return annotate_rows(set, records, deadline=deadline)
+        return annotate_rows(set, records, deadline=deadline, token=token)
     if hasattr(records, "__arrow_c_stream__"):
-        frame = annotate_stream(set, records, on, deadline=deadline)
+        _refuse_if_not_rebuildable(records, _ANNOTATE_REBUILD_REFUSAL)
+        frame = annotate_stream(set, records, on, deadline=deadline, token=token)
         try:
             return type(records)(frame)
         except Exception as exc:
-            raise UsageError(
-                "annotate with on= cannot rebuild a pandas frame from the "
-                "Arrow stream it returns. Pass the column instead — "
-                "tt.annotate(set, df[column]) — which returns a list of "
-                "dictionaries, one per row, or convert once and back — "
-                "tt.annotate(set, pl.from_pandas(df), on=column).to_pandas()"
-            ) from exc
+            raise UsageError(_ANNOTATE_REBUILD_REFUSAL) from exc
     raise UsageError(
         "annotate with on= takes a frame whose column crosses as Arrow "
         "(a Polars DataFrame); a plain list uses annotate with no on="
@@ -174,7 +218,7 @@ def annotate(set, records, *, on=None, deadline=None):
 
 
 def recognize(text, *, kinds=None, relations=None, threshold=None,
-              relation_threshold=None, on=None, deadline=None):
+              relation_threshold=None, on=None, deadline=None, token=None):
     """Find every name in a text and say what kind it is.
 
     The deck's call, as drawn::
@@ -198,7 +242,7 @@ def recognize(text, *, kinds=None, relations=None, threshold=None,
     if on is None:
         return _recognize_text(
             text, kinds=kinds, relations=relations, threshold=threshold,
-            relation_threshold=relation_threshold, deadline=deadline,
+            relation_threshold=relation_threshold, deadline=deadline, token=token,
         )
     if relations is not None:
         raise UsageError(
@@ -207,18 +251,14 @@ def recognize(text, *, kinds=None, relations=None, threshold=None,
             "tt.recognize(text, relations={...})"
         )
     if hasattr(text, "__arrow_c_stream__"):
+        _refuse_if_not_rebuildable(text, _RECOGNIZE_REBUILD_REFUSAL)
         frame = recognize_stream(text, on, kinds=kinds, threshold=threshold,
                                  relation_threshold=relation_threshold,
-                                 deadline=deadline)
+                                 deadline=deadline, token=token)
         try:
             return type(text)(frame)
         except Exception as exc:
-            raise UsageError(
-                "recognize with on= cannot rebuild a pandas frame from the "
-                "Arrow stream it returns. Pass the column instead — "
-                "tt.recognize(df[column], kinds=...) — or convert once and "
-                "back — tt.recognize(pl.from_pandas(df), on=column)"
-            ) from exc
+            raise UsageError(_RECOGNIZE_REBUILD_REFUSAL) from exc
     raise UsageError(
         "recognize with on= takes a frame whose column crosses as Arrow "
         "(a Polars DataFrame); a plain text uses recognize with no on="
@@ -226,7 +266,7 @@ def recognize(text, *, kinds=None, relations=None, threshold=None,
 
 
 def relate(records, *, relations=None, either=None, threshold=None, on=None,
-           deadline=None):
+           deadline=None, token=None):
     """Say how the records relate to each other.
 
     The deck's call, as drawn::
@@ -247,19 +287,15 @@ def relate(records, *, relations=None, either=None, threshold=None, on=None,
     """
     if on is None:
         return _relate_records(records, relations=relations, either=either,
-                               threshold=threshold, deadline=deadline)
+                               threshold=threshold, deadline=deadline, token=token)
     if hasattr(records, "__arrow_c_stream__"):
+        _refuse_if_not_rebuildable(records, _RELATE_REBUILD_REFUSAL)
         frame = relate_stream(records, on, relations=relations, either=either,
-                              threshold=threshold, deadline=deadline)
+                              threshold=threshold, deadline=deadline, token=token)
         try:
             return type(records)(frame)
         except Exception as exc:
-            raise UsageError(
-                "relate with on= cannot rebuild a pandas frame from the "
-                "Arrow stream it returns. Pass the column instead — "
-                "tt.relate(df[column], relations=...) — or convert once and "
-                "back — tt.relate(pl.from_pandas(df), on=column)"
-            ) from exc
+            raise UsageError(_RELATE_REBUILD_REFUSAL) from exc
     raise UsageError(
         "relate with on= takes a frame whose column crosses as Arrow "
         "(a Polars DataFrame); a plain list uses relate with no on="

@@ -19,17 +19,24 @@
 //! call, and a fork is repaired by the engine's process check.
 //!
 //! Every function is volatile and direct-only: no paid call is legal from
-//! a view, a trigger, an index expression, or a CHECK constraint, so the
-//! schema of a database the host has not vouched for cannot spend money or
-//! read files. The interrupt poll reads the calling connection's own handle
-//! from SQLite's own context, never a process-wide one, so two connections
-//! can open, close, and interrupt independently.
+//! a view, a trigger, a default, an index expression, or a CHECK
+//! constraint, so the schema of a database the host has not vouched for
+//! cannot spend money or read files. That promise needs SQLite 3.50.0 or
+//! newer: below 3.50.0 a CHECK constraint in an untrusted database reaches
+//! the functions (SQLite marks a call node as from-DDL only in the
+//! deterministic branch of its resolver, so a volatile function skips the
+//! mark and `SQLITE_DIRECTONLY` is not enforced; 3.50.0 moved the mark into
+//! the DIRECT/UNSAFE branch). The load-time floor check refuses an older
+//! host by name, and `tests/schema_refusal.py` proves every schema object
+//! refuses at the floor. The interrupt poll reads the calling connection's
+//! own handle from SQLite's own context, never a process-wide one, so two
+//! connections can open, close, and interrupt independently.
 
 use std::collections::HashMap;
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
 use rusqlite::vtab::{
@@ -45,8 +52,9 @@ use thinkthen_contract::{
 use thinkthen_standin::StandinConnector;
 
 /// The host's `sqlite3_api_routines` table, extended past the 3.34.1
-/// bindings the routed headers stop at, to the `is_interrupted` field the
-/// 3.41 floor guarantees.
+/// bindings the routed headers stop at, to the `is_interrupted` field
+/// SQLite 3.41 added (the floor sits at 3.50.0, so the field is always
+/// there).
 ///
 /// The tail lists every field the host header adds after `txn_state` and
 /// before `is_interrupted`, in the header's order (sqlite3ext.h, the 3.35
@@ -266,33 +274,134 @@ fn hear_interrupts(db: *mut ffi::sqlite3, token: &Cancel) {
     }
 }
 
-/// The text a panic payload carries, for a defect error.
-fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
-    if let Some(text) = payload.downcast_ref::<&str>() {
-        (*text).to_string()
-    } else if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else {
-        "a panic carrying no text".to_string()
+/// Run one callback body — a SQL function or a virtual-table callback —
+/// through the contract's shared panic boundary, turning a panic into the
+/// surface's defect error instead of letting it unwind across SQLite's own
+/// C frames. The boundary name and the message shape are the contract's,
+/// so every surface's door spells them the same.
+fn guarded<T>(what: &str, body: impl FnOnce() -> rusqlite::Result<T>) -> rusqlite::Result<T> {
+    match thinkthen_contract::catch_panic(what, || Ok(body())) {
+        Ok(result) => result,
+        Err(error) => Err(failure(error)),
     }
 }
 
-/// Run one callback body — a SQL function or a virtual-table callback —
-/// turning a panic into the surface's defect error instead of letting it
-/// unwind across SQLite's own C frames.
-fn guarded<T>(what: &str, body: impl FnOnce() -> rusqlite::Result<T>) -> rusqlite::Result<T> {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)) {
-        Ok(outcome) => outcome,
-        Err(payload) => Err(failure(thinkthen_contract::Error::defect(format!(
-            "{what} panicked: {}",
-            panic_text(payload.as_ref())
-        )))),
+/// How often the single-row watcher reads the host's interrupt flag.
+const WATCH_TICK: std::time::Duration = std::time::Duration::from_millis(5);
+
+/// The host's interrupt flag watched from a second thread while one
+/// blocking single-row call runs on the calling thread.
+///
+/// A batch hands the engine a poll that runs on the calling thread's
+/// ticks; a scalar call has no such hand, and the calling thread sits
+/// inside the engine, so nothing on it can read the host flag while a send
+/// or a backoff wait runs. This watcher reads the same flag
+/// (`sqlite3_is_interrupted` is an atomic read, safe from any thread) and
+/// arms the call's token; the engine's own waits then stop between
+/// requests, the ruled promise: no new request starts, sent ones finish.
+/// The thread stops with the call, so no watcher outlives it and no watcher
+/// exists between calls.
+struct InterruptWatch {
+    stop: Arc<(Mutex<bool>, Condvar)>,
+    watcher: Option<std::thread::JoinHandle<()>>,
+}
+
+impl InterruptWatch {
+    /// Watch `db` for `token` for as long as this value lives, reading
+    /// the host's own `is_interrupted` (resolved at load time). Watches
+    /// nothing when the host's check or the handle is missing.
+    fn start(db: *mut ffi::sqlite3, token: Cancel) -> Self {
+        Self::start_with(db, token, IS_INTERRUPTED.load(Ordering::Relaxed))
     }
+
+    /// The body of [`InterruptWatch::start`] with the host check passed
+    /// in, so a unit test can drive the watcher with its own flag reader
+    /// without touching the loader's one.
+    fn start_with(db: *mut ffi::sqlite3, token: Cancel, check: *mut ()) -> Self {
+        let stop = Arc::new((Mutex::new(false), Condvar::new()));
+        if db.is_null() || check.is_null() {
+            return Self { stop, watcher: None };
+        }
+        // SAFETY: the handle belongs to the calling connection, whose
+        // statement is running while this watcher lives; SQLite does not
+        // free a connection with a running statement, and the read is its
+        // own thread-safe flag read. The pointers cross as addresses
+        // because a raw pointer is not `Send`.
+        let address = db as usize;
+        let check = check as usize;
+        let watcher = std::thread::spawn({
+            let stop = Arc::clone(&stop);
+            move || loop {
+                let (lock, wake) = &*stop;
+                let stopping = lock.lock().unwrap();
+                let stopping = wake
+                    .wait_timeout(stopping, WATCH_TICK)
+                    .expect("the stop lock is not poisoned")
+                    .0;
+                if *stopping {
+                    return;
+                }
+                drop(stopping);
+                // SAFETY: both addresses came from the live connection and
+                // the host's own API table above; the function pointer's
+                // type is the one the table holds.
+                let check: unsafe extern "C" fn(*mut ffi::sqlite3) -> c_int =
+                    unsafe { std::mem::transmute(check) };
+                if unsafe { check(address as *mut ffi::sqlite3) } != 0 {
+                    token.cancel();
+                    return;
+                }
+            }
+        });
+        Self { stop, watcher: Some(watcher) }
+    }
+}
+
+impl Drop for InterruptWatch {
+    fn drop(&mut self) {
+        let (lock, wake) = &*self.stop;
+        *lock.lock().unwrap() = true;
+        wake.notify_all();
+        if let Some(watcher) = self.watcher.take() {
+            let _ = watcher.join();
+        }
+    }
+}
+
+/// The options one single-row call carries: the per-call deadline in the
+/// ruled third argument (milliseconds: `-1` none, `0` spent, a positive
+/// budget, any other negative refused), converted by the contract's one
+/// checked door, and the call's cancel token, armed by the interrupt
+/// watcher. The two-argument spelling the deck draws carries no deadline.
+fn call_options<'a>(context: &Context<'_>, token: &'a Cancel) -> Result<Options<'a>, Error> {
+    let mut options = Options::new().cancel(token);
+    if context.len() >= 3 {
+        let millis = match context.get_raw(2) {
+            rusqlite::types::ValueRef::Integer(whole) => whole as f64,
+            rusqlite::types::ValueRef::Real(fraction) => fraction,
+            _ => {
+                return Err(failure(thinkthen_contract::Error::usage(
+                    "the deadline is not a number",
+                )))
+            }
+        };
+        options = options.with_deadline_millis(Some(millis)).map_err(failure)?;
+        // The engine's own guard fires a spent budget at entry; this
+        // shim's session map sits in front of the engine, so the check
+        // is repeated here: a spent budget refuses rather than answering
+        // from the map, matching every other door.
+        if options.passed() {
+            return Err(failure(thinkthen_contract::Error::deadline(options.seconds())));
+        }
+    }
+    Ok(options)
 }
 
 /// `thinkthen_decide(question, text)`: 1, 0, or `NULL` when unsure.
 fn decide(context: &Context<'_>) -> Result<Option<i64>, Error> {
     guarded("thinkthen_decide", || {
+        let token = Cancel::new();
+        let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
         let key = (question.digest(), evidence.to_string());
@@ -300,8 +409,9 @@ fn decide(context: &Context<'_>) -> Result<Option<i64>, Error> {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(answer.value().map(|held| if held { 1 } else { 0 }));
         }
+        let _watch = InterruptWatch::start(connection_of(context), token.clone());
         let answer = engine()
-            .decide_opts(&question, evidence, Options::new())
+            .decide_opts(&question, evidence, options)
             .map_err(failure)?;
         answers().lock().unwrap().insert(key, Saved::Decision(answer));
         Ok(answer.value().map(|held| if held { 1 } else { 0 }))
@@ -312,6 +422,8 @@ fn decide(context: &Context<'_>) -> Result<Option<i64>, Error> {
 /// when unresolved.
 fn choose(context: &Context<'_>) -> Result<Option<String>, Error> {
     guarded("thinkthen_choose", || {
+        let token = Cancel::new();
+        let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
         let key = (question.digest(), evidence.to_string());
@@ -319,8 +431,9 @@ fn choose(context: &Context<'_>) -> Result<Option<String>, Error> {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(choice.clone());
         }
+        let _watch = InterruptWatch::start(connection_of(context), token.clone());
         let choice = engine()
-            .choose_opts(&question, evidence, Options::new())
+            .choose_opts(&question, evidence, options)
             .map_err(failure)?;
         answers()
             .lock()
@@ -334,6 +447,8 @@ fn choose(context: &Context<'_>) -> Result<Option<String>, Error> {
 /// K−1. The nearest level's name rides in `thinkthen_details`.
 fn score(context: &Context<'_>) -> Result<Option<f64>, Error> {
     guarded("thinkthen_score", || {
+        let token = Cancel::new();
+        let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
         let key = (question.digest(), evidence.to_string());
@@ -341,8 +456,9 @@ fn score(context: &Context<'_>) -> Result<Option<f64>, Error> {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(Some(scored.value));
         }
+        let _watch = InterruptWatch::start(connection_of(context), token.clone());
         let scored = engine()
-            .score_opts(&question, evidence, Options::new())
+            .score_opts(&question, evidence, options)
             .map_err(failure)?;
         answers()
             .lock()
@@ -356,6 +472,8 @@ fn score(context: &Context<'_>) -> Result<Option<f64>, Error> {
 /// in the question's order.
 fn tag(context: &Context<'_>) -> Result<Option<String>, Error> {
     guarded("thinkthen_tag", || {
+        let token = Cancel::new();
+        let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
         let key = (question.digest(), evidence.to_string());
@@ -363,8 +481,9 @@ fn tag(context: &Context<'_>) -> Result<Option<String>, Error> {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(Some(serde_json::to_string(labels).unwrap()));
         }
+        let _watch = InterruptWatch::start(connection_of(context), token.clone());
         let labels = engine()
-            .tag_opts(&question, evidence, Options::new())
+            .tag_opts(&question, evidence, options)
             .map_err(failure)?;
         let held = serde_json::to_string(&labels).unwrap();
         answers()
@@ -407,6 +526,8 @@ fn set_digest(set: &QuestionSet) -> String {
 /// shape.
 fn annotate(context: &Context<'_>) -> Result<Option<String>, Error> {
     guarded("thinkthen_annotate", || {
+        let token = Cancel::new();
+        let options = call_options(context, &token)?;
         let set = set(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
         let key = (set_digest(&set), evidence.to_string());
@@ -416,8 +537,9 @@ fn annotate(context: &Context<'_>) -> Result<Option<String>, Error> {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(Some(object.clone()));
         }
+        let _watch = InterruptWatch::start(connection_of(context), token.clone());
         let records = engine()
-            .annotate_opts(&set, &[evidence], Options::new(), None)
+            .annotate_opts(&set, &[evidence], options, None)
             .map_err(failure)?;
         let Some(record) = records.first() else {
             return Ok(None);
@@ -446,10 +568,13 @@ fn annotate(context: &Context<'_>) -> Result<Option<String>, Error> {
 /// as one JSON object. The `sends` field is what the bill sees.
 fn details(context: &Context<'_>) -> Result<Option<String>, Error> {
     guarded("thinkthen_details", || {
+        let token = Cancel::new();
+        let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
+        let _watch = InterruptWatch::start(connection_of(context), token.clone());
         let audit = engine()
-            .details_opts(&question, evidence, Options::new())
+            .details_opts(&question, evidence, options)
             .map_err(failure)?;
         let object = serde_json::json!({
             "probability": audit.probability,
@@ -1205,10 +1330,16 @@ const RELATE_MODULE: Module<'static, RelateTab> = Module::eponymous_only_module(
 // The 207 experiment's trap — a host keeping its symbols hidden — cannot
 // bite this shape.
 
-/// The support floor, SQLite 3.41.0: where `is_interrupted` appears in
-/// the host's API table, the interrupt check's one host call the routed
-/// headers lack.
-const FLOOR: c_int = 3_041_000;
+/// The support floor, SQLite 3.50.0: below it, a CHECK constraint in an
+/// untrusted database still reaches a DIRECTONLY function. SQLite marks a
+/// function call node as from-DDL only in the deterministic branch of its
+/// resolver (3.49.0 and earlier), so a volatile function — every function
+/// here — is resolved inside a CHECK without the mark and
+/// `SQLITE_DIRECTONLY` is not enforced; 3.50.0 moved the mark into the
+/// DIRECT/UNSAFE branch (the fix recorded in NOTES.md, 2026-09-22, with
+/// the version matrix). 3.50.0 also carries the `is_interrupted` field
+/// 3.41 added, so the interrupt poll's host call is unaffected.
+const FLOOR: c_int = 3_050_000;
 
 /// The refusal for a host below the floor, or `None` when the host is
 /// new enough. Pure so the message is testable without an old SQLite.
@@ -1220,17 +1351,19 @@ fn version_refusal(host: c_int) -> Option<String> {
     let minor = host / 1_000 % 1_000;
     let patch = host % 1_000;
     Some(format!(
-        "thinkthen needs SQLite 3.41.0 or newer (the interrupt check uses sqlite3_is_interrupted); \
-         this host is {major}.{minor}.{patch} ({host})"
+        "thinkthen needs SQLite 3.50.0 or newer (below 3.50.0 a CHECK constraint in an \
+         untrusted database reaches the functions, so a schema could spend money or read \
+         files); this host is {major}.{minor}.{patch} ({host})"
     ))
 }
 
 /// Register the eight-function surface. Returns false: not loaded
 /// permanently.
 fn init(connection: Connection) -> Result<bool, Error> {
-    // Refuse an old host by name at load time. Without this, the first
-    // call that needs `sqlite3_is_interrupted` meets a loader error that
-    // names no floor; the support statement is 3.41 with visible symbols.
+    // Refuse an old host by name at load time. Below the floor a CHECK
+    // constraint in an untrusted database still reaches the functions, so
+    // the surface does not load there; without the check the host would
+    // load the artifact and the promise would be false.
     let host = unsafe { ffi::sqlite3_libversion_number() };
     if let Some(refusal) = version_refusal(host) {
         return Err(Error::SqliteFailure(
@@ -1250,16 +1383,26 @@ fn init(connection: Connection) -> Result<bool, Error> {
         }
     }
     // Volatile and direct-only: `SQLITE_DETERMINISTIC` stays off, so no
-    // paid call is legal in an index expression or a CHECK constraint,
-    // and `SQLITE_DIRECTONLY` refuses views and triggers whatever the
-    // host's trusted_schema setting says.
+    // paid call is legal in an index expression, and `SQLITE_DIRECTONLY`
+    // refuses views, triggers, defaults, and CHECK constraints whatever
+    // the host's trusted_schema setting says (at the 3.50.0 floor).
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
+    // Each judgment scalar carries the two-argument spelling the deck
+    // draws and a three-argument spelling whose last argument is the
+    // per-call deadline in milliseconds (-1 none, 0 spent, positive a
+    // budget). SQLite overloads by arity, so no drawn call changes.
     connection.create_scalar_function("thinkthen_decide", 2, volatile, decide)?;
+    connection.create_scalar_function("thinkthen_decide", 3, volatile, decide)?;
     connection.create_scalar_function("thinkthen_choose", 2, volatile, choose)?;
+    connection.create_scalar_function("thinkthen_choose", 3, volatile, choose)?;
     connection.create_scalar_function("thinkthen_score", 2, volatile, score)?;
+    connection.create_scalar_function("thinkthen_score", 3, volatile, score)?;
     connection.create_scalar_function("thinkthen_tag", 2, volatile, tag)?;
+    connection.create_scalar_function("thinkthen_tag", 3, volatile, tag)?;
     connection.create_scalar_function("thinkthen_annotate", 2, volatile, annotate)?;
+    connection.create_scalar_function("thinkthen_annotate", 3, volatile, annotate)?;
     connection.create_scalar_function("thinkthen_details", 2, volatile, details)?;
+    connection.create_scalar_function("thinkthen_details", 3, volatile, details)?;
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
     connection.create_aggregate_function("thinkthen_warm", 2, volatile, Warm)?;
     connection.create_module(c"thinkthen_recognize", &RECOGNIZE_MODULE, None)?;
@@ -1291,19 +1434,25 @@ mod mapping_tests {
     /// Ruling 2 of the product rulings: the defect kind maps to SQLite's
     /// own error surface, with the kind named in the message. No public
     /// door carries a fault hook; this proves the mapping at the shim level.
-    /// The load-time floor check: an old host is refused by name, and a
-    /// host at or above 3.41.0 passes. The failure message names both the
-    /// floor and the host, so a user reads what to upgrade.
+    /// The load-time floor check: an old host is refused by name, the
+    /// floor itself passes, and the refusal names the floor, the host,
+    /// and the reason, so a user reads what to upgrade and why. The floor
+    /// is 3.50.0 because below it a CHECK constraint in an untrusted
+    /// database reaches the functions (see `FLOOR`).
     #[test]
     fn an_old_host_is_refused_by_name_and_a_new_one_passes() {
-        let refusal = version_refusal(3_040_000).expect("3.40 is below the floor");
-        assert!(refusal.contains("3.41.0"), "{refusal}");
-        assert!(refusal.contains("3.40.0 (3040000)"), "{refusal}");
-        assert!(version_refusal(3_041_000).is_none(), "the floor itself passes");
-        assert!(version_refusal(3_045_000).is_none(), "a newer host passes");
+        let refusal = version_refusal(3_045_001).expect("3.45.1 is below the floor");
+        assert!(refusal.contains("3.50.0"), "{refusal}");
+        assert!(refusal.contains("3.45.1 (3045001)"), "{refusal}");
+        assert!(refusal.contains("CHECK constraint"), "{refusal}");
+        assert!(version_refusal(3_049_000).is_some(), "3.49 is below the floor");
+        assert!(version_refusal(3_050_000).is_none(), "the floor itself passes");
+        assert!(version_refusal(3_053_004).is_none(), "a newer host passes");
         // The live `sqlite3_libversion_number()` call lives in `init`,
         // where the loadable API is initialized; a unit test cannot call
-        // the routed symbol. The stock-CLI load in check.sh exercises it.
+        // the routed symbol. `tests/schema_refusal.py` exercises it on
+        // both sides of the floor: the stock host refuses to load, the
+        // floor host loads and refuses every schema object.
     }
 
     #[test]
@@ -1335,6 +1484,48 @@ mod mapping_tests {
         );
     }
 
+    /// The flag the watcher test's fake host check reads.
+    static WATCH_FLAG: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+
+    /// A stand-in host check for the watcher test, so the loader's own
+    /// resolved check is never touched by a test.
+    unsafe extern "C" fn watch_flag(_: *mut ffi::sqlite3) -> c_int {
+        WATCH_FLAG.load(Ordering::SeqCst) as c_int
+    }
+
+    /// The single-row watcher: quiet while the flag is clear, arms the
+    /// token when the host's flag sets (this is how `sqlite3_interrupt`
+    /// reaches an engine wait with the calling thread blocked), and stops
+    /// promptly when the call ends — no per-call latency from the watch.
+    #[test]
+    fn the_watcher_arms_the_token_and_stops_with_the_call() {
+        use std::time::{Duration, Instant};
+
+        WATCH_FLAG.store(false, Ordering::SeqCst);
+        let token = Cancel::new();
+        let handle = 1_usize as *mut ffi::sqlite3;
+        let watch = InterruptWatch::start_with(handle, token.clone(), watch_flag as *mut ());
+        std::thread::sleep(Duration::from_millis(30));
+        assert!(!token.is_cancelled(), "the token is armed only by the host flag");
+        WATCH_FLAG.store(true, Ordering::SeqCst);
+        let armed = Instant::now();
+        while !token.is_cancelled() {
+            assert!(
+                armed.elapsed() < Duration::from_millis(500),
+                "the watcher never armed the token"
+            );
+            std::thread::sleep(Duration::from_millis(2));
+        }
+        let stopped = Instant::now();
+        drop(watch);
+        assert!(
+            stopped.elapsed() < Duration::from_millis(100),
+            "the watcher stop waited {:?}",
+            stopped.elapsed()
+        );
+    }
+
     #[test]
     fn a_panic_becomes_a_defect_not_an_unwind() {
         let held = guarded("thinkthen_probe", || -> rusqlite::Result<()> {
@@ -1344,8 +1535,10 @@ mod mapping_tests {
         match held {
             Error::SqliteFailure(inner, Some(message)) => {
                 assert_eq!(inner.code, ffi::Error::new(ffi::SQLITE_ERROR).code);
+                // The shared boundary's message: the contract owns the
+                // spelling every surface's door uses.
                 assert!(
-                    message.contains("thinkthen_probe panicked: the probe blew up"),
+                    message.contains("a panic crossed thinkthen_probe: the probe blew up"),
                     "{message}"
                 );
             }
