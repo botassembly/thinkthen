@@ -2,3 +2,4 @@ node_modules/
 addon/target/
 *.node
 *.tgz
+dist/
