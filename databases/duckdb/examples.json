@@ -48,7 +48,7 @@
       "files": {
         "names.json": "{\"recognize\": {\"relations\": [{\"name\": \"based_in\", \"source\": \"*\", \"target\": \"*\"}]}}"
       },
-      "sql": "SELECT (u.r).name, (u.r).source_text, (u.r).target_text FROM (SELECT 'Northwind Freight is based in Chicago and Denver.' AS body) t, unnest(thinkthen_relations(t.body, '@names.json')) AS u(r);",
+      "sql": "SELECT (u.r).name, (u.r).source, (u.r).target FROM (SELECT 'Northwind Freight is based in Chicago and Denver.' AS body) t, unnest(thinkthen_relations(t.body, '@names.json')) AS u(r);",
       "expected": "based_in|Northwind Freight|Denver"
     },
     "relate": {

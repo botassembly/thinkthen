@@ -111,6 +111,8 @@ unsafe fn install_interrupt_handler() {
 /// error-reporting call works from an aggregate callback on this C API
 /// version, so a failed warm marks its texts here and the scalar query
 /// that reads them raises the error through the path that does work.
+/// The entry clears the moment it is raised, so the pair is retried on
+/// the next call instead of failing forever.
 static POISON: LazyLock<Mutex<HashMap<(String, String), String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -240,9 +242,9 @@ fn distinct_of(
         if let Some(failed) = POISON
             .lock()
             .expect("the poison")
-            .get(&(arg.to_owned(), text.to_owned()))
+            .remove(&(arg.to_owned(), text.to_owned()))
         {
-            return Err(failed.clone());
+            return Err(failed);
         }
         let question = match kind {
             None => resolve_question(arg)?,
@@ -740,7 +742,7 @@ fn annotate_json(record: &[(String, Annotated)]) -> Result<String, EngineError> 
             Annotated::Choice(Some(winner)) => serde_json::Value::String(winner.clone()),
             Annotated::Score(scored) => serde_json::json!({
                 "position": scored.value,
-                "level": scored.nearest,
+                "nearest": scored.nearest,
             }),
             Annotated::Tags(held) => serde_json::json!(held),
             Annotated::Failed(failed) => serde_json::json!({ "failed": failed }),
@@ -764,8 +766,10 @@ struct TrailRow {
     model: String,
     /// The question's digest with its threshold.
     digest: String,
-    /// The nearest level, for a score question.
-    level: Option<String>,
+    /// The nearest level's name, for a score question; NULL for every
+    /// other verb. This is the contract's settled `nearest` field, and
+    /// the struct member carries that name.
+    nearest: Option<String>,
     /// The wire sends that produced the judgment, when the audit door
     /// could count them.
     sends: Option<u64>,
@@ -810,13 +814,13 @@ impl VScalar for DetailsScalar {
                     answer: Some(details.answer.to_string()),
                     model: details.model,
                     digest: details.digest,
-                    level: None,
+                    nearest: None,
                     sends: Some(u64::from(details.sends)),
                     requests: details.requests,
                     failed_questions: details.failed_questions,
                 }
             } else {
-                let level = if question.kind() == QuestionKind::Score {
+                let nearest = if question.kind() == QuestionKind::Score {
                     Some(
                         engine()
                             .score_opts(question, text, options())
@@ -841,7 +845,7 @@ impl VScalar for DetailsScalar {
                     answer: None,
                     model: question.model().to_owned(),
                     digest: question.digest(),
-                    level,
+                    nearest,
                     sends: None,
                     requests,
                     failed_questions: 0,
@@ -903,9 +907,9 @@ impl VScalar for DetailsScalar {
         let mut child = structs.child(4, len);
         for (i, slot) in distinct.slots.iter().enumerate() {
             match slot.and_then(|slot| trail[slot].as_ref()) {
-                Some(row) => match row.level.as_deref() {
-                    Some(level) => {
-                        child.insert(i, level);
+                Some(row) => match row.nearest.as_deref() {
+                    Some(nearest) => {
+                        child.insert(i, nearest);
                     }
                     None => child.set_null(i),
                 },
@@ -972,7 +976,7 @@ impl VScalar for DetailsScalar {
                 ("answer", LogicalTypeId::Varchar.into()),
                 ("model", LogicalTypeId::Varchar.into()),
                 ("digest", LogicalTypeId::Varchar.into()),
-                ("level", LogicalTypeId::Varchar.into()),
+                ("nearest", LogicalTypeId::Varchar.into()),
                 ("sends", LogicalTypeId::UBigint.into()),
                 (
                     "requests",

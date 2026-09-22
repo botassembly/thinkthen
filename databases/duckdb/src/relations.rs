@@ -4,8 +4,8 @@
 //! function only literal parameters (no column argument, no lateral
 //! join), while a scalar takes a column like any other function.
 //!
-//! Beta, per the design page: `(name, source_text, source_kind,
-//! target_text, target_kind, probability)`, and the relation rules come
+//! Beta, per the design page: `(name, source, source_kind, target,
+//! target_kind, probability)`, and the relation rules come
 //! from the question file's `recognize` section (`'@names.json'`). The
 //! deck's line is `SELECT * FROM thinkthen_relations(body, '@names.json')`
 //! with a bare `body`, which cannot bind without a FROM and is not a
@@ -59,9 +59,9 @@ impl VScalar for RelationsScalar {
             vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
             LogicalTypeHandle::list(&LogicalTypeHandle::struct_type(&[
                 ("name", LogicalTypeId::Varchar.into()),
-                ("source_text", LogicalTypeId::Varchar.into()),
+                ("source", LogicalTypeId::Varchar.into()),
                 ("source_kind", LogicalTypeId::Varchar.into()),
-                ("target_text", LogicalTypeId::Varchar.into()),
+                ("target", LogicalTypeId::Varchar.into()),
                 ("target_kind", LogicalTypeId::Varchar.into()),
                 ("probability", LogicalTypeId::Double.into()),
             ])),
@@ -75,6 +75,10 @@ impl VScalar for RelationsScalar {
 
 /// The relations as rows, naming each end by the entity's own text and
 /// kind.
+///
+/// The `source` and `target` columns hold the entity's *text*, not its
+/// id — the ruled end names, per the one-rule page, over the beta rows'
+/// text payload; `source_kind` and `target_kind` hold the kind words.
 fn relation_rows(
     found: &thinkthen_contract::Recognized,
 ) -> Result<Vec<RelationRow>, String> {

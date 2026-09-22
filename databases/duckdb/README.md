@@ -26,8 +26,10 @@ the values await a backend that distinguishes options.
   and `end` count code points — the recordings' unit and DuckDB's own
   string indexing — so `body[start + 1 : end]` slices the name back out.
 - `thinkthen_relations(body, '@names.json')` (beta) returns a `LIST` of
-  structs `(name, source_text, source_kind, target_text, target_kind,
-  probability)` from the question file's `recognize` section; the spec is
+  structs `(name, source, source_kind, target, target_kind, probability)`
+  from the question file's `recognize` section; `source` and `target`
+  hold the entity's text, not its id, under the ruled end names, and
+  `source_kind` and `target_kind` hold the kind words. The spec is
   a column argument, so the call sits in a `FROM` like
   `thinkthen_recognize` and `unnest()` makes rows.
 - `thinkthen_relate(query, rules)` takes a query whose first column is
@@ -47,7 +49,7 @@ the values await a backend that distinguishes options.
   A file or JSON question beside a list is a usage error, because the
   members would come twice.
 - `thinkthen_score` returns the specification's position from 0 to K−1;
-  the nearest level's name rides in `thinkthen_details.level`.
+  the nearest level's name rides in `thinkthen_details.nearest`.
 - `thinkthen_details` is one struct for every verb. For a decide it
   carries the probability, the answer's word, the model, the digest, and
   the sends that produced the judgment. For the other verbs the
@@ -65,6 +67,10 @@ the values await a backend that distinguishes options.
   takes SIGINT at LOAD and chains to the CLI's own handler, so a Ctrl-C
   stops between requests. The Python-process proof is on the planning
   page; nothing new was claimed here.
+- There is no per-call deadline option on this surface yet: the host's
+  own statement timeout is the stop, and conformance case 27 is skipped
+  for that reason. A per-call budget beside the cancel token is the
+  settled shape and a recorded gap here, named rather than implied.
 
 ## Build and run
 

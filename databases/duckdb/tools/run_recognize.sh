@@ -86,7 +86,7 @@ cat > working.sql << 'EOF'
 SELECT * FROM thinkthen_relate('SELECT id, body FROM alerts', ['caused_by']);
 
 -- relations as rows: the beta shape, a list of structs, unnest makes rows
-SELECT t.id, (u.r).name AS rule, (u.r).source_text AS source, (u.r).target_text AS target,
+SELECT t.id, (u.r).name AS rule, (u.r).source AS source, (u.r).target AS target,
        (u.r).probability
   FROM tickets t, unnest(thinkthen_relations(t.body, '@names.json')) AS u(r)
   WHERE t.id IN (1, 2, 4)

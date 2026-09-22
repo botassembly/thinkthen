@@ -263,3 +263,12 @@ Zero rows proves plan time: no row executed, and the error is ours, raised throu
 3. **The C++ API fork** already before the build team (the issue's sharpened section).
 
 Until one lands, the first-row check remains: zero requests wasted, reported one row late, proven on the stub.
+
+## 2026-09-21, the settlement wiring (contract 1fe8173)
+
+- **`nearest` everywhere it is one name.** The details struct's score member is `nearest` (was `level`), the annotate JSON's score key is `nearest` (was `level`), and the README's `thinkthen_details.nearest` matches — the contract's settled field, no private spelling left in this door. The null suite pins it: `details score nearest` reads `mid`.
+- **The warm poison clears when raised.** `POISON` now `.remove`s the entry at the raise site, so one failed warm costs one raised read and the pair is retried on the next call instead of failing forever; the doc comment says so. The null suite proves the whole arc in one piped process: the failed warm returns 0, the first read raises `thinkthen backend`, the second read answers `true` — `poison raises once` and `poison clears and the pair answers`, both green.
+- **The beta relations columns carry the ruled end names.** `thinkthen_relations` returns `(name, source, source_kind, target, target_kind, probability)`; `source` and `target` hold the entity's *text* — documented on the rows and in the README — and the kind columns hold the kind words. The example and the acceptance's working replacements were updated with it.
+- **The deadline gap is named on the page.** The README's ruled-shape section now says there is no per-call deadline option on this surface yet, the host's own statement timeout is the stop, and conformance case 27 is skipped for that reason — the settled shape is a per-call budget beside the cancel token, recorded as a gap rather than implied.
+
+The full check is green with no stub: build, the error-mapping test, the null suite (including the two poison proofs), the fast-backend cancel, the function examples, the conformance slice (74 cases), the slide, and the recognize acceptance with its pinned divergences.
