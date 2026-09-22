@@ -43,6 +43,9 @@ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_pandas_checks.py -q
 echo "== recognize and relate, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
 
+echo "== canonical results and ownership (punch-list item 3)"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_ownership.py -q
+
 echo "== cancel on a fast backend"
 ENGINE_NULL=1 .venv/bin/python tests/test_cancel_fast.py
 
