@@ -12,6 +12,8 @@ Status: Approved by the product side on 2026-09-22. It becomes a ticket after ti
 6. **A measurement before any public claim.** One probe runs a structured rubric against its string form on a labeled set. Marketing shows structured descriptions only after that probe.
 7. **Size.** The ticket pins what the local size check counts when a description is JSON.
 
+**Ruling 6 was done on 2026-09-22.** `experiments/232-structured-descriptions`: 40 support messages, three teams, 15 boundary cases, 80 requests straight to the vendor under the live guard (50,758 input and 3,040 output tokens). A sentence per option: 37 of 40. A `what`, `not_for`, `examples` object per option: 38 of 40. Mean probability on the right option 0.883 against 0.928. One answer changed, toward the label. Input tokens roughly doubled. The gain is mostly confidence. The set is small and agent-written, so it shows a direction only. The ticket should carry a larger measurement before any accuracy claim.
+
 
 TypeSafe's own documentation ("Advanced: structure", https://docs.typesafe.ai/primitives/advanced) says the four question fields — `instructions`, Choice `criteria` values, Score `criteria` entries, and Noul `criteria.true`/`criteria.false` — all accept `string`, `object`, `array`, or `null`. System One models are trained on that structure. The tool sends strings, and the question file refuses anything else, so three of the four structure surfaces go unused.
 
