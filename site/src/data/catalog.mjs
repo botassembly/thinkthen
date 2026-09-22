@@ -420,13 +420,13 @@ export const HOWTOS = [
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'], input: 'inbox.txt', runs: ['01-inbox'],
-    see: { '01-inbox': 'Three messages need a reply, and the thank-you note drops out.' },
+    see: { '01-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The thank-you note drops out.' },
   },
   {
     slug: 'find-the-clause-then-check-it', title: 'Check the notice period in a contract', reader: 'for contract and procurement staff',
     said: 'Pull the notice period out of a contract and check it. `find` picks the line. `decide` answers "Is this notice longer than 30 days?"',
     functions: ['find', 'decide'], input: 'terms.txt', runs: ['02-clause'],
-    see: { '02-clause': 'The notice is 45 days, so decide says yes.' },
+    see: { '02-clause': 'The line find pulled prints beside the answer. The notice is 45 days, so decide says true.' },
   },
   {
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
@@ -438,7 +438,7 @@ export const HOWTOS = [
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
     functions: ['score', 'tag'], input: 'answers.txt', runs: ['04-answers'],
-    see: { '04-answers': 'Two answers are unhappy, one about price and one about bugs.' },
+    see: { '04-answers': 'Two answers are unhappy. Each prints beside its tag, one price and one bugs.' },
   },
   {
     slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
@@ -456,21 +456,22 @@ export const HOWTOS = [
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
     functions: ['find', 'decide'], input: 'incidents-open.txt', runs: ['06-alert'],
     given: '`$alert` holds the new alert: Card charges fail with 500 at checkout.',
-    see: { '06-alert': 'The alert matches an open incident, and decide confirms it.' },
+    see: { '06-alert': 'find prints the matching incident, INC-1, and decide confirms it with true.' },
   },
   {
     slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
     said: 'Drop the noise, put the ready buyers first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'], input: 'leads.txt', runs: ['07-leads'],
-    see: { '07-leads': 'The two readiest buyers each go to a team.' },
+    see: { '07-leads': 'Each kept lead prints beside its team. The 200-seat lead goes to enterprise and the student discount question to smb. The team of six fell below the filter mark.' },
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
-    said: 'Hold a borderline post for a moderator, and name the rule it may break. `decide` answers not sure. `tag` names the rule.',
-    functions: ['decide', 'tag'], input: 'post.txt', runs: ['08-gate', '08-why'],
+    said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule, and each rule sets its own threshold.',
+    functions: ['decide'], input: 'post.txt', runs: ['08-insult', '08-spam', '08-topic'],
     see: {
-      '08-gate': 'The post is borderline, so decide prints null and exits 3.',
-      '08-why': 'The rule in question is insults.',
+      '08-insult': 'The insult rule holds the post, so decide says true and exits 0.',
+      '08-spam': 'The post is not spam, so decide says false and exits 1.',
+      '08-topic': 'The post stays on topic, so decide says false and exits 1.',
     },
   },
   {
@@ -478,7 +479,7 @@ export const HOWTOS = [
     said: 'Check an expense against your policy and file it. `find` pulls the rule. `decide` says whether the expense fits. `choose` picks the category.',
     functions: ['find', 'decide', 'choose'], input: 'policy.txt', runs: ['09-expense', '09-category'],
     given: '`$expense` holds the expense: Client dinner, $60 a head.',
-    see: { '09-expense': 'The $60 dinner fits the $75 meal rule.', '09-category': 'The expense files under meals.' },
+    see: { '09-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.', '09-category': 'The expense files under meals.' },
   },
   {
     slug: 'build-a-morning-reading-list', title: 'Build a morning reading list', reader: 'for engineers',
@@ -492,7 +493,7 @@ export const HOWTOS = [
     functions: ['choose', 'decide'], input: 'pages.txt', runs: ['11-kinds', '11-gaps'],
     see: {
       '11-kinds': 'Three invoice pages and one notice.',
-      '11-gaps': 'The true marks where Invoice 8 starts, and choose already set the notice apart.',
+      '11-gaps': 'The true marks where Invoice 8 starts. The gap before the notice came back false.',
     },
   },
 ];
