@@ -27,6 +27,8 @@ Every surface serializes the object to compact JSON with keys in the written ord
 
 With the public library shapes (A7), after the widening ticket lands in the engine, because the builders serialize to the grammar that ticket defines.
 
+Decided 2026-09-22 by the product side: this issue is the handoff. The library team picks it up from main when the `surfaces` branch next takes main, at A7. No separate message goes out, and no library work starts on it before the widening ticket lands.
+
 ## Second item, added 2026-09-22: the annotate form as a typed class
 
 Ian asked, from a post comparing Jev's criteria objects with a `Literal` type on a generative model's output, where annotate stands. Ruling: a library user may declare an annotate form as a typed class in languages that have types. The field's type sets the question kind (a boolean is decide, an enumeration is choose, an ordered scale is score), and the field's description carries the instructions, string or JSON. Every field comes back with its value and its probability. The class is sugar over the question set: it serializes to the same compact JSON the question file holds, so the digest is identical to the file form and the cache is shared. Nothing is generated and nothing is validated after the fact, because the model only picks. Python gets a dataclass or Pydantic model, TypeScript an interface with a description map, Rust a derive; Ruby, R, C, and the databases use the question file. Designed with the public library shapes (A7). Ian can overturn it.
