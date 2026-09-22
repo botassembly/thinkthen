@@ -163,6 +163,105 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
     assert!(refused_listener.requests().is_empty());
 }
 
+/// A one-question yes/no answer with the named share.
+fn yes(noul: &str) -> String {
+    format!(
+        r#"{{"model":"local-1","answers":{{"q1":{{"type":"noul","noul":{noul}}}}},"usage":{{"input_tokens":3,"output_tokens":1}}}}"#
+    )
+}
+
+#[test]
+fn a_per_question_on_sends_the_json_value_the_pointer_names() {
+    let listener = Listener::serving(vec![Canned::ok(&yes("0.9")), Canned::ok(&yes("0.1"))])
+        .expect("a listener");
+    let file = questions(
+        "on-selects-json",
+        concat!(
+            r#"{"version":1,"questions":{"is_meta":{"decide":"Meta?","on":"/meta"},"#,
+            r#""is_body":{"decide":"Body?","on":"/body"}}}"#,
+        ),
+    );
+    let output = spawn(
+        &[
+            "annotate",
+            &file.to_string_lossy(),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--jobs",
+            "1",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        br#"{"meta":{"a":1},"body":"The invoice failed."}"#,
+    )
+    .expect("the command runs");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        r#"{"meta":{"a":1},"body":"The invoice failed.","is_meta":true,"is_body":false}"#
+            .to_owned()
+            + "\n"
+    );
+    let bodies: Vec<String> = listener
+        .requests()
+        .iter()
+        .map(|request| String::from_utf8_lossy(&request.body).into_owned())
+        .collect();
+    assert_eq!(bodies.len(), 2);
+    assert!(bodies[0].contains(r#""state":{"a":1}"#), "{}", bodies[0]);
+    assert!(
+        bodies[1].contains(r#""state":"The invoice failed.""#),
+        "{}",
+        bodies[1]
+    );
+}
+
+#[test]
+fn several_command_fields_and_a_root_on_send_the_object_the_fields_built() {
+    let listener = Listener::serving(vec![Canned::ok(&yes("0.9"))]).expect("a listener");
+    let file = questions(
+        "fields-root",
+        r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"}}}"#,
+    );
+    let output = spawn(
+        &[
+            "annotate",
+            &file.to_string_lossy(),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--jsonl",
+            "--field",
+            "/body",
+            "--field",
+            "/meta",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        br#"{"meta":{"a":1},"body":"The invoice failed.","extra":"kept"}"#,
+    )
+    .expect("the command runs");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let body = String::from_utf8_lossy(&requests[0].body);
+    assert!(
+        body.contains(r#""state":{"body":"The invoice failed.","meta":{"a":1}}"#),
+        "{body}"
+    );
+}
+
 #[test]
 fn an_invalid_nested_description_fails_the_set_before_any_request() {
     let listener = Listener::serving(Vec::new()).expect("a listener");

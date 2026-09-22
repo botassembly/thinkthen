@@ -84,13 +84,19 @@ impl BackendProfile {
         &self.name
     }
 
-    /// Check the exact production values behind one encoded request.
-    pub(crate) fn check(&self, plan: &Plan, body: &[u8]) -> Result<(), ProfileLimit> {
+    /// Check the exact production values behind one encoded request: the
+    /// evidence in its compact text form, and the body as encoded.
+    pub(crate) fn check(
+        &self,
+        plan: &Plan,
+        evidence: &str,
+        body: &[u8],
+    ) -> Result<(), ProfileLimit> {
         check_limit(
             &self.name,
             LimitKind::EvidenceBytes,
             self.max_evidence_bytes,
-            plan.evidence().as_str().len(),
+            evidence.len(),
         )?;
         check_limit(
             &self.name,
@@ -220,9 +226,9 @@ mod tests {
         .expect("profile");
         assert_eq!(parsed.name().as_str(), "local_1");
         let body = vec![b'x'; 200];
-        assert_eq!(parsed.check(&plan("four"), &body), Ok(()));
+        assert_eq!(parsed.check(&plan("four"), "four", &body), Ok(()));
         let too_long = parsed
-            .check(&plan("five!"), &body)
+            .check(&plan("five!"), "five!", &body)
             .expect_err("one byte over");
         assert_eq!(too_long.kind, LimitKind::EvidenceBytes);
         assert_eq!((too_long.limit, too_long.actual), (4, 5));

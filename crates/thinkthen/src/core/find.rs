@@ -1,5 +1,7 @@
 //! Pure construction and result mapping for one bounded `find` request.
 
+use std::borrow::Cow;
+
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use sha2::{Digest as _, Sha256};
@@ -27,7 +29,7 @@ pub(crate) enum FindError {
 #[derive(Serialize)]
 struct Unit<'a> {
     id: String,
-    evidence: &'a str,
+    evidence: Cow<'a, str>,
 }
 
 /// One constructed find request and the stable public question it represents.
@@ -51,14 +53,19 @@ impl Find {
         if !(2..=most).contains(&evidence.len()) {
             return Err(FindError::Count);
         }
-        let units: Vec<_> = evidence
+        let units: Vec<Unit> = evidence
             .iter()
             .enumerate()
-            .map(|(place, evidence)| Unit {
-                id: unit_id(place),
-                evidence: evidence.as_str(),
+            .map(|(place, evidence)| {
+                evidence
+                    .as_text()
+                    .map(|text| Unit {
+                        id: unit_id(place),
+                        evidence: text,
+                    })
+                    .map_err(|_| FindError::Render)
             })
-            .collect();
+            .collect::<Result<_, FindError>>()?;
         let aggregate = serde_json::to_string(&units).map_err(|_| FindError::Render)?;
         let mut options: Vec<_> = (0..evidence.len()).map(unit_id).collect();
         if none {

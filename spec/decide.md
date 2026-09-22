@@ -126,7 +126,7 @@ printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure
 `--field` given more than once sends an object of the named parts, keyed by the last part of each pointer. Two pointers that end in one name are a usage error, and so is `--field` beside `--lines`.
 
 ```bash
-printf '{"id":"T-1","body":"Payouts failed."}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --field /id --dry-run | grep -c '"state":"{\\"body\\":\\"Payouts failed.\\",\\"id\\":\\"T-1\\"}"' | mustmatch like "1"
+printf '{"id":"T-1","body":"Payouts failed."}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --field /id --dry-run | grep -c '"state":{"body":"Payouts failed.","id":"T-1"}' | mustmatch like "1"
 for bad in "--field /a/text --field /b/text" "--lines --field /body"; do
   status=0
   printf '{"a":{"text":"x"},"b":{"text":"y"}}\n' | thinkthen decide 'reports a payment failure' --jsonl --dry-run $bad >/dev/null 2>&1 || status=$?

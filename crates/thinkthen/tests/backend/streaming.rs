@@ -119,7 +119,7 @@ fn one_pointer_sends_the_value_and_several_send_an_object_keyed_by_the_last_part
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         states(&listener),
-        [r#""{\"body\":\"The payout failed again.\",\"id\":\"R-1\"}""#]
+        [r#"{"body":"The payout failed again.","id":"R-1"}"#]
     );
 }
 

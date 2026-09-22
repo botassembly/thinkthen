@@ -25,7 +25,13 @@ impl PreparedRequest {
         let body = built_in::encode(plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         if let Some(profile) = profile {
-            profile.check(plan, &body).map_err(Error::ProfileLimit)?;
+            let evidence = plan
+                .evidence()
+                .as_text()
+                .map_err(|_| Error::Defect("the evidence could not be written as JSON"))?;
+            profile
+                .check(plan, evidence.as_ref(), &body)
+                .map_err(Error::ProfileLimit)?;
         }
         let digest = Recorded::new(backend.url(), &body).digest();
         Ok(Self { body, digest })

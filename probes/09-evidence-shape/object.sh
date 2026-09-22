@@ -1,10 +1,11 @@
 #!/bin/sh
 # Probe 9, the object arm: the same request with `state` as a real JSON object.
 #
-# The tool cannot send this shape, so the arm is posted by hand. The body is
-# the tool's own `--dry-run` plan with `state` parsed back from the string the
-# tool flattened it into, so the two arms differ in that one field and nothing
-# else. Each answer is saved under answers/ as the backend sent it.
+# The tool sends this shape itself now — the two pointers make one ordered
+# object — so the body is the tool's own `--dry-run` plan unchanged. The arm
+# is still posted by hand, so it opens its own connection, keeps no recording,
+# and lives outside runs/. Each answer is saved under answers/ as the backend
+# sent it.
 #
 # The key is never an argument and never printed. It is written into curl's
 # configuration on standard input, which is the one channel curl reads it from
@@ -24,7 +25,7 @@ while IFS= read -r case; do
 	id=$(printf '%s\n' "$case" | jq -r .id)
 	body=$(printf '%s\n' "$case" | thinkthen decide "$question" \
 		--jsonl --field /subject --field /body --dry-run |
-		jq -c '.request | .state |= fromjson')
+		jq -c '.request')
 	printf '%s\n' "$body" >request.json
 	printf 'header = "Authorization: Bearer %s"\n' "${THINKTHEN_API_KEY}" |
 		curl --silent --show-error --fail-with-body --config - \

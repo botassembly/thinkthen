@@ -413,8 +413,8 @@ fn plan_for(
         base_evidence
     } else {
         let nested = Reading::new(Framing::Document, first.on().to_vec())?;
-        let nested_record = nested.record(base_evidence.as_str().as_bytes())?;
-        nested.evidence(&nested_record)?
+        let record = nested.record(base_evidence.as_text()?.as_bytes())?;
+        nested.evidence(&record)?
     };
     let questions = group
         .iter()

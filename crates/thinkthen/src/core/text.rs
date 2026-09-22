@@ -1,11 +1,13 @@
 //! The text values a judgment carries, each one refused when it is blank.
 
+use std::borrow::Cow;
 use std::fmt;
 
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 use crate::core::json::Json;
+use crate::core::render::{RenderError, json_line};
 
 /// Which text value arrived blank.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -68,7 +70,85 @@ macro_rules! text_value {
     };
 }
 
-text_value!(Evidence, Evidence, "evidence a judgment reads");
+/// The evidence a judgment reads: text that is not blank, or the JSON object
+/// or list a pointer selection made.
+#[derive(Clone, Eq, PartialEq)]
+pub(crate) struct Evidence(Shape);
+
+/// Which of the two shapes the evidence holds.
+#[derive(Clone, Eq, PartialEq)]
+enum Shape {
+    /// Text the record held, or a scalar selection's compact spelling.
+    Text(String),
+    /// The object or list a pointer selection made.
+    Structured(Json),
+}
+
+/// A value offered as structured evidence is not an object or a list.
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+#[error("the structured evidence is not an object or a list")]
+pub(crate) struct EvidenceShapeError;
+
+impl Evidence {
+    /// Take text that is not blank as the evidence a judgment reads.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BlankTextError`] when the text is empty or holds only white
+    /// space.
+    pub(crate) fn new(text: impl Into<String>) -> Result<Self, BlankTextError> {
+        let text = text.into();
+        if text.trim().is_empty() {
+            return Err(BlankTextError::Evidence);
+        }
+        Ok(Self(Shape::Text(text)))
+    }
+
+    /// Take the object or list a pointer selection made as the evidence.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EvidenceShapeError`] when the value is a string, a number,
+    /// `true`, `false`, or `null`.
+    pub(crate) fn structured(value: Json) -> Result<Self, EvidenceShapeError> {
+        match value {
+            Json::Array(_) | Json::Object(_) => Ok(Self(Shape::Structured(value))),
+            _ => Err(EvidenceShapeError),
+        }
+    }
+
+    /// The text form: the text itself, or the compact spelling of the object
+    /// or list. An evidence limit counts its bytes, `find` writes it into a
+    /// unit, and a nested `on` reads a selection back out of it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RenderError`] when the compact spelling cannot be written.
+    pub(crate) fn as_text(&self) -> Result<Cow<'_, str>, RenderError> {
+        match &self.0 {
+            Shape::Text(text) => Ok(Cow::Borrowed(text.as_str())),
+            Shape::Structured(value) => Ok(Cow::Owned(json_line(value)?)),
+        }
+    }
+
+    /// The value a request's `state` field carries: the object or list a
+    /// selection made, and the text as a string otherwise.
+    #[must_use]
+    pub(crate) fn as_json(&self) -> Json {
+        match &self.0 {
+            Shape::Text(text) => Json::String(text.clone()),
+            Shape::Structured(value) => value.clone(),
+        }
+    }
+}
+
+impl fmt::Debug for Evidence {
+    /// Evidence is what a judgment reads, so debug text withholds it.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Evidence(..)")
+    }
+}
+
 text_value!(ModelName, ModelName, "model that answered");
 text_value!(Url, Url, "URL a request is posted to");
 
@@ -215,16 +295,38 @@ impl Serialize for Description {
 
 #[cfg(test)]
 mod tests {
-    use super::{BlankTextError, Evidence, Meaning, ModelName, QuestionText, Url};
+    use super::{
+        BlankTextError, Evidence, EvidenceShapeError, Meaning, ModelName, QuestionText, Url,
+    };
+    use crate::core::json::Json;
 
     #[test]
     fn new_keeps_the_text_it_was_given() {
         let question = QuestionText::new("asks for a refund").expect("not blank");
         assert_eq!(question.as_json().as_str(), Some("asks for a refund"));
         let evidence = Evidence::new(" leading space is kept ").expect("not blank");
-        assert_eq!(evidence.as_str(), " leading space is kept ");
+        assert_eq!(
+            evidence.as_text().expect("text evidence").as_ref(),
+            " leading space is kept "
+        );
         let model = ModelName::new("jev-1.13.0").expect("not blank");
         assert_eq!(model.as_str(), "jev-1.13.0");
+    }
+
+    #[test]
+    fn structured_evidence_takes_only_an_object_or_a_list() {
+        for text in ["{}", "[]", r#"{"a":[1]}"#, r#"[{"a":1}]"#] {
+            let value = Json::parse(text).expect("JSON");
+            assert!(Evidence::structured(value).is_ok(), "{text}");
+        }
+        for text in [r#""str""#, "3", "false", "null"] {
+            let value = Json::parse(text).expect("JSON");
+            assert_eq!(
+                Evidence::structured(value),
+                Err(EvidenceShapeError),
+                "{text}"
+            );
+        }
     }
 
     #[test]

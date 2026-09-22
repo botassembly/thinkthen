@@ -1,6 +1,6 @@
 # The question file cannot carry TypeSafe's structured instructions, criteria, levels, or boundaries
 
-Status: Approved by the product side on 2026-09-22. It becomes a ticket after ticket 0065 lands. Ian can overturn any ruling below.
+Status: Implemented and locally verified by ticket 0069; landing pending. Approved by the product side on 2026-09-22. Ian can overturn any ruling below.
 
 ## Product rulings, 2026-09-22
 

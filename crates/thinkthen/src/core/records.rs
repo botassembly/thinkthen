@@ -12,7 +12,7 @@ use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, LabelsError};
 use crate::core::render::{RenderError, json_line};
-use crate::core::text::{BlankTextError, Description, Evidence};
+use crate::core::text::{BlankTextError, Description, Evidence, EvidenceShapeError};
 
 /// The most one record may hold before the tool refuses to judge it.
 ///
@@ -81,6 +81,9 @@ pub(crate) enum RecordError {
     /// The evidence the record yields is blank.
     #[error("{0}")]
     Blank(#[from] BlankTextError),
+    /// A scalar was offered where structured evidence takes an object or a list.
+    #[error("{0}")]
+    EvidenceShape(#[from] EvidenceShapeError),
     /// The evidence could not be written as JSON.
     #[error("{0}")]
     Render(#[from] RenderError),
@@ -333,6 +336,11 @@ impl Reading {
 
     /// Build the evidence this record sends, which is all that leaves the machine.
     ///
+    /// With no pointer the whole record stays the text it always was. A
+    /// pointer selects, and the selected value decides the state's type: a
+    /// string is its text, a number, `true`, `false`, or `null` is its compact
+    /// spelling, and an object or a list travels as that JSON value.
+    ///
     /// # Errors
     ///
     /// Returns [`RecordError`] when a pointer finds nothing, when the evidence
@@ -341,7 +349,7 @@ impl Reading {
         let value = match (&record.0, self.fields.as_slice()) {
             (Held::Text(text), []) => return Ok(Evidence::new(text.as_str())?),
             (Held::Text(_), _) => return Err(RecordError::TextHasNoMembers),
-            (Held::Json(value), []) => value.clone(),
+            (Held::Json(value), []) => return whole(value),
             (Held::Json(value), [pointer]) => found(pointer, value)?.clone(),
             (Held::Json(value), pointers) => Json::Object(
                 pointers
@@ -350,12 +358,22 @@ impl Reading {
                     .collect::<Result<Vec<_>, RecordError>>()?,
             ),
         };
-        let text = match value.as_str() {
-            Some(text) => text.to_owned(),
-            None => json_line(&value)?,
-        };
-        Ok(Evidence::new(text)?)
+        match value {
+            Json::Array(_) | Json::Object(_) => Ok(Evidence::structured(value)?),
+            Json::String(text) => Ok(Evidence::new(text)?),
+            scalar => Ok(Evidence::new(json_line(&scalar)?)?),
+        }
     }
+}
+
+/// The evidence an unpointed JSON record sends: a string is its text and every
+/// other value is its compact spelling, as text.
+fn whole(value: &Json) -> Result<Evidence, RecordError> {
+    let text = match value.as_str() {
+        Some(text) => text.to_owned(),
+        None => json_line(value)?,
+    };
+    Ok(Evidence::new(text)?)
 }
 
 /// The value the pointer names, or the refusal that names the pointer.

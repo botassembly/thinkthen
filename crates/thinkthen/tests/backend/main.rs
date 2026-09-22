@@ -36,6 +36,7 @@ mod result_assertions;
 mod scheduling;
 mod secrecy;
 mod secrecy_find;
+mod state;
 mod streaming;
 mod support;
 mod table;

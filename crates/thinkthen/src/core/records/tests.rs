@@ -1,7 +1,7 @@
 //! Every framing, every pointer, and every refusal one record can reach.
 
 use super::{Framing, Held, Reading, ReadingError, Record, RecordError};
-use crate::core::json::JsonError;
+use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::LabelsError;
 use crate::core::render::json_line;
@@ -21,9 +21,13 @@ fn reading(framing: Framing, fields: &[&str]) -> Reading {
 /// The evidence one record sends under one reading.
 fn sent(reading: &Reading, bytes: &[u8]) -> Result<String, RecordError> {
     let record = reading.record(bytes)?;
-    reading
-        .evidence(&record)
-        .map(|evidence| evidence.as_str().to_owned())
+    Ok(reading.evidence(&record)?.as_text()?.into_owned())
+}
+
+/// The `state` value one record sends under one reading.
+fn state(reading: &Reading, bytes: &[u8]) -> Result<Json, RecordError> {
+    let record = reading.record(bytes)?;
+    reading.evidence(&record).map(|evidence| evidence.as_json())
 }
 
 #[test]
@@ -76,6 +80,111 @@ fn a_pointer_without_jsonl_reads_the_whole_input_as_one_json_value() {
         sent(&document, b"{\n  \"a\": {\"text\": \"inner\"}\n}\n").as_deref(),
         Ok("inner")
     );
+}
+
+/// A pointer selects, so the selected value decides the state's type: an
+/// object or a list travels as that JSON value, a string as its text, and a
+/// number, `true`, `false`, or `null` as its compact spelling in a string.
+#[test]
+fn a_pointer_to_an_object_or_a_list_sends_the_json_value_it_named() {
+    let line = br#"{"meta":{"a":1,"b":[true]},"items":[1,"x"],"body":"Payouts failed."}"#;
+    let object = reading(Framing::Jsonl, &["/meta"]);
+    assert_eq!(
+        state(&object, line),
+        Ok(Json::parse(r#"{"a":1,"b":[true]}"#).expect("JSON"))
+    );
+    let list = reading(Framing::Jsonl, &["/items"]);
+    assert_eq!(
+        state(&list, line),
+        Ok(Json::parse(r#"[1,"x"]"#).expect("JSON"))
+    );
+}
+
+#[test]
+fn several_pointers_send_one_object_in_the_order_the_pointers_were_given() {
+    let line = br#"{"id":"T-91","body":"Payouts failed.","meta":{"a":1}}"#;
+    let several = reading(Framing::Jsonl, &["/body", "/id", "/meta"]);
+    assert_eq!(
+        state(&several, line),
+        Ok(Json::parse(r#"{"body":"Payouts failed.","id":"T-91","meta":{"a":1}}"#).expect("JSON"))
+    );
+}
+
+#[test]
+fn a_string_or_a_scalar_stays_the_string_state_it_always_sent() {
+    let line = br#"{"body":"Payouts failed.","count":3,"ok":false,"none":null}"#;
+    for (field, expected) in [
+        ("/body", "Payouts failed."),
+        ("/count", "3"),
+        ("/ok", "false"),
+        ("/none", "null"),
+    ] {
+        let one = reading(Framing::Jsonl, &[field]);
+        assert_eq!(
+            state(&one, line).as_ref().map(Json::as_str),
+            Ok(Some(expected)),
+            "{field}"
+        );
+    }
+}
+
+#[test]
+fn the_root_pointer_selects_the_whole_record_as_the_value_it_is() {
+    let root = reading(Framing::Jsonl, &[""]);
+    let line = br#"{"id":"T-91","body":"Payouts failed."}"#;
+    assert_eq!(
+        state(&root, line),
+        Ok(Json::parse(r#"{"id":"T-91","body":"Payouts failed."}"#).expect("JSON"))
+    );
+}
+
+#[test]
+fn no_pointer_keeps_the_whole_record_as_text_even_when_it_is_json() {
+    let jsonl = reading(Framing::Jsonl, &[]);
+    let line = br#"{"id":"T-91","body":"Payouts failed."}"#;
+    assert_eq!(
+        state(&jsonl, line).as_ref().map(Json::as_str),
+        Ok(Some(r#"{"id":"T-91","body":"Payouts failed."}"#))
+    );
+    let document = reading(Framing::Document, &[]);
+    assert_eq!(
+        state(&document, line).as_ref().map(Json::as_str),
+        Ok(Some(r#"{"id":"T-91","body":"Payouts failed."}"#))
+    );
+}
+
+#[test]
+fn an_empty_object_or_list_is_evidence_but_a_blank_string_is_not() {
+    let line = br#"{"empty":{},"bare":[],"blank":"  "}"#;
+    for (field, expected) in [("/empty", "{}"), ("/bare", "[]")] {
+        let one = reading(Framing::Jsonl, &[field]);
+        assert_eq!(
+            state(&one, line),
+            Ok(Json::parse(expected).expect("JSON")),
+            "{field}"
+        );
+    }
+    let blank = reading(Framing::Jsonl, &["/blank"]);
+    assert_eq!(
+        state(&blank, line).unwrap_err(),
+        RecordError::Blank(BlankTextError::Evidence)
+    );
+}
+
+#[test]
+fn the_evidence_debug_withholds_the_text_and_the_json_it_holds() {
+    let jsonl = reading(Framing::Jsonl, &["/meta"]);
+    let record = jsonl
+        .record(br#"{"meta":{"secret":"marker-7b3ac5"}}"#)
+        .expect("a record");
+    let evidence = jsonl.evidence(&record).expect("structured evidence");
+    let shown = format!("{evidence:?}");
+    assert!(!shown.contains("marker-7b3ac5"), "{shown}");
+    assert!(!shown.contains("secret"), "{shown}");
+    let lines = reading(Framing::Lines, &[]);
+    let record = lines.record(b"text marker-7b3ac5\n").expect("a record");
+    let evidence = lines.evidence(&record).expect("text evidence");
+    assert!(!format!("{evidence:?}").contains("marker-7b3ac5"));
 }
 
 #[test]

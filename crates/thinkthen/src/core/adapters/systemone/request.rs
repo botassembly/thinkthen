@@ -15,10 +15,14 @@ use crate::core::question::{Labels, Question};
 use crate::core::text::{Description, QuestionText};
 
 /// The body one request carries.
+///
+/// `state` is a string for the text evidence a run has always sent, and the
+/// object or list itself when a pointer selection made one, so the JSON is
+/// never folded into a sentence or written twice.
 #[derive(Debug, Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
 pub(crate) struct Request {
-    state: String,
+    state: Json,
     model: String,
     questions: Questions,
 }
@@ -147,7 +151,7 @@ pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
 /// Write the plan as the request body the plan document embeds.
 pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
     let request = Request {
-        state: plan.evidence().as_str().to_owned(),
+        state: plan.evidence().as_json(),
         model: plan.model().as_str().to_owned(),
         questions: questions(plan)?,
     };
@@ -276,7 +280,7 @@ mod tests {
     use crate::core::json::Json;
     use crate::core::plan::Plan;
     use crate::core::question_file::{QuestionFile, Typed, Verb, resolve};
-    use crate::core::text::Evidence;
+    use crate::core::text::{Evidence, ModelName, QuestionText};
     use proptest::collection::vec;
     use proptest::prelude::{Strategy, any};
     use proptest::{prop_assert_eq, proptest};
@@ -343,6 +347,35 @@ mod tests {
         assert!(
             text.find(r#""q1""#).expect("q1") < text.find(r#""q2""#).expect("q2"),
             "{text}"
+        );
+    }
+
+    #[test]
+    fn a_structured_state_writes_the_json_the_selection_made() {
+        let evidence = Evidence::structured(
+            Json::parse(r#"{"query":"Why is signing in slow?","passage":"A lagging replica."}"#)
+                .expect("a JSON object"),
+        )
+        .expect("an object is structured evidence");
+        let plan = Plan::new(
+            evidence,
+            ModelName::new("local-1").expect("a model name"),
+            vec![crate::core::Question::Decide {
+                text: QuestionText::new("The passage answers the query.").expect("not blank"),
+                yes: None,
+                no: None,
+            }],
+        )
+        .expect("a plan of one question");
+        let text = String::from_utf8(encode(&plan).expect("a plan is writable"))
+            .expect("a request is text");
+        assert_eq!(
+            text,
+            concat!(
+                r#"{"state":{"query":"Why is signing in slow?","passage":"A lagging replica."},"#,
+                r#""model":"local-1","questions":{"q1":{"type":"noul","#,
+                r#""instructions":"The passage answers the query."}}}"#,
+            )
         );
     }
 
@@ -449,7 +482,7 @@ mod tests {
             instructions in texts(),
         ) {
             let written = written(&plan_for(&state, &[&instructions]));
-            prop_assert_eq!(&written.state, &state);
+            prop_assert_eq!(written.state.as_str(), Some(state.as_str()));
             let question = written.questions.get("q1").expect("one named question");
             let RequestQuestion::Noul {
                 instructions: sent,

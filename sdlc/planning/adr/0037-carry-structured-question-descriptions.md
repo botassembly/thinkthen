@@ -1,6 +1,6 @@
 # ADR 0037: Carry structured question descriptions
 
-- Status: Accepted design for Ian's structured-description rulings 1–12; implementation pending
+- Status: Accepted and implemented by verified ticket 0069; landing pending
 - Date: 2026-09-22
 
 This amends ADR 0013's text-only slots and the structured-description exclusion inherited from ADR 0010. Ian authorized the widening and settled its remaining public choices at `90a544f`. He can overturn the decisions below. Ticket 0069 supplies the implementation and proof; no library API is frozen here.
@@ -20,6 +20,14 @@ An explicit null true/false boundary is serialized as a present null criterion a
 One validated description representation reuses `core::json::Json`; the parser, resolver, serializer and adapter own the behavior in Rust. No dynamic `serde_json::Value`, wrapper-side canonicalizer, or policy exemption is added. Compact serialization preserves written object order and existing number normalization. Description whitespace outside strings does not affect identity; content and key order do. Old string-only request bytes, canonical digests, recordings and results remain unchanged.
 
 Profile request limits count exact compact encoded body bytes, including nested keys, punctuation and escaping. No token estimate or new limit is introduced. Record-carried `--options` and `find` retain their existing string-only inputs. Recognition, relations, packing and typed library builders remain separate work.
+
+## Structured state amendment
+
+Selected record evidence keeps its JSON shape in the System One `state` field. More than one `--field` pointer produces an ordered object. One pointer resolving to an object or array produces that value. One pointer resolving to a string, number, boolean, or null remains compact text. An explicit root pointer follows the selected-value rule. No pointer means the existing whole record as text. Unpointed CSV/TSV rows, whole documents, `--lines`, and `find` remain strings; multiple selected CSV/TSV columns form an object.
+
+Evidence is one validated text-or-JSON value in the core. Debug output withholds it. Empty selected objects and arrays are valid; blank selected strings remain invalid. The backend adapter emits the value without another parse. Evidence limits count compact state-value bytes, while request limits count the exact complete request. Existing text request bytes and identities stay unchanged. Structured states intentionally create new request identities. Historical recordings remain immutable; executable examples may add current mechanically derived entries without deleting or rewriting old evidence. The evidence-shape probe keeps its measured text arm by constructing the same compact object before an unpointed call, while its structured helper reads the now-native object state directly. This updates no measured answer or recorded exchange.
+
+This implements ruling 7 of the founder issue received from main after the description half passed review. It changes no scheduler, cache, recorder, transport, provider call, or wrapper. Ian can overturn the narrow framing decisions above.
 
 ## Schema and verification
 
