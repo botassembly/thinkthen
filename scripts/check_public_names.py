@@ -138,7 +138,12 @@ SURFACES: list[dict] = [
         "extract": python_names,
         "expected": set(RULED)
         | {f"{kind}Error" for kind in ERROR_KINDS if kind != "Cancelled"}
-        | {"Cancelled", "ThinkThenError", "Entity", "Relation", "Edge", "Recognized"},
+        | {
+            "Cancelled", "ThinkThenError", "Entity", "Relation", "Edge", "Recognized",
+            # The cancel token any thread can set to stop a call, added by
+            # the second-review wave: libraries/python/README.md names it.
+            "CancelToken",
+        },
         "doc": "records and errors: libraries/python/README.md and the module docstrings",
     },
     {
@@ -225,8 +230,16 @@ SURFACES: list[dict] = [
             "thinkthen_" + name
             for name in ["decide", "probability", "choose", "score", "tag", "annotate",
                          "details", "usage", "warm", "recognize", "relate", "relations"]
+        }
+        | {
+            # The per-database identity setting the extension registers at
+            # load, the mechanism behind relate's routing (second-review
+            # finding): databases/duckdb/NOTES.md and src/connections.rs
+            # name it. It is an extension setting, not a SQL function.
+            "thinkthen_instance_token",
         },
-        "doc": "the SQL set: databases/duckdb/README.md",
+        "doc": "the SQL set: databases/duckdb/README.md; "
+        "the instance-token setting: databases/duckdb/NOTES.md and src/connections.rs",
     },
     {
         "name": "sqlite",
