@@ -361,7 +361,8 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     for option in ["--threshold", "--quiet", "--details", "--dry-run"] {
         assert!(short.contains(option), "{option} is missing from {short}");
     }
-    for option in ["--url", "--model", "--record", "--timeout"] {
+    assert!(short.contains("--url"), "--url is missing from {short}");
+    for option in ["--model", "--record", "--timeout", "--jobs"] {
         assert!(!short.contains(option), "{option} is in the short help");
     }
 
@@ -392,6 +393,37 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     );
     assert!(!long.contains("THINKTHEN_TEST_RETRY_WAIT_MS"), "{long}");
     assert!(long.contains("set -e"), "the help warns about set -e");
+    assert!(
+        long.contains("It defaults to 0.5"),
+        "the help does not name the threshold default: {long}"
+    );
+    assert!(
+        long.contains("[default: 4]"),
+        "the help does not name the jobs default: {long}"
+    );
+}
+
+#[test]
+fn record_capable_help_pins_run_exit_behavior() {
+    const RECORD_EXIT: &str = "A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.";
+    const SHORT: &str = "Answer a yes/no question about the evidence and set the exit code. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers\n\nUsage:";
+    let output = run(&["decide", "-h"], &[], b"").expect("the compiled binary runs");
+    let short = String::from_utf8_lossy(&output.stdout);
+    assert!(short.starts_with(SHORT), "decide short help: {short}");
+
+    for command in ["decide", "choose", "tag", "score", "filter", "rank"] {
+        let output = run(&[command, "--help"], &[], b"").expect("the compiled binary runs");
+        let help = String::from_utf8_lossy(&output.stdout);
+        assert!(help.contains(RECORD_EXIT), "{command}: {help}");
+    }
+
+    let output = run(&["annotate", "--help"], &[], b"").expect("the compiled binary runs");
+    let help = String::from_utf8_lossy(&output.stdout);
+    assert!(help.contains(RECORD_EXIT), "annotate: {help}");
+    assert!(
+        help.contains("A completed run with one or more failed questions exits 6."),
+        "annotate: {help}"
+    );
 }
 
 #[test]

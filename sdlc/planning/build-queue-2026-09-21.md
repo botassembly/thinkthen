@@ -9,6 +9,7 @@ Ian can overturn any placement here.
 - Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).
 - Landed: 0055, the move to one package through the private engine. Its final review accepted the repaired engine ownership, conformance proof, worker lifetime, doctests, and core boundary enforcement.
 - Landed: 0056. Detailed filtering now keeps only passing records, ranked details keep the same `--top` membership, and a band's exact low edge is `not sure`.
+- Landed: 0057. Help now states the record-mode exit boundary and visible defaults, `--url` appears in short help under ADR 0031, zero timeouts fail before input or network access, and the specification agrees with the binary.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
@@ -17,7 +18,7 @@ Ian can overturn any placement here.
 
 **A1. The command-layer fixes. Safe beside 0055 only where they avoid the files 0055 changed. Otherwise first after it.**
 
-Ticket 0056 completed the first two rows below. The remaining rows keep their order.
+Tickets 0056 and 0057 completed every row below except the two message rows. Those rows form the next diagnostics ticket.
 
 | Fix | Source issue | Product ruling |
 | --- | --- | --- |

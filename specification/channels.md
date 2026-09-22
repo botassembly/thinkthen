@@ -29,7 +29,7 @@ An unknown option is a usage error. So is a repeated single-value option, and so
 
 Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
 
-Advanced options appear in the long help alone: `--url`, `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, and `--jobs N`.
+Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, and `--jobs N`. ADR 0031 makes one narrow exception: `--url` also appears in short help because it decides whether the first request reaches the default hosted service.
 
 ## Standard input
 
@@ -60,7 +60,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 
 Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
 
-In record mode the exit code reports the run. No record's answer sets it. A valid answer on standard output can accompany exit 1 or 3, so a script that wants the value reads it and then reads `$?`.
+In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. A valid answer on standard output can accompany exit 1, 3, or 6, so a script that wants the value reads it and then reads `$?`.
 
 ```sh
 if thinkthen decide 'the customer asks for a refund' --quiet < message.txt; then

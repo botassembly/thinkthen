@@ -29,7 +29,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 ## Saying what yes and no mean
 

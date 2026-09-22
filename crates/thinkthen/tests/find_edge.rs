@@ -88,8 +88,18 @@ fn help_leads_with_whole_set_disclosure_and_all_three_bounds() {
         if flag == "--help" {
             assert!(help.contains("2 to 255 units, or 2 to 254 with --none"));
             assert!(help.contains("at most 16 MiB across the original input"));
+            assert!(help.contains(
+                "`find --none` prints nothing and exits 3 when `none` wins or ties for first."
+            ));
         }
-        for accepted in ["--lines", "--jsonl", "--field", "--details", "--input"] {
+        for accepted in [
+            "--lines",
+            "--jsonl",
+            "--field",
+            "--details",
+            "--input",
+            "--url",
+        ] {
             assert!(help.contains(accepted), "{flag}: {accepted}\n{help}");
         }
         for refused in ["--csv", "--tsv", "--jobs", "--threshold", "--raw"] {

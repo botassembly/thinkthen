@@ -96,7 +96,7 @@ Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by 
 
 ## Empty input
 
-An empty record stream succeeds with no output and no request. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
+An empty line or JSONL stream succeeds with no output and no request. CSV and TSV require a header, so an empty CSV or TSV input exits 2. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
 
 ## Failure
 
@@ -104,7 +104,7 @@ Settled by ADR 0008 item 5, accepted in ADR 0010. A run stops at the first faile
 
 A run that stops early prints one line on standard error: the record it stopped at, how many records it finished, and how many of those came from a recording. A run that finishes prints nothing there. Printed output after a failure is a prefix of the input. It is not a finished dataset.
 
-An unresolved answer is never retried. In record mode the exit code reports the run, and no record's answer sets it. Codes 6, 7, and 8 stay reserved and no command uses them.
+An unresolved answer is never retried. In record mode the exit code reports the run, and no record's answer sets it. A completed run exits 0 unless `annotate` preserves one or more failed questions beside good answers and exits 6. Codes 7 and 8 stay reserved.
 
 ## Resume
 

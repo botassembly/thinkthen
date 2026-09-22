@@ -6,14 +6,16 @@ The short help shows the everyday options. The long help adds the advanced ones 
 
 ```bash
 thinkthen decide -h | head -1 | mustmatch like "Answer a yes/no question about the evidence and set the exit code"
-for option in --threshold --quiet --details --dry-run; do
+for option in --threshold --quiet --details --dry-run --url; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch not like "0"
 done
-for option in --url --model --record --replay --cache --jobs --timeout --max-retries; do
+for option in --model --record --replay --cache --jobs --timeout --max-retries; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch like "0"
   thinkthen decide --help | grep -c -- "$option" | mustmatch not like "0"
 done
 thinkthen decide --help | grep -c -- 'set -e' | mustmatch not like "0"
+thinkthen decide --help | grep -c -- 'defaults to 0.5' | mustmatch not like "0"
+thinkthen decide --help | grep -c -- '\[default: 4\]' | mustmatch not like "0"
 ```
 
 `--dry-run` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.

@@ -18,7 +18,7 @@ One cut applies independently to every probability. The default is 0.5, equality
 ["billing"]
 ```
 
-Under `--details`, the question lists the label names and the answer keeps every probability:
+Under `--details`, the question lists the label names and the answer keeps every probability. This excerpt omits the required `schema` and `meta` fields:
 
 ```json
 {"value":["billing"],"question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]},"answer":{"kind":"tag","probabilities":{"billing":0.91,"urgent":0.22}},"threshold":0.5}

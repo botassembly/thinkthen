@@ -42,6 +42,15 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
         edge::write_line(writer, &version_line(env!("CARGO_PKG_VERSION")))?;
         return Ok(ExitCode::SUCCESS);
     }
+    if cli
+        .command
+        .as_ref()
+        .is_some_and(|command| command.timeout() == 0)
+    {
+        return Err(Failure::Usage(
+            "--timeout takes a whole number of seconds greater than zero",
+        ));
+    }
     let environment = Environment::read();
     if let Some(command) = cli.command.as_ref() {
         edge::waiting(command.input(), io::stderr().lock());

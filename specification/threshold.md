@@ -56,7 +56,7 @@ Measurement of the first decider model showed answers inside an unresolved band 
 
 `--threshold` on a command that takes none is a usage error. A question inside an `annotate` file carries its own threshold, and [annotate.md](annotate.md) gives the rule there.
 
-An exact tie for first place in `choose` is unresolved with or without a threshold. With no threshold `choose` returns the winning label.
+An exact tie for first place in `choose` is unresolved with or without a threshold. With no threshold and one strict winner, `choose` returns that label.
 
 ## The value travels
 

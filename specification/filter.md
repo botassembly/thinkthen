@@ -34,7 +34,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `filter` takes no `--quiet`, no `--raw`, and no `--top`. Each is refused by name. `--top` belongs to `rank`, because `filter` keeps records and has no order to cut. A missing framing is a usage error, because one document is not a stream.
 
@@ -46,7 +46,7 @@ The request, the result object, and the recording entry are those of `decide`, s
 
 ## Exit codes
 
-0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. No record's answer sets the exit code. An empty record stream exits 0 with no output and no request.
+0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. No record's answer sets the exit code. An empty line or JSONL stream exits 0 with no output and no request. Empty CSV and TSV inputs exit 2 because the required header is missing.
 
 ## Examples
 

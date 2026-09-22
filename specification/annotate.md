@@ -44,7 +44,7 @@ Settled by ADR 0008 item 2, accepted in ADR 0010. `on` takes one pointer or seve
 
 One JSON object per record. An object record gains one top-level field per question, so a chain of judgments stays flat. Any other record, a text document included, yields an object of the named answers alone.
 
-An unresolved answer is `null`. A backend failure is never `null`, because a failure ends the run.
+An unresolved answer is `null`. A failed question is a failure marker and never `null`. When the same reply contains a usable answer, the good answer and failed marker both print and the completed run exits 6. A reply with no usable answer ends the run at exit 4.
 
 ```json
 {"id":"T-91","body":"Payouts have failed for 3 days.","unresolved":true,"kind":"bug","impact":1.6}
@@ -61,7 +61,7 @@ An unresolved answer is `null`. A backend failure is never `null`, because a fai
 | `--details` | Prints the full result object per record | Off |
 | `--input FILE` | Reads the evidence from a file | Standard input |
 | `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `annotate` takes no `--threshold`, no `--quiet`, and no `--raw`. A question carries its own threshold.
 
@@ -85,7 +85,7 @@ thinkthen annotate triage.json --dry-run
 
 ## `--dry-run`
 
-`--dry-run` validates the file and sends nothing. It needs no key. Empty evidence succeeds and prints nothing. With evidence it prints the first request and an `on` object that names the normalized pointers for every question.
+`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request and an `on` object that names the normalized pointers for every question.
 
 One record makes one request per distinct `on`, and the plan shows one request. It is the first record's first `on` set, taking the questions in file order. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
 

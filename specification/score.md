@@ -33,7 +33,7 @@ The number is a position on the levels the user named. It is not a probability t
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `score` takes no `--threshold`, no `--quiet`, and no `--raw`. It has no answer exit code, so quiet output would discard its result. Its result is a JSON number; `choose --raw` is the command that prints a bare label.
 

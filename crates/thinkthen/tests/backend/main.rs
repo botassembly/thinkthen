@@ -33,4 +33,5 @@ mod table;
 mod tag;
 mod terminal;
 mod threshold_args;
+mod timeout;
 mod wire;

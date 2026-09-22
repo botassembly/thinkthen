@@ -44,7 +44,7 @@ pub(crate) struct FindCommon {
     #[arg(long)]
     pub(crate) dry_run: bool,
     /// The backend base, which outranks THINKTHEN_BASE_URL.
-    #[arg(long, value_name = "URL", hide_short_help = true)]
+    #[arg(long, value_name = "URL")]
     pub(crate) url: Option<String>,
     /// The model named in the request.
     #[arg(
@@ -63,7 +63,7 @@ pub(crate) struct FindCommon {
     /// Replay and record through one DIR.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) cache: Option<PathBuf>,
-    /// Seconds one attempt may take.
+    /// Positive seconds one attempt may take.
     #[arg(
         long,
         value_name = "SECONDS",
