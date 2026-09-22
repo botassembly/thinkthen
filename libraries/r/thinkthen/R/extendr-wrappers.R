@@ -28,44 +28,44 @@ tt_relate_grammared <- function(spec) .Call(wrap__tt_relate_grammared, spec)
 #' Each record becomes the plain data for a data frame of names — text,
 #' kind, and the offsets in R's own string indexing, so `substr(text,
 #' start, end)` is the name — plus the relations when any were found.
-tt_recognize_column <- function(ask, texts) .Call(wrap__tt_recognize_column, ask, texts)
+tt_recognize_column <- function(ask, texts, deadline) .Call(wrap__tt_recognize_column, ask, texts, deadline)
 
 #' `relate` over records: every record crosses at once; the answer is the
 #' plain data for a data frame of edges, with the kind fields when a rule
 #' named kinds.
-tt_relate_records <- function(ask, records) .Call(wrap__tt_relate_records, ask, records)
+tt_relate_records <- function(ask, records, deadline) .Call(wrap__tt_relate_records, ask, records, deadline)
 
 #' `decide` over a column: one crossing, every judgment in input order.
-tt_decide_column <- function(question, records) .Call(wrap__tt_decide_column, question, records)
+tt_decide_column <- function(question, records, deadline) .Call(wrap__tt_decide_column, question, records, deadline)
 
 #' One `decide` of one evidence.
-tt_decide_one <- function(question, evidence) .Call(wrap__tt_decide_one, question, evidence)
+tt_decide_one <- function(question, evidence, deadline) .Call(wrap__tt_decide_one, question, evidence, deadline)
 
 #' One `choose`: the winning option, or NULL when unsure.
-tt_choose_one <- function(question, evidence) .Call(wrap__tt_choose_one, question, evidence)
+tt_choose_one <- function(question, evidence, deadline) .Call(wrap__tt_choose_one, question, evidence, deadline)
 
 #' One `score`: the weighted position and the nearest level.
-tt_score_one <- function(question, evidence) .Call(wrap__tt_score_one, question, evidence)
+tt_score_one <- function(question, evidence, deadline) .Call(wrap__tt_score_one, question, evidence, deadline)
 
 #' One `tag`: the labels that held, in the question's order.
-tt_tag_one <- function(question, evidence) .Call(wrap__tt_tag_one, question, evidence)
+tt_tag_one <- function(question, evidence, deadline) .Call(wrap__tt_tag_one, question, evidence, deadline)
 
 #' `find` over units: the winner's place, one-based, and its probability.
-tt_find_one <- function(question, units) .Call(wrap__tt_find_one, question, units)
+tt_find_one <- function(question, units, deadline) .Call(wrap__tt_find_one, question, units, deadline)
 
 #' `filter` over records: the places, one-based, whose evidence held.
-tt_filter_places <- function(question, records) .Call(wrap__tt_filter_places, question, records)
+tt_filter_places <- function(question, records, deadline) .Call(wrap__tt_filter_places, question, records, deadline)
 
 #' `rank` over records: places in rank order with their probabilities.
-tt_rank_all <- function(question, records) .Call(wrap__tt_rank_all, question, records)
+tt_rank_all <- function(question, records, deadline) .Call(wrap__tt_rank_all, question, records, deadline)
 
 #' `annotate` over records from a question set file: each row a named list
 #' in the set's own order, each field typed by its question's verb.
-tt_annotate_file <- function(path, records) .Call(wrap__tt_annotate_file, path, records)
+tt_annotate_file <- function(path, records, deadline) .Call(wrap__tt_annotate_file, path, records, deadline)
 
 #' The audit view of one judgment, with the logical requests' digests
 #' (0053) and the failed-question count (0054).
-tt_details_one <- function(question, evidence) .Call(wrap__tt_details_one, question, evidence)
+tt_details_one <- function(question, evidence, deadline) .Call(wrap__tt_details_one, question, evidence, deadline)
 
 #' The process counters.
 tt_usage_counters <- function() .Call(wrap__tt_usage_counters)

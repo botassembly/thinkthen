@@ -99,6 +99,18 @@ instead, and the null suite asserts the current behavior.
 **Means:** a stand-in gap for the contract owner to close when `details`
 grows the score shape; recorded here and in the report.
 
+**Closed by the settle wave, 2026-09-21:** the contract lane gave `Details`
+the `nearest` field and the stand-in fills it on a score question. The R
+half now carries it in `tt_details` (`nearest` is the level's name on a
+score question, NULL on every other verb), `tt_details` gained the
+`deadline` option beside every other `tt_*` verb, and the null suite
+asserts the new behavior in place of the gap. The lane's P0 — the ACTIVE
+cancel token never reaching the engine — is fixed too: `call` hands the
+registered token to every engine call, and the interrupt proof now reads
+the stub's counter at +1 s, +3 s, and +4 s (from the still-living child)
+and +5 s, all identical, so the stop is proven before process exit rather
+than by it.
+
 ## 2026-09-21 — the runtime-installer guard
 
 **Tried:** `grep -n "deno\|bun" ~/.zshrc` after the install steps.

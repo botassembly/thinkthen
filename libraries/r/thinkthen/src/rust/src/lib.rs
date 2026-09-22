@@ -29,8 +29,8 @@ use std::sync::{LazyLock, Mutex, mpsc};
 use std::time::Duration;
 
 use thinkthen_contract::{
-    Annotated, Answer, Cancel, Engine, Options, Question, QuestionSet, Recognize, Recognized,
-    Relate,
+    relate_checked, Annotated, Answer, Cancel, Engine, Options, Question, QuestionSet, Recognize,
+    Recognized, Relate,
 };
 use thinkthen_standin::BlockingEngine;
 
@@ -64,20 +64,31 @@ fn carry(error: thinkthen_contract::Error) -> String {
 /// One engine call on a fresh worker thread, R's interrupt check on the
 /// main thread while it runs, a fresh cancel token registered for the
 /// cleanup path, and plain data back for the main thread to convert.
-fn call<T>(work: impl FnOnce(&BlockingEngine) -> StdResult<T, thinkthen_contract::Error> + Send + 'static) -> StdResult<T, String>
+fn call<T>(
+    deadline: Option<f64>,
+    work: impl for<'a> FnOnce(&BlockingEngine, Options<'a>) -> StdResult<T, thinkthen_contract::Error> + Send + 'static,
+) -> StdResult<T, String>
 where
     T: Send + 'static,
 {
     let token = Cancel::new();
     {
         let mut held = ACTIVE.lock().expect("the cancel slot locks");
-        *held = Some(token);
+        *held = Some(token.clone());
     }
     let (sender, receiver) = mpsc::channel::<StdResult<T, thinkthen_contract::Error>>();
     let worker = std::thread::Builder::new()
         .name("tt-r-call".to_owned())
         .spawn(move || {
-            let _ = sender.send(work(&ENGINE));
+            // The token this call registered in ACTIVE rides every engine
+            // call, so tt_cancel_active stops the batch, and a spent
+            // deadline (zero or less) is handed on to return the deadline
+            // kind naming the budget.
+            let mut options = Options::new().cancel(&token);
+            if let Some(seconds) = deadline {
+                options = options.deadline_in(Duration::from_secs_f64(seconds.max(0.0)));
+            }
+            let _ = sender.send(work(&ENGINE, options));
         })
         .expect("the call's worker thread starts");
     let answer = loop {
@@ -149,11 +160,12 @@ fn tt_question_grammared(body: String) -> StdResult<ExternalPtr<Question>, Strin
 fn tt_decide_column(
     question: ExternalPtr<Question>,
     records: Vec<String>,
+    deadline: Option<f64>,
 ) -> StdResult<List, String> {
     let question = take(question);
-    let (codes, probabilities) = call(move |engine| {
+    let (codes, probabilities) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        engine.decide_many_opts(&question, &slices, Options::new(), None).map(|judgments| {
+        engine.decide_many_opts(&question, &slices, options, None).map(|judgments| {
             let codes: Vec<i32> =
                 judgments.iter().map(|held| answer_code(held.answer)).collect();
             let probabilities: Vec<f64> =
@@ -167,10 +179,10 @@ fn tt_decide_column(
 
 /// One `decide` of one evidence.
 #[extendr]
-fn tt_decide_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<List, String> {
+fn tt_decide_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<List, String> {
     let question = take(question);
-    let code = call(move |engine| {
-        engine.decide_opts(&question, &evidence, Options::new()).map(answer_code)
+    let code = call(deadline, move |engine, options| {
+        engine.decide_opts(&question, &evidence, options).map(answer_code)
     })?;
     Ok(list!(ans = code_robj(code)))
 }
@@ -180,10 +192,11 @@ fn tt_decide_one(question: ExternalPtr<Question>, evidence: String) -> StdResult
 fn tt_choose_one(
     question: ExternalPtr<Question>,
     evidence: String,
+    deadline: Option<f64>,
 ) -> StdResult<Nullable<String>, String> {
     let question = take(question);
-    let pick = call(move |engine| {
-        engine.choose_opts(&question, &evidence, Options::new())
+    let pick = call(deadline, move |engine, options| {
+        engine.choose_opts(&question, &evidence, options)
     })?;
     Ok(match pick {
         Some(named) => Nullable::NotNull(named),
@@ -193,11 +206,11 @@ fn tt_choose_one(
 
 /// One `score`: the weighted position and the nearest level.
 #[extendr]
-fn tt_score_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<List, String> {
+fn tt_score_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<List, String> {
     let question = take(question);
-    let (value, nearest) = call(move |engine| {
+    let (value, nearest) = call(deadline, move |engine, options| {
         engine
-            .score_opts(&question, &evidence, Options::new())
+            .score_opts(&question, &evidence, options)
             .map(|scored| (scored.value, scored.nearest))
     })?;
     Ok(list!(value = value, nearest = nearest))
@@ -205,9 +218,9 @@ fn tt_score_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<
 
 /// One `tag`: the labels that held, in the question's order.
 #[extendr]
-fn tt_tag_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<Vec<String>, String> {
+fn tt_tag_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<Vec<String>, String> {
     let question = take(question);
-    call(move |engine| engine.tag_opts(&question, &evidence, Options::new()))
+    call(deadline, move |engine, options| engine.tag_opts(&question, &evidence, options))
 }
 
 /// `filter` over records: the places, one-based, whose evidence held.
@@ -215,23 +228,24 @@ fn tt_tag_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<Ve
 fn tt_filter_places(
     question: ExternalPtr<Question>,
     records: Vec<String>,
+    deadline: Option<f64>,
 ) -> StdResult<Vec<i32>, String> {
     let question = take(question);
-    call(move |engine| {
+    call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
         engine
-            .filter_opts(&question, &slices, Options::new(), None)
+            .filter_opts(&question, &slices, options, None)
             .map(|places| places.iter().map(|place| *place as i32 + 1).collect())
     })
 }
 
 /// `rank` over records: places in rank order with their probabilities.
 #[extendr]
-fn tt_rank_all(question: ExternalPtr<Question>, records: Vec<String>) -> StdResult<List, String> {
+fn tt_rank_all(question: ExternalPtr<Question>, records: Vec<String>, deadline: Option<f64>) -> StdResult<List, String> {
     let question = take(question);
-    let (places, probabilities) = call(move |engine| {
+    let (places, probabilities) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        engine.rank_opts(&question, &slices, Options::new(), None).map(|ranked| {
+        engine.rank_opts(&question, &slices, options, None).map(|ranked| {
             let places: Vec<i32> = ranked.iter().map(|held| held.index as i32 + 1).collect();
             let probabilities: Vec<f64> =
                 ranked.iter().map(|held| held.probability).collect();
@@ -243,12 +257,12 @@ fn tt_rank_all(question: ExternalPtr<Question>, records: Vec<String>) -> StdResu
 
 /// `find` over units: the winner's place, one-based, and its probability.
 #[extendr]
-fn tt_find_one(question: ExternalPtr<Question>, units: Vec<String>) -> StdResult<List, String> {
+fn tt_find_one(question: ExternalPtr<Question>, units: Vec<String>, deadline: Option<f64>) -> StdResult<List, String> {
     let question = take(question);
-    let (place, probability) = call(move |engine| {
+    let (place, probability) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = units.iter().map(String::as_str).collect();
         engine
-            .find_opts(&question, &slices, Options::new())
+            .find_opts(&question, &slices, options)
             .map(|found| (found.index, found.probability))
     })?;
     let held: Robj = match place {
@@ -261,11 +275,11 @@ fn tt_find_one(question: ExternalPtr<Question>, units: Vec<String>) -> StdResult
 /// `annotate` over records from a question set file: each row a named list
 /// in the set's own order, each field typed by its question's verb.
 #[extendr]
-fn tt_annotate_file(path: String, records: Vec<String>) -> StdResult<List, String> {
-    let rows: Vec<Vec<(String, Field)>> = call(move |engine| {
+fn tt_annotate_file(path: String, records: Vec<String>, deadline: Option<f64>) -> StdResult<List, String> {
+    let rows: Vec<Vec<(String, Field)>> = call(deadline, move |engine, options| {
         let set = QuestionSet::from_file(Path::new(&path))?;
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        engine.annotate_opts(&set, &slices, Options::new(), None).map(|rows| {
+        engine.annotate_opts(&set, &slices, options, None).map(|rows| {
             rows.iter()
                 .map(|fields| {
                     fields
@@ -343,12 +357,12 @@ fn cause_word(cause: thinkthen_contract::Cause) -> String {
 /// The audit view of one judgment, with the logical requests' digests
 /// (0053) and the failed-question count (0054).
 #[extendr]
-fn tt_details_one(question: ExternalPtr<Question>, evidence: String) -> StdResult<List, String> {
+fn tt_details_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<List, String> {
     let question = take(question);
-    let (probability, code, model, digest, sends, requests, failed_questions) =
-        call(move |engine| {
+    let (probability, code, model, digest, sends, requests, failed_questions, nearest) =
+        call(deadline, move |engine, options| {
             engine
-                .details_opts(&question, &evidence, Options::new())
+                .details_opts(&question, &evidence, options)
                 .map(|details| {
                     (
                         details.probability,
@@ -358,9 +372,14 @@ fn tt_details_one(question: ExternalPtr<Question>, evidence: String) -> StdResul
                         details.sends,
                         details.requests,
                         details.failed_questions,
+                        details.nearest,
                     )
                 })
         })?;
+    let held: Robj = match nearest {
+        Some(level) => Robj::from(level),
+        None => Robj::from(Nullable::<&str>::Null),
+    };
     Ok(list!(
         probability = probability,
         answer = code_robj(code),
@@ -368,7 +387,8 @@ fn tt_details_one(question: ExternalPtr<Question>, evidence: String) -> StdResul
         digest = digest,
         sends = sends,
         requests = requests,
-        failed_questions = failed_questions
+        failed_questions = failed_questions,
+        nearest = held
     ))
 }
 
@@ -436,12 +456,13 @@ fn tt_relate_grammared(spec: String) -> StdResult<ExternalPtr<Relate>, String> {
 fn tt_recognize_column(
     ask: ExternalPtr<Recognize>,
     texts: Vec<String>,
+    deadline: Option<f64>,
 ) -> StdResult<List, String> {
     let ask = (*ask).clone();
-    let answers: Vec<Recognized> = call(move |engine| {
+    let answers: Vec<Recognized> = call(deadline, move |engine, options| {
         texts
             .iter()
-            .map(|text| engine.recognize(&ask, text))
+            .map(|text| engine.recognize_opts(&ask, text, options))
             .collect::<StdResult<Vec<_>, thinkthen_contract::Error>>()
     })?;
     let entries: Vec<Robj> = answers
@@ -491,11 +512,12 @@ fn tt_recognize_column(
 fn tt_relate_records(
     ask: ExternalPtr<Relate>,
     records: Vec<String>,
+    deadline: Option<f64>,
 ) -> StdResult<List, String> {
     let ask = (*ask).clone();
-    let edges = call(move |engine| {
+    let edges = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        engine.relate(&ask, &slices)
+        relate_checked(engine, &ask, &slices, options)
     })?;
     let name: Vec<&str> = edges.iter().map(|edge| edge.name.as_str()).collect();
     let source: Vec<i32> = edges.iter().map(|edge| edge.source as i32).collect();

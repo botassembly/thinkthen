@@ -146,16 +146,16 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
   }, integer(1))
 }
 
-tt_decide <- function(question, evidence, threshold = NULL) {
+tt_decide <- function(question, evidence, threshold = NULL, deadline = NULL) {
   question <- .tt_settled(question, threshold)
   evidence <- as.character(evidence)
   code <- rep(NA_integer_, length(evidence))
   live <- !is.na(evidence)
   if (any(live)) {
     if (sum(live) == 1L) {
-      code[live] <- .tt_ints(.tt_call(tt_decide_one(question, evidence[live]))$ans)
+      code[live] <- .tt_ints(.tt_call(tt_decide_one(question, evidence[live], deadline))$ans)
     } else {
-      code[live] <- .tt_ints(.tt_call(tt_decide_column(question, evidence[live]))$ans)
+      code[live] <- .tt_ints(.tt_call(tt_decide_column(question, evidence[live], deadline))$ans)
     }
   }
   ans <- rep(NA, length(code))
@@ -167,66 +167,79 @@ tt_decide <- function(question, evidence, threshold = NULL) {
 # choose: one evidence answers the winning option, or NA when unsure. The
 # contract carries one choose a request, so a column asks one request a
 # row; the winning digest is the engine's, never the host's.
-tt_choose <- function(question, evidence, options = NULL, threshold = NULL) {
+tt_choose <- function(question, evidence, options = NULL, threshold = NULL, deadline = NULL) {
   question <- .tt_settled(question, threshold, "choose", options, "options")
   unname(vapply(as.character(evidence), function(one) {
     if (is.na(one)) return(NA_character_)
-    pick <- .tt_call(tt_choose_one(question, one))
+    pick <- .tt_call(tt_choose_one(question, one, deadline))
     if (is.null(pick)) NA_character_ else as.character(pick)
   }, character(1)))
 }
 
 # score: one evidence answers the weighted position on the levels, with the
 # nearest level's name in tt_details. A column asks one request a row.
-tt_score <- function(question, evidence, levels = NULL) {
+tt_score <- function(question, evidence, levels = NULL, deadline = NULL) {
   question <- .tt_settled(question, NULL, "score", levels, "levels")
   unname(vapply(as.character(evidence), function(one) {
     if (is.na(one)) return(NA_real_)
-    .tt_call(tt_score_one(question, one))$value
+    .tt_call(tt_score_one(question, one, deadline))$value
   }, numeric(1)))
 }
 
 # tag: one evidence answers the labels that held, in the question's order.
-tt_tag <- function(question, evidence, labels = NULL) {
+tt_tag <- function(question, evidence, labels = NULL, deadline = NULL) {
   question <- .tt_settled(question, NULL, "tag", labels, "labels")
   lapply(as.character(evidence), function(one) {
     if (is.na(one)) return(character())
-    .tt_call(tt_tag_one(question, one))
+    .tt_call(tt_tag_one(question, one, deadline))
   })
 }
 
 # filter: keep the records whose evidence reached the mark. Cut questions
 # alone; the engine refuses a band with the usage kind.
-tt_filter <- function(question, records, threshold = NULL) {
+tt_filter <- function(question, records, threshold = NULL, deadline = NULL) {
   question <- .tt_settled(question, threshold)
   records <- as.character(records)
   if (anyNA(records)) {
     stop("filter takes no NA records; tt_decide answers NA for those rows",
          call. = FALSE)
   }
-  records[.tt_call(tt_filter_places(question, records))]
+  records[.tt_call(tt_filter_places(question, records, deadline))]
 }
 
-# rank: the records most likely yes first, ties keeping input order. The
-# question names no threshold of its own; the engine refuses one that does.
-tt_rank <- function(question, records, top = NULL) {
+# rank: the ruled pair (settled 2026-09-21) as a data frame — the record's
+# place in the input, the record, and the probability the backend gave it —
+# most likely yes first, ties keeping input order. The question names no
+# threshold of its own; the engine refuses one that does.
+tt_rank <- function(question, records, top = NULL, deadline = NULL) {
   question <- .tt_settled(question, NULL)
   records <- as.character(records)
   if (anyNA(records)) {
     stop("rank takes no NA records", call. = FALSE)
   }
-  ranked <- .tt_call(tt_rank_all(question, records))
-  kept <- records[ranked$place]
-  if (!is.null(top)) utils::head(kept, top) else kept
+  ranked <- .tt_call(tt_rank_all(question, records, deadline))
+  held <- data.frame(
+    place = ranked$place,
+    record = records[ranked$place],
+    probability = ranked$prob,
+    stringsAsFactors = FALSE
+  )
+  if (!is.null(top)) utils::head(held, top) else held
 }
 
-# find: the unit that best answers the question, relative to its peers, or
-# NA when the question's none arm won. Two to 255 units.
-tt_find <- function(question, units) {
+# find: the ruled pair (settled 2026-09-21) — the winning unit's place, the
+# unit itself, and its probability. `place` and `unit` are NA when the
+# question's none arm won. Two to 255 units.
+tt_find <- function(question, units, deadline = NULL) {
   question <- .tt_settled(question, NULL)
   units <- as.character(units)
-  found <- .tt_call(tt_find_one(question, units))
-  if (is.null(found$place)) NA_character_ else units[[found$place]]
+  found <- .tt_call(tt_find_one(question, units, deadline))
+  place <- if (is.null(found$place)) NA_integer_ else as.integer(found$place)
+  list(
+    place = place,
+    unit = if (is.na(place)) NA_character_ else units[[place]],
+    probability = found$prob
+  )
 }
 
 # annotate: a question set file over a data frame, one request a row, a new
@@ -239,9 +252,9 @@ tt_find <- function(question, units) {
   is.list(field) && !is.null(field$failed)
 }
 
-tt_annotate <- function(file, data, on) {
+tt_annotate <- function(file, data, on, deadline = NULL) {
   column <- as.character(data[[on]])
-  rows <- .tt_call(tt_annotate_file(as.character(file), column))
+  rows <- .tt_call(tt_annotate_file(as.character(file), column, deadline))
   if (!identical(length(rows), length(column))) {
     stop("annotate returned a row a record or nothing", call. = FALSE)
   }
@@ -396,14 +409,14 @@ tt_annotate <- function(file, data, on) {
 # probabilities times the mean of the kind probabilities.
 tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
                          relations = NULL, threshold = NULL,
-                         relation_threshold = NULL) {
+                         relation_threshold = NULL, deadline = NULL) {
   spec <- .tt_recognize_spec(kinds, relations, threshold, relation_threshold)
   ask <- .tt_call(tt_recognize_grammared(spec))
   evidence <- as.character(evidence)
   held <- vector("list", length(evidence))
   live <- which(!is.na(evidence))
   if (length(live)) {
-    found <- .tt_call(tt_recognize_column(ask, evidence[live]))
+    found <- .tt_call(tt_recognize_column(ask, evidence[live], deadline))
     for (i in seq_along(live)) {
       one <- found[[i]]
       frame <- as.data.frame(one[c("text", "kind", "start", "end", "strength")],
@@ -427,7 +440,7 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
 # igraph::graph_from_data_frame. Every record crosses at once; more than
 # 255 records is a usage error before anything else.
 tt_relate <- function(records, relations = NULL, either = NULL,
-                      kind_field = NULL, threshold = NULL) {
+                      kind_field = NULL, threshold = NULL, deadline = NULL) {
   if (!length(relations) && !length(either) && !.tt_is_file(relations)) {
     stop("relate needs at least one relation rule", call. = FALSE)
   }
@@ -438,16 +451,18 @@ tt_relate <- function(records, relations = NULL, either = NULL,
     stop("relate takes no NA records; tt_recognize answers NA for those rows",
          call. = FALSE)
   }
-  held <- .tt_call(tt_relate_records(ask, records))
+  held <- .tt_call(tt_relate_records(ask, records, deadline))
   as.data.frame(held, stringsAsFactors = FALSE)
 }
 
-# The audit view of one judgment: probability, answer, model, digest, and
-# the sends that produced it, so the caller sees what the bill sees.
-tt_details <- function(question, evidence, threshold = NULL) {
+# The audit view of one judgment: probability, answer, model, digest, the
+# sends that produced it, the logical requests' digests, the
+# failed-question count, and the nearest level's name on a score question
+# (NULL on every other verb).
+tt_details <- function(question, evidence, threshold = NULL, deadline = NULL) {
   question <- .tt_settled(question, threshold)
   one <- as.character(evidence)[[1L]]
-  held <- .tt_call(tt_details_one(question, one))
+  held <- .tt_call(tt_details_one(question, one, deadline))
   held$answer <- if (is.null(held$answer) || length(held$answer) == 0L) NA else held$answer == 1
   held
 }

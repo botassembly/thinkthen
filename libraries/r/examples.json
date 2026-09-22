@@ -1,51 +1,51 @@
 {
-  "schema": "thinkthen.examples/1",
-  "surface": "r",
-  "language": "r",
-  "install": "install.packages(\"thinkthen\", repos = NULL, type = \"source\")",
-  "examples": {
-    "decide": {
-      "r": "cat(tt_decide(\"Is this a complaint?\", \"I demand a refund today\"), \"\\n\")",
-      "expected": "TRUE"
-    },
-    "choose": {
-      "r": "cat(tt_choose(\"Which team owns this?\", \"please route this ticket\", options = c(\"the refund desk\", \"the maybe desk\", \"anywhere else\")), \"\\n\")",
-      "expected": "the refund desk"
-    },
-    "tag": {
-      "r": "cat(tt_tag(\"Which words appear?\", \"the refund and the shipping\", labels = c(\"refund\", \"shipping\"))[[1]], \"\\n\")",
-      "expected": "refund"
-    },
-    "score": {
-      "r": "cat(tt_score(\"How urgent is this?\", \"maybe later\", levels = c(\"Routine.\", \"Soon.\", \"Immediate.\")), \"\\n\")",
-      "expected": "1.05"
-    },
-    "filter": {
-      "r": "cat(tt_filter(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\")), \"\\n\")",
-      "expected": "I demand a refund today"
-    },
-    "rank": {
-      "r": "cat(tt_rank(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\")), \"\\n\")",
-      "expected": "I demand a refund today good morning"
-    },
-    "find": {
-      "r": "cat(tt_find(\"Which line asks for money back?\", c(\"good morning\", \"I want a refund\")), \"\\n\")",
-      "expected": "I want a refund"
-    },
-    "annotate": {
-      "files": {
-        "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
-      },
-      "r": "out <- tt_annotate(\"form.json\", data.frame(body = \"I demand a refund today\"), on = \"body\"); cat(out$refund, out$complaint, \"\\n\")",
-      "expected": "TRUE TRUE"
-    },
-    "recognize": {
-      "r": "found <- tt_recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds = c(\"person\", \"organization\", \"place\"))[[1]]; cat(paste(found$text, found$kind, sep = \"|\"), \"\\n\")",
-      "expected": "Maria Chen|person Northwind Freight|organization Chicago|place"
-    },
-    "relate": {
-      "r": "edges <- tt_relate(c(\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"), relations = \"caused_by\"); cat(edges$name, edges$source, edges$target, edges$probability, \"\\n\")",
-      "expected": "caused_by caused_by caused_by caused_by 1 1 2 3 2 4 4 4 0.59 0.94 0.94 0.84"
-    }
+ "schema": "thinkthen.examples/1",
+ "surface": "r",
+ "language": "r",
+ "install": "install.packages(\"thinkthen\", repos = NULL, type = \"source\")",
+ "examples": {
+  "decide": {
+   "r": "cat(tt_decide(\"Is this a complaint?\", \"I demand a refund today\"), \"\\n\")",
+   "expected": "TRUE"
+  },
+  "choose": {
+   "r": "cat(tt_choose(\"Which team owns this?\", \"please route this ticket\", options = c(\"the refund desk\", \"the maybe desk\", \"anywhere else\")), \"\\n\")",
+   "expected": "the refund desk"
+  },
+  "tag": {
+   "r": "cat(tt_tag(\"Which words appear?\", \"the refund and the shipping\", labels = c(\"refund\", \"shipping\"))[[1]], \"\\n\")",
+   "expected": "refund"
+  },
+  "score": {
+   "r": "cat(tt_score(\"How urgent is this?\", \"maybe later\", levels = c(\"Routine.\", \"Soon.\", \"Immediate.\")), \"\\n\")",
+   "expected": "1.05"
+  },
+  "filter": {
+   "r": "cat(tt_filter(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\")), \"\\n\")",
+   "expected": "I demand a refund today"
+  },
+  "rank": {
+   "r": "cat(tt_rank(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\"))$record, \"\\n\")",
+   "expected": "I demand a refund today good morning"
+  },
+  "find": {
+   "r": "cat(tt_find(\"Which line asks for money back?\", c(\"good morning\", \"I want a refund\"))$unit, \"\\n\")",
+   "expected": "I want a refund"
+  },
+  "annotate": {
+   "files": {
+    "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
+   },
+   "r": "out <- tt_annotate(\"form.json\", data.frame(body = \"I demand a refund today\"), on = \"body\"); cat(out$refund, out$complaint, \"\\n\")",
+   "expected": "TRUE TRUE"
+  },
+  "recognize": {
+   "r": "found <- tt_recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds = c(\"person\", \"organization\", \"place\"))[[1]]; cat(paste(found$text, found$kind, sep = \"|\"), \"\\n\")",
+   "expected": "Maria Chen|person Northwind Freight|organization Chicago|place"
+  },
+  "relate": {
+   "r": "edges <- tt_relate(c(\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"), relations = \"caused_by\"); cat(edges$name, edges$source, edges$target, edges$probability, \"\\n\")",
+   "expected": "caused_by caused_by caused_by caused_by 1 1 2 3 2 4 4 4 0.59 0.94 0.94 0.84"
   }
+ }
 }

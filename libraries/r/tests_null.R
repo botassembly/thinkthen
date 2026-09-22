@@ -47,12 +47,14 @@ check("choose under the cut is na", is.na(
 # score: the specification's number and the nearest level in details.
 scored <- tt_score("How urgent is this?", "I want a refund now", c("Routine.", "Soon.", "Immediate."))
 check("score weighted position", isTRUE(all.equal(scored, 1.7)))
-# Finding, recorded in NOTES.md: the stand-in's details path assumes a noul
-# answer, so details on a score question fails with "the answer carries no
-# probability". Nearest-level rides in annotate's score field instead.
-check("details on a score question is a stand-in gap", inherits(
-  tryCatch(tt_details(tt_question(score = "How urgent is this?", levels = c("Routine.", "Soon.", "Immediate.")), "I want a refund now"), thinkthen_error = function(e) e),
-  "thinkthen_backend"
+# Settled 2026-09-21: the nearest level's name rides in tt_details on a
+# score question, and it is absent on every other verb.
+check("details on a score question carries the nearest level", identical(
+  tt_details(tt_question(score = "How urgent is this?", levels = c("Routine.", "Soon.", "Immediate.")), "I want a refund now")$nearest,
+  "Immediate."
+))
+check("details on a decide question carries no nearest", is.null(
+  tt_details("Is this a complaint?", "I want a refund")$nearest
 ))
 check("score column", isTRUE(all.equal(
   tt_score("How urgent?", c("I want a refund now", "thanks"), c("Routine.", "Soon.", "Immediate.")),
@@ -76,18 +78,19 @@ band_refused <- tryCatch(
 check("filter refuses a band", inherits(band_refused, "thinkthen_usage"))
 check("usage is not retryable", isFALSE(band_refused$retryable))
 
-# rank: most likely yes first, ties keep input order.
-check("rank order", identical(
-  tt_rank("Is this urgent?", c("urgent refund", "no rush", "maybe soon")),
-  c("urgent refund", "maybe soon", "no rush")
-))
-check("rank top", identical(tt_rank("Is this urgent?", c("a refund", "b", "c"), top = 1), "a refund"))
+# rank: the ruled pair (settled 2026-09-21) as a data frame — most likely
+# yes first, ties keep input order.
+ranked <- tt_rank("Is this urgent?", c("urgent refund", "no rush", "maybe soon"))
+check("rank order", identical(ranked$record, c("urgent refund", "maybe soon", "no rush")))
+check("rank carries the pair", identical(names(ranked), c("place", "record", "probability")))
+check("rank probabilities descend", all(diff(ranked$probability) <= 0))
+check("rank top", identical(tt_rank("Is this urgent?", c("a refund", "b", "c"), top = 1)$record, "a refund"))
 
-# find: the best unit of its peers.
-check("find winner", identical(
-  tt_find("Which line asks for money?", c("nothing here", "I want a refund", "still nothing")),
-  "I want a refund"
-))
+# find: the ruled pair (settled 2026-09-21) — place, unit, probability.
+found <- tt_find("Which line asks for money?", c("nothing here", "I want a refund", "still nothing"))
+check("find winner", identical(found$unit, "I want a refund"))
+check("find carries the pair", identical(names(found), c("place", "unit", "probability")))
+check("find place", identical(found$place, 2L))
 too_few <- tryCatch(tt_find("Q?", c("one")), thinkthen_error = function(e) e$kind)
 check("find needs two units", identical(too_few, "usage"))
 

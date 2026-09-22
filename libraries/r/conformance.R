@@ -49,7 +49,12 @@ for (case in cases) {
       } else if (kind == "backend" && !wire) {
         paste0("skip     ", id, ": the backend kind needs the wire or a dead address; the null backend answers")
       } else if (kind == "deadline") {
-        paste0("skip     ", id, ": the spent-budget case needs a deadline option this surface does not carry")
+        held <- tryCatch(
+          tt_decide(built(case), case$evidence, deadline = 0),
+          thinkthen_error = function(e) e$kind
+        )
+        if (identical(held, kind)) paste0("ok       ", id) else
+          paste0("FAIL     ", id, ": expected the ", kind, " kind, got ", held)
       } else {
         run <- function() {
           question <- built(case)
@@ -171,7 +176,7 @@ for (case in cases) {
         },
         decide_many = {
           records <- unlist(case$records)
-          judgments <- thinkthen:::.tt_call(thinkthen:::tt_decide_column(question, records))
+          judgments <- thinkthen:::.tt_call(thinkthen:::tt_decide_column(question, records, NULL))
           answers <- vapply(judgments$ans, function(one) {
             if (is.null(one)) NA else one == 1
           }, logical(1))
@@ -191,7 +196,7 @@ for (case in cases) {
           records <- unlist(case$records)
           held <- tt_rank(question, records)
           wanted <- records[unlist(expect$ranking) + 1]
-          if (identical(held, wanted)) paste0("ok       ", id) else
+          if (identical(held$record, wanted)) paste0("ok       ", id) else
             paste0("FAIL     ", id, ": the ranked order diverged")
         },
         find = {
@@ -201,14 +206,14 @@ for (case in cases) {
           } else {
             held <- tt_find(case$question, units)
             wanted <- units[[expect$answer + 1]]
-            if (identical(held, wanted)) paste0("ok       ", id) else
-              paste0("FAIL     ", id, ": expected ", wanted, ", got ", held)
+            if (identical(held$unit, wanted)) paste0("ok       ", id) else
+              paste0("FAIL     ", id, ": expected ", wanted, ", got ", held$unit)
           }
         },
         recognize = {
           spec <- jsonlite::toJSON(case$question, auto_unbox = TRUE)
           ask <- thinkthen:::.tt_call(thinkthen:::tt_recognize_grammared(spec))
-          found <- thinkthen:::.tt_call(thinkthen:::tt_recognize_column(ask, case$text))[[1]]
+          found <- thinkthen:::.tt_call(thinkthen:::tt_recognize_column(ask, case$text, NULL))[[1]]
           ents <- expect$entities
           good <- identical(length(found$text), length(ents))
           if (good && length(ents)) {
@@ -250,7 +255,7 @@ for (case in cases) {
         relate = {
           spec <- jsonlite::toJSON(case$question, auto_unbox = TRUE)
           ask <- thinkthen:::.tt_call(thinkthen:::tt_relate_grammared(spec))
-          edges <- thinkthen:::.tt_call(thinkthen:::tt_relate_records(ask, unlist(case$records)))
+          edges <- thinkthen:::.tt_call(thinkthen:::tt_relate_records(ask, unlist(case$records), NULL))
           want <- expect$edges
           good <- identical(length(edges$name), length(want))
           if (good && length(want)) {
