@@ -68,3 +68,20 @@ The blocking engine's shape; DuckDB choose/tag/details/annotate handle repeated 
 5. Merge prep (connector through the contract; lint/ratchet/deny coverage plan; wire stub in-repo; private names and home paths removed plus a check; Mac-capable scripts; notes under sdlc/; license fields; vendored tools trimmed and recorded).
 
 Recommendation recorded for the build team: extend main's crate policy at merge rather than restructuring eleven workspaces now; the two-file trial-merge conflict supports the smaller step.
+
+## Progress: waves 1 and 2 landed (2026-09-22)
+
+As of branch `surfaces` tip `6a829b8`. Wave 1 is the first-review fix program (phases 1-2); wave 2 is the conformance honesty phase (phase 3). Wave 3, the second-review fixes, has not landed. Remaining items are tracked in `2026-09-22-surfaces-branch-second-review-new-defects-and-leftovers.md`.
+
+**Fixed in wave 1**, each with the commit that carries the fix and its discriminating test:
+
+- Group 1: DuckDB row mapping `2b43c13` (before: `FAILED decide alternating 10,000 rows split exactly: want '5000|5000', got '1|9'`); the DuckDB driver able to fail `7337248` (selftest corrupts one expectation, exit 1); Python multi-piece annotate and `on=` columns `d9f7a55` (before: 2+3 rows returned [1,2,1,2]); R column typing by kind `b11e143` (baseline: six FAILs including the unsure-first choose and the tag column); the pandas Series `d9f7a55` (before: one-row wrapper); the stand-in fixture off by default `7acb3da` (env-arm in shipped binaries still open); the stand-in honoring address and width `526ec11` (`EngineConfig` first, environment second).
+- Group 2: C per-thread error slots and panic containment `be8374f` (ASan use-after-free before, clean after); DuckDB callback panics `0345a42`; the checked deadline conversion in the contract `02e6370`, adopted at `be8374f`, `b11e143`, `d9f7a55`, `cbb0224`, `e60dbbf`, `9eb3cae`; Arrow release pointers `d9f7a55`; the R interrupt guard `b11e143` (record 0069); SQLite per-call handle `87bb8ac`.
+- Group 3: DuckDB `@file` access switch and relate on the caller's database `0345a42` (ADR 0038; the `thinkthen_relations` hole and further relate-routing defects remain); SQLite direct-only `87bb8ac` (the CHECK-constraint hole on 3.45.1 remains); PostgreSQL PUBLIC revoke `9eb3cae`, `f73a67d` (grant-documentation and update-path gaps remain); PostgreSQL batch errors `9eb3cae`.
+- Group 4: Ruby interruptible calls `cbb0224` (spurious-wakeup and shared-token defects remain); DuckDB one-shot token re-arm `0345a42` (the 250 ms window remains); PostgreSQL deadline `9eb3cae` (record 0070); stand-in retry sleeps `526ec11`; Python Polars single deadline `d9f7a55` (no cancel token and single-call interrupt remain); Node abort listeners `e60dbbf` (2,000 calls leave zero listeners).
+- Group 5: the connector through the contract `02e6370`, `526ec11`, adopted per surface in wave 1 (C, Rust, and DuckDB's `request_digest` remain); the private deck out of the DuckDB check `537e310`; the rest of group 5 remains, with the merge-build fact recorded in `2026-09-22-merge-trial-the-build-break-list.md`.
+- Group 6: remains (phase 4).
+
+**Fixed in wave 2 (conformance honesty):** `50c6327` the checker honors its file argument and runs from any directory; `c83add5` one skip table in the conformance file replaces the runners' own lists; `bcaa5f7` score and tag coverage (score 1→3, tag 1→4 cases); `2143d7e` the shared repeated-text, NULL-row, and annotate cases with the driver shapes; `6a829b8` the gate counts skips beside greens and a bare `cargo test` in `libraries/rust` passes. The conformance file is 84 cases.
+
+Durable records for the rulings this wave made: ADR 0037 (the C door) and ADR 0038 (the relate boundary) at `79a7efd`; records 0069 (the R interrupt window), 0070 (the PostgreSQL deadline), and 0071 (the two granted exceptions) at `aaccc63`.
