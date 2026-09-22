@@ -5,7 +5,9 @@ import Base from '../layouts/Base.astro';
   <h1>Shell recipes</h1>
   <p class="lede">The tools you already have, piped into ThinkThen.</p>
 
-  <p>No new function, and nothing bundled. The ten functions are right. A common tool needs one <code>jq</code> line in front and one behind, and those two lines are the recipe. The trick that makes every recipe work already ships: <code>--jsonl</code> reads one JSON row per record, <code>--field</code> names the part the model sees, and the row that comes back is <code>{'{"input": <the whole row>, "value": <the answer>}'}</code>. Paths, line numbers, dates, and ids ride through untouched and never reach the model.</p>
+  <p>No new function, and nothing bundled. The ten functions are right. A common tool needs one <code>jq</code> line in front and one behind. Those two lines are the recipe.</p>
+
+  <p>Two shipped flags and one fixed row shape carry every recipe. <code>--jsonl</code> reads one JSON row per record. <code>--field</code> names the part the model sees. The row that comes back is <code>{'{"input": <the whole row>, "value": <the answer>}'}</code>. Paths, line numbers, dates, and ids ride through untouched and never reach the model.</p>
 
   <div class="note">The recipes follow. Each one is recorded first, and the page then shows the run. Nothing is written here until it has run.</div>
 
