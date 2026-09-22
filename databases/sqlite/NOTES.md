@@ -362,3 +362,130 @@ connector.
 
 Problem and way round it: none open. `docker ps -a` shows no container from
 this surface (it uses none); no key, no paid call, nothing published.
+
+## 2026-09-22 — review 2, the CHECK-constraint hole, and the 3.50.0 floor
+
+**The finding.** Below SQLite 3.50.0 a CHECK constraint in an untrusted
+attached database reached the functions, so a file from somewhere else
+could spend money or read a file through its own schema (review 2, item
+1; `sdlc/issues/2026-09-22-surfaces-branch-second-review-new-defects-and-leftovers.md`).
+DEFAULT clauses, views, and triggers were refused; CHECK was not.
+
+**The mechanism, from SQLite's own source.** `sqlite3ExprFunctionUsable`
+enforces `SQLITE_DIRECTONLY` only on call nodes carrying `EP_FromDDL`. In
+`resolveExprStep` (3.49.0 and earlier) the resolver sets that mark only in
+the deterministic branch:
+
+```c
+if( (pDef->funcFlags & SQLITE_FUNC_CONSTANT)==0 ){
+  sqlite3ResolveNotValid(pParse, pNC, "non-deterministic functions",
+                         NC_IdxExpr|NC_PartIdx|NC_GenCol, 0, pExpr);
+}else{
+  pExpr->op2 = pNC->ncFlags & NC_SelfRef;
+  if( pNC->ncFlags & NC_FromDDL ) ExprSetProperty(pExpr, EP_FromDDL);   /* skipped for volatile functions */
+}
+...
+if( (pDef->funcFlags & (SQLITE_FUNC_DIRECT|SQLITE_FUNC_UNSAFE))!=0 ... ){
+  sqlite3ExprFunctionUsable(pParse, pExpr, pDef);                        /* sees no mark, allows the call */
+}
+```
+
+3.50.0 moved the marking into the DIRECT/UNSAFE branch (and 3.53.x added
+`pParse->prepFlags & SQLITE_PREPARE_FROM_DDL` to the condition):
+
+```c
+if( (pDef->funcFlags & (SQLITE_FUNC_DIRECT|SQLITE_FUNC_UNSAFE))!=0 ... ){
+  if( pNC->ncFlags & NC_FromDDL ) ExprSetProperty(pExpr, EP_FromDDL);
+  sqlite3ExprFunctionUsable(pParse, pExpr, pDef);
+}
+```
+
+Every function here is volatile (the ruled flag), so every function here
+was in the skipping branch.
+
+**The version matrix, by command.** A C harness links each amalgamation,
+loads this artifact, attaches a hostile file, and uses each object:
+
+```
+cc -O1 -o harness-3.50.0 harness.c sqlite-amalgamation-3500000/sqlite3.c -lpthread -ldl
+./harness-3.50.0 target/release/libthinkthen0.so <hostile.db> 1
+```
+
+| object | 3.45.1 | 3.49.0 | 3.50.0 | 3.53.2 |
+| --- | --- | --- | --- | --- |
+| CHECK | **runs** | **runs** | refused at attach | refused at attach |
+| DEFAULT | refused | refused | refused | refused |
+| view | refused | refused | refused | refused |
+| trigger | refused | refused | refused | refused |
+| generated column (crafted) | refused | refused | refused | refused |
+| index expression (crafted) | refused | refused | refused | refused |
+| partial index (crafted) | refused | refused | refused | refused |
+
+The crafted shapes were refused on the old versions too, by SQLite's own
+"non-deterministic functions prohibited in generated columns/index
+expressions" rule (created with `writable_schema` text, the shape a
+crafted file holds).
+
+**The fix.** `FLOOR` moves from 3.41.0 to 3.50.0: the load-time check
+refuses an older host by name, so the vulnerable path is unreachable —
+the extension cannot load where the hole is live. The check message names
+the floor, the host, and the reason. The interrupt call the old floor
+guarded (`is_interrupted`, added in 3.41) is unaffected: 3.50.0 carries
+it. `An old host` passing at 3.41 can no longer be true, and the unit
+test carries 3.45.1 and 3.49.0 as refused, 3.50.0 as the floor.
+
+**The suite.** `tests/schema_refusal.py` now authors every hostile file
+through `writable_schema` (a 3.50.0 host refuses to author them with
+CREATE, which is the fix working), and runs both `trusted_schema`
+settings: for each, CHECK, DEFAULT, view, trigger, crafted generated
+column, crafted index expression, crafted partial index, and a view over
+the recognize module all refuse; top-level SQL still answers. It also
+proves the floor on both sides: the stock host (3.45.1 here) refuses the
+load with the floor's message, and the test host is 3.50.0 or newer.
+
+Because the stock Python library here is 3.45.1, the Python tests run
+under a 3.50.0 host built once from the amalgamation:
+`tests/host_sqlite.sh` compiles `.runtimes/sqlite-amalgamation-*/
+sqlite3.c` into `.runtimes/host/libsqlite3.so.0`, and `check.sh` puts it
+on `LD_LIBRARY_PATH` when the stock host is below the floor (macOS 26
+carries 3.51.0 and needs nothing). The byte-for-byte evidence: the
+pre-fix artifact loads on the 3.45.1 host and the suite's four floor
+checks fail; the fixed artifact makes them pass.
+
+## 2026-09-22 — review 1/2 leftovers: the single-row deadline and the watcher
+
+The scalar judgment verbs now carry the settled three-argument spelling
+beside the drawn two-argument one: the last argument is the per-call
+budget in milliseconds, through the contract's one checked door (`-1`
+none, `0` spent, positive a budget, any other negative or a
+non-number a usage refusal, above 136 years a usage refusal). SQLite
+overloads by arity, so no drawn call changes and
+`pragma_function_list` shows fourteen registrations for the eight names.
+A spent budget refuses before the session answer map, so it cannot be
+answered from the shim's cache.
+
+The interruptible wait is a watcher thread: a scalar call's calling
+thread sits inside the engine, so nothing on it can read the host's
+`is_interrupted` while a send or a backoff sleeps. The watcher reads the
+calling connection's own flag (atomic, safe from any thread) every 5 ms,
+arms the call's token, and stops with the call through a condvar, so a
+call that ends early waits no tick out and no watcher exists between
+calls. The engine's own contract is unchanged: no new request starts,
+sent requests finish.
+
+**Proof.** `tests/single_row_cancel.py`: the offline arms (spent budget
+returns the deadline kind and sends nothing — the usage counter is read
+around it; a negative below the sentinel and a non-number refuse; the
+sentinel answers; an oversized budget refuses), and the loopback arms
+against a local 503 server whose refusal costs a one-second backoff: a
+150 ms budget returns the deadline kind in 0.15 s, the same call with no
+stop fails later (>= 2 s) with the backend kind, and
+`Connection.interrupt` from another thread lands as the cancelled kind in
+0.30 s. Against the pre-fix artifact the arity is wrong (the three
+arguments do not exist) and the interrupt call fails with the backend
+kind after 3.00 s, so every arm is discriminating.
+
+**Shared guard.** The surface's own `guarded`/`panic_text` pair is gone;
+`thinkthen_contract::catch_panic` owns the boundary and the message
+("a panic crossed thinkthen_probe: ..."), the same spelling every other
+surface's door uses.

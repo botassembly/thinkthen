@@ -73,15 +73,21 @@ Two named divergences and one gap, stated rather than implied:
   when the real engine lands its own cache replaces this map and the
   shim's map and hit counter are deleted together.
 - **`SQLITE_DETERMINISTIC` stays off** on every function, per the ruled
-  page, so no paid call is legal in an index expression or a CHECK
-  constraint. Volatile is the ruled flag.
-- **Every function is direct-only.** The eight functions carry
-  `SQLITE_DIRECTONLY` and both table-valued modules set
-  `SQLITE_VTAB_DIRECTONLY`, so a view or trigger inside a database the
-  host has not vouched for cannot make a paid call or read a file —
-  whatever the host's `trusted_schema` setting says. Top-level SQL is
-  untouched. `tests/schema_refusal.py` proves the refusals in Python,
-  where `trusted_schema` defaults to on.
+  page, so no paid call is legal in an index expression. Volatile is the
+  ruled flag.
+- **Every function is direct-only, from SQLite 3.50.0.** The eight
+  functions carry `SQLITE_DIRECTONLY` and both table-valued modules set
+  `SQLITE_VTAB_DIRECTONLY`, so a view, trigger, default, or CHECK
+  constraint inside a database the host has not vouched for cannot make a
+  paid call or read a file — whatever the host's `trusted_schema` setting
+  says. Top-level SQL is untouched. Below 3.50.0 SQLite skips the
+  from-DDL mark on volatile functions, so a CHECK constraint reaches
+  them; that is why the load-time floor check refuses an older host by
+  name (`thinkthen needs SQLite 3.50.0 or newer...`), and why the test
+  suite runs under a 3.50.0 host. `tests/schema_refusal.py` proves the
+  refusals in Python, where `trusted_schema` defaults to on, and proves
+  the floor on both sides: the stock 3.45.1 host refuses the load, and
+  the 3.50.0 host refuses every schema object.
 - **The interrupt poll reads the calling connection.** The handle comes
   from SQLite's own context (`sqlite3_context_db_handle`), never a
   process-wide one, and the host's own `is_interrupted` is resolved from
@@ -90,10 +96,19 @@ Two named divergences and one gap, stated rather than implied:
   read by its own copy, never a second one. `tests/two_connections.py`
   proves it; its `wire` mode against the 300 ms stub is the
   discriminating run.
-- **No per-call deadline option yet.** The host's own
-  `sqlite3_interrupt` or statement discipline is the stop; conformance
-  case 27 is skipped for that reason. A per-call budget beside the
-  cancel token is the settled shape and a recorded gap here.
+- **Single calls carry a deadline and hear the host's interrupt.** Each
+  judgment scalar has a three-argument spelling beside the drawn
+  two-argument one: the last argument is a per-call deadline in
+  milliseconds, `-1` for none, `0` for a spent deadline (the deadline
+  kind, nothing sent), a positive value for the budget, and any other
+  negative is a usage refusal. SQLite overloads by arity, so the drawn
+  calls are unchanged. While a scalar call runs, a watcher thread reads
+  the calling connection's `sqlite3_is_interrupted`, so the host's own
+  `sqlite3_interrupt` (Ctrl-C in the CLI, `Connection.interrupt` in
+  Python) arms the call's cancel token and the engine's waits stop
+  between requests — no new request starts, sent ones finish.
+  `tests/single_row_cancel.py` proves both against a loopback backend
+  that fails retryably.
 
 ## Authority: who may do what
 
@@ -123,10 +138,13 @@ Two named divergences and one gap, stated rather than implied:
   process-ID check on the next call (proven: a child forked after a call
   answers on its own wire call), idle connections are pruned by the
   engine, and the pool is sized to the width gate.
-- **Cancellation channel.** The wait's poll reads `sqlite3_is_interrupted`
-  on the loading connection, so the host's own `sqlite3_interrupt` (or a
-  Ctrl-C in the CLI) cancels the token between records — no watchdog
-  thread, and no query is left waiting on a stop that never lands.
+- **Cancellation channel.** The batch wait's poll reads
+  `sqlite3_is_interrupted` on the loading connection, so the host's own
+  `sqlite3_interrupt` (or a Ctrl-C in the CLI) cancels the token between
+  records; a single-row call, whose calling thread sits inside the
+  engine, is watched by a short-lived watcher thread that reads the same
+  flag. No watcher exists between calls, and no query is left waiting on
+  a stop that never lands.
 
 ## Building and checking
 
@@ -142,6 +160,20 @@ into `.runtimes/` (nothing outside the folder is touched, and no rc file
 is modified). The entry point follows the basename rule: the artifact is
 `libthinkthen0.so`, the entry is `sqlite3_thinkthen_init`, and
 `.load ./thinkthen` resolves `thinkthen.so`.
+
+The Python tests need a host at or above the floor. A host already new
+enough (macOS 26 carries 3.51.0) needs nothing; when the stock library is
+older (Ubuntu 24.04 carries 3.45.1, which the extension refuses), fetch
+one amalgamation and let `tests/host_sqlite.sh` build it once:
+
+```
+curl -O https://sqlite.org/2025/sqlite-amalgamation-3500000.zip
+unzip -q sqlite-amalgamation-3500000.zip -d .runtimes
+```
+
+`check.sh` puts that library in front of the tests through
+`LD_LIBRARY_PATH`, prints the host version, and refuses a host below
+3.50.0.
 
 The full record — the build traps, the wire numbers, the unchecked list —
 is `NOTES.md`. The divergences the conformance slice reports are recorded
