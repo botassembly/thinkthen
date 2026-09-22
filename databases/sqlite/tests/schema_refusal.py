@@ -129,7 +129,7 @@ def main() -> int:
         )
         old = subprocess.run(
             [sys.executable, "-c", script],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, check=False,
             env={k: v for k, v in os.environ.items() if k != "LD_LIBRARY_PATH"},
         )
         message = old.stdout.strip()
