@@ -73,7 +73,9 @@ def test_check_5_both_remedies_run():
         "tests/fixture/form.json", pl.from_pandas(frame), on="body"
     ).to_pandas()
     assert type(back) is pd.DataFrame
-    assert back.columns.tolist() == ["body", "id", "team", "urgency", "wants_refund"]
+    # The set's name order is file order (the core's parser keeps it), so
+    # the new columns follow the file: wants_refund, team, urgency.
+    assert back.columns.tolist() == ["body", "id", "wants_refund", "team", "urgency"]
     assert back.shape == (3, 5)
 
 

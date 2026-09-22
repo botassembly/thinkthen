@@ -22,7 +22,7 @@ def cut_question():
 
 def _partial_set():
     """The conformance case 74's set, built from parts so the test needs
-    no file: the stand-in fails the last name-order question for exactly
+    no file: the stand-in fails the last file-order question for exactly
     one record (SYNTHETIC_PARTIAL_RECORD)."""
     path = pathlib.Path(tempfile.mkdtemp()) / "partial.json"
     path.write_text(json.dumps({
@@ -86,17 +86,23 @@ def test_a_past_deadline_is_spent_not_refused():
     assert "deadline of" in str(seen.value)
 
 
-def test_the_sentinel_means_no_deadline():
-    """Minus one is the contract's no-deadline sentinel, so the call runs."""
-    assert tt.decide(cut_question(), "i want a refund now", deadline=-1.0) is True
+def test_the_sentinel_is_refused_like_every_other_negative():
+    """Minus one is the C door's sentinel, where a number has to stand for
+    "none"; Python's one no-deadline spelling is ``None``, so the sentinel
+    is refused with the rest of the negatives (second review, item 10)."""
+    with pytest.raises(tt.UsageError) as seen:
+        tt.decide(cut_question(), "i want a refund now", deadline=-1.0)
+    assert "None" in str(seen.value)
+    assert tt.decide(cut_question(), "i want a refund now", deadline=None) is True
 
 
 def test_deadlines_that_cannot_be_budgets_are_usage_errors():
-    """NaN, an infinity, and a negative other than the sentinel are usage
-    errors at the contract's one checked door. Before the review's fix the
-    same values reached `Duration::from_secs_f64` and raised an error that
-    `except ThinkThenError` did not catch."""
-    for budget in (float("nan"), float("inf"), -0.001, -2.0, 1e300):
+    """NaN, an infinity, and every negative — the sentinel included — are
+    usage errors at this door. Before the review's fix the same values
+    reached `Duration::from_secs_f64` and raised an error that `except
+    ThinkThenError` did not catch; before the second review's fix, -1
+    silently meant "no deadline" and a computed budget could land there."""
+    for budget in (float("nan"), float("inf"), -0.001, -1.0, -2.0, 1e300):
         with pytest.raises(tt.UsageError):
             tt.decide(cut_question(), "i want a refund now", deadline=budget)
 
@@ -199,7 +205,7 @@ def test_details_carries_the_requests_list_and_the_failure_count():
 
 def test_annotate_preserves_the_good_answers_and_marks_the_failed_one():
     """The stand-in's one synthesized partial failure (0054): the reply
-    answers one question and omits the last in name order, so its field
+    answers one question and omits the last in file order, so its field
     carries the ruled marker in this host's spelling (a dict), never
     `None`, while the good fields answer as usual."""
     rows = tt.annotate(
@@ -232,10 +238,12 @@ def test_usage_counts_sends():
     assert tt.usage()["requests"] - before == 1
 
 
-def test_cancelled_is_a_keyboard_interrupt():
-    # pyo3 gives an exception one base; cancelled rides KeyboardInterrupt,
-    # the host's own cancel gesture, per the 211 proof.
+def test_cancelled_is_a_keyboard_interrupt_and_a_thinkthen_error():
+    # Two bases now: KeyboardInterrupt, the host's own cancel gesture, and
+    # ThinkThenError, this package's base, so either `except` catches a
+    # cancel.
     assert issubclass(tt.Cancelled, KeyboardInterrupt)
+    assert issubclass(tt.Cancelled, tt.ThinkThenError)
 
 
 def test_question_parts_match_the_file_digest():
@@ -272,31 +280,18 @@ def test_fork_child_answers():
     assert done.returncode == 0, done.stderr
 
 
-def test_the_fixture_failure_is_off_without_its_opt_in():
-    """Finding 7 from the Python side: no production process meets the
-    stand-in's synthesized partial failure. A fresh process with the
-    test-only opt-in unset answers the fixture record like any other
-    input."""
-    code = (
-        "import thinkthen as tt;"
-        "rows = tt.annotate('tests/fixture/form.json',"
-        " ['order 4471: charged twice, please refund']);"
-        "assert rows[0]['wants_refund'] is True, rows;"
-        "assert 'failed' not in str(rows[0]), rows;"
-        "print('answered')"
+def test_the_fixture_fires_from_the_build_not_the_environment():
+    """Finding 7, as the compile-time door left it: the gate builds the
+    wheel with the stand-in's `synthetic-partial` feature, so the marker
+    appears for exactly the named record with the old environment variable
+    unset. A shipped wheel is a default build with no fixture code at all,
+    and the stand-in's own default-build test
+    (`the_env_variable_arms_nothing`) proves no environment variable can
+    arm it."""
+    os.environ.pop("ENGINE_SYNTHETIC_PARTIAL", None)
+    rows = tt.annotate(
+        _partial_set(), ["order 4471: charged twice, please refund"]
     )
-    env = {
-        key: value
-        for key, value in os.environ.items()
-        if key != "ENGINE_SYNTHETIC_PARTIAL"
+    assert rows[0]["topic"] == {
+        "failed": {"kind": "backend", "cause": "missing_answer"}
     }
-    env["ENGINE_NULL"] = "1"
-    done = subprocess.run(
-        [sys.executable, "-c", code],
-        capture_output=True,
-        text=True,
-        env=env,
-        check=False,
-    )
-    assert done.returncode == 0, done.stderr
-    assert "answered" in done.stdout

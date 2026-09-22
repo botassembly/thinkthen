@@ -557,15 +557,77 @@ $ (after)
 **The contract door.** `engine()` builds through the contract's
 `Connector` (`StandinConnector` + `EngineConfig::from_env`), the one line
 the merge changes; `call_options` is the contract's checked
-`with_deadline_seconds`, so NaN, an infinity, or a negative other than the
-sentinel is a usage error instead of `Duration::from_secs_f64`'s panic;
-every engine step runs under `guarded`, so a panic comes back as the
-defect kind (unit test `a_panicking_step_comes_back_as_the_defect_kind`).
-The deadline rules follow the contract: zero is spent, -1 is the
-no-deadline sentinel, and the old negative clamp is gone —
-`test_the_sentinel_means_no_deadline` and
-`test_deadlines_that_cannot_be_budgets_are_usage_errors` pin the three
-arms.
+`with_deadline_seconds`, so NaN, an infinity, or a negative is a usage
+error instead of `Duration::from_secs_f64`'s panic; every engine step runs
+under `guarded`, which is the contract's shared `catch_panic` — the local
+copy is gone, and a panic comes back as the defect kind (unit test
+`a_panicking_step_comes_back_as_the_defect_kind`).
+
+**The deadline rule, second review.** The C door's `-1` sentinel was
+copied into Python, so a budget computed as `end - now` that landed on
+`-1` silently disabled the deadline. Only the explicit `None` means no
+deadline now; every negative — `-1` included — is refused as a usage
+error, and zero stays the contract's spent deadline that sends nothing.
+`test_the_c_doors_sentinel_is_not_a_deadline`,
+`test_a_computed_budget_that_landed_below_zero_is_refused`,
+`test_zero_stays_a_spent_deadline`, and `test_no_deadline_is_the_explicit_none`
+pin the four arms; the unit test `the_deadline_conversion_refuses_what_cannot_be_a_budget`
+carries `-1.0` in its refused list. Against the pre-fix wheel the first
+of those fails and the last two pass, so the tests discriminate.
+
+**The cancel token.** `tt.CancelToken()` is a handle any thread can set;
+every verb takes `token=`. A bulk call is armed with the shim's own token
+and the poll bridges the caller's token to it at the engine's ticks, so a
+shared token's `cancel` stops exactly the calls it was handed and an
+interrupt never fires the caller's token; the score column reads the
+token between rows, so a controller thread stops it before the next row
+is sent. `test_review2_wire.py` proves both against its own delayed
+loopback server (4 requests served of 30 before the cancel; 3 of 12 rows
+for the column).
+
+**Error classes, second review.** `Cancelled` was a `KeyboardInterrupt`
+only; it is now a subclass of both, built at module init with two bases
+(pyo3's `create_exception!` gives one), so `except ThinkThenError` and
+`except KeyboardInterrupt` both catch a cancel. A signal handler that
+raises anything else — a `SystemExit`, its own error — has that error
+carried out of the poll and raised when the call stops, never turned into
+`Cancelled`; `test_review2_signals.py` proves both in child processes
+(handler `SystemExit(3)` raised as itself at 1.0 s into a 5.6 s batch;
+the cancel caught as `ThinkThenError` at 1.0 s).
+
+**Refuse before any request, second review.** A pandas frame or pyarrow
+table handed to `annotate(..., on=)` ran the whole paid batch and only
+then hit the constructor that cannot rebuild the frame. The wrapper now
+probes the host's own constructor with an empty frame of the same shape
+(`_probe_frame_rebuild`) before the input's stream is taken; the refusal
+is a usage error naming the two remedies, with the constructor's own
+error as its cause. The offline witness reads the engine's request
+counter (`test_review2_findings.py`: 0 requests where the pre-fix wheel
+spent 9), and the wire witness counts POSTs through a loopback server
+(`test_review2_wire.py`: 0, with a positive control proving the counter
+moves).
+
+**Refused inputs are released.** A batch read before a refusal was never
+released: `series_column` and `frame_column` now own each batch before
+reading it (so `Drop` releases it on the error path), the producer's
+schema rides a `SchemaGuard` that releases on every error path, and
+`borrow_strings` takes the caller's `(skip, count)` explicitly.
+`tests/sliced_struct_stream.py` records both release pointers; the two
+release tests fail against the pre-fix wheel. The RSS measurement (a
+0.6 MB input, 100 refusals per path) reads 0.0–0.2 kB a call on every
+refusal path after the fix.
+
+**The sliced struct stream.** When a struct array is sliced the Arrow
+format lets the root carry the offset and length with whole children;
+pyarrow and polars propagate slices into the children instead, so this
+layout is built by hand in `tests/sliced_struct_stream.py`. The shim read
+the children from row zero and answered about the wrong rows (the
+caller's rows 2–5 were answered with rows 0–2); `frame_column` now reads
+`(root offset + child offset, root length)` and `build_frame` normalizes
+the aliased originals to the same cut, so the output carries no root
+offset and every child names exactly the caller's rows.
+`test_a_sliced_struct_stream_answers_the_callers_rows` fails against the
+pre-fix wheel.
 
 **Cross-side note for the merge.** The stand-in's partial-failure fixture
 (finding 7) fires only under `ENGINE_SYNTHETIC_PARTIAL=1`. `check.sh`
@@ -575,11 +637,34 @@ arms it for the three runs that pin the marker (`test_surface.py`,
 process, with the opt-in unset, that the fixture text answers like any
 other input.
 
-**Green by command.** `./check.sh` exit 0: 3 shim unit tests, 27 surface
-tests, 18 Polars-door tests, 12 pandas checks, the deadline-column test,
-15 recognize/relate tests, 4 ownership tests, the fast-cancel proof, 10 of
-10 examples, 69 passed / 0 failed / 4 skipped on the conformance slice,
-and the slide sample with its recorded band mismatch.
+**Discriminating evidence.** The pre-fix wheel was built from `HEAD` in a
+scratch worktree (`maturin build` + `uv pip install --target`) and the new
+test files were run against it from outside the package: 13 of the new
+tests fail there (the sentinel deadline, the two `Cancelled` base tests,
+the sliced stream, both release tests, both refusal counters — offline
+and wire — and the two signal children), and all pass against the fixed
+wheel. The two token tests fail there too, on the missing `token=`
+argument.
+
+**Stale expectations the fixture build exposed.** Two Python tests and
+the annotate example still assumed the old sorted name order (the core's
+parser keeps file order since `49c3b78`): the widened column is `urgency`
+(the last file-order question), the frame's new columns follow the file,
+and the example's expected dict is in file order. The Python gate had not
+been run with a fixture-armed build since that change; the fixes are
+test-and-example only, and `test_a_failed_question_widens_its_column_to_text`
+now derives the failed question from the list door's own marker instead
+of naming it.
+
+**Green by command.** `./check.sh` exit 0 with the stub up on 8211
+(`STUB_DELAY_MS=300`): 3 shim unit tests, 27 surface tests, 18
+Polars-door tests, 12 pandas checks, the deadline-column test, 12
+second-review findings, 2 signal children, 6 wire findings, 15
+recognize/relate tests, 4 ownership tests, the fast-cancel proof (the
+interrupt landed at 0.819 s), the scale bench, 10 of 10 examples, 78
+passed / 0 failed / 6 skipped on the conformance slice, the slide sample
+with its recorded band mismatch, and the wire cancel (32 requests served
+at return, none after).
 
 **Memory checks.** The debug build (`maturin develop`, no `--release`)
 runs the suites green, and a 200-iteration stress of the multi-piece,

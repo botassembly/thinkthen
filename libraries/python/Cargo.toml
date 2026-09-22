@@ -24,6 +24,10 @@ panic = "unwind"
 [features]
 default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
+# The stand-in's compile-time partial-failure fixture (finding 7): the
+# gate builds with it, a shipped wheel never does, and no environment
+# variable can arm it (standin/src/lib.rs).
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
 
 # A surface builds on its own, outside the crates workspace, so its
 # binding's profile and toolchain never leak into the command.

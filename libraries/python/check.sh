@@ -16,9 +16,14 @@ if [ ! -x .venv/bin/python ]; then
   uv venv .venv
   uv pip install --python .venv/bin/python pytest polars pandas pyarrow
 fi
-# maturin develop installs into the active virtualenv
+# maturin develop installs into the active virtualenv. The wheel builds
+# with the stand-in's compile-time `synthetic-partial` feature so the
+# annotate partial-failure fixture (finding 7) is present for the cases
+# that pin its marker; a shipped wheel is a default build, and the
+# stand-in's own default-build test proves the door is compile-time only
+# (no environment variable arms it).
 source .venv/bin/activate
-maturin develop --release
+maturin develop --release --features synthetic-partial
 
 echo "== the defect kind maps to the host's error (shim unit test)"
 # The unit tests link libpython and construct a contract Error with kind
@@ -32,18 +37,25 @@ PYO3_PYTHON="$PWD/.venv/bin/python" \
   cargo test --quiet --no-default-features --lib
 
 echo "== surface tests, null backend"
-# The stand-in's one partial-failure fixture (finding 7) fires only under
-# its test-only opt-in, so the tests that pin the marker arm it here.
-ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 .venv/bin/python -m pytest tests/test_surface.py -q
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_surface.py -q
 
 echo "== the Polars door, null backend"
-ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 .venv/bin/python -m pytest tests/test_polars_door.py -q
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_polars_door.py -q
 
 echo "== the pandas checks, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_pandas_checks.py -q
 
 echo "== one deadline for a whole column (this file's own loopback server)"
 .venv/bin/python -m pytest tests/test_deadline_column.py -q
+
+echo "== the second review's findings, offline"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review2_findings.py -q
+
+echo "== the second review's signal children"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review2_signals.py -q
+
+echo "== the second review's wire findings (this file's own counting stub)"
+.venv/bin/python -m pytest tests/test_review2_wire.py -q
 
 echo "== recognize and relate, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
@@ -61,7 +73,7 @@ echo "== the function examples, run as one test"
 ENGINE_NULL=1 .venv/bin/python tests/examples.py
 
 echo "== conformance slice, offline"
-ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 .venv/bin/python tests/conformance.py
+ENGINE_NULL=1 .venv/bin/python tests/conformance.py
 
 echo "== slide sample, as drawn, on the stand-in's offline backend"
 # The loopback stub answers one noul shape a request, so the choose, score,

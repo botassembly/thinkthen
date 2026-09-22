@@ -81,15 +81,26 @@ def test_a_failed_question_widens_its_column_to_text():
     """0054 on the frame door: a question with a failed member comes back
     as a text column carrying the ruled marker JSON, so good answers and
     the failure ride the same column and no failed cell reads as `false`
-    or a bare `null`."""
+    or a bare `null`. The stand-in's fixture fails the last file-order
+    question of the set, so the widened column is derived from the list
+    door's own marker instead of naming a question here."""
     row = "order 4471: charged twice, please refund"
+    other = "I want a refund today"
     rows = tt.annotate("tests/fixture/form.json", [row])
-    marker = rows[0]["wants_refund"]
-    frame = pl.DataFrame({"body": [row, "I want a refund today"]})
+    failed = [
+        name
+        for name, value in rows[0].items()
+        if isinstance(value, dict) and "failed" in value
+    ]
+    assert failed == ["urgency"], f"the fixture fails the last file-order question: {rows[0]}"
+    name = failed[0]
+    frame = pl.DataFrame({"body": [row, other]})
     out = tt.annotate("tests/fixture/form.json", frame, on="body")
-    assert out.schema["wants_refund"] == pl.String
-    assert out["wants_refund"][0] == json.dumps(marker, separators=(",", ":"))
-    assert out["wants_refund"][1] == "true"
+    assert out.schema[name] == pl.String
+    assert out[name][0] == json.dumps(rows[0][name], separators=(",", ":"))
+    neighbour = tt.annotate("tests/fixture/form.json", [other])[0][name]
+    spelled = {True: "true", False: "false"}.get(neighbour, str(neighbour))
+    assert out[name][1] == spelled
 
 
 def test_decide_many_parity():
