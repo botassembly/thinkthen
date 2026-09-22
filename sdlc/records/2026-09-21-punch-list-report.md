@@ -156,3 +156,138 @@ stay in file order.
    installed-artifact checks, ABI floors, a self-contained R package,
    macOS, Node child-process inheritance) belongs to the separate
    packaging/databases lane and is not claimed here.
+
+## The databases lane — items 4 and 5
+
+This lane owns punch-list items 4 and 5 across the three database
+extensions, in `databases/{sqlite,duckdb,postgresql}`. The boundary held:
+a binding converts arguments, manages host lifetimes and interrupts,
+calls Rust, and presents the result — no second scheduler, no second
+answer rule, nothing published, no key, no paid call, and no container
+left behind. The languages lane's sections above stand as written.
+
+### Item 4 — the hidden counter reset, removed (SQLite)
+
+Commit `7fbb568`. `thinkthen_usage('reset')` cleared the process
+counters and the shim cache; the spelling now refuses with a usage error
+naming the substitution ("the counters are cumulative, so take two
+snapshots and subtract them"), the counters are cumulative only, and the
+shim's answer map and hit counter are marked in the source as temporary,
+deleted together at the engine swap.
+
+Focused tests: `tests/null_suite.py` 23 of 23 (the warm check now reads
+deltas — judges 3, serves 2 from the session map; a fresh sentence grows
+`requests` by one and never lowers a counter; the reset spelling's
+refusal names "cumulative" and "subtract"), and
+`tests/conformance_driver.py` case 17 reads snapshot deltas and
+supersedes its `after_reset` arm in place. The shared conformance file
+keeps its recorded `after_reset` as history; no shared case changed.
+
+### Item 5 — database authority made explicit
+
+Each of the three READMEs gained an "Authority: who may do what" section
+naming the six items: allowed question-file access, backend selection,
+credential source, query execution, connection lifetime, and the
+cancellation channel. Commits `34080d8` (SQLite), `98c5e81` (DuckDB),
+`7c86878` (PostgreSQL).
+
+**SQLite stays non-deterministic, proven.** `check.sh` now reads
+`pragma_function_list`: eight functions, zero carrying
+`SQLITE_DETERMINISTIC` (0x800 in the flags), and an index expression
+over `thinkthen_decide` refuses with `unsafe use of thinkthen_decide()`.
+
+**DuckDB's LOAD-time handler coexists with its host, proven.**
+`tools/host_signal.py`, run by `check.sh` through the build's own venv
+Python (3.12.3 with duckdb 1.5.5, the CLI's exact version), two child
+processes so one arm's signal cannot color the other's evidence:
+
+- the after-LOAD arm, the job-2 shape the punch list names: the host's
+  own SIGINT handler fires, the process survives, and the extension
+  still answers true;
+- the chained arm, the default Python shape and the CLI's: a SIGINT
+  1.0 s into a 3-million-record query stops it in 1.00 s
+  (`thinkthen cancelled: the wait was cancelled`) and reaches the host's
+  chained handler.
+
+**Found by that proof, not fixed: the DuckDB token is one shot per
+process.** Once the extension's own handler cancels the process-wide
+token, every later call in that process answers `cancelled`; the proof
+prints the reproduction as its `note` line. The CLI exits before it
+matters, and a long-lived host — a kernel that catches the interrupt, a
+service embedding the extension — is poisoned after one Ctrl-C. A fix
+means a re-armable current token; a scalar function gets no statement
+hook from DuckDB, so *when a fresh statement begins* is a real design
+choice. The lane left the behavior measured and deliberately unasserted
+and asks the architect for the fix shape rather than inventing one.
+
+**PostgreSQL's credential refuses loudly, proven.** The ruled setting is
+`thinkthen.api_key`; this engine build takes no key from the host (the
+stand-in reads no key, and which channel delivers the setting to the
+send is the database ADR's open question 4). A set, non-blank value now
+refuses every call with a usage error naming the setting and the
+substitute channel — never silently ignored, never echoing the value.
+`check.sh` proves both arms in a third disposable container
+(`laneb-pg-key`, its engine pointed at a free port nothing listens on, a
+made-up value, no real key):
+
+- `SET thinkthen.api_key = 'made-up-not-a-key'` then a call → SQLSTATE
+  `22023`, the setting and `THINKTHEN_API_KEY` named, the value absent
+  from the psql output and the server log;
+- `RESET` then the same call → SQLSTATE `38000` with `the address
+  refused the connection` — the control proving the refusal above is the
+  setting's, and the missing-credential case answering loudly.
+
+Two fixes found on the way, both in `7c86878`: the PostgreSQL message
+shape (`surface()` formatted the contract's `Display`, which already
+carries `usage: `, so every error read `thinkthen usage: usage: ...`;
+now one prefix like the other two surfaces, pinned by
+`the_kind_word_appears_once`), and the first refusal attempt's placement
+inside `engine()`, which the batch closures call on their worker thread —
+where `GucSetting::get` checks the active thread and panics. Cases 19,
+69, 70, and 72 caught it as `the batch thread stopped`; the closures now
+take the engine reference before `run_batch` spawns, so no worker thread
+reads a setting, and the slice is back to 73 of 74 with the known case
+17 divergence.
+
+### The three lists — the databases lane
+
+**Fixed on branch**
+
+1. SQLite's hidden counter reset removed — `7fbb568`;
+   `tests/null_suite.py` (23 of 23) and `tests/conformance_driver.py`
+   case 17 (deltas; `after_reset` superseded in place).
+2. SQLite's volatility proven and its authority named — `34080d8`;
+   `check.sh`'s volatile section (`flagged|0`, `known|8`, the index
+   expression's refusal).
+3. DuckDB's host-SIGINT coexistence proven and its authority named —
+   `98c5e81`; `tools/host_signal.py`, both arms green, run by
+   `check.sh`.
+4. PostgreSQL's configured credential refuses loudly and its authority
+   named — `7c86878`; `check.sh`'s credential arm (22023 naming the
+   setting and the channel; reset → 38000 refused address) plus
+   `a_configured_key_refuses_but_a_blank_one_passes`.
+5. PostgreSQL's doubled kind word in every error message — `7c86878`;
+   `the_kind_word_appears_once`.
+6. PostgreSQL's batch paths back on their feet after the refusal's first
+   placement — `7c86878`; conformance cases 19, 69, 70, and 72 green
+   again.
+
+**Waiting for a named engine capability**
+
+1. A key channel from the host. The engine takes no key input, so the
+   ruled `thinkthen.api_key` setting refuses rather than delivering. When
+   the engine accepts a key (or the database ADR answers open question
+   4), the refusal becomes delivery.
+2. A re-armable DuckDB cancel token, or a statement hook to re-arm on.
+   The surface owns the token but cannot see a statement boundary, so the
+   architect's ruling names the fix shape; until then the one-shot
+   behavior is measured, documented, and printed by the proof.
+
+**Still blocked**
+
+1. Nothing in this lane's remit is blocked on another lane. The proofs
+   run offline on loopback only; the batch forms' wire paths were
+   exercised offline through the null backend, and each surface's wire
+   suite skipped by design because this lane started no stub. The
+   stand-in's `cache_answers` gap (case 17) remains the engine's to fix,
+   not this lane's.
