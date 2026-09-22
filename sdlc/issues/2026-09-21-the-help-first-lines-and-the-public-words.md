@@ -1,6 +1,6 @@
 # The help's first lines and the public words
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 The marketing side read `thinkthen --help` and each verb's `-h` as a new user on 2026-09-21, at main `907f252`. Ian approved the public vocabulary the same day. This page gives the builder the words for the release-preparation work on help and the manual. It authorizes nothing.
 

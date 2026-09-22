@@ -1,6 +1,6 @@
 # Exit 6 and partial failure are told two ways
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 Two specification pages tell the story of a failed question inside a good reply in opposite words, and the code already follows one of them.
 

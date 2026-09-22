@@ -1,6 +1,6 @@
 # Record mode always exits 0 and the help never says so
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 A record run exits 0 no matter what its records answer. Three no answers, three unresolved answers, three ties: exit 0 each time. The single-document contract carries the answer in the exit code, and the help of every record-capable verb prints that contract without scoping it to one document.
 

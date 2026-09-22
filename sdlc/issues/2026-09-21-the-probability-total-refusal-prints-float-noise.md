@@ -1,6 +1,6 @@
 # The probability-total refusal prints float noise
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 When a backend's distribution does not sum to one, the refusal prints the tolerance with fifteen digits. The page that rules the tolerance says one hundredth.
 

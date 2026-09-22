@@ -1,6 +1,6 @@
 # The set -e warning names only no
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 The `decide` help says "Under `set -e` or `set -o pipefail` a no ends the script." An unresolved answer ends the script the same way, and the sentence does not say so.
 

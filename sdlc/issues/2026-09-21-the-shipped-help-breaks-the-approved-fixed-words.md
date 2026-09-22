@@ -1,6 +1,6 @@
 # The shipped help breaks the approved fixed words
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 The approved vocabulary (`products/thinkthen/vocabulary.md` in the marketing repository, approved 2026-09-21) fixes one word per concept. The shipped help, the README, and two how-tos break five of those fixed words. Every fix is mechanical.
 

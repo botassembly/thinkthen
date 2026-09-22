@@ -1,6 +1,6 @@
 # The empty evidence refusal names the rule backwards
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 Empty input to any command that reads one document prints "evidence is text, not white space." A stranger reads the first half as a claim that there is text, and goes looking for it.
 

@@ -1,6 +1,6 @@
 # Statuses 400 and 500 carry no phrase
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 `specification/backends.md` fixes a sentence for six statuses: 401 "the key was refused", 402 "the account has no credit", 403 "the key may not use this model or address", 404 "nothing answers at this address", 422 "the backend refused the request as malformed or too large", and 429 "the backend's rate limit was reached". Every other status prints the bare code. The status a real vendor sends for "the model does not exist" or "context length exceeded" is 400, and the user sees a number with no sentence.
 

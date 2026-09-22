@@ -1,6 +1,6 @@
 # The third and fourth outcomes have two names
 
-Status: Open
+Status: Closed on 2026-09-22. Merged into 2026-09-22-command-wording-and-help-fixes-for-0-1.md.
 
 The deck says "not sure." The help and the specification say "unresolved." The README says "an error" where the vocabulary says "broken." A reader who meets the deck and then the manual meets two words for exit 3 and two for the broken outcome.
 
