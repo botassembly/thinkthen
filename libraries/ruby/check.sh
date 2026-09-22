@@ -56,6 +56,14 @@ if [ "$wire" = yes ]; then
     -e ENGINE_WIDTH=8 \
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_cancel.rb'
+  echo "== ruby surface: probabilities cost no extra sends (punch-list item 1)"
+  docker run --rm --network host \
+    -v "$root":/src \
+    -v "$HOME/.rustup":/root/.rustup:ro \
+    -w /src/libraries/ruby \
+    -e ENGINE_BASE_URL="$stub_url" \
+    "$image" \
+    bash -eu -c 'ruby -I lib tests/test_pairs_one_crossing.rb'
 else
   echo "== ruby surface: interrupt proof skipped, no stub on 8214"
 fi

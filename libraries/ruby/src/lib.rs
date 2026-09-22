@@ -223,6 +223,7 @@ unsafe extern "C" fn relate_body(pointer: *mut c_void) -> *mut c_void {
 /// Which many-record verb a crossing runs.
 enum Bulk {
     DecideMany,
+    DecideManyWithProbabilities,
     Filter,
     Rank,
 }
@@ -266,6 +267,7 @@ unsafe extern "C" fn bulk_tick_body(pointer: *mut c_void) -> *mut c_void {
 
 enum BulkOut {
     Judgments(Vec<Judgment>),
+    JudgedPairs(Vec<Judgment>),
     Kept(Vec<usize>),
     Ranked(Vec<Ranked>),
 }
@@ -290,6 +292,9 @@ unsafe extern "C" fn bulk_body(pointer: *mut c_void) -> *mut c_void {
             Bulk::DecideMany => engine
                 .decide_many_opts(&job.question, &records, options, Some(&mut closure))
                 .map(BulkOut::Judgments),
+            Bulk::DecideManyWithProbabilities => engine
+                .decide_many_opts(&job.question, &records, options, Some(&mut closure))
+                .map(BulkOut::JudgedPairs),
             Bulk::Filter => engine
                 .filter_opts(&job.question, &records, options, Some(&mut closure))
                 .map(BulkOut::Kept),
@@ -494,6 +499,16 @@ impl EngineValue {
                 }
                 Ok(list.as_value())
             }
+            BulkOut::JudgedPairs(judgments) => {
+                let list = RArray::with_capacity(judgments.len());
+                for judgment in judgments {
+                    let pair = RHash::new();
+                    pair.aset("answer", answer_value(judgment.answer)).map_err(|error| error)?;
+                    pair.aset("probability", judgment.probability).map_err(|error| error)?;
+                    list.push(pair).map_err(|error| error)?;
+                }
+                Ok(list.as_value())
+            }
             BulkOut::Kept(places) => {
                 let list = RArray::with_capacity(places.len());
                 for place in places {
@@ -581,6 +596,29 @@ impl EngineValue {
     ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
         engine.bulk(Bulk::DecideMany, question, records, cancel, deadline, tick_from(rb_self, tick)?)
+    }
+
+    /// The same one crossing as `decide_many`, with each judgment's
+    /// probability carried beside its answer from the same call. No
+    /// second request is made merely to expose the numbers the bulk
+    /// call already produced.
+    fn decide_many_with_probabilities(
+        rb_self: Value,
+        question: &QuestionValue,
+        records: Vec<String>,
+        cancel: Value,
+        deadline: Value,
+        tick: Value,
+    ) -> Result<Value, Error> {
+        let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
+        engine.bulk(
+            Bulk::DecideManyWithProbabilities,
+            question,
+            records,
+            cancel,
+            deadline,
+            tick_from(rb_self, tick)?,
+        )
     }
 
     fn filter(
@@ -856,6 +894,10 @@ fn init() -> Result<(), Error> {
     engine.define_singleton_method("new", function!(EngineValue::new_engine, 0))?;
     engine.define_method("decide", method!(EngineValue::decide, 4))?;
         engine.define_method("decide_many", method!(EngineValue::decide_many, 5))?;
+        engine.define_method(
+            "decide_many_with_probabilities",
+            method!(EngineValue::decide_many_with_probabilities, 5),
+        )?;
     engine.define_method("filter", method!(EngineValue::filter, 5))?;
     engine.define_method("rank", method!(EngineValue::rank, 5))?;
     engine.define_method("choose", method!(EngineValue::choose, 4))?;

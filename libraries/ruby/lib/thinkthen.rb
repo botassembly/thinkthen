@@ -115,15 +115,15 @@ module ThinkThen
     end
 
     # The bulk answer with each judgment's probability beside it, for
-    # callers and conformance checks that want both.
+    # callers and conformance checks that want both. One crossing: the
+    # native call carries the probabilities from the same judgments the
+    # answers came from, so exposing them costs no extra request. The
+    # map below only re-keys the native hashes into this surface's
+    # symbol-keyed shape.
     def decide_many_with_probabilities(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      pairs = @engine.decide_many(built(question), list.map(&:to_s), cancel, deadline, nil)
-      # The bare answers carry the judgment; probabilities come from one
-      # details pass a record, which the null backend answers for free.
-      pairs.each_with_index.map do |answer, place|
-        { answer: answer, probability: @engine.details(built(question), list[place].to_s, cancel, deadline)["probability"] }
-      end
+      pairs = @engine.decide_many_with_probabilities(built(question), list.map(&:to_s), cancel, deadline, nil)
+      pairs.map { |pair| { answer: pair["answer"], probability: pair["probability"] } }
     end
 
     def filter(question, records, cancel: nil, deadline: nil)
