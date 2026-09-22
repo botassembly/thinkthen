@@ -60,7 +60,7 @@ A column in comes back a column out, under the same verb names — `tt.decide`, 
 
 | Host | Proof | Result |
 | --- | --- | --- |
-| Python | the ten-round fork-during-batch test (211, carried) | passing before this lane |
+| Python | `libraries/python/tests/test_surface.py:238` (`test_fork_child_answers`: a child forked after a call answers), with 211's ten-round fork-during-batch proof as the experiment record | passing in the suite |
 | Rust | the engine's own `libc::fork` test, `standin/tests/wire.rs:163` (`a_forked_child_answers_on_the_wire`) | cited, not duplicated |
 | C | `libraries/c/tests/fork.rs`, forked after the first door call under a 10 s alarm | `1 passed` |
 | TypeScript | `libraries/typescript/tests/fork.test.mjs`: `child_process.fork()` and a `worker_threads` worker made after the first call, 10 s watchdog | `2 passed` |
