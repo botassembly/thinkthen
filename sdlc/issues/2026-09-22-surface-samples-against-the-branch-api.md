@@ -30,3 +30,7 @@ A read-only review of `origin/surfaces` (at `ce177c1`, tip `4dc276a` when this w
 ## What would close it
 
 The real engine binds under every surface and sends the key only to the named address. Each surface's slide test then extracts the drawn sample from `surfaces.md` at run time. The DuckDB `tools/run_slide.sh` runs a saved copy in `tools/slide.sql`, so it goes stale the same way. A recording of each sample replays in the gate with no key.
+
+## Update, 2026-09-22: eight samples recorded through a forwarder
+
+Experiment 231 (`experiments/231-surface-recordings/` in the workspace) ran the drawn Python, Polars, DuckDB, SQLite, TypeScript, R, C, and Rust samples against the real backend. The stand-in still sends no key. A loopback forwarder added the header on the way out, so these runs prove the wire shapes and the answers, and they do not prove the engine's own key handling. `choose`, `score`, `tag`, and `annotate` each have a capture there now. Ruby and PostgreSQL were not run. Nine charged jobs reserved 49,000 tokens.
