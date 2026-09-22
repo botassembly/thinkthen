@@ -11,6 +11,7 @@ import os
 import pathlib
 import sqlite3
 import sys
+import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 LIB = HERE.parent / "target" / "release" / "libthinkthen0.so"
@@ -172,6 +173,60 @@ def main():
         ).fetchall()
     )
     check("two relation arguments ride at once", both, DEMO_EDGES)
+
+    # The ruled rule grammar, all through the contract's one parser:
+    # named ends with the star, the inline JSON spec, the file form, and
+    # the either prefix. Each must reach the same recorded answers.
+    starred = sorted(
+        conn.execute(
+            "SELECT name, source, target, probability FROM "
+            "thinkthen_relate('alerts', 'id', 'body', 'caused_by=*:*')"
+        ).fetchall()
+    )
+    check("named star ends equal the bare rule", starred, DEMO_EDGES)
+    inline = sorted(
+        conn.execute(
+            "SELECT name, source, target, probability FROM "
+            "thinkthen_relate('alerts', 'id', 'body', "
+            "'{\"relations\":[\"caused_by\"]}')"
+        ).fetchall()
+    )
+    check("the inline JSON spec equals the bare rule", inline, DEMO_EDGES)
+    with tempfile.TemporaryDirectory() as folder:
+        spec = os.path.join(folder, "relate-spec.json")
+        with open(spec, "w") as handle:
+            json.dump({"relate": {"relations": ["caused_by"]}}, handle)
+        filed = sorted(
+            conn.execute(
+                "SELECT name, source, target, probability FROM "
+                "thinkthen_relate('alerts', 'id', 'body', '@" + spec + "')"
+            ).fetchall()
+        )
+    check("the file form equals the bare rule", filed, DEMO_EDGES)
+    either = sorted(
+        conn.execute(
+            "SELECT name, source, target, probability FROM "
+            "thinkthen_relate('alerts', 'id', 'body', 'either:caused_by')"
+        ).fetchall()
+    )
+    check("the either prefix reaches the engine", either, DEMO_EDGES)
+    # `either:same_as` alone rides below the bar, so the empty answer is
+    # the correct one, and it proves the prefix is not swallowed.
+    either_low = conn.execute(
+        "SELECT count(*) FROM thinkthen_relate('alerts', 'id', 'body', 'either:same_as')"
+    ).fetchone()[0]
+    check("an either rule below the bar answers empty", either_low, 0)
+    try:
+        conn.execute(
+            "SELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'caused_by=*')"
+        ).fetchall()
+        check("a one-end rule refuses", "no error", "an error")
+    except sqlite3.Error as failure:
+        check(
+            "a one-end rule names the ruled spelling",
+            "NAME=SOURCE:TARGET" in str(failure),
+            True,
+        )
     conn.execute("CREATE TABLE alerts_text(alert_id text primary key, body text)")
     conn.executemany(
         "INSERT INTO alerts_text(body) VALUES (?)", [(a,) for a in ALERTS]

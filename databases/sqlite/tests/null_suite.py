@@ -161,6 +161,13 @@ audit = json.loads(
 )
 check("details carries a digest", len(audit.get("digest", "")), 64)
 check("details counts sends", audit.get("sends"), 1)
+check("details nearest is null off score", audit.get("nearest"), None)
+score_audit = json.loads(
+    conn.execute(
+        "SELECT thinkthen_details('{\"score\":\"How strong?\",\"levels\":[\"low\",\"mid\",\"high\"]}', 'maybe later')"
+    ).fetchone()[0]
+)
+check("details carries the nearest level for a score", score_audit.get("nearest"), "mid")
 
 # tag answers a JSON array in the question's order.
 check(

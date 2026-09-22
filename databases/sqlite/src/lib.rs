@@ -31,7 +31,7 @@ use rusqlite::vtab::{
 };
 use rusqlite::{Connection, Error, ffi};
 use thinkthen_contract::{
-    Annotated, Cancel, Edge, Engine, Entity, ErrorKind, Kind, MAX_RELATE_RECORDS,
+    Annotated, Cancel, Edge, Engine, Entity, ErrorKind, MAX_RELATE_RECORDS,
     Options, Question, QuestionSet, Recognize, Relate,
 };
 use thinkthen_standin::BlockingEngine;
@@ -342,6 +342,7 @@ fn details(context: &Context<'_>) -> Result<Option<String>, Error> {
     let object = serde_json::json!({
         "probability": audit.probability,
         "answer": audit.answer.value(),
+        "nearest": audit.nearest,
         "model": audit.model,
         "digest": audit.digest,
         "sends": audit.sends,
@@ -923,13 +924,59 @@ unsafe impl VTabCursor for RelateCursor {
                 "thinkthen_relate: the body column argument is required",
             ))
         })?;
-        let mut ask = Relate::new();
-        for column in RELATE_R1..=RELATE_R4 {
-            if let Some(name) = get(column) {
-                if !name.is_empty() {
-                    ask = ask.relation(name, Kind::Any, Kind::Any).map_err(failure)?;
+        let ask: Relate;
+        let slots: Vec<&str> = (RELATE_R1..=RELATE_R4)
+            .filter_map(|column| get(column))
+            .filter(|value| !value.is_empty())
+            .collect();
+        if slots.len() == 1 && slots[0].starts_with('@') {
+            // The file form: the question file's `relate` section, or the
+            // whole file when it carries no section — the contract's own
+            // parser reads it, so no grammar lives here.
+            let text = named_file(slots[0]).map_err(local_failure)?;
+            let value: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
+                failure(thinkthen_contract::Error::usage(format!(
+                    "the question file {} is not JSON: {error}",
+                    &slots[0][1..]
+                )))
+            })?;
+            let section = value.get("relate").cloned().unwrap_or(value);
+            ask = Relate::from_json(&section.to_string()).map_err(failure)?;
+        } else if slots.len() == 1 && slots[0].starts_with('{') {
+            ask = Relate::from_json(slots[0]).map_err(failure)?;
+        } else {
+            // The inline rule grammar, one slot per rule: `NAME` or
+            // `NAME=SOURCE:TARGET`, with a leading `either:` for the
+            // both-ways rule and `*` for any kind at an end. The slots
+            // translate into the question file's own grammar and the
+            // contract's parser reads that, so the spellings cannot drift.
+            let mut relations: Vec<serde_json::Value> = Vec::new();
+            let mut eithers: Vec<serde_json::Value> = Vec::new();
+            for value in &slots {
+                let (either, rule) = match value.strip_prefix("either:") {
+                    Some(rest) => (true, rest),
+                    None => (false, *value),
+                };
+                match rule.split_once('=') {
+                    Some((name, ends)) => {
+                        let (source, target) = ends.split_once(':').ok_or_else(|| {
+                            failure(thinkthen_contract::Error::usage(format!(
+                                "the relation rule {name} names one end; the ruled spelling is NAME=SOURCE:TARGET"
+                            )))
+                        })?;
+                        relations.push(serde_json::json!({
+                            "name": name,
+                            "source": source,
+                            "target": target,
+                            "either": either,
+                        }));
+                    }
+                    None if either => eithers.push(serde_json::json!(rule)),
+                    None => relations.push(serde_json::json!(rule)),
                 }
             }
+            let spec = serde_json::json!({ "relations": relations, "either": eithers });
+            ask = Relate::from_json(&spec.to_string()).map_err(failure)?;
         }
         let (ids, texts) = read_records(self.db, table, id_col, body_col).map_err(failure)?;
         let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
@@ -1052,15 +1099,17 @@ fn init(connection: Connection) -> Result<bool, Error> {
         ));
     }
     let volatile = FunctionFlags::SQLITE_UTF8;
-    let plain = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC;
+    // The ruled page holds: the functions are volatile and
+    // `SQLITE_DETERMINISTIC` stays off, so no paid call is legal in an
+    // index expression or a CHECK constraint.
     connection.create_scalar_function("thinkthen_decide", 2, volatile, decide)?;
-    connection.create_scalar_function("thinkthen_choose", 2, plain, choose)?;
-    connection.create_scalar_function("thinkthen_score", 2, plain, score)?;
-    connection.create_scalar_function("thinkthen_tag", 2, plain, tag)?;
+    connection.create_scalar_function("thinkthen_choose", 2, volatile, choose)?;
+    connection.create_scalar_function("thinkthen_score", 2, volatile, score)?;
+    connection.create_scalar_function("thinkthen_tag", 2, volatile, tag)?;
     connection.create_scalar_function("thinkthen_annotate", 2, volatile, annotate)?;
     connection.create_scalar_function("thinkthen_details", 2, volatile, details)?;
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
-    connection.create_aggregate_function("thinkthen_warm", 2, plain, Warm)?;
+    connection.create_aggregate_function("thinkthen_warm", 2, volatile, Warm)?;
     connection.create_module(c"thinkthen_recognize", &RECOGNIZE_MODULE, None)?;
     connection.create_module(c"thinkthen_relate", &RELATE_MODULE, None)?;
     Ok(false)
