@@ -35,10 +35,10 @@ const FRAMING_BY_FN = [
 ];
 
 const EXITS = [
-  [0, 'yes', 'The command finished. On a single text, decide answers yes.'],
-  [1, 'no', 'A single text under decide answers no. No other function exits 1.'],
+  [0, 'yes', 'The command finished. On a single piece of evidence, decide answers yes.'],
+  [1, 'no', 'A single piece of evidence under decide answers no. No other function exits 1.'],
   [2, 'broken', 'A usage error or an input error. The failing record sent nothing.'],
-  [3, 'unsure', 'A single text under decide or choose is not sure. Under find --none, nothing fits.'],
+  [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
   [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
   [6, 'broken', 'annotate only. The run read all its input, and one or more questions failed. It prints no diagnostic, because the result marks each failed question.'],
@@ -236,7 +236,7 @@ const COUNTS = [
   <p>The key is read from <code>{KEY_VARIABLE}</code> and from nowhere else. It goes only to the address you named. It never reaches a plan, a result, a saved answer, a log line, or an error.</p>
 
   <h2>The cache</h2>
-  <p>The cache is on by default. Ask the same question of the same text again and the tool reads the saved answer instead of sending a request.</p>
+  <p>The cache is on by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request.</p>
   <ul>
     <li>One exchange per file, named <code>DIGEST.json</code>, schema <code>thinkthen.recording/1</code>, five fields in order: <code>schema</code>, <code>adapter</code>, <code>url</code>, <code>request</code>, <code>response</code>.</li>
     <li><code>DIGEST</code> is the SHA-256, in lowercase hex, of the adapter name, a newline, the address, a newline, and the request body exactly as the adapter encoded it. The same command finds the same entry.</li>

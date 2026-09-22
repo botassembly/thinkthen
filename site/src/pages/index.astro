@@ -47,13 +47,13 @@ const sixHowtos = HOWTOS.slice(0, 6);
     ))}
   </div>
 
-  <p>This is a classifier you do not train. There is no training step. Ask many questions about one text and the answers come back in parallel. The probability was the training target. Nothing added it afterward.</p>
+  <p>This is a classifier you do not train. There is no training step. Ask many questions about one piece of evidence and the answers come back in parallel. The probability was the training target. Nothing added it afterward.</p>
 
   <p class="pagelinks"><a href="/install/">Every way to install it</a></p>
 
   <div class="facts">
     <div class="fact"><b>An exit code your script branches on</b><span>0 is yes, 1 is no, 3 is not sure.</span></div>
-    <div class="fact"><b>About a penny for a thousand answers</b><span>1.2 cents for 1,000 short texts, from the live probe.</span></div>
+    <div class="fact"><b>About a penny for a thousand answers</b><span>1.2 cents for 1,000 short records, from the live probe.</span></div>
     <div class="fact"><b>A probability on every answer</b><span>You set the bar. The middle goes to a person.</span></div>
   </div>
 
@@ -95,7 +95,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
   <h2>What it will not do</h2>
   <ul>
     <li>It writes nothing. A function reads the evidence and answers one bounded question. It never edits, summarises, or composes.</li>
-    <li>It decides nothing. ThinkThen judges. Your own code turns an answer into an action.</li>
+    <li>It never acts. It runs no command. Your own code turns an answer into an action.</li>
     <li>It does not chat, and it holds no conversation across calls.</li>
     <li>It does not promise an accuracy. {FACTS.cost.rows[0][0]} is a cost. It says nothing about how often an answer is right. Measure a question against your own labeled records before you trust it.</li>
   </ul>
