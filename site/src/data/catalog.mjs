@@ -33,7 +33,7 @@ const COMMON_OPTIONS = [
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
-  ['--jobs N', 'How many requests run at once, from 1 to 32. The default is 4.'],
+  ['--jobs N', 'How many requests run at once over a stream of records, from 1 to 32. The default is 4. Outside record mode every function refuses it, and annotate alone takes it on one document.'],
 ];
 
 export const FUNCTIONS = [
