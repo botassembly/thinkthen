@@ -2,7 +2,7 @@
 
 Date: 2026-09-22
 
-Status: landed
+Status: landed on branch `surfaces`; not yet merged to main.
 
 ## Result
 
