@@ -1,0 +1,67 @@
+#!/bin/sh
+# The workspace lint pass: every standalone workspace in this repository
+# (the contract, the stand-in, and each surface) builds through its own
+# Cargo.toml, so the root workspace's `--workspace` Clippy never sees
+# them. This script runs Clippy over each one with the rules its own
+# manifest declares ([lints] tables), which is where the strict rules
+# live for a tree that cannot share a workspace.
+#
+# One toolchain pin governs the repository: rust-toolchain.toml's 1.93.1,
+# which CI installs and every manifest's rust-version names or undercuts.
+# The single recorded exception is the Rust surface's Polars feature test
+# (RUSTUP_TOOLCHAIN=1.95, sysinfo 0.39 refuses 1.93; libraries/rust/NOTES.md).
+#
+# Formatting is not checked here: the surface workspaces are not yet
+# rustfmt-clean (a mechanical formatting wave is recorded as its own
+# follow-up), and this pass covers the lint rules only. A workspace whose
+# host toolchain is absent skips with its reason rather than failing a
+# machine that cannot build it.
+set -u
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+# A rung never answers to the shell that called it: a stray key or address
+# in the environment must not turn a check into a paid call.
+unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+
+if ! command -v cargo >/dev/null 2>&1; then
+	printf '%s\n' 'lint-workspaces: cargo is not on PATH' >&2
+	exit 1
+fi
+
+fail=0
+for entry in \
+	'contract:' \
+	'standin:' \
+	'libraries/rust:' \
+	'libraries/c:' \
+	'libraries/python:python3' \
+	'libraries/r/thinkthen/src/rust:R' \
+	'libraries/typescript/addon:node' \
+	'libraries/ruby:ruby' \
+	'databases/duckdb:' \
+	'databases/sqlite:' \
+	'databases/postgresql:pg_config' \
+; do
+	workspace=${entry%%:*}
+	needs=${entry#*:}
+	if [ ! -f "$workspace/Cargo.toml" ]; then
+		printf 'lint: %s skipped: not landed\n' "$workspace"
+		continue
+	fi
+	if [ -n "$needs" ] && ! command -v "$needs" >/dev/null 2>&1; then
+		printf 'lint: %s skipped: %s is not on PATH\n' "$workspace" "$needs"
+		continue
+	fi
+	printf 'lint: %s\n' "$workspace"
+	if ! (cd "$workspace" && cargo clippy --locked --quiet --all-targets); then
+		fail=1
+	fi
+done
+
+if [ "$fail" -ne 0 ]; then
+	printf '%s\n' 'lint-workspaces: a workspace failed its lint rules' >&2
+	exit 1
+fi
+printf '%s\n' 'lint-workspaces: every landed workspace is clean'

@@ -1,3 +1,9 @@
+# One toolchain pin for the repository: 1.93.1. CI installs exactly this
+# channel from this file, every manifest's rust-version names it or a lower
+# floor, and every lane's builds and tests ran under it. The single recorded
+# exception is the Rust surface's Polars feature test, which runs under
+# RUSTUP_TOOLCHAIN=1.95 because sysinfo 0.39 refuses 1.93 (libraries/rust/
+# NOTES.md, experiment 228). Nothing else may drift from the pin.
 [toolchain]
 channel = "1.93.1"
 profile = "minimal"

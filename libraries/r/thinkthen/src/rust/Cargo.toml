@@ -30,3 +30,15 @@ lto = true
 codegen-units = 1
 
 [workspace]
+
+# The strict lint rules, matching the house set every standalone workspace
+# carries: extendr owns the unsafe here, so the rules are the Rust ones
+# this crate can hold, plus the three clippy denies every workspace shares.
+[lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "forbid"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"

@@ -1414,8 +1414,12 @@ fn init(connection: Connection) -> Result<bool, Error> {
 /// registers the functions and touches no wire; the engine is built
 /// lazily on the first call, and a fork is repaired by the engine's
 /// process check.
+///
+/// Unsafe to call from Rust: the three pointers are SQLite's own, and
+/// only the host may hand them over (clippy's `not_unsafe_ptr_arg_deref`
+/// names the same contract).
 #[unsafe(no_mangle)]
-pub extern "C" fn sqlite3_thinkthen_init(
+pub unsafe extern "C" fn sqlite3_thinkthen_init(
     db: *mut ffi::sqlite3,
     message: *mut *mut c_char,
     api: *mut ffi::sqlite3_api_routines,

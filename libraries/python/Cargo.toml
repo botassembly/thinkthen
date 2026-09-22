@@ -2,6 +2,7 @@
 name = "thinkthen-python"
 version = "0.0.1"
 edition = "2021"
+rust-version = "1.93.1"
 publish = false
 
 [lib]
@@ -32,3 +33,19 @@ synthetic-partial = ["thinkthen-standin/synthetic-partial"]
 # A surface builds on its own, outside the crates workspace, so its
 # binding's profile and toolchain never leak into the command.
 [workspace]
+
+# The strict lint rules, matching the house set every standalone workspace
+# carries: this surface's FFI keeps unsafe (pyo3 owns it), so the rules
+# here are the Rust ones it can hold, plus the three clippy denies every
+# workspace shares.
+[lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "forbid"
+# `unreachable_pub` cannot apply here yet: src/generated.rs registers the
+# module with a `pub fn` the generator emits; restricting it is a change
+# to scripts/generate_functions.py, recorded for the follow-up wave.
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"

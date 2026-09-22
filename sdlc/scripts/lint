@@ -15,3 +15,7 @@ cargo deny --offline check advisories bans licenses
 cargo fmt --all -- --check
 cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
+# The contract, the stand-in, and every surface build through their own
+# Cargo.toml, which `--workspace` above never sees; the workspace pass
+# runs Clippy over each with the rules its own manifest declares.
+sdlc/scripts/lint-workspaces
