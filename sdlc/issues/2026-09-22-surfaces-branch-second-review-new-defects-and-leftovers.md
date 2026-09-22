@@ -133,3 +133,17 @@ The full gate ran with the stub up on all ten ports and no key in the environmen
 **Merge and records:** the three rulings now have their ADRs (`79a7efd`, `aaccc63`) and the merge trial has its own issue (`4b4f85b`); commits from the wave on end with `refs surfaces-review-1` or `refs surfaces-review-2`; the panic guard and its message are the contract's (`4a62fdb`); the surfaces ratchet counts the new trees (`3025378`, pinned `ce177c1`); the two unmaintained crates are recorded with their plans (`f0e9126`).
 
 **One new blocker found by this verification and fixed:** the Ruby wire interrupt proof segfaulted 3 of 3 pre-fix runs (exit 139; eight `ttb-worker` threads faulting in `Error::guard` over freed memory after the call returned — the poll's caller-token path returned without hearing the raise, and MRI delivered it inside the batch, skipping the scope that joins the workers). `hear_interrupts` now runs on every poll path and `without_gvl` drains after the call (`3238ed0`); the proof passes 4 of 4 and the whole Ruby surface check exits 0 with 84 ok-lines.
+
+## Closure: phase 4 (hygiene, licenses, stub, hermeticity) — fixed on 2026-09-23, `37240fd` (refs surfaces-review-2)
+
+The final verification had marked this group open with the merge ticket as owner; the orphaned phase-4 lane reclaimed and closed it. Proof commands run against the committed tree:
+
+- Private names and home paths: 29 tracked files outside sdlc/ swept to generic wording; five home paths made relative or environment-based. `python3 scripts/check_no_private_refs.py` → `ok: no private repository names or home paths outside sdlc/`, exit 0; planted violation → exit 1; removed → exit 0. The check is wired into the gate.
+- Root notes: the four NOTES-*.md files live under `sdlc/records/surfaces-notes/`; every reference updated (HANDOFF, FINDINGS, SURFACES, MERGE-NOTE, scripts).
+- Licenses: MIT on all seven missing manifests (Python Cargo+pyproject, Ruby Cargo+gemspec with `Gem::Platform::CURRENT`, TypeScript addon Cargo+package.json, R rust manifest) plus the R `LICENSE` file; R's five-folders-up reference replaced by `tools/make-tarball.sh` (stages contract/standin/thinkthen-core, check runs `--stage-only`).
+- Vendored DuckDB tools: 30 files down to the 5 the build reads, with a README recording upstream project, pin, license, and re-pin instructions.
+- Wire stub in-repo: `tools/wire-stub` builds offline in 7 s; the gate builds it when missing, starts one stub per port (300 ms — a zero delay let batches finish before cancel proofs tripped, caught on the first gate run), stops only what it started; no experiments/ dependency.
+- Hermeticity and Mac: `npm ci` on the lockfile; pinned requirements-dev.txt; postgres image by digest; Ruby toolchain by glob; `scripts/gate-hermeticity.md` records what cannot pin and why; Darwin spellings behind experimental headers; Mac evidence committed under `sdlc/records/2026-09-22-macos-artifacts/`.
+- Gates: full gate green twice on the committed content (929 green / 73 skipped / 18 diverged / 0 failed, wire stub up on all ten ports); the gate's counter now counts TAP `not ok` lines, closing the hole where Node failures were invisible in totals.
+
+With this, every row in both review tables reads fixed-with-proof except the items explicitly owned by the build team (the merge-as-a-build with the dependency retarget, the packing encode, row-at-a-time batching behind it) and the standing waiting-on-capability list.
