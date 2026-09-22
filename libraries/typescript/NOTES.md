@@ -202,3 +202,16 @@ ok 20 - every function example answers as the file says
 **Full check, `./check.sh`:** build, the addon unit test, the offline
 suites (46 tests: 40 pass, 6 skipped wire tests), the dead-address child,
 and `tsc` — all green, exit 0.
+
+
+## 2026-09-21 — the settle wave
+
+Wired to the contract's settlements (`1fe8173`): `deadlineMs` of zero or
+less is legal and spent immediately (case 27 unskipped and passing on the
+null backend; the runner threads `budget_ms` into the call); `nearest`
+rides in `details` (the level on a score question, null elsewhere); a
+built question plus `levels` refuses naming both, like `options` and
+`labels` already did. `rank` and `find` already returned the ruled pair.
+The addon's deadline filter now clamps at zero instead of dropping it.
+`node --test`: 45 pass, 0 fail; `tsc --strict` green; the name check
+green.

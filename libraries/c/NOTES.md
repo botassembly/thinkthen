@@ -380,3 +380,12 @@ $ ENGINE_NULL=1 python3 examples.py
 example as drawn, the leak check, the null suite (12 door tests), the
 deadline proof, the examples, and the conformance slice — all green; the
 wire twin skips with no stub on 8216; exit 0.
+
+
+## 2026-09-21 — the settle wave
+
+Wired to the contract's settlements (`1fe8173`): the no-verb message now
+lists all ten verbs including `filter` and `rank`; the audit JSON carries
+`nearest` (null on a decide question, the level's name on a score
+question, both asserted in `tests/door.rs`). The recorded cancel/deadline
+gaps stand as recorded. `check.sh` exit 0; the door's twelve tests green.

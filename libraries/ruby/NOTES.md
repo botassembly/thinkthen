@@ -230,3 +230,15 @@ the question files) and `check.sh` calls it:
 assertions), the fast cancel proof, the examples, the conformance slice
 green (73 and 74 included), and the slide sample. The wire interrupt proof
 skips with no stub on 8214; exit 0.
+
+
+## 2026-09-21 — the settle wave
+
+Wired to the contract's settlements (`1fe8173`): `rank` and `find` return
+the ruled pair — `Ranked` (place, record, probability) and `Found`
+(place, unit, probability) structs; `Ranked#to_s` prints its record so the
+deck's `puts mail` line runs as drawn; a built question plus members
+refuses naming both; `nearest` rides in `details`. The examples file's
+rank and find entries now show the pair, and the slide's rank assertion
+compares `map(&:record)`. `check.sh` green; the public-name check admits
+`Ranked`, `Found`, and `Ranked#to_s` with their citations.

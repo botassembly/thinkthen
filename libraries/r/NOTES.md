@@ -298,3 +298,13 @@ checks and the marker's list shape are new). The full `./check.sh` is
 green end to end: shim test, null suite, fast interrupt, examples,
 conformance (73 and 74 included), the recognize acceptance (34 checks),
 and the slide sample; the wire suite skips with no stub on 8215.
+
+
+**Also recorded here:** `R CMD INSTALL -l rlib thinkthen` failed with
+"cannot remove earlier installation" because the packaging rehearsal's
+container had installed `rlib/thinkthen` as root (the root-owned
+artifacts the adversarial review flagged). The stale tree was moved aside
+to `rlib/thinkthen-root-stale` (root-owned; a `sudo rm -rf` or a fresh
+clone clears it) and the install then succeeded. The wrappers file
+`thinkthen/R/extendr-wrappers.R` regenerated with the new `deadline`
+arguments and is committed.
