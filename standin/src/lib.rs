@@ -1064,8 +1064,8 @@ const fn phrase(status: u16) -> &'static str {
     }
 }
 
-/// The process state: one pool and one width gate, stamped with the pid
-/// and the transport shape it was built for.
+/// One settings value's state: a pool and a width gate, stamped with the
+/// pid and the settings it was built for.
 struct Inner {
     pid: u32,
     base: String,
@@ -1142,9 +1142,9 @@ const STATE_SLOTS: usize = 16;
 ///
 /// A fork during a batch leaves locks held by threads that do not exist in
 /// the child, so the child's rebuild path must take no lock any request
-/// path can hold. The read is one atomic load and an `Arc` clone a slot;
-/// the publish is a fresh construction and one compare-and-swap, and a
-/// value a replacement retires is leaked on purpose.
+/// path can hold. The read is one atomic load and an `Arc` clone per
+/// slot; the publish is a fresh construction and one compare-and-swap, and
+/// a value a replacement retires is leaked on purpose.
 static STATES: [AtomicPtr<Arc<Inner>>; STATE_SLOTS] =
     [const { AtomicPtr::new(ptr::null_mut()) }; STATE_SLOTS];
 
