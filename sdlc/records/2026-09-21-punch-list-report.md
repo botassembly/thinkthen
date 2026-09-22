@@ -137,15 +137,6 @@ stay in file order.
    `contract/tests/parser_fixtures.rs` (8 passed, 2 ignored with the
    production expectation named).
 
-**The gate, after all commits.** `scripts/check_surfaces.sh` on the final
-tree: contract tests, the stand-in's tests, the conformance validator (74
-cases), the generated function lists, the public-name check for all nine
-surfaces, and every surface's `check.sh` — `all landed checks green`,
-zero `FAILED` lines. The new sections ran inside it: the DuckDB
-host-SIGINT proof, SQLite's volatile-flag proof, and PostgreSQL's
-credential arm. The wire suites skipped by design because this lane
-started no stub. No `laneb-*` container remains (`docker ps -a`).
-
 **Waiting for a named engine capability**
 
 1. Python `recognize_stream` → `recognize_many(ask, texts)`.
@@ -280,6 +271,15 @@ reads a setting, and the slice is back to 73 of 74 with the known case
 6. PostgreSQL's batch paths back on their feet after the refusal's first
    placement — `7c86878`; conformance cases 19, 69, 70, and 72 green
    again.
+
+**The gate, after all commits.** `scripts/check_surfaces.sh` on the final
+tree: contract tests, the stand-in's tests, the conformance validator (74
+cases), the generated function lists, the public-name check for all nine
+surfaces, and every surface's `check.sh` — `all landed checks green`,
+zero `FAILED` lines. The new sections ran inside it: the DuckDB
+host-SIGINT proof, SQLite's volatile-flag proof, and PostgreSQL's
+credential arm. The wire suites skipped by design because this lane
+started no stub. No `laneb-*` container remains (`docker ps -a`).
 
 **Waiting for a named engine capability**
 
