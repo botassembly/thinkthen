@@ -21,7 +21,7 @@ The library team remains the only writer on `surfaces`. Use SWE-2 for bounded re
 
 Observed at resumption: main `c29e445` and surfaces `7fdb1fa` match their remote branches and have passing code gates. Ticket 0065 `6618694` is not an ancestor of main. The library report is committed on `surfaces`; its passing stand-in checks do not prove real-engine integration. The separate Pages workflow on main failed at `actions/configure-pages`, outside this engine lane.
 
-Ian subsequently authorized creating bounded tickets within this plan as each stage begins, with independent review before each implementation. Ticket 0066 implements wording-list items 2 and 5: the root help introduction and tag/annotate example layout. Independent design and code reviews accepted it, and the coordinator's full local ladder passed. Hosted verification and landing are pending. The remaining wording items stay open for verification or a separate ruling; this ticket does not close the forty-item issue.
+Ian subsequently authorized creating bounded tickets within this plan as each stage begins, with independent review before each implementation. Ticket 0066 implements wording-list items 2 and 5: the root help introduction and tag/annotate example layout. Independent design and code reviews accepted it, and the coordinator's full local ladder passed. Hosted gate run `35742562545` passed on `42039dd`; that revision landed on main and was pushed. The remaining wording items stay open for verification or a separate ruling; this ticket does not close the forty-item issue.
 
 ## Where things stand
 

@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs
 
 # 0066: Align the help introduction and example layout
 
-Status: in progress
+Status: landed
 
 ## Outcome and authority
 
@@ -34,4 +34,4 @@ Contract 1; State/timing 0; Reach 1; Proof 1; Cost of error 0; Total 3. Minimum 
 
 ## Review
 
-Independent Sol design review: ACCEPT, including re-review of the Clap override and executable-spec corrections. A fresh Sol code reviewer accepted the actual diff, public help, retained safety advice, and exact +74-line ratchet adjustment. SWE-2 observed the new layout and introduction tests fail before the fix and pass afterward. The coordinator ran all four gates and `git diff --check`: 547 Rust tests, doctests, replay checks, and nineteen green how-tos passed. Hosted verification and landing remain pending; `../records/0066-align-help-introduction-and-layout.md` records the evidence.
+Independent Sol design review: ACCEPT, including re-review of the Clap override and executable-spec corrections. A fresh Sol code reviewer accepted the actual diff, public help, retained safety advice, and exact +74-line ratchet adjustment. SWE-2 observed the new layout and introduction tests fail before the fix and pass afterward. The coordinator ran all four gates and `git diff --check`: 547 Rust tests, doctests, replay checks, and nineteen green how-tos passed. Hosted gate run `35742562545` passed on `42039dd`, which was then fast-forwarded to main and pushed. `../records/0066-align-help-introduction-and-layout.md` records the evidence.

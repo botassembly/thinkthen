@@ -1,6 +1,6 @@
 # 0066: Help introduction and example layout
 
-Status: Independently accepted; local gates passed; hosted verification and landing pending.
+Status: Landed on main as `42039dd266c54472a37e4338dc7fe9edb595a020` after hosted gate run `35742562545` passed on that exact revision. The coordinator fast-forwarded main, pushed it, and verified ancestry. This follow-up records the completed landing; it changes no product source.
 
 ## What changed
 
