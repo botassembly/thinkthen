@@ -5,7 +5,7 @@
     "inputs": [
       {
         "name": "tickets.json",
-        "text": "[{\"id\": \"T-101\", \"created\": \"2026-09-20\", \"body\": \"Charged twice this month. Please refund one.\"},\n {\"id\": \"T-102\", \"created\": \"2026-09-21\", \"body\": \"The export button does nothing in Safari.\"},\n {\"id\": \"T-103\", \"created\": \"2026-09-21\", \"body\": \"How do I add a second admin?\"},\n {\"id\": \"T-104\", \"created\": \"2026-09-22\", \"body\": \"The site has been down for our whole team since 9am.\"}]"
+        "text": "[{\"id\": \"T-101\", \"created\": \"2026-09-20\", \"body\": \"The login page rejects my new password after a reset.\"},\n {\"id\": \"T-102\", \"created\": \"2026-09-21\", \"body\": \"The export button does nothing in Safari.\"},\n {\"id\": \"T-103\", \"created\": \"2026-09-21\", \"body\": \"How do I add a second admin?\"},\n {\"id\": \"T-104\", \"created\": \"2026-09-22\", \"body\": \"The site has been down for our whole team since 9am.\"}]"
       },
       {
         "name": "triage.json",
@@ -16,7 +16,7 @@
       {
         "name": "tickets",
         "command": "jq -c '.[]' tickets.json \\\n    | thinkthen annotate triage.json --jsonl --field /body --jobs 16 --details \\\n    | jq -c '.input + .value | del(.body)'",
-        "output": "{\"id\":\"T-101\",\"created\":\"2026-09-20\",\"kind\":\"billing\",\"urgency\":0.79}\n{\"id\":\"T-102\",\"created\":\"2026-09-21\",\"kind\":\"bug\",\"urgency\":0.88}\n{\"id\":\"T-103\",\"created\":\"2026-09-21\",\"kind\":\"question\",\"urgency\":0.01}\n{\"id\":\"T-104\",\"created\":\"2026-09-22\",\"kind\":\"bug\",\"urgency\":1.99}",
+        "output": "{\"id\":\"T-101\",\"created\":\"2026-09-20\",\"kind\":\"bug\",\"urgency\":1.16}\n{\"id\":\"T-102\",\"created\":\"2026-09-21\",\"kind\":\"bug\",\"urgency\":0.88}\n{\"id\":\"T-103\",\"created\":\"2026-09-21\",\"kind\":\"question\",\"urgency\":0.01}\n{\"id\":\"T-104\",\"created\":\"2026-09-22\",\"kind\":\"bug\",\"urgency\":1.99}",
         "exit": 0
       },
       {
