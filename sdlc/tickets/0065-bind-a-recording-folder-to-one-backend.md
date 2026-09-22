@@ -6,7 +6,7 @@ opens: crates/thinkthen specification sdlc/issues sdlc/planning sdlc/ratchet.jso
 
 # 0065: Bind a recording folder to one backend
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
@@ -59,4 +59,4 @@ Complexity: Contract 2, state and timing 2, reach 1, proof 2, cost of error 1; t
 
 ## Landing review
 
-Ian transferred completion to the architect after the original owner stopped. Fresh independent code review found missing directory syncs on matching-marker reuse and concurrent-winner paths. Sol remediated them within this accepted durability contract; the same reviewer accepted the fix. Regression tests failed before the fix and passed afterward, including read-only exclusion. The coordinator's full combined ladder passed 568 Rust tests and nineteen green how-tos at an exact 33,839-line ceiling. Hosted verification and main landing remain pending; the matching record distinguishes original branch evidence from final integration evidence.
+Ian transferred completion to the architect after the original owner stopped. Fresh independent code review found missing directory syncs on matching-marker reuse and concurrent-winner paths. Sol remediated them within this accepted durability contract; the same reviewer accepted the fix. Regression tests failed before the fix and passed afterward, including read-only exclusion. The coordinator's full combined ladder passed 568 Rust tests and nineteen green how-tos at an exact 33,839-line ceiling. Hosted gate run `35748913958` passed on integrated revision `ba60f04`, which the coordinator fast-forwarded to main and pushed. The matching record distinguishes original branch evidence from final integration evidence.
