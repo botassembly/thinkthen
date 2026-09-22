@@ -10,6 +10,22 @@ echo "== duckdb surface: build the extension"
 make release >/dev/null
 test -s build/release/thinkthen.duckdb_extension
 
+echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
+# The stand-in's partial-failure opt-in is a compile-time door, so the one
+# conformance case that replays the failed marker (74) runs against a
+# second build that carries it, exactly the way the C surface builds its
+# door test. The default extension stays the one every other step loads.
+DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
+  cargo build --release --quiet --features synthetic-partial
+./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
+  -o build/fixture/thinkthen.duckdb_extension \
+  -l target/release/libthinkthen.so \
+  -n thinkthen -dv v1.5.5 \
+  -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
+test -s build/fixture/thinkthen.duckdb_extension
+
+export ENGINE_FIXTURE_EXTENSION="$PWD/build/fixture/thinkthen.duckdb_extension"
+
 echo "== duckdb surface: the error-mapping test"
 cargo test --release --quiet --lib
 
@@ -21,6 +37,21 @@ tools/mapping_suite.sh
 
 echo "== duckdb surface: the security and boundary suite"
 tools/security_suite.sh
+
+echo "== duckdb surface: the relate guard suite"
+tools/relate_guard_suite.sh
+
+echo "== duckdb surface: the @file open count"
+tools/atfile_suite.sh
+
+echo "== duckdb surface: the stand-in is named only at the connector line"
+standin_extra=$(grep -rn "thinkthen_standin" src/*.rs | grep -v "use thinkthen_standin::StandinConnector;" || true)
+if [[ -n "$standin_extra" ]]; then
+  echo "FAILED   stand-in references beyond the connector line:"
+  printf '%s\n' "$standin_extra"
+  exit 1
+fi
+echo "ok       the only stand-in reference is the connector import"
 
 echo "== duckdb surface: the conformance driver can fail"
 tools/conformance_selftest.sh
@@ -46,6 +77,20 @@ echo "== duckdb surface: the host's SIGINT coexistence, the job-2 shape"
 
 echo "== duckdb surface: the function examples"
 python3 tools/examples.py
+
+echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
+# The stand-in's partial-failure opt-in is a compile-time door, so the one
+# conformance case that replays the failed marker (74) runs against a
+# second build that carries it, exactly the way the C surface builds its
+# door test. The default extension stays the one every other step loads.
+DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
+  cargo build --release --quiet --features synthetic-partial
+./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
+  -l target/release/libthinkthen.so \
+  -o build/fixture/thinkthen.duckdb_extension \
+  -n thinkthen -dv v1.5.5 \
+  -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
+test -s build/fixture/thinkthen.duckdb_extension
 
 echo "== duckdb surface: conformance slice"
 python3 tools/conformance.py

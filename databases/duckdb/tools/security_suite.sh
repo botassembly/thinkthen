@@ -49,7 +49,7 @@ refuse "annotate @set refuses with access off" \
   "$(run "SET enable_external_access=false; SELECT thinkthen_annotate('@$CUT', 'maybe later');")"
 
 refuse "relate @rules file refuses with access off" \
-  "enable_external_access is off for the calling database" \
+  "enable_external_access is off for this database" \
   "$(run "SET enable_external_access=false; CREATE TABLE s(id INTEGER, body VARCHAR); INSERT INTO s VALUES (1, 'the payment failed'); SELECT * FROM thinkthen_relate('SELECT id, body FROM s', ['@$CUT']);")"
 
 # The switch is what refuses, not the path: with access on the same call
@@ -71,3 +71,27 @@ expect "relate names the temporary-table boundary" \
 expect "a missing non-temporary table keeps the raw error" \
   "Catalog Error: Table with name nope does not exist" \
   "$(run "SELECT * FROM thinkthen_relate('SELECT id, body FROM nope', ['caused_by']);")"
+
+# The other access settings are honored the same way: `allowed_directories`
+# carves an exception out of a switched-off database, and the path outside
+# it still refuses.
+OUTSIDE=$(mktemp /tmp/thinkthen-outside-XXXX.json)
+cp "$CUT" "$OUTSIDE"
+expect "allowed_directories admits the file it names" "true" \
+  "$(run "SET allowed_directories=['$ROOT/tools']; SET enable_external_access=false; SELECT thinkthen_decide('@$CUT', 'I demand a refund today');")"
+refuse "allowed_directories refuses the file it does not name" \
+  "outside its allowed_paths and allowed_directories" \
+  "$(run "SET allowed_directories=['$ROOT/tools']; SET enable_external_access=false; SELECT thinkthen_decide('@$OUTSIDE', 'I demand a refund today');")"
+rm -f "$OUTSIDE"
+
+# `disabled_filesystems` lives in the file system, not in a readable
+# setting, so the read goes through DuckDB's own file system and its own
+# words refuse.
+refuse "disabled_filesystems refuses a local read" \
+  "File system LocalFileSystem has been disabled by configuration" \
+  "$(run "SET disabled_filesystems='LocalFileSystem'; SELECT thinkthen_decide('@$CUT', 'I demand a refund today');")"
+
+# `thinkthen_relations` takes the same door as the other scalar reads.
+refuse "relations @file refuses with access off" \
+  "enable_external_access is off for this database" \
+  "$(run "SET enable_external_access=false; SELECT unnest(thinkthen_relations('the payment failed', '@$CUT'));")"

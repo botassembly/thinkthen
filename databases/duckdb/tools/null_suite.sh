@@ -36,9 +36,20 @@ expect "tag holds"         "[refund]" "$(run "SELECT thinkthen_tag('What is here
 expect "details digest"    "0b3e8345de7cbf9087b061df9dfaa4a3a467f3c6dc2f84d59b534497ed858996" \
   "$(run "SELECT thinkthen_details('Is this a complaint?', 'I demand a refund today').digest;")"
 expect "details score nearest" "mid" "$(run "SELECT thinkthen_details('{\"score\":\"How strong?\",\"levels\":[\"low\",\"mid\",\"high\"]}', 'maybe later').nearest;")"
-expect "annotate object"   '{"band":null,"spam":true}' \
+expect "annotate object"   '{"spam":true,"band":null}' \
   "$(run "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');")"
 expect "warm count"        "2"     "$(run "SELECT thinkthen_warm('Is this a complaint?', t) FROM (SELECT unnest(['refund now','refund again']) t);")"
+
+# The aggregate binds the question the first row carries and judges under
+# it; a group carrying more than one question refuses instead of judging
+# every text under whichever question came last (review item 6).
+expect "warm judges the question the rows carry" "2" \
+  "$(run "SELECT thinkthen_warm(q, t) FROM (VALUES ('Is this a complaint?', 'refund now'), ('Is this a complaint?', 'refund again')) AS v(q, t);")"
+expect "warm grouped by question judges each group" "2" \
+  "$(run "SELECT sum(w) FROM (SELECT thinkthen_warm(q, t) AS w FROM (VALUES ('Is this a complaint?', 'refund now'), ('Is this spam?', 'refund again')) AS v(q, t) GROUP BY q);")"
+expect "warm refuses a group carrying two questions" \
+  "thinkthen_warm judges one question per group, and this group carries more than one" \
+  "$(run "SELECT thinkthen_warm(q, t) FROM (VALUES ('Is this a complaint?', 'refund now'), ('Is this spam?', 'refund again')) AS v(q, t);")"
 expect "usage rows"        "requests" "$(run "SELECT metric FROM thinkthen_usage() LIMIT 1;")"
 expect "usage error kind"  "thinkthen usage" \
   "$(run "SELECT thinkthen_decide('   ', 'anything');")"
@@ -47,11 +58,16 @@ expect "backend error kind" "thinkthen backend" \
 expect "list-refusal kind" "thinkthen usage" \
   "$(run "SELECT thinkthen_choose('@$ROOT/tools/null-cut.json', 'text', ['a','b']);")"
 
-# The warm poison raises once, then clears: one failed warm must not fail
-# those pairs forever. One process, piped so the CLI continues past the
-# raised error, then the same pair's read answers.
-poison_out=$(printf "LOAD '%s';\nSELECT thinkthen_warm('Poison probe?', t) FROM (SELECT unnest(['refund now','this malformed line']) t);\nSELECT thinkthen_decide('Poison probe?', 'refund now');\nSELECT thinkthen_decide('Poison probe?', 'refund now');\n" "$EXT" | ENGINE_NULL=1 "$CLI" -unsigned -noheader -list 2>&1 || true)
-poison_count=$(printf '%s\n' "$poison_out" | grep -c "thinkthen backend" || true)
-poison_last=$(printf '%s\n' "$poison_out" | tail -1)
-expect "poison raises once" "1" "$poison_count"
-expect "poison clears and the pair answers" "true" "$poison_last"
+# A failed warm raises as the warm query's own error, and nothing is
+# poisoned afterwards: one failed warm must not fail those pairs forever,
+# and it must not count the failure as zero either. One process, piped so
+# the CLI continues past the raised error, then the same pair's read
+# answers.
+warm_out=$(printf "LOAD '%s';\nSELECT thinkthen_warm('Poison probe?', t) FROM (SELECT unnest(['refund now','this malformed line']) t);\nSELECT thinkthen_decide('Poison probe?', 'refund now');\nSELECT thinkthen_decide('Poison probe?', 'refund now');\n" "$EXT" | ENGINE_NULL=1 "$CLI" -unsigned -noheader -list 2>&1 || true)
+warm_error_line=$(printf '%s\n' "$warm_out" | head -1)
+warm_error_count=$(printf '%s\n' "$warm_out" | grep -c "thinkthen backend" || true)
+warm_last=$(printf '%s\n' "$warm_out" | tail -1)
+expect "warm failure raises as the warm's own error" "thinkthen backend" \
+  "$(printf '%s' "$warm_error_line" | grep -o 'thinkthen backend' | head -1)"
+expect "warm failure raises once" "1" "$warm_error_count"
+expect "nothing stays poisoned and the pair answers" "true" "$warm_last"

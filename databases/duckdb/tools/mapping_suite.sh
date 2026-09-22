@@ -87,6 +87,6 @@ SELECT count(*) FILTER (WHERE thinkthen_details('Is this a complaint?', t).diges
 FROM (SELECT unnest(['I demand a refund today', 'I demand a refund today', NULL, 'I demand a refund today']) AS t);")"
 
 expect "annotate repeated text answers every row" "3|1" "$(run "
-SELECT count(*) FILTER (WHERE thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', t) = '{\"band\":null,\"spam\":true}')
+SELECT count(*) FILTER (WHERE thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', t) = '{\"spam\":true,\"band\":null}')
     || '|' || count(*) FILTER (WHERE thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', t) IS NULL)
 FROM (SELECT unnest(['maybe later', 'maybe later', NULL, 'maybe later']) AS t);")"

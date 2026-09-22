@@ -515,3 +515,195 @@ suite, security suite, conformance driver and its selftest, cancel, host
 signal, examples, re-arm, two databases, panic guards, the slide, the
 recognize acceptance, and the wire suite when a stub is up (skipped
 offline, and said so).
+
+## 2026-09-22 — the second review wave on the DuckDB surface
+
+The second review's DuckDB items, fixed on this surface only, with the
+commands that prove each one. Every new test was run against the built
+extension (null backend, offline, no key); the gate is `check.sh`, and
+its last run on this wave ends `207 ok`, no `FAILED`, exit 0.
+
+**Relate reads records and nothing else (review items 1 and 2).** The
+query is refused when it holds more than one statement
+(`duckdb_extract_statements` counts them), and it runs inside
+`BEGIN TRANSACTION READ ONLY`, rolled back either way, so no statement
+it holds can write and nothing it does commits beside the caller's own
+transaction. The review's exact scenario — a DELETE inside the relate
+query surviving the caller's ROLLBACK — is the first test in
+`tools/relate_guard_suite.sh`:
+
+```
+ok       relate refuses a DELETE inside its query
+ok       the DELETE never happened, the caller's ROLLBACK included
+```
+
+The refusal is DuckDB's own: `Cannot write to database "memory" -
+transaction is launched in read-only mode`. A second statement gets
+`the relate query is one SQL statement and this one holds 2`.
+
+**Routing by database identity (review item 13).** Names cannot tell two
+databases apart: two in-memory databases both report `memory`, and the
+first fix's name probing resolved exactly one match and failed both. Each
+load now registers an extension setting on its own database,
+`thinkthen_instance_token`, whose default value is unique to the load
+(process, serial, clock); a bind reads the caller's own token through
+`duckdb_client_context_get_config_option`, so the caller's database
+answers with its own identity and no name is consulted. Names remain the
+fallback when the setting could not register. `tools/two_databases.py`
+now proves four shapes: two file databases, two in-memory databases, the
+`ATTACH ... USE other` search path (the relate query runs under the
+caller's own `search_path` setting, read at scan time), and the release
+below:
+
+```
+ok       two in-memory databases each relate on their own connection
+ok       USE other reached the relate query: it read the attached table
+ok       leaving USE behind reads the main table again
+```
+
+**The kept connection closes with its database (review item 13, third
+part).** A kept connection holds the database instance alive, and with it
+the file's lock: after the caller closed every connection, the file
+stayed locked and an in-process reopen hung. A reaper thread now watches
+each kept connection's own `duckdb_connection_count()` and, when the kept
+connection is the only one left, disconnects it and forgets the entry;
+the query gate serializes its count and its disconnect against every
+other use. The reaper's first cut wrapped the function in `count(*)` and
+read the function's one row as a count of one, so every entry was reaped
+on the first tick; the count now reads the row's value, and the gate
+caught the mistake immediately (`two_databases.py` failed every
+in-memory case). Both halves are pinned:
+
+```
+ok       the closed database's file reopened in-process
+ok       another process opened the closed database's file
+```
+
+**The file-access door everywhere a file opens (review item 3).**
+`thinkthen_relations` now takes the same door as the other scalars; the
+door honors `allowed_directories` and `allowed_paths` the way
+`DBConfig::CanAccessFile` does (external access off, then the carve-outs),
+and the read itself goes through DuckDB's own file system
+(`duckdb_client_context_get_file_system` + `duckdb_file_system_open`), so
+`disabled_filesystems` refuses with DuckDB's own words — its state lives
+in the file system, not in a readable setting, which is why the setting
+read alone could not see it. A prepared relate re-checks at execution:
+
+```
+ok       allowed_directories admits the file it names
+ok       allowed_directories refuses the file it does not name
+ok       disabled_filesystems refuses a local read
+ok       relations @file refuses with access off
+ok       a prepared relate re-checks file access at execution
+```
+
+The refusal text for the plain switched-off case keeps its old wording
+plus the carve-out clause; `security_suite.sh`'s relate expectation was
+updated to the unified message.
+
+**Nested relate refuses instead of hanging (review item 6).** The inner
+call used to block forever on the gate its own outer query holds. DuckDB
+runs the inner query's callbacks on its own thread with the kept
+connection's own client context, so the discriminator is the connection
+id: the caller's id equals the kept connection's id exactly when the
+callback runs inside a query that connection is executing. The
+thread-local mark I tried first did not fire (the inner call arrived on
+another thread, which the debug run showed before it was removed), and
+the connection-id comparison does:
+
+```
+ok       a relate inside a relate refuses instead of hanging
+```
+
+**The interrupt boundary (review item 14, first half).** The 250 ms
+window cancelled the next query when a signal landed near a finished
+call (four runs in five). The rules now: the handler cancels while an
+engine call is in flight or while calls arrive in a burst (two call
+starts within `BURST_MS`, 10 ms, and the latest within it); a call takes
+a cancelled token while another call runs with it or the burst is
+active; a call that returned the cancelled kind marks the token spent,
+and the last call out clears it once the burst is over. Ten rounds of
+signal-after-a-lone-query all leave the next query answering, and the
+host-SIGINT chain arm still stops a running chunked query (1.00 s after
+the signal):
+
+```
+ok       ten interrupts near calls left the next query answering
+ok       a signal stopped the running query and reached the host's chained handler
+```
+
+Residual, named and unfixable with the calls the surface can see: a
+signal landing in the gap between a chunked query's last call and its
+return, when the next call already belongs to the next query, still
+cancels that next query. The C API exposes no per-query hook for scalar
+functions — `VScalar` carries only `invoke`, and the function-info
+accessors are `extra_info`, `bind_data`, `init_data`, and
+`local_init_data` — so the surface cannot tell "the next chunk of this
+query" from "the first chunk of the next one". The burst window is as
+close as call timings come; `tools/rearm_suite.py`'s docstring pins it.
+
+**DuckDB's own cancel (review item 14, second half).** `con.interrupt()`
+ends a relate or scalar query at DuckDB's next boundary, and the surface
+stays clean for the next query (`ok DuckDB's own interrupt ended the
+query (InterruptException) and the next answered`). It cannot reach
+*inside* an engine call: the C API has no progress or interrupt hook a
+table or scalar function can observe (`duckdb_table_function_set_progress`
+does not exist; the API's interrupt surface is `duckdb_interrupt`, which
+sets a connection's own flag). The engine call itself stops on the SIGINT
+token and on deadlines, which is the whole of what the door allows.
+
+**Warm judges under the right question, and errors are SQL errors
+(review item 6 of the leftovers).** The aggregate binds the question the
+first row carries instead of following the last one seen, and a group
+carrying more than one question refuses. Failures now raise through
+`duckdb_aggregate_function_set_error` — the channel the old poison map
+existed to work around — so the warm query itself hears them; the poison
+map, its scalar-side consumer, and the `counts as zero` path are gone.
+The null suite's poison block became a `warm failure raises as the warm's
+own error` proof, plus three new cases:
+
+```
+ok       warm judges the question the rows carry
+ok       warm grouped by question judges each group
+ok       warm refuses a group carrying two questions
+```
+
+**One question-file read per query (review item 7).** `@file` arguments
+were resolved per row, so a 20,000-row query opened the file 20,000
+times. Resolved questions are now cached by canonical path and
+modification time, so a query reads the file once and an edited file is
+read again. `tools/atfile_suite.sh` counts the opens with strace:
+
+```
+ok       one question file open for twenty thousand rows
+ok       an edited question file is read again
+```
+
+The first cut of that test measured nothing: `count(*)` over the
+projection let DuckDB drop the unused scalar, so the file was never read.
+The query must use the answer (`sum(...)`), which the suite's comment
+now says.
+
+**The stand-in is named only at the connector line (review item 8).**
+`thinkthen_standin::request_digest` is gone: a non-decide details row
+takes model, digest, nearest, requests, and failed_questions from the
+engine's own `details_opts`, the contract door the decide branch already
+used. A choose or tag reply has no engine details yet, so its details
+call now reports the engine's own refusal (`the answer carries no
+probability`, the kind `backend`) instead of a fabricated audit row; the
+struct's doc comment says so. `check.sh` proves the surface keeps exactly
+one stand-in reference:
+
+```
+ok       the only stand-in reference is the connector import
+```
+
+**Conformance-driver updates the other lanes' changes required.**
+Annotate fields come back in the set's own file order now, so the driver
+builds its expectation in that order, not sorted; the failed marker
+serializes `{"kind":...,"cause":...}`; and the stand-in's partial-failure
+opt-in is compile-time, so `check.sh` builds a second, fixture-armed
+extension beside the default one (the C surface's pattern) and the driver
+loads it for the one case that replays the marker. `null_suite.sh`,
+`mapping_suite.sh`, and `examples.json` carried the same stale annotate
+order and now carry the file order.

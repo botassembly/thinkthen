@@ -26,6 +26,14 @@ ROOT = Path(__file__).resolve().parent.parent
 # otherwise, so a corrupted copy proves this driver's exit code.
 CASES = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT.parent.parent / "conformance" / "conformance.json"
 EXTENSION = ROOT / "build" / "release" / "thinkthen.duckdb_extension"
+# The fixture-armed extension, built beside the default one by check.sh:
+# the stand-in's partial-failure opt-in is a compile-time door, so the one
+# case that replays the failed marker needs a build that carries it.
+FIXTURE_EXTENSION = (
+    Path(os.environ["ENGINE_FIXTURE_EXTENSION"]).resolve()
+    if os.environ.get("ENGINE_FIXTURE_EXTENSION")
+    else None
+)
 DUCKDB = ROOT / "duckdb-bin" / "duckdb"
 
 # How many checks failed; `main` turns any into a nonzero exit.
@@ -66,11 +74,11 @@ def run(sql: str, fixture: bool = False) -> str:
     """One statement batch through the stock CLI, values one per line.
     The whole batch rides in `-c` so the output is the plain list form
     exact comparison needs; an init file renders the interactive boxes.
-    `fixture` arms the stand-in's test-only partial-failure opt-in for
-    the one case that replays the failed marker."""
+    `fixture` loads the fixture-armed extension for the one case that
+    replays the failed marker; the opt-in is compile-time, so no
+    environment variable can arm a shipped build."""
+    extension = FIXTURE_EXTENSION if fixture and FIXTURE_EXTENSION else EXTENSION
     env = {**os.environ, "ENGINE_NULL": "1"}
-    if fixture:
-        env["ENGINE_SYNTHETIC_PARTIAL"] = "1"
     result = subprocess.run(
         [
             str(DUCKDB),
@@ -78,7 +86,7 @@ def run(sql: str, fixture: bool = False) -> str:
             "-noheader",
             "-list",
             "-c",
-            f"LOAD '{EXTENSION}'; {sql}",
+            f"LOAD '{extension}'; {sql}",
         ],
         capture_output=True,
         text=True,
@@ -231,15 +239,21 @@ def main() -> int:
                 check_annotate_rows(name, case, set_json, records)
                 continue
             answers = expect["answers"]
-            # The failed marker rides the stand-in's test-only opt-in; only
-            # a case whose expectation carries a `failed` member arms it.
+            # The failed marker rides the stand-in's compile-time opt-in;
+            # only a case whose expectation carries a `failed` member needs
+            # the fixture-armed extension.
             fixture = any("failed" in member for member in answers.values())
+            # The fields come back in the set's own order, the order the
+            # file names, so the expectation follows the set, not the
+            # alphabet.
             parts = []
-            for field, member in sorted(answers.items()):
+            fields_in_order = list(case["set"]) + [f for f in answers if f not in case["set"]]
+            for field in fields_in_order:
+                member = answers[field]
                 if "failed" in member:
                     failed = member["failed"]
                     parts.append(
-                        f'"{field}":{{"failed":{{"cause":"{failed["cause"]}","kind":"{failed["kind"]}"}}}}'
+                        f'"{field}":{{"failed":{{"kind":"{failed["kind"]}","cause":"{failed["cause"]}"}}}}'
                     )
                 else:
                     parts.append(

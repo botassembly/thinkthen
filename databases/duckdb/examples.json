@@ -26,7 +26,7 @@
     },
     "annotate": {
       "sql": "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",
-      "expected": "{\"band\":null,\"spam\":true}"
+      "expected": "{\"spam\":true,\"band\":null}"
     },
     "details": {
       "sql": "SELECT array_length(thinkthen_details('Is this a complaint?', 'I demand a refund today').requests);",
