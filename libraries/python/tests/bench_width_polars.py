@@ -9,10 +9,15 @@ Run with the stub up on 8211:
     ENGINE_BASE_URL=http://127.0.0.1:8211/v1 ENGINE_WIDTH=32 \
         .venv/bin/python tests/bench_width_polars.py
 
+BENCH_RECORDS shrinks the fixture (the gate runs 200 to keep its stub
+window short); the assertions scale with it, so the proof is the same
+shape at any size.
+
 No key, no paid call, loopback only.
 """
 
 import json
+import os
 import sys
 import time
 import urllib.request
@@ -22,6 +27,7 @@ import polars as pl
 import thinkthen as tt
 
 BASE = "http://127.0.0.1:8211/v1"
+RECORDS = int(os.environ.get("BENCH_RECORDS", "1000"))
 
 
 def stats():
@@ -37,7 +43,7 @@ def reset():
 
 def main():
     q = tt.question(decide="Does the customer ask for a refund?")
-    records = [f"ticket {place}: please refund order {place}" for place in range(1000)]
+    records = [f"ticket {place}: please refund order {place}" for place in range(RECORDS)]
     series = pl.Series("body", records)
 
     reset()
@@ -56,9 +62,9 @@ def main():
     print(f"series wall {series_wall:.3f} s  stats {series_stats}")
 
     assert kept_list == kept_series
-    assert len(kept_list) == 1000
+    assert len(kept_list) == RECORDS
     for label, seen in (("list", list_stats), ("series", series_stats)):
-        assert seen["requests"] == 1000, (label, seen)
+        assert seen["requests"] == RECORDS, (label, seen)
         assert seen["max_in_flight"] == 32, (label, seen)
     spread = abs(list_wall - series_wall) / max(list_wall, series_wall)
     print(f"spread {spread:.4%} of the slower run")

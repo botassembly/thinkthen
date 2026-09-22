@@ -8,6 +8,7 @@ cd "$(dirname "$0")"
 
 stub_url="http://127.0.0.1:8211/v1"
 wire=no
+skip_note='wire suites skipped: no stub on 8211'
 if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
   wire=yes
 fi
@@ -85,6 +86,10 @@ ENGINE_NULL=1 .venv/bin/python tests/test_cancel_fast.py
 echo "== recognize and relate at the scale the recordings carry"
 ENGINE_NULL=1 .venv/bin/python tests/bench_recognize_scale.py
 
+echo "== per-record cost through both containers, null backend"
+ENGINE_NULL=1 .venv/bin/python tests/bench_cost_polars.py
+ENGINE_NULL=1 .venv/bin/python tests/bench_cost_pandas.py
+
 echo "== the function examples, run as one test"
 ENGINE_NULL=1 .venv/bin/python tests/examples.py
 
@@ -108,4 +113,17 @@ if [ "$wire" = yes ]; then
   echo "== cancel on the wire"
   THINKTHEN_BASE_URL="$stub_url" ENGINE_WIDTH=8 \
     .venv/bin/python tests/test_cancel.py
+
+  # The width benches hold the equality proof (same gate, same request
+  # count, same in-flight high-water mark through every container). The
+  # gate runs them at a 200-record fixture to keep the stub window short;
+  # the recorded 1,000-record runs are the manual's numbers.
+  echo "== width equality on the wire, small fixture"
+  BENCH_RECORDS=200 ENGINE_BASE_URL="$stub_url" ENGINE_WIDTH=32 \
+    .venv/bin/python tests/bench_width_polars.py
+  BENCH_RECORDS=200 ENGINE_BASE_URL="$stub_url" ENGINE_WIDTH=32 \
+    .venv/bin/python tests/bench_width_pandas.py
+else
+  echo "== width equality on the wire, small fixture"
+  echo "$skip_note"
 fi

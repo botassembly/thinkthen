@@ -6,6 +6,10 @@
 # exactly as drawn, and remove the container. Nothing is published; the
 # install is from the local file only.
 #
+# `--dry-run` builds and stages the artifact and stops before any
+# container: the gate uses it to keep the build honest without installing
+# anywhere.
+#
 # Why zig: the host build wants glibc 2.39, and the DuckDB rehearsal showed
 # what that costs on older distributions; the pin is 2.28 here too.
 # RUSTFLAGS carries the host's libsqlite3 for the link step (zig has no
@@ -16,6 +20,11 @@
 # docker rm -f -v at the end.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+dry_run=no
+if [ "${1:-}" = "--dry-run" ]; then
+  dry_run=yes
+fi
 
 VERSION=$(tail -1 ../../VERSION)
 CONTAINER=dbpkg211-sqlite
@@ -53,6 +62,11 @@ the full path in .load. The extension links the host's own libsqlite3.so.0
 for its interrupt call; every SQLite host has it.
 EOF
 
+if [ "$dry_run" = yes ]; then
+  echo "== sqlite package: dry run, no container"
+  echo "dist/thinkthen.so staged and verified; the container half is not run"
+  exit 0
+fi
 echo "== sqlite package: clean ubuntu:24.04 container with stock sqlite3"
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker pull "$IMAGE"

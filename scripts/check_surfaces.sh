@@ -109,6 +109,24 @@ for engine in duckdb sqlite postgresql; do
   fi
 done
 
+# The package rehearsals build and stage their artifacts without installing
+# anywhere (--dry-run); their container halves run by hand per
+# NOTES-packaging.md. DuckDB's package.sh gains the flag with its lane.
+if command -v cargo-zigbuild >/dev/null 2>&1 && command -v zig >/dev/null 2>&1; then
+  run_step "package dry-run: databases/sqlite" \
+    bash -c 'cd databases/sqlite && ./package.sh --dry-run' || fail=1
+else
+  printf '\n== package dry-run: databases/sqlite\n%s\n' \
+    'skipped: cargo-zigbuild or zig is not on PATH'
+fi
+if command -v cargo-pgrx >/dev/null 2>&1 && command -v pg_config >/dev/null 2>&1; then
+  run_step "package dry-run: databases/postgresql" \
+    bash -c 'cd databases/postgresql && ./package.sh --dry-run' || fail=1
+else
+  printf '\n== package dry-run: databases/postgresql\n%s\n' \
+    'skipped: cargo-pgrx or pg_config is not on PATH'
+fi
+
 wire_word=$([ "$wire" = yes ] && echo "stub up" || echo "no stub, wire suites skipped")
 if [ "$fail" -ne 0 ] || [ "$failed" -ne 0 ]; then
   echo "summary: green=$green skipped=$skipped diverged=$diverged failed=$failed (wire: $wire_word)"

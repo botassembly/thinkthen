@@ -5,10 +5,19 @@
 # exactly as drawn, and remove the container. Nothing is published; the
 # install is from the local tarball only.
 #
+# `--dry-run` builds and stages the tarball and stops before the deck and
+# the container: the gate uses it to keep the build honest without
+# installing anywhere and without needing the deck on disk.
+#
 # The container is disposable: named dbpkg211-pg, removed with
 # docker rm -f -v at the end.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+dry_run=no
+if [ "${1:-}" = "--dry-run" ]; then
+  dry_run=yes
+fi
 
 VERSION=$(tail -1 ../../VERSION)
 CONTAINER=dbpkg211-pg
@@ -48,6 +57,11 @@ Then, in each database:
     CREATE EXTENSION thinkthen;
 EOF
 
+if [ "$dry_run" = yes ]; then
+  echo "== postgres package: dry run, no deck, no container"
+  echo "dist/thinkthen-pg16-${VERSION}-linux-amd64.tar.gz staged; the container half is not run"
+  exit 0
+fi
 echo "== postgres package: slide sample extracted verbatim from the deck"
 python3 - "$DECK" "$WORK/slide.sql" << 'PY'
 import re, sys
