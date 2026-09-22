@@ -5,10 +5,8 @@
 # Run with: ruby -I lib -I tests tests/test_surface.rb  (ENGINE_NULL=1)
 #
 # The stand-in's one synthesized partial failure (conformance case 74)
-# fires only under the test-only `ENGINE_SYNTHETIC_PARTIAL` opt-in, and the
-# engine reads it when it is built, so it is set before the require.
-ENV["ENGINE_SYNTHETIC_PARTIAL"] = "1"
-
+# fires only in a build that armed the compile-time `synthetic-partial`
+# feature; check.sh builds the gate's copy that way.
 require "minitest/autorun"
 require "json"
 require "thinkthen"
@@ -177,11 +175,11 @@ class TestSurface < Minitest::Test
     assert_equal before + 1, ThinkThen.usage["requests"]
   end
 
-  def test_usage_error_is_an_argument_error
+  def test_usage_error_is_a_thinkthen_error
     error = assert_raises(ThinkThen::UsageError) do
       ThinkThen.question(decide: "", threshold: 0.2)
     end
-    assert_kind_of ArgumentError, error
+    assert_kind_of ThinkThen::Error, error
     assert_equal "usage", error.kind
     assert_equal false, error.retryable
   end

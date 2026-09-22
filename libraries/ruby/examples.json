@@ -37,7 +37,7 @@
     "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
    },
    "ruby": "p ThinkThen.annotate(ThinkThen.set(\"form.json\"), [\"maybe later\"])",
-   "expected": "[{complaint: true, refund: true}]"
+   "expected": "[{refund: true, complaint: true}]"
   },
   "recognize": {
    "ruby": "p ThinkThen.recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds: %w[person organization place]).entities.map { |one| [one.text, one.kind] }",

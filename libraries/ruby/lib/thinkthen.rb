@@ -12,6 +12,12 @@
 # Bulk calls take any Enumerable, cross into the engine once, and run at
 # the process width. Nothing here retries, sends, or holds a rule: the
 # wrapper owns keywords and record handling only.
+#
+# Every failure this surface raises is a ThinkThen::Error: the six kind
+# classes below inherit it, and the wrapper's own refusals raise
+# UsageError, so one `rescue ThinkThen::Error` hears them all. A record or
+# an evidence text that is not a String crosses as its JSON text, never as
+# Ruby's `to_s` form.
 
 require "json"
 require_relative "thinkthen/thinkthen"
@@ -26,6 +32,13 @@ module ThinkThen
       @kind = kind
       @retryable = retryable
     end
+  end
+
+  # The text one record or evidence crosses as: a String unchanged,
+  # anything else its JSON text, so a Hash keeps its fields and a record
+  # object can speak its own `to_json`. Ruby's `to_s` form is never sent.
+  def self.text_of(record)
+    record.is_a?(String) ? record : JSON.generate(record)
   end
 
   # One name `recognize` found. `start` and `end` count Ruby characters, so
@@ -75,7 +88,9 @@ module ThinkThen
     def question(**keywords)
       keys = keywords.keys.map(&:to_s)
       verb = %w[decide choose score tag].find { |one| keys.include?(one) }
-      raise ArgumentError, "question needs one of decide, choose, score, or tag" unless verb
+      unless verb
+        raise UsageError.new("question needs one of decide, choose, score, or tag", "usage")
+      end
 
       body = { verb => keywords[verb.to_sym] }
       if keywords.key?(:threshold)
@@ -102,16 +117,16 @@ module ThinkThen
       return value if value.is_a?(Question)
       return _parse_question(JSON.generate({ "decide" => value.to_s })) if value.is_a?(String)
 
-      raise ArgumentError, "a question is built text or the question's own text"
+      raise UsageError.new("a question is built text or the question's own text", "usage")
     end
 
     def decide(question, evidence, cancel: nil, deadline: nil)
-      @engine.decide(built(question), evidence.to_s, cancel, deadline)
+      @engine.decide(built(question), text_of(evidence), cancel, deadline)
     end
 
     def decide_many(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      @engine.decide_many(built(question), list.map(&:to_s), cancel, deadline, nil)
+      @engine.decide_many(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
     end
 
     # The bulk answer with each judgment's probability beside it, for
@@ -122,56 +137,56 @@ module ThinkThen
     # symbol-keyed shape.
     def decide_many_with_probabilities(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      pairs = @engine.decide_many_with_probabilities(built(question), list.map(&:to_s), cancel, deadline, nil)
+      pairs = @engine.decide_many_with_probabilities(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
       pairs.map { |pair| { answer: pair["answer"], probability: pair["probability"] } }
     end
 
     def filter(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      kept = @engine.filter(built(question), list.map(&:to_s), cancel, deadline, nil)
+      kept = @engine.filter(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
       kept.map { |index| list[index] }
     end
 
     def rank(question, records, top: nil, cancel: nil, deadline: nil)
       list = records.to_a
-      placed = @engine.rank(built(question), list.map(&:to_s), cancel, deadline, nil)
+      placed = @engine.rank(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
       ordered = placed.map { |index, probability| Ranked.new(index, list[index], probability) }
       top ? ordered.first(top) : ordered
     end
 
     def find(question, units, cancel: nil, deadline: nil)
       list = units.to_a
-      index, probability = @engine.find(built(question), list.map(&:to_s), cancel, deadline)
+      index, probability = @engine.find(built(question), list.map { |one| text_of(one) }, cancel, deadline)
       Found.new(index, index.nil? ? nil : list[index], probability)
     end
 
     def choose(question, evidence, options: nil, cancel: nil, deadline: nil)
       question = choose_question(question, options)
-      @engine.choose(question, evidence.to_s, cancel, deadline)
+      @engine.choose(question, text_of(evidence), cancel, deadline)
     end
 
     def score(question, evidence, levels: nil, cancel: nil, deadline: nil)
       question = score_question(question, levels)
-      @engine.score(question, evidence.to_s, cancel, deadline).first
+      @engine.score(question, text_of(evidence), cancel, deadline).first
     end
 
     # The score with its nearest level beside it, for callers that want
     # the level's name without a second call.
     def score_with_level(question, evidence, levels: nil, cancel: nil, deadline: nil)
       question = score_question(question, levels)
-      value, nearest = @engine.score(question, evidence.to_s, cancel, deadline)
+      value, nearest = @engine.score(question, text_of(evidence), cancel, deadline)
       [value, nearest]
     end
 
     def tag(question, evidence, labels: nil, cancel: nil, deadline: nil)
       question = tag_question(question, labels)
-      @engine.tag(question, evidence.to_s, cancel, deadline)
+      @engine.tag(question, text_of(evidence), cancel, deadline)
     end
 
     def annotate(set, records, on: nil, cancel: nil, deadline: nil)
       set = self.set(set) if set.is_a?(String)
       list = records.to_a
-      evidence = on ? list.map { |record| record[on].to_s } : list.map(&:to_s)
+      evidence = on ? list.map { |record| record[on].to_s } : list.map { |one| text_of(one) }
       answers = @engine.annotate(set, evidence, cancel, deadline, nil)
       answers.each_with_index.map do |fields, place|
         if on
@@ -185,7 +200,7 @@ module ThinkThen
     end
 
     def details(question, evidence, cancel: nil, deadline: nil)
-      @engine.details(built(question), evidence.to_s, cancel, deadline)
+      @engine.details(built(question), text_of(evidence), cancel, deadline)
     end
 
     # Find every name in a text and say what kind it is.
@@ -204,7 +219,7 @@ module ThinkThen
     def recognize(text, kinds: nil, relations: nil, threshold: nil,
                   relation_threshold: nil, cancel: nil, deadline: nil)
       spec = recognize_spec(kinds, relations, threshold, relation_threshold)
-      answer = @engine.recognize(JSON.generate(spec), text.to_s, cancel, deadline)
+      answer = @engine.recognize(JSON.generate(spec), text_of(text), cancel, deadline)
       Recognized.new(
         answer.fetch("entities").map do |one|
           Entity.new(one["id"], one["text"], one["kind"], one["start"], one["end"],
@@ -230,7 +245,7 @@ module ThinkThen
                kind_field: nil, cancel: nil, deadline: nil)
       list = records.to_a
       spec = relate_spec(relations, either, threshold, kind_field)
-      answer = @engine.relate(JSON.generate(spec), list.map(&:to_s), cancel, deadline)
+      answer = @engine.relate(JSON.generate(spec), list.map { |one| text_of(one) }, cancel, deadline)
       answer.map do |one|
         Edge.new(one["name"], one["source"], one["target"], one["probability"],
                  one["source_kind"], one["target_kind"])

@@ -20,5 +20,11 @@ rb-sys = "0.9"
 thinkthen-contract = { path = "../../contract" }
 thinkthen-standin = { path = "../../standin" }
 
+# The stand-in's one synthesized partial failure (conformance case 74),
+# armed at compile time. The gate builds with it so the marker case runs;
+# a packaged build (build.sh without the argument) never carries it.
+[features]
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
+
 [profile.release]
 panic = "unwind"

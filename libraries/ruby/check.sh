@@ -10,7 +10,10 @@ root="$(cd ../.. && pwd)"
 image="thinkthen-ruby-builder:local"
 stub_url="http://127.0.0.1:8214/v1"
 
-./build.sh
+# The gate arms the stand-in's synthesized partial failure at compile
+# time (`build.sh synthetic`), so conformance case 74 and the marker test
+# run; the packaged build never carries the fixture.
+./build.sh synthetic
 
 wire=no
 if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
@@ -38,6 +41,15 @@ docker_run 'ruby -I lib tests/test_deadline_bounds.rb'
 
 echo "== ruby surface: a plain call hears Thread#raise (no tick, no token)"
 docker_run 'ruby -I lib tests/test_interrupt_fast.rb'
+
+echo "== ruby surface: wake-ups and trapped signals leave calls alone"
+docker_run 'ruby -I lib tests/test_harmless_wakeups.rb'
+
+echo "== ruby surface: the tick survives the collector"
+docker_run 'ruby -I lib tests/test_tick_gc.rb'
+
+echo "== ruby surface: one error base, a refused bad deadline, records as JSON"
+docker_run 'ruby -I lib tests/test_error_classes.rb'
 
 echo "== ruby surface: fast-backend cancel, the poll-bug shape"
 docker_run 'ruby -I lib tests/test_cancel_fast.rb'

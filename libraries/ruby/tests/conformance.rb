@@ -7,11 +7,9 @@
 #
 # Run with: ruby -I lib tests/conformance.rb  (ENGINE_NULL=1)
 #
-# Case 74's synthesized partial failure fires only under the test-only
-# `ENGINE_SYNTHETIC_PARTIAL` opt-in, and the engine reads it when it is
-# built, so it is set before the require.
-ENV["ENGINE_SYNTHETIC_PARTIAL"] = "1"
-
+# Case 74's synthesized partial failure fires only in a build that armed
+# the compile-time `synthetic-partial` feature; check.sh builds the gate's
+# copy that way.
 require "json"
 require "thinkthen"
 
@@ -171,7 +169,7 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
     labels = ThinkThen.tag(question, evidence)
     ok_if(labels == expect["answer"], "expected #{expect['answer'].inspect}, got #{labels.inspect}")
   when "annotate"
-    set = ThinkThen._parse_set(JSON.generate({ "questions" => set_json }))
+    set = ThinkThen._parse_set(JSON.generate({ "version" => 1, "questions" => set_json }))
     held = records.empty? ? [evidence] : records
     answers = ThinkThen.annotate(set, held)
     if expect["rows"]
