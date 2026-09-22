@@ -182,6 +182,12 @@ fn settle_question(py: Python<'_>, object: &Bound<'_, PyAny>) -> PyResult<Contra
 
 /// A question argument for a verb with members: text plus this call's
 /// members, or a built question.
+///
+/// A built question carries its members once. Handing over a built
+/// question and also naming `options`, `labels`, or `levels` is
+/// ambiguous, and the call refuses with a usage error naming both
+/// rather than guessing which one wins (the settled rule of the
+/// contract's `Question` docs).
 fn settle_verb_question(
     py: Python<'_>,
     object: &Bound<'_, PyAny>,
@@ -190,6 +196,11 @@ fn settle_verb_question(
     members: Option<Vec<String>>,
 ) -> PyResult<ContractQuestion> {
     if let Ok(question) = object.extract::<Question>() {
+        if members.is_some() {
+            return Err(UsageError::new_err(format!(
+                "the question is built and the call also names {key}: the question carries its {key} once, so drop one"
+            )));
+        }
         return Ok(question.inner);
     }
     let text = object.extract::<String>().map_err(|_| {
@@ -365,14 +376,37 @@ fn question(
 }
 
 /// Ask once. `None` is "not sure".
+///
+/// A Polars column in returns a column out: the column crosses zero-copy
+/// through the Arrow stream form, the engine runs the whole column 32
+/// wide in Rust, and the answers come back as a boolean column whose
+/// `None` rows are "not sure" — the wrapper rebuilds the host's own
+/// `Series` from it. A plain string stays one answer.
 #[pyfunction(signature = (question, evidence, *, deadline = None))]
 fn decide(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
-    evidence: String,
+    evidence: &Bound<'_, PyAny>,
     deadline: Option<f64>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
+    if arrow::is_arrow(evidence)? {
+        let column = arrow::series_column(evidence)?;
+        let references: Vec<&str> = column.texts.clone();
+        let judgments = bulk(py, deadline, |armed, poll| {
+            engine().decide_many_opts(&asked, &references, armed, poll)
+        })?;
+        drop(column);
+        let values: Vec<Option<bool>> =
+            judgments.iter().map(|one| one.answer.value()).collect();
+        return Ok(Py::new(py, arrow::ArrowSeries::bools("answer", &values))?
+            .into_any());
+    }
+    let evidence: String = evidence.extract().map_err(|_| {
+        UsageError::new_err(
+            "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
+        )
+    })?;
     let answer = py
         .detach(move || engine().decide_opts(&asked, &evidence, call_options(deadline)))
         .map_err(|error| python_error(py, error))?;
@@ -427,18 +461,45 @@ fn choose(
 }
 
 /// Place the evidence on the question's levels: the number, 0 to K-1.
+///
+/// A Polars column in returns a number column out. The stand-in carries
+/// no bulk score in the contract, so the column runs one call a record
+/// through this shim; the decide column next door takes the batch spine.
+/// The public wrapper takes `levels` beside the text, as the deck draws.
 #[pyfunction(signature = (question, evidence, *, levels = None, deadline = None))]
 fn score(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
-    evidence: String,
+    evidence: &Bound<'_, PyAny>,
     levels: Option<Vec<String>>,
     deadline: Option<f64>,
-) -> PyResult<f64> {
+) -> PyResult<Py<PyAny>> {
     let asked = settle_verb_question(py, question, "score", "levels", levels)?;
-    py.detach(move || engine().score_opts(&asked, &evidence, call_options(deadline)))
+    if arrow::is_arrow(evidence)? {
+        let column = arrow::series_column(evidence)?;
+        let texts: Vec<String> = column.texts.iter().map(|text| (*text).to_owned()).collect();
+        drop(column);
+        let values = py
+            .detach(move || {
+                let mut values = Vec::with_capacity(texts.len());
+                for text in &texts {
+                    values.push(engine().score_opts(&asked, text, call_options(deadline))?.value);
+                }
+                Ok::<Vec<f64>, Error>(values)
+            })
+            .map_err(|error| python_error(py, error))?;
+        return Ok(Py::new(py, arrow::ArrowSeries::numbers("score", &values))?.into_any());
+    }
+    let evidence: String = evidence.extract().map_err(|_| {
+        UsageError::new_err(
+            "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
+        )
+    })?;
+    let value = py
+        .detach(move || engine().score_opts(&asked, &evidence, call_options(deadline)))
         .map(|Scored { value, .. }| value)
-        .map_err(|error| python_error(py, error))
+        .map_err(|error| python_error(py, error))?;
+    Ok(pyo3::types::PyFloat::new(py, value).unbind().into_any())
 }
 
 /// Name the labels that held, in the question's order.
@@ -474,28 +535,32 @@ fn filter(
 }
 
 /// Order the records most likely yes first, ties in input order.
-#[pyfunction(signature = (question, records, *, top = None, deadline = None))]
+///
+/// The answer is the ruled pair per record — the place in the input and
+/// the probability — in ranked order (the contract's `Ranked`; no surface
+/// returns the bare unit alone). The wrapper fills the record and slices
+/// `top`; the settled shape takes `top` there.
+#[pyfunction(signature = (question, records, *, deadline = None))]
 #[allow(clippy::needless_pass_by_value)]
 fn rank(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     records: Vec<String>,
-    top: Option<usize>,
     deadline: Option<f64>,
-) -> PyResult<Vec<String>> {
+) -> PyResult<Vec<(usize, f64)>> {
     let asked = settle_question(py, question)?;
     let references: Vec<&str> = records.iter().map(String::as_str).collect();
     let ranked = bulk(py, deadline, |armed, poll| {
         engine().rank_opts(&asked, &references, armed, poll)
     })?;
-    let ordered = ranked.into_iter().map(|one| records[one.index].clone());
-    Ok(match top {
-        Some(count) => ordered.take(count).collect(),
-        None => ordered.collect(),
-    })
+    Ok(ranked.into_iter().map(|one| (one.index, one.probability)).collect())
 }
 
 /// Pick the unit that best answers the question. `None` is nothing fits.
+///
+/// The answer is the ruled pair — the unit's place in the input and the
+/// probability — or `None` when nothing fits (case 25's null). The
+/// wrapper fills the unit text.
 #[pyfunction(signature = (question, units, *, deadline = None))]
 #[allow(clippy::needless_pass_by_value)]
 fn find(
@@ -503,16 +568,13 @@ fn find(
     question: &Bound<'_, PyAny>,
     units: Vec<String>,
     deadline: Option<f64>,
-) -> PyResult<Py<PyAny>> {
+) -> PyResult<Option<(usize, f64)>> {
     let asked = settle_question(py, question)?;
     let references: Vec<&str> = units.iter().map(String::as_str).collect();
     let found = py
         .detach(move || engine().find_opts(&asked, &references, call_options(deadline)))
         .map_err(|error| python_error(py, error))?;
-    Ok(match found.index {
-        Some(place) => pyo3::types::PyString::new(py, &units[place]).unbind().into_any(),
-        None => py.None(),
-    })
+    Ok(found.index.map(|place| (place, found.probability)))
 }
 
 /// The failed-question marker as Python data: the ruled shape
@@ -613,12 +675,16 @@ fn details(
     deadline: Option<f64>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
-    let Details { probability, answer, model, digest, sends, requests, failed_questions } = py
-        .detach(move || engine().details_opts(&asked, &evidence, call_options(deadline)))
-        .map_err(|error| python_error(py, error))?;
+    let Details { probability, answer, nearest, model, digest, sends, requests, failed_questions } =
+        py.detach(move || engine().details_opts(&asked, &evidence, call_options(deadline)))
+            .map_err(|error| python_error(py, error))?;
     let dict = PyDict::new(py);
     dict.set_item("probability", probability)?;
     dict.set_item("answer", bare(py, answer))?;
+    // The nearest level's name, a score question's own field (ADR 0017
+    // pick 6); `None` on every other verb, so no surface carries a
+    // private field for it.
+    dict.set_item("nearest", nearest)?;
     dict.set_item("model", model)?;
     dict.set_item("digest", digest)?;
     dict.set_item("sends", sends)?;
@@ -843,6 +909,10 @@ fn build_recognize(
                 .map_err(|_| UsageError::new_err("a relation name is a string"))?;
             let (from, to) = ends_pair(&name, &ends)?;
             let rule = RelationRule::new(&name, from, to).map_err(|error| python_error(py, error))?;
+            // The core's one rule check, the same one the file grammar
+            // runs: a named end outside the asked kinds is a usage error
+            // here, so the real engine can never be handed one.
+            rule.check_kinds(&ask.kinds).map_err(|error| python_error(py, error))?;
             ask.relations.push(rule);
         }
     }

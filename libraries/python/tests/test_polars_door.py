@@ -210,3 +210,45 @@ def test_the_wheel_never_imports_polars():
         cwd=".",
     )
     assert "clean" in out.stdout
+
+
+def test_the_decode_columns_run_as_the_deck_draws():
+    """The deck's two column lines, as drawn.
+
+    `df.with_columns(complaint=tt.decide(ask, df["body"]))` and
+    `tt.score("How urgent?", df["body"], levels)` both pass a Polars
+    column and get a column back — the first 32 wide through the batch
+    spine, no Python loop anywhere.
+    """
+    df = pl.DataFrame({"body": ["i want a refund now", "good morning", "maybe later"]})
+    ask = "Is this a complaint?"
+
+    df = df.with_columns(complaint=tt.decide(ask, df["body"]))
+    levels = ["Routine.", "Soon.", "Immediate."]
+    urgency = tt.score("How urgent?", df["body"], levels)
+    df = df.with_columns(urgency=urgency)
+
+    assert df["complaint"].dtype == pl.Boolean
+    assert df["complaint"].to_list() == [True, False, True]
+    assert df["urgency"].dtype == pl.Float64
+    assert df["urgency"].to_list() == [1.7, 0.99, 1.05]
+
+
+def test_a_column_answer_carries_nulls_for_not_sure():
+    """A band question's column keeps `None` rows as Arrow nulls."""
+    refund = tt.question(
+        decide="Does the customer ask for a refund?",
+        threshold=(0.2, 0.8),
+    )
+    df = pl.DataFrame({"body": ["i want a refund now", "maybe later", "good morning"]})
+    answers = tt.decide(refund, df["body"])
+    assert answers.to_list() == [True, None, False]
+
+
+def test_the_column_form_matches_the_list_form():
+    """A column crosses at the same answers as a slice, same order."""
+    ask = "Is this a complaint?"
+    records = ["i want a refund now", "good morning", "maybe later"]
+    column = tt.decide(ask, pl.Series("body", records))
+    listed = tt.decide_many(ask, records)
+    assert column.to_list() == listed

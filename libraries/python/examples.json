@@ -26,7 +26,7 @@
     },
     "rank": {
       "python": "tt.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
-      "expected": "['I demand a refund today', 'good morning']"
+      "expected": "[{'index': 1, 'record': 'I demand a refund today', 'probability': 0.97}, {'index': 0, 'record': 'good morning', 'probability': 0.03}]"
     },
     "find": {
       "python": "tt.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"])",

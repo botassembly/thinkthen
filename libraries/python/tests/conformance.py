@@ -166,6 +166,31 @@ def run(case):
         return tt.score(built(body), evidence) == expect.get("answer"), None
     if verb == "tag":
         return tt.tag(built(body), evidence) == expect.get("answer"), None
+    if verb == "rank":
+        ranked = tt.rank(built(body), case["records"])
+        order = [one["index"] for one in ranked]
+        if order != expect.get("ranking"):
+            return False, None
+        wanted = expect.get("probabilities")
+        if wanted is not None:
+            by_index = {one["index"]: one["probability"] for one in ranked}
+            got = [by_index[place] for place in range(len(case["records"]))]
+            if got != wanted:
+                return False, f"probabilities {got} against the case's {wanted}"
+        return True, None
+    if verb == "find":
+        found = tt.find(case["question"], case["records"])
+        if expect.get("none"):
+            # The stand-in's find judges each unit alone and always
+            # returns a best; the none arm belongs to the real engine's
+            # relative form. The same divergence TypeScript records.
+            return None, (
+                "the none arm needs the real engine's relative form; "
+                "the stand-in always returns a best unit"
+            )
+        if found is None:
+            return False, "find answered None where the case expects a unit"
+        return found["index"] == expect.get("answer"), None
     if verb == "annotate":
         path = built(body, set_body=case.get("set"))
         rows = tt.annotate(path, [evidence])

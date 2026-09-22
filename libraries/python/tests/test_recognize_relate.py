@@ -214,3 +214,16 @@ def test_a_real_string_result_column_rides_the_frame_door_whole():
     out = tt.annotate(str(path), pl.DataFrame({"body": ["Please refund order 9."]}),
                       on="body")
     assert out["kinds"][0] == "[]"
+
+
+def test_a_relation_end_outside_the_asked_kinds_refuses():
+    """The core's one rule check runs on the keyword path too: a named
+    end outside the asked kinds is a usage error before the engine is
+    handed the rule."""
+    with pytest.raises(tt.UsageError) as seen:
+        tt.recognize(
+            "Maria Chen joined Northwind Freight.",
+            kinds=["person"],
+            relations={"works_for": ("person", "organization")},
+        )
+    assert "organization" in str(seen.value)

@@ -451,3 +451,15 @@ $ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_polars_door.py tests/test_
 The pandas checks run through the same door and pass unchanged; the full
 suite (`tests/ -q`) is 56 passed. The slide sample still reports the
 pre-existing band finding; `check.sh` exits 0.
+
+## 2026-09-22 — the settle wave on the Python surface
+
+The contract lane's settlements (`1fe8173`) wired into this surface, per Ian's "all details settled" of 2026-09-21. One unit, committed whole.
+
+**The column forms (item 1).** `decide` and `score` take a Polars column and return a column, closing the deck's two as-drawn lines at `surfaces.md`: the decide line runs the whole column through the batch spine (32 wide, one crossing) and returns a boolean column whose nulls are "not sure"; the score line takes `levels` beside the text (the wrapper's public signature is `tt.score(question, text, levels=None, *, deadline=None)` — the deck passes `levels` positionally) and returns a number column. The way out is one Arrow array capsule pair (`__arrow_c_array__`, format `b` or `g`) from the new `ArrowSeries` in `arrow.rs`; the wrapper rebuilds the host's own column with `type(text)(answer)` and never imports Polars. The stand-in carries no bulk score in the contract, so the score column runs one call a record through the shim (recorded, not hidden); the decide column takes the engine's batch spine. Tests: `test_the_decode_columns_run_as_the_deck_draws`, `test_a_column_answer_carries_nulls_for_not_sure`, `test_the_column_form_matches_the_list_form`.
+
+**The pair shapes (settlement 2).** `rank` returns `{"index", "record", "probability"}` records and `find` returns `{"index", "unit", "probability"}` or `None` (the wrapper fills the record/unit; the Rust side returns the pair). `top` moved to the wrapper. The runner's rank and find arms now run cases 21 and 24 (case 25 is the recorded divergence: the stand-in's find always returns a best — the real engine's relative form owns the none arm, the same divergence TypeScript records). `examples.json`'s rank expectation carries the pair shape.
+
+**The settled rules.** `details` carries `nearest` (contract settlement 1). A built question plus `options`/`labels`/`levels` refuses as ambiguous naming the key (`settle_verb_question`). A zero or negative deadline is spent, never refused (`test_a_past_deadline_is_spent_not_refused`). The keyword relation path now runs the core's one `check_kinds` rule (`build_recognize`), so an end outside the asked kinds refuses before the engine sees it. The `relate` and `recognize` docstrings say `source`/`target`, not the refused `from`/`to`.
+
+**Green by command.** `./check.sh` exit 0: the shim unit test, 24 surface tests, 15 Polars-door tests (three new), 10 pandas checks, 15 recognize/relate tests, the fast-cancel proof, the scale bench, 10 of 10 examples, and 69 passed / 0 failed / 4 skipped on the conformance slice (17 known divergence; 18 runs as the cancel test; 25 and 71 recorded divergences; 26 the file door). The slide sample's trailing band mismatch is the sample's own recorded finding.

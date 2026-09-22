@@ -77,6 +77,27 @@ def test_deadline_names_the_limit():
     assert "deadline of 0 s" in str(seen.value)
 
 
+def test_a_past_deadline_is_spent_not_refused():
+    """A zero or negative budget is legal: the call sends nothing and
+    returns the deadline kind, per the settled rule."""
+    for budget in (0.0, -1.0, -0.001):
+        with pytest.raises(tt.DeadlineError) as seen:
+            tt.decide(cut_question(), "i want a refund now", deadline=budget)
+        assert "deadline of" in str(seen.value)
+
+
+def test_a_built_question_plus_members_refuses_as_ambiguous():
+    """The question carries its members once; naming them beside it is
+    a usage error naming both."""
+    asked = tt.question(choose="Which desk owns this?", options=["the refund desk", "anywhere else"])
+    with pytest.raises(tt.UsageError) as seen:
+        tt.choose(asked, "please route this ticket", options=["the refund desk", "anywhere else"])
+    assert "options" in str(seen.value)
+    with pytest.raises(tt.UsageError) as seen:
+        tt.score(asked, "maybe later", levels=["low", "high"])
+    assert "levels" in str(seen.value)
+
+
 def test_filter_returns_the_records():
     records = ["i want a refund now", "good morning", "refund, please"]
     kept = tt.filter(cut_question(), records)
@@ -101,7 +122,24 @@ def test_rank_orders_most_likely_first():
         "Does the writer ask for a refund?",
         ["good morning", "i want a refund now", "maybe later"],
     )
-    assert ranked[0] == "i want a refund now"
+    # The settled pair shape: the place in the input and the probability.
+    assert ranked[0] == {
+        "index": 1,
+        "record": "i want a refund now",
+        "probability": 0.97,
+    }
+    assert [one["index"] for one in ranked] == [1, 2, 0]
+
+
+def test_find_returns_the_pair_or_none():
+    found = tt.find(
+        "Which unit asks for a refund?",
+        ["good morning", "i want a refund now"],
+    )
+    assert found == {"index": 1, "unit": "i want a refund now", "probability": 0.97}
+    # The stand-in's find judges each unit alone and the best wins — it has
+    # no none arm, so `None` never comes back from it; the none case is
+    # real-engine data (case 25's recorded divergence).
 
 
 def test_choose_and_score_and_tag():

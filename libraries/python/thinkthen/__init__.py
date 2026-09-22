@@ -29,18 +29,18 @@ from ._thinkthen import (
     annotate_rows,
     annotate_stream,
     choose,
-    decide,
+    decide as _decide,
     decide_many,
     details,
-    find,
+    find as _find,
     filter,
     question,
-    rank,
+    rank as _rank,
     recognize as _recognize_text,
     recognize_stream,
     relate as _relate_records,
     relate_stream,
-    score,
+    score as _score,
     tag,
     usage,
 )
@@ -54,6 +54,75 @@ __all__ = [
     "ThinkThenError", "UsageError", "BackendError", "DeadlineError",
     "LocalError", "DefectError",
 ]
+
+
+def decide(question, text, *, deadline=None):
+    """Ask once. ``True``, ``False``, or ``None`` when the question's
+    rule makes it "not sure".
+
+    A Polars column in returns a column out: ``tt.decide(ask, df["body"])``
+    crosses zero-copy through the Arrow stream form, the engine runs the
+    column 32 wide in Rust, and the answers come back as a column whose
+    nulls are "not sure" — the deck's ``with_columns(complaint=...)`` line
+    runs as drawn.
+    """
+    answer = _decide(question, text, deadline=deadline)
+    return _column_or_value(text, answer)
+
+
+def score(question, text, levels=None, *, deadline=None):
+    """Place the text on the question's levels: the position 0 to K-1.
+
+    A Polars column in returns a number column out, and the public call
+    takes ``levels`` beside the text — ``tt.score(ask, df["body"], levels)``
+    runs as the deck draws.
+    """
+    answer = _score(question, text, levels=levels, deadline=deadline)
+    return _column_or_value(text, answer)
+
+
+def _column_or_value(text, answer):
+    """The host's own column when the answer is one, the value otherwise."""
+    if hasattr(answer, "__arrow_c_array__"):
+        try:
+            return type(text)(answer)
+        except Exception as exc:
+            raise UsageError(
+                "this host cannot rebuild its own column from the Arrow "
+                "array the engine returns; pass a Polars Series, or call "
+                "the verb once a text"
+            ) from exc
+    return answer
+
+
+def rank(question, records, *, top=None, deadline=None):
+    """Order the records most likely yes first, ties in input order.
+
+    The answer is the ruled pair per record — its place in the input and
+    the probability — as ``{"index", "record", "probability"}`` small
+    records, one shape with the other surfaces; ``top`` keeps the first
+    entries.
+    """
+    ranked = _rank(question, records, deadline=deadline)
+    ordered = [
+        {"index": index, "record": records[index], "probability": probability}
+        for index, probability in ranked
+    ]
+    return ordered if top is None else ordered[:top]
+
+
+def find(question, units, *, deadline=None):
+    """Pick the unit that best answers the question; ``None`` fits nothing.
+
+    The answer is the ruled pair — the unit's place in the input and the
+    probability — as ``{"index", "unit", "probability"}``, or ``None``
+    when nothing fits.
+    """
+    found = _find(question, units, deadline=deadline)
+    if found is None:
+        return None
+    index, probability = found
+    return {"index": index, "unit": units[index], "probability": probability}
 
 
 def annotate(set, records, *, on=None, deadline=None):
@@ -102,7 +171,8 @@ def recognize(text, *, kinds=None, relations=None, threshold=None,
     Offsets count Python string positions, so ``text[start:end]`` is the
     name. ``kinds`` is a list of the user's own kind words or a path to a
     question file; with none, person, organization, and place. A relation
-    value is a ``(from, to)`` pair, each end a kind or the one-character
+    value is a ``(source, target)`` pair, each end a kind or the
+    one-character
     string ``"*"``. The number on a name is ``entity.strength``, the settled
     field name for the value computed from several of the model's numbers.
 
@@ -152,10 +222,10 @@ def relate(records, *, relations=None, either=None, threshold=None, on=None,
 
     Every record crosses at once, and more than 255 records refuses with a
     usage error before anything happens. ``relations`` is a list of names
-    (any kind to any kind) or ``{name, from, to}`` mappings, or a path to
-    a question file; ``either`` names the rules that read the same both
-    ways. ``source`` and ``target`` are record numbers counted from 1 in
-    input order.
+    (any kind to any kind) or ``{name, source, target}`` mappings, or a
+    path to a question file; ``either`` names the rules that read the same
+    both ways. ``source`` and ``target`` are record numbers counted from 1
+    in input order.
 
     With ``on=`` the first argument is a frame's column and the answer is
     a frame of edges, one row per edge.

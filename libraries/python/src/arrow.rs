@@ -1197,3 +1197,204 @@ pub(crate) fn _arrow_probe(records: &Bound<'_, PyAny>) -> PyResult<(usize, usize
         ))
     }
 }
+
+/// The capsule names the Arrow PyCapsule interface fixes for a single
+/// array: a schema capsule and an array capsule, handed out as one pair.
+const ARRAY_SCHEMA_NAME: &CStr = c"arrow_schema";
+const ARRAY_NAME: &CStr = c"arrow_array";
+
+/// The format and name strings a column's schema keeps alive.
+struct ColumnStrings {
+    format: CString,
+    name: CString,
+}
+
+/// One column of answers on the way out: a boolean column with `None`
+/// rows ("not sure"), or a number column, both this surface's own
+/// buffers because the answers are new values.
+struct SeriesOut {
+    name: String,
+    format: &'static str,
+    length: usize,
+    null_count: i64,
+    validity: Vec<u8>,
+    values: Vec<u8>,
+}
+
+/// The buffers and the pointer table a column's array keeps alive: the
+/// `buffers` vector itself must not move while the consumer reads it.
+struct ColumnKeep {
+    state: SeriesOut,
+    buffers: Vec<*const c_void>,
+}
+
+/// A column of answers, handed to the host as one Arrow array.
+///
+/// The bulk verbs over a Polars column produce new values, so the buffers
+/// are this surface's own, minted once as one schema capsule and one
+/// array capsule through `__arrow_c_array__`; `type(series)(column)`
+/// rebuilds the host's own column with no import of the host library.
+#[pyclass(unsendable)]
+pub(crate) struct ArrowSeries {
+    state: Option<SeriesOut>,
+}
+
+impl ArrowSeries {
+    /// A boolean column: `None` is "not sure", one null bit a row.
+    pub(crate) fn bools(name: &str, values: &[Option<bool>]) -> Self {
+        let mut validity = vec![0u8; values.len().div_ceil(8)];
+        let mut bits = vec![0u8; values.len().div_ceil(8)];
+        let mut nulls = 0i64;
+        for (place, value) in values.iter().enumerate() {
+            match value {
+                Some(true) => {
+                    validity[place / 8] |= 1 << (place % 8);
+                    bits[place / 8] |= 1 << (place % 8);
+                }
+                Some(false) => validity[place / 8] |= 1 << (place % 8),
+                None => nulls += 1,
+            }
+        }
+        let validity = if nulls == 0 { Vec::new() } else { validity };
+        Self {
+            state: Some(SeriesOut {
+                name: name.to_owned(),
+                format: "b",
+                length: values.len(),
+                null_count: nulls,
+                validity,
+                values: bits,
+            }),
+        }
+    }
+
+    /// A number column, every cell present.
+    pub(crate) fn numbers(name: &str, values: &[f64]) -> Self {
+        let mut bytes = Vec::with_capacity(values.len() * 8);
+        for value in values {
+            bytes.extend_from_slice(&value.to_le_bytes());
+        }
+        Self {
+            state: Some(SeriesOut {
+                name: name.to_owned(),
+                format: "g",
+                length: values.len(),
+                null_count: 0,
+                validity: Vec::new(),
+                values: bytes,
+            }),
+        }
+    }
+}
+
+#[pymethods]
+impl ArrowSeries {
+    /// Mint the schema and array capsules the Arrow PyCapsule interface
+    /// names; the host takes one pair per column construction.
+    #[pyo3(signature = (requested_schema = None))]
+    fn __arrow_c_array__(
+        &mut self,
+        py: Python<'_>,
+        requested_schema: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
+        let _ = requested_schema;
+        let state = self.state.take().ok_or_else(|| {
+            UsageError::new_err("the column's Arrow array was already taken")
+        })?;
+        // The schema's format and name strings live in one keep box the
+        // schema's release frees.
+        let strings = Box::into_raw(Box::new(ColumnStrings {
+            format: CString::new(state.format).expect("static format"),
+            name: CString::new(state.name.as_str()).unwrap_or_default(),
+        }));
+        let schema = Box::into_raw(Box::new(ArrowSchema {
+            format: unsafe { (*strings).format.as_ptr() },
+            name: unsafe { (*strings).name.as_ptr() },
+            metadata: std::ptr::null(),
+            flags: 2,
+            n_children: 0,
+            children: std::ptr::null_mut(),
+            dictionary: std::ptr::null_mut(),
+            release: Some(column_schema_release),
+            private_data: strings as *mut c_void,
+        }));
+        // The buffers live in the array's keep; the pointer table points
+        // into that box, so it is built after the box is on the heap.
+        let mut keep = Box::new(ColumnKeep { state, buffers: Vec::new() });
+        let validity = if keep.state.null_count == 0 {
+            std::ptr::null()
+        } else {
+            keep.state.validity.as_ptr() as *const c_void
+        };
+        let values = keep.state.values.as_ptr() as *const c_void;
+        keep.buffers = vec![validity, values];
+        let keep_ptr = Box::into_raw(keep);
+        let array = Box::into_raw(Box::new(ArrowArray {
+            length: unsafe { (*keep_ptr).state.length } as i64,
+            null_count: unsafe { (*keep_ptr).state.null_count },
+            offset: 0,
+            n_buffers: 2,
+            n_children: 0,
+            buffers: unsafe { (*keep_ptr).buffers.as_ptr() as *mut *const c_void },
+            children: std::ptr::null_mut(),
+            dictionary: std::ptr::null_mut(),
+            release: Some(column_array_release),
+            private_data: keep_ptr as *mut c_void,
+        }));
+        let schema_capsule = unsafe {
+            PyCapsule::new_with_pointer_and_destructor(
+                py,
+                NonNull::new_unchecked(schema as *mut c_void),
+                ARRAY_SCHEMA_NAME,
+                Some(column_schema_capsule_destructor),
+            )
+        }?;
+        let array_capsule = unsafe {
+            PyCapsule::new_with_pointer_and_destructor(
+                py,
+                NonNull::new_unchecked(array as *mut c_void),
+                ARRAY_NAME,
+                Some(column_array_capsule_destructor),
+            )
+        }?;
+        Ok((schema_capsule.into_any().unbind(), array_capsule.into_any().unbind()))
+    }
+}
+
+unsafe extern "C" fn column_schema_release(schema: *mut ArrowSchema) {
+    let data = (*schema).private_data;
+    if !data.is_null() {
+        (*schema).private_data = std::ptr::null_mut();
+        drop(Box::from_raw(data as *mut ColumnStrings));
+    }
+}
+
+unsafe extern "C" fn column_array_release(array: *mut ArrowArray) {
+    let data = (*array).private_data;
+    if !data.is_null() {
+        (*array).private_data = std::ptr::null_mut();
+        drop(Box::from_raw(data as *mut ColumnKeep));
+    }
+}
+
+unsafe extern "C" fn column_schema_capsule_destructor(capsule: *mut pyo3::ffi::PyObject) {
+    let pointer = pyo3::ffi::PyCapsule_GetPointer(capsule, ARRAY_SCHEMA_NAME.as_ptr());
+    if !pointer.is_null() {
+        let schema = pointer as *mut ArrowSchema;
+        if let Some(release) = (*schema).release {
+            release(schema);
+        }
+        drop(Box::from_raw(schema));
+    }
+}
+
+unsafe extern "C" fn column_array_capsule_destructor(capsule: *mut pyo3::ffi::PyObject) {
+    let pointer = pyo3::ffi::PyCapsule_GetPointer(capsule, ARRAY_NAME.as_ptr());
+    if !pointer.is_null() {
+        let array = pointer as *mut ArrowArray;
+        if let Some(release) = (*array).release {
+            release(array);
+        }
+        drop(Box::from_raw(array));
+    }
+}
