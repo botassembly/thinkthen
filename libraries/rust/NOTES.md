@@ -240,3 +240,61 @@ polars door 8, conformance slice ok, wire twin skipped (no stub on 8213)
 The plain `cargo test` outside `check.sh` still needs `ENGINE_NULL=1`
 (and the fixture opt-in for verbs); that is the pre-existing review note
 about env-dependent suites, not this lane's change.
+
+**2026-09-22 (rust lane, review wave 3).** The connector, and the gate's
+pre-existing breaks repaired while proving it:
+
+- **The connector (item 6).** `Engine` holds `Arc<dyn ContractEngine>` now,
+  built through one private `connect()` whose single body names the
+  stand-in; `BlockingEngine` is gone from the crate, and the stand-in
+  appears once below its `use`:
+
+  ```
+  $ grep -rn "BlockingEngine\|StandinConnector" libraries/rust --include=*.rs
+  libraries/rust/src/lib.rs:40:use thinkthen_standin::StandinConnector;
+  libraries/rust/src/lib.rs:350:    StandinConnector.connect(config)
+  ```
+
+  `from_settings` keeps its infallible signature on the stand-in and
+  documents the panic a refusing connector would need revisited; `Debug`
+  is hand-written (the dynamic engine has none) and satisfies
+  `missing_debug_implementations = "forbid"`.
+
+- **Pre-existing breaks found by the gate, repaired here.** Adopting the
+  core parser (`49c3b78`: strict grammar, file order) left this crate's
+  expectations stale, and closing the fixture door at compile time
+  (`a06b70d`) left `check.sh` arming a dead environment variable:
+  - `examples.json`'s annotate expectation moved to file order
+    (`wants_refund=true team=null urgency=1.05`);
+  - `tests/verbs.rs`'s two inline sets gained `"version": 1`, and the
+    order assertion moved to file order (`["refund", "heat"]`);
+  - `examples/conformance.rs` wraps a case's set as
+    `{"version": 1, "questions": ...}`, the same wrap the C driver uses;
+  - `check.sh` builds `--features synthetic-partial` for the null suite
+    and the conformance slice, and `Cargo.toml` forwards
+    `thinkthen-standin/synthetic-partial`.
+
+  The three runs, in order:
+
+  ```
+  # 1. before the repairs
+  tests/examples.rs: assertion `left == right` failed
+    left: "wants_refund=true team=null urgency=1.05"
+   right: "team=null urgency=1.05 wants_refund=true"
+  tests/verbs.rs: test result: FAILED. 13 passed; 2 failed
+    (both annotate sets refused: `version` is the number 1)
+
+  # 2. after the version and order repairs
+  tests/verbs.rs: annotate_preserves_the_good_answers_and_marks_the_failed_one
+    panicked: expected the failed marker, got Some(Decision(Yes))
+    (the compile-time fixture was not armed)
+  conformance slice: FAIL 74, 82, 83, 84 - the call failed: Usage (`version` is the number 1)
+
+  # 3. after the feature-forwarding repair
+  $ ./check.sh                                        # exit 0
+  verbs 15, deadline_fast 1, examples 1, polars_door 8 (1.95),
+  conformance 84 green, wire twin skipped (no stub on 8213)
+  ```
+
+  A bare `cargo test` (no env) exits 0: the suites skip their bodies
+  through `common::note_missing_env`.

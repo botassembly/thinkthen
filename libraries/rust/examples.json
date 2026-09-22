@@ -37,7 +37,7 @@
         "form.json": "{\"version\":1,\"questions\":{\"wants_refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"team\":{\"choose\":\"Which team owns this?\",\"options\":[\"billing\",\"shipping\",\"account\"]},\"urgency\":{\"score\":\"How urgent is this?\",\"levels\":[\"Routine.\",\"Soon.\",\"Immediate.\"]}}}"
       },
       "rust": "tt.annotate(\"form.json\", &[\"maybe later\"])?",
-      "expected": "team=null urgency=1.05 wants_refund=true"
+      "expected": "wants_refund=true team=null urgency=1.05"
     },
     "recognize": {
       "rust": "tt.recognize(&Recognize::from_json(\"{\\\"kinds\\\":[\\\"person\\\",\\\"organization\\\",\\\"place\\\"]}\")?, \"Maria Chen joined Northwind Freight in Chicago last spring.\")?",

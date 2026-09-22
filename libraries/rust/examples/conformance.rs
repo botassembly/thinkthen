@@ -329,7 +329,8 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
             check_relate(expect, &edges)
         }
         "annotate" => {
-            let wrapped = serde_json::json!({ "questions": case["set"] });
+            // The core parser's own grammar: a version of 1 beside the set.
+            let wrapped = serde_json::json!({ "version": 1, "questions": case["set"] });
             let set = QuestionSet::from_json(&wrapped.to_string()).map_err(fail)?;
             let held = records(case);
             let records: Vec<&str> = if held.is_empty() {

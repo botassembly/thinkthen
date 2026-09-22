@@ -183,6 +183,7 @@ fn annotate_adds_one_field_a_question() -> Result<(), Box<dyn std::error::Error>
     let tt = engine();
     let set = QuestionSet::from_json(
         r#"{
+        "version": 1,
         "questions": {
           "refund": {"decide": "Does the customer ask for a refund?"},
           "heat": {"score": "How strong is the claim?", "levels": ["low", "mid", "high"]}
@@ -194,8 +195,8 @@ fn annotate_adds_one_field_a_question() -> Result<(), Box<dyn std::error::Error>
     let fields: Vec<&str> = annotated[0].iter().map(|(name, _)| name.as_str()).collect();
     assert_eq!(
         fields,
-        vec!["heat", "refund"],
-        "the set answers in name order"
+        vec!["refund", "heat"],
+        "the set answers in file order (the core parser's own rule)"
     );
     let refund = annotated[0]
         .iter()
@@ -238,7 +239,7 @@ fn annotate_preserves_the_good_answers_and_marks_the_failed_one()
     // count helper sees one.
     let tt = engine();
     let set = QuestionSet::from_json(
-        r#"{"questions":{"refund":{"decide":"Is this a refund request?","threshold":0.5},"topic":{"decide":"Is this a billing problem?","threshold":0.5}}}"#,
+        r#"{"version":1,"questions":{"refund":{"decide":"Is this a refund request?","threshold":0.5},"topic":{"decide":"Is this a billing problem?","threshold":0.5}}}"#,
     )?;
     let annotated = tt.annotate(&set, &["order 4471: charged twice, please refund"])?;
     let topic = annotated[0]
