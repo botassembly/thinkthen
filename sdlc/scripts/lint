@@ -9,6 +9,7 @@ python3 sdlc/scripts/policy.py
 python3 sdlc/scripts/pages-self-test
 python3 sdlc/scripts/pages
 node sdlc/scripts/ratchet.mjs
+node sdlc/scripts/surfaces-ratchet.mjs
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
 cargo deny --offline check advisories bans licenses

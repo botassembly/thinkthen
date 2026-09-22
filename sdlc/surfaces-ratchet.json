@@ -1,0 +1,19 @@
+{
+  "directories": [
+    "contract",
+    "standin",
+    "libraries",
+    "databases"
+  ],
+  "extension": ".rs",
+  "exclude": [
+    "target",
+    ".cargo",
+    ".runtimes",
+    "node_modules",
+    ".venv",
+    "build",
+    "dist"
+  ],
+  "max": 22024
+}
