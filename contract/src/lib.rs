@@ -288,6 +288,44 @@ pub fn deadline_from_millis(millis: f64) -> Result<Option<std::time::Duration>, 
     Ok(Some(std::time::Duration::from_secs_f64(millis / 1000.0)))
 }
 
+/// Run one host-facing boundary, turning a panic into the defect error.
+///
+/// Every surface that can meet a host process puts its foreign-function
+/// body behind this helper: a panic from anywhere beneath the body — the
+/// engine, the grammar, a poisoned lock — comes back as one error of the
+/// defect kind instead of unwinding into a host that was never built to
+/// catch it. Rust's own panic hook still prints the panic to stderr, so the
+/// crash is still visible; what the boundary removes is the host process's
+/// death.
+///
+/// The message names the boundary and the panic's own text, so a host log
+/// says which door failed.
+pub fn catch_panic<T>(boundary: &str, body: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)) {
+        Ok(result) => result,
+        Err(payload) => Err(Error::defect(format!(
+            "a panic crossed {boundary}: {}",
+            panic_text(payload.as_ref())
+        ))),
+    }
+}
+
+/// The text a panic payload carries: the message for a string panic, and a
+/// fixed phrase for a payload that is not text.
+///
+/// The formatter lives here so every surface's boundary spells the same
+/// message, and the panic's own words never vanish.
+#[must_use]
+pub fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(text) = payload.downcast_ref::<&'static str>() {
+        (*text).to_owned()
+    } else if let Some(text) = payload.downcast_ref::<String>() {
+        text.clone()
+    } else {
+        "a payload that is not text".to_owned()
+    }
+}
+
 /// A cancellation token, set from any thread, checked between requests and
 /// on every tick of a wait.
 ///
@@ -2430,5 +2468,56 @@ mod tests {
         assert!(edges.starts_with("{\"edges\":["), "{edges}");
         assert!(edges.contains("\"source\":1"), "{edges}");
         assert!(!edges.contains("kind"), "the ends' kinds stay out when a rule names none: {edges}");
+    }
+
+    /// A boundary passes a clean result through, panic or not.
+    #[test]
+    fn the_boundary_passes_clean_results_through() {
+        let fine: Result<u8, super::Error> =
+            super::catch_panic("the door", || Ok(7));
+        assert_eq!(fine.expect("passes"), 7);
+
+        let refused: Result<u8, super::Error> =
+            super::catch_panic("the door", || Err(super::Error::usage("no")));
+        let refused = refused.expect_err("refused");
+        assert_eq!(refused.kind, ErrorKind::Usage);
+    }
+
+    /// A panic becomes the defect error, message and all.
+    #[test]
+    fn a_panic_becomes_the_defect_error() {
+        let caught: Result<u8, super::Error> =
+            super::catch_panic("the decide door", || panic!("the answer blew up"));
+        let caught = caught.expect_err("the boundary catches the panic");
+        assert_eq!(caught.kind, ErrorKind::Defect, "{caught}");
+        assert!(
+            caught.message.contains("the decide door"),
+            "the message names the boundary: {caught}"
+        );
+        assert!(
+            caught.message.contains("the answer blew up"),
+            "the message carries the panic's own words: {caught}"
+        );
+    }
+
+    /// The formatter reads both string payloads and names a non-text one.
+    #[test]
+    fn the_panic_text_formatter_reads_a_payload() {
+        /// Catch one panicking body and hand back its payload.
+        fn payload_of(body: impl FnOnce() + std::panic::UnwindSafe) -> Box<dyn std::any::Any + Send> {
+            match std::panic::catch_unwind(body) {
+                Ok(()) => unreachable!("the body panics"),
+                Err(payload) => payload,
+            }
+        }
+
+        let borrowed = payload_of(|| panic!("a borrowed phrase"));
+        assert_eq!(super::panic_text(borrowed.as_ref()), "a borrowed phrase");
+
+        let owned = payload_of(|| panic!("a {}", "formatted phrase"));
+        assert_eq!(super::panic_text(owned.as_ref()), "a formatted phrase");
+
+        let odd = payload_of(|| std::panic::panic_any(42_u8));
+        assert_eq!(super::panic_text(odd.as_ref()), "a payload that is not text");
     }
 }
