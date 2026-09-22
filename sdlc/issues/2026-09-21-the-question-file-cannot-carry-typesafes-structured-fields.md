@@ -1,6 +1,17 @@
 # The question file cannot carry TypeSafe's structured instructions, criteria, levels, or boundaries
 
-Status: Open
+Status: Approved by the product side on 2026-09-22. It becomes a ticket after ticket 0065 lands. Ian can overturn any ruling below.
+
+## Product rulings, 2026-09-22
+
+1. **Adopt the widening.** Every description slot the vendor takes as JSON takes JSON in the question file: `instructions`, option and label descriptions, score levels, and the `true` and `false` boundaries of `decide`. A string stays valid everywhere. The CLI flags stay sentences.
+2. **The question text stays a string.** The supporting JSON rides in the same slot as the description does today. For `annotate`, an entry's `question` may be an object, and the adapter sends it as `instructions` unchanged. No new key such as `with` is added.
+3. **The adapter passes the JSON through unchanged.** The canonical form for the digest is compact JSON with keys in the order written. Two files that differ only in white space give one digest.
+4. **Keep the name `annotate`.** The rename to `structure` is refused. The word "structure" names what a slot may hold, and the ruled line "fills out a form for every record" stays. The verb `fill` is noted as the one plain alternative and is not adopted.
+5. **Order.** The ticket is not a 0.1 blocker. It follows ticket 0065. Exception: if the build finds that the recognize and relate methods need array instructions, the ticket moves ahead of them.
+6. **A measurement before any public claim.** One probe runs a structured rubric against its string form on a labeled set. Marketing shows structured descriptions only after that probe.
+7. **Size.** The ticket pins what the local size check counts when a description is JSON.
+
 
 TypeSafe's own documentation ("Advanced: structure", https://docs.typesafe.ai/primitives/advanced) says the four question fields — `instructions`, Choice `criteria` values, Score `criteria` entries, and Noul `criteria.true`/`criteria.false` — all accept `string`, `object`, `array`, or `null`. System One models are trained on that structure. The tool sends strings, and the question file refuses anything else, so three of the four structure surfaces go unused.
 
