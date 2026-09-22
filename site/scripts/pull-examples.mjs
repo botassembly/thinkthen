@@ -13,7 +13,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { FUNCTIONS, SURFACES, HOWTOS } from '../src/data/catalog.mjs';
+import { FUNCTIONS, SURFACES, HOWTOS, RECIPES } from '../src/data/catalog.mjs';
 
 const DECK = process.env.THINKTHEN_DECK
   || '/home/ian/workspace/repos/mktg/decks/2026-09-21-thinkthen-semantic-commands';
@@ -342,6 +342,32 @@ function howtoCells() {
   return out;
 }
 
+// ------------------------------------------------------------------- recipes
+
+// The recipes follow the how-tos: the deck's recipes/run.sh holds the commands
+// and the input files, and recipes/out/ holds what the recorded run printed.
+function recipeCells() {
+  const runSh = path.join(DECK, 'recipes', 'run.sh');
+  const outDir = path.join(DECK, 'recipes', 'out');
+  const { files, runs } = parseUsecasesRun(read(runSh));
+  const out = {};
+  for (const recipe of RECIPES) {
+    const steps = recipe.runs.map((name) => {
+      const run = runs[name];
+      if (!run) throw new Error(`recipe ${recipe.slug}: no run named ${name}`);
+      const rec = recorded(outDir, name);
+      if (!rec) throw new Error(`recipe ${recipe.slug}: no recorded output for ${name}`);
+      return { name, command: run.command, output: rec.output, exit: rec.exit };
+    });
+    const inputs = recipe.files.map((name) => {
+      if (files[name] === undefined) throw new Error(`recipe ${recipe.slug}: run.sh writes no ${name}`);
+      return { name, text: files[name] };
+    });
+    out[recipe.slug] = { status: 'run', source: 'deck recipes/run.sh and recipes/out/', inputs, steps };
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------- write
 
 // The see sentences are written here, not in the deck. Keep them across a pull.
@@ -365,6 +391,7 @@ function main() {
   const { cells: drawn, wholeBlocks } = drawnCells();
   const recognize = recognizeCells();
   const howtos = howtoCells();
+  const recipes = recipeCells();
 
   const index = [];
   for (const fn of FUNCTIONS) {
@@ -397,11 +424,12 @@ function main() {
 
   fs.writeFileSync(path.join(OUT, '_surfaces.json'), JSON.stringify(wholeBlocks, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_howtos.json'), JSON.stringify(howtos, null, 2) + '\n');
+  fs.writeFileSync(path.join(OUT, '_recipes.json'), JSON.stringify(recipes, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_index.json'), JSON.stringify(index, null, 2) + '\n');
 
   const counts = index.reduce((a, c) => ((a[c.status] = (a[c.status] || 0) + 1), a), {});
   console.log(`wrote ${index.length} cells:`, counts);
-  console.log(`wrote ${Object.keys(howtos).length} how-tos and ${Object.keys(wholeBlocks).length} surface samples`);
+  console.log(`wrote ${Object.keys(howtos).length} how-tos, ${Object.keys(recipes).length} recipes and ${Object.keys(wholeBlocks).length} surface samples`);
 }
 
 main();

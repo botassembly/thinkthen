@@ -1,5 +1,19 @@
 ---
 import Base from '../layouts/Base.astro';
+import Terminal from '../components/Terminal.astro';
+import { RECIPES } from '../data/catalog.mjs';
+import { RECIPE_RUNS } from '../data/examples.mjs';
+
+// Copy fields mark code with backticks. The page shows it as code.
+const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
+
+for (const recipe of RECIPES) {
+  const data = RECIPE_RUNS[recipe.slug];
+  if (!data) throw new Error(`recipes: ${recipe.slug} has no recorded run. Run npm run pull.`);
+  for (const step of data.steps) {
+    if (!recipe.see?.[step.name]) throw new Error(`recipes: ${recipe.slug} has no see caption for ${step.name}`);
+  }
+}
 ---
 <Base title="Shell recipes" description="The tools you already have, piped into ThinkThen.">
   <h1>Shell recipes</h1>
@@ -7,9 +21,24 @@ import Base from '../layouts/Base.astro';
 
   <p>Each recipe is one <code>jq</code> line in front of ThinkThen and one behind it.</p>
 
-  <p>Two shipped flags and one fixed row shape carry every recipe. <code>--jsonl</code> reads one JSON row per record. <code>--field</code> names the part the model sees. The row that comes back is <code>{'{"input": <the whole row>, "value": <the answer>}'}</code>. Paths, line numbers, dates, and ids ride through untouched and never reach the model.</p>
+  <p>A few shipped flags carry every recipe. <code>--jsonl</code> reads one JSON row per record. <code>--field</code> names the part the model sees. <code>--details</code> puts <code>input</code>, the whole row as it went in, beside <code>value</code>, the answer. Paths, line numbers, dates, and ids ride through untouched and never reach the model.</p>
 
-  <div class="note">No recipes yet. Each one appears here after its run is recorded.</div>
+  {RECIPES.map((recipe) => {
+    const data = RECIPE_RUNS[recipe.slug];
+    return (
+      <Fragment>
+        <h2 id={recipe.slug}>{recipe.title}</h2>
+        <p>{parts(recipe.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+        {data.inputs.map((file) => (
+          <div class="block">
+            <div class="caption"><span class="status run">run</span><span class="grow"><code>{file.name}</code>, a file the command reads.</span></div>
+            <pre>{file.text}</pre>
+          </div>
+        ))}
+        {data.steps.map((step) => <Terminal run={step} caption={`Recorded from the real command. ${recipe.see[step.name]}`} />)}
+      </Fragment>
+    );
+  })}
 
   <p class="pagelinks"><a href="/tutorial/">Take the tutorial</a> · <a href="/reference/">Read the reference</a> · <a href="/how-tos/">Try a how-to</a></p>
 </Base>

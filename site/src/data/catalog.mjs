@@ -498,6 +498,38 @@ export const HOWTOS = [
   },
 ];
 
+// The shell recipes. Each one is a recorded run from the deck's recipes/run.sh.
+// `files` names the inputs the page shows, and `see` says what to look for.
+export const RECIPES = [
+  {
+    slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids',
+    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body, so the id and the date ride through. Run it again and the saved answers come back at no further cost.',
+    files: ['tickets.json', 'triage.json'], runs: ['tickets', 'tickets-again'],
+    see: {
+      tickets: 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2.',
+      'tickets-again': 'The same command again. Every answer comes from the saved answers, and no request is sent.',
+    },
+  },
+  {
+    slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does',
+    said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does, and the file and hunk header ride through.',
+    files: ['change.diff', 'hunks.jq'], runs: ['diff'],
+    see: { diff: 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
+  },
+  {
+    slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging',
+    said: '`jq` numbers the lines. `filter` keeps the lines that hedge, and each comes back as it went in, line number and all.',
+    files: ['draft.txt'], runs: ['lint'],
+    see: { lint: 'The two hedging lines come back with their line numbers.' },
+  },
+  {
+    slug: 'fill-a-form-by-selection', title: 'Fill a form by selection',
+    said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
+    files: ['requests.jsonl', 'form.json'], runs: ['form'],
+    see: { form: 'Each request gets a plan, a topic, and whether to call back, all from the lists in form.json.' },
+  },
+];
+
 // Measured facts. Every one names the run it came from.
 export const FACTS = {
   cost: {
