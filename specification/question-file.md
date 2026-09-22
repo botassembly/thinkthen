@@ -1,6 +1,6 @@
 # The question file
 
-Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19. ADR 0037 carries structured text and descriptions through it.
+Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19. ADR 0039 carries structured text and descriptions through it.
 
 Every structural setting of a question has two homes. One is an option on the command line. The other is a key in a question file, under the same word. A question tuned once in a file is the question the test runs and the question the gate runs.
 

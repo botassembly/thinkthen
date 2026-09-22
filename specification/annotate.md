@@ -1,6 +1,6 @@
 # `annotate`
 
-Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one; ADR 0037 amends that exclusion.
+Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one; ADR 0039 amends that exclusion.
 
 Asks a saved question set about each record and adds one field per question.
 

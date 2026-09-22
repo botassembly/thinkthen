@@ -1,4 +1,4 @@
-# ADR 0037: Carry structured question descriptions
+# ADR 0039: Carry structured question descriptions
 
 - Status: Accepted and implemented by verified ticket 0069; landing pending
 - Date: 2026-09-22
