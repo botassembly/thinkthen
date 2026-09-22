@@ -28,8 +28,9 @@
 //! a [`EngineConfig`] leaves unset: `ENGINE_NULL` for the in-process
 //! backend, `ENGINE_BASE_URL` for the stub on the wire (the contract's
 //! `THINKTHEN_BASE_URL` wins over it), `ENGINE_TIMEOUT_SECS` (30),
-//! `ENGINE_MAX_RETRIES` (2), `ENGINE_WIDTH` (4). No key is read and none
-//! is sent.
+//! `ENGINE_MAX_RETRIES` (2), `ENGINE_WIDTH` (4), and
+//! `ENGINE_SYNTHETIC_PARTIAL` (unset) which arms the annotate partial-
+//! failure fixture for tests alone. No key is read and none is sent.
 
 use std::ptr;
 use std::sync::Arc;
@@ -82,6 +83,7 @@ struct ResolvedConfig {
     timeout: Duration,
     max_retries: u32,
     width: usize,
+    synthetic_partial: bool,
 }
 
 impl ResolvedConfig {
@@ -109,6 +111,7 @@ impl ResolvedConfig {
                 .width
                 .or_else(|| env_number("ENGINE_WIDTH").map(|value| value as usize))
                 .unwrap_or(4),
+            synthetic_partial: env("ENGINE_SYNTHETIC_PARTIAL").is_some(),
         }
     }
 
@@ -527,12 +530,16 @@ impl Engine for BlockingEngine {
                     poll();
                 }
                 // The one synthesized partial failure (no recording carries
-                // a failed logical question): for exactly this record, the
-                // last question in name order returns the ruled marker and
-                // its neighbours answer normally. The conformance case
-                // `74-annotate-preserves-good-answers` pins it, and
-                // DIVERGENCES.md marks it synthesized.
-                if record == &SYNTHETIC_PARTIAL_RECORD
+                // a failed logical question): when the test-only
+                // `ENGINE_SYNTHETIC_PARTIAL` opt-in is set, exactly this
+                // record's last name-order question returns the ruled marker
+                // and its neighbours answer normally. The conformance case
+                // `74-annotate-preserves-good-answers` pins the shape when
+                // the opt-in is set, and DIVERGENCES.md marks it synthesized.
+                // Unset, which is every production process, this record
+                // answers like any other.
+                if self.config.synthetic_partial
+                    && record == &SYNTHETIC_PARTIAL_RECORD
                     && Some(name) == set.names().last()
                 {
                     fields.push((
@@ -672,11 +679,14 @@ pub fn reset_usage() {
     TOKENS.store(0, Ordering::Relaxed);
 }
 
-/// The one synthesized partial-failure record.
+/// The one synthesized partial-failure record, armed only by tests.
 ///
 /// No recording carries a failed logical question, so the stand-in answers
 /// the ruled marker for exactly this record (its last name-order question)
-/// and nothing else; `74-annotate-preserves-good-answers` pins the output
+/// and nothing else — but only when the test-only `ENGINE_SYNTHETIC_PARTIAL`
+/// opt-in is set. Unset, the default in every production process, the
+/// record answers like any other input, so no caller ever meets a fake
+/// failure. `74-annotate-preserves-good-answers` pins the marker's shape
 /// and `conformance/DIVERGENCES.md` marks it synthesized.
 pub const SYNTHETIC_PARTIAL_RECORD: &str = "order 4471: charged twice, please refund";
 
@@ -1189,6 +1199,17 @@ mod tests {
         // Sound in this binary: every engine call runs after the seat is
         // held, so no other thread reads the environment while it is set.
         unsafe { std::env::set_var("ENGINE_NULL", "1") };
+        unsafe { std::env::remove_var("ENGINE_SYNTHETIC_PARTIAL") };
+        seat
+    }
+
+    /// The null backend with the test-only partial-failure fixture armed,
+    /// serialized the same way.
+    fn synthetic() -> StdMutexGuard<'static, ()> {
+        let seat = null();
+        // Sound in this binary: the seat is held, so no engine call runs
+        // between this set and the engine value that reads it.
+        unsafe { std::env::set_var("ENGINE_SYNTHETIC_PARTIAL", "1") };
         seat
     }
 
@@ -1389,10 +1410,12 @@ mod tests {
     }
 
     /// 0054: one logical question may fail while its neighbour answers, the
-    /// marker is the ruled JSON, and the count is one.
+    /// marker is the ruled JSON, and the count is one. The fixture is armed
+    /// by its test-only opt-in, the way `74-annotate-preserves-good-answers`
+    /// arms it.
     #[test]
     fn the_partial_failure_marker_is_the_ruled_shape() {
-        let _seat = null();
+        let _seat = synthetic();
         let tt = BlockingEngine::from_env();
         let set = QuestionSet::from_json(
             r#"{"version":1,"questions":{
@@ -1421,6 +1444,32 @@ mod tests {
             "the marker's JSON is the ruled one: {json}"
         );
         assert_eq!(thinkthen_contract::failed_questions(&rows), 1, "one failed logical question");
+    }
+
+    /// Finding 7: with the test-only opt-in unset, the fixture text answers
+    /// like any other input — no caller ever meets a fake failure.
+    #[test]
+    fn the_fixture_text_answers_on_the_default_path() {
+        let _seat = null();
+        let tt = BlockingEngine::from_env();
+        let set = QuestionSet::from_json(
+            r#"{"version":1,"questions":{
+                "kind":{"decide":"Is this a refund request?","threshold":0.5},
+                "topic":{"decide":"Is this a billing problem?","threshold":0.5}}}"#,
+        )
+        .expect("parses");
+        let rows = tt
+            .annotate(&set, &[super::SYNTHETIC_PARTIAL_RECORD], None)
+            .expect("answers");
+        assert_eq!(rows.len(), 1);
+        for (name, value) in &rows[0] {
+            assert!(
+                !matches!(value, Annotated::Failed(_)),
+                "{name} answered, not failed, on the default path"
+            );
+        }
+        assert_eq!(thinkthen_contract::failed_questions(&rows), 0, "no failed logical question");
+        assert_eq!(rows[0][0].1, Annotated::Decision(Answer::Yes), "the fixture text is a refund");
     }
 
     /// The ruled record row serializes as `{"input","value"}` and carries

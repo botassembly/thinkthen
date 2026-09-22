@@ -116,3 +116,64 @@ child keeps the inherited pool's file descriptors until it exits.
 **Core minors.** `replay.rs`'s docs no longer call `confidence` or `number`
 ruled names; `conformance/DIVERGENCES.md`'s interim-number bullet is
 rewritten as history pointing at the rename commits.
+
+## 2026-09-22 — the review fix wave, the stand-in's three pieces
+
+Findings 7 and 8, group 4's retry waits, and the connector door the review
+asked for. Each fix carries the test that failed before it.
+
+**The connector door, and finding 8 (the ignored address and width).** The
+knobs now resolve per engine value: `ResolvedConfig::resolve` reads the
+`EngineConfig` first, the environment second, and the built-in defaults
+last, and `BlockingEngine` carries the result. `StandinConnector`
+implements the contract's `Connector` and returns `Arc<dyn Engine>`. The
+process state is keyed by pid and transport shape (address, width,
+timeout), so an engine value with its own config gets its own pool and
+gate instead of silently inheriting the environment's. `Settings` stays
+the config's alias, so no surface changed.
+
+`tests/connector.rs` proves the precedence end to end with no environment
+of its own: the environment names a refused address (`127.0.0.1:1`) and
+width 8, the config names a live listener and width 1, four concurrent
+calls all answer and the listener's peak concurrency is exactly 1.
+
+**Finding 7 (the fake failure in product code).** The annotate
+partial-failure fixture now fires only when the test-only
+`ENGINE_SYNTHETIC_PARTIAL` opt-in is set. Unset — every production
+process — the fixture record answers like any other input.
+`the_fixture_text_answers_on_the_default_path` fails against the old code
+(`topic answered, not failed` was the panic: the old code returned the
+Failed marker), and `the_partial_failure_marker_is_the_ruled_shape` still
+pins the marker through the opt-in. Cross-side consequence for the merge:
+every conformance runner that replays
+`74-annotate-preserves-good-answers` must export
+`ENGINE_SYNTHETIC_PARTIAL=1` for that case, or the case needs revising in
+the phase H conformance lane.
+
+**Group 4 (retry waits that ignore a stop).** Both backoff sleeps are now
+`sleep_checked`: slices of at most 100 ms, each one checking the cancel
+token and the deadline. Before the fix,
+`a_cancel_lands_inside_the_retry_backoff` measured the full backoff —
+`the cancel cut the 1 s backoff short, wall was 1.000808042s` — and after
+it the cancel lands inside 150 ms. A deadline shorter than the backoff
+returns the deadline kind with the budget in its message.
+
+Commands and output:
+
+```
+$ cargo test
+lib: 9 passed; backoff: 2 passed; billing: 1 passed; connector: 1 passed;
+recognize_replay: 7 passed; refused: 1 passed; wire: 3 passed (skipped
+offline); doc tests: 1 passed
+
+$ cargo test --test backoff   # with the checked sleep disabled
+thread 'a_cancel_lands_inside_the_retry_backoff' panicked:
+the cancel cut the 1 s backoff short, wall was 1.000808042s
+test result: FAILED. 1 passed; 1 failed
+```
+
+The fixture text now appears only in tests, the conformance case, and
+notes: `grep -rn "order 4471: charged twice"` over the worktree finds it
+in `conformance/conformance.json`, this crate's gated fixture and its
+test, six surface test files, and NOTES files — no surface's `src/` and no
+database's `src/`.
