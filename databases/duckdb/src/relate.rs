@@ -16,39 +16,35 @@
 //! naming a question file's `relate` section. More than 255 records is a
 //! usage error before anything is asked; the contract's own
 //! `relate_checked` carries that guard, so every surface inherits it.
+//!
+//! The scan runs its query on the kept connection of the CALLER'S
+//! database, resolved at bind time through the caller's client context
+//! (`connections.rs`), not on one process-global connection: two
+//! databases in one process each load this extension and share its
+//! statics, and the global used to serve whichever loaded last. The
+//! stable C API cannot run a query on the caller's own connection, so a
+//! temporary table on that connection stays invisible; when the query
+//! misses one, `boundary_note` says so in words instead of leaving
+//! "table does not exist" to mislead.
 
 use std::ffi::{CStr, CString, c_void};
-use std::sync::Mutex;
 
 use duckdb::ffi;
 use thinkthen_contract::{Error as EngineError, Kind, Relate, relate_checked};
 
-use crate::{engine, failure, options};
+use crate::{connections, engine_call, failure, guard, options};
 
-/// The live connection `thinkthen_relate` runs its query on, opened at
-/// load time and kept for the process lifetime. The database pointer
-/// `get_database` hands out belongs to the load state and can dangle
-/// after init, so the scan must not connect from it; a kept connection
-/// is the C API's own handle and stays valid while the database lives.
-/// The mutex serializes scans that share it.
-static CONNECTION: Mutex<Option<ConnectionHandle>> = Mutex::new(None);
-
-/// A raw `duckdb_connection` a static can hold; every use sits under the
-/// mutex, which is the synchronization the handle needs.
-struct ConnectionHandle(ffi::duckdb_connection);
-
-unsafe impl Send for ConnectionHandle {}
-
-/// Remember the connection for `thinkthen_relate`; the extension keeps it
-/// open instead of disconnecting after registration.
-pub(crate) fn remember_connection(connection: ffi::duckdb_connection) {
-    *CONNECTION.lock().expect("the relate connection") = Some(ConnectionHandle(connection));
-}
-
-/// Bind data: the query and the rules, read once per query plan.
+/// Bind data: the query and the rules, read once per query plan, plus
+/// the caller's own context (it names the caller's database and holds
+/// the temp catalog the boundary check probes), the caller's file-access
+/// setting as it stood at bind, and the kept connection of the caller's
+/// database.
 struct Bind {
     query: String,
     rules: Vec<String>,
+    caller: ffi::duckdb_client_context,
+    files_allowed: bool,
+    connection: ffi::duckdb_connection,
 }
 
 /// Scan data: the rows built once per scan, and the cursor over them.
@@ -59,15 +55,24 @@ struct Scan {
 }
 
 unsafe extern "C" fn drop_bind(payload: *mut c_void) {
-    if !payload.is_null() {
-        drop(unsafe { Box::from_raw(payload as *mut Bind) });
-    }
+    guard::contained_quiet("relate bind-state destruction", || unsafe {
+        if !payload.is_null() {
+            let bind = Box::from_raw(payload as *mut Bind);
+            let mut caller = bind.caller;
+            if !caller.is_null() {
+                ffi::duckdb_destroy_client_context(&mut caller);
+            }
+            drop(bind);
+        }
+    });
 }
 
 unsafe extern "C" fn drop_scan(payload: *mut c_void) {
-    if !payload.is_null() {
-        drop(unsafe { Box::from_raw(payload as *mut Scan) });
-    }
+    guard::contained_quiet("relate scan-state destruction", || unsafe {
+        if !payload.is_null() {
+            drop(Box::from_raw(payload as *mut Scan));
+        }
+    });
 }
 
 /// A string out of a `duckdb_value`, copied and the C string freed.
@@ -108,7 +113,17 @@ unsafe fn bind_error(info: ffi::duckdb_bind_info, message: &str) {
     }
 }
 
+/// The bind callback, contained: a panic becomes the bind error.
 unsafe extern "C" fn bind(info: ffi::duckdb_bind_info) {
+    if let Err(message) = guard::contained("relate bind", || unsafe { plan(info) }) {
+        unsafe { bind_error(info, &message) };
+    }
+}
+
+/// Plan one relate: declare the columns, read the parameters, and
+/// resolve the caller's database, its file-access setting, and the kept
+/// connection the scan will use.
+unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
     unsafe {
         for (name, kind) in [
             (c"name", ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR),
@@ -127,36 +142,64 @@ unsafe extern "C" fn bind(info: ffi::duckdb_bind_info) {
         ffi::duckdb_destroy_value(&mut query_value);
         ffi::duckdb_destroy_value(&mut rules_value);
         let Some(query) = query else {
-            bind_error(info, "thinkthen usage: the relate query is NULL");
-            return;
+            return Err("thinkthen usage: the relate query is NULL".into());
         };
         if query.trim().is_empty() {
-            bind_error(info, "thinkthen usage: the relate query is blank");
-            return;
+            return Err("thinkthen usage: the relate query is blank".into());
         }
         let Some(rules) = rules else {
-            bind_error(
-                info,
-                "thinkthen usage: the relate rules are NULL or hold a NULL entry",
+            return Err(
+                "thinkthen usage: the relate rules are NULL or hold a NULL entry".into(),
             );
-            return;
         };
         if rules.is_empty() {
-            bind_error(
-                info,
-                "thinkthen usage: relate needs at least one rule, as a name or a question file",
+            return Err(
+                "thinkthen usage: relate needs at least one rule, as a name or a question file"
+                    .into(),
             );
-            return;
         }
+        // The caller's own context: its catalogs name the caller's
+        // database among the loaded ones, and its temp catalog answers
+        // the boundary check when the query misses a temporary table.
+        let mut caller: ffi::duckdb_client_context = std::ptr::null_mut();
+        ffi::duckdb_table_function_get_client_context(info, &mut caller);
+        if caller.is_null() {
+            return Err("thinkthen defect: the calling connection has no client context".into());
+        }
+        let files_allowed = connections::external_access_enabled(caller);
+        let connection = match connections::for_caller(caller) {
+            Ok(connection) => connection,
+            Err(message) => {
+                let mut caller = caller;
+                ffi::duckdb_destroy_client_context(&mut caller);
+                return Err(message);
+            }
+        };
         ffi::duckdb_bind_set_bind_data(
             info,
-            Box::into_raw(Box::new(Bind { query, rules })) as *mut c_void,
+            Box::into_raw(Box::new(Bind {
+                query,
+                rules,
+                caller,
+                files_allowed,
+                connection,
+            })) as *mut c_void,
             Some(drop_bind),
         );
+        Ok(())
     }
 }
 
 unsafe extern "C" fn init(info: ffi::duckdb_init_info) {
+    if let Err(message) = guard::contained("relate init", || unsafe { init_scan(info) }) {
+        if let Ok(text) = CString::new(message) {
+            unsafe { ffi::duckdb_init_set_error(info, text.as_ptr()) };
+        }
+    }
+}
+
+/// One scan state per scan.
+unsafe fn init_scan(info: ffi::duckdb_init_info) -> Result<(), String> {
     unsafe {
         ffi::duckdb_init_set_init_data(
             info,
@@ -167,39 +210,36 @@ unsafe extern "C" fn init(info: ffi::duckdb_init_info) {
             })) as *mut c_void,
             Some(drop_scan),
         );
+        Ok(())
     }
 }
 
 /// Emit the edges, up to one vector per call; the first call builds them.
+/// The callback is contained: a panic becomes the scan's error.
 unsafe extern "C" fn function(info: ffi::duckdb_function_info, output: ffi::duckdb_data_chunk) {
+    if let Err(message) = guard::contained("relate scan", || unsafe { scan(info, output) }) {
+        if let Ok(text) = CString::new(message) {
+            unsafe { ffi::duckdb_function_set_error(info, text.as_ptr()) };
+        }
+        unsafe { ffi::duckdb_data_chunk_set_size(output, 0) };
+    }
+}
+
+unsafe fn scan(info: ffi::duckdb_function_info, output: ffi::duckdb_data_chunk) -> Result<(), String> {
     unsafe {
         let scan = ffi::duckdb_function_get_init_data(info) as *mut Scan;
         if scan.is_null() {
             ffi::duckdb_data_chunk_set_size(output, 0);
-            return;
+            return Ok(());
         }
         let scan = &mut *scan;
         if !scan.built {
             scan.built = true;
             let bind = ffi::duckdb_function_get_bind_data(info) as *const Bind;
             if bind.is_null() {
-                if let Ok(text) = CString::new("thinkthen defect: the relate plan lost its bind data")
-                {
-                    ffi::duckdb_function_set_error(info, text.as_ptr());
-                }
-                ffi::duckdb_data_chunk_set_size(output, 0);
-                return;
+                return Err("thinkthen defect: the relate plan lost its bind data".into());
             }
-            match build_rows(&*bind) {
-                Ok(rows) => scan.rows = rows,
-                Err(message) => {
-                    let text = CString::new(message)
-                        .unwrap_or_else(|_| c"thinkthen: the relate call failed".to_owned());
-                    ffi::duckdb_function_set_error(info, text.as_ptr());
-                    ffi::duckdb_data_chunk_set_size(output, 0);
-                    return;
-                }
-            }
+            scan.rows = build_rows(&*bind)?;
         }
         let remaining = scan.rows.len().saturating_sub(scan.at);
         let count = remaining.min(2048);
@@ -214,6 +254,7 @@ unsafe extern "C" fn function(info: ffi::duckdb_function_info, output: ffi::duck
         }
         scan.at += count;
         ffi::duckdb_data_chunk_set_size(output, count as u64);
+        Ok(())
     }
 }
 
@@ -230,26 +271,20 @@ unsafe fn assign_string(output: ffi::duckdb_data_chunk, column: u64, row: usize,
     }
 }
 
-/// The edges, built once per scan: run the query, ask the engine, map the
-/// edge ordinals back to the query's own ids.
+/// The edges, built once per scan: run the query on the caller's
+/// database's kept connection, ask the engine, map the edge ordinals
+/// back to the query's own ids.
 fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String> {
-    let records = {
-        let guard = CONNECTION.lock().map_err(|_| {
-            "thinkthen defect: the relate connection's lock is poisoned".to_owned()
-        })?;
-        let Some(handle) = guard.as_ref() else {
-            return Err("thinkthen defect: the extension did not keep its relate connection".into());
-        };
-        unsafe { run_query(handle.0, &bind.query)? }
-    };
+    let records = connections::run_serialized(|| unsafe { run_query(bind.connection, &bind.query) })
+        .map_err(|message| boundary_note(bind, message))?;
     if records.is_empty() {
         // No records, no pairs, nothing to ask: zero edges is arithmetic,
         // not a judgment, so the recordings are not consulted.
         return Ok(Vec::new());
     }
-    let ask = build_ask(&bind.rules)?;
+    let ask = build_ask(&bind.rules, bind.files_allowed)?;
     let bodies: Vec<&str> = records.iter().map(|(_, body)| body.as_str()).collect();
-    let edges = relate_checked(engine(), &ask, &bodies, options()).map_err(failure)?;
+    let edges = engine_call(|engine| relate_checked(engine, &ask, &bodies, options()))?;
     let mut rows = Vec::with_capacity(edges.len());
     for edge in edges {
         let id = |record: u64| -> Result<String, String> {
@@ -270,11 +305,17 @@ fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String>
 
 /// The rules parameter as a `Relate` ask: bare names mean any-to-any, and
 /// a single `'@file'` or `'{...}'` entry is the question file's `relate`
-/// section or the spec itself.
-fn build_ask(rules: &[String]) -> Result<Relate, String> {
+/// section or the spec itself. A file read refuses when the caller's
+/// database has external file access off.
+fn build_ask(rules: &[String], files_allowed: bool) -> Result<Relate, String> {
     if rules.len() == 1 {
         let only = rules[0].trim();
         if let Some(path) = only.strip_prefix('@') {
+            if !files_allowed {
+                return Err(format!(
+                    "thinkthen local: the question file {path} was not read: enable_external_access is off for the calling database"
+                ));
+            }
             let text = std::fs::read_to_string(path).map_err(|error| {
                 format!("thinkthen local: the question file {path} did not read: {error}")
             })?;
@@ -294,8 +335,64 @@ fn build_ask(rules: &[String]) -> Result<Relate, String> {
     Ok(ask)
 }
 
-/// Run the query on the kept connection and read `(id, text)` per row;
-/// any value renders as its text, so an integer id comes back as `1`.
+/// The raw run failure, translated when the missing table is the
+/// caller's own temporary one. The stable C API cannot run a query on
+/// the calling connection, so relate can never see that table; saying
+/// which boundary was hit beats "table does not exist".
+fn boundary_note(bind: &Bind, message: String) -> String {
+    let Some(name) = missing_table(&message) else {
+        return message;
+    };
+    if !temp_table_exists(bind.caller, &name) {
+        return message;
+    }
+    format!(
+        "thinkthen local: the relate query names the temporary table {name}, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables; materialize it (CREATE TABLE ... AS SELECT) or run the query directly"
+    )
+}
+
+/// The missing name inside DuckDB's catalog error, when it names one.
+fn missing_table(message: &str) -> Option<String> {
+    let rest = message.split("Table with name ").nth(1)?;
+    let name = rest.split(" does not exist").next()?.trim().trim_matches('"');
+    if name.is_empty() {
+        None
+    } else {
+        Some(name.to_owned())
+    }
+}
+
+/// Whether the caller's context holds a table with this name in its
+/// temporary catalog.
+fn temp_table_exists(caller: ffi::duckdb_client_context, name: &str) -> bool {
+    let Ok(name) = CString::new(name) else {
+        return false;
+    };
+    let mut catalog =
+        unsafe { ffi::duckdb_client_context_get_catalog(caller, c"temp".as_ptr()) };
+    if catalog.is_null() {
+        return false;
+    }
+    let mut entry = unsafe {
+        ffi::duckdb_catalog_get_entry(
+            catalog,
+            caller,
+            ffi::duckdb_catalog_entry_type_DUCKDB_CATALOG_ENTRY_TYPE_TABLE,
+            c"main".as_ptr(),
+            name.as_ptr(),
+        )
+    };
+    let exists = !entry.is_null();
+    if exists {
+        unsafe { ffi::duckdb_destroy_catalog_entry(&mut entry) };
+    }
+    unsafe { ffi::duckdb_destroy_catalog(&mut catalog) };
+    exists
+}
+
+/// Run the query on the caller's database's kept connection and read
+/// `(id, text)` per row; any value renders as its text, so an integer id
+/// comes back as `1`.
 unsafe fn run_query(
     connection: ffi::duckdb_connection,
     sql: &str,

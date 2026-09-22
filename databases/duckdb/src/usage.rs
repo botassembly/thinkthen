@@ -7,21 +7,31 @@ use std::ffi::{CStr, CString, c_void};
 
 use duckdb::ffi;
 
-use thinkthen_contract::Engine as ContractEngine;
 
-use crate::engine;
+use crate::{guard, with_engine};
 
 /// Drop a boxed emitted flag.
 unsafe extern "C" fn drop_flag(payload: *mut c_void) {
-    if !payload.is_null() {
-        drop(unsafe { Box::from_raw(payload as *mut bool) });
-    }
+    guard::contained_quiet("usage state destruction", || unsafe {
+        if !payload.is_null() {
+            drop(Box::from_raw(payload as *mut bool));
+        }
+    });
 }
 
 /// Bind: declare the two result columns, then hand back a bind payload
 /// DuckDB can destroy. The columns live in bind because the table
-/// function itself carries no result-column call on this API.
+/// function itself carries no result-column call on this API. The
+/// callback is contained: a panic becomes the bind error.
 unsafe extern "C" fn bind(info: ffi::duckdb_bind_info) {
+    if let Err(message) = guard::contained("usage bind", || unsafe { plan(info) }) {
+        if let Ok(text) = CString::new(message) {
+            unsafe { ffi::duckdb_bind_set_error(info, text.as_ptr()) };
+        }
+    }
+}
+
+unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
     unsafe {
         let varchar = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR);
         ffi::duckdb_bind_add_result_column(info, c"metric".as_ptr(), varchar);
@@ -32,34 +42,54 @@ unsafe extern "C" fn bind(info: ffi::duckdb_bind_info) {
             Box::into_raw(Box::new(false)) as *mut c_void,
             Some(drop_flag),
         );
+        Ok(())
     }
 }
 
-/// Init: one emitted flag per scan.
+/// Init: one emitted flag per scan, contained like its siblings.
 unsafe extern "C" fn init(info: ffi::duckdb_init_info) {
+    if let Err(message) = guard::contained("usage init", || unsafe { init_scan(info) }) {
+        if let Ok(text) = CString::new(message) {
+            unsafe { ffi::duckdb_init_set_error(info, text.as_ptr()) };
+        }
+    }
+}
+
+unsafe fn init_scan(info: ffi::duckdb_init_info) -> Result<(), String> {
     unsafe {
         ffi::duckdb_init_set_init_data(
             info,
             Box::into_raw(Box::new(false)) as *mut c_void,
             Some(drop_flag),
         );
+        Ok(())
     }
 }
 
-/// Emit the three rows once per scan, then empty chunks.
+/// Emit the three rows once per scan, then empty chunks. The callback is
+/// contained: a panic becomes the scan's error.
 unsafe extern "C" fn function(info: ffi::duckdb_function_info, output: ffi::duckdb_data_chunk) {
+    if let Err(message) = guard::contained("usage scan", || unsafe { scan(info, output) }) {
+        if let Ok(text) = CString::new(message) {
+            unsafe { ffi::duckdb_function_set_error(info, text.as_ptr()) };
+        }
+        unsafe { ffi::duckdb_data_chunk_set_size(output, 0) };
+    }
+}
+
+unsafe fn scan(info: ffi::duckdb_function_info, output: ffi::duckdb_data_chunk) -> Result<(), String> {
     unsafe {
         let emitted = ffi::duckdb_function_get_init_data(info) as *mut bool;
         if emitted.is_null() {
             ffi::duckdb_data_chunk_set_size(output, 0);
-            return;
+            return Ok(());
         }
         if *emitted {
             ffi::duckdb_data_chunk_set_size(output, 0);
-            return;
+            return Ok(());
         }
         *emitted = true;
-        let usage = engine().usage();
+        let usage = with_engine(|engine| engine.usage())?;
         let rows = [
             ("requests", usage.requests as i64),
             ("cache_answers", usage.cache_answers as i64),
@@ -80,6 +110,7 @@ unsafe extern "C" fn function(info: ffi::duckdb_function_info, output: ffi::duck
             *value.add(i) = *count;
         }
         ffi::duckdb_data_chunk_set_size(output, rows.len() as u64);
+        Ok(())
     }
 }
 

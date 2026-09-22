@@ -14,9 +14,9 @@ use std::error::Error;
 use duckdb::core::{DataChunkHandle, Inserter, LogicalTypeHandle, LogicalTypeId};
 use duckdb::vscalar::{ScalarFunctionSignature, VScalar};
 use duckdb::vtab::arrow::WritableVector;
-use thinkthen_contract::{Engine as ContractEngine, Recognize, Recognized};
+use thinkthen_contract::{Recognize, Recognized};
 
-use crate::{engine, failure, options, read_list_strings, read_strings};
+use crate::{engine_call, options, read_list_strings, read_strings};
 
 /// `thinkthen_recognize(body, kinds)`: one list of structs per row; a
 /// NULL row stays NULL, and a text with no names gives an empty list.
@@ -45,9 +45,7 @@ impl VScalar for RecognizeScalar {
                 continue;
             }
             let ask = Recognize::new().kinds(kinds.to_vec());
-            let answer = engine()
-                .recognize_opts(&ask, body, options())
-                .map_err(failure)?;
+            let answer = engine_call(|engine| engine.recognize_opts(&ask, body, options()))?;
             memo.insert(key, answer.clone());
             found.push(Some(answer));
         }

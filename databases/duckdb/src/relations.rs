@@ -18,9 +18,9 @@ use std::error::Error;
 use duckdb::core::{DataChunkHandle, Inserter, LogicalTypeHandle, LogicalTypeId};
 use duckdb::vscalar::{ScalarFunctionSignature, VScalar};
 use duckdb::vtab::arrow::WritableVector;
-use thinkthen_contract::{Engine as ContractEngine, Error as EngineError, Recognize};
+use thinkthen_contract::{Error as EngineError, Recognize};
 
-use crate::{engine, failure, options, read_strings};
+use crate::{engine_call, failure, options, read_strings};
 
 /// One relation as a row-shaped struct.
 type RelationRow = (String, String, String, String, String, f64);
@@ -45,9 +45,7 @@ impl VScalar for RelationsScalar {
                 continue;
             };
             let ask = build_ask(spec)?;
-            let found = engine()
-                .recognize_opts(&ask, body, options())
-                .map_err(failure)?;
+            let found = engine_call(|engine| engine.recognize_opts(&ask, body, options()))?;
             rows.push(Some(relation_rows(&found)?));
         }
         write_lists(output, &rows);

@@ -14,7 +14,7 @@ use std::ffi::CString;
 
 use duckdb::ffi;
 
-use crate::{judge_warm, read_raw_column};
+use crate::{guard, judge_warm, read_raw_column};
 
 /// The aggregate's state: one question argument and the distinct texts
 /// seen.
@@ -33,20 +33,28 @@ unsafe fn warm_state(handle: ffi::duckdb_aggregate_state) -> &'static mut WarmSt
 }
 
 unsafe extern "C" fn state_size(_: ffi::duckdb_function_info) -> u64 {
-    std::mem::size_of::<*mut WarmState>() as u64
+    guard::contained_with(
+        "warm state size",
+        std::mem::size_of::<*mut WarmState>() as u64,
+        || std::mem::size_of::<*mut WarmState>() as u64,
+    )
 }
 
 unsafe extern "C" fn state_init(_: ffi::duckdb_function_info, state: ffi::duckdb_aggregate_state) {
-    unsafe { *(state as *mut *mut WarmState) = Box::into_raw(Box::default()) };
+    guard::contained_quiet("warm state init", || unsafe {
+        *(state as *mut *mut WarmState) = Box::into_raw(Box::default());
+    });
 }
 
 unsafe extern "C" fn state_destroy(states: *mut ffi::duckdb_aggregate_state, count: u64) {
-    for i in 0..count as usize {
-        let handle = unsafe { *states.add(i) };
-        if !handle.is_null() {
-            drop(unsafe { Box::from_raw(*(handle as *mut *mut WarmState)) });
+    guard::contained_quiet("warm state destruction", || unsafe {
+        for i in 0..count as usize {
+            let handle = *states.add(i);
+            if !handle.is_null() {
+                drop(Box::from_raw(*(handle as *mut *mut WarmState)));
+            }
         }
-    }
+    });
 }
 
 unsafe extern "C" fn update(
@@ -54,19 +62,21 @@ unsafe extern "C" fn update(
     input: ffi::duckdb_data_chunk,
     states: *mut ffi::duckdb_aggregate_state,
 ) {
-    let questions = unsafe { read_raw_column(input, 0) };
-    let texts = unsafe { read_raw_column(input, 1) };
-    for (i, (question, text)) in questions.iter().zip(&texts).enumerate() {
-        // A NULL in either column never reaches the state, and so never
-        // costs a request.
-        let (Some(question), Some(text)) = (question, text) else {
-            continue;
-        };
-        let handle = unsafe { *states.add(i) };
-        let warm = unsafe { warm_state(handle) };
-        warm.question = question.clone();
-        warm.seen.insert(text.clone());
-    }
+    guard::contained_quiet("warm update", || unsafe {
+        let questions = read_raw_column(input, 0);
+        let texts = read_raw_column(input, 1);
+        for (i, (question, text)) in questions.iter().zip(&texts).enumerate() {
+            // A NULL in either column never reaches the state, and so never
+            // costs a request.
+            let (Some(question), Some(text)) = (question, text) else {
+                continue;
+            };
+            let handle = *states.add(i);
+            let warm = warm_state(handle);
+            warm.question = question.clone();
+            warm.seen.insert(text.clone());
+        }
+    });
 }
 
 unsafe extern "C" fn combine(
@@ -75,15 +85,17 @@ unsafe extern "C" fn combine(
     target: *mut ffi::duckdb_aggregate_state,
     count: u64,
 ) {
-    for i in 0..count as usize {
-        let from = unsafe { warm_state(*source.add(i)) };
-        let to = unsafe { warm_state(*target.add(i)) };
-        if to.question.is_empty() {
-            to.question = from.question.clone();
+    guard::contained_quiet("warm combine", || unsafe {
+        for i in 0..count as usize {
+            let from = warm_state(*source.add(i));
+            let to = warm_state(*target.add(i));
+            if to.question.is_empty() {
+                to.question = from.question.clone();
+            }
+            let moved = std::mem::take(&mut from.seen);
+            to.seen.extend(moved);
         }
-        let moved = std::mem::take(&mut from.seen);
-        to.seen.extend(moved);
-    }
+    });
 }
 
 unsafe extern "C" fn finalize(
@@ -93,12 +105,14 @@ unsafe extern "C" fn finalize(
     count: u64,
     offset: u64,
 ) {
-    let out = unsafe { ffi::duckdb_vector_get_data(result) } as *mut i64;
-    for i in 0..count as usize {
-        let warm = unsafe { warm_state(*source.add(i)) };
-        let judged = judge_warm(&warm.question, std::mem::take(&mut warm.seen)).unwrap_or(0);
-        unsafe { *out.add(offset as usize + i) = judged as i64 };
-    }
+    guard::contained_quiet("warm finalize", || unsafe {
+        let out = ffi::duckdb_vector_get_data(result) as *mut i64;
+        for i in 0..count as usize {
+            let warm = warm_state(*source.add(i));
+            let judged = judge_warm(&warm.question, std::mem::take(&mut warm.seen)).unwrap_or(0);
+            *out.add(offset as usize + i) = judged as i64;
+        }
+    });
 }
 
 /// Register the aggregate on a raw connection.

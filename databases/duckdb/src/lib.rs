@@ -30,8 +30,8 @@
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{LazyLock, Mutex, OnceLock};
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
 use duckdb::{
     Connection,
@@ -42,36 +42,172 @@ use duckdb::{
     vtab::arrow::WritableVector,
 };
 use thinkthen_contract::{
-    Annotated, Answer, Cancel, Engine as ContractEngine, Error as EngineError, Judgment, Options,
-    Question, QuestionKind, QuestionSet, Scored,
+    Annotated, Answer, Cancel, Connector as _, Engine as ContractEngine, EngineConfig,
+    Error as EngineError, ErrorKind, Judgment, Options, Question, QuestionKind, QuestionSet, Scored,
 };
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
+mod connections;
+mod guard;
 mod recognize;
 mod relate;
 mod relations;
 mod usage;
 mod warm;
 
-/// The engine this surface calls, built from the environment on the first
-/// call. The stand-in implements the contract today; the real engine
-/// replaces it with one changed dependency.
-static ENGINE: OnceLock<BlockingEngine> = OnceLock::new();
+/// The engine this surface calls, built once from the environment through
+/// the contract's connector: the stand-in implements the contract today,
+/// and the real engine replaces it by naming a different connector in one
+/// dependency line. The failure is kept as its verdict, so the first call
+/// reports it and no call panics.
+static ENGINE: OnceLock<Result<Arc<dyn ContractEngine>, String>> = OnceLock::new();
 
 /// The engine value, built once, on first use and never at load time.
-fn engine() -> &'static BlockingEngine {
-    ENGINE.get_or_init(BlockingEngine::from_env)
+fn engine() -> Result<&'static Arc<dyn ContractEngine>, String> {
+    match ENGINE.get_or_init(|| {
+        StandinConnector
+            .connect(&EngineConfig::from_env())
+            .map_err(failure)
+    }) {
+        Ok(engine) => Ok(engine),
+        Err(message) => Err(message.clone()),
+    }
 }
 
-/// The options every call carries: the process-wide cancel token.
+/// Run one engine call that answers a value, with the in-flight count
+/// held for its whole duration, however it ends.
+pub(crate) fn with_engine<T>(
+    call: impl FnOnce(&dyn ContractEngine) -> T,
+) -> Result<T, String> {
+    let engine = engine()?;
+    let _in_flight = InFlight::new();
+    Ok(call(&**engine))
+}
+
+/// Run one engine call, its contract failure spelled for the SQL reader.
+pub(crate) fn engine_call<T>(
+    call: impl FnOnce(&dyn ContractEngine) -> Result<T, EngineError>,
+) -> Result<T, String> {
+    with_engine(call)?.map_err(failure)
+}
+
+/// The options every call carries: the live cancel token.
 fn options() -> Options<'static> {
-    Options::new().maybe_cancel(Some(&CANCEL))
+    let token = current_cancel();
+    LAST_START.store(now_ms(), Ordering::SeqCst);
+    Options::new().maybe_cancel(Some(token))
 }
 
-/// The process-wide cancellation token. Every engine call carries it, and
-/// the SIGINT handler below sets it, so the CLI's interrupt path reaches
-/// the waits between requests and between batch items.
-static CANCEL: LazyLock<Cancel> = LazyLock::new(Cancel::new);
+/// How stale the last engine call may be before a signal counts as aimed
+/// at a running query. Chunk cadence is milliseconds; a query that ends
+/// leaves this window within a quarter second, and a signal in that
+/// quarter second still stops the query it was aimed at.
+const ACTIVE_MS: u64 = 250;
+
+/// The live cancellation token, re-armed when the last one has served
+/// its interrupt.
+///
+/// One token served the whole process before, and a one-shot token is
+/// spent forever: after one Ctrl-C every later call in that process
+/// returned `cancelled` without asking anything (review finding: DuckDB's
+/// interrupt poisoned the process). The rules now:
+///
+/// - The handler cancels the live token only when a query is plausibly
+///   running — an engine call is in flight, or one started within
+///   `ACTIVE_MS` — so an idle Ctrl-C is the host's own gesture and never
+///   poisons the surface.
+/// - A call that starts while the token is cancelled takes the token when
+///   the last call is recent (the interrupted query is still running, and
+///   this call must stop it) and installs a fresh one otherwise. The
+///   consumed mark below is the exact signal: a call returned the
+///   cancelled kind, so the query that owned the interrupt is over.
+/// Tokens are leaked once per interrupt, never per call.
+static CANCEL: AtomicPtr<Cancel> = AtomicPtr::new(std::ptr::null_mut());
+
+/// Engine calls in flight: the handler's "a query is running" signal.
+static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
+
+/// When the last engine call started, in milliseconds since the clock's
+/// base.
+static LAST_START: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The monotonic clock the activity window counts on, initialized long
+/// before any handler runs.
+static CLOCK: OnceLock<std::time::Instant> = OnceLock::new();
+
+/// A cancellation that reached a call and ended it: the next call starts
+/// clean.
+static CANCEL_CONSUMED: AtomicBool = AtomicBool::new(false);
+
+/// Milliseconds since the clock's base, never decreasing.
+fn now_ms() -> u64 {
+    CLOCK.get_or_init(std::time::Instant::now).elapsed().as_millis() as u64
+}
+
+/// The in-flight guard: counted on entry, uncounted however the call
+/// ends, a panic included.
+struct InFlight;
+
+impl InFlight {
+    /// Count this call as in flight.
+    fn new() -> Self {
+        IN_FLIGHT.fetch_add(1, Ordering::SeqCst);
+        Self
+    }
+}
+
+impl Drop for InFlight {
+    fn drop(&mut self) {
+        IN_FLIGHT.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// The live token, installing a fresh one when the last has served its
+/// interrupt.
+fn current_cancel() -> &'static Cancel {
+    let Some(token) = live_cancel() else {
+        return install_cancel();
+    };
+    if !token.is_cancelled() {
+        return token;
+    }
+    if CANCEL_CONSUMED.swap(false, Ordering::SeqCst) {
+        return install_cancel();
+    }
+    if now_ms().saturating_sub(LAST_START.load(Ordering::SeqCst)) < ACTIVE_MS {
+        // The interrupted query is still running; this call stops it.
+        return token;
+    }
+    install_cancel()
+}
+
+/// The live token, when one exists, without installing anything.
+fn live_cancel() -> Option<&'static Cancel> {
+    let live = CANCEL.load(Ordering::Acquire);
+    if live.is_null() {
+        None
+    } else {
+        Some(unsafe { &*live })
+    }
+}
+
+/// Install a fresh token, keeping a live one another thread installed
+/// first.
+fn install_cancel() -> &'static Cancel {
+    CANCEL_CONSUMED.store(false, Ordering::SeqCst);
+    let fresh = Box::into_raw(Box::new(Cancel::new()));
+    loop {
+        let live = CANCEL.load(Ordering::Acquire);
+        if !live.is_null() && !unsafe { &*live }.is_cancelled() {
+            drop(unsafe { Box::from_raw(fresh) });
+            return unsafe { &*live };
+        }
+        match CANCEL.compare_exchange_weak(live, fresh, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(_) => return unsafe { &*fresh },
+            Err(_) => continue,
+        }
+    }
+}
 
 /// The handler SIGINT replaced, so the CLI's own interrupt still runs.
 static HANDLER_CHAIN: AtomicUsize = AtomicUsize::new(0);
@@ -80,10 +216,22 @@ static HANDLER_CHAIN: AtomicUsize = AtomicUsize::new(0);
 /// chain a handler to itself.
 static HANDLER_SET: AtomicBool = AtomicBool::new(false);
 
-/// Cancel the token, then run whatever handler was there before. SIG_DFL
-/// and SIG_IGN sit at 0 and 1 and are never called as functions.
+/// Cancel the live token when a query is plausibly running, then run
+/// whatever handler was there before. SIG_DFL and SIG_IGN sit at 0 and 1
+/// and are never called as functions.
 extern "C" fn on_interrupt(signal: libc::c_int) {
-    CANCEL.cancel();
+    if let Some(token) = live_cancel() {
+        if !token.is_cancelled() {
+            let in_flight = IN_FLIGHT.load(Ordering::SeqCst) > 0;
+            let recent =
+                now_ms().saturating_sub(LAST_START.load(Ordering::SeqCst)) < ACTIVE_MS;
+            if in_flight || recent {
+                token.cancel();
+            }
+            // Otherwise the process is idle: the signal is the host's,
+            // and cancelling here would only poison the next query.
+        }
+    }
     let previous = HANDLER_CHAIN.load(Ordering::SeqCst);
     if previous > 1 {
         let chained: extern "C" fn(libc::c_int) = unsafe { std::mem::transmute(previous) };
@@ -96,6 +244,8 @@ unsafe fn install_interrupt_handler() {
     if HANDLER_SET.swap(true, Ordering::SeqCst) {
         return;
     }
+    // The activity clock starts now, long before any handler can read it.
+    let _ = now_ms();
     let previous = unsafe {
         libc::signal(
             libc::SIGINT,
@@ -125,8 +275,12 @@ fn poison(question: &str, texts: &HashSet<String>, failure: &str) {
 }
 
 /// A contract failure as the SQL error a reader sees, with the kind and
-/// the retryable signal both carried.
+/// the retryable signal both carried. A cancellation that reached this
+/// call is the interrupt being served: the next call re-arms.
 fn failure(error: EngineError) -> String {
+    if error.kind == ErrorKind::Cancelled {
+        CANCEL_CONSUMED.store(true, Ordering::SeqCst);
+    }
     let retry = if error.retryable {
         " (a second try could help)"
     } else {
@@ -138,14 +292,33 @@ fn failure(error: EngineError) -> String {
 /// Resolve a question argument: `'@file.json'` names a file, a leading
 /// `{` is the file grammar's own JSON, and anything else is the question
 /// as plain text under the grammar's default cut. One grammar, one door.
+/// A file read refuses when this database's own `enable_external_access`
+/// is off.
 fn resolve_question(arg: &str) -> Result<Question, String> {
     if let Some(path) = arg.strip_prefix('@') {
+        if let Some(refusal) = file_read_refusal(path) {
+            return Err(refusal);
+        }
         Question::from_file(Path::new(path)).map_err(failure)
     } else if arg.starts_with('{') {
         Question::from_json(arg).map_err(failure)
     } else {
         let file = serde_json::json!({ "decide": arg }).to_string();
         Question::from_json(&file).map_err(failure)
+    }
+}
+
+/// The refusal a `'@file'` read earns when a database that loaded this
+/// extension has external file access off. The setting is read through
+/// the DuckDB API, so the database's own answer decides and no file is
+/// touched when the answer is no.
+fn file_read_refusal(path: &str) -> Option<String> {
+    if connections::files_allowed() {
+        None
+    } else {
+        Some(format!(
+            "thinkthen local: the question file {path} was not read: enable_external_access is off for this database"
+        ))
     }
 }
 
@@ -184,9 +357,7 @@ use thinkthen_contract::ChoiceBuilder as ChoiceBuilt;
 /// Judge one built question's texts at the engine's width. One text asks
 /// once; many cross once through the batch door.
 fn judged(question: &Question, texts: &[&str]) -> Result<Vec<Judgment>, String> {
-    engine()
-        .decide_many_opts(question, texts, options(), None)
-        .map_err(failure)
+    engine_call(|engine| engine.decide_many_opts(question, texts, options(), None))
 }
 
 /// The warm aggregate's judge: resolve the question argument, judge every
@@ -508,9 +679,8 @@ impl VScalar for ChooseScalar {
         )?;
         let mut picked: Vec<Option<Option<String>>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
-            let answer = engine()
-                .choose_opts(&distinct.questions[*question_at], text, options())
-                .map_err(failure)?;
+            let answer =
+                engine_call(|engine| engine.choose_opts(&distinct.questions[*question_at], text, options()))?;
             picked[slot] = Some(answer);
         }
         let mut out = output.flat_vector();
@@ -560,9 +730,8 @@ impl VScalar for ScoreScalar {
         let distinct = distinct_of(&questions, &levels, &texts, Some(QuestionKind::Score))?;
         let mut scored: Vec<Option<Scored>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
-            let answer = engine()
-                .score_opts(&distinct.questions[*question_at], text, options())
-                .map_err(failure)?;
+            let answer =
+                engine_call(|engine| engine.score_opts(&distinct.questions[*question_at], text, options()))?;
             scored[slot] = Some(answer);
         }
         // Each row's own slot, never the pair's index: see `judged_rows`.
@@ -622,9 +791,8 @@ impl VScalar for TagScalar {
         let distinct = distinct_of(&questions, &labels, &texts, Some(QuestionKind::Tag))?;
         let mut held: Vec<Option<Vec<String>>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
-            let answer = engine()
-                .tag_opts(&distinct.questions[*question_at], text, options())
-                .map_err(failure)?;
+            let answer =
+                engine_call(|engine| engine.tag_opts(&distinct.questions[*question_at], text, options()))?;
             held[slot] = Some(answer);
         }
         let len = texts.len();
@@ -707,6 +875,9 @@ impl VScalar for AnnotateScalar {
         let mut judged: Vec<Option<String>> = vec![None; unique.len()];
         for (slot, (arg, text)) in unique.iter().enumerate() {
             let set = if let Some(path) = arg.strip_prefix('@') {
+                if let Some(refusal) = file_read_refusal(path) {
+                    return Err(refusal.into());
+                }
                 QuestionSet::from_file(Path::new(path)).map_err(failure)?
             } else if arg.starts_with('{') {
                 QuestionSet::from_json(arg).map_err(failure)?
@@ -715,9 +886,8 @@ impl VScalar for AnnotateScalar {
                     "thinkthen usage: annotate names a question set as '@form.json' or JSON".into(),
                 );
             };
-            let records = engine()
-                .annotate_opts(&set, &[text.as_str()], options(), None)
-                .map_err(failure)?;
+            let records =
+                engine_call(|engine| engine.annotate_opts(&set, &[text.as_str()], options(), None))?;
             judged[slot] = Some(annotate_json(&records[0]).map_err(failure)?);
         }
         let mut out = output.flat_vector();
@@ -822,9 +992,7 @@ impl VScalar for DetailsScalar {
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
             let question = &distinct.questions[*question_at];
             let row = if question.kind() == QuestionKind::Decide {
-                let details = engine()
-                    .details_opts(question, text, options())
-                    .map_err(failure)?;
+                let details = engine_call(|engine| engine.details_opts(question, text, options()))?;
                 TrailRow {
                     probability: Some(details.probability),
                     answer: Some(details.answer.to_string()),
@@ -838,10 +1006,7 @@ impl VScalar for DetailsScalar {
             } else {
                 let nearest = if question.kind() == QuestionKind::Score {
                     Some(
-                        engine()
-                            .score_opts(question, text, options())
-                            .map_err(failure)?
-                            .nearest,
+                        engine_call(|engine| engine.score_opts(question, text, options()))?.nearest,
                     )
                 } else {
                     None
@@ -1010,18 +1175,57 @@ impl VScalar for DetailsScalar {
 
 /// The extension's entrypoint, hand-written where the macro-generated one
 /// hides the raw connection the aggregate and the table function need.
+/// The entrypoint is contained like the other C boundaries: a panic
+/// during load becomes a load error, never an abort.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_init_c_api(
     info: ffi::duckdb_extension_info,
     access: *const ffi::duckdb_extension_access,
 ) -> bool {
-    unsafe { init(info, access).is_ok() }
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe { init(info, access) })) {
+        Ok(Ok(())) => true,
+        Ok(Err(error)) => {
+            unsafe { report_load_error(info, access, &error.to_string()) };
+            false
+        }
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<&str>()
+                .map(|text| (*text).to_owned())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "a non-string panic payload".to_owned());
+            let wrapped =
+                format!("thinkthen defect: the extension load callback panicked: {message}");
+            unsafe { report_load_error(info, access, &wrapped) };
+            false
+        }
+    }
+}
+
+/// Report a load failure through the extension access, when it offers the
+/// call; DuckDB's own load error names the file either way.
+unsafe fn report_load_error(
+    info: ffi::duckdb_extension_info,
+    access: *const ffi::duckdb_extension_access,
+    message: &str,
+) {
+    unsafe {
+        if access.is_null() {
+            return;
+        }
+        if let Some(set_error) = (*access).set_error {
+            if let Ok(text) = std::ffi::CString::new(message) {
+                set_error(info, text.as_ptr());
+            }
+        }
+    }
 }
 
 unsafe fn init(
     info: ffi::duckdb_extension_info,
     access: *const ffi::duckdb_extension_access,
 ) -> Result<(), Box<dyn Error>> {
+    guard::test_arm("extension load");
     unsafe { install_interrupt_handler() };
     if !unsafe { ffi::duckdb_rs_extension_api_init(info, access, "v1.5.5") }? {
         return Ok(());
@@ -1041,21 +1245,18 @@ unsafe fn init(
     connection.register_scalar_function::<recognize::RecognizeScalar>("thinkthen_recognize")?;
     connection.register_scalar_function::<relations::RelationsScalar>("thinkthen_relations")?;
 
-    // The relate table function runs the query it is given. The database
-    // pointer `get_database` hands out belongs to the load state and can
-    // dangle after init, so the extension keeps this connection open for
-    // the process lifetime and runs the relate query on it instead.
-    let mut raw: ffi::duckdb_connection = std::ptr::null_mut();
-    if unsafe { ffi::duckdb_connect(database, &mut raw) } != ffi::DuckDBSuccess {
-        return Err("the raw connection refused".into());
-    }
+    // The relate, usage, and warm functions run on a connection kept per
+    // loaded database, opened here: the database pointer `get_database`
+    // hands out belongs to the load state and can dangle after init, and
+    // one process-global connection used to serve whichever database
+    // loaded last (review finding: relate queried the wrong database).
+    let raw = connections::register(database)?;
     let table = unsafe { usage::register(raw) };
     let aggregate = unsafe { warm::register(raw) };
     let relate_function = unsafe { relate::register(raw) };
     table?;
     aggregate?;
     relate_function?;
-    relate::remember_connection(raw);
     Ok(())
 }
 
@@ -1102,7 +1303,11 @@ mod cancel_tests {
             std::env::set_var("ENGINE_NULL", "1");
             std::env::set_var("ENGINE_WIDTH", "1");
         }
-        let engine = BlockingEngine::from_env();
+        let engine = thinkthen_contract::Connector::connect(
+            &StandinConnector,
+            &EngineConfig::from_env(),
+        )
+        .expect("the connector answers");
         let question = Question::from_json(r#"{"decide":"Is this a complaint?"}"#)
             .expect("the question parses");
         let texts: Vec<String> = (0..1_000_000).map(|i| format!("record {i}")).collect();

@@ -19,8 +19,20 @@ tools/null_suite.sh
 echo "== duckdb surface: the row-mapping suite"
 tools/mapping_suite.sh
 
+echo "== duckdb surface: the security and boundary suite"
+tools/security_suite.sh
+
 echo "== duckdb surface: the conformance driver can fail"
 tools/conformance_selftest.sh
+
+echo "== duckdb surface: one interrupt, one query (the re-arm proof)"
+./configure/venv/bin/python tools/rearm_suite.py
+
+echo "== duckdb surface: two databases, each on its own connection"
+./configure/venv/bin/python tools/two_databases.py
+
+echo "== duckdb surface: the panic guards contain a callback panic"
+tools/panic_suite.sh
 
 echo "== duckdb surface: fast-backend cancel, the poll-bug shape"
 tools/cancel_fast.sh
