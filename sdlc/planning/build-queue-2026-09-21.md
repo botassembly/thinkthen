@@ -23,6 +23,8 @@ Observed at resumption: main `c29e445` and surfaces `7fdb1fa` match their remote
 
 Ian subsequently authorized creating bounded tickets within this plan as each stage begins, with independent review before each implementation. Ticket 0066 implements wording-list items 2 and 5: the root help introduction and tag/annotate example layout. Independent design and code reviews accepted it, and the coordinator's full local ladder passed. Hosted gate run `35742562545` passed on `42039dd`; that revision landed on main and was pushed. The remaining wording items stay open for verification or a separate ruling; this ticket does not close the forty-item issue.
 
+Ticket 0067 addresses wording-list items 3 and 4: the eight operation-oriented command introductions and teaching order. It keeps short-help safety disclosures, long-help result shapes, and the examples from 0066. Independent design/code reviews and the coordinator's full local ladder passed; hosted verification and landing are pending. The next command work must reconcile the outcome-word ruling and verify the remaining vocabulary/diagnostic items rather than assume all forty still fail. Shared engine settings/cache work still waits for 0065's owner to land it.
+
 ## Where things stand
 
 - Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).

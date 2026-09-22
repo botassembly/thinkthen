@@ -21,7 +21,7 @@ fn tag_and_annotate_help_leads_with_the_description_and_ends_with_examples() {
     for (verb, description, examples) in [
         (
             "tag",
-            "Return every applicable label as one JSON array",
+            "Name every label that fits",
             [
                 "thinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt",
                 "thinkthen tag 'Which topics?' billing urgent < message.txt",
@@ -29,7 +29,7 @@ fn tag_and_annotate_help_leads_with_the_description_and_ends_with_examples() {
         ),
         (
             "annotate",
-            "Ask every question in a saved set and print one annotated JSON object",
+            "Fill out a question set for every record",
             [
                 "thinkthen annotate checks.json < message.txt",
                 "thinkthen annotate checks.json --input message.txt",

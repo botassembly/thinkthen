@@ -15,9 +15,9 @@ pub(crate) enum Command {
     /// Report resolved local settings, cache size, and local usage counts.
     Status(StatusArguments),
 
-    /// Answer a yes/no question about the evidence and set the exit code. A
-    /// record run exits 0 when it completes without a partial or whole-run
-    /// failure. The printed values carry the individual answers.
+    /// Answer one yes or no question about a text. A record run exits 0 when
+    /// it completes without a partial or whole-run failure. The printed
+    /// values carry the individual answers.
     ///
     /// The answer is a bare `true`, `false`, or `null`, and the exit code is 0
     /// for yes, 1 for no, and 3 for unresolved. Under `set -e` or `set -o
@@ -39,7 +39,43 @@ pub(crate) enum Command {
     /// the action undone.
     Decide(DecideArguments),
 
-    /// Pick one label from a fixed list and print it.
+    /// Keep the records where the answer is yes.
+    ///
+    /// `filter` asks one yes/no question of each record and prints the records
+    /// that reach `--threshold` in input order. Line and JSONL records return
+    /// as they arrived; CSV and TSV rows become compact JSON objects. It needs
+    /// a record framing and makes one paid request for every record.
+    ///
+    /// A single cut keeps or drops, and there is no third pile. A run that
+    /// wants one asks `decide --details` and splits with `jq`:
+    ///
+    /// thinkthen decide 'The report is reproducible.' --jsonl --field /body --details < i.jsonl | jq -c 'select(.answer.probability >= 0.9)'
+    ///
+    /// A finished run prints nothing on standard error, so two kept records
+    /// out of five and two out of two look alike on the way out.
+    ///
+    /// A record run exits 0 when it completes without a partial or whole-run
+    /// failure. The printed values carry the individual answers.
+    Filter(FilterArguments),
+
+    /// Sort records by how likely the answer is yes. `rank` asks one yes/no
+    /// question of each record and sorts locally; it never compares two
+    /// records.
+    ///
+    /// The printed order puts the most likely yes first. An exact tie keeps
+    /// input order. `rank` never runs a tournament.
+    ///
+    /// It holds every record until the input ends, because a final order needs
+    /// the whole set, so an endless stream is cut into windows upstream.
+    /// `--top N` prints the first N of the order and saves no request.
+    ///
+    /// `rank` orders and never selects. A floor is `filter` in front of it.
+    ///
+    /// A record run exits 0 when it completes without a partial or whole-run
+    /// failure. The printed values carry the individual answers.
+    Rank(RankArguments),
+
+    /// Pick one option from your list.
     ///
     /// The answer is a bare JSON string, or `null` when the winning option
     /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
@@ -73,16 +109,19 @@ pub(crate) enum Command {
     /// failure. The printed values carry the individual answers.
     Choose(ChooseArguments),
 
-    /// Return every applicable label as one JSON array.
+    /// Pick the one line or record that best answers a question. Every unit
+    /// leaves together and sees every other unit.
     ///
-    /// A record run exits 0 when it completes without a partial or whole-run
-    /// failure. The printed values carry the individual answers.
-    #[command(
-        after_help = "Examples:\n\nthinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt\nthinkthen tag 'Which topics?' billing urgent < message.txt\n"
-    )]
-    Tag(TagArguments),
+    /// Every unit leaves together in one request and sees every other unit.
+    /// Input defaults to lines; --jsonl reads records and --field selects what
+    /// the model sees. The set holds 2 to 255 units, or 2 to 254 with --none,
+    /// and at most 16 MiB across the original input.
+    ///
+    /// `find --none` prints nothing and exits 3 when `none` wins or ties for
+    /// first.
+    Find(FindArguments),
 
-    /// Place the evidence on named levels and print the number.
+    /// Place a text on a scale you name.
     ///
     /// The levels come lowest first, and the number is the backend's
     /// probability-weighted position on them, from 0 to the number of levels
@@ -106,56 +145,22 @@ pub(crate) enum Command {
     /// failure. The printed values carry the individual answers.
     Score(ScoreArguments),
 
-    /// Keep the records that reach the mark.
+    /// Name every label that fits.
     ///
-    /// `filter` asks one yes/no question of each record and prints the records
-    /// that reach `--threshold` in input order. Line and JSONL records return
-    /// as they arrived; CSV and TSV rows become compact JSON objects. It needs
-    /// a record framing and makes one paid request for every record.
-    ///
-    /// A single cut keeps or drops, and there is no third pile. A run that
-    /// wants one asks `decide --details` and splits with `jq`:
-    ///
-    /// thinkthen decide 'The report is reproducible.' --jsonl --field /body --details < i.jsonl | jq -c 'select(.answer.probability >= 0.9)'
-    ///
-    /// A finished run prints nothing on standard error, so two kept records
-    /// out of five and two out of two look alike on the way out.
-    ///
-    /// A record run exits 0 when it completes without a partial or whole-run
-    /// failure. The printed values carry the individual answers.
-    Filter(FilterArguments),
+    /// The answer is one JSON array holding every applicable label. A record
+    /// run exits 0 when it completes without a partial or whole-run failure.
+    /// The printed values carry the individual answers.
+    #[command(
+        after_help = "Examples:\n\nthinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt\nthinkthen tag 'Which topics?' billing urgent < message.txt\n"
+    )]
+    Tag(TagArguments),
 
-    /// Print the records with the most likely yes first: one yes/no question
-    /// of each record, a local sort, and no comparison of two records.
+    /// Fill out a question set for every record.
     ///
-    /// An exact tie keeps input order. `rank` never runs a tournament.
-    ///
-    /// It holds every record until the input ends, because a final order needs
-    /// the whole set, so an endless stream is cut into windows upstream.
-    /// `--top N` prints the first N of the order and saves no request.
-    ///
-    /// `rank` orders and never selects. A floor is `filter` in front of it.
-    ///
-    /// A record run exits 0 when it completes without a partial or whole-run
-    /// failure. The printed values carry the individual answers.
-    Rank(RankArguments),
-
-    /// Pick the best unit. Every unit leaves together and sees every other unit.
-    ///
-    /// Every unit leaves together in one request and sees every other unit.
-    /// Input defaults to lines; --jsonl reads records and --field selects what
-    /// the model sees. The set holds 2 to 255 units, or 2 to 254 with --none,
-    /// and at most 16 MiB across the original input.
-    ///
-    /// `find --none` prints nothing and exits 3 when `none` wins or ties for
-    /// first.
-    Find(FindArguments),
-
-    /// Ask every question in a saved set and print one annotated JSON object.
-    ///
-    /// A record run exits 0 when it completes without a partial or whole-run
-    /// failure. The printed values carry the individual answers. A completed
-    /// run with one or more failed questions exits 6.
+    /// The answer is one annotated JSON object. A record run exits 0 when it
+    /// completes without a partial or whole-run failure. The printed values
+    /// carry the individual answers. A completed run with one or more failed
+    /// questions exits 6.
     #[command(
         after_help = "Examples:\n\nthinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\n"
     )]
