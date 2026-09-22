@@ -1,6 +1,6 @@
 # Feedback to the quality team after wave one
 
-Status: Open
+Status: Closed on 2026-09-22. The feedback was delivered and the work it asked for landed.
 
 From the product side, 2026-09-21, at Ian's request. Wave one was good work. 345 checks, 21 findings, each with a reproduction and a severity a user would recognize, a one-page list in the order of embarrassment, and a proposed plan with gates and costs. The "what would not embarrass us" paragraph is as useful as the findings, and the next wave should keep it.
 

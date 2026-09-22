@@ -1,5 +1,7 @@
 # Five small closings for the recognize team
 
+Status: Closed on 2026-09-22. All five items are done with no paid run, and the recognize program is closed.
+
 Written 2026-09-21 by the product side. The harvest package at `experiments/225-recognize-harvest-package/` is accepted. An audit found every part the request listed: the exact words, the rules with tests, forty made-up cases with recordings in the ruled shape, `relate` as its own set, and the map. No more experiments are asked for. Four page fixes remain, and none needs a paid run.
 
 1. **Mark the method page as superseded on shape.** `experiments/RECOGNIZE-PRODUCT-SPEC.md` still prints `PER`, `head`, `tail`, `type`, word positions in the main object, a `depth` dial, and a margin term. Put three lines at its top: the public shape is `sdlc/planning/recognize-design.md`, the rules and cases are the harvest package, and the table of rulings on the design page settles each difference. Do not rewrite the page.

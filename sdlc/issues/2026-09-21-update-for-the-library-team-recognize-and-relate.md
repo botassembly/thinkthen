@@ -1,6 +1,6 @@
 # Update for the library team: two new functions, `recognize` and `relate`
 
-Status: Open
+Status: Closed on 2026-09-22. The library team landed both functions on all nine surfaces and closed this update.
 
 Ian told the library team about `recognize` on 2026-09-21. He has since ruled that `relate` is a function of its own and is built with it. The count is ten functions and one special form, the question file. This page is what the library and database extension work needs to get ready. Nothing here is built in the core yet, and the core comes first.
 

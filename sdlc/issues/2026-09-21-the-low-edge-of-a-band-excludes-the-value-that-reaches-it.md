@@ -1,6 +1,6 @@
 # The low edge of a band excludes the value that reaches it
 
-Status: Open
+Status: Closed on 2026-09-22. The fix landed in ticket 0056.
 
 `specification/threshold.md` line 19 says: "Boundaries are inclusive. A value meets its mark when it reaches it." Four of the five boundaries follow that sentence. The fifth does not: the low edge of a band sends a probability that reaches it to no, not to not sure.
 

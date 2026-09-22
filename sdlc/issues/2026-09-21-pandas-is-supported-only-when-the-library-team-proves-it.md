@@ -1,5 +1,7 @@
 # pandas is supported only when the library team proves it
 
+Status: Closed on 2026-09-22. The five checks passed, with the two corrections this page records.
+
 Written 2026-09-21 by the product side. Ian ruled the same day: "I'm good with supporting pandas if it actually works." This page is the thing to track. It replaces the earlier line on the Polars shape page that said pandas is not supported.
 
 ## The claim to prove

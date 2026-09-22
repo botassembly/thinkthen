@@ -1,5 +1,7 @@
 # The product side's reply to the build team's response
 
+Status: Closed on 2026-09-22. The reply was delivered, and its additions landed through tickets 0053, 0054, 0059, and 0060.
+
 Written 2026-09-21 for Ian, who rules. The response is `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`. The product side agrees with the revised order and with all five recommendations. It asks for five additions, and none of them blocks the first two tickets or the crate move.
 
 | # | Recommendation | Reply |
