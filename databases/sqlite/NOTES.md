@@ -244,3 +244,38 @@ $ ./check.sh
 The shared conformance file is untouched: case 17 keeps its recorded
 `after_reset` arm as history, and the driver names the supersession in
 its line. Nothing published, no key, no paid call.
+
+## 2026-09-22 — the authority section and the non-determinism proof (punch-list item 5)
+
+The architect's punch list, item 5, this surface's half: name the
+extension's authority, and keep SQLite non-deterministic.
+
+**README.** A new "Authority: who may do what" section names the six
+items: question-file access (the one `'@name'` file, against the process
+working directory), backend selection (the environment, read at first
+call; SQL cannot name a backend), credential source
+(`THINKTHEN_API_KEY` at send time; the stand-in reads no key and sends
+none), query execution (SQLite's own step loop, the warm pass, the
+whole-table relate read, no `SQLITE_DETERMINISTIC` flag), connection
+lifetime (process-long, fork repaired by the engine's pid check, idle
+pool pruned), and the cancellation channel
+(`sqlite3_is_interrupted` through the wait's poll).
+
+**The proof.** `check.sh` gained the volatile-flag section, run in the
+stock CLI:
+
+```
+== sqlite surface: volatile stays the flag
+   flagged|0
+   known|8
+   Parse error near line 5: unsafe use of thinkthen_decide()
+ok       no deterministic flag on any of the eight; an index expression refuses
+```
+
+`pragma_function_list` shows the eight functions and zero carrying the
+deterministic bit (0x800); an index expression over `thinkthen_decide`
+refuses with `unsafe use of thinkthen_decide()`. The check asserts all
+three lines, so the flag cannot come back unnoticed.
+
+Cleanup: this surface needs no containers; `docker ps -a` shows no
+`laneb-*` left. No key, no paid call, nothing published.

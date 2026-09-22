@@ -80,6 +80,39 @@ Two named divergences and one gap, stated rather than implied:
   case 27 is skipped for that reason. A per-call budget beside the
   cancel token is the settled shape and a recorded gap here.
 
+## Authority: who may do what
+
+- **Question-file access.** The only file a call reads is the one its
+  question argument names with the command's `'@name'` spelling, resolved
+  against the process working directory. Nothing else is read: no
+  configuration file, no directory listing, no table.
+- **Backend selection.** The engine builds lazily on the first call from
+  the process environment (`THINKTHEN_BASE_URL`, or the stand-in's
+  `ENGINE_BASE_URL`; `ENGINE_NULL=1` for the in-process backend). SQL
+  cannot name a backend, and load-time init registers the functions and
+  touches no wire.
+- **Credential source.** `THINKTHEN_API_KEY` in the process environment,
+  read by the engine at send time and sent only to the named address. The
+  stand-in reads no key and sends none (its own record); no credential is
+  ever read from a fixture, a question file, or SQL, and none is logged.
+- **Query execution.** SQLite's own step loop runs the SQL and calls the
+  scalar functions once per row on the calling thread; `thinkthen_warm`
+  judges its distinct texts in one bulk pass at the engine's width, and
+  `thinkthen_relate` reads a whole named table, the one function a
+  database cannot run row by row. The extension owns no thread between
+  calls. No function carries `SQLITE_DETERMINISTIC`, so no paid call is
+  legal in an index expression — `check.sh` proves both the flag and the
+  refusal.
+- **Connection lifetime.** The engine and its pool live as long as the
+  process that loaded the extension; a fork is repaired by the engine's
+  process-ID check on the next call (proven: a child forked after a call
+  answers on its own wire call), idle connections are pruned by the
+  engine, and the pool is sized to the width gate.
+- **Cancellation channel.** The wait's poll reads `sqlite3_is_interrupted`
+  on the loading connection, so the host's own `sqlite3_interrupt` (or a
+  Ctrl-C in the CLI) cancels the token between records — no watchdog
+  thread, and no query is left waiting on a stop that never lands.
+
 ## Building and checking
 
 ```

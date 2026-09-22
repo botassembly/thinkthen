@@ -28,6 +28,27 @@ ENGINE_NULL=1 python3 tests/null_suite.py
 echo "== sqlite surface: fast-backend interrupt"
 python3 tests/cancel_fast.py
 
+echo "== sqlite surface: volatile stays the flag"
+# Punch-list item 5's SQLite half: no function carries
+# SQLITE_DETERMINISTIC (0x800 in pragma_function_list's flags), and an
+# index expression refuses the call outright.
+volatile_out=$(ENGINE_NULL=1 .runtimes/sqlite3 :memory: 2>&1 <<'SQL' || true
+.load ./thinkthen
+SELECT 'flagged', count(*) FROM pragma_function_list WHERE name LIKE 'thinkthen%' AND (flags & 0x800) != 0;
+SELECT 'known', count(*) FROM pragma_function_list WHERE name LIKE 'thinkthen%';
+CREATE TABLE t(body TEXT);
+CREATE INDEX idx ON t(thinkthen_decide('Is this a complaint?', body));
+SQL
+)
+printf '%s\n' "$volatile_out" | sed 's/^/   /'
+grep -q "^flagged|0$" <<<"$volatile_out" \
+    || { echo "FAILED   a function carries SQLITE_DETERMINISTIC" >&2; exit 1; }
+grep -q "^known|8$" <<<"$volatile_out" \
+    || { echo "FAILED   the function list is not the eight" >&2; exit 1; }
+grep -q "unsafe use of thinkthen_decide()" <<<"$volatile_out" \
+    || { echo "FAILED   an index expression accepted the call" >&2; exit 1; }
+echo "ok       no deterministic flag on any of the eight; an index expression refuses"
+
 echo "== sqlite surface: the function examples"
 python3 tests/examples.py
 
