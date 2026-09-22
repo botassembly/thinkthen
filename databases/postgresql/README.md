@@ -8,7 +8,9 @@ second bulk form `postgres.md` names. Every function is `PARALLEL
 RESTRICTED`; `NULL` is "not sure"; a question file names itself with the
 command's spelling, `'@refund.json'`, resolved against the backend's working
 directory; the six error kinds map to six SQLSTATEs with the retry signal in
-the message.
+the message. The width (the engine's `width` setting or `ENGINE_WIDTH`) is
+the number of requests in flight, and each in-flight request holds its own
+connection: 1,000 records at width 32 measured 33 pooled connections.
 
 `recognize` returns the five ruled columns `(text, kind, start, end,
 strength)`, used with `LATERAL`; `start` and `end` count characters, so

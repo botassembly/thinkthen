@@ -7,7 +7,10 @@ carrying the retry signal. One engine under the contract, built with extendr
 from `contract/` and `standin/`, installed into the folder-local `rlib/`.
 Run `./check.sh` for the null suite, the conformance slice, the recognize
 and relate acceptance, the slide sample, and the wire suite when the stub is
-up on 8215. Findings and quirks are in `NOTES.md`.
+up on 8215. Findings and quirks are in `NOTES.md`. The width (the engine's
+`width` setting or `ENGINE_WIDTH`) is the number of requests in flight, and
+each in-flight request holds its own connection: 1,000 records at width 32
+measured 33 pooled connections.
 
 `tt_recognize(body, kinds)` returns a list column of data frames, one row per
 name under `tidyr::unnest()`; a relation's ends are `source` and `target`,

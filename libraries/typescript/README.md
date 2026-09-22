@@ -16,3 +16,6 @@ const rows = await tt.annotate("form.json", tickets, { signal });
 
 `null` is "not sure". An `AbortSignal` cancels a batch: the binding's brief
 item 7 proves it against the stand-in. The bulk spelling is `decide_many`.
+The width — the engine value's `width`, or `ENGINE_WIDTH` — is the number
+of requests in flight, and each in-flight request holds its own connection:
+1,000 records at width 32 measured 33 pooled connections.

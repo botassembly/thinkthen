@@ -25,7 +25,10 @@ let complaints = tt.filter("Is this a complaint?", &reviews)?;
 ```
 
 The engine itself, with no binding in between. Blocking calls, and no async
-runtime comes with it. `Answer::Unsure` is a checked arm.
+runtime comes with it. `Answer::Unsure` is a checked arm. The width —
+`Settings::width`, or `ENGINE_WIDTH` — is the number of requests in flight,
+and each in-flight request holds its own connection: 1,000 records at width
+32 measured 33 pooled connections.
 
 ## The Polars Series door, behind a feature flag
 

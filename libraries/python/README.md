@@ -15,5 +15,8 @@ df = tt.annotate("form.json", df, on="body")
 ```
 
 `None` is "not sure". A list or a data frame column crosses once. The bulk
-spelling is `decide_many`. The shim binds `thinkthen-contract` and never the
+spelling is `decide_many`. The width — the engine value's `width`, or
+`ENGINE_WIDTH` — is the number of requests in flight, and each in-flight
+request holds its own connection: 1,000 records at width 32 measured 33
+pooled connections. The shim binds `thinkthen-contract` and never the
 engine beneath it.

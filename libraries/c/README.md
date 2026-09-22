@@ -35,3 +35,7 @@ failure where the return-codes block and this door use the kind codes,
 and the design pages' question-file relation ends are `source`/`target`
 where the core parser and the conformance cases read `from`/`to`. The
 ruled bulk spelling is `thinkthen_decide_many`.
+
+The width (the engine's `width` setting or `ENGINE_WIDTH`) is the number of
+requests in flight, and each in-flight request holds its own connection:
+1,000 records at width 32 measured 33 pooled connections.

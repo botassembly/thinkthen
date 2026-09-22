@@ -62,7 +62,10 @@ the values await a backend that distinguishes options.
   JSON functions read the object.
 - `thinkthen_warm(question, text)` is the aggregate: it collects the
   distinct texts a scan sees and judges them once through the engine's
-  batch door.
+  batch door. The width (the engine's `width` setting or `ENGINE_WIDTH`)
+  is the number of requests in flight, and each in-flight request holds
+  its own connection: 1,000 records at width 32 measured 33 pooled
+  connections.
 - Every call carries the process-wide cancel token, and the extension
   takes SIGINT at LOAD and chains to the CLI's own handler, so a Ctrl-C
   stops between requests. The Python-process proof is on the planning

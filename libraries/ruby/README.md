@@ -14,8 +14,10 @@ ThinkThen.score("How urgent is this?", outage, levels: [...])
 ```
 
 `nil` is "not sure". A `Range` threshold is the band. Any `Enumerable`
-crosses into the engine once and runs at the process width. The bulk
-spelling is `decide_many`. The six error kinds are Ruby classes —
+crosses into the engine once and runs at the process width: the width is
+the number of requests in flight, and each in-flight request holds its own
+connection — 1,000 records at width 32 measured 33 pooled connections. The
+bulk spelling is `decide_many`. The six error kinds are Ruby classes —
 `UsageError` under `ArgumentError`, the rest under `StandardError` — each
 carrying `kind` and `retryable`. The interrupt shape: a bulk call runs a
 tick each wait interval with the VM lock taken, and a raise inside the

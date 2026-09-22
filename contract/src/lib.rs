@@ -1145,7 +1145,9 @@ pub struct Settings {
     pub address: Option<String>,
     /// The model, overriding the alias and the question's own name.
     pub model: Option<String>,
-    /// How many requests one process has in flight at once.
+    /// How many requests one process has in flight at once. Each
+    /// in-flight request holds its own connection: 1,000 records at
+    /// width 32 measured 33 pooled connections.
     pub width: Option<usize>,
     /// The request limit: a bulk call with more records is refused before
     /// its first request.
