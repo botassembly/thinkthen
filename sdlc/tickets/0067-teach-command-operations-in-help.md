@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/args/command.rs crates/thinkthen/tests/version.r
 
 # 0067: Teach command operations in help
 
-Status: in progress
+Status: landed
 
 ## Outcome and authority
 
@@ -47,4 +47,4 @@ Contract 1; State/timing 0; Reach 1; Proof 1; Cost of error 1; Total 4. Minimum 
 
 ## Review
 
-Independent Sol design and fresh code reviews: ACCEPT. They confirmed the explicit summaries/order, retained safety and result-shape advice, bounded scope, level-2 routing, and exact +69-line ratchet. SWE-2 observed sixteen old-introduction failures and the old root-order failure before the fix; forty-seven focused tests then passed. The coordinator ran all four gates and `git diff --check`: 548 Rust tests, doctests, replay checks, and nineteen how-tos passed. Hosted verification and landing remain pending; the matching record holds the evidence.
+Independent Sol design and fresh code reviews: ACCEPT. They confirmed the explicit summaries/order, retained safety and result-shape advice, bounded scope, level-2 routing, and exact +69-line ratchet. SWE-2 observed sixteen old-introduction failures and the old root-order failure before the fix; forty-seven focused tests then passed. The coordinator ran all four gates and `git diff --check`: 548 Rust tests, doctests, replay checks, and nineteen how-tos passed. Hosted gate run `35745327707` passed on `be078b7`, which was fast-forwarded to main and pushed after Ian resolved a full filesystem. The matching record holds the evidence.

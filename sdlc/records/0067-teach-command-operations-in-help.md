@@ -1,6 +1,8 @@
 # 0067: Command introductions and teaching order
 
-Status: Independently accepted; local gates passed; hosted verification and landing pending.
+Status: Landed on main as `be078b717f075827f34e206ad9af5de458e88a31` after hosted gate run `35745327707` passed on that exact revision. The coordinator fast-forwarded main, pushed it, and verified ancestry.
+
+The first landing attempt stopped before changing main because the filesystem had zero available space and Git could not write its lock. Ian freed space; the coordinator observed 134 GB available and retried successfully. No lock, source, build directory, or registered worktree was removed by the coordinator.
 
 ## What changed
 
