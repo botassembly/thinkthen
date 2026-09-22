@@ -20,6 +20,12 @@ cc -std=c11 -Wall -Wextra -I../../contract/include examples/slide.c \
 echo "== c surface: the slide, as drawn, on the null backend"
 ENGINE_NULL=1 ./build/slide
 
+echo "== c surface: free from an atexit handler, after thread-local teardown"
+cc -std=c11 -Wall -Wextra -I../../contract/include tests/atexit_free.c \
+    -o build/atexit_free -Ltarget/release -lthinkthen \
+    -Wl,-rpath,"$PWD/target/release"
+ENGINE_NULL=1 ./build/atexit_free
+
 echo "== c surface: compile the recognize and relate example with a plain cc"
 cc -std=c11 -Wall -Wextra -I../../contract/include examples/recognize.c \
     -o build/recognize -Ltarget/release -lthinkthen \
@@ -68,6 +74,9 @@ ENGINE_NULL=1 cargo test --quiet --test concurrency
 
 echo "== c surface: two threads read their own error messages"
 ENGINE_NULL=1 cargo test --quiet --test error_threads
+
+echo "== c surface: failures stay on their own engine, and a reused address starts clean"
+cargo test --quiet --test error_engines -- --test-threads=1
 
 echo "== c surface: fork after the first call answers in the child"
 ENGINE_NULL=1 cargo test --quiet --test fork -- --test-threads=1

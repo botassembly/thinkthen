@@ -179,7 +179,7 @@ int main(void) {
     thinkthen_free_string(out);
 
     /* The relate section, as drawn. */
-    unsigned long lens[4];
+    size_t lens[4];
     for (int at = 0; at < 4; at += 1) {
         lens[at] = strlen(ALERTS[at]);
     }

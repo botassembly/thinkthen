@@ -70,7 +70,7 @@ def load():
     ]
     lib.thinkthen_decide_opts.argtypes = [
         ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p,
-        ctypes.c_size_t, ctypes.c_long, ctypes.c_void_p,
+        ctypes.c_size_t, ctypes.c_int64, ctypes.c_void_p,
         ctypes.POINTER(Answer),
     ]
     lib.thinkthen_decide_many.argtypes = [

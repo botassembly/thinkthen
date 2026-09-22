@@ -2,9 +2,9 @@
 //!
 //! This crate is the whole C surface: it builds `libthinkthen.so` and
 //! `libthinkthen.a` against [`contract/include/thinkthen.h`] and owns every
-//! exported symbol. The engine beneath exports none. The stand-in engine
-//! implements the contract today; when the real engine lands, the path
-//! dependency changes and nothing here does.
+//! exported symbol. The engine beneath exports none. The engine is built
+//! through the contract's connector; the stand-in implements it today, and
+//! the one line naming the connector is what the real engine changes.
 //!
 //! The door follows the header's lifetime rules exactly: an engine lives
 //! until `thinkthen_engine_free`, a string from `thinkthen_call`,
@@ -12,13 +12,18 @@
 //! `thinkthen_free_string`, and the message from
 //! `thinkthen_error_message` belongs to the calling thread: it lives until
 //! that thread records its next failure, and no other thread's calls
-//! replace it.
+//! replace it. Each engine carries its own failure table, so a failure on
+//! one engine never hides another's, and a freed engine's failures die
+//! with it.
 //!
-//! No panic crosses into the host. Every exported symbol runs behind a
-//! guard that catches a panic from anywhere beneath it, records the defect
-//! kind on the calling thread's slot, and returns a code or a null the
-//! host can handle, so a bug in the door or the engine never aborts the
-//! host process. Rust's own hook still prints the panic to stderr.
+//! No panic crosses into the host. Every exported symbol runs behind the
+//! contract's shared boundary (`catch_panic`), records the defect kind in
+//! the engine's failure table for the calling thread, and returns a code
+//! or a null the host can handle, so a bug in the door or the engine never
+//! aborts the host process. The boundary holds no thread-local storage, so
+//! a call after thread-local teardown — `thinkthen_engine_free` from an
+//! `atexit` handler — exits clean instead of aborting. Rust's own hook
+//! still prints the panic to stderr.
 //!
 //! Two findings from the slide, filed in `NOTES.md`, shape the code: the
 //! slide passes a bare question string where the header's doc promised the
@@ -35,15 +40,17 @@
 //!
 //! [`contract/include/thinkthen.h`]: ../../contract/include/thinkthen.h
 
-use std::cell::RefCell;
-use std::ffi::{c_char, c_long, CStr, CString};
+use std::collections::HashMap;
+use std::ffi::{c_char, CStr, CString};
+use std::sync::{Arc, Mutex};
+use std::thread::ThreadId;
 
 use thinkthen_contract::{
-    Annotated, Answer, Cancel, Details, Engine as _, Error, ErrorKind, Options, Question,
-    QuestionSet, Ranked, Recognize, Relate, Scored, deadline_from_millis, edges_json,
-    relate_checked,
+    Annotated, Answer, Cancel, Connector as _, Details, Engine, EngineConfig, Error, ErrorKind,
+    Options, Question, QuestionSet, Ranked, Recognize, Relate, Scored, deadline_from_millis,
+    edges_json, relate_checked,
 };
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
 /// The header's success code.
 const THINKTHEN_OK: i32 = 0;
@@ -55,8 +62,10 @@ const THINKTHEN_EUSAGE: i32 = 1;
 /// the door.
 const THINKTHEN_EDEFECT: i32 = 6;
 
-/// The header's `THINKTHEN_NO_DEADLINE`: a negative budget sets none.
-const NO_DEADLINE: c_long = -1;
+/// The header's `THINKTHEN_NO_DEADLINE`: -1, the one budget value that
+/// sets no deadline. Every other negative value is refused with the usage
+/// kind.
+const NO_DEADLINE: i64 = -1;
 
 /// The judgment the typed doors return: the outcome code and the
 /// probability behind it, matching `thinkthen_answer` in the header.
@@ -80,13 +89,16 @@ pub struct thinkthen_cancel_token {
     cancel: Cancel,
 }
 
-/// The opaque engine value. The engine the door calls; the last failure
-/// belongs to the thread that recorded it, not to this value, so two
-/// threads over one engine read their own messages.
+/// The opaque engine value: the engine the door calls and its own failure
+/// table, one entry per thread that recorded a failure on it. A failure
+/// on another engine never appears here, and the table dies with the
+/// value, so a new engine at a reused address starts clean.
 #[allow(non_camel_case_types)] // the header's own name for the value
 pub struct thinkthen_engine {
-    /// The engine the door calls. Built from the environment.
-    engine: BlockingEngine,
+    /// The engine the door calls, built through the contract's connector.
+    engine: Arc<dyn Engine>,
+    /// The last failure each thread recorded on this engine.
+    failures: Mutex<HashMap<ThreadId, LastError>>,
 }
 
 /// The stored failure behind `thinkthen_error_message`.
@@ -97,16 +109,6 @@ struct LastError {
     retryable: bool,
     /// The message, kept alive until the recording thread's next failure.
     message: CString,
-}
-
-thread_local! {
-    /// The failure the calling thread recorded last, and the engine it came
-    /// from. One slot per thread, so a caller and its readers stay on one
-    /// thread and another thread's failures never replace the message. The
-    /// slot drops at thread exit; freeing an engine forgets its entry on
-    /// the freeing thread so a reused address starts clean.
-    static LAST_FAILURE: RefCell<Option<(*const thinkthen_engine, LastError)>> =
-        RefCell::new(None);
 }
 
 /// The code for a kind, matching the header's six defines.
@@ -140,24 +142,59 @@ fn json_of(answer: &Answer) -> serde_json::Value {
 }
 
 impl thinkthen_engine {
-    /// Record a failure for the calling thread and return its code. The
-    /// message replaces this thread's previous failure and stays alive
-    /// until this thread records its next one.
+    /// Record a failure for the calling thread in this engine's own table
+    /// and return its code. The message replaces this thread's previous
+    /// failure on this engine and stays alive until this thread records
+    /// its next one (or the engine is freed).
     fn fail(&self, error: Error) -> i32 {
         let code = code_of(&error.kind);
-        let message = CString::new(error.message)
-            .unwrap_or_else(|_| CString::new("defect: the message held a NUL").expect("static"));
-        LAST_FAILURE.with(|slot| {
-            *slot.borrow_mut() = Some((
-                self as *const thinkthen_engine,
-                LastError {
-                    code,
-                    retryable: error.retryable,
-                    message,
-                },
-            ));
+        let message = CString::new(error.message).unwrap_or_else(|_| {
+            CString::new("defect: the message held a NUL").unwrap_or_default()
         });
+        let mut held = self
+            .failures
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        held.insert(
+            std::thread::current().id(),
+            LastError {
+                code,
+                retryable: error.retryable,
+                message,
+            },
+        );
         code
+    }
+
+    /// Run `read` over this engine's failure for the calling thread, when
+    /// there is one. The lock is held only for the read: the entry belongs
+    /// to this thread alone until this thread's next failure on this
+    /// engine, so a value read out of it outlives the borrow.
+    fn with_failure<T>(&self, read: impl FnOnce(&LastError) -> T) -> Option<T> {
+        let held = self
+            .failures
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        held.get(&std::thread::current().id()).map(read)
+    }
+
+    /// The code the calling thread recorded on this engine,
+    /// `THINKTHEN_OK` when it recorded none.
+    fn thread_error_code(&self) -> i32 {
+        self.with_failure(|last| last.code).unwrap_or(THINKTHEN_OK)
+    }
+
+    /// Whether a second try could help the calling thread's last failure
+    /// on this engine; zero when this thread recorded none.
+    fn thread_error_retryable(&self) -> i32 {
+        self.with_failure(|last| i32::from(last.retryable)).unwrap_or(0)
+    }
+
+    /// The calling thread's message for this engine, when it recorded a
+    /// failure. The pointer stays valid until this thread records its next
+    /// failure on this engine, exactly as the header promises.
+    fn thread_error_message(&self) -> Option<*const c_char> {
+        self.with_failure(|last| last.message.as_ptr())
     }
 
     /// One judgment over one text, in one request, carrying both the
@@ -178,83 +215,30 @@ impl thinkthen_engine {
     }
 }
 
-/// The code the calling thread recorded for `engine`, `THINKTHEN_OK` when
-/// it recorded none. A failure on another thread or another engine is not
-/// this thread's to report.
-fn thread_error_code(engine: *const thinkthen_engine) -> i32 {
-    LAST_FAILURE.with(|slot| match slot.borrow().as_ref() {
-        Some((key, last)) if std::ptr::eq(*key, engine) => last.code,
-        _ => THINKTHEN_OK,
-    })
-}
-
-/// Whether a second try could help the calling thread's last failure on
-/// `engine`; zero when this thread recorded none.
-fn thread_error_retryable(engine: *const thinkthen_engine) -> i32 {
-    LAST_FAILURE.with(|slot| match slot.borrow().as_ref() {
-        Some((key, last)) if std::ptr::eq(*key, engine) => i32::from(last.retryable),
-        _ => 0,
-    })
-}
-
-/// The calling thread's message for `engine`, when it recorded a failure.
-/// The pointer stays valid until this thread records its next failure,
-/// exactly as the header promises.
-fn thread_error_message(engine: *const thinkthen_engine) -> Option<*const c_char> {
-    LAST_FAILURE.with(|slot| match slot.borrow().as_ref() {
-        Some((key, last)) if std::ptr::eq(*key, engine) => Some(last.message.as_ptr()),
-        _ => None,
-    })
-}
-
-/// Forget the calling thread's failure for `engine`: the engine is going
-/// away, or a new one took a reused address.
-fn forget_thread_failure(engine: *const thinkthen_engine) {
-    LAST_FAILURE.with(|slot| {
-        let mut held = slot.borrow_mut();
-        if let Some((key, _)) = held.as_ref() {
-            if std::ptr::eq(*key, engine) {
-                *held = None;
-            }
-        }
-    });
-}
-
-/// Run one door body behind a panic guard.
+/// Run one door body behind the contract's shared panic boundary.
 ///
 /// A panic from anywhere beneath the body — the engine, the contract, or
-/// the door itself — is caught here, recorded as the defect kind on the
-/// calling thread's slot when an engine is at hand, and reported through
-/// `fallback`, so it never unwinds into the host process. Rust's default
-/// hook still prints the panic to stderr; what the guard removes is the
-/// abort that would otherwise kill the host.
+/// the door itself — is caught by [`thinkthen_contract::catch_panic`],
+/// recorded as the defect kind in the engine's failure table for the
+/// calling thread when an engine is at hand, and reported through
+/// `fallback`, so it never unwinds into the host process. The error path
+/// touches no thread-local storage, so it also works after thread-local
+/// teardown (a free from an `atexit` handler). Rust's default hook still
+/// prints the panic to stderr; what the guard removes is the abort that
+/// would otherwise kill the host.
 fn guard<T>(
     engine: *const thinkthen_engine,
     fallback: impl FnOnce() -> T,
     body: impl FnOnce() -> T,
 ) -> T {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)) {
+    match thinkthen_contract::catch_panic("the C door", || Ok(body())) {
         Ok(value) => value,
-        Err(payload) => {
+        Err(error) => {
             if let Some(engine) = unsafe { engine.as_ref() } {
-                engine.fail(Error::defect(format!(
-                    "a panic crossed the door: {}",
-                    panic_text(payload.as_ref())
-                )));
+                engine.fail(error);
             }
             fallback()
         }
-    }
-}
-
-/// The text a panic payload carries, for the recorded defect message.
-fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
-    if let Some(text) = payload.downcast_ref::<&'static str>() {
-        (*text).to_owned()
-    } else if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else {
-        "a payload that is not text".to_owned()
     }
 }
 
@@ -276,8 +260,9 @@ fn question_from(text: &str) -> Result<Question, Error> {
 // what it can before trusting the host, and every body runs behind the
 // panic guard so no panic crosses into the host process.
 
-/// Build an engine from the environment. Returns null only when the
-/// process cannot hold an engine at all.
+/// Build an engine from the environment through the contract's connector.
+/// Returns null when the connector refuses the environment or the process
+/// cannot hold an engine at all.
 ///
 /// # Panics
 ///
@@ -286,18 +271,20 @@ fn question_from(text: &str) -> Result<Question, Error> {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_new() -> *mut thinkthen_engine {
     guard(std::ptr::null(), || std::ptr::null_mut(), || {
-        let engine = Box::into_raw(Box::new(thinkthen_engine {
-            engine: BlockingEngine::from_env(),
-        }));
-        // A fresh engine starts with no failure, even when it took an
-        // address this thread used before.
-        forget_thread_failure(engine);
-        engine
+        let Ok(engine) = StandinConnector.connect(&EngineConfig::from_env()) else {
+            return std::ptr::null_mut();
+        };
+        Box::into_raw(Box::new(thinkthen_engine {
+            engine,
+            failures: Mutex::new(HashMap::new()),
+        }))
     })
 }
 
-/// Free an engine. Null is accepted and ignored. The calling thread's
-/// error slot forgets the engine, so a reused address starts clean.
+/// Free an engine. Null is accepted and ignored. The engine's failure
+/// table dies with it, so a new engine at a reused address starts clean.
+/// The error path records nothing: the value it would name is going away,
+/// so the guard passes no engine.
 ///
 /// # Safety
 ///
@@ -305,9 +292,8 @@ pub unsafe extern "C" fn thinkthen_engine_new() -> *mut thinkthen_engine {
 /// using.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut thinkthen_engine) {
-    guard(engine, || {}, || {
+    guard(std::ptr::null(), || {}, || {
         if !engine.is_null() {
-            forget_thread_failure(engine);
             drop(unsafe { Box::from_raw(engine) });
         }
     })
@@ -332,7 +318,7 @@ pub unsafe extern "C" fn thinkthen_error_message(
             let Some(held) = (unsafe { engine.as_ref() }) else {
                 return c"no engine came, so no failure is named".as_ptr();
             };
-            match thread_error_message(held as *const thinkthen_engine) {
+            match held.thread_error_message() {
                 Some(message) => message,
                 None => c"no failure yet".as_ptr(),
             }
@@ -353,7 +339,7 @@ pub unsafe extern "C" fn thinkthen_error_retryable(engine: *const thinkthen_engi
         let Some(held) = (unsafe { engine.as_ref() }) else {
             return 0;
         };
-        thread_error_retryable(held as *const thinkthen_engine)
+        held.thread_error_retryable()
     })
 }
 
@@ -371,7 +357,7 @@ pub unsafe extern "C" fn thinkthen_error_code(engine: *const thinkthen_engine) -
         let Some(held) = (unsafe { engine.as_ref() }) else {
             return THINKTHEN_EUSAGE;
         };
-        thread_error_code(held as *const thinkthen_engine)
+        held.thread_error_code()
     })
 }
 
@@ -426,21 +412,19 @@ pub unsafe extern "C" fn thinkthen_cancel_token_free(token: *mut thinkthen_cance
 }
 
 /// The options one call carries beside its arguments: the caller's budget
-/// and the caller's token. `THINKTHEN_NO_DEADLINE` sets no deadline; zero
-/// is a spent budget by the engine's own rule, so it refuses before
-/// anything is sent; any other value is a count of milliseconds from now,
+/// and the caller's token. `THINKTHEN_NO_DEADLINE` (-1) sets no deadline;
+/// zero is a spent budget by the engine's own rule, so it refuses before
+/// anything is sent; any other negative value is refused here with the
+/// usage kind; a positive value is a count of milliseconds from now,
 /// converted by the contract's checked door so an oversized budget comes
 /// back as the usage kind instead of a panic in the host. A null token is
 /// no token.
 fn control<'a>(
-    deadline_ms: c_long,
+    deadline_ms: i64,
     token: *const thinkthen_cancel_token,
 ) -> Result<Options<'a>, Error> {
     let token = unsafe { token.as_ref() };
     let options = Options::new().maybe_cancel(token.map(|held| &held.cancel));
-    if deadline_ms < 0 {
-        return Ok(options);
-    }
     match deadline_from_millis(deadline_ms as f64) {
         Ok(Some(budget)) => Ok(options.deadline_in(budget)),
         Ok(None) => Ok(options),
@@ -493,7 +477,7 @@ pub unsafe extern "C" fn thinkthen_decide_opts(
     question_json: *const c_char,
     text: *const c_char,
     text_len: usize,
-    deadline_ms: c_long,
+    deadline_ms: i64,
     cancel: *const thinkthen_cancel_token,
     out: *mut thinkthen_answer,
 ) -> i32 {
@@ -602,7 +586,7 @@ pub unsafe extern "C" fn thinkthen_decide_many_opts(
     texts: *const *const c_char,
     lengths: *const usize,
     count: usize,
-    deadline_ms: c_long,
+    deadline_ms: i64,
     cancel: *const thinkthen_cancel_token,
     out: *mut thinkthen_answer,
 ) -> i32 {
@@ -714,7 +698,8 @@ pub unsafe extern "C" fn thinkthen_call(
 /// - `{"find": "...", "units": ["...", ...]}`
 /// - `{"annotate": <the question set>, "records": ["...", ...]}`
 /// - `{"decide": "...", "evidence": "...", "details": true}` for the
-///   audit view
+///   audit view; any other `details` value, `false` included, is not the
+///   view and the request answers as its plain verb
 /// - `{"usage": true}` for the counters, which take no options
 ///
 /// # Safety
@@ -726,7 +711,7 @@ pub unsafe extern "C" fn thinkthen_call(
 pub unsafe extern "C" fn thinkthen_call_opts(
     engine: *const thinkthen_engine,
     request_json: *const c_char,
-    deadline_ms: c_long,
+    deadline_ms: i64,
     cancel: *const thinkthen_cancel_token,
 ) -> *mut c_char {
     guard(engine, || std::ptr::null_mut(), || {
@@ -829,7 +814,7 @@ fn call_verb(
         engine.one_judgment(&question, evidence, options)
     };
 
-    if object.contains_key("details") {
+    if object.get("details").and_then(serde_json::Value::as_bool) == Some(true) {
         let evidence = evidence("evidence")?;
         let question_text = serde_json::to_string(&serde_json::Value::Object(question_object))
             .map_err(|error| Error::defect(format!("the question did not serialize: {error}")))?;
@@ -1063,7 +1048,7 @@ pub unsafe extern "C" fn thinkthen_recognize_opts(
     spec_json: *const c_char,
     text: *const c_char,
     text_len: usize,
-    deadline_ms: c_long,
+    deadline_ms: i64,
     cancel: *const thinkthen_cancel_token,
     out: *mut *mut c_char,
     out_len: *mut usize,
@@ -1157,7 +1142,7 @@ pub unsafe extern "C" fn thinkthen_relate_opts(
     texts: *const *const c_char,
     lengths: *const usize,
     count: usize,
-    deadline_ms: c_long,
+    deadline_ms: i64,
     cancel: *const thinkthen_cancel_token,
     out: *mut *mut c_char,
     out_len: *mut usize,
@@ -1208,7 +1193,7 @@ fn run_relate(
         let length = unsafe { *lengths.add(index) };
         records.push(str_from(pointer, length)?);
     }
-    let edges = relate_checked(&engine.engine, &ask, &records, options)?;
+    let edges = relate_checked(engine.engine.as_ref(), &ask, &records, options)?;
     Ok(edges_json(&edges))
 }
 
@@ -1258,9 +1243,9 @@ mod tests {
     use thinkthen_contract::Error as ContractError;
 
     /// The defect kind is its own code, and its message and retry signal
-    /// ride the calling thread's last-failure slot. The construction
-    /// stands in for the injected fault main's engine-only case uses; no
-    /// public fault hook exists.
+    /// ride the engine's failure table for the calling thread. The
+    /// construction stands in for the injected fault main's engine-only
+    /// case uses; no public fault hook exists.
     #[test]
     fn the_defect_kind_carries_code_six() {
         assert_eq!(code_of(&ErrorKind::Defect), 6);
@@ -1272,7 +1257,7 @@ mod tests {
         assert_eq!(
             unsafe { thinkthen_error_code(engine) },
             6,
-            "the failing code rides the calling thread's last-failure slot"
+            "the failing code rides the engine's failure table"
         );
         let message = unsafe { CStr::from_ptr(thinkthen_error_message(engine)) };
         assert!(message
@@ -1283,10 +1268,10 @@ mod tests {
         unsafe { thinkthen_engine_free(engine) };
     }
 
-    /// A panic beneath the door is caught and recorded as the defect kind
-    /// on the calling thread, and the call returns a code instead of
-    /// unwinding into the host. Every exported symbol runs behind this
-    /// same guard.
+    /// A panic beneath the door is caught by the contract's shared
+    /// boundary, recorded as the defect kind for the calling thread, and
+    /// returned as a code instead of unwinding into the host. Every
+    /// exported symbol runs behind this same guard.
     #[test]
     fn a_panic_behind_the_door_comes_back_as_the_defect_kind() {
         let engine = unsafe { thinkthen_engine_new() };
@@ -1301,6 +1286,10 @@ mod tests {
             message.contains("the probe panic"),
             "the panic's own text is recorded: {message}"
         );
+        assert!(
+            message.contains("a panic crossed the C door"),
+            "the shared boundary's own spelling is recorded: {message}"
+        );
         assert_eq!(
             unsafe { thinkthen_error_retryable(engine) },
             0,
@@ -1309,9 +1298,48 @@ mod tests {
         unsafe { thinkthen_engine_free(engine) };
     }
 
-    /// A failure is visible only to the thread that recorded it: the slot
-    /// is per thread, so a second thread's `fail` does not replace the
-    /// first thread's message and a fresh thread reads no failure at all.
+    /// A failure is visible only on the engine and thread that recorded
+    /// it: the table belongs to the engine and is keyed by the recording
+    /// thread, so a failure on one engine never hides another engine's
+    /// failure, and neither engine's message replaces the other's.
+    #[test]
+    fn a_failure_on_one_engine_does_not_hide_another() {
+        let first = unsafe { thinkthen_engine_new() };
+        let second = unsafe { thinkthen_engine_new() };
+        assert!(!first.is_null() && !second.is_null(), "both engines build");
+        let held_first = unsafe { &*first };
+        let held_second = unsafe { &*second };
+        held_first.fail(ContractError::usage("the first engine's failure"));
+        held_second.fail(ContractError::local("the second engine's failure"));
+
+        assert_eq!(
+            unsafe { thinkthen_error_code(first) },
+            THINKTHEN_EUSAGE,
+            "the first engine still reads its own failure"
+        );
+        assert_eq!(
+            unsafe { thinkthen_error_code(second) },
+            4,
+            "the second engine reads its own failure"
+        );
+        let first_message = unsafe { CStr::from_ptr(thinkthen_error_message(first)) }
+            .to_string_lossy()
+            .into_owned();
+        let second_message = unsafe { CStr::from_ptr(thinkthen_error_message(second)) }
+            .to_string_lossy()
+            .into_owned();
+        assert!(first_message.contains("the first engine's failure"), "{first_message}");
+        assert!(second_message.contains("the second engine's failure"), "{second_message}");
+        unsafe {
+            thinkthen_engine_free(first);
+            thinkthen_engine_free(second);
+        }
+    }
+
+    /// A failure is visible only to the thread that recorded it: the table
+    /// is keyed by the recording thread, so a second thread's `fail` does
+    /// not replace the first thread's message and a fresh thread reads no
+    /// failure at all.
     #[test]
     fn a_failure_belongs_to_the_thread_that_recorded_it() {
         let engine = unsafe { thinkthen_engine_new() };
@@ -1343,5 +1371,38 @@ mod tests {
             .into_owned();
         assert!(message.contains("the main thread's failure"), "{message}");
         unsafe { thinkthen_engine_free(engine) };
+    }
+
+    /// Only the exact sentinel means "no deadline": every other negative
+    /// value is refused with the usage kind, zero is the spent budget the
+    /// engine itself refuses, and a positive value converts. Before this,
+    /// any negative value read as no deadline.
+    #[test]
+    fn only_the_sentinel_means_no_deadline() {
+        assert!(
+            control(NO_DEADLINE, std::ptr::null()).is_ok(),
+            "the sentinel means no deadline"
+        );
+        assert!(
+            control(0, std::ptr::null()).is_ok(),
+            "zero is passed on; the engine refuses the spent budget"
+        );
+        assert!(
+            control(1_000, std::ptr::null()).is_ok(),
+            "a positive budget converts"
+        );
+        let refused = control(-2, std::ptr::null())
+            .err()
+            .expect("every other negative refuses");
+        assert_eq!(refused.kind, ErrorKind::Usage);
+        assert!(
+            refused.message.contains("negative"),
+            "the message names why: {}",
+            refused.message
+        );
+        let smallest = control(i64::MIN, std::ptr::null())
+            .err()
+            .expect("the smallest negative refuses");
+        assert_eq!(smallest.kind, ErrorKind::Usage);
     }
 }

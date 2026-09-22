@@ -26,7 +26,7 @@ int main(void) {
         "just saying hi",
         "maybe a refund",
     };
-    unsigned long lens[3] = {
+    size_t lens[3] = {
         strlen(texts[0]), strlen(texts[1]), strlen(texts[2]),
     };
     enum { COUNT = 3 };

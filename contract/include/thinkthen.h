@@ -1,8 +1,8 @@
 /*
  * thinkthen.h — the C door to the thinkthen engine, version 0.0.1.
  *
- * One archive per platform ships this header, the shared library, the
- * static library, and a `.pc` file. Every language that cannot bind Rust
+ * One archive per platform ships this header, the shared library, and the
+ * static library. Every language that cannot bind Rust
  * directly binds this door: the JSON door carries any request, and the
  * typed `thinkthen_decide` and `thinkthen_decide_many` carry the hot path
  * without building JSON in the host.
@@ -35,13 +35,17 @@
  * bulk call returns its code with no rows.
  *
  * Version 0.1.0 freezes the symbol names, the `thinkthen_answer` layout,
- * and the return codes. Every open-shaped result crosses as JSON text;
- * `thinkthen_answer` is the one struct that crosses the boundary, and it
- * never grows a field.
+ * the argument types (exact-width `size_t` lengths and counts, `int64_t`
+ * budgets), and the return codes. Every open-shaped result crosses as JSON
+ * text; `thinkthen_answer` is the one struct that crosses the boundary,
+ * and it never grows a field.
  */
 
 #ifndef THINKTHEN_H
 #define THINKTHEN_H
+
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,11 +72,14 @@ extern "C" {
 #define THINKTHEN_EDEFECT 6    /* the engine broke its own contract */
 
 /*
- * The budget an `_opts` call carries, in milliseconds. A positive value is
- * the budget; zero is a spent budget, so the call refuses before anything
- * is sent with THINKTHEN_EDEADLINE; THINKTHEN_NO_DEADLINE sets none.
+ * The budget an `_opts` call carries, in milliseconds, an `int64_t` so
+ * every value and the sentinel are exact on every platform. A positive
+ * value is the budget from the call; zero is a spent budget, so the call
+ * refuses before anything is sent with THINKTHEN_EDEADLINE;
+ * THINKTHEN_NO_DEADLINE sets none; and any other negative value is
+ * refused with THINKTHEN_EUSAGE before anything is sent.
  */
-#define THINKTHEN_NO_DEADLINE (-1L)
+#define THINKTHEN_NO_DEADLINE INT64_C(-1)
 
 /* The three answers a yes-or-no question gives. UNSURE is the public word;
  * the specification keeps "unresolved" in its own grammar. */
@@ -99,8 +106,9 @@ typedef struct thinkthen_answer {
 } thinkthen_answer;
 
 /* Build an engine from the environment: THINKTHEN_BASE_URL for the
- * address, THINKTHEN_CACHE for a cache folder. Returns NULL only when the
- * process cannot hold an engine at all. */
+ * address, THINKTHEN_CACHE for a cache folder. Returns NULL when the
+ * connector refuses the environment or the process cannot hold an engine
+ * at all. */
 thinkthen_engine *thinkthen_engine_new(void);
 
 /* Free an engine. NULL is accepted and ignored. Free it only after every
@@ -166,14 +174,14 @@ void thinkthen_cancel_token_free(thinkthen_cancel_token *token);
  * question; `text` and `text_len` are the evidence. The judgment lands in
  * `out` on THINKTHEN_OK. */
 int thinkthen_decide(const thinkthen_engine *engine, const char *question_json,
-                     const char *text, unsigned long text_len,
+                     const char *text, size_t text_len,
                      thinkthen_answer *out);
 
 /* The same call with the options beside it: `deadline_ms` is the budget
  * and `cancel` is the token, both described above. */
 int thinkthen_decide_opts(const thinkthen_engine *engine, const char *question_json,
-                          const char *text, unsigned long text_len,
-                          long deadline_ms, thinkthen_cancel_token *cancel,
+                          const char *text, size_t text_len,
+                          int64_t deadline_ms, thinkthen_cancel_token *cancel,
                           thinkthen_answer *out);
 
 /* Ask the same question of every text at once, at the engine's width, and
@@ -184,13 +192,13 @@ int thinkthen_decide_opts(const thinkthen_engine *engine, const char *question_j
  * spelling, the one bulk entry point every language loading this library
  * uses. */
 int thinkthen_decide_many(const thinkthen_engine *engine, const char *question_json,
-                          const char *const *texts, const unsigned long *lengths,
-                          unsigned long count, thinkthen_answer *out);
+                          const char *const *texts, const size_t *lengths,
+                          size_t count, thinkthen_answer *out);
 
 /* The same bulk call with the options beside it. */
 int thinkthen_decide_many_opts(const thinkthen_engine *engine, const char *question_json,
-                               const char *const *texts, const unsigned long *lengths,
-                               unsigned long count, long deadline_ms,
+                               const char *const *texts, const size_t *lengths,
+                               size_t count, int64_t deadline_ms,
                                thinkthen_cancel_token *cancel, thinkthen_answer *out);
 
 /* The JSON door with no budget and no token: exactly
@@ -208,7 +216,7 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * A request that only reads the counters (`{"usage": true}`) takes no
  * options. */
 char *thinkthen_call_opts(const thinkthen_engine *engine, const char *request_json,
-                          long deadline_ms, thinkthen_cancel_token *cancel);
+                          int64_t deadline_ms, thinkthen_cancel_token *cancel);
 
 /* Find every name in one text, and the relations the rules allow: exactly
  * `thinkthen_recognize_opts` with THINKTHEN_NO_DEADLINE and a null
@@ -226,14 +234,14 @@ char *thinkthen_call_opts(const thinkthen_engine *engine, const char *request_js
  * this returned JSON and the question file included; `from` and `to` are
  * refused with the ruled spelling named. */
 int thinkthen_recognize(const thinkthen_engine *engine, const char *spec_json,
-                        const char *text, unsigned long text_len, char **out,
-                        unsigned long *out_len);
+                        const char *text, size_t text_len, char **out,
+                        size_t *out_len);
 
 /* The same call with the options beside it. */
 int thinkthen_recognize_opts(const thinkthen_engine *engine, const char *spec_json,
-                             const char *text, unsigned long text_len,
-                             long deadline_ms, thinkthen_cancel_token *cancel,
-                             char **out, unsigned long *out_len);
+                             const char *text, size_t text_len,
+                             int64_t deadline_ms, thinkthen_cancel_token *cancel,
+                             char **out, size_t *out_len);
 
 /* Say how every record relates to the others: exactly
  * `thinkthen_relate_opts` with THINKTHEN_NO_DEADLINE and a null token.
@@ -247,15 +255,15 @@ int thinkthen_recognize_opts(const thinkthen_engine *engine, const char *spec_js
  * (1..6, THINKTHEN_EUSAGE through THINKTHEN_EDEFECT) on failure, with
  * `thinkthen_error_message` naming what failed. */
 int thinkthen_relate(const thinkthen_engine *engine, const char *spec_json,
-                     const char *const *texts, const unsigned long *lengths,
-                     unsigned long count, char **out, unsigned long *out_len);
+                     const char *const *texts, const size_t *lengths,
+                     size_t count, char **out, size_t *out_len);
 
 /* The same call with the options beside it. */
 int thinkthen_relate_opts(const thinkthen_engine *engine, const char *spec_json,
-                          const char *const *texts, const unsigned long *lengths,
-                          unsigned long count, long deadline_ms,
+                          const char *const *texts, const size_t *lengths,
+                          size_t count, int64_t deadline_ms,
                           thinkthen_cancel_token *cancel, char **out,
-                          unsigned long *out_len);
+                          size_t *out_len);
 
 /* Free a string `thinkthen_call`, `thinkthen_recognize`, or
  * `thinkthen_relate` returned, or their `_opts` twins. NULL is accepted

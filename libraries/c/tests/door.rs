@@ -3,7 +3,7 @@
 //!
 //! Run through `./check.sh`, which sets `ENGINE_NULL=1`.
 
-use std::ffi::{c_char, c_long, CString};
+use std::ffi::{c_char, CString};
 
 use thinkthen::thinkthen_engine;
 
@@ -18,7 +18,7 @@ const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {
 };
 
 /// The header's `THINKTHEN_NO_DEADLINE`.
-const NO_DEADLINE: c_long = -1;
+const NO_DEADLINE: i64 = -1;
 
 unsafe fn engine() -> *mut thinkthen_engine {
     thinkthen::thinkthen_engine_new()
@@ -231,6 +231,31 @@ fn the_json_door_answers_every_verb_it_carries() {    unsafe {
             "the nearest level rides in details on a score question"
         );
 
+        // `details: false` is not the audit view: the request answers as
+        // its plain verb, with none of the audit fields. Before this, any
+        // `details` key — false included — turned the audit view on.
+        let not_the_view = take(json(
+            engine,
+            r#"{"decide": "Does the customer ask for a refund?", "evidence": "I want a refund for order 9", "details": false}"#,
+        ));
+        assert_eq!(
+            not_the_view["answer"],
+            serde_json::json!(true),
+            "the plain decide shape answers"
+        );
+        assert!(
+            not_the_view["probability"].is_number(),
+            "the plain decide shape carries its probability"
+        );
+        assert!(
+            not_the_view.get("model").is_none()
+                && not_the_view.get("digest").is_none()
+                && not_the_view.get("sends").is_none()
+                && not_the_view.get("requests").is_none()
+                && not_the_view.get("failed_questions").is_none(),
+            "details: false carries no audit field: {not_the_view}"
+        );
+
         thinkthen::thinkthen_engine_free(engine);
     }
 }
@@ -315,7 +340,7 @@ unsafe fn recognize_with(
     engine: *const thinkthen_engine,
     spec: &str,
     text: &str,
-    deadline_ms: c_long,
+    deadline_ms: i64,
     cancel: *const thinkthen::thinkthen_cancel_token,
 ) -> (i32, String) {
     let spec = CString::new(spec).expect("no NUL");
@@ -358,7 +383,7 @@ unsafe fn relate_with(
     engine: *const thinkthen_engine,
     spec: &str,
     records: &[&str],
-    deadline_ms: c_long,
+    deadline_ms: i64,
     cancel: *const thinkthen::thinkthen_cancel_token,
 ) -> (i32, String) {
     let spec = CString::new(spec).expect("no NUL");

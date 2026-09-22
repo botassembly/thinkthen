@@ -637,3 +637,107 @@ rebuilds the production shape after. The inline annotate dialect, the
 `functions.c` example, and `examples.json` carry `"version": 1` now, and
 annotate columns come back in file order, so the example's expected line
 follows.
+
+**2026-09-22 (c lane, review wave 3).** Items 1, 3, 4, 5, 6, 7, and 16 of
+the second review, one wave:
+
+- **The failure table moved into the engine (items 1 and 16).** The old
+  one-slot-per-thread table keyed by the engine pointer broke two ways: a
+  failure on one engine erased another engine's entry (the first engine
+  then read `no failure yet`), and a freed engine's entry survived on
+  threads that did not free it, so a new engine at the reused address
+  inherited the dead engine's message. The table now lives inside
+  `thinkthen_engine`, keyed by the recording thread; `fail`, the three
+  error readers, and `thinkthen_engine_free` all go through it, and the
+  thread-local (`LAST_FAILURE`) and `forget_thread_failure` are gone.
+  `tests/error_engines.rs` is new and pins both edges. Against the pre-fix
+  code (a scratch worktree at `f532e9e`, the same test file copied in,
+  removed after):
+
+  ```
+  $ ENGINE_NULL=1 cargo test --test error_engines -- --test-threads=1
+  assertion `left == right` failed: the first engine still reports its own failure
+    left: 0
+   right: 1
+  assertion `left == right` failed: a new engine at the old address starts with no failure
+    left: 1
+   right: 0
+  test result: FAILED. 0 passed; 2 failed
+  ```
+
+- **The teardown abort (items 1 and 7).** glibc runs thread-local
+  destructors before the atexit handlers, so the old error path's
+  `LAST_FAILURE.with` panicked twice — once inside the body (caught by
+  `catch_unwind`), once in the guard's own error arm (not caught) — and a
+  panic escaping `extern "C"` aborts the host. The door now runs the
+  contract's shared guard (`catch_panic`), which is also item 7: the local
+  `catch_unwind` wrapper and `panic_text` are deleted, and the recorded
+  message now reads `a panic crossed the C door: ...`. `tests/atexit_free.c`
+  is new, registers `thinkthen_engine_free` with `atexit`, and `check.sh`
+  runs it:
+
+  ```
+  $ ENGINE_NULL=1 ./build/atexit_free; echo $?          # at HEAD
+  0
+  # the same program against the pre-fix library:
+  panicked ... cannot access a Thread Local Storage value during or after destruction
+  panicked ... panic in a function that cannot unwind
+  thread caused non-unwinding panic. aborting.
+  thinkthen_engine_free
+  free_at_exit
+  __run_exit_handlers
+  exit 134
+  ```
+
+  The unit test `a_panic_behind_the_door_comes_back_as_the_defect_kind`
+  also pins the shared boundary's own spelling now.
+
+- **The deadline sentinel (item 3).** `control()` dropped its
+  `deadline_ms < 0` early return and passes every value through the
+  contract's `deadline_from_millis`; only `THINKTHEN_NO_DEADLINE` (-1)
+  yields no deadline. Zero stays a spent budget; `-2` and `i64::MIN`
+  refuse with the usage kind before anything is sent.
+  `tests/deadline_fast.rs` gained
+  `every_other_negative_budget_refuses_before_the_wire` (pre-fix: 3 passed,
+  1 failed, `a negative budget is the usage kind: no failure yet`, because
+  `-2` answered), and the unit test
+  `only_the_sentinel_means_no_deadline` covers the conversion table.
+
+- **`details: false` (item 4).** The JSON door reaches the audit view
+  only when `details` is exactly `true`; the old `contains_key("details")`
+  turned the view on for `false`. The door suite asserts the plain decide
+  shape and the absence of every audit field (pre-fix it failed with the
+  full audit JSON printed).
+
+- **The header (item 5).** `unsigned long` lengths and counts became
+  `size_t`, `long` budgets became `int64_t`, `<stddef.h>`/`<stdint.h>` are
+  included, and `THINKTHEN_NO_DEADLINE` is `INT64_C(-1)`; a C++ syntax
+  check (`g++ -std=c++17 -fsyntax-only`) passes. The `.pc` promise is
+  removed: no install tree ships in 0.1, so a `.pc` would name a prefix
+  that does not exist (DESIGN.md section 8). SONAME: none for 0.1,
+  recorded in section 8 — `readelf -d libthinkthen.so` shows no SONAME,
+  and the release ships as an archive linked by path. The ctypes driver's
+  deadline slot moved to `c_int64`, and the examples' length arrays to
+  `size_t`.
+
+- **The connector (item 6).** `thinkthen_engine` holds `Arc<dyn Engine>`
+  built by `StandinConnector.connect(&EngineConfig::from_env())`;
+  `BlockingEngine` is gone from the crate, and the stand-in is named
+  exactly once below its `use`:
+
+  ```
+  $ grep -rn "BlockingEngine\|StandinConnector" libraries/c libraries/rust --include=*.rs
+  libraries/c/src/lib.rs:53:use thinkthen_standin::StandinConnector;
+  libraries/c/src/lib.rs:274:        let Ok(engine) = StandinConnector.connect(&EngineConfig::from_env()) else {
+  libraries/rust/src/lib.rs:40:use thinkthen_standin::StandinConnector;
+  libraries/rust/src/lib.rs:350:    StandinConnector.connect(config)
+  ```
+
+  `thinkthen_engine_new` returns null when the connector refuses the
+  environment (the stand-in never refuses); the header's comment says so.
+
+- **Commands.** `./check.sh` exits 0: lib 5, door 14, null matrix 5,
+  cancel 3, deadline_fast 4, concurrency 1, error_threads 1, error_engines
+  2, fork 1, the drawn slide and the recognize and relate examples as
+  drawn, the ASan error-thread repro clean, the atexit probe 0,
+  conformance 84 green (the wire twin skipped, no stub on 8216).

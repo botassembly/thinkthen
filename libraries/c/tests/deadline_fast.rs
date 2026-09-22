@@ -15,7 +15,7 @@
 //! `--test-threads=1`, because the spent-budget row compares the
 //! stand-in's process-global request counter.
 
-use std::ffi::{c_char, c_long, CStr, CString};
+use std::ffi::{c_char, CStr, CString};
 use std::time::{Duration, Instant};
 
 use thinkthen::thinkthen_engine;
@@ -145,6 +145,59 @@ fn a_budget_spent_mid_batch_ends_the_wait_within_a_tick() {
     }
 }
 
+/// Only the sentinel means "no deadline": every other negative budget is
+/// refused with the usage kind before anything is sent, and
+/// THINKTHEN_NO_DEADLINE itself leaves the call to answer. Before this,
+/// any negative value read as no deadline, so a host that computed a
+/// negative budget got an unbounded call instead of a refusal.
+#[test]
+fn every_other_negative_budget_refuses_before_the_wire() {
+    null_backend();
+    unsafe {
+        let engine = thinkthen::thinkthen_engine_new();
+        let question = CString::new("Does the customer ask for a refund?").expect("static");
+        let evidence = CString::new("I want a refund for order 9").expect("static");
+        let before = usage_of(engine);
+
+        let mut answer = UNWRITTEN;
+        let code = thinkthen::thinkthen_decide_opts(
+            engine,
+            question.as_ptr(),
+            evidence.as_ptr(),
+            evidence.as_bytes().len(),
+            -2,
+            std::ptr::null(),
+            &mut answer,
+        );
+        assert_eq!(code, 1, "a negative budget is the usage kind: {}", message(engine));
+        assert!(
+            message(engine).contains("negative"),
+            "the message names why: {}",
+            message(engine)
+        );
+        assert_eq!(answer.outcome, 7, "a refusal writes nothing");
+        assert_eq!(usage_of(engine), before, "a refused budget sends nothing");
+
+        let code = thinkthen::thinkthen_decide_opts(
+            engine,
+            question.as_ptr(),
+            evidence.as_ptr(),
+            evidence.as_bytes().len(),
+            -1,
+            std::ptr::null(),
+            &mut answer,
+        );
+        assert_eq!(
+            code, 0,
+            "the sentinel itself is no deadline and the call answers: {}",
+            message(engine)
+        );
+        assert_ne!(answer.outcome, 7, "the sentinel leaves the answer to the engine");
+
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
 /// A budget too large for the engine is refused with the usage kind before
 /// anything is sent: the contract's checked conversion owns the
 /// millisecond-to-budget step, so an impossible budget is a code, not a
@@ -165,7 +218,7 @@ fn an_impossible_budget_is_refused_not_a_panic() {
             question.as_ptr(),
             evidence.as_ptr(),
             evidence.as_bytes().len(),
-            c_long::MAX,
+            i64::MAX,
             std::ptr::null(),
             &mut answer,
         );

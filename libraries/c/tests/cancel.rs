@@ -13,7 +13,7 @@ use thinkthen::thinkthen_cancel_token;
 use thinkthen::thinkthen_engine;
 
 const CANCELLED: i32 = 5;
-const NO_DEADLINE: std::ffi::c_long = -1;
+const NO_DEADLINE: i64 = -1;
 
 /// A judgment that was never written, so a cancel is visible in the out.
 const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {

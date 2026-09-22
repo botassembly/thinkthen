@@ -3,8 +3,9 @@
 The door every language that cannot bind Rust directly loads: one header
 from `contract/include/thinkthen.h`, `libthinkthen.so` and
 `libthinkthen.a` built here, and every exported symbol owned by this
-surface. The engine exports none. The stand-in implements the contract
-today; the real engine replaces it with one changed dependency.
+surface. The engine exports none. The engine is built through the
+contract's connector; the stand-in provides the connector today and the
+real engine replaces it by the one line that names the connector.
 
 The acceptance sample is the C slide in
 `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`,

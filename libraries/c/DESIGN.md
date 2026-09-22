@@ -8,7 +8,8 @@ deadlines, partial completion, null/length inputs, allocated results, and
 concurrent callers before its ABI freezes"
 (`sdlc/planning/library-team-architecture-punch-list.md`).
 
-The shape that stays: one engine value built from the environment; the JSON
+The shape that stays: one engine value built through the contract's
+connector (the environment by default); the JSON
 door carries any request; the typed doors carry the hot paths; every result
 of open size crosses as JSON text. The design behind the option arguments
 is the A-shape approved on 2026-09-22: the drawn signatures freeze and the
@@ -38,11 +39,16 @@ needs it. The callback stays deferred (see the end of this page).
 
 ## 2. Deadlines
 
-**Decision.** Every `_opts` spelling takes a flat `long deadline_ms`
-argument, beside the token. THINKTHEN_NO_DEADLINE (-1) sets none; zero is
-a spent budget, exactly as the conformance file's own row
+**Decision.** Every `_opts` spelling takes a flat `int64_t deadline_ms`
+argument, beside the token; the header's `size_t` lengths and counts and
+this `int64_t` budget are the frozen exact-width argument types (section
+8). THINKTHEN_NO_DEADLINE (-1) sets none; zero is a spent budget, exactly
+as the conformance file's own row
 (`27-deadline-spent-budget`, `budget_ms: 0`) rules, so the call refuses
-before anything is sent with THINKTHEN_EDEADLINE; a positive value is that
+before anything is sent with THINKTHEN_EDEADLINE; every other negative
+value is refused with THINKTHEN_EUSAGE before anything is sent, because
+only the sentinel means "none" and a host that computed a negative budget
+must hear a refusal, not get an unbounded call; a positive value is that
 many milliseconds from the call, converted through the contract's checked
 millisecond door (`deadline_from_millis`) so a budget larger than the
 engine holds is the usage kind before anything is sent, instead of an
@@ -52,8 +58,9 @@ tick. Every plain
 spelling is exactly its `_opts` twin called with THINKTHEN_NO_DEADLINE and
 a null token; the header says so in one sentence and
 `the_plain_call_is_its_opts_twin` proves it on the answer path and the
-error path alike. `tests/deadline_fast.rs`'s
-`an_impossible_budget_is_refused_not_a_panic` pins the oversized case.
+error path alike. `tests/deadline_fast.rs` pins the sentinel's own rule
+(`every_other_negative_budget_refuses_before_the_wire`) and the oversized
+case (`an_impossible_budget_is_refused_not_a_panic`).
 
 **Why flat arguments, not an options struct.** Go's cgo and Java's FFI
 marshal scalars and pointers directly and struct-by-value awkwardly; C++
@@ -151,24 +158,32 @@ line. The door owns one name per symbol and adds no alias.
 
 **Decision.** Any number of threads may call on one engine at once, and
 each caller sees the answers it would get alone. The host must not free the
-engine or a token while a call that uses it is in flight. The error slot is
-per thread, not per engine: `thinkthen_error_code`,
-`thinkthen_error_message`, and `thinkthen_error_retryable` name the last
-failure the calling thread recorded on the engine, another thread's
-failures never replace it, and a thread that recorded none reads the
-no-failure text. The failing call's own return value is always that call's
-authoritative code.
+engine or a token while a call that uses it is in flight. The failure
+table is per (thread, engine): each engine carries its own table keyed by
+the recording thread, and `thinkthen_error_code`,
+`thinkthen_error_message`, and `thinkthen_error_retryable` read this
+thread's entry on this engine — another thread's failures never replace
+it, another engine's failures never answer for it, and a thread that
+recorded none reads the no-failure text. The failing call's own return
+value is always that call's authoritative code.
 
-**Why per thread.** The header promises any number of threads and a message
-that stays valid until the recording thread's next failure; one shared
-last-writer-wins slot cannot keep both, and the review measured the
-consequence — a second thread's failure freed the first thread's message
-while the first thread was reading it, an AddressSanitizer
-use-after-free. The slot lives in thread-local storage keyed by the engine
-pointer, drops at thread exit, and is forgotten when the thread frees the
-engine, so a reused address starts clean. Freeing an engine from one
-thread leaves another thread's entry in place; it holds only a message
-string, and the cross-thread address-reuse window is noted in `NOTES.md`.
+**Why per (thread, engine).** The header promises any number of threads
+and a message that stays valid until the recording thread's next failure;
+one shared last-writer-wins slot cannot keep both, and the review measured
+the consequence — a second thread's failure freed the first thread's
+message while the first thread was reading it, an AddressSanitizer
+use-after-free. The first repair kept one thread-local entry per thread
+keyed by the engine pointer; the second review measured that design's two
+edges: a failure on one engine erased the other engine's entry (the first
+engine then read "no failure"), and a freed engine's entry survived on
+threads that did not free it, so a new engine at the same address
+inherited the dead engine's message. The table now lives inside the
+engine, so failures can neither cross engines nor outlive the engine they
+came from; the message pointer is a string the table holds until the
+recording thread's next failure on that engine, or until the engine is
+freed. `tests/error_engines.rs` pins both edges: two engines each read
+their own failure, and a reader thread reads "no failure yet" from a new
+engine that took the freed engine's address.
 
 **Proof.** `tests/concurrency.rs` runs four threads over one engine,
 twenty-five calls each: the plain typed call, its `_opts` twin, the JSON
@@ -189,8 +204,7 @@ two-million-record batch runs and watches the call end within a tick.
 code of the last failure the calling thread recorded on the engine,
 THINKTHEN_OK before any failure by that thread. Success does not clear it.
 A null engine returns THINKTHEN_EUSAGE, because no engine holds a failure.
-The message and the retry signal come from the same per-thread slot
-(section 6).
+The message and the retry signal come from the same table (section 6).
 
 **Why.** The JSON door returns NULL, so before this function a host could
 read the message and the retryable flag but never the kind (NOTES finding
@@ -199,15 +213,23 @@ cannot decide a fallback from a message string. The typed doors keep
 returning their code directly, and the three functions together are the
 whole error surface: code, message, retry signal.
 
-**One guard for panics.** Every exported symbol runs its body behind a
-panic guard: a panic from the engine, the contract, or the door itself is
-caught, recorded on the calling thread's slot as the defect kind with the
-panic's own text in the message, and reported through the symbol's
+**One guard for panics.** Every exported symbol runs its body behind the
+contract's shared boundary (`catch_panic`, the same helper every
+door-owning surface binds): a panic from the engine, the contract, or the
+door itself is caught, recorded in the engine's failure table for the
+calling thread as the defect kind with the panic's own text in the
+message, and reported through the symbol's
 fallback — a code, a null, or the defect text from
 `thinkthen_error_message` — so a panic never unwinds into the host process
-and never aborts it. Rust's default hook still prints the panic to stderr.
+and never aborts it. The error path touches no thread-local storage, so
+the guard still works after thread-local teardown: `thinkthen_engine_free`
+from an `atexit` handler exits clean, where the old thread-local error
+path panicked a second time and aborted the host (exit 134).
+`tests/atexit_free.c` runs exactly that and must exit 0. Rust's default
+hook still prints the panic to stderr.
 The unit test `a_panic_behind_the_door_comes_back_as_the_defect_kind`
-proves the guard the exported symbols share.
+proves the guard the exported symbols share, including the shared
+boundary's own spelling in the message.
 
 ## 8. ABI stability
 
@@ -219,13 +241,27 @@ proves the guard the exported symbols share.
   third field,
 - the return codes 0 through 6, with new kinds appended and old ones never
   renumbered,
-- THINKTHEN_NO_DEADLINE, and the `thinkthen_` prefix on every name.
+- THINKTHEN_NO_DEADLINE, and the `thinkthen_` prefix on every name,
+- the exact-width argument types: `size_t` lengths and counts, `int64_t`
+  budgets.
 
 Adding a symbol or a code is a minor bump. Changing a signature, a struct
 layout, or an existing code is a major bump. No symbol is removed without
 a major bump. The version macros in the header carry the version at compile
-time; a runtime version accessor is deferred, because no consumer asked for
-one and the header and the `.pc` file answer the same question.
+time; a runtime version accessor is deferred, because no consumer asked
+for one and the compile-time macros answer the question.
+
+**The `.pc` file.** The header's first draft promised one archive per
+platform with a `.pc` file. No install tree ships in 0.1, so a `.pc` would
+name a prefix that does not exist; the promise is removed rather than
+shipped hollow. It returns with packaging.
+
+**SONAME.** None for 0.1, recorded: cargo links the shared library without
+a soname, and this release ships as an archive per platform rather than an
+installed system library. A soname implies an install prefix and an
+upgrade discipline that no shipped tree carries yet; consumers link the
+archive by path, as the examples and `check.sh` do. Revisit when packaging
+lands.
 
 **Why no structs cross.** Every open-shaped result crosses as JSON text, so
 a new field never changes a layout. `thinkthen_answer` is the one struct,

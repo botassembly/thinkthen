@@ -65,7 +65,7 @@ int main(void) {
     door(tt, "annotate", "{\"annotate\":{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}},\"records\":[\"maybe later\"]}");
 
     char *found = NULL;
-    unsigned long found_len = 0;
+    size_t found_len = 0;
     const char *sentence = "Maria Chen joined Northwind Freight in Chicago last spring.";
     rc = thinkthen_recognize(tt, "{\"kinds\":[\"person\",\"organization\",\"place\"]}", sentence, strlen(sentence), &found, &found_len);
     if (rc != 0) {
@@ -81,12 +81,12 @@ int main(void) {
         "The nightly export ran two hours late.",
         "The payments database ran out of disk space.",
     };
-    unsigned long lengths[4];
+    size_t lengths[4];
     for (int i = 0; i < 4; i++) {
         lengths[i] = strlen(alerts[i]);
     }
     char *edges = NULL;
-    unsigned long edges_len = 0;
+    size_t edges_len = 0;
     rc = thinkthen_relate(tt, "{\"relations\":[{\"name\":\"caused_by\",\"source\":\"*\",\"target\":\"*\"}]}", alerts, lengths, 4, &edges, &edges_len);
     if (rc != 0) {
         printf("relate: %s\n", thinkthen_error_message(tt));
