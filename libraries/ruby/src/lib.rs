@@ -101,12 +101,25 @@ type Crossing<T> = Result<T, ContractError>;
 /// engine's poll instead, where the VM lock is taken again and the
 /// pending interrupt can be judged; the caller's own token rides the
 /// same poll. The region between the two calls touches no Ruby object.
-fn without_gvl<A, R>(job: A, body: unsafe extern "C" fn(*mut c_void) -> *mut c_void) -> R {
+///
+/// On return, a real interrupt that arrived between the last poll and
+/// the return (the caller fires its token and raises in the same breath,
+/// say) is caught here with the VM lock held and returned beside the
+/// answer. Left pending, MRI delivers it at the next checkpoint - inside
+/// the raise of this call's own error or answer conversion - and that
+/// delivery unwinding across the Rust frames is what corrupted the heap
+/// the review's repro found. Every caller surfaces the drained error
+/// before it touches the answer.
+fn without_gvl<A, R>(
+    job: A,
+    body: unsafe extern "C" fn(*mut c_void) -> *mut c_void,
+) -> (R, Option<Error>) {
     let boxed = Box::into_raw(Box::new(job)) as *mut c_void;
     let answer = unsafe {
         rb_sys::rb_thread_call_without_gvl(Some(body), boxed, None, std::ptr::null_mut())
     };
-    unsafe { *Box::from_raw(answer as *mut R) }
+    let pending = hear_interrupts().err();
+    (unsafe { *Box::from_raw(answer as *mut R) }, pending)
 }
 
 /// Run one engine call behind the contract's shared panic boundary: a
@@ -313,6 +326,16 @@ unsafe extern "C" fn bulk_tick_body(pointer: *mut c_void) -> *mut c_void {
     // cannot cancel a sibling call.
     if state.caller.as_ref().is_some_and(Cancel::is_cancelled) {
         state.token.cancel();
+        // A raise that landed in the same breath as the caller's cancel
+        // must be caught here, with the VM lock held; left pending, MRI
+        // delivers it at a later checkpoint - a GVL reacquisition inside
+        // the batch - and the jump out skips the scope that joins this
+        // batch's workers, which then live on over freed memory (the
+        // review's repro: eight `ttb-worker` threads faulting in
+        // `Error::guard` after the call had returned).
+        if let Err(raised) = hear_interrupts() {
+            state.raised = Some(raised);
+        }
         return std::ptr::null_mut();
     }
     // Hear the host's own interrupts: a real Thread#raise, Ctrl-C, or
@@ -329,6 +352,14 @@ unsafe extern "C" fn bulk_tick_body(pointer: *mut c_void) -> *mut c_void {
         let tick = unsafe { *pointer };
         let outcome: Result<Value, Error> = tick.funcall("call", ());
         if let Err(raised) = outcome {
+            state.token.cancel();
+            state.raised = Some(raised);
+        }
+    }
+    // A raise can arrive while the tick runs Ruby code; drain again so it
+    // is caught here rather than at an MRI checkpoint later.
+    if state.raised.is_none() {
+        if let Err(raised) = hear_interrupts() {
             state.token.cancel();
             state.raised = Some(raised);
         }
@@ -541,7 +572,10 @@ impl EngineValue {
             deadline: optional_deadline(deadline)?,
             which,
         };
-        let answer: Crossing<SingleOut> = without_gvl(job, single_body);
+        let (answer, pending): (Crossing<SingleOut>, Option<Error>) = without_gvl(job, single_body);
+        if let Some(raised) = pending {
+            return Err(raised);
+        }
         let answer = answer.map_err(map_error)?;
         let ruby = magnus::Ruby::get().unwrap();
         let value = match answer {
@@ -598,10 +632,10 @@ impl EngineValue {
             which,
             tick: held_tick.as_ref().map(|held| held.as_ref() as *const Value),
         };
-        let (answer, raised): (Crossing<BulkOut>, Option<Error>) =
+        let ((answer, raised), pending): ((Crossing<BulkOut>, Option<Error>), Option<Error>) =
             without_gvl(job, bulk_body);
         drop(held_tick);
-        if let Some(raised) = raised {
+        if let Some(raised) = raised.or(pending) {
             return Err(raised);
         }
         let answer = answer.map_err(map_error)?;
@@ -674,7 +708,11 @@ impl EngineValue {
             token: token.clone(),
             deadline: optional_deadline(deadline)?,
         };
-        let answer: Crossing<Recognized> = without_gvl(job, recognize_body);
+        let (answer, pending): (Crossing<Recognized>, Option<Error>) =
+            without_gvl(job, recognize_body);
+        if let Some(raised) = pending {
+            return Err(raised);
+        }
         let answer = answer.map_err(map_error)?;
         recognized_value(&answer)
     }
@@ -698,7 +736,11 @@ impl EngineValue {
             token: token.clone(),
             deadline: optional_deadline(deadline)?,
         };
-        let answer: Crossing<Vec<Edge>> = without_gvl(job, relate_body);
+        let (answer, pending): (Crossing<Vec<Edge>>, Option<Error>) =
+            without_gvl(job, relate_body);
+        if let Some(raised) = pending {
+            return Err(raised);
+        }
         let answer = answer.map_err(map_error)?;
         edges_value(&answer)
     }
@@ -817,7 +859,10 @@ impl EngineValue {
             token: token.clone(),
             deadline: optional_deadline(deadline)?,
         };
-        let found: Crossing<Found> = without_gvl(job, find_body);
+        let (found, pending): (Crossing<Found>, Option<Error>) = without_gvl(job, find_body);
+        if let Some(raised) = pending {
+            return Err(raised);
+        }
         let found = found.map_err(map_error)?;
         let pair = RArray::with_capacity(2);
         match found.index {
@@ -852,10 +897,12 @@ impl EngineValue {
             deadline: optional_deadline(deadline)?,
             tick: held_tick.as_ref().map(|held| held.as_ref() as *const Value),
         };
-        let (answer, raised): (Crossing<Vec<Vec<(String, Annotated)>>>, Option<Error>) =
-            without_gvl(job, annotate_body);
+        let ((answer, raised), pending): (
+            (Crossing<Vec<Vec<(String, Annotated)>>>, Option<Error>),
+            Option<Error>,
+        ) = without_gvl(job, annotate_body);
         drop(held_tick);
-        if let Some(raised) = raised {
+        if let Some(raised) = raised.or(pending) {
             return Err(raised);
         }
         let records_out = answer.map_err(map_error)?;

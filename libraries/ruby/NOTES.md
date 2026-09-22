@@ -432,3 +432,53 @@ fork: green; examples: 10 of 10; conformance slice: green; slide: green
 `cargo test --lib` is 3 passed (the unblock-function test is gone with the
 unblock function; the panic test now asserts the contract's boundary
 message).
+
+## 2026-09-22 — the wire interrupt proof's segfault: the leaked workers (fixed)
+
+**The finding.** The final verification run of the gate segfaulted in the
+wire step `tests/test_cancel.rb`: exit 139, five runs in six. The shape is
+the one the test pins — a watcher fires the caller's token and
+`Thread#raise` back to back, which is exactly what the second review's
+fix wave taught the poll to hear.
+
+**The diagnosis, by command.** An `LD_PRELOAD` shim that interposes
+`sigaction` (kept separate from the branch, in session scratch) caught the
+first fault: `segv addr=10`, RIP inside
+`lib/thinkthen/thinkthen.so`, and the executing threads' names read from
+`/proc/self/task/<tid>/comm`. Every faulting thread was a `ttb-worker` —
+the stand-in batch's own workers — and the fault was
+`thinkthen_contract::Error::guard` dereferencing a pointer that was `0x10`,
+seconds after `test_cancel.rb`'s call had already returned. The workers had
+outlived the call.
+
+**The mechanism.** The caller's token and the raise land in the same
+breath. The poll's caller-token branch cancelled the call's token and
+returned **without hearing the interrupt**; the raise stayed pending, and
+MRI later delivered it at its own checkpoint — inside the batch, during a
+GVL reacquisition — where the jump skips Rust frames, including the
+`thread::scope` that joins the batch's workers. The workers lived on over
+the freed `Options` (its `&Cancel` read back as `0x10` from reused stack),
+and the process died at the next checkpoint. Raise alone and token alone
+were each clean; only the pair crashed, which is what the bisected probe
+matrix showed (`none`, `token`, `raise`: survived; `both`: crashed).
+
+**The fix.** `hear_interrupts` now runs on every poll path: the
+caller-token branch drains the pending interrupt under `rb_protect`
+before it returns, the regular path still drains first, and a second
+drain follows the tick's own Ruby code. `without_gvl` also drains once
+after the call returns, with the VM lock held, so a raise that arrives
+between the last poll and the return surfaces as the call's error — the
+clean channel — instead of firing inside the raise that follows.
+
+**Evidence, pre-fix versus post-fix, by command.** Same stub (8214, 300 ms
+delay), same test:
+
+| probe | pre-fix | post-fix |
+| --- | --- | --- |
+| `ruby -I lib tests/test_cancel.rb` | exit 139, 5 of 6 runs | exit 0, 10 of 10 runs, `interrupt proof green` |
+| `tests/test_interrupt_wire.rb` | exit 0 | exit 0 |
+| `./check.sh` (whole surface) | died at this step | exit 0, 84 ok-lines |
+
+The regression pin is `tests/test_cancel.rb` itself: it crashed against
+the pre-fix build and passes after, so the gate now fails if the drain
+regresses.
