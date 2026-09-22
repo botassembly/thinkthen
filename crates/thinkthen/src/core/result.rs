@@ -60,6 +60,7 @@ impl Usage {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct RequestMeta {
     replayed: bool,
+    requests_sent: u64,
     requests: Vec<String>,
     failed_questions: usize,
     profile_warning: Option<ProfileWarning>,
@@ -68,9 +69,10 @@ pub(crate) struct RequestMeta {
 impl RequestMeta {
     /// Take the replay fact and ordered recording digests for one result.
     #[must_use]
-    pub(crate) const fn new(replayed: bool, requests: Vec<String>) -> Self {
+    pub(crate) const fn new(replayed: bool, requests_sent: u64, requests: Vec<String>) -> Self {
         Self {
             replayed,
+            requests_sent,
             requests,
             failed_questions: 0,
             profile_warning: None,
@@ -170,6 +172,7 @@ pub(crate) struct AnnotateMeta {
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
+    requests_sent: u64,
     replayed: bool,
     requests: Vec<String>,
     failed_questions: usize,
@@ -190,6 +193,7 @@ impl AnnotateMeta {
     ) -> Self {
         let RequestMeta {
             replayed,
+            requests_sent,
             requests,
             failed_questions,
             profile_warning,
@@ -200,6 +204,7 @@ impl AnnotateMeta {
             url,
             model,
             usage,
+            requests_sent,
             replayed,
             requests,
             failed_questions,
@@ -274,6 +279,7 @@ pub(crate) struct Meta {
     model: ModelName,
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
+    requests_sent: u64,
     replayed: bool,
     requests: Vec<String>,
     failed_questions: usize,
@@ -284,13 +290,8 @@ pub(crate) struct Meta {
 impl Meta {
     /// Name the tool, who answered, at what cost, and whether a recording did.
     ///
-    /// `version` is the binary's own version, and `tool` is the identity line
-    /// the tool prints of itself, so a saved row names what made it.
-    /// `question_sha256` names the exact question that produced the row, and
-    /// `specification/question-file.md` writes out the form it digests.
-    /// `usage` is `None` when the backend reported none, and the field is then
-    /// absent from the JSON. `replayed` and the ordered logical `requests` are
-    /// always present.
+    /// The result keeps the binary, resolved question, backend, cost, send
+    /// count, replay state, and ordered logical request identities.
     #[must_use]
     pub(crate) fn new(
         version: &str,
@@ -302,6 +303,7 @@ impl Meta {
     ) -> Self {
         let RequestMeta {
             replayed,
+            requests_sent,
             requests,
             failed_questions: _,
             profile_warning,
@@ -312,6 +314,7 @@ impl Meta {
             url,
             model,
             usage,
+            requests_sent,
             replayed,
             requests,
             failed_questions: 0,
@@ -391,7 +394,7 @@ mod tests {
         r#""meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
         r#""url":"https://api.typesafe.ai/v1/systemone","#,
         r#""model":"jev-1.13.0","#,
-        r#""usage":{"input_tokens":312,"output_tokens":48},"replayed":false,"#,
+        r#""usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"replayed":false,"#,
         r#""requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}}"#,
     );
 
@@ -426,7 +429,7 @@ mod tests {
                 Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
                 ModelName::new("jev-1.13.0").expect("not empty"),
                 Some(Usage::new(312, 48)),
-                RequestMeta::new(false, vec![REQUEST.to_owned()]),
+                RequestMeta::new(false, 1, vec![REQUEST.to_owned()]),
             ),
         )
     }
@@ -455,7 +458,7 @@ mod tests {
             Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
             ModelName::new("local-1").expect("not empty"),
             None,
-            RequestMeta::new(true, vec![REQUEST.to_owned()]),
+            RequestMeta::new(true, 0, vec![REQUEST.to_owned()]),
         );
         let rendered = serde_json::to_string(&meta).expect("meta serializes");
         assert_eq!(
@@ -463,7 +466,7 @@ mod tests {
             concat!(
                 r#"{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
                 r#""url":"http://127.0.0.1:8080/v1/systemone","#,
-                r#""model":"local-1","replayed":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}"#,
+                r#""model":"local-1","requests_sent":0,"replayed":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}"#,
             )
         );
     }
@@ -488,7 +491,7 @@ mod tests {
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
-                RequestMeta::new(false, vec![REQUEST.to_owned()]),
+                RequestMeta::new(false, 1, vec![REQUEST.to_owned()]),
             ),
         );
         let rendered = serde_json::to_string(&result).expect("a result serializes");
@@ -528,7 +531,7 @@ mod tests {
                 Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
                 ModelName::new("local-1").expect("not empty"),
                 None,
-                RequestMeta::new(false, vec![REQUEST.to_owned()]),
+                RequestMeta::new(false, 1, vec![REQUEST.to_owned()]),
             ),
         );
         let rendered = serde_json::to_string(&result).expect("a result serializes");

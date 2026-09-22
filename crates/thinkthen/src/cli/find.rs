@@ -119,6 +119,7 @@ pub(crate) fn run(
         &units,
         &answered.reply,
         answered.replayed,
+        answered.requests_sent,
         answered.request.as_str(),
     )?;
     if let Some(line) = line {
@@ -176,6 +177,7 @@ fn rendered(
     units: &[Unit],
     reply: &Reply,
     replayed: bool,
+    requests_sent: u64,
     request: &str,
 ) -> Result<(Option<String>, bool), Failure> {
     let [crate::core::AnswerOutcome::Answered(answer)] = reply.outcomes() else {
@@ -201,7 +203,7 @@ fn rendered(
             backend.url().clone(),
             reply.model().clone(),
             reply.usage(),
-            RequestMeta::new(replayed, vec![request.to_owned()]),
+            RequestMeta::new(replayed, requests_sent, vec![request.to_owned()]),
         );
         Some(json_line(&find.result(value, selected, meta))?)
     } else {

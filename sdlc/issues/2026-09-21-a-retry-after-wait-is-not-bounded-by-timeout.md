@@ -1,6 +1,6 @@
 # A Retry-After wait is not bounded by --timeout
 
-Status: Open
+Status: Closed by ticket 0064
 
 A 429 that carries a Retry-After header sets the wait between attempts, and the wait ignores `--timeout`. The `--timeout` help says "Seconds one attempt may take, from connect to the last byte", and a server can hold the run for up to 60 seconds between attempts with no output.
 
@@ -29,3 +29,5 @@ The `--timeout` help says what it bounds and what it does not. Better, the wait 
 Minor. The wait is capped and the run stays correct, and a scripted user cannot bound the time while a person cannot see why nothing happens.
 
 Found by experiment 218, wave 1.5, the blind seat.
+
+Ticket 0064 caps header-selected and exponential waits at `--timeout`. A loopback test proves a 30-second header retries after the one-second timeout boundary while the existing unit test retains the independent 60-second header ceiling.

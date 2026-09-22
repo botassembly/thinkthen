@@ -12,6 +12,7 @@ use std::time::Duration;
 #[cfg(target_os = "linux")]
 use crate::harness::process_is_blocked_on_inode;
 use crate::harness::{Canned, Listener, Observed, spawn};
+use crate::result_assertions::normalized_details;
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -124,35 +125,6 @@ fn start(base: &str, folder: &str) -> io::Result<ReapedChild> {
     Ok(guarded)
 }
 
-fn normalized_details(output: &std::process::Output) -> io::Result<(String, bool)> {
-    let mut details = std::str::from_utf8(&output.stdout)
-        .map_err(|_| io::Error::other("details are not UTF-8"))?
-        .to_owned();
-    let meta = details
-        .find(r#""meta":{"#)
-        .ok_or_else(|| io::Error::other("details carry no meta"))?;
-    let marker = r#""replayed":"#;
-    if details.matches(marker).count() != 1 {
-        return Err(io::Error::other("details do not carry one replayed field"));
-    }
-    let start = details
-        .find(marker)
-        .ok_or_else(|| io::Error::other("details carry no replayed field"))?;
-    if start <= meta {
-        return Err(io::Error::other("replayed does not belong to meta"));
-    }
-    let value = start + marker.len();
-    let (replayed, end) = if details[value..].starts_with("true") {
-        (true, value + 4)
-    } else if details[value..].starts_with("false") {
-        (false, value + 5)
-    } else {
-        return Err(io::Error::other("replayed is not a boolean"));
-    };
-    details.replace_range(value..end, "<replayed>");
-    Ok((details, replayed))
-}
-
 fn one_entry(folder: &Path) -> io::Result<PathBuf> {
     let entries = fs::read_dir(folder)?
         .filter_map(Result::ok)
@@ -261,18 +233,24 @@ fn two_processes_share_one_request_and_the_keyless_waiter_replays() {
 
     assert_eq!(owner.status.code(), Some(0));
     assert_eq!(waiter.status.code(), Some(0));
-    let (owner_details, owner_replayed) = normalized_details(&owner).expect("owner details");
-    let (waiter_details, waiter_replayed) = normalized_details(&waiter).expect("waiter details");
+    let (owner_details, owner_replayed, owner_sent) =
+        normalized_details(&owner).expect("owner details");
+    let (waiter_details, waiter_replayed, waiter_sent) =
+        normalized_details(&waiter).expect("waiter details");
     assert!(!owner_replayed);
     assert!(waiter_replayed);
+    assert_eq!(owner_sent, 1);
+    assert_eq!(waiter_sent, 0);
     let first_requests = listener.requests();
     assert_eq!(first_requests.len(), 1);
     assert_eq!(owner_details, waiter_details);
 
     let later = cached(&base, &named, false).expect("later keyless replay runs");
     assert_eq!(later.status.code(), Some(0));
-    let (later_details, later_replayed) = normalized_details(&later).expect("later details");
+    let (later_details, later_replayed, later_sent) =
+        normalized_details(&later).expect("later details");
     assert!(later_replayed);
+    assert_eq!(later_sent, 0);
     assert_eq!(owner_details, later_details);
     assert!(listener.requests().is_empty());
 }
@@ -330,10 +308,14 @@ fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
     let waiter = waiter.wait().expect("waiter finishes");
     assert_eq!(owner.status.code(), Some(0));
     assert_eq!(waiter.status.code(), Some(0));
-    let (owner_details, owner_replayed) = normalized_details(&owner).expect("owner details");
-    let (waiter_details, waiter_replayed) = normalized_details(&waiter).expect("waiter details");
+    let (owner_details, owner_replayed, owner_sent) =
+        normalized_details(&owner).expect("owner details");
+    let (waiter_details, waiter_replayed, waiter_sent) =
+        normalized_details(&waiter).expect("waiter details");
     assert!(!owner_replayed);
     assert!(waiter_replayed);
+    assert_eq!(owner_sent, 1);
+    assert_eq!(waiter_sent, 0);
     assert_eq!(owner_details, waiter_details);
     assert_eq!(listener.requests().len(), 1);
 }

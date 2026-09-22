@@ -463,6 +463,7 @@ impl Judging<'_> {
                 answered.reply.usage(),
                 RequestMeta::new(
                     answered.replayed,
+                    answered.requests_sent,
                     vec![answered.request.as_str().to_owned()],
                 )
                 .with_profile_warning(self.mismatch.warning()),

@@ -139,7 +139,7 @@ pub(crate) struct Common {
     #[arg(long, conflicts_with = "cache")]
     pub(crate) no_cache: bool,
 
-    /// Positive seconds one attempt may take, from connect to the last byte.
+    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
     #[arg(
         long,
         value_name = "SECONDS",

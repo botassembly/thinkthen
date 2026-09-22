@@ -151,7 +151,8 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
     let live = String::from_utf8(recorded.1).expect("a result is text");
     let replayed = String::from_utf8(output.stdout).expect("a result is text");
     assert_eq!(
-        live.replace(r#""replayed":false"#, r#""replayed":true"#),
+        live.replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
+            .replace(r#""replayed":false"#, r#""replayed":true"#),
         replayed
     );
     assert!(live.contains(r#""replayed":false"#), "{live}");
@@ -220,7 +221,7 @@ fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
             r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
             r#""url":"https://api.typesafe.ai/v1/systemone","#,
             r#""model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"#,
-            r#""replayed":true,"requests":[""#,
+            r#""requests_sent":0,"replayed":true,"requests":[""#,
         ),
         request,
         r#""],"failed_questions":0}"#,
@@ -354,6 +355,8 @@ fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
         let printed = String::from_utf8_lossy(&output.stdout);
         let replayed = format!(r#""replayed":{}"#, run == 1);
         assert!(printed.contains(&replayed), "run {run}: {printed}");
+        let requests_sent = format!(r#""requests_sent":{}"#, usize::from(run == 0));
+        assert!(printed.contains(&requests_sent), "run {run}: {printed}");
     }
 
     assert_eq!(listener.requests().len(), 1);

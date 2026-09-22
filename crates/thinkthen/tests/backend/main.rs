@@ -31,6 +31,7 @@ mod recording_durability;
 mod recordings;
 mod refusals;
 mod refused;
+mod result_assertions;
 mod scheduling;
 mod secrecy;
 mod secrecy_find;

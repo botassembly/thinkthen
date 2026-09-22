@@ -38,12 +38,16 @@ fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
         ("THINKTHEN_API_KEY", "secret-key"),
         ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
     ];
-    assert_eq!(
-        run(&["decide", "retry", "--no-cache"], &environment)
-            .expect("retry")
-            .status
-            .code(),
-        Some(0)
+    let retried = run(
+        &["decide", "retry", "--no-cache", "--details"],
+        &environment,
+    )
+    .expect("retry");
+    assert_eq!(retried.status.code(), Some(0));
+    let details = String::from_utf8_lossy(&retried.stdout);
+    assert!(
+        details.contains(r#""requests_sent":2,"replayed":false"#),
+        "{details}"
     );
     assert_eq!(
         run(

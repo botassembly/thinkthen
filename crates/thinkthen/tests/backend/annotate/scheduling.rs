@@ -238,6 +238,10 @@ fn a_cache_can_mix_replayed_and_live_groups_with_checked_usage() {
         "{row}"
     );
     assert!(row.contains(r#""replayed":false"#), "{row}");
+    assert!(
+        row.contains(r#""requests_sent":1,"replayed":false"#),
+        "{row}"
+    );
     assert_eq!(listener.requests().len(), 2);
 }
 
@@ -274,6 +278,8 @@ fn annotate_equal_groups_share_one_cache_request() {
     assert_eq!(rows.lines().count(), 2);
     assert_eq!(rows.matches(r#""replayed":false"#).count(), 1);
     assert_eq!(rows.matches(r#""replayed":true"#).count(), 1);
+    assert_eq!(rows.matches(r#""requests_sent":1"#).count(), 1);
+    assert_eq!(rows.matches(r#""requests_sent":0"#).count(), 1);
     assert_eq!(listener.requests().len(), 1);
 }
 

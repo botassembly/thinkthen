@@ -42,7 +42,7 @@ Tickets 0056 through 0058 completed every row below. Lane A continues with backe
 
 **A4. The cache, and the money bugs with it.** Proposed tickets 6, 7, and 14 together, because a cache that is on by default puts these bugs in front of every user. They are one body of work in the files 0055 just moved:
 
-Tickets 0061 and 0062 complete recording durability and the bounded default cache. The next cache ticket adds `status` and numeric counters without changing entry contents.
+Tickets 0061 through 0063 complete recording durability, the bounded default cache, `status`, and numeric counters without changing entry contents. Ticket 0064 bounds retry waits, reports successful per-result sends, and pins prompt clean-close handling.
 
 - Engine settings for the cache and the counters.
 - The default bounded cache, the smallest config file, `--no-cache`, prune, and `thinkthen status` (`the-disk-cache-is-never-on-unless-the-user-names-a-folder`, `a-status-command-for-configuration-and-usage`).
@@ -51,9 +51,7 @@ Tickets 0061 and 0062 complete recording durability and the bounded default cach
 - A cache write that hits a size limit kills the process.
 - A write failure after a good exchange throws away the paid answer.
 - Lock files stay after their entries land.
-- A `Retry-After` wait is bounded by `--timeout`.
-- A closed connection costs the whole timeout.
-- A retried send is visible to the user, and the usage counter counts what left the machine.
+- Landed through ticket 0064: `Retry-After` and exponential waits are bounded by `--timeout`; a clean close before headers fails promptly; a retried send is visible in detailed output; and the usage counter counts every attempt that left the machine.
 - A run stopped by Ctrl-C prints its stopped-at line.
 - Ask the product side before freezing the field name `meta.replayed`. Ian dislikes the word. The product side proposes `meta.cached`.
 

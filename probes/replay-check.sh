@@ -37,8 +37,8 @@ for committed in "$probe"/runs/*.jsonl; do
 		status=1
 		continue
 	fi
-	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests, .meta.failed_questions) | .meta.replayed = "set aside"' "$committed" >"$scratch/committed.norm"
-	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests, .meta.failed_questions) | .meta.replayed = "set aside"' "$replayed" >"$scratch/replayed.norm"
+	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests_sent, .meta.requests, .meta.failed_questions) | .meta.replayed = "set aside"' "$committed" >"$scratch/committed.norm"
+	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests_sent, .meta.requests, .meta.failed_questions) | .meta.replayed = "set aside"' "$replayed" >"$scratch/replayed.norm"
 	if diff -q "$scratch/committed.norm" "$scratch/replayed.norm" >/dev/null; then
 		printf 'replay-check: %s reproduced %s rows\n' "$name" "$(wc -l <"$committed" | tr -d ' ')"
 	else

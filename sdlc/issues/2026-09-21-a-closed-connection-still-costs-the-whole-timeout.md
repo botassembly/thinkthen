@@ -1,6 +1,6 @@
 # A closed connection still costs the whole timeout
 
-Status: Open
+Status: Closed by ticket 0064
 
 A backend that accepts a connection and then closes it without a response is only noticed when the deadline fires. The attempt runs to the full `--timeout`, the failure reads as a timeout, and every dead peer costs the whole deadline per attempt.
 
@@ -27,3 +27,5 @@ One caveat from the tester: the close was produced by a Python stand-in's close-
 Minor. A dead backend costs the user `--timeout` seconds per attempt with a message that names the deadline and not the close.
 
 Found by experiment 218, wave 1, areas 3 and 7.
+
+Ticket 0064 replaced the ambiguous stand-in with a raw TCP test that reads the whole request and drops every accepted-socket handle before response headers. The pinned client returns promptly with the structured premature-close diagnostic. The earlier Python stand-in did not isolate a clean peer close.

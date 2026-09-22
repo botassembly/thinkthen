@@ -181,3 +181,7 @@ Ian approved the build team's request-identity recommendation before the one-cra
 ## Amendment, 2026-09-21: answered or failed logical results
 
 The shared core represents each decoded logical question as answered or failed. A backend failure carries the closed cause list `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. Bulk host forms preserve good answers and return the failed marker beside them. Typed single calls and the remaining bulk and database host forms still need their ruled surface mappings before the C interface freezes.
+
+## Amendment, 2026-09-22: sends on each result
+
+Every detailed command result carries `meta.requests_sent` immediately after optional provider `usage` and before `replayed`. It counts the HTTP attempts that produced that successful result. A first-attempt live answer reports one, retries add one per attempt, and a recording or cache answer reports zero. Packed annotation sums the counts from its logical group requests. The process counter remains broader because it also counts attempts from runs that return no result. Ian can overturn the field name.

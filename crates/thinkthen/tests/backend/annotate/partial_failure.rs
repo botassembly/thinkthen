@@ -252,7 +252,9 @@ fn a_recorded_partial_reply_replays_with_the_same_result() -> io::Result<()> {
     assert_eq!(second.status.code(), Some(6));
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(
-        String::from_utf8_lossy(&first.stdout).replace(r#""replayed":false"#, r#""replayed":true"#),
+        String::from_utf8_lossy(&first.stdout)
+            .replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
+            .replace(r#""replayed":false"#, r#""replayed":true"#),
         String::from_utf8_lossy(&second.stdout)
     );
     Ok(())

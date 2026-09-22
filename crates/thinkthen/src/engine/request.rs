@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::core::adapters::built_in;
 use crate::core::{Backend, BackendProfile, Plan};
 use crate::engine::error::Error;
-use crate::engine::http::{Client, Exchange, Key};
+use crate::engine::http::{Client, Exchange, HttpAnswer, Key};
 use crate::engine::prepared_request::{Answered, PreparedRequest};
 use crate::engine::recorder::{PreparedRecording, Recorder, WritePermit};
 use crate::engine::usage::Counters;
@@ -88,7 +88,20 @@ where
 {
     let prepared = PreparedRequest::new(backend, plan).map_err(E::from)?;
     let usage = Counters::default();
-    ask_prepared(backend, plan, prepared, recorder, &usage, key, send)
+    ask_prepared(
+        backend,
+        plan,
+        prepared,
+        recorder,
+        &usage,
+        key,
+        |prepared, key| {
+            send(prepared, key).map(|body| HttpAnswer {
+                body,
+                requests_sent: 1,
+            })
+        },
+    )
 }
 
 #[expect(
@@ -102,7 +115,7 @@ pub(crate) fn ask_prepared<E>(
     recorder: &Recorder,
     usage: &Counters,
     key: impl FnOnce() -> Result<Key, E>,
-    send: impl FnOnce(&PreparedRequest, &Key) -> Result<Vec<u8>, E>,
+    send: impl FnOnce(&PreparedRequest, &Key) -> Result<HttpAnswer, E>,
 ) -> Result<Answered, E>
 where
     E: From<Error>,
@@ -111,7 +124,7 @@ where
     let operation = recorder
         .prepare(&recorded, &prepared.digest)
         .map_err(E::from)?;
-    let (reply, replayed) = match operation {
+    let (reply, replayed, requests_sent) = match operation {
         PreparedRecording::Replay(response) => (
             {
                 let reply = built_in::decode(plan, &response)
@@ -123,11 +136,12 @@ where
                 reply
             },
             true,
+            0,
         ),
         PreparedRecording::Live(permit) => {
             let (permit, key) = finish_or_cancel(permit, key())?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
-            let decoded = built_in::decode_observed(plan, &answered);
+            let decoded = built_in::decode_observed(plan, &answered.body);
             if let Some(tokens) = decoded.usage {
                 usage.tokens(tokens);
             }
@@ -139,15 +153,16 @@ where
                 }
             };
             permit
-                .finish(&recorded, &answered, &prepared.digest.file_name())
+                .finish(&recorded, &answered.body, &prepared.digest.file_name())
                 .map_err(E::from)?;
-            (reply, false)
+            (reply, false, answered.requests_sent)
         }
     };
     Ok(Answered {
         reply,
         replayed,
         request: prepared.digest,
+        requests_sent,
     })
 }
 

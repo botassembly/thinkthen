@@ -36,6 +36,7 @@ pub(crate) struct Canned {
     release: Option<Arc<Barrier>>,
     answered: Option<Sender<()>>,
     asked: Vec<(String, String)>,
+    close_without_reply: bool,
 }
 
 impl Canned {
@@ -55,6 +56,7 @@ impl Canned {
             release: None,
             answered: None,
             asked: Vec::new(),
+            close_without_reply: false,
         }
     }
 
@@ -69,6 +71,22 @@ impl Canned {
             release: None,
             answered: None,
             asked: Vec::new(),
+            close_without_reply: false,
+        }
+    }
+
+    /// Read the complete request and close before writing response headers.
+    pub(crate) fn close_without_reply() -> Self {
+        Self {
+            status: 200,
+            body: String::new(),
+            location: None,
+            promised: None,
+            delay: Duration::ZERO,
+            release: None,
+            answered: None,
+            asked: Vec::new(),
+            close_without_reply: true,
         }
     }
 
@@ -83,6 +101,7 @@ impl Canned {
             release: None,
             answered: None,
             asked: Vec::new(),
+            close_without_reply: false,
         }
     }
 
@@ -367,6 +386,9 @@ fn serve(stream: TcpStream, canned: &Canned) {
 
 /// Write one canned response, closing the connection or keeping it open.
 fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
+    if canned.close_without_reply {
+        return;
+    }
     let location = canned
         .location
         .as_ref()

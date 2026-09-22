@@ -40,4 +40,5 @@ pub(crate) struct Answered {
     pub(crate) reply: Reply,
     pub(crate) replayed: bool,
     pub(crate) request: Digest,
+    pub(crate) requests_sent: u64,
 }

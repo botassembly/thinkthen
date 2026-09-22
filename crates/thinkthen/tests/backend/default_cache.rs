@@ -52,13 +52,13 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
         ("THINKTHEN_API_KEY", "secret-key"),
         ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
     ];
-    for _ in 0..2 {
-        assert_eq!(
-            run(&["decide", "asks for a refund"], &environment)
-                .expect("run")
-                .status
-                .code(),
-            Some(0)
+    for (run_number, expected) in [(1, 1), (2, 0)] {
+        let output = run(&["decide", "asks for a refund", "--details"], &environment).expect("run");
+        assert_eq!(output.status.code(), Some(0));
+        let printed = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            printed.contains(&format!(r#""requests_sent":{expected},"replayed":"#)),
+            "run {run_number}: {printed}"
         );
     }
     assert_eq!(listener.requests().len(), 1);

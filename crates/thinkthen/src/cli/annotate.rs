@@ -270,6 +270,7 @@ impl Judging<'_> {
         let mut model: Option<ModelName> = None;
         let mut requests = Vec::with_capacity(answered.len());
         let mut usage: Option<Usage> = Some(Usage::new(0, 0));
+        let mut requests_sent = 0_u64;
         let mut replayed = true;
         let mut failed_questions = 0;
         for answered in answered {
@@ -277,6 +278,7 @@ impl Judging<'_> {
                 places,
                 reply,
                 digest,
+                requests_sent: group_requests_sent,
                 replayed: was_replayed,
             } = answered;
             check_model(&mut model, reply.model(), self.backend.model())?;
@@ -288,6 +290,9 @@ impl Judging<'_> {
                 _ => None,
             };
             replayed &= was_replayed;
+            requests_sent = requests_sent
+                .checked_add(group_requests_sent)
+                .ok_or(Failure::Defect("a request count overflowed"))?;
             failed_questions += take_answers(
                 &self.set,
                 &places,
@@ -306,7 +311,7 @@ impl Judging<'_> {
                 self.backend.url().clone(),
                 model.ok_or(Failure::Defect("no group reported a model"))?,
                 usage,
-                RequestMeta::new(replayed, requests)
+                RequestMeta::new(replayed, requests_sent, requests)
                     .with_failed_questions(failed_questions)
                     .with_profile_warning(self.mismatch.warning()),
             );
@@ -360,6 +365,7 @@ impl Judging<'_> {
             places: group.places,
             reply: answered.reply,
             digest: answered.request.as_str().to_owned(),
+            requests_sent: answered.requests_sent,
             replayed: answered.replayed,
         })
     }
@@ -369,6 +375,7 @@ pub(crate) struct GroupAnswer {
     pub(crate) places: Vec<usize>,
     pub(crate) reply: Reply,
     pub(crate) digest: String,
+    pub(crate) requests_sent: u64,
     pub(crate) replayed: bool,
 }
 

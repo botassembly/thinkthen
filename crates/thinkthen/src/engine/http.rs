@@ -55,7 +55,10 @@ const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
 /// A pool keeps a connection open between requests, so a run over many records
 /// pays for one handshake rather than one per record. `ureq` shares an agent
 /// across threads, so the workers hold one of these between them.
-pub(crate) struct Client(Agent);
+pub(crate) struct Client {
+    agent: Agent,
+    timeout: Duration,
+}
 
 impl fmt::Debug for Client {
     /// Name the pool and show nothing of what has travelled through it.
@@ -81,7 +84,10 @@ impl Client {
         if !secure {
             config = config.proxy(None);
         }
-        Self(config.build().into())
+        Self {
+            agent: config.build().into(),
+            timeout,
+        }
     }
 
     /// Post the request and hand back the response body the backend answered with.
@@ -98,23 +104,34 @@ impl Client {
         &self,
         exchange: &Exchange<'_>,
         before_attempt: impl Fn(),
-    ) -> Result<Vec<u8>, Error> {
+    ) -> Result<HttpAnswer, Error> {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
             before_attempt();
-            let attempt = match send(&self.0, exchange) {
-                Ok(body) => return Ok(body),
+            let attempt = match send(&self.agent, exchange) {
+                Ok(body) => {
+                    return Ok(HttpAnswer {
+                        body,
+                        requests_sent: u64::from(retries) + 1,
+                    });
+                }
                 Err(attempt) => attempt,
             };
             if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
                 return Err(attempt.failure);
             }
-            thread::sleep(attempt.asked.unwrap_or(wait));
+            thread::sleep(bounded_wait(attempt.asked, wait, self.timeout));
             wait = wait.saturating_mul(2);
             retries += 1;
         }
     }
+}
+
+/// One successful HTTP reply and every attempt that produced it.
+pub(crate) struct HttpAnswer {
+    pub(crate) body: Vec<u8>,
+    pub(crate) requests_sent: u64,
 }
 
 /// What one exchange needs, gathered at the edge before anything opens.
@@ -178,6 +195,11 @@ fn honored(millis: Option<&str>, seconds: Option<&str>) -> Option<Duration> {
         None => Duration::from_secs(asked(seconds)?),
     };
     Some(wait.min(MAX_RETRY_WAIT))
+}
+
+/// Bound either retry-wait source by the public per-attempt timeout.
+fn bounded_wait(asked: Option<Duration>, exponential: Duration, timeout: Duration) -> Duration {
+    asked.unwrap_or(exponential).min(timeout)
 }
 
 /// Post the request once.
@@ -248,7 +270,7 @@ fn is_retried(failure: &Error) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{honored, io_transport, transport};
+    use super::{bounded_wait, honored, io_transport, transport};
     use crate::engine::error::TransportKind;
     use std::io;
     use std::time::Duration;
@@ -285,6 +307,28 @@ mod tests {
         for (millis, seconds, expected) in cases {
             assert_eq!(honored(millis, seconds), expected, "{millis:?} {seconds:?}");
         }
+    }
+
+    #[test]
+    fn either_retry_wait_source_stops_at_the_attempt_timeout() {
+        let timeout = Duration::from_secs(2);
+        assert_eq!(
+            bounded_wait(
+                Some(Duration::from_secs(30)),
+                Duration::from_secs(1),
+                timeout
+            ),
+            timeout
+        );
+        assert_eq!(bounded_wait(None, Duration::from_secs(4), timeout), timeout);
+        assert_eq!(
+            bounded_wait(
+                Some(Duration::from_millis(250)),
+                Duration::from_secs(4),
+                timeout
+            ),
+            Duration::from_millis(250)
+        );
     }
 
     #[test]

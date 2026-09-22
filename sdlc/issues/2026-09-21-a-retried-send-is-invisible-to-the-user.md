@@ -1,6 +1,6 @@
 # A retried send is invisible to the user
 
-Status: Open
+Status: Closed by ticket 0064
 
 A judgment that needed three sends to arrive reports one send. The `--details` object after a retried run is byte-identical to the object after a clean single-send run. The user's bill shows three requests and the tool shows one judgment carrying one send's tokens.
 
@@ -29,3 +29,5 @@ The orchestrator reproduced this independently on 2026-09-21: a clean run and a 
 Major. The tool's own numbers disagree with the bill, and a user reconciling a spend has no lever that shows the retries.
 
 Found by experiment 218, wave 1, area 7.
+
+Ticket 0064 adds `meta.requests_sent` to every detailed result. A two-attempt success reports two while the persisted process total reports the same two sends. Cache and replay answers report zero, and a failed run remains visible only in the broader process total.

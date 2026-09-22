@@ -154,7 +154,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
                 r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
-                r#""replayed":false,"requests":["{request}"],"failed_questions":0}}}}"#,
+                r#""requests_sent":1,"replayed":false,"requests":["{request}"],"failed_questions":0}}}}"#,
                 "\n",
             ),
             url = detailed.url(),
@@ -220,10 +220,16 @@ fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
     ])
     .expect("a loopback listener");
 
-    let output = decide(listener.base(), &[], KEY, "Refund me.").expect("the compiled binary runs");
+    let output = decide(listener.base(), &["--details"], KEY, "Refund me.")
+        .expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 2);
     assert_eq!(output.status.code(), Some(0));
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        printed.contains(r#""requests_sent":2,"replayed":false"#),
+        "{printed}"
+    );
 }
 
 #[test]
@@ -263,6 +269,51 @@ fn a_rate_limit_waits_the_seconds_the_backend_asked_for() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 2);
     assert!(took >= Duration::from_millis(900), "{took:?}");
+}
+
+#[test]
+fn a_rate_limit_wait_cannot_exceed_the_attempt_timeout() {
+    let listener = Listener::serving(vec![
+        Canned::status(429, "slow down").asking("retry-after", "30"),
+        Canned::ok(ANSWERED),
+    ])
+    .expect("a loopback listener");
+
+    let started = Instant::now();
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "1", "--timeout", "1"],
+        KEY,
+        "Refund me.",
+    )
+    .expect("the compiled binary runs");
+    let took = started.elapsed();
+
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(listener.requests().len(), 2);
+    assert!(took >= Duration::from_millis(900), "{took:?}");
+    assert!(took < Duration::from_secs(3), "{took:?}");
+}
+
+#[test]
+fn zero_retries_never_sleeps_after_the_only_attempt() {
+    let listener = Listener::serving(vec![
+        Canned::status(429, "slow down").asking("retry-after", "30"),
+    ])
+    .expect("a loopback listener");
+    let started = Instant::now();
+
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "0", "--timeout", "4"],
+        KEY,
+        "Refund me.",
+    )
+    .expect("the compiled binary runs");
+
+    assert!(started.elapsed() < Duration::from_secs(1));
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(output.status.code(), Some(4));
 }
 
 #[test]
@@ -404,6 +455,77 @@ fn a_body_the_backend_cut_short_is_exit_four() {
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
         "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n"
+    );
+}
+
+#[test]
+fn a_backend_that_closes_before_headers_fails_promptly() {
+    let listener =
+        Listener::serving(vec![Canned::close_without_reply()]).expect("a loopback listener");
+    let started = Instant::now();
+
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "0", "--timeout", "4"],
+        KEY,
+        "private evidence",
+    )
+    .expect("the compiled binary runs");
+
+    assert!(started.elapsed() < Duration::from_secs(1));
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n"
+    );
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("private evidence"));
+}
+
+#[test]
+fn an_open_peer_that_sends_no_reply_reaches_the_timeout_diagnostic() {
+    let listener =
+        Listener::answering(|_| Canned::ok(ANSWERED).after(2_000)).expect("a loopback listener");
+    let started = Instant::now();
+
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "0", "--timeout", "1"],
+        KEY,
+        "private evidence",
+    )
+    .expect("the compiled binary runs");
+
+    assert!(started.elapsed() < Duration::from_secs(3));
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the backend timed out; increase --timeout or try again\n"
+    );
+}
+
+#[test]
+fn a_close_before_headers_follows_the_transport_retry_rule() {
+    let listener = Listener::serving(vec![Canned::close_without_reply(), Canned::ok(ANSWERED)])
+        .expect("a loopback listener");
+
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "1", "--details"],
+        KEY,
+        "Refund me.",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(output.status.code(), Some(0));
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        printed.contains(r#""requests_sent":2,"replayed":false"#),
+        "{printed}"
     );
 }
 
