@@ -2,12 +2,16 @@
 //! through the raw C API because `duckdb-rs` wires no aggregate path.
 //!
 //! The aggregate's update collects the distinct texts of the rows the
-//! database scans, combine merges the per-thread partials, and finalize
-//! judges them all once through the engine's batch door and returns how
-//! many texts were asked. The engine owns the fan, the cache, and the
-//! width; what stays here is the aggregate's own shape and the poison
-//! map, because no error-reporting call works from an aggregate callback
-//! on this C API version.
+//! database scans and binds the question the first row carries, combine
+//! merges the per-thread partials, and finalize judges them all once
+//! through the engine's batch door and returns how many texts were asked.
+//! The engine owns the fan, the cache, and the width. The question binds
+//! at the first row instead of following the last one seen (review
+//! finding: a group whose rows carried different questions judged every
+//! text under whichever question came last), and a group carrying more
+//! than one question errors. A failure sets the aggregate's own error
+//! through `duckdb_aggregate_function_set_error`, so the query that ran
+//! the warm hears it — no poison map, and nothing counted as zero.
 
 use std::collections::HashSet;
 use std::ffi::CString;
@@ -16,11 +20,11 @@ use duckdb::ffi;
 
 use crate::{guard, judge_warm, read_raw_column};
 
-/// The aggregate's state: one question argument and the distinct texts
-/// seen.
+/// The aggregate's state: the question argument the first row bound and
+/// the distinct texts seen.
 #[derive(Default)]
 struct WarmState {
-    question: String,
+    question: Option<String>,
     seen: HashSet<String>,
 }
 
@@ -58,7 +62,7 @@ unsafe extern "C" fn state_destroy(states: *mut ffi::duckdb_aggregate_state, cou
 }
 
 unsafe extern "C" fn update(
-    _: ffi::duckdb_function_info,
+    info: ffi::duckdb_function_info,
     input: ffi::duckdb_data_chunk,
     states: *mut ffi::duckdb_aggregate_state,
 ) {
@@ -73,14 +77,24 @@ unsafe extern "C" fn update(
             };
             let handle = *states.add(i);
             let warm = warm_state(handle);
-            warm.question = question.clone();
+            match warm.question.as_deref() {
+                None => warm.question = Some(question.clone()),
+                Some(bound) if bound == question => {}
+                Some(bound) => {
+                    set_error(
+                        info,
+                        &mixed_questions(bound, question),
+                    );
+                    return;
+                }
+            }
             warm.seen.insert(text.clone());
         }
     });
 }
 
 unsafe extern "C" fn combine(
-    _: ffi::duckdb_function_info,
+    info: ffi::duckdb_function_info,
     source: *mut ffi::duckdb_aggregate_state,
     target: *mut ffi::duckdb_aggregate_state,
     count: u64,
@@ -89,8 +103,13 @@ unsafe extern "C" fn combine(
         for i in 0..count as usize {
             let from = warm_state(*source.add(i));
             let to = warm_state(*target.add(i));
-            if to.question.is_empty() {
-                to.question = from.question.clone();
+            match (to.question.as_deref(), from.question.as_deref()) {
+                (None, Some(question)) => to.question = Some(question.to_owned()),
+                (Some(bound), Some(question)) if bound != question => {
+                    set_error(info, &mixed_questions(bound, question));
+                    return;
+                }
+                _ => {}
             }
             let moved = std::mem::take(&mut from.seen);
             to.seen.extend(moved);
@@ -99,7 +118,7 @@ unsafe extern "C" fn combine(
 }
 
 unsafe extern "C" fn finalize(
-    _: ffi::duckdb_function_info,
+    info: ffi::duckdb_function_info,
     source: *mut ffi::duckdb_aggregate_state,
     result: ffi::duckdb_vector,
     count: u64,
@@ -109,10 +128,32 @@ unsafe extern "C" fn finalize(
         let out = ffi::duckdb_vector_get_data(result) as *mut i64;
         for i in 0..count as usize {
             let warm = warm_state(*source.add(i));
-            let judged = judge_warm(&warm.question, std::mem::take(&mut warm.seen)).unwrap_or(0);
-            *out.add(offset as usize + i) = judged as i64;
+            let question = warm.question.clone().unwrap_or_default();
+            let seen = std::mem::take(&mut warm.seen);
+            match judge_warm(&question, seen) {
+                Ok(judged) => *out.add(offset as usize + i) = judged as i64,
+                Err(message) => {
+                    set_error(info, &message);
+                    return;
+                }
+            }
         }
     });
+}
+
+/// The error a group carrying more than one question earns.
+fn mixed_questions(bound: &str, seen: &str) -> String {
+    format!(
+        "thinkthen usage: thinkthen_warm judges one question per group, and this group carries more than one: {bound:?} and {seen:?}"
+    )
+}
+
+/// Set the aggregate's own error, the channel DuckDB raises with the
+/// query's own message.
+unsafe fn set_error(info: ffi::duckdb_function_info, message: &str) {
+    if let Ok(text) = CString::new(message) {
+        unsafe { ffi::duckdb_aggregate_function_set_error(info, text.as_ptr()) };
+    }
 }
 
 /// Register the aggregate on a raw connection.

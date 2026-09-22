@@ -18,14 +18,25 @@
 //! `relate_checked` carries that guard, so every surface inherits it.
 //!
 //! The scan runs its query on the kept connection of the CALLER'S
-//! database, resolved at bind time through the caller's client context
-//! (`connections.rs`), not on one process-global connection: two
+//! database, resolved at bind time through the caller's own identity
+//! token (`connections.rs`), not on one process-global connection: two
 //! databases in one process each load this extension and share its
 //! statics, and the global used to serve whichever loaded last. The
 //! stable C API cannot run a query on the caller's own connection, so a
 //! temporary table on that connection stays invisible; when the query
 //! misses one, `boundary_note` says so in words instead of leaving
 //! "table does not exist" to mislead.
+//!
+//! The query reads records and nothing else, and the scan enforces that:
+//! exactly one statement, run in a read-only transaction under the
+//! caller's own search path, so no statement it holds can change data
+//! and no work it does can commit beside the caller's transaction. A
+//! relate inside a relate is refused with a usage error rather than
+//! waiting forever on the connection the outer query already holds.
+//! The rules file's read is checked against the caller's own
+//! `enable_external_access`, `allowed_paths`, `allowed_directories`, and
+//! `disabled_filesystems` at bind and again at execution, because a
+//! prepared statement executes after its settings were read.
 
 use std::ffi::{CStr, CString, c_void};
 
@@ -35,15 +46,14 @@ use thinkthen_contract::{Error as EngineError, Kind, Relate, relate_checked};
 use crate::{connections, engine_call, failure, guard, options};
 
 /// Bind data: the query and the rules, read once per query plan, plus
-/// the caller's own context (it names the caller's database and holds
-/// the temp catalog the boundary check probes), the caller's file-access
-/// setting as it stood at bind, and the kept connection of the caller's
+/// the caller's own context (it carries the caller's database identity,
+/// the temp catalog the boundary check probes, and the settings every
+/// access check reads live) and the kept connection of the caller's
 /// database.
 struct Bind {
     query: String,
     rules: Vec<String>,
     caller: ffi::duckdb_client_context,
-    files_allowed: bool,
     connection: ffi::duckdb_connection,
 }
 
@@ -166,7 +176,6 @@ unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
         if caller.is_null() {
             return Err("thinkthen defect: the calling connection has no client context".into());
         }
-        let files_allowed = connections::external_access_enabled(caller);
         let connection = match connections::for_caller(caller) {
             Ok(connection) => connection,
             Err(message) => {
@@ -175,13 +184,19 @@ unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
                 return Err(message);
             }
         };
+        // A rules file the caller's database forbids fails the bind now,
+        // and the same check runs again at execution.
+        if let Some(refusal) = rules_file_refusal(&rules, caller) {
+            let mut caller = caller;
+            ffi::duckdb_destroy_client_context(&mut caller);
+            return Err(refusal);
+        }
         ffi::duckdb_bind_set_bind_data(
             info,
             Box::into_raw(Box::new(Bind {
                 query,
                 rules,
                 caller,
-                files_allowed,
                 connection,
             })) as *mut c_void,
             Some(drop_bind),
@@ -273,52 +288,71 @@ unsafe fn assign_string(output: ffi::duckdb_data_chunk, column: u64, row: usize,
 
 /// The edges, built once per scan: run the query on the caller's
 /// database's kept connection, ask the engine, map the edge ordinals
-/// back to the query's own ids.
+/// back to the query's own ids. The whole build runs under the query
+/// gate, so the reaper cannot close the connection mid-scan and a nested
+/// relate is refused before it waits.
 fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String> {
-    let records = connections::run_serialized(|| unsafe { run_query(bind.connection, &bind.query) })
-        .map_err(|message| boundary_note(bind, message))?;
-    if records.is_empty() {
-        // No records, no pairs, nothing to ask: zero edges is arithmetic,
-        // not a judgment, so the recordings are not consulted.
-        return Ok(Vec::new());
+    // A callback carrying the kept connection's own id runs inside a query
+    // that connection is executing: a relate inside a relate. It must
+    // refuse here, before it waits on the gate its own outer query holds.
+    if connections::caller_is_kept(bind.caller, bind.connection) {
+        return Err(
+            "thinkthen usage: the relate query calls thinkthen_relate while its own query is running; nested relate cannot run, because the outer query waits on the connection the inner one needs"
+                .into(),
+        );
     }
-    let ask = build_ask(&bind.rules, bind.files_allowed)?;
-    let bodies: Vec<&str> = records.iter().map(|(_, body)| body.as_str()).collect();
-    let edges = engine_call(|engine| relate_checked(engine, &ask, &bodies, options()))?;
-    let mut rows = Vec::with_capacity(edges.len());
-    for edge in edges {
-        let id = |record: u64| -> Result<String, String> {
-            records
-                .get((record as usize).saturating_sub(1))
-                .map(|(id, _)| id.clone())
-                .ok_or_else(|| {
-                    failure(EngineError::defect(format!(
-                        "the engine returned an edge over record {record}, past the {} records the query returned",
-                        records.len()
-                    )))
-                })
-        };
-        rows.push((edge.name, id(edge.source)?, id(edge.target)?, edge.probability));
+    connections::run_serialized(|| {
+        let records = unsafe { run_query(bind) }.map_err(|message| boundary_note(bind, message))?;
+        if records.is_empty() {
+            // No records, no pairs, nothing to ask: zero edges is arithmetic,
+            // not a judgment, so the recordings are not consulted.
+            return Ok(Vec::new());
+        }
+        let ask = build_ask(&bind.rules, bind.caller)?;
+        let bodies: Vec<&str> = records.iter().map(|(_, body)| body.as_str()).collect();
+        let edges = engine_call(|engine| relate_checked(engine, &ask, &bodies, options()))?;
+        let mut rows = Vec::with_capacity(edges.len());
+        for edge in edges {
+            let id = |record: u64| -> Result<String, String> {
+                records
+                    .get((record as usize).saturating_sub(1))
+                    .map(|(id, _)| id.clone())
+                    .ok_or_else(|| {
+                        failure(EngineError::defect(format!(
+                            "the engine returned an edge over record {record}, past the {} records the query returned",
+                            records.len()
+                        )))
+                    })
+            };
+            rows.push((edge.name, id(edge.source)?, id(edge.target)?, edge.probability));
+        }
+        Ok(rows)
+    })
+}
+
+/// The refusal a rules argument naming a file earns when the calling
+/// database forbids the read; bare rule names read nothing.
+fn rules_file_refusal(rules: &[String], caller: ffi::duckdb_client_context) -> Option<String> {
+    if rules.len() != 1 {
+        return None;
     }
-    Ok(rows)
+    let path = rules[0].trim().strip_prefix('@')?;
+    connections::read_refusal(caller, path)
 }
 
 /// The rules parameter as a `Relate` ask: bare names mean any-to-any, and
 /// a single `'@file'` or `'{...}'` entry is the question file's `relate`
-/// section or the spec itself. A file read refuses when the caller's
-/// database has external file access off.
-fn build_ask(rules: &[String], files_allowed: bool) -> Result<Relate, String> {
+/// section or the spec itself. A file read is checked against the calling
+/// database's own settings here, at execution, however long ago the
+/// statement was prepared.
+fn build_ask(rules: &[String], caller: ffi::duckdb_client_context) -> Result<Relate, String> {
     if rules.len() == 1 {
         let only = rules[0].trim();
         if let Some(path) = only.strip_prefix('@') {
-            if !files_allowed {
-                return Err(format!(
-                    "thinkthen local: the question file {path} was not read: enable_external_access is off for the calling database"
-                ));
+            if let Some(refusal) = connections::read_refusal(caller, path) {
+                return Err(refusal);
             }
-            let text = std::fs::read_to_string(path).map_err(|error| {
-                format!("thinkthen local: the question file {path} did not read: {error}")
-            })?;
+            let text = connections::read_question_file(path, Some(caller))?;
             let value: serde_json::Value = serde_json::from_str(&text)
                 .map_err(|error| format!("thinkthen usage: the question file {path} is not JSON: {error}"))?;
             let section = value.get("relate").cloned().unwrap_or(value);
@@ -391,9 +425,103 @@ fn temp_table_exists(caller: ffi::duckdb_client_context, name: &str) -> bool {
 }
 
 /// Run the query on the caller's database's kept connection and read
-/// `(id, text)` per row; any value renders as its text, so an integer id
-/// comes back as `1`.
-unsafe fn run_query(
+/// `(id, text)` per row: exactly one statement, under the caller's own
+/// search path, inside a read-only transaction that always rolls back.
+unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
+    let connection = bind.connection;
+    unsafe { ensure_single_statement(connection, &bind.query)? };
+    let search = connections::search_path_of(bind.caller);
+    unsafe { begin_read_only(connection)? };
+    let outcome = unsafe { under_search_path(connection, search.as_deref(), || run_statement(connection, &bind.query)) };
+    // The read-only transaction ends either way; rollback and an unset
+    // search path leave the kept connection as the next query expects it.
+    let _ = unsafe { execute(connection, c"ROLLBACK") };
+    let _ = unsafe { execute(connection, c"RESET search_path") };
+    outcome
+}
+
+/// Refuse a query that holds more than one statement, so relate reads
+/// records and never runs a script; a query that does not parse reports
+/// the parser's own words.
+unsafe fn ensure_single_statement(connection: ffi::duckdb_connection, sql: &str) -> Result<(), String> {
+    let Ok(sql_c) = CString::new(sql) else {
+        return Err("thinkthen usage: the relate query holds a NUL byte".into());
+    };
+    let mut extracted: ffi::duckdb_extracted_statements = std::ptr::null_mut();
+    let count = unsafe { ffi::duckdb_extract_statements(connection, sql_c.as_ptr(), &mut extracted) };
+    let outcome = if count == 0 {
+        let message = if extracted.is_null() {
+            std::ptr::null()
+        } else {
+            unsafe { ffi::duckdb_extract_statements_error(extracted) }
+        };
+        let text = if message.is_null() {
+            "the parser reported no words".to_owned()
+        } else {
+            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
+        };
+        Err(format!("thinkthen usage: the relate query did not parse: {text}"))
+    } else if count > 1 {
+        Err(format!(
+            "thinkthen usage: the relate query is one SQL statement and this one holds {count}; relate reads records, it does not run scripts"
+        ))
+    } else {
+        Ok(())
+    };
+    unsafe { ffi::duckdb_destroy_extracted(&mut extracted) };
+    outcome
+}
+
+/// Start the read-only transaction the records are read in.
+unsafe fn begin_read_only(connection: ffi::duckdb_connection) -> Result<(), String> {
+    unsafe { execute(connection, c"BEGIN TRANSACTION READ ONLY") }.map_err(|text| {
+        format!("thinkthen usage: the relate query could not start its read-only transaction: {text}")
+    })
+}
+
+/// Run `body` under the calling session's own search path when it set
+/// one, so `USE other` reaches the query relate runs; the kept
+/// connection's default path returns afterwards.
+unsafe fn under_search_path<T>(
+    connection: ffi::duckdb_connection,
+    path: Option<&str>,
+    body: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    let Some(text) = path.map(str::trim).filter(|text| !text.is_empty()) else {
+        return body();
+    };
+    let quoted = text.replace('\'', "''");
+    let Ok(sql) = CString::new(format!("SET search_path = '{quoted}'")) else {
+        return Err("thinkthen usage: the calling session's search path holds a NUL byte".into());
+    };
+    unsafe { execute(connection, &sql) }.map_err(|reason| {
+        format!("thinkthen usage: the relate query could not run under the calling session's search path {text}: {reason}")
+    })?;
+    body()
+}
+
+/// Run one statement and discard its rows; the failure text is the
+/// engine's own.
+unsafe fn execute(connection: ffi::duckdb_connection, sql: &std::ffi::CStr) -> Result<(), String> {
+    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
+    let state = unsafe { ffi::duckdb_query(connection, sql.as_ptr(), &mut result) };
+    if state != ffi::DuckDBSuccess {
+        let message = unsafe { ffi::duckdb_result_error(&mut result) };
+        let text = if message.is_null() {
+            "the statement failed".to_owned()
+        } else {
+            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
+        };
+        unsafe { ffi::duckdb_destroy_result(&mut result) };
+        return Err(text);
+    }
+    unsafe { ffi::duckdb_destroy_result(&mut result) };
+    Ok(())
+}
+
+/// One statement's rows as `(id, text)` pairs; any value renders as its
+/// text, so an integer id comes back as `1`.
+unsafe fn run_statement(
     connection: ffi::duckdb_connection,
     sql: &str,
 ) -> Result<Vec<(String, String)>, String> {

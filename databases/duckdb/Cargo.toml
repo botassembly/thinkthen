@@ -18,6 +18,12 @@ crate-type = ["cdylib"]
 # the host. The command's own profile stays as the root workspace sets it.
 panic = "unwind"
 
+[features]
+# The stand-in's compile-time fixture opt-in, forwarded so the failed-marker
+# conformance case can run against a fixture-armed build (check.sh builds
+# one beside the default extension); a shipped build never carries it.
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
+
 [dependencies]
 duckdb = { version = "~1.10505.0", features = ["loadable-extension", "vscalar", "vscalar-arrow"] }
 libc = "0.2"

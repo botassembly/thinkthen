@@ -110,13 +110,17 @@ fn relation_rows(
 }
 
 /// The spec as a `Recognize` ask: `'@file'` reads the question file and
-/// takes its `recognize` section, `'{...}'` is the section itself.
+/// takes its `recognize` section, `'{...}'` is the section itself. A file
+/// read is checked against every loaded database's own settings first —
+/// the same door the scalar functions take, because a scalar cannot name
+/// the calling database.
 fn build_ask(spec: &str) -> Result<Recognize, String> {
     let only = spec.trim();
     if let Some(path) = only.strip_prefix('@') {
-        let text = std::fs::read_to_string(path).map_err(|error| {
-            format!("thinkthen local: the question file {path} did not read: {error}")
-        })?;
+        if let Some(refusal) = crate::connections::file_read_refusal(path) {
+            return Err(refusal);
+        }
+        let text = crate::connections::read_question_file(path, None)?;
         let value: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
             format!("thinkthen usage: the question file {path} is not JSON: {error}")
         })?;

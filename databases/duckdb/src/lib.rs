@@ -29,7 +29,6 @@
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
@@ -94,58 +93,84 @@ pub(crate) fn engine_call<T>(
 /// The options every call carries: the live cancel token.
 fn options() -> Options<'static> {
     let token = current_cancel();
-    LAST_START.store(now_ms(), Ordering::SeqCst);
     Options::new().maybe_cancel(Some(token))
 }
 
-/// How stale the last engine call may be before a signal counts as aimed
-/// at a running query. Chunk cadence is milliseconds; a query that ends
-/// leaves this window within a quarter second, and a signal in that
-/// quarter second still stops the query it was aimed at.
-const ACTIVE_MS: u64 = 250;
-
-/// The live cancellation token, re-armed when the last one has served
-/// its interrupt.
+/// The live cancellation token, cleared at the boundaries of the calls
+/// that carry it.
 ///
 /// One token served the whole process before, and a one-shot token is
 /// spent forever: after one Ctrl-C every later call in that process
 /// returned `cancelled` without asking anything (review finding: DuckDB's
-/// interrupt poisoned the process). The rules now:
+/// interrupt poisoned the process). A second review found the surviving
+/// half: an interrupt landing near an engine call — just after one
+/// returned, or in a chunk gap — still cancelled the next query, four
+/// runs in five. The rules now:
 ///
-/// - The handler cancels the live token only when a query is plausibly
-///   running — an engine call is in flight, or one started within
-///   `ACTIVE_MS` — so an idle Ctrl-C is the host's own gesture and never
-///   poisons the surface.
-/// - A call that starts while the token is cancelled takes the token when
-///   the last call is recent (the interrupted query is still running, and
-///   this call must stop it) and installs a fresh one otherwise. The
-///   consumed mark below is the exact signal: a call returned the
-///   cancelled kind, so the query that owned the interrupt is over.
+/// - The handler cancels the live token while an engine call is in
+///   flight, or while calls are arriving in a burst — two call starts
+///   within [`BURST_MS`] and the latest within it too. A chunked query
+///   produces calls that close together, so a signal landing in a gap
+///   still stops it at its next call; a signal that lands after a
+///   query's last call — a lone call whose next call belongs to the next
+///   query — cancels nothing and poisons nothing.
+/// - A call takes the cancelled token while another call still runs with
+///   it, or while the burst is active: the interrupt belongs to the query
+///   still producing calls, and every one of them stops.
+/// - A call whose engine returned the cancelled kind marks the token
+///   spent, so the next call starts fresh; the last call out also clears
+///   a cancelled token once the burst is over.
+///
+/// What stays unsolvable without a query hook: a signal that lands in the
+/// gap between a chunked query's last call and its return, when the next
+/// call already belongs to the next query. The C API exposes no
+/// per-query callback for scalar functions — `VScalar` carries only
+/// `invoke`, and the function-info accessors are `extra_info`,
+/// `bind_data`, `init_data`, and `local_init_data` — so the surface sees
+/// calls, never queries, and the two shapes above are as close as calls
+/// can come to telling them apart. The boundary is pinned in NOTES.md.
 /// Tokens are leaked once per interrupt, never per call.
 static CANCEL: AtomicPtr<Cancel> = AtomicPtr::new(std::ptr::null_mut());
 
 /// Engine calls in flight: the handler's "a query is running" signal.
 static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
 
-/// When the last engine call started, in milliseconds since the clock's
-/// base.
+/// The last two engine-call starts, in milliseconds: two calls that close
+/// together are a query producing calls, which is what a signal needs to
+/// stop.
 static LAST_START: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static PREV_START: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
-/// The monotonic clock the activity window counts on, initialized long
-/// before any handler runs.
-static CLOCK: OnceLock<std::time::Instant> = OnceLock::new();
+/// How close two call starts must be to count as a burst.
+const BURST_MS: u64 = 10;
 
 /// A cancellation that reached a call and ended it: the next call starts
 /// clean.
 static CANCEL_CONSUMED: AtomicBool = AtomicBool::new(false);
+
+/// The monotonic clock the re-arm decisions count on, initialized long
+/// before any handler runs.
+static CLOCK: OnceLock<std::time::Instant> = OnceLock::new();
 
 /// Milliseconds since the clock's base, never decreasing.
 fn now_ms() -> u64 {
     CLOCK.get_or_init(std::time::Instant::now).elapsed().as_millis() as u64
 }
 
+/// Whether calls are arriving in a burst: the last two starts close
+/// together, and the latest close to now.
+fn burst_active() -> bool {
+    let last = LAST_START.load(Ordering::SeqCst);
+    let prev = PREV_START.load(Ordering::SeqCst);
+    last != 0
+        && prev != 0
+        && last.saturating_sub(prev) < BURST_MS
+        && now_ms().saturating_sub(last) < BURST_MS
+}
+
 /// The in-flight guard: counted on entry, uncounted however the call
-/// ends, a panic included.
+/// ends, a panic included; the last one out clears a spent or stale
+/// interrupt so the next query starts clean.
 struct InFlight;
 
 impl InFlight {
@@ -158,13 +183,29 @@ impl InFlight {
 
 impl Drop for InFlight {
     fn drop(&mut self) {
-        IN_FLIGHT.fetch_sub(1, Ordering::SeqCst);
+        if IN_FLIGHT.fetch_sub(1, Ordering::SeqCst) == 1 {
+            clear_finished_cancel();
+        }
     }
 }
 
-/// The live token, installing a fresh one when the last has served its
-/// interrupt.
+/// The last call to end clears a cancelled token once the burst is over:
+/// an interrupt that reached its query, or reached none, is over with it.
+/// Mid-burst the token stays, because the query's next call serves it.
+fn clear_finished_cancel() {
+    if let Some(token) = live_cancel() {
+        if token.is_cancelled() && !burst_active() {
+            CANCEL_CONSUMED.store(false, Ordering::SeqCst);
+            install_cancel();
+        }
+    }
+}
+
+/// The live token a call carries: the cancelled one while another call
+/// still runs with it or the burst is active, a fresh one otherwise.
 fn current_cancel() -> &'static Cancel {
+    PREV_START.store(LAST_START.load(Ordering::SeqCst), Ordering::SeqCst);
+    LAST_START.store(now_ms(), Ordering::SeqCst);
     let Some(token) = live_cancel() else {
         return install_cancel();
     };
@@ -174,8 +215,11 @@ fn current_cancel() -> &'static Cancel {
     if CANCEL_CONSUMED.swap(false, Ordering::SeqCst) {
         return install_cancel();
     }
-    if now_ms().saturating_sub(LAST_START.load(Ordering::SeqCst)) < ACTIVE_MS {
-        // The interrupted query is still running; this call stops it.
+    // This call already counts in flight, so more than one means another
+    // call is running with this token and both stop together; a burst
+    // means the query that produced the interrupt is still producing
+    // calls, and this is one of them.
+    if IN_FLIGHT.load(Ordering::SeqCst) > 1 || burst_active() {
         return token;
     }
     install_cancel()
@@ -194,7 +238,6 @@ fn live_cancel() -> Option<&'static Cancel> {
 /// Install a fresh token, keeping a live one another thread installed
 /// first.
 fn install_cancel() -> &'static Cancel {
-    CANCEL_CONSUMED.store(false, Ordering::SeqCst);
     let fresh = Box::into_raw(Box::new(Cancel::new()));
     loop {
         let live = CANCEL.load(Ordering::Acquire);
@@ -216,20 +259,15 @@ static HANDLER_CHAIN: AtomicUsize = AtomicUsize::new(0);
 /// chain a handler to itself.
 static HANDLER_SET: AtomicBool = AtomicBool::new(false);
 
-/// Cancel the live token when a query is plausibly running, then run
-/// whatever handler was there before. SIG_DFL and SIG_IGN sit at 0 and 1
-/// and are never called as functions.
+/// Cancel the live token while an engine call is in flight or while calls
+/// are arriving in a burst, then run whatever handler was there before.
+/// SIG_DFL and SIG_IGN sit at 0 and 1 and are never called as functions.
+/// A signal that lands after a query's last call is the host's own
+/// gesture: cancelling here would only poison the next query.
 extern "C" fn on_interrupt(signal: libc::c_int) {
     if let Some(token) = live_cancel() {
-        if !token.is_cancelled() {
-            let in_flight = IN_FLIGHT.load(Ordering::SeqCst) > 0;
-            let recent =
-                now_ms().saturating_sub(LAST_START.load(Ordering::SeqCst)) < ACTIVE_MS;
-            if in_flight || recent {
-                token.cancel();
-            }
-            // Otherwise the process is idle: the signal is the host's,
-            // and cancelling here would only poison the next query.
+        if !token.is_cancelled() && (IN_FLIGHT.load(Ordering::SeqCst) > 0 || burst_active()) {
+            token.cancel();
         }
     }
     let previous = HANDLER_CHAIN.load(Ordering::SeqCst);
@@ -257,26 +295,9 @@ unsafe fn install_interrupt_handler() {
     }
 }
 
-/// A failed warm's poison, keyed by question argument and text. No
-/// error-reporting call works from an aggregate callback on this C API
-/// version, so a failed warm marks its texts here and the scalar query
-/// that reads them raises the error through the path that does work.
-/// The entry clears the moment it is raised, so the pair is retried on
-/// the next call instead of failing forever.
-static POISON: LazyLock<Mutex<HashMap<(String, String), String>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
-/// Mark texts a failed warm could not judge.
-fn poison(question: &str, texts: &HashSet<String>, failure: &str) {
-    let mut poisoned = POISON.lock().expect("the poison");
-    for text in texts {
-        poisoned.insert((question.to_owned(), text.clone()), failure.to_owned());
-    }
-}
-
 /// A contract failure as the SQL error a reader sees, with the kind and
-/// the retryable signal both carried. A cancellation that reached this
-/// call is the interrupt being served: the next call re-arms.
+/// the retryable signal both carried. A cancellation serves its call and
+/// marks the token spent; the next call starts fresh.
 fn failure(error: EngineError) -> String {
     if error.kind == ErrorKind::Cancelled {
         CANCEL_CONSUMED.store(true, Ordering::SeqCst);
@@ -299,7 +320,7 @@ fn resolve_question(arg: &str) -> Result<Question, String> {
         if let Some(refusal) = file_read_refusal(path) {
             return Err(refusal);
         }
-        Question::from_file(Path::new(path)).map_err(failure)
+        question_from_file(path)
     } else if arg.starts_with('{') {
         Question::from_json(arg).map_err(failure)
     } else {
@@ -308,18 +329,47 @@ fn resolve_question(arg: &str) -> Result<Question, String> {
     }
 }
 
-/// The refusal a `'@file'` read earns when a database that loaded this
-/// extension has external file access off. The setting is read through
-/// the DuckDB API, so the database's own answer decides and no file is
-/// touched when the answer is no.
-fn file_read_refusal(path: &str) -> Option<String> {
-    if connections::files_allowed() {
-        None
-    } else {
-        Some(format!(
-            "thinkthen local: the question file {path} was not read: enable_external_access is off for this database"
-        ))
+/// The question files this process has read, keyed by canonical path and
+/// modification time: a query naming one file in every row reads it once
+/// (review finding: the file was re-read per row, 20,000 opens in one
+/// query), and an edited file is read again on its next use.
+static QUESTION_FILES: LazyLock<Mutex<HashMap<String, (std::time::SystemTime, Question)>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// One question file's question, read once per file version. The
+/// modification time decides whether the cached question still describes
+/// the file.
+fn question_from_file(path: &str) -> Result<Question, String> {
+    let stamp = std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
+    let key = std::fs::canonicalize(path)
+        .map(|real| real.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| path.to_owned());
+    if let Some(stamp) = stamp {
+        let cached = QUESTION_FILES.lock().expect("the file cache");
+        if let Some((held, question)) = cached.get(&key) {
+            if *held == stamp {
+                return Ok(question.clone());
+            }
+        }
     }
+    let text = connections::read_question_file(path, None)?;
+    let question = Question::from_json(&text).map_err(failure)?;
+    if let Some(stamp) = stamp {
+        QUESTION_FILES
+            .lock()
+            .expect("the file cache")
+            .insert(key, (stamp, question.clone()));
+    }
+    Ok(question)
+}
+
+/// The refusal a `'@file'` read earns when a loaded database forbids it:
+/// external access off, or the path outside `allowed_paths` and
+/// `allowed_directories`, or the LocalFileSystem disabled. The settings
+/// are read through the DuckDB API, so the databases' own answers decide
+/// and no file is touched when the answer is no.
+fn file_read_refusal(path: &str) -> Option<String> {
+    connections::file_read_refusal(path)
 }
 
 /// Build a members verb's question from plain text and the `LIST`
@@ -362,8 +412,8 @@ fn judged(question: &Question, texts: &[&str]) -> Result<Vec<Judgment>, String> 
 
 /// The warm aggregate's judge: resolve the question argument, judge every
 /// distinct text once through the batch door, and return how many were
-/// asked. A failure poisons the texts it reached and still returns a
-/// count, because no aggregate error channel exists on this C API version.
+/// asked. A failure is the caller's error: the aggregate raises it as the
+/// query's own error, so nothing counts a failure as zero.
 fn judge_warm(arg: &str, seen: HashSet<String>) -> Result<usize, String> {
     if seen.is_empty() {
         return Ok(0);
@@ -372,13 +422,8 @@ fn judge_warm(arg: &str, seen: HashSet<String>) -> Result<usize, String> {
     texts.sort_unstable();
     let question = resolve_question(arg)?;
     let borrowed: Vec<&str> = texts.iter().map(String::as_str).collect();
-    match judged(&question, &borrowed) {
-        Ok(_) => Ok(texts.len()),
-        Err(failed) => {
-            poison(arg, &seen, &failed);
-            Ok(0)
-        }
-    }
+    judged(&question, &borrowed)?;
+    Ok(texts.len())
 }
 
 /// The distinct questions and texts of a chunk, with each row's slot into
@@ -410,13 +455,6 @@ fn distinct_of(
         let (Some(arg), Some(text)) = (args[i].as_deref(), texts[i].as_deref()) else {
             continue;
         };
-        if let Some(failed) = POISON
-            .lock()
-            .expect("the poison")
-            .remove(&(arg.to_owned(), text.to_owned()))
-        {
-            return Err(failed);
-        }
         let question = match kind {
             None => resolve_question(arg)?,
             Some(kind) => {
@@ -878,7 +916,8 @@ impl VScalar for AnnotateScalar {
                 if let Some(refusal) = file_read_refusal(path) {
                     return Err(refusal.into());
                 }
-                QuestionSet::from_file(Path::new(path)).map_err(failure)?
+                let text = connections::read_question_file(path, None)?;
+                QuestionSet::from_json(&text).map_err(failure)?
             } else if arg.starts_with('{') {
                 QuestionSet::from_json(arg).map_err(failure)?
             } else {
@@ -972,8 +1011,11 @@ struct TrailRow {
 /// `thinkthen_details(question, text)`: the audit trail, with the sends
 /// that produced the judgment and, for a score question, the nearest
 /// level's name. A score, choose, or tag reply carries no
-/// yes-probability, so for those the question's own fields carry the
-/// audit and probability, answer, and sends read NULL.
+/// yes-probability, so for those probability, answer, and sends read
+/// NULL, and the audit fields — model, digest, nearest, requests,
+/// failed_questions — come from the engine's own details door. A choose
+/// or tag reply has no engine details yet, so the engine's own refusal
+/// is the answer there.
 struct DetailsScalar;
 
 impl VScalar for DetailsScalar {
@@ -991,45 +1033,38 @@ impl VScalar for DetailsScalar {
         let mut trail: Vec<Option<TrailRow>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
             let question = &distinct.questions[*question_at];
+            // Every kind's audit comes through the engine's own details
+            // door, the contract's: a score reports its nearest level and
+            // its request digests, and a choose or tag reply reports the
+            // engine's own refusal, because no surface invents an audit
+            // the engine did not give it.
+            let details = engine_call(|engine| {
+                ContractEngine::details_opts(engine, question, text, options())
+            })?;
             let row = if question.kind() == QuestionKind::Decide {
-                let details = engine_call(|engine| engine.details_opts(question, text, options()))?;
                 TrailRow {
                     probability: Some(details.probability),
                     answer: Some(details.answer.to_string()),
                     model: details.model,
                     digest: details.digest,
-                    nearest: None,
+                    nearest: details.nearest,
                     sends: Some(u64::from(details.sends)),
                     requests: details.requests,
                     failed_questions: details.failed_questions,
                 }
             } else {
-                let nearest = if question.kind() == QuestionKind::Score {
-                    Some(
-                        engine_call(|engine| engine.score_opts(question, text, options()))?.nearest,
-                    )
-                } else {
-                    None
-                };
-                // The requests list for a non-decide question: the
-                // engine's own digest rule, the same one `details` uses
-                // for decide. When the real engine lands, its details
-                // carry the list for every kind and this call goes away.
-                let requests = vec![thinkthen_standin::request_digest(
-                    &question,
-                    thinkthen_contract::Settings::from_env().model.as_deref(),
-                    text,
-                )
-                .map_err(failure)?];
+                // A non-decide reply carries no yes-probability and no
+                // sends, so those read NULL; the question's own audit
+                // fields come from the engine's own details.
                 TrailRow {
                     probability: None,
                     answer: None,
-                    model: question.model().to_owned(),
-                    digest: question.digest(),
-                    nearest,
+                    model: details.model,
+                    digest: details.digest,
+                    nearest: details.nearest,
                     sends: None,
-                    requests,
-                    failed_questions: 0,
+                    requests: details.requests,
+                    failed_questions: details.failed_questions,
                 }
             };
             trail[slot] = Some(row);
