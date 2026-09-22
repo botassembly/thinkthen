@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "python",
+  "code": "import thinkthen as tt\n\n# a list goes in, and a list of filled forms comes out\nforms = tt.annotate(\"form.json\", messages)",
+  "function": "annotate",
+  "surface": "python"
+}

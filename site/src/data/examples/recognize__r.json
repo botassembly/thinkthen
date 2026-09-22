@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "r",
+  "code": "tickets |>\n  mutate(names = tt_recognize(body, c(\"person\", \"organization\"))) |>\n  tidyr::unnest(names)",
+  "function": "recognize",
+  "surface": "r"
+}

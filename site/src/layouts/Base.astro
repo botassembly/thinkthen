@@ -1,0 +1,137 @@
+---
+import '../styles/site.css';
+import { TAGLINE, NOINDEX } from '../data/catalog.mjs';
+
+const { title, description = 'Ten functions that process text by its meaning, in your scripts, your programs, and your queries.' } = Astro.props;
+const full = title === 'ThinkThen' ? 'ThinkThen: code that understands' : `${title} — ThinkThen`;
+const here = Astro.url.pathname;
+const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
+const nav = [
+  ['/functions/', 'Functions'],
+  ['/surfaces/', 'Surfaces'],
+  ['/how-tos/', 'How-tos'],
+  ['/install/', 'Install'],
+  ['/trust/', 'Trust'],
+  ['/blog/', 'Blog'],
+];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{full}</title>
+<meta name="description" content={description}>
+{NOINDEX && <meta name="robots" content="noindex">}
+<link rel="icon" href="/brand/thinkthen-mark-dark.svg">
+<link rel="alternate" type="text/markdown" href={mdHref}>
+<script is:inline>
+  // The theme and the language choice are set before the page draws, so
+  // nothing flashes.
+  try {
+    var t = localStorage.getItem('tt-theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+    var l = localStorage.getItem('tt-lang');
+    if (l) document.documentElement.setAttribute('data-lang', l);
+  } catch (e) {}
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a href="/" aria-label="ThinkThen home"><img src="/brand/thinkthen-wordmark-dark.svg" alt="ThinkThen" class="mark-dark"></a>
+    <nav>
+      {nav.map(([href, label]) => (
+        <a href={href} aria-current={here.startsWith(href) ? 'page' : undefined}>{label}</a>
+      ))}
+    </nav>
+    <span class="spacer"></span>
+    <button class="theme" type="button" data-theme-toggle>Theme</button>
+  </div>
+</header>
+
+<main><div class="wrap"><slot /></div></main>
+
+<footer class="bottom">
+  <div class="wrap">
+    <span>{TAGLINE}</span>
+    <span><a href="/version.json">Build proof</a> · <a href="/llms.txt">llms.txt</a> · <a href={mdHref}>This page as Markdown</a></span>
+  </div>
+</footer>
+
+<script is:inline>
+(function () {
+  var root = document.documentElement;
+
+  function lightNow() {
+    var forced = root.getAttribute('data-theme');
+    if (forced) return forced === 'light';
+    return window.matchMedia('(prefers-color-scheme: light)').matches;
+  }
+  function paintMark() {
+    var file = lightNow() ? 'light' : 'dark';
+    document.querySelectorAll('img.mark-dark').forEach(function (img) {
+      img.src = '/brand/thinkthen-wordmark-' + (file === 'light' ? 'light' : 'dark') + '.svg';
+    });
+  }
+  paintMark();
+  document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var next = lightNow() ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('tt-theme', next); } catch (e) {}
+      paintMark();
+    });
+  });
+
+  // One language for the whole visit. Every tabbed block follows it.
+  function tabsIn(group) {
+    return Array.prototype.slice.call(group.querySelectorAll(':scope > .tabs > button'));
+  }
+  // A group that has no tab for the chosen language falls back to the same
+  // family: Polars answers for Python, DuckDB for SQL.
+  function show(group, lang, family) {
+    var buttons = tabsIn(group);
+    var pick = null;
+    buttons.forEach(function (b) { if (!pick && b.dataset.lang === lang) pick = b.dataset.lang; });
+    if (!pick) buttons.forEach(function (b) { if (!pick && b.dataset.alias === family) pick = b.dataset.lang; });
+    if (!pick) pick = group.dataset.fallback || (buttons[0] && buttons[0].dataset.lang);
+    buttons.forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.lang === pick)); });
+    group.querySelectorAll(':scope > .cell').forEach(function (c) { c.hidden = c.dataset.lang !== pick; });
+  }
+  function showAll(lang, family) {
+    document.querySelectorAll('.tabbed').forEach(function (g) { show(g, lang, family); });
+  }
+  var current = 'Bash', family = 'Bash';
+  try {
+    current = localStorage.getItem('tt-lang') || 'Bash';
+    family = localStorage.getItem('tt-lang-family') || current;
+  } catch (e) {}
+  showAll(current, family);
+  document.querySelectorAll('.tabbed').forEach(function (group) {
+    tabsIn(group).forEach(function (b) {
+      b.addEventListener('click', function () {
+        current = b.dataset.lang;
+        family = b.dataset.alias || current;
+        try {
+          localStorage.setItem('tt-lang', current);
+          localStorage.setItem('tt-lang-family', family);
+        } catch (e) {}
+        showAll(current, family);
+      });
+    });
+  });
+
+  document.querySelectorAll('button.copy').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var pre = b.closest('.block').querySelector('pre');
+      var text = pre.dataset.copy || pre.innerText;
+      navigator.clipboard.writeText(text).then(function () {
+        var was = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = was; }, 1200);
+      }, function () {});
+    });
+  });
+})();
+</script>
+</body>
+</html>

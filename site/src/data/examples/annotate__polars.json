@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "python",
+  "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.read_parquet(\"tickets.parquet\")\nask = \"Is this a complaint?\"\n\n# a whole frame goes in with on=, and it comes back\n# with one new column for each question in the form\ndf = tt.annotate(\"form.json\", df, on=\"body\")",
+  "function": "annotate",
+  "surface": "polars"
+}

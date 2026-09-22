@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "-- the question reads like any other condition\nSELECT id, body\nFROM 'tickets.parquet'\nWHERE thinkthen_decide('Is this a complaint?', body);",
+  "function": "decide",
+  "surface": "duckdb"
+}

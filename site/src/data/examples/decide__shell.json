@@ -1,0 +1,48 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "decide",
+      "command": "thinkthen decide 'Does the customer ask for a refund?' < ticket.txt",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": "ticket.txt",
+      "output": "true",
+      "exit": 0
+    },
+    {
+      "name": "decide-answer",
+      "command": "thinkthen decide --details 'Does the customer ask for a refund?' < ticket.txt | jq '.answer'",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": "ticket.txt",
+      "output": "{\n  \"kind\": \"yes_no\",\n  \"probability\": 0.99\n}",
+      "exit": 0
+    },
+    {
+      "name": "decide-vague",
+      "command": "thinkthen decide 'Does the customer ask for a refund?' < vague.txt",
+      "input": "I was charged twice. Can you fix this?",
+      "inputFile": "vague.txt",
+      "output": "true",
+      "exit": 0
+    },
+    {
+      "name": "decide-cut",
+      "command": "thinkthen decide --threshold 0.9 'Does the customer ask for a refund?' < vague.txt",
+      "input": "I was charged twice. Can you fix this?",
+      "inputFile": "vague.txt",
+      "output": "false",
+      "exit": 1
+    },
+    {
+      "name": "decide-band",
+      "command": "thinkthen decide --threshold 0.2:0.8 --details 'Does the customer ask for a refund?' < vague.txt | jq -r '[.value, .answer.probability]|tojson'",
+      "input": "I was charged twice. Can you fix this?",
+      "inputFile": "vague.txt",
+      "output": "[null,0.74]",
+      "exit": 0
+    }
+  ],
+  "function": "decide",
+  "surface": "shell"
+}

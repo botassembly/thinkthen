@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import { SURFACES, KEY_VARIABLE } from '../data/catalog.mjs';
+const shell = SURFACES.find((s) => s.slug === 'shell');
+const rest = SURFACES.filter((s) => s.slug !== 'shell');
+---
+<Base title="Install" description="Every channel, for every surface.">
+  <h1>Install</h1>
+  <p class="lede">The command is the only shipped surface. Every library below is planned, and the line is the one it will ship under.</p>
+
+  <div class="note">Ask for a key first. A new user waits about a day for one, and everything else takes a minute. <code>--dry-run</code> needs no key at all, so you can read the plan while you wait.</div>
+
+  <h2>The shell</h2>
+  <p>Two channels, neither built yet. Both arrive with 0.1.</p>
+  <table>
+    <tr><th>Channel</th><th>Line</th><th>Status</th></tr>
+    <tr><td>Homebrew</td><td><code>{shell.install[0][0]}</code></td><td><span class="status planned">coming with 0.1</span></td></tr>
+    <tr><td>Download script</td><td><code>{shell.install[1][0]}</code></td><td><span class="status planned">coming with 0.1</span></td></tr>
+  </table>
+  <p>The download script will be served from this site at <code>/install.sh</code>, byte for byte the same file the repository holds, checked on every build.</p>
+
+  <h2>Where the key goes</h2>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key.</p>
+
+  <h2>Every other surface</h2>
+  <p>Each library is planned. The <a href="/surfaces/">surface pages</a> carry the code drawn for each one.</p>
+  <table>
+    <tr><th>Surface</th><th>Channels</th><th>Status</th></tr>
+    {rest.map((s) => (
+      <tr>
+        <td><a href={`/${s.slug}/`}>{s.name}</a></td>
+        <td>{s.install.map(([line], i) => (<Fragment>{i > 0 ? ' · ' : ''}<code>{line}</code></Fragment>))}</td>
+        <td><span class="status planned">planned</span></td>
+      </tr>
+    ))}
+  </table>
+
+  <h2>Check what you got</h2>
+  <p>Every deploy of this site writes the commit it was built from to <a href="/version.json">/version.json</a>. A deploy that does not end with that commit on the site is a failed deploy, whatever the build log says.</p>
+
+  <p class="pagelinks"><a href="/shell/">The shell</a> · <a href="/functions/">Every function</a></p>
+</Base>

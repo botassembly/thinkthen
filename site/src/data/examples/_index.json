@@ -1,0 +1,607 @@
+[
+  {
+    "function": "decide",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "decide",
+    "surface": "python",
+    "status": "drawn"
+  },
+  {
+    "function": "decide",
+    "surface": "polars",
+    "status": "drawn"
+  },
+  {
+    "function": "decide",
+    "surface": "typescript",
+    "status": "planned"
+  },
+  {
+    "function": "decide",
+    "surface": "ruby",
+    "status": "planned"
+  },
+  {
+    "function": "decide",
+    "surface": "r",
+    "status": "drawn"
+  },
+  {
+    "function": "decide",
+    "surface": "rust",
+    "status": "drawn"
+  },
+  {
+    "function": "decide",
+    "surface": "c",
+    "status": "drawn"
+  },
+  {
+    "function": "decide",
+    "surface": "duckdb",
+    "status": "drawn"
+  },
+  {
+    "function": "decide",
+    "surface": "sqlite",
+    "status": "drawn"
+  },
+  {
+    "function": "decide",
+    "surface": "postgresql",
+    "status": "drawn"
+  },
+  {
+    "function": "choose",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "choose",
+    "surface": "python",
+    "status": "planned"
+  },
+  {
+    "function": "choose",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "choose",
+    "surface": "typescript",
+    "status": "drawn"
+  },
+  {
+    "function": "choose",
+    "surface": "ruby",
+    "status": "planned"
+  },
+  {
+    "function": "choose",
+    "surface": "r",
+    "status": "drawn"
+  },
+  {
+    "function": "choose",
+    "surface": "rust",
+    "status": "planned"
+  },
+  {
+    "function": "choose",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "choose",
+    "surface": "duckdb",
+    "status": "drawn"
+  },
+  {
+    "function": "choose",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "choose",
+    "surface": "postgresql",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "tag",
+    "surface": "python",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "typescript",
+    "status": "drawn"
+  },
+  {
+    "function": "tag",
+    "surface": "ruby",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "r",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "rust",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "duckdb",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "tag",
+    "surface": "postgresql",
+    "status": "planned"
+  },
+  {
+    "function": "score",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "score",
+    "surface": "python",
+    "status": "planned"
+  },
+  {
+    "function": "score",
+    "surface": "polars",
+    "status": "drawn"
+  },
+  {
+    "function": "score",
+    "surface": "typescript",
+    "status": "planned"
+  },
+  {
+    "function": "score",
+    "surface": "ruby",
+    "status": "drawn"
+  },
+  {
+    "function": "score",
+    "surface": "r",
+    "status": "drawn"
+  },
+  {
+    "function": "score",
+    "surface": "rust",
+    "status": "planned"
+  },
+  {
+    "function": "score",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "score",
+    "surface": "duckdb",
+    "status": "drawn"
+  },
+  {
+    "function": "score",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "score",
+    "surface": "postgresql",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "filter",
+    "surface": "python",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "typescript",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "ruby",
+    "status": "drawn"
+  },
+  {
+    "function": "filter",
+    "surface": "r",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "rust",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "duckdb",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "filter",
+    "surface": "postgresql",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "rank",
+    "surface": "python",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "typescript",
+    "status": "drawn"
+  },
+  {
+    "function": "rank",
+    "surface": "ruby",
+    "status": "drawn"
+  },
+  {
+    "function": "rank",
+    "surface": "r",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "rust",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "duckdb",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "rank",
+    "surface": "postgresql",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "find",
+    "surface": "python",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "typescript",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "ruby",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "r",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "rust",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "duckdb",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "find",
+    "surface": "postgresql",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "annotate",
+    "surface": "python",
+    "status": "drawn"
+  },
+  {
+    "function": "annotate",
+    "surface": "polars",
+    "status": "drawn"
+  },
+  {
+    "function": "annotate",
+    "surface": "typescript",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "ruby",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "r",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "rust",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "duckdb",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "annotate",
+    "surface": "postgresql",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "shell",
+    "status": "planned"
+  },
+  {
+    "function": "recognize",
+    "surface": "python",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "recognize",
+    "surface": "typescript",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "ruby",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "r",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "rust",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "c",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "duckdb",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "sqlite",
+    "status": "drawn"
+  },
+  {
+    "function": "recognize",
+    "surface": "postgresql",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "shell",
+    "status": "planned"
+  },
+  {
+    "function": "relate",
+    "surface": "python",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "relate",
+    "surface": "typescript",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "ruby",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "r",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "rust",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "c",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "duckdb",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "sqlite",
+    "status": "drawn"
+  },
+  {
+    "function": "relate",
+    "surface": "postgresql",
+    "status": "drawn"
+  },
+  {
+    "function": "question-file",
+    "surface": "shell",
+    "status": "run"
+  },
+  {
+    "function": "question-file",
+    "surface": "python",
+    "status": "drawn"
+  },
+  {
+    "function": "question-file",
+    "surface": "polars",
+    "status": "planned"
+  },
+  {
+    "function": "question-file",
+    "surface": "typescript",
+    "status": "planned"
+  },
+  {
+    "function": "question-file",
+    "surface": "ruby",
+    "status": "planned"
+  },
+  {
+    "function": "question-file",
+    "surface": "r",
+    "status": "planned"
+  },
+  {
+    "function": "question-file",
+    "surface": "rust",
+    "status": "drawn"
+  },
+  {
+    "function": "question-file",
+    "surface": "c",
+    "status": "planned"
+  },
+  {
+    "function": "question-file",
+    "surface": "duckdb",
+    "status": "planned"
+  },
+  {
+    "function": "question-file",
+    "surface": "sqlite",
+    "status": "planned"
+  },
+  {
+    "function": "question-file",
+    "surface": "postgresql",
+    "status": "drawn"
+  }
+]

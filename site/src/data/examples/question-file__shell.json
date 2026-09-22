@@ -1,0 +1,24 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "question-yes",
+      "command": "thinkthen decide @refund.json",
+      "input": "I would like to return this and get my money back.",
+      "inputFile": null,
+      "output": "true",
+      "exit": 0
+    },
+    {
+      "name": "question-unsure",
+      "command": "thinkthen decide @refund.json",
+      "input": "I was charged twice. Can you fix this?",
+      "inputFile": null,
+      "output": "null",
+      "exit": 3
+    }
+  ],
+  "function": "question-file",
+  "surface": "shell"
+}

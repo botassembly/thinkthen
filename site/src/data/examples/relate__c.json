@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "c",
+  "code": "int rc = thinkthen_relate(tt, spec_json, texts, lens, COUNT, &out, &out_len);",
+  "function": "relate",
+  "surface": "c"
+}

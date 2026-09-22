@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ts",
+  "code": "import * as tt from \"thinkthen\";\n\n// pick one option: \"billing\"\nconst options = [\"billing\", \"shipping\", \"account\"];\nawait tt.choose(\"Which team owns this?\", text, { options });",
+  "function": "choose",
+  "surface": "typescript"
+}

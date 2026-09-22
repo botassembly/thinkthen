@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "c",
+  "code": "char *out; size_t out_len;\nint rc = thinkthen_recognize(tt, spec_json, text, text_len, &out, &out_len);\nthinkthen_string_free(out);",
+  "function": "recognize",
+  "surface": "c"
+}

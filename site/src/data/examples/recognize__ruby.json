@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "ruby",
+  "code": "found = ThinkThen.recognize(text, kinds: %w[person organization place],\n                            relations: { works_for: %w[person organization] })\nfound.entities.first.kind  # \"person\"",
+  "function": "recognize",
+  "surface": "ruby"
+}

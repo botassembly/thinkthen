@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import { HOWTOS } from '../../data/catalog.mjs';
+---
+<Base title="How-tos" description="Eleven flows, each built from a run of the shipped command.">
+  <h1>How-tos</h1>
+  <p class="lede">Each one is two or three functions in a pipeline, with the records that went in and the lines that came out. Every page is built from a saved run, so a page cannot drift from the command.</p>
+
+  <table>
+    <tr><th>How-to</th><th>Reader</th><th>Functions</th></tr>
+    {HOWTOS.map((h) => (
+      <tr>
+        <td><a href={`/how-tos/${h.slug}/`}>{h.title}</a></td>
+        <td>{h.reader}</td>
+        <td>{h.functions.map((f, i) => (<Fragment>{i > 0 ? ', ' : ''}<a href={`/functions/${f}/`}><code>{f}</code></a></Fragment>))}</td>
+      </tr>
+    ))}
+  </table>
+
+  <p class="pagelinks"><a href="/functions/">Every function</a> · <a href="/trust/">Trust</a></p>
+</Base>

@@ -1,0 +1,24 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "rank",
+      "command": "thinkthen rank 'Does this need an answer today?' --lines --top 2 < inbox.txt",
+      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nCan we move our Thursday call to next week?\nReminder: your invoice is due in 30 days",
+      "inputFile": "inbox.txt",
+      "output": "Our checkout page is down and customers cannot pay\nCan we move our Thursday call to next week?",
+      "exit": 0
+    },
+    {
+      "name": "rank-answer",
+      "command": "thinkthen rank --details 'Does this need an answer today?' --lines --top 2 < inbox.txt | jq -r '\"\\(.answer.probability)  \\(.input)\"'",
+      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nCan we move our Thursday call to next week?\nReminder: your invoice is due in 30 days",
+      "inputFile": "inbox.txt",
+      "output": "0.94  Our checkout page is down and customers cannot pay\n0.49  Can we move our Thursday call to next week?",
+      "exit": 0
+    }
+  ],
+  "function": "rank",
+  "surface": "shell"
+}

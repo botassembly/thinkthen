@@ -1,0 +1,72 @@
+---
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { SURFACES, CODE_FUNCTIONS, FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { cell, SURFACE_SAMPLES } from '../../data/examples.mjs';
+
+export function getStaticPaths() {
+  return SURFACES.map((s) => ({ params: { surface: s.slug }, props: { surface: s } }));
+}
+
+const { surface } = Astro.props;
+const sample = SURFACE_SAMPLES[surface.slug] || null;
+const shipped = surface.status === 'shipped';
+const questionFile = FUNCTIONS.find((f) => f.notAFunction);
+const sections = [...CODE_FUNCTIONS, questionFile].map((fn) => ({ fn, data: cell(fn.name, surface.slug) }));
+const carried = sections.filter((s) => s.data.status !== 'planned');
+const missing = sections.filter((s) => s.data.status === 'planned');
+---
+<Base title={surface.name} description={surface.blurb}>
+  <div class="eyebrow">surface</div>
+  <h1>{surface.name} <span class={`status ${surface.status}`}>{surface.status}</span></h1>
+  <p class="lede">{surface.blurb}</p>
+  {!shipped && (
+    <div class="note"><span class="status planned">planned</span> Nothing on this page has run. The {surface.name} sample is drawn from the design so the library is built to match it. The command is the only shipped surface today.</div>
+  )}
+
+  <h2>Install</h2>
+  <table>
+    <tr><th>Channel</th><th>Note</th></tr>
+    {surface.install.map(([line, note]) => (
+      <tr><td><code>{line}</code></td><td>{note || (shipped ? '' : 'Planned.')}</td></tr>
+    ))}
+  </table>
+
+  <h2>Where the key goes</h2>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. Nothing reads a key from a file or a flag, and no page here prints one. <code>--dry-run</code> prints the plan and needs no key, so the first thing you run costs nothing and sends nothing.</p>
+
+  <h2>A first call</h2>
+  {sample ? (
+    <Code code={sample.code} caption={`${surface.name} is planned. This is how the calls will read.`} />
+  ) : (
+    <Terminal run={cell('decide', 'shell').runs[0]} />
+  )}
+  <p>Not sure comes back as <code>{surface.unsureWord}</code> here. It is the one word this page explains, and no other page repeats it.</p>
+
+  <h2>The functions on this surface</h2>
+  {carried.length === 0 && <p>No function is drawn on {surface.name} yet.</p>}
+  {carried.map(({ fn, data }) => (
+    <section>
+      <h3><a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a> — {fn.line}</h3>
+      {data.status === 'run'
+        ? <Terminal run={data.runs[0]} />
+        : <Code code={data.code} caption={`Drawn from the design for ${surface.name}.`} />}
+    </section>
+  ))}
+  {missing.length > 0 && (
+    <>
+      <h3>Not drawn yet</h3>
+      <p>
+        {missing.map(({ fn }, i) => (
+          <>{i > 0 ? ', ' : ''}<a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a></>
+        ))}. Each one works the same way it does in the shell, and this page gains its sample when the library ships.
+      </p>
+    </>
+  )}
+
+  <h2>What is particular here</h2>
+  <ul>{surface.particular.map((p) => <li>{p}</li>)}</ul>
+
+  <p class="pagelinks"><a href="/surfaces/">Every surface</a> · <a href="/functions/">Every function</a> · <a href="/install/">Install</a></p>
+</Base>
