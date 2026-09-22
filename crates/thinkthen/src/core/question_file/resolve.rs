@@ -9,6 +9,7 @@
 use serde::{Serialize, Serializer};
 
 use crate::core::adapters::built_in::DEFAULT_MODEL;
+use crate::core::backend_profile::ProfileName;
 use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, Question};
 use crate::core::question_file::{
@@ -71,6 +72,7 @@ pub(crate) struct Resolved {
     model: ModelName,
     on: Vec<Pointer>,
     sources: Sources,
+    profile: Option<ProfileName>,
 }
 
 impl Resolved {
@@ -108,6 +110,11 @@ impl Resolved {
     #[must_use]
     pub(crate) const fn sources(&self) -> &Sources {
         &self.sources
+    }
+
+    /// The profile this saved threshold was calibrated under, when named.
+    pub(crate) const fn profile(&self) -> Option<&ProfileName> {
+        self.profile.as_ref()
     }
 }
 
@@ -212,6 +219,7 @@ pub(crate) fn resolve(
         threshold,
         model,
         on,
+        profile: file.and_then(|held| held.profile.clone()),
         sources: Sources {
             verb,
             question: question_source,

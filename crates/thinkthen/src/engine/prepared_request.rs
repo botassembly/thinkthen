@@ -2,7 +2,7 @@
 
 use crate::core::adapters::built_in;
 use crate::core::recording::{Digest, Exchange as Recorded};
-use crate::core::{Backend, Plan, Reply};
+use crate::core::{Backend, BackendProfile, Plan, Reply};
 
 use crate::engine::error::Error;
 
@@ -12,9 +12,21 @@ pub(crate) struct PreparedRequest {
 }
 
 impl PreparedRequest {
+    #[cfg(test)]
     pub(crate) fn new(backend: &Backend, plan: &Plan) -> Result<Self, Error> {
+        Self::with_profile(backend, plan, None)
+    }
+
+    pub(crate) fn with_profile(
+        backend: &Backend,
+        plan: &Plan,
+        profile: Option<&BackendProfile>,
+    ) -> Result<Self, Error> {
         let body = built_in::encode(plan)
             .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
+        if let Some(profile) = profile {
+            profile.check(plan, &body).map_err(Error::ProfileLimit)?;
+        }
         let digest = Recorded::new(backend.url(), &body).digest();
         Ok(Self { body, digest })
     }

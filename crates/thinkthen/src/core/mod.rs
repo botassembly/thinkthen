@@ -12,6 +12,7 @@
 pub(crate) mod adapters;
 mod answer;
 mod backend;
+mod backend_profile;
 mod digest;
 mod find;
 mod json;
@@ -34,7 +35,14 @@ mod threshold;
 pub(crate) use crate::core::adapters::built_in::DEFAULT_MODEL;
 pub(crate) use crate::core::answer::{Answer, Value};
 pub(crate) use crate::core::backend::{Backend, BackendError, KEY_VAR};
+#[cfg(test)]
+pub(crate) use crate::core::backend_profile::LimitKind;
+pub(crate) use crate::core::backend_profile::{
+    BackendProfile, ProfileError, ProfileLimit, ProfileName,
+};
+#[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
+pub(crate) use crate::core::digest::question_sha256_with_profile;
 pub(crate) use crate::core::find::Find;
 pub(crate) use crate::core::order::ranking;
 pub(crate) use crate::core::plan::Plan;
@@ -52,7 +60,7 @@ pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, DecisionResult, Meta, RequestMeta, Usage,
+    AnnotatedValue, DecisionResult, Meta, ProfileWarning, RequestMeta, Usage,
 };
 pub(crate) use crate::core::text::{Evidence, ModelName, QuestionText};
 pub(crate) use crate::core::threshold::{Outcome, Threshold};

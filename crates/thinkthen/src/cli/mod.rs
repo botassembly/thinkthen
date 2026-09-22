@@ -10,6 +10,7 @@ pub(crate) mod failure;
 pub(crate) mod find;
 pub(crate) mod judge;
 pub(crate) mod normalize;
+pub(crate) mod profile;
 pub(crate) mod schedule;
 pub(crate) mod table;
 

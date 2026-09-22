@@ -2,6 +2,7 @@
 
 use std::io;
 
+use crate::core::ProfileLimit;
 use crate::core::adapters::built_in::DecodeError;
 
 /// A safe, stable description of why a backend connection failed.
@@ -46,6 +47,7 @@ pub(crate) enum Error {
     RecordingPathIsFile,
     Defect(&'static str),
     Usage(&'static str),
+    ProfileLimit(ProfileLimit),
     Cancelled,
     Deadline,
 }
@@ -64,7 +66,7 @@ impl Error {
             | Self::Recording(_)
             | Self::RecordingPathIsFile => Kind::Local,
             Self::Defect(_) => Kind::Defect,
-            Self::Usage(_) => Kind::Usage,
+            Self::Usage(_) | Self::ProfileLimit(_) => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,
             Self::Deadline => Kind::Deadline,
         }

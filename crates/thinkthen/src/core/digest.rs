@@ -9,6 +9,7 @@ use serde::ser::SerializeMap as _;
 use serde::{Serialize, Serializer};
 use sha2::{Digest as _, Sha256};
 
+use crate::core::backend_profile::ProfileName;
 use crate::core::question::{Labels, Question};
 use crate::core::render::{RenderError, json_line};
 use crate::core::threshold::Threshold;
@@ -43,13 +44,23 @@ fn nibble(value: u8) -> char {
 /// # Errors
 ///
 /// Returns [`RenderError`] when the canonical form cannot be written as JSON.
+#[cfg(test)]
 pub(crate) fn question_sha256(
     question: &Question,
     threshold: Option<Threshold>,
 ) -> Result<String, RenderError> {
+    question_sha256_with_profile(question, threshold, None)
+}
+
+pub(crate) fn question_sha256_with_profile(
+    question: &Question,
+    threshold: Option<Threshold>,
+    profile: Option<&ProfileName>,
+) -> Result<String, RenderError> {
     let canonical = json_line(&Canonical {
         question,
         threshold,
+        profile,
     })?;
     let mut hasher = Sha256::new();
     hasher.update(canonical.as_bytes());
@@ -64,6 +75,7 @@ pub(crate) fn question_sha256(
 pub(crate) struct Canonical<'a> {
     question: &'a Question,
     threshold: Option<Threshold>,
+    profile: Option<&'a ProfileName>,
 }
 
 impl<'a> Canonical<'a> {
@@ -71,6 +83,7 @@ impl<'a> Canonical<'a> {
         Self {
             question,
             threshold,
+            profile: None,
         }
     }
 }
@@ -109,6 +122,9 @@ impl Serialize for Canonical<'_> {
         if let Some(threshold) = self.threshold {
             map.serialize_entry("threshold", &threshold)?;
         }
+        if let Some(profile) = self.profile {
+            map.serialize_entry("profile", profile.as_str())?;
+        }
         map.end()
     }
 }
@@ -125,7 +141,8 @@ impl Serialize for Described<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Canonical, question_sha256};
+    use super::{Canonical, question_sha256, question_sha256_with_profile};
+    use crate::core::ProfileName;
     use crate::core::question::{Labels, Question};
     use crate::core::render::json_line;
     use crate::core::text::{Meaning, QuestionText};
@@ -185,6 +202,7 @@ mod tests {
             json_line(&Canonical {
                 question,
                 threshold,
+                profile: None,
             })
             .expect("a canonical form is writable")
         };
@@ -254,6 +272,21 @@ mod tests {
             question_sha256(&question, threshold).expect("digest"),
             "00b00cf7e1d55b2bb16356f583da7d2dab8fb538f459d859f817392b59efdedf"
         );
+    }
+
+    #[test]
+    fn calibration_identity_changes_only_the_question_digest() {
+        let question = Question::Decide {
+            text: text("Does this ask for a refund?"),
+            yes: None,
+            no: None,
+        };
+        let plain = question_sha256(&question, Some(Threshold::default())).expect("digest");
+        let profile = ProfileName::new("jev").expect("profile name");
+        let calibrated =
+            question_sha256_with_profile(&question, Some(Threshold::default()), Some(&profile))
+                .expect("digest");
+        assert_ne!(plain, calibrated);
     }
 
     #[test]

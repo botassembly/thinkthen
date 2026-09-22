@@ -4,6 +4,8 @@
 mod conformance_support;
 #[path = "conformance_tests/outcomes/outcomes.rs"]
 mod outcomes;
+#[path = "conformance_tests/profile_cases.rs"]
+mod profile_cases;
 
 use crate::core::adapters::systemone;
 use crate::core::recording::Exchange as Recorded;

@@ -11,6 +11,7 @@ Ian can overturn any placement here.
 - Landed: 0056. Detailed filtering now keeps only passing records, ranked details keep the same `--top` membership, and a band's exact low edge is `not sure`.
 - Landed: 0057. Help now states the record-mode exit boundary and visible defaults, `--url` appears in short help under ADR 0031, zero timeouts fail before input or network access, and the specification agrees with the binary.
 - Landed: 0058. Backend, transport, question-file, recording, table, and empty-input diagnostics now name the condition and a safe action. Dry runs apply the live one-document width rule.
+- Landed: 0059. Explicit backend profiles enforce local byte and question limits before replay, cache, key lookup, or network access. Saved calibration names warn once at the ordered result boundary and appear in detailed metadata.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
@@ -32,7 +33,7 @@ Tickets 0056 through 0058 completed every row below. Lane A continues with backe
 | Messages a stranger can parse | `several-messages-cannot-be-parsed-by-a-stranger`, plus the older wording issues (`question-file-refusals-name-the-wrong-thing`, `the-empty-evidence-refusal-names-the-rule-backwards`, `the-probability-total-refusal-prints-float-noise`, `the-set-e-warning-names-only-no`, `transport-failure-messages-paste-the-http-clients-own-words`, `a-refused-request-hides-the-backends-reason`) | One wording ticket. Each message pinned by its exact sentence |
 | Four specification sentences the binary refuses | `four-spec-sentences-promise-what-the-binary-refuses` | Decide each one in the ticket: the specification is the contract, so the binary moves unless the sentence was wrong |
 
-**A2. Backend profiles, the local size check, and the threshold warning.** Proposed ticket 4. Also closes `windows-over-long-text` as a refusal with a clear message. The mismatch warning goes in `meta` too (product addition E).
+**A2. Done.** Ticket 0059 added explicit backend profiles, local size checks, and the threshold warning. It also closes `windows-over-long-text` as a refusal with a clear message. The mismatch warning goes in `meta` too (product addition E).
 
 **A3. Each record comes back with its answer.** Proposed ticket 5. Closes `two-function-flows-lose-the-record-between-stages`. `recognize` and `relate` follow the same rule (addition D). A single text still prints a bare answer, pinned by a test (addition C). The deck's triage and leads slides wait on this.
 

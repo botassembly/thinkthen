@@ -14,9 +14,15 @@ use crate::asking::{Folders, ask};
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::Client;
+use crate::prepared_request::PreparedRequest;
+use crate::profile;
 use crate::recorder::Recorder;
 
 /// Read one bounded set, ask once, and print its selected original unit.
+#[expect(
+    clippy::too_many_lines,
+    reason = "the one-request command keeps validation and output in their observable order"
+)]
 pub(crate) fn run(
     arguments: &FindArguments,
     environment: &Environment,
@@ -47,6 +53,7 @@ pub(crate) fn run(
             .as_deref()
             .unwrap_or(crate::core::DEFAULT_MODEL),
     )?;
+    let profile = profile::read(common)?;
     let folders = Folders::of(common)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
@@ -78,6 +85,7 @@ pub(crate) fn run(
     let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
         .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?;
     if common.dry_run {
+        let _prepared = PreparedRequest::with_profile(&backend, find.plan(), profile.as_ref())?;
         let document = PlanDocument::of(&backend, find.plan())
             .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
         let document = document.reading(&reading);
@@ -93,6 +101,7 @@ pub(crate) fn run(
         environment,
         &recorder,
         &client,
+        profile.as_ref(),
     )?;
     let (line, resolved) = rendered(
         common,

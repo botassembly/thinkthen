@@ -12,6 +12,7 @@ use std::fmt;
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
+use crate::core::backend_profile::ProfileName;
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::{Pointer, PointerError};
 use crate::core::question::LabelsError;
@@ -46,10 +47,18 @@ impl Verb {
     /// The keys a file of this verb may hold, its own key first.
     const fn keys(self) -> &'static [&'static str] {
         match self {
-            Self::Decide => &["decide", "true", "false", "threshold", "on", "model"],
-            Self::Choose => &["choose", "options", "threshold", "on", "model"],
-            Self::Tag => &["tag", "labels", "threshold", "on", "model"],
-            Self::Score => &["score", "levels", "on", "model"],
+            Self::Decide => &[
+                "decide",
+                "true",
+                "false",
+                "threshold",
+                "on",
+                "model",
+                "profile",
+            ],
+            Self::Choose => &["choose", "options", "threshold", "on", "model", "profile"],
+            Self::Tag => &["tag", "labels", "threshold", "on", "model", "profile"],
+            Self::Score => &["score", "levels", "on", "model", "profile"],
         }
     }
 }
@@ -64,7 +73,7 @@ impl fmt::Display for Verb {
 pub(crate) type Described = Vec<(String, Option<String>)>;
 
 /// Every key any question file may hold, so an unknown one is told apart.
-const EVERY_KEY: [&str; 11] = [
+const EVERY_KEY: [&str; 12] = [
     "decide",
     "choose",
     "tag",
@@ -76,6 +85,7 @@ const EVERY_KEY: [&str; 11] = [
     "levels",
     "threshold",
     "on",
+    "profile",
 ];
 
 /// Where one setting of the question that results came from.
@@ -293,6 +303,7 @@ pub(crate) struct QuestionFile {
     threshold: Option<Threshold>,
     on: Option<Vec<Pointer>>,
     model: Option<ModelName>,
+    profile: Option<ProfileName>,
 }
 
 impl QuestionFile {
@@ -346,6 +357,7 @@ impl QuestionFile {
             threshold: threshold_in(&value)?,
             on: pointers_in(&value)?,
             model: model_in(&value)?,
+            profile: profile_in(&value)?,
         })
     }
 }
@@ -506,9 +518,11 @@ pub(crate) fn pointers(
         .collect()
 }
 
+mod profile;
 mod resolve;
 
 pub(crate) use crate::core::question_file::resolve::{Cutting, Resolved, Sources, Typed, resolve};
+use profile::profile_in;
 
 #[cfg(test)]
 mod tests;

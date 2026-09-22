@@ -3,14 +3,13 @@
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
 use std::io::{Read, Write};
-use std::path::Path;
 use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, RequestMeta, Resolved, Sources, Threshold, Value, json_line,
-    question_sha256,
+    Backend, BackendProfile, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer,
+    Question, QuestionText, Reading, Record, RequestMeta, Resolved, Sources, Threshold, Value,
+    json_line, question_sha256_with_profile,
 };
 
 use crate::args::Common;
@@ -18,10 +17,17 @@ use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::Client;
 use crate::judge::{Asked, Keeping, View};
-use crate::prepared_request::Answered;
+use crate::prepared_request::PreparedRequest;
+use crate::profile::{self, Mismatch};
 use crate::recorder::Recorder;
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
+
+mod folders;
+mod request;
+
+pub(crate) use folders::Folders;
+pub(crate) use request::{ask, ask_prepared};
 
 /// Where one record's question comes from.
 ///
@@ -108,6 +114,8 @@ pub(crate) fn run(
         environment.base_url(),
         settled.model().as_str(),
     )?;
+    let profile = profile::read(common)?;
+    let mismatch = Mismatch::new(settled.profile(), profile.as_ref());
     let reading = read_by(common, settled)?;
     if keeping.streams_only() && !reading.streams() {
         return Err(Failure::NoFraming(keeping.verb()));
@@ -127,6 +135,8 @@ pub(crate) fn run(
         view,
         keeping,
         streams: reading.streams(),
+        profile,
+        mismatch,
         sources: settled
             .sources()
             .question_is_from_file()
@@ -142,6 +152,8 @@ pub(crate) fn run(
     if common.dry_run {
         return plan(
             &configuration.backend,
+            configuration.profile.as_ref(),
+            &configuration.mismatch,
             &reading,
             &Planning {
                 asks: &configuration.asks,
@@ -182,6 +194,8 @@ fn over_table(
     if configuration.common.dry_run {
         return plan_record(
             &configuration.backend,
+            configuration.profile.as_ref(),
+            &configuration.mismatch,
             reading,
             &Planning {
                 asks: &configuration.asks,
@@ -200,46 +214,6 @@ fn over_table(
         recording,
         output,
     )
-}
-
-/// The folders `--record`, `--replay`, and `--cache` name between them.
-#[derive(Debug)]
-pub(crate) struct Folders<'a> {
-    pub(crate) record: Option<&'a Path>,
-    pub(crate) replay: Option<&'a Path>,
-}
-
-impl<'a> Folders<'a> {
-    /// Read the two folders, with `--cache` standing for both at once.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Failure::CacheWithRecording`] when `--cache` is given beside
-    /// one of the two options it stands for.
-    pub(crate) fn of(common: &'a Common) -> Result<Self, Failure> {
-        let Some(cached) = common.cache.as_deref() else {
-            if matches!((&common.record, &common.replay), (Some(record), Some(replay)) if record != replay)
-            {
-                return Err(Failure::TwoFolders);
-            }
-            return Ok(Self {
-                record: common.record.as_deref(),
-                replay: common.replay.as_deref(),
-            });
-        };
-        if common.record.is_some() || common.replay.is_some() {
-            return Err(Failure::CacheWithRecording);
-        }
-        Ok(Self {
-            record: Some(cached),
-            replay: Some(cached),
-        })
-    }
-
-    /// True when a folder is named at all, which a plan may not name.
-    pub(crate) const fn named(&self) -> bool {
-        self.record.is_some() || self.replay.is_some()
-    }
 }
 
 /// Read the framing the command line asked for, over the settled pointers.
@@ -272,8 +246,14 @@ struct Planning<'a> {
 }
 
 /// Print the plan for the first record, and read no further than that record.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "byte and table inputs share one plan path with explicit profile state"
+)]
 fn plan(
     backend: &Backend,
+    profile: Option<&BackendProfile>,
+    mismatch: &Mismatch,
     reading: &Reading,
     planning: &Planning<'_>,
     first: Option<Vec<u8>>,
@@ -285,11 +265,25 @@ fn plan(
     let record = reading
         .record(&bytes)
         .map_err(|error| Failure::record(error, reading.streams()))?;
-    plan_record(backend, reading, planning, Some(record), writer)
+    plan_record(
+        backend,
+        profile,
+        mismatch,
+        reading,
+        planning,
+        Some(record),
+        writer,
+    )
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the plan path receives each resolved concern without a second configuration type"
+)]
 fn plan_record(
     backend: &Backend,
+    profile: Option<&BackendProfile>,
+    mismatch: &Mismatch,
     reading: &Reading,
     planning: &Planning<'_>,
     first: Option<Record>,
@@ -299,6 +293,8 @@ fn plan_record(
         return Ok(ExitCode::SUCCESS);
     };
     let sending = asked_of(reading, record, backend, planning.asks)?;
+    let _prepared = PreparedRequest::with_profile(backend, &sending.plan, profile)?;
+    mismatch.print_once()?;
     let document = PlanDocument::of(backend, &sending.plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let document = if reading.streams() {
@@ -348,6 +344,8 @@ struct Judging<'a> {
     view: View,
     keeping: Keeping,
     streams: bool,
+    profile: Option<BackendProfile>,
+    mismatch: Mismatch,
 }
 
 struct JudgingInput<'a> {
@@ -361,6 +359,8 @@ struct JudgingInput<'a> {
     keeping: Keeping,
     streams: bool,
     sources: Option<Sources>,
+    profile: Option<BackendProfile>,
+    mismatch: Mismatch,
 }
 
 impl Judging<'_> {
@@ -376,6 +376,8 @@ impl Judging<'_> {
             keeping,
             streams,
             sources: _,
+            profile,
+            mismatch,
         } = input;
         let secure = backend.is_secure();
         Ok(Judging {
@@ -389,6 +391,8 @@ impl Judging<'_> {
             view,
             keeping,
             streams,
+            profile,
+            mismatch,
         })
     }
 
@@ -421,6 +425,7 @@ impl Judging<'_> {
             self.environment,
             &self.recorder,
             &self.client,
+            self.profile.as_ref(),
         )?;
         let [crate::core::AnswerOutcome::Answered(answer)] = answered.reply.outcomes() else {
             return Err(Failure::Defect("the adapter answered no question"));
@@ -433,14 +438,19 @@ impl Judging<'_> {
         {
             let meta = Meta::new(
                 env!("CARGO_PKG_VERSION"),
-                question_sha256(&sending.question, self.threshold)?,
+                question_sha256_with_profile(
+                    &sending.question,
+                    self.threshold,
+                    self.calibrated_profile(),
+                )?,
                 self.backend.url().clone(),
                 answered.reply.model().clone(),
                 answered.reply.usage(),
                 RequestMeta::new(
                     answered.replayed,
                     vec![answered.request.as_str().to_owned()],
-                ),
+                )
+                .with_profile_warning(self.mismatch.warning()),
             );
             // `rank` orders and never selects, so a ranked row carries no
             // value. A value here would be a cut at 0.5 that nobody named.
@@ -482,33 +492,13 @@ impl Judging<'_> {
             replayed: answered.replayed,
             probability,
             partial_failure: false,
+            profile_mismatch: self.mismatch.notice(),
         })
     }
-}
 
-/// Answer the plan from the recording folder, or from the backend itself.
-///
-/// The recording is read before a key is, so a replay opens no connection and
-/// needs no key. Only an exchange the adapter read is recorded.
-pub(crate) fn ask(
-    backend: &Backend,
-    plan: &Plan,
-    common: &Common,
-    environment: &Environment,
-    recorder: &Recorder,
-    client: &Client,
-) -> Result<Answered, Failure> {
-    crate::engine::request::ask(
-        backend,
-        plan,
-        recorder,
-        crate::engine::request::Transport {
-            client,
-            max_retries: common.max_retries,
-            retry_wait: environment.retry_wait(),
-        },
-        edge::key,
-    )
+    fn calibrated_profile(&self) -> Option<&crate::core::ProfileName> {
+        self.mismatch.calibrated()
+    }
 }
 
 /// Turn the outcome into the exit code `specification/channels.md` fixes.

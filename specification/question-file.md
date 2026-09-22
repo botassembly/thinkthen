@@ -23,19 +23,19 @@ A JSON syntax error says `the question file is not valid JSON: the JSON at line 
 A question file holds exactly one question. The first key names the verb and carries the question text.
 
 ```json
-{"decide": "TEXT", "true": "TEXT", "false": "TEXT", "threshold": "CUT", "on": "POINTER", "model": "NAME"}
+{"decide": "TEXT", "true": "TEXT", "false": "TEXT", "threshold": "CUT", "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
 ```json
-{"choose": "TEXT", "options": ["LABEL", "LABEL"], "threshold": 0.8, "on": "POINTER", "model": "NAME"}
+{"choose": "TEXT", "options": ["LABEL", "LABEL"], "threshold": 0.8, "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
 ```json
-{"tag": "TEXT", "labels": ["LABEL", "LABEL"], "threshold": 0.5, "on": "POINTER", "model": "NAME"}
+{"tag": "TEXT", "labels": ["LABEL", "LABEL"], "threshold": 0.5, "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
 ```json
-{"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME"}
+{"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
 A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional.
@@ -57,6 +57,7 @@ A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and
 | The rule | `--threshold T` or `--threshold LOW:HIGH` | `threshold` | `0.5` for `decide`, `tag`, and `filter`, none for `choose`, `score`, and `rank` | A cut of 0 or above 1, a band whose low side is not below its high side, a band on `choose`, `tag`, and `filter`, and any threshold on `score` and on `rank` |
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901 |
 | The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
+| The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 
@@ -64,7 +65,7 @@ Nothing has a default where a guess would hide a mistake. `choose` with no optio
 
 Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.**
 
-A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`.
+A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead.
 
 A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`.
 
@@ -86,13 +87,13 @@ A run with no question file prints no `from` object, because every setting came 
 
 Every `--details` row carries `meta.question_sha256`. It names the exact question that produced the row, so two runs that asked almost the same thing cannot be mistaken for one. The same question gives the same digest whether it was typed or read from a file, and any override shows up as a different digest.
 
-The digest is the SHA-256 of the canonical form below, written as 64 lowercase hexadecimal figures.
+The digest is the SHA-256 of the canonical form below, written as 64 lowercase hexadecimal figures. A saved `profile` follows `threshold` in that form and changes the digest. Selecting `--profile FILE` does not.
 
 ### The canonical form
 
 The canonical form is one JSON object on one line. Another implementation follows these rules and reaches the same digest.
 
-1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`. For `choose`: `verb`, `text`, `options`, `threshold`. For `tag`: `verb`, `text`, `labels`, `threshold`. For `score`: `verb`, `text`, `levels`. `verb` holds the command name.
+1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`, `profile`. For `choose`: `verb`, `text`, `options`, `threshold`, `profile`. For `tag`: `verb`, `text`, `labels`, `threshold`, `profile`. For `score`: `verb`, `text`, `levels`, `profile`. `verb` holds the command name. An absent `profile` is omitted.
 2. **A key with no value is absent.** `true` and `false` are absent when no text was given. `threshold` is absent on `score`, which takes no rule, and on a `choose` with no cut.
 3. **There is no insignificant white space.** No space follows a colon or a comma, and there is no newline inside the form. The digest is taken over the UTF-8 bytes of that one line.
 4. **Text is escaped as JSON escapes it, and no further.** A quotation mark is `\"`, a backslash is `\\`, and the control characters use their JSON escapes. Every other character is written as itself, including every character outside ASCII. No `\u` escape is used where the character can stand for itself.
@@ -130,7 +131,7 @@ The canonical form is not the `question` field of a result. That field prints a 
 
 ## The digest of a question set
 
-`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. The canonical object has `version`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. The path, model, address, formatting, and other runtime settings are absent.
+`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. The canonical object has `version`, optional top-level `profile`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. A nested question cannot carry `profile`. The path, model, address, formatting, and other runtime settings are absent.
 
 ```json
 {"version":1,"questions":[{"name":"refund","question":{"verb":"decide","text":"Does this ask for a refund?","threshold":0.5},"on":[""]}]}

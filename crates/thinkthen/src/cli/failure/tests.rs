@@ -1,6 +1,8 @@
 use super::{Failure, report};
 use crate::core::recording::{Entry, Exchange as Recorded};
-use crate::core::{QuestionSetError, RecordError, Url};
+use crate::core::{
+    LimitKind, ProfileError, ProfileLimit, ProfileName, QuestionSetError, RecordError, Url,
+};
 use crate::engine::error::TransportKind;
 use std::process::ExitCode;
 use std::time::Duration;
@@ -38,6 +40,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         probability: Some(0.91),
         replayed: false,
         partial_failure: false,
+        profile_mismatch: None,
     };
     let client = crate::http::Client::new(Duration::from_secs(1), false);
     // `rank` holds every record in memory until the input ends, so the
@@ -50,6 +53,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             probability: Some(0.91),
             replayed: false,
             partial_failure: false,
+            profile_mismatch: None,
         }],
         top: Some(2),
         writer: &mut written,
@@ -57,10 +61,24 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
 
     let shown = format!(
         "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {:?} {:?} {:?}",
+             {ordered:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
         Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
+        Failure::OpenProfile {
+            path: "safe-profile.json".into(),
+            error: std::io::Error::from(std::io::ErrorKind::NotFound),
+        },
+        Failure::Profile {
+            path: "safe-profile.json".into(),
+            error: ProfileError::Name,
+        },
+        Failure::ProfileLimit(ProfileLimit {
+            name: ProfileName::new("safe-profile").expect("safe name"),
+            kind: LimitKind::EvidenceBytes,
+            limit: 1,
+            actual: EVIDENCE.len(),
+        }),
     );
 
     assert!(!shown.contains(KEY), "{shown}");
@@ -106,6 +124,20 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         Failure::FindCount { none: false },
         Failure::FindCount { none: true },
         Failure::FindTooLarge,
+        Failure::OpenProfile {
+            path: "safe-profile.json".into(),
+            error: std::io::Error::from(std::io::ErrorKind::NotFound),
+        },
+        Failure::Profile {
+            path: "safe-profile.json".into(),
+            error: ProfileError::Name,
+        },
+        Failure::ProfileLimit(ProfileLimit {
+            name: ProfileName::new("safe-profile").expect("safe name"),
+            kind: LimitKind::EvidenceBytes,
+            limit: 1,
+            actual: EVIDENCE.len(),
+        }),
         Failure::Defect("a ranked row carries no probability"),
     ];
 

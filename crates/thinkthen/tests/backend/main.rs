@@ -20,6 +20,7 @@ mod json_syntax;
 mod keeping;
 mod limits;
 mod parallel;
+mod profile;
 mod recording_conflicts;
 mod recordings;
 mod refusals;

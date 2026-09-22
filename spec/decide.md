@@ -6,7 +6,7 @@ The short help shows the everyday options. The long help adds the advanced ones 
 
 ```bash
 thinkthen decide -h | head -1 | mustmatch like "Answer a yes/no question about the evidence and set the exit code"
-for option in --threshold --quiet --details --dry-run --url; do
+for option in --threshold --quiet --details --dry-run --url --profile; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch not like "0"
 done
 for option in --model --record --replay --cache --jobs --timeout --max-retries; do
@@ -165,10 +165,10 @@ printf 'x' | thinkthen decide 'asks for a refund' --quiet --details >/dev/null 2
 echo "$status" | mustmatch like "2"
 ```
 
-Every option the earlier surface carried is gone, and each one is a usage error now. The configuration surface went with ADR 0010, and the four options that served it are gone too.
+The remaining options from the earlier configuration surface stay gone. `--profile` has returned with the smaller limit-only meaning of ADR 0032.
 
 ```bash
-for gone in --status "--min-prob 0.9" --plan "--backend jev" "--profile jev" "--adapter systemone" "--key-env LOCAL_KEY" "--config site.json"; do
+for gone in --status "--min-prob 0.9" --plan "--backend jev" "--adapter systemone" "--key-env LOCAL_KEY" "--config site.json"; do
   status=0
   printf 'x' | thinkthen decide 'asks for a refund' --dry-run $gone >/dev/null 2>&1 || status=$?
   echo "$status" | mustmatch like "2"
@@ -176,6 +176,20 @@ done
 status=0
 printf 'x' | thinkthen decide if 'asks for a refund' --dry-run >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch like "2"
+```
+
+An explicit profile refuses an oversized request before a key or connection. The limit counts the UTF-8 evidence bytes after selection.
+
+```bash
+cat > profile.json <<'JSON'
+{"schema":"thinkthen.backend-profile/1","name":"four-byte-test","max_evidence_bytes":4}
+JSON
+printf 'four' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --dry-run --profile profile.json | grep -c '"state":"four"' | mustmatch like "1"
+status=0
+printf 'five!' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --dry-run --profile profile.json >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+printf 'five!' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --dry-run --profile profile.json 2>&1 >/dev/null | mustmatch like "thinkthen: profile four-byte-test allows at most 4 evidence bytes; this request has 5"
+rm profile.json
 ```
 
 Evidence that is empty or holds only white space is a usage error, because a judgment about nothing is a mistake in the pipeline. A question that is blank is refused the same way.

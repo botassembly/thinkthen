@@ -165,16 +165,13 @@ fn every_option_the_old_surface_carried_is_a_usage_error() {
 }
 
 #[test]
-fn every_option_the_configuration_surface_carried_is_a_usage_error() {
-    let cases: [&[&str]; 8] = [
-        &["--profile", "jev"],
-        &["--profile", "site"],
+fn every_remaining_option_the_configuration_surface_carried_is_a_usage_error() {
+    let cases: [&[&str]; 5] = [
         &["--adapter", "systemone"],
         &["--adapter", "chat-logprobs"],
         &["--key-env", "LOCAL_KEY"],
         &["--config", "site.json"],
         &["--url", CLOSED, "--adapter", "systemone", "--model", "m"],
-        &["--dry-run", "--profile", "jev"],
     ];
 
     for arguments in cases {
@@ -358,7 +355,13 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     let long = run(&["decide", "--help"], &[], b"").expect("the compiled binary runs");
 
     let short = String::from_utf8_lossy(&short.stdout);
-    for option in ["--threshold", "--quiet", "--details", "--dry-run"] {
+    for option in [
+        "--threshold",
+        "--quiet",
+        "--details",
+        "--dry-run",
+        "--profile",
+    ] {
         assert!(short.contains(option), "{option} is missing from {short}");
     }
     assert!(short.contains("--url"), "--url is missing from {short}");
@@ -373,6 +376,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
         "--details",
         "--dry-run",
         "--url",
+        "--profile",
         "--model",
         "--record",
         "--replay",
@@ -381,7 +385,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     ] {
         assert!(long.contains(option), "{option} is missing from {long}");
     }
-    for gone in ["--profile", "--adapter", "--key-env", "--config"] {
+    for gone in ["--adapter", "--key-env", "--config"] {
         assert!(!long.contains(gone), "{gone} is still in {long}");
     }
     // The help states the model a run defaults to, and the adapter owns that

@@ -4,7 +4,7 @@ use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::annotate::{GroupAnswer, Judging, check_model};
+use crate::annotate::{GroupAnswer, Judging, PreparedGroup, check_model};
 use crate::core::{ModelName, Reading, Record};
 use crate::engine::annotate_schedule::{
     self as engine_schedule, InputPort, Outcome as RunOutcome, Prepared,
@@ -14,8 +14,7 @@ use crate::failure::Failure;
 use crate::schedule::Output;
 
 struct Work {
-    record: Record,
-    places: Vec<usize>,
+    group: PreparedGroup,
 }
 
 struct Answers {
@@ -45,7 +44,7 @@ where
             thread::spawn(move || read(chunks, &requests, &events));
         },
         |input| prepare(judging, reading, input),
-        &|work: Work| judging.answer_group(reading, &work.record, work.places),
+        &|work: Work| judging.answer_group(work.group),
         |answers, answer| {
             check_model(
                 &mut answers.model,
@@ -99,11 +98,12 @@ fn prepare(
     let work = judging
         .groups()
         .into_iter()
-        .map(|places| Work {
-            record: record.clone(),
-            places,
+        .map(|places| {
+            judging
+                .prepare_group(reading, &record, places)
+                .map(|group| Work { group })
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(Prepared {
         seed: record,
         accumulator: Answers {

@@ -4,7 +4,19 @@ Status: **Settled** for the wire shape, the key, the address, the request, the `
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
 
-A backend is two values: the address and the model. `THINKTHEN_BASE_URL` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. ADR 0010 took the configuration file and the four options that served it out of version one. [roadmap.md](roadmap.md) names each one, says what the file held, and says what would bring it back.
+A backend is an address and a model. `THINKTHEN_BASE_URL` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. An explicit profile may add a stable name and local limits. It never selects either value.
+
+## Explicit profiles and local preflight
+
+Settled by ADR 0032.
+
+`--profile FILE` reads one UTF-8 JSON object with schema `thinkthen.backend-profile/1`. It requires `name` and at least one of `max_evidence_bytes`, `max_request_bytes`, or `max_questions`. The name is nonempty and uses lowercase letters, digits, hyphens, and underscores. Each limit is a positive integer. No other key is accepted.
+
+Evidence bytes are the UTF-8 bytes after field extraction and JSON normalization. Request bytes are the exact bytes the adapter encoded. Questions are the expanded wire questions, so each `tag` label counts once. An exact limit passes. One unit over exits 2 and names the profile, limit, unit, and actual count. The diagnostic repeats no evidence or request bytes.
+
+The engine checks a complete encoded logical request before reading a recording or cache entry, reading the key, or opening a connection. `annotate` checks every group for one record before starting any group. Dry runs perform the same check before printing a plan. Profiles apply equally to live calls, replay, cache, and recording.
+
+The profile estimates no tokens and performs no splitting. A backend whose published limit is only tokens needs a tokenizer or a verified byte ceiling before its file can enforce the limit. `--url`, `THINKTHEN_BASE_URL`, and `--model` still select the backend. A profile contains none of them.
 
 ## The key
 

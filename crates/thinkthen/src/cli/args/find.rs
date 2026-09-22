@@ -46,6 +46,9 @@ pub(crate) struct FindCommon {
     /// The backend base, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
     pub(crate) url: Option<String>,
+    /// Read enforceable backend limits and a calibration name from FILE.
+    #[arg(long, value_name = "FILE")]
+    pub(crate) profile: Option<PathBuf>,
     /// The model named in the request.
     #[arg(
         long,
@@ -89,6 +92,7 @@ impl FindCommon {
             field: self.field.clone(),
             dry_run: self.dry_run,
             url: self.url.clone(),
+            profile: self.profile.clone(),
             model: self.model.clone(),
             record: self.record.clone(),
             replay: self.replay.clone(),

@@ -13,8 +13,11 @@ struct ResolvedSet<'a>(&'a QuestionSet);
 
 impl Serialize for ResolvedSet<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(2))?;
+        let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("version", &1)?;
+        if let Some(profile) = &self.0.profile {
+            map.serialize_entry("profile", profile.as_str())?;
+        }
         map.serialize_entry("questions", &ResolvedQuestions(&self.0.questions))?;
         map.end()
     }

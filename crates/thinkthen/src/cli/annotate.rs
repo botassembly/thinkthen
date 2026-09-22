@@ -9,19 +9,29 @@ use std::time::Duration;
 use crate::core::adapters::built_in;
 use crate::core::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, AnswerOutcome, Backend, FailedValue, Framing, ModelName, Outcome, Plan,
-    PlanDocument, Pointer, QuestionSet, Reading, Record, Reply, RequestMeta, Usage, json_line,
+    AnnotatedValue, AnswerOutcome, Backend, BackendProfile, FailedValue, Framing, ModelName,
+    Outcome, Plan, Pointer, QuestionSet, Reading, Record, Reply, RequestMeta, Usage, json_line,
 };
 
 use crate::args::{AnnotateArguments, Common};
-use crate::asking::ask;
+use crate::asking::ask_prepared;
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::Client;
+use crate::prepared_request::PreparedRequest;
+use crate::profile::{self, Mismatch};
 use crate::recorder::Recorder;
 use crate::schedule::{Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
+mod plan;
+
+use plan::{dry_run, dry_run_record};
+
+#[expect(
+    clippy::too_many_lines,
+    reason = "the command edge keeps validation and mode selection in their observable order"
+)]
 pub(crate) fn run(
     arguments: &AnnotateArguments,
     environment: &Environment,
@@ -53,6 +63,8 @@ pub(crate) fn run(
         environment.base_url(),
         model,
     )?;
+    let profile = profile::read(&arguments.common)?;
+    let mismatch = Mismatch::new(set.profile(), profile.as_ref());
     let reading = reading(&arguments.common)?;
     let source = edge::source(arguments.common.input.as_deref(), input)?;
     if let Some(kind) = table_kind(&arguments.common) {
@@ -62,6 +74,8 @@ pub(crate) fn run(
                 &set,
                 &backend,
                 &reading,
+                profile.as_ref(),
+                &mismatch,
                 rows.next().transpose()?,
                 &mut writer,
             );
@@ -76,6 +90,8 @@ pub(crate) fn run(
             ),
             backend,
             set,
+            profile,
+            mismatch,
         };
         let mut output = Output::Streaming(&mut writer);
         let jobs = arguments.common.jobs.map_or(4, usize::from);
@@ -93,6 +109,8 @@ pub(crate) fn run(
             &set,
             &backend,
             &reading,
+            profile.as_ref(),
+            &mismatch,
             chunks.next().transpose()?,
             &mut writer,
         );
@@ -107,6 +125,8 @@ pub(crate) fn run(
         ),
         backend,
         set,
+        profile,
+        mismatch,
     };
     let mut output = Output::Streaming(&mut writer);
     let jobs = arguments.common.jobs.map_or(4, usize::from);
@@ -200,56 +220,6 @@ fn reading(common: &Common) -> Result<Reading, Failure> {
     Ok(Reading::new(framing(common), fields)?)
 }
 
-fn dry_run(
-    set: &QuestionSet,
-    backend: &Backend,
-    base: &Reading,
-    first: Option<Vec<u8>>,
-    writer: &mut dyn Write,
-) -> Result<ExitCode, Failure> {
-    let Some(bytes) = first else {
-        return Ok(ExitCode::SUCCESS);
-    };
-    let record = base
-        .annotation_record(&bytes)
-        .map_err(|error| Failure::record(error, base.streams()))?;
-    dry_run_record(set, backend, base, Some(record), writer)
-}
-
-fn dry_run_record(
-    set: &QuestionSet,
-    backend: &Backend,
-    base: &Reading,
-    first: Option<Record>,
-    writer: &mut dyn Write,
-) -> Result<ExitCode, Failure> {
-    let Some(record) = first else {
-        return Ok(ExitCode::SUCCESS);
-    };
-    collisions(set, &record)?;
-    let group = set
-        .groups()
-        .into_iter()
-        .next()
-        .ok_or(Failure::Defect("a set has no group"))?;
-    let plan = plan_for(set, &group, backend, base, &record)?;
-    let on = set
-        .questions()
-        .iter()
-        .map(|question| (question.name().to_owned(), question.on().to_vec()))
-        .collect();
-    let document = PlanDocument::of(backend, &plan)
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
-        .questions_on(on);
-    let document = if base.streams() {
-        document.reading(base)
-    } else {
-        document
-    };
-    edge::write_line(writer, &json_line(&document)?)?;
-    Ok(ExitCode::SUCCESS)
-}
-
 pub(crate) struct Judging<'a> {
     common: &'a Common,
     environment: &'a Environment,
@@ -257,6 +227,8 @@ pub(crate) struct Judging<'a> {
     client: Client,
     backend: Backend,
     set: QuestionSet,
+    profile: Option<BackendProfile>,
+    mismatch: Mismatch,
 }
 
 impl Judging<'_> {
@@ -333,7 +305,9 @@ impl Judging<'_> {
                 self.backend.url().clone(),
                 model.ok_or(Failure::Defect("no group reported a model"))?,
                 usage,
-                RequestMeta::new(replayed, requests).with_failed_questions(failed_questions),
+                RequestMeta::new(replayed, requests)
+                    .with_failed_questions(failed_questions)
+                    .with_profile_warning(self.mismatch.warning()),
             );
             json_line(&AnnotateResult::new(
                 record,
@@ -350,26 +324,37 @@ impl Judging<'_> {
             replayed,
             probability: None,
             partial_failure: failed_questions > 0,
+            profile_mismatch: self.mismatch.notice(),
         })
     }
 
-    pub(crate) fn answer_group(
+    pub(crate) fn prepare_group(
         &self,
         base: &Reading,
         record: &Record,
         places: Vec<usize>,
-    ) -> Result<GroupAnswer, Failure> {
+    ) -> Result<PreparedGroup, Failure> {
         let plan = plan_for(&self.set, &places, &self.backend, base, record)?;
-        let answered = ask(
+        let prepared = PreparedRequest::with_profile(&self.backend, &plan, self.profile.as_ref())?;
+        Ok(PreparedGroup {
+            places,
+            plan,
+            prepared,
+        })
+    }
+
+    pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
+        let answered = ask_prepared(
             &self.backend,
-            &plan,
+            &group.plan,
+            group.prepared,
             self.common,
             self.environment,
             &self.recorder,
             &self.client,
         )?;
         Ok(GroupAnswer {
-            places,
+            places: group.places,
             reply: answered.reply,
             digest: answered.request.as_str().to_owned(),
             replayed: answered.replayed,
@@ -382,6 +367,12 @@ pub(crate) struct GroupAnswer {
     pub(crate) reply: Reply,
     pub(crate) digest: String,
     pub(crate) replayed: bool,
+}
+
+pub(crate) struct PreparedGroup {
+    pub(crate) places: Vec<usize>,
+    plan: Plan,
+    prepared: PreparedRequest,
 }
 
 fn collisions(set: &QuestionSet, record: &Record) -> Result<(), Failure> {

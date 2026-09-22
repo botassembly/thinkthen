@@ -10,6 +10,10 @@ use crate::core::reply::{BackendFailure, FailedValue};
 use crate::core::text::{ModelName, Url};
 use crate::core::threshold::Threshold;
 
+mod profile_warning;
+
+pub(crate) use profile_warning::ProfileWarning;
+
 /// The schema string a version one result carries.
 pub(crate) const SCHEMA: &str = "thinkthen.result/1";
 
@@ -52,6 +56,7 @@ pub(crate) struct RequestMeta {
     replayed: bool,
     requests: Vec<String>,
     failed_questions: usize,
+    profile_warning: Option<ProfileWarning>,
 }
 
 impl RequestMeta {
@@ -62,7 +67,14 @@ impl RequestMeta {
             replayed,
             requests,
             failed_questions: 0,
+            profile_warning: None,
         }
+    }
+
+    /// Carry a profile mismatch into detailed metadata.
+    pub(crate) fn with_profile_warning(mut self, warning: Option<ProfileWarning>) -> Self {
+        self.profile_warning = warning;
+        self
     }
 
     /// Carry the number of failed logical questions in one result.
@@ -155,6 +167,8 @@ pub(crate) struct AnnotateMeta {
     replayed: bool,
     requests: Vec<String>,
     failed_questions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile_warning: Option<ProfileWarning>,
 }
 
 impl AnnotateMeta {
@@ -172,6 +186,7 @@ impl AnnotateMeta {
             replayed,
             requests,
             failed_questions,
+            profile_warning,
         } = request_meta;
         Self {
             tool: crate::core::version_line(version),
@@ -182,6 +197,7 @@ impl AnnotateMeta {
             replayed,
             requests,
             failed_questions,
+            profile_warning,
         }
     }
 }
@@ -247,6 +263,8 @@ pub(crate) struct Meta {
     replayed: bool,
     requests: Vec<String>,
     failed_questions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile_warning: Option<ProfileWarning>,
 }
 
 impl Meta {
@@ -272,6 +290,7 @@ impl Meta {
             replayed,
             requests,
             failed_questions: _,
+            profile_warning,
         } = request_meta;
         Self {
             tool: crate::core::version_line(version),
@@ -282,6 +301,7 @@ impl Meta {
             replayed,
             requests,
             failed_questions: 0,
+            profile_warning,
         }
     }
 }

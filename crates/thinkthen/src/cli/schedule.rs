@@ -12,6 +12,7 @@ use crate::engine::schedule::{
     self as engine_schedule, Completed, Input, InputPort, Outcome as RunOutcome,
 };
 use crate::failure::Failure;
+use crate::profile::Mismatch;
 
 const DEFAULT_JOBS: usize = 4;
 
@@ -24,6 +25,7 @@ pub(crate) struct Judged {
     pub(crate) replayed: bool,
     pub(crate) probability: Option<f64>,
     pub(crate) partial_failure: bool,
+    pub(crate) profile_mismatch: Option<Mismatch>,
 }
 
 impl fmt::Debug for Judged {
@@ -41,6 +43,7 @@ impl fmt::Debug for Judged {
             .field("replayed", &self.replayed)
             .field("probability", &self.probability)
             .field("partial_failure", &self.partial_failure)
+            .field("profile_warning", &self.profile_mismatch.is_some())
             .finish()
     }
 }
@@ -71,10 +74,15 @@ impl fmt::Debug for Output<'_> {
 impl Output<'_> {
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
         match self {
-            Self::Streaming(writer) => match judged.printed.as_deref() {
-                Some(line) => edge::write_line(&mut **writer, line),
-                None => Ok(true),
-            },
+            Self::Streaming(writer) => {
+                if let Some(mismatch) = &judged.profile_mismatch {
+                    mismatch.print_once()?;
+                }
+                match judged.printed.as_deref() {
+                    Some(line) => edge::write_line(&mut **writer, line),
+                    None => Ok(true),
+                }
+            }
             Self::Ordered { held, .. } => {
                 held.push(judged);
                 Ok(true)
@@ -98,6 +106,12 @@ impl Output<'_> {
             let Some(line) = held.get(place).and_then(|judged| judged.printed.as_deref()) else {
                 continue;
             };
+            if let Some(mismatch) = held
+                .get(place)
+                .and_then(|judged| judged.profile_mismatch.as_ref())
+            {
+                mismatch.print_once()?;
+            }
             if !edge::write_line(&mut **writer, line)? {
                 return Ok(());
             }

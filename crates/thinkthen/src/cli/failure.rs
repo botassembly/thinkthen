@@ -1,39 +1,22 @@
 //! Every way the command fails, mapped once to what the user is told.
 
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::core::adapters::built_in::DecodeError;
 use crate::core::{
-    BackendError, PointerError, QuestionFileError, QuestionSetError, ReadingError, RecordError,
-    RenderError, Source,
+    BackendError, PointerError, ProfileError, ProfileLimit, QuestionFileError, QuestionSetError,
+    ReadingError, RecordError, RenderError, Source,
 };
 
 use crate::engine::error::Error as EngineError;
 use crate::engine::error::TransportKind;
 use crate::table;
 
-/// The phrases are fixed text written here. A backend can quote the evidence
-/// back in an error body, so nothing a backend sent ever reaches a message.
-const PHRASES: [(u16, &str); 8] = [
-    (
-        400,
-        "the backend refused the request; check --model and the request size",
-    ),
-    (401, "the key was refused"),
-    (402, "the account has no credit"),
-    (403, "the key may not use this model or address"),
-    (404, "nothing answers at this address"),
-    (
-        422,
-        "the backend refused the request as malformed or too large",
-    ),
-    (429, "the backend's rate limit was reached"),
-    (
-        500,
-        "the backend failed after the allowed attempts; try again later or change --max-retries",
-    ),
-];
+mod status;
+
+use status::said;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
@@ -45,6 +28,12 @@ const UNNAMED: &str = "defect: a usage error with no sentence";
 pub(crate) enum Failure {
     /// The flags and the environment name no backend.
     Backend(BackendError),
+    /// The selected profile file could not be opened.
+    OpenProfile { path: PathBuf, error: io::Error },
+    /// The selected profile file was refused.
+    Profile { path: PathBuf, error: ProfileError },
+    /// A prepared request exceeds an explicit profile limit.
+    ProfileLimit(ProfileLimit),
     /// Two views of one answer were asked for at once.
     QuietWithDetails,
     /// A bare label was asked for beside another view of the same answer.
@@ -319,6 +308,26 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
 
 fn special_failure(failure: &Failure) -> Option<(u8, String)> {
     Some(match failure {
+        Failure::OpenProfile { path, error } => (
+            5,
+            format!(
+                "the profile file `{}` could not be opened: {error}",
+                path.display()
+            ),
+        ),
+        Failure::Profile { path, error } => {
+            (5, format!("the profile file `{}` {error}", path.display()))
+        }
+        Failure::ProfileLimit(limit) => (
+            2,
+            format!(
+                "profile {} allows at most {} {}; this request has {}",
+                limit.name.as_str(),
+                limit.limit,
+                limit.kind.words(),
+                limit.actual
+            ),
+        ),
         Failure::QuestionSet(error) => (5, error.to_string()),
         Failure::OpenQuestionSet(error) => {
             (5, format!("the question set could not be opened: {error}"))
@@ -416,15 +425,6 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
     })
 }
 
-/// Name the status the backend answered with, plus its fixed phrase when it has one.
-fn said(status: u16) -> String {
-    let answered = format!("the backend answered with status {status}");
-    match PHRASES.iter().find(|(code, _)| *code == status) {
-        Some((_, phrase)) => format!("{answered}: {phrase}"),
-        None => answered,
-    }
-}
-
 const fn transport_message(kind: TransportKind) -> &'static str {
     match kind {
         TransportKind::Timeout => "the backend timed out; increase --timeout or try again",
@@ -496,6 +496,7 @@ impl From<EngineError> for Failure {
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
             EngineError::Defect(message) => Self::Defect(message),
             EngineError::Usage(message) => Self::Usage(message),
+            EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
             EngineError::Cancelled => {
                 Self::Defect("an unavailable cancel token reached the command")
             }

@@ -89,6 +89,12 @@ pub(crate) struct Common {
     #[arg(long, value_name = "URL")]
     pub(crate) url: Option<String>,
 
+    /// Read enforceable backend limits and a calibration name from FILE.
+    ///
+    /// A profile never selects an address, model, key, adapter, or cache.
+    #[arg(long, value_name = "FILE")]
+    pub(crate) profile: Option<PathBuf>,
+
     // The default is the adapter's, so the sentence is built from the constant
     // rather than written again here. A doc comment cannot read a constant, so
     // clap is given the two texts as expressions instead.

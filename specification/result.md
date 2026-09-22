@@ -31,7 +31,7 @@ Every value is compact and sits on one line, so one answer is also one record fo
 - `question` names the question kind and the text the model received. `filter` and `rank` ask a `decide` question, so their `question.verb` is `decide`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
-- `meta` carries the run. Every field is always present, and `usage` alone may be absent.
+- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present.
 
 ## A detailed result keeps everything
 
@@ -81,7 +81,7 @@ The canonical `find` question is compact JSON with keys in this order: `{"verb":
 
 ## `meta`
 
-ADR 0010 dropped `profile` and `adapter` from this object. Profiles left version one, and one wire shape leaves nothing for an adapter name to tell a reader apart from.
+ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the explicitly selected run profile differ. Its value is `{"calibrated":NAME,"running":NAME}`. The command prints the same mismatch once on standard error at the first successful logical result. `filter` still warns when it rejects every result and prints no records. A failure on the first logical record warns nobody, even when a later parallel worker completed. A missing name on either side and equal names add no field. The run profile itself stays out of metadata because the field records a warning, not backend selection.
 
 | Field | Holds |
 | --- | --- |
@@ -93,6 +93,7 @@ ADR 0010 dropped `profile` and `adapter` from this object. Profiles left version
 | `replayed` | `true` when a recording answered rather than a backend |
 | `requests` | The recording digests of the logical requests that produced the result, in construction order. Retries add nothing, and equal logical requests keep separate positions |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
+| `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
 
 ## Record rows
 

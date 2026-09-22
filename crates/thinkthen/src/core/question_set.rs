@@ -5,6 +5,7 @@ use sha2::{Digest as _, Sha256};
 use std::fmt;
 use thiserror::Error;
 
+use crate::core::backend_profile::{ProfileError, ProfileName};
 use crate::core::digest::Canonical;
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
@@ -134,6 +135,7 @@ impl NamedQuestion {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct QuestionSet {
     questions: Vec<NamedQuestion>,
+    profile: Option<ProfileName>,
 }
 
 impl QuestionSet {
@@ -147,7 +149,7 @@ impl QuestionSet {
             return Err(QuestionSetError::MissingQuestions);
         }
         for (key, _) in members {
-            if !["version", "threshold", "questions"].contains(&key.as_str()) {
+            if !["version", "threshold", "profile", "questions"].contains(&key.as_str()) {
                 return Err(QuestionSetError::UnknownKey(key.clone()));
             }
         }
@@ -161,6 +163,7 @@ impl QuestionSet {
             }
         }
         let inherited = threshold(&value)?;
+        let profile = profile(&value)?;
         let Some(Json::Object(entries)) = value.member("questions") else {
             return Err(QuestionSetError::Shape {
                 path: "questions".to_owned(),
@@ -185,9 +188,12 @@ impl QuestionSet {
                     wanted: "is one question object",
                 });
             };
-            if fields.iter().any(|(key, _)| key == "model") {
+            if let Some((key, _)) = fields
+                .iter()
+                .find(|(key, _)| matches!(key.as_str(), "model" | "profile"))
+            {
                 return Err(QuestionSetError::UnknownKey(format!(
-                    "questions.{name}.model"
+                    "questions.{name}.{key}"
                 )));
             }
             let written = json_line(held).map_err(|_| QuestionSetError::Render)?;
@@ -217,13 +223,18 @@ impl QuestionSet {
                 on,
             });
         }
-        Ok(Self { questions })
+        Ok(Self { questions, profile })
     }
 
     /// Read the resolved questions in file order.
     #[must_use]
     pub(crate) fn questions(&self) -> &[NamedQuestion] {
         &self.questions
+    }
+
+    /// The profile this set's thresholds were calibrated under, when named.
+    pub(crate) const fn profile(&self) -> Option<&ProfileName> {
+        self.profile.as_ref()
     }
 
     /// Group question indexes by identical normalized pointer lists.
@@ -259,6 +270,25 @@ impl QuestionSet {
     #[cfg(test)]
     fn resolved_json(&self) -> Result<String, RenderError> {
         resolved::json(self)
+    }
+}
+
+fn profile(value: &Json) -> Result<Option<ProfileName>, QuestionSetError> {
+    match value.member("profile") {
+        None => Ok(None),
+        Some(Json::String(name)) => ProfileName::new(name)
+            .map(Some)
+            .map_err(|error| match error {
+                ProfileError::Name => QuestionSetError::Shape {
+                    path: "profile".to_owned(),
+                    wanted: "is a safe profile name",
+                },
+                _ => QuestionSetError::Render,
+            }),
+        Some(_) => Err(QuestionSetError::Shape {
+            path: "profile".to_owned(),
+            wanted: "is a safe profile name",
+        }),
     }
 }
 
@@ -346,8 +376,11 @@ fn pointer_clash(name: &str, pointers: &[Pointer]) -> Result<(), QuestionSetErro
 struct CanonicalSet<'a>(&'a QuestionSet);
 impl Serialize for CanonicalSet<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(2))?;
+        let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("version", &1)?;
+        if let Some(profile) = &self.0.profile {
+            map.serialize_entry("profile", profile.as_str())?;
+        }
         map.serialize_entry("questions", &CanonicalQuestions(&self.0.questions))?;
         map.end()
     }

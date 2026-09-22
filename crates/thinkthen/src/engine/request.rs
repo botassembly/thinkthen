@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use crate::core::adapters::built_in;
-use crate::core::{Backend, Plan};
+use crate::core::{Backend, BackendProfile, Plan};
 use crate::engine::cache_lock;
 use crate::engine::error::Error;
 use crate::engine::http::{Client, Exchange, Key};
@@ -39,9 +39,10 @@ pub(crate) struct Transport<'a> {
     pub(crate) retry_wait: Duration,
 }
 
-pub(crate) fn ask<E>(
+pub(crate) fn ask_profile<E>(
     backend: &Backend,
     plan: &Plan,
+    profile: Option<&BackendProfile>,
     recorder: &Recorder,
     transport: Transport<'_>,
     key: impl FnOnce() -> Result<Key, E>,
@@ -49,7 +50,8 @@ pub(crate) fn ask<E>(
 where
     E: From<Error>,
 {
-    ask_with(backend, plan, recorder, key, |prepared, key| {
+    let prepared = PreparedRequest::with_profile(backend, plan, profile).map_err(E::from)?;
+    ask_prepared(backend, plan, prepared, recorder, key, |prepared, key| {
         transport
             .client
             .post(&Exchange {
@@ -63,6 +65,7 @@ where
     })
 }
 
+#[cfg(test)]
 pub(crate) fn ask_with<E>(
     backend: &Backend,
     plan: &Plan,
@@ -74,6 +77,20 @@ where
     E: From<Error>,
 {
     let prepared = PreparedRequest::new(backend, plan).map_err(E::from)?;
+    ask_prepared(backend, plan, prepared, recorder, key, send)
+}
+
+pub(crate) fn ask_prepared<E>(
+    backend: &Backend,
+    plan: &Plan,
+    prepared: PreparedRequest,
+    recorder: &Recorder,
+    key: impl FnOnce() -> Result<Key, E>,
+    send: impl FnOnce(&PreparedRequest, &Key) -> Result<Vec<u8>, E>,
+) -> Result<Answered, E>
+where
+    E: From<Error>,
+{
     let recorded = prepared.recorded(backend);
     let (reply, replayed) = cache_lock::coalesce(
         || {

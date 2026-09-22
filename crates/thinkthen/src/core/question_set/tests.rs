@@ -14,6 +14,26 @@ fn pinned_set_has_the_contract_digest() {
 }
 
 #[test]
+fn one_top_level_profile_changes_the_set_digest_and_nested_profiles_are_refused() {
+    let plain = QuestionSet::parse(r#"{"version":1,"questions":{"refund":{"decide":"Refund?"}}}"#)
+        .expect("plain set");
+    let named = QuestionSet::parse(
+        r#"{"version":1,"profile":"jev","questions":{"refund":{"decide":"Refund?"}}}"#,
+    )
+    .expect("profiled set");
+    assert_eq!(named.profile().expect("profile").as_str(), "jev");
+    assert_ne!(
+        plain.sha256().expect("digest"),
+        named.sha256().expect("digest")
+    );
+    let nested = QuestionSet::parse(
+        r#"{"version":1,"questions":{"refund":{"decide":"Refund?","profile":"jev"}}}"#,
+    )
+    .expect_err("nested profile");
+    assert!(nested.to_string().contains("questions.refund.profile"));
+}
+
+#[test]
 fn grammar_errors_name_the_full_path() {
     let cases = [
         (

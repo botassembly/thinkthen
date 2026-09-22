@@ -18,7 +18,7 @@ mod engine;
 mod cli;
 
 #[cfg(feature = "cli")]
-pub(crate) use cli::{annotate, args, asking, edge, failure, judge, table};
+pub(crate) use cli::{annotate, args, asking, edge, failure, judge, profile, table};
 #[cfg(feature = "cli")]
 pub(crate) use cli::{annotate_schedule, schedule};
 pub(crate) use engine::{http, prepared_request, recorder};
