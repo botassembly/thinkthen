@@ -25,6 +25,8 @@ Ian subsequently authorized creating bounded tickets within this plan as each st
 
 Ticket 0067 addresses wording-list items 3 and 4: the eight operation-oriented command introductions and teaching order. It keeps short-help safety disclosures, long-help result shapes, and the examples from 0066. Independent design/code reviews and the coordinator's full local ladder passed. Hosted gate run `35745327707` passed on `be078b7`, which landed on main and was pushed. The next command work must reconcile the outcome-word ruling and verify the remaining vocabulary/diagnostic items rather than assume all forty still fail. Ticket 0065 is now landed at `ba60f04`, after integrated review repaired a matching-marker directory-sync gap and both local and hosted gates passed. The 0065 record holds the proof; the prerequisite for shared settings/cache work is cleared. The planned metadata rename may proceed independently of the remaining outcome-vocabulary ruling, without changing answer semantics.
 
+Ticket 0068 implements the planned `meta.cached` rename under ADR 0036. Provenance semantics, `--replay`, request counts, recording bytes, and historical measurements are unchanged; offline readers accept the legacy key only when `cached` is absent. Design/code review and the full sequential local ladder passed. Hosted verification and landing are pending. Marketing must refresh detailed-output captures; the library handoff records the canonical field for real-engine integration. Next, bound the private refused-connection fast-failure slice under ADR 0017 before taking on process-wide width, cancellation/deadlines, and fork/signal work. Remaining wording decisions stay separately open.
+
 ## Where things stand
 
 - Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).
@@ -74,7 +76,7 @@ Tickets 0061 through 0063 complete recording durability, the bounded default cac
 - Lock files stay after their entries land.
 - Landed through ticket 0064: `Retry-After` and exponential waits are bounded by `--timeout`; a clean close before headers fails promptly; a retried send is visible in detailed output; and the usage counter counts every attempt that left the machine.
 - A run stopped by Ctrl-C prints its stopped-at line.
-- Ask the product side before freezing the field name `meta.replayed`. Ian dislikes the word. The product side proposes `meta.cached`.
+- ADR 0036 and ticket 0068 settle the planned `meta.cached` spelling from the approved handoff. The name changes, the stored-answer meaning does not; `--replay` keeps its name.
 
 **A5. The probability tolerance, and shared instructions packed once per request.** Proposed ticket 8. It changes request bytes and the cost record, so it lands before `recognize` makes any cost claim.
 

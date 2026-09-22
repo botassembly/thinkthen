@@ -26,7 +26,7 @@ Every result is compact and sits on one line, so one answer is also one record f
 `--details` prints this object in place of the bare value.
 
 ```json
-{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Does this ask for a refund?"},"answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f...88","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Does this ask for a refund?"},"answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f...88","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 - `value` is the bare judgment. For `filter --details`, it is the cut's boolean; `filter` keeps the record when that boolean is true.
@@ -48,7 +48,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 **`choice`**, from `choose`.
 
 ```json
-{"schema":"thinkthen.result/1","value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02},"confidence":0.91},"threshold":0.8,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"5d5f...25","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02},"confidence":0.91},"threshold":0.8,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"5d5f...25","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 `answer.pick` is the option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the label that cleared the cut.
@@ -58,7 +58,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 **`tag`**, from `tag`.
 
 ```json
-{"schema":"thinkthen.result/1","value":["billing"],"question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]},"answer":{"kind":"tag","probabilities":{"billing":0.91,"urgent":0.22}},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"00b0...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","value":["billing"],"question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]},"answer":{"kind":"tag","probabilities":{"billing":0.91,"urgent":0.22}},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"00b0...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 `answer.probabilities` holds one entry per label in the order sent. `value` keeps every label whose probability reaches the one cut, in that order. An empty array is a complete successful answer.
@@ -66,7 +66,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 **`score`**, from `score`.
 
 ```json
-{"schema":"thinkthen.result/1","value":1.6,"question":{"verb":"score","text":"How much disruption does this report?","levels":["None.","Work continues with a workaround.","Work is blocked."]},"answer":{"kind":"score","level":"Work is blocked.","probabilities":{"None.":0.05,"Work continues with a workaround.":0.30,"Work is blocked.":0.65}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"005c...f5","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","value":1.6,"question":{"verb":"score","text":"How much disruption does this report?","levels":["None.","Work continues with a workaround.","Work is blocked."]},"answer":{"kind":"score","level":"Work is blocked.","probabilities":{"None.":0.05,"Work continues with a workaround.":0.30,"Work is blocked.":0.65}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"005c...f5","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 `answer.level` is the level with the highest probability. `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first. `value` is the weighted position on those levels, and [score.md](score.md) gives the arithmetic.
@@ -74,7 +74,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 **`find`**, from `find`.
 
 ```json
-{"schema":"thinkthen.result/1","value":"Refunds take five days.","question":{"verb":"find","text":"When does a refund arrive?","none":true},"answer":{"kind":"find","pick":"u002","probabilities":{"u001":0.01,"u002":0.98,"none":0.01}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"1f2a...9c","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","value":"Refunds take five days.","question":{"verb":"find","text":"When does a refund arrive?","none":true},"answer":{"kind":"find","pick":"u002","probabilities":{"u001":0.01,"u002":0.98,"none":0.01}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"1f2a...9c","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 `answer.pick` names the first wire choice at the highest probability. `answer.probabilities` follows unit order and puts `none` last. `value` is the selected original unit. A strict `none` lead or any top tie involving `none` makes `value` null. A tie among real units selects the first input unit.
@@ -82,6 +82,8 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 The canonical `find` question is compact JSON with keys in this order: `{"verb":"find","text":TEXT,"none":BOOL}`. Generated unit ids, evidence, and unit count are absent. For `Which unit answers?` without `--none`, the canonical bytes are `{"verb":"find","text":"Which unit answers?","none":false}` and their SHA-256 is `01456d0e17c98c801c2ad9b2a9b56e47aeb33ff0eacde8d44bd6f55e4d0ab9ef`. Question text or the `none` policy changes the digest; changing only the units does not.
 
 ## `meta`
+
+ADR 0036 names the stored-answer field `cached`, replacing `replayed` without changing its meaning. New results emit only `cached`. The cost and trials readers still accept historical rows with `replayed`; a present `cached` field takes precedence even when false. Explicit read-only replay also reports `cached: true`.
 
 ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the explicitly selected run profile differ. Its value is `{"calibrated":NAME,"running":NAME}`. The command prints the same mismatch once on standard error at the first successful logical result. `filter` still warns when it rejects every result and prints no records. A failure on the first logical record warns nobody, even when a later parallel worker completed. A missing name on either side and equal names add no field. The run profile itself stays out of metadata because the field records a warning, not backend selection.
 
@@ -93,7 +95,7 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 | `model` | The model that answered, as the backend reported it |
 | `usage` | The token counts the backend reported. Absent when the backend reports none |
 | `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Retries add one each |
-| `replayed` | `true` when a recording answered rather than a backend |
+| `cached` | `true` when the answer came entirely from stored exchanges — a recording or a cache — rather than a live backend |
 | `requests` | The recording digests of the logical requests that produced the result, in construction order. Retries add nothing, and equal logical requests keep separate positions |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
@@ -109,13 +111,13 @@ The default record row for `decide`, `choose`, `tag`, and `score` keeps the pars
 Under `--details`, the full result object also carries `input`, the original record. `input` holds the whole record, including parts that were never sent. On `filter` and `rank`, `--details` prints these objects for the same records in the same order that the default view would have taken. `filter --details` still prints only kept records.
 
 ```json
-{"schema":"thinkthen.result/1","value":true,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this report a payment failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","value":true,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this report a payment failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 The preceding row is a `decide --details` example. A ranked detailed row keeps the same complete shape, with `value` and `threshold` both `null`:
 
 ```json
-{"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 ## `annotate`
@@ -123,13 +125,13 @@ The preceding row is a `decide --details` example. A ranked detailed row keeps t
 `annotate --details` prints `schema`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`.
 
 ```json
-{"schema":"thinkthen.result/1","input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":{"unresolved":true,"kind":"bug"},"answers":{"unresolved":{"value":true,"question":{"verb":"decide","text":"Is this still unresolved?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":"0.1:0.9","request":"6b1f...c4"},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8,"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"]}}
+{"schema":"thinkthen.result/1","input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":{"unresolved":true,"kind":"bug"},"answers":{"unresolved":{"value":true,"question":{"verb":"decide","text":"Is this still unresolved?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":"0.1:0.9","request":"6b1f...c4"},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8,"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"cached":false,"requests":["6b1f...c4"]}}
 ```
 
 Each successful entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints. A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. Its detailed entry carries `question`, `failure`, and `request`, and omits `value`, `answer`, and `threshold`. The closed causes are `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. A failed `tag` counts once even when one of its wire members failed. `null` remains a valid not sure answer.
 
 ```json
-{"schema":"thinkthen.result/1","input":"one note","value":{"ready":true,"kind":{"failed":{"kind":"backend","cause":"missing_probability"}}},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Is this ready?"},"answer":{"kind":"yes_no","probability":0.91},"threshold":0.5,"request":"6b1f...c4"},"kind":{"question":{"verb":"choose","text":"Which kind?","options":["bug","other"]},"failure":{"kind":"backend","cause":"missing_probability"},"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"replayed":false,"requests":["6b1f...c4"],"failed_questions":1}}
+{"schema":"thinkthen.result/1","input":"one note","value":{"ready":true,"kind":{"failed":{"kind":"backend","cause":"missing_probability"}}},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Is this ready?"},"answer":{"kind":"yes_no","probability":0.91},"threshold":0.5,"request":"6b1f...c4"},"kind":{"question":{"verb":"choose","text":"Which kind?","options":["bug","other"]},"failure":{"kind":"backend","cause":"missing_probability"},"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":1}}
 ```
 
 Settled by ADR 0008 item 3 and replaced in part by ADR 0027. `meta.questions_sha256` is the digest of the resolved canonical question set, so spacing, its path, and runtime backend settings do not change it. Each answer carries `request`, the digest that also names the recording entry. Two answers that rode in one request carry the same digest. `meta.requests` lists every group request in question-set group order, even when concurrent replies finish in another order.

@@ -6,6 +6,10 @@ Keep working in your own worktree. Leave main and ticket 0065 to their owners. D
 
 Progress checked on resumption, 2026-09-22: `surfaces` at `7fdb1fa` commits the language lane's report in `sdlc/records/2026-09-21-punch-list-report.md`. Ruby's extra probability calls and JSON re-parsing are fixed; ownership tests and parser-invalid fixtures are committed. Six scalar loops await production bulk entries. The original punch list below remains the acceptance checklist, not a request to repeat those fixes. Database and packaging work remains with its active owners, and none of these stand-in checks proves the real-engine swap.
 
+## Integration update: cached metadata
+
+Ticket 0068 and ADR 0036 establish `meta.cached` as the detailed-output name, with no emitted `meta.replayed` alias. Its meaning is unchanged: all contributing exchanges came from storage, including explicit replay; any live annotation group makes it false. Bare values, request counts, counters, recording bytes, and `--replay` do not change. The real-engine swap should consume this canonical name. Historical-row readers on main retain legacy input compatibility. This notice requests no competing edits to your active worktree and no second implementation in the stand-in.
+
 ## The boundary
 
 One Rust engine owns parsing, validation, question construction, answer interpretation, scheduling, retries, cache, counters, recognition, and relations. A binding converts arguments, manages host lifetimes and interrupts, calls Rust, and presents the result. Native adapter code may construct host objects and columns; it must not become another scheduler or implement another answer rule.

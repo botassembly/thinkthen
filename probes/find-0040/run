@@ -67,7 +67,9 @@ find_one() {
 	0 | 3) ;;
 	*) stop "$find_case" "$find_policy" "$find_status" ;;
 	esac
-	python3 fixture.py find-row "$find_case" "$find_policy" "$scratch/result" \
+	jq -c -f "$probe/stored-result.jq" "$scratch/result" >"$scratch/legacy-result" ||
+		stop "$find_case" "$find_policy-normalize" 2
+	python3 fixture.py find-row "$find_case" "$find_policy" "$scratch/legacy-result" \
 		>>"$find_rows" || stop "$find_case" "$find_policy-result" 2
 }
 
@@ -80,7 +82,9 @@ rank_one() {
 		--url "$base" --cache "$cache" --max-retries 0 \
 		<"$scratch/rank-input" >"$scratch/result" 2>"$scratch/error" && rank_status=0 || rank_status=$?
 	[ "$rank_status" = 0 ] || stop "$rank_case" rank "$rank_status"
-	python3 fixture.py rank-row "$rank_case" "$scratch/result" \
+	jq -c -f "$probe/stored-result.jq" "$scratch/result" >"$scratch/legacy-result" ||
+		stop "$rank_case" rank-normalize 2
+	python3 fixture.py rank-row "$rank_case" "$scratch/legacy-result" \
 		>>"$rank_rows" || stop "$rank_case" rank-result 2
 }
 

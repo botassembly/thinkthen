@@ -27,15 +27,18 @@ pub(crate) fn normalized_details(output: &Output) -> io::Result<(String, bool, u
         .map_err(|_| io::Error::other("requests_sent is not an integer"))?;
     details.replace_range(sent_value..sent_end, "<requests_sent>");
 
-    let marker = r#""replayed":"#;
+    if details.matches(r#""replayed":"#).count() != 0 {
+        return Err(io::Error::other("details carry the legacy replayed name"));
+    }
+    let marker = r#""cached":"#;
     if details.matches(marker).count() != 1 {
-        return Err(io::Error::other("details do not carry one replayed field"));
+        return Err(io::Error::other("details do not carry one cached field"));
     }
     let start = details
         .find(marker)
-        .ok_or_else(|| io::Error::other("details carry no replayed field"))?;
+        .ok_or_else(|| io::Error::other("details carry no cached field"))?;
     if start <= meta {
-        return Err(io::Error::other("replayed does not belong to meta"));
+        return Err(io::Error::other("cached does not belong to meta"));
     }
     let value = start + marker.len();
     let (replayed, end) = if details[value..].starts_with("true") {
@@ -43,8 +46,8 @@ pub(crate) fn normalized_details(output: &Output) -> io::Result<(String, bool, u
     } else if details[value..].starts_with("false") {
         (false, value + 5)
     } else {
-        return Err(io::Error::other("replayed is not a boolean"));
+        return Err(io::Error::other("cached is not a boolean"));
     };
-    details.replace_range(value..end, "<replayed>");
+    details.replace_range(value..end, "<cached>");
     Ok((details, replayed, requests_sent))
 }

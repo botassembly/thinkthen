@@ -11,7 +11,10 @@
 #   - Probabilities are averaged before the saved rule is applied again. A
 #     derived row describes that average and never claims to be one call.
 #   - Input, question, threshold, answer kind, and stable run facts must agree
-#     within a case. Usage and replay state may differ.
+#     within a case. Usage and stored provenance may differ.
+#   - Stored provenance is `meta.cached`; rows written before the rename carry
+#     it as `meta.replayed`, read only when `cached` is absent. A present
+#     `cached` must be a boolean and wins even when false.
 #   - Tag, annotate, and find need other grouping rules and are refused.
 #   - Probability means remain unrounded. A score value alone is rounded to
 #     twelve decimal places, matching the product.
@@ -60,6 +63,8 @@ def valid_probabilities:
     (.question.levels | valid_names(2; 10))
     and distribution_complete(.question.levels)
   end;
+
+def stored: if .meta | has("cached") then .meta.cached else .meta.replayed end;
 
 def stable_facts:
   {schema, input, question, threshold, kind:.answer.kind,
@@ -132,8 +137,8 @@ def derive($rows):
   | {schema:"thinkthen.trials/1", input:$first.input, value:$derived.value,
      question:$first.question, answer:$derived.answer, threshold:$first.threshold,
      trials:{count:($rows | length),
-             live:([$rows[] | select(.meta.replayed | not)] | length),
-             replayed:([$rows[] | select(.meta.replayed)] | length)},
+             live:([$rows[] | select(stored | not)] | length),
+             replayed:([$rows[] | select(stored)] | length)},
      meta:{tool:$first.meta.tool, question_sha256:$first.meta.question_sha256,
            url:$first.meta.url, model:$first.meta.model}};
 
@@ -165,7 +170,7 @@ else . end
            and (.meta.model? | type) == "string"
            and (.meta.question_sha256? | type) == "string"
            and (.meta.question_sha256 | test("\\A[0-9a-f]{64}\\z"))
-           and (.meta.replayed? | type) == "boolean") | not
+           and (stored | type) == "boolean") | not
   then error("trials: every row must carry valid metadata")
   elif ([$rows[].answer.kind] | unique | length) > 1
   then error("trials: one input must carry one answer kind")

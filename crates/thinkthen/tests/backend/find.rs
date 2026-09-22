@@ -68,7 +68,7 @@ fn a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader() {
     let row = String::from_utf8_lossy(&output.stdout);
     assert!(row.starts_with(r#"{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which unit answers?","none":true},"answer":{"kind":"find","pick":"u001","probabilities":{"u001":0.5,"u002":0.0,"none":0.5}},"threshold":null,"meta":{"tool":"thinkthen 0.0.1","question_sha256":"#), "{row}");
     assert!(
-        row.contains(r#""requests_sent":1,"replayed":false,"requests":[""#),
+        row.contains(r#""requests_sent":1,"cached":false,"requests":[""#),
         "{row}"
     );
 }
@@ -135,7 +135,7 @@ fn cache_records_once_and_then_replays_without_a_key_or_second_request() {
     assert_eq!(
         first
             .replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
-            .replace(r#""replayed":false"#, r#""replayed":true"#),
+            .replace(r#""cached":false"#, r#""cached":true"#),
         second
     );
     assert_eq!(listener.requests().len(), 1);

@@ -156,10 +156,10 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
     let replayed = String::from_utf8(output.stdout).expect("a result is text");
     assert_eq!(
         live.replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
-            .replace(r#""replayed":false"#, r#""replayed":true"#),
+            .replace(r#""cached":false"#, r#""cached":true"#),
         replayed
     );
-    assert!(live.contains(r#""replayed":false"#), "{live}");
+    assert!(live.contains(r#""cached":false"#), "{live}");
 }
 
 #[test]
@@ -188,7 +188,7 @@ fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
     let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(printed.contains(r#""replayed":true"#), "{printed}");
+    assert!(printed.contains(r#""cached":true"#), "{printed}");
     assert!(
         printed.contains(r#""url":"https://api.typesafe.ai/v1/systemone""#),
         "{printed}"
@@ -199,7 +199,7 @@ fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
 
 /// `meta`, pinned field by field in the order it prints them.
 #[test]
-fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
+fn meta_holds_the_url_the_model_the_usage_and_the_cached_flag() {
     let folder = folder("meta");
     let name = plant(&folder, ANSWERED).expect("an entry the default address answers");
     assert!(name.ends_with(".json"), "{name}");
@@ -225,7 +225,7 @@ fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
             r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
             r#""url":"https://api.typesafe.ai/v1/systemone","#,
             r#""model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"#,
-            r#""requests_sent":0,"replayed":true,"requests":[""#,
+            r#""requests_sent":0,"cached":true,"requests":[""#,
         ),
         request,
         r#""],"failed_questions":0}"#,
@@ -357,7 +357,7 @@ fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
         let output = decide(listener.base(), &both, KEY).expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(0), "run {run}");
         let printed = String::from_utf8_lossy(&output.stdout);
-        let replayed = format!(r#""replayed":{}"#, run == 1);
+        let replayed = format!(r#""cached":{}"#, run == 1);
         assert!(printed.contains(&replayed), "run {run}: {printed}");
         let requests_sent = format!(r#""requests_sent":{}"#, usize::from(run == 0));
         assert!(printed.contains(&requests_sent), "run {run}: {printed}");
@@ -525,7 +525,7 @@ fn cache_is_the_two_options_on_one_folder_and_stands_beside_neither() {
         decide(listener.base(), &["--cache", &named, "--details"], None).expect("the binary runs");
     assert_eq!(output.status.code(), Some(0));
     let row = String::from_utf8_lossy(&output.stdout);
-    assert!(row.contains(r#""replayed":true"#), "{row}");
+    assert!(row.contains(r#""cached":true"#), "{row}");
     assert!(listener.requests().is_empty(), "a cached run asks nothing");
 
     for beside in [["--record", &named], ["--replay", &named]] {

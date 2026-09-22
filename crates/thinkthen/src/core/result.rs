@@ -173,7 +173,7 @@ pub(crate) struct AnnotateMeta {
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
     requests_sent: u64,
-    replayed: bool,
+    cached: bool,
     requests: Vec<String>,
     failed_questions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -205,7 +205,7 @@ impl AnnotateMeta {
             model,
             usage,
             requests_sent,
-            replayed,
+            cached: replayed,
             requests,
             failed_questions,
             profile_warning,
@@ -280,7 +280,7 @@ pub(crate) struct Meta {
     #[serde(skip_serializing_if = "Option::is_none")]
     usage: Option<Usage>,
     requests_sent: u64,
-    replayed: bool,
+    cached: bool,
     requests: Vec<String>,
     failed_questions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -315,7 +315,7 @@ impl Meta {
             model,
             usage,
             requests_sent,
-            replayed,
+            cached: replayed,
             requests,
             failed_questions: 0,
             profile_warning,
@@ -394,7 +394,7 @@ mod tests {
         r#""meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
         r#""url":"https://api.typesafe.ai/v1/systemone","#,
         r#""model":"jev-1.13.0","#,
-        r#""usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"replayed":false,"#,
+        r#""usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"#,
         r#""requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}}"#,
     );
 
@@ -466,7 +466,7 @@ mod tests {
             concat!(
                 r#"{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
                 r#""url":"http://127.0.0.1:8080/v1/systemone","#,
-                r#""model":"local-1","requests_sent":0,"replayed":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}"#,
+                r#""model":"local-1","requests_sent":0,"cached":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}"#,
             )
         );
     }

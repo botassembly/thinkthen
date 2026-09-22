@@ -154,7 +154,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
                 r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
-                r#""requests_sent":1,"replayed":false,"requests":["{request}"],"failed_questions":0}}}}"#,
+                r#""requests_sent":1,"cached":false,"requests":["{request}"],"failed_questions":0}}}}"#,
                 "\n",
             ),
             url = detailed.url(),
@@ -227,7 +227,7 @@ fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
     assert_eq!(output.status.code(), Some(0));
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(
-        printed.contains(r#""requests_sent":2,"replayed":false"#),
+        printed.contains(r#""requests_sent":2,"cached":false"#),
         "{printed}"
     );
 }
@@ -524,7 +524,7 @@ fn a_close_before_headers_follows_the_transport_retry_rule() {
     assert_eq!(output.status.code(), Some(0));
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(
-        printed.contains(r#""requests_sent":2,"replayed":false"#),
+        printed.contains(r#""requests_sent":2,"cached":false"#),
         "{printed}"
     );
 }

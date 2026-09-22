@@ -75,6 +75,33 @@ printf '%s\n' '{"value":0.8125,"answer":{"kind":"score","level":"middle","probab
 cmp "$work/score-expected.json" "$work/score-report.json"
 
 jq -n -c '
+  def row($id;$provenance):
+    {schema:"thinkthen.result/1",input:{id:$id},value:true,
+     question:{verb:"decide",text:"Fixture question"},
+     answer:{kind:"yes_no",probability:0.9},threshold:0.5,
+     meta:({tool:"thinkthen 0.0.1",question_sha256:("e"*64),url:"https://example.invalid",model:"fixture"} + $provenance)};
+  row("new-stored";{cached:true}),
+  row("new-live";{cached:false}),
+  row("old-stored";{replayed:true}),
+  row("old-live";{replayed:false}),
+  row("both-stored-wins";{cached:true,replayed:false}),
+  row("both-live-wins";{cached:false,replayed:true}),
+  row("legacy-ignored";{cached:true,replayed:"junk"})
+' > "$work/provenance.jsonl"
+jq -n -c -f trials.jq "$work/provenance.jsonl" \
+  | jq -c '{id:.input.id,trials}' > "$work/provenance-report.jsonl"
+cat > "$work/provenance-expected.jsonl" <<'EOF'
+{"id":"new-stored","trials":{"count":1,"live":0,"replayed":1}}
+{"id":"new-live","trials":{"count":1,"live":1,"replayed":0}}
+{"id":"old-stored","trials":{"count":1,"live":0,"replayed":1}}
+{"id":"old-live","trials":{"count":1,"live":1,"replayed":0}}
+{"id":"both-stored-wins","trials":{"count":1,"live":0,"replayed":1}}
+{"id":"both-live-wins","trials":{"count":1,"live":1,"replayed":0}}
+{"id":"legacy-ignored","trials":{"count":1,"live":0,"replayed":1}}
+EOF
+cmp "$work/provenance-expected.jsonl" "$work/provenance-report.jsonl"
+
+jq -n -c '
   [range(0;255) | "option-\(.)"] as $options
   | reduce $options[] as $name ({}; .[$name]=0)
   | .[$options[0]]=1 | .[$options[1]]=0.01000000000002
@@ -123,6 +150,12 @@ printf '%s\n' "$private_row" | jq -c '.input.id="private" | .threshold="private"
 expect_failure threshold 'trials: every row must carry a valid threshold' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c '.input.id="private" | .meta.model=7' > "$work/bad.jsonl"
 expect_failure metadata 'trials: every row must carry valid metadata' "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="private" | .meta.cached=null' > "$work/bad.jsonl"
+expect_failure canonical-null 'trials: every row must carry valid metadata' "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="private" | .meta.cached="yes"' > "$work/bad.jsonl"
+expect_failure canonical-string 'trials: every row must carry valid metadata' "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="private" | del(.meta.replayed)' > "$work/bad.jsonl"
+expect_failure no-provenance 'trials: every row must carry valid metadata' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c '.input.id="private" | .answer.kind="tag"' > "$work/bad.jsonl"
 expect_failure kind 'trials: answer kind must be yes_no, choice, or score and match the question verb' "$work/bad.jsonl"
 head -n 1 "$work/choice.jsonl" | jq -c '.input.id="private" | .question.options[0]=" "' > "$work/bad.jsonl"

@@ -341,7 +341,7 @@ fn replay_warns_once_without_a_key_and_keeps_request_identity() {
         1
     );
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("result");
-    assert_eq!(row["meta"]["replayed"], true);
+    assert_eq!(row["meta"]["cached"], true);
     assert_eq!(row["meta"]["requests"][0], digest(url, &body));
 }
 

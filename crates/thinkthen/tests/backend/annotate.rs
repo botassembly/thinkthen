@@ -277,7 +277,7 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
     );
     let row = String::from_utf8_lossy(&first.stdout);
     assert!(row.contains(r#""questions_sha256":"#), "{row}");
-    assert!(row.contains(r#""replayed":false"#), "{row}");
+    assert!(row.contains(r#""cached":false"#), "{row}");
     assert!(row.contains(r#""failed_questions":0"#), "{row}");
     assert!(row.contains(r#""answers":{"risky":{"value":true"#), "{row}");
 
@@ -291,7 +291,7 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
         String::from_utf8_lossy(&second.stderr)
     );
     let row = String::from_utf8_lossy(&second.stdout);
-    assert!(row.contains(r#""replayed":true"#), "{row}");
+    assert!(row.contains(r#""cached":true"#), "{row}");
     assert_eq!(listener.requests().len(), 1);
 }
 

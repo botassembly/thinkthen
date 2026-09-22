@@ -31,8 +31,8 @@ thinkthen decide 'the customer asks for money back' \
   --url http://127.0.0.1:8721/v1 --model local-1 \
   --threshold 0.1:0.9 --details --replay recording/ \
   < message.txt \
-  | jq -c '{replayed: .meta.replayed, model: .meta.model, value: .value}' \
-  | mustmatch '{"replayed":true,"model":"local-1","value":true}'
+  | jq -c '{cached: .meta.cached, model: .meta.model, value: .value}' \
+  | mustmatch '{"cached":true,"model":"local-1","value":true}'
 ```
 
 ## What can go wrong

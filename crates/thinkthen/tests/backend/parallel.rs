@@ -426,8 +426,8 @@ fn equal_cache_misses_send_once_at_every_supported_width() {
         assert_eq!(output.status.code(), Some(0), "{}", said(&output));
         let rows = printed(&output);
         assert_eq!(rows.lines().count(), 16);
-        assert_eq!(rows.matches(r#""replayed":false"#).count(), 1);
-        assert_eq!(rows.matches(r#""replayed":true"#).count(), 15);
+        assert_eq!(rows.matches(r#""cached":false"#).count(), 1);
+        assert_eq!(rows.matches(r#""cached":true"#).count(), 15);
         assert_eq!(listener.requests().len(), 1, "jobs {jobs}");
         assert_eq!(entries(&cache), 1);
     }

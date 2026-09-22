@@ -240,11 +240,9 @@ fn a_cache_can_mix_replayed_and_live_groups_with_checked_usage() {
         row.contains(r#""usage":{"input_tokens":20,"output_tokens":4}"#),
         "{row}"
     );
-    assert!(row.contains(r#""replayed":false"#), "{row}");
-    assert!(
-        row.contains(r#""requests_sent":1,"replayed":false"#),
-        "{row}"
-    );
+    assert_eq!(row.matches(r#""cached":"#).count(), 1);
+    assert!(!row.contains(r#""replayed":"#), "{row}");
+    assert!(row.contains(r#""requests_sent":1,"cached":false"#), "{row}");
     assert_eq!(listener.requests().len(), 2);
 }
 
@@ -279,8 +277,8 @@ fn annotate_equal_groups_share_one_cache_request() {
     assert_eq!(output.status.code(), Some(0));
     let rows = String::from_utf8_lossy(&output.stdout);
     assert_eq!(rows.lines().count(), 2);
-    assert_eq!(rows.matches(r#""replayed":false"#).count(), 1);
-    assert_eq!(rows.matches(r#""replayed":true"#).count(), 1);
+    assert_eq!(rows.matches(r#""cached":false"#).count(), 1);
+    assert_eq!(rows.matches(r#""cached":true"#).count(), 1);
     assert_eq!(rows.matches(r#""requests_sent":1"#).count(), 1);
     assert_eq!(rows.matches(r#""requests_sent":0"#).count(), 1);
     assert_eq!(listener.requests().len(), 1);

@@ -54,7 +54,7 @@ Exit 2 covers a mistyped flag and a refused record alike. The message on standar
 
 ## Step 3: repair the record and run again
 
-The repaired file goes through the same folder. `meta.replayed` is the ledger of what each row cost.
+The repaired file goes through the same folder. `meta.cached` is the ledger of what each row cost.
 
 ```bash
 set -eu
@@ -62,11 +62,11 @@ set -eu
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
   | thinkthen decide 'Does the message report a payment failure?' \
       --jsonl --field /body --details --cache recording/ \
-  | jq -c '{id: .input.id, value, replayed: .meta.replayed}' \
-  | mustmatch '{"id":"Q-01","value":true,"replayed":true}
-{"id":"Q-02","value":false,"replayed":true}
-{"id":"Q-03","value":true,"replayed":true}
-{"id":"Q-04","value":false,"replayed":true}'
+  | jq -c '{id: .input.id, value, cached: .meta.cached}' \
+  | mustmatch '{"id":"Q-01","value":true,"cached":true}
+{"id":"Q-02","value":false,"cached":true}
+{"id":"Q-03","value":true,"cached":true}
+{"id":"Q-04","value":false,"cached":true}'
 ```
 
 Every row reads `true` here, because the committed recording holds all four exchanges and a gate touches no network. On a real rerun the first two rows read `true` and the last two read `false`, and the bill is two requests instead of four.

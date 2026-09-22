@@ -299,7 +299,7 @@ fn dns_host_case_spellings_share_one_recording_identity() {
         recorded.contains(&format!(r#""url":"{canonical}""#)),
         "{recorded}"
     );
-    assert!(recorded.contains(r#""replayed":false"#), "{recorded}");
+    assert!(recorded.contains(r#""cached":false"#), "{recorded}");
     assert_eq!(listener.requests().len(), 1, "record sends one request");
 
     let (name, written) = only_entry(&folder).expect("one canonical entry");
@@ -330,7 +330,7 @@ fn dns_host_case_spellings_share_one_recording_identity() {
         replayed.contains(&format!(r#""url":"{canonical}""#)),
         "{replayed}"
     );
-    assert!(replayed.contains(r#""replayed":true"#), "{replayed}");
+    assert!(replayed.contains(r#""cached":true"#), "{replayed}");
     assert!(listener.requests().is_empty(), "replay asks nothing");
     assert_eq!(only_entry(&folder).expect("one canonical entry").0, name);
 }

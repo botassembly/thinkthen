@@ -58,7 +58,7 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
         assert_eq!(output.status.code(), Some(0));
         let printed = String::from_utf8_lossy(&output.stdout);
         assert!(
-            printed.contains(&format!(r#""requests_sent":{expected},"replayed":"#)),
+            printed.contains(&format!(r#""requests_sent":{expected},"cached":"#)),
             "run {run_number}: {printed}"
         );
     }

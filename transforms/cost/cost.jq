@@ -9,9 +9,11 @@
 #     fact about a contract rather than about a run, so the transform never
 #     assumes one.
 # Policies:
-#   - A row whose `meta.replayed` is true came from a recording. It opened no
-#     connection and paid nothing, so its tokens are counted apart under
-#     `replayed` and never priced. Counting them would bill a gate.
+#   - A row whose `meta.cached` is true came from stored exchanges. It opened
+#     no connection and paid nothing, so its tokens are counted apart under
+#     `replayed` and never priced. Counting them would bill a gate. Rows
+#     written before the rename carry the same field as `meta.replayed`, read
+#     only when `cached` is absent, and only a boolean true counts as stored.
 #   - Only input tokens are priced, because the ledger this repository keeps
 #     counts input tokens. Output tokens are reported beside them and are not
 #     converted.
@@ -33,7 +35,10 @@ reduce inputs as $row (
      then ($row.input.id // "with no id")
      else "with no id"
      end) as $id
-  | (if $row.meta.replayed == true then "replayed" else "charged" end) as $side
+  | ($row.meta
+     | if type == "object" and has("cached") then .cached else .replayed end)
+      as $stored
+  | (if $stored == true then "replayed" else "charged" end) as $side
   | .[$side].rows += 1
   | if $row.meta | has("usage") | not then .no_usage += [$id]
     else
