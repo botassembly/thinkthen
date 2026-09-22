@@ -13,13 +13,13 @@ import { SURFACES, statusClass } from '../data/catalog.mjs';
         <td><a href={`/${s.slug}/`}>{s.name}</a></td>
         <td><code>{s.install[0][0]}</code></td>
         <td><code>{s.unsureWord}</code></td>
-        <td><span class={`status ${statusClass(s.status)}`}>{s.status}</span></td>
+        <td><span class={`status ${statusClass(s.status)}`}>{s.release === '0.1' ? 'comes with 0.1' : s.status}</span></td>
       </tr>
     ))}
   </table>
 
   <h2>Not here yet</h2>
-  <p>pandas gets a short page under Python when the library team ships it.</p>
+  <p>pandas gets a short page under Python when the Python library ships.</p>
 
   <p class="pagelinks"><a href="/install/">Install</a> · <a href="/functions/">See every function</a></p>
 </Base>

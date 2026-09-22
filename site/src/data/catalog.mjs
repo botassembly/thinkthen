@@ -120,7 +120,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads, and it is not a gate.',
+    unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it as a gate.',
     howtos: ['code-open-ended-survey-answers'],
   },
   {
@@ -207,7 +207,7 @@ export const FUNCTIONS = [
     status: 'preview',
     options: [],
     exits: [],
-    unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. Three thresholds are yours to set. The number on a name is its strength, which is ours and computed, and it claims nothing about chance. Relations are a preview too.',
+    unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. Three thresholds are yours to set. The number on a name is its strength. We compute it, and it claims nothing about chance. Relations are a preview too.',
     howtos: [],
   },
   {
@@ -389,7 +389,7 @@ export const SURFACES = [
     unsureWord: 'NULL',
     install: [['.load ./thinkthen', null]],
     particular: [
-      'SQLite asks row by row, so thinkthen_warm judges the table in one fast pass, 32 requests at a time.',
+      'SQLite asks row by row, so thinkthen_warm judges the table in one pass, 32 requests at a time.',
       'Every query after that reads the saved answers at no further cost.',
     ],
   },
@@ -420,7 +420,7 @@ export const HOWTOS = [
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'], input: 'inbox.txt', runs: ['01-inbox'],
-    see: { '01-inbox': 'Three messages need a reply. The thank-you note drops out.' },
+    see: { '01-inbox': 'Three messages need a reply, and the thank-you note drops out.' },
   },
   {
     slug: 'find-the-clause-then-check-it', title: 'Check the notice period in a contract', reader: 'for contract and procurement staff',
@@ -438,7 +438,7 @@ export const HOWTOS = [
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
     functions: ['score', 'tag'], input: 'answers.txt', runs: ['04-answers'],
-    see: { '04-answers': 'Two unhappy answers. One is about price and one about bugs.' },
+    see: { '04-answers': 'Two answers are unhappy, one about price and one about bugs.' },
   },
   {
     slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
@@ -469,7 +469,7 @@ export const HOWTOS = [
     said: 'Hold a borderline post for a moderator, and name the rule it may break. `decide` answers not sure. `tag` names the rule.',
     functions: ['decide', 'tag'], input: 'post.txt', runs: ['08-gate', '08-why'],
     see: {
-      '08-gate': 'The post is borderline, so decide says not sure. It prints null and exits with 3.',
+      '08-gate': 'The post is borderline, so decide prints null and exits 3.',
       '08-why': 'The rule in question is insults.',
     },
   },
@@ -492,7 +492,7 @@ export const HOWTOS = [
     functions: ['choose', 'decide'], input: 'pages.txt', runs: ['11-kinds', '11-gaps'],
     see: {
       '11-kinds': 'Three invoice pages and one notice.',
-      '11-gaps': 'The true in the middle marks where Invoice 8 starts. The notice needs no break, because choose already set it apart.',
+      '11-gaps': 'The true marks where Invoice 8 starts, and choose already set the notice apart.',
     },
   },
 ];
@@ -512,8 +512,8 @@ export const FACTS = {
   size: {
     headline: 'How big the evidence can be.',
     rows: [
-      ['32,000 tokens of evidence with one question', 'thinkthen specification/records.md, "Evidence in one request"'],
-      ['64,000 tokens of evidence with all its questions', 'the same table, confirmed by one live request of 33,663 input tokens on 2026-09-19'],
+      ['About 32,000 tokens of evidence in one request', 'thinkthen specification/records.md, "Evidence in one request"'],
+      ['About 64,000 tokens in one whole request, the questions included', 'the same table, confirmed by one live request of 33,663 input tokens on 2026-09-19'],
       ['find reads 2 to 255 lines, or 2 to 254 with --none', 'thinkthen specification/find.md'],
       ['The evidence crosses whole and is never split', 'thinkthen sdlc/issues/2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md'],
       ['Evidence over the limit is refused with exit code 4', 'thinkthen specification/backends.md'],

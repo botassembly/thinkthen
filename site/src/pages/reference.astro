@@ -173,7 +173,7 @@ const COUNTS = [
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
   <h2>Limits</h2>
-  <p>One request carries at most 64k tokens. The evidence and the longest question together must fit in 32k tokens. Both numbers are the model vendor's, from its published model card. They belong to the backend and not to the tool.</p>
+  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. Both numbers are the model vendor's, from its published model card. They belong to the backend and not to the tool.</p>
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together, so a long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
@@ -261,7 +261,7 @@ const COUNTS = [
   <p>Precedence everywhere: the command line, then the question file, then the default. A typed value replaces the file's value. A typed list replaces the file's whole list and never merges.</p>
 
   <h2>Question files</h2>
-  <p>A question file holds one saved question, and every function that takes a question accepts one. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> is a different file: it holds many questions under <code>"version": 1</code>.</p>
+  <p>A question file holds one saved question. <code>decide</code>, <code>choose</code>, <code>tag</code>, <code>score</code>, <code>filter</code>, and <code>rank</code> accept one. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> is a different file: it holds many questions under <code>"version": 1</code>.</p>
   <p>A question file that cannot be read, is not one JSON object, or breaks a rule is exit 5. A command that names the wrong verb for the file is exit 2. The <a href="/functions/question-file/">question file page</a> carries the keys.</p>
 
   <p class="pagelinks"><a href="/tutorial/">Take the tutorial</a> · <a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>

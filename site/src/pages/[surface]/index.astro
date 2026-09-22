@@ -45,7 +45,7 @@ const when = surface.release && !shipped
   {sample ? (
     <Code code={sample.code} caption={`${when} The calls will read like this.`} />
   ) : (
-    <Terminal run={cell('decide', 'shell').runs[0]} />
+    <Terminal run={cell('decide', 'shell').runs[0]} caption="Recorded from the real command. decide prints true and exits 0." />
   )}
   <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person.</p>
 
@@ -75,5 +75,5 @@ const when = surface.release && !shipped
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{p}</li>)}</ul>
 
-  <p class="pagelinks"><a href="/surfaces/">Other languages and databases</a> · <a href="/functions/">See every function</a> · <a href="/install/">Install</a></p>
+  <p class="pagelinks"><a href="/surfaces/">See other languages and databases</a> · <a href="/functions/">See every function</a> · <a href="/install/">Install</a></p>
 </Base>

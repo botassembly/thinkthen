@@ -25,8 +25,8 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer, and nothing else does. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
   <p>The same evidence, under two rules:</p>
-  <Terminal run={cut} />
-  <Terminal run={band} />
+  <Terminal run={cut} caption="Recorded from the real command. At a cut of 0.9 the message answers no." />
+  <Terminal run={band} caption="Recorded from the real command. Under a band the same 0.74 comes back null." />
   <p>You choose the threshold. The model never does.</p>
   <p><code>jev-latest</code> follows the vendor’s newest model. Pin a run by naming a version, and check your labeled cases again when you change it.</p>
 
@@ -65,7 +65,7 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
   </table>
 
   <h2>What it costs</h2>
-  <p>Requests are the bill. A short record pays almost only for the fixed part. Many questions about one piece of evidence pay the fixed part once, which is what <code>annotate</code> does. Many records pay it once each.</p>
+  <p>Requests are the bill. A short record pays almost only for the fixed part. Many questions about one piece of evidence pay the fixed part once. <code>annotate</code> does that. Many records pay it once each.</p>
   <table>
     <tr><th>Fact</th><th>Where it was measured</th></tr>
     {FACTS.cost.rows.map(([fact, where]) => <tr><td>{fact}</td><td>{where}</td></tr>)}
