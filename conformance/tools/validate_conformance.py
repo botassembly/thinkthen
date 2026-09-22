@@ -23,6 +23,8 @@ KINDS = {"usage", "backend", "local", "cancelled", "deadline", "defect"}
 CAUSES = {"missing_answer", "wrong_kind", "missing_probability", "invalid_probability",
           "invalid_distribution", "unexpected_probability"}
 VERB_KEYS = {"decide", "choose", "tag", "score"}
+SKIP_WHEN_KEYS = {"id", "verb", "kind", "form", "none", "record", "error"}
+SURFACES = {"python", "typescript", "ruby", "r", "rust", "c", "duckdb", "sqlite", "postgresql"}
 CASE_KEYS = {"id", "source", "verb", "question", "question_file", "evidence", "records", "jobs", "set",
              "calls", "cancel_after_replies", "budget_ms", "none", "exchanges", "expect",
              "text", "requests", "pairs", "form", "note", "failed_questions", "rows"}
@@ -90,6 +92,54 @@ check(set(data["error_kinds"]) == KINDS, "error_kinds must be the six")
 check(data["case_count"] == len(data["cases"]), "case_count")
 ids = [c["id"] for c in data["cases"]]
 check(len(set(ids)) == len(ids), "case ids unique")
+
+def check_skips(data):
+    """The shared skip table: one place names what each surface cannot run.
+    Every entry carries a written reason, a matcher over the cases, and an
+    optional surface list; a case id or verb it names must exist."""
+    skips = data.get("skips")
+    if skips is None:
+        return
+    check(isinstance(skips, list), "skips must be a list")
+    case_ids = {c["id"] for c in data["cases"]}
+    verbs = {c["verb"] for c in data["cases"]}
+    for index, entry in enumerate(skips):
+        where = f"skips[{index}]"
+        check(isinstance(entry, dict), f"{where} must be an object")
+        if not isinstance(entry, dict):
+            continue
+        check(set(entry) <= {"when", "surfaces", "unless", "as", "why"},
+              f"{where} unknown keys {sorted(set(entry) - {'when', 'surfaces', 'unless', 'as', 'why'})}")
+        why = entry.get("why")
+        check(isinstance(why, str) and why.strip() != "", f"{where} needs a written why")
+        when = entry.get("when")
+        check(isinstance(when, dict) and bool(when), f"{where} needs a when")
+        if isinstance(when, dict):
+            check(set(when) <= SKIP_WHEN_KEYS,
+                  f"{where} unknown when keys {sorted(set(when) - SKIP_WHEN_KEYS)}")
+            if "id" in when:
+                check(when["id"] in case_ids, f"{where} names no case: {when['id']}")
+            if "verb" in when:
+                listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
+                check(bool(listed) and all(v in verbs for v in listed),
+                      f"{where} verb not among the cases: {when['verb']}")
+            if "kind" in when:
+                check(when["kind"] in KINDS, f"{where} kind not one of the six")
+            if "none" in when:
+                check(isinstance(when["none"], bool), f"{where} none is true or false")
+            if "error" in when:
+                check(isinstance(when["error"], bool), f"{where} error is true or false")
+            if "record" in when:
+                check(when["record"] == "null", f"{where} the only record family is null")
+        if "surfaces" in entry:
+            check(isinstance(entry["surfaces"], list) and bool(entry["surfaces"]),
+                  f"{where} surfaces is a non-empty list")
+            check(set(entry["surfaces"]) <= SURFACES, f"{where} unknown surface")
+        if "unless" in entry:
+            check(entry["unless"] == "wire", f"{where} unless is wire")
+        if "as" in entry:
+            check(entry["as"] in ("skip", "diverge"), f"{where} as is skip or diverge")
+
 
 def check_question(q, verb_of_case, where=""):
     keys = set(q)
@@ -573,6 +623,8 @@ for c in data["cases"]:
     for ex in c["exchanges"]:
         check_reply_shape(ex["request"], ex.get("reply", {}), ex.get("status"), failed_names)
     replay(c)
+
+check_skips(data)
 
 if errors:
     print(f"FAILED: {len(errors)} problem(s)")

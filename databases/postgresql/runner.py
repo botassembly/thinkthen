@@ -9,11 +9,46 @@ Usage: runner.py <container-name>
 The container already has the extension installed and the null backend on.
 """
 import json
+import pathlib
 import subprocess
 import sys
 
-CASES = "../../conformance/conformance.json"
+HERE = pathlib.Path(__file__).resolve().parent
+FILE = json.loads((HERE.parents[1] / "conformance" / "conformance.json").read_text())
+CASES = FILE["cases"]
+SKIPS = FILE.get("skips", [])
 CONTAINER = sys.argv[1] if len(sys.argv) > 1 else "thinkthen-pg"
+
+
+def central_skip(surface, case, wire):
+    """The shared skip table's reason for this case on this surface, or
+    None. First match wins; entries naming a surface apply only there."""
+    kind = case.get("expect", {}).get("error", {}).get("kind")
+    for entry in SKIPS:
+        if entry.get("surfaces") and surface not in entry["surfaces"]:
+            continue
+        if entry.get("unless") == "wire" and wire:
+            continue
+        when = entry["when"]
+        if "id" in when and case["id"] != when["id"]:
+            continue
+        if "verb" in when:
+            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
+            if case["verb"] not in listed:
+                continue
+        if "kind" in when and kind != when["kind"]:
+            continue
+        if "form" in when and case.get("form") != when["form"]:
+            continue
+        if "none" in when and bool(case.get("none")) != when["none"]:
+            continue
+        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
+            continue
+        if "record" in when and when["record"] == "null" \
+                and not any(record is None for record in case.get("records") or []):
+            continue
+        return entry["why"], entry.get("as", "skip")
+    return None
 
 
 def sql(query: str) -> str:
@@ -53,14 +88,19 @@ NOTES: list[str | None] = []
 
 
 def main() -> int:
-    cases = json.load(open(CASES))["cases"]
+    cases = CASES
     bad = 0
     for case in cases:
         verb, ident = case["verb"], case["id"]
         expect = case["expect"]
         rows_line = None
-        if "question_file" in case:
-            print(f"skip     {ident}: the local kind needs a file door")
+        central = central_skip("postgresql", case, wire=False)
+        if central is not None:
+            why, disposition = central
+            print(f"{disposition:<8} {ident}: {why}")
+            NOTES.append(f"{disposition} {ident}: {why}")
+            if disposition == "diverge":
+                bad += 1
             continue
         if "error" in expect and expect["error"].get("kind") == "deadline":
             # The deadline door is `thinkthen.deadline_ms`, the enforced tool
@@ -168,28 +208,23 @@ def main() -> int:
                 note = None if got_lines == want_lines else \
                     f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
             elif verb == "relate":
-                if case.get("form") == "per-subject":
-                    note = ("the per-subject arm shares its input with the pairs arm and "
-                            "the stand-in serves the ruled pairs form; a conformance-data "
-                            "finding for the build team")
-                else:
-                    rules = [r["name"] for r in case["question"].get("relations", [])]
-                    arr = "ARRAY[" + ",".join(literal(r) for r in rules) + "]::text[]"
-                    values = ", ".join(
-                        f"({i + 1}, {literal(text)})"
-                        for i, text in enumerate(case["records"]))
-                    query = literal(f"SELECT i, t FROM (VALUES {values}) AS v(i, t)")
-                    got = sql(
-                        "SELECT \"name\" || '~' || \"source\" || '~' || \"target\" "
-                        "|| '~' || to_char(\"probability\", 'FM0.0000') "
-                        f"FROM thinkthen_relate({query}, {arr}) "
-                        'ORDER BY "source", "target", "name"')
-                    want_lines = sorted(
-                        f"{e['name']}~{e['source']}~{e['target']}~{e['probability']:.4f}"
-                        for e in expect["edges"])
-                    got_lines = sorted(got.splitlines()) if got else []
-                    note = None if got_lines == want_lines else \
-                        f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
+                rules = [r["name"] for r in case["question"].get("relations", [])]
+                arr = "ARRAY[" + ",".join(literal(r) for r in rules) + "]::text[]"
+                values = ", ".join(
+                    f"({i + 1}, {literal(text)})"
+                    for i, text in enumerate(case["records"]))
+                query = literal(f"SELECT i, t FROM (VALUES {values}) AS v(i, t)")
+                got = sql(
+                    "SELECT \"name\" || '~' || \"source\" || '~' || \"target\" "
+                    "|| '~' || to_char(\"probability\", 'FM0.0000') "
+                    f"FROM thinkthen_relate({query}, {arr}) "
+                    'ORDER BY "source", "target", "name"')
+                want_lines = sorted(
+                    f"{e['name']}~{e['source']}~{e['target']}~{e['probability']:.4f}"
+                    for e in expect["edges"])
+                got_lines = sorted(got.splitlines()) if got else []
+                note = None if got_lines == want_lines else \
+                    f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
             elif verb == "details":
                 held = expect["details"]
                 # The audit's identity fields and the two 0053/0054 additions;
@@ -229,12 +264,6 @@ def main() -> int:
                     f"diverge {ident}: expected {want} after the second call, got {again}; "
                     "the stand-in answers the repeat from in-process memory but never counts it in "
                     "cache_answers, its own record says so — a real-engine requirement, not a surface gap")
-            elif verb == "cancel":
-                note = (f"skip {ident}: the engine token cannot be pre-fired through SQL; the "
-                        "statement_timeout proof in NOTES.md is this surface's cancel shape, and "
-                        "the engine-side gap is recorded in conformance/DIVERGENCES.md")
-            elif verb in ("filter", "rank", "find"):
-                note = f"skip {ident}: {verb} is WHERE, ORDER BY, and LIMIT here; the surface ships no function for it"
             else:
                 note = f"skip {ident}: no SQL shape for {verb} yet"
         except RuntimeError as failure:

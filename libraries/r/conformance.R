@@ -14,7 +14,34 @@ Sys.setenv(ENGINE_SYNTHETIC_PARTIAL = "1")
 
 file <- jsonlite::fromJSON("../../conformance/conformance.json", simplifyVector = FALSE)
 cases <- file$cases
+skips <- file$skips %||% list()
 wire <- Sys.getenv("ENGINE_BASE_URL") != "" || Sys.getenv("THINKTHEN_BASE_URL") != ""
+
+# The shared skip table's entry for this case on this surface, or NULL.
+# First match wins; entries naming a surface apply only there.
+central_skip <- function(surface, case, wire) {
+  kind <- case$expect$error$kind
+  for (entry in skips) {
+    if (!is.null(entry$surfaces) && !(surface %in% unlist(entry$surfaces))) next
+    if (identical(entry$unless, "wire") && wire) next
+    when <- entry$when
+    if (!is.null(when$id) && !identical(case$id, when$id)) next
+    if (!is.null(when$verb)) {
+      listed <- unlist(when$verb)
+      if (!(case$verb %in% listed)) next
+    }
+    if (!is.null(when$kind) && !identical(kind, when$kind)) next
+    if (!is.null(when$form) && !identical(case$form, when$form)) next
+    if (!is.null(when$none) && !identical(isTRUE(case$none), when$none)) next
+    if (!is.null(when$error) && !identical(!is.null(case$expect$error), when$error)) next
+    if (identical(when$record, "null")) {
+      has_null <- any(vapply(case$records %||% list(), is.null, logical(1)))
+      if (!has_null) next
+    }
+    return(list(disposition = entry$as %||% "skip", why = entry$why))
+  }
+  NULL
+}
 
 passed <- 0
 failures <- 0
@@ -37,23 +64,15 @@ same_number <- function(one, two) isTRUE(all.equal(one, two, tolerance = 1e-9))
 for (case in cases) {
   id <- case$id
   expect <- case$expect
-  if (!is.null(case$question_file)) {
-    say(paste0("skip     ", id, ": the local kind needs a file door this surface does not carry"))
-    next
-  }
-  if (identical(case$verb, "relate") && identical(case$form, "per-subject")) {
-    say(paste0("skip     ", id,
-      ": the per-subject arm is pinned, not replayed; the stand-in serves the pairs recording (conformance/DIVERGENCES.md)"))
+  central <- central_skip("r", case, wire)
+  if (!is.null(central)) {
+    say(paste0(central$disposition, "  ", id, ": ", central$why))
     next
   }
   outcome <- tryCatch({
     kind <- expect$error$kind
     if (!is.null(kind)) {
-      if (case$verb == "cancel") {
-        paste0("diverge  ", id, ": the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement")
-      } else if (kind == "backend" && !wire) {
-        paste0("skip     ", id, ": the backend kind needs the wire or a dead address; the null backend answers")
-      } else if (kind == "deadline") {
+      if (kind == "deadline") {
         held <- tryCatch(
           tt_decide(built(case), case$evidence, deadline = 0),
           thinkthen_error = function(e) e$kind
@@ -163,22 +182,6 @@ for (case in cases) {
           if (good) paste0("ok       ", id) else
             paste0("FAIL     ", id, ": the details diverged")
         },
-        usage = {
-          before <- tt_usage()
-          for (i in seq_len(expect$request_calls %||% case$calls %||% 2)) NULL
-          tt_decide(question, case$evidence)
-          tt_decide(question, case$evidence)
-          held <- tt_usage()
-          sent <- held$requests - before$requests
-          cached <- held$cache_answers - before$cache_answers
-          if (expect$cache_answers > 0 && cached == 0) {
-            paste0("diverge  ", id, ": the stand-in carries no disk cache, so the second call sends again; conformance/DIVERGENCES.md and Phase A's record carry it")
-          } else if (identical(sent, expect$requests)) {
-            paste0("ok       ", id)
-          } else {
-            paste0("FAIL     ", id, ": expected ", expect$requests, " requests, got ", sent)
-          }
-        },
         decide_many = {
           records <- unlist(case$records)
           judgments <- thinkthen:::.tt_call(thinkthen:::tt_decide_column(question, records, NULL))
@@ -206,14 +209,10 @@ for (case in cases) {
         },
         find = {
           units <- unlist(case$records)
-          if (isTRUE(case$none)) {
-            paste0("diverge  ", id, ": the surface's find has no none arm; the none case is real-engine data")
-          } else {
-            held <- tt_find(case$question, units)
-            wanted <- units[[expect$answer + 1]]
-            if (identical(held$unit, wanted)) paste0("ok       ", id) else
-              paste0("FAIL     ", id, ": expected ", wanted, ", got ", held$unit)
-          }
+          held <- tt_find(case$question, units)
+          wanted <- units[[expect$answer + 1]]
+          if (identical(held$unit, wanted)) paste0("ok       ", id) else
+            paste0("FAIL     ", id, ": expected ", wanted, ", got ", held$unit)
         },
         recognize = {
           spec <- jsonlite::toJSON(case$question, auto_unbox = TRUE)

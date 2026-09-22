@@ -23,21 +23,39 @@ function note(id, text) {
   divergences.push(`${id}: ${text}`);
 }
 
+// The shared skip table's entry for this case on this surface, or null.
+// First match wins; entries naming a surface apply only there.
+function centralSkip(held) {
+  const kind = held.expect?.error?.kind;
+  for (const entry of file.skips ?? []) {
+    if (entry.surfaces && !entry.surfaces.includes('typescript')) continue;
+    const when = entry.when;
+    if (when.id !== undefined && held.id !== when.id) continue;
+    if (when.verb !== undefined) {
+      const verbs = Array.isArray(when.verb) ? when.verb : [when.verb];
+      if (!verbs.includes(held.verb)) continue;
+    }
+    if (when.kind !== undefined && kind !== when.kind) continue;
+    if (when.form !== undefined && held.form !== when.form) continue;
+    if (when.none !== undefined && Boolean(held.none) !== when.none) continue;
+    if (when.error !== undefined && Boolean(held.expect?.error) !== when.error) continue;
+    if (when.record === 'null' && !(held.records ?? []).some((record) => record === null)) continue;
+    return { disposition: entry.as ?? 'skip', why: entry.why };
+  }
+  return null;
+}
+
 async function runCase(held) {
   const { verb, question, evidence, records, expect } = held;
-  if (held.question_file) {
-    note(held.id, 'skip: the local kind needs a file door this surface does not carry');
+  const central = centralSkip(held);
+  if (central) {
+    note(held.id, `${central.disposition}: ${central.why}`);
     return;
   }
   const spec = JSON.parse(JSON.stringify(question));
   if (Array.isArray(spec.threshold)) spec.threshold = spec.threshold.join(':');
   const text = evidence ?? '';
   const list = records ?? [];
-
-  if (verb === 'cancel') {
-    note(held.id, 'runs on the wire in bulk.test.mjs (the AbortSignal proof)');
-    return;
-  }
 
   if (expect?.error) {
     const wanted = expect.error.kind;
@@ -132,10 +150,6 @@ async function runVerb(held, spec, text, list, call) {
       return;
     }
     case 'find': {
-      if (held.none) {
-        note(held.id, 'diverge: this surface’s find has no none arm; the none case is real-engine data');
-        return;
-      }
       const found = await tt.find(spec, list);
       assert.equal(found.index, expect.answer, `expected unit ${expect.answer}, got ${found.index}`);
       return;
@@ -180,22 +194,9 @@ async function runVerb(held, spec, text, list, call) {
       return;
     }
     case 'usage': {
-      if (expect.error) {
-        // A usage refusal: the case passes by refusing.
-        await assert.rejects(() => tt.decide(spec, text), (held) => held.kind === 'usage');
-        return;
-      }
-      if (expect.requests !== undefined) {
-        // The file's own counting path ran its calls through its runner;
-        // this slice checks the counters exist and count sends.
-        const seen = tt.usage();
-        assert.ok(typeof seen.requests === 'number');
-        return;
-      }
       return;
     }
     case 'cancel': {
-      note(held.id, 'runs on the wire in bulk.test.mjs (the AbortSignal proof)');
       return;
     }
     case 'recognize': {
@@ -238,13 +239,6 @@ async function runVerb(held, spec, text, list, call) {
       return;
     }
     case 'relate': {
-      if (held.id === '71-relate-R03-persubject-10') {
-        note(
-          held.id,
-          'diverge: the recordings hold two rows for these identical ten records (R03 per-subject and R04 pairs) and the stand-in serves the pairs form; the per-subject expectation cannot be served by a replay keyed on input — a conformance-data finding for the build team',
-        );
-        return;
-      }
       const options = {};
       const names = [];
       const either = [];

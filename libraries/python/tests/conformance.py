@@ -1,12 +1,12 @@
 """Run the one conformance file through the Python surface, offline.
 
-Usage: python tests/conformance.py [--wire]
+Usage: python tests/conformance.py
 
 Offline the engine answers from the null backend with the conformance
-file's own numbers, so this needs no network and no key. Case 18
-(cancel) needs a live interrupt and runs as ``tests/test_cancel.py``
-against the stub instead; case 17 (usage and cache) is recorded as a
-known divergence while the stand-in holds no disk cache.
+file's own numbers, so this needs no network and no key. What this
+surface cannot run comes from the shared skip table in the conformance
+file, one place a reason each; the live interrupt runs as
+tests/test_cancel.py against the stub instead.
 """
 
 import json
@@ -17,7 +17,40 @@ import tempfile
 import thinkthen as tt
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-CASES = json.loads((ROOT / "conformance" / "conformance.json").read_text())["cases"]
+FILE = json.loads((ROOT / "conformance" / "conformance.json").read_text())
+CASES = FILE["cases"]
+SKIPS = FILE.get("skips", [])
+
+
+def central_skip(surface, case, wire):
+    """The shared skip table's reason for this case on this surface, or
+    None. First match wins; entries naming a surface apply only there."""
+    kind = case.get("expect", {}).get("error", {}).get("kind")
+    for entry in SKIPS:
+        if entry.get("surfaces") and surface not in entry["surfaces"]:
+            continue
+        if entry.get("unless") == "wire" and wire:
+            continue
+        when = entry["when"]
+        if "id" in when and case["id"] != when["id"]:
+            continue
+        if "verb" in when:
+            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
+            if case["verb"] not in listed:
+                continue
+        if "kind" in when and kind != when["kind"]:
+            continue
+        if "form" in when and case.get("form") != when["form"]:
+            continue
+        if "none" in when and bool(case.get("none")) != when["none"]:
+            continue
+        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
+            continue
+        if "record" in when and when["record"] == "null" \
+                and not any(record is None for record in case.get("records") or []):
+            continue
+        return entry["why"]
+    return None
 
 
 def built(body, set_body=None):
@@ -107,16 +140,6 @@ def run_recognize(case):
 
 
 def run_relate(case):
-    if case.get("form") == "per-subject":
-        # R03 per-subject and R04 pairs hold the identical ten records,
-        # and the stand-in serves the ruled pairs form; a replay keyed on
-        # input cannot reach the per-subject expectation. Recorded as a
-        # conformance-data finding for the build team, not bent here.
-        return None, (
-            "the per-subject arm shares its input with the pairs arm and "
-            "the stand-in serves the ruled pairs form; a conformance-data "
-            "finding for the build team"
-        )
     body = case["question"]
     relations, either = [], []
     for rule in body.get("relations", []):
@@ -180,14 +203,6 @@ def run(case):
         return True, None
     if verb == "find":
         found = tt.find(case["question"], case["records"])
-        if expect.get("none"):
-            # The stand-in's find judges each unit alone and always
-            # returns a best; the none arm belongs to the real engine's
-            # relative form. The same divergence TypeScript records.
-            return None, (
-                "the none arm needs the real engine's relative form; "
-                "the stand-in always returns a best unit"
-            )
         if found is None:
             return False, "find answered None where the case expects a unit"
         return found["index"] == expect.get("answer"), None
@@ -245,8 +260,6 @@ def run(case):
 def expect_error(case, kind):
     """Run a case that must fail, and return whether it failed rightly."""
     verb = case["verb"]
-    if "question_file" in case:
-        return None, "the local kind needs a file door this surface does not carry"
     body = case.get("question", {})
     try:
         question = built(body)
@@ -275,11 +288,12 @@ def main():
     passed, failed, skipped = [], [], []
     for case in CASES:
         name = case["id"]
+        reason = central_skip("python", case, wire=False)
+        if reason is not None:
+            skipped.append((name, reason))
+            continue
         kind = case.get("expect", {}).get("error", {}).get("kind")
         try:
-            if name == "18-cancel-mid-batch":
-                skipped.append((name, "runs as tests/test_cancel.py against the stub"))
-                continue
             if kind:
                 ok, note = expect_error(case, kind)
             else:
@@ -296,12 +310,8 @@ def main():
         print(f"FAIL  {name}: {why}")
     for name, why in skipped:
         print(f"skip  {name}: {why}")
-    known = [name for name, _ in failed if name == "17-usage-and-cache"]
-    hard = [item for item in failed if item[0] != "17-usage-and-cache"]
-    print(f"{len(passed)} passed, {len(hard)} failed, {len(skipped)} skipped")
-    if known:
-        print("known divergence: 17-usage-and-cache waits on the disk cache")
-    return 1 if hard else 0
+    print(f"{len(passed)} passed, {len(failed)} failed, {len(skipped)} skipped")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

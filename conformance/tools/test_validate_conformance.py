@@ -123,6 +123,31 @@ def test_wrong_case_count_fails():
     )
 
 
+def test_skip_table_entries_are_checked():
+    data = json.loads(CASES.read_text())
+    data["skips"].append({"when": {"id": "no-such-case"}, "why": "x"})
+    with tempfile.TemporaryDirectory() as scratch:
+        copy = pathlib.Path(scratch) / "bad-skip.json"
+        copy.write_text(json.dumps(data))
+        done = run([str(copy)], scratch)
+    report(
+        "a skip entry naming no case fails the check",
+        done.returncode == 1 and "names no case" in (done.stdout + done.stderr),
+        f"exit {done.returncode}: {(done.stdout + done.stderr).strip()[:200]}",
+    )
+    data = json.loads(CASES.read_text())
+    data["skips"].append({"when": {"verb": "cancel"}})
+    with tempfile.TemporaryDirectory() as scratch:
+        copy = pathlib.Path(scratch) / "no-why.json"
+        copy.write_text(json.dumps(data))
+        done = run([str(copy)], scratch)
+    report(
+        "a skip entry without a reason fails the check",
+        done.returncode == 1 and "needs a written why" in (done.stdout + done.stderr),
+        f"exit {done.returncode}: {(done.stdout + done.stderr).strip()[:200]}",
+    )
+
+
 def main():
     test_default_from_repo_root()
     test_explicit_relative_path()
@@ -130,6 +155,7 @@ def main():
     test_corrupted_copy_fails_and_names_the_case()
     test_missing_file_reports_cleanly()
     test_wrong_case_count_fails()
+    test_skip_table_entries_are_checked()
     if FAILURES:
         print(f"{FAILURES} checker test(s) failed")
         return 1

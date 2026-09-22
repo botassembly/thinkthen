@@ -4,14 +4,9 @@
 //! every case the library can express against the null backend (which
 //! answers with the file's own numbers), and prints one line a case:
 //! `ok`, `skip` with a reason, or `FAIL` with what diverged. A nonzero exit
-//! follows any FAIL. Run through `./check.sh`.
-//!
-//! Two case families cannot run on the stand-in and are skipped with their
-//! reasons printed: the backend-refusal cases need the wire or a dead
-//! address, and the usage case's cache half needs the disk cache, which
-//! the stand-in does not carry. The local case names a missing question
-//! file, and this surface has no file door, so it skips too; the deadline
-//! case runs as the spent-budget shape.
+//! follows any FAIL. What this surface cannot run comes from the shared
+//! skip table in the conformance file, one place a reason each; the
+//! deadline case runs as the spent-budget shape. Run through `./check.sh`.
 
 use std::path::Path;
 
@@ -21,6 +16,75 @@ use thinkthen::{
     Annotated, Answer, Details, Engine, Error, Options, Question, QuestionSet, Recognize,
     Recognized, Relate, Row, byte_range, failed_questions, name_in, rows_json,
 };
+
+/// The shared skip table's entry for this case on this surface: the reason
+/// and whether it is a recorded divergence. First match wins; entries
+/// naming a surface apply only there.
+fn central_skip(file: &Value, case: &Value, wire: bool) -> Option<(String, bool)> {
+    let skips = file["skips"].as_array()?;
+    let id = case["id"].as_str().unwrap_or("?");
+    let verb = case["verb"].as_str().unwrap_or("?");
+    let kind = case["expect"]["error"]["kind"].as_str();
+    let form = case["form"].as_str();
+    let none = case["none"].as_bool().unwrap_or(false);
+    for entry in skips {
+        if let Some(surfaces) = entry["surfaces"].as_array() {
+            if !surfaces.iter().any(|one| one.as_str() == Some("rust")) {
+                continue;
+            }
+        }
+        if entry["unless"].as_str() == Some("wire") && wire {
+            continue;
+        }
+        let when = &entry["when"];
+        let matches_verb = when["verb"].as_str() == Some(verb)
+            || when["verb"]
+                .as_array()
+                .is_some_and(|list| list.iter().any(|one| one.as_str() == Some(verb)));
+        if when["verb"].as_str().is_some() || when["verb"].as_array().is_some() {
+            if !matches_verb {
+                continue;
+            }
+        }
+        if let Some(want) = when["id"].as_str() {
+            if want != id {
+                continue;
+            }
+        }
+        if let Some(want) = when["kind"].as_str() {
+            if Some(want) != kind {
+                continue;
+            }
+        }
+        if let Some(want) = when["form"].as_str() {
+            if Some(want) != form {
+                continue;
+            }
+        }
+        if let Some(want) = when["none"].as_bool() {
+            if want != none {
+                continue;
+            }
+        }
+        if let Some(want) = when["error"].as_bool() {
+            let has_error = !case["expect"]["error"].is_null();
+            if want != has_error {
+                continue;
+            }
+        }
+        if when["record"].as_str() == Some("null") {
+            let has_null = case["records"]
+                .as_array()
+                .is_some_and(|records| records.iter().any(Value::is_null));
+            if !has_null {
+                continue;
+            }
+        }
+        let why = entry["why"].as_str().unwrap_or_default().to_owned();
+        return Some((why, entry["as"].as_str() == Some("diverge")));
+    }
+    None
+}
 
 fn main() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../conformance/conformance.json");
@@ -37,7 +101,12 @@ fn main() {
         let verb = case["verb"].as_str().unwrap_or("?");
         let question_text =
             serde_json::to_string(&case["question"]).expect("the question serializes");
-        match run(&tt, verb, &question_text, case) {
+        let outcome = match central_skip(&file, case, wire_is_set()) {
+            Some((why, true)) => Err(Outcome::Diverge(why)),
+            Some((why, false)) => Err(Outcome::Skip(why)),
+            None => run(&tt, verb, &question_text, case),
+        };
+        match outcome {
             Ok(()) => println!("ok       {id}"),
             Err(Outcome::Skip(reason)) => println!("skip     {id}: {reason}"),
             Err(Outcome::Diverge(reason)) => println!("diverge  {id}: {reason}"),
@@ -108,23 +177,6 @@ fn wire_is_set() -> bool {
 fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(), Outcome> {
     let expect = &case["expect"];
     if let Some(kind) = expect["error"]["kind"].as_str() {
-        if verb == "cancel" {
-            return Err(Outcome::Diverge(
-                "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
-                    .to_owned(),
-            ));
-        }
-        if kind == "backend" && !wire_is_set() {
-            return Err(Outcome::Skip(
-                "the backend kind needs the wire or a dead address; the null backend answers"
-                    .to_owned(),
-            ));
-        }
-        if kind == "local" {
-            return Err(Outcome::Skip(
-                "the local kind needs a file door this surface does not carry".to_owned(),
-            ));
-        }
         if kind == "deadline" {
             let question = built(question_text)?;
             let budget = case["budget_ms"].as_u64().unwrap_or_default();
@@ -246,12 +298,6 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
             )
         }
         "find" => {
-            if case.get("none").is_some() {
-                return Err(Outcome::Diverge(
-                    "the contract's find has no none flag yet; the none case is real-engine data"
-                        .to_owned(),
-                ));
-            }
             let text = case["question"]
                 .as_str()
                 .ok_or_else(|| Outcome::Fail("the find question arrives as text".to_owned()))?;
@@ -277,18 +323,6 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
             check_recognize(expect, text, &found)
         }
         "relate" => {
-            // Finding, filed in `libraries/rust/NOTES.md`: the conformance
-            // file holds two cases over one identical input — R03 is the
-            // per-subject recording and R04 the ruled pairs form — and the
-            // stand-in answers the pairs form, which `relate-design.md`
-            // rules. R03's five-edge expectation cannot be met by the
-            // ruled shape; the conformance owner decides its fate.
-            if case["id"].as_str() == Some("71-relate-R03-persubject-10") {
-                return Err(Outcome::Diverge(
-                    "two recordings share this input; the stand-in answers the ruled pairs form (R04), and the per-subject expectation (R03) is not the ruled shape; see libraries/rust/NOTES.md"
-                        .to_owned(),
-                ));
-            }
             let ask = Relate::from_json(question_text).map_err(fail)?;
             let records = records(case);
             let edges = tt.relate(&ask, &records).map_err(fail)?;
@@ -367,10 +401,6 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
         }
         "usage" => Err(Outcome::Skip(
             "the cache half needs the disk cache, which the stand-in does not carry".to_owned(),
-        )),
-        "cancel" => Err(Outcome::Diverge(
-            "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
-                .to_owned(),
         )),
         other => Err(Outcome::Skip(format!("no case shape for {other}"))),
     }

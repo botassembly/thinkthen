@@ -32,6 +32,36 @@ DUCKDB = ROOT / "duckdb-bin" / "duckdb"
 FAILURES = 0
 
 
+def central_skip(file: dict, case: dict):
+    """The shared skip table's reason for this case on this surface, and
+    whether it is a recorded divergence. First match wins; entries naming
+    a surface apply only there."""
+    kind = case.get("expect", {}).get("error", {}).get("kind")
+    for entry in file.get("skips", []):
+        if entry.get("surfaces") and "duckdb" not in entry["surfaces"]:
+            continue
+        when = entry["when"]
+        if "id" in when and case["id"] != when["id"]:
+            continue
+        if "verb" in when:
+            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
+            if case["verb"] not in listed:
+                continue
+        if "kind" in when and kind != when["kind"]:
+            continue
+        if "form" in when and case.get("form") != when["form"]:
+            continue
+        if "none" in when and bool(case.get("none")) != when["none"]:
+            continue
+        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
+            continue
+        if "record" in when and when["record"] == "null" \
+                and not any(record is None for record in case.get("records") or []):
+            continue
+        return entry["why"], entry.get("as", "skip")
+    return None
+
+
 def run(sql: str, fixture: bool = False) -> str:
     """One statement batch through the stock CLI, values one per line.
     The whole batch rides in `-c` so the output is the plain list form
@@ -94,17 +124,16 @@ def main() -> int:
         verb = case["verb"]
         evidence = case.get("evidence")
         records = case.get("records")
-        if "question_file" in case:
-            print(f"skip     {name}: the local kind needs a file door")
+        central = central_skip(data, case)
+        if central is not None:
+            why, disposition = central
+            print(f"{disposition:<8} {name}: {why}")
             continue
         if verb == "recognize":
             check_recognize(name, case)
             continue
         if verb == "relate":
             check_relate(name, case)
-            continue
-        if verb in ("rank", "find"):
-            print(f"skip     {name}: {verb} is not this surface's SQL shape; the surface check owns it")
             continue
         question = case["question"]
         expect = case["expect"]
@@ -113,12 +142,6 @@ def main() -> int:
         arg = json.dumps(question)
 
         if "error" in expect:
-            if verb == "cancel":
-                print(f"diverge  {name}: the CLI's Ctrl-C owns cancel; see NOTES")
-                continue
-            if expect["error"]["kind"] == "deadline":
-                print(f"skip     {name}: the spent-budget case needs a deadline door this driver does not carry")
-                continue
             wanted = f"thinkthen {expect['error']['kind']}"
             text = evidence or (records[0] if records else "")
             if verb in ("choose", "score", "tag"):
@@ -173,19 +196,24 @@ def main() -> int:
                     pairs,
                 )
         elif verb == "decide_many":
-            listing = ",".join(sql_string(r) for r in records)
-            wanted = "[" + ", ".join("true" if a else "false" for a in expect["answers"]) + "]"
+            # A JSON null record is SQL NULL: no request is sent for it and
+            # its answer stays NULL (the ruled row mapping).
+            listing = ",".join("NULL" if r is None else sql_string(r) for r in records)
+            wanted = "[" + ", ".join(
+                "NULL" if a is None else ("true" if a else "false") for a in expect["answers"]
+            ) + "]"
             check(name, f"SELECT list(thinkthen_decide({sql_string(arg)}, text)) FROM (SELECT unnest([{listing}]) AS text);",
                   wanted)
             if expect.get("rows"):
                 pairs = "~".join(
-                    f"{row['input']}|{'true' if row['value'] else 'false'}"
+                    f"{row['input'] if row['input'] is not None else '<null>'}|"
+                    + ("<null>" if row["value"] is None else ("true" if row["value"] else "false"))
                     for row in expect["rows"]
                 )
                 check(
                     name + " rows",
-                    "SELECT string_agg(text || '|' || thinkthen_decide("
-                    f"{sql_string(arg)}, text), '~' ORDER BY i) "
+                    "SELECT string_agg(coalesce(text, '<null>') || '|' || "
+                    f"coalesce(thinkthen_decide({sql_string(arg)}, text)::varchar, '<null>'), '~' ORDER BY i) "
                     f"FROM unnest([{listing}]) WITH ORDINALITY AS t(text, i);",
                     pairs,
                 )
@@ -198,6 +226,10 @@ def main() -> int:
                       f"SELECT (thinkthen_details({sql_string(arg)}, {sql_string(evidence)})).requests;",
                       wanted)
         elif verb == "annotate":
+            set_json = json.dumps({"version": 1, "questions": case["set"]})
+            if expect.get("rows") is not None:
+                check_annotate_rows(name, case, set_json, records)
+                continue
             answers = expect["answers"]
             # The failed marker rides the stand-in's test-only opt-in; only
             # a case whose expectation carries a `failed` member arms it.
@@ -214,7 +246,6 @@ def main() -> int:
                         f'"{field}":' + ("null" if member["answer"] is None else "true" if member["answer"] is True else "false")
                     )
             fields = ",".join(parts)
-            set_json = json.dumps({"version": 1, "questions": case["set"]})
             check(name, f"SELECT thinkthen_annotate({sql_string(set_json)}, {sql_string(evidence)});",
                   "{" + fields + "}", fixture)
         elif verb == "usage":
@@ -264,15 +295,61 @@ def check_recognize(name: str, case: dict) -> None:
     )
 
 
+def check_annotate_rows(name: str, case: dict, set_json: str, records: list) -> None:
+    """A multi-record annotate case: one answer object a record, in input
+    order, and a NULL record answers NULL. The field shape is the
+    surface's own (a decision is true/false, a score is its object with
+    the nearest level and the position), and a numeric expectation reads
+    the position, so the case pins the bare answers."""
+    global FAILURES
+    listing = ",".join("NULL" if record is None else sql_string(record) for record in records)
+    fixture = any(
+        isinstance(member, dict) and "failed" in member
+        for row in case["expect"]["rows"]
+        for member in row["value"].values()
+    )
+    got_raw = run(
+        "SELECT thinkthen_annotate(" + sql_string(set_json) + ", text)::varchar "
+        f"FROM (SELECT * FROM unnest([{listing}]) WITH ORDINALITY AS t(text, i)) ORDER BY i;",
+        fixture=fixture,
+    ).strip()
+    got_lines = got_raw.splitlines() if got_raw else []
+    wanted_rows = case["expect"]["rows"]
+    problems = []
+    if len(got_lines) != len(wanted_rows):
+        problems.append(f"expected {len(wanted_rows)} rows, got {len(got_lines)}")
+    else:
+        for index, (line, wanted) in enumerate(zip(got_lines, wanted_rows)):
+            if line == "NULL":
+                problems.append(f"row {index}: NULL where the case expects {wanted['value']}")
+                continue
+            try:
+                got = json.loads(line)
+            except json.JSONDecodeError:
+                problems.append(f"row {index}: not JSON: {line!r}")
+                continue
+            for field, value in wanted["value"].items():
+                held = got.get(field)
+                if isinstance(value, dict) and "failed" in value:
+                    if held != {"failed": value["failed"]}:
+                        problems.append(f"row {index} {field}: {held!r}, expected the marker")
+                elif isinstance(value, (int, float)) and not isinstance(value, bool):
+                    if not isinstance(held, dict) or "position" not in held \
+                            or abs(held["position"] - value) > 1e-9:
+                        problems.append(f"row {index} {field}: {held!r}, expected {value}")
+                elif held != value:
+                    problems.append(f"row {index} {field}: {held!r}, expected {value!r}")
+    if problems:
+        FAILURES += 1
+        print(f"FAILED   {name}: {'; '.join(problems)}")
+    else:
+        print(f"ok       {name} rows: {len(wanted_rows)} records in input order")
+
+
 def check_relate(name: str, case: dict) -> None:
     """One relate case: the recorded edges as rows over the query's own
     ids. The ruled form is `pairs`; the per-subject arm is the engine's
     own and the stand-in serves the pairs row when the texts collide."""
-    if case.get("form") == "per-subject":
-        print(
-            f"diverge  {name}: per-subject is the engine-internal arm; the ruled form is pairs and the stand-in serves it on a text collision"
-        )
-        return
     records = case["records"]
     values = ",".join(
         f"({i + 1}, {sql_string(record)})" for i, record in enumerate(records)

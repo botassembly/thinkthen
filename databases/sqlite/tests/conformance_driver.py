@@ -31,7 +31,40 @@ import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 LIB = HERE.parent / "target" / "release" / "libthinkthen0.so"
-CASES = HERE.parent.parent.parent / "conformance" / "conformance.json"
+FILE = json.loads((HERE.parent.parent.parent / "conformance" / "conformance.json").read_text())
+CASES = FILE["cases"]
+SKIPS = FILE.get("skips", [])
+
+
+def central_skip(surface, case, wire):
+    """The shared skip table's reason for this case on this surface, or
+    None. First match wins; entries naming a surface apply only there."""
+    kind = case.get("expect", {}).get("error", {}).get("kind")
+    for entry in SKIPS:
+        if entry.get("surfaces") and surface not in entry["surfaces"]:
+            continue
+        if entry.get("unless") == "wire" and wire:
+            continue
+        when = entry["when"]
+        if "id" in when and case["id"] != when["id"]:
+            continue
+        if "verb" in when:
+            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
+            if case["verb"] not in listed:
+                continue
+        if "kind" in when and kind != when["kind"]:
+            continue
+        if "form" in when and case.get("form") != when["form"]:
+            continue
+        if "none" in when and bool(case.get("none")) != when["none"]:
+            continue
+        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
+            continue
+        if "record" in when and when["record"] == "null" \
+                and not any(record is None for record in case.get("records") or []):
+            continue
+        return entry["why"], entry.get("as", "skip")
+    return None
 
 os.environ.setdefault("ENGINE_NULL", "1")
 # Case 74 pins the failed-question marker for one synthesized record; the
@@ -83,29 +116,23 @@ def as_sql_question(question):
 
 
 def main():
-    cases = json.loads(CASES.read_text())["cases"]
+    cases = CASES
     conn = fresh()
 
     for case in cases:
         case_id = case["id"]
         verb = case["verb"]
-        if "question_file" in case:
-            print(f"skip     {case_id}: the local kind needs a file door")
+        central = central_skip("sqlite", case, wire=False)
+        if central is not None:
+            why, disposition = central
+            print(f"{disposition:<8} {case_id}: {why}")
             continue
         question = case["question"]
         evidence = case.get("evidence")
         expect = case["expect"]
 
-        if "error" in expect and expect["error"]["kind"] == "backend":
-            print(f"skip     {case_id}: the backend kind needs the wire")
-            continue
-
-        if "error" in expect and expect["error"].get("kind") == "deadline":
-            print(f"skip     {case_id}: the spent-budget case needs a deadline door this driver does not carry")
-            continue
-
         try:
-            if verb in ("decide", "details", "usage", "cancel"):
+            if verb in ("decide", "details", "usage"):
                 if verb == "usage":
                     # The counters are cumulative (the reset-removal ruling),
                     # so the case is read as deltas between snapshots; its
@@ -151,14 +178,6 @@ def main():
                             f"expected {wanted}",
                             failed=True,
                         )
-                    continue
-                if verb == "cancel":
-                    print(
-                        f"diverge  {case_id}: the stand-in ignores a pre-fired "
-                        "token; conformance/DIVERGENCES.md carries this as a "
-                        "real-engine requirement, and the wire suite proves "
-                        "the mid-flight interrupt"
-                    )
                     continue
                 sql = (
                     "SELECT thinkthen_details(?, ?)"

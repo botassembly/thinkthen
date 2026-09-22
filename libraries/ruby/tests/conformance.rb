@@ -16,9 +16,39 @@ require "json"
 require "thinkthen"
 
 PATH = File.expand_path("../../../conformance/conformance.json", __dir__)
+FILE = JSON.parse(File.read(PATH))
+SKIPS = FILE["skips"] || []
 
 def wire_set?
   ENV.key?("ENGINE_BASE_URL") || ENV.key?("THINKTHEN_BASE_URL")
+end
+
+# The shared skip table's entry for this case on this surface, or nil.
+# First match wins; entries naming a surface apply only there.
+def central_skip(surface, one, wire)
+  kind = one.dig("expect", "error", "kind")
+  SKIPS.each do |entry|
+    next if entry["surfaces"] && !entry["surfaces"].include?(surface)
+    next if entry["unless"] == "wire" && wire
+
+    rule = entry["when"]
+    next if rule.key?("id") && one["id"] != rule["id"]
+    if rule.key?("verb")
+      listed = rule["verb"].is_a?(Array) ? rule["verb"] : [rule["verb"]]
+      next unless listed.include?(one["verb"])
+    end
+    next if rule.key?("kind") && kind != rule["kind"]
+    next if rule.key?("form") && one["form"] != rule["form"]
+    next if rule.key?("none") && (!!one["none"]) != rule["none"]
+    if rule.key?("error")
+      next unless (!one.dig("expect", "error").nil?) == rule["error"]
+    end
+    if rule["record"] == "null"
+      next unless (one["records"] || []).any?(&:nil?)
+    end
+    return [entry["as"] || "skip", entry["why"]]
+  end
+  nil
 end
 
 def built(text)
@@ -85,8 +115,6 @@ end
 def run_case(verb, question_text, evidence, records, expect, set_json, text = nil, form = nil)
   if (error = expect["error"])
     kind = error["kind"]
-    raise "SKIP: the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement" if verb == "cancel"
-    raise "SKIP: the backend kind needs the wire or a dead address; the null backend answers" if kind == "backend" && !wire_set?
 
     return check_error(verb, question_text, evidence, records, kind)
   end
@@ -171,8 +199,6 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
   when "details"
     question = built(question_text)
     check_details(expect, ThinkThen.details(question, evidence))
-  when "usage"
-    raise "SKIP: the cache half needs the disk cache, which the stand-in does not carry"
   when "recognize"
     spec = JSON.parse(question_text)
     rules = (spec["relations"] || []).to_h do |rule|
@@ -203,10 +229,6 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
             "#{[got.name, got.source, got.target, got.probability].inspect}")
     end
   when "relate"
-    if form == "per-subject"
-      raise "SKIP: the per-subject arm is engine-internal; the stand-in serves the ruled pairs " \
-            "form (conformance/DIVERGENCES.md)"
-    end
     spec = JSON.parse(question_text)
     rules = (spec["relations"] || []).map do |rule|
       rule.is_a?(Hash) ? { rule["name"] => [rule["source"], rule["target"]] } : rule
@@ -230,13 +252,15 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
   end
 end
 
-file = JSON.parse(File.read(PATH))
+file = FILE
 failed = 0
 file["cases"].each do |one|
   id = one["id"]
   verb = one["verb"]
-  if one["question_file"]
-    puts "skip     #{id}: the local kind needs a file door this surface does not carry"
+  central = central_skip("ruby", one, wire_set?)
+  if central
+    disposition, why = central
+    puts "#{disposition.ljust(8)} #{id}: #{why}"
     next
   end
   question_text = JSON.generate(one["question"])

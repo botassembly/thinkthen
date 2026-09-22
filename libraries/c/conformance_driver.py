@@ -5,17 +5,10 @@ Drives the built door (target/release/libthinkthen.so) through ctypes: the
 typed decide doors for the decide family, the out-param recognize and
 relate doors for the two semantic functions, and the JSON door for the
 rest. Prints one line a case — ok, skip with a reason — and exits nonzero
-on any divergence. Run through ./check.sh; the door is the surface under
-test and this driver is scaffolding.
-
-Skips, with their reasons: the backend-refusal cases need the wire or a
-dead address (tests/wire.rs proves the backend kind there), the usage case
-needs a cache and a reset the door does not carry, the cancel case cancels
-after the second of four replies under the wire stub and the offline null
-backend cannot time that (tests/cancel.rs proves the token's pre-fired and
-mid-batch paths through the door), and the per-subject relate arm shares
-its input with the pairs arm while the stand-in serves the ruled pairs
-form (a conformance-data finding for the build team).
+on any divergence. What this surface cannot run comes from the shared
+skip table in the conformance file, one place a reason each. Run through
+./check.sh; the door is the surface under test and this driver is
+scaffolding.
 """
 
 import ctypes
@@ -25,7 +18,40 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 LIB = HERE / "target" / "release" / "libthinkthen.so"
-CASES = HERE.parent.parent / "conformance" / "conformance.json"
+FILE = json.loads((HERE.parent.parent / "conformance" / "conformance.json").read_text())
+CASES = FILE["cases"]
+SKIPS = FILE.get("skips", [])
+
+
+def central_skip(surface, case, wire):
+    """The shared skip table's reason for this case on this surface, or
+    None. First match wins; entries naming a surface apply only there."""
+    kind = case.get("expect", {}).get("error", {}).get("kind")
+    for entry in SKIPS:
+        if entry.get("surfaces") and surface not in entry["surfaces"]:
+            continue
+        if entry.get("unless") == "wire" and wire:
+            continue
+        when = entry["when"]
+        if "id" in when and case["id"] != when["id"]:
+            continue
+        if "verb" in when:
+            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
+            if case["verb"] not in listed:
+                continue
+        if "kind" in when and kind != when["kind"]:
+            continue
+        if "form" in when and case.get("form") != when["form"]:
+            continue
+        if "none" in when and bool(case.get("none")) != when["none"]:
+            continue
+        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
+            continue
+        if "record" in when and when["record"] == "null" \
+                and not any(record is None for record in case.get("records") or []):
+            continue
+        return entry["why"]
+    return None
 
 YES, NO, UNSURE = 1, 0, 2
 
@@ -176,23 +202,22 @@ def outcome_of(expected):
 def main():
     lib = load()
     engine = lib.thinkthen_engine_new()
-    cases = json.loads(CASES.read_text())["cases"]
+    cases = CASES
     failures = 0
 
     for case in cases:
         case_id = case["id"]
         verb = case["verb"]
-        if "question_file" in case:
-            print(f"skip     {case_id}: the local kind needs a file door")
+        reason = central_skip("c", case, wire=False)
+        if reason is not None:
+            print(f"skip     {case_id}: {reason}")
             continue
         question = case["question"]
         evidence = case.get("evidence")
         expect = case["expect"]
         line = ""
 
-        if "error" in expect and expect["error"]["kind"] == "backend":
-            line = f"skip     {case_id}: the backend kind needs the wire or a dead address"
-        elif "error" in expect and expect["error"]["kind"] == "deadline":
+        if "error" in expect and expect["error"]["kind"] == "deadline":
             # The door's `deadline_ms` argument, with the case's own budget:
             # zero is spent before the call starts, so nothing is sent.
             budget = case.get("budget_ms", 0)
@@ -399,50 +424,32 @@ def main():
                 else:
                     line = f"ok       {case_id}"
         elif verb == "relate":
-            if case.get("form") == "per-subject":
-                # R03 per-subject and R04 pairs hold the identical ten
-                # records, and the stand-in serves the ruled pairs form.
-                line = (
-                    f"skip     {case_id}: the per-subject arm shares its "
-                    "input with the pairs arm and the stand-in serves the "
-                    "ruled pairs form; a conformance-data finding for the "
-                    "build team"
-                )
+            spec = {}
+            rules = [
+                {"name": rule["name"], "source": rule["source"], "target": rule["target"]}
+                for rule in question.get("relations", [])
+                if not rule.get("either")
+            ]
+            either = [
+                rule["name"]
+                for rule in question.get("relations", [])
+                if rule.get("either")
+            ]
+            if rules:
+                spec["relations"] = rules
+            if either:
+                spec["either"] = either
+            if "threshold" in question:
+                spec["threshold"] = question["threshold"]
+            edges, message = relate(lib, engine, spec, case["records"])
+            if edges is None:
+                line = f"FAIL     {case_id}: {message}"
+                failures += 1
+            elif edges.get("edges") != case["expect"]["edges"]:
+                line = f"FAIL     {case_id}: {edges.get('edges')}, expected {case['expect']['edges']}"
+                failures += 1
             else:
-                spec = {}
-                rules = [
-                    {"name": rule["name"], "source": rule["source"], "target": rule["target"]}
-                    for rule in question.get("relations", [])
-                    if not rule.get("either")
-                ]
-                either = [
-                    rule["name"]
-                    for rule in question.get("relations", [])
-                    if rule.get("either")
-                ]
-                if rules:
-                    spec["relations"] = rules
-                if either:
-                    spec["either"] = either
-                if "threshold" in question:
-                    spec["threshold"] = question["threshold"]
-                edges, message = relate(lib, engine, spec, case["records"])
-                if edges is None:
-                    line = f"FAIL     {case_id}: {message}"
-                    failures += 1
-                elif edges.get("edges") != case["expect"]["edges"]:
-                    line = f"FAIL     {case_id}: {edges.get('edges')}, expected {case['expect']['edges']}"
-                    failures += 1
-                else:
-                    line = f"ok       {case_id}"
-        elif verb == "usage":
-            line = f"skip     {case_id}: the cache half and the reset need machinery the door does not carry"
-        elif verb == "cancel":
-            line = (
-                f"skip     {case_id}: the mid-batch cancel needs the wire "
-                "stub's reply timing; tests/cancel.rs proves the token's "
-                "pre-fired and mid-batch paths through the door"
-            )
+                line = f"ok       {case_id}"
         else:
             line = f"skip     {case_id}: the driver has no route for {verb}"
 

@@ -11,6 +11,215 @@
  ],
  "unsure_marker": null,
  "public_word_for_unsure": "unsure",
+ "skips": [
+  {
+   "when": {
+    "id": "18-cancel-mid-batch"
+   },
+   "surfaces": [
+    "python"
+   ],
+   "why": "the live interrupt runs as tests/test_cancel.py against the stub"
+  },
+  {
+   "when": {
+    "id": "18-cancel-mid-batch"
+   },
+   "surfaces": [
+    "typescript"
+   ],
+   "why": "the live interrupt runs on the wire in bulk.test.mjs (the AbortSignal proof)"
+  },
+  {
+   "when": {
+    "id": "18-cancel-mid-batch"
+   },
+   "surfaces": [
+    "c"
+   ],
+   "why": "the mid-batch cancel needs the wire stub's reply timing; tests/cancel.rs proves the token's pre-fired and mid-batch paths through the door"
+  },
+  {
+   "when": {
+    "id": "18-cancel-mid-batch"
+   },
+   "surfaces": [
+    "postgresql"
+   ],
+   "why": "the engine token cannot be pre-fired through SQL; the statement_timeout proof in the surface's NOTES.md is its cancel shape"
+  },
+  {
+   "when": {
+    "verb": "cancel"
+   },
+   "surfaces": [
+    "ruby"
+   ],
+   "why": "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+  },
+  {
+   "when": {
+    "verb": "cancel"
+   },
+   "surfaces": [
+    "r",
+    "rust",
+    "duckdb",
+    "sqlite"
+   ],
+   "as": "diverge",
+   "why": "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+  },
+  {
+   "when": {
+    "kind": "backend"
+   },
+   "unless": "wire",
+   "surfaces": [
+    "ruby",
+    "r",
+    "rust",
+    "c",
+    "sqlite"
+   ],
+   "why": "the backend kind needs the wire or a dead address; the null backend answers"
+  },
+  {
+   "when": {
+    "kind": "deadline"
+   },
+   "surfaces": [
+    "sqlite",
+    "duckdb"
+   ],
+   "why": "the spent-budget case needs a deadline door this driver does not carry"
+  },
+  {
+   "when": {
+    "kind": "local"
+   },
+   "why": "the local kind needs a file door this surface does not carry"
+  },
+  {
+   "when": {
+    "form": "per-subject"
+   },
+   "surfaces": [
+    "duckdb"
+   ],
+   "as": "diverge",
+   "why": "the per-subject form is the engine-internal arm; the ruled form is pairs and the stand-in serves it on a text collision"
+  },
+  {
+   "when": {
+    "form": "per-subject"
+   },
+   "why": "the per-subject arm shares its input with the pairs arm and the stand-in serves the ruled pairs form; a conformance-data finding for the build team"
+  },
+  {
+   "when": {
+    "verb": "find",
+    "none": true
+   },
+   "surfaces": [
+    "python",
+    "typescript",
+    "ruby",
+    "r",
+    "rust"
+   ],
+   "why": "the none arm needs the real engine's relative form; the stand-in always returns a best unit"
+  },
+  {
+   "when": {
+    "verb": "usage"
+   },
+   "surfaces": [
+    "duckdb"
+   ],
+   "as": "diverge",
+   "why": "the disk cache waits on the real engine (named)"
+  },
+  {
+   "when": {
+    "verb": "usage"
+   },
+   "surfaces": [
+    "python",
+    "typescript",
+    "ruby",
+    "r",
+    "rust",
+    "c"
+   ],
+   "why": "the cache half needs the disk cache, which the stand-in does not carry"
+  },
+  {
+   "when": {
+    "verb": [
+     "rank",
+     "find"
+    ]
+   },
+   "surfaces": [
+    "duckdb",
+    "sqlite"
+   ],
+   "why": "rank and find are not this surface's SQL shape; the surface's own check owns them"
+  },
+  {
+   "when": {
+    "verb": [
+     "filter",
+     "rank",
+     "find"
+    ]
+   },
+   "surfaces": [
+    "postgresql"
+   ],
+   "why": "filter, rank, and find are WHERE, ORDER BY, and LIMIT here; the surface ships no function for them"
+  },
+  {
+   "when": {
+    "verb": [
+     "rank",
+     "find"
+    ],
+    "error": false
+   },
+   "surfaces": [
+    "ruby"
+   ],
+   "why": "the runner carries no rank or find branch; the surface's own tests cover both"
+  },
+  {
+   "when": {
+    "verb": [
+     "rank",
+     "find"
+    ]
+   },
+   "surfaces": [
+    "c"
+   ],
+   "why": "the driver has no route for rank or find"
+  },
+  {
+   "when": {
+    "record": "null"
+   },
+   "surfaces": [
+    "python",
+    "typescript",
+    "ruby",
+    "r",
+    "rust",
+    "c"
+   ],
+   "why": "the NULL row is a database-surface form; this door takes text strings"
+  }
+ ],
  "cases": [
   {
    "id": "01-decide-yes-cut",
