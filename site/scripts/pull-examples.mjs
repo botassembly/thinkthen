@@ -195,8 +195,9 @@ function drawnCells() {
     if (surface.slug === 'shell') continue;
     const block = sections[surface.deckHeading]?.[0];
     if (!block) continue;
+    // Split on the whole heading line. A bare `## R` also matches `## Ruby`.
     const install = /^Install: `(.+)`$/m.exec(
-      text.split(`## ${surface.deckHeading}`)[1].split('\n```')[0]);
+      text.split(`\n## ${surface.deckHeading}\n`)[1].split('\n```')[0]);
     wholeBlocks[surface.slug] = { lang: block.lang, code: block.code, install: install?.[1] || null };
     const chunks = chunksOf(block.code);
     const preamble = [];

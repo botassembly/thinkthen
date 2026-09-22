@@ -45,13 +45,18 @@ export const COMMON_EXITS = [
   [70, 'a defect in the tool'],
 ];
 
+// A function page's lede reads "You give it <takes>. You get back <gives>.",
+// so both are lower-case phrases with no closing period. `lede` replaces them
+// on the question file, as HTML. `toPerson` marks the functions whose
+// not-sure answers a person should read.
 export const FUNCTIONS = [
   {
     name: 'decide',
     primitive: 'Yes or no',
     line: 'Answer one yes or no question about the evidence.',
-    takes: 'One question and one piece of evidence.',
-    gives: 'true, false, or null.',
+    takes: 'one question and one piece of evidence',
+    gives: 'true, false, or null',
+    toPerson: true,
     requests: 'One request for one piece of evidence. One request for each record in a stream.',
     args: 'QUESTION or @FILE',
     options: [
@@ -69,8 +74,9 @@ export const FUNCTIONS = [
     name: 'choose',
     primitive: 'Pick one',
     line: 'Pick one option from your list.',
-    takes: 'One question, one piece of evidence, and 2 to 255 options.',
-    gives: 'One of your options, or null.',
+    takes: 'one question, one piece of evidence, and 2 to 255 options',
+    gives: 'one of your options, or null',
+    toPerson: true,
     requests: 'One request for one piece of evidence. One request for each record in a stream.',
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
@@ -89,8 +95,8 @@ export const FUNCTIONS = [
     name: 'tag',
     primitive: 'Yes or no, per label',
     line: 'Name every label that fits.',
-    takes: 'One question, one piece of evidence, and 1 to 20 labels.',
-    gives: 'The labels that fit, as a list.',
+    takes: 'one question, one piece of evidence, and 1 to 20 labels',
+    gives: 'the labels that fit, as a list',
     requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count.',
     args: 'QUESTION or @FILE, then LABEL...',
     options: [
@@ -106,8 +112,8 @@ export const FUNCTIONS = [
     name: 'score',
     primitive: 'Place on a scale',
     line: 'Place the evidence on a scale you name.',
-    takes: 'One question, one piece of evidence, and 2 to 10 levels, least first.',
-    gives: 'A number along your levels. The first level is 0.',
+    takes: 'one question, one piece of evidence, and 2 to 10 levels, least first',
+    gives: 'a number along your levels. The first level is 0',
     requests: 'One request for one piece of evidence. One request for each record in a stream.',
     args: 'QUESTION or @FILE, then LEVEL...',
     options: [
@@ -121,8 +127,8 @@ export const FUNCTIONS = [
     name: 'filter',
     primitive: 'Yes or no, per record',
     line: 'Keep the records where the answer is yes.',
-    takes: 'One yes-or-no question and many records.',
-    gives: 'The records that pass, byte for byte, in the order they went in.',
+    takes: 'one yes-or-no question and many records',
+    gives: 'the records that pass, byte for byte, in the order they went in',
     requests: 'One request for each record.',
     args: 'QUESTION or @FILE. One of --lines, --jsonl, --csv, or --tsv is required.',
     options: [
@@ -139,8 +145,8 @@ export const FUNCTIONS = [
     name: 'rank',
     primitive: 'Yes or no, per record',
     line: 'Sort records by how likely the answer is yes.',
-    takes: 'One yes-or-no question and many records.',
-    gives: 'Every record again, most likely first.',
+    takes: 'one yes-or-no question and many records',
+    gives: 'every record again, most likely first',
     requests: 'One request for each record. --top trims the printed list and saves nothing.',
     args: 'QUESTION or @FILE. One of --lines, --jsonl, --csv, or --tsv is required.',
     options: [
@@ -157,9 +163,9 @@ export const FUNCTIONS = [
     name: 'find',
     primitive: 'Pick one, over the lines of the evidence',
     line: 'Pick the one line that best answers a question.',
-    takes: 'A question and 2 to 255 lines or records. 2 to 254 with --none.',
-    gives: 'The one line that fits best.',
-    requests: 'One request for the whole document, however many lines it holds.',
+    takes: 'a question and 2 to 255 lines or records, or 2 to 254 with --none',
+    gives: 'the one line that fits best',
+    requests: 'It sends one request for the whole document.',
     args: 'QUESTION',
     options: [
       ['--none', 'Lets it answer that nothing fits. It then prints nothing and exits 3.'],
@@ -175,11 +181,12 @@ export const FUNCTIONS = [
   },
   {
     name: 'annotate',
-    primitive: 'All three, many at once',
+    primitive: 'Every kind of answer, many at once',
     line: 'Fill out a form for every record.',
-    takes: 'A question set and your records.',
-    gives: 'Every record back with one field per question.',
-    requests: 'One request for each record, for each distinct place the questions read. Records never share a request.',
+    takes: 'a saved set of questions and your records',
+    gives: 'each record with one answer per question',
+    requests: 'It sends one request for each record and each part the questions read.',
+    toPerson: true,
     args: 'FILE, the saved question set',
     options: [
       ['--profile FILE', 'Applies local backend limits and names the calibration profile in use.'],
@@ -193,28 +200,28 @@ export const FUNCTIONS = [
     name: 'recognize',
     primitive: 'Pick one, per word',
     line: 'Find every name in the evidence and say what kind it is.',
-    takes: 'The evidence and the kinds of name you allow.',
-    gives: 'Each name, its kind, where it sits, and a strength.',
+    takes: 'the evidence and the kinds of name you allow',
+    gives: 'each name, its kind, where it sits, and a strength',
     requests: 'The specification does not yet carry recognize, so the request count is not settled.',
     args: 'Not settled. The command has no recognize yet.',
     status: 'preview',
     options: [],
     exits: [],
-    unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. Three thresholds are yours to set. The number on a name is its strength, which is ours and computed, and it claims nothing about chance. Relations are beta.',
+    unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. Three thresholds are yours to set. The number on a name is its strength, which is ours and computed, and it claims nothing about chance. Relations are a preview too.',
     howtos: [],
   },
   {
     name: 'relate',
     primitive: 'Pick one, per pair of records',
     line: 'Say how the records relate to each other.',
-    takes: 'A set of records and the relations you allow.',
-    gives: 'One edge for each related pair, with a probability.',
+    takes: 'a set of records and the relations you allow',
+    gives: 'one edge for each related pair, with a probability',
     requests: 'The specification does not yet carry relate, so the request count is not settled.',
     args: 'Not settled. The command has no relate yet.',
     status: 'preview',
     options: [],
     exits: [],
-    unsure: 'A relation has a direction, or it is marked as reading the same both ways. The number on an edge is a probability. relate is beta.',
+    unsure: 'A relation has a direction, or it is marked as reading the same both ways. The number on an edge is a probability. relate is a preview.',
     howtos: [],
   },
   {
@@ -222,8 +229,7 @@ export const FUNCTIONS = [
     title: '@question',
     primitive: 'Not a function',
     line: 'A saved question every function accepts.',
-    takes: 'One JSON file holding exactly one question.',
-    gives: 'Nothing. A question file gives no answer. It carries a question.',
+    lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. The hook, the test, and the pipeline then ask the same question.',
     requests: 'None of its own. The function that reads it sends the requests.',
     args: '@FILE in place of the question words, on decide, choose, tag, score, filter, and rank.',
     options: [
@@ -280,7 +286,7 @@ export const SURFACES = [
   {
     slug: 'shell', name: 'Bash', deckHeading: null, status: 'ships first', release: 'ships first',
     lang: 'bash', tab: 'Bash',
-    blurb: 'The command. Ten functions, standard in, standard out, and an exit code your script branches on.',
+    blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
     unsureWord: 'null, and exit code 3',
     install: [
       ['brew install genomoncology/thinkthen/thinkthen', 'Homebrew tap. Coming with 0.1.'],
@@ -296,7 +302,7 @@ export const SURFACES = [
   {
     slug: 'python', name: 'Python', deckHeading: 'Python', status: 'planned', release: '0.1',
     lang: 'python', tab: 'Python',
-    blurb: 'The ten functions as plain Python functions. Build a question once and use it anywhere.',
+    blurb: 'Pass a string or a list, and get `True`, `False`, or `None` back. Build a question once and reuse it.',
     unsureWord: 'None',
     install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: [
@@ -318,7 +324,7 @@ export const SURFACES = [
   {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript', status: 'planned', release: '0.1',
     lang: 'ts', tab: 'TypeScript',
-    blurb: 'The ten functions, all async. Options ride in one object.',
+    blurb: 'Ten async functions. Pass one options object and await the answer.',
     unsureWord: 'null',
     install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
     particular: [
@@ -329,7 +335,7 @@ export const SURFACES = [
   {
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby', status: 'planned', release: '0.1',
     lang: 'ruby', tab: 'Ruby',
-    blurb: 'The ten functions as module methods.',
+    blurb: 'Ten module methods. Any Enumerable goes in.',
     unsureWord: 'nil',
     install: [['gem install thinkthen', null]],
     particular: ['Any Enumerable crosses to the engine once.'],
@@ -337,7 +343,7 @@ export const SURFACES = [
   {
     slug: 'r', name: 'R', deckHeading: 'R', status: 'planned', release: '0.1',
     lang: 'r', tab: 'R',
-    blurb: 'The ten functions with a tt_ prefix, inside dplyr.',
+    blurb: 'Ten `tt_` functions that work inside dplyr.',
     unsureWord: 'NA',
     install: [['install.packages("thinkthen")', null]],
     particular: [
@@ -348,7 +354,7 @@ export const SURFACES = [
   {
     slug: 'rust', name: 'Rust', deckHeading: 'Rust', status: 'planned', release: '0.1',
     lang: 'rust', tab: 'Rust',
-    blurb: 'The engine itself, with no binding in between.',
+    blurb: 'Call the engine directly. The compiler makes you handle not sure.',
     unsureWord: 'Answer::Unsure',
     install: [['cargo add thinkthen', null]],
     particular: [
@@ -359,7 +365,7 @@ export const SURFACES = [
   {
     slug: 'c', name: 'C', deckHeading: 'C', status: 'planned', release: '0.1',
     lang: 'c', tab: 'Rust',
-    blurb: 'The header and the library. The door to every other language.',
+    blurb: 'One header and one library. Bind ThinkThen to any language.',
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
     install: [['thinkthen.h + libthinkthen', 'One archive per platform, with the header, both libraries, and a .pc file.']],
     particular: [
@@ -370,7 +376,8 @@ export const SURFACES = [
   {
     slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB', status: 'planned', release: '0.1',
     lang: 'sql', tab: 'SQL',
-    blurb: 'The functions work in WHERE, SELECT, and ORDER BY.',
+    blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
+    captions: { score: 'This query also orders by score.' },
     unsureWord: 'NULL',
     install: [['INSTALL thinkthen FROM community; LOAD thinkthen;', null]],
     particular: ['A whole column chunk crosses at once.'],
@@ -378,7 +385,7 @@ export const SURFACES = [
   {
     slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite', status: 'planned', release: '0.1',
     lang: 'sql', tab: 'SQL',
-    blurb: 'The same function names, with a warm pass in front of them.',
+    blurb: 'One warm pass answers the whole table. Every later query reads the saved answers.',
     unsureWord: 'NULL',
     install: [['.load ./thinkthen', null]],
     particular: [
@@ -389,7 +396,7 @@ export const SURFACES = [
   {
     slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL', status: 'planned', release: '0.1',
     lang: 'sql', tab: 'SQL',
-    blurb: 'An extension. annotate returns jsonb.',
+    blurb: 'One extension. Ask questions in any query.',
     unsureWord: 'NULL',
     install: [['CREATE EXTENSION thinkthen;', null]],
     particular: [

@@ -12,18 +12,18 @@ const channels = [
   ['Download script', shell.install[1][0]],
 ];
 ---
-<Base title="Install" description="Every channel, for every surface.">
+<Base title="Install" description="One line installs ThinkThen for Bash, each language, and each database.">
   <h1>Install</h1>
-  <p class="lede">The command is the only shipped surface. Every library below is planned, and the line is the one it will ship under.</p>
+  <p class="lede">One line installs ThinkThen, the command that answers questions about text. Bash ships first. Every library below lists the line it will ship under.</p>
 
-  <div class="note">Ask for a key first. A new user waits about a day for one, and everything else takes a minute. <code>--dry-run</code> needs no key at all, so you can read the plan while you wait.</div>
+  <div class="note">Ask for a key first. It can take a day to arrive. While you wait, <code>--dry-run</code> shows the plan with no key.</div>
 
-  <h2>The shell</h2>
-  <p>Two channels, neither built yet. Both arrive with 0.1.</p>
+  <h2>Bash</h2>
+  <p>Both channels arrive with 0.1.</p>
   <table>
     <tr><th>Channel</th><th>Line</th><th>Status</th></tr>
     {channels.map(([channel, line]) => (
-      <tr><td>{channel}</td><td><code>{line}</code></td><td><span class="status planned">coming with 0.1</span></td></tr>
+      <tr><td>{channel}</td><td><code>{line}</code></td><td><span class="status planned">comes with 0.1</span></td></tr>
     ))}
   </table>
   <p>The download script will be served from this site at <code>/install.sh</code>, byte for byte the same file the repository holds, checked on every build.</p>
@@ -31,21 +31,18 @@ const channels = [
   <h2>Where the key goes</h2>
   <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key.</p>
 
-  <h2>Every other surface</h2>
-  <p>Each library is planned. The <a href="/surfaces/">surface pages</a> carry the code drawn for each one.</p>
+  <h2>Libraries and databases</h2>
+  <p>Each page shows how the calls will read.</p>
   <table>
-    <tr><th>Surface</th><th>Channels</th><th>Status</th></tr>
+    <tr><th>Language or database</th><th>Channels</th><th>Status</th></tr>
     {rest.map((s) => (
       <tr>
         <td><a href={`/${s.slug}/`}>{s.name}</a></td>
         <td>{s.install.map(([line], i) => (<Fragment>{i > 0 ? ' · ' : ''}<code>{line}</code></Fragment>))}</td>
-        <td><span class="status planned">planned</span></td>
+        <td><span class="status planned">{s.release ? `comes with ${s.release}` : 'planned'}</span></td>
       </tr>
     ))}
   </table>
 
-  <h2>Check what you got</h2>
-  <p>Every deploy of this site writes the commit it was built from to <a href="/version.json">/version.json</a>. A deploy that does not end with that commit on the site is a failed deploy, whatever the build log says.</p>
-
-  <p class="pagelinks"><a href="/shell/">The shell</a> · <a href="/functions/">Every function</a></p>
+  <p class="pagelinks"><a href="/shell/">Read the Bash page</a> · <a href="/surfaces/">See every language and database</a> · <a href="/functions/">See every function</a></p>
 </Base>
