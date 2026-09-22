@@ -345,3 +345,90 @@ closed with discriminating tests.
 
 Problem and way round it: none open. No key, no paid call, nothing
 published; `docker ps -a` shows no `laneb-*` left.
+
+## 2026-09-22 — review 2, item 4: the @ requirement, the narrowed grant, and the update path
+
+**The finding.** Any argument that was not JSON was read as a *file path*
+with no `@` needed, so a role holding EXECUTE could read server files as
+the postgres user; the documented grant was `GRANT EXECUTE ON ALL
+FUNCTIONS IN SCHEMA public`, which also re-grants other extensions'
+functions; and the PUBLIC revoke ran only at install, so a future
+`ALTER EXTENSION UPDATE` would hand a new function's default PUBLIC grant
+to everyone.
+
+**The fix, three parts.**
+
+1. `arg_form` decides every named argument (question, question set,
+   recognize spec): `@name` is a file, `{...}` is JSON, and anything else
+   is a usage error naming the required form — never a path. Pure, so the
+   rule has unit tests.
+2. The documented grant now loops over the extension's own functions
+   through `pg_depend` (the same query as the revoke), never
+   `ALL FUNCTIONS IN SCHEMA public`. The gate proves both sides: the
+   granted role calls `thinkthen_decide`, and an unrelated function
+   (`tt_control`, PUBLIC revoked) stays refused with permission denied.
+3. The revoke block also creates `thinkthen_guard_public()`, an event
+   trigger function (SECURITY DEFINER, `search_path = pg_catalog`), and
+   an event trigger on `ddl_command_end` for `CREATE FUNCTION`,
+   `CREATE PROCEDURE`, and `CREATE AGGREGATE`; each fire revokes PUBLIC on
+   every extension-owned function. The guard function takes its own
+   revoke by name (it is created after the install loop ran). A function
+   created by a future update script is therefore revoked even though the
+   update script says nothing about PUBLIC.
+
+**Evidence, pre-fix versus post-fix, by command.** A synthetic next
+version (`thinkthen--0.0.1--0.0.2.sql` holding one `CREATE FUNCTION` and
+no revoke statement) is installed and `ALTER EXTENSION thinkthen UPDATE TO
+'0.0.2'` runs in a disposable container:
+
+| probe | pre-fix | post-fix |
+| --- | --- | --- |
+| `has_function_privilege('public', 'thinkthen_rehearsal_probe(integer)', 'EXECUTE')` | true | false |
+| extension-owned functions with PUBLIC EXECUTE | 1 | 0 |
+| bare `'names.json'` spec | reads the file and answers | usage refusal naming `@names.json` |
+| granted role calling an unrelated function | succeeds | permission denied |
+
+**The deck's line.** The mktg deck's PostgreSQL tab draws
+`thinkthen_annotate('form.json', body)` with a bare name. The ruled
+spelling for a file is `'@form.json'`, so the drawn line is stale for its
+owner (README.md records it); `check.sh` runs the ruled spelling, and
+`package.sh` substitutes it in the verbatim deck extraction with the
+reason in a comment.
+
+## 2026-09-22 — review 1/2 leftovers: the batch deadline and the interrupt gate
+
+**The findings.** The batch paths (the array overload, the warm
+aggregate, relate) ignored `thinkthen.deadline_ms`, and the poll treated
+*any* interrupt as a cancel, so a benign procsignal interrupt (a
+memory-contexts request) failed a paid batch with the cancelled kind.
+
+**The fix.** `run_batch` resolves the deadline budget on the backend
+thread (`budget_of`, the contract's checked millis door) and carries it
+into the worker's options, so a spent budget sends nothing and a budget
+mid-batch stops it at the engine's next tick. The poll now cancels the
+token only when `QueryCancelPending` or `ProcDiePending` is set — SIGINT
+(`pg_cancel_backend`, statement timeout) and SIGTERM
+(`pg_terminate_backend`) — and leaves every other interrupt to
+`CHECK_FOR_INTERRUPTS`, which services it without ending the batch.
+
+**Evidence, pre-fix versus post-fix, by command.**
+
+| probe | pre-fix | post-fix |
+| --- | --- | --- |
+| `thinkthen.deadline_ms = 0` on the array overload | completes, count 2 | SQLSTATE 57014, nothing sent |
+| `thinkthen.deadline_ms = 0` on `thinkthen_warm` | completes | 57014 |
+| `thinkthen.deadline_ms = 50` on a 300k-record array | completes in about a second | 57014 in 0.35 s |
+| `pg_log_backend_memory_contexts` mid-batch | `ERROR: thinkthen cancelled` | the batch completes with its count |
+| `pg_cancel_backend` mid-batch | stops (control) | stops in 0.29 s |
+| `statement_timeout = 1s` on the same batch | stops (control) | stops in 1.32 s |
+
+**The gate's fixture.** The compile-time fixture door (review 1's item)
+needs a feature-passing build: the crate forwards the stand-in's
+`synthetic-partial` feature, and `check.sh` packages its test artifact
+with it (`package.sh` keeps the production shape), so conformance case 74
+replays the synthesized partial failure instead of diverging.
+
+**Shared guard.** The worker body runs behind
+`thinkthen_contract::catch_panic("the batch thread", ...)`, and the join
+fallback's formatter is the pgrx report first, then the contract's own
+`panic_text` — one spelling for every other payload.
