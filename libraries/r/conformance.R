@@ -136,6 +136,9 @@ for (case in cases) {
         tag = {
           held <- tt_tag(question, case$evidence)[[1]]
           wanted <- unlist(expect$answer)
+          # An empty answer is a zero-length character here, not NULL.
+          if (is.null(wanted)) wanted <- character()
+          if (is.null(held)) held <- character()
           if (identical(held, wanted)) paste0("ok       ", id) else
             paste0("FAIL     ", id, ": expected ", length(wanted), " labels, got ", length(held))
         },

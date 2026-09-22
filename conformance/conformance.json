@@ -1,6 +1,6 @@
 {
  "schema": "thinkthen.conformance/1",
- "case_count": 74,
+ "case_count": 79,
  "error_kinds": [
   "usage",
   "backend",
@@ -218,6 +218,24 @@
     "c"
    ],
    "why": "the NULL row is a database-surface form; this door takes text strings"
+  },
+  {
+   "when": {
+    "id": "77-tag-none-held"
+   },
+   "surfaces": [
+    "duckdb"
+   ],
+   "why": "this surface's tag call answers a list and the driver asserts only a held label; the empty-answer shape is the surface's own check"
+  },
+  {
+   "when": {
+    "id": "79-tag-threshold-excludes"
+   },
+   "surfaces": [
+    "duckdb"
+   ],
+   "why": "the SQL tag call takes its question as plain text and its labels in the list; a per-question threshold has no shape here"
   }
  ],
  "cases": [
@@ -4200,6 +4218,335 @@
    "question": {
     "decide": "Is this a refund request?",
     "threshold": 0.5
+   }
+  },
+  {
+   "id": "75-score-top-level",
+   "source": "synthesized 2026-09-22: coverage the review measured as hollow; the numbers are the null backend's own rules (refund 0.05/0.20/0.75, otherwise 0.34/0.33/0.33; tag labels 0.72/0.55/0.03 by keyword)",
+   "verb": "score",
+   "question": {
+    "score": "How strong is the claim?",
+    "levels": [
+     "weak",
+     "moderate",
+     "strong"
+    ]
+   },
+   "evidence": "refund now",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "score",
+        "instructions": "How strong is the claim?",
+        "criteria": [
+         "weak",
+         "moderate",
+         "strong"
+        ]
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "score",
+        "probabilities": {
+         "0": 0.05,
+         "1": 0.2,
+         "2": 0.75
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 11,
+       "output_tokens": 3
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": 1.7,
+    "details": {
+     "kind": "score",
+     "nearest_level": "strong",
+     "probabilities": {
+      "weak": 0.05,
+      "moderate": 0.2,
+      "strong": 0.75
+     },
+     "model": "jev-latest",
+     "question_sha256": "3a95e00d98cc509b71ac6c2b673f4cf0e87cc5a89cc0faa89f589f0e2a6d6623"
+    }
+   }
+  },
+  {
+   "id": "76-score-equal-distribution",
+   "source": "synthesized 2026-09-22: coverage the review measured as hollow; the numbers are the null backend's own rules (refund 0.05/0.20/0.75, otherwise 0.34/0.33/0.33; tag labels 0.72/0.55/0.03 by keyword)",
+   "verb": "score",
+   "question": {
+    "score": "How strong is the claim?",
+    "levels": [
+     "weak",
+     "moderate",
+     "strong"
+    ]
+   },
+   "evidence": "good morning",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "score",
+        "instructions": "How strong is the claim?",
+        "criteria": [
+         "weak",
+         "moderate",
+         "strong"
+        ]
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "score",
+        "probabilities": {
+         "0": 0.34,
+         "1": 0.33,
+         "2": 0.33
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 11,
+       "output_tokens": 3
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": 0.99,
+    "details": {
+     "kind": "score",
+     "nearest_level": "weak",
+     "probabilities": {
+      "weak": 0.34,
+      "moderate": 0.33,
+      "strong": 0.33
+     },
+     "model": "jev-latest",
+     "question_sha256": "3a95e00d98cc509b71ac6c2b673f4cf0e87cc5a89cc0faa89f589f0e2a6d6623"
+    }
+   }
+  },
+  {
+   "id": "77-tag-none-held",
+   "source": "synthesized 2026-09-22: coverage the review measured as hollow; the numbers are the null backend's own rules (refund 0.05/0.20/0.75, otherwise 0.34/0.33/0.33; tag labels 0.72/0.55/0.03 by keyword)",
+   "verb": "tag",
+   "question": {
+    "tag": "Does this line show the word?",
+    "labels": [
+     "the first word",
+     "the second word",
+     "the third word"
+    ]
+   },
+   "evidence": "a plain line",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "a plain line",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the first word\" applies to this item."
+       },
+       "q2": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the second word\" applies to this item."
+       },
+       "q3": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the third word\" applies to this item."
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.03
+       },
+       "q2": {
+        "type": "noul",
+        "noul": 0.03
+       },
+       "q3": {
+        "type": "noul",
+        "noul": 0.03
+       }
+      },
+      "usage": {
+       "input_tokens": 18,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": [],
+    "details": {
+     "kind": "tag",
+     "probabilities": {
+      "the first word": 0.03,
+      "the second word": 0.03,
+      "the third word": 0.03
+     },
+     "model": "jev-latest",
+     "question_sha256": "69cbdcb763bae6c257fce4d16fa16ce63ed55d98193c9bcdf1c2dd70d05a01c8"
+    }
+   }
+  },
+  {
+   "id": "78-tag-two-labels-in-question-order",
+   "source": "synthesized 2026-09-22: coverage the review measured as hollow; the numbers are the null backend's own rules (refund 0.05/0.20/0.75, otherwise 0.34/0.33/0.33; tag labels 0.72/0.55/0.03 by keyword)",
+   "verb": "tag",
+   "question": {
+    "tag": "Does this line show the word?",
+    "labels": [
+     "the maybe word",
+     "the refund word"
+    ]
+   },
+   "evidence": "a plain line",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "a plain line",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the maybe word\" applies to this item."
+       },
+       "q2": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the refund word\" applies to this item."
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.55
+       },
+       "q2": {
+        "type": "noul",
+        "noul": 0.72
+       }
+      },
+      "usage": {
+       "input_tokens": 18,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": [
+     "the maybe word",
+     "the refund word"
+    ],
+    "details": {
+     "kind": "tag",
+     "probabilities": {
+      "the maybe word": 0.55,
+      "the refund word": 0.72
+     },
+     "model": "jev-latest",
+     "question_sha256": "6bd2ccf0bea91dca624b6c699f13c06f7f9971133d947ccca6bf5149f93978fd"
+    }
+   }
+  },
+  {
+   "id": "79-tag-threshold-excludes",
+   "source": "synthesized 2026-09-22: coverage the review measured as hollow; the numbers are the null backend's own rules (refund 0.05/0.20/0.75, otherwise 0.34/0.33/0.33; tag labels 0.72/0.55/0.03 by keyword)",
+   "verb": "tag",
+   "question": {
+    "tag": "Does this line show the word?",
+    "labels": [
+     "the refund word",
+     "the maybe word"
+    ],
+    "threshold": 0.6
+   },
+   "evidence": "a plain line",
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "a plain line",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the refund word\" applies to this item."
+       },
+       "q2": {
+        "type": "noul",
+        "instructions": "Does this line show the word?\n\nDetermine whether the label \"the maybe word\" applies to this item."
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.72
+       },
+       "q2": {
+        "type": "noul",
+        "noul": 0.55
+       }
+      },
+      "usage": {
+       "input_tokens": 18,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answer": [
+     "the refund word"
+    ],
+    "details": {
+     "kind": "tag",
+     "probabilities": {
+      "the refund word": 0.72,
+      "the maybe word": 0.55
+     },
+     "model": "jev-latest",
+     "question_sha256": "d17cf2b3c253fabd1d4c6f8e87feb550bd30bc66b301ed63e06282c68caec0ec"
+    }
    }
   }
  ]
