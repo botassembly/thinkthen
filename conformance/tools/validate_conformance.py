@@ -470,7 +470,10 @@ def replay(c):
         value = round(sum(i * ps[str(i)] for i in range(len(levels))) / total, 12)
         nearest = max(range(len(levels)), key=lambda i: ps[str(i)])
         check(exp["answer"] == value, f"{c['id']} score number {exp['answer']} vs {value}")
+        check("nearest_level" in det, f"{c['id']} score details carry the nearest level")
         check(det.get("nearest_level") == levels[nearest], f"{c['id']} nearest level")
+        check(isinstance(det.get("nearest_level"), str) and det["nearest_level"] in levels,
+              f"{c['id']} nearest level is one of the question's own levels")
         check(det.get("probabilities") == {l: ps[str(i)] for i, l in enumerate(levels)},
               f"{c['id']} score probabilities by level name")
     if c["verb"] == "filter":

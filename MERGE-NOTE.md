@@ -78,7 +78,11 @@ merge; it fails on any public name that is not ruled or documented.
   poll runs from the answer arms too, gated by one tick. The regression
   test is `libraries/python/tests/test_cancel_fast.py` plus the Rust
   test; it fails in 2.87 s with the busy-arm ticks dropped and passes in
-  0.24 s with them. ADR 0017 copies this shape only.
+  0.24 s with them. Each binding's channel into that poll is named:
+  SQLite's progress handler, PostgreSQL's interrupt check,
+  `AbortSignal`, R's tick, and DuckDB's chained SIGINT-at-LOAD handler
+  (proven inside a Python process, 0.11 s stop with the wire frozen).
+  ADR 0017 copies this shape only.
 - **The usage counter** (ruling 5): counts what left the machine. A sent
   retry counts again; a cache hit, a size refusal, and a usage error count
   nothing; tokens come from the vendor's replies only.

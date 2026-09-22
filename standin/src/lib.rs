@@ -378,15 +378,7 @@ impl Engine for BlockingEngine {
             Value::Score(number) => number,
             _ => return Err(Error::defect("a score reply carried no position")),
         };
-        // The nearest level rides in the answer's own serialized form; the
-        // core keeps no public accessor for it yet.
-        let nearest = serde_json::to_value(&answer)
-            .ok()
-            .as_ref()
-            .and_then(|held| held.get("level"))
-            .and_then(serde_json::Value::as_str)
-            .map(str::to_owned)
-            .ok_or_else(|| Error::defect("a score reply named no level"))?;
+        let (nearest, _) = score_level_and_probability(&answer)?;
         Ok(Scored { value: number, nearest })
     }
 
@@ -536,12 +528,22 @@ impl Engine for BlockingEngine {
         options: Options<'_>,
     ) -> Result<Details, Error> {
         let (answer, sends, model) = self.ask(question, evidence, &options)?;
-        let probability = answer
-            .yes()
-            .ok_or_else(|| Error::backend_not_retryable("the answer carries no probability"))?;
+        let (probability, nearest) = if question.kind() == QuestionKind::Score {
+            // A score carries no yes side: the trail's number is the
+            // nearest level's own probability, and the level's name rides
+            // in `nearest` per ADR 0017 pick 6.
+            let (nearest, leader) = score_level_and_probability(&answer)?;
+            (leader, Some(nearest))
+        } else {
+            let probability = answer
+                .yes()
+                .ok_or_else(|| Error::backend_not_retryable("the answer carries no probability"))?;
+            (probability, None)
+        };
         Ok(Details {
             probability,
             answer: outcome_of(answer.read(question.threshold())),
+            nearest,
             model,
             digest: question.digest(),
             sends,
@@ -586,6 +588,30 @@ fn outcome_of((_, outcome): (Value, thinkthen_core::Outcome)) -> Answer {
         thinkthen_core::Outcome::Yes => Answer::Yes,
         thinkthen_core::Outcome::No => Answer::No,
         thinkthen_core::Outcome::Unresolved => Answer::Unsure,
+    }
+}
+
+/// A score answer's nearest level and that level's own probability, read
+/// from the answer's serialized form. The core keeps no public accessor
+/// for the level yet, so both the `score` and `details` paths read it
+/// here, once.
+fn score_level_and_probability(
+    answer: &thinkthen_core::Answer,
+) -> Result<(String, f64), Error> {
+    let held = serde_json::to_value(answer).map_err(|error| Error::defect(error.to_string()))?;
+    let level = held
+        .get("level")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
+    let probability = held
+        .get("probabilities")
+        .and_then(serde_json::Value::as_object)
+        .and_then(|map| {
+            map.values().filter_map(serde_json::Value::as_f64).reduce(f64::max)
+        });
+    match (level, probability) {
+        (Some(level), Some(probability)) => Ok((level, probability)),
+        _ => Err(Error::defect("a score reply named no level")),
     }
 }
 
@@ -1142,6 +1168,15 @@ mod tests {
         let trail = trail.expect("answers");
         assert_eq!(trail.sends, 1);
         assert_eq!(trail.digest.len(), 64);
+        assert_eq!(trail.nearest, None, "no level on a decide question");
+
+        // Pick 6: a score question's details carry the nearest level's
+        // name and its own probability; the decide-only answer member
+        // reads as the core's own resolved outcome.
+        let score_trail = tt.details(&score, "maybe later").expect("answers");
+        assert_eq!(score_trail.nearest.as_deref(), Some("mid"));
+        assert!((score_trail.probability - 0.55).abs() < 1e-9);
+        assert_eq!(score_trail.answer, Answer::Yes);
     }
 
     /// The verb rules refuse what they must, and the counters count sends.

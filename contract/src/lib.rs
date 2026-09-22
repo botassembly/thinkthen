@@ -256,6 +256,11 @@ impl std::fmt::Debug for Cancel {
 /// width gate, the retries, and one blocking send all count against it. When
 /// it passes mid-batch, no new request starts, sent requests finish, and the
 /// call returns the deadline's own kind.
+///
+/// A budget of zero, or any deadline already at or past the current
+/// instant, is legal: the deadline is spent before the call starts,
+/// nothing is sent, and the call returns the deadline kind with the
+/// message naming the budget. No surface refuses a spent deadline.
 #[derive(Clone, Copy, Default)]
 pub struct Options<'a> {
     cancel: Option<&'a Cancel>,
@@ -292,6 +297,9 @@ impl<'a> Options<'a> {
     }
 
     /// Stop the whole call after this budget, counted from now.
+    ///
+    /// A zero budget is spent immediately: the call sends nothing and
+    /// returns the deadline kind.
     #[must_use]
     pub fn deadline_in(self, budget: std::time::Duration) -> Self {
         let seconds = budget.as_secs_f64();
@@ -371,9 +379,27 @@ pub struct Scored {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Details {
     /// The probability the backend gave the yes side.
+    ///
+    /// A score question has no yes side: its details read the probability
+    /// of the nearest level, and the position `score` returns is that
+    /// verb's own answer, not repeated here.
     pub probability: f64,
     /// Yes, no, or unsure under the question's rule.
+    ///
+    /// A score question reads as `Yes` when it resolved, because the core
+    /// reports a score's read as its own `Outcome::Yes` and a score has no
+    /// threshold to apply. The answer a caller wants from a score question
+    /// is the position, with the nearest level's name in
+    /// [`Details::nearest`].
     pub answer: Answer,
+    /// The nearest level's name, for a score question; `None` for every
+    /// other verb, serialized as null.
+    ///
+    /// This is ADR 0017 pick 6: the level's name rides in `details` on
+    /// every door, so no surface carries a private field for it. The
+    /// nearest level is the one with the highest probability among the
+    /// question's own levels.
+    pub nearest: Option<String>,
     /// The model the request named.
     pub model: String,
     /// The digest of the question with its threshold, 64 hex figures.
@@ -1048,6 +1074,13 @@ pub fn edges_json(edges: &[Edge]) -> String {
 /// keeps its enrichment of objects and does not use this row. The input is
 /// the caller's own record, unchanged; the value is the answer its verdict
 /// carries.
+///
+/// The row is a host-side rendering, not an engine return value: the
+/// library verbs hand back their own values (judgments, kept records,
+/// ranked pairs), and a host that pairs answers with the caller's records
+/// renders them in this shape. No surface must emit the row for the
+/// engine's sake; the SQL forms get the same shape from their own two
+/// columns.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Row<V> {
     /// The caller's own record, unchanged.
@@ -1177,6 +1210,11 @@ impl std::fmt::Display for QuestionKind {
 /// writes the file's own JSON and reads it back through the one grammar, so
 /// no second parser exists to drift. The digest is the core's own, over the
 /// question and its threshold.
+///
+/// A question carries its members once. When a caller hands over a built
+/// question and also names its members — `options`, `labels`, or `levels` —
+/// the pair is ambiguous, and the call refuses with a usage error naming
+/// both rather than guessing which one wins.
 #[derive(Clone, Debug)]
 pub struct Question {
     asked: CoreQuestion,
@@ -1700,6 +1738,10 @@ pub trait Engine: Send + Sync {
     /// Order the records most likely yes first, ties in input order,
     /// threshold-less questions alone.
     ///
+    /// Each [`Ranked`] carries the ruled pair: the record's place in the
+    /// input and the probability the backend gave it. No surface returns
+    /// the bare record alone.
+    ///
     /// # Errors
     ///
     /// Same kinds as [`Engine::decide_many_opts`], and the usage kind when
@@ -1714,6 +1756,10 @@ pub trait Engine: Send + Sync {
 
     /// Pick the unit that best answers the question, out of two to 255 sent
     /// together.
+    ///
+    /// The [`Found`] carries the ruled pair: the winning unit's place in
+    /// the input and its probability. No surface returns the bare unit
+    /// alone.
     ///
     /// # Errors
     ///
@@ -2024,6 +2070,39 @@ mod tests {
         assert_eq!(error.kind, ErrorKind::Deadline);
         assert!(error.message.contains("0.001"), "the message names the value: {error}");
         assert!(error.retryable);
+    }
+
+    /// A zero budget is legal: it is spent before the call starts, sends
+    /// nothing, and returns the deadline kind naming the budget.
+    #[test]
+    fn a_zero_budget_is_spent_immediately() {
+        let spent = Options::new().deadline_in(std::time::Duration::ZERO);
+        assert!(spent.passed(), "a zero budget is already gone");
+        let error = super::Error::guard(&spent).expect_err("the deadline is gone");
+        assert_eq!(error.kind, ErrorKind::Deadline);
+        assert!(error.message.contains("the deadline of 0 s"), "the message names the value: {error}");
+        assert!(error.retryable, "a fresh budget may answer");
+    }
+
+    /// The door JSON for `find` and `rank` is the ruled pair, one shape:
+    /// the place in the input and the probability.
+    #[test]
+    fn the_find_and_rank_pair_is_the_door_json() {
+        let ranked = super::Ranked { index: 3, probability: 0.97 };
+        assert_eq!(
+            serde_json::to_string(&ranked).expect("serializes"),
+            r#"{"index":3,"probability":0.97}"#
+        );
+        let found = super::Found { index: Some(2), probability: 0.55 };
+        assert_eq!(
+            serde_json::to_string(&found).expect("serializes"),
+            r#"{"index":2,"probability":0.55}"#
+        );
+        let none = super::Found { index: None, probability: 0.03 };
+        assert_eq!(
+            serde_json::to_string(&none).expect("serializes"),
+            r#"{"index":null,"probability":0.03}"#
+        );
     }
 
     /// The public word for the middle arm is unsure, on every page.
