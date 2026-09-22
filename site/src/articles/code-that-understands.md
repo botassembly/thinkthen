@@ -12,6 +12,8 @@ We tried that with clinical notes. Around 2019, we got about 30% accuracy on the
 
 This month, TypeSafe shipped a model called Jev. It answers a bounded question about a text: yes or no, one of a list, several of a list, or a place on a scale. It needs no training data and no labels. You give it text and one question. It returns an answer and a probability. It never writes a sentence. Your code has nothing to parse. The vendor lists input at $0.042 per million tokens and output as free. That price is cheap enough to call from a loop.
 
+This is a classifier you do not train. One model covers every domain. Ask many questions about one text and the answers come back in parallel. The probability was the training target, not a number added afterward.
+
 I built ThinkThen around that interface. It is one binary. You pipe in text and pass one question as an argument. ThinkThen prints a bare answer and sets an exit code.
 
 ## `decide`
