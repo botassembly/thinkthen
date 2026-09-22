@@ -308,3 +308,17 @@ to `rlib/thinkthen-root-stale` (root-owned; a `sudo rm -rf` or a fresh
 clone clears it) and the install then succeeded. The wrappers file
 `thinkthen/R/extendr-wrappers.R` regenerated with the new `deadline`
 arguments and is committed.
+
+## 2026-09-21 — punch-list item 2: the loops to hand the engine
+
+Four per-record scheduling loops live here, each conversion-ready for the
+engine's bulk entry point; none converted (no second bulk implementation
+while the engine entry is pending). The full inventory is
+`sdlc/records/2026-09-21-punch-list-report.md`:
+
+- `tt_choose` — `thinkthen/R/thinkthen.R` (the `vapply` loop calling
+  `tt_choose_one` a row). Conversion-ready -> future `choose_many`.
+- `tt_score` — same file (the `vapply` loop). -> future `score_many`.
+- `tt_tag` — same file (the `lapply` loop). -> future `tag_many`.
+- `tt_recognize_column` — `thinkthen/src/rust/src/lib.rs` (the `.map`
+  calling `engine.recognize_opts` a record). -> future `recognize_many`.

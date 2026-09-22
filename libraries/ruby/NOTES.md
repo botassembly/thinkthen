@@ -242,3 +242,14 @@ refuses naming both; `nearest` rides in `details`. The examples file's
 rank and find entries now show the pair, and the slide's rank assertion
 compares `map(&:record)`. `check.sh` green; the public-name check admits
 `Ranked`, `Found`, and `Ranked#to_s` with their citations.
+
+## 2026-09-21 — punch-list item 1: probabilities from the one call
+
+`decide_many_with_probabilities` no longer makes a details call a record.
+The native `decide_many_with_probabilities` carries each judgment's
+probability beside its answer from the same bulk call (commit c666251).
+Acceptance: `tests/test_pairs_one_crossing.rb` against the counted stub:
+20 records, 20 requests, none after the return -- a details pass a record
+would have shown 40. `libraries/ruby/NOTES.md` also inherits punch-list
+item 3 there: `recognize` and `relate` answers now arrive as typed Ruby
+records, built natively; no serialized answer JSON is parsed in Ruby.

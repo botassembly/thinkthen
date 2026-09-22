@@ -463,3 +463,18 @@ The contract lane's settlements (`1fe8173`) wired into this surface, per Ian's "
 **The settled rules.** `details` carries `nearest` (contract settlement 1). A built question plus `options`/`labels`/`levels` refuses as ambiguous naming the key (`settle_verb_question`). A zero or negative deadline is spent, never refused (`test_a_past_deadline_is_spent_not_refused`). The keyword relation path now runs the core's one `check_kinds` rule (`build_recognize`), so an end outside the asked kinds refuses before the engine sees it. The `relate` and `recognize` docstrings say `source`/`target`, not the refused `from`/`to`.
 
 **Green by command.** `./check.sh` exit 0: the shim unit test, 24 surface tests, 15 Polars-door tests (three new), 10 pandas checks, 15 recognize/relate tests, the fast-cancel proof, the scale bench, 10 of 10 examples, and 69 passed / 0 failed / 4 skipped on the conformance slice (17 known divergence; 18 runs as the cancel test; 25 and 71 recorded divergences; 26 the file door). The slide sample's trailing band mismatch is the sample's own recorded finding.
+
+## 2026-09-21 — punch-list item 2: the loops to hand the engine
+
+Two per-record scheduling loops live in this surface's native layer, each
+conversion-ready for the engine's bulk entry point, none converted here to
+avoid inventing a second bulk implementation (the architect's boundary;
+the full inventory with the R loops is `sdlc/records/2026-09-21-punch-list-report.md`):
+
+- `recognize_stream` — `src/lib.rs` (the `for (place, text) in
+  references` loop calling `engine().recognize_opts` per record).
+  Conversion-ready -> the engine's future `recognize_many(ask, texts)`.
+- `score` over an Arrow column — `src/lib.rs` (the `for text in &texts`
+  loop calling `engine().score_opts` per record; it also runs without the
+  poll, one more reason the bulk entry is where it belongs).
+  Conversion-ready -> the engine's future `score_many`.
