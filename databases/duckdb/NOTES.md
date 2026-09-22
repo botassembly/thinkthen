@@ -316,3 +316,202 @@ items, including the one-shot token.
 
 Cleanup: no containers; `docker ps -a` shows no `laneb-*` left. No key,
 no paid call, nothing published.
+
+## 2026-09-22 — the review fix wave on the DuckDB surface
+
+The review's findings 1, 2, 3, 4, and 5 for this surface, each with the
+test that failed before it. Commands and their outputs, not
+recollections.
+
+**Finding 1, the row mapping (wrong answers with no error).** `decide`,
+`probability`, and `score` wrote the k-th distinct text's answer to the
+k-th row; with repeated texts or a NULL, most rows read a neighbor's
+answer or a zero. The fix indexes every row through its own slot
+(`distinct.slots`), the way `choose`, `tag`, `details`, and `annotate`
+already did.
+
+```
+$ ENGINE_NULL=1 duckdb-bin/duckdb -unsigned -noheader -list -c "LOAD …;
+    SELECT count(*) FILTER (WHERE thinkthen_decide('Is this a complaint?', t))
+        || '|' || count(*) FILTER (WHERE NOT thinkthen_decide('Is this a complaint?', t))
+    FROM (SELECT CASE WHEN i % 2 = 0 THEN 'I demand a refund today'
+                      ELSE 'thanks for the help' END AS t FROM range(10000) r(i));"
+1|9        # the two distinct texts answered rows 0 and 1; 10,000 rows
+           # returned 5 true and 9,995 false
+
+$ tools/mapping_suite.sh      # after the fix
+ok  decide alternating 10,000 rows split exactly (5000|5000)
+ok  decide one text repeated answers every row (4|0)
+ok  decide NULL rows stay NULL and consume no answer (2|1|2)
+ok  decide three-text cycle keeps every row's answer (6|3|0)
+ok  probability one text repeated answers every row (4|0)
+ok  probability NULL row stays NULL beside a repeat (2|1)
+ok  score one text repeated answers every row (4|0)
+ok  score two texts alternating answer per row (3|0)
+ok  choose repeated text answers every row (4)         # regressions
+ok  tag repeated text answers every row (4)
+ok  details repeated text answers every row (3|1)
+ok  annotate repeated text answers every row (3|1)
+
+$ git stash && make release && tools/mapping_suite.sh   # old code
+FAILED   decide alternating 10,000 rows split exactly: want '5000|5000', got '1|9'
+```
+
+**Finding 2, the driver could not fail.** `tools/conformance.py` printed
+`FAILED` and returned 0, compared with `want in got` (so a long rendered
+box containing the word `true` passed), ignored a path argument, and ran
+the SQL through `-init`, which renders the interactive boxes. Now: exact
+comparison, the argument is the cases file, and any FAILED line returns
+1. Error cases go through `check_error`, which requires the output to be
+an error whose text starts with the expected kind.
+
+```
+$ python3 tools/conformance.py          # 107 checks, exact
+ok       74-annotate-preserves-good-answers
+$ echo $?
+0
+
+$ tools/conformance_selftest.sh
+corrupted 01-decide-yes-cut
+ok       the corrupted expectation fails the driver (exit 1)
+ok       the real conformance file passes from the repository root
+
+$ git stash && python3 tools/conformance.py /dev/null; echo $?
+0        # the old driver ignored the argument and read the good file
+```
+
+Case 74's failed marker rides the stand-in's `ENGINE_SYNTHETIC_PARTIAL`
+opt-in; the driver arms it from the case's own expectation (a `failed`
+member), not from a case id.
+
+**Finding 3, `@file` reads ignored `enable_external_access`.** Every
+`@`-file door now refuses before touching the disk when the database's
+own setting is off; the switch is read through
+`duckdb_client_context_get_config_option` (unstable C API, which the
+extension declares via `USE_UNSTABLE_C_API=1` / `C_STRUCT_UNSTABLE`).
+Scalars read every loaded database's setting and refuse if any forbids.
+Relate reads the caller's own context at bind.
+
+```
+$ ENGINE_NULL=1 duckdb -c "LOAD …; SET enable_external_access=false;
+    SELECT thinkthen_decide('@tools/null-cut.json', 'I demand a refund today');"
+Invalid Input Error: thinkthen local: the question file …/null-cut.json
+was not read: enable_external_access is off for this database
+# before the fix the same call read the file and answered true
+
+$ tools/security_suite.sh
+ok  decide @file refuses with access off
+ok  annotate @set refuses with access off
+ok  relate @rules file refuses with access off
+ok  decide @file answers with access on
+ok  plain text answers with access off
+ok  relate names the temporary-table boundary
+ok  a missing non-temporary table keeps the raw error
+```
+
+**Finding 3, relate and the caller's connection — ruled option A.** The
+stable C API cannot reach the caller's connection (`duckdb_query` needs a
+`duckdb_connection`; a client context yields catalogs, config, and the
+file system only, and temp tables live in per-connection `ClientData` —
+verified in `client_data.hpp` and live: a temp table returns
+`Catalog Error: Table with name tt does not exist`). What is fixed: the
+scan runs on a connection belonging to the CALLER'S DATABASE, resolved at
+bind through `duckdb_client_context_get_catalog` against a per-database
+registry built at init, so one process-global connection no longer serves
+whichever database loaded last. When the query misses the caller's
+temporary table, the error names that boundary in words.
+
+```
+$ configure/venv/bin/python tools/two_databases.py
+a.db: 4 edges (want 4), b.db: 11 edges (want 11)
+ok       each database's relate ran on its own connection
+# before the fix: "no recorded answer for the rule caused_by on these
+# records; the recording covers founded, works_for" - a.db's query ran
+# against b.db's table
+
+$ ENGINE_NULL=1 duckdb -c "…CREATE TEMP TABLE tt…; SELECT * FROM
+    thinkthen_relate('SELECT id, body FROM tt', ['caused_by']);"
+Invalid Input Error: thinkthen local: the relate query names the
+temporary table tt, and the stable C API cannot run a query on the
+calling connection, so relate cannot see temporary tables; materialize
+it (CREATE TABLE ... AS SELECT) or run the query directly
+```
+
+MERGE-NOTE material for the build team: the boundary this leaves is
+exactly the one the C++ door would lift. Temp-table and open-transaction
+visibility for relate is impossible through the stable C API; the C++
+fork under their consideration (the duckdb-rs bind-callback question)
+is what removes it. Same-name databases in one process cannot be told
+apart through the client context and are refused as a defect rather than
+guessed.
+
+**Finding 5, panics across the C boundary.** The entrypoint and every
+hand-written callback (relate's bind, init, scan, its destructors;
+warm's update, combine, finalize, state lifecycle; usage's bind, init,
+scan, destructor) now run inside `guard` containment, where a panic
+becomes the callback's error (or a logged quiet containment where no
+error channel exists). The scalar functions were already contained by
+duckdb-rs's registration helpers. The `ENGINE_TEST_PANIC` door arms one
+boundary for the check alone.
+
+```
+$ tools/panic_suite.sh
+ok  the extension load: the panic became the callback's error (exit 1)
+ok  relate bind: the panic became the callback's error (exit 1)
+ok  usage scan: the panic became the callback's error (exit 1)
+ok  the arm is dormant when unset
+
+# with the containment disabled the same arm dies at the boundary:
+thread caused non-unwinding panic. aborting.
+```
+
+**Group 4, the one-shot interrupt token — fixed at last.** The finding
+recorded above ("the token is one shot per process") is closed. The
+surface now keeps a live token the handler cancels only when a query is
+plausibly running (an engine call in flight, or one started within
+250 ms), and a call that starts on a cancelled token re-arms when the
+interrupt has been served (a call returned the cancelled kind) or when
+the last call is stale. An idle Ctrl-C is the host's gesture and no
+longer poisons anything.
+
+```
+$ configure/venv/bin/python tools/rearm_suite.py
+the interrupted call ended with RuntimeError: Query interrupted
+ok       the interrupt stopped one query and the next query answered
+# before the fix: "FAILED   the query after the interrupt errored, so the
+# interrupt poisoned the process: … thinkthen cancelled: the wait was
+# cancelled"
+
+$ ENGINE_NULL=1 configure/venv/bin/python tools/host_signal.py chain …
+the query ended 1.00s after the signal with: … thinkthen cancelled: the wait was cancelled
+ok       a signal stopped the running query and reached the host's chained handler
+note     after the cancelled statement the next call answered: True
+# the note was "…answered: … thinkthen cancelled…" before the fix
+```
+
+Residual, named: a signal landing while the engine is idle but within
+250 ms of the last call still counts as aimed at that query, so a query
+started inside that window is interrupted once. The window is four
+orders of magnitude above the chunk cadence and the alternative (no
+window) leaves the chained-host query unstoppable, which the `chain`
+arm proved.
+
+**Phase 1 adoption.** Construction now goes through the contract's
+connector (`StandinConnector` behind `EngineConfig`), so pointing this
+surface at the real engine is the connector dependency line;
+`engine_call`/`with_engine` hold the in-flight count for the interrupt
+window. No deadline door exists on this surface, so the checked
+conversion has no call site here.
+
+**The deck dependency is gone from the check.** `tools/run_recognize.sh`
+read the drawn calls out of the private deck repo; it now reads
+`tools/drawn-calls/recognize.sql`, a vendored copy of the three drawn
+lines with the deck named as the source of truth. `check.sh` passes with
+no private deck on disk. `README.md` still names the deck path; that
+line belongs to the hygiene lane's sweep.
+
+`check.sh` runs the whole set: build, unit tests, null suite, mapping
+suite, security suite, conformance driver and its selftest, cancel, host
+signal, examples, re-arm, two databases, panic guards, the slide, the
+recognize acceptance, and the wire suite when a stub is up (skipped
+offline, and said so).
