@@ -10,7 +10,10 @@ step() { printf '\n== %s\n' "$*"; }
 
 step "build"
 npm install --no-audit --no-fund --silent
-npm run build --silent
+# The gate's copy arms the stand-in's compile-time synthesized partial
+# failure so conformance case 74 and the marker test run; `npm run build`
+# is the packaging path and never carries the fixture.
+npm run build:synthetic --silent
 
 step "the defect kind maps into the failure envelope (shim unit test)"
 (cd addon && cargo test --quiet --lib)

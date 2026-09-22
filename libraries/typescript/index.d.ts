@@ -47,10 +47,12 @@ export interface CallOptions {
   signal?: AbortSignal;
   /** Bounds the whole call in milliseconds. A budget of zero is legal and
    * spent immediately: the call sends nothing and rejects with the
-   * `deadline` kind naming the budget. Minus one means no deadline; any
-   * other negative, a NaN, and an oversized budget reject with the `usage`
-   * kind. */
-  deadlineMs?: number;
+   * `deadline` kind naming the budget. `null` (or leaving it out) is the
+   * one spelling of no deadline; every negative — including the
+   * contract's minus-one sentinel, which a computed `end - Date.now()`
+   * can land on by chance — a NaN, and an oversized budget reject with
+   * the `usage` kind. */
+  deadlineMs?: number | null;
 }
 
 /** `choose`'s last object: the option list and the call options together. */
@@ -74,7 +76,8 @@ export type Answer = boolean | null;
 /** One judgment from the audit trail. */
 export interface DetailsAnswer {
   probability: number;
-  value: Answer;
+  /** The ruled key every surface uses, and the contract's own field name. */
+  answer: Answer;
   model: string;
   digest: string;
   sends: number;
@@ -186,7 +189,10 @@ export interface RelateOptions extends CallOptions {
   threshold?: number;
 }
 
-export type AnnotatedRow<T> = T & Record<string, AnnotatedField>;
+/** One record's fields, in the set's file order, one object a record in
+ * input order. The input record itself is `records[index]`, the shape
+ * Python, Ruby, R, and the C door return. */
+export type AnnotatedRow = Record<string, AnnotatedField>;
 
 export interface UsageAnswer {
   requests: number;
@@ -239,11 +245,11 @@ export function find(question: string | Question, units: readonly string[], opti
 /** Ask every question in the set of every record, once each, adding one
  * field per question to each record. The set is a file path or the set
  * JSON. */
-export function annotate<T extends object = { record: string }>(
+export function annotate(
   set: string,
-  records: readonly (string | T)[],
+  records: readonly string[],
   options?: CallOptions,
-): Promise<AnnotatedRow<T>[]>;
+): Promise<AnnotatedRow[]>;
 
 /** One judgment plus the audit trail, with the sends that produced it. */
 export function details(question: string | Question, text: string, options?: CallOptions): Promise<DetailsAnswer>;

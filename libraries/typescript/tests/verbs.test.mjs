@@ -5,9 +5,8 @@
 // evidence keyword over three levels; a tag weighs its labels' own text.
 //
 // The stand-in's one synthesized partial failure (conformance case 74)
-// fires only under the test-only `ENGINE_SYNTHETIC_PARTIAL` opt-in, which
-// the door reads when it builds the engine on the first call.
-process.env.ENGINE_SYNTHETIC_PARTIAL = '1';
+// fires only in a build that armed the compile-time `synthetic-partial`
+// feature; check.sh builds the gate's copy that way.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -101,9 +100,9 @@ test('find: picks a unit and reports its probability', async () => {
   assert.equal(typeof found.probability, 'number');
 });
 
-test('details: probability, value, model, digest, sends', async () => {
+test('details: probability, answer, model, digest, sends', async () => {
   const held = await tt.details('Does the customer ask for a refund?', 'I want a refund for order 9');
-  assert.equal(held.value, true);
+  assert.equal(held.answer, true);
   assert.ok(Math.abs(held.probability - 0.97) < 1e-9);
   assert.equal(typeof held.model, 'string');
   assert.match(held.digest, /^[0-9a-f]{64}$/);

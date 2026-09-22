@@ -141,15 +141,21 @@ function callOptions(options) {
     throw usageError('options is an object: { signal, deadlineMs }');
   }
   const { signal, deadlineMs } = options;
-  if (deadlineMs !== undefined) {
+  // `undefined` and an explicit `null` are this host's one spelling of no
+  // deadline. Every number crosses raw to the door, which converts it
+  // through the contract's one checked conversion: zero is a spent
+  // deadline, and every negative — including the contract's minus-one
+  // sentinel — or an oversized budget rejects with the usage kind instead
+  // of crashing the process or quietly disabling the deadline. A budget
+  // computed as `end - Date.now()` can land on minus one by chance.
+  if (deadlineMs !== undefined && deadlineMs !== null) {
     const held = Number(deadlineMs);
     if (!Number.isFinite(held)) {
       throw usageError('options.deadlineMs is milliseconds');
     }
-    // The raw milliseconds cross to the door, which converts them through
-    // the contract's one checked conversion: zero is a spent deadline,
-    // minus one means no deadline, and any other negative or an oversized
-    // budget rejects with the usage kind instead of crashing the process.
+    if (held < 0) {
+      throw usageError('options.deadlineMs is milliseconds from now; no deadline is spelled null, and a negative budget is refused');
+    }
     out.deadlineMs = held;
   }
   // The signal's listener is added last, so a refusal above never leaves
@@ -293,11 +299,13 @@ async function annotate(set, records, options) {
   }
   const { call } = splitLast('annotate', options);
   const rows = await invoke('annotate', set, JSON.stringify(checkRecords(records)), call);
-  return rows.map((row, index) => {
+  // One object a record, in input order, carrying only the set's fields —
+  // the shape Python, Ruby, R, and the C door return, and the shape the
+  // conformance rows pin. The input record is `records[index]`.
+  return rows.map((row) => {
     const fields = {};
     for (const [name, held] of row) fields[name] = annotatedField(held);
-    const record = records[index];
-    return typeof record === 'string' ? { record, ...fields } : { ...record, ...fields };
+    return fields;
   });
 }
 
@@ -308,7 +316,9 @@ async function details(questionOrText, text, options) {
   const held = await invoke('details', spec, text, call);
   return {
     probability: held.probability,
-    value: bare(held.answer),
+    // The ruled key every other surface uses, and the contract's own
+    // field name: `answer`, never `value`.
+    answer: bare(held.answer),
     model: held.model,
     digest: held.digest,
     sends: held.sends,

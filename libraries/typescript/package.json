@@ -22,6 +22,7 @@
   "private": true,
   "scripts": {
     "build": "napi build --release --platform --cargo-cwd ./addon --js loader.cjs --dts loader.d.ts .",
+    "build:synthetic": "napi build --release --platform --features synthetic-partial --cargo-cwd ./addon --js loader.cjs --dts loader.d.ts .",
     "test": "node --test tests/"
   },
   "devDependencies": {

@@ -39,18 +39,33 @@ fn engine() -> &'static Arc<dyn tt::Engine> {
     })
 }
 
-/// Run a call so a panic never crosses into the host process: the defect
-/// kind rides back as data in the failure envelope.
+/// Run one engine call behind the contract's shared panic boundary: a
+/// panic from anywhere beneath the body comes back as one error of the
+/// defect kind, which the wrapper raises, never as an unwind into the
+/// host process.
 fn guarded<T>(call: impl FnOnce() -> Result<T, tt::Error>) -> Result<T, tt::Error> {
-    panic::catch_unwind(AssertUnwindSafe(call))
-        .unwrap_or_else(|_| Err(tt::Error::defect("the engine panicked inside the Node shim")))
+    tt::catch_panic("the Node door", call)
 }
 
 /// The call's deadline instant, through the contract's one checked
-/// conversion: a NaN, a negative other than the `NO_DEADLINE` sentinel, or
-/// an oversized budget comes back as the usage kind instead of the panic
-/// the unchecked conversion raised inside the host process.
+/// conversion: a NaN or an oversized budget comes back as the usage kind
+/// instead of the panic the unchecked conversion raised inside the host
+/// process.
+///
+/// `None` — an absent `deadlineMs`, or an explicit `null` — is this
+/// host's one spelling of "no deadline". Every negative is refused,
+/// including the contract's `-1` sentinel, because a budget computed as
+/// `end - Date.now()` can land on `-1` by chance and must never quietly
+/// disable the deadline; zero stays what the contract settled, a spent
+/// deadline that sends nothing.
 fn deadline_of(deadline_ms: Option<f64>) -> Result<Option<Instant>, tt::Error> {
+    if let Some(held) = deadline_ms {
+        if held < 0.0 {
+            return Err(tt::Error::usage(format!(
+                "the deadline of {held} ms is negative; no deadline is spelled null, and a computed budget below zero is refused rather than silently disabling the deadline"
+            )));
+        }
+    }
     let budget = deadline_ms.map(tt::deadline_from_millis).transpose()?.flatten();
     Ok(budget.map(|held| Instant::now() + held))
 }
@@ -319,8 +334,9 @@ fn failure_envelope(error: tt::Error) -> String {
 /// `cancel` carries the wrapper's `AbortSignal`; `deadlineMs` bounds the
 /// whole call. A budget of zero is legal and spent immediately: the
 /// contract returns the deadline kind naming the budget. Minus one
-/// milliseconds is the no-deadline sentinel; any other negative and every
-/// oversized or NaN budget is refused with the usage kind.
+/// milliseconds is this host's no-deadline spelling; every negative
+/// (including the contract's `-1` sentinel) and every oversized or NaN
+/// budget is refused with the usage kind.
 #[allow(clippy::needless_pass_by_value)]
 #[napi]
 pub fn call(
@@ -369,15 +385,14 @@ mod tests {
 
     #[test]
     fn a_hostile_budget_is_a_usage_error_not_a_panic() {
-        for held in [f64::NAN, f64::INFINITY, -5.0, f64::MAX] {
+        for held in [f64::NAN, f64::INFINITY, -5.0, -1.0, f64::MAX] {
             let failure = match deadline_of(Some(held)) {
                 Err(error) => error,
                 Ok(_) => panic!("the budget {held} must be refused"),
             };
             assert_eq!(failure.kind, tt::ErrorKind::Usage, "the budget {held} is refused as usage");
         }
-        assert!(deadline_of(Some(-1.0)).expect("the sentinel").is_none(), "minus one means no deadline");
         assert!(deadline_of(Some(0.0)).expect("zero is spent, not refused").is_some());
-        assert!(deadline_of(None).expect("no budget").is_none());
+        assert!(deadline_of(None).expect("an absent budget means no deadline").is_none());
     }
 }

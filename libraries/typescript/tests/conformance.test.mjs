@@ -130,7 +130,10 @@ async function runVerb(held, spec, text, list, call) {
       assert.ok(Math.abs(value - expect.answer) < 1e-9, `score ${value} vs ${expect.answer}`);
       const nearest = expect.details?.nearest_level;
       if (nearest !== undefined) {
-        note(held.id, 'nearest level is not on this surface until the audit trail carries it');
+        // The nearest level rides the audit trail (ADR 0017 pick 6), so
+        // the case's nearest_level is checkable here now.
+        const audit = await tt.details(spec, text);
+        assert.equal(audit.nearest, nearest, `nearest level ${audit.nearest} vs ${nearest}`);
       }
       return;
     }
@@ -155,7 +158,7 @@ async function runVerb(held, spec, text, list, call) {
       return;
     }
     case 'annotate': {
-      const set = JSON.stringify({ questions: held.set });
+      const set = JSON.stringify({ version: 1, questions: held.set });
       if (expect.rows) {
         // The multi-record form: one answer object a record, in input
         // order, each field the bare answer (a score reads its position).
@@ -163,7 +166,6 @@ async function runVerb(held, spec, text, list, call) {
         const rows = await tt.annotate(set, list);
         assert.equal(rows.length, wantedRows.length, 'one answer a record');
         rows.forEach((got, at) => {
-          delete got.record;
           const want = wantedRows[at];
           assert.deepEqual(Object.keys(got).sort(), Object.keys(want).sort(), `row ${at} fields`);
           for (const [name, value] of Object.entries(want)) {
@@ -192,7 +194,6 @@ async function runVerb(held, spec, text, list, call) {
         }
       }
       const got = rows[0];
-      delete got.record;
       const wantedKeys = Object.keys(wanted);
       for (const key of wantedKeys) {
         if (!(key in got)) return note(held.id, `field ${key} missing from the row`);
