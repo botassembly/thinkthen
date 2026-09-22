@@ -261,7 +261,7 @@ Cross-compilation was attempted with `cargo-zigbuild` (already installed, v0.23.
 | Ruby | `cargo zigbuild --target aarch64-apple-darwin` | **Failed.** `rb-sys` panics (`ruby not found`) without a Ruby toolchain to read config from; no macOS gem artifact from this box |
 | R | not attempted | R source packages have no local cross path; R-universe's own builders are the macOS path, and the submission stays Ian's |
 
-So four of six have a stated macOS answer (C and Python produce real artifacts; Rust is source by design; R is R-universe), and two need the Mac or a fuller cross setup (TypeScript's `.node`, Ruby's gem).
+So the final macOS state, after both Mac visits: **eight of the nine surfaces carry a real darwin-arm64 artifact or a platform-neutral source answer, and R is the one by design.** C and Python (cross-compiled above), TypeScript (`libraries/typescript/dist/thinkthen-0.0.1-darwin-arm64.tgz`, built on the Mac), Ruby (`libraries/ruby/dist/thinkthen-0.0.1.gem`, built on the Mac), the three database extensions (SQLite `thinkthen.dylib`, DuckDB `thinkthen-osx_arm64.duckdb_extension`, PostgreSQL `thinkthen-pg16-0.0.1-darwin-arm64.tar.gz`, all built on the Mac), Rust (source by design), and R (source through R-universe, which builds its own macOS binaries; the submission stays Ian's).
 
 Incidental note: the Ruby builder container ran as root and left root-owned artifacts under `libraries/ruby/target/`; a host rebuild of that folder needs a fresh `CARGO_TARGET_DIR` (the macOS attempt above used `/tmp/pkg211/ruby-cross`) or a chown this session cannot do without sudo.
 
@@ -468,3 +468,23 @@ Ian made M5 available over Tailscale SSH (macOS 26.4, arm64, user imaurer), and 
 **Guest bookkeeping:** the scratch directory was removed (`rm -rf ~/tmp/thinkthen-macos`); the one install that outlives it is pgrx's home at `~/.pgrx` (config plus its empty data-16), created by `cargo pgrx init` and justified as necessary for the package build - removal is `rm -rf ~/.pgrx`. The duckdb CLI download and the clone's npm/venv/pip work all lived inside the scratch and are gone; zerobrew's packages were used, not changed; no service was started beyond the scratch Postgres, which was stopped and deleted; no postgres process runs now.
 
 **Repo findings this lane hands to the surfaces:** the two macOS link-flag sites (TypeScript addon, pgrx crate) belong in the repo so no future macOS build needs magic environment; the DuckDB `LOAD` path caveat belongs in the dist README beside the artifact; and the apple sqlite3 caveat belongs in the SQLite README's macOS note.
+
+
+## The Mac visits, closed 2026-09-22
+
+Two visits to guest `m5` (macOS 26.4, arm64, over Tailscale SSH), each under the guest rules: scratch under `~/tmp/`, every install recorded with its removal, nothing published, no key, no paid call, no project data touched.
+
+**First visit** closed TypeScript, SQLite, DuckDB, and PostgreSQL, each with its build log beside the artifact in `dist/macos-build.log`: the TypeScript `.node` in its `.tgz` (the scratch install ran the examples runner), the SQLite dylib loaded in a real `sqlite3` CLI, the DuckDB extension loaded in the official v1.5.5 macOS CLI (the `osx_arm64` metadata footer present), and the pgrx PostgreSQL package. All four artifacts verified Mach-O arm64 on this box.
+
+**Second visit** closed Ruby - the fifth - with this recipe for the next build:
+
+1. `ruby-build 3.4.10` compiled into the scratch (`RUBY_CONFIGURE_OPTS="--disable-install-doc --with-out-ext=psych"`; ruby-build built OpenSSL 3 into `ruby/openssl` itself). psych is excluded from core because macOS carries no libyaml; libyaml 0.2.5 is built from source into the scratch and psych 5.2.2 is then built from the Ruby source tree's `ext/psych` and installed by hand - RubyGems cannot install anything without psych, so the usual `gem install psych` is the chicken-and-egg this sidesteps.
+2. `rustup` into the scratch (`--profile minimal --no-modify-path`); the workspace pins 1.93.1.
+3. Sources rsynced from the worktree (`crates/`, `contract/`, `standin/`, `libraries/ruby/`, `conformance/`, `VERSION`, and the root `Cargo.toml`/`Cargo.lock`/`rust-toolchain.toml` - the root manifest is required because `thinkthen-core` inherits `edition.workspace`).
+4. `RUSTFLAGS="-C link-arg=-Wl,-undefined,dynamic_lookup"` on the cargo build: on Darwin the Ruby extension must resolve `rb_*` symbols at load, not link time. This is now carried in the repo at `libraries/ruby/.cargo/config.toml` for both darwin targets, so the next build needs no environment magic.
+5. The extension file is `lib/thinkthen/thinkthen.bundle` - macOS Ruby loads `.bundle`, not `.so`; the gem carries both names (the `.bundle` that loads, the `.so` the gemspec lists), so **the repo should teach `build.sh`/the gemspec the platform name (darwin -> `.bundle`) before the next macOS build**.
+6. Suite on the guest, null backend: `cargo test --lib` 2 passed; `test_surface.rb` 32 runs, 99 assertions, 0 failures; `test_cancel_fast.rb` the raise holds (1.056 s); `test_fork.rb` the child answers; `examples.rb` 10 of 10; `test_conformance.rb` the slice green; `slide_sample.rb` green. Then the gem installed into the scratch gem home and a fresh `ruby -e 'require "thinkthen"'` outside `-I lib`: `decide` true, `recognize` 3 entities, first "Maria Chen". Every line is in `libraries/ruby/dist/macos-build.log`; the gem was re-verified Mach-O arm64 on this box, both member files.
+
+**R - answered, not installed.** The guest carries no R: `R`/`Rscript` absent from PATH, no `/Library/Frameworks/R.framework`, no Homebrew. Nothing was installed. R's macOS path is the source tarball through R-universe, which builds its own macOS binaries; a local macOS R would be a verification nicety, not a distribution blocker. If ever wanted: Homebrew plus `brew install r` (a system-level change to Ian's machine) or the CRAN installer.
+
+**Removals, both visits:** the whole second visit lived in `~/tmp/thinkthen-macos` - Ruby, rustup, libyaml, gems, sources - removed with `rm -rf ~/tmp/thinkthen-macos` (verified gone; `~/tmp` back to 0 B), plus `/tmp/ruby-build.*` and the gemcheck dirs. From the first visit, `~/.pgrx` remains with its recorded removal (`rm -rf ~/.pgrx`). No user-level install was made in either visit.
