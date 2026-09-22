@@ -1,0 +1,264 @@
+---
+import Base from '../layouts/Base.astro';
+import { CODE_FUNCTIONS, KEY_VARIABLE } from '../data/catalog.mjs';
+
+// Every row on this page comes from repos/thinkthen/specification/. Nothing
+// here is an example. The runs live on the function pages and the tutorial.
+
+const GLOBAL = [
+  ['--details', 'none', 'Prints the whole result object in place of the bare value.', 'off'],
+  ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', 'off'],
+  ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', 'https://api.typesafe.ai/v1'],
+  ['--model NAME', 'a name', 'The model the request carries. This is how a run is pinned to one version.', 'jev-latest'],
+  ['--timeout SECONDS', 'a whole number above 0', 'Covers one attempt, connect to last byte. 0 is a usage error.', '30'],
+  ['--max-retries N', 'a whole number', 'Retries after the first attempt.', '2'],
+  ['--record DIR', 'a folder', 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', 'off'],
+  ['--replay DIR', 'a folder', 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', 'off'],
+  ['--cache DIR', 'a folder', 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', 'off'],
+  ['--no-cache', 'none', 'Turns off the platform cache for one run, both lookup and writing. It never turns off usage counting.', 'the cache is on'],
+  ['--profile FILE', 'a JSON file', 'Applies local byte and question limits before a request leaves, and names the calibration profile in use. It selects neither address nor model.', 'none'],
+  ['--input FILE', 'a path', 'Reads the evidence from a file instead of standard input. It names a path, never a framing.', 'standard input'],
+];
+
+const FRAMING = [
+  ['none', 'The whole input is one text document and one record.'],
+  ['--lines', 'Each line is one text record. A trailing newline ends the last record.'],
+  ['--jsonl', 'Each line is one JSON value and one record. No blank lines.'],
+  ['--csv', 'The first logical row is a header. Each later row becomes one JSON object of string cells.'],
+  ['--tsv', 'The CSV rules, with a tab delimiter.'],
+];
+
+const FRAMING_BY_FN = [
+  ['decide, choose, tag, score, annotate', 'One document by default. All four framing flags are accepted.'],
+  ['filter, rank', 'One framing flag is required. One document is not a stream, and its absence is a usage error.'],
+  ['find', '--lines by default, or --jsonl. CSV and TSV are refused as unexpected arguments.'],
+];
+
+const EXITS = [
+  [0, 'yes', 'The command finished. On a single text, decide answers yes.'],
+  [1, 'no', 'A single text under decide answers no. No other function exits 1.'],
+  [2, 'broken', 'A usage error or an input error. The failing record sent nothing.'],
+  [3, 'unsure', 'A single text under decide or choose is not sure. Under find --none, nothing fits.'],
+  [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
+  [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
+  [6, 'broken', 'annotate only. The run read all its input, and one or more questions failed. It prints no diagnostic, because the result marks each failed question.'],
+  [70, 'broken', 'A defect in the tool.'],
+];
+
+const ENVS = [
+  ['THINKTHEN_API_KEY', 'The key. No option names another variable. Absent or empty is exit 4, and an empty variable counts as absent.', 'none; a live call needs it'],
+  ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', 'https://api.typesafe.ai/v1'],
+  ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', 'the platform cache path'],
+  ['XDG_CACHE_HOME', 'The root for the cache and the usage folder. It counts only when absolute.', '$HOME/.cache on Linux'],
+  ['XDG_CONFIG_HOME', 'The root for config.json. It counts only when absolute.', '$HOME/.config on Linux'],
+  ['HOME', 'The fallback root for the cache, the usage totals, and the configuration. It counts only when absolute.', 'none'],
+  ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and in lower case. Under https:// the named proxy carries the request and sees only the host. Under http:// every one of them is cancelled.', 'none'],
+];
+
+const ANSWERS = [
+  ['yes_no', 'decide, filter, rank', '{"kind":"yes_no","probability":FLOAT}', 'The probability of yes, and nothing else. There is no confidence field on this kind.'],
+  ['choice', 'choose', '{"kind":"choice","pick":STRING,"probabilities":{LABEL:FLOAT},"confidence":FLOAT}', 'pick is the highest option before any threshold. probabilities holds one entry per option, in send order. confidence is the vendor’s number and shows only when the backend sends it.'],
+  ['tag', 'tag', '{"kind":"tag","probabilities":{LABEL:FLOAT}}', 'One entry per label, in send order.'],
+  ['score', 'score', '{"kind":"score","level":STRING,"probabilities":{LEVEL:FLOAT}}', 'level is the highest level. probabilities follows your level order, lowest first.'],
+  ['find', 'find', '{"kind":"find","pick":STRING,"probabilities":{UNIT:FLOAT,"none":FLOAT}}', 'probabilities follows unit order and puts none last.'],
+];
+
+const META = [
+  ['tool', 'The name and version of the binary.'],
+  ['question_sha256', 'The digest of the exact question this row answers. On annotate it is questions_sha256.'],
+  ['url', 'The address that answered.'],
+  ['model', 'The model that answered, as the backend reported it.'],
+  ['usage', '{"input_tokens":INT,"output_tokens":INT}. Absent when the backend reports none.'],
+  ['requests_sent', 'The HTTP attempts behind this result. A saved answer reports zero. Each retry adds one.'],
+  ['replayed', 'true when a saved answer served the row.'],
+  ['requests', 'The digests of the logical requests, in the order they were built.'],
+  ['failed_questions', 'How many logical questions failed. Always present, including zero.'],
+  ['profile_warning', '{"calibrated":NAME,"running":NAME}. Absent unless both exist and differ.'],
+];
+
+const BARE = [
+  ['decide', 'true, false, or null.'],
+  ['choose', 'A JSON string, or null. --raw prints the bare label.'],
+  ['tag', 'A JSON array of every label that reaches the bar, including [].'],
+  ['score', 'A JSON number.'],
+  ['find', 'The selected line or JSONL record as it arrived. Nothing when --none wins or ties.'],
+  ['filter', 'Each kept line or JSONL record as it arrived, in input order. A kept table row prints as compact JSON.'],
+  ['rank', 'Every line or record again, most likely yes first.'],
+  ['annotate', 'One JSON object per record.'],
+];
+
+const COUNTS = [
+  ['decide', 'none', 'A cut or a band. decide is the one function that takes both.', '0.5'],
+  ['choose', '2 to 255 options', 'A cut only. A band is a usage error.', 'none; the winning label comes back'],
+  ['tag', '1 to 20 labels', 'A cut only, applied to each label on its own. A band is refused.', '0.5'],
+  ['score', '2 to 10 levels, lowest first', 'None. score has no threshold.', 'n/a'],
+  ['filter', 'none', 'A cut only. A band is exit 2 from the command line and exit 5 from a question file.', '0.5'],
+  ['rank', 'none', 'None. A threshold is refused in both homes.', 'n/a'],
+  ['find', '2 to 255 units, or 2 to 254 with --none', 'None.', 'n/a'],
+  ['annotate', 'a question set file', 'Each question carries its own. A top-level threshold applies to every decide question that names none.', 'per question'],
+];
+---
+<Base title="Reference" description="Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.">
+  <h1>Reference</h1>
+  <p class="lede">Everything the command takes and everything it prints, from the specification. This is the page to read before writing a pipeline, and the page to hand an agent.</p>
+  <div class="note">Where this page and the tool disagree, the tool is behind. The specification is the contract and the code follows it.</div>
+
+  <h2>The ten functions</h2>
+  <table>
+    <tr><th>Function</th><th>What it does</th><th>Primitive</th><th>Requests</th></tr>
+    {CODE_FUNCTIONS.map((fn) => (
+      <tr>
+        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td>
+        <td>{fn.line}</td>
+        <td>{fn.primitive}</td>
+        <td>{fn.requests}</td>
+      </tr>
+    ))}
+  </table>
+
+  <h2>Arguments and thresholds</h2>
+  <p>A threshold is your bar on a probability. It is an input, never an output, and it never changes the probability. A cut is one number. A band is two, written <code>LOW:HIGH</code>.</p>
+  <table>
+    <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
+    {COUNTS.map(([fn, args, rule, dflt]) => (
+      <tr><td><code>{fn}</code></td><td>{args}</td><td>{rule}</td><td><code>{dflt}</code></td></tr>
+    ))}
+  </table>
+  <p>With p as the probability of yes:</p>
+  <table>
+    <tr><th>Form</th><th>Accepted</th><th>Yes</th><th>No</th><th>Not sure</th></tr>
+    <tr><td>none given</td><td></td><td>p ≥ 0.5</td><td>p &lt; 0.5</td><td>never</td></tr>
+    <tr><td><code>--threshold T</code></td><td>0 &lt; T ≤ 1</td><td>p ≥ T</td><td>p &lt; T</td><td>never</td></tr>
+    <tr><td><code>--threshold LOW:HIGH</code></td><td>0 ≤ LOW &lt; HIGH ≤ 1</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
+  </table>
+  <p>The high side is inclusive and the low side belongs to not sure, so a probability exactly at <code>LOW</code> is not sure. A cut of 0 is refused. A band low of 0 is accepted. <code>--threshold 0.5</code> and no threshold name the same rule. A percent such as <code>90</code>, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.</p>
+  <p>The cut applies to the probability of yes on <code>decide</code> and on each record under <code>filter</code>, to the winning option's probability on <code>choose</code>, and to each label on its own under <code>tag</code>.</p>
+
+  <h2>Global flags</h2>
+  <p>Every function accepts all of these.</p>
+  <table>
+    <tr><th>Flag</th><th>Takes</th><th>What it does</th><th>Default</th></tr>
+    {GLOBAL.map(([flag, takes, does, dflt]) => (
+      <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td><code>{dflt}</code></td></tr>
+    ))}
+  </table>
+  <p><code>--jobs N</code> is not global. It runs from 1 to 32, defaults to 4, and it belongs to record mode. <code>annotate</code> also accepts it on one document. Every other function refuses it outside record mode.</p>
+  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, a whole number of 1 or more), <code>--none</code> (<code>find</code>).</p>
+
+  <h2>Framing a stream</h2>
+  <p>The four framing flags are mutually exclusive. The tool never guesses a framing from a filename.</p>
+  <table>
+    <tr><th>Flag</th><th>One record is</th></tr>
+    {FRAMING.map(([flag, what]) => (<tr><td><code>{flag}</code></td><td>{what}</td></tr>))}
+  </table>
+  <table>
+    <tr><th>Function</th><th>What it accepts</th></tr>
+    {FRAMING_BY_FN.map(([fn, what]) => (<tr><td><code>{fn}</code></td><td>{what}</td></tr>))}
+  </table>
+
+  <h3><code>--field POINTER</code></h3>
+  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees, and it is the disclosure boundary: only the pointed value leaves the machine. Under <code>--details</code> the whole record still comes back in <code>input</code>.</p>
+  <ul>
+    <li>Under <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> it reads the pointer in each record.</li>
+    <li>With no framing flag it reads the whole input as one JSON value and takes the pointer inside it. There is no separate JSON framing flag.</li>
+    <li>Under <code>--lines</code> it is a usage error, because a text line has no members.</li>
+    <li>It may repeat. Several pointers build an evidence object, each member keyed by the last part of its pointer. Two members that would share one key are a usage error.</li>
+    <li>A pointer that finds nothing is an input error for that record, exit 2, before any request for it.</li>
+    <li><code>$.body</code>, <code>#/id</code>, a wildcard, and a negative index are refused, and the message names RFC 6901.</li>
+    <li>A pointed value that is not a string is serialized as compact JSON and sent as text. With no <code>--field</code>, a JSONL, CSV, or TSV record is serialized whole.</li>
+  </ul>
+
+  <h3>CSV and TSV</h3>
+  <p>Both require a header. Every cell becomes a JSON string, including an empty cell and text that looks like a number, a boolean, a null, an array, or an object. Header order becomes key order. A header name may hold whitespace, but it may not be blank, hold a control character, or exactly duplicate another. One UTF-8 byte order mark is ignored at the start of the first header name and nowhere else. Every data row must carry the header's field count. A header with no data rows is a successful empty dataset and sends no request. Empty input is exit 2. Every output from CSV or TSV input is JSONL.</p>
+  <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
+
+  <h2>What one row looks like</h2>
+  <h3>Without <code>--details</code></h3>
+  <table>
+    <tr><th>Function</th><th>Standard output</th></tr>
+    {BARE.map(([fn, out]) => (<tr><td><code>{fn}</code></td><td>{out}</td></tr>))}
+  </table>
+  <p>In record mode, a <code>decide</code>, <code>choose</code>, <code>tag</code>, or <code>score</code> row is <code>{'{"input":RECORD,"value":ANSWER}'}</code>, in that key order. <code>filter</code>, <code>rank</code>, and <code>find</code> keep returning records. Every result is compact and sits on one line.</p>
+  <p><code>annotate</code> in record mode adds one top-level field per question to an object record. A line, a JSON scalar, or a JSON array keeps its parsed record under <code>input</code> and its named answers under <code>value</code>. CSV and TSV rows are objects, so they stay flat.</p>
+
+  <h3>With <code>--details</code></h3>
+  <p>One JSON object per row, with its fields in this order.</p>
+  <table>
+    <tr><th>Field</th><th>Holds</th></tr>
+    <tr><td><code>schema</code></td><td>Always <code>"thinkthen.result/1"</code>.</td></tr>
+    <tr><td><code>value</code></td><td>The bare judgment. Under <code>filter</code> it is the cut's boolean. Under <code>rank</code> it is <code>null</code>.</td></tr>
+    <tr><td><code>input</code></td><td>Record mode only, between <code>value</code> and <code>question</code>. The whole original record, including the parts never sent.</td></tr>
+    <tr><td><code>question</code></td><td><code>verb</code> and <code>text</code>, then <code>options</code>, <code>labels</code>, <code>levels</code>, or <code>none</code>, by the kind. <code>filter</code> and <code>rank</code> ask a <code>decide</code> question, so their <code>question.verb</code> is <code>"decide"</code>.</td></tr>
+    <tr><td><code>answer</code></td><td>One of the five answer kinds below. No vendor field name appears in it.</td></tr>
+    <tr><td><code>threshold</code></td><td>A number for a cut, the string <code>"LOW:HIGH"</code> for a band, and <code>null</code> when none applies. <code>decide</code> never prints <code>null</code> here.</td></tr>
+    <tr><td><code>meta</code></td><td>The run, below.</td></tr>
+  </table>
+
+  <h3>The five answer kinds</h3>
+  <table>
+    <tr><th>Kind</th><th>From</th><th>Shape</th><th>Notes</th></tr>
+    {ANSWERS.map(([kind, from, shape, note]) => (
+      <tr><td><code>{kind}</code></td><td><code>{from}</code></td><td><code>{shape}</code></td><td>{note}</td></tr>
+    ))}
+  </table>
+  <p>Every number in <code>probabilities</code> is the model's own, passed through unchanged. The tool computes one number only, the position <code>score</code> prints, and it is the average of the level probabilities.</p>
+
+  <h3><code>meta</code></h3>
+  <table>
+    <tr><th>Field</th><th>Holds</th></tr>
+    {META.map(([field, holds]) => (<tr><td><code>{field}</code></td><td>{holds}</td></tr>))}
+  </table>
+
+  <h3><code>annotate --details</code></h3>
+  <p>The top level is <code>schema</code>, <code>input</code>, <code>value</code>, <code>answers</code>, <code>meta</code>. <code>value</code> holds the named answers. Each entry under <code>answers</code> that succeeded carries <code>value</code>, <code>question</code>, <code>answer</code>, <code>threshold</code>, and <code>request</code>.</p>
+  <p>A failed question is never turned into <code>null</code>. Its bare value is <code>{'{"failed":{"kind":"backend","cause":CAUSE}}'}</code>, and its detailed entry carries <code>question</code>, <code>failure</code>, and <code>request</code> and leaves out <code>value</code>, <code>answer</code>, and <code>threshold</code>. The causes are a closed list: <code>missing_answer</code>, <code>wrong_kind</code>, <code>missing_probability</code>, <code>invalid_probability</code>, <code>invalid_distribution</code>, <code>unexpected_probability</code>. <code>meta.usage</code> is the sum over the record's requests.</p>
+
+  <h2>Exit codes</h2>
+  <table>
+    <tr><th>Code</th><th>What it means</th></tr>
+    {EXITS.map(([code, outcome, what]) => (
+      <tr><td><span class={`exit ${outcome}`}>{code}</span></td><td>{what}</td></tr>
+    ))}
+  </table>
+  <p>Codes 7 and 8 are reserved and unused. In record mode the exit code reports the run, not any one record's answer, so a completed run exits 0 unless <code>annotate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, or 6.</p>
+
+  <h2>The environment</h2>
+  <table>
+    <tr><th>Variable</th><th>What it does</th><th>Default</th></tr>
+    {ENVS.map(([name, what, dflt]) => (
+      <tr><td><code>{name}</code></td><td>{what}</td><td><code>{dflt}</code></td></tr>
+    ))}
+  </table>
+  <p>The key is read from <code>{KEY_VARIABLE}</code> and from nowhere else. It goes only to the address you named. It never reaches a plan, a result, a saved answer, a log line, or an error.</p>
+
+  <h2>The cache</h2>
+  <p>The cache is on by default. Ask the same question of the same text again and the tool reads the saved answer instead of sending a request.</p>
+  <ul>
+    <li>One exchange per file, named <code>DIGEST.json</code>, schema <code>thinkthen.recording/1</code>, five fields in order: <code>schema</code>, <code>adapter</code>, <code>url</code>, <code>request</code>, <code>response</code>.</li>
+    <li><code>DIGEST</code> is the SHA-256, in lowercase hex, of the adapter name, a newline, the address, a newline, and the request body exactly as the adapter encoded it. The same command finds the same entry.</li>
+    <li>Bodies only, never headers, so no key can reach an entry. Only an exchange that succeeded and decoded is saved. A failure is never saved.</li>
+    <li>The folder is <code>$XDG_CACHE_HOME/thinkthen</code>, then <code>$HOME/.cache/thinkthen</code> on Linux and <code>$HOME/Library/Caches/thinkthen</code> on macOS. <code>THINKTHEN_CACHE</code> names another one.</li>
+    <li>A folder the tool creates is mode 0700 and each entry is 0600, whatever the umask says, because an entry holds the evidence.</li>
+    <li>The first write binds a folder to one backend through a private marker. Reusing that folder against another address fails at exit 5, before the key is read and before any request.</li>
+    <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
+    <li><code>thinkthen cache prune DIR</code> is the only way entries are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run.</li>
+  </ul>
+  <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They are local observations and not a provider bill.</p>
+  <p><code>thinkthen status</code> is read-only and opens no connection. It reports the version, the resolved configuration and where each value came from, whether a key is present, the cache entry count and allocated bytes, and the local usage for the current UTC month and in all. <code>status --json</code> prints the same facts as one <code>thinkthen.status/1</code> object.</p>
+
+  <h2>The configuration file</h2>
+  <p>Optional, and read-only to the command. <b>The tool never creates it and never edits it.</b> There is no command that sets a value in it.</p>
+  <ul>
+    <li>Path: <code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, then <code>$HOME/.config/thinkthen/config.json</code> on Linux and <code>$HOME/Library/Application Support/thinkthen/config.json</code> on macOS.</li>
+    <li>Format: one JSON object with <code>"schema": "thinkthen.config/1"</code>.</li>
+    <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, and a positive <code>cache_bytes</code>. Any other field is refused.</li>
+    <li>The default is the cache on, with a target of 100,000,000 allocated bytes.</li>
+  </ul>
+  <p>Precedence everywhere: the command line, then the question file, then the default. A typed value replaces the file's value. A typed list replaces the file's whole list and never merges.</p>
+
+  <h2>Question files</h2>
+  <p>A question file holds one saved question, and every function that takes a question accepts one. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> is a different file: it holds many questions under <code>"version": 1</code>.</p>
+  <p>A question file that cannot be read, is not one JSON object, or breaks a rule is exit 5. A command that names the wrong verb for the file is exit 2. The <a href="/functions/question-file/">question file page</a> carries the keys.</p>
+
+  <p class="pagelinks"><a href="/tutorial/">Tutorial</a> · <a href="/functions/">Every function</a> · <a href="/trust/">Trust</a></p>
+</Base>
