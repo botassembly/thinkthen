@@ -35,6 +35,7 @@ docker_run 'ruby -I lib -I tests tests/test_surface.rb'
 
 echo "== ruby surface: fast-backend cancel, the poll-bug shape"
 docker_run 'ruby -I lib tests/test_cancel_fast.rb'
+docker_run 'ruby -I lib tests/test_fork.rb'
 
 echo "== ruby surface: the function examples"
 docker_run 'ruby -I lib tests/examples.rb'

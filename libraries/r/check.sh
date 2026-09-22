@@ -17,6 +17,9 @@ ENGINE_NULL=1 Rscript tests_null.R
 echo "== r surface: fast-backend interrupt, the poll-bug shape"
 ./interrupt_fast.sh
 
+echo "== r surface: fork after the first call answers in the child"
+timeout 60 env ENGINE_NULL=1 Rscript fork_check.R
+
 echo "== r surface: the function examples"
 ENGINE_NULL=1 Rscript examples.R
 
