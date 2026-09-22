@@ -67,3 +67,19 @@ Private repo name on 47 lines in 30 files; /home/ian on 20 lines; the built Pyth
 ## Fix order
 
 1. Security items 1–4. 2. Crashes 5–8. 3. Wrong answers 9–16 plus memory/perf 17–19. 4. Merge: dependency retarget decided and the trial merge run as a build (build team, with our enumerated break list). 5. Phases 4–5 as announced, plus ADRs for the rulings, the shared panic guard in the contract, and the gate over the new workspaces.
+
+## Progress: wave 2 landed, wave 3 queued (2026-09-22)
+
+As of branch `surfaces` tip `6a829b8`. Wave 2 (conformance honesty) landed after the review's snapshot; wave 3 (this issue's fixes) has not landed.
+
+**Landed since the review snapshot**, each closing a gap this review listed:
+
+- `50c6327` the checker honors its file argument and runs from the repository root.
+- `c83add5` every runner reads its skips from one table in the conformance file; the per-runner hardcoded lists are gone.
+- `bcaa5f7` score and tag coverage raised (score 1→3, tag 1→4 cases).
+- `2143d7e` the shared repeated-text, NULL-row, and annotate cases, with the DuckDB driver's `decide_many` and `annotate` branches extended under a narrow permission (record 0071) and the selftest extended so the new shapes fail when corrupted; DIVERGENCES carries the reasons.
+- `6a829b8` the gate summary counts skips beside greens, and a bare `cargo test` in `libraries/rust` passes, closing the "17 tests" leftover. The conformance file is 84 cases.
+
+**Records landed:** ADR 0037 (the C door serves every language that can call C) and ADR 0038 (DuckDB relate on the caller's database) at `79a7efd`; records 0069 (the R interrupt window), 0070 (the PostgreSQL deadline), 0071 (the two granted exceptions) at `aaccc63`. The merge-build fact has its own record at `sdlc/issues/2026-09-22-merge-trial-the-build-break-list.md` (`4b4f85b`).
+
+**Open as of tip `6a829b8`:** the new defects 1–19 and the first-review leftovers above, plus the merge-build item. Commits from here on end with `refs surfaces-review-2` or `refs surfaces-review-1`, so this issue can be read against the branch by search.
