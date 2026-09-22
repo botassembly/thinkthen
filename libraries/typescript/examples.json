@@ -1,48 +1,48 @@
 {
- "schema": "thinkthen.examples/1",
- "surface": "typescript",
- "language": "typescript",
- "install": "npm install thinkthen",
- "examples": {
-  "decide": {
-   "ts": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\")",
-   "expected": "true"
-  },
-  "choose": {
-   "ts": "tt.choose(\"Which team owns this?\", \"please route this ticket\", { options: [\"the refund desk\", \"the maybe desk\", \"anywhere else\"] })",
-   "expected": "\"the refund desk\""
-  },
-  "tag": {
-   "ts": "tt.tag(\"Which words appear?\", \"the refund and the shipping\", { labels: [\"refund\", \"shipping\"] })",
-   "expected": "[\"refund\"]"
-  },
-  "score": {
-   "ts": "tt.score({ score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] }, \"maybe later\")",
-   "expected": "1.05"
-  },
-  "filter": {
-   "ts": "tt.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
-   "expected": "[\"I demand a refund today\"]"
-  },
-  "rank": {
-   "ts": "tt.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
-   "expected": "[{\"index\":1,\"record\":\"I demand a refund today\",\"probability\":0.97},{\"index\":0,\"record\":\"good morning\",\"probability\":0.03}]"
-  },
-  "find": {
-   "ts": "tt.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"])",
-   "expected": "{\"index\":1,\"unit\":\"I want a refund\",\"probability\":0.97}"
-  },
-  "annotate": {
-   "ts": "tt.annotate(\"{\\\"version\\\":1,\\\"questions\\\":{\\\"wants_refund\\\":{\\\"decide\\\":\\\"Does the customer ask for a refund?\\\"},\\\"team\\\":{\\\"choose\\\":\\\"Which team owns this?\\\",\\\"options\\\":[\\\"billing\\\",\\\"shipping\\\",\\\"account\\\"]},\\\"urgency\\\":{\\\"score\\\":\\\"How urgent is this?\\\",\\\"levels\\\":[\\\"Routine.\\\",\\\"Soon.\\\",\\\"Immediate.\\\"]}}}\", [\"maybe later\"])",
-   "expected": "[{\"team\":null,\"urgency\":1.05,\"wants_refund\":true}]"
-  },
-  "recognize": {
-   "ts": "(await tt.recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", { kinds: [\"person\", \"organization\", \"place\"] })).entities.map((one) => [one.text, one.kind])",
-   "expected": "[[\"Maria Chen\",\"person\"],[\"Northwind Freight\",\"organization\"],[\"Chicago\",\"place\"]]"
-  },
-  "relate": {
-   "ts": "(await tt.relate([\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"], { relations: [\"caused_by\"] })).map((one) => [one.name, one.source, one.target, one.probability])",
-   "expected": "[[\"caused_by\",1,2,0.59],[\"caused_by\",1,4,0.94],[\"caused_by\",2,4,0.94],[\"caused_by\",3,4,0.84]]"
+  "schema": "thinkthen.examples/1",
+  "surface": "typescript",
+  "language": "typescript",
+  "install": "npm install thinkthen",
+  "examples": {
+    "decide": {
+      "ts": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\")",
+      "expected": "true"
+    },
+    "choose": {
+      "ts": "tt.choose(\"Which team owns this?\", \"please route this ticket\", { options: [\"the refund desk\", \"the maybe desk\", \"anywhere else\"] })",
+      "expected": "\"the refund desk\""
+    },
+    "tag": {
+      "ts": "tt.tag(\"Which words appear?\", \"the refund and the shipping\", { labels: [\"refund\", \"shipping\"] })",
+      "expected": "[\"refund\"]"
+    },
+    "score": {
+      "ts": "tt.score({ score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] }, \"maybe later\")",
+      "expected": "1.05"
+    },
+    "filter": {
+      "ts": "tt.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "[\"I demand a refund today\"]"
+    },
+    "rank": {
+      "ts": "tt.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "[{\"index\":1,\"record\":\"I demand a refund today\",\"probability\":0.97},{\"index\":0,\"record\":\"good morning\",\"probability\":0.03}]"
+    },
+    "find": {
+      "ts": "tt.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"])",
+      "expected": "{\"index\":1,\"unit\":\"I want a refund\",\"probability\":0.97}"
+    },
+    "annotate": {
+      "ts": "tt.annotate(\"{\\\"version\\\":1,\\\"questions\\\":{\\\"wants_refund\\\":{\\\"decide\\\":\\\"Does the customer ask for a refund?\\\"},\\\"team\\\":{\\\"choose\\\":\\\"Which team owns this?\\\",\\\"options\\\":[\\\"billing\\\",\\\"shipping\\\",\\\"account\\\"]},\\\"urgency\\\":{\\\"score\\\":\\\"How urgent is this?\\\",\\\"levels\\\":[\\\"Routine.\\\",\\\"Soon.\\\",\\\"Immediate.\\\"]}}}\", [\"maybe later\"])",
+      "expected": "[{\"team\":null,\"urgency\":1.05,\"wants_refund\":true}]"
+    },
+    "recognize": {
+      "ts": "(await tt.recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", { kinds: [\"person\", \"organization\", \"place\"] })).entities.map((one) => [one.text, one.kind])",
+      "expected": "[[\"Maria Chen\",\"person\"],[\"Northwind Freight\",\"organization\"],[\"Chicago\",\"place\"]]"
+    },
+    "relate": {
+      "ts": "(await tt.relate([\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"], { relations: [\"caused_by\"] })).map((one) => [one.name, one.source, one.target, one.probability])",
+      "expected": "[[\"caused_by\",1,2,0.59],[\"caused_by\",1,4,0.94],[\"caused_by\",2,4,0.94],[\"caused_by\",3,4,0.84]]"
+    }
   }
- }
 }

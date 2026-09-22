@@ -12,8 +12,9 @@ export declare function usage(): string
  * `cancel` carries the wrapper's `AbortSignal`; `deadlineMs` bounds the
  * whole call. A budget of zero is legal and spent immediately: the
  * contract returns the deadline kind naming the budget. Minus one
- * milliseconds is the no-deadline sentinel; any other negative and every
- * oversized or NaN budget is refused with the usage kind.
+ * milliseconds is this host's no-deadline spelling; every negative
+ * (including the contract's `-1` sentinel) and every oversized or NaN
+ * budget is refused with the usage kind.
  */
 export declare function call(op: string, spec: string | undefined | null, payload: string, cancel?: CancelHandle | undefined | null, deadlineMs?: number | undefined | null): Promise<unknown>
 /**
