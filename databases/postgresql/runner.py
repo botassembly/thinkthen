@@ -63,7 +63,19 @@ def main() -> int:
             print(f"skip     {ident}: the local kind needs a file door")
             continue
         if "error" in expect and expect["error"].get("kind") == "deadline":
-            print(f"skip     {ident}: the spent-budget case needs a deadline door this driver does not carry")
+            # The deadline door is `thinkthen.deadline_ms`, the enforced tool
+            # on the single-row path; zero is a spent budget, so the call
+            # returns the deadline kind having sent nothing.
+            budget = case.get("budget_ms", 0)
+            try:
+                sql(
+                    f"SET thinkthen.deadline_ms = {int(budget)}; "
+                    f"SELECT thinkthen_decide({question_arg(case)}, {literal(case['evidence'])})"
+                )
+                note = f"diverge {ident}: a spent deadline answered"
+            except RuntimeError as failure:
+                note = None if "thinkthen deadline" in str(failure) else \
+                    f"diverge {ident}: expected the deadline kind, got {failure}"
             continue
         try:
             if verb == "decide":

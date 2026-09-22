@@ -17,12 +17,24 @@
 //! engine's token — no new request starts, and the sent ones finish — and
 //! the check then raises the database's own error. Experiment 211 measured
 //! this shape; no proof is re-run here.
+//!
+//! The single-row calls cannot be cancelled that way: the backend thread
+//! waits on the wire inside the call, so `pg_cancel_backend` and
+//! `statement_timeout` only take effect after the send returns. The
+//! enforced tool there is `thinkthen.deadline_ms` (milliseconds; `-1` is
+//! none, `0` is a spent deadline, a positive value is the budget), carried
+//! by every single-request function; a spent or expired budget returns the
+//! deadline kind with nothing sent or with the sent request abandoned.
+//!
+//! `CREATE EXTENSION` revokes the default PUBLIC grant on every function,
+//! so a paid call and an `@path` file read need a role an administrator
+//! has granted EXECUTE to; superusers keep access by their own right.
 
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::ffi::c_int;
 use std::path::Path;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use pgrx::datum::{Array, JsonB};
@@ -30,10 +42,10 @@ use pgrx::pg_sys::FunctionCallInfo;
 use pgrx::prelude::*;
 use pgrx::{Aggregate, AggregateName, GucContext, GucFlags, GucRegistry, GucSetting, Spi};
 use thinkthen_contract::{
-    Annotated, Engine as _, Entity, Error, ErrorKind, Kind, Question, QuestionKind, QuestionSet,
-    Recognize, Relate, relate_checked,
+    Annotated, Connector as _, Engine, EngineConfig, Entity, Error, ErrorKind, Kind, Options,
+    Question, QuestionKind, QuestionSet, Recognize, Relate, relate_checked,
 };
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
 pgrx::pg_module_magic!();
 
@@ -61,8 +73,19 @@ fn unwired_key_refusal(setting: Option<&str>) -> Option<Error> {
     })
 }
 
+/// The per-call deadline, in milliseconds: `-1` is no deadline, `0` is a
+/// spent deadline, and a positive value is the budget. `Userset`, so any
+/// role can bound its own paid call; a superuser can set a database-wide
+/// default with `ALTER DATABASE ... SET thinkthen.deadline_ms`.
+///
+/// This is the enforced tool on the single-row path: the backend thread
+/// waits on a blocking send there, so `pg_cancel_backend` and
+/// `statement_timeout` cannot reach the wire call — the budget is what
+/// bounds it. The batch forms carry the host's cancel instead.
+static DEADLINE_MS: GucSetting<i32> = GucSetting::<i32>::new(-1);
+
 /// The engine, lazy in each backend. Built on first use, after the fork.
-static ENGINE: OnceLock<BlockingEngine> = OnceLock::new();
+static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 
 /// The engine value, with the configured key's refusal in front of it.
 ///
@@ -70,13 +93,26 @@ static ENGINE: OnceLock<BlockingEngine> = OnceLock::new();
 /// (`GucSetting::get`) checks the active thread and panics elsewhere. The
 /// batch closures take the reference before `run_batch` spawns, so no
 /// worker thread reads a setting.
-fn engine() -> &'static BlockingEngine {
+fn engine() -> &'static Arc<dyn Engine> {
     if let Some(key) = API_KEY.get() {
         if let Some(error) = unwired_key_refusal(Some(&key.to_string_lossy())) {
             raise(error);
         }
     }
-    ENGINE.get_or_init(BlockingEngine::from_env)
+    ENGINE.get_or_init(|| {
+        StandinConnector
+            .connect(&EngineConfig::from_env())
+            .expect("the stand-in connector has no failure path")
+    })
+}
+
+/// The options every single-request call carries: the deadline setting,
+/// converted by the contract's one checked door, so a NaN-like or
+/// oversized value refuses instead of panicking inside the backend.
+fn call_options() -> Options<'static> {
+    let millis = DEADLINE_MS.get();
+    let given = if millis == -1 { None } else { Some(f64::from(millis)) };
+    Options::new().with_deadline_millis(given).unwrap_or_else(|error| raise(error))
 }
 
 // PostgreSQL's interrupt flag, read only. The C layer raises the error;
@@ -94,6 +130,11 @@ fn interrupt_pending() -> bool {
 /// the interrupt flag. A pending interrupt cancels the token, the batch
 /// stops between requests, and the proper error then raises through the
 /// check.
+///
+/// A worker that panics — a defect, since every error a worker is meant to
+/// report comes back as a value — is contained here and reported as the
+/// defect kind carrying the panic's own message, so a bad question in a
+/// batch never reads as "the batch thread stopped" with the cause lost.
 fn run_batch<T, F>(work: F) -> Result<T, Error>
 where
     F: FnOnce(Option<&thinkthen_contract::Cancel>) -> Result<T, Error> + Send + 'static,
@@ -108,11 +149,30 @@ where
         }
         std::thread::sleep(Duration::from_millis(100));
     }
-    let out = handle
-        .join()
-        .unwrap_or_else(|_| Err(Error::defect("the batch thread stopped")));
+    let out = match handle.join() {
+        Ok(out) => out,
+        Err(payload) => Err(Error::defect(format!(
+            "the batch thread stopped: {}",
+            panic_text(payload.as_ref())
+        ))),
+    };
     check_for_interrupts!();
     out
+}
+
+/// The text a stopped worker thread carried: a pgrx error report keeps
+/// its PostgreSQL message, and a plain panic keeps its own text.
+fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(report) = payload.downcast_ref::<pgrx::pg_sys::panic::ErrorReportWithLevel>() {
+        return report.message().to_string();
+    }
+    if let Some(text) = payload.downcast_ref::<&str>() {
+        return (*text).to_string();
+    }
+    if let Some(text) = payload.downcast_ref::<String>() {
+        return text.clone();
+    }
+    "a panic carrying no text".to_string()
 }
 
 /// Raise the engine's failure as the database's own error, with the kind,
@@ -269,7 +329,7 @@ fn annotated_as_json(held: &Annotated) -> serde_json::Value {
 fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bool> {
     let question = question_of(question);
     let Some(evidence) = evidence else { return None };
-    match engine().decide_with(&question, evidence, None) {
+    match engine().decide_opts(&question, evidence, call_options()) {
         Ok(answer) => answer.value(),
         Err(error) => raise(error),
     }
@@ -279,8 +339,7 @@ fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bo
 fn thinkthen_probability(question: Option<&str>, evidence: Option<&str>) -> Option<f64> {
     let question = question_of(question);
     let Some(evidence) = evidence else { return None };
-    let options = thinkthen_contract::Options::new();
-    match engine().decide_many_opts(&question, &[evidence], options, None) {
+    match engine().decide_many_opts(&question, &[evidence], call_options(), None) {
         Ok(mut judged) => judged.pop().map(|judgment| judgment.probability),
         Err(error) => raise(error),
     }
@@ -294,7 +353,7 @@ fn thinkthen_choose(
 ) -> Option<String> {
     let question = with_members(&question_of(question), options);
     let Some(evidence) = evidence else { return None };
-    match engine().choose(&question, evidence) {
+    match engine().choose_opts(&question, evidence, call_options()) {
         Ok(choice) => choice,
         Err(error) => raise(error),
     }
@@ -308,7 +367,7 @@ fn thinkthen_score(
 ) -> Option<f64> {
     let question = with_members(&question_of(question), levels);
     let Some(evidence) = evidence else { return None };
-    match engine().score(&question, evidence) {
+    match engine().score_opts(&question, evidence, call_options()) {
         Ok(scored) => Some(scored.value),
         Err(error) => raise(error),
     }
@@ -322,7 +381,7 @@ fn thinkthen_tag(
 ) -> Option<Vec<String>> {
     let question = with_members(&question_of(question), labels);
     let Some(evidence) = evidence else { return None };
-    match engine().tag(&question, evidence) {
+    match engine().tag_opts(&question, evidence, call_options()) {
         Ok(held) => Some(held),
         Err(error) => raise(error),
     }
@@ -332,8 +391,7 @@ fn thinkthen_tag(
 fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
     let set = set_of(set);
     let Some(evidence) = evidence else { return None };
-    let options = thinkthen_contract::Options::new();
-    match engine().annotate_opts(&set, &[evidence], options, None) {
+    match engine().annotate_opts(&set, &[evidence], call_options(), None) {
         Ok(mut answers) => {
             let mut object = serde_json::Map::new();
             let Some(fields) = answers.pop() else { return None };
@@ -350,7 +408,7 @@ fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB
 fn thinkthen_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
     let question = question_of(question);
     let Some(evidence) = evidence else { return None };
-    match engine().details(&question, evidence) {
+    match engine().details_opts(&question, evidence, call_options()) {
         Ok(details) => Some(JsonB(serde_json::to_value(details).expect("details serializes"))),
         Err(error) => raise(error),
     }
@@ -412,7 +470,7 @@ fn thinkthen_recognize(
             ask = ask.kinds(names);
         }
     }
-    let found = engine().recognize(&ask, body).unwrap_or_else(|error| raise(error));
+    let found = engine().recognize_opts(&ask, body, call_options()).unwrap_or_else(|error| raise(error));
     let rows: Vec<_> = found
         .entities
         .into_iter()
@@ -499,7 +557,7 @@ fn thinkthen_relate(
     let edges = run_batch(move |cancel| {
         let texts: Vec<&str> = owned.iter().map(String::as_str).collect();
         let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
-        relate_checked(engine, &ask, &texts, options)
+        relate_checked(engine.as_ref(), &ask, &texts, options)
     })
     .unwrap_or_else(|error| raise(error));
     let out: Vec<_> = edges
@@ -542,7 +600,7 @@ fn thinkthen_relations(
         return TableIterator::new(std::iter::empty());
     };
     let ask = recognizer_of(spec);
-    let found = engine().recognize(&ask, body).unwrap_or_else(|error| raise(error));
+    let found = engine().recognize_opts(&ask, body, call_options()).unwrap_or_else(|error| raise(error));
     let by_id: HashMap<u64, Entity> =
         found.entities.into_iter().map(|entity| (entity.id, entity)).collect();
     let rows: Vec<_> = found
@@ -572,6 +630,10 @@ fn thinkthen_decide_array(
     evidences: Option<Array<'_, &str>>,
 ) -> TableIterator<'static, (name!(i, Option<i32>), name!(decided, Option<bool>))> {
     let question_text = question.unwrap_or_default().to_owned();
+    // The question resolves on the backend thread, before any worker
+    // spawns: a bad question file raises its own error (naming the file)
+    // instead of dying inside the worker and reading as a stopped thread.
+    let question = question_of(Some(&question_text));
     let rows: Vec<Option<String>> = evidences
         .iter()
         .flat_map(|array| array.iter().map(|text| text.map(str::to_owned)))
@@ -580,7 +642,6 @@ fn thinkthen_decide_array(
     let owned = distinct.clone();
     let engine = engine();
     let judged = run_batch(move |cancel| {
-        let question = question_of(Some(&question_text));
         let records: Vec<&str> = owned.iter().map(String::as_str).collect();
         let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
         engine.decide_many_opts(&question, &records, options, None)
@@ -650,9 +711,12 @@ impl Aggregate<Warm> for Warm {
         let mut judged: i64 = 0;
         for (question_text, evidences) in by_question {
             let distinct = distinct_of(evidences.iter().map(|text| Some(text.as_str())));
+            // The question resolves on the backend thread, before any
+            // worker spawns: a bad question file raises its own error
+            // (naming the file) instead of dying inside the worker.
+            let question = question_of(Some(&question_text));
             let engine = engine();
             let outcome = run_batch(move |cancel| {
-                let question = question_of(Some(&question_text));
                 let records: Vec<&str> = distinct.iter().map(String::as_str).collect();
                 let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
                 engine.decide_many_opts(&question, &records, options, None)
@@ -666,11 +730,21 @@ impl Aggregate<Warm> for Warm {
     }
 }
 
-/// Register the key setting. Nothing else happens here: the engine builds
-/// lazily in each backend, after the fork, and `_PG_init` never touches
-/// the wire.
+/// Register the key setting and the deadline setting. Nothing else
+/// happens here: the engine builds lazily in each backend, after the
+/// fork, and `_PG_init` never touches the wire.
 #[pg_guard]
 extern "C-unwind" fn _PG_init() {
+    GucRegistry::define_int_guc(
+        c"thinkthen.deadline_ms",
+        c"the per-call deadline in milliseconds: -1 none, 0 spent, positive a budget",
+        c"",
+        &DEADLINE_MS,
+        -1,
+        i32::MAX,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
     GucRegistry::define_string_guc(
         c"thinkthen.api_key",
         c"the API key for the ThinkThen engine",
@@ -680,6 +754,43 @@ extern "C-unwind" fn _PG_init() {
         GucFlags::NO_SHOW_ALL | GucFlags::SUPERUSER_ONLY | GucFlags::DISALLOW_IN_AUTO_FILE,
     );
 }
+
+// Revoke the default PUBLIC grant on every function this extension
+// installs, and on nothing else.
+//
+// PostgreSQL grants EXECUTE on a new function to PUBLIC by default, so
+// without this every role could make paid calls and read server files
+// through `@path`. The block covers both `thinkthen_decide` overloads and
+// the `thinkthen_warm` aggregate too: `REVOKE ... ON FUNCTION` accepts an
+// aggregate's signature.
+//
+// The one-line grant an administrator runs to let an application role
+// call the surface (which also grants the `@path` reads, so a role with
+// it is trusted):
+//
+//     GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO the_app_role;
+extension_sql!(
+    r#"
+DO $thinkthen_revoke$
+DECLARE
+    signature text;
+BEGIN
+    FOR signature IN
+        SELECT p.oid::regprocedure::text
+        FROM pg_proc p
+        WHERE p.proname LIKE 'thinkthen%'
+          AND p.pronamespace = (
+              SELECT pronamespace FROM pg_proc WHERE proname = 'thinkthen_decide' LIMIT 1
+          )
+    LOOP
+        EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', signature);
+    END LOOP;
+END
+$thinkthen_revoke$;
+"#,
+    name = "revoke_public",
+    finalize,
+);
 
 #[cfg(test)]
 mod mapping_tests {
@@ -705,8 +816,7 @@ mod mapping_tests {
     /// the kind named in the message. No public door carries a fault hook;
     /// this proves the mapping at the shim level.
     #[test]
-    fn the_defect_kind_maps_to_the_engines_error() {
-        let (code, text) = surface(&Error::defect("the relate plan lost its bind data"));
+    fn the_defect_kind_maps_to_the_engines_error() {        let (code, text) = surface(&Error::defect("the relate plan lost its bind data"));
         assert_eq!(code, PgSqlErrorCode::ERRCODE_INTERNAL_ERROR);
         assert!(text.contains("thinkthen defect:"), "{text}");
         assert!(text.contains("the relate plan lost its bind data"), "{text}");
@@ -725,5 +835,20 @@ mod mapping_tests {
         let (code, text) = surface(&Error::backend_retryable("the backend is busy"));
         assert_eq!(code, PgSqlErrorCode::ERRCODE_EXTERNAL_ROUTINE_EXCEPTION);
         assert_eq!(text, "thinkthen backend: the backend is busy (retryable: yes)");
+    }
+
+    /// A worker that panics keeps its own message: `run_batch` reports the
+    /// defect kind with the payload's text, so a bad question in a batch
+    /// never reads as "the batch thread stopped" with the cause lost.
+    /// Before the fix the payload was dropped on the floor.
+    #[test]
+    fn a_stopped_worker_keeps_its_message() {
+        let payload = std::panic::catch_unwind(|| panic!("the relate plan lost its bind data"))
+            .expect_err("the probe panicked");
+        let text = panic_text(payload.as_ref());
+        assert!(
+            text.contains("the relate plan lost its bind data"),
+            "{text}"
+        );
     }
 }

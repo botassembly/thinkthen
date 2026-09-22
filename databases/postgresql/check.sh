@@ -57,6 +57,7 @@ echo "== postgres surface: disposable container, null backend"
 docker rm -f -v "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" --network host \
   -e POSTGRES_PASSWORD=postgres -e PGPORT=$PORT -e ENGINE_NULL=1 \
+  -e ENGINE_SYNTHETIC_PARTIAL=1 \
   postgres:16 >/dev/null
 wait_ready "$NAME"
 
@@ -94,6 +95,93 @@ grep -q " 2 | maybe this is on our side" .tmp-slide.out
 grep -q "1.7" .tmp-slide.out
 rm .tmp-slide.out
 echo "slide sample green: the maybe row reads, urgency ordered 1.7/1.05/0.99"
+
+echo "== postgres surface: PUBLIC cannot call, a granted role can"
+# Group 3: CREATE EXTENSION revokes the default PUBLIC grant on every
+# function, so a paid call and an '@path' read need an explicit grant.
+docker cp fixtures/broken.json "$NAME:/var/lib/postgresql/data/broken.json"
+psql_in << 'SQL' > .tmp-revoke.out
+SELECT 'public_can', count(*) FROM pg_proc p
+WHERE p.proname LIKE 'thinkthen%'
+  AND p.pronamespace = (SELECT pronamespace FROM pg_proc WHERE proname = 'thinkthen_decide' LIMIT 1)
+  AND has_function_privilege('public', p.oid, 'EXECUTE');
+SELECT 'functions', count(*) FROM pg_proc p
+WHERE p.proname LIKE 'thinkthen%'
+  AND p.pronamespace = (SELECT pronamespace FROM pg_proc WHERE proname = 'thinkthen_decide' LIMIT 1);
+SQL
+grep -qE "public_can *\| *0" .tmp-revoke.out \
+  || { echo "FAILED   PUBLIC still holds EXECUTE" >&2; cat .tmp-revoke.out >&2; exit 1; }
+known=$(grep -E "^ *functions *\|" .tmp-revoke.out | head -1 | awk -F'|' '{print $2}' | tr -d ' ')
+[ "$known" -ge 12 ] || { echo "FAILED   only $known thinkthen functions found" >&2; exit 1; }
+echo "ok       PUBLIC holds EXECUTE on none of the $known functions"
+rm .tmp-revoke.out
+
+psql_in -c "CREATE ROLE tt_app;" >/dev/null
+if psql_in -c "SET ROLE tt_app;" \
+    -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" \
+    > .tmp-role.out 2>&1; then
+  echo "FAILED   an ungranted role made a paid call" >&2; cat .tmp-role.out >&2; exit 1
+fi
+grep -q "permission denied for function thinkthen_decide" .tmp-role.out \
+  || { echo "FAILED   the refusal is not a permission error" >&2; cat .tmp-role.out >&2; exit 1; }
+echo "ok       an ungranted role is refused with permission denied"
+psql_in -c "GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO tt_app;" >/dev/null
+psql_in -Atq -c "SET ROLE tt_app;" \
+  -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" > .tmp-role.out
+# The role reads a file the backend process owns: the grant is the trust.
+grep -q "^t$" .tmp-role.out \
+  || { echo "FAILED   the granted role's call did not answer" >&2; cat .tmp-role.out >&2; exit 1; }
+echo "ok       the documented one-line grant lets a role call (and read '@path')"
+psql_in -c "RESET ROLE;" -c "DROP OWNED BY tt_app;" -c "DROP ROLE tt_app;" >/dev/null
+rm -f .tmp-role.out
+
+echo "== postgres surface: a bad question in a batch names itself"
+# Group 3: the question resolves on the backend thread before any worker
+# spawns, so the real error surfaces instead of "the batch thread stopped".
+if psql_in -c "SELECT count(*) FROM thinkthen_decide('@no-such-file.json', ARRAY['a', 'b']);" \
+    > .tmp-broken.out 2>&1; then
+  echo "FAILED   a missing question file was accepted" >&2; exit 1
+fi
+grep -q "no-such-file.json" .tmp-broken.out \
+  || { echo "FAILED   the error does not name the missing file" >&2; cat .tmp-broken.out >&2; exit 1; }
+if grep -q "the batch thread stopped" .tmp-broken.out; then
+  echo "FAILED   the batch error masked the real message" >&2; cat .tmp-broken.out >&2; exit 1
+fi
+echo "ok       a missing file in a batch names the file, not a stopped thread"
+if psql_in -c "SELECT count(*) FROM thinkthen_decide('@broken.json', ARRAY['a', 'b']);" \
+    > .tmp-broken.out 2>&1; then
+  echo "FAILED   a broken question file was accepted" >&2; exit 1
+fi
+grep -q "the question file is not valid JSON" .tmp-broken.out \
+  || { echo "FAILED   the broken file did not return the usage kind" >&2; cat .tmp-broken.out >&2; exit 1; }
+if grep -q "the batch thread stopped" .tmp-broken.out; then
+  echo "FAILED   the batch error masked the real message" >&2; cat .tmp-broken.out >&2; exit 1
+fi
+echo "ok       a broken question file returns the usage kind naming the file"
+if psql_in -c "SELECT thinkthen_warm('@no-such-file.json', body) FROM tickets;" \
+    > .tmp-broken.out 2>&1; then
+  echo "FAILED   the warm aggregate accepted a missing question file" >&2; exit 1
+fi
+grep -q "no-such-file.json" .tmp-broken.out \
+  || { echo "FAILED   the warm error does not name the file" >&2; cat .tmp-broken.out >&2; exit 1; }
+echo "ok       the warm aggregate names the file too"
+rm -f .tmp-broken.out
+
+echo "== postgres surface: a spent deadline refuses before sending"
+# Group 4: the single-row path cannot hear pg_cancel_backend, so the
+# deadline setting is the enforced tool. Zero is a spent deadline: the
+# ruled kind, nothing sent.
+psql_in -c '\set VERBOSITY verbose' \
+  -c "SET thinkthen.deadline_ms = 0;" \
+  -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" \
+  > .tmp-deadline.out 2>&1 || true
+grep -q "57014" .tmp-deadline.out \
+  || { echo "FAILED   a spent deadline did not return the deadline kind" >&2; cat .tmp-deadline.out >&2; exit 1; }
+grep -q "thinkthen deadline" .tmp-deadline.out \
+  || { echo "FAILED   the spent deadline's message is missing" >&2; cat .tmp-deadline.out >&2; exit 1; }
+psql_in -c "RESET thinkthen.deadline_ms;" >/dev/null
+echo "ok       a zero budget returns the deadline kind (57014) with nothing sent"
+rm -f .tmp-deadline.out
 
 echo "== postgres surface: conformance slice, offline"
 python3 runner.py "$NAME"
@@ -297,6 +385,29 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
     -c "SELECT thinkthen_decide('@refund.json', 'please refund the duplicate');" | grep -q t
   psql_wire -c "SELECT * FROM thinkthen_usage();" | grep -Eq "^[0-9]+\|[0-9]+\|[0-9]+$"
   echo "wire green: decide answers on the wire, usage counts sends and tokens"
+
+  echo "== postgres surface: a deadline shorter than the stub's delay"
+  # The enforced tool on the single-row path, against the 300 ms stub: a
+  # 50 ms budget must return the deadline kind in about a tick, not after
+  # the send returns.
+  deadline_start=$(date +%s.%N)
+  if psql_wire -c '\set VERBOSITY verbose' \
+      -c "SET thinkthen.deadline_ms = 50;" \
+      -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" \
+      > .tmp-wire-deadline.out 2>&1; then
+    echo "FAILED   the 50 ms budget did not refuse" >&2; exit 1
+  fi
+  deadline_end=$(date +%s.%N)
+  deadline_elapsed=$(awk -v a="$deadline_start" -v b="$deadline_end" 'BEGIN { printf "%.2f", b - a }')
+  grep -q "57014" .tmp-wire-deadline.out \
+    || { echo "FAILED   the wire deadline did not return 57014" >&2; cat .tmp-wire-deadline.out >&2; exit 1; }
+  grep -q "thinkthen deadline" .tmp-wire-deadline.out \
+    || { echo "FAILED   the wire deadline's message is missing" >&2; cat .tmp-wire-deadline.out >&2; exit 1; }
+  awk -v e="$deadline_elapsed" 'BEGIN { exit !(e <= 1.5) }' \
+    || { echo "FAILED   the 50 ms budget took ${deadline_elapsed}s" >&2; exit 1; }
+  psql_wire -c "RESET thinkthen.deadline_ms;" >/dev/null
+  rm -f .tmp-wire-deadline.out
+  echo "ok       a 50 ms budget refused in ${deadline_elapsed}s against the 300 ms stub"
 else
   echo "== postgres surface: wire suite skipped, no stub on 8219"
 fi

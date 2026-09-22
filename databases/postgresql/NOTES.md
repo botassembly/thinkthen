@@ -272,3 +272,74 @@ in; the credential arm green; `12 of 12 examples ok`; wire suite skipped
 by design without the stub on 8219; `check.sh` exit 0; the exit trap
 removed all three containers and `docker ps -a` shows no `laneb-*` left.
 No key, no paid call, nothing published.
+
+
+## The review fixes: the grant, the deadline, batch errors, the connector (2026-09-22)
+
+Tried: the PostgreSQL findings of the branch review (groups 3, 4, 5), each
+with a test that would have failed before it.
+
+**PUBLIC loses EXECUTE.** A `finalize` `extension_sql!` block revokes the
+default PUBLIC grant on every function the extension installs — a DO loop
+over `pg_proc` in the extension's own schema, so both `thinkthen_decide`
+overloads and the `thinkthen_warm` aggregate are covered (`REVOKE ... ON
+FUNCTION` accepts an aggregate's signature; verified in a scratch
+container before wiring it). Before, any role could call and could read
+server files through `'@path'`. The check now measures it: `PUBLIC holds
+EXECUTE on none of the 13 functions`, an ungranted role is refused with
+`permission denied for function thinkthen_decide`, and the documented
+one-line grant (`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO
+the_app_role;`) lets a role call — which is the trust for `'@path'` reads
+too, since the read runs as the server process. README's "Authority"
+section now says all of it.
+
+**Batch errors carry the real message.** The question resolves on the
+backend thread before `run_batch` spawns, in both the array overload and
+the warm aggregate, so a bad question file raises its own error instead of
+dying inside the worker. The worker's panic payload is no longer dropped:
+`panic_text` downcasts a pgrx error report (keeping its PostgreSQL
+message), a `&str`, or a `String`. The check proves three arms: a missing
+file names itself (`no-such-file.json`), a broken file returns the usage
+kind (`the question file is not valid JSON`), the warm aggregate names the
+missing file — and none of them says `the batch thread stopped`. A unit
+test (`a_stopped_worker_keeps_its_message`) proves the extraction.
+
+**The deadline is the single-row tool.** New `thinkthen.deadline_ms` GUC
+(`Userset`, `-1` none, `0` spent, positive a budget), read by
+`call_options()` through the contract's checked `with_deadline_millis` and
+carried by every single-request function. A spent budget refuses before
+sending (the check: SQLSTATE `57014`, `thinkthen deadline` in the
+message), and against the 300 ms stub a 50 ms budget refused in 0.13 s.
+Conformance case 27 now runs instead of skipping: `runner.py` gained the
+deadline arm. The physics — a blocking socket cannot hear
+`pg_cancel_backend`, so the budget is the enforced tool — is stated in the
+module doc, the README, and the setting's own description.
+
+**Phase 1 adopted.** `engine()` is `Arc<dyn Engine>` built through
+`StandinConnector.connect(&EngineConfig::from_env())`; `relate_checked`
+takes `engine.as_ref()`. The connector line is the merge's one-line swap.
+
+**Case 74.** The stand-in arms its synthesized partial-failure fixture only
+under `ENGINE_SYNTHETIC_PARTIAL` now, so the null container is started with
+that test-only opt-in (`check.sh`); without it case 74 diverges.
+
+Saw (full `./check.sh`, stub up on 8219, exit 0):
+
+```
+ok       PUBLIC holds EXECUTE on none of the 13 functions
+ok       an ungranted role is refused with permission denied
+ok       the documented one-line grant lets a role call (and read '@path')
+ok       a missing file in a batch names the file, not a stopped thread
+ok       a broken question file returns the usage kind naming the file
+ok       the warm aggregate names the file too
+ok       a zero budget returns the deadline kind (57014) with nothing sent
+73 of 74 cases ok, 1 diverged        (case 17, the stand-in's recorded gap)
+ok       a 50 ms budget refused in 0.13s against the 300 ms stub
+check.sh exit 0; the trap removed all three containers
+```
+
+Means: the group-3, group-4, and connector findings for this surface are
+closed with discriminating tests.
+
+Problem and way round it: none open. No key, no paid call, nothing
+published; `docker ps -a` shows no `laneb-*` left.

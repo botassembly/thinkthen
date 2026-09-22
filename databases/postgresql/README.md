@@ -12,6 +12,18 @@ the message. The width (the engine's `width` setting or `ENGINE_WIDTH`) is
 the number of requests in flight, and each in-flight request holds its own
 connection: 1,000 records at width 32 measured 33 pooled connections.
 
+Every single-request function — `decide`, `probability`, `choose`,
+`score`, `tag`, `annotate`, `details`, `recognize`, `relations` — carries
+the `thinkthen.deadline_ms` budget (milliseconds: `-1` none, `0` spent,
+positive a budget; `Userset`, so any role can bound its own call, and a
+superuser can set a database-wide default with `ALTER DATABASE ... SET
+thinkthen.deadline_ms`). That setting is the enforced tool on the
+single-row path: a backend thread waiting on the wire cannot hear
+`pg_cancel_backend` or `statement_timeout` until the send returns, so a
+spent or expired budget returns the deadline kind (SQLSTATE `57014`) with
+nothing sent or the sent request abandoned. The batch paths carry
+PostgreSQL's own interrupt instead.
+
 `recognize` returns the five ruled columns `(text, kind, start, end,
 strength)`, used with `LATERAL`; `start` and `end` count characters, so
 `substring(text from start + 1 for end - start)` is the name. `relate`
@@ -49,10 +61,19 @@ slice proves it: case 13's `nearest_level` (`mid`) is compared against
 
 ## Authority: who may do what
 
+- **Who may call.** `CREATE EXTENSION` revokes the default PUBLIC grant
+  on every function it installs — both `thinkthen_decide` overloads and
+  the `thinkthen_warm` aggregate included — so an unprivileged role
+  cannot make a paid call or read a file; superusers keep access by
+  their own right. The one-line grant for an application role:
+  `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO the_app_role;`.
+  The grant is the trust: a role holding it can ask for any `'@path'`
+  the server process can read.
 - **Question-file access.** `'@name'` reads one file, resolved against
   the backend's working directory (the official image's data directory),
-  exactly as named. `thinkthen_relate` reads no file: it runs the query
-  text it is given through SPI. Nothing else is read.
+  exactly as named, and only from a role holding the EXECUTE grant above.
+  `thinkthen_relate` reads no file: it runs the query text it is given
+  through SPI. Nothing else is read.
 - **Backend selection.** The engine builds lazily in each backend, after
   the fork, from the server process's environment (`THINKTHEN_BASE_URL`,
   or the stand-in's `ENGINE_BASE_URL`; `ENGINE_NULL=1` for the in-process
@@ -81,5 +102,11 @@ slice proves it: case 13's `nearest_level` (`mid`) is compared against
   poll reads `InterruptPending`, cancels the engine's token, and the
   proper error raises through `check_for_interrupts!()`, so
   `pg_cancel_backend` and `statement_timeout` both stop a waiting batch
-  (the check measures 0.33 s and 1.24 s). A scalar call carries no token:
-  the flag is read when it returns.
+  (the check measures 0.32 s and 1.31 s). A single-row call carries no
+  token — the flag is only read when it returns — so its enforced tool is
+  the `thinkthen.deadline_ms` budget above.
+- **Batch errors.** A question resolves on the backend thread before any
+  worker spawns, so a bad question file raises its own error (naming the
+  file) instead of dying inside the worker; a worker that does panic is
+  contained and reported as the defect kind carrying the panic's own
+  message.
