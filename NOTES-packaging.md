@@ -6,11 +6,12 @@ The cache default, stated once for all six packages: the ruled default folder is
 
 ## Python
 
-Build, from `libraries/python`:
+Build, from `libraries/python` (the script remaps every path under `$HOME`
+so the wheel carries no builder home directory, and proves it):
 
 ```
-$ maturin build --release
-📦 Built wheel for abi3 Python ≥ 3.10 to libraries/python/target/wheels/thinkthen-0.0.1-cp310-abi3-manylinux_2_39_x86_64.whl
+$ ./build-wheel.sh
+📦 Built wheel for abi3 Python ≥ 3.10 to libraries/python/dist/thinkthen-0.0.1-cp310-abi3-manylinux_2_34_x86_64.whl
 ```
 
 Clean container: `docker pull python:3.12-slim` (Debian glibc 2.41, Python 3.12.14). Install from the wheel file, not from the source tree and not `maturin develop`:

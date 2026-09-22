@@ -22,8 +22,24 @@ fi
 # that pin its marker; a shipped wheel is a default build, and the
 # stand-in's own default-build test proves the door is compile-time only
 # (no environment variable arms it).
+#
+# Cargo embeds absolute source paths (the workspace, the registry) in the
+# extension's panic locations, so a shipped .so would otherwise name the
+# builder's home directory 165 times. Remap every path under $HOME to a
+# neutral prefix at build time; the two checks after the build prove the
+# remap took, and the same remap rides in build-wheel.sh for wheels.
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 source .venv/bin/activate
 maturin develop --release --features synthetic-partial
+
+echo "== the built extensions carry no builder home paths"
+for artifact in target/release/lib_thinkthen.so thinkthen/_thinkthen.abi3.so; do
+  if strings "$artifact" | grep -qF -- "$HOME"; then
+    echo "the remap did not take: $artifact still carries $HOME" >&2
+    exit 1
+  fi
+done
+echo "clean: neither built extension carries $HOME"
 
 echo "== the defect kind maps to the host's error (shim unit test)"
 # The unit tests link libpython and construct a contract Error with kind

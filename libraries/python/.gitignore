@@ -2,3 +2,4 @@
 __pycache__/
 *.egg-info/
 thinkthen/_thinkthen.abi3.so
+dist/
