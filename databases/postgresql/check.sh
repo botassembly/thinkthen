@@ -565,6 +565,26 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   psql_wire -c "RESET thinkthen.deadline_ms;" >/dev/null
   rm -f .tmp-wire-deadline.out
   echo "ok       a 50 ms budget refused in ${deadline_elapsed}s against the 300 ms stub"
+
+  echo "== postgres surface: a batch budget lands inside the stub's round"
+  # Review 1/2 leftovers against the 300 ms stub: a batch of 64 distinct
+  # texts at width 32 needs two rounds (about 0.6 s) without a stop; a
+  # 100 ms budget must end it at the engine's tick, not at the end.
+  batch_wire_start=$(date +%s.%N)
+  if psql_wire -c '\set VERBOSITY verbose' \
+      -c "SET thinkthen.deadline_ms = 100;" \
+      -c "SELECT count(*) FROM thinkthen_decide('@refund.json', (SELECT array_agg('refund ' || g) FROM generate_series(1, 64) g));" \
+      > .tmp-wire-batch.out 2>&1; then
+    echo "FAILED   the wire batch's 100 ms budget completed" >&2; cat .tmp-wire-batch.out >&2; exit 1
+  fi
+  batch_wire_elapsed=$(awk -v a="$batch_wire_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+  grep -q "57014" .tmp-wire-batch.out \
+    || { echo "FAILED   the wire batch did not return the deadline kind" >&2; cat .tmp-wire-batch.out >&2; exit 1; }
+  awk -v e="$batch_wire_elapsed" 'BEGIN { exit !(e <= 1.5) }' \
+    || { echo "FAILED   the wire batch's budget took ${batch_wire_elapsed}s" >&2; exit 1; }
+  psql_wire -c "RESET thinkthen.deadline_ms;" >/dev/null
+  rm -f .tmp-wire-batch.out
+  echo "ok       a 100 ms budget ended a 64-record wire batch in ${batch_wire_elapsed}s (two 300 ms rounds without it)"
 else
   echo "== postgres surface: wire suite skipped, no stub on 8219"
 fi
