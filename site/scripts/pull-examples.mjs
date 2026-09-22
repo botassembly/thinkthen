@@ -4,6 +4,8 @@
 // Nothing here is typed by hand. A Bash cell comes from the deck's recorded
 // run: the command from examples/run.sh, the output from examples/out/*.txt.
 // A code cell comes from the deck's surfaces.md, which is drawn and not run.
+// A surface sample the branch build ran carries what it printed, from the
+// same section of surfaces.md.
 // Every function-and-surface cell gets a status: run, drawn, or planned.
 //
 //   node scripts/pull-examples.mjs
@@ -244,9 +246,18 @@ function drawnCells() {
     const block = sections[surface.deckHeading]?.[0];
     if (!block) continue;
     // Split on the whole heading line. A bare `## R` also matches `## Ruby`.
-    const install = /^Install: `(.+)`$/m.exec(
-      text.split(`\n## ${surface.deckHeading}\n`)[1].split('\n```')[0]);
+    const section = text.split(`\n## ${surface.deckHeading}\n`)[1].split(/\n## /)[0];
+    const install = /^Install: `(.+)`$/m.exec(section.split('\n```')[0]);
     wholeBlocks[surface.slug] = { lang: block.lang, code: block.code, install: install?.[1] || null };
+    // What the sample printed when the branch build ran it: the command, the
+    // see sentence, and the ```text block, all from the same section.
+    const run = /^Printed by: `(.+)`$/m.exec(section);
+    if (run) {
+      const see = /^See: (.+)$/m.exec(section);
+      const printed = sections[surface.deckHeading].find((b) => b.lang === 'text');
+      if (!see || !printed) throw new Error(`${surface.slug}: Printed by: needs a See: line and a text block`);
+      wholeBlocks[surface.slug].printed = { command: run[1], output: printed.code, see: see[1] };
+    }
     const chunks = chunksOf(block.code);
     const preamble = [];
     for (const chunk of chunks) {
