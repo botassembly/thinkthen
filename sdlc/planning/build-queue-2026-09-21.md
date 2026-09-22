@@ -4,6 +4,23 @@ Written 2026-09-21 by the product side at Ian's request. It folds the quality wa
 
 Ian can overturn any placement here.
 
+## Execution amendment, 2026-09-22
+
+Ian directed the architect to resume the reviewed plan, record this queue amendment, and drive bounded engine tickets with SWE-2 implementation and independent review. This order supersedes the A5–A8 sequence below; their scope remains in the queue. ADR 0017's execution-order amendment records the same dependency change.
+
+1. Let ticket 0065's existing owner finish and land it. Do not take over its worktree. Independent command research and non-overlapping command corrections may proceed while it finishes.
+2. Recheck the forty command wording/help items against the current binary. Fix only surviving items in bounded reviewed tickets; leave unsettled wording or safety changes out of an otherwise independent correction.
+3. Reconcile shared settings and result metadata, including the planned `replayed` to `cached` change, against settled contracts. Preserve existing validation, durability, and accounting guarantees.
+4. Complete private engine controls: process-wide width, cancellation, deadlines, fast failure, fork recovery, and host signal ownership. Keep the command as the production caller and prove the behavior on local listeners before opening the public API.
+5. Settle recognition policies and the optional instruction-packing decision. Preserve the baseline when packing lacks authorized evidence. The conflicting relation request forms remain blocked pending an explicit ruling; this amendment chooses neither form.
+6. Build pure recognition/relation behavior and its engine/command callers after the relevant contracts are settled.
+7. Expose the public Rust API over all ten functions after controls and result shapes are stable. Then complete C and separately review real-engine surface integration.
+8. Finish installed-artifact QA and release checks. Publication, names, paid calls, and upstream reports retain their separate authorization boundaries.
+
+The library team remains the only writer on `surfaces`. Use SWE-2 for bounded research, accepted implementation, and remediation; use separate Sol sessions for design and code review. Keep complexity floors and escalate irreducible high-risk implementation. The architect's full plan and library handoff are `architect-engine-survey-and-plan.md` and `library-team-architecture-punch-list.md`.
+
+Observed at resumption: main `c29e445` and surfaces `7fdb1fa` match their remote branches and have passing code gates. Ticket 0065 `6618694` is not an ancestor of main. The library report is committed on `surfaces`; its passing stand-in checks do not prove real-engine integration. The separate Pages workflow on main failed at `actions/configure-pages`, outside this engine lane.
+
 ## Where things stand
 
 - Landed: 0053 (request identity on every result) and 0054 (good answers survive one failed question, exit 6).

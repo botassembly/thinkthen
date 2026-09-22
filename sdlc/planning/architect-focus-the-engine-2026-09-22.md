@@ -8,7 +8,11 @@ Read first: `handoff-to-the-architect-2026-09-21.md`, then `build-queue-2026-09-
 
 Tickets 0001 to 0064 have landed. Lane A0 (ticket 0055, the one-crate move), A2 (backend profiles), and A3 (record with answer) are done. Tickets 0062 and 0063 shipped the default cache and `thinkthen status`, and 0064 bounded retries. Ticket 0065 is active. Let it finish.
 
-## The tickets to make, in order
+## Execution amendment, 2026-09-22
+
+Ian authorized resumption of the architect's reviewed plan. The execution amendment in `build-queue-2026-09-21.md` now controls the order: 0065 keeps its owner; surviving command corrections and shared settings/result decisions precede private engine controls; controls precede recognition integration and the public Rust API. Recognition policy and optional packing need settled evidence, and the relation-request conflict remains blocked. C and the surface merge follow the public API. ADR 0017 records the dependency amendment. The table below retains the original source map, not the current dispatch order. Command corrections may be split into bounded reviewed tickets after checking what still fails.
+
+## Original ticket order and source map
 
 | Order | Lane | Ticket | Sources | Why this order |
 | --- | --- | --- | --- | --- |

@@ -185,3 +185,11 @@ The shared core represents each decoded logical question as answered or failed. 
 ## Amendment, 2026-09-22: sends on each result
 
 Every detailed command result carries `meta.requests_sent` immediately after optional provider `usage` and before `replayed`. It counts the HTTP attempts that produced that successful result. A first-attempt live answer reports one, retries add one per attempt, and a recording or cache answer reports zero. Packed annotation sums the counts from its logical group requests. The process counter remains broader because it also counts attempts from runs that return no result. Ian can overturn the field name.
+
+## Amendment, 2026-09-22: prove private controls before the public API
+
+Ian directed the architect to record the reviewed execution order. This amendment supersedes section 8's remaining order, not its behavioral contracts. Step 1 has landed through ticket 0055. Consolidate the existing private settings, cache, counters, and result metadata first. Then implement and prove process-wide width, cancellation, whole-call deadlines, fast failure, fork recovery, and host signal ownership while the engine remains private and the command remains its production caller.
+
+Private controls precede recognition integration. The public Rust functions follow both those controls and the settled behavior and result shapes of all ten functions. C follows the public Rust result path, and real-engine library/database integration is separately reviewed afterward. The detailed order and the continuing ownership of ticket 0065 and `surfaces` live in `../build-queue-2026-09-21.md`.
+
+No cancellation, deadline, retry, durability, signal, or fork guarantee is weakened by this sequencing change. Each implementation ticket must settle its exact contract and prove it independently. This amendment authorizes no replacement relation request form, paid measurement, publication, or change to the library team's active worktree. Ian can overturn the order.
