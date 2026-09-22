@@ -16,18 +16,16 @@ const tabs = [
   { label: 'SQL', alias: 'SQL', surface: 'duckdb' },
 ];
 
-const jobs = ['decide', 'choose', 'filter'];
-const bash = jobs.map((fn) => cell(fn, 'shell').runs[0]);
+const bash = [cell('filter', 'shell').runs[0]];
 const surfaceOf = (slug) => SURFACES.find((s) => s.slug === slug);
 const plannedCaption = (slug) => surfaceOf(slug).name + ' is planned. This is how the calls will read.';
 const sixHowtos = HOWTOS.slice(0, 6);
 ---
 <Base title="ThinkThen">
   <h1>Code that understands.</h1>
-  <p class="lede">Ten small functions. Each one asks a question about the evidence and hands back an answer with a probability.</p>
+  <p class="lede">Your code can branch on an exit code, filter with a pattern, and sort by a column. It cannot branch on what a message means. So the messy cases go to a person, or to a regex that breaks by Friday, or to a chat model wrapped in a prompt, a parser, a retry loop, and a bill.</p>
 
-  <h2>Three jobs</h2>
-  <p>Answer a yes-or-no question. Pick one option. Keep the records that pass. Change the tab and every code block on the site changes with it.</p>
+  <p>ThinkThen gives your code ten functions that understand. <code>decide</code> is an if that reads. <code>filter</code> is a grep that reads. <code>rank</code> is a sort that reads. <code>choose</code>, <code>tag</code>, <code>score</code>, <code>find</code>, <code>annotate</code>, <code>recognize</code>, and <code>relate</code> cover the rest. Each one asks one bounded question about a piece of evidence and hands back a plain answer with a probability. You set the bar. Anything in the middle comes back as not sure, and your code sends it to a person.</p>
 
   <div class="tabbed" data-fallback="Bash">
     <div class="tabs" role="tablist">
@@ -46,16 +44,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
       </div>
     ))}
   </div>
-
-  <p>This is a classifier you do not train. There is no training step. Ask many questions about one piece of evidence and the answers come back in parallel. The probability was the training target. Nothing added it afterward.</p>
-
-  <p class="pagelinks"><a href="/install/">Every way to install it</a></p>
-
-  <div class="facts">
-    <div class="fact"><b>An exit code your script branches on</b><span>0 is yes, 1 is no, 3 is not sure.</span></div>
-    <div class="fact"><b>About a penny for a thousand answers</b><span>1.2 cents for 1,000 short records, from the live probe.</span></div>
-    <div class="fact"><b>A probability on every answer</b><span>You set the bar. The middle goes to a person.</span></div>
-  </div>
+  <p class="pagelinks"><a href="/install/">Every way to install it</a> · <a href="/surfaces/">The same ten functions in Bash, Python, TypeScript, Ruby, R, Rust, C, and SQL</a></p>
 
   <h2>The ten functions</h2>
   <div class="grid">
@@ -66,19 +55,12 @@ const sixHowtos = HOWTOS.slice(0, 6);
       </a>
     ))}
   </div>
-  <p class="pagelinks"><a href="/functions/question-file/">A question is also a small file</a></p>
+  <p class="pagelinks"><a href="/functions/question-file/">A question is also a small file</a> · <a href="/tutorial/">The tutorial</a></p>
 
-  <h2>The surfaces</h2>
-  <div class="grid">
-    {SURFACES.map((s) => (
-      <a class="tile" href={`/${s.slug}/`}>
-        <b>{s.name} <span class={`status ${s.status}`}>{s.status}</span></b>
-        <span>{s.blurb}</span>
-      </a>
-    ))}
-  </div>
+  <h2>What answers the question</h2>
+  <p>Under the hood is Jev, a System One model from TypeSafe. It answers in one step, with no reasoning text and nothing to train. Ask a question it has never seen, in plain words, and it returns a probability it means. About a penny buys a thousand answers. <a href="/backends/">The backends page</a> says how to name a model and what to do when a new one ships.</p>
 
-  <h2>Six how-tos</h2>
+  <h2>Things you can ship this afternoon</h2>
   <div class="grid">
     {sixHowtos.map((h) => (
       <a class="tile" href={`/how-tos/${h.slug}/`}>
@@ -87,9 +69,8 @@ const sixHowtos = HOWTOS.slice(0, 6);
       </a>
     ))}
   </div>
-  <p class="pagelinks"><a href="/how-tos/">All eleven how-tos</a></p>
+  <p class="pagelinks"><a href="/how-tos/">All eleven how-tos</a> · <a href="/recipes/">Shell recipes</a></p>
 
   <h2>Why a careful engineer trusts it</h2>
-  <p>Every answer carries a probability the model reported. You set the bar, and a band sends the middle to a person. The evidence crosses whole, answers are saved, and nothing else leaves the machine. The <a href="/trust/">trust page</a> lays out the outcomes, the thresholds, the cache, and how to check a question against your own labeled records.</p>
-
+  <p>A question is a small file. It lives in your repo, diffs in a pull request, and runs against your own labeled cases before you trust it. Every answer carries the probability the model reported, and a band sends the middle to a person. The evidence crosses whole, answers are saved, and nothing else leaves the machine. The <a href="/trust/">trust page</a> lays out the outcomes, the thresholds, the cache, and how to check a question against your own labeled records.</p>
 </Base>
