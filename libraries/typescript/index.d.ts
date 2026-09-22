@@ -45,9 +45,11 @@ export type Question = {
 export interface CallOptions {
   /** Cancels the call: no new request starts, sent requests finish. */
   signal?: AbortSignal;
-  /** Bounds the whole call in milliseconds. A budget of zero or less is
-   * legal and spent immediately: the call sends nothing and rejects with
-   * the `deadline` kind naming the budget. */
+  /** Bounds the whole call in milliseconds. A budget of zero is legal and
+   * spent immediately: the call sends nothing and rejects with the
+   * `deadline` kind naming the budget. Minus one means no deadline; any
+   * other negative, a NaN, and an oversized budget reject with the `usage`
+   * kind. */
   deadlineMs?: number;
 }
 

@@ -9,11 +9,13 @@ export declare function usage(): string
  * One call on a worker thread. `op` names the verb; `spec` is the
  * question's file-grammar JSON (or, for `annotate`, a set's path or
  * JSON); `payload` is one evidence text or a JSON array of records;
- * `cancel` carries the wrapper's `AbortSignal`; `deadlineSec` bounds the
- * whole call. A budget of zero or less is legal and spent immediately:
- * the contract returns the deadline kind naming the budget.
+ * `cancel` carries the wrapper's `AbortSignal`; `deadlineMs` bounds the
+ * whole call. A budget of zero is legal and spent immediately: the
+ * contract returns the deadline kind naming the budget. Minus one
+ * milliseconds is the no-deadline sentinel; any other negative and every
+ * oversized or NaN budget is refused with the usage kind.
  */
-export declare function call(op: string, spec: string | undefined | null, payload: string, cancel?: CancelHandle | undefined | null, deadlineSec?: number | undefined | null): Promise<unknown>
+export declare function call(op: string, spec: string | undefined | null, payload: string, cancel?: CancelHandle | undefined | null, deadlineMs?: number | undefined | null): Promise<unknown>
 /**
  * A cancel token the wrapper holds. The same token rides into the task,
  * so an `AbortSignal` listener can stop a running batch from JavaScript.

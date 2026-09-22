@@ -215,3 +215,59 @@ built question plus `levels` refuses naming both, like `options` and
 The addon's deadline filter now clamps at zero instead of dropping it.
 `node --test`: 45 pass, 0 fail; `tsc --strict` green; the name check
 green.
+
+## 2026-09-22 — the review fix wave: the listener leak, the checked deadline, the connector
+
+The TypeScript lane of the surfaces branch review: group 4's abort-listener
+leak and group 2's deadline crash, plus the phase-1 adoption (connector,
+checked deadline, panic guard).
+
+**The listener leak (group 4).** `callOptions` added one `abort` listener
+to the caller's signal per call and never removed it; `{ once: true }`
+only removes it when the abort fires. A server sharing one shutdown signal
+leaked one listener per call. Reproduced against HEAD's `index.js`: the
+first test in `tests/abort_listener.test.mjs` fails on call 1. The wrapper
+now hands `invoke` a `release` that removes the listener in a `finally`,
+and the deadline check runs before the listener is added, so a refusal
+cannot leave one behind either.
+
+**The deadline crash (group 2).** The addon computed
+`Instant::now() + Duration::from_secs_f64(seconds.max(0.0))` unchecked.
+Reproduced against HEAD's addon: `deadlineMs: Number.MAX_VALUE` panicked
+at `core/src/time.rs:965` and took the process down — `fatal runtime
+error: failed to initiate panic, error 5, aborting`, SIGABRT. The door now
+takes milliseconds and converts them through the contract's
+`deadline_from_millis`: zero is a spent deadline, minus one means no
+deadline, and a NaN, any other negative, or an oversized budget comes back
+as a `usage` rejection in the ordinary failure envelope. The unit tests
+and `tests/deadline_bounds.test.mjs` pin it.
+
+**The connector and the panic guard (phase 1).** The addon's engine is
+`OnceLock<Arc<dyn tt::Engine>>` built by `StandinConnector` through the
+contract's `Connector`; `CallTask::run` takes `&dyn tt::Engine`. A
+`guarded` helper catches panics around the engine call and `usage()`, so a
+panic cannot cross into the host process; its unit test pins the defect
+envelope.
+
+**Case 74's opt-in.** The stand-in's synthesized partial failure now fires
+only under `ENGINE_SYNTHETIC_PARTIAL` (phase 1), read when the door builds
+the engine on the first call, so `tests/verbs.test.mjs` sets it at the
+top. Without that, the marker test read `true`.
+
+Commands and output (offline with `ENGINE_NULL=1`; the wire run against
+the stub on 8212 at 300 ms):
+
+```
+$ (cd addon && cargo test --quiet --lib)
+test result: ok. 3 passed (the two new ones: a panic becomes the defect
+kind; a hostile budget is a usage error not a panic)
+
+$ ENGINE_NULL=1 node --test tests/abort_listener.test.mjs tests/deadline_bounds.test.mjs
+# pass 6, # fail 0
+(against HEAD's index.js the first listener test fails; against HEAD's
+addon the deadline test aborts with SIGABRT)
+
+$ ./check.sh
+offline: 56 pass, 0 fail, 6 skipped; wire suites: 5 pass; types green
+typescript surface: all checks green
+```

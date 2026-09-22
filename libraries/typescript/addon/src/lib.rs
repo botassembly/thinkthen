@@ -16,20 +16,43 @@
 //! the event loop. A bulk call blocks one worker while the engine's own
 //! scoped threads run at the process width, which is the ADR's Node shape.
 
-use std::sync::OnceLock;
-use std::time::{Duration, Instant};
+use std::panic::{self, AssertUnwindSafe};
+use std::sync::{Arc, OnceLock};
+use std::time::Instant;
 
 use napi::bindgen_prelude::AsyncTask;
 use napi::{Env, JsString, Task};
 use napi_derive::napi;
-use thinkthen_contract::Engine;
 use thinkthen_contract as tt;
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
-static ENGINE: OnceLock<BlockingEngine> = OnceLock::new();
+/// The one engine the door holds, built through the contract's connector:
+/// pointing a surface at the real engine's connector is the one line the
+/// merge changes.
+static ENGINE: OnceLock<Arc<dyn tt::Engine>> = OnceLock::new();
 
-fn engine() -> &'static BlockingEngine {
-    ENGINE.get_or_init(BlockingEngine::from_env)
+fn engine() -> &'static Arc<dyn tt::Engine> {
+    ENGINE.get_or_init(|| {
+        let connector = StandinConnector;
+        tt::Connector::connect(&connector, &tt::EngineConfig::from_env())
+            .expect("the stand-in connector always connects")
+    })
+}
+
+/// Run a call so a panic never crosses into the host process: the defect
+/// kind rides back as data in the failure envelope.
+fn guarded<T>(call: impl FnOnce() -> Result<T, tt::Error>) -> Result<T, tt::Error> {
+    panic::catch_unwind(AssertUnwindSafe(call))
+        .unwrap_or_else(|_| Err(tt::Error::defect("the engine panicked inside the Node shim")))
+}
+
+/// The call's deadline instant, through the contract's one checked
+/// conversion: a NaN, a negative other than the `NO_DEADLINE` sentinel, or
+/// an oversized budget comes back as the usage kind instead of the panic
+/// the unchecked conversion raised inside the host process.
+fn deadline_of(deadline_ms: Option<f64>) -> Result<Option<Instant>, tt::Error> {
+    let budget = deadline_ms.map(tt::deadline_from_millis).transpose()?.flatten();
+    Ok(budget.map(|held| Instant::now() + held))
 }
 
 /// A cancel token the wrapper holds. The same token rides into the task,
@@ -62,7 +85,8 @@ impl CancelHandle {
 /// The counters since the last reset, as the contract's JSON.
 #[napi]
 pub fn usage() -> String {
-    serde_json::to_string(&engine().usage()).expect("the counters serialize")
+    let held = panic::catch_unwind(|| engine().usage()).unwrap_or_default();
+    serde_json::to_string(&held).expect("the counters serialize")
 }
 
 /// The verbs the door carries. The wrapper names them; the contract owns
@@ -118,6 +142,9 @@ pub struct CallTask {
     payload: String,
     token: Option<tt::Cancel>,
     deadline: Option<Instant>,
+    /// A failure the door itself found (a refused budget), carried back in
+    /// the same envelope the engine's failures use.
+    door_error: Option<tt::Error>,
 }
 
 fn records(payload: &str) -> Result<Vec<String>, tt::Error> {
@@ -164,7 +191,7 @@ fn relate_spec(spec: &Option<String>) -> Result<tt::Relate, tt::Error> {
 }
 
 impl CallTask {
-    fn run(&self, engine: &BlockingEngine, options: tt::Options<'_>) -> Result<serde_json::Value, tt::Error> {
+    fn run(&self, engine: &dyn tt::Engine, options: tt::Options<'_>) -> Result<serde_json::Value, tt::Error> {
         match self.op {
             Op::Decide => {
                 let question = question(&self.spec)?;
@@ -249,6 +276,9 @@ impl Task for CallTask {
     type JsValue = JsString;
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
+        if let Some(error) = self.door_error.take() {
+            return Ok(failure_envelope(error));
+        }
         let mut options = tt::Options::new();
         if let Some(token) = &self.token {
             options = options.cancel(token);
@@ -256,7 +286,8 @@ impl Task for CallTask {
         if let Some(at) = self.deadline {
             options = options.deadline(at);
         }
-        let run = self.run(engine(), options);
+        let held = engine();
+        let run = guarded(|| self.run(held.as_ref(), options));
         Ok(match run {
             Ok(value) => serde_json::json!({ "ok": value }).to_string(),
             Err(error) => failure_envelope(error),
@@ -285,9 +316,11 @@ fn failure_envelope(error: tt::Error) -> String {
 /// One call on a worker thread. `op` names the verb; `spec` is the
 /// question's file-grammar JSON (or, for `annotate`, a set's path or
 /// JSON); `payload` is one evidence text or a JSON array of records;
-/// `cancel` carries the wrapper's `AbortSignal`; `deadlineSec` bounds the
-/// whole call. A budget of zero or less is legal and spent immediately:
-/// the contract returns the deadline kind naming the budget.
+/// `cancel` carries the wrapper's `AbortSignal`; `deadlineMs` bounds the
+/// whole call. A budget of zero is legal and spent immediately: the
+/// contract returns the deadline kind naming the budget. Minus one
+/// milliseconds is the no-deadline sentinel; any other negative and every
+/// oversized or NaN budget is refused with the usage kind.
 #[allow(clippy::needless_pass_by_value)]
 #[napi]
 pub fn call(
@@ -295,14 +328,15 @@ pub fn call(
     spec: Option<String>,
     payload: String,
     cancel: Option<&CancelHandle>,
-    deadline_sec: Option<f64>,
+    deadline_ms: Option<f64>,
 ) -> napi::Result<AsyncTask<CallTask>> {
     let op = Op::parse(&op)?;
     let token = cancel.map(|handle| handle.token.clone());
-    let deadline = deadline_sec
-        .filter(|seconds| seconds.is_finite())
-        .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds.max(0.0)));
-    Ok(AsyncTask::new(CallTask { op, spec, payload, token, deadline }))
+    let (deadline, door_error) = match deadline_of(deadline_ms) {
+        Ok(deadline) => (deadline, None),
+        Err(error) => (None, Some(error)),
+    };
+    Ok(AsyncTask::new(CallTask { op, spec, payload, token, deadline, door_error }))
 }
 
 #[cfg(test)]
@@ -319,5 +353,31 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("the engine broke its own contract"));
+    }
+
+    #[test]
+    fn a_panic_inside_the_shim_becomes_the_defect_kind() {
+        let held = guarded(|| -> Result<(), tt::Error> { panic!("a shim bug") });
+        match held {
+            Err(error) => {
+                assert_eq!(error.kind, tt::ErrorKind::Defect);
+                assert!(!error.retryable);
+            }
+            Ok(()) => panic!("the panic must not read as a value"),
+        }
+    }
+
+    #[test]
+    fn a_hostile_budget_is_a_usage_error_not_a_panic() {
+        for held in [f64::NAN, f64::INFINITY, -5.0, f64::MAX] {
+            let failure = match deadline_of(Some(held)) {
+                Err(error) => error,
+                Ok(_) => panic!("the budget {held} must be refused"),
+            };
+            assert_eq!(failure.kind, tt::ErrorKind::Usage, "the budget {held} is refused as usage");
+        }
+        assert!(deadline_of(Some(-1.0)).expect("the sentinel").is_none(), "minus one means no deadline");
+        assert!(deadline_of(Some(0.0)).expect("zero is spent, not refused").is_some());
+        assert!(deadline_of(None).expect("no budget").is_none());
     }
 }

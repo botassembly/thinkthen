@@ -3,6 +3,11 @@
 // own: evidence naming a refund scores 0.97, "maybe" 0.55, anything else
 // 0.03; a choose weighs its options' own text; a score spreads the
 // evidence keyword over three levels; a tag weighs its labels' own text.
+//
+// The stand-in's one synthesized partial failure (conformance case 74)
+// fires only under the test-only `ENGINE_SYNTHETIC_PARTIAL` opt-in, which
+// the door reads when it builds the engine on the first call.
+process.env.ENGINE_SYNTHETIC_PARTIAL = '1';
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

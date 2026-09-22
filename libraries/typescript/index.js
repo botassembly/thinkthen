@@ -135,37 +135,54 @@ function specFrom(verb, questionOrSpec, inputs) {
 }
 
 function callOptions(options) {
-  const out = {};
+  const out = { release: () => {} };
   if (options === undefined || options === null) return out;
   if (typeof options !== 'object' || Array.isArray(options)) {
     throw usageError('options is an object: { signal, deadlineMs }');
   }
   const { signal, deadlineMs } = options;
+  if (deadlineMs !== undefined) {
+    const held = Number(deadlineMs);
+    if (!Number.isFinite(held)) {
+      throw usageError('options.deadlineMs is milliseconds');
+    }
+    // The raw milliseconds cross to the door, which converts them through
+    // the contract's one checked conversion: zero is a spent deadline,
+    // minus one means no deadline, and any other negative or an oversized
+    // budget rejects with the usage kind instead of crashing the process.
+    out.deadlineMs = held;
+  }
+  // The signal's listener is added last, so a refusal above never leaves
+  // one behind.
   if (signal !== undefined) {
     if (!signal || typeof signal.aborted !== 'boolean' || typeof signal.addEventListener !== 'function') {
       throw usageError('options.signal must be an AbortSignal');
     }
     const handle = new native.CancelHandle();
     const stop = () => handle.cancel();
-    if (signal.aborted) stop();
-    else signal.addEventListener('abort', stop, { once: true });
-    out.cancel = handle;
-  }
-  if (deadlineMs !== undefined) {
-    const held = Number(deadlineMs);
-    if (!Number.isFinite(held)) {
-      throw usageError('options.deadlineMs is milliseconds');
+    if (signal.aborted) {
+      stop();
+    } else {
+      // The listener comes off when the call settles (invoke's finally),
+      // so a long-lived shared signal gains nothing per call. `once`
+      // alone is not enough: a call that ends without an abort would
+      // leave its listener behind.
+      signal.addEventListener('abort', stop, { once: true });
+      out.release = () => signal.removeEventListener('abort', stop);
     }
-    // A budget of zero or less is legal: the deadline is spent before the
-    // call starts and the engine returns the deadline kind naming it.
-    out.deadlineSec = held / 1000;
+    out.cancel = handle;
   }
   return out;
 }
 
 async function invoke(op, spec, payload, options) {
-  const { cancel, deadlineSec } = callOptions(options);
-  const envelope = await native.call(op, spec ?? null, payload, cancel ?? null, deadlineSec ?? null);
+  const { cancel, deadlineMs, release } = callOptions(options);
+  let envelope;
+  try {
+    envelope = await native.call(op, spec ?? null, payload, cancel ?? null, deadlineMs ?? null);
+  } finally {
+    release();
+  }
   const parsed = JSON.parse(envelope);
   if (parsed.err) {
     throw new ThinkThenError(parsed.err.kind, parsed.err.message, parsed.err.retryable);
