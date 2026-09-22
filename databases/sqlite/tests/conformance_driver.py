@@ -308,7 +308,9 @@ def main():
                     else:
                         report(case_id, f"held {held!r}", failed=True)
             elif verb == "annotate":
-                body = json.dumps({"questions": case["set"]})
+                # The ruled question-set grammar carries `version`: 1
+                # (the contract now reads sets with the core parser).
+                body = json.dumps({"version": 1, "questions": case["set"]})
                 if "rows" in expect:
                     # The multi-record form: one answer a record, in input
                     # order, each field this surface's object with `answer`

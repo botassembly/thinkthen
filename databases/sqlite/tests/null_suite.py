@@ -217,7 +217,7 @@ with tempfile.NamedTemporaryFile(
     "w", suffix=".json", delete=False, dir=HERE.parent
 ) as handle:
     handle.write(
-        """{"questions": {
+        """{"version": 1, "questions": {
             "spam": {"decide": "Is this spam?", "threshold": 0.5},
             "band": {"decide": "Is this spam?", "threshold": "0.2:0.8"}
         }}"""
