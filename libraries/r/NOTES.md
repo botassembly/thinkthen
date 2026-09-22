@@ -415,3 +415,12 @@ test result: ok. 3 passed; 0 failed
 **The row-at-a-time requests, recorded for the build team (item 4).** `tt_choose`, `tt_score`, and `tt_tag` (and `tt_recognize_column`) ask the engine one request a row: they wait on the engine's bulk entry points and the packing encode the wire probe specified (the structured `state` object, one named question a row), which is the build team's work per the second review's leftover list. No host-side batching is possible before that encode exists; converting the loops without it would be the second bulk implementation the punch list forbids. The inventory above (punch-list item 2) stays the pointer.
 
 **The evidence, full runs.** Offline, no stub: shim tests 3, null suite 56 checks, text checks 9, fast interrupt at 0.868 s, fork check, 10 of 10 examples, the conformance slice (86 ok with its recorded skips and divergences, case 74 included), recognize 34 checks, ownership, slide. With the loopback stub on 8215 (`STUB_DELAY_MS=300`, stopped afterwards and the port checked closed): `width: 1000 records, wall 9.67 s`, `stub: requests 1000 max_in_flight 32 connections 33`, and the wire interrupt frozen at 320 requests through +5 s. Exit 0. The crate's `Cargo.lock` gained the `indexmap`/`hashbrown`/`equivalent` entries the current dependency graph resolves (the contract now carries the core's parser); it is committed with the fix.
+
+**The unmaintained crate under extendr, recorded (item 4).** `paste 1.0.15`
+rides in through `extendr-api 0.8.2` (`cargo deny --offline check advisories`
+in `libraries/r/thinkthen/src/rust` fails with `error[unmaintained]`,
+RUSTSEC-2024-0436, "No safe upgrade is available!"), so the swap is
+upstream's to make: pin as the lock does now, bump extendr-api when it moves
+(the advisory names pastey and with_builtin_macros as alternatives), and
+record the explicit `ignore` or block at the merge when deny coverage
+extends over the workspaces. Same ticket as the PostgreSQL side.

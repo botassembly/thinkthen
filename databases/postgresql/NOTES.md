@@ -432,3 +432,15 @@ replays the synthesized partial failure instead of diverging.
 `thinkthen_contract::catch_panic("the batch thread", ...)`, and the join
 fallback's formatter is the pgrx report first, then the contract's own
 `panic_text` — one spelling for every other payload.
+
+**The unmaintained crate under pgrx, recorded (item 4).** `serde_cbor 0.11.2`
+rides in through the pinned `pgrx 0.17.0` (`cargo tree --locked -i serde_cbor`
+in this folder: serde_cbor ← pgrx ← thinkthen), and `cargo deny --offline
+check advisories` fails here with `error[unmaintained]` (RUSTSEC-2021-0127,
+"No safe upgrade is available!"). The crate is pgrx's own dependency, so the
+swap is not ours to make: the plan is to pin as the lock does now, bump pgrx
+when it drops serde_cbor (the author's named alternatives are ciborium and
+minicbor), and — when deny coverage extends over the surface workspaces at
+merge — record an explicit `ignore` for RUSTSEC-2021-0127 in deny.toml with
+this note as the argument, or block on the pgrx bump. The build team owns
+that call; the ticket beside the review findings carries it.
