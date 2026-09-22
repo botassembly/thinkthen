@@ -207,7 +207,7 @@ const llms = [
   '> ThinkThen: code that knows what you mean. Simple functions that give your software the judgment to handle whatever comes its way. Ten functions, in your scripts, your programs, and your queries.',
   '',
   'Every page on this site has a Markdown twin at the same address with .md added.',
-  'The command is the only shipped surface. Every library page is marked planned and its code is drawn from the design, not run.',
+  'Bash ships first. Every library page shows how the calls will read. None of that code has run yet.',
   '',
   '## Pages',
   '',

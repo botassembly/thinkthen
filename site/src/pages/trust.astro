@@ -8,8 +8,8 @@ const band = cell('decide', 'shell').runs.find((r) => r.name === 'decide-band');
 const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
 ---
 <Base title="Trust" description="Outcomes, thresholds, the cache, what leaves the machine, and how to check a question against your own labeled records.">
-  <h1>Why a careful engineer trusts it</h1>
-  <p class="lede">A classifier has a fixed set of answers, a probability, and an error rate you can measure. That is the whole promise. It writes nothing.</p>
+  <h1>Test it before you trust it</h1>
+  <p class="lede">ThinkThen gives every answer a fixed form and the model’s probability. You set the bar, and you count the misses on your own records.</p>
 
   <h2>Four outcomes, four colors</h2>
   <p>Learn the exit codes by looking. The same four colors run through this site, the terminal, and the diagrams.</p>
@@ -25,12 +25,13 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer, and nothing else does. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
   <p>The same evidence, under two rules:</p>
-  <Terminal run={cut} />
-  <Terminal run={band} />
-  <p>The threshold is an input, never an output. The model never chooses it.</p>
+  <Terminal run={cut} caption="Recorded from the real command. At a cut of 0.9 the message answers no." />
+  <Terminal run={band} caption="Recorded from the real command. Under a band the same 0.74 comes back null." />
+  <p>You choose the threshold. The model never does.</p>
+  <p><code>jev-latest</code> follows the vendor’s newest model. Pin a run by naming a version, and check your labeled cases again when you change it.</p>
 
   <h2>Not sure is an answer</h2>
-  <p>A band is how a pipeline hands a person the calls it should not make alone. <code>null</code> and exit 3 mean the probability landed in the middle you set. It is not a guess and not a failure.</p>
+  <p>A band is how a pipeline hands a person the calls it should not make alone. <code>null</code> and exit 3 mean the probability landed in the middle you set.</p>
   <p>A question the backend could not answer is different. It is marked failed and counted, and it never turns into <code>null</code>. <code>annotate</code> exits 6 when a run finishes with failed questions.</p>
 
   <h2>The words for the numbers</h2>
@@ -48,8 +49,8 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
 
   <h2>What leaves the machine</h2>
   <ul>
-    <li>The question and the evidence go to the backend in one request. Nothing else does.</li>
-    <li>The evidence crosses whole. No word, sentence, or punctuation handling exists in the tool, so nothing is split and nothing is dropped.</li>
+    <li>The question and your text go to the backend in one request. Nothing else does. With <code>--field</code>, only the part you point at goes.</li>
+    <li>The tool sends your text as it is. It splits nothing and drops nothing.</li>
     <li>The key comes from <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries one.</li>
     <li><code>--dry-run</code> prints the plan and sends nothing.</li>
   </ul>
@@ -64,7 +65,7 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
   </table>
 
   <h2>What it costs</h2>
-  <p>Requests are the bill. A short record pays almost only for the fixed part. Many questions about one piece of evidence pay the fixed part once, which is what <code>annotate</code> does. Many records pay it once each.</p>
+  <p>Requests are the bill. A short record pays almost only for the fixed part. Many questions about one piece of evidence pay the fixed part once. <code>annotate</code> does that. Many records pay it once each.</p>
   <table>
     <tr><th>Fact</th><th>Where it was measured</th></tr>
     {FACTS.cost.rows.map(([fact, where]) => <tr><td>{fact}</td><td>{where}</td></tr>)}
@@ -78,16 +79,10 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
     <li>Compare <code>.value</code> to your label with <code>jq</code>, and count the misses.</li>
     <li>Try a band. The pairs that land in the middle are the ones a person should read.</li>
   </ol>
-  <p>Accuracy belongs to a named test, never to the tool. A number from your records is the only one that tells you anything about your work.</p>
+  <p>Only a number from your own records tells you how it does on your work.</p>
 
   <h2>What it will not do</h2>
-  <ul>
-    <li>It never writes text. Ten bounded questions, and nothing else.</li>
-    <li>It never decides. It judges, and your rules decide. Use an <code>if</code>, a <code>case</code>, or a queue.</li>
-    <li>It never holds a conversation. Each call stands alone.</li>
-    <li>It judges the evidence. It never judges a person.</li>
-    <li>It promises no accuracy. Measure it on your own records.</li>
-  </ul>
+  <p>The <a href="/refusals/">refusals page</a> lists every line the tool will not cross.</p>
 
-  <p class="pagelinks"><a href="/functions/decide/">decide</a> · <a href="/functions/question-file/">Question files</a> · <a href="/install/">Install</a></p>
+  <p class="pagelinks"><a href="/functions/decide/">Run decide</a> · <a href="/functions/question-file/">Save a question file</a> · <a href="/refusals/">See what it will not do</a> · <a href="/install/">Install it</a></p>
 </Base>

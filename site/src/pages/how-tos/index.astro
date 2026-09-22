@@ -2,12 +2,12 @@
 import Base from '../../layouts/Base.astro';
 import { HOWTOS } from '../../data/catalog.mjs';
 ---
-<Base title="How-tos" description="Eleven flows, each built from a run of the shipped command.">
+<Base title="How-tos" description="Real jobs done with ThinkThen, each shown with a recorded run.">
   <h1>How-tos</h1>
-  <p class="lede">Each one is two or three functions in a pipeline, with the records that went in and the lines that came out. Every page is built from a saved run, so a page cannot drift from the command.</p>
+  <p class="lede">Pick your job. ThinkThen reads each line and answers a question about it. Each page shows what went in, the commands, and what came out.</p>
 
   <table>
-    <tr><th>How-to</th><th>Reader</th><th>Functions</th></tr>
+    <tr><th>How-to</th><th>Who it is for</th><th>Functions</th></tr>
     {HOWTOS.map((h) => (
       <tr>
         <td><a href={`/how-tos/${h.slug}/`}>{h.title}</a></td>
@@ -17,5 +17,5 @@ import { HOWTOS } from '../../data/catalog.mjs';
     ))}
   </table>
 
-  <p class="pagelinks"><a href="/functions/">Every function</a> · <a href="/trust/">Trust</a></p>
+  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
 </Base>

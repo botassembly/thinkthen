@@ -89,32 +89,34 @@ That file also diffs in a pull request like any other code.
 
 ## Ten functions you can compose
 
-The model answers three kinds of question: yes or no, one of a list, and a place on a scale. Diogo Almeida, TypeSafe's founder, puts them in code terms: "Choice is a switch on an enum. Noul is an if. Score is a sort or a threshold." ThinkThen turns those answers into ten functions. This article shows four of them; the site shows all ten. The functions read standard input and write standard output.
+The model answers three kinds of question: yes or no, one of a list, and a place on a scale. Diogo Almeida, TypeSafe's founder, puts them in code terms: "Choice maps into a switch statement on an enum. Nouls map to if statements. Scores map to sorting or thresholding." ThinkThen turns those answers into ten functions. This article shows four of them; the site shows all ten. The functions read standard input and write standard output.
 
 `decide` answers one yes or no. `choose` picks one option from your list. `score` places the evidence on named levels. `tag` names every label that fits. `filter` keeps the records that pass, byte for byte and in their original order. `rank` orders records by how likely a yes is. `find` picks the one line that best answers a question. `annotate` fills out a form of named questions for every record. `recognize` finds the names in the evidence, and `relate` says how records connect.
 
 You can pipe the record-oriented functions into each other:
 
 ```
-$ cat feed.txt
-Postgres 18 ships a faster vacuum
-Ten habits of happy developers
-How DuckDB reads Parquet so fast
-A new font for your terminal
+$ cat leads.txt
+We need 200 seats next quarter. Please send a quote.
+Please remove me from this list.
+Our team of six wants to buy today. How do we pay?
+Loved your talk at the conference last week.
 
-$ thinkthen filter 'Is this about databases?' --lines < feed.txt \
-    | thinkthen rank 'Would an engineer read this first?' --lines --top 2
-How DuckDB reads Parquet so fast
-Postgres 18 ships a faster vacuum
+$ thinkthen filter 'Is this a buying inquiry?' --lines < leads.txt \
+    | thinkthen rank 'Is this buyer ready to pay now?' --lines \
+    | thinkthen choose 'Which team should take this?' enterprise smb --lines \
+    | jq -r '"\(.value)  \(.input)"'
+smb  Our team of six wants to buy today. How do we pay?
+enterprise  We need 200 seats next quarter. Please send a quote.
 ```
 
-The pipeline returns the original lines. It doesn't rewrite them.
+The pipeline returns the original lines, each beside its team. It doesn't rewrite them.
 
 I reach for `annotate` most. A question set contains any mix of `decide`, `choose`, `score`, and `tag` questions in one file. `annotate` answers the question set for every record:
 
 ```
-$ thinkthen annotate form.json < ticket.txt
-{"wants_refund":true,"team":"billing","urgency":0.91}
+$ thinkthen annotate form.json < report.txt
+{"steps":true,"area":"export","impact":1.99}
 ```
 
 ThinkThen answers three questions in one request.

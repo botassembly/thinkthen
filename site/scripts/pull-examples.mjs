@@ -13,7 +13,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { FUNCTIONS, SURFACES, HOWTOS } from '../src/data/catalog.mjs';
+import { FUNCTIONS, SURFACES, HOWTOS, RECIPES } from '../src/data/catalog.mjs';
 
 const DECK = process.env.THINKTHEN_DECK
   || '/home/ian/workspace/repos/mktg/decks/2026-09-21-thinkthen-semantic-commands';
@@ -59,6 +59,33 @@ function parseExamplesRun(text) {
     const cat = /^cat > (\S+) <</.exec(line);
     if (cat) { files[cat[1]] = body; i += 1; continue; }
 
+    // A run shown whole, shell and all: `{ ...; } > "$out/NAME.txt"`.
+    if (/^\{ /.test(line)) {
+      const block = [];
+      let row = line;
+      for (;;) {
+        const end = /\} > "\$out\/([^"]+)\.txt"/.exec(row);
+        if (end) {
+          block.push(row.slice(0, end.index));
+          const command = block.join('\n')
+            .replace(/^\{ /, '')
+            .replace(/\$tt\b/g, 'thinkthen')
+            .replace(/\s*"\$@"/g, '')
+            .replace(/;\s*$/, '')
+            .split('\n').map((l) => l.replace(/^  /, '')).join('\n')
+            .trimEnd();
+          calls.push({ name: end[1], command, heredoc: null, redirect: /< (\S+)/.exec(command)?.[1] });
+          break;
+        }
+        block.push(row);
+        i += 1;
+        if (i >= lines.length) break;
+        row = lines[i];
+      }
+      i += 1;
+      continue;
+    }
+
     const call = /^(show|showj|showr) (.*)$/.exec(line);
     if (call) {
       const kind = call[1];
@@ -77,7 +104,7 @@ function parseExamplesRun(text) {
         .replace(/\s+<<'[A-Z]+'\s*$/, '')
         .trim();
       if (jq) command += kind === 'showr' ? ` | jq -r '${jq}'` : ` | jq '${jq}'`;
-      calls.push({ name, command, heredoc: body, redirect: /< (\S+)/.exec(rest)?.[1] });
+      calls.push({ name, command, heredoc: body, redirect: (/< (\S+)/.exec(rest) || /--input (\S+)/.exec(rest))?.[1] });
       i += 1;
       continue;
     }
@@ -103,29 +130,50 @@ function recorded(dir, name) {
 // teach the same lesson with `jq .answer`. It is left out here, not edited.
 const SKIP_RUNS = new Set(['decide-details']);
 
+// Runs that belong to a page and to no function. They land in _pages.json.
+const PAGE_RUNS = new Set(['dry-run']);
+
+// The files a command names besides its input, such as a question set, shown
+// with `cat` above the command.
+function alsoFiles(call, files) {
+  return Object.keys(files)
+    .filter((name) => name !== call.redirect && new RegExp(`(^|\\s)${name.replace(/\./g, '\\.')}(\\s|$)`).test(call.command))
+    .map((name) => ({ name, text: files[name] }));
+}
+
 function bashCells() {
   const runSh = path.join(DECK, 'examples', 'run.sh');
   const outDir = path.join(DECK, 'examples', 'out');
   const { files, calls } = parseExamplesRun(read(runSh));
   const byFunction = {};
+  const pages = {};
   for (const call of calls) {
     if (SKIP_RUNS.has(call.name)) continue;
+    if (PAGE_RUNS.has(call.name)) {
+      const rec = recorded(outDir, call.name);
+      if (!rec) throw new Error(`${call.name}: no recorded output`);
+      pages[call.name] = { name: call.name, command: call.command, input: files[call.redirect] ?? null,
+        inputFile: call.redirect || null, output: rec.output, exit: rec.exit };
+      continue;
+    }
     const fn = FUNCTIONS.find((f) => call.name === f.name || call.name.startsWith(f.name + '-'))
       || (call.name.startsWith('question-') ? FUNCTIONS.find((f) => f.name === 'question-file') : null);
     if (!fn) throw new Error(`no function owns the example ${call.name}`);
     const rec = recorded(outDir, call.name);
     if (!rec) throw new Error(`${call.name}: no recorded output`);
     const input = call.heredoc ?? (call.redirect ? files[call.redirect] : null);
+    const also = alsoFiles(call, files);
     (byFunction[fn.name] ||= []).push({
       name: call.name,
       command: call.command,
       input,
       inputFile: call.heredoc ? null : call.redirect || null,
+      ...(also.length ? { also } : {}),
       output: rec.output,
       exit: rec.exit,
     });
   }
-  return byFunction;
+  return { byFunction, pages };
 }
 
 // ------------------------------------------------------------- drawn surfaces
@@ -195,8 +243,9 @@ function drawnCells() {
     if (surface.slug === 'shell') continue;
     const block = sections[surface.deckHeading]?.[0];
     if (!block) continue;
+    // Split on the whole heading line. A bare `## R` also matches `## Ruby`.
     const install = /^Install: `(.+)`$/m.exec(
-      text.split(`## ${surface.deckHeading}`)[1].split('\n```')[0]);
+      text.split(`\n## ${surface.deckHeading}\n`)[1].split('\n```')[0]);
     wholeBlocks[surface.slug] = { lang: block.lang, code: block.code, install: install?.[1] || null };
     const chunks = chunksOf(block.code);
     const preamble = [];
@@ -341,16 +390,56 @@ function howtoCells() {
   return out;
 }
 
+// ------------------------------------------------------------------- recipes
+
+// The recipes follow the how-tos: the deck's recipes/run.sh holds the commands
+// and the input files, and recipes/out/ holds what the recorded run printed.
+function recipeCells() {
+  const runSh = path.join(DECK, 'recipes', 'run.sh');
+  const outDir = path.join(DECK, 'recipes', 'out');
+  const { files, runs } = parseUsecasesRun(read(runSh));
+  const out = {};
+  for (const recipe of RECIPES) {
+    const steps = recipe.runs.map((name) => {
+      const run = runs[name];
+      if (!run) throw new Error(`recipe ${recipe.slug}: no run named ${name}`);
+      const rec = recorded(outDir, name);
+      if (!rec) throw new Error(`recipe ${recipe.slug}: no recorded output for ${name}`);
+      return { name, command: run.command, output: rec.output, exit: rec.exit };
+    });
+    const inputs = recipe.files.map((name) => {
+      if (files[name] === undefined) throw new Error(`recipe ${recipe.slug}: run.sh writes no ${name}`);
+      return { name, text: files[name] };
+    });
+    out[recipe.slug] = { status: 'run', source: 'deck recipes/run.sh and recipes/out/', inputs, steps };
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------- write
 
+// The see sentences are written here, not in the deck. Keep them across a pull.
+function keptSee() {
+  const see = {};
+  if (!exists(OUT)) return see;
+  for (const file of fs.readdirSync(OUT).filter((f) => f.endsWith('__shell.json'))) {
+    for (const run of JSON.parse(read(path.join(OUT, file))).runs || []) {
+      if (run.see) see[run.name] = run.see;
+    }
+  }
+  return see;
+}
+
 function main() {
+  const see = keptSee();
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
 
-  const bash = bashCells();
+  const { byFunction: bash, pages } = bashCells();
   const { cells: drawn, wholeBlocks } = drawnCells();
   const recognize = recognizeCells();
   const howtos = howtoCells();
+  const recipes = recipeCells();
 
   const index = [];
   for (const fn of FUNCTIONS) {
@@ -358,7 +447,7 @@ function main() {
       const key = `${fn.name}|${surface.slug}`;
       let cell;
       if (surface.slug === 'shell') {
-        const runs = bash[fn.name];
+        const runs = bash[fn.name]?.map((run) => (see[run.name] ? { ...run, see: see[run.name] } : run));
         cell = runs
           ? { status: 'run', source: 'deck examples/run.sh and examples/out/', runs }
           : { status: 'planned', source: 'the command has no such function yet' };
@@ -381,13 +470,15 @@ function main() {
     }
   }
 
+  fs.writeFileSync(path.join(OUT, '_pages.json'), JSON.stringify(pages, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_surfaces.json'), JSON.stringify(wholeBlocks, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_howtos.json'), JSON.stringify(howtos, null, 2) + '\n');
+  fs.writeFileSync(path.join(OUT, '_recipes.json'), JSON.stringify(recipes, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_index.json'), JSON.stringify(index, null, 2) + '\n');
 
   const counts = index.reduce((a, c) => ((a[c.status] = (a[c.status] || 0) + 1), a), {});
   console.log(`wrote ${index.length} cells:`, counts);
-  console.log(`wrote ${Object.keys(howtos).length} how-tos and ${Object.keys(wholeBlocks).length} surface samples`);
+  console.log(`wrote ${Object.keys(howtos).length} how-tos, ${Object.keys(recipes).length} recipes and ${Object.keys(wholeBlocks).length} surface samples`);
 }
 
 main();

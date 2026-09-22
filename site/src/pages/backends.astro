@@ -1,13 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
+import Terminal from '../components/Terminal.astro';
 import { KEY_VARIABLE } from '../data/catalog.mjs';
+import { PAGE_RUNS } from '../data/examples.mjs';
 ---
 <Base title="Backends" description="The default vendor and model, where the key goes, the cache, what the tool counts, and the second backend.">
   <h1>Backends</h1>
-  <p class="lede">A backend is an address and a model. The tool speaks one wire shape, and one adapter encodes it. Point the tool somewhere else and the same bytes go out.</p>
+  <p class="lede">By default, ThinkThen sends every question to Jev, a System One model from TypeSafe. A backend is that address and that model.</p>
 
   <h2>The default</h2>
-  <p>TypeSafe's Jev is the first System One model. The request goes to <code>https://api.typesafe.ai/v1/systemone</code> and carries the model name <code>jev-latest</code> by default.</p>
+  <p>Jev is a System One model from TypeSafe. The request goes to <code>https://api.typesafe.ai/v1/systemone</code> and carries the model name <code>jev-latest</code> by default.</p>
   <p><code>jev-latest</code> is a moving alias. It follows the vendor's newest model. To pin a run, name a version such as <code>jev-1.13.0</code> in the question file's <code>model</code> field or with <code>--model</code>. A change of model means you run your labeled set again before you trust the threshold.</p>
   <table>
     <tr><th>Setting</th><th>Default</th><th>Set it with</th></tr>
@@ -43,31 +45,20 @@ import { KEY_VARIABLE } from '../data/catalog.mjs';
     <li>A saved answer adds no tokens. A decoded hit in the cache counts as a cache answer.</li>
     <li><code>THINKTHEN_CACHE</code> never moves the folder, and <code>--no-cache</code> never turns the counting off.</li>
   </ul>
-  <p>Counting is best effort. A crash can undercount tokens or overcount one request that was already charged. These totals describe local observations and are not a provider bill.</p>
+  <p>Counting is best effort. A crash can undercount tokens or overcount one request that was already charged. They count what this machine saw. Your provider’s bill is the real cost.</p>
   <p><code>thinkthen status</code> reads them back. It is read-only and opens no connection.</p>
 
   <h2><code>--dry-run</code></h2>
   <p><code>--dry-run</code> prints what the command would send and then stops. It calls no backend, it reads no key, and it sends nothing. <code>--record</code> or <code>--replay</code> beside it is a usage error.</p>
+  <Terminal run={PAGE_RUNS['dry-run']} caption="Recorded from the real command. The plan names the address, the model, and the variable a key would come from, and it holds no key." />
   <p>The plan is one compact JSON document with four fields: <code>url</code>, <code>model</code>, <code>key_env</code>, and <code>request</code>. <code>request</code> is the body the adapter would send, as a JSON value and never as a string. <code>key_env</code> names the variable a key would be read from, so a script can prove that the key stayed home. The plan never holds the value.</p>
   <p>The plan does carry the evidence, because the evidence would leave the machine. A plan deserves the same care as the request itself.</p>
   <p>In record mode the plan gains an <code>input</code> field describing the framing and the pointers, and it prints for the first record only. A run that read a question file adds a <code>from</code> object naming each setting's source: the file, the command line, or the default.</p>
 
   <h2>A second backend</h2>
   <p>The specification is plain about the shipped state: version one compiles one adapter, <code>systemone</code>, and nothing selects it. One wire shape leaves nothing to choose between.</p>
-  <p>We tried a second System One model on 2026-09-21 and recorded the run. A small local server presented the same shape, <code>THINKTHEN_BASE_URL</code> alone pointed the released binary at it, and no paid call was made. Ten runs finished, every one at exit code 0, twice over with a fresh cache each time. Every number in this section comes from that record, <code>sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md</code>.</p>
-  <p>What it settled:</p>
-  <ul>
-    <li><b>Another server accepts our exact request bytes.</b> No code, no option, and no new adapter was needed. A backend is a URL and an adapter, and that held as written.</li>
-    <li><b>Unknown fields are ignored on decode.</b> A reply carrying extra fields decoded without complaint, so a compatible server need not strip its own extras.</li>
-    <li><b>The probability tolerance was never reached.</b> A distribution totalled one to within 0.0002.</li>
-  </ul>
-  <p>What it found, and what still has to be fixed:</p>
-  <ul>
-    <li><b>A threshold does not carry between backends.</b> The same evidence under the same question file exited 3 on one backend and exited 0 on the other. A question file that pins a threshold should name the backend it was calibrated against, or say plainly that it was not.</li>
-    <li><b>A small backend cannot tell a user its limit.</b> The second backend refused long evidence and named its own budget in the reply. The user saw only that the backend refused the request, because the tool never repeats a response body. That rule is right. It costs the user the most useful sentence a backend can send. A profile carrying the backend's stated limits, checked before the request leaves, is the fix.</li>
-    <li><b>A backend that truncates in silence is the danger.</b> The second model's own library trims long input and says nothing. Any page for a small backend has to state whether the backend truncates.</li>
-  </ul>
-  <p>No accuracy work came out of it. We compared sixteen answers against the first backend: twelve agreed on the value a script acts on, four differed, and two of the four were wrong. That is a smoke signal and not a measurement. The second backend is not a shipped choice, and nothing on this site depends on it.</p>
+  <p>We tried a second System One model on 2026-09-21. A threshold did not carry between the two. The same evidence under the same question file exited 3 on one backend and exited 0 on the other. A question file that pins a threshold should name the backend it was tuned on.</p>
+  <p><a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md">Read the full record</a> of that run.</p>
 
-  <p class="pagelinks"><a href="/reference/">Reference</a> · <a href="/trust/">Trust</a> · <a href="/install/">Install</a></p>
+  <p class="pagelinks"><a href="/reference/">Read the reference</a> · <a href="/trust/">Test it before you trust it</a> · <a href="/install/">Install it</a></p>
 </Base>

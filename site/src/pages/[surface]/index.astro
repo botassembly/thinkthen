@@ -16,57 +16,64 @@ const questionFile = FUNCTIONS.find((f) => f.notAFunction);
 const sections = [...CODE_FUNCTIONS, questionFile].map((fn) => ({ fn, data: cell(fn.name, surface.slug) }));
 const carried = sections.filter((s) => s.data.status !== 'planned');
 const missing = sections.filter((s) => s.data.status === 'planned');
+const headline = shipped
+  ? `A ${surface.name} command that answers questions about text`
+  : `${surface.name} functions that answer questions about text`;
+const when = surface.release && !shipped
+  ? `${surface.name} comes with ${surface.release}.`
+  : `${surface.name} is planned.`;
 ---
-<Base title={surface.name} description={surface.blurb}>
-  <div class="eyebrow">surface</div>
-  <h1>{surface.name} <span class={`status ${statusClass(surface.status)}`}>{surface.status}</span></h1>
-  <p class="lede">{surface.blurb}</p>
+<Base title={surface.name} description={surface.blurb.replace(/`/g, '')}>
+  <h1>{headline} <span class={`status ${statusClass(surface.status)}`}>{surface.status}</span></h1>
+  <p class="lede">{surface.blurb.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</p>
   {!shipped && (
-    <div class="note"><span class="status planned">planned</span> Nothing on this page has run. The {surface.name} sample is drawn from the design so the library is built to match it. The command is the only shipped surface today.</div>
+    <div class="note">{when} The code below shows how the calls will read.{surface.release && ' None of it has run yet. Bash ships first.'}</div>
   )}
 
   <h2>Install</h2>
   <table>
     <tr><th>Channel</th><th>Note</th></tr>
     {surface.install.map(([line, note]) => (
-      <tr><td><code>{line}</code></td><td>{note || (shipped ? '' : 'Planned.')}</td></tr>
+      <tr><td><code>{line}</code></td><td>{note || (shipped ? '' : surface.release ? `Comes with ${surface.release}.` : 'Planned.')}</td></tr>
     ))}
   </table>
 
   <h2>Where the key goes</h2>
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment. Nothing reads a key from a file or a flag, and no page here prints one. <code>--dry-run</code> prints the plan and needs no key, so the first thing you run costs nothing and sends nothing.</p>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. ThinkThen never reads a key from a file or a flag.</p>
 
   <h2>A first call</h2>
   {sample ? (
-    <Code code={sample.code} caption={`${surface.name} is planned. This is how the calls will read.`} />
+    <Code code={sample.code} caption={`${when} The calls will read like this.`} />
   ) : (
-    <Terminal run={cell('decide', 'shell').runs[0]} />
+    <Terminal run={cell('decide', 'shell').runs.find((r) => r.name === 'decide')} caption="Recorded from the real command. decide prints true and exits 0." />
   )}
-  <p>Not sure comes back as <code>{surface.unsureWord}</code> here. It is the one word this page explains, and no other page repeats it.</p>
+  <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person.</p>
 
-  <h2>The functions on this surface</h2>
-  {carried.length === 0 && <p>No function is drawn on {surface.name} yet.</p>}
+  <h2>Each function in {surface.name}</h2>
+  {carried.length === 0 && <p>No {surface.name} sample yet.</p>}
   {carried.map(({ fn, data }) => (
     <section>
       <h3><a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a> — {fn.line}</h3>
       {data.status === 'run'
-        ? <Terminal run={data.runs[0]} />
-        : <Code code={data.code} caption={`Drawn from the design for ${surface.name}.`} />}
+        ? <Terminal run={data.runs[0]} caption={`Recorded from the real command. ${data.runs[0].see}`} />
+        : <Code code={data.code} caption={surface.captions?.[fn.name] || null} />}
     </section>
   ))}
   {missing.length > 0 && (
     <>
-      <h3>Not drawn yet</h3>
+      <h3>No sample yet</h3>
       <p>
         {missing.map(({ fn }, i) => (
           <>{i > 0 ? ', ' : ''}<a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a></>
-        ))}. Each one works the same way it does in the shell, and this page gains its sample when the library ships.
+        ))}. {shipped
+          ? 'Each is a preview. Its Bash sample lands here once it is recorded.'
+          : 'Each works as it does in Bash. Its sample lands here when the library ships.'}
       </p>
     </>
   )}
 
-  <h2>What is particular here</h2>
+  <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{p}</li>)}</ul>
 
-  <p class="pagelinks"><a href="/surfaces/">Every surface</a> · <a href="/functions/">Every function</a> · <a href="/install/">Install</a></p>
+  <p class="pagelinks"><a href="/surfaces/">See other languages and databases</a> · <a href="/functions/">See every function</a> · <a href="/install/">Install</a></p>
 </Base>

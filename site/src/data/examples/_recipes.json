@@ -1,0 +1,92 @@
+{
+  "label-a-json-file": {
+    "status": "run",
+    "source": "deck recipes/run.sh and recipes/out/",
+    "inputs": [
+      {
+        "name": "tickets.json",
+        "text": "[{\"id\": \"T-101\", \"created\": \"2026-09-20\", \"body\": \"The login page rejects my new password after a reset.\"},\n {\"id\": \"T-102\", \"created\": \"2026-09-21\", \"body\": \"The export button does nothing in Safari.\"},\n {\"id\": \"T-103\", \"created\": \"2026-09-21\", \"body\": \"How do I add a second admin?\"},\n {\"id\": \"T-104\", \"created\": \"2026-09-22\", \"body\": \"The site has been down for our whole team since 9am.\"}]"
+      },
+      {
+        "name": "triage.json",
+        "text": "{\n  \"version\": 1,\n  \"questions\": {\n    \"kind\": {\n      \"choose\": \"What kind of message is this?\",\n      \"options\": [\"billing\", \"bug\", \"question\"]},\n    \"urgency\": {\n      \"score\": \"How urgent is this?\",\n      \"levels\": [\"Routine.\", \"Soon.\", \"Immediate.\"]}\n  }\n}"
+      }
+    ],
+    "steps": [
+      {
+        "name": "tickets",
+        "command": "jq -c '.[]' tickets.json \\\n    | thinkthen annotate triage.json --jsonl --field /body --jobs 16 --details \\\n    | jq -c '.input + .value | del(.body)'",
+        "output": "{\"id\":\"T-101\",\"created\":\"2026-09-20\",\"kind\":\"bug\",\"urgency\":1.16}\n{\"id\":\"T-102\",\"created\":\"2026-09-21\",\"kind\":\"bug\",\"urgency\":0.88}\n{\"id\":\"T-103\",\"created\":\"2026-09-21\",\"kind\":\"question\",\"urgency\":0.01}\n{\"id\":\"T-104\",\"created\":\"2026-09-22\",\"kind\":\"bug\",\"urgency\":1.99}",
+        "exit": 0
+      },
+      {
+        "name": "tickets-again",
+        "command": "jq -c '.[]' tickets.json \\\n    | thinkthen annotate triage.json --jsonl --field /body --jobs 16 --details \\\n    | jq -c '{id: .input.id, cached: .meta.cached, requests_sent: .meta.requests_sent}'",
+        "output": "{\"id\":\"T-101\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-102\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-103\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-104\",\"cached\":true,\"requests_sent\":0}",
+        "exit": 0
+      }
+    ]
+  },
+  "review-a-diff-by-what-it-does": {
+    "status": "run",
+    "source": "deck recipes/run.sh and recipes/out/",
+    "inputs": [
+      {
+        "name": "change.diff",
+        "text": "diff --git a/billing.py b/billing.py\n--- a/billing.py\n+++ b/billing.py\n@@ -3,2 +3,2 @@ def late_fee(days):\n-    # charge a fee after 30 days\n+    # Charge a fee after 30 days.\n     if days > 30:\n@@ -8,2 +8,2 @@ def refund(amount, limit):\n-    if amount > limit:\n+    if amount >= limit:\n         return False\n@@ -14,3 +14,3 @@ def total(items):\n-    t = 0\n-    for i in items: t += i.price\n-    return t\n+    subtotal = 0\n+    for item in items: subtotal += item.price\n+    return subtotal\n@@ -20,1 +20,1 @@ def tax(amount):\n-    return amount * 0.07\n+    return round(amount * 0.07, 2)"
+      },
+      {
+        "name": "hunks.jq",
+        "text": "reduce inputs as $l ({file: null, hunks: []};\n  if ($l | startswith(\"+++ b/\")) then .file = $l[6:]\n  elif ($l | startswith(\"@@\")) then .hunks += [{file, at: $l, hunk: \"\"}]\n  elif (.hunks | length) > 0 and ($l | test(\"^(diff |--- )\") | not)\n  then .hunks[-1].hunk += $l + \"\\n\"\n  else . end)\n| .hunks[]"
+      }
+    ],
+    "steps": [
+      {
+        "name": "diff",
+        "command": "jq -cRnf hunks.jq change.diff \\\n    | thinkthen decide 'Does this change what the code does when it runs?' \\\n        --jsonl --field /hunk --threshold 0.2:0.8 --details \\\n    | jq -c '{file: .input.file, at: .input.at, changes: .value}'",
+        "output": "{\"file\":\"billing.py\",\"at\":\"@@ -3,2 +3,2 @@ def late_fee(days):\",\"changes\":false}\n{\"file\":\"billing.py\",\"at\":\"@@ -8,2 +8,2 @@ def refund(amount, limit):\",\"changes\":true}\n{\"file\":\"billing.py\",\"at\":\"@@ -14,3 +14,3 @@ def total(items):\",\"changes\":false}\n{\"file\":\"billing.py\",\"at\":\"@@ -20,1 +20,1 @@ def tax(amount):\",\"changes\":true}",
+        "exit": 0
+      }
+    ]
+  },
+  "lint-prose-for-hedging": {
+    "status": "run",
+    "source": "deck recipes/run.sh and recipes/out/",
+    "inputs": [
+      {
+        "name": "draft.txt",
+        "text": "The export runs every night at two.\nIt might possibly be worth considering a retry.\nFailed rows go to a separate file.\nWe think this should probably work for most users.\nEach row keeps its id."
+      }
+    ],
+    "steps": [
+      {
+        "name": "lint",
+        "command": "jq -cR '{line: input_line_number, text: .}' draft.txt \\\n    | thinkthen filter 'Does this sentence hedge?' --jsonl --field /text \\\n    | jq -r '\"draft.txt:\\(.line): \\(.text)\"'",
+        "output": "draft.txt:2: It might possibly be worth considering a retry.\ndraft.txt:4: We think this should probably work for most users.",
+        "exit": 0
+      }
+    ]
+  },
+  "fill-a-form-by-selection": {
+    "status": "run",
+    "source": "deck recipes/run.sh and recipes/out/",
+    "inputs": [
+      {
+        "name": "requests.jsonl",
+        "text": "{\"id\": \"R-1\", \"text\": \"We are on the team plan and cannot export to CSV.\"}\n{\"id\": \"R-2\", \"text\": \"Our enterprise account was billed twice. Call me today.\"}\n{\"id\": \"R-3\", \"text\": \"New here on the free plan. How do I reset my password?\"}"
+      },
+      {
+        "name": "form.json",
+        "text": "{\n  \"version\": 1,\n  \"questions\": {\n    \"plan\": {\n      \"choose\": \"Which plan is the sender on?\",\n      \"options\": [\"free\", \"team\", \"enterprise\"]},\n    \"topic\": {\n      \"choose\": \"What is this about?\",\n      \"options\": [\"billing\", \"access\", \"export\"]},\n    \"call\": {\n      \"decide\": \"Does the sender ask for a call?\"}\n  }\n}"
+      }
+    ],
+    "steps": [
+      {
+        "name": "form",
+        "command": "thinkthen annotate form.json --jsonl --field /text --details < requests.jsonl \\\n    | jq -c '{id: .input.id} + .value'",
+        "output": "{\"id\":\"R-1\",\"plan\":\"team\",\"topic\":\"export\",\"call\":false}\n{\"id\":\"R-2\",\"plan\":\"enterprise\",\"topic\":\"billing\",\"call\":true}\n{\"id\":\"R-3\",\"plan\":\"free\",\"topic\":\"access\",\"call\":false}",
+        "exit": 0
+      }
+    ]
+  }
+}

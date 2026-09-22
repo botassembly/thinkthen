@@ -12,6 +12,10 @@ import { outcomeOf, exitWord } from '../data/catalog.mjs';
 const { run, caption = 'Recorded from the real command.', fn = null, word = true } = Astro.props;
 
 const lines = [];
+for (const file of run.also || []) {
+  lines.push({ cls: 'p', text: `$ cat ${file.name}` });
+  for (const l of file.text.split('\n')) lines.push({ cls: 'in', text: l });
+}
 if (run.input && run.inputFile) {
   lines.push({ cls: 'p', text: `$ cat ${run.inputFile}` });
   for (const l of run.input.split('\n')) lines.push({ cls: 'in', text: l });

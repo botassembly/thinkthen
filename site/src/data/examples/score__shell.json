@@ -8,7 +8,8 @@
       "input": "Our checkout page is down and customers cannot pay.",
       "inputFile": "outage.txt",
       "output": "2.0",
-      "exit": 0
+      "exit": 0,
+      "see": "The outage scores 2.0, and 2 is Immediate on this scale."
     },
     {
       "name": "score-answer",
@@ -16,23 +17,17 @@
       "input": "Our checkout page is down and customers cannot pay.",
       "inputFile": "outage.txt",
       "output": "{\n  \"Routine.\": 0.0,\n  \"Soon.\": 0.0,\n  \"Immediate.\": 1.0\n}",
-      "exit": 0
+      "exit": 0,
+      "see": "The details put all of the weight on Immediate."
     },
     {
-      "name": "score-between",
-      "command": "thinkthen score 'How urgent is this?' 'Routine.' 'Soon.' 'Immediate.' < flaky.txt",
-      "input": "A few customers say card payments fail now and then.",
-      "inputFile": "flaky.txt",
-      "output": "0.78",
-      "exit": 0
-    },
-    {
-      "name": "score-between-answer",
-      "command": "thinkthen score --details 'How urgent is this?' 'Routine.' 'Soon.' 'Immediate.' < flaky.txt | jq -r '.answer.probabilities|tojson'",
-      "input": "A few customers say card payments fail now and then.",
-      "inputFile": "flaky.txt",
-      "output": "{\"Routine.\":0.24,\"Soon.\":0.74,\"Immediate.\":0.02}",
-      "exit": 0
+      "name": "score-lines",
+      "command": "thinkthen score --lines 'How urgent is this?' 'Routine.' 'Soon.' 'Immediate.' < queue.txt | jq -r '\"\\(.value)  \\(.input)\"'",
+      "input": "Please update my mailing address when you can.\nCan you send the signed contract by Friday?\nNobody can log in to the site right now.",
+      "inputFile": "queue.txt",
+      "output": "0.06  Please update my mailing address when you can.\n0.99  Can you send the signed contract by Friday?\n2.0  Nobody can log in to the site right now.",
+      "exit": 0,
+      "see": "The address change lands near 0, the Friday deadline near 1, and the login outage at 2."
     }
   ],
   "function": "score",

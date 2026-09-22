@@ -3,12 +3,31 @@
   "source": "deck examples/run.sh and examples/out/",
   "runs": [
     {
+      "name": "decide-lines",
+      "command": "thinkthen decide --lines --details --threshold 0.2:0.8 'Does the customer ask for a refund?' < messages.txt | jq -r '\"\\(.value)  \\(.answer.probability)  \\(.input)\"'",
+      "input": "Please refund my order. It arrived broken.\nThanks for the quick help yesterday!\nI was charged twice. Can you fix this?",
+      "inputFile": "messages.txt",
+      "output": "true  0.99  Please refund my order. It arrived broken.\nfalse  0.01  Thanks for the quick help yesterday!\nnull  0.77  I was charged twice. Can you fix this?",
+      "exit": 0,
+      "see": "The refund request answers true, the thank-you note false, and the charged-twice line lands inside the band as null."
+    },
+    {
+      "name": "decide-case",
+      "command": "thinkthen decide --quiet --threshold 0.2:0.8 'Does the customer ask for a refund?' < ticket.txt\ncase $? in\n  0) echo 'refund it' ;;\n  1) echo 'answer it as usual' ;;\n  3) echo 'send it to a person' ;;\nesac",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": "ticket.txt",
+      "output": "refund it",
+      "exit": null,
+      "see": "The ticket asks for a refund, so decide exits 0 and the case takes the refund branch."
+    },
+    {
       "name": "decide",
       "command": "thinkthen decide 'Does the customer ask for a refund?' < ticket.txt",
       "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
       "inputFile": "ticket.txt",
       "output": "true",
-      "exit": 0
+      "exit": 0,
+      "see": "The ticket asks for a refund, so decide prints true and exits 0."
     },
     {
       "name": "decide-answer",
@@ -16,7 +35,8 @@
       "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
       "inputFile": "ticket.txt",
       "output": "{\n  \"kind\": \"yes_no\",\n  \"probability\": 0.99\n}",
-      "exit": 0
+      "exit": 0,
+      "see": "The details put yes at 0.99 for this ticket."
     },
     {
       "name": "decide-vague",
@@ -24,7 +44,8 @@
       "input": "I was charged twice. Can you fix this?",
       "inputFile": "vague.txt",
       "output": "true",
-      "exit": 0
+      "exit": 0,
+      "see": "The vague message answers true at the default bar of 0.5."
     },
     {
       "name": "decide-cut",
@@ -32,7 +53,8 @@
       "input": "I was charged twice. Can you fix this?",
       "inputFile": "vague.txt",
       "output": "false",
-      "exit": 1
+      "exit": 1,
+      "see": "At a cut of 0.9 the vague message answers false and exits 1."
     },
     {
       "name": "decide-band",
@@ -40,7 +62,17 @@
       "input": "I was charged twice. Can you fix this?",
       "inputFile": "vague.txt",
       "output": "[null,0.74]",
-      "exit": 0
+      "exit": 0,
+      "see": "The 0.74 lands inside the 0.2 to 0.8 band, so the value comes back null."
+    },
+    {
+      "name": "decide-means",
+      "command": "thinkthen decide 'Does the customer ask for a refund?' --true 'The customer asks for money back.' --false 'Anything else, such as a cancellation or a question.' < cancel.txt",
+      "input": "Please cancel my plan at the end of this month.",
+      "inputFile": "cancel.txt",
+      "output": "false",
+      "exit": 1,
+      "see": "A cancellation is not money back under these words, so decide says false and exits 1."
     }
   ],
   "function": "decide",

@@ -11,11 +11,11 @@ const posts = [
 ---
 <Base title="Blog" description="Writing about semantic commands.">
   <h1>Blog</h1>
-  <p class="lede">One article so far.</p>
+  <p class="lede">Articles about software that answers questions about text.</p>
   <div class="grid">
     {posts.map((p) => (
       <a class="tile" href={p.href}><b>{p.title}</b><span>{p.blurb}</span></a>
     ))}
   </div>
-  <p class="pagelinks"><a href="/functions/">Every function</a> · <a href="/trust/">Trust</a></p>
+  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
 </Base>
