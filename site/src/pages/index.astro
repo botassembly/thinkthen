@@ -24,7 +24,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
 ---
 <Base title="ThinkThen">
   <h1>Code that understands.</h1>
-  <p class="lede">Ten small functions that ask a question about a text and get an answer with a probability.</p>
+  <p class="lede">Ten small functions. Each one asks a question about the evidence and hands back an answer with a probability.</p>
 
   <h2>Three jobs</h2>
   <p>Answer a yes-or-no question. Pick one option. Keep the records that pass. Change the tab and every code block on the site changes with it.</p>
@@ -47,7 +47,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
     ))}
   </div>
 
-  <p>This is a classifier you do not train. One model covers every domain. Ask many questions about one text and the answers come back in parallel. The probability was the training target, not a number added afterward.</p>
+  <p>This is a classifier you do not train. One model covers every domain. Ask many questions about one text and the answers come back in parallel. The probability was the training target. Nothing added it afterward.</p>
 
   <p class="pagelinks"><a href="/install/">Every way to install it</a></p>
 
@@ -94,9 +94,9 @@ const sixHowtos = HOWTOS.slice(0, 6);
 
   <h2>What it will not do</h2>
   <ul>
-    <li>It writes nothing. A function reads a text and answers one bounded question. It never edits, summarises, or composes.</li>
+    <li>It writes nothing. A function reads the evidence and answers one bounded question. It never edits, summarises, or composes.</li>
     <li>It decides nothing. ThinkThen judges. Your own code turns an answer into an action.</li>
     <li>It does not chat, and it holds no conversation across calls.</li>
-    <li>It does not promise an accuracy. {FACTS.cost.rows[0][0]} is a cost, not a score. Measure a question against your own labeled records before you trust it.</li>
+    <li>It does not promise an accuracy. {FACTS.cost.rows[0][0]} is a cost. It says nothing about how often an answer is right. Measure a question against your own labeled records before you trust it.</li>
   </ul>
 </Base>
