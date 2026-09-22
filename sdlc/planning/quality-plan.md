@@ -95,7 +95,7 @@ A standing brief for one agent that pokes around after each release and on a sch
 
 A review by someone who types commands and a review by someone who calls the tool from a program find different classes of fault, and the plan names both as gates. The typing review is the how-to and demo ladder above. The caller review is the parity, dry-run, sizes, and refused-question tests, and it joins the exploring tester's rotation. (Standing rule added 2026-09-21 from the caller's review that found four things wave 1 missed.)
 
-## Three rules that outrank every page
+## The rules that outrank every page
 
 Added 2026-09-21 after the `filter --details` miss. A marketing reader of the deck caught what wave 1's 345 checks did not: `filter --details` printed the records the filter had refused, because one spec page said to and the testers graded against the page.
 
