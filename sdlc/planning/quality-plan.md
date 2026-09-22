@@ -1,6 +1,6 @@
 # The quality plan
 
-Status: **Proposal** from experiment 218, wave 1 (2026-09-21). Waves 2 through 4 extend the checklist and the tester brief as the libraries, databases, and the real engine land. Ian can overturn the form and any rung placement.
+Status: **Proposal under use** from experiment 218, fed by waves 1 and 1.5 (2026-09-21) and the ticket and issue catalog of 2026-09-22. Waves 2 through 4 extend it as the libraries, databases, and the real engine land. Ian can overturn the form and any rung placement.
 
 One rule carries the whole plan: a finding that can be a test becomes one, and a test runs from a rung or it rots. What cannot be a test becomes a line on the release checklist, and what cannot be checked becomes the exploring tester's rotation.
 
@@ -13,7 +13,9 @@ The ladder stays `install`, `lint`, `test`, `spec`. Wave 1 found nineteen issues
 | Test | Guards | Cost |
 | --- | --- | --- |
 | Send-count visibility: a 500-then-ok listener; `--details` must carry the number of sends and the summed usage, and the stand-in count must match | issue 3 (retried send invisible) | seconds |
-| Address-change warning: cache three records under one loopback URL, resume under another; the run must warn and the second listener must see exactly the re-sent requests | issue 2 (silent re-bill) | seconds |
+| Address-change refusal: a recording folder is bound to one backend identity (ticket 0065); a resume under a different address exits 5 before the key is read, sends nothing, prints no result, and leaves the entries unchanged | issue 2 (silent re-bill), fixed by ticket 0065 | seconds |
+| Scheduler waiting bound (ticket 0024): at most `jobs` dispatched rows wait while requests are in flight, and streaming output returns before more input is read; assert against a stand-in by counting requests in flight and rows consumed | ticket 0024 | seconds |
+| Connection count: the number of simultaneous connections a run opens equals what the ruling on `--jobs` fixes (today, one per in-flight request), and the page says so | the jobs-connections issue | seconds |
 | Lock cleanup: after a completed `--cache` run, `.locks` holds nothing (or shards with entries); file count equals entry count | issue 10 (locks stay) | seconds |
 | Write-before-request: a read-only record folder must refuse before the first send (listener count zero), or the help must say the request happens first | issue 12 (paid answer discarded) | seconds |
 | Early close: a listener that closes without a response fails in milliseconds, not at `--timeout` | issue 8 (closed connection costs the deadline) | seconds |
@@ -51,6 +53,12 @@ The marketing repository's pages get the same script on its own side, run before
 | `sdlc/scripts/load` (proposed) | 100k records through `filter --jsonl`, `decide --lines`, `rank`, `tag`, `annotate` against a bundled stand-in; asserts peak RSS of the streaming functions stays inside a fixed bound (wave 1's numbers become the first bounds) and prints the table | ~10 minutes |
 | Speed-claim rerun | the command-local numbers from the public pages (process start, cache hit versus miss, records per second against the stand-in) | ~2 minutes |
 
+A pinning row lands with its fix, red-green: a row that guards an open issue is written the day the fix lands, or it sits in the plan marked red-by-design. Red-by-design today: the SIGINT stopped-at line, and `--dry-run` printing the request count. Both guard open issues; neither is on the rung until its fix lands.
+
+## Part 1a: pinned by the repository's own ladder
+
+The ticket catalog of 2026-09-22 (`experiments/218-thinkthen-release-qa/wave2/ticket-coverage.md`) maps all 68 landed tickets to rows. Eight are pinned by committed repo tests the ladder already runs rather than by rows here (0017 option equivalence, 0022 and 0030 refusal sentences, 0026 entry immutability, 0029 lazy replay, 0031 digest case folding, 0033 threshold validation, 0039 one-send-per-digest): the ladder is the guard, and the exploring tester's rotation re-checks them by hand once a cycle.
+
 ## Part 2: the release checklist
 
 The full pass runs at the exact release commit, on Linux and macOS, from the installed package, not the checkout. It blocks on any Open blocker or major in `sdlc/issues/` that is not consciously waived in the release record.
@@ -69,6 +77,8 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 12. The surfaces review's classes are closed or waived: wrong answers with no error, host crashes at a boundary, cancel per host, and the security rows (file access behind the host's own switch, functions marked direct-only, PUBLIC revoked, relate on the caller's connection).
 13. The packages carry licenses and platforms, and no package ships recordings: a recording commits its evidence, and a published package publishes it.
 14. A mechanical hygiene check runs zero-hit: no private repository names, no home-directory paths, in shipped files and comments.
+15. The transform catalog surface exists (`thinkthen transform list` and `show`, ticket 0050's promise) or the release record names who deferred it; no open ticket owns it today.
+16. Issue statuses are normalized to a two-value vocabulary (Open and everything-else) before the waiver sweep runs; the record currently carries nine status words and two files with none.
 
 ## Part 3: the exploring tester
 
