@@ -21,6 +21,11 @@ path = "./src/bin/pgrx_embed.rs"
 [features]
 default = ["pg16"]
 pg16 = ["pgrx/pg16"]
+# Forward the stand-in's compile-time fixture door to a gate build that
+# needs it (conformance case 74's synthesized partial failure). Off by
+# default: a packaged extension carries no fixture code and no environment
+# variable can arm one.
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
 
 [dependencies]
 pgrx = "=0.17.0"

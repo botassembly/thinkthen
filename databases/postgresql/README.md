@@ -33,11 +33,22 @@ back to the query's table; more than 255 records is a usage error.
 `thinkthen_relations(body, '@names.json')` is the beta companion returning
 the relations as rows.
 
+Every argument that names a file — a question, a question set, a
+recognize spec — uses the command's `'@name'` spelling, resolved by the
+backend against its working directory. A string that is not JSON and
+carries no `@` is refused with the usage kind naming the required form;
+it is never read as a path.
+
 The acceptance sample from
 `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md` runs
 as drawn: the `IS NULL` query returns the `maybe` row a person should read,
-and `thinkthen_annotate('form.json', body)` orders by urgency 1.7 / 1.05 /
-0.99. The `recognize` and `relate` calls in
+and `thinkthen_annotate('@form.json', body)` orders by urgency 1.7 / 1.05 /
+0.99. The deck's PostgreSQL tab draws that set as the bare name
+`'form.json'`; every file name on this surface carries the ruled `@`
+spelling (review 2, item 4: a bare string that is not JSON was read as a
+server path, so a granted role could read files with no `@` required), so
+the deck's line is stale for its owner and `check.sh` runs the ruled
+spelling with the divergence recorded here. The `recognize` and `relate` calls in
 `recognize-surfaces.md` run as drawn too: the LATERAL call, the names-become-
 rows pattern with the no-request join, and `thinkthen_relate('SELECT id, body
 FROM alerts', ARRAY['caused_by'])`.

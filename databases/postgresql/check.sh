@@ -48,16 +48,20 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== postgres surface: the error-mapping test"
-cargo test --release --quiet --lib
+# The annotate partial-failure fixture is compiled in only for a build
+# that asks for it (standin/Cargo.toml, the `synthetic-partial` feature):
+# conformance case 74 replays that record. The packaged test artifact is
+# built with the feature; the release rehearsal in package.sh builds
+# without it.
+cargo test --release --quiet --lib --features synthetic-partial
 
 echo "== postgres surface: package the extension"
-(cd . && cargo pgrx package --pg-config /usr/bin/pg_config) >/dev/null
+(cd . && cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null
 
 echo "== postgres surface: disposable container, null backend"
 docker rm -f -v "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" --network host \
   -e POSTGRES_PASSWORD=postgres -e PGPORT=$PORT -e ENGINE_NULL=1 \
-  -e ENGINE_SYNTHETIC_PARTIAL=1 \
   postgres:16 >/dev/null
 wait_ready "$NAME"
 
@@ -88,7 +92,12 @@ WHERE thinkthen_decide('@refund.json', body) IS NULL;
 SELECT id, a->>'team' AS team,
     (a->>'urgency')::float AS urgency
 FROM tickets,
-    thinkthen_annotate('form.json', body) AS a
+    -- The deck's PostgreSQL tab draws this set as a bare name
+    -- ('form.json'); a file name carries the ruled '@' spelling on this
+    -- surface (review 2, item 4: bare text was read as a server path), so
+    -- the drawn line runs here in the ruled spelling. The deck's line is
+    -- recorded for its owner in README.md.
+    thinkthen_annotate('@form.json', body) AS a
 ORDER BY urgency DESC;
 SQL
 grep -q " 2 | maybe this is on our side" .tmp-slide.out
@@ -137,15 +146,41 @@ fi
 grep -q "permission denied for function thinkthen_decide" .tmp-role.out \
   || { echo "FAILED   the refusal is not a permission error" >&2; cat .tmp-role.out >&2; exit 1; }
 echo "ok       an ungranted role is refused with permission denied"
-psql_in -c "GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO tt_app;" >/dev/null
+# Review 2, item 4: the grant names the extension's own functions, never
+# ALL FUNCTIONS IN SCHEMA public, which would also grant every other
+# function in the schema. The control below is exactly such a function.
+psql_in -c "CREATE FUNCTION tt_control(x integer) RETURNS integer LANGUAGE sql AS 'SELECT \$1';" \
+  -c "REVOKE ALL ON FUNCTION tt_control(integer) FROM PUBLIC;" >/dev/null
+psql_in << 'SQL' >/dev/null
+DO $thinkthen_grant$
+DECLARE
+    signature text;
+BEGIN
+    FOR signature IN
+        SELECT p.oid::regprocedure::text
+        FROM pg_proc p
+        JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+        JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+        WHERE e.extname = 'thinkthen'
+    LOOP
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO tt_app', signature);
+    END LOOP;
+END
+$thinkthen_grant$;
+SQL
 psql_in -Atq -c "SET ROLE tt_app;" \
   -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" > .tmp-role.out
 # The role reads a file the backend process owns: the grant is the trust.
 grep -q "^t$" .tmp-role.out \
-  || { echo "FAILED   the granted role's call did not answer" >&2; cat .tmp-role.out >&2; exit 1; }
-echo "ok       the documented one-line grant lets a role call (and read '@path')"
-psql_in -c "RESET ROLE;" -c "DROP OWNED BY tt_app;" -c "DROP ROLE tt_app;" >/dev/null
-rm -f .tmp-role.out
+  || { echo "FAILED   the narrowed grant's call did not answer" >&2; cat .tmp-role.out >&2; exit 1; }
+if psql_in -c "SET ROLE tt_app;" -c "SELECT tt_control(7);" > .tmp-control.out 2>&1; then
+  echo "FAILED   the grant reached an unrelated function" >&2; cat .tmp-control.out >&2; exit 1
+fi
+grep -q "permission denied" .tmp-control.out \
+  || { echo "FAILED   the control's refusal is not a permission error" >&2; cat .tmp-control.out >&2; exit 1; }
+echo "ok       the narrowed grant covers the extension's own functions and not the schema's others"
+psql_in -c "RESET ROLE;" -c "DROP OWNED BY tt_app;" -c "DROP FUNCTION tt_control(integer);" -c "DROP ROLE tt_app;" >/dev/null
+rm -f .tmp-role.out .tmp-control.out
 
 echo "== postgres surface: a bad question in a batch names itself"
 # Group 3: the question resolves on the backend thread before any worker
@@ -194,6 +229,43 @@ grep -q "thinkthen deadline" .tmp-deadline.out \
 psql_in -c "RESET thinkthen.deadline_ms;" >/dev/null
 echo "ok       a zero budget returns the deadline kind (57014) with nothing sent"
 rm -f .tmp-deadline.out
+
+echo "== postgres surface: batches carry the deadline too"
+# Review 1/2 leftovers: the batch paths ignored the setting, so a spent
+# budget still spent. Both batch shapes must refuse with nothing sent.
+psql_in -c '\set VERBOSITY verbose' \
+  -c "SET thinkthen.deadline_ms = 0;" \
+  -c "SELECT count(*) FROM thinkthen_decide('@refund.json', ARRAY['a', 'b']);" \
+  > .tmp-batch.out 2>&1 || true
+grep -q "57014" .tmp-batch.out \
+  || { echo "FAILED   the array batch ignored a spent budget" >&2; cat .tmp-batch.out >&2; exit 1; }
+grep -q "thinkthen deadline" .tmp-batch.out \
+  || { echo "FAILED   the array batch's deadline message is missing" >&2; cat .tmp-batch.out >&2; exit 1; }
+psql_in -c '\set VERBOSITY verbose' \
+  -c "SET thinkthen.deadline_ms = 0;" \
+  -c "SELECT thinkthen_warm('@refund.json', body) FROM tickets;" \
+  > .tmp-batch.out 2>&1 || true
+grep -q "57014" .tmp-batch.out \
+  || { echo "FAILED   the warm aggregate ignored a spent budget" >&2; cat .tmp-batch.out >&2; exit 1; }
+psql_in -c "RESET thinkthen.deadline_ms;" >/dev/null
+# Mid-flight: a budget inside a long batch ends it at the deadline, not at
+# the end (the same batch without a stop runs about a second on the null
+# backend and answers a count).
+batch_start=$(date +%s.%N)
+if psql_in -c '\set VERBOSITY verbose' \
+    -c "SET thinkthen.deadline_ms = 50;" \
+    -c "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', (SELECT array_agg('refund ' || g) FROM generate_series(1, 300000) g));" \
+    > .tmp-batch.out 2>&1; then
+  echo "FAILED   the 50 ms budget's batch completed" >&2; cat .tmp-batch.out >&2; exit 1
+fi
+batch_elapsed=$(awk -v a="$batch_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+grep -q "57014" .tmp-batch.out \
+  || { echo "FAILED   the 50 ms budget's batch did not return the deadline kind" >&2; cat .tmp-batch.out >&2; exit 1; }
+awk -v e="$batch_elapsed" 'BEGIN { exit !(e <= 2.0) }' \
+  || { echo "FAILED   the 50 ms budget's batch took ${batch_elapsed}s" >&2; exit 1; }
+psql_in -c "RESET thinkthen.deadline_ms;" >/dev/null
+echo "ok       a spent budget sends nothing on both batch shapes; a 50 ms budget ends a long batch in ${batch_elapsed}s"
+rm -f .tmp-batch.out
 
 echo "== postgres surface: conformance slice, offline"
 python3 runner.py "$NAME"
@@ -259,6 +331,26 @@ after=$(grep "requests after join" .tmp-recognize.out | awk '{print $NF}')
 rm .tmp-recognize.out
 echo "recognize rows, offsets, the no-request join, relate edges, and the relations rows are green"
 
+echo "== postgres surface: a bare path never names a file"
+# Review 2, item 4: any text without @ was read as a server path, so a
+# granted role could read files as the postgres user with no @ required.
+# Both files below exist in the data directory, so a pre-fix build reads
+# them and answers; the fix refuses with the usage kind naming the form.
+if psql_in -c "SELECT count(*) FROM thinkthen_relations('Maria Chen joined Northwind Freight in Chicago last spring.', 'names.json');" > .tmp-bare.out 2>&1; then
+  echo "FAILED   a bare path named a file" >&2; cat .tmp-bare.out >&2; exit 1
+fi
+grep -q "@names.json" .tmp-bare.out \
+  || { echo "FAILED   the refusal does not name the @ form" >&2; cat .tmp-bare.out >&2; exit 1; }
+grep -q "never a path" .tmp-bare.out \
+  || { echo "FAILED   the refusal does not say bare text is not a path" >&2; cat .tmp-bare.out >&2; exit 1; }
+if psql_in -c "SELECT thinkthen_annotate('form.json', body) FROM tickets LIMIT 1;" > .tmp-bare.out 2>&1; then
+  echo "FAILED   a bare set path named a file" >&2; cat .tmp-bare.out >&2; exit 1
+fi
+grep -q "@form.json" .tmp-bare.out \
+  || { echo "FAILED   the set refusal does not name the @ form" >&2; cat .tmp-bare.out >&2; exit 1; }
+echo "ok       bare text is refused with the @ form named, and never read"
+rm -f .tmp-bare.out
+
 echo "== postgres surface: from and to are refused"
 docker cp fixtures/names-legacy.json "$NAME:/var/lib/postgresql/data/names-legacy.json"
 if psql_in -c "SELECT thinkthen_relations('Maria Chen joined Northwind Freight in Chicago last spring.', '@names-legacy.json');" > .tmp-legacy.out 2>&1; then
@@ -279,6 +371,26 @@ grep -q "22023" .tmp-255.out
 grep -q "relate takes at most 255 records and 256 came" .tmp-255.out
 rm .tmp-255.out
 echo "the 256th record refuses with the usage kind and SQLSTATE 22023"
+
+echo "== postgres surface: a benign interrupt does not fail a batch"
+# Review 1/2 leftovers: every interrupt was treated as a cancel, so a
+# memory-contexts request (a procsignal interrupt, not a query cancel)
+# failed a paid batch with the cancelled kind. The control below proves
+# the batch completes; the cancel and timeout arms after it prove a real
+# stop still stops.
+psql_in -c "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', (SELECT array_agg('refund ' || g) FROM generate_series(1, 1000000) g));" > .tmp-benign.out 2>&1 &
+benign_bg=$!
+sleep 1.2
+benign_victim=$(psql_in -Atqc "SELECT pid FROM pg_stat_activity WHERE query LIKE '%thinkthen_decide%' AND pid <> pg_backend_pid() ORDER BY backend_start DESC LIMIT 1")
+psql_in -Atqc "SELECT pg_log_backend_memory_contexts($benign_victim);" >/dev/null
+wait "$benign_bg" || true
+if grep -q "cancelled\|ERROR" .tmp-benign.out; then
+  echo "FAILED   a benign interrupt failed the batch" >&2; cat .tmp-benign.out >&2; exit 1
+fi
+grep -qE "^ *[0-9]+ *$" .tmp-benign.out \
+  || { echo "FAILED   the benign-interrupt batch did not answer a count" >&2; cat .tmp-benign.out >&2; exit 1; }
+echo "ok       a memory-contexts interrupt is serviced, and the paid batch still completes"
+rm -f .tmp-benign.out
 
 echo "== postgres surface: fast-backend cancel, the poll-bug shape"
 # The batch paths run on a worker thread while the backend thread polls the
@@ -374,6 +486,39 @@ echo "ok       a configured key refuses with 22023 naming the setting; reset, th
 echo "== postgres surface: the function examples"
 docker cp fixtures/names.json "$NAME:/var/lib/postgresql/data/names.json"
 python3 tests/examples.py "$NAME"
+
+echo "== postgres surface: an extension update cannot hand a function to PUBLIC"
+# Review 2, item 4: the install revoke runs once, so a function created by
+# a future ALTER EXTENSION UPDATE would keep PostgreSQL's default PUBLIC
+# grant — and an unchanged revoke block never appears in a diff-based
+# update script. The synthetic update below creates one function and says
+# nothing about PUBLIC; the extension's event trigger must revoke it.
+cat > .tmp-update.sql <<'SQL'
+-- A synthetic next version: one new function, no revoke statement at all.
+CREATE FUNCTION thinkthen_rehearsal_probe(x integer) RETURNS integer
+LANGUAGE sql AS 'SELECT $1';
+SQL
+docker cp .tmp-update.sql "$NAME:/usr/share/postgresql/16/extension/thinkthen--0.0.1--0.0.2.sql"
+psql_in -c "ALTER EXTENSION thinkthen UPDATE TO '0.0.2';" >/dev/null
+psql_in << 'SQL' > .tmp-update.out
+SELECT 'probe_public', has_function_privilege('public', 'thinkthen_rehearsal_probe(integer)', 'EXECUTE');
+SELECT 'probe_owned', count(*) FROM pg_proc p
+  JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+  JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+  WHERE e.extname = 'thinkthen' AND p.proname = 'thinkthen_rehearsal_probe';
+SELECT 'public_any', count(*) FROM pg_proc p
+  JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+  JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+  WHERE e.extname = 'thinkthen' AND has_function_privilege('public', p.oid, 'EXECUTE');
+SQL
+grep -qE "probe_public *\| *f" .tmp-update.out \
+  || { echo "FAILED   an update-created function still holds PUBLIC's grant" >&2; cat .tmp-update.out >&2; exit 1; }
+grep -qE "probe_owned *\| *1" .tmp-update.out \
+  || { echo "FAILED   the update-created function is not extension-owned" >&2; cat .tmp-update.out >&2; exit 1; }
+grep -qE "public_any *\| *0" .tmp-update.out \
+  || { echo "FAILED   PUBLIC holds EXECUTE on an extension function after the update" >&2; cat .tmp-update.out >&2; exit 1; }
+echo "ok       the update path's new function is extension-owned and out of PUBLIC's hands"
+rm -f .tmp-update.sql .tmp-update.out
 
 if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   echo "== postgres surface: wire suite against the stub on 8219"

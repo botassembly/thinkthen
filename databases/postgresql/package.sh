@@ -56,6 +56,11 @@ section = text.split('## PostgreSQL', 1)[1].split('## Names become rows', 1)[0]
 block = re.search(r'```sql\n(.*?)```', section, re.S).group(1)
 open(sys.argv[2], 'w').write(block)
 PY
+# The deck's PostgreSQL tab draws the annotate set as a bare name
+# ('form.json'); this surface requires the ruled '@name' spelling for a
+# file (review 2, item 4), so the rehearsal substitutes it. The deck's
+# line is recorded for its owner in README.md.
+sed -i "s/thinkthen_annotate('form.json'/thinkthen_annotate('@form.json'/" "$WORK/slide.sql"
 cat "$WORK/slide.sql"
 
 echo "== postgres package: clean postgres:16 container"

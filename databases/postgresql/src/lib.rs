@@ -836,6 +836,14 @@ extern "C-unwind" fn _PG_init() {
     );
 }
 
+// Keep every function this extension owns out of PUBLIC's hands: revoke
+// the default PUBLIC grant at install, and re-revoke whenever a function
+// is created, so an ALTER EXTENSION UPDATE cannot hand a new function to
+// PUBLIC (review 2, item 4). The event trigger is SECURITY DEFINER — the
+// DDL's role need not own the functions — with its search path pinned,
+// and it grants nothing: the narrowed grant documented below is the
+// administrator's act.
+//
 // Revoke the default PUBLIC grant on every function this extension
 // installs, and on nothing else.
 //
@@ -887,25 +895,12 @@ BEGIN
     END LOOP;
 END
 $thinkthen_revoke$;
-"#,
-    name = "revoke_public",
-    finalize,
-);
 
-// Keep every function this extension owns out of PUBLIC's hands, including
-// the ones a future `ALTER EXTENSION UPDATE` creates.
-//
-// The revoke above runs once, at CREATE EXTENSION. An update script that
-// creates a new function would hand it EXECUTE by PostgreSQL's default
-// grant, and an unchanged revoke block never appears in a diff-based
-// update script (review 2, item 4). This event trigger closes that path
-// mechanically: whenever a function, procedure, or aggregate is created
-// in this database, it revokes PUBLIC on every function the extension
-// owns. It is SECURITY DEFINER — the DDL may be run by a role that does
-// not own the functions — with its search path pinned, and it grants
-// nothing: the narrowed grant above is the administrator's act.
-extension_sql!(
-    r#"
+-- The same revoke, run whenever a function is created: an update script
+-- that creates a new function would hand it EXECUTE by PostgreSQL's
+-- default grant, and an unchanged revoke block never appears in a
+-- diff-based update script. SECURITY DEFINER so the DDL's role need not
+-- own the functions; the search path is pinned; it grants nothing.
 CREATE FUNCTION thinkthen_guard_public() RETURNS event_trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $thinkthen_guard$
 DECLARE
@@ -925,14 +920,20 @@ BEGIN
 END
 $thinkthen_guard$;
 
+-- The guard function itself is created after the revoke loop above ran,
+-- so it takes the same revoke by name; the event trigger then covers
+-- everything created later.
+REVOKE ALL ON FUNCTION thinkthen_guard_public() FROM PUBLIC;
+
 CREATE EVENT TRIGGER thinkthen_guard_public
     ON ddl_command_end
     WHEN TAG IN ('CREATE FUNCTION', 'CREATE PROCEDURE', 'CREATE AGGREGATE')
     EXECUTE FUNCTION thinkthen_guard_public();
 "#,
-    name = "guard_public",
+    name = "revoke_public",
     finalize,
 );
+
 
 #[cfg(test)]
 mod mapping_tests {
