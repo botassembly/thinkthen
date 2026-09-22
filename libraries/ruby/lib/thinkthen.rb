@@ -243,8 +243,9 @@ module ThinkThen
 
     # Run one bulk call on a tick: the engine runs the block every wait
     # interval with the VM lock taken, and a raise inside it cancels the
-    # call, lets sent requests finish, and re-raises. The interrupt path
-    # for a host that owns its own signals.
+    # call, lets sent requests finish, and re-raises. Optional: every call
+    # already hears Thread#raise and Ctrl-C through the shim's unblock
+    # function; a tick is for progress reporting or a host's own gesture.
     def with_tick(&tick)
       @tick_engine.instance_variable_set(:@tick, tick)
       @tick_engine

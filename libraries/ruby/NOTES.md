@@ -253,3 +253,79 @@ Acceptance: `tests/test_pairs_one_crossing.rb` against the counted stub:
 would have shown 40. `libraries/ruby/NOTES.md` also inherits punch-list
 item 3 there: `recognize` and `relate` answers now arrive as typed Ruby
 records, built natively; no serialized answer JSON is parsed in Ruby.
+
+## 2026-09-22 — the review fix wave: interrupts, the connector, the checked deadline
+
+The Ruby lane of the surfaces branch review: group 4's interrupt finding,
+plus the phase-1 adoption (connector, checked deadline, panic guard).
+
+**The interrupt (group 4).** Before this, `rb_thread_call_without_gvl` was
+called with no unblock function, so `Thread#raise` and Ctrl-C could not
+reach a running call: the VM lock was released with no way to wake the
+waiting thread, and a plain call ran to completion before the raise
+landed. Reproduced against HEAD's shim: `raised: Interrupt after 4.378 s
+(signal at 0.3 s)` on a two-million-record null batch — the full deaf
+batch, about 4.3 s.
+
+The fix is MRI's unblock function, firing the call's own token. Every
+crossing now arms the call with a token (the caller's, or a fresh one) and
+passes Ruby `stop_call` as the unblock function's data: when an interrupt
+arrives, MRI calls it from the interrupting thread, it sets the token's
+atomic, the engine returns its cancelled error at its next stop check, and
+the pending exception re-raises when the call returns. Semantics were
+proven first with a 30-line C extension against MRI 3.4 in the builder
+container, because the docs alone were ambiguous: the unblock function
+fires (`ubf=1`), the body returns because it polled the stop flag
+(`body=1`), and MRI raises by long jump (`after=0`) — so the code after
+the VM call never runs on an interrupt. That last fact is why the answer
+box and the unblock function's token copy leak, one small allocation pair
+per interrupted call; the token's own refcount is dropped on every
+non-interrupted path.
+
+**The checked deadline (group 2).** `options_for` used
+`Duration::from_secs_f64(seconds.max(0.0))` outside the panic guard.
+Reproduced against HEAD: a 1e300 budget aborted the process —
+`thread caused non-unwinding panic. aborting`, exit 134. It now goes
+through the contract's `Options::with_deadline_seconds`, inside the
+guarded region: NaN, infinity, any negative other than the sentinel, and
+oversized budgets raise `UsageError`; minus one means no deadline; zero
+stays a spent deadline. A Ruby test and two shim unit tests pin it.
+
+**The connector (phase 1).** `EngineValue` holds `Arc<dyn Engine>` built
+by `StandinConnector` through the contract's `Connector`; the job structs
+hold the `Arc` instead of a raw pointer to the concrete type. Pointing the
+surface at the real engine is now the one connector line the merge
+changes. The panic guard also wraps `connect` and the option build, so a
+panic on either side of the engine call cannot reach the host.
+
+**Case 74's opt-in.** The stand-in's synthesized partial failure now fires
+only under `ENGINE_SYNTHETIC_PARTIAL` (phase 1), and the engine reads it
+at construction, so `tests/test_surface.rb` and `tests/conformance.rb` set
+it before the require. Without that, `74-annotate-preserves-good-answers`
+read `true` where the marker belongs.
+
+Commands and output (all inside the builder container; the wire runs
+against the stub on 8214 at 300 ms):
+
+```
+$ cargo test --quiet --lib
+test result: ok. 4 passed (the two new ones: the unblock function fires
+the call's own token; a hostile budget is a usage error not a panic)
+
+$ ENGINE_NULL=1 ruby -I lib tests/test_interrupt_fast.rb
+raised: Interrupt after 0.440 s (interrupt set at 0.3 s)
+a plain call hears Thread#raise
+
+$ ruby -I lib tests/test_interrupt_wire.rb   # stub up, 300 ms delay
+raised: Interrupt after 0.604 s (signal at 0.5 s, one round 0.302 s)
+stub:   requests at return 16, after 2 s settle 16
+deaf would be about 15.1 s over 50 rounds; the bound is 2.1 s
+
+$ ./check.sh
+surface tests: 32 runs, 99 assertions, 0 failures
+conformance slice: green, 74 included
+slide sample: green; interrupt proofs: green; pairs: green
+```
+
+The wire test skips, with a printed reason, when no stub is up or the stub
+runs without a delay; the timing proof needs one.

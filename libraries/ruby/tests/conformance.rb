@@ -6,6 +6,11 @@
 # for case.
 #
 # Run with: ruby -I lib tests/conformance.rb  (ENGINE_NULL=1)
+#
+# Case 74's synthesized partial failure fires only under the test-only
+# `ENGINE_SYNTHETIC_PARTIAL` opt-in, and the engine reads it when it is
+# built, so it is set before the require.
+ENV["ENGINE_SYNTHETIC_PARTIAL"] = "1"
 
 require "json"
 require "thinkthen"

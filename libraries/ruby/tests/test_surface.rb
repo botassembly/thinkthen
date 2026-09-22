@@ -3,6 +3,11 @@
 # The surface's own tests, offline against the null backend.
 #
 # Run with: ruby -I lib -I tests tests/test_surface.rb  (ENGINE_NULL=1)
+#
+# The stand-in's one synthesized partial failure (conformance case 74)
+# fires only under the test-only `ENGINE_SYNTHETIC_PARTIAL` opt-in, and the
+# engine reads it when it is built, so it is set before the require.
+ENV["ENGINE_SYNTHETIC_PARTIAL"] = "1"
 
 require "minitest/autorun"
 require "json"

@@ -14,11 +14,22 @@
 //! engine's token, so sent requests finish and no new one starts, and the
 //! exception is re-raised when the engine call returns. A token fired
 //! without a raise returns the `cancelled` kind.
+//!
+//! Every crossing also passes Ruby an unblock function, so `Thread#raise`
+//! and Ctrl-C stop a call even with no tick and no token of the caller's:
+//! the interrupt fires the call's own token from the interrupting thread,
+//! the engine returns its cancelled error at its next stop check, and the
+//! pending exception re-raises when the call returns (MRI checks
+//! interrupts at the end of `rb_thread_call_without_gvl`). Earlier, the
+//! lock was released with no way to wake the waiting thread, so a plain
+//! call ran to completion before the raise landed. An interrupt is the
+//! one path where the code after the VM call does not run: MRI raises by
+//! long jump, and the boxed answer and the unblock function's token copy
+//! are left behind, one small allocation pair per interrupted call.
 
 use std::ffi::c_void;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::Arc;
-use std::time::Duration;
 
 use magnus::prelude::*;
 use magnus::{
@@ -26,11 +37,11 @@ use magnus::{
     IntoValue, RArray, RClass, RHash, TryConvert, TypedData, Value,
 };
 use thinkthen_contract::{
-    relate_checked, Annotated, Answer, Cancel, Details, Edge, Engine as ContractEngine,
-    Error as ContractError, ErrorKind, Found, Judgment, Options, Question, QuestionSet, Ranked,
-    Recognize, Recognized, Relate, Scored, Usage,
+    relate_checked, Annotated, Answer, Cancel, Connector as ContractConnector, Details, Edge,
+    Engine as ContractEngine, EngineConfig, Error as ContractError, ErrorKind, Found, Judgment,
+    Options, Question, QuestionSet, Ranked, Recognize, Recognized, Relate, Scored, Usage,
 };
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
 /// A built question: the file's JSON text beside its parsed engine form.
 #[derive(Clone, TypedData)]
@@ -56,7 +67,7 @@ impl DataTypeFunctions for SetValue {}
 #[derive(Clone, TypedData)]
 #[magnus(class = "ThinkThen::Cancel", free_immediately)]
 pub struct CancelValue {
-    token: Arc<Cancel>,
+    token: Cancel,
 }
 
 impl DataTypeFunctions for CancelValue {}
@@ -68,11 +79,12 @@ impl CancelValue {
     }
 }
 
-/// The engine value. It holds no thread between calls.
+/// The engine value: one value from the contract's connector, held for
+/// the process. It holds no thread between calls.
 #[derive(TypedData)]
 #[magnus(class = "ThinkThen::Native::Engine", free_immediately)]
 pub struct EngineValue {
-    engine: BlockingEngine,
+    engine: Arc<dyn ContractEngine>,
 }
 
 impl DataTypeFunctions for EngineValue {}
@@ -80,13 +92,36 @@ impl DataTypeFunctions for EngineValue {}
 /// One crossing's answer, or the engine's error carried back as data.
 type Crossing<T> = Result<T, ContractError>;
 
-/// Run `body` on this Ruby thread with the VM lock released. The region
-/// between the two calls touches no Ruby object.
-fn without_gvl<A, R>(job: A, body: unsafe extern "C" fn(*mut c_void) -> *mut c_void) -> R {
+/// The unblock function Ruby calls, from the interrupting thread, while
+/// this thread waits without the VM lock: fire the call's own token, so
+/// the engine stops at its next stop check and the wait returns. Running
+/// without the lock, this may touch nothing but the token's atomic.
+///
+/// # Safety
+///
+/// `pointer` must be the token box [`without_gvl`] passed as the unblock
+/// function's data, valid for the whole blocking call.
+unsafe extern "C" fn stop_call(pointer: *mut c_void) {
+    let token = unsafe { &*(pointer as *const Cancel) };
+    token.cancel();
+}
+
+/// Run `body` on this Ruby thread with the VM lock released, armed so an
+/// interrupt reaches the engine: any `Thread#raise`, Ctrl-C, or kill
+/// fires `token` through the unblock function, the crossing returns its
+/// cancelled error, and the pending exception re-raises when the call
+/// returns. The region between the two calls touches no Ruby object.
+fn without_gvl<A, R>(
+    job: A,
+    token: Cancel,
+    body: unsafe extern "C" fn(*mut c_void) -> *mut c_void,
+) -> R {
     let boxed = Box::into_raw(Box::new(job)) as *mut c_void;
+    let armed = Box::into_raw(Box::new(token)) as *mut c_void;
     let answer = unsafe {
-        rb_sys::rb_thread_call_without_gvl(Some(body), boxed, None, std::ptr::null_mut())
+        rb_sys::rb_thread_call_without_gvl(Some(body), boxed, Some(stop_call), armed)
     };
+    unsafe { drop(Box::from_raw(armed as *mut Cancel)) };
     unsafe { *Box::from_raw(answer as *mut R) }
 }
 
@@ -140,10 +175,10 @@ enum Single {
 
 /// What a single-evidence crossing carries in and out.
 struct SingleJob {
-    engine: *const BlockingEngine,
+    engine: Arc<dyn ContractEngine>,
     question: Question,
     evidence: String,
-    token: Option<Arc<Cancel>>,
+    token: Cancel,
     deadline: Option<f64>,
     which: Single,
 }
@@ -151,19 +186,19 @@ struct SingleJob {
 /// What a recognize crossing carries in and out. The spec is parsed by the
 /// contract's one grammar before the VM lock is released.
 struct RecognizeJob {
-    engine: *const BlockingEngine,
+    engine: Arc<dyn ContractEngine>,
     ask: Recognize,
     text: String,
-    token: Option<Arc<Cancel>>,
+    token: Cancel,
     deadline: Option<f64>,
 }
 
 /// What a relate crossing carries in and out: every record at once.
 struct RelateJob {
-    engine: *const BlockingEngine,
+    engine: Arc<dyn ContractEngine>,
     ask: Relate,
     records: Vec<String>,
-    token: Option<Arc<Cancel>>,
+    token: Cancel,
     deadline: Option<f64>,
 }
 
@@ -177,24 +212,30 @@ enum SingleOut {
 
 unsafe extern "C" fn single_body(pointer: *mut c_void) -> *mut c_void {
     let job = unsafe { *Box::from_raw(pointer as *mut SingleJob) };
-    let engine = unsafe { &*job.engine };
-    let options = options_for(job.token.as_deref(), job.deadline);
-    let answer: Crossing<SingleOut> = guarded(|| match job.which {
-        Single::Decide => engine
-            .decide_opts(&job.question, &job.evidence, options)
-            .map(SingleOut::Answer),
-        Single::Choose => engine
-            .choose_opts(&job.question, &job.evidence, options)
-            .map(SingleOut::Choice),
-        Single::Score => engine
-            .score_opts(&job.question, &job.evidence, options)
-            .map(SingleOut::Score),
-        Single::Tag => engine
-            .tag_opts(&job.question, &job.evidence, options)
-            .map(SingleOut::Tags),
-        Single::Details => engine
-            .details_opts(&job.question, &job.evidence, options)
-            .map(SingleOut::Details),
+    let answer: Crossing<SingleOut> = guarded(|| {
+        let options = options_for(&job.token, job.deadline)?;
+        match job.which {
+            Single::Decide => job
+                .engine
+                .decide_opts(&job.question, &job.evidence, options)
+                .map(SingleOut::Answer),
+            Single::Choose => job
+                .engine
+                .choose_opts(&job.question, &job.evidence, options)
+                .map(SingleOut::Choice),
+            Single::Score => job
+                .engine
+                .score_opts(&job.question, &job.evidence, options)
+                .map(SingleOut::Score),
+            Single::Tag => job
+                .engine
+                .tag_opts(&job.question, &job.evidence, options)
+                .map(SingleOut::Tags),
+            Single::Details => job
+                .engine
+                .details_opts(&job.question, &job.evidence, options)
+                .map(SingleOut::Details),
+        }
     });
     Box::into_raw(Box::new(answer)) as *mut c_void
 }
@@ -202,21 +243,21 @@ unsafe extern "C" fn single_body(pointer: *mut c_void) -> *mut c_void {
 /// One recognize crossing, the VM lock released for its whole width.
 unsafe extern "C" fn recognize_body(pointer: *mut c_void) -> *mut c_void {
     let job = unsafe { *Box::from_raw(pointer as *mut RecognizeJob) };
-    let engine = unsafe { &*job.engine };
-    let options = options_for(job.token.as_deref(), job.deadline);
-    let answer: Crossing<Recognized> =
-        guarded(|| engine.recognize_opts(&job.ask, &job.text, options));
+    let answer: Crossing<Recognized> = guarded(|| {
+        let options = options_for(&job.token, job.deadline)?;
+        job.engine.recognize_opts(&job.ask, &job.text, options)
+    });
     Box::into_raw(Box::new(answer)) as *mut c_void
 }
 
 /// One relate crossing: every record at once, the limit checked inside.
 unsafe extern "C" fn relate_body(pointer: *mut c_void) -> *mut c_void {
     let job = unsafe { *Box::from_raw(pointer as *mut RelateJob) };
-    let engine = unsafe { &*job.engine };
-    let options = options_for(job.token.as_deref(), job.deadline);
     let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
-    let answer: Crossing<Vec<Edge>> =
-        guarded(|| relate_checked(engine, &job.ask, &records, options));
+    let answer: Crossing<Vec<Edge>> = guarded(|| {
+        let options = options_for(&job.token, job.deadline)?;
+        relate_checked(job.engine.as_ref(), &job.ask, &records, options)
+    });
     Box::into_raw(Box::new(answer)) as *mut c_void
 }
 
@@ -230,10 +271,10 @@ enum Bulk {
 
 /// What a many-record crossing carries in and out.
 struct BulkJob {
-    engine: *const BlockingEngine,
+    engine: Arc<dyn ContractEngine>,
     question: Question,
     records: Vec<String>,
-    token: Option<Arc<Cancel>>,
+    token: Cancel,
     deadline: Option<f64>,
     which: Bulk,
     tick: Option<Value>,
@@ -243,7 +284,7 @@ struct BulkJob {
 struct BulkTick {
     tick: Value,
     raised: Option<Error>,
-    token: Option<Arc<Cancel>>,
+    token: Cancel,
 }
 
 impl BulkTick {
@@ -257,9 +298,7 @@ unsafe extern "C" fn bulk_tick_body(pointer: *mut c_void) -> *mut c_void {
     let state = unsafe { &mut *(pointer as *mut BulkTick) };
     let outcome: Result<Value, Error> = state.tick.funcall("call", ());
     if let Err(raised) = outcome {
-        if let Some(token) = state.token.clone() {
-            token.cancel();
-        }
+        state.token.cancel();
         state.raised = Some(raised);
     }
     std::ptr::null_mut()
@@ -273,9 +312,7 @@ enum BulkOut {
 }
 
 unsafe extern "C" fn bulk_body(pointer: *mut c_void) -> *mut c_void {
-    let mut job = unsafe { *Box::from_raw(pointer as *mut BulkJob) };
-    let engine = unsafe { &*job.engine };
-    let options = options_for(job.token.as_deref(), job.deadline);
+    let job = unsafe { *Box::from_raw(pointer as *mut BulkJob) };
     let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
     let mut tick_state: Option<BulkTick> = job.tick.map(|tick| BulkTick {
         tick,
@@ -283,22 +320,27 @@ unsafe extern "C" fn bulk_body(pointer: *mut c_void) -> *mut c_void {
         token: job.token.clone(),
     });
     let answer: Crossing<BulkOut> = guarded(|| {
+        let options = options_for(&job.token, job.deadline)?;
         let mut closure = || {
             if let Some(state) = tick_state.as_mut() {
                 state.poll();
             }
         };
         match job.which {
-            Bulk::DecideMany => engine
+            Bulk::DecideMany => job
+                .engine
                 .decide_many_opts(&job.question, &records, options, Some(&mut closure))
                 .map(BulkOut::Judgments),
-            Bulk::DecideManyWithProbabilities => engine
+            Bulk::DecideManyWithProbabilities => job
+                .engine
                 .decide_many_opts(&job.question, &records, options, Some(&mut closure))
                 .map(BulkOut::JudgedPairs),
-            Bulk::Filter => engine
+            Bulk::Filter => job
+                .engine
                 .filter_opts(&job.question, &records, options, Some(&mut closure))
                 .map(BulkOut::Kept),
-            Bulk::Rank => engine
+            Bulk::Rank => job
+                .engine
                 .rank_opts(&job.question, &records, options, Some(&mut closure))
                 .map(BulkOut::Ranked),
         }
@@ -309,18 +351,16 @@ unsafe extern "C" fn bulk_body(pointer: *mut c_void) -> *mut c_void {
 
 /// The annotate crossing, which takes a set instead of one question.
 struct AnnotateJob {
-    engine: *const BlockingEngine,
+    engine: Arc<dyn ContractEngine>,
     set: QuestionSet,
     records: Vec<String>,
-    token: Option<Arc<Cancel>>,
+    token: Cancel,
     deadline: Option<f64>,
     tick: Option<Value>,
 }
 
 unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
-    let mut job = unsafe { *Box::from_raw(pointer as *mut AnnotateJob) };
-    let engine = unsafe { &*job.engine };
-    let options = options_for(job.token.as_deref(), job.deadline);
+    let job = unsafe { *Box::from_raw(pointer as *mut AnnotateJob) };
     let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
     let mut tick_state: Option<BulkTick> = job.tick.map(|tick| BulkTick {
         tick,
@@ -328,12 +368,13 @@ unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
         token: job.token.clone(),
     });
     let answer: Crossing<Vec<Vec<(String, Annotated)>>> = guarded(|| {
+        let options = options_for(&job.token, job.deadline)?;
         let mut closure = || {
             if let Some(state) = tick_state.as_mut() {
                 state.poll();
             }
         };
-        engine.annotate_opts(&job.set, &records, options, Some(&mut closure))
+        job.engine.annotate_opts(&job.set, &records, options, Some(&mut closure))
     });
     let raised = tick_state.and_then(|state| state.raised);
     Box::into_raw(Box::new((answer, raised))) as *mut c_void
@@ -341,29 +382,32 @@ unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
 
 /// The find crossing, which takes units and no tick.
 struct FindJob {
-    engine: *const BlockingEngine,
+    engine: Arc<dyn ContractEngine>,
     question: Question,
     units: Vec<String>,
-    token: Option<Arc<Cancel>>,
+    token: Cancel,
     deadline: Option<f64>,
 }
 
 unsafe extern "C" fn find_body(pointer: *mut c_void) -> *mut c_void {
     let job = unsafe { *Box::from_raw(pointer as *mut FindJob) };
-    let engine = unsafe { &*job.engine };
-    let options = options_for(job.token.as_deref(), job.deadline);
     let units: Vec<&str> = job.units.iter().map(String::as_str).collect();
-    let answer: Crossing<Found> = guarded(|| engine.find_opts(&job.question, &units, options));
+    let answer: Crossing<Found> = guarded(|| {
+        let options = options_for(&job.token, job.deadline)?;
+        job.engine.find_opts(&job.question, &units, options)
+    });
     Box::into_raw(Box::new(answer)) as *mut c_void
 }
 
 /// Build the call options the wrapper's two keywords control.
-fn options_for(token: Option<&Cancel>, deadline: Option<f64>) -> Options<'_> {
-    let mut options = Options::new().maybe_cancel(token);
-    if let Some(seconds) = deadline {
-        options = options.deadline_in(Duration::from_secs_f64(seconds.max(0.0)));
-    }
-    options
+/// Build the call options the wrapper's two keywords control: the call's
+/// own token, always armed so an interrupt has something to fire, and the
+/// caller's deadline through the contract's one checked conversion. A NaN,
+/// a negative other than the `NO_DEADLINE` sentinel, or an oversized
+/// budget is a usage error instead of the panic the unchecked conversion
+/// raised inside the host process.
+fn options_for(token: &Cancel, deadline: Option<f64>) -> Result<Options<'_>, ContractError> {
+    Options::new().cancel(token).with_deadline_seconds(deadline)
 }
 
 /// Yes is `true`, no is `false`, unsure is `nil`.
@@ -384,7 +428,7 @@ impl QuestionValue {
 }
 
 /// A nil-tolerant read of the optional cancel token.
-fn optional_cancel(value: Value) -> Result<Option<Arc<Cancel>>, Error> {
+fn optional_cancel(value: Value) -> Result<Option<Cancel>, Error> {
     if value.is_nil() {
         return Ok(None);
     }
@@ -392,6 +436,12 @@ fn optional_cancel(value: Value) -> Result<Option<Arc<Cancel>>, Error> {
         Ok(held) => Ok(Some(held.token.clone())),
         Err(_) => Err(Error::new(exception::arg_error(), "cancel is not a ThinkThen::Cancel")),
     }
+}
+
+/// The token a crossing carries: the caller's, or a fresh one, because
+/// every call is armed so `Thread#raise`, Ctrl-C, and kill can stop it.
+fn call_token(cancel: Value) -> Result<Cancel, Error> {
+    Ok(optional_cancel(cancel)?.unwrap_or_default())
 }
 
 /// A nil-tolerant read of the optional deadline in seconds.
@@ -418,8 +468,13 @@ fn tick_from(rb_self: Value, tick: Value) -> Result<Value, Error> {
 }
 
 impl EngineValue {
-    fn new_engine() -> Self {
-        Self { engine: BlockingEngine::from_env() }
+    fn new_engine() -> Result<Self, Error> {
+        let connector = StandinConnector;
+        let engine = guarded(|| {
+            ContractConnector::connect(&connector, &EngineConfig::from_env())
+        })
+        .map_err(map_error)?;
+        Ok(Self { engine })
     }
 
     /// Any single-evidence verb, one crossing with the lock released.
@@ -431,15 +486,16 @@ impl EngineValue {
         cancel: Value,
         deadline: Value,
     ) -> Result<Value, Error> {
+        let token = call_token(cancel)?;
         let job = SingleJob {
-            engine: &self.engine,
+            engine: Arc::clone(&self.engine),
             question: question.question.clone(),
             evidence,
-            token: optional_cancel(cancel)?,
+            token: token.clone(),
             deadline: optional_deadline(deadline),
             which,
         };
-        let answer: Crossing<SingleOut> = without_gvl(job, single_body);
+        let answer: Crossing<SingleOut> = without_gvl(job, token, single_body);
         let answer = answer.map_err(map_error)?;
         let ruby = magnus::Ruby::get().unwrap();
         let value = match answer {
@@ -477,16 +533,18 @@ impl EngineValue {
         deadline: Value,
         tick: Value,
     ) -> Result<Value, Error> {
+        let token = call_token(cancel)?;
         let job = BulkJob {
-            engine: &self.engine,
+            engine: Arc::clone(&self.engine),
             question: question.question.clone(),
             records,
-            token: optional_cancel(cancel)?,
+            token: token.clone(),
             deadline: optional_deadline(deadline),
             which,
             tick: optional_tick(tick),
         };
-        let (answer, raised): (Crossing<BulkOut>, Option<Error>) = without_gvl(job, bulk_body);
+        let (answer, raised): (Crossing<BulkOut>, Option<Error>) =
+            without_gvl(job, token, bulk_body);
         if let Some(raised) = raised {
             return Err(raised);
         }
@@ -552,14 +610,15 @@ impl EngineValue {
         deadline: Value,
     ) -> Result<Value, Error> {
         let ask = Recognize::from_json(&spec).map_err(map_error)?;
+        let token = call_token(cancel)?;
         let job = RecognizeJob {
-            engine: &self.engine,
+            engine: Arc::clone(&self.engine),
             ask,
             text,
-            token: optional_cancel(cancel)?,
+            token: token.clone(),
             deadline: optional_deadline(deadline),
         };
-        let answer: Crossing<Recognized> = without_gvl(job, recognize_body);
+        let answer: Crossing<Recognized> = without_gvl(job, token, recognize_body);
         let answer = answer.map_err(map_error)?;
         recognized_value(&answer)
     }
@@ -575,14 +634,15 @@ impl EngineValue {
         deadline: Value,
     ) -> Result<Value, Error> {
         let ask = Relate::from_json(&spec).map_err(map_error)?;
+        let token = call_token(cancel)?;
         let job = RelateJob {
-            engine: &self.engine,
+            engine: Arc::clone(&self.engine),
             ask,
             records,
-            token: optional_cancel(cancel)?,
+            token: token.clone(),
             deadline: optional_deadline(deadline),
         };
-        let answer: Crossing<Vec<Edge>> = without_gvl(job, relate_body);
+        let answer: Crossing<Vec<Edge>> = without_gvl(job, token, relate_body);
         let answer = answer.map_err(map_error)?;
         edges_value(&answer)
     }
@@ -693,14 +753,15 @@ impl EngineValue {
         cancel: Value,
         deadline: Value,
     ) -> Result<RArray, Error> {
+        let token = call_token(cancel)?;
         let job = FindJob {
-            engine: &self.engine,
+            engine: Arc::clone(&self.engine),
             question: question.question.clone(),
             units,
-            token: optional_cancel(cancel)?,
+            token: token.clone(),
             deadline: optional_deadline(deadline),
         };
-        let found: Crossing<Found> = without_gvl(job, find_body);
+        let found: Crossing<Found> = without_gvl(job, token, find_body);
         let found = found.map_err(map_error)?;
         let pair = RArray::with_capacity(2);
         match found.index {
@@ -720,16 +781,17 @@ impl EngineValue {
         tick: Value,
     ) -> Result<RArray, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
+        let token = call_token(cancel)?;
         let job = AnnotateJob {
-            engine: &engine.engine,
+            engine: Arc::clone(&engine.engine),
             set: set.set.clone(),
             records,
-            token: optional_cancel(cancel)?,
+            token: token.clone(),
             deadline: optional_deadline(deadline),
             tick: optional_tick(tick_from(rb_self, tick)?),
         };
         let (answer, raised): (Crossing<Vec<Vec<(String, Annotated)>>>, Option<Error>) =
-            without_gvl(job, annotate_body);
+            without_gvl(job, token, annotate_body);
         if let Some(raised) = raised {
             return Err(raised);
         }
@@ -749,7 +811,7 @@ impl EngineValue {
     }
 
     fn usage(&self) -> Result<RHash, Error> {
-        let Usage { requests, cache_answers, tokens } = ContractEngine::usage(&self.engine);
+        let Usage { requests, cache_answers, tokens } = self.engine.usage();
         let ruby = magnus::Ruby::get().unwrap();
         let hash = RHash::new();
         hash.aset("requests", requests).map_err(|error| error)?;
@@ -913,7 +975,7 @@ fn parse_set(json: String) -> Result<SetValue, Error> {
 
 /// Build a fresh cancel token.
 fn cancel_new() -> CancelValue {
-    CancelValue { token: Arc::new(Cancel::new()) }
+    CancelValue { token: Cancel::new() }
 }
 
 #[magnus::init(name = "thinkthen")]
@@ -992,5 +1054,31 @@ mod tests {
             }
             Ok(()) => panic!("the panic must not read as a value"),
         }
+    }
+
+    #[test]
+    fn the_unblock_function_fires_the_calls_own_token() {
+        let token = Cancel::new();
+        let armed = Box::into_raw(Box::new(token.clone())) as *mut c_void;
+        unsafe { stop_call(armed) };
+        let fired = unsafe { Box::from_raw(armed as *mut Cancel) };
+        assert!(fired.is_cancelled(), "the token the engine holds must be the one fired");
+        assert!(token.is_cancelled());
+    }
+
+    #[test]
+    fn a_hostile_budget_is_a_usage_error_not_a_panic() {
+        let token = Cancel::new();
+        for held in [f64::NAN, f64::INFINITY, -5.0, 1e300] {
+            let failure = match options_for(&token, Some(held)) {
+                Err(error) => error,
+                Ok(_) => panic!("the budget {held} must be refused"),
+            };
+            assert_eq!(failure.kind, ErrorKind::Usage, "the budget {held} is refused as usage");
+        }
+        let none = options_for(&token, Some(-1.0)).expect("the sentinel means no deadline");
+        assert!(!none.passed());
+        let spent = options_for(&token, Some(0.0)).expect("zero is spent, not refused");
+        assert!(spent.passed());
     }
 }

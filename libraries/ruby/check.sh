@@ -33,6 +33,12 @@ docker_run 'cargo test --quiet --lib'
 echo "== ruby surface: surface tests, null backend"
 docker_run 'ruby -I lib -I tests tests/test_surface.rb'
 
+echo "== ruby surface: the deadline's bounds, checked at the contract's door"
+docker_run 'ruby -I lib tests/test_deadline_bounds.rb'
+
+echo "== ruby surface: a plain call hears Thread#raise (no tick, no token)"
+docker_run 'ruby -I lib tests/test_interrupt_fast.rb'
+
 echo "== ruby surface: fast-backend cancel, the poll-bug shape"
 docker_run 'ruby -I lib tests/test_cancel_fast.rb'
 docker_run 'ruby -I lib tests/test_fork.rb'
@@ -56,6 +62,15 @@ if [ "$wire" = yes ]; then
     -e ENGINE_WIDTH=8 \
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_cancel.rb'
+  echo "== ruby surface: interrupt proof on a delayed stub, no tick and no token"
+  docker run --rm --network host \
+    -v "$root":/src \
+    -v "$HOME/.rustup":/root/.rustup:ro \
+    -w /src/libraries/ruby \
+    -e ENGINE_BASE_URL="$stub_url" \
+    -e ENGINE_WIDTH=8 \
+    "$image" \
+    bash -eu -c 'ruby -I lib tests/test_interrupt_wire.rb'
   echo "== ruby surface: probabilities cost no extra sends (punch-list item 1)"
   docker run --rm --network host \
     -v "$root":/src \
