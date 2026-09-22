@@ -192,3 +192,17 @@ test result: ok. 1 passed
 
 **Full check, `./check.sh`:** every suite green including the new two;
 the wire suite skips with no stub on 8213; exit 0.
+
+## 2026-09-22 — the settle wave on the Rust surface: the Series door
+
+Ian approved the Polars decisions ("approve the polars decisions. i want all details settled across all languages"), and the plan's shape is the Series door first. It is in, behind a feature flag, with its tests and docs.
+
+**The feature.** `polars = ["dep:polars"]`, off by default: the core surface keeps building with the pinned 1.93.1 toolchain and no Polars. With the feature on the crate needs the 1.95 toolchain Polars requires (experiment 228's recorded cost: `sysinfo 0.39` refuses 1.93). `check.sh` runs the feature step with `RUSTUP_TOOLCHAIN=1.95` and `--test-threads=1` (the request-count equality reads the process-wide usage counter, so the two measurements must not race a sibling test).
+
+**The methods** (`src/polars.rs`): `decide_column` (the whole column through the batch spine at the process gate, a boolean column whose nulls are "not sure"), `choose_column`, `score_column`, `tag_column` (text/number/list columns; the stand-in's contract carries no bulk form for these three, so they run one call a record — recorded, not hidden; `decide` is the spine), and `annotate_frame` (the caller's columns unchanged, one new column a question in the set's name order; a failed member widens that column to text carrying the ruled marker, the same widening the other frame doors use). A null row refuses naming the row; a non-text column refuses naming its dtype.
+
+**Zero copy and the equality expectation.** Each row is a `&str` read out of the producer's own UTF-8 buffer — no copy, no per-row object. Docs state the equality: a column crosses at the same width as a slice — one crossing, 32 in flight, answers in input order, same request count. The tests prove answers, order, and the request-count equality against the slice form; experiment 213 measured the width itself (9.658 s vs 9.665 s, both 32 in flight).
+
+**Green by command.** `./check.sh` exit 0: the null suite, the fast-deadline test, the examples, the new feature step (`8 passed`), the conformance slice, and the wire suite skipped without the stub. `cargo check` and the full default suite stay green on 1.93.1 with the feature off.
+
+**Noted, not hidden.** The two new files are rustfmt-clean; the folder's pre-existing fmt diffs (other files) wait for the merge ticket, per `MERGE-NOTE.md` item 4, which already assigns fmt/clippy over the new folders to the merge.

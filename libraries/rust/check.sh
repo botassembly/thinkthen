@@ -15,6 +15,11 @@ ENGINE_NULL=1 cargo test --quiet --test deadline_fast
 echo "== rust surface: the function examples"
 ENGINE_NULL=1 cargo test --quiet --test examples
 
+echo "== rust surface: the Polars Series door (the 1.95 toolchain Polars needs)"
+# Serial test threads: the request-count equality reads the process-wide
+# usage counter, so the two measurements must not race a sibling test.
+ENGINE_NULL=1 RUSTUP_TOOLCHAIN=1.95 cargo test --quiet --features polars --test polars_door -- --test-threads=1
+
 echo "== rust surface: conformance slice"
 ENGINE_NULL=1 cargo run --quiet --example conformance
 

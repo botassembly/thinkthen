@@ -32,6 +32,10 @@ pub use thinkthen_contract::{
 };
 
 use thinkthen_contract::Engine as ContractEngine;
+
+/// The Series door: Polars columns and frames, behind the `polars` feature.
+#[cfg(feature = "polars")]
+pub mod polars;
 use thinkthen_standin::BlockingEngine;
 
 /// The engine value every call goes through.
