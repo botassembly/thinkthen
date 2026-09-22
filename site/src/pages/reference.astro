@@ -17,7 +17,7 @@ const GLOBAL = [
   ['--cache DIR', 'a folder', 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', 'off'],
   ['--no-cache', 'none', 'Turns off the platform cache for one run, both lookup and writing. It never turns off usage counting.', 'the cache is on'],
   ['--profile FILE', 'a JSON file', 'Applies local byte and question limits before a request leaves, and names the calibration profile in use. It selects neither address nor model.', 'none'],
-  ['--input FILE', 'a path', 'Reads the evidence from a file instead of standard input. It names a path, never a framing.', 'standard input'],
+  ['--input FILE', 'a path', 'Reads the evidence from a file instead of standard input. It names a path. It never names a framing.', 'standard input'],
 ];
 
 const FRAMING = [
@@ -100,7 +100,7 @@ const COUNTS = [
 ---
 <Base title="Reference" description="Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.">
   <h1>Reference</h1>
-  <p class="lede">Everything the command takes and everything it prints, from the specification. This is the page to read before writing a pipeline, and the page to hand an agent.</p>
+  <p class="lede">Everything the command takes and everything it prints, from the specification. Read this page before you write a pipeline, and hand it to an agent.</p>
   <div class="note">Where this page and the tool disagree, the tool is behind. The specification is the contract and the code follows it.</div>
 
   <h2>The ten functions</h2>
@@ -117,7 +117,7 @@ const COUNTS = [
   </table>
 
   <h2>Arguments and thresholds</h2>
-  <p>A threshold is your bar on a probability. It is an input, never an output, and it never changes the probability. A cut is one number. A band is two, written <code>LOW:HIGH</code>.</p>
+  <p>A threshold is your bar on a probability. You set it. The tool never reports one, and a threshold never changes the probability. A cut is one number. A band is two, written <code>LOW:HIGH</code>.</p>
   <table>
     <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
     {COUNTS.map(([fn, args, rule, dflt]) => (
@@ -173,7 +173,7 @@ const COUNTS = [
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
   <h2>Limits</h2>
-  <p>One request carries at most 64k tokens. The evidence and the longest question together must fit in 32k tokens. Both numbers are the model vendor's, from its published model card, and they are the backend's limits rather than the tool's.</p>
+  <p>One request carries at most 64k tokens. The evidence and the longest question together must fit in 32k tokens. Both numbers are the model vendor's, from its published model card. They belong to the backend and not to the tool.</p>
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together, so a long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
@@ -224,7 +224,7 @@ const COUNTS = [
       <tr><td><span class={`exit ${outcome}`}>{code}</span></td><td>{what}</td></tr>
     ))}
   </table>
-  <p>Codes 7 and 8 are reserved and unused. In record mode the exit code reports the run, not any one record's answer, so a completed run exits 0 unless <code>annotate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, or 6.</p>
+  <p>Codes 7 and 8 are reserved and unused. In record mode the exit code reports the run and never one record's answer. A completed run exits 0 unless <code>annotate</code> exits 6. A valid answer on standard output can sit beside exit 1, 3, or 6.</p>
 
   <h2>The environment</h2>
   <table>
