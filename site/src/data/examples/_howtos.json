@@ -2,27 +2,13 @@
   "triage-a-support-inbox": {
     "status": "run",
     "source": "deck usecases/run.sh and usecases/out/",
-    "input": "Charged twice. Please refund today.\nJust saying thanks, no reply needed.\nOrder never arrived. Week three now.\nDo you ship to Canada?",
+    "input": "Please fix the wrong amount on my invoice.\nJust saying thanks, no reply needed.\nOrder never arrived. Week three now.\nDo you ship to Canada?",
     "inputFile": "inbox.txt",
     "steps": [
       {
         "name": "01-inbox",
         "command": "thinkthen filter 'Does this need a reply?' --lines < inbox.txt \\\n    | thinkthen annotate triage.json --lines --details \\\n    | jq -r '\"\\(.value.kind) \\(.value.urgency)  \\(.input)\"'",
-        "output": "billing 1.87  Charged twice. Please refund today.\ndelivery 1.45  Order never arrived. Week three now.\nquestion 0.01  Do you ship to Canada?",
-        "exit": 0
-      }
-    ]
-  },
-  "find-the-clause-then-check-it": {
-    "status": "run",
-    "source": "deck usecases/run.sh and usecases/out/",
-    "input": "Either party may end this for cause.\nRenewal notice is due 45 days ahead.\nFees follow the published index.\nOhio law governs this agreement.",
-    "inputFile": "terms.txt",
-    "steps": [
-      {
-        "name": "02-clause",
-        "command": "thinkthen find 'Which line gives the notice period?' < terms.txt \\\n    | thinkthen decide 'Is this notice longer than 30 days?' --lines --details \\\n    | jq -r '\"\\(.input)  \\(.value)\"'",
-        "output": "Renewal notice is due 45 days ahead.  true",
+        "output": "billing 0.58  Please fix the wrong amount on my invoice.\ndelivery 1.45  Order never arrived. Week three now.\nquestion 0.01  Do you ship to Canada?",
         "exit": 0
       }
     ]
@@ -30,13 +16,13 @@
   "screen-studies-for-a-review": {
     "status": "run",
     "source": "deck usecases/run.sh and usecases/out/",
-    "input": "Survey of 900 remote workers on output.\nOpinion essay on open-plan offices.\nInterviews with 12 managers on hybrid teams.\nPlan for a future survey of remote staff.",
+    "input": "Survey of 900 remote workers: output rose 4%.\nOpinion essay on open-plan offices.\nInterviews with 12 managers on hybrid teams.\nPilot of remote work at one small firm, with early numbers.",
     "inputFile": "studies.txt",
     "steps": [
       {
         "name": "03-studies",
         "command": "thinkthen decide 'Does this report measured results on remote work?' \\\n      --lines --threshold 0.1:0.9 --details < studies.txt \\\n    | jq -r 'select(.value == null) | .input' \\\n    | thinkthen rank 'Is this close to a study with measured results?' --lines",
-        "output": "Interviews with 12 managers on hybrid teams.\nPlan for a future survey of remote staff.",
+        "output": "Pilot of remote work at one small firm, with early numbers.\nInterviews with 12 managers on hybrid teams.",
         "exit": 0
       }
     ]
@@ -66,12 +52,6 @@
         "command": "thinkthen decide 'Do these two describe the same problem?' --lines \\\n      --details < pairs.txt | jq -r 'select(.value) | .input'",
         "output": "Card charges fail at checkout. / INC-1 payment gateway returns 500\nExport finished hours late again. / INC-2 nightly export queue backed up",
         "exit": 0
-      },
-      {
-        "name": "05-team",
-        "command": "thinkthen choose 'Which team owns this?' billing platform \\\n      --lines < tickets.txt",
-        "output": "\"billing\"\n\"platform\"",
-        "exit": 0
       }
     ]
   },
@@ -92,13 +72,13 @@
   "rank-the-inbound-leads": {
     "status": "run",
     "source": "deck usecases/run.sh and usecases/out/",
-    "input": "We need 200 seats by next quarter.\nDo you offer a student discount?\nPlease remove me from this list.\nOur team of six wants to start now.",
+    "input": "We need 200 seats next quarter. Please send a quote.\nPlease remove me from this list.\nOur team of six wants to buy today. How do we pay?\nLoved your talk at the conference last week.",
     "inputFile": "leads.txt",
     "steps": [
       {
         "name": "07-leads",
-        "command": "thinkthen filter 'Is this a buying inquiry?' --lines < leads.txt \\\n    | thinkthen rank 'Is this buyer ready now?' --lines --top 2 \\\n    | thinkthen choose 'Which team should take this?' \\\n        enterprise smb --lines --details \\\n    | jq -r '\"\\(.value)  \\(.input)\"'",
-        "output": "enterprise  We need 200 seats by next quarter.\nsmb  Do you offer a student discount?",
+        "command": "thinkthen filter 'Is this a buying inquiry?' --lines < leads.txt \\\n    | thinkthen rank 'Is this buyer ready to pay now?' --lines \\\n    | thinkthen choose 'Which team should take this?' enterprise smb --lines \\\n    | jq -r '\"\\(.value)  \\(.input)\"'",
+        "output": "smb  Our team of six wants to buy today. How do we pay?\nenterprise  We need 200 seats next quarter. Please send a quote.",
         "exit": 0
       }
     ]
@@ -106,7 +86,7 @@
   "screen-a-post-before-it-goes-up": {
     "status": "run",
     "source": "deck usecases/run.sh and usecases/out/",
-    "input": "This take is lazy and the author should quit.",
+    "input": "The author is an idiot and this take is lazy.",
     "inputFile": "post.txt",
     "steps": [
       {
@@ -140,45 +120,25 @@
         "command": "thinkthen find \"Which rule covers: $expense\" < policy.txt \\\n    | thinkthen decide \"Does this rule allow: $expense\" --lines --details \\\n    | jq -r '\"\\(.input)  \\(.value)\"'",
         "output": "Meals with a client: up to $75 a head.  true",
         "exit": 0
-      },
-      {
-        "name": "09-category",
-        "command": "echo \"$expense\" | thinkthen choose 'Which category is this expense?' \\\n      meals travel software",
-        "output": "\"meals\"",
-        "exit": 0
-      }
-    ]
-  },
-  "build-a-morning-reading-list": {
-    "status": "run",
-    "source": "deck usecases/run.sh and usecases/out/",
-    "input": "Postgres 18 ships a faster vacuum\nTen habits of happy developers\nHow DuckDB reads Parquet so fast\nA new font for your terminal",
-    "inputFile": "feed.txt",
-    "steps": [
-      {
-        "name": "10-reading",
-        "command": "thinkthen filter 'Is this about databases?' --lines < feed.txt \\\n    | thinkthen rank 'Would an engineer read this first?' --lines --top 2",
-        "output": "How DuckDB reads Parquet so fast\nPostgres 18 ships a faster vacuum",
-        "exit": 0
       }
     ]
   },
   "split-a-scanned-packet-into-documents": {
     "status": "run",
     "source": "deck usecases/run.sh and usecases/out/",
-    "input": "Invoice 7 for Northwind. Amount due $1,200. Page 1 of 2.\nInvoice 7 continued. Line items and totals. Page 2 of 2.\nInvoice 8 for Contoso. Amount due $310. Page 1 of 1.\nNotice to all customers: payment terms change on May 1.",
+    "input": "Invoice 7 for Northwind. Page 1 of 2.\nInvoice 7 for Northwind. Page 2 of 2. Total due $1,200.\nInvoice 8 for Contoso. Page 1 of 1. Total due $310.\nNotice to all customers. Page 1 of 1. New terms from May 1.",
     "inputFile": "pages.txt",
     "steps": [
       {
         "name": "11-kinds",
-        "command": "thinkthen choose 'What kind of page is this?' invoice notice other \\\n      --lines < pages.txt | paste -sd' ' -",
-        "output": "\"invoice\" \"invoice\" \"invoice\" \"notice\"",
+        "command": "thinkthen choose 'What kind of page is this?' invoice notice other \\\n      --lines --raw < pages.txt | paste -sd' ' -",
+        "output": "invoice invoice invoice notice",
         "exit": 0
       },
       {
         "name": "11-gaps",
-        "command": "awk 'NR>1 {print p\" | \"$0} {p=$0}' pages.txt \\\n    | thinkthen decide 'Does a new document start after the | mark?' \\\n        --lines | paste -sd' ' -",
-        "output": "false true false",
+        "command": "awk 'NR>1 {print p\" | \"$0} {p=$0}' pages.txt \\\n    | thinkthen decide 'Are the two sides from different documents?' \\\n        --lines | jq -r .value | paste -sd' ' -",
+        "output": "false true true",
         "exit": 0
       }
     ]

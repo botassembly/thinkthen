@@ -27,6 +27,20 @@ export function outcomeOf(exit) {
   return 'broken';
 }
 
+// The backend and cache options every shipped function takes, from
+// specification/backends.md and specification/recording.md.
+const BACKEND_OPTIONS = [
+  ['--model NAME', 'The model the request carries. Name a version to pin a run. The default is jev-latest.'],
+  ['--url BASE', 'The backend base address. It outranks THINKTHEN_BASE_URL.'],
+  ['--timeout SECONDS', 'How long one attempt may take. The default is 30.'],
+  ['--max-retries N', 'Retries after the first attempt. The default is 2.'],
+  ['--record DIR', 'Calls the backend and saves each exchange in DIR.'],
+  ['--replay DIR', 'Answers from DIR alone, with no key and no network.'],
+  ['--cache DIR', 'Answers from DIR when it can and saves new exchanges there.'],
+  ['--no-cache', 'Turns off the saved answers for one run.'],
+  ['--profile FILE', 'Applies local backend limits and names the calibration profile in use.'],
+];
+
 const COMMON_OPTIONS = [
   ['--details', 'Prints the whole result in place of the bare value: the probabilities, the question, and the run.'],
   ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
@@ -34,6 +48,7 @@ const COMMON_OPTIONS = [
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
   ['--jobs N', 'How many requests run at once, from 1 to 32. The default is 4. It works on a stream of records. annotate also takes it on one document.'],
+  ...BACKEND_OPTIONS,
 ];
 
 // The failure codes every function shares, from specification/channels.md.
@@ -68,7 +83,7 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'The probability landed inside the band. The tool prints null and exits 3.',
-    howtos: ['find-the-clause-then-check-it', 'screen-studies-for-a-review', 'join-two-tables-by-meaning', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
+    howtos: ['screen-studies-for-a-review', 'join-two-tables-by-meaning', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
   },
   {
     name: 'choose',
@@ -89,7 +104,7 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'No option reached the threshold. The tool prints null and exits 3. choose never exits 1.',
-    howtos: ['join-two-tables-by-meaning', 'rank-the-inbound-leads', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
+    howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
   },
   {
     name: 'tag',
@@ -139,7 +154,7 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'No record sets the exit code. A record under the bar is dropped.',
-    howtos: ['triage-a-support-inbox', 'rank-the-inbound-leads', 'build-a-morning-reading-list'],
+    howtos: ['triage-a-support-inbox', 'rank-the-inbound-leads'],
   },
   {
     name: 'rank',
@@ -157,7 +172,7 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'rank takes no threshold, so nothing is dropped and nothing is not sure. The sort happens on this machine.',
-    howtos: ['screen-studies-for-a-review', 'rank-the-inbound-leads', 'build-a-morning-reading-list'],
+    howtos: ['screen-studies-for-a-review', 'rank-the-inbound-leads'],
   },
   {
     name: 'find',
@@ -174,10 +189,11 @@ export const FUNCTIONS = [
       ['--details', 'Prints the whole result, with a probability for every line.'],
       ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
       ['--dry-run', 'Prints the plan and sends nothing.'],
+      ...BACKEND_OPTIONS,
     ],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
     unsure: 'Without --none, find must pick a line, and it will pick a wrong one. --none is how it says nothing fits. A document past the backend’s token limit is refused, and the command exits 4.',
-    howtos: ['find-the-clause-then-check-it', 'group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
+    howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
   },
   {
     name: 'annotate',
@@ -189,7 +205,6 @@ export const FUNCTIONS = [
     toPerson: true,
     args: 'FILE, the saved question set',
     options: [
-      ['--profile FILE', 'Applies local backend limits and names the calibration profile in use.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], ...COMMON_EXITS.map(([code, what]) => [code, code === 5 ? 'the question set could not be read' : what])],
@@ -423,16 +438,10 @@ export const HOWTOS = [
     see: { '01-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The thank-you note drops out.' },
   },
   {
-    slug: 'find-the-clause-then-check-it', title: 'Check the notice period in a contract', reader: 'for contract and procurement staff',
-    said: 'Pull the notice period out of a contract and check it. `find` picks the line. `decide` answers "Is this notice longer than 30 days?"',
-    functions: ['find', 'decide'], input: 'terms.txt', runs: ['02-clause'],
-    see: { '02-clause': 'The line find pulled prints beside the answer. The notice is 45 days, so decide says true.' },
-  },
-  {
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
     said: 'Sort the clear studies in or out, and hand a person only the unclear ones, best first. `decide` sets them aside. `rank` orders them.',
     functions: ['decide', 'rank'], input: 'studies.txt', runs: ['03-studies'],
-    see: { '03-studies': 'The two unclear studies come back, the closer one first.' },
+    see: { '03-studies': 'The survey with a result and the opinion essay are settled. The pilot with early numbers and the interviews come back for a person, the pilot first.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
@@ -442,14 +451,14 @@ export const HOWTOS = [
   },
   {
     slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
-    said: 'Match each ticket to the incident it describes, even when the words differ. `decide` judges each pair. `choose` picks the team.',
-    functions: ['decide', 'choose'], input: 'tickets.txt', runs: ['05-join', '05-team'],
+    said: 'Match each ticket to the incident it describes, even when the words differ. `decide` judges each pair.',
+    functions: ['decide'], input: 'tickets.txt', runs: ['05-join'],
     also: {
       file: 'incidents.txt',
       text: 'INC-1 payment gateway returns 500\nINC-2 nightly export queue backed up',
       note: '`jq` pairs every ticket with every incident. The first command reads those pairs from `pairs.txt`.',
     },
-    see: { '05-join': 'Each ticket finds its incident.', '05-team': 'Each ticket goes to its team.' },
+    see: { '05-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
   },
   {
     slug: 'group-alerts-into-incidents', title: 'Group alerts into incidents', reader: 'for on-call engineers',
@@ -460,32 +469,26 @@ export const HOWTOS = [
   },
   {
     slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
-    said: 'Drop the noise, put the ready buyers first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
+    said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'], input: 'leads.txt', runs: ['07-leads'],
-    see: { '07-leads': 'Each kept lead prints beside its team. The 200-seat lead goes to enterprise and the student discount question to smb. The team of six fell below the filter mark.' },
+    see: { '07-leads': 'The unsubscribe and the thank-you drop out. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
     said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule, and each rule sets its own threshold.',
     functions: ['decide'], input: 'post.txt', runs: ['08-insult', '08-spam', '08-topic'],
     see: {
-      '08-insult': 'The insult rule holds the post, so decide says true and exits 0.',
+      '08-insult': 'The post calls the author an idiot, so decide says true and exits 0.',
       '08-spam': 'The post is not spam, so decide says false and exits 1.',
       '08-topic': 'The post stays on topic, so decide says false and exits 1.',
     },
   },
   {
     slug: 'check-an-expense-against-the-policy', title: 'Check an expense against the policy', reader: 'for finance staff',
-    said: 'Check an expense against your policy and file it. `find` pulls the rule. `decide` says whether the expense fits. `choose` picks the category.',
-    functions: ['find', 'decide', 'choose'], input: 'policy.txt', runs: ['09-expense', '09-category'],
+    said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
+    functions: ['find', 'decide'], input: 'policy.txt', runs: ['09-expense'],
     given: '`$expense` holds the expense: Client dinner, $60 a head.',
-    see: { '09-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.', '09-category': 'The expense files under meals.' },
-  },
-  {
-    slug: 'build-a-morning-reading-list', title: 'Build a morning reading list', reader: 'for engineers',
-    said: 'Keep the headlines on your topic and put the best one on top. `filter` keeps them. `rank` orders them.',
-    functions: ['filter', 'rank'], input: 'feed.txt', runs: ['10-reading'],
-    see: { '10-reading': 'Two database headlines, the best one on top.' },
+    see: { '09-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
   },
   {
     slug: 'split-a-scanned-packet-into-documents', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
@@ -493,7 +496,7 @@ export const HOWTOS = [
     functions: ['choose', 'decide'], input: 'pages.txt', runs: ['11-kinds', '11-gaps'],
     see: {
       '11-kinds': 'Three invoice pages and one notice.',
-      '11-gaps': 'The true marks where Invoice 8 starts. The gap before the notice came back false.',
+      '11-gaps': 'The two pages of Invoice 7 stay together. A new document starts at Invoice 8 and at the notice.',
     },
   },
 ];

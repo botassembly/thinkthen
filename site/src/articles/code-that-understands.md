@@ -96,25 +96,27 @@ The model answers three kinds of question: yes or no, one of a list, and a place
 You can pipe the record-oriented functions into each other:
 
 ```
-$ cat feed.txt
-Postgres 18 ships a faster vacuum
-Ten habits of happy developers
-How DuckDB reads Parquet so fast
-A new font for your terminal
+$ cat leads.txt
+We need 200 seats next quarter. Please send a quote.
+Please remove me from this list.
+Our team of six wants to buy today. How do we pay?
+Loved your talk at the conference last week.
 
-$ thinkthen filter 'Is this about databases?' --lines < feed.txt \
-    | thinkthen rank 'Would an engineer read this first?' --lines --top 2
-How DuckDB reads Parquet so fast
-Postgres 18 ships a faster vacuum
+$ thinkthen filter 'Is this a buying inquiry?' --lines < leads.txt \
+    | thinkthen rank 'Is this buyer ready to pay now?' --lines \
+    | thinkthen choose 'Which team should take this?' enterprise smb --lines \
+    | jq -r '"\(.value)  \(.input)"'
+smb  Our team of six wants to buy today. How do we pay?
+enterprise  We need 200 seats next quarter. Please send a quote.
 ```
 
-The pipeline returns the original lines. It doesn't rewrite them.
+The pipeline returns the original lines, each beside its team. It doesn't rewrite them.
 
 I reach for `annotate` most. A question set contains any mix of `decide`, `choose`, `score`, and `tag` questions in one file. `annotate` answers the question set for every record:
 
 ```
-$ thinkthen annotate form.json < ticket.txt
-{"wants_refund":true,"team":"billing","urgency":0.91}
+$ thinkthen annotate form.json < report.txt
+{"steps":true,"area":"export","impact":1.99}
 ```
 
 ThinkThen answers three questions in one request.

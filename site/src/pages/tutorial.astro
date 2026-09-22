@@ -20,7 +20,8 @@ const saved = cell('question-file', 'shell').runs;
 const savedYes = saved.find((r) => r.name === 'question-yes');
 const savedUnsure = saved.find((r) => r.name === 'question-unsure');
 
-const reading = HOWTO_RUNS['build-a-morning-reading-list'];
+const kept = cell('filter', 'shell').runs.find((r) => r.name === 'filter');
+const sorted = cell('rank', 'shell').runs.find((r) => r.name === 'rank');
 const triage = HOWTO_RUNS['triage-a-support-inbox'];
 
 const refundFile = `{
@@ -86,13 +87,12 @@ const triageFile = `{
   <p>Tune the file once. Your git hook, your test, and your pipeline then ask the same question.</p>
 
   <h2>7. Judge a stream</h2>
-  <p>One of <code>--lines</code>, <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> says how the records are framed. <code>filter</code> keeps the records where the answer is yes, byte for byte and in order. <code>rank</code> sorts them by how likely the answer is yes. Put them in a pipe and the second question reads only what the first kept.</p>
-  <div class="block">
-    <div class="caption"><span class="status run">run</span><span class="grow">{reading.inputFile}, the file the pipeline reads.</span></div>
-    <pre>{reading.input}</pre>
-  </div>
-  {reading.steps.map((step) => <Terminal run={step} caption={`Recorded from the real command. ${HOWTOS.find((h) => h.slug === 'build-a-morning-reading-list').see[step.name]}`} />)}
+  <p>One of <code>--lines</code>, <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> says how the records are framed. <code>filter</code> keeps the records where the answer is yes, byte for byte and in order.</p>
+  <Terminal run={kept} caption={`Recorded from the real command. ${kept.see}`} />
+  <p><code>rank</code> sorts the records by how likely the answer is yes.</p>
+  <Terminal run={sorted} caption={`Recorded from the real command. ${sorted.see}`} />
   <p><code>--top 2</code> trims the printed list. Every record was still judged.</p>
+  <p>Put them in a pipe and the second question reads only what the first kept. <a href="/how-tos/rank-the-inbound-leads/">See the leads how-to</a> for <code>filter</code>, <code>rank</code>, and <code>choose</code> in one pipeline.</p>
 
   <h2>8. Ask many questions at once</h2>
   <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file, under <code>"version": 1</code>.</p>
