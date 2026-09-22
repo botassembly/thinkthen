@@ -25,6 +25,11 @@ polars = { version = "0.55.2", optional = true, default-features = false, featur
 # A Polars column crosses zero-copy on Arrow buffers through the same
 # engine, the same width gate, and the same batch spine as a slice.
 polars = ["dep:polars"]
+# Forward the stand-in's compile-time fixture door to a gate build that
+# needs it (conformance case 74's synthesized partial failure). Off by
+# default: a shipped library carries no fixture code and no environment
+# variable can arm one.
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
 
 [lints.rust]
 missing_docs = "warn"

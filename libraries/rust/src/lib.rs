@@ -6,10 +6,10 @@
 //! the host's own empty value is `None`, which [`Answer::value`] gives.
 //!
 //! Every call goes through the contract, never the engine beneath it: the
-//! stand-in implements [`thinkthen_contract::Engine`] today, the real
-//! engine implements it after the merge, and the move changes one
-//! dependency in this crate's manifest. No rule, no retry, and no sending
-//! lives here.
+//! engine value is built through the contract's connector, the stand-in
+//! provides the connector today, the real engine provides it after the
+//! merge, and the move changes the one line that names the connector.
+//! No rule, no retry, and no sending lives here.
 //!
 //! The first argument of a yes-or-no verb is the question, as text or as a
 //! built [`Question`]: `tt.decide("...", text)` and `tt.decide(&refund,
@@ -23,6 +23,7 @@
 //! [`Error`] value itself.
 
 use std::ops::Range;
+use std::sync::Arc;
 
 pub use thinkthen_contract::{
     Annotated, AnnotatedRecord, Answer, Cancel, Cause, Details, Edge, Entity, Error, ErrorKind,
@@ -31,12 +32,12 @@ pub use thinkthen_contract::{
     Scored, Settings, Usage, failed_questions, rows_json,
 };
 
-use thinkthen_contract::Engine as ContractEngine;
+use thinkthen_contract::{Connector as _, Engine as ContractEngine, EngineConfig};
 
 /// The Series door: Polars columns and frames, behind the `polars` feature.
 #[cfg(feature = "polars")]
 pub mod polars;
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
 /// The engine value every call goes through.
 ///
@@ -44,13 +45,22 @@ use thinkthen_standin::BlockingEngine;
 /// settings. It holds no thread between calls, keeps one width gate for the
 /// process, and rebuilds its state after a fork. Cloning shares the same
 /// state, which is what a host embedding the library wants.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Engine {
-    inner: BlockingEngine,
+    inner: Arc<dyn ContractEngine>,
+}
+
+/// The engine's type alone: the contract's dynamic engine has no `Debug`
+/// of its own, and a host's logs want a name, not the stand-in's guts.
+impl std::fmt::Debug for Engine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Engine").finish_non_exhaustive()
+    }
 }
 
 impl Engine {
-    /// Build an engine from the environment.
+    /// Build an engine from the environment, through the contract's
+    /// connector.
     ///
     /// The stand-in never fails here, and the signature is already the
     /// ruled one, so the real engine may refuse a broken environment
@@ -62,16 +72,21 @@ impl Engine {
     /// kind when the environment it reads is broken.
     pub fn from_env() -> Result<Self, Error> {
         Ok(Self {
-            inner: BlockingEngine::from_env(),
+            inner: connect(&EngineConfig::from_env())?,
         })
     }
 
     /// Build an engine from settled settings, the form a host with its own
     /// configuration uses.
+    ///
+    /// # Panics
+    ///
+    /// Never on the stand-in: its connector has no failure path. A
+    /// connector that can refuse needs this signature revisited.
     #[must_use]
     pub fn from_settings(settings: Settings) -> Self {
         Self {
-            inner: BlockingEngine::from_settings(settings),
+            inner: connect(&settings).expect("the stand-in connector has no failure path"),
         }
     }
 
@@ -325,6 +340,14 @@ impl Engine {
     pub fn usage(&self) -> Usage {
         self.inner.usage()
     }
+}
+
+/// Build through the contract's connector: the one line that names the
+/// stand-in, and the one line the real engine changes. Every constructor
+/// above goes through here, so no other name of a concrete engine exists
+/// in this crate.
+fn connect(config: &EngineConfig) -> Result<Arc<dyn ContractEngine>, Error> {
+    StandinConnector.connect(config)
 }
 
 /// The byte range of one entity's name in the text it was found in.
