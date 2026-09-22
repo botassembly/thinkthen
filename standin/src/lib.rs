@@ -1127,15 +1127,55 @@ impl Gate {
     }
 }
 
-/// The live state, as a leaked box holding the `Arc`, behind an atomic
-/// pointer that is exchanged atomically and never unwound.
+/// How many settings values keep their own state in one process.
+///
+/// One state per settings value is the rule (review finding, 2026-09-22):
+/// two engines whose settings differ never share a gate or a pool, so a
+/// width of 1 holds across them and no call rebuilds a neighbour's state.
+/// A process that uses more than sixteen distinct settings values retires
+/// the slot its key hashes to and leaks the retired pool the way a fork
+/// retires the parent's; sixteen covers every surface's own use.
+const STATE_SLOTS: usize = 16;
+
+/// One state per settings value, behind an array of atomic pointers that
+/// are exchanged and never unwound.
 ///
 /// A fork during a batch leaves locks held by threads that do not exist in
 /// the child, so the child's rebuild path must take no lock any request
-/// path can hold. The read is one atomic load and an `Arc` clone; the
-/// rebuild is a fresh construction and one compare-and-swap, and the box an
-/// exchange retires is leaked on purpose.
-static STATE: AtomicPtr<Arc<Inner>> = AtomicPtr::new(ptr::null_mut());
+/// path can hold. The read is one atomic load and an `Arc` clone a slot;
+/// the publish is a fresh construction and one compare-and-swap, and a
+/// value a replacement retires is leaked on purpose.
+static STATES: [AtomicPtr<Arc<Inner>>; STATE_SLOTS] =
+    [const { AtomicPtr::new(ptr::null_mut()) }; STATE_SLOTS];
+
+/// Whether one state answers this pid and these settings.
+fn state_matches(inner: &Inner, pid: u32, settings: &ResolvedConfig) -> bool {
+    inner.pid == pid
+        && inner.base == settings.base
+        && inner.width == settings.width.max(1)
+        && inner.timeout == settings.timeout
+}
+
+/// The first slot a settings value tries, from a stable hash of its key, so
+/// the same settings always walk the same probe order and two threads never
+/// publish two states for one settings value.
+fn home_slot(settings: &ResolvedConfig) -> usize {
+    // FNV-1a, so the order is stable across runs and platforms.
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    let eat = |hash: &mut u64, bytes: [u8; 8]| {
+        for byte in bytes {
+            *hash ^= u64::from(byte);
+            *hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    };
+    for byte in settings.base.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    eat(&mut hash, (settings.width.max(1) as u64).to_le_bytes());
+    eat(&mut hash, (settings.timeout.as_nanos() as u64).to_le_bytes());
+    (hash % STATE_SLOTS as u64) as usize
+}
 
 /// Lock a mutex without ever panicking on another thread's failure.
 fn lock<T>(held: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -1173,9 +1213,9 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
     })
 }
 
-/// The state for this process and transport shape, rebuilt after a fork
-/// and when an engine value with a different address, width, or timeout
-/// arrives.
+/// The state for this pid and settings value, rebuilt after a fork and
+/// published into its own slot, so two engines with different settings
+/// never share a gate or a pool.
 ///
 /// # Errors
 ///
@@ -1183,34 +1223,82 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
 /// an error of the backend kind when the pool cannot be built.
 fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>, Error> {
     let now = std::process::id();
+    if let Some(inner) = state_lookup(now, settings) {
+        return Ok(inner);
+    }
+    Error::guard(options)?;
+    let fresh = Arc::new(build_inner(now, settings)?);
+    let boxed = Box::into_raw(Box::new(Arc::clone(&fresh)));
+    let home = home_slot(settings);
+    // Walk the probe order from home: an empty slot takes the publish, and
+    // a slot another thread is publishing the same settings into answers
+    // instead of growing a second state for one settings value.
+    for step in 0..STATE_SLOTS {
+        let place = (home + step) % STATE_SLOTS;
+        loop {
+            let held = STATES[place].load(Ordering::Acquire);
+            if held.is_null() {
+                if STATES[place]
+                    .compare_exchange(ptr::null_mut(), boxed, Ordering::AcqRel, Ordering::Acquire)
+                    .is_ok()
+                {
+                    return Ok(fresh);
+                }
+                continue;
+            }
+            // SAFETY: a stored pointer is never freed.
+            let inner = unsafe { (*held).clone() };
+            if state_matches(&inner, now, settings) {
+                // SAFETY: `boxed` was never published, so this is the only
+                // handle; the box goes, the fresh state is dropped.
+                drop(unsafe { Box::from_raw(boxed) });
+                return Ok(inner);
+            }
+            break;
+        }
+    }
+    // Every slot holds a different settings value: retire one from a
+    // vanished pid first, or else the home slot, and leak what was there
+    // for the same reason a fork retires rather than frees.
+    let stale = (0..STATE_SLOTS).find(|place| {
+        let held = STATES[*place].load(Ordering::Acquire);
+        // SAFETY: a stored pointer is never freed.
+        !held.is_null() && unsafe { (&*held).pid } != now
+    });
+    let place = stale.unwrap_or(home);
     loop {
-        let current = STATE.load(Ordering::Acquire);
-        if !current.is_null() {
-            // SAFETY: a stored pointer is never freed. Retirement leaks the
-            // old value on purpose, so this read stays valid forever.
-            let inner = unsafe { (*current).clone() };
-            if inner.pid == now
-                && inner.base == settings.base
-                && inner.width == settings.width.max(1)
-                && inner.timeout == settings.timeout
-            {
+        let held = STATES[place].load(Ordering::Acquire);
+        if !held.is_null() {
+            // SAFETY: a stored pointer is never freed.
+            let inner = unsafe { (*held).clone() };
+            if state_matches(&inner, now, settings) {
+                // SAFETY: as above, the box was never published.
+                drop(unsafe { Box::from_raw(boxed) });
                 return Ok(inner);
             }
         }
-        Error::guard(options)?;
-        let fresh = Arc::new(build_inner(now, settings)?);
-        let boxed = Box::into_raw(Box::new(Arc::clone(&fresh)));
-        if STATE
-            .compare_exchange(current, boxed, Ordering::AcqRel, Ordering::Acquire)
+        if STATES[place]
+            .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
             .is_ok()
         {
-            // SAFETY: the box this exchange retired is deliberately leaked:
-            // dropping it could take a lock a vanished thread still holds.
             return Ok(fresh);
         }
-        // SAFETY: `boxed` was never published, so this is the only handle.
-        drop(unsafe { Box::from_raw(boxed) });
     }
+}
+
+/// The published state for this pid and settings, when one already exists.
+fn state_lookup(pid: u32, settings: &ResolvedConfig) -> Option<Arc<Inner>> {
+    for slot in &STATES {
+        let held = slot.load(Ordering::Acquire);
+        if !held.is_null() {
+            // SAFETY: a stored pointer is never freed.
+            let inner = unsafe { (*held).clone() };
+            if state_matches(&inner, pid, settings) {
+                return Some(inner);
+            }
+        }
+    }
+    None
 }
 
 #[cfg(test)]
