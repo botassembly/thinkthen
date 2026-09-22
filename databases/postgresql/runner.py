@@ -123,7 +123,10 @@ def main() -> int:
                 note = check(case, got, expect["answer"])
             elif verb == "decide_many":
                 rows = expect["answers"]
-                array = "ARRAY[" + ",".join(literal(r) for r in case["records"]) + "]"
+                # A JSON null record is SQL NULL: no request is sent for it
+                # and its answer stays null.
+                array = "ARRAY[" + ",".join(
+                    "NULL" if r is None else literal(r) for r in case["records"]) + "]"
                 got = sql("SELECT string_agg(COALESCE(decided::text, 'null'), ',' ORDER BY i) "
                           f"FROM thinkthen_decide({question_arg(case)}, {array})")
                 want = ",".join("null" if r is None else ("true" if r else "false") for r in rows)
@@ -133,12 +136,13 @@ def main() -> int:
                     # own record beside its value, in input order — the SQL
                     # row itself, read back through the array's positions.
                     pairs = "~".join(
-                        f"{row['input']}|{'true' if row['value'] else 'false'}"
+                        f"{row['input'] if row['input'] is not None else '<null>'}|"
+                        + ("null" if row["value"] is None else ("true" if row["value"] else "false"))
                         for row in expect["rows"]
                     )
                     got_rows = sql(
                         f"WITH recs AS (SELECT {array}::text[] AS a) "
-                        "SELECT string_agg(recs.a[d.i + 1] || '|' || "
+                        "SELECT string_agg(COALESCE(recs.a[d.i + 1], '<null>') || '|' || "
                         "COALESCE(d.decided::text, 'null'), '~' ORDER BY d.i) "
                         f"FROM recs, thinkthen_decide({question_arg(case)}, recs.a) AS d(i, decided)"
                     )
@@ -161,36 +165,65 @@ def main() -> int:
                 want = ",".join(expect["answer"])
                 note = None if got == want else f"diverge {ident}: expected {want!r}, got {got!r}"
             elif verb == "annotate":
-                held = expect["answers"]
-                fields = ",".join(f"a->>'{name}'" for name in held)
-                wrapped = json.dumps({"version": 1, "questions": case["set"]})
-                got = sql(f"SELECT {fields} FROM thinkthen_annotate({literal(wrapped)}, "
-                          f"{literal(case['evidence'])}) AS a")
-                parts = got.split("|")
-                names = list(held)
-                ok = len(parts) == len(names)
-                seen = []
-                for index, name in enumerate(names):
-                    value = held[name]
-                    part = parts[index] if index < len(parts) else ""
-                    seen.append(f"{name}={part!r}")
-                    if "failed" in value:
-                        try:
-                            marker = json.loads(part) if part else None
-                        except json.JSONDecodeError:
-                            marker = part
-                        ok = ok and marker == {"failed": value["failed"]}
-                    else:
-                        if value is None or value.get("unsure"):
-                            expected = ""
-                        elif value["answer"] is True:
-                            expected = "true"
-                        elif value["answer"] is False:
-                            expected = "false"
+                if expect.get("rows") is not None:
+                    # The multi-record form: one answer row a record, in
+                    # input order; this surface spells each field bare.
+                    wrapped = json.dumps({"version": 1, "questions": case["set"]})
+                    problems = []
+                    for at, (record, row) in enumerate(zip(case["records"], expect["rows"])):
+                        names = list(row["value"])
+                        fields = ",".join(f"a->>'{name}'" for name in names)
+                        got = sql(
+                            f"SELECT {fields} FROM thinkthen_annotate({literal(wrapped)}, "
+                            f"{literal(record)}) AS a"
+                        )
+                        parts = got.split("|")
+                        for index, name in enumerate(names):
+                            value = row["value"][name]
+                            part = parts[index] if index < len(parts) else ""
+                            if isinstance(value, float):
+                                try:
+                                    read = float(part)
+                                except ValueError:
+                                    read = None
+                                if read is None or abs(read - value) > 1e-9:
+                                    problems.append(f"row {at} {name}: {part!r}")
+                            else:
+                                want = "true" if value is True else ("false" if value is False else str(value))
+                                if part != want:
+                                    problems.append(f"row {at} {name}: {part!r}")
+                    note = None if not problems else f"diverge {ident}: {'; '.join(problems)}"
+                else:
+                    held = expect["answers"]
+                    fields = ",".join(f"a->>'{name}'" for name in held)
+                    wrapped = json.dumps({"version": 1, "questions": case["set"]})
+                    got = sql(f"SELECT {fields} FROM thinkthen_annotate({literal(wrapped)}, "
+                              f"{literal(case['evidence'])}) AS a")
+                    parts = got.split("|")
+                    names = list(held)
+                    ok = len(parts) == len(names)
+                    seen = []
+                    for index, name in enumerate(names):
+                        value = held[name]
+                        part = parts[index] if index < len(parts) else ""
+                        seen.append(f"{name}={part!r}")
+                        if "failed" in value:
+                            try:
+                                marker = json.loads(part) if part else None
+                            except json.JSONDecodeError:
+                                marker = part
+                            ok = ok and marker == {"failed": value["failed"]}
                         else:
-                            expected = str(value["answer"])
-                        ok = ok and (part or "") == expected
-                note = None if ok else f"diverge {ident}: {' '.join(seen)}"
+                            if value is None or value.get("unsure"):
+                                expected = ""
+                            elif value["answer"] is True:
+                                expected = "true"
+                            elif value["answer"] is False:
+                                expected = "false"
+                            else:
+                                expected = str(value["answer"])
+                            ok = ok and (part or "") == expected
+                    note = None if ok else f"diverge {ident}: {' '.join(seen)}"
             elif verb == "recognize":
                 kinds = (case.get("question") or {}).get("kinds") or []
                 arr = ("ARRAY[" + ",".join(literal(k) for k in kinds) + "]::text[]")

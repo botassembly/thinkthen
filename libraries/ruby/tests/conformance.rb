@@ -174,6 +174,35 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
     set = ThinkThen._parse_set(JSON.generate({ "questions" => set_json }))
     held = records.empty? ? [evidence] : records
     answers = ThinkThen.annotate(set, held)
+    if expect["rows"]
+      # The multi-record form: one answer object a record, in input order,
+      # each field the bare answer (a score is its position).
+      wanted = expect["rows"].map { |row| row["value"] }
+      unless answers.length == wanted.length
+        raise "FAIL: #{answers.length} rows against the case's #{wanted.length}"
+      end
+
+      answers.each_with_index do |got, at|
+        want = wanted[at]
+        unless got.keys.map(&:to_s).sort == want.keys.sort
+          raise "FAIL: row #{at} fields #{got.keys.map(&:to_s).sort} against #{want.keys.sort}"
+        end
+
+        want.each do |name, value|
+          field = got[name.to_sym]
+          # This host spells a score field as [position, nearest]; the case
+          # pins the bare position, so read the position out.
+          field = field.first if value.is_a?(Float) && field.is_a?(Array) && field.first.is_a?(Numeric)
+          if value.is_a?(Float)
+            ok_if(field.is_a?(Numeric) && (field - value).abs < 1e-9,
+                  "row #{at} #{name}: #{field.inspect} against #{value.inspect}")
+          else
+            ok_if(field == value, "row #{at} #{name}: #{field.inspect} against #{value.inspect}")
+          end
+        end
+      end
+      return
+    end
     first = answers.first or raise "FAIL: no annotated record came back"
     expect["answers"].each do |name, wanted|
       field = first.key?(name.to_sym) ? first[name.to_sym] : (raise "FAIL: no #{name} field in the answer")

@@ -309,6 +309,39 @@ def main():
                         report(case_id, f"held {held!r}", failed=True)
             elif verb == "annotate":
                 body = json.dumps({"questions": case["set"]})
+                if "rows" in expect:
+                    # The multi-record form: one answer a record, in input
+                    # order, each field this surface's object with `answer`
+                    # (a score adds its nearest level).
+                    wanted_rows = [row["value"] for row in expect["rows"]]
+                    held_rows = [
+                        json.loads(
+                            conn.execute(
+                                "SELECT thinkthen_annotate(?, ?)", (body, record)
+                            ).fetchone()[0]
+                        )
+                        for record in case["records"]
+                    ]
+                    problems = []
+                    if len(held_rows) != len(wanted_rows):
+                        problems.append(
+                            f"{len(held_rows)} rows against the case's {len(wanted_rows)}"
+                        )
+                    else:
+                        for at, (held_fields, want) in enumerate(zip(held_rows, wanted_rows)):
+                            for name, value in want.items():
+                                field = held_fields.get(name)
+                                read = field.get("answer") if isinstance(field, dict) else field
+                                if isinstance(value, float):
+                                    if not isinstance(read, (int, float)) or abs(read - value) > 1e-9:
+                                        problems.append(f"row {at} {name}: {field!r}")
+                                elif read != value:
+                                    problems.append(f"row {at} {name}: {field!r}")
+                    if problems:
+                        report(case_id, "; ".join(problems), failed=True)
+                    else:
+                        report(case_id, f"{len(wanted_rows)} records in input order")
+                    continue
                 held = conn.execute(
                     "SELECT thinkthen_annotate(?, ?)", (body, evidence)
                 ).fetchone()[0]

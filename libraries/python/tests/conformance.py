@@ -208,7 +208,25 @@ def run(case):
         return found["index"] == expect.get("answer"), None
     if verb == "annotate":
         path = built(body, set_body=case.get("set"))
-        rows = tt.annotate(path, [evidence])
+        held = case.get("records") or [evidence]
+        rows = tt.annotate(path, held)
+        if "rows" in expect:
+            # The multi-record form: one answer object a record, in input
+            # order, each field the bare answer (a score is its position).
+            wanted = [row["value"] for row in expect["rows"]]
+            if len(rows) != len(wanted):
+                return False, f"{len(rows)} rows against the case's {len(wanted)}"
+            for at, (got_row, want_row) in enumerate(zip(rows, wanted)):
+                if set(got_row) != set(want_row):
+                    return False, f"row {at} fields {sorted(got_row)} against {sorted(want_row)}"
+                for name, value in want_row.items():
+                    got = got_row[name]
+                    if isinstance(value, float):
+                        if not isinstance(got, (int, float)) or abs(got - value) > 1e-9:
+                            return False, f"row {at} {name}: {got!r} against {value!r}"
+                    elif got != value:
+                        return False, f"row {at} {name}: {got!r} against {value!r}"
+            return True, None
         wanted = {}
         for name, field in expect.get("answers", {}).items():
             if "failed" in field:

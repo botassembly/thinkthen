@@ -1,6 +1,6 @@
 {
  "schema": "thinkthen.conformance/1",
- "case_count": 79,
+ "case_count": 84,
  "error_kinds": [
   "usage",
   "backend",
@@ -236,6 +236,15 @@
     "duckdb"
    ],
    "why": "the SQL tag call takes its question as plain text and its labels in the list; a per-question threshold has no shape here"
+  },
+  {
+   "when": {
+    "record": "null"
+   },
+   "surfaces": [
+    "sqlite"
+   ],
+   "why": "this surface refuses a NULL text at the door (Invalid type) rather than answering NULL; the passthrough is pinned on the surfaces that take SQL NULL, and conformance/DIVERGENCES.md records the gap"
   }
  ],
  "cases": [
@@ -4547,6 +4556,755 @@
      "model": "jev-latest",
      "question_sha256": "d17cf2b3c253fabd1d4c6f8e87feb550bd30bc66b301ed63e06282c68caec0ec"
     }
+   }
+  },
+  {
+   "id": "80-decide-many-alternating-repeated-texts",
+   "source": "synthesized 2026-09-22: repeated-text row mapping; the numbers are the null backend's own rules (refund 0.97, otherwise 0.03)",
+   "verb": "decide_many",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.5
+   },
+   "records": [
+    "refund now",
+    "good morning",
+    "refund now",
+    "good morning",
+    "refund now",
+    "good morning",
+    "refund now",
+    "good morning",
+    "refund now",
+    "good morning"
+   ],
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answers": [
+     true,
+     false,
+     true,
+     false,
+     true,
+     false,
+     true,
+     false,
+     true,
+     false
+    ],
+    "probabilities": [
+     0.97,
+     0.03,
+     0.97,
+     0.03,
+     0.97,
+     0.03,
+     0.97,
+     0.03,
+     0.97,
+     0.03
+    ],
+    "rows": [
+     {
+      "input": "refund now",
+      "value": true
+     },
+     {
+      "input": "good morning",
+      "value": false
+     },
+     {
+      "input": "refund now",
+      "value": true
+     },
+     {
+      "input": "good morning",
+      "value": false
+     },
+     {
+      "input": "refund now",
+      "value": true
+     },
+     {
+      "input": "good morning",
+      "value": false
+     },
+     {
+      "input": "refund now",
+      "value": true
+     },
+     {
+      "input": "good morning",
+      "value": false
+     },
+     {
+      "input": "refund now",
+      "value": true
+     },
+     {
+      "input": "good morning",
+      "value": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "81-decide-many-null-text-passes-through",
+   "source": "synthesized 2026-09-22: a JSON null record is SQL NULL on the database surfaces; no request is sent for it and its answer stays null",
+   "verb": "decide_many",
+   "question": {
+    "decide": "Does the writer ask for a refund?",
+    "threshold": 0.5
+   },
+   "records": [
+    "refund now",
+    null,
+    "good morning"
+   ],
+   "exchanges": [
+    {
+     "captured": "stub",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.97,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    },
+    {
+     "captured": "stub",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Does the writer ask for a refund?"
+       }
+      }
+     },
+     "reply": {
+      "answers": {
+       "q1": {
+        "noul": 0.03,
+        "type": "noul"
+       }
+      },
+      "model": "jev-latest",
+      "usage": {
+       "input_tokens": 10,
+       "output_tokens": 2
+      }
+     }
+    }
+   ],
+   "expect": {
+    "answers": [
+     true,
+     null,
+     false
+    ],
+    "probabilities": [
+     0.97,
+     null,
+     0.03
+    ],
+    "requests": 2,
+    "rows": [
+     {
+      "input": "refund now",
+      "value": true
+     },
+     {
+      "input": null,
+      "value": null
+     },
+     {
+      "input": "good morning",
+      "value": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "82-annotate-over-repeated-texts",
+   "source": "synthesized 2026-09-22: annotate over records, repeated texts included; the numbers are the null backend's own rules",
+   "verb": "annotate",
+   "question": {
+    "decide": "Is this a complaint?",
+    "threshold": 0.5
+   },
+   "set": {
+    "spam": {
+     "decide": "Is this a complaint?",
+     "threshold": 0.5
+    }
+   },
+   "records": [
+    "refund now",
+    "good morning",
+    "refund now"
+   ],
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a complaint?"
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.97
+       }
+      },
+      "usage": {
+       "input_tokens": 16,
+       "output_tokens": 4
+      }
+     }
+    },
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "good morning",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a complaint?"
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.03
+       }
+      },
+      "usage": {
+       "input_tokens": 16,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "rows": [
+     {
+      "input": "refund now",
+      "value": {
+       "spam": true
+      }
+     },
+     {
+      "input": "good morning",
+      "value": {
+       "spam": false
+      }
+     },
+     {
+      "input": "refund now",
+      "value": {
+       "spam": true
+      }
+     }
+    ],
+    "failed_questions": 0
+   }
+  },
+  {
+   "id": "83-annotate-score-over-repeated-texts",
+   "source": "synthesized 2026-09-22: annotate over records, repeated texts included; the numbers are the null backend's own rules",
+   "verb": "annotate",
+   "question": {
+    "score": "How strong is the claim?",
+    "levels": [
+     "weak",
+     "moderate",
+     "strong"
+    ]
+   },
+   "set": {
+    "strength": {
+     "score": "How strong is the claim?",
+     "levels": [
+      "weak",
+      "moderate",
+      "strong"
+     ]
+    }
+   },
+   "records": [
+    "refund now",
+    "maybe so",
+    "refund now"
+   ],
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "score",
+        "instructions": "How strong is the claim?",
+        "criteria": [
+         "weak",
+         "moderate",
+         "strong"
+        ]
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "score",
+        "probabilities": {
+         "0": 0.05,
+         "1": 0.2,
+         "2": 0.75
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 16,
+       "output_tokens": 4
+      }
+     }
+    },
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "maybe so",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "score",
+        "instructions": "How strong is the claim?",
+        "criteria": [
+         "weak",
+         "moderate",
+         "strong"
+        ]
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "score",
+        "probabilities": {
+         "0": 0.2,
+         "1": 0.55,
+         "2": 0.25
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 16,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "rows": [
+     {
+      "input": "refund now",
+      "value": {
+       "strength": 1.7
+      }
+     },
+     {
+      "input": "maybe so",
+      "value": {
+       "strength": 1.05
+      }
+     },
+     {
+      "input": "refund now",
+      "value": {
+       "strength": 1.7
+      }
+     }
+    ],
+    "failed_questions": 0
+   }
+  },
+  {
+   "id": "84-annotate-multi-column-score",
+   "source": "synthesized 2026-09-22: annotate over records, repeated texts included; the numbers are the null backend's own rules",
+   "verb": "annotate",
+   "question": {
+    "decide": "Is this a complaint?",
+    "threshold": 0.5
+   },
+   "set": {
+    "spam": {
+     "decide": "Is this a complaint?",
+     "threshold": 0.5
+    },
+    "strength": {
+     "score": "How strong is the claim?",
+     "levels": [
+      "weak",
+      "moderate",
+      "strong"
+     ]
+    }
+   },
+   "records": [
+    "refund now"
+   ],
+   "exchanges": [
+    {
+     "captured": "shaped-to-contract",
+     "request": {
+      "state": "refund now",
+      "model": "jev-latest",
+      "questions": {
+       "q1": {
+        "type": "noul",
+        "instructions": "Is this a complaint?"
+       },
+       "q2": {
+        "type": "score",
+        "instructions": "How strong is the claim?",
+        "criteria": [
+         "weak",
+         "moderate",
+         "strong"
+        ]
+       }
+      }
+     },
+     "reply": {
+      "model": "jev-latest",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.97
+       },
+       "q2": {
+        "type": "score",
+        "probabilities": {
+         "0": 0.05,
+         "1": 0.2,
+         "2": 0.75
+        }
+       }
+      },
+      "usage": {
+       "input_tokens": 16,
+       "output_tokens": 4
+      }
+     }
+    }
+   ],
+   "expect": {
+    "rows": [
+     {
+      "input": "refund now",
+      "value": {
+       "spam": true,
+       "strength": 1.7
+      }
+     }
+    ],
+    "failed_questions": 0
    }
   }
  ]

@@ -153,3 +153,57 @@ The remaining case expectations do not yet carry `requests` or
 answer from its exchange at the merge, and the build team's validator owns
 that derivation. What this file pins today is the shape, the ordering rule,
 the retry rule, and the closed cause list.
+
+## The review's growth, 2026-09-22: repeated texts, the NULL row, and the score and tag coverage
+
+The review of 2026-09-22 measured the file as hollow where it mattered —
+45 of 74 cases were recognize and relate lookups, score and tag had one
+case each, and the checker ignored its argument. This wave added ten
+cases and one table:
+
+- **The skip table.** `conformance.json` now carries a top-level `skips`
+  list: one place naming what each surface cannot run, each entry with a
+  matcher, an optional surface list, and a written reason. Every runner
+  reads it instead of carrying its own skip list, and the checker
+  validates every entry (a case id or verb it names must exist, a reason
+  is required, surfaces and dispositions are closed sets).
+- **`80-decide-many-alternating-repeated-texts`** pins per-row mapping
+  where two texts alternate over ten rows: five true, five false. The
+  review's first finding was this shape answering the k-th distinct text
+  on the k-th row.
+- **`81-decide-many-null-text-passes-through`** pins the SQL NULL row:
+  a JSON `null` record sends nothing, consumes no answer, and stays
+  NULL. DuckDB and PostgreSQL pass it through and run the case. SQLite's
+  door refuses a NULL text (`Invalid type`) rather than answering NULL,
+  so the case is skipped there with that written reason and the gap is
+  recorded here as a surface follow-up, not bent in the file. The library
+  doors take text strings and skip it with their own reason.
+- **`82-annotate-over-repeated-texts`**, **`83-annotate-score-over-repeated-texts`**,
+  and **`84-annotate-multi-column-score`** pin the annotate record form:
+  `records` carries the inputs, `expect.rows` one `{"input","value"}`
+  answer object a record in input order, and repeated texts reuse their
+  answer (one exchange a distinct record, first appearance first). The
+  field value is the bare answer; a score reads as its position. The
+  surfaces spell a score field differently — a bare number on Python,
+  TypeScript, Rust, R, and PostgreSQL; `{"answer","nearest"}` on SQLite
+  and the C JSON door; `{"nearest","position"}` on DuckDB; `[position,
+  nearest]` on Ruby — and every runner reads the position out, so the
+  case pins the number, not the host's spelling.
+- **`75` to `79`** add two score cases (top level at 1.7, the equal
+  distribution at 0.99) and three tag cases (none held, two labels in
+  the question's order, a threshold that excludes the weaker label), so
+  score and tag each carry three cases or more.
+- **The DuckDB tag boundary, two entries.** Its SQL tag call takes the
+  question as plain text and the labels in a list — a JSON question is
+  refused ("tag takes its question as plain text and its labels in the
+  list") — so a per-question threshold has no shape there, and its
+  driver asserts only a held label, so the empty-answer case is the
+  surface's own check. Both are reasoned skips in the table.
+- **The numbers.** The new cases derive from the null backend's own
+  rules (a `refund` text 0.97 and a score's 0.05/0.20/0.75; `maybe`
+  0.55/0.20/0.55/0.25; anything else 0.03 and 0.34/0.33/0.33; tag
+  labels 0.72/0.55/0.03 by keyword), so every one replays offline; each
+  is marked `shaped-to-contract` the way the five older synthesized
+  exchanges are. No recording is fabricated: the exchanges carry the
+  request and reply the null backend answers, and the checker recomputes
+  every expectation from them.

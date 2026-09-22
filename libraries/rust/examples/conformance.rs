@@ -338,6 +338,42 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
                 held
             };
             let annotated = tt.annotate(&set, &records).map_err(fail)?;
+            if let Some(wanted_rows) = expect["rows"].as_array() {
+                // The multi-record form: one answer a record, in input
+                // order, each field the bare answer (a score is its
+                // position).
+                ok_if(
+                    annotated.len() == wanted_rows.len(),
+                    format!("expected {} rows, got {}", wanted_rows.len(), annotated.len()),
+                )?;
+                for (record, (wanted, got)) in records.iter().zip(wanted_rows.iter().zip(&annotated)) {
+                    for (name, value) in wanted["value"].as_object().into_iter().flatten() {
+                        let field = got
+                            .iter()
+                            .find(|(held, _)| held == name)
+                            .map(|(_, held)| held)
+                            .ok_or_else(|| {
+                                Outcome::Fail(format!("no {name} field in the answer for {record:?}"))
+                            })?;
+                        match field {
+                            Annotated::Decision(answer) => ok_if(
+                                *answer == expected_answer(value),
+                                format!("{name}: expected {value:?}, got {answer:?}"),
+                            )?,
+                            Annotated::Score(scored) => ok_if(
+                                value.as_f64().is_some_and(|wanted| (scored.value - wanted).abs() < 1e-9),
+                                format!("{name}: expected {value:?}, got {}", scored.value),
+                            )?,
+                            other => {
+                                return Err(Outcome::Fail(format!(
+                                    "{name}: expected a bare answer, got {other:?}"
+                                )))
+                            }
+                        }
+                    }
+                }
+                return Ok(());
+            }
             let first = annotated
                 .first()
                 .ok_or_else(|| Outcome::Fail("no annotated record came back".to_owned()))?;

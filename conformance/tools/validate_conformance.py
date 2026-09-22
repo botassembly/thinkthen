@@ -406,6 +406,54 @@ def replay_recognize_and_relate(c):
         check(edges == c["expect"]["edges"], f"{c['id']} edges replay exactly")
 
 
+def replay_annotate_rows(c):
+    """The multi-record annotate form: one row a record, in input order,
+    each field recomputed from the exchange whose state is that record.
+    The exchanges are one per distinct record text, first appearance
+    first, because annotate groups distinct evidence into distinct
+    requests; a repeated text reuses its answer."""
+    rows = c["expect"]["rows"]
+    records = c.get("records") or []
+    check(len(rows) == len(records), f"{c['id']} one row a record")
+    check(all(row["input"] == record for row, record in zip(rows, records)),
+          f"{c['id']} row inputs in input order")
+    order = list(c.get("set", {}))
+    distinct = []
+    for record in records:
+        if record not in distinct:
+            distinct.append(record)
+    check([e["request"]["state"] for e in c["exchanges"]] == distinct,
+          f"{c['id']} one exchange a distinct record, first appearance first")
+    for row, record in zip(rows, records):
+        named = [e for e in c["exchanges"] if e["request"]["state"] == record]
+        check(bool(named), f"{c['id']} an exchange carries {record!r}")
+        if not named:
+            continue
+        reply = named[0]["reply"]
+        for field, value in row["value"].items():
+            check(field in order, f"{c['id']} row field {field!r} is in the set")
+            if field not in order:
+                continue
+            member = c["set"][field]
+            answered = reply["answers"].get(f"q{order.index(field) + 1}")
+            check(answered is not None, f"{c['id']} the exchange answers {field}")
+            if answered is None:
+                continue
+            if "decide" in member:
+                check(answered.get("type") == "noul", f"{c['id']} {field} is a noul answer")
+                got = decide_answer(answered["noul"], member.get("threshold", 0.5))
+                check(value == got, f"{c['id']} {field} recomputes to {got!r}")
+            elif "score" in member:
+                ps = answered.get("probabilities", {})
+                check(set(ps) == {str(i) for i in range(len(member["levels"]))},
+                      f"{c['id']} {field} keyed by the level numbers")
+                total = sum(ps.values())
+                got = round(sum(i * ps[str(i)] for i in range(len(member["levels"]))) / total, 12)
+                check(value == got, f"{c['id']} {field} recomputes to {got!r}")
+            else:
+                check(False, f"{c['id']} annotate rows support decide and score members here")
+
+
 def replay(c):
     """Recompute the expected answer from question plus recorded exchange."""
     if c["verb"] in ("recognize", "relate"):
@@ -506,7 +554,11 @@ def replay(c):
     if "failed_questions" in det:
         check(det["failed_questions"] == 0,
               f"{c['id']} a details result carries zero failed questions")
-    if verb == "decide" and c["verb"] in ("decide", "details"):
+    if c["verb"] == "annotate" and "rows" in exp:
+        # The multi-record form was replayed field by field above; it
+        # carries no single `answer` to recompute here.
+        pass
+    elif verb == "decide" and c["verb"] in ("decide", "details"):
         p = reply["answers"]["q1"]["noul"]
         check(exp["answer"] == decide_answer(p, q.get("threshold", 0.5)), f"{c['id']} decide answer")
         if "probability" in det:
@@ -547,11 +599,29 @@ def replay(c):
         check(exp["indexes"] == kept, f"{c['id']} filter indexes")
         check(len(c["exchanges"]) == len(c["records"]), f"{c['id']} one exchange a record")
     if c["verb"] == "decide_many":
+        # A JSON null record is SQL NULL on the database surfaces: no
+        # request is sent for it and its answer stays null. Every other
+        # record has its own exchange, in input order.
+        records = c["records"]
+        real = [record for record in records if record is not None]
+        check(len(c["exchanges"]) == len(real),
+              f"{c['id']} one exchange a non-null record")
         ps = [e["reply"]["answers"]["q1"]["noul"] for e in c["exchanges"]]
         t = q.get("threshold", 0.5)
-        check(exp["answers"] == [decide_answer(p, t) for p in ps], f"{c['id']} bulk answers")
-        check(exp["probabilities"] == ps, f"{c['id']} bulk probabilities")
-    if c["verb"] == "annotate":
+        told = iter(ps)
+        answers = [None if record is None else decide_answer(next(told), t)
+                   for record in records]
+        told = iter(ps)
+        probabilities = [None if record is None else next(told)
+                         for record in records]
+        check(exp["answers"] == answers, f"{c['id']} bulk answers")
+        check(exp["probabilities"] == probabilities, f"{c['id']} bulk probabilities")
+        if "requests" in exp:
+            check(exp["requests"] == len(real),
+                  f"{c['id']} requests count the non-null records")
+    if c["verb"] == "annotate" and "rows" in exp:
+        replay_annotate_rows(c)
+    elif c["verb"] == "annotate":
         for name, sub in c["set"].items():
             want = exp["answers"][name]
             if "failed" in want:
@@ -582,10 +652,14 @@ def replay(c):
                   f"{c['id']} row inputs are the kept records in input order")
             check(all(r["value"] is True for r in rows), f"{c['id']} row values are the kept verdict")
         if c["verb"] == "decide_many":
+            records = c["records"]
             ps = [e["reply"]["answers"]["q1"]["noul"] for e in c["exchanges"]]
             t = q.get("threshold", 0.5)
-            check([r["input"] for r in rows] == c["records"], f"{c['id']} row inputs in input order")
-            check([r["value"] for r in rows] == [decide_answer(p, t) for p in ps],
+            told = iter(ps)
+            answers = [None if record is None else decide_answer(next(told), t)
+                       for record in records]
+            check([r["input"] for r in rows] == records, f"{c['id']} row inputs in input order")
+            check([r["value"] for r in rows] == answers,
                   f"{c['id']} row values are the answers")
 
 for c in data["cases"]:
@@ -614,7 +688,7 @@ for c in data["cases"]:
     if c["verb"] == "relate":
         check_relate_case(c)
     failed_names = ()
-    if c["verb"] == "annotate":
+    if c["verb"] == "annotate" and "answers" in c["expect"]:
         # The failed logical names map to their wire names: set order is
         # name order, and q{i} names the i-th logical question.
         order = list(c.get("set", {}))

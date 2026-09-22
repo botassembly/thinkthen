@@ -146,28 +146,50 @@ for (case in cases) {
           set_file <- tempfile(fileext = ".json")
           wrapped <- list(version = 1, questions = case$set)
           writeLines(jsonlite::toJSON(wrapped, auto_unbox = TRUE), set_file)
-          frame <- data.frame(body = case$evidence, stringsAsFactors = FALSE)
+          held_records <- if (is.null(case$records)) case$evidence else unlist(case$records)
+          frame <- data.frame(body = held_records, stringsAsFactors = FALSE)
           held <- tt_annotate(set_file, frame, on = "body")
-          wanted <- expect$answers
-          good <- all(vapply(names(wanted), function(name) {
-            one <- held[[name]][[1]]
-            if (!is.null(wanted[[name]]$failed)) {
-              # The ruled marker (0054), in this host's own spelling.
-              return(identical(one, list(failed = wanted[[name]]$failed)))
+          if (!is.null(expect$rows)) {
+            # The multi-record form: one answer a record, in input order,
+            # each field the bare answer (a score is its position).
+            wanted <- expect$rows
+            good <- nrow(held) == length(wanted)
+            if (good) {
+              for (at in seq_along(wanted)) {
+                row <- wanted[[at]]
+                for (name in names(row$value)) {
+                  value <- row$value[[name]]
+                  field <- held[[name]][[at]]
+                  good <- good && if (is.numeric(value)) same_number(field, value) else identical(field, value)
+                  if (!good) break
+                }
+                if (!good) break
+              }
             }
-            two <- answer_of(wanted[[name]]$answer)
-            (is.na(one) && is.na(two)) || isTRUE(identical(one, two)) || same_number(one, two)
-          }, logical(1)))
-          if (good && !is.null(expect$failed_questions)) {
-            counted <- sum(vapply(held, function(column) {
-              is.list(column) && any(vapply(column, function(cell) {
-                is.list(cell) && !is.null(cell$failed)
-              }, logical(1)))
+            if (good) paste0("ok       ", id) else
+              paste0("FAIL     ", id, ": the per-record answers diverged")
+          } else {
+            wanted <- expect$answers
+            good <- all(vapply(names(wanted), function(name) {
+              one <- held[[name]][[1]]
+              if (!is.null(wanted[[name]]$failed)) {
+                # The ruled marker (0054), in this host's own spelling.
+                return(identical(one, list(failed = wanted[[name]]$failed)))
+              }
+              two <- answer_of(wanted[[name]]$answer)
+              (is.na(one) && is.na(two)) || isTRUE(identical(one, two)) || same_number(one, two)
             }, logical(1)))
-            good <- isTRUE(counted == expect$failed_questions)
+            if (good && !is.null(expect$failed_questions)) {
+              counted <- sum(vapply(held, function(column) {
+                is.list(column) && any(vapply(column, function(cell) {
+                  is.list(cell) && !is.null(cell$failed)
+                }, logical(1)))
+              }, logical(1)))
+              good <- isTRUE(counted == expect$failed_questions)
+            }
+            if (good) paste0("ok       ", id) else
+              paste0("FAIL     ", id, ": the assembled answers diverged")
           }
-          if (good) paste0("ok       ", id) else
-            paste0("FAIL     ", id, ": the assembled answers diverged")
         },
         details = {
           held <- tt_details(question, case$evidence)

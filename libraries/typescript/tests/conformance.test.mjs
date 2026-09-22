@@ -156,6 +156,31 @@ async function runVerb(held, spec, text, list, call) {
     }
     case 'annotate': {
       const set = JSON.stringify({ questions: held.set });
+      if (expect.rows) {
+        // The multi-record form: one answer object a record, in input
+        // order, each field the bare answer (a score reads its position).
+        const wantedRows = expect.rows.map((row) => row.value);
+        const rows = await tt.annotate(set, list);
+        assert.equal(rows.length, wantedRows.length, 'one answer a record');
+        rows.forEach((got, at) => {
+          delete got.record;
+          const want = wantedRows[at];
+          assert.deepEqual(Object.keys(got).sort(), Object.keys(want).sort(), `row ${at} fields`);
+          for (const [name, value] of Object.entries(want)) {
+            if (typeof value === 'number') {
+              const field = got[name];
+              const read = field !== null && typeof field === 'object' && 'position' in field ? field.position : field;
+              assert.ok(
+                typeof read === 'number' && Math.abs(read - value) < 1e-9,
+                `row ${at} ${name}: ${JSON.stringify(field)} vs ${value}`,
+              );
+            } else {
+              assert.deepEqual(got[name], value, `row ${at} ${name}`);
+            }
+          }
+        });
+        return;
+      }
       const rows = await tt.annotate(set, [text]);
       const wanted = {};
       for (const [name, field] of Object.entries(expect.fields ?? expect.answers ?? {})) {

@@ -333,11 +333,42 @@ def main():
             else:
                 line = f"ok       {case_id}"
         elif verb == "annotate":
-            request = {"annotate": {"questions": case["set"]}, "records": [evidence]}
+            held_records = case.get("records") or [evidence]
+            request = {"annotate": {"questions": case["set"]}, "records": held_records}
             reply, message, _ = call(lib, engine, request)
             if reply is None:
                 line = f"FAIL     {case_id}: {message}"
                 failures += 1
+            elif "rows" in expect:
+                # The multi-record form: one answer object a record, in
+                # input order, each field the bare answer.
+                rows = reply["answer"]
+                wanted = [row["value"] for row in expect["rows"]]
+                if len(rows) != len(wanted):
+                    line = f"FAIL     {case_id}: {len(rows)} rows against the case's {len(wanted)}"
+                    failures += 1
+                else:
+                    diverged = []
+                    for at, (record, want) in enumerate(zip(rows, wanted)):
+                        if set(record) != set(want):
+                            diverged.append(f"row {at} fields {sorted(record)}")
+                            continue
+                        for name, value in want.items():
+                            got = record[name]
+                            if isinstance(value, float):
+                                # This door spells a score field as
+                                # {"answer": position, "nearest": level}; the
+                                # case pins the bare position.
+                                read = got.get("answer") if isinstance(got, dict) else got
+                                if not isinstance(read, (int, float)) or abs(read - value) > 1e-9:
+                                    diverged.append(f"row {at} {name}: {got!r}")
+                            elif got != value:
+                                diverged.append(f"row {at} {name}: {got!r}")
+                    if diverged:
+                        line = f"FAIL     {case_id}: {'; '.join(diverged)}"
+                        failures += 1
+                    else:
+                        line = f"ok       {case_id}"
             else:
                 record = reply["answer"][0]
                 wanted = expect["answers"]
