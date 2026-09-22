@@ -3,12 +3,14 @@
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Duration;
 
+#[cfg(target_os = "linux")]
+use crate::harness::process_is_blocked_on_inode;
 use crate::harness::{Canned, Listener, Observed, spawn};
 
 const QUESTION: &str = "asks for a refund";
@@ -55,6 +57,28 @@ fn cached(base: &str, folder: &str, keyed: bool) -> io::Result<std::process::Out
 struct ReapedChild(Option<Child>);
 
 impl ReapedChild {
+    fn id(&self) -> io::Result<u32> {
+        self.0
+            .as_ref()
+            .map(Child::id)
+            .ok_or_else(|| io::Error::other("child already reaped"))
+    }
+
+    fn is_running(&mut self) -> io::Result<bool> {
+        self.0
+            .as_mut()
+            .ok_or_else(|| io::Error::other("child already reaped"))?
+            .try_wait()
+            .map(|status| status.is_none())
+    }
+
+    fn wait(mut self) -> io::Result<Output> {
+        self.0
+            .take()
+            .ok_or_else(|| io::Error::other("child already reaped"))?
+            .wait_with_output()
+    }
+
     fn write_input(&mut self, input: &[u8]) -> io::Result<()> {
         self.0
             .as_mut()
@@ -132,7 +156,12 @@ fn one_entry(folder: &Path) -> io::Result<PathBuf> {
     let entries = fs::read_dir(folder)?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.extension().is_some_and(|value| value == "json"))
+        .filter(|path| {
+            path.extension().is_some_and(|value| value == "json")
+                && path
+                    .file_name()
+                    .is_some_and(|value| !value.to_string_lossy().starts_with('.'))
+        })
         .collect::<Vec<_>>();
     let [entry] = entries.as_slice() else {
         return Err(io::Error::other(format!(
@@ -247,6 +276,67 @@ fn two_processes_share_one_request_and_the_keyless_waiter_replays() {
     assert!(listener.requests().is_empty());
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
+    use std::os::unix::fs::MetadataExt as _;
+    use std::sync::{Arc, Barrier};
+    use std::time::Instant;
+
+    let cache = folder("cache-original-inode-process-race");
+    let named = cache.to_string_lossy().into_owned();
+    let release = Arc::new(Barrier::new(2));
+    let (events, observed) = mpsc::channel();
+    let listener = Listener::answering_with_events(
+        {
+            let release = Arc::clone(&release);
+            move |_| Canned::ok(ANSWER).after_release(Arc::clone(&release))
+        },
+        events,
+    )
+    .expect("a loopback listener");
+    let mut owner = start(listener.base(), &named).expect("owner starts");
+    assert!(matches!(
+        observed.recv_timeout(Duration::from_secs(2)),
+        Ok(Observed::Request)
+    ));
+    let locks = fs::read_dir(cache.join(".locks"))
+        .expect("lock folder")
+        .filter_map(Result::ok)
+        .collect::<Vec<_>>();
+    let [lock] = locks.as_slice() else {
+        panic!("one owner lock, found {locks:?}")
+    };
+    let owner_inode = lock.metadata().expect("owner lock metadata").ino();
+
+    let mut waiter = start(listener.base(), &named).expect("waiter starts");
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while !process_is_blocked_on_inode(waiter.id().expect("waiter pid"), owner_inode)
+        .expect("waiter descriptors are readable")
+    {
+        assert!(
+            Instant::now() < deadline,
+            "waiter never opened the owner inode"
+        );
+        thread::yield_now();
+    }
+    assert!(owner.is_running().expect("owner state"));
+    assert!(waiter.is_running().expect("waiter state"));
+    assert!(observed.recv_timeout(Duration::from_millis(100)).is_err());
+
+    release.wait();
+    let owner = owner.wait().expect("owner finishes");
+    let waiter = waiter.wait().expect("waiter finishes");
+    assert_eq!(owner.status.code(), Some(0));
+    assert_eq!(waiter.status.code(), Some(0));
+    let (owner_details, owner_replayed) = normalized_details(&owner).expect("owner details");
+    let (waiter_details, waiter_replayed) = normalized_details(&waiter).expect("waiter details");
+    assert!(!owner_replayed);
+    assert!(waiter_replayed);
+    assert_eq!(owner_details, waiter_details);
+    assert_eq!(listener.requests().len(), 1);
+}
+
 #[test]
 fn process_death_releases_the_digest_lock_without_recovery() {
     let cache = folder("cache-killed-owner");
@@ -288,7 +378,7 @@ fn process_death_releases_the_digest_lock_without_recovery() {
 
 #[cfg(unix)]
 #[test]
-fn recording_failure_releases_the_lock_for_a_waiter() {
+fn a_failed_owner_keeps_the_empty_lock_name_and_a_waiter_sends_nothing() {
     use std::os::unix::fs::PermissionsExt as _;
 
     let cache = folder("cache-recording-failure");
@@ -324,18 +414,34 @@ fn recording_failure_releases_the_lock_for_a_waiter() {
         .expect("owner runs");
     owner.join().expect("owner joins");
     assert_eq!(failed.status.code(), Some(5));
-    assert!(matches!(
-        observed.recv_timeout(Duration::from_secs(2)),
-        Ok(Observed::Request)
-    ));
+    assert!(observed.recv_timeout(Duration::from_millis(300)).is_err());
     let mut permissions = fs::metadata(&cache).expect("cache metadata").permissions();
     permissions.set_mode(0o700);
     fs::set_permissions(&cache, permissions).expect("cache made writable");
-    let recovered = waiter.join().expect("waiter joins");
+    let refused = waiter.join().expect("waiter joins");
 
-    assert_eq!(recovered.status.code(), Some(0));
-    assert_eq!(listener.requests().len(), 2);
-    assert!(one_entry(&cache).expect("one entry").is_file());
+    assert_eq!(refused.status.code(), Some(5));
+    assert_eq!(listener.requests().len(), 1);
+    let locks = fs::read_dir(cache.join(".locks"))
+        .expect("lock folder")
+        .filter_map(Result::ok)
+        .collect::<Vec<_>>();
+    let [lock] = locks.as_slice() else {
+        panic!("one retained lock, found {locks:?}")
+    };
+    assert!(fs::read(lock.path()).expect("empty lock").is_empty());
+    assert_eq!(
+        lock.metadata().expect("lock metadata").permissions().mode() & 0o777,
+        0o600
+    );
+    assert_eq!(
+        fs::metadata(cache.join(".locks"))
+            .expect("lock folder metadata")
+            .permissions()
+            .mode()
+            & 0o777,
+        0o700
+    );
 }
 
 #[test]
@@ -349,14 +455,14 @@ fn lock_setup_fails_before_a_key_or_request_is_needed() {
     assert_eq!(output.status.code(), Some(5));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the recording folder could not be read or written: File exists (os error 17)\n"
+        "thinkthen: the recording folder could not be read or written; check its permissions and free space\n"
     );
     assert!(listener.requests().is_empty());
 }
 
 #[cfg(unix)]
 #[test]
-fn cache_lock_files_are_empty_private_digest_names() {
+fn a_successful_cache_fill_removes_its_private_lock_file() {
     use std::os::unix::fs::PermissionsExt as _;
 
     let cache = folder("cache-private-lock");
@@ -372,17 +478,7 @@ fn cache_lock_files_are_empty_private_digest_names() {
         .expect("lock directory")
         .filter_map(Result::ok)
         .collect::<Vec<_>>();
-    let [lock] = files.as_slice() else {
-        panic!("one lock file, found {files:?}")
-    };
-    let name = lock.file_name().to_string_lossy().into_owned();
-
-    assert_eq!(name.len(), 64);
-    assert!(
-        name.bytes()
-            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-    );
-    assert!(fs::read(lock.path()).expect("empty lock").is_empty());
+    assert!(files.is_empty(), "completed locks leave: {files:?}");
     assert_eq!(
         fs::metadata(&cache)
             .expect("cache mode")
@@ -398,10 +494,6 @@ fn cache_lock_files_are_empty_private_digest_names() {
             .mode()
             & 0o777,
         0o700
-    );
-    assert_eq!(
-        lock.metadata().expect("file mode").permissions().mode() & 0o777,
-        0o600
     );
 }
 
@@ -425,6 +517,7 @@ fn replay_only_creates_no_lock_directory() {
     )
     .expect("record run");
     assert_eq!(recorded.status.code(), Some(0));
+    fs::remove_dir(cache.join(".locks")).expect("empty lock folder removed for the replay check");
     let replayed = spawn(
         &[
             "decide",

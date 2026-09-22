@@ -1,6 +1,6 @@
 # A write failure after a good exchange discards the paid answer
 
-Status: Open
+Status: Closed by ticket 0061. A writing mode opens its private temporary entry before key lookup or a request.
 
 `--record` into a folder the process cannot write makes the backend request first and fails at the write. The bill pays for an answer the run throws away.
 

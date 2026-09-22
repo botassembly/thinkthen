@@ -164,15 +164,13 @@ fn whitespace_padded_responses_with_different_values_conflict() {
             .code(),
         Some(0)
     );
+    let path = entry(&folder).expect("one entry");
+    let before = fs::read(&path).expect("the first entry is readable");
 
     let output = decide(listener.base(), &folder, &[], EVIDENCE).expect("the binary runs");
     assert_eq!(output.status.code(), Some(5));
     assert!(String::from_utf8_lossy(&output.stderr).contains(CONFLICT));
-    assert!(
-        fs::read_to_string(entry(&folder).expect("one entry"))
-            .expect("the entry is text")
-            .contains(r#""noul":0.9"#)
-    );
+    assert_eq!(fs::read(path).expect("the entry is readable"), before);
     assert!(
         temporary_names(&folder)
             .expect("the folder is readable")
@@ -181,7 +179,7 @@ fn whitespace_padded_responses_with_different_values_conflict() {
 }
 
 #[test]
-fn a_damaged_winner_is_refused_and_never_replaced() {
+fn a_damaged_entry_is_replaced_after_one_successful_answer() {
     let folder = folder("recording-damaged-winner");
     let listener =
         Listener::serving(vec![Canned::ok(TRUE), Canned::ok(FALSE)]).expect("a loopback listener");
@@ -197,9 +195,11 @@ fn a_damaged_winner_is_refused_and_never_replaced() {
     fs::write(&path, damaged).expect("the entry is writable");
 
     let output = decide(listener.base(), &folder, &[], EVIDENCE).expect("the binary runs");
-    assert_eq!(output.status.code(), Some(5));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("not a recording entry"));
-    assert_eq!(fs::read(path).expect("the entry is readable"), damaged);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stderr.is_empty());
+    let repaired = fs::read(path).expect("the entry is readable");
+    assert_ne!(repaired, damaged);
+    assert!(String::from_utf8_lossy(&repaired).contains(r#""noul":0.1"#));
     assert!(
         temporary_names(&folder)
             .expect("the folder is readable")

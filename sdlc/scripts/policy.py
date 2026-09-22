@@ -22,7 +22,7 @@ ALLOWED_LICENSES = {
     "Unicode-3.0",
     "Unlicense",
 }
-# `csv-core` uses the already accepted MIT/Unlicense terms. Three more licenses
+# `csv-core` and `signal-hook` use the already accepted terms. Three more licenses
 # arrive with the TLS stack under ureq and with nothing
 # else. Each one is tied to the crates that force it, so the allowance cannot
 # quietly cover a crate that lands later. All three are permissive and carry no
@@ -36,7 +36,9 @@ LICENSE_EXCEPTIONS = {
     "webpki-roots": {"CDLA-Permissive-2.0"},
 }
 ACCEPTED_DEPENDENCIES = {
-    "thinkthen": {"clap", "csv-core", "serde", "serde_json", "sha2", "thiserror", "ureq"},
+    "thinkthen": {
+        "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook", "thiserror", "ureq"
+    },
 }
 ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": {"proptest"}}
 MAX_FILE_LINES = 500

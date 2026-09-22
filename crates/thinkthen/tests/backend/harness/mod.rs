@@ -10,6 +10,22 @@ use std::time::Duration;
 
 use crate::support::ENDPOINT_PATH;
 
+/// Whether this Linux process is blocked while holding this inode open.
+#[cfg(target_os = "linux")]
+pub(crate) fn process_is_blocked_on_inode(process: u32, expected: u64) -> io::Result<bool> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let mut opened = false;
+    for descriptor in std::fs::read_dir(format!("/proc/{process}/fd"))? {
+        if std::fs::metadata(descriptor?.path()).is_ok_and(|metadata| metadata.ino() == expected) {
+            opened = true;
+            break;
+        }
+    }
+    let wait = std::fs::read_to_string(format!("/proc/{process}/wchan"))?;
+    Ok(opened && wait.trim() == "locks_lock_inode_wait")
+}
+
 /// One response the listener will serve, in the order the script gives.
 pub(crate) struct Canned {
     status: u16,

@@ -23,6 +23,7 @@ mod parallel;
 mod profile;
 mod record_values;
 mod recording_conflicts;
+mod recording_durability;
 mod recordings;
 mod refusals;
 mod refused;

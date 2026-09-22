@@ -1,7 +1,5 @@
 //! Structured failures produced below the command boundary.
 
-use std::io;
-
 use crate::core::ProfileLimit;
 use crate::core::adapters::built_in::DecodeError;
 
@@ -43,7 +41,7 @@ pub(crate) enum Error {
     ReplayMiss(String),
     Entry(String, String),
     RecordingConflict(String),
-    Recording(io::Error),
+    RecordingStorage,
     RecordingPathIsFile,
     Defect(&'static str),
     Usage(&'static str),
@@ -63,7 +61,7 @@ impl Error {
             Self::ReplayMiss(_)
             | Self::Entry(_, _)
             | Self::RecordingConflict(_)
-            | Self::Recording(_)
+            | Self::RecordingStorage
             | Self::RecordingPathIsFile => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_) | Self::ProfileLimit(_) => Kind::Usage,

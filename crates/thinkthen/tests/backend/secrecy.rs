@@ -248,13 +248,12 @@ pub(crate) const PATHS: [Route; 17] = [
         4,
     ),
     route("an unreadable answer", &[], Answers::Unreadable, 1, 4),
-    // The exchange succeeds and the entry cannot be written, which is the one
-    // failure that happens after a key has already crossed the wire.
+    // Recording preflight refuses an unusable folder before a key or request.
     route(
         "a recording folder that cannot be made",
         &["--record", "/dev/null/x"],
-        Answers::Good,
-        1,
+        Answers::Nothing,
+        0,
         5,
     ),
     Route {

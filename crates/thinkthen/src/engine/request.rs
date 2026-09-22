@@ -4,11 +4,10 @@ use std::time::Duration;
 
 use crate::core::adapters::built_in;
 use crate::core::{Backend, BackendProfile, Plan};
-use crate::engine::cache_lock;
 use crate::engine::error::Error;
 use crate::engine::http::{Client, Exchange, Key};
 use crate::engine::prepared_request::{Answered, PreparedRequest};
-use crate::engine::recorder::Recorder;
+use crate::engine::recorder::{PreparedRecording, Recorder, WritePermit};
 
 #[cfg(test)]
 pub(crate) enum Injection {
@@ -23,9 +22,7 @@ pub(crate) enum Injection {
 pub(crate) fn inject(injection: Injection) -> Error {
     match injection {
         Injection::Backend => Error::Status(422),
-        Injection::Local => {
-            Error::Recording(std::io::Error::other("injected recording read failure"))
-        }
+        Injection::Local => Error::RecordingStorage,
         Injection::Cancelled => Error::Cancelled,
         Injection::Deadline => Error::Deadline,
         Injection::Defect => Error::Defect("injected invariant failure"),
@@ -92,35 +89,48 @@ where
     E: From<Error>,
 {
     let recorded = prepared.recorded(backend);
-    let (reply, replayed) = cache_lock::coalesce(
-        || {
-            let replayed = recorder
-                .replayed(&recorded, &prepared.digest)
-                .map_err(E::from)?;
-            replayed
-                .map(|response| {
-                    built_in::decode(plan, &response)
-                        .map_err(Error::from)
-                        .map_err(E::from)
-                })
-                .transpose()
-        },
-        || recorder.lock(&prepared.digest).map_err(E::from),
-        || {
-            let key = key()?;
-            let answered = send(&prepared, &key)?;
-            let reply = built_in::decode(plan, &answered)
+    let operation = recorder
+        .prepare(&recorded, &prepared.digest)
+        .map_err(E::from)?;
+    let (reply, replayed) = match operation {
+        PreparedRecording::Replay(response) => (
+            built_in::decode(plan, &response)
                 .map_err(Error::from)
+                .map_err(E::from)?,
+            true,
+        ),
+        PreparedRecording::Live(permit) => {
+            let (permit, key) = finish_or_cancel(permit, key())?;
+            let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
+            let reply = match built_in::decode(plan, &answered) {
+                Ok(reply) => reply,
+                Err(error) => {
+                    permit.cancel().map_err(E::from)?;
+                    return Err(E::from(Error::from(error)));
+                }
+            };
+            permit
+                .finish(&recorded, &answered, &prepared.digest.file_name())
                 .map_err(E::from)?;
-            recorder
-                .record(&recorded, &prepared.digest, &answered)
-                .map_err(E::from)?;
-            Ok(reply)
-        },
-    )?;
+            (reply, false)
+        }
+    };
     Ok(Answered {
         reply,
         replayed,
         request: prepared.digest,
     })
+}
+
+fn finish_or_cancel<T, E>(permit: WritePermit, result: Result<T, E>) -> Result<(WritePermit, T), E>
+where
+    E: From<Error>,
+{
+    match result {
+        Ok(value) => Ok((permit, value)),
+        Err(error) => {
+            permit.cancel().map_err(E::from)?;
+            Err(error)
+        }
+    }
 }

@@ -485,10 +485,13 @@ fn a_failed_exchange_is_never_recorded() {
         .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(4));
-        assert!(
-            fs::read_dir(&folder).is_err_and(|error| error.kind() == io::ErrorKind::NotFound),
-            "a failure writes no folder"
-        );
+        let files = fs::read_dir(&folder)
+            .expect("recording preflight made the private folder")
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().is_some_and(|value| value == "json"))
+            .collect::<Vec<_>>();
+        assert!(files.is_empty(), "a failed exchange installs no entry");
     }
 }
 

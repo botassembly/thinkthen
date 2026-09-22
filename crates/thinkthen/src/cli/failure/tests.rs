@@ -61,7 +61,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
 
     let shown = format!(
         "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+             {ordered:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
         Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
@@ -79,6 +79,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             limit: 1,
             actual: EVIDENCE.len(),
         }),
+        Failure::RecordingStorage,
     );
 
     assert!(!shown.contains(KEY), "{shown}");
@@ -138,6 +139,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             limit: 1,
             actual: EVIDENCE.len(),
         }),
+        Failure::RecordingStorage,
         Failure::Defect("a ranked row carries no probability"),
     ];
 
@@ -150,6 +152,23 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         assert!(!said.contains(EVIDENCE), "{said}");
         assert!(!said.contains(&body), "{said}");
     }
+}
+
+#[test]
+fn recording_storage_has_one_fixed_secret_safe_diagnostic() {
+    let mut written = Vec::new();
+    assert_eq!(
+        report(&Failure::RecordingStorage, &mut written),
+        ExitCode::from(5)
+    );
+    assert_eq!(
+        String::from_utf8(written).expect("a diagnostic is text"),
+        "thinkthen: the recording folder could not be read or written; check its permissions and free space\n"
+    );
+    assert_eq!(
+        format!("{:?}", Failure::RecordingStorage),
+        "RecordingStorage"
+    );
 }
 
 #[test]

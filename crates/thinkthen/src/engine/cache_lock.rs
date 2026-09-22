@@ -1,22 +1,26 @@
-//! One operating-system lock for one request digest in a cache folder.
+//! One operating-system lock for one missing or damaged recording entry.
 
 use std::fs::{self, File};
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// An exclusive digest lock, released when its file closes.
 #[derive(Debug)]
 pub(crate) struct CacheLock {
     _file: File,
+    path: PathBuf,
+    folder: PathBuf,
 }
 
-/// Wait for exclusive ownership of one digest in this cache folder.
-///
-/// The empty lock file stays in place. Removing it could let later callers
-/// lock a new file while an earlier waiter still holds the old file.
+/// Wait for exclusive ownership of one digest in this recording folder.
 pub(crate) fn acquire(folder: &Path, digest: &str) -> io::Result<CacheLock> {
+    acquire_after_open(folder, digest, || {})
+}
+
+fn acquire_after_open(folder: &Path, digest: &str, opened: impl FnOnce()) -> io::Result<CacheLock> {
     let locks = folder.join(".locks");
     make_private(&locks)?;
+    let path = locks.join(digest);
     let mut options = File::options();
     options.read(true).write(true).create(true);
     #[cfg(unix)]
@@ -24,32 +28,41 @@ pub(crate) fn acquire(folder: &Path, digest: &str) -> io::Result<CacheLock> {
         use std::os::unix::fs::OpenOptionsExt as _;
         options.mode(0o600);
     }
-    let file = options.open(locks.join(digest))?;
+    let file = options.open(&path)?;
+    opened();
     file.lock()?;
-    Ok(CacheLock { _file: file })
+    Ok(CacheLock {
+        _file: file,
+        path,
+        folder: locks,
+    })
 }
 
-/// Read, optionally lock and read again, or perform live work under the lock.
-pub(crate) fn coalesce<T, E, G>(
-    mut replay: impl FnMut() -> Result<Option<T>, E>,
-    acquire: impl FnOnce() -> Result<Option<G>, E>,
-    live: impl FnOnce() -> Result<T, E>,
-) -> Result<(T, bool), E> {
-    if let Some(answer) = replay()? {
-        return Ok((answer, true));
+impl CacheLock {
+    /// Remove a completed lock while this owner still holds its inode.
+    pub(crate) fn unlink(&self) -> io::Result<()> {
+        match fs::remove_file(&self.path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error),
+        }
     }
-    let guard = acquire()?;
-    if guard.is_some()
-        && let Some(answer) = replay()?
-    {
-        return Ok((answer, true));
+
+    pub(crate) fn sync_folder(&self) -> io::Result<()> {
+        sync_directory(&self.folder)
     }
-    let answer = live()?;
-    drop(guard);
-    Ok((answer, false))
+
+    #[cfg(test)]
+    pub(crate) fn file(&self) -> &File {
+        &self._file
+    }
 }
 
-/// Make the cache and lock folders readable by their owner alone.
+/// Sync one directory after changing the names it contains.
+pub(crate) fn sync_directory(folder: &Path) -> io::Result<()> {
+    File::open(folder)?.sync_all()
+}
+
 fn make_private(folder: &Path) -> io::Result<()> {
     #[cfg(unix)]
     {
@@ -68,98 +81,59 @@ fn make_private(folder: &Path) -> io::Result<()> {
 mod tests {
     use std::fs;
     use std::io;
-    use std::path::Path;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{Mutex, mpsc};
+    use std::sync::mpsc;
     use std::thread;
     use std::time::Duration;
 
-    use super::{acquire, coalesce};
-
-    type Answer = &'static str;
-
-    fn replay(recorded: &Mutex<Option<Answer>>) -> io::Result<Option<Answer>> {
-        Ok(recorded
-            .lock()
-            .map_err(|_| io::Error::other("recorded answer lock poisoned"))?
-            .to_owned())
-    }
-
-    fn own(
-        recorded: &Mutex<Option<Answer>>,
-        folder: &Path,
-        started: mpsc::Sender<()>,
-        release: mpsc::Receiver<()>,
-    ) -> io::Result<(Answer, bool)> {
-        coalesce(
-            || replay(recorded),
-            || acquire(folder, "digest").map(Some),
-            || {
-                started.send(()).map_err(io::Error::other)?;
-                release.recv().map_err(io::Error::other)?;
-                *recorded
-                    .lock()
-                    .map_err(|_| io::Error::other("recorded answer lock poisoned"))? =
-                    Some("answer");
-                Ok("answer")
-            },
-        )
-    }
-
-    fn wait(
-        recorded: &Mutex<Option<Answer>>,
-        folder: &Path,
-        attempted: mpsc::Sender<()>,
-        fills: &AtomicUsize,
-    ) -> io::Result<(Answer, bool)> {
-        coalesce(
-            || replay(recorded),
-            || {
-                attempted.send(()).map_err(io::Error::other)?;
-                acquire(folder, "digest").map(Some)
-            },
-            || {
-                fills.fetch_add(1, Ordering::SeqCst);
-                Ok("wrong answer")
-            },
-        )
-    }
+    use super::{acquire, acquire_after_open};
 
     #[test]
-    fn a_waiter_rereads_after_the_owner_fills_under_the_real_lock() {
+    fn a_waiter_keeps_the_original_inode_after_the_owner_unlinks_it() -> io::Result<()> {
         let folder = std::env::temp_dir().join(format!("thinkthen-lock-{}", std::process::id()));
         let _absent = fs::remove_dir_all(&folder);
-        let recorded: Mutex<Option<&'static str>> = Mutex::new(None);
-        let waiter_fills = AtomicUsize::new(0);
-        let (fill_send, fill_started) = mpsc::channel();
-        let (release_send, release) = mpsc::channel();
-        let (attempt_send, attempted) = mpsc::channel();
+        let owner = acquire(&folder, "digest")?;
+        let owner_inode = inode(owner.file())?;
+        let opened = fs::File::open(folder.join(".locks/digest"))?;
+        assert_eq!(inode(&opened)?, owner_inode);
+        let (attempted_send, attempted) = mpsc::channel();
+        let (owned_send, owned) = mpsc::channel();
 
-        let (owner, waiter, owner_started, waiter_attempted) = thread::scope(|scope| {
-            let owner_recorded = &recorded;
-            let owner_folder = &folder;
-            let owner = scope.spawn(move || own(owner_recorded, owner_folder, fill_send, release));
-            let owner_started = fill_started.recv_timeout(Duration::from_secs(2)).is_ok();
-            let waiter_recorded = &recorded;
-            let waiter_folder = &folder;
-            let waiter_fills = &waiter_fills;
-            let waiter = scope
-                .spawn(move || wait(waiter_recorded, waiter_folder, attempt_send, waiter_fills));
-            let waiter_attempted = attempted.recv_timeout(Duration::from_secs(2)).is_ok();
-            let _released = release_send.send(());
-            (
-                owner.join().expect("owner joins"),
-                waiter.join().expect("waiter joins"),
-                owner_started,
-                waiter_attempted,
-            )
+        let waiter_folder = folder.clone();
+        let waiter = thread::spawn(move || -> io::Result<()> {
+            let guard = acquire_after_open(&waiter_folder, "digest", || {
+                let _sent = attempted_send.send(());
+            })?;
+            owned_send
+                .send(inode(guard.file())?)
+                .map_err(io::Error::other)
         });
+        attempted
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(io::Error::other)?;
+        owner.unlink()?;
+        owner.sync_folder()?;
+        drop(owner);
+        let waiter_inode = owned
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(io::Error::other)?;
+        waiter
+            .join()
+            .map_err(|_| io::Error::other("waiter panicked"))??;
 
-        assert!(owner_started);
-        assert!(waiter_attempted);
-        assert_eq!(owner.expect("owner result"), ("answer", false));
-        assert_eq!(waiter.expect("waiter result"), ("answer", true));
-        assert_eq!(waiter_fills.load(Ordering::SeqCst), 0);
-        fs::remove_dir_all(folder).expect("test lock folder removed");
+        assert_eq!(waiter_inode, owner_inode);
+        assert!(!folder.join(".locks/digest").exists());
+        fs::remove_dir_all(folder)?;
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    fn inode(file: &fs::File) -> io::Result<u64> {
+        use std::os::unix::fs::MetadataExt as _;
+        Ok(file.metadata()?.ino())
+    }
+
+    #[cfg(not(unix))]
+    fn inode(_file: &fs::File) -> io::Result<u64> {
+        Ok(1)
     }
 }

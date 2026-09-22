@@ -147,7 +147,7 @@ pub(crate) enum Failure {
     /// The entry already keeps another response for this request.
     RecordingConflict(String),
     /// The recording folder could not be read or written.
-    Recording(io::Error),
+    RecordingStorage,
     /// A recording directory argument names a regular file.
     RecordingPathIsFile,
     /// An invariant inside `thinkthen` broke.
@@ -231,9 +231,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             5,
             format!("the entry `{name}` already records a different response"),
         ),
-        Failure::Recording(error) => (
+        Failure::RecordingStorage => (
             5,
-            format!("the recording folder could not be read or written: {error}"),
+            "the recording folder could not be read or written; check its permissions and free space"
+                .to_owned(),
         ),
         Failure::RecordingPathIsFile => (
             5,
@@ -286,6 +287,9 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
         return None;
     };
     let code = say(cause, writer);
+    if matches!(cause.as_ref(), Failure::RecordingStorage) {
+        return Some(code);
+    }
     let withheld = if *held {
         ", and nothing was printed because an order needs every record"
     } else {
@@ -492,7 +496,7 @@ impl From<EngineError> for Failure {
             EngineError::ReplayMiss(name) => Self::ReplayMiss(name),
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
-            EngineError::Recording(error) => Self::Recording(error),
+            EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
             EngineError::Defect(message) => Self::Defect(message),
             EngineError::Usage(message) => Self::Usage(message),

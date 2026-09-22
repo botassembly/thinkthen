@@ -1,6 +1,6 @@
 # Lock files stay after their entries land
 
-Status: Open
+Status: Closed by ticket 0061. A valid final entry lets the owner unlink the digest lock while it still holds the original inode.
 
 A completed `--cache` run leaves one lock file per entry. The cache holds two files for every answer, and the lock files never leave.
 

@@ -1,6 +1,6 @@
 # A corrupt recording entry bills every retry and never repairs
 
-Status: Open
+Status: Closed by ticket 0061. Record and cache modes repair a damaged entry after one successful answer; replay alone remains read-only.
 
 A recording folder that holds one truncated entry becomes stuck. The same documented command sends a fresh request, pays for it, then refuses the write and leaves the entry broken. Every retry pays again, and the only repair today is deleting the file by hand.
 

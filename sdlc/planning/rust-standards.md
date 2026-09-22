@@ -47,7 +47,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 
 ## Dependencies
 
-- Few, and each one argued. `serde`, `serde_json`, `sha2`, `thiserror`, and the engine's `ureq` form the library-only graph. The default `cli` feature adds optional `clap` and `csv-core`. Parallel requests use threads and bounded channels. No async runtime enters until a measurement asks for one. The package rung builds and inspects the default-features-off graph.
+- Few, and each one argued. `serde`, `serde_json`, `sha2`, `thiserror`, the engine's `ureq`, and `signal-hook` form the library-only graph. `signal-hook` installs the Unix `SIGXFSZ` handler without unsafe code in this repository; the standard library exposes no safe signal-installation interface. The default `cli` feature adds optional `clap` and `csv-core`. Parallel requests use threads and bounded channels. No async runtime enters until a measurement asks for one. The package rung builds and inspects the default-features-off graph.
 - Every dependency resolves from crates.io with a checksum, under MIT, Apache-2.0, Unicode-3.0, or Unlicense. HTTPS forced three more: ISC, BSD-3-Clause, and CDLA-Permissive-2.0, each tied in `policy.py` to the crates that need it. No TLS stack exists in Rust without them. Enforced by: `lint` reads `cargo metadata` and `Cargo.lock`, and `cargo deny` reads the same seven licenses from `deny.toml` and fails on an advisory or on a license nothing in the tree offers.
 - Adding a dependency takes a second reviewing agent and a line in the commit message saying why the standard library would not do.
 

@@ -1,6 +1,6 @@
 # A cache write hitting a size limit kills the process
 
-Status: Open
+Status: Closed by ticket 0061. A safe process-once handler turns `SIGXFSZ` into the fixed recording storage failure and cleanup path.
 
 When the entry write fails on a file-size limit, the process dies on SIGXFSZ with no thinkthen message, and a partial temporary file stays behind. The replay path after the death stays clean, so the damage is contained, but the user sees a raw signal and a core dump notice.
 

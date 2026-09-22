@@ -13,6 +13,7 @@ Ian can overturn any placement here.
 - Landed: 0058. Backend, transport, question-file, recording, table, and empty-input diagnostics now name the condition and a safe action. Dry runs apply the live one-document width rule.
 - Landed: 0059. Explicit backend profiles enforce local byte and question limits before replay, cache, key lookup, or network access. Saved calibration names warn once at the ordered result boundary and appear in detailed metadata.
 - Landed: 0060. Default streamed value rows keep each parsed record under `input` beside its answer under `value`. Streamed annotation still enriches object records and wraps non-object records. One-document and explicit views stay unchanged.
+- Landed: 0061. Recording writers preflight storage, repair damaged entries atomically, handle file-size signals safely, sync complete entries, preserve valid old bytes, and remove new digest locks after a valid entry lands.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
@@ -39,6 +40,8 @@ Tickets 0056 through 0058 completed every row below. Lane A continues with backe
 **A3. Done.** Ticket 0060 returns each streamed record with the value verbs' answer and closes `two-function-flows-lose-the-record-between-stages`. `recognize` and `relate` follow the same rule when they land (addition D). A single text still prints a bare answer, pinned by tests (addition C).
 
 **A4. The cache, and the money bugs with it.** Proposed tickets 6, 7, and 14 together, because a cache that is on by default puts these bugs in front of every user. They are one body of work in the files 0055 just moved:
+
+Ticket 0061 completed the durability foundation before any default cache: corrupt-entry repair, write preflight, file-size failure handling, temporary cleanup, synced installation, and completed-lock removal.
 
 - Engine settings for the cache and the counters.
 - The default bounded cache, the smallest config file, `--no-cache`, prune, and `thinkthen status` (`the-disk-cache-is-never-on-unless-the-user-names-a-folder`, `a-status-command-for-configuration-and-usage`).
