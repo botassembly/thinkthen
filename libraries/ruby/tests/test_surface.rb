@@ -71,16 +71,33 @@ class TestSurface < Minitest::Test
   def test_rank_orders_most_likely_yes_first
     records = ["hello", "I want a refund", "maybe"]
     ranked = ThinkThen.rank("Is this a complaint?", records)
-    assert_equal "I want a refund", ranked.first
+    # The ruled pair (settled 2026-09-21): the record's place, the record,
+    # and the probability the backend gave it.
+    assert_equal "I want a refund", ranked.first.record
+    assert_equal 1, ranked.first.index
+    assert_in_delta 0.97, ranked.first.probability, 1e-9
     assert_equal 3, ranked.length
     top = ThinkThen.rank("Is this a complaint?", records, top: 2)
     assert_equal 2, top.length
   end
 
-  def test_find_returns_the_unit
+  def test_find_returns_the_unit_and_its_probability
     units = ["hello", "I want a refund for order 9", "weather talk"]
     found = ThinkThen.find("Which line asks for money back?", units)
-    assert_equal "I want a refund for order 9", found
+    # The ruled pair (settled 2026-09-21): place, unit, and probability.
+    assert_equal 1, found.index
+    assert_equal "I want a refund for order 9", found.unit
+    assert_in_delta 0.97, found.probability, 1e-9
+  end
+
+  def test_a_built_question_carries_its_members_once
+    # Settled 2026-09-21: a built question plus members refuses, naming both.
+    question = ThinkThen.question(choose: "Which team?", options: %w[billing shipping])
+    error = assert_raises(ThinkThen::UsageError) do
+      ThinkThen.choose(question, "some text", options: %w[billing])
+    end
+    assert_match(/options/, error.message)
+    assert_equal "usage", error.kind
   end
 
   def test_annotate_over_strings
@@ -108,6 +125,15 @@ class TestSurface < Minitest::Test
     assert_equal "jev-latest", details["model"]
     assert_match(/\A[0-9a-f]{64}\z/, details["digest"])
     assert_equal 1, details["sends"]
+    # The nearest level's name on a score question; nil on every other
+    # verb (settled 2026-09-21).
+    assert_nil details["nearest"]
+  end
+
+  def test_details_nearest_on_a_score_question
+    question = ThinkThen.question(score: "How strong is the refund claim?", levels: %w[low mid high])
+    details = ThinkThen.details(question, "maybe later")
+    assert_equal "mid", details["nearest"]
   end
 
   def test_details_carries_the_requests_list_and_the_failure_count

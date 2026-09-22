@@ -57,7 +57,7 @@ expected_rank = [
   "Where is my order?",
   "Hello team"
 ]
-failures << "rank order diverged: #{urgent.inspect}" unless urgent == expected_rank
+failures << "rank order diverged: #{urgent.inspect}" unless urgent.map(&:record) == expected_rank
 scored, nearest = ThinkThen.score_with_level("How urgent is this?", outage, levels: levels)
 failures << "score returned #{scored}, outside the top level's range" unless scored > 1.0 && scored <= 2.0
 failures << "score's nearest level is #{nearest.inspect}, the comment promises 'Immediate.'" unless nearest == "Immediate."

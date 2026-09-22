@@ -793,6 +793,9 @@ fn details_hash(ruby: &magnus::Ruby, details: &Details) -> Result<RHash, Error> 
     }
     hash.aset("requests", requests).map_err(|error| error)?;
     hash.aset("failed_questions", details.failed_questions).map_err(|error| error)?;
+    // The nearest level's name on a score question; nil on every other
+    // verb (ADR 0017 pick 6, settled 2026-09-21).
+    hash.aset("nearest", details.nearest.clone()).map_err(|error| error)?;
     let _ = ruby;
     Ok(hash)
 }

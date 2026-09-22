@@ -48,6 +48,21 @@ module ThinkThen
   # edge prints once with the lower number in `source`.
   Edge = Struct.new(:name, :source, :target, :probability, :source_kind, :target_kind)
 
+  # The ruled pair `rank` returns: the record's place in the input, the
+  # record itself, and the probability the backend gave it. Most likely
+  # yes first; ties keep input order (settled 2026-09-21). It prints as
+  # its record, because the deck's sample prints ranked records directly.
+  Ranked = Struct.new(:index, :record, :probability) do
+    def to_s
+      record.to_s
+    end
+  end
+
+  # The ruled pair `find` returns: the winning unit's place, the unit
+  # itself, and its probability. `index` and `unit` are nil when nothing
+  # fits (settled 2026-09-21).
+  Found = Struct.new(:index, :unit, :probability)
+
   # One shared engine value: no thread is held between calls, and the
   # process keeps one width gate and one set of counters.
   @engine = Native::Engine.new
@@ -120,14 +135,14 @@ module ThinkThen
     def rank(question, records, top: nil, cancel: nil, deadline: nil)
       list = records.to_a
       placed = @engine.rank(built(question), list.map(&:to_s), cancel, deadline, nil)
-      ordered = placed.map { |index, _probability| list[index] }
+      ordered = placed.map { |index, probability| Ranked.new(index, list[index], probability) }
       top ? ordered.first(top) : ordered
     end
 
     def find(question, units, cancel: nil, deadline: nil)
       list = units.to_a
-      index, = @engine.find(built(question), list.map(&:to_s), cancel, deadline)
-      index.nil? ? nil : list[index]
+      index, probability = @engine.find(built(question), list.map(&:to_s), cancel, deadline)
+      Found.new(index, index.nil? ? nil : list[index], probability)
     end
 
     def choose(question, evidence, options: nil, cancel: nil, deadline: nil)
@@ -276,7 +291,11 @@ module ThinkThen
     end
 
     def choose_question(question, options)
-      return built(question) if options.nil? && question.is_a?(Question)
+      if question.is_a?(Question)
+        raise UsageError.new("choose: a question value carries its own options; pass the options on the question, not beside it", "usage") if options
+
+        return built(question)
+      end
 
       body = question_body("choose", question)
       body["options"] = options if options
@@ -284,7 +303,11 @@ module ThinkThen
     end
 
     def score_question(question, levels)
-      return built(question) if levels.nil? && question.is_a?(Question)
+      if question.is_a?(Question)
+        raise UsageError.new("score: a question value carries its own levels; pass the levels on the question, not beside it", "usage") if levels
+
+        return built(question)
+      end
 
       body = question_body("score", question)
       body["levels"] = levels if levels
@@ -292,7 +315,11 @@ module ThinkThen
     end
 
     def tag_question(question, labels)
-      return built(question) if labels.nil? && question.is_a?(Question)
+      if question.is_a?(Question)
+        raise UsageError.new("tag: a question value carries its own labels; pass the labels on the question, not beside it", "usage") if labels
+
+        return built(question)
+      end
 
       body = question_body("tag", question)
       body["labels"] = labels if labels
