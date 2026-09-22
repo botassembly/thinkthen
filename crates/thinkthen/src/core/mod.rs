@@ -25,6 +25,7 @@ mod question;
 mod question_file;
 mod question_set;
 pub(crate) mod recording;
+pub(crate) mod recording_identity;
 mod records;
 mod render;
 mod reply;

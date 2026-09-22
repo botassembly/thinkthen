@@ -1,16 +1,8 @@
 //! The one sweep that proves no key leaves this process and no error quotes the
 //! evidence.
 //!
-//! The four single-answer commands run down every path the backend can send
-//! them, on one document and over records, in both views. The record commands
-//! run the hostile replay path under both framings and views. One reader then
-//! reads standard output, standard error, and every file the run wrote.
-//! `refusals.rs` drives the same reader down every usage error, and
-//! `crates/thinkthen/src/failure.rs` drives it over every diagnostic and every
-//! `Debug` line a message is built from.
-//!
-//! A command enters the sweep by adding one row to [`VERBS`], and a path by
-//! adding one row to `PATHS`.
+//! One reader checks standard output, standard error, and every file written
+//! across all command families, backend paths, framings, and views.
 
 use std::fs;
 use std::io;
@@ -408,7 +400,11 @@ fn sweep(
     if let Some(damage) = route.damage {
         let entries = written(&dir);
         assert!(!entries.is_empty(), "{case}: an entry to damage");
-        for entry in entries {
+        for entry in entries.into_iter().filter(|entry| {
+            entry
+                .file_name()
+                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+        }) {
             fs::write(&entry, damage)?;
         }
     }
@@ -526,7 +522,11 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             Some(format!("Bearer {KEY}").as_str()),
             "{name}"
         );
-        assert_eq!(written(&dir).len(), 1, "{name}: one entry was recorded");
+        assert_eq!(
+            written(&dir).len(),
+            2,
+            "{name}: marker and one entry were recorded"
+        );
         nothing_leaked(name, &output, &into);
     }
 }

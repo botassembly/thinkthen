@@ -66,6 +66,9 @@ fn entry(folder: &Path) -> io::Result<PathBuf> {
         .filter(|path| {
             path.extension()
                 .is_some_and(|extension| extension == "json")
+                && path
+                    .file_name()
+                    .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
         })
         .collect::<Vec<_>>();
     let [path] = entries.as_slice() else {
@@ -80,6 +83,7 @@ fn temporary_names(folder: &Path) -> io::Result<Vec<String>> {
         .filter(|found| found.file_type().is_ok_and(|kind| kind.is_file()))
         .map(|found| found.file_name().to_string_lossy().into_owned())
         .filter(|name| name.starts_with('.'))
+        .filter(|name| name != ".thinkthen-backend.json")
         .collect())
 }
 

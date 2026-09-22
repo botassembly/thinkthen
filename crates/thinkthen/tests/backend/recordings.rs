@@ -83,7 +83,11 @@ pub(crate) fn only_entry(folder: &Path) -> io::Result<(String, String)> {
     let mut entries = Vec::new();
     for entry in fs::read_dir(folder)? {
         let path = entry?.path();
-        if path.extension().is_some_and(|value| value == "json") {
+        if path.extension().is_some_and(|value| value == "json")
+            && path
+                .file_name()
+                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+        {
             entries.push(path);
         }
     }
@@ -470,7 +474,6 @@ fn an_entry_that_cannot_be_read_is_not_reported_as_a_miss() {
 
 #[test]
 fn a_failed_exchange_is_never_recorded() {
-    let folder = folder("failed");
     let cases = [
         Canned::status(402, r#"{"error":"no credit"}"#),
         Canned::ok("not json at all"),
@@ -478,7 +481,8 @@ fn a_failed_exchange_is_never_recorded() {
         Canned::cut_short(),
     ];
 
-    for canned in cases {
+    for (place, canned) in cases.into_iter().enumerate() {
+        let folder = folder(&format!("failed-{place}"));
         let listener = Listener::serving(vec![canned]).expect("a loopback listener");
         let output = decide(
             listener.base(),
@@ -492,7 +496,12 @@ fn a_failed_exchange_is_never_recorded() {
             .expect("recording preflight made the private folder")
             .filter_map(Result::ok)
             .map(|entry| entry.path())
-            .filter(|path| path.extension().is_some_and(|value| value == "json"))
+            .filter(|path| {
+                path.extension().is_some_and(|value| value == "json")
+                    && path
+                        .file_name()
+                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+            })
             .collect::<Vec<_>>();
         assert!(files.is_empty(), "a failed exchange installs no entry");
     }

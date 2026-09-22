@@ -15,6 +15,12 @@ thread_local! {
 #[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum StorageStage {
+    IdentityCreate,
+    IdentityWrite,
+    IdentityFileSync,
+    IdentityInstall,
+    IdentityDirectorySync,
+    IdentityCleanup,
     Write,
     FileSync,
     Install,
@@ -27,6 +33,12 @@ pub(super) enum StorageStage {
 
 #[derive(Clone, Copy)]
 pub(super) enum StorageStageName {
+    IdentityCreate,
+    IdentityWrite,
+    IdentityFileSync,
+    IdentityInstall,
+    IdentityDirectorySync,
+    IdentityCleanup,
     Write,
     FileSync,
     Install,
@@ -50,6 +62,12 @@ pub(super) const fn maybe_fail(_stage: StorageStageName) -> Result<(), Error> {
 #[cfg(test)]
 pub(super) fn maybe_fail_io(stage: StorageStageName) -> io::Result<()> {
     let requested = match stage {
+        StorageStageName::IdentityCreate => StorageStage::IdentityCreate,
+        StorageStageName::IdentityWrite => StorageStage::IdentityWrite,
+        StorageStageName::IdentityFileSync => StorageStage::IdentityFileSync,
+        StorageStageName::IdentityInstall => StorageStage::IdentityInstall,
+        StorageStageName::IdentityDirectorySync => StorageStage::IdentityDirectorySync,
+        StorageStageName::IdentityCleanup => StorageStage::IdentityCleanup,
         StorageStageName::Write => StorageStage::Write,
         StorageStageName::FileSync => StorageStage::FileSync,
         StorageStageName::Install => StorageStage::Install,
@@ -134,6 +152,12 @@ mod tests {
                 permit
             } else {
                 fs::create_dir_all(&folder).expect("recording folder");
+                crate::engine::recorder::identity::check(
+                    &folder,
+                    &exchange.backend_identity(),
+                    true,
+                )
+                .expect("backend identity");
                 fs::write(&path, &old).expect("test seeds a valid entry");
                 let recorder = Recorder::of(Some(&folder), None).expect("record recorder");
                 live(

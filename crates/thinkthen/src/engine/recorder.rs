@@ -14,6 +14,7 @@ use crate::engine::error::Error;
 use self::fault::{StorageStageName, maybe_fail, maybe_fail_io};
 
 mod fault;
+mod identity;
 
 static WRITES: AtomicU64 = AtomicU64::new(0);
 
@@ -102,7 +103,7 @@ impl Recorder {
         self.cache_answers
     }
 
-    fn ready(&self, name: &str) -> Result<(), Error> {
+    fn ready(&self, exchange: &Exchange<'_>, name: &str) -> Result<(), Error> {
         let Some(folder) = self.folder.as_deref() else {
             return Ok(());
         };
@@ -119,9 +120,11 @@ impl Recorder {
             return Err(Error::ReplayMiss(name.to_owned()));
         }
         if self.private_default {
-            require_private(folder)?;
+            identity::require_private(folder)?;
         }
-        *gate = Some(cache_lock::shared_folder(folder).map_err(storage)?);
+        let opened = cache_lock::shared_folder(folder).map_err(storage)?;
+        identity::check(folder, &exchange.backend_identity(), self.recording)?;
+        *gate = Some(opened);
         Ok(())
     }
 
@@ -135,7 +138,7 @@ impl Recorder {
             return Ok(PreparedRecording::Live(WritePermit { write: None }));
         };
         let name = digest.file_name();
-        self.ready(&name)?;
+        self.ready(exchange, &name)?;
         let entry = folder.join(&name);
         if self.recording {
             install_sigxfsz_handler()?;
@@ -171,22 +174,6 @@ impl Recorder {
             }
         }
     }
-}
-
-#[cfg(unix)]
-fn require_private(folder: &Path) -> Result<(), Error> {
-    use std::os::unix::fs::PermissionsExt as _;
-    let mode = fs::metadata(folder).map_err(storage)?.permissions().mode() & 0o777;
-    if mode == 0o700 {
-        Ok(())
-    } else {
-        Err(Error::DefaultCachePrivate)
-    }
-}
-
-#[cfg(not(unix))]
-fn require_private(_folder: &Path) -> Result<(), Error> {
-    Ok(())
 }
 
 impl WritePermit {
@@ -532,6 +519,9 @@ mod tests {
                 paths.iter().any(|path| {
                     path.file_name()
                         .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+                        && path
+                            .file_name()
+                            .is_some_and(|name| name.to_string_lossy() != ".thinkthen-backend.json")
                         && !path
                             .parent()
                             .is_some_and(|parent| parent.ends_with(".locks"))

@@ -54,7 +54,11 @@ fn sweep(route: &Route, details: bool) -> io::Result<()> {
     if let Some(damage) = route.damage {
         let entries = written(&dir);
         assert!(!entries.is_empty(), "{case}: entry to damage");
-        for entry in entries {
+        for entry in entries.into_iter().filter(|entry| {
+            entry
+                .file_name()
+                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+        }) {
             fs::write(entry, damage)?;
         }
     }

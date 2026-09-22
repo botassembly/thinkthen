@@ -43,6 +43,8 @@ pub(crate) enum Error {
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
+    RecordingBackendMismatch,
+    RecordingFolderLegacy,
     DefaultCachePrivate,
     CacheEntry,
     Defect(&'static str),
@@ -65,6 +67,8 @@ impl Error {
             | Self::RecordingConflict(_)
             | Self::RecordingStorage
             | Self::RecordingPathIsFile
+            | Self::RecordingBackendMismatch
+            | Self::RecordingFolderLegacy
             | Self::DefaultCachePrivate => Kind::Local,
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,

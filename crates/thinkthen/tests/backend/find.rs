@@ -286,7 +286,13 @@ fn a_closed_output_pipe_ends_find_quietly_after_the_paid_answer_finishes() {
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
-        .args(["find", "Which unit answers?", "--url", listener.base()])
+        .args([
+            "find",
+            "Which unit answers?",
+            "--url",
+            listener.base(),
+            "--no-cache",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

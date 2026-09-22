@@ -9,6 +9,7 @@ use thiserror::Error;
 
 use crate::core::adapters::built_in;
 use crate::core::digest::hex;
+use crate::core::recording_identity::BackendIdentity;
 use crate::core::text::Url;
 
 /// The schema string a version one recording entry carries.
@@ -107,6 +108,12 @@ impl<'a> Exchange<'a> {
         hasher.update(b"\n");
         hasher.update(self.request);
         Digest(hex(&hasher.finalize()))
+    }
+
+    /// Name the backend interface and address independently of request bytes.
+    #[must_use]
+    pub(crate) fn backend_identity(&self) -> BackendIdentity {
+        BackendIdentity::new(self.url)
     }
 }
 

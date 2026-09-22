@@ -123,6 +123,7 @@ fn tsv_details_carries_the_parsed_object() {
             listener.base(),
             "--model",
             "local-1",
+            "--no-cache",
         ],
         &KEY,
         b"body\tid\nyes\t1\n",
@@ -486,6 +487,7 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
             listener.base(),
             "--model",
             "local-1",
+            "--no-cache",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

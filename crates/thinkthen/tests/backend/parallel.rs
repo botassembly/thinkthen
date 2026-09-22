@@ -109,10 +109,11 @@ fn entries(folder: &Path) -> usize {
         entries
             .filter_map(Result::ok)
             .filter(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .is_some_and(|value| value == "json")
+                let path = entry.path();
+                path.extension().is_some_and(|value| value == "json")
+                    && path
+                        .file_name()
+                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
             })
             .count()
     })
@@ -339,6 +340,7 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
             "/body",
             "--jobs",
             "4",
+            "--no-cache",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

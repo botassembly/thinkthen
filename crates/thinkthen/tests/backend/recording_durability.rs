@@ -220,6 +220,7 @@ fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry()
         .any(|entry| {
             entry.file_type().is_ok_and(|kind| kind.is_file())
                 && entry.file_name().to_string_lossy().starts_with('.')
+                && entry.file_name().to_string_lossy() != ".thinkthen-backend.json"
         });
     assert!(!temporary, "no temporary recording entry remains");
 }

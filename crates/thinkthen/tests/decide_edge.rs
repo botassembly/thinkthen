@@ -2,6 +2,7 @@
 
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 const DEFAULT_MODEL: &str = "jev-latest";
 
@@ -10,10 +11,16 @@ const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// Run the binary with no environment but what the case names, and feed it bytes.
 fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io::Result<Output> {
+    static RUNS: AtomicUsize = AtomicUsize::new(0);
+    let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "decide-edge-home-{}-{}",
+        std::process::id(),
+        RUNS.fetch_add(1, Ordering::Relaxed)
+    ));
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("HOME", home)
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

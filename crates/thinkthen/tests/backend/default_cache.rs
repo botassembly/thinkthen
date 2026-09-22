@@ -5,7 +5,10 @@ use std::process::Output;
 use std::thread;
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
+use crate::support::{
+    DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_backend_identity,
+    plant_recording,
+};
 
 const ANSWERED: &str = concat!(
     r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
@@ -25,12 +28,10 @@ fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
 
 fn plant(folder: &Path, response: &str) -> Option<String> {
     let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "asks for a refund");
-    plant_recording(
-        folder,
-        &format!("{DEFAULT_BASE}/{ENDPOINT_PATH}"),
-        &request,
-        response,
-    )
+    let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
+    let name = plant_recording(folder, &url, &request, response)?;
+    plant_backend_identity(folder, &url)?;
+    Some(name)
 }
 
 fn usage(status: &Output, name: &str) -> Option<u64> {

@@ -1,6 +1,6 @@
 # A cache resume under a different address silently re-bills everything
 
-Status: Open
+Status: Addressed by ticket 0065
 
 A recording entry's name is the SHA-256 of the adapter, the URL, and the request bytes (`specification/recording.md`, "An entry"). The address is inside the digest, and nothing tells the user. A user who resumes a stopped run without the identical `THINKTHEN_BASE_URL` or `--url` misses every cached answer, sends every record to the default vendor address, and sees a clean exit 0 with no warning.
 

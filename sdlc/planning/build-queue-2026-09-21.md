@@ -42,12 +42,12 @@ Tickets 0056 through 0058 completed every row below. Lane A continues with backe
 
 **A4. The cache, and the money bugs with it.** Proposed tickets 6, 7, and 14 together, because a cache that is on by default puts these bugs in front of every user. They are one body of work in the files 0055 just moved:
 
-Tickets 0061 through 0063 complete recording durability, the bounded default cache, `status`, and numeric counters without changing entry contents. Ticket 0064 bounds retry waits, reports successful per-result sends, and pins prompt clean-close handling.
+Tickets 0061 through 0063 complete recording durability, the bounded default cache, `status`, and numeric counters without changing entry contents. Ticket 0064 bounds retry waits, reports successful per-result sends, and pins prompt clean-close handling. Ticket 0065 binds every new write-capable folder to one canonical backend before key lookup or a request while preserving exact read-only replay from older folders.
 
 - Engine settings for the cache and the counters.
 - The default bounded cache, the smallest config file, `--no-cache`, prune, and `thinkthen status` (`the-disk-cache-is-never-on-unless-the-user-names-a-folder`, `a-status-command-for-configuration-and-usage`).
 - **A corrupt recording entry bills every retry and never repairs itself.** The worst wave 1.5 finding. A bad entry is replaced on the next good answer, never trusted and never fatal.
-- A cache resumed under a different address silently bills everything again.
+- Address-safe resume landed in ticket 0065. A mismatched backend now fails locally before any paid request.
 - A cache write that hits a size limit kills the process.
 - A write failure after a good exchange throws away the paid answer.
 - Lock files stay after their entries land.

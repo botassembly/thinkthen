@@ -14,6 +14,7 @@ use crate::engine::error::Error as EngineError;
 use crate::engine::error::TransportKind;
 use crate::table;
 
+mod recording;
 mod status;
 
 use status::said;
@@ -143,6 +144,8 @@ pub(crate) enum Failure {
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
+    RecordingBackendMismatch,
+    RecordingFolderLegacy,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
     Configuration(&'static str),
@@ -178,6 +181,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     if let Some(code) = stopped(failure, writer) {
         return code;
     }
+    if let Some((code, message)) = recording::message(failure) {
+        let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
+        return code;
+    }
     if let Some((code, message)) = special_failure(failure) {
         let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
         return code;
@@ -191,8 +198,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Backend(error) => (2, error.to_string()),
         Failure::Question(error) => (
             match error.origin() {
-                // A value the file holds is a failure of a local file, which
-                // `annotate.md` already puts at exit 5. A value the user typed
+                // A file value is local failure 5. A value the user typed
                 // is a usage error, as it has always been.
                 Source::File => 5,
                 _ => 2,
@@ -215,23 +221,15 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
-        Failure::ReplayMiss(name) => (
-            5,
-            format!("the replay folder holds no entry named `{name}`"),
-        ),
-        Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
-        Failure::RecordingConflict(name) => (
-            5,
-            format!("the entry `{name}` already records a different response"),
-        ),
-        Failure::RecordingStorage => (
-            5,
-            "the recording folder could not be read or written; check its permissions and free space"
-                .to_owned(),
-        ),
-        Failure::RecordingPathIsFile => (
-            5,
-            "the recording directory is a file; choose another path or remove the file".to_owned(),
+        Failure::ReplayMiss(_)
+        | Failure::Entry(_, _)
+        | Failure::RecordingConflict(_)
+        | Failure::RecordingStorage
+        | Failure::RecordingPathIsFile
+        | Failure::RecordingBackendMismatch
+        | Failure::RecordingFolderLegacy => (
+            70,
+            "defect: a recording failure was not reported".to_owned(),
         ),
         Failure::OpenInput(error) => (5, format!("--input could not be opened: {error}")),
         Failure::Input(error) => (5, format!("standard input could not be read: {error}")),
@@ -507,6 +505,8 @@ impl From<EngineError> for Failure {
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
+            EngineError::RecordingBackendMismatch => Self::RecordingBackendMismatch,
+            EngineError::RecordingFolderLegacy => Self::RecordingFolderLegacy,
             EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
             EngineError::CacheEntry => Self::CacheEntry,
             EngineError::Defect(message) => Self::Defect(message),

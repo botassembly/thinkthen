@@ -68,6 +68,26 @@ pub(crate) fn digest(url: &str, request: &[u8]) -> String {
         .collect()
 }
 
+pub(crate) fn plant_backend_identity(folder: &Path, url: &str) -> Option<()> {
+    let mut hasher = Sha256::new();
+    hasher.update(b"systemone\n");
+    hasher.update(url.as_bytes());
+    let backend_sha256: String = hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    fs::create_dir_all(folder).ok()?;
+    fs::write(
+        folder.join(".thinkthen-backend.json"),
+        format!(
+            "{{\"schema\":\"thinkthen.backend-folder/1\",\"backend_sha256\":\"{backend_sha256}\"}}\n"
+        ),
+    )
+    .ok()?;
+    Some(())
+}
+
 pub(crate) fn plant_recording(
     folder: &Path,
     url: &str,

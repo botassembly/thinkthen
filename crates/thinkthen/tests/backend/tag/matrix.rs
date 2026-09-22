@@ -260,6 +260,7 @@ fn a_closed_tag_output_pipe_stops_quietly() {
             "--lines",
             "--jobs",
             "4",
+            "--no-cache",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

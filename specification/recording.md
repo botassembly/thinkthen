@@ -9,7 +9,7 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 | Option | Meaning |
 | --- | --- |
 | `--record DIR` | Call the backend, then write the exchange into `DIR`. `DIR` is created when absent |
-| `--replay DIR` | Answer from `DIR` alone. Open no connection and read no key. A request that `DIR` lacks is a local failure, exit code 5, and the message names the missing entry |
+| `--replay DIR` | Answer from `DIR` alone. Open no connection and read no key. A request that `DIR` lacks is a local failure, exit code 5, and the message names the missing entry and says what forms its name |
 | Both, with the same `DIR` | A cache. An entry that exists is replayed. A request that is absent goes to the backend and is recorded |
 | `--cache DIR` | The row above, written once. It stands beside neither `--record` nor `--replay`, because one run keeps one folder |
 
@@ -33,6 +33,12 @@ The optional read-only configuration file is `$XDG_CONFIG_HOME/thinkthen/config.
 
 A recording directory argument that names a regular file is a local failure at exit 5. The diagnostic says to choose another path or remove the file. It repeats neither the path nor an operating-system error.
 
+The first write-capable use of a new or empty folder binds it to the canonical backend interface and resolved endpoint address. The private `.thinkthen-backend.json` marker carries schema `thinkthen.backend-folder/1` and one `backend_sha256` field. The digest covers the adapter name, a newline, and the resolved endpoint URL. It excludes the model, so requests for several models may share a folder. A later mismatch fails locally at exit 5 before the tool reads a key or sends a request. The message tells the user to restore the backend settings or choose another folder.
+
+The marker is complete before it gets its final name. The tool writes and syncs a private temporary file, installs the final name without replacing a concurrent winner, checks a winner, and syncs the folder. A strict bounded reader follows no symlink and refuses a malformed, foreign, oversized, non-regular, or replaced marker without printing bytes from it. On Unix the marker and its temporary file use mode `0600`.
+
+Exact replay from an older unmarked folder remains read-only and creates no marker. A write-capable use of an unmarked folder that already has a digest-shaped entry fails locally and tells the user to replay it read-only or choose a new folder. Unknown names, private temporary files, and the lock folder do not prevent an otherwise empty folder from being bound. The tool never guesses an old folder's address from its entries.
+
 Both options on one folder are also the resume for a record run. [records.md](records.md) shows it.
 
 ## An entry
@@ -52,7 +58,7 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
 - The five fields each sit on their own line, in the order above. `request` and `response` are JSON values rather than strings. The adapter emits the request as one compact JSON value, so its stored value is the bytes sent. The stored response is the JSON value the backend returned; whitespace outside that value is not part of the entry. One exchange therefore writes the same file every time, and a diff shows which field changed.
 - Only an exchange that succeeded and decoded is recorded. A failure is never recorded.
 - An entry holds bodies and never headers. No key can reach a recording.
-- Replay derives the digest-named entry for the requested exchange and reads only that path. It does not enumerate or validate other files in `DIR`, so an unrelated file is ignored. A requested entry that cannot be parsed is a local failure, exit code 5. The message names the entry and the line and column where reading stopped, and never the text it stopped on. An entry is written around the evidence, so quoting that text would print the evidence into a diagnostic.
+- Replay derives the digest-named entry for the requested exchange and reads only that path after the folder marker check. It does not enumerate or validate other entry files in `DIR`, so an unrelated file is ignored. A requested entry that cannot be parsed is a local failure, exit code 5. The message names the entry and the line and column where reading stopped, and never the text it stopped on. An entry is written around the evidence, so quoting that text would print the evidence into a diagnostic.
 - No refusal repeats any field of an entry. An entry that parses and names another schema is refused with a sentence that may name only the trusted fixed schema `thinkthen.recording/1` and never repeats the schema the entry named. Every field of a file under `DIR` is untrusted text: it is unbounded, it can carry a control byte, and it can quote the evidence back.
 - An entry stores the address the request went to, its path included, so a token must never sit in the path of a base. A base carrying user information, a query, or a fragment is refused for the same reason.
 - A writing mode creates its private temporary entry before it reads the key or sends a request. An unusable recording folder therefore fails locally before a request. After a reply succeeds and decodes, the tool writes and syncs the complete entry. It makes a missing final name as a hard link without replacing anything already there. It replaces a damaged final name atomically while it owns that digest's lock. It syncs the recording folder before success, so a reader never sees half a file. Every returned path attempts to remove its temporary name. A process crash can leave a private dot-prefixed temporary file.
@@ -86,3 +92,5 @@ The request body carries the evidence. A recording is as private as the input it
 `thinkthen cache prune DIR` is the only cache-entry removal surface, and `DIR` is always explicit. `--older-than Nd|Nh|Nm|Ns` and `--answered-by-other-than MODEL` select a union. `--max-size BYTES` sets a separate target; without it, the configuration target applies. Selected entries leave first, then the oldest modification time leaves until recognized allocated bytes reach the target. Every chosen entry is deleted in modification-time order, with equal times sorted by digest name. An active digest lock is skipped without waiting. Its entry and allocated bytes remain in the final counts and may leave the cache over target. The command prints `removed N entries and B bytes; N entries and B bytes remain`.
 
 Prune validates every digest-named regular file before it deletes one. The name must match the digest recomputed from the fixed adapter, stored URL, and exact request bytes, and the response must name a nonblank model. A digest-shaped symlink or other non-regular object is refused without following it. Unknown names, directories, locks, and dot-prefixed temporary files are ignored. A scan refusal deletes nothing. A later filesystem failure can leave an oldest prefix deleted and prints no success line.
+
+Prune ignores and preserves `.thinkthen-backend.json`. Status counts only digest-named exchange entries and their allocated bytes.

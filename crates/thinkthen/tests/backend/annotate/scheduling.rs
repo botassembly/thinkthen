@@ -48,10 +48,11 @@ fn entries(path: &Path) -> usize {
         entries
             .filter_map(Result::ok)
             .filter(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .is_some_and(|value| value == "json")
+                let path = entry.path();
+                path.extension().is_some_and(|value| value == "json")
+                    && path
+                        .file_name()
+                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
             })
             .count()
     })
@@ -82,6 +83,7 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 "local-1",
                 "--jobs",
                 &jobs.to_string(),
+                "--no-cache",
             ],
             &environment,
             grouped_input(1, 6).as_bytes(),
@@ -115,6 +117,7 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 "--jsonl",
                 "--jobs",
                 &jobs.to_string(),
+                "--no-cache",
             ],
             &environment,
             input.as_bytes(),
@@ -343,6 +346,7 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
             "--jsonl",
             "--jobs",
             "4",
+            "--no-cache",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
