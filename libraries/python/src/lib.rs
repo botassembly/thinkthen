@@ -870,7 +870,7 @@ fn details(
 /// name sits in the text the user gave. `strength` is the settled field
 /// name for the number on a name, computed from several of the model's
 /// numbers; the marketing vocabulary page
-/// (`repos/mktg/products/thinkthen/vocabulary.md`, "The words for
+/// (the product vocabulary page, "The words for
 /// numbers") reserves the vendor's own summary word, and `probability`,
 /// for reported numbers, so this computed number carries neither word.
 #[pyclass(frozen, skip_from_py_object)]

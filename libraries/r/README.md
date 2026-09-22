@@ -7,7 +7,15 @@ carrying the retry signal. One engine under the contract, built with extendr
 from `contract/` and `standin/`, installed into the folder-local `rlib/`.
 Run `./check.sh` for the null suite, the conformance slice, the recognize
 and relate acceptance, the slide sample, and the wire suite when the stub is
-up on 8215. Findings and quirks are in `NOTES.md`. The width (the engine's
+up on 8215. Findings and quirks are in `NOTES.md`.
+
+The package's Rust crate points at `../../../../../contract` and
+`../../../../../standin` for in-tree builds. A tarball build cannot follow
+that path out of the repository, so `tools/make-tarball.sh` stages a copy
+with the contract, the stand-in, and `crates/thinkthen-core` vendored under
+`src/rust/vendor/` (keeping the repository's relative layout), rewrites the
+two path lines, and runs `R CMD build`. The check runs its `--stage-only`
+form so the rewrite stays enforced. The width (the engine's
 `width` setting or `ENGINE_WIDTH`) is the number of requests in flight, and
 each in-flight request holds its own connection: 1,000 records at width 32
 measured 33 pooled connections.
@@ -19,7 +27,7 @@ relations, either)` returns a data frame of edges ready for a graph library.
 Both run as written in the acceptance page, offline from the recordings.
 
 The acceptance sample, drawn in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`,
+the product deck's surfaces page,
 runs as drawn; `slide.R` holds the drawn block untouched and
 `slide_check.R` proves it. Against the null backend the whole pipeline
 runs, including the `choose` and `score` columns. Against the one-probability

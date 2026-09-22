@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The Rust surface's check: the null suite, the conformance slice, and the
-# wire suite when the stub is up on this surface's port (8213). The wire
-# stub is experiments/205-thinkthen-libs/shared running with STUB_PORT=8213
-# STUB_DELAY_MS=300.
+# wire suite when the stub is up on this surface's port (8213). The
+# wire stub is the in-repo tools/wire-stub, which scripts/check_surfaces.sh
+# builds and starts with STUB_PORT=8213 STUB_DELAY_MS=300.
 set -euo pipefail
 cd "$(dirname "$0")"
 

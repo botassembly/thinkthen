@@ -3,19 +3,34 @@
 # disposable postgres:16 container on the host network, and remove the
 # container after. The null path always runs; the wire path runs when the
 # loopback stub is up on this surface's port (8219), with STUB_DELAY_MS=300.
+# Experimental on macOS: the container paths and the port probe below take
+# the Darwin spellings (lsof, no ss); Linux is the gate's platform.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 NAME=laneb-pg
 WIRE_NAME=laneb-pg-wire
 KEY_NAME=laneb-pg-key
+# Pinned to the digest resolved on this host at pinning time (2026-09-22);
+# the pinning story is in scripts/gate-hermeticity.md.
+PG_IMAGE=postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6
 
 # Sibling sessions on this box start and stop their own postgres containers,
 # so a fixed port is a race. Take the first free port from a quiet range.
+port_busy() {
+  local candidate=$1
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltn 2>/dev/null | grep -q ":$candidate "
+  elif command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"$candidate" -sTCP:LISTEN >/dev/null 2>&1
+  else
+    (exec 3<>/dev/tcp/127.0.0.1/"$candidate") >/dev/null 2>&1
+  fi
+}
 free_port() {
   for candidate in 5460 5461 5462 5463 5464 5465 5466 5467 5468 5469; do
     case " $* " in *" $candidate "*) continue ;; esac
-    if ! ss -ltn 2>/dev/null | grep -q ":$candidate "; then
+    if ! port_busy "$candidate"; then
       echo "$candidate"; return
     fi
   done
@@ -62,7 +77,7 @@ echo "== postgres surface: disposable container, null backend"
 docker rm -f -v "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" --network host \
   -e POSTGRES_PASSWORD=postgres -e PGPORT=$PORT -e ENGINE_NULL=1 \
-  postgres:16 >/dev/null
+  "$PG_IMAGE" >/dev/null
 wait_ready "$NAME"
 
 docker cp "$EXT/lib/postgresql/16/lib/thinkthen.so" "$NAME:/usr/lib/postgresql/16/lib/thinkthen.so"
@@ -436,7 +451,7 @@ docker rm -f -v "$KEY_NAME" >/dev/null 2>&1 || true
 docker run -d --name "$KEY_NAME" --network host \
   -e POSTGRES_PASSWORD=postgres -e PGPORT=$KEY_PORT \
   -e ENGINE_BASE_URL=http://127.0.0.1:$REFUSED_PORT/v1 \
-  postgres:16 >/dev/null
+  "$PG_IMAGE" >/dev/null
 wait_ready "$KEY_NAME"
 docker cp "$EXT/lib/postgresql/16/lib/thinkthen.so" "$KEY_NAME:/usr/lib/postgresql/16/lib/thinkthen.so"
 docker cp "$EXT/share/postgresql/16/extension/thinkthen.control" \
@@ -526,7 +541,7 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   docker run -d --name "$WIRE_NAME" --network host \
     -e POSTGRES_PASSWORD=postgres -e PGPORT=$WIRE_PORT \
     -e ENGINE_BASE_URL=http://127.0.0.1:8219/v1 -e ENGINE_WIDTH=32 \
-    postgres:16 >/dev/null
+    "$PG_IMAGE" >/dev/null
   wait_ready "$WIRE_NAME"
   docker cp "$EXT/lib/postgresql/16/lib/thinkthen.so" "$WIRE_NAME:/usr/lib/postgresql/16/lib/thinkthen.so"
   docker cp "$EXT/share/postgresql/16/extension/thinkthen.control" \

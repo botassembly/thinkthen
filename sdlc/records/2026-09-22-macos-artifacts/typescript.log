@@ -1,0 +1,6 @@
+macOS lane build log - TypeScript
+host: macOS 26.4 arm64; node v26.0.0; npm 11.12.1; cargo 1.95.0 (Homebrew)
+build: RUSTFLAGS="-C link-arg=-undefined -C link-arg=dynamic_lookup" npm run build
+artifact: index.darwin-arm64.node inside thinkthen-0.0.1.tgz (1,426,192 bytes)
+verify: scratch app install from the tarball; examples runner -> examples: 5 ok, 0 bad
+note: without the RUSTFLAGS the link fails with undefined napi symbols; the repo should carry the napi-rs macOS link flags.

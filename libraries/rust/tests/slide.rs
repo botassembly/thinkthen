@@ -1,7 +1,7 @@
 //! The slide sample, run exactly as drawn, under the null backend.
 //!
 //! The sample is the Rust slide in
-//! `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`.
+//! the product deck's surfaces page.
 //! The setup above each sample (`ticket`, `reviews`, the two piles) is the
 //! slide's context, not its code. Run through `./check.sh`, which sets
 //! `ENGINE_NULL=1` (a bare `cargo test` skips it with a note); the wire

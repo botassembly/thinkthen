@@ -166,7 +166,7 @@ SURFACES: list[dict] = [
         }
         | {f"{kind}Error" for kind in ERROR_KINDS}
         | {"Entity", "Relation", "Edge", "Recognized"}
-        # The ruled pair types (settled 2026-09-21, NOTES-settle-wave.md
+        # The ruled pair types (settled 2026-09-21, sdlc/records/surfaces-notes/NOTES-settle-wave.md
         # item 2): rank and find return them instead of the bare record.
         # `to_s` is Ranked's print form, because the deck's sample prints
         # ranked records directly (`puts mail`).

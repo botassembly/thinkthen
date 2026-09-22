@@ -1,7 +1,7 @@
 # The sqlite surface
 
 Landed 2026-09-21. The acceptance sample, drawn in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`, runs
+the product deck's surfaces page, runs
 as drawn against the stand-in: `thinkthen_warm` fills the answers in one
 pass at the process width, and the queries read them row by row. The width
 is the number of requests in flight, and each in-flight request holds its

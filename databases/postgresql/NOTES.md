@@ -388,7 +388,7 @@ no revoke statement) is installed and `ALTER EXTENSION thinkthen UPDATE TO
 | bare `'names.json'` spec | reads the file and answers | usage refusal naming `@names.json` |
 | granted role calling an unrelated function | succeeds | permission denied |
 
-**The deck's line.** The mktg deck's PostgreSQL tab draws
+**The deck's line.** The deck's PostgreSQL tab draws
 `thinkthen_annotate('form.json', body)` with a bare name. The ruled
 spelling for a file is `'@form.json'`, so the drawn line is stale for its
 owner (README.md records it); `check.sh` runs the ruled spelling, and

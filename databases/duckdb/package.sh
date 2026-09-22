@@ -14,6 +14,15 @@
 # The container is disposable: created as dbpkg211-duckdb, started once,
 # removed with docker rm -f -v at the end.
 set -euo pipefail
+
+# This rehearsal cross-builds for Linux (glibc 2.28) with cargo-zigbuild.
+# Experimental on macOS: build natively there instead; the Mac build and
+# its verification commands are recorded in
+# sdlc/records/surfaces-notes/NOTES-packaging.md.
+if [ "$(uname -s)" = Darwin ]; then
+  echo "this rehearsal cross-builds for Linux; on macOS build natively (see the packaging notes)" >&2
+  exit 1
+fi
 cd "$(dirname "$0")"
 
 VERSION=$(tail -1 ../../VERSION)
@@ -22,6 +31,9 @@ cleanup() {
   docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
+# The duckdb/duckdb:1.5.5 digest was not resolvable offline at pinning
+# time (no local copy); the pull below prints the resolved digest to
+# record. The pinning story is in scripts/gate-hermeticity.md.
 IMAGE=duckdb/duckdb:1.5.5
 TARGET=x86_64-unknown-linux-gnu.2.28
 LIB=target/x86_64-unknown-linux-gnu/release/libthinkthen.so
@@ -78,6 +90,7 @@ printf "SELECT 'duckdb ' || version() AS duckdb;\nLOAD '/pkg/thinkthen.duckdb_ex
 echo "== duckdb package: clean container from the official image"
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker pull "$IMAGE"
+  echo "image digest to record in the pinning story: $(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
 else
   echo "image present: $(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
 fi

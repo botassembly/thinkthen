@@ -2,7 +2,7 @@
 
 The eight verbs as module methods on `ThinkThen`, over the one engine
 through the contract. The acceptance sample, drawn in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`,
+the product deck's surfaces page,
 runs as drawn through `tests/slide_sample.rb`:
 
 ```ruby

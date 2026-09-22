@@ -8,7 +8,7 @@ contract's connector; the stand-in provides the connector today and the
 real engine replaces it by the one line that names the connector.
 
 The acceptance sample is the C slide in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`,
+the product deck's surfaces page,
 and it runs as drawn: `./check.sh` builds the door, compiles the sample
 with a plain cc, and runs it on the null backend and against the stub on
 port 8216, beside the door's test suites and the surface's slice of

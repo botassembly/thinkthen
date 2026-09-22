@@ -40,7 +40,7 @@ carries no `@` is refused with the usage kind naming the required form;
 it is never read as a path.
 
 The acceptance sample from
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md` runs
+the product deck's surfaces page runs
 as drawn: the `IS NULL` query returns the `maybe` row a person should read,
 and `thinkthen_annotate('@form.json', body)` orders by urgency 1.7 / 1.05 /
 0.99. The deck's PostgreSQL tab draws that set as the bare name

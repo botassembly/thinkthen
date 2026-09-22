@@ -1,7 +1,7 @@
 # Merge note: the `surfaces` branch
 
 For the build team, from the library team, 2026-09-21, revised 2026-09-22.
-The branch is `surfaces` in `/home/ian/workspace/worktrees/thinkthen-surfaces`;
+The branch is `surfaces` in the `thinkthen-surfaces` worktree;
 the rulings it obeys are in `sdlc/issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 Each section below is one merge-ticket decision or edit. The branch never
 touched main; everything that needs both sides is here. Section 8 is the
@@ -37,7 +37,7 @@ green/skipped/diverged/failed so a skipped suite cannot hide behind
 - The recognize-and-relate update issue's closing says "four findings, all
   filed" and lists an item with no file; the rulings issue's closing says
   "three sample findings filed". Correct both sentences to the record's
-  actual locations (three mktg files; one in-branch fix; one lane note).
+  actual locations (three deck files; one in-branch fix; one lane note).
 
 ## 3. The rulings issue was edited on both sides
 
@@ -83,11 +83,11 @@ merge; it fails on any public name that is not ruled or documented.
 - PostgreSQL's packaged `.so` is not glibc-pinned; the pin or the stated
   floor is the build team's call.
 - macOS artifacts: all five built and verified on the Mac
-  (`NOTES-packaging.md`, "The Mac visits"): TypeScript, Ruby, SQLite,
+  (`sdlc/records/surfaces-notes/NOTES-packaging.md`, "The Mac visits"): TypeScript, Ruby, SQLite,
   DuckDB, and PostgreSQL beside the cross-built C and Python. R is source
   through R-universe, whose builders make its macOS binaries. The R
   user-installed SIGINT handler case stays unchecked.
-- The deck: three open findings in `repos/mktg/sdlc/issues/` (`located_in`
+- The deck: three open findings in the deck repository's issues (`located_in`
   has no recording; the DuckDB `relate` subquery cannot bind; the Ruby
   score comment pinned a distribution). The `thinkthen_relations` finding
   from ruling 9 is filed in this repository

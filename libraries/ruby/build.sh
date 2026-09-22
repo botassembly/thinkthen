@@ -30,7 +30,7 @@ docker run --rm \
   -w /src/libraries/ruby \
   "$image" \
   bash -eu -c "
-    export PATH=/root/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin:\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo
+    export PATH=\$(ls -d /root/.rustup/toolchains/*/bin | head -1):\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo
     mkdir -p lib/thinkthen
     cargo build --release $features
     cp target/release/libthinkthen_native.so lib/thinkthen/thinkthen.so

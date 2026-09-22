@@ -78,20 +78,29 @@ OK: 84 cases validated: schema, grammar, digests, wire contract, offline replay
 ```
 
 **The full gate.** `scripts/check_surfaces.sh` builds and checks the
-contract, the stand-in, and every landed surface. The wire suites need
-the loopback stub, one instance a surface port:
+contract, the stand-in, and every landed surface. It builds the in-repo
+wire stub (`tools/wire-stub`) when the binary is missing and starts one
+stub per surface port itself, so this is the whole recipe:
 
 ```
-$ STUB=/home/ian/workspace/experiments/205-thinkthen-libs/shared/target/release/stub-backend
-$ for p in 8211 8212 8213 8214 8215 8216 8217 8218 8219 8231; do
-    STUB_PORT=$p STUB_DELAY_MS=300 "$STUB" &
-  done
-$ sh sdlc/scripts/surfaces
+$ bash scripts/check_surfaces.sh
+```
+
+A stub already listening on a port is used as it is, and only the stubs
+the gate started are stopped when it ends.
+
+To run one surface's own `check.sh` outside the gate, start the stub on
+that surface's port first:
+
+```
+$ STUB=tools/wire-stub/target/release/stub-backend  # or: (cd tools/wire-stub && cargo build --release)
+$ STUB_PORT=8213 STUB_DELAY_MS=300 "$STUB" &        # the port that surface owns
+$ (cd libraries/rust && ./check.sh)
 ```
 
 The ports: 8211 Python, 8212 TypeScript, 8213 Rust, 8214 Ruby, 8215 R,
 8216 C, 8217 DuckDB, 8218 SQLite, 8219 PostgreSQL, 8231 the stand-in's
-own wire test. Without the stub each wire suite skips with its own
+own wire test. Without a stub each wire suite skips with its own
 message and the rest still runs.
 
 **Run the gate in the foreground.** A gate started as a background job of
@@ -173,7 +182,7 @@ The fuller input with the same items and the blocker proposals is
 **The packing spec from the wire probe.**
 `sdlc/issues/2026-09-22-wire-probe-can-one-request-carry-many-states.md`
 (on main; raw rows in
-`/home/ian/workspace/experiments/thinkthen-wire-probe-2026-09-22/`).
+the wire probe's directory under the experiments folder, dated 2026-09-22).
 The batched form exists and is the structured `state` object: one
 condition, one row object per state, one named question per row, one
 answer per row, with the request floor paid once (two rows billed 372
@@ -226,9 +235,9 @@ The C options/ownership item closed after that report: the design is
 | `MERGE-NOTE.md` | The build team's seven items, in final form |
 | `MERGE-NOTE-INPUT.md` | The fuller cross-side input: ten items including the blocker proposals |
 | `SURFACES.md` | How to add a surface or a function |
-| `NOTES-packaging.md` | Every packaging rehearsal and the Mac visits, with commands |
-| `NOTES-maintainability.md` | The ninth-function test and the generator's two counts |
-| `NOTES-rulings-wave.md`, `NOTES-settle-wave.md` | The two fix waves and their verification runs |
+| `sdlc/records/surfaces-notes/NOTES-packaging.md` | Every packaging rehearsal and the Mac visits, with commands |
+| `sdlc/records/surfaces-notes/NOTES-maintainability.md` | The ninth-function test and the generator's two counts |
+| `sdlc/records/surfaces-notes/NOTES-rulings-wave.md`, `sdlc/records/surfaces-notes/NOTES-settle-wave.md` | The two fix waves and their verification runs |
 | `libraries/<language>/`, `databases/<engine>/` | One folder a surface: README, NOTES, `check.sh`, sources, tests, examples |
 | `contract/`, `standin/`, `conformance/` | The contract, the stand-in (recordings in `standin/data/`), the one conformance file with `tools/` and `fixtures/` |
 | `scripts/check_surfaces.sh`, `scripts/generate_functions.py`, `scripts/check_public_names.py`, `functions.toml` | The gate, the generator, the name check, the function table |
@@ -265,7 +274,7 @@ wire-probe issue named in section 4,
   expression (experiment 216), the warm-Polars-pool fork proof
   (experiment 214), an R user-installed SIGINT handler after load, and
   the defect kind in the conformance file (by principle). The macOS items
-  that list carried are closed by the Mac lane (`NOTES-packaging.md`,
+  that list carried are closed by the Mac lane (`sdlc/records/surfaces-notes/NOTES-packaging.md`,
   "The Mac visits"). Two more carried knowingly: case 17's stand-in
   divergence is the engine's to fix, and the wire probe leaves the rate
   and the partner-lane questions untested by design.

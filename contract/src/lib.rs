@@ -1113,7 +1113,7 @@ impl Relate {
 /// the name in a host whose indexing is code points. Every other host
 /// converts once: JavaScript to UTF-16 units, Rust and C to bytes. The
 /// number field is the interim name for the number on a name: the
-/// marketing vocabulary page (`repos/mktg/products/thinkthen/vocabulary.md`,
+/// marketing vocabulary page (the product vocabulary page,
 /// "The words for numbers") restricts `confidence` to the literal field Jev
 /// returns in detailed output, and this number is computed from several of
 /// Jev's numbers, so it may not carry that word; the recognize team's free

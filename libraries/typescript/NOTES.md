@@ -38,7 +38,7 @@ Write here as you go. A note written later is a guess. Newest entry last.
 
 ## 2026-09-21 — the last-object shape fix
 
-The packaging rehearsal found it: the binding treated the last argument as call options only (`signal`, `deadlineMs`) and built the question from the first argument alone, so the rebuilt deck's samples could not run as drawn. Before, from `NOTES-packaging.md`:
+The packaging rehearsal found it: the binding treated the last argument as call options only (`signal`, `deadlineMs`) and built the question from the first argument alone, so the rebuilt deck's samples could not run as drawn. Before, from `sdlc/records/surfaces-notes/NOTES-packaging.md`:
 
 ```
 choose {options}-last  -> ERROR defect | a choose reply carried no choice
@@ -106,7 +106,7 @@ The recorded-rule form is the passing test above; the deck form is pinned in its
 
 **The conformance slice now runs both families**: all 41 recognize cases and 3 of 4 relate cases pass offline with every entity's slice checked and every probability compared; the fourth is finding 2.
 
-**Vocabulary sweep, the words for numbers** (`repos/mktg/products/thinkthen/vocabulary.md`), over `index.js`, `index.d.ts`, `README.md`, and `tests/`:
+**Vocabulary sweep, the words for numbers** (the product vocabulary page), over `index.js`, `index.d.ts`, `README.md`, and `tests/`:
 
 ```
 restricted: one line, index.d.ts:102, "(never call it confidence)" — the restriction

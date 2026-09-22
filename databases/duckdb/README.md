@@ -10,7 +10,7 @@ beside `thinkthen_relate`. `filter`, `rank`, and `find` get no functions;
 and a failure is an error that never reads as `NULL`.
 
 The acceptance sample, drawn in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`,
+the product deck's surfaces page,
 runs as drawn against the stand-in: `tools/run_slide.sh` extracts the
 slide's code block verbatim and runs it in the stock CLI. One finding for
 the slide's owner sits in NOTES: the sample's `choose` column reads NULL

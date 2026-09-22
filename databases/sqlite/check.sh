@@ -2,10 +2,18 @@
 # The SQLite surface's check: build the extension, run the slide sample
 # exactly as drawn in the stock CLI, the null suite, the conformance
 # slice, then the wire suite when the stub is up on this surface's port
-# (8218). The wire stub is experiments/205-thinkthen-libs/shared running
-# with STUB_PORT=8218 STUB_DELAY_MS=300.
+# (8218). The wire stub is the in-repo tools/wire-stub, which
+# scripts/check_surfaces.sh builds and starts with STUB_PORT=8218
+# STUB_DELAY_MS=300.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Experimental on macOS: the library spellings below take the Darwin forms
+# (dylib, DYLD_LIBRARY_PATH); Linux is the gate's platform.
+case "$(uname -s)" in
+  Darwin) LIB_EXT=dylib; LIB_PATH_VAR=DYLD_LIBRARY_PATH ;;
+  *)      LIB_EXT=so;    LIB_PATH_VAR=LD_LIBRARY_PATH ;;
+esac
 
 echo "== sqlite surface: build the extension"
 # The annotate partial-failure fixture is compiled in only for a build
@@ -13,7 +21,7 @@ echo "== sqlite surface: build the extension"
 # the conformance slice replays that record (case 74). The release
 # artifact built by package.sh carries no fixture.
 cargo build --release --quiet --features synthetic-partial
-cp target/release/libthinkthen0.so thinkthen.so
+cp target/release/libthinkthen0.$LIB_EXT thinkthen.so
 
 # The floor is 3.50.0 (below it a CHECK constraint in an untrusted
 # database reaches the functions), so the Python tests run against a host
@@ -22,7 +30,7 @@ cp target/release/libthinkthen0.so thinkthen.so
 # one (see tests/host_sqlite.sh for the one-time fetch).
 if ! python3 -c 'import sqlite3,sys; sys.exit(0 if tuple(int(x) for x in sqlite3.sqlite_version.split(".")) >= (3,50,0) else 1)'; then
     HOST_DIR=$(tests/host_sqlite.sh)
-    export LD_LIBRARY_PATH="$HOST_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export "$LIB_PATH_VAR=$HOST_DIR${!LIB_PATH_VAR:+:${!LIB_PATH_VAR}}"
 fi
 HOST=$(python3 -c 'import sqlite3;print(sqlite3.sqlite_version)')
 python3 -c 'import sqlite3,sys; sys.exit(0 if tuple(int(x) for x in sqlite3.sqlite_version.split(".")) >= (3,50,0) else 1)' \

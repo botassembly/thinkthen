@@ -9,7 +9,9 @@ cd "$(dirname "$0")"
 step() { printf '\n== %s\n' "$*"; }
 
 step "build"
-npm install --no-audit --no-fund --silent
+# npm ci installs exactly package-lock.json; the first run needs the
+# network (or npm's cache), every later run is offline.
+npm ci --no-audit --no-fund --silent
 # The gate's copy arms the stand-in's compile-time synthesized partial
 # failure so conformance case 74 and the marker test run; `npm run build`
 # is the packaging path and never carries the fixture.

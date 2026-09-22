@@ -1,0 +1,21 @@
+# macOS darwin-arm64 gem build, 2026-09-22, guest m5 (macOS 26.4, arm64)
+## ruby-build 3.4.10 (psych excluded from core; libyaml 0.2.5 + psych 5.2.2 installed after)
+-> make install
+==> Installed ruby-3.4.10 to /Users/ian/tmp/thinkthen-macos/ruby
+## link flag needed on darwin: RUSTFLAGS=-C link-arg=-Wl,-undefined,dynamic_lookup (rb-sys leaves ruby symbols unresolved)
+    Finished `release` profile [optimized] target(s) in 8.68s
+BUILD-OK
+## artifacts
+arm64
+3147776 /Users/ian/tmp/thinkthen-macos/src/libraries/ruby/thinkthen-0.0.1.gem
+## suite (null backend)
+32 runs, 99 assertions, 0 failures, 0 errors, 0 skips
+the fast-backend tick raise holds
+fork after the first call answers in the child
+10 of 10 examples ok
+conformance slice green for the Ruby surface
+slide sample green
+## installed-gem proof (GEM_HOME=/Users/ian/tmp/thinkthen-macos/gems, no -I lib)
+decide: true
+entities: 3, first: Maria Chen
+## removal of this whole visit: rm -rf ~/tmp/thinkthen-macos

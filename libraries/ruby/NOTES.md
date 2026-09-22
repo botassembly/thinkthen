@@ -117,7 +117,7 @@ killed after each wire pass. The rc guard, after every install this lane
 made (all inside the folder or the container):
 
 ```
-$ grep -c deno /home/ian/.zshrc
+$ grep -c deno ~/.zshrc
 0
 $ git -C repos/dotfiles status -s | wc -l
 0
@@ -153,7 +153,7 @@ sweep:         no confidence, certainty, likelihood, cutoff, gray zone, calibrat
 
 **Finding, pre-existing, out of this change's scope:** the Ruby conformance runner has no arms for `rank` and `find`, so those three cases skip as "no case shape" even though the surface implements both verbs and its own tests cover them. The Python runner has a `rank` arm. A small follow-up for whichever lane owns the case runner shape.
 
-**Pinned divergence, deck-side:** the deck's Python, TypeScript, and Rust sections ask a `located_in` rule on the Maria Chen sentence; the C01 recording covers `works_for` and `based_in`, so that rule cannot run as recorded. The Ruby section does not use `located_in` and is unaffected; the divergence is filed with the deck's owner (`repos/mktg/sdlc/issues/2026-09-21-the-decks-located-in-rule-has-no-recording.md`). Not bent here.
+**Pinned divergence, deck-side:** the deck's Python, TypeScript, and Rust sections ask a `located_in` rule on the Maria Chen sentence; the C01 recording covers `works_for` and `based_in`, so that rule cannot run as recorded. The Ruby section does not use `located_in` and is unaffected; the divergence is filed with the deck's owner (`the deck repository's issue`). Not bent here.
 
 ## 2026-09-21 — the rulings wave (languages lane)
 

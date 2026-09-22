@@ -1,7 +1,7 @@
 //! Wire tests for the stand-in engine, against the live stub.
 //!
 //! Every test here needs the stub from
-//! `experiments/205-thinkthen-libs/shared` running on the loopback, pointed
+//! the in-repo `tools/wire-stub` running on the loopback, pointed
 //! at by `ENGINE_BASE_URL`, with `ENGINE_WIDTH` naming the width under
 //! test. A test skips with a message when the stub is not up, so the suite
 //! stays green offline.

@@ -23,7 +23,7 @@ $ ENGINE_NULL=1 ./duckdb-bin/duckdb -unsigned -c "LOAD '...'; SELECT thinkthen_d
 
 **Two bugs the suites caught.** The details struct's string children leaked stale memory into unwritten rows (`'level': Is this a complaint?hipping label`) — the write path set no NULL where a field did not apply; every child now writes or nulls its row. And `thinkthen_details` over a score question failed outright ("the answer carries no probability"), because a score reply carries a level distribution and no yes-probability: the audit door is decide-shaped. The ruled shape taken: one struct for every verb, probability/answer/sends NULL on the non-decide kinds, the question's own model and digest carrying the audit, the score's nearest level in `level`. Both fixes verified in the null suite.
 
-**Wire, stub on 8217** (`experiments/205-thinkthen-libs/shared/target/release/stub-backend`, `STUB_PORT=8217`):
+**Wire, stub on 8217** (the in-repo `tools/wire-stub` binary, `STUB_PORT=8217`; at the time of this run the stub lived in `experiments/205-thinkthen-libs/shared`):
 
 ```
 SELECT thinkthen_decide('@tools_fixture.json', 'I demand a refund today');  -> true   (the @file carries threshold 0.9)

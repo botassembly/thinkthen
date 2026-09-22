@@ -2,7 +2,7 @@
  * The C surface's slide sample, run exactly as drawn.
  *
  * The sample is the C slide in
- * repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md.
+ * the product deck's surfaces page.
  * The harness below supplies the slide's context (`text`, `texts`, `lens`,
  * COUNT) and checks the answers; the drawn lines are the lines between
  * the two markers, unchanged. The stub's rule answers "refund" evidence

@@ -22,7 +22,7 @@ surface owns every exported symbol; the engine exports none.
 ## The acceptance test
 
 The slide code in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md` is
+the product deck's surfaces page is
 the acceptance test. Each sample runs as drawn against the stand-in and
 gives the answer in its comment. A sample that cannot work as drawn is a
 finding: report it, and the slide changes. Nothing in a surface may rename
@@ -63,7 +63,7 @@ a verb, add one, or spell a bulk form the contract does not carry.
 6. Each surface grows the verb in its own spelling of the same name, by
    hand: a function's body has its own shape per verb and each binding's
    signature its own types. The maintainability test of 2026-09-21
-   measured both paths; its record is `NOTES-maintainability.md`.
+   measured both paths; its record is `sdlc/records/surfaces-notes/NOTES-maintainability.md`.
 
 ## What the check script runs
 

@@ -2,11 +2,22 @@
 # The R surface's check: the null suite, the conformance slice, the
 # recognize and relate acceptance, and the slide sample against the null
 # backend, then the wire suite when the stub is up on this surface's port
-# (8215). The wire stub is
-# experiments/205-thinkthen-libs/shared running with STUB_PORT=8215
+# (8215). The wire stub is the in-repo tools/wire-stub, which
+# scripts/check_surfaces.sh builds and starts with STUB_PORT=8215
 # STUB_DELAY_MS=300.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Experimental on macOS: `timeout` arrives as `gtimeout` there; without
+# either, the step runs unguarded.
+TIMEOUT=$(command -v timeout || command -v gtimeout || true)
+run_limited() { # seconds command...
+  local seconds=$1; shift
+  if [ -n "$TIMEOUT" ]; then "$TIMEOUT" "$seconds" "$@"; else "$@"; fi
+}
+
+echo "== r surface: the tarball build vendors the contract crates"
+./tools/make-tarball.sh --stage-only >/dev/null
 
 echo "== r surface: the defect kind crosses as its own kind (shim unit test)"
 (cd thinkthen/src/rust && cargo test --quiet --lib)
@@ -29,7 +40,7 @@ echo "== r surface: fast-backend interrupt, the poll-bug shape"
 ./interrupt_fast.sh
 
 echo "== r surface: fork after the first call answers in the child"
-timeout 60 env ENGINE_NULL=1 Rscript fork_check.R
+run_limited 60 env ENGINE_NULL=1 Rscript fork_check.R
 
 echo "== r surface: the function examples"
 ENGINE_NULL=1 Rscript examples.R

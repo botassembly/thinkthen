@@ -1,6 +1,6 @@
 //! The door's wire suite, against the stub on this surface's port (8216).
 //!
-//! The stub is experiments/205-thinkthen-libs/shared running with
+//! The stub is the in-repo tools/wire-stub running with
 //! `STUB_PORT=8216 STUB_DELAY_MS=300`. Run through `./check.sh`, which
 //! starts nothing itself: when no stub is up the suite is skipped.
 

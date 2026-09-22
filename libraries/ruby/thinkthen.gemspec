@@ -9,7 +9,10 @@ Gem::Specification.new do |spec|
   spec.description = "The eight thinkthen verbs over one engine. Not the first release."
   spec.authors = ["thinkthen"]
   spec.homepage = "https://example.invalid/thinkthen"
-  spec.license = "UNLICENSED"
+  spec.license = "MIT"
+  # The gem carries a compiled extension built on the host, so it is a
+  # platform gem: the build host's platform is stamped at build time.
+  spec.platform = Gem::Platform::CURRENT
   spec.files = ["lib/thinkthen.rb", "lib/thinkthen/version.rb", "lib/thinkthen/thinkthen.so"]
   spec.require_paths = ["lib"]
   spec.required_ruby_version = ">= 3.1"

@@ -1,22 +1,28 @@
-# Extension CI Tools for DuckDB
-This repository contains reusable components for building, testing and deploying DuckDB extensions.
+# The vendored DuckDB extension build tools
 
-DuckDB's [Extension Template](https://github.com/duckdb/extension-template/actions) and various DuckDB Extensions based on the template use this repository to deduplicate code for build configuration and easily update the extension repositories when changes occur to DuckDB's build system and/or CI.
+Upstream project: `https://github.com/duckdb/extension-ci-tools`, the build
+tooling DuckDB publishes for C API extensions. License: MIT, the same
+license as DuckDB's repositories.
 
-## Versioning
-| Extension-ci-tools Branch | DuckDB target version | Actively maintained? |
-|---------------------------|-----------------------|----------------------|
-| main                      | main                  | yes                  |
-| v1.5.0                    | v1.5.0                | yes                  |
-| v1.4.4                    | v1.4.4                | yes                  |
-| v1.4.3                    | v1.4.3                | no                   |
-| v1.4.2                    | v1.4.2                | no                   |
-| v1.4.1                    | v1.4.1                | no                   |
-| v1.4.0                    | v1.4.0                | no                   |
-| v1.3.2                    | v1.3.2                | no                   |
-| v1.3.1                    | v1.3.1                | no                   |
-| v1.3.0                    | v1.3.0                | no                   |
-| <= v1.2.2                 |                       | no                   |
+Version: the exact upstream commit is not recoverable from the tree this was
+copied from (recorded in `../NOTES.md`, "The ci-tools tree, recorded
+truthfully"). The files were vendored for the DuckDB `v1.5.5` extension
+build (`TARGET_DUCKDB_VERSION=v1.5.5` in `../Makefile`). To re-pin: clone
+the upstream repository cleanly, record the commit, and copy the files
+listed below.
 
-Each branch in this repository targets a specific version of DuckDB. Note that these branches will be continually updated to ensure the build environment is functional for that version of DuckDB.
-Also note that at some point, support for versions will be dropped. Currently, we aim to support the latest 2 DuckDB versions, to allow extensions devs to transition to a new DuckDB version.
+Five files are kept, because they are the only ones this build path reads:
+
+- `makefiles/c_api_extensions/base.Makefile` — included by `../Makefile`;
+  it in turn uses `config/distribution_matrix.json` and
+  `scripts/configure_helper.py` and `scripts/append_extension_metadata.py`.
+- `makefiles/c_api_extensions/rust.Makefile` — included by `../Makefile`.
+- `config/distribution_matrix.json` — read by `base.Makefile`.
+- `scripts/configure_helper.py` — run by `base.Makefile` for the platform
+  and version.
+- `scripts/append_extension_metadata.py` — run by `../check.sh` and
+  `../package.sh` to append the metadata footer.
+
+The other twenty-five files the vendoring sweep carried (CI workflows,
+Dockerfiles, vcpkg ports, other makefiles) were removed on 2026-09-22; the
+build and the gate were rerun against the five-file set.

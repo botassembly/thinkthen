@@ -8,7 +8,7 @@ stub is up on 8213. Findings and quirks are in `NOTES.md`; the slide's
 one-character finding is filed there for the slide owner.
 
 The acceptance sample, drawn in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`, runs
+the product deck's surfaces page, runs
 as drawn against the stand-in when this folder holds the library:
 
 ```rust

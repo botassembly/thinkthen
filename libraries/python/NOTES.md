@@ -328,7 +328,7 @@ Findings reported, not bent around:
    conformance cases use them. The file door here converts nothing on its
    own; the test uses the parser's spelling and names the gap.
 
-Vocabulary sweep against `repos/mktg/products/thinkthen/vocabulary.md`
+Vocabulary sweep against the product vocabulary page
 "The words for numbers" (restricted: the vendor's summary word, accuracy,
 calibrated; banned: certainty, likelihood, score-as-a-probability, cutoff,
 gray zone), over this folder's code, tests, notes, and scripts:

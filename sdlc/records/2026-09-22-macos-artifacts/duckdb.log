@@ -1,0 +1,5 @@
+macOS lane build log — DuckDB
+build: make configure; make release (platform osx_arm64, duckdb v1.5.5, abi C_STRUCT_UNSTABLE)
+artifact: thinkthen.duckdb_extension (3.8 MB, metadata footer osx_arm64)
+verify: official v1.5.5 macos CLI, ENGINE_NULL=1, LOAD absolute path -> wants=true
+note: relative LOAD refuses in the hardened CLI; absolute path needed.

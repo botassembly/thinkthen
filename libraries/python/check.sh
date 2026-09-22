@@ -3,8 +3,15 @@
 # run the surface's own tests and its slice of the conformance file
 # offline, then the slide sample and the cancel proof when the stub is up.
 # The port this surface owns is 8211.
+# Experimental on macOS: the library spellings below take the Darwin forms
+# (dylib, DYLD_LIBRARY_PATH); Linux is the gate's platform.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+case "$(uname -s)" in
+  Darwin) LIB_EXT=dylib; LIB_PATH_VAR=DYLD_LIBRARY_PATH ;;
+  *)      LIB_EXT=so;    LIB_PATH_VAR=LD_LIBRARY_PATH ;;
+esac
 
 stub_url="http://127.0.0.1:8211/v1"
 wire=no
@@ -15,7 +22,9 @@ fi
 
 if [ ! -x .venv/bin/python ]; then
   uv venv .venv
-  uv pip install --python .venv/bin/python pytest polars pandas pyarrow
+  # Pinned through requirements-dev.txt; the first provision needs the
+  # network (or uv's cache), every later run is offline.
+  uv pip install --python .venv/bin/python -r requirements-dev.txt
 fi
 # maturin develop installs into the active virtualenv. The wheel builds
 # with the stand-in's compile-time `synthetic-partial` feature so the
@@ -34,7 +43,7 @@ source .venv/bin/activate
 maturin develop --release --features synthetic-partial
 
 echo "== the built extensions carry no builder home paths"
-for artifact in target/release/lib_thinkthen.so thinkthen/_thinkthen.abi3.so; do
+for artifact in target/release/lib_thinkthen.$LIB_EXT thinkthen/_thinkthen.abi3.so; do
   if strings "$artifact" | grep -qF -- "$HOME"; then
     echo "the remap did not take: $artifact still carries $HOME" >&2
     exit 1
@@ -49,7 +58,7 @@ echo "== the defect kind maps to the host's error (shim unit test)"
 LIBDIR=$(.venv/bin/python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')
 BASEP=$(.venv/bin/python -c 'import sys; print(sys.base_prefix)')
 PYO3_PYTHON="$PWD/.venv/bin/python" \
-  LD_LIBRARY_PATH="${LIBDIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+  env "$LIB_PATH_VAR=${LIBDIR}${!LIB_PATH_VAR:+:${!LIB_PATH_VAR}}" \
   PYTHONHOME="$BASEP" \
   cargo test --quiet --no-default-features --lib
 

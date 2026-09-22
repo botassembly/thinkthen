@@ -1,7 +1,7 @@
 # The fixtures
 
 `refund.json` and `form.json` are byte-for-byte the two files the Bash
-slides use, from `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/examples/`.
+slides use, from `the product deck's examples directory`.
 Every slide uses the same refund question and the same form set, so the
 sample travels. `tickets.sql` builds the slide's `tickets` table: one row
 that asks for a refund (the stub answers 0.97, a yes under the 0.2:0.8

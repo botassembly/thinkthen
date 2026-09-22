@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 # The DuckDB surface's check: the build, the null suite, the conformance
 # slice, the slide as drawn, and the wire suite when the stub is up on
-# this surface's port (8217). The wire stub is
-# experiments/205-thinkthen-libs/shared running with STUB_PORT=8217.
+# this surface's port (8217). The wire stub is the in-repo
+# tools/wire-stub, which scripts/check_surfaces.sh builds and starts.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Experimental on macOS: the library spelling below takes the Darwin form
+# (dylib); Linux is the gate's platform.
+case "$(uname -s)" in
+  Darwin) LIB_EXT=dylib ;;
+  *)      LIB_EXT=so ;;
+esac
 
 echo "== duckdb surface: build the extension"
 make release >/dev/null
@@ -19,7 +26,7 @@ DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
   cargo build --release --quiet --features synthetic-partial
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
   -o build/fixture/thinkthen.duckdb_extension \
-  -l target/release/libthinkthen.so \
+  -l target/release/libthinkthen.$LIB_EXT \
   -n thinkthen -dv v1.5.5 \
   -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
 test -s build/fixture/thinkthen.duckdb_extension
@@ -86,7 +93,7 @@ echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
 DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
   cargo build --release --quiet --features synthetic-partial
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
-  -l target/release/libthinkthen.so \
+  -l target/release/libthinkthen.$LIB_EXT \
   -o build/fixture/thinkthen.duckdb_extension \
   -n thinkthen -dv v1.5.5 \
   -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null

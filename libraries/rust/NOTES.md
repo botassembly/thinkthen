@@ -93,7 +93,7 @@ The conformance runner grew `recognize` and `relate` arms (`examples/conformance
 
 ### Vocabulary sweep, run at close
 
-Against `repos/mktg/products/thinkthen/vocabulary.md`, "The words for numbers":
+Against the product vocabulary page, "The words for numbers":
 
 ```
 $ grep -rniE "certainty|likelihood|cutoff|gray zone" src/ tests/ examples/ README.md NOTES.md check.sh

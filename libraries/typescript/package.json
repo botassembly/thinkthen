@@ -1,6 +1,7 @@
 {
   "name": "thinkthen",
   "version": "0.0.1",
+  "license": "MIT",
   "description": "The thinkthen surface for Node: eight verbs, one bound engine. Not published.",
   "main": "index.js",
   "types": "index.d.ts",

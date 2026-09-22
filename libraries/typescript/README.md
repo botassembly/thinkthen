@@ -1,7 +1,7 @@
 # The TypeScript surface
 
 Lands in Phase B. The acceptance sample, drawn in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`, runs
+the product deck's surfaces page, runs
 as drawn against the stand-in when this folder holds the shim:
 
 ```ts

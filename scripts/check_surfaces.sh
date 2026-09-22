@@ -3,11 +3,12 @@
 # and the conformance file; each surface hooks in as it lands in Phase B,
 # by a function of its own that this script calls.
 #
-# The wire tests need the stub from
-# experiments/205-thinkthen-libs/shared running on the loopback, with
-# STUB_PORT and STUB_DELAY_MS set before it starts. When the stub is not
-# reachable the wire tests skip and the script says so; every surface's
-# conformance replay needs no network at all.
+# The wire tests need the loopback stub that lives in this repository
+# (tools/wire-stub). This script builds it when the binary is missing and
+# starts one stub per surface port that has no stub already, so the wire
+# suites run rather than skip; it stops only the stubs it started. A stub
+# already listening on a port is used as it is. Every surface's conformance
+# replay needs no network at all.
 #
 # Every line a runner prints with `ok`, `skip`, `diverge`, or `FAIL` at its
 # start is counted, and the last line states the four totals beside the
@@ -27,7 +28,13 @@ skipped=0
 diverged=0
 failed=0
 step_log=$(mktemp)
-trap 'rm -f "$step_log"' EXIT
+stub_pids=()
+stop_stubs() {
+  for pid in ${stub_pids[@]+${stub_pids[@]}}; do
+    kill "$pid" 2>/dev/null || true
+  done
+}
+trap 'rm -f "$step_log"; stop_stubs' EXIT
 
 # Count one step's own result lines into the running totals.
 count_lines() {
@@ -35,7 +42,9 @@ count_lines() {
   green=$((green + $(grep -cE '^(ok[[:space:]]|ok:|OK:)' "$file" || true)))
   skipped=$((skipped + $(grep -cE '^skip[[:space:]]' "$file" || true)))
   diverged=$((diverged + $(grep -cE '^diverge[[:space:]]' "$file" || true)))
-  failed=$((failed + $(grep -cE '^FAIL' "$file" || true)))
+  # `not ok` is TAP, which node --test prints; a node failure must land in
+  # the failed total and not only in the step's exit status.
+  failed=$((failed + $(grep -cE '^(FAIL|not ok)' "$file" || true)))
 }
 
 # Run one step, show its output as it happens, count its result lines, and
@@ -64,6 +73,54 @@ run_surface() {
 
 # The stub's address, when a stub is up.
 stub_url="http://127.0.0.1:${STUB_PORT:-8231}/v1"
+
+# Build the in-repo wire stub when its binary is missing (offline: the
+# dependencies come from the local cargo cache).
+stub_bin=$repo/tools/wire-stub/target/release/stub-backend
+if [ ! -x "$stub_bin" ]; then
+  printf '\n== wire stub: build tools/wire-stub\n'
+  (cd tools/wire-stub && cargo build --release --offline) || fail=1
+fi
+
+# Start one stub per surface port that has no stub already. Every port
+# carries the same 300 ms delay the manual recipe used: the cancel and
+# interrupt proofs need requests still in flight when they trip, and a
+# zero-delay stub lets whole batches finish before anything can stop them.
+# Only stubs this script starts are stopped.
+start_stub() {
+  local port=$1 delay=$2
+  if curl -sf --max-time 1 "http://127.0.0.1:$port/v1/stats" >/dev/null 2>&1; then
+    echo "stub already up on $port; using it"
+    return
+  fi
+  if [ ! -x "$stub_bin" ]; then
+    echo "no stub binary; wire suites on $port will skip"
+    return
+  fi
+  STUB_PORT=$port STUB_DELAY_MS=$delay "$stub_bin" >/dev/null 2>&1 &
+  stub_pids+=($!)
+  local _
+  for _ in $(seq 1 30); do
+    if curl -sf --max-time 1 "http://127.0.0.1:$port/v1/stats" >/dev/null 2>&1; then
+      echo "stub up on $port (delay ${delay}ms)"
+      return
+    fi
+    sleep 0.1
+  done
+  echo "stub on $port did not answer; its wire suites will skip"
+}
+printf '\n== wire stubs\n'
+start_stub 8211 300   # python: the cancel proof needs a delay
+start_stub 8212 300   # typescript: the abort and deadline proofs need a delay
+start_stub 8213 300   # rust
+start_stub 8214 300   # ruby: the interrupt proof needs a delay
+start_stub 8215 300   # r
+start_stub 8216 300   # c
+start_stub 8217 300   # duckdb
+start_stub 8218 300   # sqlite
+start_stub 8219 300   # postgresql
+start_stub 8231 300   # the stand-in wire test below
+
 if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
   wire=yes
 else
@@ -93,6 +150,10 @@ run_step "public names" python3 scripts/check_public_names.py || fail=1
 
 run_step "public-name check tests" python3 scripts/test_check_public_names.py || fail=1
 
+run_step "private references" python3 scripts/check_no_private_refs.py || fail=1
+
+run_step "private-reference check tests" python3 scripts/test_check_no_private_refs.py || fail=1
+
 # Each surface lands in Phase B with a check of its own. A surface is
 # checked by running its slide sample against the stand-in and its slice of
 # the conformance file; the hook is the surface's folder, named here in the
@@ -115,7 +176,7 @@ done
 
 # The package rehearsals build and stage their artifacts without installing
 # anywhere (--dry-run); their container halves run by hand per
-# NOTES-packaging.md. DuckDB's package.sh gains the flag with its lane.
+# sdlc/records/surfaces-notes/NOTES-packaging.md. DuckDB's package.sh gains the flag with its lane.
 if command -v cargo-zigbuild >/dev/null 2>&1 && command -v zig >/dev/null 2>&1; then
   run_step "package dry-run: databases/sqlite" \
     bash -c 'cd databases/sqlite && ./package.sh --dry-run' || fail=1

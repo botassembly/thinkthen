@@ -31,7 +31,7 @@ reviews = [
 df = polars.DataFrame({"body": [text]})
 
 # The slide, verbatim from
-# repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md.
+# the product deck's surfaces page.
 
 first = tt.decide("Does the customer ask for a refund?",
     text)  # True

@@ -21,8 +21,13 @@ fi
 
 VERSION=$(tail -1 ../../VERSION)
 CONTAINER=dbpkg211-pg
-IMAGE=postgres:16
-DECK=${THINKTHEN_DECK:-/home/ian/workspace/repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md}
+# Pinned to the digest resolved on this host at pinning time (2026-09-22);
+# the pinning story is in scripts/gate-hermeticity.md.
+IMAGE=postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6
+# The rehearsal's slide comes from the product deck, which lives outside
+# this repository. Point THINKTHEN_DECK at its surfaces page to run the
+# full rehearsal; the dry run needs no deck.
+DECK=${THINKTHEN_DECK:-}
 EXT=target/release/thinkthen-pg16/usr
 WORK=dist/.rehearsal
 
@@ -62,6 +67,7 @@ if [ "$dry_run" = yes ]; then
   echo "dist/thinkthen-pg16-${VERSION}-linux-amd64.tar.gz staged; the container half is not run"
   exit 0
 fi
+: "${DECK:?set THINKTHEN_DECK to the product deck's surfaces page for the full rehearsal (the dry run needs no deck)}"
 echo "== postgres package: slide sample extracted verbatim from the deck"
 python3 - "$DECK" "$WORK/slide.sql" << 'PY'
 import re, sys

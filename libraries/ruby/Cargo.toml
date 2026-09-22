@@ -1,6 +1,7 @@
 [package]
 name = "thinkthen-ruby"
 version = "0.0.1"
+license = "MIT"
 edition = "2021"
 publish = false
 description = "The Ruby surface over the thinkthen contract. Not the product."

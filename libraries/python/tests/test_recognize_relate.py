@@ -1,7 +1,7 @@
 """`recognize` and `relate` through the Python surface, offline.
 
 The acceptance test is the deck's own section in
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`.
+`the product deck's recognize page`.
 Every call below is that page's Python section, run as written, and the
 comments are asserted where a recording backs them. One call cannot run
 as written — the deck asks the rule `located_in` on the Maria Chen

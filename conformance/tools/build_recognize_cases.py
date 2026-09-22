@@ -2,7 +2,7 @@
 """Build the recognize and relate replay table and conformance cases.
 
 Reads the harvest package (a path argument, default
-`/home/ian/workspace/experiments/225-recognize-harvest-package`) and writes:
+`$THEN_RECOGNIZE_PACKAGE`) and writes:
 
 1. `standin/data/recognize-replay.json` — the replay table the stand-in
    answers recognize and relate from. One row per recorded case: the text,
@@ -36,7 +36,9 @@ import os
 import re
 import sys
 
-PACKAGE = sys.argv[1] if len(sys.argv) > 1 else "/home/ian/workspace/experiments/225-recognize-harvest-package"
+PACKAGE = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("THEN_RECOGNIZE_PACKAGE", "")
+if not PACKAGE:
+    sys.exit("usage: build_recognize_cases.py <harvest-package> (or set THEN_RECOGNIZE_PACKAGE)")
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 RULE_ENDS = {

@@ -2,7 +2,7 @@
 
 # The slide sample, exactly as drawn, against the stand-in's offline
 # backend. The drawn block is copied verbatim from
-# repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md; the
+# the product deck's surfaces page; the
 # fixtures around it only pick the data. After the drawn block, the
 # harness asserts what the comments promise.
 #

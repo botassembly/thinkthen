@@ -2,14 +2,22 @@
 # The C surface's check: build the door's two libraries, run the slide
 # sample as drawn with a plain cc, the null suite, the conformance slice
 # through ctypes, and the wire twin when the stub is up on this surface's
-# port (8216). The wire stub is experiments/205-thinkthen-libs/shared
-# running with STUB_PORT=8216 STUB_DELAY_MS=300.
+# port (8216). The wire stub is the in-repo tools/wire-stub, which
+# scripts/check_surfaces.sh builds and starts with STUB_PORT=8216
+# STUB_DELAY_MS=300.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "== c surface: build the door (libthinkthen.so and libthinkthen.a)"
+# Experimental on macOS: the library spelling below takes the Darwin form
+# (dylib); Linux is the gate's platform.
+case "$(uname -s)" in
+  Darwin) LIB_EXT=dylib ;;
+  *)      LIB_EXT=so ;;
+esac
+
+echo "== c surface: build the door (libthinkthen.$LIB_EXT and libthinkthen.a)"
 cargo build --release --quiet
-ls -l target/release/libthinkthen.so target/release/libthinkthen.a
+ls -l target/release/libthinkthen.$LIB_EXT target/release/libthinkthen.a
 
 echo "== c surface: compile the slide with a plain cc"
 mkdir -p build

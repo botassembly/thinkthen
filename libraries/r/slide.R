@@ -1,5 +1,5 @@
 # The slide sample, exactly as drawn in
-# repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md.
+# the product deck's surfaces page.
 # The harness defines the tickets frame before the drawn block and checks
 # the answer after; the drawn block itself is untouched.
 

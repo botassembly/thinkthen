@@ -1,5 +1,5 @@
 // The slide sample, exactly as drawn in
-// repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md,
+// the product deck's surfaces page,
 // run against the stand-in engine. The deck's import names the installed
 // package (`import * as tt from "thinkthen"`); the packaging rehearsal
 // installs it under that name. Here the same surface loads from the

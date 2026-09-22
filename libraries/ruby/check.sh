@@ -3,6 +3,8 @@
 # builder container, run the surface tests and the conformance slice
 # offline, run the slide sample, and run the interrupt proof when the stub
 # is up on this surface's port (8214).
+# Experimental on macOS: the builder container needs Docker Desktop there,
+# and --network host does not carry the loopback the way it does on Linux.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -27,7 +29,7 @@ docker_run() {
     -w /src/libraries/ruby \
     -e ENGINE_NULL=1 \
     "$image" \
-    bash -eu -c "export PATH=/root/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin:\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo; $1"
+    bash -eu -c "export PATH=\$(ls -d /root/.rustup/toolchains/*/bin | head -1):\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo; $1"
 }
 
 echo "== ruby surface: the defect kind maps to its error class (shim unit test)"

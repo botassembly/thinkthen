@@ -1,0 +1,9 @@
+# The Python surface's development requirements, pinned to the versions the
+# checks were last green against (2026-09-22). The check installs from this
+# file into the folder-local venv on first provision; after that the venv
+# is reused and no network is needed. The pinning story is in
+# scripts/gate-hermeticity.md.
+pytest==9.1.1
+polars==1.44.2
+pandas==3.0.6
+pyarrow==25.0.1
