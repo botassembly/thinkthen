@@ -24,7 +24,7 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
 
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer, and nothing else does. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
-  <p>The same text, under two rules:</p>
+  <p>The same evidence, under two rules:</p>
   <Terminal run={cut} />
   <Terminal run={band} />
   <p>The threshold is an input, never an output. The model never chooses it.</p>
@@ -40,10 +40,11 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
     <tr><td>probabilities</td><td>The model's full list, one number per option or level, adding to 1. It shows under <code>--details</code>.</td></tr>
     <tr><td>threshold</td><td>Your bar on a probability. An input.</td></tr>
     <tr><td>band</td><td>A low bar and a high bar. The middle goes to a person.</td></tr>
-    <tr><td>position</td><td>The number <code>score</code> prints: where the text lands along your levels. It is the average of the level probabilities, and we compute it.</td></tr>
+    <tr><td>position</td><td>The number <code>score</code> prints: where the evidence lands along your levels. It is the average of the level probabilities, and we compute it.</td></tr>
     <tr><td>strength</td><td>The number on a recognized name. We compute it, and it claims nothing about chance.</td></tr>
   </table>
   <p>We do not print a confidence of our own. The one field named confidence is the vendor's number for how lopsided the probabilities are, it shows only under <code>--details</code>, and it failed as a gate in our tests.</p>
+  <p>The test was experiment 220, on the words <code>recognize</code> reads. As a gate between name words and ordinary words, <code>confidence</code> scored 0.22 on a scale where 0.5 is a coin flip and 1 is perfect. The probability of the picked option scored 0.99. The record is <code>sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md</code>.</p>
 
   <h2>What leaves the machine</h2>
   <ul>
@@ -54,16 +55,16 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
   </ul>
 
   <h2>Saved answers</h2>
-  <p>The tool saves what it asked and what came back. Ask the same question of the same text again and it reads the saved answer instead of sending a request, at no further cost. Saving is on by default, and <code>--no-cache</code> turns it off for one run. On SQLite, <code>thinkthen_warm</code> judges a table in one pass and every query after that reads the saved answers.</p>
+  <p>The tool saves what it asked and what came back. Ask the same question of the same evidence again and it reads the saved answer instead of sending a request, at no further cost. Saving is on by default, and <code>--no-cache</code> turns it off for one run. On SQLite, <code>thinkthen_warm</code> judges a table in one pass and every query after that reads the saved answers.</p>
 
-  <h2>How big a text can be</h2>
+  <h2>How big the evidence can be</h2>
   <table>
     <tr><th>Fact</th><th>Where it was measured</th></tr>
     {FACTS.size.rows.map(([fact, where]) => <tr><td>{fact}</td><td>{where}</td></tr>)}
   </table>
 
   <h2>What it costs</h2>
-  <p>Requests are the bill. A short text pays almost only for the fixed part. Many questions about one text pay the fixed part once, which is what <code>annotate</code> does. Many texts pay it once each.</p>
+  <p>Requests are the bill. A short record pays almost only for the fixed part. Many questions about one piece of evidence pay the fixed part once, which is what <code>annotate</code> does. Many records pay it once each.</p>
   <table>
     <tr><th>Fact</th><th>Where it was measured</th></tr>
     {FACTS.cost.rows.map(([fact, where]) => <tr><td>{fact}</td><td>{where}</td></tr>)}

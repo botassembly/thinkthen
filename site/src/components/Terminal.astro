@@ -2,9 +2,14 @@
 // One recorded run: what went in, the command, what came out, and the exit
 // code in its outcome colour. Nothing here is typed by hand; the fields come
 // from src/data/examples/.
-import { outcomeOf } from '../data/catalog.mjs';
+//
+// The word after the exit code comes from the function's own exits list.
+// `fn` names the function; without it, the function is read from the last
+// stage of the command. A pipeline that ends in another tool, such as jq,
+// gets no word, because that tool set the code. `word={false}` hides it.
+import { outcomeOf, exitWord } from '../data/catalog.mjs';
 
-const { run, caption = 'Run against the shipped command and saved.' } = Astro.props;
+const { run, caption = 'Recorded from the real command.', fn = null, word = true } = Astro.props;
 
 const lines = [];
 if (run.input && run.inputFile) {
@@ -20,7 +25,7 @@ if (run.input && !run.inputFile) {
 if (run.output) for (const l of run.output.split('\n')) lines.push({ cls: 'out', text: l });
 
 const outcome = outcomeOf(run.exit);
-const words = { yes: 'yes', no: 'no', unsure: 'not sure', broken: 'broken' }[outcome];
+const said = word ? exitWord(run.command, run.exit, fn) : null;
 const copy = run.command;
 ---
 <div class="block">
@@ -33,6 +38,6 @@ const copy = run.command;
     <Fragment><span class={l.cls}>{l.text}</span>{i < lines.length - 1 ? '\n' : ''}</Fragment>
   ))}</pre>
   {run.exit !== null && run.exit !== undefined && (
-    <div class="caption"><span class={`exit ${outcome}`}>exit {run.exit} — {words}</span></div>
+    <div class="caption"><span class={`exit ${outcome}`}>exit {run.exit}{said ? ` — ${said}` : ''}</span></div>
   )}
 </div>

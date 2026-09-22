@@ -65,9 +65,9 @@ const triageFile = `{
   <p>That number is the model's own. The tool passes it through and computes nothing.</p>
 
   <h2>4. Set your own bar</h2>
-  <p>A weaker text still comes back <code>true</code> at the default bar of 0.5.</p>
+  <p>A weaker message still comes back <code>true</code> at the default bar of 0.5.</p>
   <Terminal run={vague} />
-  <p><code>--threshold</code> is your bar on the probability. Raise it and the same text answers no.</p>
+  <p><code>--threshold</code> is your bar on the probability. Raise it and the same message answers no.</p>
   <Terminal run={cut} />
   <p>The threshold is an input. The model never chooses it, and it never changes the probability. It changes what you call a yes.</p>
 
@@ -79,9 +79,9 @@ const triageFile = `{
   <h2>6. Save the question to a file</h2>
   <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
   <Code code={refundFile} status="run" caption="refund.json, the file the two runs below read." copy={true} />
-  <p>Write <code>@refund.json</code> in place of the question words. A clear text passes.</p>
+  <p>Write <code>@refund.json</code> in place of the question words. A clear message passes.</p>
   <Terminal run={savedYes} />
-  <p>The weak text lands inside the band and goes to a person.</p>
+  <p>The weak message lands inside the band and goes to a person.</p>
   <Terminal run={savedUnsure} />
   <p>Tune the file once and the hook, the test, and the pipeline all ask the same question. A question file is not a function. It gives no answer. It carries a question, and every function accepts one.</p>
 
@@ -114,5 +114,5 @@ const triageFile = `{
   </ul>
   <p>ThinkThen judges. Your rules decide. It never runs a command and it never writes a file you did not name.</p>
 
-  <p class="pagelinks"><a href="/reference/">Reference</a> · <a href="/functions/">Every function</a> · <a href="/how-tos/">How-tos</a> · <a href="/recipes/">Shell recipes</a> · <a href="/refusals/">What it will not do</a></p>
+  <p class="pagelinks"><a href="/reference/">Reference</a> · <a href="/functions/">Every function</a> · <a href="/how-tos/">How-tos</a> · <a href="/refusals/">What it will not do</a></p>
 </Base>

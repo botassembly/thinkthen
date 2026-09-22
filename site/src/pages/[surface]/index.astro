@@ -2,7 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
-import { SURFACES, CODE_FUNCTIONS, FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { SURFACES, CODE_FUNCTIONS, FUNCTIONS, KEY_VARIABLE, statusClass } from '../../data/catalog.mjs';
 import { cell, SURFACE_SAMPLES } from '../../data/examples.mjs';
 
 export function getStaticPaths() {
@@ -11,7 +11,7 @@ export function getStaticPaths() {
 
 const { surface } = Astro.props;
 const sample = SURFACE_SAMPLES[surface.slug] || null;
-const shipped = surface.status === 'shipped';
+const shipped = surface.status === 'ships first';
 const questionFile = FUNCTIONS.find((f) => f.notAFunction);
 const sections = [...CODE_FUNCTIONS, questionFile].map((fn) => ({ fn, data: cell(fn.name, surface.slug) }));
 const carried = sections.filter((s) => s.data.status !== 'planned');
@@ -19,7 +19,7 @@ const missing = sections.filter((s) => s.data.status === 'planned');
 ---
 <Base title={surface.name} description={surface.blurb}>
   <div class="eyebrow">surface</div>
-  <h1>{surface.name} <span class={`status ${surface.status}`}>{surface.status}</span></h1>
+  <h1>{surface.name} <span class={`status ${statusClass(surface.status)}`}>{surface.status}</span></h1>
   <p class="lede">{surface.blurb}</p>
   {!shipped && (
     <div class="note"><span class="status planned">planned</span> Nothing on this page has run. The {surface.name} sample is drawn from the design so the library is built to match it. The command is the only shipped surface today.</div>

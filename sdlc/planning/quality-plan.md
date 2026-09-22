@@ -1,6 +1,6 @@
 # The quality plan
 
-Status: **Proposal** from experiment 218, wave 1 (2026-09-21). Waves 2 through 4 extend the checklist and the tester brief as the libraries, databases, and the real engine land. Ian can overturn the form and any rung placement.
+Status: **Proposal under use** from experiment 218, fed by waves 1 and 1.5 (2026-09-21) and the ticket and issue catalog of 2026-09-22. Waves 2 through 4 extend it as the libraries, databases, and the real engine land. Ian can overturn the form and any rung placement.
 
 One rule carries the whole plan: a finding that can be a test becomes one, and a test runs from a rung or it rots. What cannot be a test becomes a line on the release checklist, and what cannot be checked becomes the exploring tester's rotation.
 
@@ -13,7 +13,9 @@ The ladder stays `install`, `lint`, `test`, `spec`. Wave 1 found nineteen issues
 | Test | Guards | Cost |
 | --- | --- | --- |
 | Send-count visibility: a 500-then-ok listener; `--details` must carry the number of sends and the summed usage, and the stand-in count must match | issue 3 (retried send invisible) | seconds |
-| Address-change warning: cache three records under one loopback URL, resume under another; the run must warn and the second listener must see exactly the re-sent requests | issue 2 (silent re-bill) | seconds |
+| Address-change refusal: a recording folder is bound to one backend identity (ticket 0065); a resume under a different address exits 5 before the key is read, sends nothing, prints no result, and leaves the entries unchanged | issue 2 (silent re-bill), fixed by ticket 0065 | seconds |
+| Scheduler waiting bound (ticket 0024): at most `jobs` dispatched rows wait while requests are in flight, and streaming output returns before more input is read; assert against a stand-in by counting requests in flight and rows consumed | ticket 0024 | seconds |
+| Connection count: the number of simultaneous connections a run opens equals what the ruling on `--jobs` fixes (today, one per in-flight request), and the page says so | the jobs-connections issue | seconds |
 | Lock cleanup: after a completed `--cache` run, `.locks` holds nothing (or shards with entries); file count equals entry count | issue 10 (locks stay) | seconds |
 | Write-before-request: a read-only record folder must refuse before the first send (listener count zero), or the help must say the request happens first | issue 12 (paid answer discarded) | seconds |
 | Early close: a listener that closes without a response fails in milliseconds, not at `--timeout` | issue 8 (closed connection costs the deadline) | seconds |
@@ -22,6 +24,9 @@ The ladder stays `install`, `lint`, `test`, `spec`. Wave 1 found nineteen issues
 | Dry-run parity: `--dry-run` accepts and refuses exactly what the live run does, and prints the request count | same | seconds |
 | Sizes battery: 40 bytes, 3 KB, 16 KB, 100 KB, 1.4 MB through each function against a loopback stand-in; nothing is sent that could never be answered | same | under a minute |
 | Membership invariance: for every function and every output-shaping flag (`--details`, `--raw`, `--quiet`, `--top`), the set of output units is identical with and without the flag; only the shape of a unit may change. The check runs each function both ways over the same mixed input and compares which records appear. Guards the `filter --details` ruling of 2026-09-21, found by a marketing reader of the deck after wave 1 missed it | the filter ruling, `sdlc/issues/2026-09-21-filter-details-must-still-filter.md` | seconds |
+| Row-mapping invariance, every surface: a table of repeated texts, NULLs, and 10,000 rows through every row-shaped function must give each row the same answer the single-row call gives it. One answer per distinct text is computed; the mapping back to rows is the bug the surfaces review found in DuckDB | the surfaces review, wrong-answers class 1 | seconds per surface |
+| Chunked-input invariance: the same table arriving in pieces (Arrow record batches, query chunks) produces the same rows in the same order as the whole table | the surfaces review, Python multi-piece annotate | seconds |
+| A gate that can fail: every conformance runner exits nonzero on any miss, compares answers exactly (never `want in got`), honors the file argument it is given, and runs from the repository root. The runner is run once against a deliberately broken case and must fail | the surfaces review, conformance-driver class | seconds |
 | SIGINT: a spawned record run stopped by SIGINT exits 130, prints the stopped-at line, and leaves every entry complete (needs a process spawn; skip on hosts that cannot signal) | issue 11 (silent stop) | ~2 s |
 
 ### `lint` (policy, pages, size, format; today ~1 minute)
@@ -48,6 +53,12 @@ The marketing repository's pages get the same script on its own side, run before
 | `sdlc/scripts/load` (proposed) | 100k records through `filter --jsonl`, `decide --lines`, `rank`, `tag`, `annotate` against a bundled stand-in; asserts peak RSS of the streaming functions stays inside a fixed bound (wave 1's numbers become the first bounds) and prints the table | ~10 minutes |
 | Speed-claim rerun | the command-local numbers from the public pages (process start, cache hit versus miss, records per second against the stand-in) | ~2 minutes |
 
+A pinning row lands with its fix, red-green: a row that guards an open issue is written the day the fix lands, or it sits in the plan marked red-by-design. Red-by-design today: the SIGINT stopped-at line, and `--dry-run` printing the request count. Both guard open issues; neither is on the rung until its fix lands.
+
+## Part 1a: pinned by the repository's own ladder
+
+The ticket catalog of 2026-09-22 (`experiments/218-thinkthen-release-qa/wave2/ticket-coverage.md`) maps all 68 landed tickets to rows. Eight are pinned by committed repo tests the ladder already runs rather than by rows here (0017 option equivalence, 0022 and 0030 refusal sentences, 0026 entry immutability, 0029 lazy replay, 0031 digest case folding, 0033 threshold validation, 0039 one-send-per-digest): the ladder is the guard, and the exploring tester's rotation re-checks them by hand once a cycle.
+
 ## Part 2: the release checklist
 
 The full pass runs at the exact release commit, on Linux and macOS, from the installed package, not the checkout. It blocks on any Open blocker or major in `sdlc/issues/` that is not consciously waived in the release record.
@@ -63,6 +74,11 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 9. The cache rows that waves 1 could not run (default XDG folder, 100 MB cap, prune, `status`, one-command clear, full disk) pass, or the release record says why not.
 10. The vocabulary lint is zero-hit on help, README, demos, and the marketing pages.
 11. Every wave-1 issue file is closed or waived with a name beside the waiver.
+12. The surfaces review's classes are closed or waived: wrong answers with no error, host crashes at a boundary, cancel per host, and the security rows (file access behind the host's own switch, functions marked direct-only, PUBLIC revoked, relate on the caller's connection).
+13. The packages carry licenses and platforms, and no package ships recordings: a recording commits its evidence, and a published package publishes it.
+14. A mechanical hygiene check runs zero-hit: no private repository names, no home-directory paths, in shipped files and comments.
+15. The transform catalog surface exists (`thinkthen transform list` and `show`, ticket 0050's promise) or the release record names who deferred it; no open ticket owns it today.
+16. Issue statuses are normalized to a two-value vocabulary (Open and everything-else) before the waiver sweep runs; the record currently carries nine status words and two files with none.
 
 ## Part 3: the exploring tester
 
@@ -85,6 +101,9 @@ Added 2026-09-21 after the `filter --details` miss. A marketing reader of the de
 1. **A flag that adds information never changes membership.** A flag may change what is printed about a unit of output. It never changes which units print. Any flag that widens, narrows, or reorders the set of output units is a finding, whatever the page says.
 2. **The page never outranks the stranger.** The standard is a careful new user. When behavior makes that user say "what the hell," it is filed against the page that permits it, not excused by it. A page is a claim, not a standard.
 3. **Two pages that disagree are a finding on their own.** When two specification pages describe the same behavior differently (`filter.md` said kept-or-not while `result.md` said same records as the bare values), the contradiction is filed the day it is found, even if the binary matches one of them and every printed example runs.
+4. **A check that cannot fail is not a check.** A runner that prints FAILED and exits 0, a comparison that tests `want in got`, a checker that ignores the file it was given: each is a green lie. Every check proves it can fail before it proves anything else.
+5. **No test fixture lives in product code.** Failure injection is a mode of the harness or the stand-in, never a constant in the engine that fails one fixed text on the live path.
+6. **Row answers are positional.** Repeats, NULLs, chunks, and packing must never move an answer to another row. And where packing legitimately changes an answer (neighbors matter, the wire probe measured 34 of 1,000 moving on regrouping), the page says so and the cache key covers the whole request.
 
 ## The first bounds, from wave 1
 

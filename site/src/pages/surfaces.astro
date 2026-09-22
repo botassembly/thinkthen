@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { SURFACES } from '../data/catalog.mjs';
+import { SURFACES, statusClass } from '../data/catalog.mjs';
 ---
 <Base title="Surfaces" description="The shell, six languages, data frames, and three databases.">
   <h1>Every surface</h1>
@@ -13,7 +13,7 @@ import { SURFACES } from '../data/catalog.mjs';
         <td><a href={`/${s.slug}/`}>{s.name}</a></td>
         <td><code>{s.install[0][0]}</code></td>
         <td><code>{s.unsureWord}</code></td>
-        <td><span class={`status ${s.status}`}>{s.status}</span></td>
+        <td><span class={`status ${statusClass(s.status)}`}>{s.status}</span></td>
       </tr>
     ))}
   </table>

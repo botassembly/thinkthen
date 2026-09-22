@@ -22,8 +22,8 @@ const title = fn.title || fn.name;
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
   <h1>{fn.line}</h1>
   <p class="lede">{fn.takes} {fn.gives}</p>
-  {fn.status === 'planned' && (
-    <div class="note"><span class="status planned">planned</span> The command has no <code>{fn.name}</code> yet. Every sample below is drawn from the design and has not run.</div>
+  {fn.status === 'preview' && (
+    <div class="note"><span class="status preview">preview</span> The command has no <code>{fn.name}</code> yet. Every sample below is drawn from the design and has not run.</div>
   )}
 
   {first && (
@@ -72,7 +72,7 @@ const title = fn.title || fn.name;
 
   <h2>What it costs</h2>
   <p>{fn.requests}</p>
-  <p>A short text runs about 290 input tokens, of which about 256 is the fixed part, at $0.042 per million. That is 1.2 cents for a thousand short texts, measured in the live probe on 2026-09-20.</p>
+  <p>A short record runs about 290 input tokens, of which about 256 is the fixed part, at $0.042 per million. That is 1.2 cents for a thousand short records, measured in the live probe on 2026-09-20.</p>
 
   <h2>The how-tos that use it</h2>
   {howtos.length === 0 ? (

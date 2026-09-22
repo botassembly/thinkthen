@@ -7,7 +7,8 @@ import { KEY_VARIABLE } from '../data/catalog.mjs';
   <p class="lede">A backend is an address and a model. The tool speaks one wire shape, and one adapter encodes it. Point the tool somewhere else and the same bytes go out.</p>
 
   <h2>The default</h2>
-  <p>TypeSafe's Jev is the first decider model. The request goes to <code>https://api.typesafe.ai/v1/systemone</code> and carries the model name <code>jev-latest</code>. That name is how a run is pinned to one version.</p>
+  <p>TypeSafe's Jev is the first System One model. The request goes to <code>https://api.typesafe.ai/v1/systemone</code> and carries the model name <code>jev-latest</code> by default.</p>
+  <p><code>jev-latest</code> is a moving alias. It follows the vendor's newest model. To pin a run, name a version such as <code>jev-1.13.0</code> in the question file's <code>model</code> field or with <code>--model</code>. A change of model means you run your labeled set again before you trust the threshold.</p>
   <table>
     <tr><th>Setting</th><th>Default</th><th>Set it with</th></tr>
     <tr><td>Address</td><td><code>https://api.typesafe.ai/v1</code></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code></td></tr>
@@ -23,12 +24,12 @@ import { KEY_VARIABLE } from '../data/catalog.mjs';
   <p>A base that carries user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a saved answer.</p>
 
   <h2>Saved answers</h2>
-  <p>The cache is on by default. Ask the same question of the same text again and the tool reads the saved answer instead of sending a request, at no further cost.</p>
+  <p>The cache is on by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request, at no further cost.</p>
   <ul>
     <li>One exchange per file: the adapter name, the address, the request body, and the response body. Bodies only, never headers, so no key can reach one.</li>
     <li>The file name is the SHA-256 of the adapter name, the address, and the request body exactly as the adapter encoded it.</li>
     <li>An exchange is saved only when it succeeded and decoded. A failure is never saved.</li>
-    <li>An entry holds the text that was judged, so the folder is owner-only: mode 0700 on the folder and 0600 on each file.</li>
+    <li>An entry holds the evidence that was judged, so the folder is owner-only: mode 0700 on the folder and 0600 on each file.</li>
     <li>The first write binds a folder to one backend. Reusing that folder against another address fails before the key is read and before any request. A change of address cannot quietly bill everything again.</li>
     <li><code>--no-cache</code> turns off lookup and writing for one run. <code>--cache DIR</code> names a folder of your own.</li>
   </ul>
@@ -53,7 +54,7 @@ import { KEY_VARIABLE } from '../data/catalog.mjs';
 
   <h2>A second backend</h2>
   <p>The specification is plain about the shipped state: version one compiles one adapter, <code>systemone</code>, and nothing selects it. One wire shape leaves nothing to choose between.</p>
-  <p>We tried a second decider model on 2026-09-21 and recorded the run. A small local server presented the same shape, <code>THINKTHEN_BASE_URL</code> alone pointed the released binary at it, and no paid call was made. Ten runs finished, every one at exit code 0, twice over with a fresh cache each time. Every number in this section comes from that record, <code>sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md</code>.</p>
+  <p>We tried a second System One model on 2026-09-21 and recorded the run. A small local server presented the same shape, <code>THINKTHEN_BASE_URL</code> alone pointed the released binary at it, and no paid call was made. Ten runs finished, every one at exit code 0, twice over with a fresh cache each time. Every number in this section comes from that record, <code>sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md</code>.</p>
   <p>What it settled:</p>
   <ul>
     <li><b>Another server accepts our exact request bytes.</b> No code, no option, and no new adapter was needed. A backend is a URL and an adapter, and that held as written.</li>
@@ -62,9 +63,9 @@ import { KEY_VARIABLE } from '../data/catalog.mjs';
   </ul>
   <p>What it found, and what still has to be fixed:</p>
   <ul>
-    <li><b>A threshold does not carry between backends.</b> The same text under the same question file exited 3 on one backend and exited 0 on the other. A question file that pins a threshold should name the backend it was calibrated against, or say plainly that it was not.</li>
-    <li><b>A small backend cannot tell a user its limit.</b> The second backend refused a long text and named its own budget in the reply. The user saw only that the backend refused the request, because the tool never repeats a response body. That rule is right. It costs the user the most useful sentence a backend can send. A profile carrying the backend's stated limits, checked before the request leaves, is the fix.</li>
-    <li><b>A backend that truncates in silence is the danger.</b> The second model's own library trims a long text and says nothing. Any page for a small backend has to state whether the backend truncates.</li>
+    <li><b>A threshold does not carry between backends.</b> The same evidence under the same question file exited 3 on one backend and exited 0 on the other. A question file that pins a threshold should name the backend it was calibrated against, or say plainly that it was not.</li>
+    <li><b>A small backend cannot tell a user its limit.</b> The second backend refused long evidence and named its own budget in the reply. The user saw only that the backend refused the request, because the tool never repeats a response body. That rule is right. It costs the user the most useful sentence a backend can send. A profile carrying the backend's stated limits, checked before the request leaves, is the fix.</li>
+    <li><b>A backend that truncates in silence is the danger.</b> The second model's own library trims long input and says nothing. Any page for a small backend has to state whether the backend truncates.</li>
   </ul>
   <p>No accuracy work came out of it. We compared sixteen answers against the first backend: twelve agreed on the value a script acts on, four differed, and two of the four were wrong. That is a smoke signal and not a measurement. The second backend is not a shipped choice, and nothing on this site depends on it.</p>
 

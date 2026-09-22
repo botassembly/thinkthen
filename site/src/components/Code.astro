@@ -1,8 +1,8 @@
 ---
-// A drawn code sample. It is labelled "drawn, not run" wherever it appears,
-// because no library ships yet.
+// A drawn code sample. Its badge says "not run yet" wherever it appears,
+// because no library ships yet. "drawn" stays in the data and the class.
 const { code, status = 'drawn', caption = null, copy = true } = Astro.props;
-const label = status === 'drawn' ? 'drawn, not run' : status;
+const label = status === 'drawn' ? 'not run yet' : status;
 const lines = code.split('\n');
 const comment = /^\s*(#|\/\/|--|\/\*|\*)/;
 ---

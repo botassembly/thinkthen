@@ -28,7 +28,7 @@ TypeSafe's own documentation ("Advanced: structure", https://docs.typesafe.ai/pr
 
 | Surface | TypeSafe accepts | The tool today |
 | --- | --- | --- |
-| `state` | string or object | **Structured, fully used.** Several `--field` pointers send an object of the named parts, and the pointer is the disclosure boundary. This one is right. |
+| `state` | string or object | **Structured at the boundary, string on the wire.** Several `--field` pointers build an object of the named parts, and the pointer is the disclosure boundary. `request.rs` then sends that object as a string. Corrected 2026-09-22; the founder issue, ruling 7, sends the object as JSON. |
 | `instructions` | string, object, array, null | String only. The wire carries `"instructions": "Which team?"`. |
 | Choice `criteria` values | string, object, array, null | String or null. An object description is refused: `` `options` in the question file is a list of labels, or a map from each label to its description ``, exit 5. |
 | Score `criteria` entries | string, object, array | String only. An object level is refused: `` `levels` in the question file is a list of levels, lowest first ``, exit 5. |
