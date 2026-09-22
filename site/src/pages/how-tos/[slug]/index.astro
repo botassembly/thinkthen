@@ -16,6 +16,10 @@ const data = HOWTO_RUNS[howto.slug];
 const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
 const plain = (text) => text.replaceAll('`', '');
 
+// Only a function with exit 3 can answer not sure. The two shared
+// sentences below promise it only when one of the how-to's functions can.
+const unsure = howto.functions.some((n) => FUNCTIONS.find((f) => f.name === n).exits.some(([code]) => code === 3));
+
 for (const step of data.steps) {
   if (!howto.see?.[step.name]) throw new Error(`how-tos: ${howto.slug} has no see caption for ${step.name}`);
 }
@@ -24,7 +28,7 @@ for (const step of data.steps) {
   <div class="eyebrow">{howto.reader}</div>
   <h1>{howto.title}</h1>
   <p class="lede">{parts(howto.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
-  <p>ThinkThen reads each line and answers a plain question about it. Every answer carries a probability. An unclear case comes back as not sure, exit code 3, for a person to check.</p>
+  <p>ThinkThen reads each line and answers a plain question about it. Every answer carries a probability.{unsure && ' An unclear case comes back as not sure, exit code 3, for a person to check.'}</p>
 
   <h2>What goes in</h2>
   <div class="block">
@@ -51,7 +55,7 @@ for (const step of data.steps) {
     })}
   </div>
 
-  <p>Copy the commands and point them at your own file. Set the bar with <code>--threshold</code>. Anything in the middle comes back as not sure for a person to check.</p>
+  <p>Copy the commands and point them at your own file. Set the bar with <code>--threshold</code>.{unsure && ' Anything in the middle comes back as not sure for a person to check.'}</p>
 
   <p class="pagelinks"><a href="/how-tos/">See every how-to</a> · <a href="/shell/">Use it from Bash</a> · <a href="/install/">Install it</a></p>
 </Base>

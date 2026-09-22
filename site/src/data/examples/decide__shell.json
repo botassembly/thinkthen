@@ -8,7 +8,8 @@
       "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
       "inputFile": "ticket.txt",
       "output": "true",
-      "exit": 0
+      "exit": 0,
+      "see": "The ticket asks for a refund, so decide prints true and exits 0."
     },
     {
       "name": "decide-answer",
@@ -16,7 +17,8 @@
       "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
       "inputFile": "ticket.txt",
       "output": "{\n  \"kind\": \"yes_no\",\n  \"probability\": 0.99\n}",
-      "exit": 0
+      "exit": 0,
+      "see": "The details put yes at 0.99 for this ticket."
     },
     {
       "name": "decide-vague",
@@ -24,7 +26,8 @@
       "input": "I was charged twice. Can you fix this?",
       "inputFile": "vague.txt",
       "output": "true",
-      "exit": 0
+      "exit": 0,
+      "see": "The vague message still answers true."
     },
     {
       "name": "decide-cut",
@@ -32,7 +35,8 @@
       "input": "I was charged twice. Can you fix this?",
       "inputFile": "vague.txt",
       "output": "false",
-      "exit": 1
+      "exit": 1,
+      "see": "At a cut of 0.9 the vague message answers false and exits 1."
     },
     {
       "name": "decide-band",
@@ -40,7 +44,8 @@
       "input": "I was charged twice. Can you fix this?",
       "inputFile": "vague.txt",
       "output": "[null,0.74]",
-      "exit": 0
+      "exit": 0,
+      "see": "The 0.74 lands inside the 0.2 to 0.8 band, so the value comes back null."
     }
   ],
   "function": "decide",

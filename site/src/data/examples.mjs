@@ -1,5 +1,6 @@
 // Read the pulled examples. The build fails when a function-and-surface cell
-// is missing, or when a cell carries neither an example nor a status.
+// is missing, when a cell carries neither an example nor a status, or when a
+// recorded run has no see sentence telling the reader what to look for.
 
 import { FUNCTIONS, SURFACES } from './catalog.mjs';
 
@@ -20,6 +21,13 @@ for (const fn of FUNCTIONS) {
     if (!STATUSES.has(cell.status)) throw new Error(`examples: ${key} has no status`);
     if (cell.status === 'run' && !cell.runs?.length) {
       throw new Error(`examples: ${key} is marked run and carries no example`);
+    }
+    if (cell.status === 'run') {
+      for (const run of cell.runs) {
+        if (typeof run.see !== 'string' || !run.see.trim()) {
+          throw new Error(`examples: ${fn.name}__${surface.slug}.json run ${run.name} has no see sentence`);
+        }
+      }
     }
     if (cell.status === 'drawn' && !cell.code) {
       throw new Error(`examples: ${key} is marked drawn and carries no code`);

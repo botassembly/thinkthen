@@ -8,7 +8,8 @@
       "input": "Our checkout page is down and customers cannot pay.",
       "inputFile": "outage.txt",
       "output": "2.0",
-      "exit": 0
+      "exit": 0,
+      "see": "The outage scores 2.0, and 2 is Immediate on this scale."
     },
     {
       "name": "score-answer",
@@ -16,7 +17,8 @@
       "input": "Our checkout page is down and customers cannot pay.",
       "inputFile": "outage.txt",
       "output": "{\n  \"Routine.\": 0.0,\n  \"Soon.\": 0.0,\n  \"Immediate.\": 1.0\n}",
-      "exit": 0
+      "exit": 0,
+      "see": "The details put all of the weight on Immediate."
     },
     {
       "name": "score-between",
@@ -24,7 +26,8 @@
       "input": "A few customers say card payments fail now and then.",
       "inputFile": "flaky.txt",
       "output": "0.78",
-      "exit": 0
+      "exit": 0,
+      "see": "The flaky payments score 0.78, close to Soon."
     },
     {
       "name": "score-between-answer",
@@ -32,7 +35,8 @@
       "input": "A few customers say card payments fail now and then.",
       "inputFile": "flaky.txt",
       "output": "{\"Routine.\":0.24,\"Soon.\":0.74,\"Immediate.\":0.02}",
-      "exit": 0
+      "exit": 0,
+      "see": "Soon holds most of the weight, and the weighted average of the steps gives 0.78."
     }
   ],
   "function": "score",

@@ -37,12 +37,12 @@ const sixHowtos = HOWTOS.slice(0, 6);
     </div>
     <div class="cell" data-lang="Bash">
       {bash.map((run) => <Terminal run={run} caption="Recorded from the real command. filter keeps the two complaints." />)}
-      <InstallLine line={surfaceOf('shell').install[0][0]} status="planned" note="coming with 0.1" caption="Install the command" />
+      <InstallLine line={surfaceOf('shell').install[0][0]} status="planned" label="comes with 0.1" note="comes with 0.1" caption="Install the command" />
     </div>
     {tabs.slice(1).map((t) => (
       <div class="cell" data-lang={t.label} hidden>
         <Code code={SURFACE_SAMPLES[t.surface].code} caption={plannedCaption(t.surface)} />
-        <InstallLine line={surfaceOf(t.surface).install[0][0]} status="planned" caption="Install, once it ships" />
+        <InstallLine line={surfaceOf(t.surface).install[0][0]} status="planned" label={surfaceOf(t.surface).release ? `comes with ${surfaceOf(t.surface).release}` : 'planned'} caption="Install it, once it ships" />
       </div>
     ))}
   </div>

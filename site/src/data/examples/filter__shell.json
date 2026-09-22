@@ -8,7 +8,8 @@
       "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThird time my order shows up late. Not okay.",
       "inputFile": "reviews.txt",
       "output": "The zipper broke the first time I used it.\nThird time my order shows up late. Not okay.",
-      "exit": 0
+      "exit": 0,
+      "see": "filter keeps the two complaints and drops the rest."
     },
     {
       "name": "filter-strict",
@@ -16,7 +17,8 @@
       "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThird time my order shows up late. Not okay.",
       "inputFile": "reviews.txt",
       "output": "Third time my order shows up late. Not okay.",
-      "exit": 0
+      "exit": 0,
+      "see": "At 0.95 only the clearest complaint stays."
     }
   ],
   "function": "filter",

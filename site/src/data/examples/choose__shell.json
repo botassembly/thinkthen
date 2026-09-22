@@ -8,7 +8,8 @@
       "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
       "inputFile": "ticket.txt",
       "output": "\"billing\"",
-      "exit": 0
+      "exit": 0,
+      "see": "The ticket goes to billing, and choose exits 0."
     },
     {
       "name": "choose-answer",
@@ -16,7 +17,8 @@
       "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
       "inputFile": "ticket.txt",
       "output": "{\n  \"billing\": 1.0,\n  \"shipping\": 0.0,\n  \"account\": 0.0\n}",
-      "exit": 0
+      "exit": 0,
+      "see": "The details give billing all of the weight."
     },
     {
       "name": "choose-split",
@@ -24,7 +26,8 @@
       "input": "You charged me twice and the package still has not shipped.",
       "inputFile": "both.txt",
       "output": "{\"billing\":0.85,\"shipping\":0.1,\"account\":0.05}",
-      "exit": 0
+      "exit": 0,
+      "see": "The message touches two teams, and billing still leads at 0.85."
     },
     {
       "name": "choose-null",
@@ -32,7 +35,8 @@
       "input": "You charged me twice and the package still has not shipped.",
       "inputFile": "both.txt",
       "output": "null",
-      "exit": 3
+      "exit": 3,
+      "see": "No team reaches 0.9, so choose prints null and exits 3."
     }
   ],
   "function": "choose",

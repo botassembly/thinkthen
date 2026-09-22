@@ -1,7 +1,8 @@
 ---
 // One install line with a copy button, and the status it ships under.
-const { line, status = 'planned', note = null, caption = 'Install' } = Astro.props;
-const label = status === 'shipped' ? 'shipped' : status;
+// `status` picks the colour. `label` is the status word the reader sees:
+// "comes with 0.1" when the release is named, "planned" when it is not.
+const { line, status = 'planned', label = status, note = null, caption = 'Install' } = Astro.props;
 const rows = [{ cls: 'p', text: '$ ' + line }];
 if (note) rows.push({ cls: 'cm', text: '# ' + note });
 ---

@@ -37,7 +37,7 @@ const [probe] = FACTS.cost.rows[0];
   {first && (
     <>
       <h2>The simplest example</h2>
-      <Terminal run={first} />
+      <Terminal run={first} caption={`Recorded from the real command. ${first.see}`} />
     </>
   )}
 
@@ -75,7 +75,7 @@ const [probe] = FACTS.cost.rows[0];
   {rest.length > 0 && (
     <>
       <h3>Each option, taught once</h3>
-      {rest.map((run) => <Terminal run={run} />)}
+      {rest.map((run) => <Terminal run={run} caption={`Recorded from the real command. ${run.see}`} />)}
     </>
   )}
 

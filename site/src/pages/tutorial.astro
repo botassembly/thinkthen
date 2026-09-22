@@ -50,8 +50,8 @@ const triageFile = `{
 
   <h2>1. Install it</h2>
   <p>Both channels come with 0.1.</p>
-  <InstallLine line={shell.install[0][0]} status="planned" note={shell.install[0][1]} caption="Homebrew tap" />
-  <InstallLine line={shell.install[1][0]} status="planned" note={shell.install[1][1]} caption="Download script" />
+  <InstallLine line={shell.install[0][0]} status="planned" label="comes with 0.1" note={shell.install[0][1]} caption="Homebrew tap" />
+  <InstallLine line={shell.install[1][0]} status="planned" label="comes with 0.1" note={shell.install[1][1]} caption="Download script" />
   <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key before you start. While you wait, <code>--dry-run</code> shows what would be sent. It needs no key. The <a href="/install/">install page</a> carries every other surface.</p>
 
   <h2>2. Ask one question</h2>

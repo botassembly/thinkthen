@@ -344,7 +344,20 @@ function howtoCells() {
 
 // ---------------------------------------------------------------------- write
 
+// The see sentences are written here, not in the deck. Keep them across a pull.
+function keptSee() {
+  const see = {};
+  if (!exists(OUT)) return see;
+  for (const file of fs.readdirSync(OUT).filter((f) => f.endsWith('__shell.json'))) {
+    for (const run of JSON.parse(read(path.join(OUT, file))).runs || []) {
+      if (run.see) see[run.name] = run.see;
+    }
+  }
+  return see;
+}
+
 function main() {
+  const see = keptSee();
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
 
@@ -359,7 +372,7 @@ function main() {
       const key = `${fn.name}|${surface.slug}`;
       let cell;
       if (surface.slug === 'shell') {
-        const runs = bash[fn.name];
+        const runs = bash[fn.name]?.map((run) => (see[run.name] ? { ...run, see: see[run.name] } : run));
         cell = runs
           ? { status: 'run', source: 'deck examples/run.sh and examples/out/', runs }
           : { status: 'planned', source: 'the command has no such function yet' };

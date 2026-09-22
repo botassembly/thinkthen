@@ -8,7 +8,8 @@
       "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
       "inputFile": null,
       "output": "{\"wants_refund\":true,\"team\":\"billing\",\"urgency\":0.91}",
-      "exit": 0
+      "exit": 0,
+      "see": "annotate returns one JSON record with a refund answer, a team, and an urgency."
     }
   ],
   "function": "annotate",

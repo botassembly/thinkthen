@@ -8,7 +8,8 @@
       "input": "I would like to return this and get my money back.",
       "inputFile": null,
       "output": "true",
-      "exit": 0
+      "exit": 0,
+      "see": "The saved question answers true for a clear refund request."
     },
     {
       "name": "question-unsure",
@@ -16,7 +17,8 @@
       "input": "I was charged twice. Can you fix this?",
       "inputFile": null,
       "output": "null",
-      "exit": 3
+      "exit": 3,
+      "see": "The saved question is not sure about the vague message, so it prints null and exits 3."
     }
   ],
   "function": "question-file",

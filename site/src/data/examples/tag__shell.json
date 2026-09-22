@@ -8,7 +8,8 @@
       "input": "You charged me twice and the package still has not shipped.\nI need this fixed today.",
       "inputFile": "message.txt",
       "output": "[\"billing\",\"shipping\",\"urgent\"]",
-      "exit": 0
+      "exit": 0,
+      "see": "The message gets billing, shipping, and urgent, and praise stays off."
     },
     {
       "name": "tag-answer",
@@ -16,7 +17,8 @@
       "input": "You charged me twice and the package still has not shipped.\nI need this fixed today.",
       "inputFile": "message.txt",
       "output": "{\n  \"billing\": 0.95,\n  \"shipping\": 0.93,\n  \"urgent\": 0.92,\n  \"praise\": 0.01\n}",
-      "exit": 0
+      "exit": 0,
+      "see": "Each of the three topics clears 0.9, and praise sits at 0.01."
     }
   ],
   "function": "tag",
