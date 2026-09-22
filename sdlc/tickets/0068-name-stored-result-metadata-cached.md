@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/result.rs crates/thinkthen/tests specification 
 
 # 0068: Name stored-result metadata cached
 
-Status: in progress
+Status: landed
 
 ## Outcome and authority
 
@@ -41,4 +41,4 @@ Contract 1; State/timing 0; Reach 1; Proof 2; Cost of error 1; Total 5. Minimum 
 
 ## Review
 
-Independent Sol design and code reviews: ACCEPT, including the frozen-probe read boundary and annotation no-alias proof. The final output structs use `cached` directly; engine/RequestMeta bookkeeping is unchanged, and the 500-line cap remains intact. The coordinator's sequential four-rung ladder passed 568 Rust tests, one intentional child-harness ignore, doctests, replay checks, transform/probe tests, and nineteen how-tos at the exact 33,840-line ceiling. Frozen preregistration files and captured recordings/rows are unchanged. Hosted run `35756403716` was cancelled after Ian disabled Actions; he selected local full gates as the verification authority. New main `692ba59` was integrated without conflicts and the coordinator reran the complete ladder successfully on the combined tree. Landing remains pending. The matching record retains the earlier overlapping-worker test failures and their evidence limitations.
+Independent Sol design and code reviews: ACCEPT, including the frozen-probe read boundary and annotation no-alias proof. The final output structs use `cached` directly; engine/RequestMeta bookkeeping is unchanged, and the 500-line cap remains intact. The coordinator's sequential four-rung ladder passed 568 Rust tests, one intentional child-harness ignore, doctests, replay checks, transform/probe tests, and nineteen how-tos at the exact 33,840-line ceiling. Frozen preregistration files and captured recordings/rows are unchanged. Hosted run `35756403716` was cancelled after Ian disabled Actions; he selected local full gates as the verification authority. New main `692ba59` was integrated without conflicts and the coordinator reran the complete ladder successfully on the combined tree. Integrated revision `22a4193` was fast-forwarded to main and pushed under that local-gate authority. The matching record retains the earlier overlapping-worker test failures and their evidence limitations.

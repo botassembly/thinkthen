@@ -1,6 +1,6 @@
 # 0068: Cached result metadata
 
-Status: Independently accepted; final integrated local gates passed; landing pending. Hosted run `35756403716` for `8912884` was cancelled after Ian disabled GitHub Actions. Ian explicitly authorized local full gates as the verification authority; no hosted success is claimed.
+Status: Landed on main as `22a4193` after independent acceptance and final integrated local gates. The coordinator pushed main and verified ancestry. Hosted run `35756403716` for `8912884` was cancelled after Ian disabled GitHub Actions. Ian explicitly authorized local full gates as the verification authority; no hosted success is claimed.
 
 ## Result and handoff
 
