@@ -206,3 +206,37 @@ Ian approved the Polars decisions ("approve the polars decisions. i want all det
 **Green by command.** `./check.sh` exit 0: the null suite, the fast-deadline test, the examples, the new feature step (`8 passed`), the conformance slice, and the wire suite skipped without the stub. `cargo check` and the full default suite stay green on 1.93.1 with the feature off.
 
 **Noted, not hidden.** The two new files are rustfmt-clean; the folder's pre-existing fmt diffs (other files) wait for the merge ticket, per `MERGE-NOTE.md` item 4, which already assigns fmt/clippy over the new folders to the merge.
+
+## 2026-09-22 — the review fix wave (lane C, the Rust surface)
+
+**Item 3 resolves to nothing to change, with the grep to prove it.** The
+Rust surface is a native Rust API: no `extern "C"`, no `no_mangle`, no FFI
+boundary for a panic to cross, and no `from_secs_f64` of its own — it takes
+the contract's `Options` and never builds a `Duration` from a float. The
+phase-1 checked conversion lives in the contract
+(`deadline_from_seconds` / `Options::with_deadline_seconds`), so a Rust
+host that wants the checked door calls it there. The five `deadline`
+mentions in `src/lib.rs` are doc lines.
+
+```
+$ grep -rn 'extern "C"\|no_mangle\|from_secs_f64\|catch_unwind' libraries/rust --include="*.rs" | grep -v target
+(no matches)
+```
+
+**The cross-side repair: the fixture opt-in.** The stand-in's annotate
+partial-failure fixture is armed only by `ENGINE_SYNTHETIC_PARTIAL=1`
+(standin commit `7acb3da`, finding 7). `tests/verbs.rs`'s
+`annotate_preserves_the_good_answers_and_marks_the_failed_one` and
+conformance case 74 both replay that record, so the null suite and the
+conformance example failed at HEAD without the opt-in. `check.sh` now
+exports the opt-in on those two lines, with a comment naming the reason.
+
+```
+$ ./check.sh                                        # exit 0
+null suite: 15 passed (verbs included), examples 1, deadline_fast 1,
+polars door 8, conformance slice ok, wire twin skipped (no stub on 8213)
+```
+
+The plain `cargo test` outside `check.sh` still needs `ENGINE_NULL=1`
+(and the fixture opt-in for verbs); that is the pre-existing review note
+about env-dependent suites, not this lane's change.

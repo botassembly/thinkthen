@@ -527,3 +527,103 @@ failing thread's twenty-five refusals sending nothing.
 - No Windows: the first release is Linux and macOS.
 - The examples and the drawn slide are unchanged; the plain signatures
   they call did not move, which is the point of the A-shape.
+
+## 2026-09-22 — the review fix wave (lane C)
+
+The review's group 2 entries for this door, each fix with the test that
+failed before it, plus the cross-side repair the stand-in's fixture
+opt-in demanded.
+
+**The per-thread error slot.** The old slot was one `Mutex` on the engine,
+last-writer-wins, while the header promised both any number of threads and
+a message that lives until the next call. A second thread's failure freed
+the first thread's message mid-read. The slot is now thread-local
+(`LAST_FAILURE`, keyed by the engine pointer): `fail` replaces only the
+calling thread's entry, the three error accessors read only the calling
+thread's entry, `thinkthen_engine_free` and `thinkthen_engine_new` forget
+the calling thread's entry so a reused address starts clean, and the entry
+drops at thread exit. The header's two promise spots and `DESIGN.md`'s
+sections 5, 6, 7, and the deferred list now state that truth.
+
+The repro, against the pre-fix library (the fix stashed, the new tests
+kept), is the review's own: a saved message pointer read after the other
+thread failed.
+
+```
+$ clang -fsanitize=address ... tests/error_threads.c && ./build/error_threads_prefix
+==ERROR: AddressSanitizer: heap-use-after-free ... READ of size 2 ... thread T1
+    #1 ... in strstr
+freed by thread T2 here:
+    #1 ... in thinkthen::thinkthen_engine::fail
+previously allocated by thread T1 here:
+    #3 ... in thinkthen::thinkthen_engine::fail
+
+$ ENGINE_NULL=1 cargo test --test error_threads        # against the pre-fix library
+two_threads_read_their_own_messages --- FAILED
+```
+
+With the fix, `tests/error_threads.c` prints `ok two threads read their
+own messages, none crossed` under ASan and LSan, and
+`tests/error_threads.rs` passes. `tests/concurrency.rs`'s four threads
+each read their own code and message; the main thread, which recorded no
+failure, reads the no-failure text, where the old test asserted the last
+writer's failure on the main thread — that assertion was the shared-slot
+bug written down.
+
+**The panic guard.** Every exported symbol now runs its body behind
+`guard`: `catch_unwind` catches a panic from anywhere beneath the door,
+records the defect kind on the calling thread's slot with the panic's own
+text, and returns the symbol's fallback (a code, null, or the defect
+text), so a panic never aborts the host. The unit test
+`a_panic_behind_the_door_comes_back_as_the_defect_kind` forces a panic
+through the guard and reads code 6 and the recorded text back. A test hook
+that panics was rejected: it would be test code in the shipped library,
+the same defect finding 7 removed from the stand-in.
+
+**The checked deadline.** `control()` now converts a nonnegative
+`deadline_ms` through the contract's `deadline_from_millis`, so a budget
+larger than the engine holds is the usage kind before anything is sent.
+Before this, `deadline_ms = i64::MAX` overflowed the instant and panicked
+inside the host process — the C door's share of the review's "large
+deadline crashes the host" finding.
+`an_impossible_budget_is_refused_not_a_panic` pins it (usage code, the
+`larger than` message, nothing sent, nothing written).
+
+**The cross-side repair.** The stand-in's annotate fixture is now armed
+only by `ENGINE_SYNTHETIC_PARTIAL=1` (standin commit `7acb3da`), and the C
+gate replayed that record in `the_new_shapes_ride_the_json_door` and in
+conformance case 74. Without the opt-in the door suite failed at HEAD;
+`check.sh` now exports the opt-in for the door suite and the conformance
+driver, with a comment naming the reason. Verified: without the opt-in
+exactly one door test fails (the fixture's), with it all fourteen pass.
+
+**Commands and output.**
+
+```
+$ ./check.sh                                        # exit 0
+asan and lsan clean
+ok       two threads read their own messages, none crossed
+lib: 3 passed; door: 14 passed; null_matrix: 5 passed; cancel: 3 passed;
+deadline_fast: 3 passed; conformance: 1 passed; error_threads: 1 passed;
+fork: 1 passed; examples and the drawn slide unchanged; wire twin skipped
+(no stub on 8216)
+conformance slice: 74-annotate-preserves-good-answers ok, 68 green lines
+```
+
+The four pre-existing `unsafe_op_in_unsafe_fn` warnings in
+`tests/deadline_fast.rs` and `tests/door.rs` helpers are unchanged from
+HEAD; this lane added none.
+
+**The Rust surface.** `libraries/rust` has no FFI boundary and no
+`from_secs_f64` of its own (grep over the crate: no matches), so item 3's
+two clauses resolve to nothing to change there; its notes carry the grep.
+It needed the same fixture opt-in repair as this gate — `tests/verbs.rs`
+and conformance case 74 replay the armed record — and its `check.sh` is
+green with it.
+
+**Known corner.** The TLS slot is keyed by the engine pointer. A thread
+that recorded a failure keeps its message string after another thread
+frees the engine; if a new engine takes that address and is used on that
+thread, the stale entry could be read as the new engine's last failure.
+Bounded to one message string per thread, cleared on that thread's own
+free and new, and stated here rather than hidden.

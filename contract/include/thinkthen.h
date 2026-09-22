@@ -24,8 +24,9 @@
  * string from `thinkthen_call`, `thinkthen_recognize`, or
  * `thinkthen_relate` lives until `thinkthen_free_string`; a cancel token
  * lives until `thinkthen_cancel_token_free`, and no call may carry a token
- * the host has freed; the message from `thinkthen_error_message` lives
- * until the next call on the same engine.
+ * the host has freed; the message from `thinkthen_error_message` belongs
+ * to the calling thread and lives until that thread records its next
+ * failure, so no other thread's calls replace it.
  *
  * The failure rule: a nonzero return leaves every out parameter holding
  * what it held before the call, and `thinkthen_error_code`,
@@ -106,10 +107,11 @@ thinkthen_engine *thinkthen_engine_new(void);
  * call on it has returned. */
 void thinkthen_engine_free(thinkthen_engine *engine);
 
-/* The message for the last failure on this engine, valid until the next
- * call on the same engine. A deadline's message names the limit and its
- * value. Never NULL: before any failure it names that nothing failed yet,
- * and with a null engine it names that no engine came. */
+/* The message for the last failure the calling thread recorded on this
+ * engine, valid until that thread records its next failure; another
+ * thread's calls never replace it. A deadline's message names the limit
+ * and its value. Never NULL: before any failure it names that nothing
+ * failed yet, and with a null engine it names that no engine came. */
 const char *thinkthen_error_message(const thinkthen_engine *engine);
 
 /* Whether a second try could help the last failure, in the caller's

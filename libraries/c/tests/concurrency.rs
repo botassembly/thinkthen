@@ -120,9 +120,8 @@ fn four_threads_share_one_engine() {
                     assert_eq!(value["answer"], serde_json::json!(true));
                 }
             });
-            // A failing caller beside the answering ones: its own code
-            // comes back on every call, and the shared message slot names
-            // the same failure.
+            // A failing caller beside the answering ones: its own code and
+            // its own message come back on every call.
             scope.spawn(move || {
                 for _ in 0..CALLS {
                     let mut answer = UNWRITTEN;
@@ -139,6 +138,15 @@ fn four_threads_share_one_engine() {
                         1,
                         "the failing caller reads its own code"
                     );
+                    let message = CStr::from_ptr(thinkthen::thinkthen_error_message(
+                        shared.engine(),
+                    ))
+                    .to_string_lossy()
+                    .into_owned();
+                    assert!(
+                        message.contains("choose"),
+                        "the failing caller reads its own message: {message}"
+                    );
                     assert_eq!(answer.outcome, 7, "a refusal writes nothing");
                 }
             });
@@ -151,10 +159,13 @@ fn four_threads_share_one_engine() {
             (3 * CALLS) as u64,
             "one send a call, none lost and none doubled"
         );
+        // The main thread recorded no failure of its own, so the per-thread
+        // slot has none for it: the failures live on the threads that made
+        // them.
         assert_eq!(
             thinkthen::thinkthen_error_code(engine),
-            1,
-            "the last failure was the broken question's"
+            0,
+            "the main thread recorded no failure"
         );
         thinkthen::thinkthen_engine_free(engine);
     }

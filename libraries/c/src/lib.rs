@@ -10,7 +10,15 @@
 //! until `thinkthen_engine_free`, a string from `thinkthen_call`,
 //! `thinkthen_recognize`, or `thinkthen_relate` lives until
 //! `thinkthen_free_string`, and the message from
-//! `thinkthen_error_message` lives until the next call on the same engine.
+//! `thinkthen_error_message` belongs to the calling thread: it lives until
+//! that thread records its next failure, and no other thread's calls
+//! replace it.
+//!
+//! No panic crosses into the host. Every exported symbol runs behind a
+//! guard that catches a panic from anywhere beneath it, records the defect
+//! kind on the calling thread's slot, and returns a code or a null the
+//! host can handle, so a bug in the door or the engine never aborts the
+//! host process. Rust's own hook still prints the panic to stderr.
 //!
 //! Two findings from the slide, filed in `NOTES.md`, shape the code: the
 //! slide passes a bare question string where the header's doc promised the
@@ -27,12 +35,13 @@
 //!
 //! [`contract/include/thinkthen.h`]: ../../contract/include/thinkthen.h
 
+use std::cell::RefCell;
 use std::ffi::{c_char, c_long, CStr, CString};
-use std::sync::Mutex;
 
 use thinkthen_contract::{
     Annotated, Answer, Cancel, Details, Engine as _, Error, ErrorKind, Options, Question,
-    QuestionSet, Ranked, Recognize, Relate, Scored, edges_json, relate_checked,
+    QuestionSet, Ranked, Recognize, Relate, Scored, deadline_from_millis, edges_json,
+    relate_checked,
 };
 use thinkthen_standin::BlockingEngine;
 
@@ -41,6 +50,10 @@ const THINKTHEN_OK: i32 = 0;
 
 /// The header's usage code, which a null engine also returns.
 const THINKTHEN_EUSAGE: i32 = 1;
+
+/// The header's defect code, the guard's fallback when a panic crossed
+/// the door.
+const THINKTHEN_EDEFECT: i32 = 6;
 
 /// The header's `THINKTHEN_NO_DEADLINE`: a negative budget sets none.
 const NO_DEADLINE: c_long = -1;
@@ -67,16 +80,13 @@ pub struct thinkthen_cancel_token {
     cancel: Cancel,
 }
 
-/// The opaque engine value. The engine plus the last failure's message,
-/// which the header promises stays valid until the next call.
+/// The opaque engine value. The engine the door calls; the last failure
+/// belongs to the thread that recorded it, not to this value, so two
+/// threads over one engine read their own messages.
 #[allow(non_camel_case_types)] // the header's own name for the value
 pub struct thinkthen_engine {
     /// The engine the door calls. Built from the environment.
     engine: BlockingEngine,
-    /// The last failure: its code, its retry signal, and a C string the
-    /// caller may still hold a pointer to. Guarded because a host may
-    /// call the door from many threads over one engine.
-    last: Mutex<Option<LastError>>,
 }
 
 /// The stored failure behind `thinkthen_error_message`.
@@ -85,8 +95,18 @@ struct LastError {
     code: i32,
     /// Whether a second try could help.
     retryable: bool,
-    /// The message, kept alive until the next call replaces it.
+    /// The message, kept alive until the recording thread's next failure.
     message: CString,
+}
+
+thread_local! {
+    /// The failure the calling thread recorded last, and the engine it came
+    /// from. One slot per thread, so a caller and its readers stay on one
+    /// thread and another thread's failures never replace the message. The
+    /// slot drops at thread exit; freeing an engine forgets its entry on
+    /// the freeing thread so a reused address starts clean.
+    static LAST_FAILURE: RefCell<Option<(*const thinkthen_engine, LastError)>> =
+        RefCell::new(None);
 }
 
 /// The code for a kind, matching the header's six defines.
@@ -120,19 +140,22 @@ fn json_of(answer: &Answer) -> serde_json::Value {
 }
 
 impl thinkthen_engine {
-    /// Record a failure and return its code. The message the caller reads
-    /// stays alive until the next call on this engine.
+    /// Record a failure for the calling thread and return its code. The
+    /// message replaces this thread's previous failure and stays alive
+    /// until this thread records its next one.
     fn fail(&self, error: Error) -> i32 {
         let code = code_of(&error.kind);
         let message = CString::new(error.message)
             .unwrap_or_else(|_| CString::new("defect: the message held a NUL").expect("static"));
-        *self
-            .last
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(LastError {
-            code,
-            retryable: error.retryable,
-            message,
+        LAST_FAILURE.with(|slot| {
+            *slot.borrow_mut() = Some((
+                self as *const thinkthen_engine,
+                LastError {
+                    code,
+                    retryable: error.retryable,
+                    message,
+                },
+            ));
         });
         code
     }
@@ -155,6 +178,86 @@ impl thinkthen_engine {
     }
 }
 
+/// The code the calling thread recorded for `engine`, `THINKTHEN_OK` when
+/// it recorded none. A failure on another thread or another engine is not
+/// this thread's to report.
+fn thread_error_code(engine: *const thinkthen_engine) -> i32 {
+    LAST_FAILURE.with(|slot| match slot.borrow().as_ref() {
+        Some((key, last)) if std::ptr::eq(*key, engine) => last.code,
+        _ => THINKTHEN_OK,
+    })
+}
+
+/// Whether a second try could help the calling thread's last failure on
+/// `engine`; zero when this thread recorded none.
+fn thread_error_retryable(engine: *const thinkthen_engine) -> i32 {
+    LAST_FAILURE.with(|slot| match slot.borrow().as_ref() {
+        Some((key, last)) if std::ptr::eq(*key, engine) => i32::from(last.retryable),
+        _ => 0,
+    })
+}
+
+/// The calling thread's message for `engine`, when it recorded a failure.
+/// The pointer stays valid until this thread records its next failure,
+/// exactly as the header promises.
+fn thread_error_message(engine: *const thinkthen_engine) -> Option<*const c_char> {
+    LAST_FAILURE.with(|slot| match slot.borrow().as_ref() {
+        Some((key, last)) if std::ptr::eq(*key, engine) => Some(last.message.as_ptr()),
+        _ => None,
+    })
+}
+
+/// Forget the calling thread's failure for `engine`: the engine is going
+/// away, or a new one took a reused address.
+fn forget_thread_failure(engine: *const thinkthen_engine) {
+    LAST_FAILURE.with(|slot| {
+        let mut held = slot.borrow_mut();
+        if let Some((key, _)) = held.as_ref() {
+            if std::ptr::eq(*key, engine) {
+                *held = None;
+            }
+        }
+    });
+}
+
+/// Run one door body behind a panic guard.
+///
+/// A panic from anywhere beneath the body — the engine, the contract, or
+/// the door itself — is caught here, recorded as the defect kind on the
+/// calling thread's slot when an engine is at hand, and reported through
+/// `fallback`, so it never unwinds into the host process. Rust's default
+/// hook still prints the panic to stderr; what the guard removes is the
+/// abort that would otherwise kill the host.
+fn guard<T>(
+    engine: *const thinkthen_engine,
+    fallback: impl FnOnce() -> T,
+    body: impl FnOnce() -> T,
+) -> T {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)) {
+        Ok(value) => value,
+        Err(payload) => {
+            if let Some(engine) = unsafe { engine.as_ref() } {
+                engine.fail(Error::defect(format!(
+                    "a panic crossed the door: {}",
+                    panic_text(payload.as_ref())
+                )));
+            }
+            fallback()
+        }
+    }
+}
+
+/// The text a panic payload carries, for the recorded defect message.
+fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(text) = payload.downcast_ref::<&'static str>() {
+        (*text).to_owned()
+    } else if let Some(text) = payload.downcast_ref::<String>() {
+        text.clone()
+    } else {
+        "a payload that is not text".to_owned()
+    }
+}
+
 /// Build a question from what the caller passed: the question-file grammar
 /// when the string is a JSON object — and a parse failure there is a usage
 /// error, never silently a bare question — or the bare text of a decide
@@ -169,25 +272,32 @@ fn question_from(text: &str) -> Result<Question, Error> {
 }
 
 // The door. Every function matches its declaration in
-// contract/include/thinkthen.h; unsafe is the boundary, and each body
-// checks what it can before trusting the host.
+// contract/include/thinkthen.h; unsafe is the boundary, each body checks
+// what it can before trusting the host, and every body runs behind the
+// panic guard so no panic crosses into the host process.
 
 /// Build an engine from the environment. Returns null only when the
 /// process cannot hold an engine at all.
 ///
 /// # Panics
 ///
-/// Never: allocation failure aborts the process by Rust's own rule.
+/// None that crosses the boundary: the guard catches every panic; an
+/// allocation failure aborts the process by Rust's own rule.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_new() -> *mut thinkthen_engine {
-    let engine = BlockingEngine::from_env();
-    Box::into_raw(Box::new(thinkthen_engine {
-        engine,
-        last: Mutex::new(None),
-    }))
+    guard(std::ptr::null(), || std::ptr::null_mut(), || {
+        let engine = Box::into_raw(Box::new(thinkthen_engine {
+            engine: BlockingEngine::from_env(),
+        }));
+        // A fresh engine starts with no failure, even when it took an
+        // address this thread used before.
+        forget_thread_failure(engine);
+        engine
+    })
 }
 
-/// Free an engine. Null is accepted and ignored.
+/// Free an engine. Null is accepted and ignored. The calling thread's
+/// error slot forgets the engine, so a reused address starts clean.
 ///
 /// # Safety
 ///
@@ -195,14 +305,18 @@ pub unsafe extern "C" fn thinkthen_engine_new() -> *mut thinkthen_engine {
 /// using.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut thinkthen_engine) {
-    if !engine.is_null() {
-        drop(unsafe { Box::from_raw(engine) });
-    }
+    guard(engine, || {}, || {
+        if !engine.is_null() {
+            forget_thread_failure(engine);
+            drop(unsafe { Box::from_raw(engine) });
+        }
+    })
 }
 
-/// The message for the last failure on this engine, valid until the next
-/// call. Never null: before any failure it names that nothing failed yet,
-/// and a null engine names that no engine came.
+/// The message for the last failure the calling thread recorded on this
+/// engine, valid until that thread records its next failure; no other
+/// thread's call replaces it. Never null: before any failure it names
+/// that nothing failed yet, and a null engine names that no engine came.
 ///
 /// # Safety
 ///
@@ -211,58 +325,54 @@ pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut thinkthen_engine) {
 pub unsafe extern "C" fn thinkthen_error_message(
     engine: *const thinkthen_engine,
 ) -> *const c_char {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return c"no engine came, so no failure is named".as_ptr();
-    };
-    let guard = engine
-        .last
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    match guard.as_ref() {
-        Some(last) => last.message.as_ptr(),
-        None => c"no failure yet".as_ptr(),
-    }
+    guard(
+        engine,
+        || c"the door panicked, so no message came".as_ptr(),
+        || {
+            let Some(held) = (unsafe { engine.as_ref() }) else {
+                return c"no engine came, so no failure is named".as_ptr();
+            };
+            match thread_error_message(held as *const thinkthen_engine) {
+                Some(message) => message,
+                None => c"no failure yet".as_ptr(),
+            }
+        },
+    )
 }
 
-/// Whether a second try could help the last failure: 1 when it could,
-/// 0 when it could not or nothing failed. Zero with a null engine.
+/// Whether a second try could help the calling thread's last failure on
+/// this engine: 1 when it could, 0 when it could not or that thread
+/// recorded none. Zero with a null engine.
 ///
 /// # Safety
 ///
 /// `engine` is null or a value this door returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_retryable(engine: *const thinkthen_engine) -> i32 {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return 0;
-    };
-    let guard = engine
-        .last
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    i32::from(guard.as_ref().is_some_and(|last| last.retryable))
+    guard(engine, || 0, || {
+        let Some(held) = (unsafe { engine.as_ref() }) else {
+            return 0;
+        };
+        thread_error_retryable(held as *const thinkthen_engine)
+    })
 }
 
-/// The code of the last failure on this engine: the value the failing call
-/// returned, `THINKTHEN_OK` when nothing failed yet. Success does not
-/// clear it. A null engine is the usage code, because no engine holds a
-/// failure.
+/// The code of the last failure the calling thread recorded on this
+/// engine: the value the failing call returned, `THINKTHEN_OK` when that
+/// thread recorded none. Success does not clear it. A null engine is the
+/// usage code, because no engine holds a failure.
 ///
 /// # Safety
 ///
 /// `engine` is null or a value this door returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_code(engine: *const thinkthen_engine) -> i32 {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return THINKTHEN_EUSAGE;
-    };
-    let guard = engine
-        .last
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    match guard.as_ref() {
-        Some(last) => last.code,
-        None => THINKTHEN_OK,
-    }
+    guard(engine, || THINKTHEN_EDEFECT, || {
+        let Some(held) = (unsafe { engine.as_ref() }) else {
+            return THINKTHEN_EUSAGE;
+        };
+        thread_error_code(held as *const thinkthen_engine)
+    })
 }
 
 /// Create a cancel token. Free it with `thinkthen_cancel_token_free` after
@@ -274,9 +384,11 @@ pub unsafe extern "C" fn thinkthen_error_code(engine: *const thinkthen_engine) -
 /// and the host frees it exactly once.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_cancel_token_new() -> *mut thinkthen_cancel_token {
-    Box::into_raw(Box::new(thinkthen_cancel_token {
-        cancel: Cancel::new(),
-    }))
+    guard(std::ptr::null(), || std::ptr::null_mut(), || {
+        Box::into_raw(Box::new(thinkthen_cancel_token {
+            cancel: Cancel::new(),
+        }))
+    })
 }
 
 /// Fire a token: every call carrying it stops starting new requests and
@@ -290,9 +402,11 @@ pub unsafe extern "C" fn thinkthen_cancel_token_new() -> *mut thinkthen_cancel_t
 /// `token` is null or a value this door returned and has not freed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_cancel(token: *mut thinkthen_cancel_token) {
-    if let Some(token) = unsafe { token.as_ref() } {
-        token.cancel.cancel();
-    }
+    guard(std::ptr::null(), || {}, || {
+        if let Some(token) = unsafe { token.as_ref() } {
+            token.cancel.cancel();
+        }
+    })
 }
 
 /// Free a token. Null is accepted and ignored. Free it only after every
@@ -304,23 +418,33 @@ pub unsafe extern "C" fn thinkthen_cancel(token: *mut thinkthen_cancel_token) {
 /// using.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_cancel_token_free(token: *mut thinkthen_cancel_token) {
-    if !token.is_null() {
-        drop(unsafe { Box::from_raw(token) });
-    }
+    guard(std::ptr::null(), || {}, || {
+        if !token.is_null() {
+            drop(unsafe { Box::from_raw(token) });
+        }
+    })
 }
 
 /// The options one call carries beside its arguments: the caller's budget
 /// and the caller's token. `THINKTHEN_NO_DEADLINE` sets no deadline; zero
 /// is a spent budget by the engine's own rule, so it refuses before
-/// anything is sent; any other value is a count of milliseconds from now.
-/// A null token is no token.
-fn control<'a>(deadline_ms: c_long, token: *const thinkthen_cancel_token) -> Options<'a> {
+/// anything is sent; any other value is a count of milliseconds from now,
+/// converted by the contract's checked door so an oversized budget comes
+/// back as the usage kind instead of a panic in the host. A null token is
+/// no token.
+fn control<'a>(
+    deadline_ms: c_long,
+    token: *const thinkthen_cancel_token,
+) -> Result<Options<'a>, Error> {
     let token = unsafe { token.as_ref() };
     let options = Options::new().maybe_cancel(token.map(|held| &held.cancel));
     if deadline_ms < 0 {
-        options
-    } else {
-        options.deadline_in(std::time::Duration::from_millis(deadline_ms as u64))
+        return Ok(options);
+    }
+    match deadline_from_millis(deadline_ms as f64) {
+        Ok(Some(budget)) => Ok(options.deadline_in(budget)),
+        Ok(None) => Ok(options),
+        Err(error) => Err(error),
     }
 }
 
@@ -339,7 +463,7 @@ pub unsafe extern "C" fn thinkthen_decide(
     text_len: usize,
     out: *mut thinkthen_answer,
 ) -> i32 {
-    unsafe {
+    guard(engine, || THINKTHEN_EDEFECT, || unsafe {
         thinkthen_decide_opts(
             engine,
             question_json,
@@ -349,7 +473,7 @@ pub unsafe extern "C" fn thinkthen_decide(
             std::ptr::null(),
             out,
         )
-    }
+    })
 }
 
 /// Ask one yes-or-no question of one text, with the options beside it.
@@ -373,24 +497,30 @@ pub unsafe extern "C" fn thinkthen_decide_opts(
     cancel: *const thinkthen_cancel_token,
     out: *mut thinkthen_answer,
 ) -> i32 {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return THINKTHEN_EUSAGE;
-    };
-    if out.is_null() {
-        return engine.fail(Error::usage("a null out pointer"));
-    }
-    let options = control(deadline_ms, cancel);
-    let (answer, probability) = match run_decide(engine, question_json, text, text_len, options) {
-        Ok(pair) => pair,
-        Err(error) => return engine.fail(error),
-    };
-    unsafe {
-        *out = thinkthen_answer {
-            outcome: outcome_of(&answer),
-            probability,
+    guard(engine, || THINKTHEN_EDEFECT, || {
+        let Some(engine) = (unsafe { engine.as_ref() }) else {
+            return THINKTHEN_EUSAGE;
         };
-    }
-    THINKTHEN_OK
+        if out.is_null() {
+            return engine.fail(Error::usage("a null out pointer"));
+        }
+        let options = match control(deadline_ms, cancel) {
+            Ok(options) => options,
+            Err(error) => return engine.fail(error),
+        };
+        let (answer, probability) =
+            match run_decide(engine, question_json, text, text_len, options) {
+                Ok(pair) => pair,
+                Err(error) => return engine.fail(error),
+            };
+        unsafe {
+            *out = thinkthen_answer {
+                outcome: outcome_of(&answer),
+                probability,
+            };
+        }
+        THINKTHEN_OK
+    })
 }
 
 /// The shared body of the two decide doors, safe on the Rust side.
@@ -438,7 +568,7 @@ pub unsafe extern "C" fn thinkthen_decide_many(
     count: usize,
     out: *mut thinkthen_answer,
 ) -> i32 {
-    unsafe {
+    guard(engine, || THINKTHEN_EDEFECT, || unsafe {
         thinkthen_decide_many_opts(
             engine,
             question_json,
@@ -449,7 +579,7 @@ pub unsafe extern "C" fn thinkthen_decide_many(
             std::ptr::null(),
             out,
         )
-    }
+    })
 }
 
 /// Ask the same question of every text at once, at the engine's width,
@@ -476,55 +606,60 @@ pub unsafe extern "C" fn thinkthen_decide_many_opts(
     cancel: *const thinkthen_cancel_token,
     out: *mut thinkthen_answer,
 ) -> i32 {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return THINKTHEN_EUSAGE;
-    };
-    if count > 0 {
-        if out.is_null() {
-            return engine.fail(Error::usage("a null out array with a nonzero count"));
-        }
-        if texts.is_null() {
-            return engine.fail(Error::usage("a null texts array with a nonzero count"));
-        }
-        if lengths.is_null() {
-            return engine.fail(Error::usage("a null lengths array with a nonzero count"));
-        }
-    }
-    let options = control(deadline_ms, cancel);
-    let question = match str_required(question_json, "question").and_then(question_from) {
-        Ok(question) => question,
-        Err(error) => return engine.fail(error),
-    };
-    let mut records = Vec::with_capacity(count);
-    for index in 0..count {
-        let pointer = unsafe { *texts.add(index) };
-        let length = unsafe { *lengths.add(index) };
-        match str_from(pointer, length) {
-            Ok(text) => records.push(text),
-            Err(error) => return engine.fail(error),
-        }
-    }
-    match engine
-        .engine
-        .decide_many_opts(&question, &records, options, None)
-    {
-        Ok(judgments) if judgments.len() == count => {
-            for (index, judgment) in judgments.iter().enumerate() {
-                unsafe {
-                    *out.add(index) = thinkthen_answer {
-                        outcome: outcome_of(&judgment.answer),
-                        probability: judgment.probability,
-                    };
-                }
+    guard(engine, || THINKTHEN_EDEFECT, || {
+        let Some(engine) = (unsafe { engine.as_ref() }) else {
+            return THINKTHEN_EUSAGE;
+        };
+        if count > 0 {
+            if out.is_null() {
+                return engine.fail(Error::usage("a null out array with a nonzero count"));
             }
-            THINKTHEN_OK
+            if texts.is_null() {
+                return engine.fail(Error::usage("a null texts array with a nonzero count"));
+            }
+            if lengths.is_null() {
+                return engine.fail(Error::usage("a null lengths array with a nonzero count"));
+            }
         }
-        Ok(judgments) => engine.fail(Error::defect(format!(
-            "the engine returned {} judgments for {count} records",
-            judgments.len()
-        ))),
-        Err(error) => engine.fail(error),
-    }
+        let options = match control(deadline_ms, cancel) {
+            Ok(options) => options,
+            Err(error) => return engine.fail(error),
+        };
+        let question = match str_required(question_json, "question").and_then(question_from) {
+            Ok(question) => question,
+            Err(error) => return engine.fail(error),
+        };
+        let mut records = Vec::with_capacity(count);
+        for index in 0..count {
+            let pointer = unsafe { *texts.add(index) };
+            let length = unsafe { *lengths.add(index) };
+            match str_from(pointer, length) {
+                Ok(text) => records.push(text),
+                Err(error) => return engine.fail(error),
+            }
+        }
+        match engine
+            .engine
+            .decide_many_opts(&question, &records, options, None)
+        {
+            Ok(judgments) if judgments.len() == count => {
+                for (index, judgment) in judgments.iter().enumerate() {
+                    unsafe {
+                        *out.add(index) = thinkthen_answer {
+                            outcome: outcome_of(&judgment.answer),
+                            probability: judgment.probability,
+                        };
+                    }
+                }
+                THINKTHEN_OK
+            }
+            Ok(judgments) => engine.fail(Error::defect(format!(
+                "the engine returned {} judgments for {count} records",
+                judgments.len()
+            ))),
+            Err(error) => engine.fail(error),
+        }
+    })
 }
 
 /// One borrowed `&str` from a pointer and a byte length, refusing text
@@ -558,7 +693,9 @@ pub unsafe extern "C" fn thinkthen_call(
     engine: *const thinkthen_engine,
     request_json: *const c_char,
 ) -> *mut c_char {
-    unsafe { thinkthen_call_opts(engine, request_json, NO_DEADLINE, std::ptr::null()) }
+    guard(engine, || std::ptr::null_mut(), || unsafe {
+        thinkthen_call_opts(engine, request_json, NO_DEADLINE, std::ptr::null())
+    })
 }
 
 /// The JSON door: any request of the eight verbs, with the answer as JSON
@@ -592,33 +729,41 @@ pub unsafe extern "C" fn thinkthen_call_opts(
     deadline_ms: c_long,
     cancel: *const thinkthen_cancel_token,
 ) -> *mut c_char {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return std::ptr::null_mut();
-    };
-    let options = control(deadline_ms, cancel);
-    let request = match str_required(request_json, "request").and_then(|text| {
-        serde_json::from_str::<serde_json::Value>(text)
-            .map_err(|error| Error::usage(format!("the request is not JSON: {error}")))
-    }) {
-        Ok(request) => request,
-        Err(error) => {
-            engine.fail(error);
+    guard(engine, || std::ptr::null_mut(), || {
+        let Some(engine) = (unsafe { engine.as_ref() }) else {
             return std::ptr::null_mut();
-        }
-    };
-    match call_verb(engine, &request, options) {
-        Ok(reply) => {
-            let Ok(text) = CString::new(reply.to_string()) else {
-                engine.fail(Error::defect("the reply held a NUL"));
+        };
+        let options = match control(deadline_ms, cancel) {
+            Ok(options) => options,
+            Err(error) => {
+                engine.fail(error);
                 return std::ptr::null_mut();
-            };
-            text.into_raw()
+            }
+        };
+        let request = match str_required(request_json, "request").and_then(|text| {
+            serde_json::from_str::<serde_json::Value>(text)
+                .map_err(|error| Error::usage(format!("the request is not JSON: {error}")))
+        }) {
+            Ok(request) => request,
+            Err(error) => {
+                engine.fail(error);
+                return std::ptr::null_mut();
+            }
+        };
+        match call_verb(engine, &request, options) {
+            Ok(reply) => {
+                let Ok(text) = CString::new(reply.to_string()) else {
+                    engine.fail(Error::defect("the reply held a NUL"));
+                    return std::ptr::null_mut();
+                };
+                text.into_raw()
+            }
+            Err(error) => {
+                engine.fail(error);
+                std::ptr::null_mut()
+            }
         }
-        Err(error) => {
-            engine.fail(error);
-            std::ptr::null_mut()
-        }
-    }
+    })
 }
 
 /// Route one parsed request to its verb. Every reply is a JSON value the
@@ -883,7 +1028,7 @@ pub unsafe extern "C" fn thinkthen_recognize(
     out: *mut *mut c_char,
     out_len: *mut usize,
 ) -> i32 {
-    unsafe {
+    guard(engine, || THINKTHEN_EDEFECT, || unsafe {
         thinkthen_recognize_opts(
             engine,
             spec_json,
@@ -894,7 +1039,7 @@ pub unsafe extern "C" fn thinkthen_recognize(
             out,
             out_len,
         )
-    }
+    })
 }
 
 /// Find every name in one text, and the relations the rules allow, as one
@@ -923,20 +1068,25 @@ pub unsafe extern "C" fn thinkthen_recognize_opts(
     out: *mut *mut c_char,
     out_len: *mut usize,
 ) -> i32 {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return THINKTHEN_EUSAGE;
-    };
-    if out.is_null() {
-        return engine.fail(Error::usage("a null out pointer"));
-    }
-    if out_len.is_null() {
-        return engine.fail(Error::usage("a null out_len pointer"));
-    }
-    let options = control(deadline_ms, cancel);
-    match run_recognize(engine, spec_json, text, text_len, options) {
-        Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
-        Err(error) => engine.fail(error),
-    }
+    guard(engine, || THINKTHEN_EDEFECT, || {
+        let Some(engine) = (unsafe { engine.as_ref() }) else {
+            return THINKTHEN_EUSAGE;
+        };
+        if out.is_null() {
+            return engine.fail(Error::usage("a null out pointer"));
+        }
+        if out_len.is_null() {
+            return engine.fail(Error::usage("a null out_len pointer"));
+        }
+        let options = match control(deadline_ms, cancel) {
+            Ok(options) => options,
+            Err(error) => return engine.fail(error),
+        };
+        match run_recognize(engine, spec_json, text, text_len, options) {
+            Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
+            Err(error) => engine.fail(error),
+        }
+    })
 }
 
 /// The shared body of `thinkthen_recognize`, safe on the Rust side.
@@ -971,7 +1121,7 @@ pub unsafe extern "C" fn thinkthen_relate(
     out: *mut *mut c_char,
     out_len: *mut usize,
 ) -> i32 {
-    unsafe {
+    guard(engine, || THINKTHEN_EDEFECT, || unsafe {
         thinkthen_relate_opts(
             engine,
             spec_json,
@@ -983,7 +1133,7 @@ pub unsafe extern "C" fn thinkthen_relate(
             out,
             out_len,
         )
-    }
+    })
 }
 
 /// Say how every record relates to the others, as one JSON object the
@@ -1012,20 +1162,25 @@ pub unsafe extern "C" fn thinkthen_relate_opts(
     out: *mut *mut c_char,
     out_len: *mut usize,
 ) -> i32 {
-    let Some(engine) = (unsafe { engine.as_ref() }) else {
-        return THINKTHEN_EUSAGE;
-    };
-    if out.is_null() {
-        return engine.fail(Error::usage("a null out pointer"));
-    }
-    if out_len.is_null() {
-        return engine.fail(Error::usage("a null out_len pointer"));
-    }
-    let options = control(deadline_ms, cancel);
-    match run_relate(engine, spec_json, texts, lengths, count, options) {
-        Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
-        Err(error) => engine.fail(error),
-    }
+    guard(engine, || THINKTHEN_EDEFECT, || {
+        let Some(engine) = (unsafe { engine.as_ref() }) else {
+            return THINKTHEN_EUSAGE;
+        };
+        if out.is_null() {
+            return engine.fail(Error::usage("a null out pointer"));
+        }
+        if out_len.is_null() {
+            return engine.fail(Error::usage("a null out_len pointer"));
+        }
+        let options = match control(deadline_ms, cancel) {
+            Ok(options) => options,
+            Err(error) => return engine.fail(error),
+        };
+        match run_relate(engine, spec_json, texts, lengths, count, options) {
+            Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
+            Err(error) => engine.fail(error),
+        }
+    })
 }
 
 /// The shared body of `thinkthen_relate`, safe on the Rust side.
@@ -1090,9 +1245,11 @@ unsafe fn hand_over(
 /// `text` is null or a pointer this door returned and has not freed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_free_string(text: *mut c_char) {
-    if !text.is_null() {
-        drop(unsafe { CString::from_raw(text) });
-    }
+    guard(std::ptr::null(), || {}, || {
+        if !text.is_null() {
+            drop(unsafe { CString::from_raw(text) });
+        }
+    })
 }
 
 #[cfg(test)]
@@ -1101,9 +1258,9 @@ mod tests {
     use thinkthen_contract::Error as ContractError;
 
     /// The defect kind is its own code, and its message and retry signal
-    /// ride the engine's last-failure slot. The construction stands in for
-    /// the injected fault main's engine-only case uses; no public fault
-    /// hook exists.
+    /// ride the calling thread's last-failure slot. The construction
+    /// stands in for the injected fault main's engine-only case uses; no
+    /// public fault hook exists.
     #[test]
     fn the_defect_kind_carries_code_six() {
         assert_eq!(code_of(&ErrorKind::Defect), 6);
@@ -1115,7 +1272,7 @@ mod tests {
         assert_eq!(
             unsafe { thinkthen_error_code(engine) },
             6,
-            "the failing code rides the engine's last-failure slot"
+            "the failing code rides the calling thread's last-failure slot"
         );
         let message = unsafe { CStr::from_ptr(thinkthen_error_message(engine)) };
         assert!(message
@@ -1123,6 +1280,68 @@ mod tests {
             .expect("the message is UTF-8")
             .contains("the engine broke its own contract"));
         assert_eq!(unsafe { thinkthen_error_retryable(engine) }, 0);
+        unsafe { thinkthen_engine_free(engine) };
+    }
+
+    /// A panic beneath the door is caught and recorded as the defect kind
+    /// on the calling thread, and the call returns a code instead of
+    /// unwinding into the host. Every exported symbol runs behind this
+    /// same guard.
+    #[test]
+    fn a_panic_behind_the_door_comes_back_as_the_defect_kind() {
+        let engine = unsafe { thinkthen_engine_new() };
+        assert!(!engine.is_null(), "the engine builds without a wire");
+        let code = guard(engine, || THINKTHEN_EDEFECT, || panic!("the probe panic"));
+        assert_eq!(code, THINKTHEN_EDEFECT, "a panic is the defect code");
+        assert_eq!(unsafe { thinkthen_error_code(engine) }, THINKTHEN_EDEFECT);
+        let message = unsafe { CStr::from_ptr(thinkthen_error_message(engine)) }
+            .to_string_lossy()
+            .into_owned();
+        assert!(
+            message.contains("the probe panic"),
+            "the panic's own text is recorded: {message}"
+        );
+        assert_eq!(
+            unsafe { thinkthen_error_retryable(engine) },
+            0,
+            "a defect is not retryable"
+        );
+        unsafe { thinkthen_engine_free(engine) };
+    }
+
+    /// A failure is visible only to the thread that recorded it: the slot
+    /// is per thread, so a second thread's `fail` does not replace the
+    /// first thread's message and a fresh thread reads no failure at all.
+    #[test]
+    fn a_failure_belongs_to_the_thread_that_recorded_it() {
+        let engine = unsafe { thinkthen_engine_new() };
+        assert!(!engine.is_null(), "the engine builds without a wire");
+        let held = unsafe { &*engine };
+        held.fail(ContractError::usage("the main thread's failure"));
+        assert_eq!(unsafe { thinkthen_error_code(engine) }, THINKTHEN_EUSAGE);
+
+        // A raw pointer is not `Send`; the thread gets its address and
+        // rebuilds it, the same shape `tests/concurrency.rs` uses.
+        let key = engine as usize;
+        std::thread::scope(|scope| {
+            scope.spawn(move || {
+                let engine = key as *mut thinkthen_engine;
+                // A fresh thread reads no failure of its own, even though
+                // another thread already recorded one on the same engine.
+                assert_eq!(unsafe { thinkthen_error_code(engine) }, THINKTHEN_OK);
+                assert_eq!(unsafe { thinkthen_error_retryable(engine) }, 0);
+                let message = unsafe { CStr::from_ptr(thinkthen_error_message(engine)) }
+                    .to_string_lossy()
+                    .into_owned();
+                assert_eq!(message, "no failure yet");
+            });
+        });
+
+        // The recorder's own message survived the other thread untouched.
+        let message = unsafe { CStr::from_ptr(thinkthen_error_message(engine)) }
+            .to_string_lossy()
+            .into_owned();
+        assert!(message.contains("the main thread's failure"), "{message}");
         unsafe { thinkthen_engine_free(engine) };
     }
 }

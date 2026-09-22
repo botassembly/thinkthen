@@ -35,12 +35,21 @@ if command -v clang >/dev/null 2>&1; then
         -lthinkthen -Wl,-rpath,"$PWD/target/release"
     ENGINE_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/recognize_asan >/dev/null
     echo "asan and lsan clean"
+
+    echo "== c surface: the per-thread error slot under the sanitizer (the review's repro)"
+    clang -std=c11 -Wall -Wextra -fsanitize=address -pthread -I../../contract/include \
+        tests/error_threads.c -o build/error_threads -Ltarget/release \
+        -lthinkthen -Wl,-rpath,"$PWD/target/release"
+    ENGINE_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/error_threads
 else
     echo "== c surface: leak check skipped, no clang"
 fi
 
 echo "== c surface: null suite (the door, the error surface, and the twins)"
-ENGINE_NULL=1 cargo test --quiet --lib --test door -- --test-threads=1
+# The annotate partial-failure fixture is armed only by the stand-in's
+# test opt-in (standin/NOTES.md, finding 7); the door's shape test and
+# conformance case 74 replay that record.
+ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 cargo test --quiet --lib --test door -- --test-threads=1
 
 echo "== c surface: the null and length matrix"
 ENGINE_NULL=1 cargo test --quiet --test null_matrix -- --test-threads=1
@@ -54,6 +63,9 @@ ENGINE_NULL=1 cargo test --quiet --test deadline_fast -- --test-threads=1
 echo "== c surface: four threads over one engine"
 ENGINE_NULL=1 cargo test --quiet --test concurrency
 
+echo "== c surface: two threads read their own error messages"
+ENGINE_NULL=1 cargo test --quiet --test error_threads
+
 echo "== c surface: fork after the first call answers in the child"
 ENGINE_NULL=1 cargo test --quiet --test fork -- --test-threads=1
 
@@ -61,7 +73,7 @@ echo "== c surface: the function examples"
 python3 examples.py
 
 echo "== c surface: conformance slice through ctypes"
-ENGINE_NULL=1 python3 conformance_driver.py
+ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 python3 conformance_driver.py
 
 if curl -sf --max-time 1 http://127.0.0.1:8216/v1/stats >/dev/null 2>&1; then
     echo "== c surface: the slide on the wire, stub on 8216"

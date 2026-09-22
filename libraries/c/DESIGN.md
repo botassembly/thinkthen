@@ -43,12 +43,17 @@ argument, beside the token. THINKTHEN_NO_DEADLINE (-1) sets none; zero is
 a spent budget, exactly as the conformance file's own row
 (`27-deadline-spent-budget`, `budget_ms: 0`) rules, so the call refuses
 before anything is sent with THINKTHEN_EDEADLINE; a positive value is that
-many milliseconds from the call. The engine's own tick check enforces it,
-so a budget spent mid-batch ends the wait within one tick. Every plain
+many milliseconds from the call, converted through the contract's checked
+millisecond door (`deadline_from_millis`) so a budget larger than the
+engine holds is the usage kind before anything is sent, instead of an
+overflowing instant that panics inside the host. The engine's own tick
+check enforces it, so a budget spent mid-batch ends the wait within one
+tick. Every plain
 spelling is exactly its `_opts` twin called with THINKTHEN_NO_DEADLINE and
 a null token; the header says so in one sentence and
 `the_plain_call_is_its_opts_twin` proves it on the answer path and the
-error path alike.
+error path alike. `tests/deadline_fast.rs`'s
+`an_impossible_budget_is_refused_not_a_panic` pins the oversized case.
 
 **Why flat arguments, not an options struct.** Go's cgo and Java's FFI
 marshal scalars and pointers directly and struct-by-value awkwardly; C++
@@ -130,8 +135,9 @@ what it did not allocate:
   returned.
 - The engine from `thinkthen_engine_new` is freed with
   `thinkthen_engine_free`, after every call on it has returned.
-- The message from `thinkthen_error_message` is borrowed: valid until the
-  next call on the same engine, never freed by the host.
+- The message from `thinkthen_error_message` is borrowed: it belongs to
+  the calling thread and is valid until that thread records its next
+  failure, never freed by the host.
 - Every buffer the caller passes in is borrowed for the call, never
   retained, and never freed by the door. The door writes only the out
   parameters the header names.
@@ -145,27 +151,46 @@ line. The door owns one name per symbol and adds no alias.
 
 **Decision.** Any number of threads may call on one engine at once, and
 each caller sees the answers it would get alone. The host must not free the
-engine or a token while a call that uses it is in flight. The door's only
-shared mutable state is the last-failure slot, which is guarded and
-last-writer-wins: `thinkthen_error_code`, `thinkthen_error_message`, and
-`thinkthen_error_retryable` name the most recent failure any thread
-recorded, and the failing call's own return value is that call's
+engine or a token while a call that uses it is in flight. The error slot is
+per thread, not per engine: `thinkthen_error_code`,
+`thinkthen_error_message`, and `thinkthen_error_retryable` name the last
+failure the calling thread recorded on the engine, another thread's
+failures never replace it, and a thread that recorded none reads the
+no-failure text. The failing call's own return value is always that call's
 authoritative code.
+
+**Why per thread.** The header promises any number of threads and a message
+that stays valid until the recording thread's next failure; one shared
+last-writer-wins slot cannot keep both, and the review measured the
+consequence — a second thread's failure freed the first thread's message
+while the first thread was reading it, an AddressSanitizer
+use-after-free. The slot lives in thread-local storage keyed by the engine
+pointer, drops at thread exit, and is forgotten when the thread frees the
+engine, so a reused address starts clean. Freeing an engine from one
+thread leaves another thread's entry in place; it holds only a message
+string, and the cross-thread address-reuse window is noted in `NOTES.md`.
 
 **Proof.** `tests/concurrency.rs` runs four threads over one engine,
 twenty-five calls each: the plain typed call, its `_opts` twin, the JSON
 door, and
-a failing caller. Every thread asserts its own answers and codes, and the
-engine's counter shows one send a call, seventy five in all, none lost and
-none doubled. `tests/cancel.rs` fires a token from a second thread while a
+a failing caller. Every thread asserts its own answers and codes, the
+failing caller reads its own message, and the main thread reads no failure
+at all. `tests/error_threads.rs` runs two threads with distinct failures
+behind a barrier, each reading its own message back; `tests/error_threads.c`
+is the same repro under AddressSanitizer with a saved pointer read after
+the other thread failed, and against the shared slot that read was the
+review's use-after-free (the pre-fix runs are recorded in `NOTES.md`).
+`tests/cancel.rs` fires a token from a second thread while a
 two-million-record batch runs and watches the call end within a tick.
 
 ## 7. The error surface
 
 **Decision.** `thinkthen_error_code(const thinkthen_engine *)` returns the
-code of the last failure on the engine, THINKTHEN_OK before any failure.
-Success does not clear it. A null engine returns THINKTHEN_EUSAGE, because
-no engine holds a failure.
+code of the last failure the calling thread recorded on the engine,
+THINKTHEN_OK before any failure by that thread. Success does not clear it.
+A null engine returns THINKTHEN_EUSAGE, because no engine holds a failure.
+The message and the retry signal come from the same per-thread slot
+(section 6).
 
 **Why.** The JSON door returns NULL, so before this function a host could
 read the message and the retryable flag but never the kind (NOTES finding
@@ -173,6 +198,16 @@ read the message and the retryable flag but never the kind (NOTES finding
 cannot decide a fallback from a message string. The typed doors keep
 returning their code directly, and the three functions together are the
 whole error surface: code, message, retry signal.
+
+**One guard for panics.** Every exported symbol runs its body behind a
+panic guard: a panic from the engine, the contract, or the door itself is
+caught, recorded on the calling thread's slot as the defect kind with the
+panic's own text in the message, and reported through the symbol's
+fallback — a code, a null, or the defect text from
+`thinkthen_error_message` — so a panic never unwinds into the host process
+and never aborts it. Rust's default hook still prints the panic to stderr.
+The unit test `a_panic_behind_the_door_comes_back_as_the_defect_kind`
+proves the guard the exported symbols share.
 
 ## 8. ABI stability
 
@@ -207,7 +242,5 @@ no options struct to grow.
   callback would need one dispatch per consumer language. The header's old
   sentence about an installed callback was corrected to say what ships.
 - **Partial rows.** They need an engine capability (section 3).
-- **Per-thread error slots.** The header promises one slot per engine, and
-  the last-writer-wins rule is stated instead of a second mechanism.
 - **Windows.** The first release is Linux and macOS, as the packaging notes
   say; the design has no Windows-specific shape.

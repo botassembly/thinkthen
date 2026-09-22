@@ -7,7 +7,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "== rust surface: build and null suite"
-ENGINE_NULL=1 cargo test --quiet
+# The annotate partial-failure fixture is armed only by the stand-in's
+# test opt-in (standin/NOTES.md, finding 7); tests/verbs.rs replays that
+# record.
+ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 cargo test --quiet
 
 echo "== rust surface: fast-backend deadline, the poll-bug shape"
 ENGINE_NULL=1 cargo test --quiet --test deadline_fast
@@ -21,7 +24,8 @@ echo "== rust surface: the Polars Series door (the 1.95 toolchain Polars needs)"
 ENGINE_NULL=1 RUSTUP_TOOLCHAIN=1.95 cargo test --quiet --features polars --test polars_door -- --test-threads=1
 
 echo "== rust surface: conformance slice"
-ENGINE_NULL=1 cargo run --quiet --example conformance
+# Case 74 replays the stand-in's opt-in fixture, same as the null suite.
+ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 cargo run --quiet --example conformance
 
 if curl -sf --max-time 1 http://127.0.0.1:8213/v1/stats >/dev/null 2>&1; then
   echo "== rust surface: wire suite against the stub on 8213"
