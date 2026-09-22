@@ -17,6 +17,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 repo=$(pwd)
 
+# A stray key or address in the caller's shell must not turn a check into a
+# paid call; the rung (sdlc/scripts/surfaces) carries the same guard.
+unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+
 fail=0
 green=0
 skipped=0
