@@ -25,7 +25,7 @@ const input = { command: `cat ${data.inputFile}`, input: data.input, inputFile: 
   </div>
 
   <h2>The flow</h2>
-  {data.steps.map((step) => <Terminal run={step} caption="Run against the shipped command and saved." />)}
+  {data.steps.map((step) => <Terminal run={step} />)}
 
   <h2>The functions it uses</h2>
   <div class="grid">

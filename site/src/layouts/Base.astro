@@ -2,23 +2,21 @@
 import '../styles/site.css';
 import { TAGLINE, NOINDEX } from '../data/catalog.mjs';
 
-const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Ten functions, in your scripts, your programs, and your queries.' } = Astro.props;
+const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.' } = Astro.props;
 const full = title === 'ThinkThen' ? 'ThinkThen: code that knows what you mean' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
 // One card for every page. The image is the wordmark on the light ground.
-const social = 'Simple functions that give your software the judgment to handle whatever comes its way. Command line, every library, every database.';
+const social = 'Simple functions that give your software the judgment to handle whatever comes its way. From the command line, your code, or SQL.';
 const cardImage = new URL('/brand/thinkthen-card.png', Astro.site).href;
 const pageUrl = new URL(here, Astro.site).href;
 const nav = [
   ['/functions/', 'Functions'],
-  ['/surfaces/', 'Surfaces'],
+  ['/surfaces/', 'Languages'],
   ['/how-tos/', 'How-tos'],
   ['/tutorial/', 'Tutorial'],
   ['/reference/', 'Reference'],
-  ['/recipes/', 'Recipes'],
   ['/backends/', 'Backends'],
-  ['/refusals/', 'Refusals'],
   ['/install/', 'Install'],
   ['/trust/', 'Trust'],
   ['/blog/', 'Blog'],

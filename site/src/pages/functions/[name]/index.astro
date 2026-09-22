@@ -22,8 +22,8 @@ const title = fn.title || fn.name;
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
   <h1>{fn.line}</h1>
   <p class="lede">{fn.takes} {fn.gives}</p>
-  {fn.status === 'planned' && (
-    <div class="note"><span class="status planned">planned</span> The command has no <code>{fn.name}</code> yet. Every sample below is drawn from the design and has not run.</div>
+  {fn.status === 'preview' && (
+    <div class="note"><span class="status preview">preview</span> The command has no <code>{fn.name}</code> yet. Every sample below is drawn from the design and has not run.</div>
   )}
 
   {first && (

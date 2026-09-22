@@ -33,7 +33,16 @@ const COMMON_OPTIONS = [
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
-  ['--jobs N', 'How many requests run at once over a stream of records, from 1 to 32. The default is 4. Outside record mode every function refuses it, and annotate alone takes it on one document.'],
+  ['--jobs N', 'How many requests run at once, from 1 to 32. The default is 4. It works on a stream of records. annotate also takes it on one document.'],
+];
+
+// The failure codes every function shares, from specification/channels.md.
+// A function's own list puts its answers first and then these.
+export const COMMON_EXITS = [
+  [2, 'usage or input error'],
+  [4, 'the backend failed or refused, as it does for evidence over the size limit'],
+  [5, 'a local failure'],
+  [70, 'a defect in the tool'],
 ];
 
 export const FUNCTIONS = [
@@ -52,7 +61,7 @@ export const FUNCTIONS = [
       ['--quiet', 'Prints nothing. The exit code carries the answer.'],
       ...COMMON_OPTIONS,
     ],
-    exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
+    exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'The probability landed inside the band. The tool prints null and exits 3.',
     howtos: ['find-the-clause-then-check-it', 'screen-studies-for-a-review', 'join-two-tables-by-meaning', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
   },
@@ -72,7 +81,7 @@ export const FUNCTIONS = [
       ['--quiet', 'Prints nothing. The exit code carries the run.'],
       ...COMMON_OPTIONS,
     ],
-    exits: [[0, 'an option came back'], [3, 'not sure'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
+    exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'No option reached the threshold. The tool prints null and exits 3. choose never exits 1.',
     howtos: ['join-two-tables-by-meaning', 'rank-the-inbound-leads', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
   },
@@ -89,7 +98,7 @@ export const FUNCTIONS = [
       ['--label LABEL=DESCRIPTION', 'A label and what it means. It may repeat, and it replaces the positional labels.'],
       ...COMMON_OPTIONS,
     ],
-    exits: [[0, 'the run finished'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
+    exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'A label under the bar is left out. An empty list is a good answer and exits 0.',
     howtos: ['code-open-ended-survey-answers', 'screen-a-post-before-it-goes-up'],
   },
@@ -104,7 +113,7 @@ export const FUNCTIONS = [
     options: [
       ...COMMON_OPTIONS,
     ],
-    exits: [[0, 'the run finished'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
+    exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads, and it is not a gate.',
     howtos: ['code-open-ended-survey-answers'],
   },
@@ -122,7 +131,7 @@ export const FUNCTIONS = [
       ['--false TEXT', 'What a no means.'],
       ...COMMON_OPTIONS,
     ],
-    exits: [[0, 'the run finished'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
+    exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'No record sets the exit code. A record under the bar is dropped.',
     howtos: ['triage-a-support-inbox', 'rank-the-inbound-leads', 'build-a-morning-reading-list'],
   },
@@ -140,7 +149,7 @@ export const FUNCTIONS = [
       ['--false TEXT', 'What a no means.'],
       ...COMMON_OPTIONS,
     ],
-    exits: [[0, 'the run finished'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
+    exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'rank takes no threshold, so nothing is dropped and nothing is not sure. The sort happens on this machine.',
     howtos: ['screen-studies-for-a-review', 'rank-the-inbound-leads', 'build-a-morning-reading-list'],
   },
@@ -160,7 +169,7 @@ export const FUNCTIONS = [
       ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
       ['--dry-run', 'Prints the plan and sends nothing.'],
     ],
-    exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
+    exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
     unsure: 'Without --none, find must pick a line, and it will pick a wrong one. --none is how it says nothing fits. A document past the backend’s token limit is refused, and the command exits 4.',
     howtos: ['find-the-clause-then-check-it', 'group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
   },
@@ -176,7 +185,7 @@ export const FUNCTIONS = [
       ['--profile FILE', 'Applies local backend limits and names the calibration profile in use.'],
       ...COMMON_OPTIONS,
     ],
-    exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'the question set could not be read'], [70, 'a defect in the tool']],
+    exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], ...COMMON_EXITS.map(([code, what]) => [code, code === 5 ? 'the question set could not be read' : what])],
     unsure: 'Each question carries its own threshold, so a question set mixes cuts and bands. A question the backend could not answer is marked failed, counted, and never turned into null. The questions and the evidence together can pass the backend’s token limit for one request. The backend refuses it, and the command exits 4.',
     howtos: ['triage-a-support-inbox'],
   },
@@ -188,7 +197,7 @@ export const FUNCTIONS = [
     gives: 'Each name, its kind, where it sits, and a strength.',
     requests: 'The specification does not yet carry recognize, so the request count is not settled.',
     args: 'Not settled. The command has no recognize yet.',
-    status: 'planned',
+    status: 'preview',
     options: [],
     exits: [],
     unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. Three thresholds are yours to set. The number on a name is its strength, which is ours and computed, and it claims nothing about chance. Relations are beta.',
@@ -202,7 +211,7 @@ export const FUNCTIONS = [
     gives: 'One edge for each related pair, with a probability.',
     requests: 'The specification does not yet carry relate, so the request count is not settled.',
     args: 'Not settled. The command has no relate yet.',
-    status: 'planned',
+    status: 'preview',
     options: [],
     exits: [],
     unsure: 'A relation has a direction, or it is marked as reading the same both ways. The number on an edge is a probability. relate is beta.',
@@ -233,11 +242,43 @@ export const FUNCTIONS = [
   },
 ];
 
+// The last stage of a shell command, split on pipes outside quotes.
+function lastStage(command) {
+  let quote = null;
+  let start = 0;
+  for (let i = 0; i < command.length; i++) {
+    const c = command[i];
+    if (quote) { if (c === quote) quote = null; continue; }
+    if (c === "'" || c === '"') quote = c;
+    else if (c === '|' && command[i + 1] !== '|' && command[i - 1] !== '|') start = i + 1;
+  }
+  return command.slice(start).trim();
+}
+
+// The word printed after an exit code: the function's own meaning for it.
+// null when the function is unknown or the command ends in another tool.
+export function exitWord(command, exit, fn = null) {
+  let name = fn;
+  if (!name) {
+    const found = /^thinkthen\s+([a-z-]+)/.exec(lastStage(command || ''));
+    name = found && found[1];
+  }
+  const entry = FUNCTIONS.find((f) => f.name === name);
+  const row = entry && entry.exits.find(([code]) => code === exit);
+  return row ? row[1] : null;
+}
+
 export const CODE_FUNCTIONS = FUNCTIONS.filter((f) => !f.notAFunction);
+
+// One status vocabulary for every badge: planned, comes with 0.1, ships
+// first, not run yet, preview. An example cell may still say "drawn" in data.
+// A surface's release names the version it comes with; Polars has none yet.
+// A badge's class: the status word with spaces turned into dashes.
+export const statusClass = (status) => status.replace(/ /g, '-');
 
 export const SURFACES = [
   {
-    slug: 'shell', name: 'The shell', deckHeading: null, status: 'shipped',
+    slug: 'shell', name: 'Bash', deckHeading: null, status: 'ships first', release: 'ships first',
     lang: 'bash', tab: 'Bash',
     blurb: 'The command. Ten functions, standard in, standard out, and an exit code your script branches on.',
     unsureWord: 'null, and exit code 3',
@@ -253,7 +294,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'python', name: 'Python', deckHeading: 'Python', status: 'planned',
+    slug: 'python', name: 'Python', deckHeading: 'Python', status: 'planned', release: '0.1',
     lang: 'python', tab: 'Python',
     blurb: 'The ten functions as plain Python functions. Build a question once and use it anywhere.',
     unsureWord: 'None',
@@ -264,7 +305,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'polars', name: 'Polars', deckHeading: 'Polars', status: 'planned',
+    slug: 'polars', name: 'Polars', deckHeading: 'Polars', status: 'planned', release: null,
     lang: 'python', tab: 'Python',
     blurb: 'A Polars column goes in and a column comes out.',
     unsureWord: 'None',
@@ -275,7 +316,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript', status: 'planned',
+    slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript', status: 'planned', release: '0.1',
     lang: 'ts', tab: 'TypeScript',
     blurb: 'The ten functions, all async. Options ride in one object.',
     unsureWord: 'null',
@@ -286,7 +327,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby', status: 'planned',
+    slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby', status: 'planned', release: '0.1',
     lang: 'ruby', tab: 'Ruby',
     blurb: 'The ten functions as module methods.',
     unsureWord: 'nil',
@@ -294,7 +335,7 @@ export const SURFACES = [
     particular: ['Any Enumerable crosses to the engine once.'],
   },
   {
-    slug: 'r', name: 'R', deckHeading: 'R', status: 'planned',
+    slug: 'r', name: 'R', deckHeading: 'R', status: 'planned', release: '0.1',
     lang: 'r', tab: 'R',
     blurb: 'The ten functions with a tt_ prefix, inside dplyr.',
     unsureWord: 'NA',
@@ -305,7 +346,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'rust', name: 'Rust', deckHeading: 'Rust', status: 'planned',
+    slug: 'rust', name: 'Rust', deckHeading: 'Rust', status: 'planned', release: '0.1',
     lang: 'rust', tab: 'Rust',
     blurb: 'The engine itself, with no binding in between.',
     unsureWord: 'Answer::Unsure',
@@ -316,7 +357,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'c', name: 'C', deckHeading: 'C', status: 'planned',
+    slug: 'c', name: 'C', deckHeading: 'C', status: 'planned', release: '0.1',
     lang: 'c', tab: 'Rust',
     blurb: 'The header and the library. The door to every other language.',
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
@@ -327,7 +368,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB', status: 'planned',
+    slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB', status: 'planned', release: '0.1',
     lang: 'sql', tab: 'SQL',
     blurb: 'The functions work in WHERE, SELECT, and ORDER BY.',
     unsureWord: 'NULL',
@@ -335,7 +376,7 @@ export const SURFACES = [
     particular: ['A whole column chunk crosses at once.'],
   },
   {
-    slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite', status: 'planned',
+    slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite', status: 'planned', release: '0.1',
     lang: 'sql', tab: 'SQL',
     blurb: 'The same function names, with a warm pass in front of them.',
     unsureWord: 'NULL',
@@ -346,7 +387,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL', status: 'planned',
+    slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL', status: 'planned', release: '0.1',
     lang: 'sql', tab: 'SQL',
     blurb: 'An extension. annotate returns jsonb.',
     unsureWord: 'NULL',

@@ -16,7 +16,7 @@ const alias = (slug) => ({
 
 const tabs = SURFACES.map((s) => ({
   slug: s.slug,
-  label: s.slug === 'shell' ? 'Bash' : s.name,
+  label: s.name,
   alias: alias(s.slug),
   surface: s,
   data: cell(fn, s.slug),
@@ -31,15 +31,15 @@ const tabs = SURFACES.map((s) => ({
   {tabs.map((t) => (
     <div class="cell" data-lang={t.label} hidden={t.label !== 'Bash'}>
       {t.data.status === 'run' && t.data.runs.slice(0, first).map((run) => (
-        <Terminal run={run} caption="Run against the shipped command and saved." />
+        <Terminal run={run} />
       ))}
       {t.data.status === 'drawn' && (
-        <Code code={t.data.code} caption={`${t.surface.name} is planned. This is how the call will read.`} />
+        <Code code={t.data.code} caption={`${t.surface.name} ${t.surface.release ? `comes with ${t.surface.release}` : 'is planned'}. The call will read like this.`} />
       )}
       {t.data.status === 'planned' && (
         <div class="note">
           <span class="status planned">planned</span>{' '}
-          No example is drawn for <code>{fn}</code> on {t.surface.name} yet.
+          No <code>{fn}</code> example for {t.surface.name} yet.
           {t.surface.slug !== 'shell' && <> See the <a href={`/${t.surface.slug}/`}>{t.surface.name} page</a>.</>}
         </div>
       )}
