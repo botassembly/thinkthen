@@ -172,6 +172,10 @@ const COUNTS = [
   <p>Both require a header. Every cell becomes a JSON string, including an empty cell and text that looks like a number, a boolean, a null, an array, or an object. Header order becomes key order. A header name may hold whitespace, but it may not be blank, hold a control character, or exactly duplicate another. One UTF-8 byte order mark is ignored at the start of the first header name and nowhere else. Every data row must carry the header's field count. A header with no data rows is a successful empty dataset and sends no request. Empty input is exit 2. Every output from CSV or TSV input is JSONL.</p>
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
+  <h2>Limits</h2>
+  <p>One request carries at most 64k tokens. The evidence and the longest question together must fit in 32k tokens. Both numbers are the model vendor's, from its published model card, and they are the backend's limits rather than the tool's.</p>
+  <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together, so a long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
+
   <h2>What one row looks like</h2>
   <h3>Without <code>--details</code></h3>
   <table>
