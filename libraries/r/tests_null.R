@@ -4,10 +4,10 @@
 library(thinkthen)
 stopifnot(Sys.getenv("ENGINE_NULL") == "1")
 
-# The stand-in's one synthesized partial failure (0054) is armed only by
-# this test opt-in, and the engine reads it when its engine value is built,
-# so it is set before the first call.
-Sys.setenv(ENGINE_SYNTHETIC_PARTIAL = "1")
+# The stand-in's one synthesized partial failure (0054) is a compile-time
+# build door since review 1: this suite needs a package installed with
+# THINKTHEN_R_SYNTHETIC_PARTIAL=1 (check.sh installs one and restores the
+# production shape afterwards). No environment variable arms it.
 
 passed <- 0
 fail <- function(what) stop(paste("failed:", what), call. = FALSE)

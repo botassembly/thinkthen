@@ -36,5 +36,13 @@ cd thinkthen
 R CMD INSTALL -l ../rlib .    # configure runs cargo; rlib/ is folder-local
 ```
 
+The default install is the production shape: no fixture code, and no
+environment variable can arm one. `./check.sh` instead installs a build
+with the stand-in's synthesized partial-failure fixture (the
+`synthetic-partial` cargo feature, asked for with
+`THINKTHEN_R_SYNTHETIC_PARTIAL=1` on the install line), because conformance
+case 74 and the null suite's failed-marker checks replay that record; it
+restores the production install when the run ends.
+
 Nothing is published: no CRAN, no R-universe, no gem, no npm. The package
 version follows the repository's one version number.

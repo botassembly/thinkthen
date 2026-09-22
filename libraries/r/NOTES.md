@@ -377,3 +377,41 @@ R's own Ctrl-C in a script prints "Execution halted" and exits 1 as well (`Rscri
 **Residual windows, stated.** An interrupt is noticed at the next tick, so up to 100 ms after the signal (measured 0.886 s against a 1 s signal). A request already on the wire finishes before the engine stops (the engine's promise); the call returns without waiting for it, and the worker's own token clone keeps the batch stopped. An uncaught re-raised interrupt prints one `Error:` line before `Execution halted` where R's own interrupt prints none. `R_ToplevelExec` catches any jump from the interrupt check; the check is called on the main thread only. The `-1` deadline sentinel is the contract's one spelling for "no deadline"; R's `NULL` remains the natural one.
 
 **One side effect, stated:** with the kinds in hand, `tt_annotate` now names its columns from the set even when the frame has zero rows, where the old code errored on `names(rows[[1]])`; a zero-row frame comes back with the typed empty columns instead of stopping.
+
+## 2026-09-22 — the second review's R items: the percent crash, the encodings, the shared guard, and the fixture door
+
+Source: `sdlc/issues/2026-09-22-surfaces-branch-second-review-new-defects-and-leftovers.md` (items 5 and 6, the contract's shared panic guard, and the fixture-door leftover). Commands and output as they happened on this machine (R 4.3.3).
+
+**The percent crash (finding 5).** The stand-in's refusal quotes the caller's text back — `no recorded answer for the text "plain sentence"; the stand-in answers only from the recordings` — and extendr raises every shim `Err` string through `Rf_error`, whose argument is a printf format (`extendr-macros-0.8.2/src/wrappers.rs`, `throw_r_error` in `extendr-api-0.8.2/src/thread_safety.rs:51-56`). A `%s` in the quoted text made R read varargs that do not exist. The repro, before the fix:
+
+```
+$ ENGINE_NULL=1 Rscript text_check.R
+ *** caught segfault ***
+address 0x6a, cause 'memory not mapped'
+...
+ 7: tt_recognize("100% sure %s")
+...
+An irrecoverable exception occurred. R is aborting now ...
+exit: 139
+```
+
+Fixed in the one place every error crosses, `carry`: every `%` in the message doubles, and `Rf_error`'s own formatting turns `%%` back into `%`, so the condition message R finally shows is byte-for-byte the engine's text. The shim unit test proves the doubling and fails without it:
+
+```
+$ cargo test --quiet --lib        # with the doubling reverted
+failures:
+    tests::a_percent_in_a_message_doubles_for_r
+test result: FAILED. 2 passed; 1 failed
+$ cargo test --quiet --lib        # with the fix
+test result: ok. 3 passed; 0 failed
+```
+
+**Encodings (finding 6).** The root cause was extendr's own string conversion: `charsxp_to_str` builds a `&str` with `std::str::from_utf8_unchecked` over a CHARSXP's raw bytes (`extendr-api-0.8.2/src/wrapper/rstr.rs:26-40`), so a latin1 or invalid string became a `&str` that is not UTF-8 — undefined behavior that aborts the host on some R builds, and here answered silently (latin1 `café` → FALSE, invalid bytes → TRUE). Every `#[extendr]` text argument now arrives as `Robj` and crosses through `text_of`/`texts_of`: the CHARSXP's encoding mark is read with `Rf_getCharCE`; native, UTF-8, and latin1 strings convert through `Rf_translateCharUTF8` and are validated with `std::str::from_utf8`; a bytes-marked string, any other mark, or bytes that are not valid UTF-8 are refused with a usage error naming the fix (`convert it with enc2utf8() or iconv() first`); NA is refused by name. The new `text_check.R` (9 checks) covers the percent text, latin1 conversion (proven through the refusal's quote), the latin1/UTF-8 forms answering alike, clean UTF-8, invalid bytes, and a bytes-marked string. After: `text checks passed: 9`. Note the shim no longer uses extendr's `Vec<String>`/`String` conversion anywhere.
+
+**The contract's shared panic guard (phase 3).** As recorded above, this crate carried no local `catch_unwind` copy to delete: extendr already wraps every generated `#[extendr]` body, and a worker panic previously landed as a channel disconnect with a generic message. The one engine boundary — the worker thread that runs `work` — now runs behind `thinkthen_contract::catch_panic("the R call", ...)`, so a panic beneath the engine comes back as the defect kind carrying the panic's own words (then escaped by `carry`), instead of a lost message. The guard's own behavior is pinned by the contract's tests; this crate's adoption is one call site and has no R-level test because the shim cannot make the engine panic on demand.
+
+**The fixture door, a cross-lane red found by running this lane's gate.** The stand-in's synthesized partial failure became a compile-time door (`synthetic-partial`, `a06b70d`): the R lane's `ENGINE_SYNTHETIC_PARTIAL=1` arming went inert, and the null suite went red before any of this lane's fixes — `Error: failed: the failed field carries the ruled marker`. Adopted the C lane's pattern: the crate forwards the feature (`synthetic-partial = ["thinkthen-standin/synthetic-partial"]`), `tools/config.R` passes `--features synthetic-partial` to its cargo build when `THINKTHEN_R_SYNTHETIC_PARTIAL=1` is set on the `R CMD INSTALL` line, and `check.sh` installs the fixture build for the run and restores the production install at the end (the README's default). `tests_null.R` and `conformance.R` no longer set the dead environment variable. Evidence: `null suite: 56 checks passed` on the fixture build, and the restored production install answers (`production install answers`).
+
+**The row-at-a-time requests, recorded for the build team (item 4).** `tt_choose`, `tt_score`, and `tt_tag` (and `tt_recognize_column`) ask the engine one request a row: they wait on the engine's bulk entry points and the packing encode the wire probe specified (the structured `state` object, one named question a row), which is the build team's work per the second review's leftover list. No host-side batching is possible before that encode exists; converting the loops without it would be the second bulk implementation the punch list forbids. The inventory above (punch-list item 2) stays the pointer.
+
+**The evidence, full runs.** Offline, no stub: shim tests 3, null suite 56 checks, text checks 9, fast interrupt at 0.868 s, fork check, 10 of 10 examples, the conformance slice (86 ok with its recorded skips and divergences, case 74 included), recognize 34 checks, ownership, slide. With the loopback stub on 8215 (`STUB_DELAY_MS=300`, stopped afterwards and the port checked closed): `width: 1000 records, wall 9.67 s`, `stub: requests 1000 max_in_flight 32 connections 33`, and the wire interrupt frozen at 320 requests through +5 s. Exit 0. The crate's `Cargo.lock` gained the `indexmap`/`hashbrown`/`equivalent` entries the current dependency graph resolves (the contract now carries the core's parser); it is committed with the fix.

@@ -11,8 +11,19 @@ cd "$(dirname "$0")"
 echo "== r surface: the defect kind crosses as its own kind (shim unit test)"
 (cd thinkthen/src/rust && cargo test --quiet --lib)
 
+# The fixture build. Conformance case 74 and the null suite's failed-marker
+# checks replay the stand-in's synthesized partial failure, and that fixture
+# is a compile-time door since review 1: no environment variable can arm it.
+# The gate installs a build that asks for it, runs the suites below, and
+# restores the production shape at the end.
+echo "== r surface: install the fixture build (synthetic-partial)"
+(cd thinkthen && THINKTHEN_R_SYNTHETIC_PARTIAL=1 R CMD INSTALL -l ../rlib .)
+
 echo "== r surface: null suite"
 ENGINE_NULL=1 Rscript tests_null.R
+
+echo "== r surface: the text crossing (percent, encodings, invalid bytes)"
+ENGINE_NULL=1 Rscript text_check.R
 
 echo "== r surface: fast-backend interrupt, the poll-bug shape"
 ./interrupt_fast.sh
@@ -48,3 +59,9 @@ if curl -sf --max-time 1 http://127.0.0.1:8215/v1/stats >/dev/null 2>&1; then
 else
   echo "== r surface: wire suite skipped, no stub on 8215"
 fi
+
+# The production shape the README installs: no fixture code, proven by the
+# plainest call answering on the restored package.
+echo "== r surface: restore the production install (no fixture code)"
+(cd thinkthen && R CMD INSTALL -l ../rlib .)
+ENGINE_NULL=1 Rscript -e '.libPaths(c("rlib", .libPaths())); library(thinkthen); stopifnot(isTRUE(tt_decide("Is this a complaint?", "I want a refund for order 9"))); cat("production install answers\n")'

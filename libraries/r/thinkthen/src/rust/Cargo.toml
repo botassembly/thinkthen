@@ -18,6 +18,13 @@ extendr-api = '0.8'
 thinkthen-contract = { path = '../../../../../contract' }
 thinkthen-standin = { path = '../../../../../standin' }
 
+[features]
+# Forward the stand-in's compile-time fixture door to a gate build that
+# needs it (conformance case 74's synthesized partial failure). Off by
+# default: a package installed without it carries no fixture code, and no
+# environment variable can arm one.
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
+
 [profile.release]
 lto = true
 codegen-units = 1

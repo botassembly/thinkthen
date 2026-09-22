@@ -28,8 +28,18 @@
 //! Errors cross as one string, `kind`, a marker, `retryable`, a marker,
 //! and the message, so the R half can raise a condition carrying all
 //! three.
+//!
+//! Two checks guard that crossing. Every caller's text converts to UTF-8
+//! through R's own translator — native and latin1 strings convert, and a
+//! string R marks as bytes or one whose bytes are not valid UTF-8 is
+//! refused with a clear error — so the shim never holds a `&str` that is
+//! not UTF-8. And every `%` in a carried message doubles, because extendr
+//! raises that string through R's `Rf_error`, whose argument is a printf
+//! format; a lone `%` in text the engine quoted back would make R read
+//! varargs that do not exist and die.
 
 use extendr_api::prelude::*;
+use extendr_api::SEXP;
 use std::ffi::c_void;
 use std::path::Path;
 use std::result::Result as StdResult;
@@ -55,6 +65,19 @@ const ERROR_SEP: &str = "\u{1f}";
 extern "C" {
     fn R_CheckUserInterrupt();
     fn R_ToplevelExec(check: extern "C" fn(*mut c_void), data: *mut c_void) -> i32;
+}
+
+// R's text machinery, for the checked crossing of strings. A CHARSXP's
+// bytes are text only once R has translated them: `Rf_getCharCE` names
+// the encoding mark first, so a string R marks as bytes is refused before
+// the translator can raise, and `Rf_translateCharUTF8` converts native
+// and latin1 strings to UTF-8.
+#[allow(improper_ctypes)] // SEXP is R's own pointer type; R's headers have no better.
+extern "C" {
+    fn Rf_getCharCE(x: SEXP) -> i32;
+    fn Rf_translateCharUTF8(x: SEXP) -> *const std::os::raw::c_char;
+    fn STRING_ELT(x: SEXP, i: isize) -> SEXP;
+    static R_NaString: SEXP;
 }
 
 /// The one engine value, built through the contract's connector door at the
@@ -86,8 +109,88 @@ fn clear_active() {
 }
 
 /// An engine error as the one string the R half parses.
+///
+/// Every `%` in the message doubles. extendr raises this string through
+/// R's `Rf_error`, whose argument is a printf format: a lone `%` in text
+/// the engine quoted back (say, `100% sure`) would make R read varargs
+/// that do not exist, and the host dies. Doubling leaves the message R
+/// finally shows byte-for-byte the engine's own text.
 fn carry(error: thinkthen_contract::Error) -> String {
-    format!("{}{ERROR_SEP}{}{ERROR_SEP}{}", error.kind, error.retryable, error.message)
+    format!(
+        "{}{ERROR_SEP}{}{ERROR_SEP}{}",
+        error.kind,
+        error.retryable,
+        error.message.replace('%', "%%")
+    )
+}
+
+// R's encoding marks (Rinternals.h `cetype_t`): native, UTF-8, and latin1
+// are the marks this surface translates; every other mark, the bytes mark
+// included, is refused by name.
+const CE_NATIVE: i32 = 0;
+const CE_UTF8: i32 = 1;
+const CE_LATIN1: i32 = 2;
+
+/// A usage failure carrying the given text, in the carried shape.
+fn usage(message: String) -> String {
+    carry(thinkthen_contract::Error::usage(message))
+}
+
+/// One CHARSXP as UTF-8 text, or a clear refusal.
+///
+/// R strings carry an encoding mark, and the bytes under it are not
+/// necessarily UTF-8. Native and latin1 strings convert through R's own
+/// translator, so a latin1 `café` arrives as the text the caller meant.
+/// A string R marks as bytes, or bytes that are not valid UTF-8, is
+/// refused by name: extendr would hand the shim a `&str` built with
+/// `from_utf8_unchecked` for those, which is undefined behavior that
+/// aborts the host on some R builds.
+fn charsxp_text(charsxp: SEXP, what: &str) -> StdResult<String, String> {
+    if charsxp == unsafe { R_NaString } {
+        return Err(usage(format!("{what} carries NA, which this call does not take")));
+    }
+    let mark = unsafe { Rf_getCharCE(charsxp) };
+    if mark != CE_NATIVE && mark != CE_UTF8 && mark != CE_LATIN1 {
+        return Err(usage(format!(
+            "{what} carries a string R cannot translate to UTF-8; convert it with enc2utf8() or iconv() first"
+        )));
+    }
+    let translated = unsafe { Rf_translateCharUTF8(charsxp) };
+    let bytes = unsafe { std::ffi::CStr::from_ptr(translated) }.to_bytes();
+    std::str::from_utf8(bytes).map(str::to_owned).map_err(|_| {
+        usage(format!(
+            "{what} carries bytes that are not valid UTF-8; convert it with enc2utf8() or iconv() first"
+        ))
+    })
+}
+
+/// One R value as one string.
+fn text_of(robj: &Robj, what: &str) -> StdResult<String, String> {
+    match robj.rtype() {
+        Rtype::Strings if robj.len() == 1 => {
+            charsxp_text(unsafe { STRING_ELT(robj.get(), 0) }, what)
+        }
+        Rtype::Strings => Err(usage(format!(
+            "{what} must be one string, not a vector of {}",
+            robj.len()
+        ))),
+        Rtype::Rstr => charsxp_text(unsafe { robj.get() }, what),
+        _ => Err(usage(format!("{what} must be text"))),
+    }
+}
+
+/// One R character vector as UTF-8 texts.
+fn texts_of(robj: &Robj, what: &str) -> StdResult<Vec<String>, String> {
+    if robj.rtype() != Rtype::Strings {
+        return Err(usage(format!("{what} must be a character vector")));
+    }
+    let len = robj.len();
+    let mut held = Vec::with_capacity(len);
+    for index in 0..len {
+        let charsxp = unsafe { STRING_ELT(robj.get(), index as isize) };
+        held.push(charsxp_text(charsxp, what)?);
+    }
+    Ok(held)
 }
 
 /// The marker the R half reads as R's own interrupt condition, packed like
@@ -146,7 +249,12 @@ where
         if let Some(budget) = budget {
             options = options.deadline_in(budget);
         }
-        let _ = sender.send(work(&*engine, options));
+        // The contract owns the panic boundary: a panic anywhere beneath
+        // the engine comes back as the defect kind carrying the panic's
+        // own words, so the caller hears a failure instead of a worker
+        // thread that died without an answer.
+        let answer = thinkthen_contract::catch_panic("the R call", move || work(&*engine, options));
+        let _ = sender.send(answer);
     }) {
         Ok(worker) => worker,
         Err(error) => {
@@ -221,7 +329,8 @@ enum Field {
 
 /// Build a question through the one file grammar, any verb, any threshold.
 #[extendr]
-fn tt_question_grammared(body: String) -> StdResult<ExternalPtr<Question>, String> {
+fn tt_question_grammared(body: Robj) -> StdResult<ExternalPtr<Question>, String> {
+    let body = text_of(&body, "the question body")?;
     let question = Question::from_json(&body).map_err(carry)?;
     Ok(ExternalPtr::new(question))
 }
@@ -230,9 +339,10 @@ fn tt_question_grammared(body: String) -> StdResult<ExternalPtr<Question>, Strin
 #[extendr]
 fn tt_decide_column(
     question: ExternalPtr<Question>,
-    records: Vec<String>,
+    records: Robj,
     deadline: Option<f64>,
 ) -> StdResult<List, String> {
+    let records = texts_of(&records, "the records")?;
     let question = take(question);
     let (codes, probabilities) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -250,7 +360,8 @@ fn tt_decide_column(
 
 /// One `decide` of one evidence.
 #[extendr]
-fn tt_decide_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_decide_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+    let evidence = text_of(&evidence, "the evidence")?;
     let question = take(question);
     let code = call(deadline, move |engine, options| {
         engine.decide_opts(&question, &evidence, options).map(answer_code)
@@ -262,9 +373,10 @@ fn tt_decide_one(question: ExternalPtr<Question>, evidence: String, deadline: Op
 #[extendr]
 fn tt_choose_one(
     question: ExternalPtr<Question>,
-    evidence: String,
+    evidence: Robj,
     deadline: Option<f64>,
 ) -> StdResult<Nullable<String>, String> {
+    let evidence = text_of(&evidence, "the evidence")?;
     let question = take(question);
     let pick = call(deadline, move |engine, options| {
         engine.choose_opts(&question, &evidence, options)
@@ -277,7 +389,8 @@ fn tt_choose_one(
 
 /// One `score`: the weighted position and the nearest level.
 #[extendr]
-fn tt_score_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_score_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+    let evidence = text_of(&evidence, "the evidence")?;
     let question = take(question);
     let (value, nearest) = call(deadline, move |engine, options| {
         engine
@@ -289,7 +402,8 @@ fn tt_score_one(question: ExternalPtr<Question>, evidence: String, deadline: Opt
 
 /// One `tag`: the labels that held, in the question's order.
 #[extendr]
-fn tt_tag_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<Vec<String>, String> {
+fn tt_tag_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<Vec<String>, String> {
+    let evidence = text_of(&evidence, "the evidence")?;
     let question = take(question);
     call(deadline, move |engine, options| engine.tag_opts(&question, &evidence, options))
 }
@@ -298,9 +412,10 @@ fn tt_tag_one(question: ExternalPtr<Question>, evidence: String, deadline: Optio
 #[extendr]
 fn tt_filter_places(
     question: ExternalPtr<Question>,
-    records: Vec<String>,
+    records: Robj,
     deadline: Option<f64>,
 ) -> StdResult<Vec<i32>, String> {
+    let records = texts_of(&records, "the records")?;
     let question = take(question);
     call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -312,7 +427,8 @@ fn tt_filter_places(
 
 /// `rank` over records: places in rank order with their probabilities.
 #[extendr]
-fn tt_rank_all(question: ExternalPtr<Question>, records: Vec<String>, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_rank_all(question: ExternalPtr<Question>, records: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+    let records = texts_of(&records, "the records")?;
     let question = take(question);
     let (places, probabilities) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -328,7 +444,8 @@ fn tt_rank_all(question: ExternalPtr<Question>, records: Vec<String>, deadline: 
 
 /// `find` over units: the winner's place, one-based, and its probability.
 #[extendr]
-fn tt_find_one(question: ExternalPtr<Question>, units: Vec<String>, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_find_one(question: ExternalPtr<Question>, units: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+    let units = texts_of(&units, "the units")?;
     let question = take(question);
     let (place, probability) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = units.iter().map(String::as_str).collect();
@@ -346,7 +463,9 @@ fn tt_find_one(question: ExternalPtr<Question>, units: Vec<String>, deadline: Op
 /// `annotate` over records from a question set file: each row a named list
 /// in the set's own order, each field typed by its question's verb.
 #[extendr]
-fn tt_annotate_file(path: String, records: Vec<String>, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_annotate_file(path: Robj, records: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+    let path = text_of(&path, "the question set path")?;
+    let records = texts_of(&records, "the records")?;
     let rows: Vec<Vec<(String, Field)>> = call(deadline, move |engine, options| {
         let set = QuestionSet::from_file(Path::new(&path))?;
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -408,7 +527,8 @@ fn tt_annotate_file(path: String, records: Vec<String>, deadline: Option<f64>) -
 /// R half types each answer column by its question rather than by the first
 /// answer it happens to see.
 #[extendr]
-fn tt_annotate_kinds(path: String) -> StdResult<List, String> {
+fn tt_annotate_kinds(path: Robj) -> StdResult<List, String> {
+    let path = text_of(&path, "the question set path")?;
     let set = QuestionSet::from_file(Path::new(&path)).map_err(carry)?;
     let kinds: Vec<String> = set
         .questions()
@@ -442,7 +562,8 @@ fn cause_word(cause: thinkthen_contract::Cause) -> String {
 /// The audit view of one judgment, with the logical requests' digests
 /// (0053) and the failed-question count (0054).
 #[extendr]
-fn tt_details_one(question: ExternalPtr<Question>, evidence: String, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_details_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+    let evidence = text_of(&evidence, "the evidence")?;
     let question = take(question);
     let (probability, code, model, digest, sends, requests, failed_questions, nearest) =
         call(deadline, move |engine, options| {
@@ -526,14 +647,16 @@ fn tt_question_parts(question: ExternalPtr<Question>) -> List {
 
 /// Build a recognize ask through the question file's own section grammar.
 #[extendr]
-fn tt_recognize_grammared(spec: String) -> StdResult<ExternalPtr<Recognize>, String> {
+fn tt_recognize_grammared(spec: Robj) -> StdResult<ExternalPtr<Recognize>, String> {
+    let spec = text_of(&spec, "the recognize spec")?;
     let ask = Recognize::from_json(&spec).map_err(carry)?;
     Ok(ExternalPtr::new(ask))
 }
 
 /// Build a relate ask through the question file's own section grammar.
 #[extendr]
-fn tt_relate_grammared(spec: String) -> StdResult<ExternalPtr<Relate>, String> {
+fn tt_relate_grammared(spec: Robj) -> StdResult<ExternalPtr<Relate>, String> {
+    let spec = text_of(&spec, "the relate spec")?;
     let ask = Relate::from_json(&spec).map_err(carry)?;
     Ok(ExternalPtr::new(ask))
 }
@@ -546,9 +669,10 @@ fn tt_relate_grammared(spec: String) -> StdResult<ExternalPtr<Relate>, String> {
 #[extendr]
 fn tt_recognize_column(
     ask: ExternalPtr<Recognize>,
-    texts: Vec<String>,
+    texts: Robj,
     deadline: Option<f64>,
 ) -> StdResult<List, String> {
+    let texts = texts_of(&texts, "the texts")?;
     let ask = (*ask).clone();
     let answers: Vec<Recognized> = call(deadline, move |engine, options| {
         texts
@@ -602,9 +726,10 @@ fn tt_recognize_column(
 #[extendr]
 fn tt_relate_records(
     ask: ExternalPtr<Relate>,
-    records: Vec<String>,
+    records: Robj,
     deadline: Option<f64>,
 ) -> StdResult<List, String> {
+    let records = texts_of(&records, "the records")?;
     let ask = (*ask).clone();
     let edges = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -688,5 +813,19 @@ mod tests {
         let carried = interrupt_carried();
         let parts: Vec<&str> = carried.split(ERROR_SEP).collect();
         assert_eq!(parts, ["interrupt", "false", "the call was interrupted"]);
+    }
+
+    #[test]
+    fn a_percent_in_a_message_doubles_for_r() {
+        // R's error formatter reads the carried message as a printf
+        // format; a lone % would make it read varargs that do not exist.
+        let carried = carry(thinkthen_contract::Error::usage(
+            "no recorded answer for the text \"100% sure %s\"",
+        ));
+        let parts: Vec<&str> = carried.split(ERROR_SEP).collect();
+        assert_eq!(
+            parts,
+            ["usage", "false", "no recorded answer for the text \"100%% sure %%s\""]
+        );
     }
 }
