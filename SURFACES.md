@@ -3,7 +3,7 @@
 How the six language libraries and the three database extensions live in
 this repository, per ADR 0017 and the rulings of 2026-09-21. One repository,
 one version number (`VERSION`, and 0.1.0 is the first release), one engine
-under ten surfaces.
+under nine surfaces.
 
 ## The layout
 

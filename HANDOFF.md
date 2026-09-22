@@ -1,22 +1,30 @@
 # Handoff: the `surfaces` branch
 
 For the agent that picks this branch up next. Written 2026-09-22 in the
-handoff lane on branch `surfaces` at `8c83765`. Every pointer below was
-resolved and every command was run in that lane; the gate output in
-section 2 is from its own run. `FINDINGS.md` is the closure record,
-`MERGE-NOTE.md` is the build team's list, and this page is the door.
+handoff lane on branch `surfaces`, revised the same day by the final
+verification lane at tip `01a6a81`. Every pointer below was resolved and
+every command was run in those lanes; the gate output in section 2 is
+from the final verification's own run. `FINDINGS.md` is the closure
+record, `MERGE-NOTE.md` is the build team's list, and this page is the
+door.
 
 ## 1. What this is
 
-Ten functions, nine surfaces, one contract, one conformance file — all
-complete and green against the stand-in engine.
+Ten functions, nine surfaces, one contract, one conformance file —
+landed and green against the stand-in engine at `01a6a81`, after two
+external reviews and their fix waves. The reviews and their per-finding
+status are the pair of issues linked from `FINDINGS.md`:
+`sdlc/issues/2026-09-22-surfaces-branch-review-the-full-findings.md`
+(waves 1–2) and
+`sdlc/issues/2026-09-22-surfaces-branch-second-review-new-defects-and-leftovers.md`
+(wave 3, fixed 2026-09-22).
 
 | Piece | Where | State |
 | --- | --- | --- |
 | The contract | `contract/` — the Rust trait, the public types, and `contract/include/thinkthen.h`, the C door | landed |
 | The stand-in engine | `standin/` — implements the contract whole | landed |
 | Nine surfaces | `libraries/{python,typescript,ruby,r,rust,c}` and `databases/{duckdb,sqlite,postgresql}`, each with its own `check.sh`, README, and NOTES | landed |
-| The one conformance file | `conformance/conformance.json`, 74 cases, validator at `conformance/tools/validate_conformance.py` | landed |
+| The one conformance file | `conformance/conformance.json`, 84 cases, validator at `conformance/tools/validate_conformance.py` | landed |
 | The Polars door | Python's `decide` and `score` take a plain list or a Polars column and return a column over the same Rust spine; the wheel holds no Polars import | landed |
 | The C door | the drawn `thinkthen_*` signatures from the slide sample, plus the `_opts` twins (cancel token, per-call deadline); design in `libraries/c/DESIGN.md` | landed |
 
@@ -24,13 +32,24 @@ The ten functions: decide, choose, score, tag, filter, rank, find,
 annotate, recognize, relate. `functions.toml` holds the fourteen ruled
 public names (the ten plus `decide_many`, `question`, `details`, `usage`).
 
-**The seam, stated once.** Every surface binds the stand-in engine today.
-Production is the real engine implementing `contract/`: each surface
-changes one dependency line, from `thinkthen-standin` to the real crate,
-and nothing above the contract changes. The conformance file is that
-swap's acceptance test — the same 74 cases every surface already replays.
-The stand-in never invents an answer: recognize and relate replay the
-recordings in `standin/data/recognize-replay.json`, and a text the
+**The seam, stated once.** Every surface builds its engine through the
+contract's connector: the only stand-in naming in any surface's Rust is
+`use thinkthen_standin::StandinConnector;`, one import per surface, and
+everything else calls `thinkthen_contract::Connector::connect`.
+
+```
+$ grep -rn "thinkthen_standin" --include="*.rs" libraries databases \
+    | grep -v "use thinkthen_standin::StandinConnector;"
+(no output)
+$ grep -rln "use thinkthen_standin::StandinConnector;" --include="*.rs" libraries databases
+nine files, one per surface
+```
+
+Production is the real engine implementing `contract/`, and the swap is
+those nine imports changing to the real connector — the conformance file
+is that swap's acceptance test, the same 84 cases every surface already
+replays. The stand-in never invents an answer: recognize and relate replay
+the recordings in `standin/data/recognize-replay.json`, and a text the
 recordings do not hold is a usage error naming what is missing; the
 decide family answers from the stand-in's own keyword rule.
 
@@ -51,11 +70,11 @@ too; without `cargo` it prints the skip line and exits 0.
 $ python3 scripts/generate_functions.py --check
 generated files match functions.toml (14 functions)
 $ python3 scripts/check_public_names.py
-ok python: 25 names, all ruled or documented
+ok python: 26 names, all ruled or documented
 ... one line a surface ...
 every surface's public names are ruled or documented
 $ (cd conformance && python3 tools/validate_conformance.py conformance.json)
-OK: 74 cases validated: schema, grammar, digests, wire contract, offline replay
+OK: 84 cases validated: schema, grammar, digests, wire contract, offline replay
 ```
 
 **The full gate.** `scripts/check_surfaces.sh` builds and checks the
@@ -82,31 +101,24 @@ fast-cancel test fails with "the batch ran deaf" while the branch is
 fine. This lane lost two runs to that before running it in the
 foreground; that run is green.
 
-**Verified state.** This lane's own run on `8c83765` with the stubs above,
-`sh sdlc/scripts/surfaces`, exit 0:
+**Verified state.** The final verification lane's own run on `01a6a81`
+with the stubs above and no key in the environment,
+`bash scripts/check_surfaces.sh`, exit 0:
 
 ```
-ok       choose
-ok       score
-ok       tag
-ok       annotate
-ok       details
-ok       usage
-ok       warm
-ok       recognize
-ok       relations
-ok       relate
-12 of 12 examples ok
-== postgres surface: wire suite against the stub on 8219
-wire green: decide answers on the wire, usage counts sends and tokens
-all landed checks green
+$ bash scripts/check_surfaces.sh
+...
+== postgres package: dry run, no deck, no container
+dist/thinkthen-pg16-0.0.1-linux-amd64.tar.gz staged; the container half is not run
+all landed checks green: green=927 skipped=73 diverged=18 failed=0 (wire: stub up)
 ```
 
 The run covered every section: the contract tests, the stand-in's null
-and wire tests, the conformance validator (74 cases), the generated
-lists, the public names, and all nine surfaces' checks — each surface's
-slide sample, function examples, conformance slice, and its wire section
-where the surface has one (PostgreSQL's own wire suite green on 8219).
+and wire tests, the conformance validator (84 cases), the checker's own
+tests, the generated lists, the public names and their check, and all
+nine surfaces' checks — each surface's slide sample, function examples,
+conformance slice, and its wire section where the surface has one. The
+honest summary line names its skips and divergences beside the greens.
 
 ## 3. What is stubbed versus real
 
