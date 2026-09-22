@@ -22,6 +22,13 @@ ureq = "3"
 [dev-dependencies]
 libc = "0.2"
 
+[features]
+# The test-only door for the synthesized annotate partial failure
+# (SYNTHETIC_PARTIAL_RECORD). Off by default, so a shipped library carries
+# no fixture code and no environment variable can arm it; a gate that needs
+# the fixture builds with this feature on.
+synthetic-partial = []
+
 [profile.release]
 # A library lives inside someone else's process, and an abort there kills
 # the host. The command's own profile stays as the root workspace sets it.

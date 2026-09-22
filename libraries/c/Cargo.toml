@@ -27,6 +27,13 @@ thinkthen-standin = { path = "../../standin" }
 [dev-dependencies]
 libc = "0.2"
 
+[features]
+# Forward the stand-in's compile-time fixture door to a gate build that
+# needs it (conformance case 74's synthesized partial failure). Off by
+# default: a shipped libthinkthen carries no fixture code and no
+# environment variable can arm one.
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
+
 [profile.release]
 # A library lives inside someone else's process, and an abort there kills
 # the host. The command's own profile stays as the root workspace sets it.

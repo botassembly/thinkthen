@@ -25,12 +25,20 @@
 //! numbers, so one set of cases runs against it and against recordings.
 //!
 //! Environment, read when an engine value is built and used only for what
-//! a [`EngineConfig`] leaves unset: `ENGINE_NULL` for the in-process
-//! backend, `ENGINE_BASE_URL` for the stub on the wire (the contract's
-//! `THINKTHEN_BASE_URL` wins over it), `ENGINE_TIMEOUT_SECS` (30),
-//! `ENGINE_MAX_RETRIES` (2), `ENGINE_WIDTH` (4), and
-//! `ENGINE_SYNTHETIC_PARTIAL` (unset) which arms the annotate partial-
-//! failure fixture for tests alone. No key is read and none is sent.
+//! a [`EngineConfig`] leaves unset: `THINKTHEN_NULL` for the in-process
+//! backend, `THINKTHEN_BASE_URL` for the stub on the wire (the contract's
+//! own name), `THINKTHEN_TIMEOUT_SECS` (30), `THINKTHEN_MAX_RETRIES` (2),
+//! and `THINKTHEN_WIDTH` (4). The older unprefixed spellings
+//! (`ENGINE_NULL`, `ENGINE_BASE_URL`, `ENGINE_TIMEOUT_SECS`,
+//! `ENGINE_MAX_RETRIES`, `ENGINE_WIDTH`) keep working, deprecated; the
+//! prefixed spelling wins when both are set. No key is read and none is
+//! sent.
+//!
+//! One fixture is compiled in only when the build asks for it: the
+//! `synthetic-partial` cargo feature arms the annotate partial-failure
+//! fixture (see [`SYNTHETIC_PARTIAL_RECORD`]). A default build carries no
+//! fixture code at all, so a shipped library can never be talked into a
+//! fake failure by an environment variable.
 
 use std::ptr;
 use std::sync::Arc;
@@ -83,7 +91,6 @@ struct ResolvedConfig {
     timeout: Duration,
     max_retries: u32,
     width: usize,
-    synthetic_partial: bool,
 }
 
 impl ResolvedConfig {
@@ -92,26 +99,32 @@ impl ResolvedConfig {
     /// defaults answer last.
     fn resolve(config: &EngineConfig) -> Self {
         let env = |name: &str| std::env::var(name).ok().filter(|value| !value.trim().is_empty());
-        let env_number = |name: &str| env(name).and_then(|value| value.parse::<u64>().ok());
+        // The `THINKTHEN_` spelling is the settled one; the older `ENGINE_`
+        // spelling keeps working and the prefixed name wins when both are
+        // set (standin/NOTES.md, 2026-09-22).
+        let setting = |name: &str, older: &str| env(name).or_else(|| env(older));
+        let number = |name: &str, older: &str| {
+            setting(name, older).and_then(|value| value.parse::<u64>().ok())
+        };
         Self {
-            null: env("ENGINE_NULL").is_some(),
+            null: setting("THINKTHEN_NULL", "ENGINE_NULL").is_some(),
             base: config
                 .address
                 .clone()
-                .or_else(|| env("THINKTHEN_BASE_URL"))
-                .or_else(|| env("ENGINE_BASE_URL"))
+                .or_else(|| setting("THINKTHEN_BASE_URL", "ENGINE_BASE_URL"))
                 .unwrap_or_else(|| "http://127.0.0.1:8091/v1".into()),
-            timeout: config
-                .timeout
-                .unwrap_or_else(|| Duration::from_secs(env_number("ENGINE_TIMEOUT_SECS").unwrap_or(30))),
-            max_retries: config
-                .max_retries
-                .unwrap_or_else(|| env_number("ENGINE_MAX_RETRIES").unwrap_or(2) as u32),
+            timeout: config.timeout.unwrap_or_else(|| {
+                Duration::from_secs(number("THINKTHEN_TIMEOUT_SECS", "ENGINE_TIMEOUT_SECS").unwrap_or(30))
+            }),
+            max_retries: config.max_retries.unwrap_or_else(|| {
+                number("THINKTHEN_MAX_RETRIES", "ENGINE_MAX_RETRIES").unwrap_or(2) as u32
+            }),
             width: config
                 .width
-                .or_else(|| env_number("ENGINE_WIDTH").map(|value| value as usize))
+                .or_else(|| {
+                    number("THINKTHEN_WIDTH", "ENGINE_WIDTH").map(|value| value as usize)
+                })
                 .unwrap_or(4),
-            synthetic_partial: env("ENGINE_SYNTHETIC_PARTIAL").is_some(),
         }
     }
 
@@ -530,15 +543,15 @@ impl Engine for BlockingEngine {
                     poll();
                 }
                 // The one synthesized partial failure (no recording carries
-                // a failed logical question): when the test-only
-                // `ENGINE_SYNTHETIC_PARTIAL` opt-in is set, exactly this
-                // record's last name-order question returns the ruled marker
-                // and its neighbours answer normally. The conformance case
-                // `74-annotate-preserves-good-answers` pins the shape when
-                // the opt-in is set, and DIVERGENCES.md marks it synthesized.
-                // Unset, which is every production process, this record
-                // answers like any other.
-                if self.config.synthetic_partial
+                // a failed logical question): when the build enabled the
+                // `synthetic-partial` feature, exactly this record's last
+                // file-order question returns the ruled marker and its
+                // neighbours answer normally. The conformance case
+                // `74-annotate-preserves-good-answers` pins the shape in
+                // that build, and DIVERGENCES.md marks it synthesized.
+                // A default build carries no fixture code, so this record
+                // answers like any other at every door.
+                if SYNTHETIC_PARTIAL_ARMED
                     && record == &SYNTHETIC_PARTIAL_RECORD
                     && Some(name) == set.names().last()
                 {
@@ -679,16 +692,28 @@ pub fn reset_usage() {
     TOKENS.store(0, Ordering::Relaxed);
 }
 
-/// The one synthesized partial-failure record, armed only by tests.
+/// The one synthesized partial-failure record, compiled in only when the
+/// build enables the `synthetic-partial` feature.
 ///
-/// No recording carries a failed logical question, so the stand-in answers
-/// the ruled marker for exactly this record (its last name-order question)
-/// and nothing else — but only when the test-only `ENGINE_SYNTHETIC_PARTIAL`
-/// opt-in is set. Unset, the default in every production process, the
-/// record answers like any other input, so no caller ever meets a fake
-/// failure. `74-annotate-preserves-good-answers` pins the marker's shape
-/// and `conformance/DIVERGENCES.md` marks it synthesized.
+/// No recording carries a failed logical question, so a fixture build
+/// answers the ruled marker for exactly this record (its last file-order
+/// question) and nothing else. A default build — every shipped library —
+/// compiles the fixture out entirely, so no environment variable and no
+/// caller can arm it. `74-annotate-preserves-good-answers` pins the
+/// marker's shape in a fixture build and `conformance/DIVERGENCES.md`
+/// marks it synthesized.
 pub const SYNTHETIC_PARTIAL_RECORD: &str = "order 4471: charged twice, please refund";
+
+/// Whether this build carries the synthetic partial-failure fixture: true
+/// only under the `synthetic-partial` cargo feature, a compile-time door an
+/// environment variable cannot open.
+#[cfg(feature = "synthetic-partial")]
+const SYNTHETIC_PARTIAL_ARMED: bool = true;
+
+/// See the `synthetic-partial` arm above: a default build answers every
+/// record for real.
+#[cfg(not(feature = "synthetic-partial"))]
+const SYNTHETIC_PARTIAL_ARMED: bool = false;
 
 /// The recording digest the request this call would make is filed under.
 ///
@@ -897,17 +922,22 @@ fn post(
                 if options.passed() {
                     return Err(Error::deadline(options.seconds()));
                 }
-                if attempt < limit {
-                    attempt += 1;
-                    let nap = match options.remaining() {
-                        Some(left) => waited.min(left),
-                        None => waited,
-                    };
-                    sleep_checked(nap, options)?;
-                    waited = waited.saturating_mul(2);
-                    continue;
+                let failure = classify_transport(&error);
+                // Only a genuinely retryable failure earns the backoff: an
+                // address that refused the connection refuses it again
+                // within the second as well, so it fails at once instead of
+                // burning the two backoff waits (review finding, 2026-09-22).
+                if !failure.retryable || attempt >= limit {
+                    return Err(failure);
                 }
-                return Err(classify_transport(&error));
+                attempt += 1;
+                let nap = match options.remaining() {
+                    Some(left) => waited.min(left),
+                    None => waited,
+                };
+                sleep_checked(nap, options)?;
+                waited = waited.saturating_mul(2);
+                continue;
             }
         };
         let status = response.status().as_u16();
@@ -952,7 +982,23 @@ fn count_tokens(body: &[u8]) {
     }
 }
 
-/// A transport failure, split by whether a second try could help.
+/// Split a transport failure by whether a second try could help.
+///
+/// An address that refused the connection will refuse it again within the
+/// second, so it is not retryable and the caller fails at once; every other
+/// transport failure may pass, so it keeps the retry the backends page
+/// gives a transport failure.
+fn classify_transport(error: &ureq::Error) -> Error {
+    let refused = match error {
+        ureq::Error::Io(io) => io.kind() == std::io::ErrorKind::ConnectionRefused,
+        _ => false,
+    };
+    if refused {
+        return Error::backend_not_retryable(format!("{error}: the address refused the connection"));
+    }
+    Error::backend_retryable(error.to_string())
+}
+
 /// Whether a failed send left the process: a refusal, a failed connect,
 /// or a name that did not resolve never reached the wire, so the counter
 /// stays put for them. Every other transport failure may have left, and
@@ -965,17 +1011,6 @@ fn left_the_machine(error: &ureq::Error) -> bool {
         | ureq::Error::BadUri(_) => false,
         _ => true,
     }
-}
-
-fn classify_transport(error: &ureq::Error) -> Error {
-    let refused = match error {
-        ureq::Error::Io(io) => io.kind() == std::io::ErrorKind::ConnectionRefused,
-        _ => false,
-    };
-    if refused {
-        return Error::backend_not_retryable(format!("{error}: the address refused the connection"));
-    }
-    Error::backend_retryable(error.to_string())
 }
 
 /// The wait a response's headers name, milliseconds first, seconds second.
@@ -1199,18 +1234,15 @@ mod tests {
         // Sound in this binary: every engine call runs after the seat is
         // held, so no other thread reads the environment while it is set.
         unsafe { std::env::set_var("ENGINE_NULL", "1") };
-        unsafe { std::env::remove_var("ENGINE_SYNTHETIC_PARTIAL") };
         seat
     }
 
-    /// The null backend with the test-only partial-failure fixture armed,
-    /// serialized the same way.
+    /// The null backend in a build that carries the test-only partial
+    /// failure, serialized the same way. The fixture is a compile-time door
+    /// (`synthetic-partial`), so this helper exists only in such a build.
+    #[cfg(feature = "synthetic-partial")]
     fn synthetic() -> StdMutexGuard<'static, ()> {
-        let seat = null();
-        // Sound in this binary: the seat is held, so no engine call runs
-        // between this set and the engine value that reads it.
-        unsafe { std::env::set_var("ENGINE_SYNTHETIC_PARTIAL", "1") };
-        seat
+        null()
     }
 
     /// Every verb answers on the null backend with the conformance
@@ -1261,11 +1293,12 @@ mod tests {
         .expect("parses");
         let rows = tt.annotate(&set, &["maybe later"], None).expect("answers");
         assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0][0].0, "kind");
+        assert_eq!(rows[0][0].0, "spam", "file order: spam, then kind");
+        assert_eq!(rows[0][1].0, "kind");
         // `bug` and `feature` carry no keyword, so the null backend ties
         // them at one half each, and a tied choice reads as unsure — the
         // core's own rule, which the contract keeps.
-        assert!(matches!(&rows[0][0].1, Annotated::Choice(None)));
+        assert!(matches!(&rows[0][1].1, Annotated::Choice(None)));
 
         let trail = tt.details(&Question::from_json(CUT).expect("parses"), "i want a refund");
         let trail = trail.expect("answers");
@@ -1410,9 +1443,10 @@ mod tests {
     }
 
     /// 0054: one logical question may fail while its neighbour answers, the
-    /// marker is the ruled JSON, and the count is one. The fixture is armed
-    /// by its test-only opt-in, the way `74-annotate-preserves-good-answers`
-    /// arms it.
+    /// marker is the ruled JSON, and the count is one. The fixture is
+    /// compiled in only under the `synthetic-partial` feature, the way
+    /// `74-annotate-preserves-good-answers` is run.
+    #[cfg(feature = "synthetic-partial")]
     #[test]
     fn the_partial_failure_marker_is_the_ruled_shape() {
         let _seat = synthetic();
@@ -1427,7 +1461,7 @@ mod tests {
             .annotate(&set, &[super::SYNTHETIC_PARTIAL_RECORD], None)
             .expect("answers");
         assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0][0].0, "kind", "name order: kind, then topic");
+        assert_eq!(rows[0][0].0, "kind", "file order: kind, then topic");
         assert_eq!(rows[0][0].1, Annotated::Decision(Answer::Yes), "the neighbour answers");
         assert_eq!(rows[0][1].0, "topic");
         assert_eq!(
@@ -1446,11 +1480,16 @@ mod tests {
         assert_eq!(thinkthen_contract::failed_questions(&rows), 1, "one failed logical question");
     }
 
-    /// Finding 7: with the test-only opt-in unset, the fixture text answers
-    /// like any other input — no caller ever meets a fake failure.
+    /// Finding 7, kept as a compile-time rule: the environment variable no
+    /// longer arms anything, and this default build carries no fixture code
+    /// at all. Setting the old variable proves it arms nothing.
+    #[cfg(not(feature = "synthetic-partial"))]
     #[test]
-    fn the_fixture_text_answers_on_the_default_path() {
+    fn the_env_variable_arms_nothing() {
         let _seat = null();
+        // Sound in this binary: the seat is held, and the engine value below
+        // is the only reader.
+        unsafe { std::env::set_var("ENGINE_SYNTHETIC_PARTIAL", "1") };
         let tt = BlockingEngine::from_env();
         let set = QuestionSet::from_json(
             r#"{"version":1,"questions":{
@@ -1465,11 +1504,12 @@ mod tests {
         for (name, value) in &rows[0] {
             assert!(
                 !matches!(value, Annotated::Failed(_)),
-                "{name} answered, not failed, on the default path"
+                "{name} answered, not failed, even with the variable set"
             );
         }
         assert_eq!(thinkthen_contract::failed_questions(&rows), 0, "no failed logical question");
         assert_eq!(rows[0][0].1, Annotated::Decision(Answer::Yes), "the fixture text is a refund");
+        unsafe { std::env::remove_var("ENGINE_SYNTHETIC_PARTIAL") };
     }
 
     /// The ruled record row serializes as `{"input","value"}` and carries

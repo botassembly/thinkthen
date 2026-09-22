@@ -46,10 +46,13 @@ else
 fi
 
 echo "== c surface: null suite (the door, the error surface, and the twins)"
-# The annotate partial-failure fixture is armed only by the stand-in's
-# test opt-in (standin/NOTES.md, finding 7); the door's shape test and
-# conformance case 74 replay that record.
-ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 cargo test --quiet --lib --test door -- --test-threads=1
+# The annotate partial-failure fixture is compiled in only for a build that
+# asks for it (standin/Cargo.toml, the `synthetic-partial` feature): the
+# door's shape test and conformance case 74 replay that record. The release
+# library the ctypes driver loads is rebuilt with the same feature, then
+# restored to the production shape below.
+cargo build --release --quiet --features synthetic-partial
+ENGINE_NULL=1 cargo test --quiet --features synthetic-partial --lib --test door -- --test-threads=1
 
 echo "== c surface: the null and length matrix"
 ENGINE_NULL=1 cargo test --quiet --test null_matrix -- --test-threads=1
@@ -73,7 +76,10 @@ echo "== c surface: the function examples"
 python3 examples.py
 
 echo "== c surface: conformance slice through ctypes"
-ENGINE_NULL=1 ENGINE_SYNTHETIC_PARTIAL=1 python3 conformance_driver.py
+ENGINE_NULL=1 python3 conformance_driver.py
+
+echo "== c surface: back to the production shape (no fixture code compiled)"
+cargo build --release --quiet
 
 if curl -sf --max-time 1 http://127.0.0.1:8216/v1/stats >/dev/null 2>&1; then
     echo "== c surface: the slide on the wire, stub on 8216"
