@@ -16,6 +16,12 @@ cargo test --release --quiet --lib
 echo "== duckdb surface: null suite"
 tools/null_suite.sh
 
+echo "== duckdb surface: the row-mapping suite"
+tools/mapping_suite.sh
+
+echo "== duckdb surface: the conformance driver can fail"
+tools/conformance_selftest.sh
+
 echo "== duckdb surface: fast-backend cancel, the poll-bug shape"
 tools/cancel_fast.sh
 

@@ -6,6 +6,10 @@ Only the cases a database surface can spell run here; the file's grammar
 and digests are the validator's job, not this driver's. The known
 divergences print as `diverge` with the reason, matching the other
 surfaces' drivers.
+
+The driver can fail: answers compare exactly, a `FAILED` line forces a
+nonzero exit, and the cases file is the argument when one is passed, so a
+corrupted copy can prove the exit code.
 """
 
 from __future__ import annotations
@@ -14,36 +18,69 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CASES = ROOT.parent.parent / "conformance" / "conformance.json"
+# The cases file: the first argument when one is given, the shared file
+# otherwise, so a corrupted copy proves this driver's exit code.
+CASES = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT.parent.parent / "conformance" / "conformance.json"
 EXTENSION = ROOT / "build" / "release" / "thinkthen.duckdb_extension"
 DUCKDB = ROOT / "duckdb-bin" / "duckdb"
 
+# How many checks failed; `main` turns any into a nonzero exit.
+FAILURES = 0
 
-def run(sql: str) -> str:
-    with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as handle:
-        handle.write(f"LOAD '{EXTENSION}';\n{sql}\n")
-        name = handle.name
+
+def run(sql: str, fixture: bool = False) -> str:
+    """One statement batch through the stock CLI, values one per line.
+    The whole batch rides in `-c` so the output is the plain list form
+    exact comparison needs; an init file renders the interactive boxes.
+    `fixture` arms the stand-in's test-only partial-failure opt-in for
+    the one case that replays the failed marker."""
+    env = {**os.environ, "ENGINE_NULL": "1"}
+    if fixture:
+        env["ENGINE_SYNTHETIC_PARTIAL"] = "1"
     result = subprocess.run(
-        [str(DUCKDB), "-unsigned", "-noheader", "-list", "-init", name],
+        [
+            str(DUCKDB),
+            "-unsigned",
+            "-noheader",
+            "-list",
+            "-c",
+            f"LOAD '{EXTENSION}'; {sql}",
+        ],
         capture_output=True,
         text=True,
-        env={**os.environ, "ENGINE_NULL": "1"},
+        env=env,
         check=False,
     )
-    Path(name).unlink()
     return result.stdout + result.stderr
 
 
-def check(name: str, sql: str, want: str) -> None:
-    got = run(sql).strip()
-    if want in got:
+def check(name: str, sql: str, want: str, fixture: bool = False) -> None:
+    global FAILURES
+    got = run(sql, fixture).strip()
+    if got == want:
         print(f"ok       {name}")
     else:
+        FAILURES += 1
         print(f"FAILED   {name}: want {want!r}, got {got!r}")
+
+
+def check_error(name: str, sql: str, want_kind: str) -> None:
+    """An error case: the output is an error whose text begins with the
+    expected kind, so a value that merely contains the words cannot pass."""
+    global FAILURES
+    got = run(sql).strip()
+    first = got.splitlines()[0] if got else ""
+    marker = first.find("Error: ")
+    body = first[marker + len("Error: ") :] if marker >= 0 else ""
+    if body.startswith(want_kind):
+        print(f"ok       {name}")
+    else:
+        FAILURES += 1
+        print(f"FAILED   {name}: want an error starting {want_kind!r}, got {got!r}")
 
 
 def sql_string(value: str) -> str:
@@ -86,22 +123,22 @@ def main() -> int:
             text = evidence or (records[0] if records else "")
             if verb in ("choose", "score", "tag"):
                 listing = "[" + ",".join(sql_string(m) for m in members) + "]"
-                check(name, f"SELECT thinkthen_{verb}({sql_string(kind)}, {sql_string(text)}, {listing});", wanted)
+                check_error(name, f"SELECT thinkthen_{verb}({sql_string(kind)}, {sql_string(text)}, {listing});", wanted)
             elif verb == "filter":
                 print(f"diverge  {name}: SQL spells filter as WHERE, and a band under WHERE reads as NULL by rule 6; the refusal belongs to the surface check")
             else:
-                check(name, f"SELECT thinkthen_decide({sql_string(arg)}, {sql_string(text)});", wanted)
+                check_error(name, f"SELECT thinkthen_decide({sql_string(arg)}, {sql_string(text)});", wanted)
             continue
 
         if verb == "decide":
             wanted = expect["answer"]
             check(name, f"SELECT thinkthen_decide({sql_string(arg)}, {sql_string(evidence)});",
-                  "true" if wanted is True else ("false" if wanted is False else ""))
+                  "true" if wanted is True else ("false" if wanted is False else "NULL"))
         elif verb in ("choose",):
             wanted = expect.get("answer")
             listing = "[" + ",".join(sql_string(m) for m in members) + "]"
             check(name, f"SELECT thinkthen_choose({sql_string(kind)}, {sql_string(evidence)}, {listing});",
-                  "" if wanted is None else wanted)
+                  "NULL" if wanted is None else wanted)
         elif verb == "score":
             listing = "[" + ",".join(sql_string(m) for m in members) + "]"
             check(name, f"SELECT thinkthen_score({sql_string(kind)}, {sql_string(evidence)}, {listing});",
@@ -162,6 +199,9 @@ def main() -> int:
                       wanted)
         elif verb == "annotate":
             answers = expect["answers"]
+            # The failed marker rides the stand-in's test-only opt-in; only
+            # a case whose expectation carries a `failed` member arms it.
+            fixture = any("failed" in member for member in answers.values())
             parts = []
             for field, member in sorted(answers.items()):
                 if "failed" in member:
@@ -176,13 +216,16 @@ def main() -> int:
             fields = ",".join(parts)
             set_json = json.dumps({"version": 1, "questions": case["set"]})
             check(name, f"SELECT thinkthen_annotate({sql_string(set_json)}, {sql_string(evidence)});",
-                  "{" + fields + "}")
+                  "{" + fields + "}", fixture)
         elif verb == "usage":
             print(f"diverge  {name}: the disk cache waits on the real engine (named)")
         elif verb == "cancel":
             print(f"diverge  {name}: the CLI's Ctrl-C owns cancel; see NOTES")
         else:
             print(f"skip     {name}: {verb} has no SQL spelling on this surface")
+    if FAILURES:
+        print(f"{FAILURES} case(s) failed")
+        return 1
     return 0
 
 
@@ -199,6 +242,10 @@ def check_recognize(name: str, case: dict) -> None:
         f"{e['text']}:{e['kind']}:{e['start']}:{e['end']}"
         for e in sorted(case["expect"]["entities"], key=lambda e: e["id"])
     )
+    # An empty entity list aggregates to no rows, which `string_agg`
+    # renders as NULL.
+    if not wanted:
+        wanted = "NULL"
     check(
         name,
         f"SELECT string_agg(t.text || ':' || t.kind || ':' || t.start || ':' || t.end, '|' ORDER BY t.start) "
