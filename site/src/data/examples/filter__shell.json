@@ -5,20 +5,38 @@
     {
       "name": "filter",
       "command": "thinkthen filter 'Is this a complaint?' --lines < reviews.txt",
-      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThird time my order shows up late. Not okay.",
+      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nNice bag, though the strap feels a little thin.",
       "inputFile": "reviews.txt",
-      "output": "The zipper broke the first time I used it.\nThird time my order shows up late. Not okay.",
+      "output": "The zipper broke the first time I used it.\nNice bag, though the strap feels a little thin.",
       "exit": 0,
-      "see": "filter keeps the two complaints and drops the rest."
+      "see": "filter keeps the two complaints: the broken zipper and the thin strap."
     },
     {
       "name": "filter-strict",
-      "command": "thinkthen filter --threshold 0.95 'Is this a complaint?' --lines < reviews.txt",
-      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThird time my order shows up late. Not okay.",
+      "command": "thinkthen filter --threshold 0.9 'Is this a complaint?' --lines < reviews.txt",
+      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nNice bag, though the strap feels a little thin.",
       "inputFile": "reviews.txt",
-      "output": "Third time my order shows up late. Not okay.",
+      "output": "The zipper broke the first time I used it.",
       "exit": 0,
-      "see": "At 0.95 only the clearest complaint stays."
+      "see": "At 0.9 the mild strap complaint drops out and the broken zipper stays."
+    },
+    {
+      "name": "filter-means",
+      "command": "thinkthen filter 'Is this about the item itself?' --lines --true 'Its build, size, color, or parts.' --false 'Delivery, price, or service.' < reviews.txt",
+      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nNice bag, though the strap feels a little thin.",
+      "inputFile": "reviews.txt",
+      "output": "The zipper broke the first time I used it.\nDoes this come in blue?\nNice bag, though the strap feels a little thin.",
+      "exit": 0,
+      "see": "The zipper, the color, and the strap are about the item, so they stay. The early delivery drops out."
+    },
+    {
+      "name": "filter-csv",
+      "command": "thinkthen filter 'Is this a complaint?' --csv --field /comment < reviews.csv",
+      "input": "id,comment\nR-1,Arrived a day early. Thank you!\nR-2,The zipper broke the first time I used it.\nR-3,Does this come in blue?",
+      "inputFile": "reviews.csv",
+      "output": "{\"id\":\"R-2\",\"comment\":\"The zipper broke the first time I used it.\"}",
+      "exit": 0,
+      "see": "Only R-2 complains, and it comes back as one JSON object, id and all."
     }
   ],
   "function": "filter",

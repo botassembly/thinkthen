@@ -4,21 +4,30 @@
   "runs": [
     {
       "name": "tag",
-      "command": "thinkthen tag 'Which topics does this cover?' billing shipping urgent praise < message.txt",
-      "input": "You charged me twice and the package still has not shipped.\nI need this fixed today.",
+      "command": "thinkthen tag 'Which labels fit this message?' praise bug billing shipping < message.txt",
+      "input": "Love the new dashboard, but the export button crashes the app.",
       "inputFile": "message.txt",
-      "output": "[\"billing\",\"shipping\",\"urgent\"]",
+      "output": "[\"praise\",\"bug\"]",
       "exit": 0,
-      "see": "The message gets billing, shipping, and urgent, and praise stays off."
+      "see": "The message praises the dashboard and reports a crash, so it gets praise and bug."
     },
     {
       "name": "tag-answer",
-      "command": "thinkthen tag --details 'Which topics does this cover?' billing shipping urgent praise < message.txt | jq '.answer.probabilities'",
-      "input": "You charged me twice and the package still has not shipped.\nI need this fixed today.",
+      "command": "thinkthen tag --details 'Which labels fit this message?' praise bug billing shipping < message.txt | jq '.answer.probabilities'",
+      "input": "Love the new dashboard, but the export button crashes the app.",
       "inputFile": "message.txt",
-      "output": "{\n  \"billing\": 0.95,\n  \"shipping\": 0.93,\n  \"urgent\": 0.92,\n  \"praise\": 0.01\n}",
+      "output": "{\n  \"praise\": 0.75,\n  \"bug\": 0.96,\n  \"billing\": 0.03,\n  \"shipping\": 0.07\n}",
       "exit": 0,
-      "see": "Each of the three topics clears 0.9, and praise sits at 0.01."
+      "see": "bug and praise clear 0.5, and billing and shipping sit near 0."
+    },
+    {
+      "name": "tag-labels",
+      "command": "thinkthen tag --lines --threshold 0.9 'Which labels fit this message?' --label 'bug=Something is broken.' --label 'praise=Says something kind.' --label 'request=Asks for something new.' < feedback.txt | jq -r '\"\\(.value | join(\",\"))  \\(.input)\"'",
+      "input": "The export button crashes the app.\nGreat support, thank you!\nPlease add a dark mode.",
+      "inputFile": "feedback.txt",
+      "output": "bug  The export button crashes the app.\npraise  Great support, thank you!\nrequest  Please add a dark mode.",
+      "exit": 0,
+      "see": "Each line gets the one label its description fits."
     }
   ],
   "function": "tag",

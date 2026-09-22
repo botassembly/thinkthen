@@ -4,39 +4,39 @@
   "runs": [
     {
       "name": "choose",
-      "command": "thinkthen choose 'Which team owns this?' billing shipping account < ticket.txt",
-      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
-      "inputFile": "ticket.txt",
-      "output": "\"billing\"",
+      "command": "thinkthen choose 'Which team owns this?' billing shipping account < parcel.txt",
+      "input": "My parcel has been stuck in transit for a week.",
+      "inputFile": "parcel.txt",
+      "output": "\"shipping\"",
       "exit": 0,
-      "see": "The ticket goes to billing, and choose exits 0."
-    },
-    {
-      "name": "choose-answer",
-      "command": "thinkthen choose --details 'Which team owns this?' billing shipping account < ticket.txt | jq '.answer.probabilities'",
-      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
-      "inputFile": "ticket.txt",
-      "output": "{\n  \"billing\": 1.0,\n  \"shipping\": 0.0,\n  \"account\": 0.0\n}",
-      "exit": 0,
-      "see": "The details give billing all of the weight."
+      "see": "The stuck parcel goes to shipping."
     },
     {
       "name": "choose-split",
       "command": "thinkthen choose --details 'Which team owns this?' billing shipping account < both.txt | jq -r '.answer.probabilities|tojson'",
-      "input": "You charged me twice and the package still has not shipped.",
+      "input": "My parcel never came, and now I cannot log in to track it.",
       "inputFile": "both.txt",
-      "output": "{\"billing\":0.85,\"shipping\":0.1,\"account\":0.05}",
+      "output": "{\"billing\":0.0,\"shipping\":0.63,\"account\":0.37}",
       "exit": 0,
-      "see": "The message touches two teams, and billing still leads at 0.85."
+      "see": "The message is about a parcel and a login, so shipping and account share the probability."
     },
     {
       "name": "choose-null",
       "command": "thinkthen choose --threshold 0.9 'Which team owns this?' billing shipping account < both.txt",
-      "input": "You charged me twice and the package still has not shipped.",
+      "input": "My parcel never came, and now I cannot log in to track it.",
       "inputFile": "both.txt",
       "output": "null",
       "exit": 3,
       "see": "No team reaches 0.9, so choose prints null and exits 3."
+    },
+    {
+      "name": "choose-raw",
+      "command": "thinkthen choose --raw --lines 'Which team owns this?' --option 'billing=Invoices, fees, and refunds.' --option 'shipping=Parcels and delivery.' --option 'account=Logins and passwords.' < requests.txt",
+      "input": "Please refund the extra fee on my invoice.\nMy parcel went to the wrong address.\nI cannot reset my password.",
+      "inputFile": "requests.txt",
+      "output": "billing\nshipping\naccount",
+      "exit": 0,
+      "see": "Each request goes to the team its description names, printed bare with no quotation marks."
     }
   ],
   "function": "choose",

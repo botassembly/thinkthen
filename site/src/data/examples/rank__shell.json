@@ -19,6 +19,15 @@
       "output": "0.94  Our checkout page is down and customers cannot pay\n0.49  Can we move our Thursday call to next week?",
       "exit": 0,
       "see": "The details show the outage at 0.94 and the call at 0.49."
+    },
+    {
+      "name": "rank-jsonl",
+      "command": "thinkthen rank 'Does this stop customers from buying?' --jsonl --field /title --top 1 < bugs.jsonl",
+      "input": "{\"id\": \"B-1\", \"title\": \"Typo on the About page\"}\n{\"id\": \"B-2\", \"title\": \"Checkout crashes for every customer\"}\n{\"id\": \"B-3\", \"title\": \"Logo looks blurry on large screens\"}",
+      "inputFile": "bugs.jsonl",
+      "output": "{\"id\": \"B-2\", \"title\": \"Checkout crashes for every customer\"}",
+      "exit": 0,
+      "see": "The checkout crash stops customers from buying, so B-2 comes back first, id and all."
     }
   ],
   "function": "rank",

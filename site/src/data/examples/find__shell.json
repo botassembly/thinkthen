@@ -37,6 +37,15 @@
       "output": "Returns need the original receipt.",
       "exit": 0,
       "see": "Without --none, find must pick a line, so it prints the receipt rule."
+    },
+    {
+      "name": "find-jsonl",
+      "command": "thinkthen find 'Which answer says how to reset a password?' --jsonl --field /text --input faq.jsonl",
+      "input": "{\"id\": \"Q1\", \"text\": \"Open Settings and choose Reset password.\"}\n{\"id\": \"Q2\", \"text\": \"Invoices are emailed on the first of the month.\"}\n{\"id\": \"Q3\", \"text\": \"We ship to the US and Canada.\"}",
+      "inputFile": "faq.jsonl",
+      "output": "{\"id\": \"Q1\", \"text\": \"Open Settings and choose Reset password.\"}",
+      "exit": 0,
+      "see": "Q1 holds the reset steps, and the whole record comes back."
     }
   ],
   "function": "find",

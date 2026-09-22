@@ -45,7 +45,7 @@ const when = surface.release && !shipped
   {sample ? (
     <Code code={sample.code} caption={`${when} The calls will read like this.`} />
   ) : (
-    <Terminal run={cell('decide', 'shell').runs[0]} caption="Recorded from the real command. decide prints true and exits 0." />
+    <Terminal run={cell('decide', 'shell').runs.find((r) => r.name === 'decide')} caption="Recorded from the real command. decide prints true and exits 0." />
   )}
   <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person.</p>
 

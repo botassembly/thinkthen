@@ -4,12 +4,33 @@
   "runs": [
     {
       "name": "annotate",
-      "command": "thinkthen annotate form.json",
-      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
-      "inputFile": null,
-      "output": "{\"wants_refund\":true,\"team\":\"billing\",\"urgency\":0.91}",
+      "command": "thinkthen annotate form.json < report.txt",
+      "input": "CSV export fails every time. Steps: open a report,\nclick Export, pick CSV. My month-end numbers are stuck.",
+      "inputFile": "report.txt",
+      "also": [
+        {
+          "name": "form.json",
+          "text": "{\n  \"version\": 1,\n  \"questions\": {\n    \"steps\": {\n      \"decide\": \"Does the report give steps to reproduce?\"},\n    \"area\": {\n      \"choose\": \"Which part of the app is this?\",\n      \"options\": [\"export\", \"login\", \"billing\"]},\n    \"impact\": {\n      \"score\": \"How much does this block the user?\",\n      \"levels\": [\"None.\", \"Slows them.\", \"Blocks work.\"]}\n  }\n}"
+        }
+      ],
+      "output": "{\"steps\":true,\"area\":\"export\",\"impact\":1.99}",
       "exit": 0,
-      "see": "annotate returns one JSON record with a refund answer, a team, and an urgency."
+      "see": "The report gives steps, is about export, and blocks the month-end numbers, so impact sits near 2."
+    },
+    {
+      "name": "annotate-jsonl",
+      "command": "thinkthen annotate form.json --jsonl --field /body --jobs 8 < reports.jsonl",
+      "input": "{\"id\": \"B-7\", \"body\": \"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.\"}\n{\"id\": \"B-8\", \"body\": \"The invoice page button is a slightly different blue. No steps, I just noticed it.\"}\n{\"id\": \"B-9\", \"body\": \"Steps: open a report and click Export. The file takes ten minutes to arrive.\"}",
+      "inputFile": "reports.jsonl",
+      "also": [
+        {
+          "name": "form.json",
+          "text": "{\n  \"version\": 1,\n  \"questions\": {\n    \"steps\": {\n      \"decide\": \"Does the report give steps to reproduce?\"},\n    \"area\": {\n      \"choose\": \"Which part of the app is this?\",\n      \"options\": [\"export\", \"login\", \"billing\"]},\n    \"impact\": {\n      \"score\": \"How much does this block the user?\",\n      \"levels\": [\"None.\", \"Slows them.\", \"Blocks work.\"]}\n  }\n}"
+        }
+      ],
+      "output": "{\"id\":\"B-7\",\"body\":\"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.\",\"steps\":true,\"area\":\"login\",\"impact\":2.0}\n{\"id\":\"B-8\",\"body\":\"The invoice page button is a slightly different blue. No steps, I just noticed it.\",\"steps\":false,\"area\":\"billing\",\"impact\":0.03}\n{\"id\":\"B-9\",\"body\":\"Steps: open a report and click Export. The file takes ten minutes to arrive.\",\"steps\":true,\"area\":\"export\",\"impact\":1.07}",
+      "exit": 0,
+      "see": "Each report keeps its id and gains three answers. The blue button has no steps and blocks nothing."
     }
   ],
   "function": "annotate",

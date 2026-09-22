@@ -59,6 +59,33 @@ function parseExamplesRun(text) {
     const cat = /^cat > (\S+) <</.exec(line);
     if (cat) { files[cat[1]] = body; i += 1; continue; }
 
+    // A run shown whole, shell and all: `{ ...; } > "$out/NAME.txt"`.
+    if (/^\{ /.test(line)) {
+      const block = [];
+      let row = line;
+      for (;;) {
+        const end = /\} > "\$out\/([^"]+)\.txt"/.exec(row);
+        if (end) {
+          block.push(row.slice(0, end.index));
+          const command = block.join('\n')
+            .replace(/^\{ /, '')
+            .replace(/\$tt\b/g, 'thinkthen')
+            .replace(/\s*"\$@"/g, '')
+            .replace(/;\s*$/, '')
+            .split('\n').map((l) => l.replace(/^  /, '')).join('\n')
+            .trimEnd();
+          calls.push({ name: end[1], command, heredoc: null, redirect: /< (\S+)/.exec(command)?.[1] });
+          break;
+        }
+        block.push(row);
+        i += 1;
+        if (i >= lines.length) break;
+        row = lines[i];
+      }
+      i += 1;
+      continue;
+    }
+
     const call = /^(show|showj|showr) (.*)$/.exec(line);
     if (call) {
       const kind = call[1];
@@ -77,7 +104,7 @@ function parseExamplesRun(text) {
         .replace(/\s+<<'[A-Z]+'\s*$/, '')
         .trim();
       if (jq) command += kind === 'showr' ? ` | jq -r '${jq}'` : ` | jq '${jq}'`;
-      calls.push({ name, command, heredoc: body, redirect: /< (\S+)/.exec(rest)?.[1] });
+      calls.push({ name, command, heredoc: body, redirect: (/< (\S+)/.exec(rest) || /--input (\S+)/.exec(rest))?.[1] });
       i += 1;
       continue;
     }
@@ -103,29 +130,50 @@ function recorded(dir, name) {
 // teach the same lesson with `jq .answer`. It is left out here, not edited.
 const SKIP_RUNS = new Set(['decide-details']);
 
+// Runs that belong to a page and to no function. They land in _pages.json.
+const PAGE_RUNS = new Set(['dry-run']);
+
+// The files a command names besides its input, such as a question set, shown
+// with `cat` above the command.
+function alsoFiles(call, files) {
+  return Object.keys(files)
+    .filter((name) => name !== call.redirect && new RegExp(`(^|\\s)${name.replace(/\./g, '\\.')}(\\s|$)`).test(call.command))
+    .map((name) => ({ name, text: files[name] }));
+}
+
 function bashCells() {
   const runSh = path.join(DECK, 'examples', 'run.sh');
   const outDir = path.join(DECK, 'examples', 'out');
   const { files, calls } = parseExamplesRun(read(runSh));
   const byFunction = {};
+  const pages = {};
   for (const call of calls) {
     if (SKIP_RUNS.has(call.name)) continue;
+    if (PAGE_RUNS.has(call.name)) {
+      const rec = recorded(outDir, call.name);
+      if (!rec) throw new Error(`${call.name}: no recorded output`);
+      pages[call.name] = { name: call.name, command: call.command, input: files[call.redirect] ?? null,
+        inputFile: call.redirect || null, output: rec.output, exit: rec.exit };
+      continue;
+    }
     const fn = FUNCTIONS.find((f) => call.name === f.name || call.name.startsWith(f.name + '-'))
       || (call.name.startsWith('question-') ? FUNCTIONS.find((f) => f.name === 'question-file') : null);
     if (!fn) throw new Error(`no function owns the example ${call.name}`);
     const rec = recorded(outDir, call.name);
     if (!rec) throw new Error(`${call.name}: no recorded output`);
     const input = call.heredoc ?? (call.redirect ? files[call.redirect] : null);
+    const also = alsoFiles(call, files);
     (byFunction[fn.name] ||= []).push({
       name: call.name,
       command: call.command,
       input,
       inputFile: call.heredoc ? null : call.redirect || null,
+      ...(also.length ? { also } : {}),
       output: rec.output,
       exit: rec.exit,
     });
   }
-  return byFunction;
+  return { byFunction, pages };
 }
 
 // ------------------------------------------------------------- drawn surfaces
@@ -387,7 +435,7 @@ function main() {
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
 
-  const bash = bashCells();
+  const { byFunction: bash, pages } = bashCells();
   const { cells: drawn, wholeBlocks } = drawnCells();
   const recognize = recognizeCells();
   const howtos = howtoCells();
@@ -422,6 +470,7 @@ function main() {
     }
   }
 
+  fs.writeFileSync(path.join(OUT, '_pages.json'), JSON.stringify(pages, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_surfaces.json'), JSON.stringify(wholeBlocks, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_howtos.json'), JSON.stringify(howtos, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, '_recipes.json'), JSON.stringify(recipes, null, 2) + '\n');

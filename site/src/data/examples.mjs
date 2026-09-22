@@ -40,6 +40,7 @@ export const CELLS = cells;
 export const SURFACE_SAMPLES = load('_surfaces.json');
 export const HOWTO_RUNS = load('_howtos.json');
 export const RECIPE_RUNS = load('_recipes.json');
+export const PAGE_RUNS = load('_pages.json');
 export const INDEX = load('_index.json');
 
 export function cell(fn, surface) {
