@@ -17,11 +17,18 @@
 //! [`Engine`] trait owns all of that. Load-time init registers the
 //! functions and touches no wire; the engine is built lazily on the first
 //! call, and a fork is repaired by the engine's process check.
+//!
+//! Every function is volatile and direct-only: no paid call is legal from
+//! a view, a trigger, an index expression, or a CHECK constraint, so the
+//! schema of a database the host has not vouched for cannot spend money or
+//! read files. The interrupt poll reads the calling connection's own handle
+//! from SQLite's own context, never a process-wide one, so two connections
+//! can open, close, and interrupt independently.
 
 use std::collections::HashMap;
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
@@ -31,20 +38,61 @@ use rusqlite::vtab::{
 };
 use rusqlite::{Connection, Error, ffi};
 use thinkthen_contract::{
-    Annotated, Cancel, Edge, Engine, Entity, ErrorKind, MAX_RELATE_RECORDS,
-    Options, Question, QuestionSet, Recognize, Relate,
+    Annotated, Cancel, Connector as _, Edge, Engine, EngineConfig, Entity,
+    ErrorKind, MAX_RELATE_RECORDS, Options, Question, QuestionSet, Recognize,
+    Relate,
 };
-use thinkthen_standin::BlockingEngine;
+use thinkthen_standin::StandinConnector;
 
-/// The connection that loaded the extension, held for the interrupt poll.
-/// A process loads the extension onto one connection at a time; the CLI
-/// shape this surface ships for is one connection.
-static DB: AtomicUsize = AtomicUsize::new(0);
+/// The host's `sqlite3_api_routines` table, extended past the 3.34.1
+/// bindings the routed headers stop at, to the `is_interrupted` field the
+/// 3.41 floor guarantees.
+///
+/// The tail lists every field the host header adds after `txn_state` and
+/// before `is_interrupted`, in the header's order (sqlite3ext.h, the 3.35
+/// through 3.41 groups). Every one of them is a function pointer, so an
+/// opaque pointer keeps each offset exact; only `is_interrupted` is ever
+/// called, and only after the floor check names a host that carries it.
+#[repr(C)]
+struct ApiRoutines {
+    base: ffi::sqlite3_api_routines,
+    changes64: *const (),
+    total_changes64: *const (),
+    autovacuum_pages: *const (),
+    error_offset: *const (),
+    vtab_rhs_value: *const (),
+    vtab_distinct: *const (),
+    vtab_in: *const (),
+    vtab_in_first: *const (),
+    vtab_in_next: *const (),
+    deserialize: *const (),
+    serialize: *const (),
+    db_name: *const (),
+    value_encoding: *const (),
+    is_interrupted: Option<unsafe extern "C" fn(*mut ffi::sqlite3) -> c_int>,
+}
+
+/// The host's own `is_interrupted`, resolved from its API table at load
+/// time. The host's copy is the only correct one: the connection handle
+/// belongs to the host's SQLite, and a second copy would read foreign
+/// memory. Null until a load passes the floor check.
+static IS_INTERRUPTED: AtomicPtr<()> = AtomicPtr::new(std::ptr::null_mut());
+
+/// The host's API table pointer, held between the entry and `init` so the
+/// extended tail is read only after the floor check passes.
+static API_TABLE: AtomicPtr<()> = AtomicPtr::new(std::ptr::null_mut());
 
 /// The engine every call binds, built once, lazily, never at load time.
-fn engine() -> &'static BlockingEngine {
-    static ENGINE: OnceLock<BlockingEngine> = OnceLock::new();
-    ENGINE.get_or_init(BlockingEngine::from_env)
+///
+/// The stand-in's connector builds it; pointing this line at the real
+/// engine's connector is the swap the merge makes.
+fn engine() -> &'static Arc<dyn Engine> {
+    static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
+    ENGINE.get_or_init(|| {
+        StandinConnector
+            .connect(&EngineConfig::from_env())
+            .expect("the stand-in connector has no failure path")
+    })
 }
 
 /// One saved answer, keyed by the question's digest and the evidence.
@@ -185,91 +233,146 @@ fn set(argument: &str) -> Result<Arc<QuestionSet>, Error> {
     Ok(held)
 }
 
+/// The connection a callback is running on, read from the host's own
+/// context. Per call, never a global: a closed connection can never be
+/// read, and two connections cannot confuse each other.
+fn connection_of(context: &Context<'_>) -> *mut ffi::sqlite3 {
+    // SAFETY: the context belongs to the live call, and the handle is
+    // borrowed for one read of the interrupt flag.
+    match unsafe { context.get_connection() } {
+        Ok(connection) => unsafe { connection.handle() },
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
 /// One tick of the wait, on the calling thread: hear the host's interrupt
-/// and cancel the token. A set token ends the batch with the cancelled
-/// kind; requests already sent finish.
-fn hear_interrupts(token: &Cancel) {
-    let db = DB.load(Ordering::Relaxed) as *mut ffi::sqlite3;
-    if !db.is_null() && unsafe { sqlite3_is_interrupted(db) } != 0 {
+/// on the connection this call runs on, and cancel the token. A set token
+/// ends the batch with the cancelled kind; requests already sent finish.
+fn hear_interrupts(db: *mut ffi::sqlite3, token: &Cancel) {
+    if db.is_null() {
+        return;
+    }
+    let check = IS_INTERRUPTED.load(Ordering::Relaxed);
+    if check.is_null() {
+        return;
+    }
+    // SAFETY: the pointer came from the host's own API table at load time
+    // (the floor check guarantees the field), and `db` is the live handle
+    // of the call being served.
+    let check: unsafe extern "C" fn(*mut ffi::sqlite3) -> c_int =
+        unsafe { std::mem::transmute(check) };
+    if unsafe { check(db) } != 0 {
         token.cancel();
+    }
+}
+
+/// The text a panic payload carries, for a defect error.
+fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(text) = payload.downcast_ref::<&str>() {
+        (*text).to_string()
+    } else if let Some(text) = payload.downcast_ref::<String>() {
+        text.clone()
+    } else {
+        "a panic carrying no text".to_string()
+    }
+}
+
+/// Run one callback body — a SQL function or a virtual-table callback —
+/// turning a panic into the surface's defect error instead of letting it
+/// unwind across SQLite's own C frames.
+fn guarded<T>(what: &str, body: impl FnOnce() -> rusqlite::Result<T>) -> rusqlite::Result<T> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)) {
+        Ok(outcome) => outcome,
+        Err(payload) => Err(failure(thinkthen_contract::Error::defect(format!(
+            "{what} panicked: {}",
+            panic_text(payload.as_ref())
+        )))),
     }
 }
 
 /// `thinkthen_decide(question, text)`: 1, 0, or `NULL` when unsure.
 fn decide(context: &Context<'_>) -> Result<Option<i64>, Error> {
-    let question = question(context.get_raw(0).as_str()?)?;
-    let evidence = context.get_raw(1).as_str()?;
-    let key = (question.digest(), evidence.to_string());
-    if let Some(Saved::Decision(answer)) = answers().lock().unwrap().get(&key) {
-        cache_hits().fetch_add(1, Ordering::Relaxed);
-        return Ok(answer.value().map(|held| if held { 1 } else { 0 }));
-    }
-    let answer = engine()
-        .decide_opts(&question, evidence, Options::new())
-        .map_err(failure)?;
-    answers().lock().unwrap().insert(key, Saved::Decision(answer));
-    Ok(answer.value().map(|held| if held { 1 } else { 0 }))
+    guarded("thinkthen_decide", || {
+        let question = question(context.get_raw(0).as_str()?)?;
+        let evidence = context.get_raw(1).as_str()?;
+        let key = (question.digest(), evidence.to_string());
+        if let Some(Saved::Decision(answer)) = answers().lock().unwrap().get(&key) {
+            cache_hits().fetch_add(1, Ordering::Relaxed);
+            return Ok(answer.value().map(|held| if held { 1 } else { 0 }));
+        }
+        let answer = engine()
+            .decide_opts(&question, evidence, Options::new())
+            .map_err(failure)?;
+        answers().lock().unwrap().insert(key, Saved::Decision(answer));
+        Ok(answer.value().map(|held| if held { 1 } else { 0 }))
+    })
 }
 
 /// `thinkthen_choose(question, text)`: the winning option's text, `NULL`
 /// when unresolved.
 fn choose(context: &Context<'_>) -> Result<Option<String>, Error> {
-    let question = question(context.get_raw(0).as_str()?)?;
-    let evidence = context.get_raw(1).as_str()?;
-    let key = (question.digest(), evidence.to_string());
-    if let Some(Saved::Choice(choice)) = answers().lock().unwrap().get(&key) {
-        cache_hits().fetch_add(1, Ordering::Relaxed);
-        return Ok(choice.clone());
-    }
-    let choice = engine()
-        .choose_opts(&question, evidence, Options::new())
-        .map_err(failure)?;
-    answers()
-        .lock()
-        .unwrap()
-        .insert(key, Saved::Choice(choice.clone()));
-    Ok(choice)
+    guarded("thinkthen_choose", || {
+        let question = question(context.get_raw(0).as_str()?)?;
+        let evidence = context.get_raw(1).as_str()?;
+        let key = (question.digest(), evidence.to_string());
+        if let Some(Saved::Choice(choice)) = answers().lock().unwrap().get(&key) {
+            cache_hits().fetch_add(1, Ordering::Relaxed);
+            return Ok(choice.clone());
+        }
+        let choice = engine()
+            .choose_opts(&question, evidence, Options::new())
+            .map_err(failure)?;
+        answers()
+            .lock()
+            .unwrap()
+            .insert(key, Saved::Choice(choice.clone()));
+        Ok(choice)
+    })
 }
 
 /// `thinkthen_score(question, text)`: the specification's number from 0 to
 /// K−1. The nearest level's name rides in `thinkthen_details`.
 fn score(context: &Context<'_>) -> Result<Option<f64>, Error> {
-    let question = question(context.get_raw(0).as_str()?)?;
-    let evidence = context.get_raw(1).as_str()?;
-    let key = (question.digest(), evidence.to_string());
-    if let Some(Saved::Score(scored)) = answers().lock().unwrap().get(&key) {
-        cache_hits().fetch_add(1, Ordering::Relaxed);
-        return Ok(Some(scored.value));
-    }
-    let scored = engine()
-        .score_opts(&question, evidence, Options::new())
-        .map_err(failure)?;
-    answers()
-        .lock()
-        .unwrap()
-        .insert(key, Saved::Score(scored.clone()));
-    Ok(Some(scored.value))
+    guarded("thinkthen_score", || {
+        let question = question(context.get_raw(0).as_str()?)?;
+        let evidence = context.get_raw(1).as_str()?;
+        let key = (question.digest(), evidence.to_string());
+        if let Some(Saved::Score(scored)) = answers().lock().unwrap().get(&key) {
+            cache_hits().fetch_add(1, Ordering::Relaxed);
+            return Ok(Some(scored.value));
+        }
+        let scored = engine()
+            .score_opts(&question, evidence, Options::new())
+            .map_err(failure)?;
+        answers()
+            .lock()
+            .unwrap()
+            .insert(key, Saved::Score(scored.clone()));
+        Ok(Some(scored.value))
+    })
 }
 
 /// `thinkthen_tag(question, text)`: the labels that held, as a JSON array
 /// in the question's order.
 fn tag(context: &Context<'_>) -> Result<Option<String>, Error> {
-    let question = question(context.get_raw(0).as_str()?)?;
-    let evidence = context.get_raw(1).as_str()?;
-    let key = (question.digest(), evidence.to_string());
-    if let Some(Saved::Tags(labels)) = answers().lock().unwrap().get(&key) {
-        cache_hits().fetch_add(1, Ordering::Relaxed);
-        return Ok(Some(serde_json::to_string(labels).unwrap()));
-    }
-    let labels = engine()
-        .tag_opts(&question, evidence, Options::new())
-        .map_err(failure)?;
-    let held = serde_json::to_string(&labels).unwrap();
-    answers()
-        .lock()
-        .unwrap()
-        .insert(key, Saved::Tags(labels));
-    Ok(Some(held))
+    guarded("thinkthen_tag", || {
+        let question = question(context.get_raw(0).as_str()?)?;
+        let evidence = context.get_raw(1).as_str()?;
+        let key = (question.digest(), evidence.to_string());
+        if let Some(Saved::Tags(labels)) = answers().lock().unwrap().get(&key) {
+            cache_hits().fetch_add(1, Ordering::Relaxed);
+            return Ok(Some(serde_json::to_string(labels).unwrap()));
+        }
+        let labels = engine()
+            .tag_opts(&question, evidence, Options::new())
+            .map_err(failure)?;
+        let held = serde_json::to_string(&labels).unwrap();
+        answers()
+            .lock()
+            .unwrap()
+            .insert(key, Saved::Tags(labels));
+        Ok(Some(held))
+    })
 }
 
 /// One field of an `annotate` answer, in the conformance file's shape.
@@ -303,61 +406,66 @@ fn set_digest(set: &QuestionSet) -> String {
 /// the set's name order, each field the judgment in the conformance
 /// shape.
 fn annotate(context: &Context<'_>) -> Result<Option<String>, Error> {
-    let set = set(context.get_raw(0).as_str()?)?;
-    let evidence = context.get_raw(1).as_str()?;
-    let key = (set_digest(&set), evidence.to_string());
-    if let Some(Saved::Annotate(object)) = answers().lock().unwrap().get(&key)
-    {
-        cache_hits().fetch_add(1, Ordering::Relaxed);
-        return Ok(Some(object.clone()));
-    }
-    let records = engine()
-        .annotate_opts(&set, &[evidence], Options::new(), None)
-        .map_err(failure)?;
-    let Some(record) = records.first() else {
-        return Ok(None);
-    };
-    let object = record
-        .iter()
-        .map(|(name, field)| {
-            format!(
-                "{}:{}",
-                serde_json::to_string(name).unwrap(),
-                serde_json::to_string(&field_of(field)).unwrap()
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(",");
-    let object = format!("{{{object}}}");
-    answers()
-        .lock()
-        .unwrap()
-        .insert(key, Saved::Annotate(object.clone()));
-    Ok(Some(object))
+    guarded("thinkthen_annotate", || {
+        let set = set(context.get_raw(0).as_str()?)?;
+        let evidence = context.get_raw(1).as_str()?;
+        let key = (set_digest(&set), evidence.to_string());
+        if let Some(Saved::Annotate(object)) =
+            answers().lock().unwrap().get(&key)
+        {
+            cache_hits().fetch_add(1, Ordering::Relaxed);
+            return Ok(Some(object.clone()));
+        }
+        let records = engine()
+            .annotate_opts(&set, &[evidence], Options::new(), None)
+            .map_err(failure)?;
+        let Some(record) = records.first() else {
+            return Ok(None);
+        };
+        let object = record
+            .iter()
+            .map(|(name, field)| {
+                format!(
+                    "{}:{}",
+                    serde_json::to_string(name).unwrap(),
+                    serde_json::to_string(&field_of(field)).unwrap()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let object = format!("{{{object}}}");
+        answers()
+            .lock()
+            .unwrap()
+            .insert(key, Saved::Annotate(object.clone()));
+        Ok(Some(object))
+    })
 }
 
 /// `thinkthen_details(question, text)`: the judgment and its audit trail,
 /// as one JSON object. The `sends` field is what the bill sees.
 fn details(context: &Context<'_>) -> Result<Option<String>, Error> {
-    let question = question(context.get_raw(0).as_str()?)?;
-    let evidence = context.get_raw(1).as_str()?;
-    let audit = engine()
-        .details_opts(&question, evidence, Options::new())
-        .map_err(failure)?;
-    let object = serde_json::json!({
-        "probability": audit.probability,
-        "answer": audit.answer.value(),
-        "nearest": audit.nearest,
-        "model": audit.model,
-        "digest": audit.digest,
-        "sends": audit.sends,
-        "requests": audit.requests,
-        "failed_questions": audit.failed_questions,
-    });
-    Ok(Some(
-        serde_json::to_string(&object)
-            .map_err(|failure| local_failure(failure.to_string()))?,
-    ))
+    guarded("thinkthen_details", || {
+        let question = question(context.get_raw(0).as_str()?)?;
+        let evidence = context.get_raw(1).as_str()?;
+        let audit = engine()
+            .details_opts(&question, evidence, Options::new())
+            .map_err(failure)?;
+        let object = serde_json::json!({
+            "probability": audit.probability,
+            "answer": audit.answer.value(),
+            "nearest": audit.nearest,
+            "model": audit.model,
+            "digest": audit.digest,
+            "sends": audit.sends,
+            "requests": audit.requests,
+            "failed_questions": audit.failed_questions,
+        });
+        Ok(Some(
+            serde_json::to_string(&object)
+                .map_err(|failure| local_failure(failure.to_string()))?,
+        ))
+    })
 }
 
 /// `thinkthen_usage()`: the process counters as one JSON object — sends,
@@ -366,23 +474,25 @@ fn details(context: &Context<'_>) -> Result<Option<String>, Error> {
 /// a caller takes two snapshots and subtracts them. The removed reset
 /// spelling refuses and names that substitution.
 fn usage(context: &Context<'_>) -> Result<String, Error> {
-    if context.len() != 0 {
-        let argument = context.get_raw(0).as_str()?;
-        let message = if argument == "reset" {
-            "the reset spelling is removed; the counters are cumulative, so take two snapshots and subtract them"
-        } else {
-            "thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots"
-        };
-        return Err(failure(thinkthen_contract::Error::usage(message)));
-    }
-    let held = engine().usage();
-    let object = serde_json::json!({
-        "requests": held.requests,
-        "cache_answers": cache_hits().load(Ordering::Relaxed),
-        "tokens": held.tokens,
-    });
-    Ok(serde_json::to_string(&object)
-        .map_err(|failure| local_failure(failure.to_string()))?)
+    guarded("thinkthen_usage", || {
+        if context.len() != 0 {
+            let argument = context.get_raw(0).as_str()?;
+            let message = if argument == "reset" {
+                "the reset spelling is removed; the counters are cumulative, so take two snapshots and subtract them"
+            } else {
+                "thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots"
+            };
+            return Err(failure(thinkthen_contract::Error::usage(message)));
+        }
+        let held = engine().usage();
+        let object = serde_json::json!({
+            "requests": held.requests,
+            "cache_answers": cache_hits().load(Ordering::Relaxed),
+            "tokens": held.tokens,
+        });
+        Ok(serde_json::to_string(&object)
+            .map_err(|failure| local_failure(failure.to_string()))?)
+    })
 }
 
 /// The `thinkthen_warm` accumulator: the texts one flush holds.
@@ -405,7 +515,9 @@ const CHUNK: usize = 256;
 
 impl Aggregate<WarmState, Option<i64>> for Warm {
     fn init(&self, _: &mut Context<'_>) -> Result<WarmState, Error> {
-        Ok(WarmState { question: None, pending: Vec::new(), judged: 0 })
+        guarded("thinkthen_warm", || {
+            Ok(WarmState { question: None, pending: Vec::new(), judged: 0 })
+        })
     }
 
     fn step(
@@ -413,48 +525,52 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
         context: &mut Context<'_>,
         state: &mut WarmState,
     ) -> Result<(), Error> {
-        let question = question(context.get_raw(0).as_str()?)?;
-        let text = context.get_raw(1).as_str()?.to_string();
-        if answers().lock().unwrap().contains_key(&(question.digest(), text.clone())) {
-            cache_hits().fetch_add(1, Ordering::Relaxed);
-            return Ok(());
-        }
-        if state.question.is_none() {
-            state.question = Some(question.clone());
-        }
-        state.pending.push(text);
-        if state.pending.len() >= CHUNK {
-            flush(state)?;
-        }
-        Ok(())
+        guarded("thinkthen_warm", || {
+            let question = question(context.get_raw(0).as_str()?)?;
+            let text = context.get_raw(1).as_str()?.to_string();
+            if answers().lock().unwrap().contains_key(&(question.digest(), text.clone())) {
+                cache_hits().fetch_add(1, Ordering::Relaxed);
+                return Ok(());
+            }
+            if state.question.is_none() {
+                state.question = Some(question.clone());
+            }
+            state.pending.push(text);
+            if state.pending.len() >= CHUNK {
+                flush(state, connection_of(context))?;
+            }
+            Ok(())
+        })
     }
 
     fn finalize(
         &self,
-        _: &mut Context<'_>,
+        context: &mut Context<'_>,
         mut state: Option<WarmState>,
     ) -> Result<Option<i64>, Error> {
-        if let Some(state) = state.as_mut() {
-            if !state.pending.is_empty() {
-                flush(state)?;
+        guarded("thinkthen_warm", || {
+            if let Some(state) = state.as_mut() {
+                if !state.pending.is_empty() {
+                    flush(state, connection_of(context))?;
+                }
+                return Ok(Some(state.judged as i64));
             }
-            return Ok(Some(state.judged as i64));
-        }
-        Ok(None)
+            Ok(None)
+        })
     }
 }
 
 /// Judge the pending texts at once, saving every judgment. A set
-/// interrupt cancels the token through the poll; no new request starts,
-/// the requests sent finish, and the statement ends with the cancelled
-/// kind.
-fn flush(state: &mut WarmState) -> Result<(), Error> {
+/// interrupt cancels the token through the poll, which reads the calling
+/// connection's own handle; no new request starts, the requests sent
+/// finish, and the statement ends with the cancelled kind.
+fn flush(state: &mut WarmState, db: *mut ffi::sqlite3) -> Result<(), Error> {
     let Some(question) = state.question.clone() else {
         return Ok(());
     };
     let token = Cancel::new();
     let records: Vec<&str> = state.pending.iter().map(String::as_str).collect();
-    let mut poll = || hear_interrupts(&token);
+    let mut poll = || hear_interrupts(db, &token);
     let judgments = engine()
         .decide_many_opts(&question, &records, Options::new().cancel(&token), Some(&mut poll))
         .map_err(failure)?;
@@ -642,7 +758,9 @@ unsafe impl<'vtab> VTab<'vtab> for RecognizeTab {
         _table_name: &[u8],
         _args: &[&[u8]],
     ) -> rusqlite::Result<(std::borrow::Cow<'static, CStr>, Self)> {
-        db.config(VTabConfig::Innocuous)?;
+        // Direct-only, like the eight functions: a view or trigger inside
+        // an untrusted schema cannot reach the paid call.
+        db.config(VTabConfig::DirectOnly)?;
         Ok((
             std::borrow::Cow::Borrowed(
                 c"CREATE TABLE x(text,kind,start,end,strength,body hidden,kinds hidden)",
@@ -652,39 +770,41 @@ unsafe impl<'vtab> VTab<'vtab> for RecognizeTab {
     }
 
     fn best_index(&self, info: &mut IndexInfo) -> rusqlite::Result<bool> {
-        let mut present = [false; RECOGNIZE_COLUMNS];
-        let mut constraint = [usize::MAX; RECOGNIZE_COLUMNS];
-        for (i, held) in info.constraints().enumerate() {
-            let column = held.column() as usize;
-            if column < RECOGNIZE_BODY || column >= RECOGNIZE_COLUMNS {
-                continue;
+        guarded("thinkthen_recognize", || {
+            let mut present = [false; RECOGNIZE_COLUMNS];
+            let mut constraint = [usize::MAX; RECOGNIZE_COLUMNS];
+            for (i, held) in info.constraints().enumerate() {
+                let column = held.column() as usize;
+                if column < RECOGNIZE_BODY || column >= RECOGNIZE_COLUMNS {
+                    continue;
+                }
+                if !held.is_usable()
+                    || held.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
+                {
+                    return Ok(false);
+                }
+                present[column] = true;
+                constraint[column] = i;
             }
-            if !held.is_usable()
-                || held.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
-            {
+            if !present[RECOGNIZE_BODY] {
                 return Ok(false);
             }
-            present[column] = true;
-            constraint[column] = i;
-        }
-        if !present[RECOGNIZE_BODY] {
-            return Ok(false);
-        }
-        let mut mask: c_int = 0;
-        let mut argv: c_int = 0;
-        for column in RECOGNIZE_BODY..RECOGNIZE_COLUMNS {
-            if present[column] {
-                argv += 1;
-                mask |= 1 << column;
-                let mut usage = info.constraint_usage(constraint[column]);
-                usage.set_argv_index(argv);
-                usage.set_omit(true);
+            let mut mask: c_int = 0;
+            let mut argv: c_int = 0;
+            for column in RECOGNIZE_BODY..RECOGNIZE_COLUMNS {
+                if present[column] {
+                    argv += 1;
+                    mask |= 1 << column;
+                    let mut usage = info.constraint_usage(constraint[column]);
+                    usage.set_argv_index(argv);
+                    usage.set_omit(true);
+                }
             }
-        }
-        info.set_idx_num(mask);
-        info.set_estimated_cost(50.0);
-        info.set_estimated_rows(4);
-        Ok(true)
+            info.set_idx_num(mask);
+            info.set_estimated_cost(50.0);
+            info.set_estimated_rows(4);
+            Ok(true)
+        })
     }
 
     fn open(&'vtab mut self) -> rusqlite::Result<Self::Cursor> {
@@ -714,40 +834,42 @@ unsafe impl VTabCursor for RecognizeCursor {
         _idx_str: Option<&str>,
         args: &Filters<'_>,
     ) -> rusqlite::Result<()> {
-        let mut arg = 0;
-        let body = if idx_num & (1 << RECOGNIZE_BODY) != 0 {
-            let held: Option<String> = args.get(arg)?;
-            arg += 1;
-            held
-        } else {
-            None
-        };
-        let kinds = if idx_num & (1 << RECOGNIZE_KINDS) != 0 {
-            let held: Option<String> = args.get(arg)?;
-            held
-        } else {
-            None
-        };
-        let body = body.ok_or_else(|| {
-            failure(thinkthen_contract::Error::usage(
-                "thinkthen_recognize: the text argument is required",
-            ))
-        })?;
-        let kinds: Vec<String> = match kinds.as_deref().map(str::trim) {
-            None | Some("") => Vec::new(),
-            Some(list) => list.split(',').map(|kind| kind.trim().to_string()).collect(),
-        };
-        let ask = if kinds.is_empty() {
-            Recognize::new()
-        } else {
-            Recognize::new().kinds(kinds)
-        };
-        let recognized = engine()
-            .recognize_opts(&ask, &body, Options::new())
-            .map_err(failure)?;
-        self.rows = recognized.entities;
-        self.row = 0;
-        Ok(())
+        guarded("thinkthen_recognize", || {
+            let mut arg = 0;
+            let body = if idx_num & (1 << RECOGNIZE_BODY) != 0 {
+                let held: Option<String> = args.get(arg)?;
+                arg += 1;
+                held
+            } else {
+                None
+            };
+            let kinds = if idx_num & (1 << RECOGNIZE_KINDS) != 0 {
+                let held: Option<String> = args.get(arg)?;
+                held
+            } else {
+                None
+            };
+            let body = body.ok_or_else(|| {
+                failure(thinkthen_contract::Error::usage(
+                    "thinkthen_recognize: the text argument is required",
+                ))
+            })?;
+            let kinds: Vec<String> = match kinds.as_deref().map(str::trim) {
+                None | Some("") => Vec::new(),
+                Some(list) => list.split(',').map(|kind| kind.trim().to_string()).collect(),
+            };
+            let ask = if kinds.is_empty() {
+                Recognize::new()
+            } else {
+                Recognize::new().kinds(kinds)
+            };
+            let recognized = engine()
+                .recognize_opts(&ask, &body, Options::new())
+                .map_err(failure)?;
+            self.rows = recognized.entities;
+            self.row = 0;
+            Ok(())
+        })
     }
 
     fn next(&mut self) -> rusqlite::Result<()> {
@@ -760,15 +882,17 @@ unsafe impl VTabCursor for RecognizeCursor {
     }
 
     fn column(&self, ctx: &mut VtabContext, i: c_int) -> rusqlite::Result<()> {
-        let entity = &self.rows[self.row];
-        match i {
-            RECOGNIZE_TEXT => ctx.set_result(&entity.text),
-            RECOGNIZE_KIND => ctx.set_result(&entity.kind),
-            RECOGNIZE_START => ctx.set_result(&(entity.start as i64)),
-            RECOGNIZE_END => ctx.set_result(&(entity.end as i64)),
-            RECOGNIZE_STRENGTH => ctx.set_result(&entity.strength),
-            _ => Ok(()),
-        }
+        guarded("thinkthen_recognize", || {
+            let entity = &self.rows[self.row];
+            match i {
+                RECOGNIZE_TEXT => ctx.set_result(&entity.text),
+                RECOGNIZE_KIND => ctx.set_result(&entity.kind),
+                RECOGNIZE_START => ctx.set_result(&(entity.start as i64)),
+                RECOGNIZE_END => ctx.set_result(&(entity.end as i64)),
+                RECOGNIZE_STRENGTH => ctx.set_result(&entity.strength),
+                _ => Ok(()),
+            }
+        })
     }
 
     fn rowid(&self) -> rusqlite::Result<i64> {
@@ -812,7 +936,9 @@ unsafe impl<'vtab> VTab<'vtab> for RelateTab {
         _table_name: &[u8],
         _args: &[&[u8]],
     ) -> rusqlite::Result<(std::borrow::Cow<'static, CStr>, Self)> {
-        db.config(VTabConfig::Innocuous)?;
+        // Direct-only, like the eight functions: a view or trigger inside
+        // an untrusted schema cannot reach the paid call.
+        db.config(VTabConfig::DirectOnly)?;
         // SAFETY: the handle belongs to this connection and outlives the
         // virtual table; the nested read is read-only.
         let handle = unsafe { db.handle() };
@@ -825,39 +951,41 @@ unsafe impl<'vtab> VTab<'vtab> for RelateTab {
     }
 
     fn best_index(&self, info: &mut IndexInfo) -> rusqlite::Result<bool> {
-        let mut present = [false; RELATE_COLUMNS];
-        let mut constraint = [usize::MAX; RELATE_COLUMNS];
-        for (i, held) in info.constraints().enumerate() {
-            let column = held.column() as usize;
-            if column < RELATE_TABLE || column >= RELATE_COLUMNS {
-                continue;
+        guarded("thinkthen_relate", || {
+            let mut present = [false; RELATE_COLUMNS];
+            let mut constraint = [usize::MAX; RELATE_COLUMNS];
+            for (i, held) in info.constraints().enumerate() {
+                let column = held.column() as usize;
+                if column < RELATE_TABLE || column >= RELATE_COLUMNS {
+                    continue;
+                }
+                if !held.is_usable()
+                    || held.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
+                {
+                    return Ok(false);
+                }
+                present[column] = true;
+                constraint[column] = i;
             }
-            if !held.is_usable()
-                || held.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
-            {
+            if !present[RELATE_TABLE] || !present[RELATE_ID] || !present[RELATE_BODY] {
                 return Ok(false);
             }
-            present[column] = true;
-            constraint[column] = i;
-        }
-        if !present[RELATE_TABLE] || !present[RELATE_ID] || !present[RELATE_BODY] {
-            return Ok(false);
-        }
-        let mut mask: c_int = 0;
-        let mut argv: c_int = 0;
-        for column in RELATE_TABLE..RELATE_COLUMNS {
-            if present[column] {
-                argv += 1;
-                mask |= 1 << column;
-                let mut usage = info.constraint_usage(constraint[column]);
-                usage.set_argv_index(argv);
-                usage.set_omit(true);
+            let mut mask: c_int = 0;
+            let mut argv: c_int = 0;
+            for column in RELATE_TABLE..RELATE_COLUMNS {
+                if present[column] {
+                    argv += 1;
+                    mask |= 1 << column;
+                    let mut usage = info.constraint_usage(constraint[column]);
+                    usage.set_argv_index(argv);
+                    usage.set_omit(true);
+                }
             }
-        }
-        info.set_idx_num(mask);
-        info.set_estimated_cost(200.0);
-        info.set_estimated_rows(8);
-        Ok(true)
+            info.set_idx_num(mask);
+            info.set_estimated_cost(200.0);
+            info.set_estimated_rows(8);
+            Ok(true)
+        })
     }
 
     fn open(&'vtab mut self) -> rusqlite::Result<Self::Cursor> {
@@ -898,136 +1026,139 @@ unsafe impl VTabCursor for RelateCursor {
         _idx_str: Option<&str>,
         args: &Filters<'_>,
     ) -> rusqlite::Result<()> {
-        let mut values: Vec<Option<String>> = Vec::new();
-        for column in RELATE_TABLE..RELATE_COLUMNS {
-            if idx_num & (1 << column) != 0 {
-                values.push(args.get(values.len())?);
-            }
-        }
-        let mut rank = [usize::MAX; RELATE_COLUMNS];
-        let mut n = 0;
-        for column in RELATE_TABLE..RELATE_COLUMNS {
-            if idx_num & (1 << column) != 0 {
-                rank[column] = n;
-                n += 1;
-            }
-        }
-        let get = |column: usize| -> Option<&str> {
-            if rank[column] == usize::MAX {
-                None
-            } else {
-                values[rank[column]].as_deref()
-            }
-        };
-        let table = get(RELATE_TABLE).ok_or_else(|| {
-            failure(thinkthen_contract::Error::usage(
-                "thinkthen_relate: the table name argument is required",
-            ))
-        })?;
-        let id_col = get(RELATE_ID).ok_or_else(|| {
-            failure(thinkthen_contract::Error::usage(
-                "thinkthen_relate: the id column argument is required",
-            ))
-        })?;
-        let body_col = get(RELATE_BODY).ok_or_else(|| {
-            failure(thinkthen_contract::Error::usage(
-                "thinkthen_relate: the body column argument is required",
-            ))
-        })?;
-        let ask: Relate;
-        let slots: Vec<&str> = (RELATE_R1..=RELATE_R4)
-            .filter_map(|column| get(column))
-            .filter(|value| !value.is_empty())
-            .collect();
-        if slots.len() == 1 && slots[0].starts_with('@') {
-            // The file form: the question file's `relate` section, or the
-            // whole file when it carries no section — the contract's own
-            // parser reads it, so no grammar lives here.
-            let text = named_file(slots[0]).map_err(local_failure)?;
-            let value: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
-                failure(thinkthen_contract::Error::usage(format!(
-                    "the question file {} is not JSON: {error}",
-                    &slots[0][1..]
-                )))
-            })?;
-            let section = value.get("relate").cloned().unwrap_or(value);
-            ask = Relate::from_json(&section.to_string()).map_err(failure)?;
-        } else if slots.len() == 1 && slots[0].starts_with('{') {
-            ask = Relate::from_json(slots[0]).map_err(failure)?;
-        } else {
-            // The inline rule grammar, one slot per rule: `NAME` or
-            // `NAME=SOURCE:TARGET`, with a leading `either:` for the
-            // both-ways rule and `*` for any kind at an end. The slots
-            // translate into the question file's own grammar and the
-            // contract's parser reads that, so the spellings cannot drift.
-            let mut relations: Vec<serde_json::Value> = Vec::new();
-            let mut eithers: Vec<serde_json::Value> = Vec::new();
-            for value in &slots {
-                let (either, rule) = match value.strip_prefix("either:") {
-                    Some(rest) => (true, rest),
-                    None => (false, *value),
-                };
-                match rule.split_once('=') {
-                    Some((name, ends)) => {
-                        let (source, target) = ends.split_once(':').ok_or_else(|| {
-                            failure(thinkthen_contract::Error::usage(format!(
-                                "the relation rule {name} names one end; the ruled spelling is NAME=SOURCE:TARGET"
-                            )))
-                        })?;
-                        relations.push(serde_json::json!({
-                            "name": name,
-                            "source": source,
-                            "target": target,
-                            "either": either,
-                        }));
-                    }
-                    None if either => eithers.push(serde_json::json!(rule)),
-                    None => relations.push(serde_json::json!(rule)),
+        guarded("thinkthen_relate", || {
+            let mut values: Vec<Option<String>> = Vec::new();
+            for column in RELATE_TABLE..RELATE_COLUMNS {
+                if idx_num & (1 << column) != 0 {
+                    values.push(args.get(values.len())?);
                 }
             }
-            let spec = serde_json::json!({ "relations": relations, "either": eithers });
-            ask = Relate::from_json(&spec.to_string()).map_err(failure)?;
-        }
-        let (ids, texts) = read_records(self.db, table, id_col, body_col).map_err(failure)?;
-        let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
-        let edges: Vec<Edge> = thinkthen_contract::relate_checked(engine(), &ask, &refs, Options::new())
-            .map_err(failure)?;
-        let mut rows = Vec::with_capacity(edges.len());
-        for edge in &edges {
-            let source = edge
-                .source
-                .checked_sub(1)
-                .and_then(|i| ids.get(i as usize))
-                .cloned()
-                .ok_or_else(|| {
-                    failure(thinkthen_contract::Error::defect(format!(
-                        "the edge names record {}, and only {} records came in",
-                        edge.source,
-                        ids.len()
+            let mut rank = [usize::MAX; RELATE_COLUMNS];
+            let mut n = 0;
+            for column in RELATE_TABLE..RELATE_COLUMNS {
+                if idx_num & (1 << column) != 0 {
+                    rank[column] = n;
+                    n += 1;
+                }
+            }
+            let get = |column: usize| -> Option<&str> {
+                if rank[column] == usize::MAX {
+                    None
+                } else {
+                    values[rank[column]].as_deref()
+                }
+            };
+            let table = get(RELATE_TABLE).ok_or_else(|| {
+                failure(thinkthen_contract::Error::usage(
+                    "thinkthen_relate: the table name argument is required",
+                ))
+            })?;
+            let id_col = get(RELATE_ID).ok_or_else(|| {
+                failure(thinkthen_contract::Error::usage(
+                    "thinkthen_relate: the id column argument is required",
+                ))
+            })?;
+            let body_col = get(RELATE_BODY).ok_or_else(|| {
+                failure(thinkthen_contract::Error::usage(
+                    "thinkthen_relate: the body column argument is required",
+                ))
+            })?;
+            let ask: Relate;
+            let slots: Vec<&str> = (RELATE_R1..=RELATE_R4)
+                .filter_map(|column| get(column))
+                .filter(|value| !value.is_empty())
+                .collect();
+            if slots.len() == 1 && slots[0].starts_with('@') {
+                // The file form: the question file's `relate` section, or the
+                // whole file when it carries no section — the contract's own
+                // parser reads it, so no grammar lives here.
+                let text = named_file(slots[0]).map_err(local_failure)?;
+                let value: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
+                    failure(thinkthen_contract::Error::usage(format!(
+                        "the question file {} is not JSON: {error}",
+                        &slots[0][1..]
                     )))
                 })?;
-            let target = edge
-                .target
-                .checked_sub(1)
-                .and_then(|i| ids.get(i as usize))
-                .cloned()
-                .ok_or_else(|| {
-                    failure(thinkthen_contract::Error::defect(format!(
-                        "the edge names record {}, and only {} records came in",
-                        edge.target,
-                        ids.len()
-                    )))
-                })?;
-            rows.push(RelateRow {
-                name: edge.name.clone(),
-                source,
-                target,
-                probability: edge.probability,
-            });
-        }
-        self.rows = rows;
-        self.row = 0;
-        Ok(())
+                let section = value.get("relate").cloned().unwrap_or(value);
+                ask = Relate::from_json(&section.to_string()).map_err(failure)?;
+            } else if slots.len() == 1 && slots[0].starts_with('{') {
+                ask = Relate::from_json(slots[0]).map_err(failure)?;
+            } else {
+                // The inline rule grammar, one slot per rule: `NAME` or
+                // `NAME=SOURCE:TARGET`, with a leading `either:` for the
+                // both-ways rule and `*` for any kind at an end. The slots
+                // translate into the question file's own grammar and the
+                // contract's parser reads that, so the spellings cannot drift.
+                let mut relations: Vec<serde_json::Value> = Vec::new();
+                let mut eithers: Vec<serde_json::Value> = Vec::new();
+                for value in &slots {
+                    let (either, rule) = match value.strip_prefix("either:") {
+                        Some(rest) => (true, rest),
+                        None => (false, *value),
+                    };
+                    match rule.split_once('=') {
+                        Some((name, ends)) => {
+                            let (source, target) = ends.split_once(':').ok_or_else(|| {
+                                failure(thinkthen_contract::Error::usage(format!(
+                                    "the relation rule {name} names one end; the ruled spelling is NAME=SOURCE:TARGET"
+                                )))
+                            })?;
+                            relations.push(serde_json::json!({
+                                "name": name,
+                                "source": source,
+                                "target": target,
+                                "either": either,
+                            }));
+                        }
+                        None if either => eithers.push(serde_json::json!(rule)),
+                        None => relations.push(serde_json::json!(rule)),
+                    }
+                }
+                let spec = serde_json::json!({ "relations": relations, "either": eithers });
+                ask = Relate::from_json(&spec.to_string()).map_err(failure)?;
+            }
+            let (ids, texts) = read_records(self.db, table, id_col, body_col).map_err(failure)?;
+            let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+            let edges: Vec<Edge> =
+                thinkthen_contract::relate_checked(engine().as_ref(), &ask, &refs, Options::new())
+                    .map_err(failure)?;
+            let mut rows = Vec::with_capacity(edges.len());
+            for edge in &edges {
+                let source = edge
+                    .source
+                    .checked_sub(1)
+                    .and_then(|i| ids.get(i as usize))
+                    .cloned()
+                    .ok_or_else(|| {
+                        failure(thinkthen_contract::Error::defect(format!(
+                            "the edge names record {}, and only {} records came in",
+                            edge.source,
+                            ids.len()
+                        )))
+                    })?;
+                let target = edge
+                    .target
+                    .checked_sub(1)
+                    .and_then(|i| ids.get(i as usize))
+                    .cloned()
+                    .ok_or_else(|| {
+                        failure(thinkthen_contract::Error::defect(format!(
+                            "the edge names record {}, and only {} records came in",
+                            edge.target,
+                            ids.len()
+                        )))
+                    })?;
+                rows.push(RelateRow {
+                    name: edge.name.clone(),
+                    source,
+                    target,
+                    probability: edge.probability,
+                });
+            }
+            self.rows = rows;
+            self.row = 0;
+            Ok(())
+        })
     }
 
     fn next(&mut self) -> rusqlite::Result<()> {
@@ -1040,20 +1171,22 @@ unsafe impl VTabCursor for RelateCursor {
     }
 
     fn column(&self, ctx: &mut VtabContext, i: c_int) -> rusqlite::Result<()> {
-        let held = &self.rows[self.row];
-        match i {
-            RELATE_NAME => ctx.set_result(&held.name),
-            RELATE_SOURCE => match &held.source {
-                RecordId::Int(id) => ctx.set_result(id),
-                RecordId::Text(id) => ctx.set_result(id),
-            },
-            RELATE_TARGET => match &held.target {
-                RecordId::Int(id) => ctx.set_result(id),
-                RecordId::Text(id) => ctx.set_result(id),
-            },
-            RELATE_PROBABILITY => ctx.set_result(&held.probability),
-            _ => Ok(()),
-        }
+        guarded("thinkthen_relate", || {
+            let held = &self.rows[self.row];
+            match i {
+                RELATE_NAME => ctx.set_result(&held.name),
+                RELATE_SOURCE => match &held.source {
+                    RecordId::Int(id) => ctx.set_result(id),
+                    RecordId::Text(id) => ctx.set_result(id),
+                },
+                RELATE_TARGET => match &held.target {
+                    RecordId::Int(id) => ctx.set_result(id),
+                    RecordId::Text(id) => ctx.set_result(id),
+                },
+                RELATE_PROBABILITY => ctx.set_result(&held.probability),
+                _ => Ok(()),
+            }
+        })
     }
 
     fn rowid(&self) -> rusqlite::Result<i64> {
@@ -1066,18 +1199,15 @@ const RECOGNIZE_MODULE: Module<'static, RecognizeTab> =
     Module::eponymous_only_module();
 const RELATE_MODULE: Module<'static, RelateTab> = Module::eponymous_only_module();
 
-// rusqlite's loadable headers stop at SQLite 3.34, so this 3.41 call is
-// declared against the host's own library and linked directly. The host
-// process has libsqlite3 loaded, so the symbol resolves; a host that
-// keeps its symbols hidden would break this, and that trap is on record
-// from the 207 experiment.
-#[link(name = "sqlite3")]
-unsafe extern "C" {
-    fn sqlite3_is_interrupted(db: *mut ffi::sqlite3) -> c_int;
-}
+// The interrupt check resolves through the host's own API table (see
+// `ApiRoutines`), never a directly linked symbol: a host that statically
+// links SQLite would otherwise be read by a second copy of the library.
+// The 207 experiment's trap — a host keeping its symbols hidden — cannot
+// bite this shape.
 
-/// The support floor, SQLite 3.41.0: where `sqlite3_is_interrupted`
-/// appears, the interrupt check's one host call the routed headers lack.
+/// The support floor, SQLite 3.41.0: where `is_interrupted` appears in
+/// the host's API table, the interrupt check's one host call the routed
+/// headers lack.
 const FLOOR: c_int = 3_041_000;
 
 /// The refusal for a host below the floor, or `None` when the host is
@@ -1108,10 +1238,22 @@ fn init(connection: Connection) -> Result<bool, Error> {
             Some(refusal),
         ));
     }
-    let volatile = FunctionFlags::SQLITE_UTF8;
-    // The ruled page holds: the functions are volatile and
-    // `SQLITE_DETERMINISTIC` stays off, so no paid call is legal in an
-    // index expression or a CHECK constraint.
+    // The floor passed, so the host's API table carries `is_interrupted`
+    // at the offset the extended tail names. Resolve the host's own
+    // function here; the poll never calls a second SQLite copy.
+    let table = API_TABLE.load(Ordering::Relaxed) as *const ApiRoutines;
+    if !table.is_null() {
+        // SAFETY: the pointer is the host's own table, and the floor
+        // check above proves the field exists in it.
+        if let Some(check) = unsafe { (*table).is_interrupted } {
+            IS_INTERRUPTED.store(check as *mut (), Ordering::Relaxed);
+        }
+    }
+    // Volatile and direct-only: `SQLITE_DETERMINISTIC` stays off, so no
+    // paid call is legal in an index expression or a CHECK constraint,
+    // and `SQLITE_DIRECTONLY` refuses views and triggers whatever the
+    // host's trusted_schema setting says.
+    let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     connection.create_scalar_function("thinkthen_decide", 2, volatile, decide)?;
     connection.create_scalar_function("thinkthen_choose", 2, volatile, choose)?;
     connection.create_scalar_function("thinkthen_score", 2, volatile, score)?;
@@ -1135,7 +1277,9 @@ pub extern "C" fn sqlite3_thinkthen_init(
     message: *mut *mut c_char,
     api: *mut ffi::sqlite3_api_routines,
 ) -> c_int {
-    DB.store(db as usize, Ordering::Relaxed);
+    // Hold the host's own API table for `init`, which reads its extended
+    // tail only after the floor check passes.
+    API_TABLE.store(api as *mut (), Ordering::Relaxed);
     // SAFETY: this is the contract of extension_init2; init only registers.
     unsafe { Connection::extension_init2(db, message, api, init) }
 }
@@ -1173,6 +1317,41 @@ mod mapping_tests {
             other => panic!("expected a SqliteFailure, got {other:?}"),
         }
     }
+    #[test]
+    fn the_api_tail_layout_holds() {
+        // The extended tail appends thirteen function pointers between the
+        // 3.34.1 bindings and `is_interrupted`; a bindings upgrade that
+        // moved anything fails here instead of reading a wrong offset in
+        // a host's table.
+        assert_eq!(
+            std::mem::offset_of!(ApiRoutines, is_interrupted),
+            std::mem::size_of::<ffi::sqlite3_api_routines>()
+                + 13 * std::mem::size_of::<*const ()>()
+        );
+        assert_eq!(
+            std::mem::size_of::<ApiRoutines>(),
+            std::mem::offset_of!(ApiRoutines, is_interrupted)
+                + std::mem::size_of::<*const ()>()
+        );
+    }
+
+    #[test]
+    fn a_panic_becomes_a_defect_not_an_unwind() {
+        let held = guarded("thinkthen_probe", || -> rusqlite::Result<()> {
+            panic!("the probe blew up")
+        })
+        .expect_err("a panic is a defect");
+        match held {
+            Error::SqliteFailure(inner, Some(message)) => {
+                assert_eq!(inner.code, ffi::Error::new(ffi::SQLITE_ERROR).code);
+                assert!(
+                    message.contains("thinkthen_probe panicked: the probe blew up"),
+                    "{message}"
+                );
+            }
+            other => panic!("expected a SqliteFailure, got {other:?}"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1182,17 +1361,28 @@ mod cancel_tests {
     use std::thread;
     use std::time::{Duration, Instant};
 
+    /// The flag the fake host interrupt check reads.
+    static HOST_INTERRUPTED: AtomicBool = AtomicBool::new(false);
+
+    /// A stand-in for the host's own `is_interrupted`, stored where the
+    /// loader stores the real one, so the test exercises `hear_interrupts`
+    /// itself rather than a copy of its shape.
+    unsafe extern "C" fn fake_is_interrupted(_: *mut ffi::sqlite3) -> c_int {
+        HOST_INTERRUPTED.load(AtomicOrdering::SeqCst) as c_int
+    }
+
     /// The fast-backend interrupt proof (lane B item 5, the poll-bug shape)
-    /// at the shape this surface wires: the poll reads SQLite's own
-    /// `sqlite3_is_interrupted` flag and sets the cancel token, and a fast
-    /// backend never idles the engine's wait, so the poll must run on the
-    /// busy arm. This test replicates `hear_interrupts` faithfully — a flag
-    /// set from another thread, a poll that turns it into a token cancel —
-    /// and asserts the call returns the cancelled kind within about a tick.
-    /// With the busy-arm tick missing, the flag would never be read (the
-    /// null wait never idles) and the 8M-record batch would run to
-    /// completion (~50 s), so the bound cannot be met by a batch that
-    /// finishes.
+    /// at the shape this surface wires: the poll calls `hear_interrupts`,
+    /// which reads the host's own `is_interrupted` and sets the cancel
+    /// token, and a fast backend never idles the engine's wait, so the
+    /// poll must run on the busy arm. The handle argument is a sentinel:
+    /// the fake host check ignores it, and production passes the calling
+    /// connection's own handle (proven end to end in
+    /// `tests/two_connections.py`). The call must return the cancelled
+    /// kind within about a tick. With the busy-arm tick missing, the flag
+    /// would never be read (the null wait never idles) and the 8M-record
+    /// batch would run to completion (~50 s), so the bound cannot be met
+    /// by a batch that finishes.
     ///
     /// End to end through SQLite cannot isolate this: on a fast backend
     /// SQLite's own step loop aborts between warm flushes (measured
@@ -1204,32 +1394,33 @@ mod cancel_tests {
             std::env::set_var("ENGINE_NULL", "1");
             std::env::set_var("ENGINE_WIDTH", "1");
         }
-        let engine = BlockingEngine::from_env();
+        HOST_INTERRUPTED.store(false, AtomicOrdering::SeqCst);
+        IS_INTERRUPTED.store(fake_is_interrupted as *mut (), AtomicOrdering::SeqCst);
+        let engine = StandinConnector
+            .connect(&EngineConfig::from_env())
+            .expect("the stand-in connector builds");
         let question = Question::from_json(r#"{"decide":"Is this a complaint?"}"#)
             .expect("the question parses");
         let texts: Vec<String> = (0..1_000_000).map(|i| format!("record {i}")).collect();
         let records: Vec<&str> =
             (0..8_000_000).map(|i| texts[i % texts.len()].as_str()).collect();
         let token = Cancel::new();
-        let interrupted = Arc::new(AtomicBool::new(false));
         let polls = Arc::new(AtomicUsize::new(0));
         let fired_at: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
-        let setter = {
-            let interrupted = Arc::clone(&interrupted);
-            thread::spawn(move || {
-                thread::sleep(Duration::from_millis(150));
-                interrupted.store(true, AtomicOrdering::SeqCst);
-            })
-        };
+        let setter = thread::spawn(|| {
+            thread::sleep(Duration::from_millis(150));
+            HOST_INTERRUPTED.store(true, AtomicOrdering::SeqCst);
+        });
+        let handle = 1_usize as *mut ffi::sqlite3;
         let mut poll = {
             let token = token.clone();
-            let interrupted = Arc::clone(&interrupted);
             let polls = Arc::clone(&polls);
             let fired_at = Arc::clone(&fired_at);
             move || {
                 polls.fetch_add(1, AtomicOrdering::SeqCst);
-                if interrupted.load(AtomicOrdering::SeqCst) {
-                    token.cancel();
+                let set_before = HOST_INTERRUPTED.load(AtomicOrdering::SeqCst);
+                hear_interrupts(handle, &token);
+                if set_before && token.is_cancelled() {
                     let mut held = fired_at.lock().expect("the fired stamp");
                     if held.is_none() {
                         *held = Some(Instant::now());

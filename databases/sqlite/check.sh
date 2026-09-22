@@ -25,6 +25,12 @@ ENGINE_NULL=1 .runtimes/sqlite3 :memory: < tests/slide.sql \
 echo "== sqlite surface: null suite"
 ENGINE_NULL=1 python3 tests/null_suite.py
 
+echo "== sqlite surface: the untrusted-schema refusals"
+python3 tests/schema_refusal.py
+
+echo "== sqlite surface: two connections, one closed"
+python3 tests/two_connections.py
+
 echo "== sqlite surface: fast-backend interrupt"
 python3 tests/cancel_fast.py
 
@@ -62,6 +68,8 @@ if curl -sf --max-time 1 http://127.0.0.1:8218/v1/stats >/dev/null 2>&1; then
     echo "== sqlite surface: wire suite against the stub on 8218"
     curl -s -X POST http://127.0.0.1:8218/v1/reset >/dev/null
     STUB_PORT=8218 python3 tests/wire_suite.py
+    echo "== sqlite surface: per-connection interrupt on the wire"
+    STUB_PORT=8218 python3 tests/two_connections.py wire
 else
     echo "== sqlite surface: wire suite skipped, no stub on 8218"
 fi

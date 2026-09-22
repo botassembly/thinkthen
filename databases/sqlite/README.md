@@ -75,6 +75,21 @@ Two named divergences and one gap, stated rather than implied:
 - **`SQLITE_DETERMINISTIC` stays off** on every function, per the ruled
   page, so no paid call is legal in an index expression or a CHECK
   constraint. Volatile is the ruled flag.
+- **Every function is direct-only.** The eight functions carry
+  `SQLITE_DIRECTONLY` and both table-valued modules set
+  `SQLITE_VTAB_DIRECTONLY`, so a view or trigger inside a database the
+  host has not vouched for cannot make a paid call or read a file —
+  whatever the host's `trusted_schema` setting says. Top-level SQL is
+  untouched. `tests/schema_refusal.py` proves the refusals in Python,
+  where `trusted_schema` defaults to on.
+- **The interrupt poll reads the calling connection.** The handle comes
+  from SQLite's own context (`sqlite3_context_db_handle`), never a
+  process-wide one, and the host's own `is_interrupted` is resolved from
+  its API table at load time. Two connections can open, close, and
+  interrupt independently, and a host that statically links SQLite is
+  read by its own copy, never a second one. `tests/two_connections.py`
+  proves it; its `wire` mode against the 300 ms stub is the
+  discriminating run.
 - **No per-call deadline option yet.** The host's own
   `sqlite3_interrupt` or statement discipline is the stop; conformance
   case 27 is skipped for that reason. A per-call budget beside the

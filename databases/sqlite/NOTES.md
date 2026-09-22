@@ -279,3 +279,86 @@ three lines, so the flag cannot come back unnoticed.
 
 Cleanup: this surface needs no containers; `docker ps -a` shows no
 `laneb-*` left. No key, no paid call, nothing published.
+
+
+## Entry 21: the review fixes — direct-only, per-connection handles, guards (2026-09-22)
+
+Tried: the SQLite findings of the branch review (group 2 and group 3), each
+with a test that would have failed before it.
+
+**Direct-only.** Every function and both table-valued modules are now
+`SQLITE_DIRECTONLY` (the scalar and aggregate registrations carry the flag;
+the two `connect` bodies call `VTabConfig::DirectOnly`). A view or trigger
+inside an attached database can no longer make a paid call or read a file,
+whatever the host's `trusted_schema` says — Python's default is on, and the
+new `tests/schema_refusal.py` runs there. Before, against the previous
+build: `FAIL 2 a view in an attached file refuses`, `FAIL 3 a trigger in an
+attached file refuses`, `FAIL 4 a view over the recognize module refuses`.
+After: all five checks green, and the control (`top-level SQL still
+answers`) proves the rule did not close the ordinary door.
+
+**Per-connection handle.** The single process-wide `sqlite3*` is gone. The
+poll reads the calling connection's own handle from SQLite's context
+(`Context::get_connection`, the host's `context_db_handle`), so a closed
+connection can never be read and two connections cannot confuse each other.
+The host's own `is_interrupted` is resolved at load time from its
+`sqlite3_api_routines` table: the crate declares the table's tail past the
+3.34.1 bindings (`ApiRoutines`: the 13 function-pointer fields between
+`txn_state` and `is_interrupted`, in the host header's order, then the
+field itself), reads it only after the 3.41 floor check passes, and holds
+the function pointer in a static. The direct `#[link(name = "sqlite3")]`
+declaration is deleted, so a host that statically links SQLite — the stock
+CLI does — is read by its own copy, never a second one. A layout unit test
+pins the offsets.
+
+`tests/two_connections.py` proves the behaviour in two modes. The null mode
+(two connections, the second closed, the first interrupted) passes on both
+builds because SQLite's own step loop also hears a fast-backend interrupt;
+the wire mode (`STUB_PORT=8218 ... wire`) is the discriminator — a 300 ms
+backend, so only the poll can carry the stop. Measured against the previous
+build: `FAIL the poll carries the stop, not SQLite's step loop` and
+`FAIL the stop lands within about a tick, past 0.5s (2.42s)`; the new build
+passes in 0.91 s with the `thinkthen cancelled` kind.
+
+**Guards.** Every SQL-function body and the vtab callbacks run behind
+`guarded`, which turns a panic into the surface's defect error (with the
+panic's text) instead of unwinding across SQLite's C frames. A unit test
+proves the shape: `guarded("thinkthen_probe", || panic!("the probe blew
+up"))` returns `thinkthen defect: thinkthen_probe panicked: the probe blew
+up`.
+
+**Phase 1 adopted.** `engine()` is now `Arc<dyn Engine>` built through
+`StandinConnector.connect(&EngineConfig::from_env())` — the one line the
+merge repoints at the real engine's connector. No deadline door exists on
+this surface, so the named gap ("No per-call deadline option yet") stands;
+the checked conversion is not reachable from here.
+
+**Case 74.** The stand-in's synthesized partial-failure fixture is armed
+only under the test-only `ENGINE_SYNTHETIC_PARTIAL` opt-in now, so the
+conformance driver sets it (`tests/conformance_driver.py`); without it case
+74 diverges, as it did on every build after phase 1 landed.
+
+Saw (full `./check.sh`, stub up on 8218, exit 0):
+
+```
+== sqlite surface: the untrusted-schema refusals
+ok  1 this host trusts schema by default
+ok  2 a view in an attached file refuses
+ok  3 a trigger in an attached file refuses
+ok  4 a view over the recognize module refuses
+ok  5 top-level SQL still answers
+== sqlite surface: two connections, one closed
+the per-connection interrupt holds (null)
+== sqlite surface: per-connection interrupt on the wire
+the per-connection interrupt holds (wire)
+== sqlite surface: conformance slice, offline
+ok       74-annotate-preserves-good-answers: fields assembled
+conformance slice done
+```
+
+Means: the group-2 and group-3 SQLite findings are closed with
+discriminating tests, and the engine seam now runs through the contract's
+connector.
+
+Problem and way round it: none open. `docker ps -a` shows no container from
+this surface (it uses none); no key, no paid call, nothing published.
