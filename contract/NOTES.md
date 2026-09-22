@@ -78,3 +78,31 @@ The two new tests: a host's deadline is converted checked (NaN, negative,
 infinity, 1e300, the sentinel, zero, and the largest accepted budget, in
 both seconds and milliseconds), and the Options helper arms a call without
 panicking on a hostile value.
+
+## 2026-09-22 — the core judges the set parser, and the boundary helpers
+
+- **The set parser hands every text to `thinkthen_core::QuestionSet::parse`
+  first**, so the libraries accept exactly what the command line accepts
+  and refuse with the core's own words: a version other than 1, an unknown
+  top-level key, a name outside the grammar, an empty set, and a duplicate
+  name all refuse. The rebuild below the judge keeps file order
+  (`serde_json`'s `preserve_order`), so annotate's columns carry the order
+  the file names, and the object-form `kinds` in a recognize spec does too.
+- Measured while aligning: `on-collision.json` is ACCEPTED by the core —
+  `thinkthen_core::QuestionSet::parse` returns two questions, `["a", "b"]`,
+  because two members sharing one `on` pointer are the grouping form. The
+  fixture README's earlier "refuse" row was wrong and now records this.
+- **`catch_panic` and `panic_text`** are the contract's own boundary guard
+  and payload formatter, so the surfaces' seven copies collapse into one
+  (the C door still carries its own until its lane adopts these).
+
+Commands and output:
+
+```
+$ cargo test
+lib: 20 passed; parser_fixtures: 8 passed; doc tests: 1 passed
+
+$ git checkout 49c3b78^ -- src/lib.rs Cargo.toml && cargo test --test parser_fixtures
+7 failed: every refusal (bad version, missing version, duplicate name,
+unknown top key, empty set, empty name) and file_order_is_kept
+```

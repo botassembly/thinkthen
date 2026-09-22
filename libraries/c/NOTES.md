@@ -627,3 +627,13 @@ frees the engine; if a new engine takes that address and is used on that
 thread, the stale entry could be read as the new engine's last failure.
 Bounded to one message string per thread, cleared on that thread's own
 free and new, and stated here rather than hidden.
+
+**2026-09-22 (contract lane).** The fixture door moved from
+`ENGINE_SYNTHETIC_PARTIAL` to the stand-in's `synthetic-partial` cargo
+feature; this gate forwards it (`synthetic-partial =
+["thinkthen-standin/synthetic-partial"]`), builds `--features
+synthetic-partial` for the door shape test and the conformance slice, and
+rebuilds the production shape after. The inline annotate dialect, the
+`functions.c` example, and `examples.json` carry `"version": 1` now, and
+annotate columns come back in file order, so the example's expected line
+follows.

@@ -177,3 +177,63 @@ notes: `grep -rn "order 4471: charged twice"` over the worktree finds it
 in `conformance/conformance.json`, this crate's gated fixture and its
 test, six surface test files, and NOTES files — no surface's `src/` and no
 database's `src/`.
+
+## 2026-09-22 — the second review wave: state per settings value, a compile-time fixture door, retry classification, and the settled names
+
+Four changes, each with the test that failed before it (commands below):
+
+- **One state per settings value.** `STATES` is a fixed table of atomic
+  pointers keyed by pid, address, width, and timeout: a lookup is one
+  atomic load and an `Arc` clone per slot, a miss publishes through a
+  compare-and-swap, a fork rebuilds into empty or stale slots, and a
+  replacement retires rather than frees, for the reason the single slot
+  always gave. Before, `a_narrow_engine_keeps_its_width_beside_a_wide_one`
+  measured a peak of 3 concurrent calls on a width-1 engine while a
+  second, wider engine ran beside it, and `the_file_descriptors_stay_flat`
+  saw 10 → 14 descriptors over forty calls. After, peak 1 and flat.
+- **The fixture door is compile time.** The synthesized annotate failure
+  sits behind the `synthetic-partial` cargo feature, off by default;
+  `ENGINE_SYNTHETIC_PARTIAL` is read by nothing. Before, a temporary
+  host-level test with the variable set failed (`failed_questions` was 1,
+  not 0). After, a default build answers the record for real, and the
+  in-lib test `the_env_variable_arms_nothing` pins it.
+- **A refused connection fails at once.** `post` classifies a send
+  failure before the retry loop; only a genuinely retryable failure earns
+  the backoff. Before, `a_refused_send_fails_at_once` measured 7.00 s
+  (1 s + 2 s + 4 s of backoff). After, under 0.9 s, non-retryable, and
+  the counter stays put. The retry-wait tests now generate their retry
+  with a local 503, a genuinely retryable answer.
+- **The settled environment names.** `THINKTHEN_NULL`,
+  `THINKTHEN_BASE_URL`, `THINKTHEN_TIMEOUT_SECS`, `THINKTHEN_MAX_RETRIES`,
+  and `THINKTHEN_WIDTH` win; the older `ENGINE_*` names keep working,
+  deprecated. Before, `the_prefixed_names_win_and_the_old_ones_still_work`
+  measured width 1 with `THINKTHEN_WIDTH=4` set. After, 4, and the
+  deprecated name alone still sets 2.
+
+The contract's parser wave changed annotate's columns to file order, so
+`every_verb_answers_on_null` now expects `spam` before `kind`. The C
+gate's `ENGINE_SYNTHETIC_PARTIAL=1` exports are gone: `libraries/c/check.sh`
+builds the door with `--features synthetic-partial` for the door shape
+test and case 74, then rebuilds the production shape.
+
+Commands and output:
+
+```
+$ cargo test
+lib: 8 passed; backoff: 2 passed; billing: 1 passed; connector: 1 passed;
+prefixed_env: 1 passed; recognize_replay: 7 passed; refused: 1 passed;
+settings_state: 2 passed; wire: 3 passed (skipped offline); doc tests: 1
+
+$ cargo test --features synthetic-partial
+lib: 8 passed (the marker test runs, the env test is out); the rest as above
+
+$ git checkout c81679b^ -- src/lib.rs && cargo test --test settings_state
+a_narrow_engine_keeps_its_width_beside_a_wide_one: left 3, right 1
+the_file_descriptors_stay_flat: descriptors went 10 to 14
+
+$ git checkout a06b70d^ -- src/lib.rs && cargo test --test refused
+no backoff waits for a refusal, wall was 7.00242021s
+
+$ git checkout a06b70d^ -- src/lib.rs && cargo test --test prefixed_env
+THINKTHEN_WIDTH=4 beat ENGINE_WIDTH=1: left 1, right 4
+```
