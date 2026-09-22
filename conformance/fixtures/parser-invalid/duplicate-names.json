@@ -1,0 +1,3 @@
+{"version": 1, "questions": {
+  "spam": {"decide": "Spam?"},
+  "spam": {"decide": "Not spam?"}}}
