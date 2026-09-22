@@ -271,3 +271,63 @@ $ ./check.sh
 offline: 56 pass, 0 fail, 6 skipped; wire suites: 5 pass; types green
 typescript surface: all checks green
 ```
+
+## 2026-09-22 — wave 3: the second review's TypeScript items
+
+**The deadline rule (item 10).** `deadlineMs: null` (and leaving the key
+out) is now this host's one spelling of no deadline, and every negative —
+including the contract's `-1` sentinel — rejects with the usage kind.
+Before: `Number(null)` read as `0`, so an explicit `null` was a *spent*
+deadline, and `-1` silently meant "no deadline", which a computed
+`end - Date.now()` can land on by chance. The wrapper refuses the negative
+before the door, and the door refuses it too, so a native caller cannot
+bypass the rule. Pre-fix, two tests fail:
+
+```
+not ok 2 - a hostile budget rejects with the usage kind      (deadlineMs -1)
+not ok 3 - null and an absent budget both mean no deadline   (null read as spent)
+```
+
+**Shape parity with Python (item 6).** Two shapes aligned, ten recorded
+with reasons in `DIVERGENCES.md` (new): the audit trail's key is `answer`
+(was `value`; the contract's own field name and every other surface's),
+and `annotate` rows are the set's fields only (the `record` key is gone;
+the input record is `records[index]`, the shape Python, Ruby, C, and the
+conformance rows use). The alignment let three dead checks live: the
+conformance runner's annotate cases were failing on a set without the
+`version` the core's parser requires and were being *recorded as
+divergences* rather than run — with the version carried (as the Python
+runner does) cases 15, 74, 82, 83, and 84 pass, and the score cases now
+assert `details.nearest` against the case's `nearest_level` instead of
+noting it as unreachable. Pre-fix, the example and details tests fail:
+
+```
+not ok 5 - every function example answers as the file says  (the record key)
+not ok 15 - details: probability, answer, model, digest, sends  (value vs answer)
+```
+
+**The shared panic guard (item 7).** `guarded` now calls the contract's
+`catch_panic("the Node door", ...)` — one implementation for every
+surface instead of the seventh copy — and the message names the boundary
+and the panic's own words. The zero-listener proof is unchanged and
+green: 2,000 calls on one shared `AbortSignal` leave zero listeners.
+
+**The gate's fixture, compile-time now.** The stand-in's synthesized
+partial failure is armed by the `synthetic-partial` cargo feature
+(phase 1), so the old `ENGINE_SYNTHETIC_PARTIAL` opt-in in
+`tests/verbs.test.mjs` was dead. `addon/Cargo.toml` declares the feature,
+`npm run build:synthetic` builds the gate's copy with it (napi's
+`--features`), `check.sh` uses that script, and the test no longer sets
+the dead variable. `npm run build`, the packaging path, never carries the
+fixture.
+
+**Commands and output (final gate).**
+
+```
+$ ./check.sh            # exit 0
+offline: 62 tests, 56 pass, 0 fail, 6 skipped (wire, dead address)
+addon unit tests: 3 passed (the panic test now asserts the contract's
+boundary message)
+dead address: 1 pass; types: tsc --noEmit clean
+typescript surface: all checks green
+```
