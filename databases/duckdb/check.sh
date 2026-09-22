@@ -19,6 +19,13 @@ tools/null_suite.sh
 echo "== duckdb surface: fast-backend cancel, the poll-bug shape"
 tools/cancel_fast.sh
 
+echo "== duckdb surface: the host's SIGINT coexistence, the job-2 shape"
+# Punch-list item 5's proof: a host handler installed after LOAD fires and
+# the extension keeps answering; a handler installed before LOAD is chained
+# to and a running query stops. Runs through the build's own venv Python
+# (duckdb 1.5.5, the CLI's version) on the null backend.
+./configure/venv/bin/python tools/host_signal.py
+
 echo "== duckdb surface: the function examples"
 python3 tools/examples.py
 

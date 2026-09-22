@@ -272,3 +272,47 @@ Until one lands, the first-row check remains: zero requests wasted, reported one
 - **The deadline gap is named on the page.** The README's ruled-shape section now says there is no per-call deadline option on this surface yet, the host's own statement timeout is the stop, and conformance case 27 is skipped for that reason — the settled shape is a per-call budget beside the cancel token, recorded as a gap rather than implied.
 
 The full check is green with no stub: build, the error-mapping test, the null suite (including the two poison proofs), the fast-backend cancel, the function examples, the conformance slice (74 cases), the slide, and the recognize acceptance with its pinned divergences.
+
+## 2026-09-22 — the host-SIGINT proof and the authority section (punch-list item 5)
+
+Item 5: prove the LOAD-time signal handler coexists with its host, and
+name the extension's authority.
+
+**The proof.** `tools/host_signal.py`, run by `check.sh` through the
+build's own venv Python (3.12.3, duckdb 1.5.5 — the CLI's exact
+version), two child processes so one arm's signal cannot color the
+other's evidence:
+
+```
+host: Python 3.12.3 with duckdb 1.5.5; the extension is built for v1.5.5
+-- host SIGINT, the after arm
+ok       the host's handler took SIGINT after LOAD and the extension still answered true
+-- host SIGINT, the chain arm
+         the query ended 1.00s after the signal with: Invalid Input Error: thinkthen cancelled: the wait was cancelled
+ok       a signal stopped the running query and reached the host's chained handler
+note     after the cancelled statement the next call answered: Invalid Input Error: thinkthen cancelled: the wait was cancelled
+```
+
+The `after` arm is the job-2 shape the punch list names: the host
+installs its own SIGINT handler after LOAD, the handler fires, the
+process survives, and the extension keeps answering. The `chain` arm
+(the default Python shape, and the CLI's) proves the extension's handler
+stops a 3-million-record query within one tick and reaches the host's
+handler through the chain.
+
+**Found, not fixed: the token is one shot per process.** The `note` line
+is a real defect, measured and deliberately not asserted: once the
+extension's own handler cancels the process-wide token, every later call
+in that process answers `cancelled`. The CLI exits before it matters; a
+long-lived host (a kernel that catches the interrupt, a service embedding
+the extension) is poisoned after one Ctrl-C. A fix means a re-armable
+current token — surface-local, but with a real choice about when a fresh
+statement begins, and a scalar function gets no statement hook from
+DuckDB, so the fix shape belongs to the architect. The reproduction is
+this `note` line; the finding is in the punch-list report.
+
+**README.** A new "Authority: who may do what" section names the six
+items, including the one-shot token.
+
+Cleanup: no containers; `docker ps -a` shows no `laneb-*` left. No key,
+no paid call, nothing published.

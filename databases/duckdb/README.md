@@ -68,12 +68,54 @@ the values await a backend that distinguishes options.
   connections.
 - Every call carries the process-wide cancel token, and the extension
   takes SIGINT at LOAD and chains to the CLI's own handler, so a Ctrl-C
-  stops between requests. The Python-process proof is on the planning
-  page; nothing new was claimed here.
+  stops between requests. The punch-list proof is `tools/host_signal.py`,
+  run by `check.sh`: a host handler installed after LOAD fires and the
+  extension keeps answering, and a handler installed before LOAD is
+  chained to while a running query stops. The token is one shot per
+  process — the proof's `note` line and the punch-list report record the
+  long-lived-host finding.
 - There is no per-call deadline option on this surface yet: the host's
   own statement timeout is the stop, and conformance case 27 is skipped
   for that reason. A per-call budget beside the cancel token is the
   settled shape and a recorded gap here, named rather than implied.
+
+## Authority: who may do what
+
+The boundary the architect drew, per item: this extension converts
+arguments, coordinates the host, calls the engine, and presents results.
+Everything else — parsing, scheduling, retries, cache, counters,
+recognition, relations — is the engine's.
+
+- **Question-file access.** The only file a call reads is the one its
+  question argument names with the command's `'@name'` spelling, resolved
+  against the process working directory. Nothing else is read: no
+  configuration file, no directory listing, no table.
+- **Backend selection.** The engine builds lazily on the first call from
+  the process environment (`THINKTHEN_BASE_URL`, or the stand-in's
+  `ENGINE_BASE_URL`; `ENGINE_NULL=1` for the in-process backend). SQL
+  cannot name a backend, and LOAD registers the functions and the SIGINT
+  handler and touches no wire.
+- **Credential source.** `THINKTHEN_API_KEY` in the process environment,
+  read by the engine at send time and sent only to the named address. The
+  stand-in reads no key and sends none (its own record); no credential is
+  ever read from a fixture, a question file, or SQL, and none is logged.
+- **Query execution.** DuckDB's executor runs the SQL and calls the
+  scalar functions inside its own execution, on the threads it uses; the
+  stable C API offers no parallel-safety marking for a scalar function.
+  The aggregate and the relate query run through the engine's bulk doors
+  at the width, which is the number of requests in flight. The extension
+  owns no thread between calls.
+- **Connection lifetime.** The engine and its pool live as long as the
+  host process; the engine's process-ID check repairs a fork on the next
+  call, idle connections are pruned by the engine, and the pool is sized
+  to the width gate.
+- **Cancellation channel.** SIGINT, taken at LOAD and chained to the
+  handler that was there. The handler cancels the process-wide token that
+  every call carries, so a stop lands between requests. A host that
+  installs its own handler after LOAD displaces the extension's and keeps
+  its own (proven by `tools/host_signal.py`); the token is one shot per
+  process, which the CLI never notices and a long-lived host should treat
+  as a restart signal.
 
 ## Build and run
 
