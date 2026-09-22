@@ -2,7 +2,9 @@
 
 Status: Open
 
-TypeSafe's own documentation ("Advanced: structure", docs.typesafe.ai) says the four question fields — `instructions`, Choice `criteria` values, Score `criteria` entries, and Noul `criteria.true`/`criteria.false` — all accept `string`, `object`, `array`, or `null`. System One models are trained on that structure. The tool sends strings, and the question file refuses anything else, so three of the four structure surfaces go unused.
+TypeSafe's own documentation ("Advanced: structure", https://docs.typesafe.ai/primitives/advanced) says the four question fields — `instructions`, Choice `criteria` values, Score `criteria` entries, and Noul `criteria.true`/`criteria.false` — all accept `string`, `object`, `array`, or `null`. System One models are trained on that structure. The tool sends strings, and the question file refuses anything else, so three of the four structure surfaces go unused.
+
+**Verified against the live API on 2026-09-21** through `sdlc/scripts/live` (probe: `experiments/218-thinkthen-release-qa/probe-typesafe-structure.sh`, ledger charge 4,000 tokens, actual use 1,116 input and 149 output over two requests). All five shapes from the documentation page were accepted and answered, and answered well: the structured rubric sent a phishing message to `account` rather than `billing`; the credential question with structured `true`/`false` definitions answered 0.99 on a message asking for a password; the taxonomy question with subtrees as option values answered `Sporting Goods` with both department probabilities returned. The capability is real on the wire today, not documentation only.
 
 ## What was verified, 2026-09-21 at main `db19349`
 
