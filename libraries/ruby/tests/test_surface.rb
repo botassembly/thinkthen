@@ -233,6 +233,55 @@ class TestSurface < Minitest::Test
     assert_equal "Maria Chen", text[name.start...name.end]
   end
 
+  # Punch-list item 3, repeated names and endpoints: the same place named
+  # twice gives two entities with two ids, and a relation's endpoints are
+  # those ids.
+  def test_recognize_repeated_names_carry_distinct_ids
+    text = "Chicago sent a delegation in March, and Chicago hosted the reply in June."
+    found = ThinkThen.recognize(text, kinds: %w[place])
+    assert_equal 2, found.entities.length
+    first, second = found.entities
+    assert_equal ["Chicago", "Chicago"], [first.text, second.text]
+    refute_equal first.id, second.id
+    assert_equal "Chicago", text[first.start...first.end]
+    assert_equal "Chicago", text[second.start...second.end]
+  end
+
+  # Punch-list item 3, nested mutation isolation: everything the caller is
+  # handed is the host's own copy. Mutating it at any depth must not change
+  # the engine's next answer.
+  def test_result_mutation_isolates_from_the_engine
+    text = "Chicago sent a delegation in March, and Chicago hosted the reply in June."
+    first = ThinkThen.recognize(text, kinds: %w[place])
+    assert_equal 2, first.entities.length
+    first.entities.first.text.replace("Oslo")
+    first.entities.first.kind.replace("organization")
+    first.entities.first.start = 999
+    first.entities.clear
+    first.relations << :junk
+
+    second = ThinkThen.recognize(text, kinds: %w[place])
+    assert_equal 2, second.entities.length
+    assert_equal "Chicago", second.entities.first.text
+    assert_equal "place", second.entities.first.kind
+    assert_equal 0, second.entities.first.start
+    assert_equal 7, second.entities.first.end
+    assert_equal [], second.relations
+  end
+
+  # Punch-list item 3, result lifetime: the values stay readable after the
+  # call returns, through a GC pass and a later call.
+  def test_result_lifetime_across_gc_and_later_calls
+    text = "Le café 😀 Maria Chen arrived."
+    found = ThinkThen.recognize(text, kinds: %w[person])
+    GC.start
+    ThinkThen.usage
+    name = found.entities.first
+    assert_equal "Maria Chen", name.text
+    assert_equal "person", name.kind
+    assert_equal "Maria Chen", text[name.start...name.end]
+  end
+
   # The deck's relate call, as drawn, against the four recorded alerts.
   def test_relate_as_drawn
     alerts = ["Checkout returns 500 at the payment step.",

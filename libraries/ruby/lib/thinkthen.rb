@@ -204,7 +204,7 @@ module ThinkThen
     def recognize(text, kinds: nil, relations: nil, threshold: nil,
                   relation_threshold: nil, cancel: nil, deadline: nil)
       spec = recognize_spec(kinds, relations, threshold, relation_threshold)
-      answer = JSON.parse(@engine.recognize_json(JSON.generate(spec), text.to_s, cancel, deadline))
+      answer = @engine.recognize(JSON.generate(spec), text.to_s, cancel, deadline)
       Recognized.new(
         answer.fetch("entities").map do |one|
           Entity.new(one["id"], one["text"], one["kind"], one["start"], one["end"],
@@ -230,8 +230,8 @@ module ThinkThen
                kind_field: nil, cancel: nil, deadline: nil)
       list = records.to_a
       spec = relate_spec(relations, either, threshold, kind_field)
-      answer = JSON.parse(@engine.relate_json(JSON.generate(spec), list.map(&:to_s), cancel, deadline))
-      answer.fetch("edges").map do |one|
+      answer = @engine.relate(JSON.generate(spec), list.map(&:to_s), cancel, deadline)
+      answer.map do |one|
         Edge.new(one["name"], one["source"], one["target"], one["probability"],
                  one["source_kind"], one["target_kind"])
       end

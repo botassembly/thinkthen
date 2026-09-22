@@ -26,7 +26,7 @@ use magnus::{
     IntoValue, RArray, RClass, RHash, TryConvert, TypedData, Value,
 };
 use thinkthen_contract::{
-    edges_json, relate_checked, Annotated, Answer, Cancel, Details, Edge, Engine as ContractEngine,
+    relate_checked, Annotated, Answer, Cancel, Details, Edge, Engine as ContractEngine,
     Error as ContractError, ErrorKind, Found, Judgment, Options, Question, QuestionSet, Ranked,
     Recognize, Recognized, Relate, Scored, Usage,
 };
@@ -542,15 +542,15 @@ impl EngineValue {
 
 
     /// `recognize`: the spec is the contract's one grammar; the answer is
-    /// one JSON string and the Ruby side parses it into its own records,
-    /// the pattern the C door uses for a result of no fixed size.
-    fn recognize_json(
+    /// typed Ruby records built here from the engine's own structures, so
+    /// no serialized answer JSON is parsed on the Ruby side.
+    fn recognize(
         &self,
         spec: String,
         text: String,
         cancel: Value,
         deadline: Value,
-    ) -> Result<String, Error> {
+    ) -> Result<Value, Error> {
         let ask = Recognize::from_json(&spec).map_err(map_error)?;
         let job = RecognizeJob {
             engine: &self.engine,
@@ -561,18 +561,19 @@ impl EngineValue {
         };
         let answer: Crossing<Recognized> = without_gvl(job, recognize_body);
         let answer = answer.map_err(map_error)?;
-        Ok(answer.to_json())
+        recognized_value(&answer)
     }
 
     /// `relate`: every record crosses at once, the 255-record limit refuses
-    /// with the usage kind before any question is asked.
-    fn relate_json(
+    /// with the usage kind before any question is asked. The edges come
+    /// back as typed Ruby records, not a serialized answer to re-parse.
+    fn relate(
         &self,
         spec: String,
         records: Vec<String>,
         cancel: Value,
         deadline: Value,
-    ) -> Result<String, Error> {
+    ) -> Result<Value, Error> {
         let ask = Relate::from_json(&spec).map_err(map_error)?;
         let job = RelateJob {
             engine: &self.engine,
@@ -583,7 +584,7 @@ impl EngineValue {
         };
         let answer: Crossing<Vec<Edge>> = without_gvl(job, relate_body);
         let answer = answer.map_err(map_error)?;
-        Ok(edges_json(&answer))
+        edges_value(&answer)
     }
 
     fn decide_many(
@@ -838,6 +839,62 @@ fn details_hash(ruby: &magnus::Ruby, details: &Details) -> Result<RHash, Error> 
     Ok(hash)
 }
 
+/// The recognize answer as typed Ruby records: a hash with an `entities`
+/// array and a `relations` array, each field converted once from the
+/// engine's own structures. No serialized answer JSON is parsed in Ruby.
+fn recognized_value(found: &Recognized) -> Result<Value, Error> {
+    let ruby = magnus::Ruby::get().expect("the lock is held here");
+    let entities = RArray::with_capacity(found.entities.len());
+    for entity in &found.entities {
+        let one = RHash::new();
+        one.aset("id", entity.id as i64).map_err(|error| error)?;
+        one.aset("text", entity.text.clone()).map_err(|error| error)?;
+        one.aset("kind", entity.kind.clone()).map_err(|error| error)?;
+        one.aset("start", entity.start as i64).map_err(|error| error)?;
+        one.aset("end", entity.end as i64).map_err(|error| error)?;
+        one.aset("strength", entity.strength).map_err(|error| error)?;
+        entities.push(one).map_err(|error| error)?;
+    }
+    let relations = RArray::with_capacity(found.relations.len());
+    for relation in &found.relations {
+        let one = RHash::new();
+        one.aset("name", relation.name.clone()).map_err(|error| error)?;
+        one.aset("source", relation.source as i64).map_err(|error| error)?;
+        one.aset("target", relation.target as i64).map_err(|error| error)?;
+        one.aset("probability", relation.probability).map_err(|error| error)?;
+        relations.push(one).map_err(|error| error)?;
+    }
+    let answer = RHash::new();
+    answer.aset("entities", entities).map_err(|error| error)?;
+    answer.aset("relations", relations).map_err(|error| error)?;
+    let _ = ruby;
+    Ok(answer.as_value())
+}
+
+/// The relate answer as typed Ruby records: an array of edge hashes with
+/// the ruled field names; the kind fields appear only when a rule named
+/// one, matching the JSON door's shape.
+fn edges_value(edges: &[Edge]) -> Result<Value, Error> {
+    let ruby = magnus::Ruby::get().expect("the lock is held here");
+    let list = RArray::with_capacity(edges.len());
+    for edge in edges {
+        let one = RHash::new();
+        one.aset("name", edge.name.clone()).map_err(|error| error)?;
+        one.aset("source", edge.source as i64).map_err(|error| error)?;
+        one.aset("target", edge.target as i64).map_err(|error| error)?;
+        one.aset("probability", edge.probability).map_err(|error| error)?;
+        if let Some(kind) = &edge.source_kind {
+            one.aset("source_kind", kind.clone()).map_err(|error| error)?;
+        }
+        if let Some(kind) = &edge.target_kind {
+            one.aset("target_kind", kind.clone()).map_err(|error| error)?;
+        }
+        list.push(one).map_err(|error| error)?;
+    }
+    let _ = ruby;
+    Ok(list.as_value())
+}
+
 /// Parse the file's grammar into a question value.
 fn parse_question(json: String) -> Result<QuestionValue, Error> {
     match Question::from_json(&json) {
@@ -906,8 +963,8 @@ fn init() -> Result<(), Error> {
     engine.define_method("details", method!(EngineValue::details, 4))?;
     engine.define_method("find", method!(EngineValue::find, 4))?;
     engine.define_method("annotate", method!(EngineValue::annotate, 5))?;
-    engine.define_method("recognize_json", method!(EngineValue::recognize_json, 4))?;
-    engine.define_method("relate_json", method!(EngineValue::relate_json, 4))?;
+    engine.define_method("recognize", method!(EngineValue::recognize, 4))?;
+    engine.define_method("relate", method!(EngineValue::relate, 4))?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;
 
     module.define_module_function("_parse_question", function!(parse_question, 1))?;
