@@ -1,6 +1,6 @@
 # ADR 0039: Carry structured question descriptions
 
-- Status: Accepted and implemented by verified ticket 0069; landing pending
+- Status: Accepted and implemented by landed ticket 0069
 - Date: 2026-09-22
 
 This amends ADR 0013's text-only slots and the structured-description exclusion inherited from ADR 0010. Ian authorized the widening and settled its remaining public choices at `90a544f`. He can overturn the decisions below. Ticket 0069 supplies the implementation and proof; no library API is frozen here.

@@ -1,6 +1,6 @@
 # 0069: Structured question descriptions and state
 
-Status: Verified on the ticket branch after independent acceptance and the final sequential local ladder. Landing and pushed-main ancestry remain pending. GitHub Actions stays manually disabled under Ian's local-gate ruling; no hosted success is claimed.
+Status: Landed on main as `e261e4e` after independent acceptance and the final sequential local ladder. Main was pushed and ancestry verified. GitHub Actions stays manually disabled under Ian's local-gate ruling; no hosted success is claimed.
 
 ## Result
 

@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0069: Carry structured question descriptions
 
-Status: verified; landing pending
+Status: landed
 
 ## Outcome and authority
 
