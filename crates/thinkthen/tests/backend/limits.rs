@@ -59,7 +59,13 @@ fn a_record_over_the_limit_stops_the_run_and_sends_nothing_for_itself() {
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "true\n");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        concat!(
+            r#"{"input":{"id":"R-1","body":"The payout failed again."},"value":true}"#,
+            "\n",
+        )
+    );
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
@@ -92,11 +98,9 @@ fn a_record_of_exactly_the_limit_is_judged() {
             decide(listener.base(), &["--lines"], &input).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{ending:?}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
-            "true\n",
-            "{ending:?}"
-        );
+        let shown = String::from_utf8_lossy(&output.stdout);
+        assert!(shown.starts_with(r#"{"input":"xxx"#), "{ending:?}");
+        assert!(shown.ends_with("\",\"value\":true}\n"), "{ending:?}");
         assert_eq!(listener.requests().len(), 1, "{ending:?}");
     }
 }

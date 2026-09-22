@@ -17,7 +17,9 @@ One internal result model feeds both views. The view never changes the request o
 | `annotate` | one JSON object per record |
 | `find` | the selected line or JSONL record as it arrived; no output when `--none` wins or ties |
 
-Every value is compact and sits on one line, so one answer is also one record for `jq`, `grep`, and `wc -l`.
+The table describes one-document output. In record mode, default `decide`, `choose`, `tag`, and `score` rows are `{"input":RECORD,"value":ANSWER}`. The record is parsed: a line is a JSON string, JSONL keeps its value, and CSV or TSV becomes an object of string cells. `choose --raw` keeps its plain-text record view. `filter`, `rank`, and `find` keep returning records.
+
+Every result is compact and sits on one line, so one answer is also one record for `jq`, `grep`, and `wc -l`.
 
 ## `--details`
 
@@ -97,7 +99,13 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 
 ## Record rows
 
-In record mode the object also carries `input`, the original record. `input` holds the whole record, including parts that were never sent. On `filter` and `rank`, `--details` prints these objects for the same records in the same order that the bare values would have taken. `filter --details` still prints only kept records.
+The default record row for `decide`, `choose`, `tag`, and `score` keeps the parsed record beside its bare answer. Key order is `input`, then `value`.
+
+```json
+{"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":true}
+```
+
+Under `--details`, the full result object also carries `input`, the original record. `input` holds the whole record, including parts that were never sent. On `filter` and `rank`, `--details` prints these objects for the same records in the same order that the default view would have taken. `filter --details` still prints only kept records.
 
 ```json
 {"schema":"thinkthen.result/1","value":true,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this report a payment failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"replayed":false,"requests":["6b1f...c4"]}}

@@ -127,6 +127,12 @@ impl Record {
         matches!(&self.0, Held::Json(Json::Object(members)) if members.iter().any(|(held, _)| held == name))
     }
 
+    /// True when this record is a JSON object that annotations can enrich.
+    #[must_use]
+    pub(crate) const fn is_object(&self) -> bool {
+        matches!(&self.0, Held::Json(Json::Object(_)))
+    }
+
     /// Add named answers to an object record, or return the answers alone.
     #[must_use]
     pub(crate) fn annotated(

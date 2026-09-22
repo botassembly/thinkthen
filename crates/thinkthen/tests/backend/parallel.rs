@@ -81,6 +81,16 @@ fn printed(output: &Output) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
+fn wrapped(count: usize) -> String {
+    (1..=count)
+        .map(|place| {
+            format!(
+                "{{\"input\":{{\"id\":\"R-{place}\",\"body\":\"record {place}\"}},\"value\":false}}\n"
+            )
+        })
+        .collect()
+}
+
 /// What the run said on standard error.
 fn said(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
@@ -228,7 +238,7 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(printed(&output), "false\nfalse\n");
+    assert_eq!(printed(&output), wrapped(2));
     let message = said(&output);
     assert!(message.contains("status 500"), "{message}");
     assert!(
@@ -250,7 +260,7 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "false\nfalse\nfalse\nfalse\n");
+    assert_eq!(printed(&output), wrapped(4));
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(entries(&cache), 4);
 }
@@ -284,7 +294,7 @@ fn jobs_acts_in_record_mode_alone_and_inside_its_range() {
     )
     .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "false\nfalse\n");
+    assert_eq!(printed(&output), wrapped(2));
 }
 
 #[test]
@@ -349,7 +359,7 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
 
     let status = child.wait().expect("the compiled binary ends");
     assert_eq!(status.code(), Some(0));
-    assert_eq!(row, "false\n");
+    assert_eq!(row, wrapped(1));
     // The tool learns of the closed pipe from the write that fails, so it
     // stops within one round of requests. The count stays near --jobs and
     // never reaches the input. A tool that kept scheduling would ask, and

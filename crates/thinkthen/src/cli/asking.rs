@@ -8,8 +8,8 @@ use std::time::Duration;
 
 use crate::core::{
     Backend, BackendProfile, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer,
-    Question, QuestionText, Reading, Record, RequestMeta, Resolved, Sources, Threshold, Value,
-    json_line, question_sha256_with_profile,
+    Question, QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources,
+    Threshold, Value, json_line, question_sha256_with_profile,
 };
 
 use crate::args::Common;
@@ -483,6 +483,8 @@ impl Judging<'_> {
             }
         } else if self.view.quiet {
             None
+        } else if self.streams {
+            Some(json_line(&RecordValue::new(sending.record, value))?)
         } else {
             Some(json_line(&value)?)
         };

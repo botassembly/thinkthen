@@ -43,12 +43,16 @@ Settled by ADR 0008 item 2, accepted in ADR 0010. `on` takes one pointer or seve
 
 ## What it prints
 
-One JSON object per record. An object record gains one top-level field per question, so a chain of judgments stays flat. Any other record, a text document included, yields an object of the named answers alone.
+One JSON object per record. In record mode an object record gains one top-level field per question, so a chain of judgments stays flat. A line, JSON scalar, or JSON array keeps its parsed record under `input` and its named answer object under `value`. CSV and TSV rows are objects and stay flat. On one document, an object still gains the answers and every other JSON shape or text document still yields the named answers alone.
 
 An unresolved answer is `null`. A failed question is a failure marker and never `null`. When the same reply contains a usable answer, the good answer and failed marker both print and the completed run exits 6. A reply with no usable answer ends the run at exit 4.
 
 ```json
 {"id":"T-91","body":"Payouts have failed for 3 days.","unresolved":true,"kind":"bug","impact":1.6}
+```
+
+```json
+{"input":"Payouts have failed for 3 days.","value":{"unresolved":true,"kind":"bug","impact":1.6}}
 ```
 
 `--details` prints `input`, `value`, `answers`, and `meta`, as [result.md](result.md) gives them.

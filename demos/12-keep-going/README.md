@@ -15,11 +15,12 @@ set -eu
 
 thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --input queue.jsonl --cache recording/ 2>/dev/null \
-  | mustmatch "true
-false"
+  | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
+{"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}'
 ```
 
 Two records were judged and the third ended the run. One line on standard error names the record by its number, never by its text.
+Each completed row keeps its parsed input beside the answer, so a resumed file still identifies every result without `--details`.
 
 ```bash
 set -eu
@@ -80,10 +81,10 @@ set -eu
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
   | thinkthen decide 'Does the message report a payment failure?' \
       --jsonl --field /body --cache recording/ --jobs 8 \
-  | mustmatch "true
-false
-true
-false"
+  | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
+{"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}
+{"input":{"id":"Q-03","body":"Payout to our bank bounced twice on Tuesday with no reason given."},"value":true}
+{"input":{"id":"Q-04","body":"Can you point me at the API docs for webhooks?"},"value":false}'
 ```
 
 ## What can go wrong

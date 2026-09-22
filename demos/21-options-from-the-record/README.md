@@ -56,7 +56,7 @@ sed -n '3p' steps.jsonl \
   | mustmatch '{"ship_a_replacement":"Send the same item again at no charge.","refund_the_order":"Give the money back and send nothing.","open_a_carrier_claim":"Ask the carrier to investigate the parcel.","close_the_ticket":"End the conversation with no further action."}'
 ```
 
-A list of names sends the same shape with `null` under each name. The value on standard output is the name in both forms, and a description never becomes an answer.
+A list sends the same shape with `null` under each name. `--raw` prints the name for this loop. The default record view keeps it under `value` beside the complete record under `input`. Descriptions never become answers.
 
 ## What can go wrong
 

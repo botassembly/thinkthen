@@ -215,7 +215,14 @@ fn tag_keeps_record_order_at_each_supported_job_count() {
         assert_eq!(output.status.code(), Some(0));
         assert_eq!(
             String::from_utf8_lossy(&output.stdout),
-            "[\"billing\"]\n[\"billing\"]\n[\"billing\"]\n"
+            concat!(
+                r#"{"input":"first","value":["billing"]}"#,
+                "\n",
+                r#"{"input":"second","value":["billing"]}"#,
+                "\n",
+                r#"{"input":"third","value":["billing"]}"#,
+                "\n",
+            )
         );
         assert_eq!(listener.requests().len(), 3);
     }

@@ -1,0 +1,35 @@
+{
+  "schema": "thinkthen.record-value-conformance/1",
+  "cases": [
+    {
+      "id": "text-and-yes",
+      "input": "\"hello\"",
+      "value": {"kind": "yes_no", "held": true},
+      "expect": "{\"input\":\"hello\",\"value\":true}"
+    },
+    {
+      "id": "object-and-choice",
+      "input": "{\"id\":7,\"body\":\"late\"}",
+      "value": {"kind": "choice", "held": "billing"},
+      "expect": "{\"input\":{\"id\":7,\"body\":\"late\"},\"value\":\"billing\"}"
+    },
+    {
+      "id": "array-and-empty-tags",
+      "input": "[1,2]",
+      "value": {"kind": "tag", "held": []},
+      "expect": "{\"input\":[1,2],\"value\":[]}"
+    },
+    {
+      "id": "scalar-and-score",
+      "input": "17",
+      "value": {"kind": "score", "held": 1.6},
+      "expect": "{\"input\":17,\"value\":1.6}"
+    },
+    {
+      "id": "null-and-unresolved",
+      "input": "null",
+      "value": {"kind": "yes_no", "held": null},
+      "expect": "{\"input\":null,\"value\":null}"
+    }
+  ]
+}

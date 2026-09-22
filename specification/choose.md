@@ -16,7 +16,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 ## What it prints
 
-A JSON string, or `null` when the answer is unresolved. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `choice`. In record mode one value prints per record, in input order.
+On one document, a JSON string or `null` when the answer is unresolved. In the default record view each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `choice`.
 
 `--raw` is available for one document, `--lines`, and `--jsonl`. It prints the label without its quotation marks, as `jq -r` does. On one document an unresolved answer prints nothing. Under `--lines` or `--jsonl` an unresolved answer prints an empty line, so one line still stands for one record. CSV and TSV always print JSONL and refuse `--raw`. A blank label is a usage error, so an empty line never means a label.
 

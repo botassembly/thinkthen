@@ -46,15 +46,15 @@ pub(crate) struct Common {
 
     /// Take each line as one text record.
     ///
-    /// One value prints per record, in the order the command defines. The bare values alone tie
-    /// no line to a record, so a script that names records reads --details.
+    /// Value verbs keep `input` beside `value`. Record-returning verbs return
+    /// records. `annotate` enriches object records.
     #[arg(long, conflicts_with_all = ["jsonl", "csv", "tsv"])]
     pub(crate) lines: bool,
 
     /// Take each line as one JSON record.
     ///
-    /// One value prints per record, in the order the command defines. The bare values alone tie
-    /// no line to a record, so a script that names records reads --details.
+    /// Value verbs keep `input` beside `value`. Record-returning verbs return
+    /// records. `annotate` enriches object records.
     #[arg(long, conflicts_with_all = ["csv", "tsv"])]
     pub(crate) jsonl: bool,
 

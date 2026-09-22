@@ -16,7 +16,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 ## What it prints
 
-A JSON number. The score runs from 0 at the lowest level to the number of levels minus one at the highest. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `score`. In record mode one number prints per record, in input order.
+On one document, a JSON number. The score runs from 0 at the lowest level to the number of levels minus one at the highest. In record mode each compact JSONL row is `{"input":RECORD,"value":NUMBER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `score`.
 
 ## The number
 

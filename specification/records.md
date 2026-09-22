@@ -77,7 +77,7 @@ The vendor also accepts that field as a real JSON object rather than as text hol
 
 ## Order and requests
 
-Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. One value prints per record, and output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order.
+Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. Default `decide`, `choose`, `tag`, and `score` output keeps each parsed record under `input` and its answer under `value`. Output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `choose --raw` keeps printing plain labels for lines and JSONL. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order. Every output from CSV and TSV input is JSONL.
 
 ### How many requests each command makes
 

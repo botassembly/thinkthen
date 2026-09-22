@@ -11,8 +11,10 @@ use crate::core::text::{ModelName, Url};
 use crate::core::threshold::Threshold;
 
 mod profile_warning;
+mod record_value;
 
 pub(crate) use profile_warning::ProfileWarning;
+pub(crate) use record_value::RecordValue;
 
 /// The schema string a version one result carries.
 pub(crate) const SCHEMA: &str = "thinkthen.result/1";
@@ -232,7 +234,15 @@ impl AnnotateResult {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct NamedValues(Vec<(String, AnnotatedValue)>);
+pub(crate) struct NamedValues(Vec<(String, AnnotatedValue)>);
+
+impl NamedValues {
+    /// Keep named values in question-set order.
+    #[must_use]
+    pub(crate) const fn new(values: Vec<(String, AnnotatedValue)>) -> Self {
+        Self(values)
+    }
+}
 impl Serialize for NamedValues {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_map(self.0.iter().map(|(name, value)| (name, value)))

@@ -16,7 +16,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 ## What it prints
 
-`true`, `false`, or `null`. `null` is an unresolved answer, and it arises only under a band. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`. In record mode one value prints per record, in input order.
+On one document, `true`, `false`, or `null`. `null` is an unresolved answer, and it arises only under a band. In record mode each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`.
 
 ## Options
 

@@ -97,7 +97,15 @@ fn a_list_in_each_record_becomes_that_record_s_own_options() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "\"late\"\n\"empty\"\n");
+    assert_eq!(
+        printed(&output),
+        concat!(
+            r#"{"input":{"id":"N-1","note":"The parcel arrived on Friday, three days late.","codes":["late","lost"]},"value":"late"}"#,
+            "\n",
+            r#"{"input":{"id":"N-2","note":"The box was empty when it reached us.","codes":["empty","damaged","other"]},"value":"empty"}"#,
+            "\n",
+        )
+    );
     let sent = bodies(&listener);
     assert!(
         sent[0].contains(r#""criteria":{"late":null,"lost":null}"#),
@@ -129,7 +137,13 @@ fn a_map_in_a_record_sends_each_description_under_its_own_option() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "\"late\"\n");
+    assert_eq!(
+        printed(&output),
+        concat!(
+            r#"{"input":{"id":"N-1","note":"The parcel arrived on Friday, three days late.","codes":{"late":"It came after the promised day.","lost":"It never came at all."}},"value":"late"}"#,
+            "\n",
+        )
+    );
     let sent = bodies(&listener);
     assert!(
         sent[0].contains(concat!(
@@ -185,7 +199,14 @@ fn a_candidate_list_the_verb_refuses_stops_the_run_and_sends_nothing_for_itself(
         .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{bad}");
-        assert_eq!(printed(&output), "\"late\"\n", "{bad}");
+        assert_eq!(
+            printed(&output),
+            concat!(
+                r#"{"input":{"id":"N-1","note":"The parcel arrived late.","codes":["late","lost"]},"value":"late"}"#,
+                "\n",
+            ),
+            "{bad}"
+        );
         assert_eq!(listener.requests().len(), 1, "{bad}");
         let message = said(&output);
         assert!(message.contains(said_part), "{message}");

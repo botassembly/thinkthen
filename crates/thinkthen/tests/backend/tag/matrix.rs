@@ -187,7 +187,20 @@ fn delayed_tag_rows_keep_evidence_and_output_order() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "[\"billing\"]\n[]\n[\"billing\"]\n[]\n[\"billing\"]\n[]\n"
+        concat!(
+            r#"{"input":"row 1","value":["billing"]}"#,
+            "\n",
+            r#"{"input":"row 2","value":[]}"#,
+            "\n",
+            r#"{"input":"row 3","value":["billing"]}"#,
+            "\n",
+            r#"{"input":"row 4","value":[]}"#,
+            "\n",
+            r#"{"input":"row 5","value":["billing"]}"#,
+            "\n",
+            r#"{"input":"row 6","value":[]}"#,
+            "\n",
+        )
     );
     let bodies: Vec<String> = listener
         .requests()
@@ -265,7 +278,7 @@ fn a_closed_tag_output_pipe_stops_quietly() {
     drop(output);
     let finished = child.wait_with_output().expect("tag ends");
     assert_eq!(finished.status.code(), Some(0));
-    assert_eq!(first, "[\"billing\"]\n");
+    assert_eq!(first, "{\"input\":\"row 1\",\"value\":[\"billing\"]}\n");
     assert!(finished.stderr.is_empty());
     assert!(listener.requests().len() <= 12);
 }

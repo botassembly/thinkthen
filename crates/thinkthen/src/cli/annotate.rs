@@ -10,7 +10,8 @@ use crate::core::adapters::built_in;
 use crate::core::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, AnswerOutcome, Backend, BackendProfile, FailedValue, Framing, ModelName,
-    Outcome, Plan, Pointer, QuestionSet, Reading, Record, Reply, RequestMeta, Usage, json_line,
+    NamedValues, Outcome, Plan, Pointer, QuestionSet, Reading, Record, RecordValue, Reply,
+    RequestMeta, Usage, json_line,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -92,6 +93,7 @@ pub(crate) fn run(
             set,
             profile,
             mismatch,
+            streams: reading.streams(),
         };
         let mut output = Output::Streaming(&mut writer);
         let jobs = arguments.common.jobs.map_or(4, usize::from);
@@ -127,6 +129,7 @@ pub(crate) fn run(
         set,
         profile,
         mismatch,
+        streams: reading.streams(),
     };
     let mut output = Output::Streaming(&mut writer);
     let jobs = arguments.common.jobs.map_or(4, usize::from);
@@ -229,6 +232,7 @@ pub(crate) struct Judging<'a> {
     set: QuestionSet,
     profile: Option<BackendProfile>,
     mismatch: Mismatch,
+    streams: bool,
 }
 
 impl Judging<'_> {
@@ -315,6 +319,8 @@ impl Judging<'_> {
                 named_details,
                 meta,
             ))?
+        } else if self.streams && !record.is_object() {
+            json_line(&RecordValue::new(record, NamedValues::new(named_values)))?
         } else {
             json_line(&record.annotated(named_values))?
         };

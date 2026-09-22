@@ -455,6 +455,21 @@ fn shared_help_defers_order_and_document_rules_to_each_command() {
 }
 
 #[test]
+fn record_framing_help_names_each_commands_output_rule() {
+    const VALUE: &str = "Value verbs keep `input` beside `value`.";
+    const RECORD: &str = "Record-returning verbs return records.";
+    const ANNOTATE: &str = "`annotate` enriches object records.";
+
+    for command in ["decide", "annotate", "filter"] {
+        let output = run(&[command, "--help"], &[], b"").expect("the compiled binary runs");
+        let help = String::from_utf8_lossy(&output.stdout);
+        for rule in [VALUE, RECORD, ANNOTATE] {
+            assert!(help.contains(rule), "{command}: {rule}\n{help}");
+        }
+    }
+}
+
+#[test]
 fn an_unknown_word_is_a_usage_error_and_never_an_instruction() {
     for arguments in [
         &["decide", "a", "b"][..],

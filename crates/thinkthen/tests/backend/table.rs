@@ -51,10 +51,26 @@ fn every_record_command_accepts_a_table_and_prints_jsonl() {
     let tag = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}}}"#;
     let score = r#"{"model":"local-1","answers":{"q1":{"type":"score","score":0.8,"confidence":0.8,"legend":{"0":"low","1":"high"},"probabilities":{"0":0.2,"1":0.8}}}}"#;
     let cases: &[(&str, &[&str], &str)] = &[
-        (yes, &["decide", "Is it yes?"], "true\n"),
-        (choice, &["choose", "Which?", "a", "b"], "\"a\"\n"),
-        (tag, &["tag", "Which?", "a", "b"], "[\"a\"]\n"),
-        (score, &["score", "How much?", "low", "high"], "0.8\n"),
+        (
+            yes,
+            &["decide", "Is it yes?"],
+            "{\"input\":{\"body\":\"yes\",\"id\":\"1\"},\"value\":true}\n",
+        ),
+        (
+            choice,
+            &["choose", "Which?", "a", "b"],
+            "{\"input\":{\"body\":\"yes\",\"id\":\"1\"},\"value\":\"a\"}\n",
+        ),
+        (
+            tag,
+            &["tag", "Which?", "a", "b"],
+            "{\"input\":{\"body\":\"yes\",\"id\":\"1\"},\"value\":[\"a\"]}\n",
+        ),
+        (
+            score,
+            &["score", "How much?", "low", "high"],
+            "{\"input\":{\"body\":\"yes\",\"id\":\"1\"},\"value\":0.8}\n",
+        ),
         (
             yes,
             &["filter", "Is it yes?"],
@@ -341,7 +357,14 @@ fn reverse_completion_keeps_table_order_and_a_bad_row_stops_the_tail() {
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "true\nfalse\ntrue\n"
+        concat!(
+            r#"{"input":{"body":"slow","id":"1"},"value":true}"#,
+            "\n",
+            r#"{"input":{"body":"middle","id":"2"},"value":false}"#,
+            "\n",
+            r#"{"input":{"body":"fast","id":"3"},"value":true}"#,
+            "\n",
+        )
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
@@ -481,6 +504,6 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
     reader.read_line(&mut first).expect("one output row");
     drop(reader);
     assert_eq!(child.wait().expect("command ends").code(), Some(0));
-    assert_eq!(first, "true\n");
+    assert_eq!(first, "{\"input\":{\"body\":\"row 0\"},\"value\":true}\n");
     assert!(listener.requests().len() <= 12);
 }

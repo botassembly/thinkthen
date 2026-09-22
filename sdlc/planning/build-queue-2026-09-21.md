@@ -12,6 +12,7 @@ Ian can overturn any placement here.
 - Landed: 0057. Help now states the record-mode exit boundary and visible defaults, `--url` appears in short help under ADR 0031, zero timeouts fail before input or network access, and the specification agrees with the binary.
 - Landed: 0058. Backend, transport, question-file, recording, table, and empty-input diagnostics now name the condition and a safe action. Dry runs apply the live one-document width rule.
 - Landed: 0059. Explicit backend profiles enforce local byte and question limits before replay, cache, key lookup, or network access. Saved calibration names warn once at the ordered result boundary and appear in detailed metadata.
+- Landed: 0060. Default streamed value rows keep each parsed record under `input` beside its answer under `value`. Streamed annotation still enriches object records and wraps non-object records. One-document and explicit views stay unchanged.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
@@ -35,7 +36,7 @@ Tickets 0056 through 0058 completed every row below. Lane A continues with backe
 
 **A2. Done.** Ticket 0059 added explicit backend profiles, local size checks, and the threshold warning. It also closes `windows-over-long-text` as a refusal with a clear message. The mismatch warning goes in `meta` too (product addition E).
 
-**A3. Each record comes back with its answer.** Proposed ticket 5. Closes `two-function-flows-lose-the-record-between-stages`. `recognize` and `relate` follow the same rule (addition D). A single text still prints a bare answer, pinned by a test (addition C). The deck's triage and leads slides wait on this.
+**A3. Done.** Ticket 0060 returns each streamed record with the value verbs' answer and closes `two-function-flows-lose-the-record-between-stages`. `recognize` and `relate` follow the same rule when they land (addition D). A single text still prints a bare answer, pinned by tests (addition C).
 
 **A4. The cache, and the money bugs with it.** Proposed tickets 6, 7, and 14 together, because a cache that is on by default puts these bugs in front of every user. They are one body of work in the files 0055 just moved:
 

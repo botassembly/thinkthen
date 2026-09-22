@@ -60,7 +60,8 @@ pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, DecisionResult, Meta, ProfileWarning, RequestMeta, Usage,
+    AnnotatedValue, DecisionResult, Meta, NamedValues, ProfileWarning, RecordValue, RequestMeta,
+    Usage,
 };
 pub(crate) use crate::core::text::{Evidence, ModelName, QuestionText};
 pub(crate) use crate::core::threshold::{Outcome, Threshold};

@@ -97,7 +97,10 @@ fn divergent_duplicate_records_stop_before_the_second_answer_prints() {
     .expect("the binary runs");
 
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "false\n");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        concat!(r#"{"input":"Refund me please.","value":false}"#, "\n",)
+    );
     let message = String::from_utf8_lossy(&output.stderr);
     assert!(message.contains(CONFLICT), "{message}");
     for hidden in [FALSE, TRUE, "0.1", "0.9"] {
