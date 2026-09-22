@@ -83,3 +83,19 @@ As of branch `surfaces` tip `6a829b8`. Wave 2 (conformance honesty) landed after
 **Records landed:** ADR 0037 (the C door serves every language that can call C) and ADR 0038 (DuckDB relate on the caller's database) at `79a7efd`; records 0069 (the R interrupt window), 0070 (the PostgreSQL deadline), 0071 (the two granted exceptions) at `aaccc63`. The merge-build fact has its own record at `sdlc/issues/2026-09-22-merge-trial-the-build-break-list.md` (`4b4f85b`).
 
 **Open as of tip `6a829b8`:** the new defects 1–19 and the first-review leftovers above, plus the merge-build item. Commits from here on end with `refs surfaces-review-2` or `refs surfaces-review-1`, so this issue can be read against the branch by search.
+
+## Progress note (2026-09-22, the fix wave)
+
+The fixes for the groups above landed on the `surfaces` branch in 36 commits, `2143d7e..ce177c1`:
+
+```
+$ git rev-list --count 2143d7e..ce177c1        # 36
+$ git diff --shortstat 2143d7e..ce177c1        # 150 files changed, 7971 insertions(+), 1481 deletions(-)
+$ node sdlc/scripts/surfaces-ratchet.mjs       # 22039/22039 non-blank .rs lines
+```
+
+The four new trees (contract, standin, libraries, databases) grew 2316 net non-blank Rust lines in the wave — 19723 at `2143d7e` to 22039 at `ce177c1`, measured by the surfaces ratchet added this wave; the 7971/1481 figures are every file type.
+
+Landed by the lanes, each with a test that fails against its pre-fix code: the security group (SQLite's schema-object reach, DuckDB's read-only single-statement relate with per-database routing and the file-access door, PostgreSQL's `@` requirement, narrowed grants, and the update-path revoke); the crash group (R's percent and encoding handling, the DuckDB nested-relate refusal, the C guard's teardown path, Ruby's tick rooting); the wrong-answer group (settings-keyed stand-in state, the deadline sentinels, the pre-request refusals, the sliced struct stream, the interrupt re-arm); the memory and performance items; the host-side leftovers (compile-time fixture, connector completion for C, Rust, and DuckDB, the cancel gaps, the error classes); the ADRs for the rulings; the shared panic guard in the contract; and this wave's process work (the workspace lint pass over every standalone workspace, the surfaces ratchet, the benches and package dry-runs wired into the gate, the Python artifact's home-path remap). The two unmaintained crates the audit found are recorded with replacement plans in the ticket beside this issue.
+
+Still in flight or fenced when this note was written: the final commits of the DuckDB, Ruby, and TypeScript lanes, and the final verification pass that re-runs both reviews' repros as commands and corrects the documents.
