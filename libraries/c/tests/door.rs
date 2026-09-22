@@ -209,6 +209,18 @@ fn the_json_door_answers_every_verb_it_carries() {    unsafe {
         assert_eq!(requests.len(), 1);
         assert_eq!(requests[0].as_str().unwrap_or_default().len(), 64);
         assert_eq!(audit["failed_questions"], serde_json::json!(0));
+        // Settled 2026-09-21: nearest is null on a decide question and the
+        // level's name on a score question.
+        assert_eq!(audit["nearest"], serde_json::Value::Null);
+
+        let scored_audit = take(json(
+            engine,
+            r#"{"score": "How urgent is this?", "levels": ["Routine.", "Soon.", "Immediate."], "evidence": "I want a refund now", "details": true}"#,
+        ));
+        assert!(
+            scored_audit["nearest"].is_string(),
+            "the nearest level rides in details on a score question"
+        );
 
         thinkthen::thinkthen_engine_free(engine);
     }

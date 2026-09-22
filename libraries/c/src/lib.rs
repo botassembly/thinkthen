@@ -536,7 +536,7 @@ fn call_verb(
         return Ok(serde_json::json!({ "answer": labels }));
     }
     Err(Error::usage(
-        "the request carries no verb the door knows: decide, choose, score, tag, find, annotate, details, usage",
+        "the request carries no verb the door knows: decide, choose, score, tag, filter, rank, find, annotate, details, usage",
     ))
 }
 
@@ -564,6 +564,7 @@ fn details_json(
         sends,
         requests,
         failed_questions,
+        nearest,
     } = engine
         .engine
         .details_opts(question, evidence, Options::new())?;
@@ -575,6 +576,9 @@ fn details_json(
         "sends": sends,
         "requests": requests,
         "failed_questions": failed_questions,
+        // The nearest level's name on a score question; null on every
+        // other verb (ADR 0017 pick 6, settled 2026-09-21).
+        "nearest": nearest,
     }))
 }
 
