@@ -1426,6 +1426,14 @@ mod tests {
         let error = caught.expect_err("a panic is an error, not an unwind past this door");
         assert_eq!(error.kind, ErrorKind::Defect);
         assert!(error.message.contains("the engine broke"), "{}", error.message);
+        // The message comes from the contract's shared boundary, which
+        // names the door the panic crossed; the pre-fix local guard said
+        // "the engine panicked" and never named it.
+        assert!(
+            error.message.contains("the Python door"),
+            "the contract's boundary names this door: {}",
+            error.message
+        );
         assert!(!error.retryable);
     }
 
