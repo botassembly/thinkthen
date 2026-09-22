@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "rust",
-  "code": "let ask = Recognize::kinds([\"person\", \"organization\", \"place\"])\n    .relation(\"works_for\", Kind::named(\"person\"), Kind::named(\"organization\"))?\n    .relation(\"located_in\", Kind::Any, Kind::named(\"place\"))?;\nlet found = tt.recognize(&ask, &text)?;",
+  "code": "let ask = Recognize::new().kinds([\"person\", \"organization\", \"place\"])\n    .relation(\"works_for\", Kind::named(\"person\"), Kind::named(\"organization\"))?\n    .relation(\"located_in\", Kind::Any, Kind::named(\"place\"))?;\nlet found = tt.recognize(&ask, &text)?;",
   "function": "recognize",
   "surface": "rust"
 }

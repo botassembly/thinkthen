@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "ts",
-  "code": "import * as tt from \"thinkthen\";\n\n// every label that fits: [\"billing\", \"shipping\", \"urgent\"]\nconst labels = [\"billing\", \"shipping\", \"urgent\", \"praise\"];\nawait tt.tag(\"Which topics?\", message, { labels });",
+  "code": "import * as tt from \"thinkthen\";\n\n// praise and a bug in one message: [\"praise\", \"bug\"]\nconst labels = [\"praise\", \"bug\", \"billing\", \"shipping\"];\nconsole.log(await tt.tag(\"Which labels fit this message?\",\n    \"Love the app, but export crashes.\", { labels }));",
   "function": "tag",
   "surface": "typescript"
 }

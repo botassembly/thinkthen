@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "rust",
-  "code": "use thinkthen::{Answer, Engine, Question};\n\n// reads THINKTHEN_API_KEY; blocking, no async runtime\nlet tt = Engine::from_env()?;\n\nlet asks = \"Does the customer ask for a refund?\";\nlet refund = Question::decide(asks).band(0.2, 0.8)?;",
+  "code": "use thinkthen::{Answer, Engine, Question};\n\n// blocking calls, and no async runtime comes with it\nlet tt = Engine::from_env()?;\n\nlet asks = \"Does the customer ask for a refund?\";\nlet refund = Question::decide(asks)?.band(0.2, 0.8)?;\nlet texts = [\"Please refund my order. It came broken.\",\n    \"I was charged twice. Can you fix this?\"];\n// the compiler makes you handle \"not sure\"\nfor text in texts {\n    match tt.decide(&refund, text)? {\n        Answer::Yes => println!(\"refund: {text}\"),\n        Answer::No => println!(\"no: {text}\"),\n        Answer::Unsure => println!(\"a person: {text}\"),\n    }\n}",
   "function": "question-file",
   "surface": "rust"
 }

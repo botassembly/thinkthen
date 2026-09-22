@@ -385,7 +385,7 @@ export const SURFACES = [
     install: [['thinkthen.h + libthinkthen', 'One archive per platform, with the header, both libraries, and a .pc file.']],
     particular: [
       'Every call returns 0 or one of six error kinds.',
-      'Arrays of pointers and lengths cross once and run 32 at a time.',
+      'The answer lands in a struct: the outcome and its probability.',
     ],
   },
   {
@@ -394,7 +394,7 @@ export const SURFACES = [
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     captions: { score: 'This query also orders by score.' },
     unsureWord: 'NULL',
-    install: [['INSTALL thinkthen FROM community; LOAD thinkthen;', null]],
+    install: [['duckdb -unsigned', 'The build loads unsigned today. The query loads the extension file first.']],
     particular: ['A whole column chunk crosses at once.'],
   },
   {

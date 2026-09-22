@@ -1,52 +1,52 @@
 {
   "python": {
     "lang": "python",
-    "code": "import thinkthen as tt\n\n# one yes-or-no answer: True\ntt.decide(\"Does the customer ask for a refund?\", text)\n\n# build a question once. The band's middle is \"not sure\"\nrefund = tt.question(\n    decide=\"Does the customer ask for a refund?\",\n    threshold=(0.2, 0.8),\n)\n\n# 0.74 falls inside the band, so the answer is None\ntt.decide(refund, \"I was charged twice. Can you fix this?\")\n\n# a list goes in, and a list of filled forms comes out\nforms = tt.annotate(\"form.json\", messages)",
+    "code": "import thinkthen as tt\n\n# a plain ask for money back: True\nprint(tt.decide(\"Does the customer ask for a refund?\",\n    \"Please refund my order. It arrived broken.\"))\n\n# build a question once. The band's middle is \"not sure\"\nrefund = tt.question(\n    decide=\"Does the customer ask for a refund?\",\n    threshold=(0.2, 0.8),\n)\n\n# a charge, but no plain ask for money back: None\nprint(tt.decide(refund,\n    \"I was charged twice. Can you fix this?\"))\n\n# a list goes in, and one filled form a report comes out\nreports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\"]\nprint(tt.annotate(\"form.json\", reports))",
     "install": "pip install thinkthen"
   },
   "polars": {
     "lang": "python",
-    "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.read_parquet(\"tickets.parquet\")\nask = \"Is this a complaint?\"\n\n# a column goes in and a column comes out.\n# Rust reads the column in place and runs it 32 wide\ndf = df.with_columns(complaint=tt.decide(ask, df[\"body\"]))\n\n# score gives a number column. None is \"not sure\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nurgency = tt.score(\"How urgent?\", df[\"body\"], levels)\ndf = df.with_columns(urgency=urgency)\n\n# a whole frame goes in with on=, and it comes back\n# with one new column for each question in the form\ndf = tt.annotate(\"form.json\", df, on=\"body\")",
+    "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.DataFrame({\"body\": [\n    \"Export crashes. Steps: open a report, click Export.\",\n    \"The invoice button is a slightly different blue.\",\n]})\n\n# a column goes in and a column comes out\nask = \"Does this stop someone from working?\"\ndf = df.with_columns(blocks=tt.decide(ask, df[\"body\"]))\n\n# score gives a number column: 0 is \"Routine.\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nurgency = tt.score(\"How urgent?\", df[\"body\"], levels)\n\n# a whole frame goes in with on=, and it comes back\n# with one new column for each question in the form\ndf = tt.annotate(\"form.json\", df, on=\"body\")\nprint(df.drop(\"body\").with_columns(urgency=urgency))",
     "install": "pip install thinkthen[polars]"
   },
   "typescript": {
     "lang": "ts",
-    "code": "import * as tt from \"thinkthen\";\n\n// pick one option: \"billing\"\nconst options = [\"billing\", \"shipping\", \"account\"];\nawait tt.choose(\"Which team owns this?\", text, { options });\n\n// every label that fits: [\"billing\", \"shipping\", \"urgent\"]\nconst labels = [\"billing\", \"shipping\", \"urgent\", \"praise\"];\nawait tt.tag(\"Which topics?\", message, { labels });\n\n// a batch you can cancel: abort() stops the requests\nconst stop = new AbortController();\nconst urgent = await tt.rank(\"Is this urgent?\", inbox, {\n  top: 5,\n  signal: stop.signal,\n});\nconsole.log(urgent[0]);",
+    "code": "import * as tt from \"thinkthen\";\n\n// a parcel stuck in transit: \"shipping\"\nconst options = [\"billing\", \"shipping\", \"account\"];\nconsole.log(await tt.choose(\"Which team owns this?\",\n    \"My parcel is stuck in transit.\", { options }));\n\n// praise and a bug in one message: [\"praise\", \"bug\"]\nconst labels = [\"praise\", \"bug\", \"billing\", \"shipping\"];\nconsole.log(await tt.tag(\"Which labels fit this message?\",\n    \"Love the app, but export crashes.\", { labels }));\n\n// a batch you can cancel: abort() stops the requests\nconst inbox = [\"Can we move Thursday's call?\",\n    \"Checkout is down and nobody can pay.\"];\nconst stop = new AbortController();\nconst urgent = await tt.rank(\"Is this urgent?\",\n    inbox, { top: 1, signal: stop.signal });\n// the outage is the most urgent\nconsole.log(urgent[0].record);",
     "install": "npm install thinkthen"
   },
   "ruby": {
     "lang": "ruby",
-    "code": "require \"thinkthen\"\n\n# keep the records where the answer is yes\nupset = ThinkThen.filter(\"Is this a complaint?\", reviews)\nputs \"#{upset.size} of #{reviews.size} are complaints\"\n\n# any Enumerable works, and it crosses to the engine once\nurgent = ThinkThen.rank(\"Is this urgent?\", inbox, top: 5)\nurgent.each { |mail| puts mail }\n\n# your own scale: 0 is \"Routine.\", 2 is \"Immediate.\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nThinkThen.score(\"How urgent is this?\", outage, levels:)",
+    "code": "require \"thinkthen\"\n\n# keep the records where the answer is yes: the zipper\nreviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\"]\nputs ThinkThen.filter(\"Is this a complaint?\", reviews)\n\n# any Enumerable works, and it crosses to the engine once\ninbox = [\"Can we move Thursday's call?\",\n    \"Checkout is down and nobody can pay.\"]\nputs ThinkThen.rank(\"Is this urgent?\", inbox, top: 1)\n\n# your own scale, 0 to 2. An outage sits near the top\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nputs ThinkThen.score(\"How urgent is this?\",\n    \"Our checkout page is down.\", levels:)",
     "install": "gem install thinkthen"
   },
   "r": {
     "lang": "r",
-    "code": "library(dplyr)\nlibrary(thinkthen)\n\nteams <- c(\"billing\", \"shipping\", \"account\")\nlevels <- c(\"Routine.\", \"Soon.\", \"Immediate.\")\n\n# a column goes in and a column comes out.\n# NA is \"not sure\", and filter() drops those rows\ntickets |>\n  filter(tt_decide(\"Is this a complaint?\", body)) |>\n  mutate(\n    team = tt_choose(\"Which team owns this?\", body, teams),\n    urgency = tt_score(\"How urgent is this?\", body, levels)\n  ) |>\n  arrange(desc(urgency))",
+    "code": "library(dplyr)\nlibrary(thinkthen)\n\ntickets <- tibble(body = c(\n  \"I was billed twice for one order. Fix it.\",\n  \"My parcel is a week late. Not okay.\",\n  \"Thanks for the quick help yesterday!\"\n))\nteams <- c(\"billing\", \"shipping\", \"account\")\nlevels <- c(\"Routine.\", \"Soon.\", \"Immediate.\")\n\n# a column goes in and a column comes out.\n# a thank-you is no complaint, so filter() drops it\ntickets |>\n  filter(tt_decide(\"Is this a complaint?\", body)) |>\n  mutate(\n    team = tt_choose(\"Which team owns this?\", body, teams),\n    urgency = tt_score(\"How urgent is this?\", body, levels)\n  )",
     "install": "install.packages(\"thinkthen\")"
   },
   "rust": {
     "lang": "rust",
-    "code": "use thinkthen::{Answer, Engine, Question};\n\n// reads THINKTHEN_API_KEY; blocking, no async runtime\nlet tt = Engine::from_env()?;\n\nlet asks = \"Does the customer ask for a refund?\";\nlet refund = Question::decide(asks).band(0.2, 0.8)?;\n\n// the compiler makes you handle \"not sure\"\nmatch tt.decide(&refund, &ticket.body)? {\n    Answer::Yes => refunds.push(ticket),\n    Answer::No => {}\n    Answer::Unsure => review.push(ticket),\n}",
+    "code": "use thinkthen::{Answer, Engine, Question};\n\n// blocking calls, and no async runtime comes with it\nlet tt = Engine::from_env()?;\n\nlet asks = \"Does the customer ask for a refund?\";\nlet refund = Question::decide(asks)?.band(0.2, 0.8)?;\nlet texts = [\"Please refund my order. It came broken.\",\n    \"I was charged twice. Can you fix this?\"];\n// the compiler makes you handle \"not sure\"\nfor text in texts {\n    match tt.decide(&refund, text)? {\n        Answer::Yes => println!(\"refund: {text}\"),\n        Answer::No => println!(\"no: {text}\"),\n        Answer::Unsure => println!(\"a person: {text}\"),\n    }\n}",
     "install": "cargo add thinkthen"
   },
   "c": {
     "lang": "c",
-    "code": "#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\nconst char *q = \"Does the customer ask for a refund?\";\n\n/* every call returns 0, or one of six error kinds.\n   one text: a.outcome is THINKTHEN_YES, at 0.99 */\nthinkthen_answer a;\nint rc = thinkthen_decide(tt, q, text, text_len, &a);\n\n/* many texts cross once and run 32 at a time */\nthinkthen_answer out[COUNT];\nrc = thinkthen_decide_many(tt, q, texts, lens, COUNT, out);\n\nthinkthen_engine_free(tt);",
+    "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\nconst char *q = \"Does the customer ask for a refund?\";\nconst char *t = \"Please refund my order. It came broken.\";\n\n/* every call returns 0, or one of six error kinds */\nthinkthen_answer a;\nint rc = thinkthen_decide(tt, q, t, strlen(t), &a);\n\n/* a plain ask for money back prints 1 0.99.\n   1 is THINKTHEN_YES */\nif (rc == THINKTHEN_OK)\n    printf(\"%d %.2f\\n\", a.outcome, a.probability);\nelse\n    puts(thinkthen_error_message(tt));\n\nthinkthen_engine_free(tt);",
     "install": "thinkthen.h + libthinkthen"
   },
   "duckdb": {
     "lang": "sql",
-    "code": "-- the question reads like any other condition\nSELECT id, body\nFROM 'tickets.parquet'\nWHERE thinkthen_decide('Is this a complaint?', body);\n\n-- one option per row, most urgent rows first\nSELECT id,\n    thinkthen_choose('Which team owns this?', body,\n        ['billing', 'shipping', 'account']) AS team\nFROM 'tickets.parquet'\nORDER BY thinkthen_score('How urgent?', body,\n    ['Routine.', 'Soon.', 'Immediate.']) DESC;",
-    "install": "INSTALL thinkthen FROM community; LOAD thinkthen;"
+    "code": "LOAD './thinkthen.duckdb_extension';\n\n-- three tickets, written inline\nCREATE TABLE tickets AS SELECT * FROM (VALUES\n    (1, 'My parcel is a week late. Not okay.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'We are locked out of our account. Fix it.')\n) t(id, body);\n\n-- the question reads like any other condition.\n-- the thank-you drops out. The lockout comes first\nSELECT id,\n    thinkthen_choose('Which team owns this?', body,\n        ['billing', 'shipping', 'account']) AS team\nFROM tickets\nWHERE thinkthen_decide('Is this a complaint?', body)\nORDER BY thinkthen_score('How urgent is this?', body,\n    ['Routine.', 'Soon.', 'Immediate.']) DESC;",
+    "install": "duckdb -unsigned"
   },
   "sqlite": {
     "lang": "sql",
-    "code": "-- SQLite asks row by row, so warm the table first:\n-- one pass, 32 requests at a time, answers saved\nSELECT thinkthen_warm('Is this a complaint?', body)\nFROM reviews;\n\n-- this query now reads the saved answers\nSELECT id, body\nFROM reviews\nWHERE thinkthen_decide('Is this a complaint?', body);\n\n-- and so does this one, at no further cost\nSELECT count(*)\nFROM reviews\nWHERE thinkthen_decide('Is this a complaint?', body);",
+    "code": "CREATE TABLE reviews(id INTEGER, body TEXT);\nINSERT INTO reviews VALUES\n    (1, 'Arrived a day early. Thank you!'),\n    (2, 'The zipper broke the first time I used it.'),\n    (3, 'Does this come in blue?');\n\n-- SQLite asks row by row, so warm the table first:\n-- one pass, 32 requests at a time, answers saved\nSELECT thinkthen_warm('Is this a complaint?', body)\nFROM reviews;\n\n-- this query reads the saved answers: the zipper\nSELECT id, body\nFROM reviews\nWHERE thinkthen_decide('Is this a complaint?', body);",
     "install": ".load ./thinkthen"
   },
   "postgresql": {
     "lang": "sql",
-    "code": "-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body\nFROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;\n\n-- fill out form.json for every row, as jsonb\nSELECT id, a->>'team' AS team,\n    (a->>'urgency')::float AS urgency\nFROM tickets,\n    thinkthen_annotate('form.json', body) AS a\nORDER BY urgency DESC;",
+    "code": "-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body\nFROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;\n\n-- fill out form.json for every row, as jsonb\nSELECT id, a->>'team' AS team,\n    (a->>'urgency')::float AS urgency\nFROM tickets,\n    thinkthen_annotate('@form.json', body) AS a\nORDER BY urgency DESC;",
     "install": "CREATE EXTENSION thinkthen;"
   }
 }

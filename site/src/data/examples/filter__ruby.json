@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# keep the records where the answer is yes\nupset = ThinkThen.filter(\"Is this a complaint?\", reviews)\nputs \"#{upset.size} of #{reviews.size} are complaints\"",
+  "code": "require \"thinkthen\"\n\n# keep the records where the answer is yes: the zipper\nreviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\"]\nputs ThinkThen.filter(\"Is this a complaint?\", reviews)",
   "function": "filter",
   "surface": "ruby"
 }

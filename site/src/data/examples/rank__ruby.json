@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# any Enumerable works, and it crosses to the engine once\nurgent = ThinkThen.rank(\"Is this urgent?\", inbox, top: 5)\nurgent.each { |mail| puts mail }",
+  "code": "require \"thinkthen\"\n\n# any Enumerable works, and it crosses to the engine once\ninbox = [\"Can we move Thursday's call?\",\n    \"Checkout is down and nobody can pay.\"]\nputs ThinkThen.rank(\"Is this urgent?\", inbox, top: 1)",
   "function": "rank",
   "surface": "ruby"
 }

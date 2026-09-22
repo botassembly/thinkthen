@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# your own scale: 0 is \"Routine.\", 2 is \"Immediate.\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nThinkThen.score(\"How urgent is this?\", outage, levels:)",
+  "code": "require \"thinkthen\"\n\n# your own scale, 0 to 2. An outage sits near the top\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nputs ThinkThen.score(\"How urgent is this?\",\n    \"Our checkout page is down.\", levels:)",
   "function": "score",
   "surface": "ruby"
 }

@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "ts",
-  "code": "import * as tt from \"thinkthen\";\n\n// pick one option: \"billing\"\nconst options = [\"billing\", \"shipping\", \"account\"];\nawait tt.choose(\"Which team owns this?\", text, { options });",
+  "code": "import * as tt from \"thinkthen\";\n\n// a parcel stuck in transit: \"shipping\"\nconst options = [\"billing\", \"shipping\", \"account\"];\nconsole.log(await tt.choose(\"Which team owns this?\",\n    \"My parcel is stuck in transit.\", { options }));",
   "function": "choose",
   "surface": "typescript"
 }

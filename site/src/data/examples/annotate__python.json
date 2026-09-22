@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "python",
-  "code": "import thinkthen as tt\n\n# a list goes in, and a list of filled forms comes out\nforms = tt.annotate(\"form.json\", messages)",
+  "code": "import thinkthen as tt\n\n# a list goes in, and one filled form a report comes out\nreports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\"]\nprint(tt.annotate(\"form.json\", reports))",
   "function": "annotate",
   "surface": "python"
 }

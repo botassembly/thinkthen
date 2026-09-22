@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "sql",
-  "code": "-- SQLite asks row by row, so warm the table first:\n-- one pass, 32 requests at a time, answers saved\nSELECT thinkthen_warm('Is this a complaint?', body)\nFROM reviews;\n\n-- this query now reads the saved answers\nSELECT id, body\nFROM reviews\nWHERE thinkthen_decide('Is this a complaint?', body);",
+  "code": "CREATE TABLE reviews(id INTEGER, body TEXT);\nINSERT INTO reviews VALUES\n    (1, 'Arrived a day early. Thank you!'),\n    (2, 'The zipper broke the first time I used it.'),\n    (3, 'Does this come in blue?');\n\n-- SQLite asks row by row, so warm the table first:\n-- one pass, 32 requests at a time, answers saved\nSELECT thinkthen_warm('Is this a complaint?', body)\nFROM reviews;\n\n-- this query reads the saved answers: the zipper\nSELECT id, body\nFROM reviews\nWHERE thinkthen_decide('Is this a complaint?', body);",
   "function": "decide",
   "surface": "sqlite"
 }

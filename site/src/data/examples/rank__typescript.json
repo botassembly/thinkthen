@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "ts",
-  "code": "import * as tt from \"thinkthen\";\n\n// a batch you can cancel: abort() stops the requests\nconst stop = new AbortController();\nconst urgent = await tt.rank(\"Is this urgent?\", inbox, {\n  top: 5,\n  signal: stop.signal,\n});\nconsole.log(urgent[0]);",
+  "code": "import * as tt from \"thinkthen\";\n\n// a batch you can cancel: abort() stops the requests\nconst inbox = [\"Can we move Thursday's call?\",\n    \"Checkout is down and nobody can pay.\"];\nconst stop = new AbortController();\nconst urgent = await tt.rank(\"Is this urgent?\",\n    inbox, { top: 1, signal: stop.signal });\n// the outage is the most urgent\nconsole.log(urgent[0].record);",
   "function": "rank",
   "surface": "typescript"
 }

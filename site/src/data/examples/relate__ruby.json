@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "ruby",
-  "code": "edges = ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])",
+  "code": "edges = ThinkThen.relate(bugs, either: %w[same_as])",
   "function": "relate",
   "surface": "ruby"
 }
