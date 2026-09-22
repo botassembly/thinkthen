@@ -434,14 +434,14 @@ export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
-    functions: ['filter', 'annotate'], input: 'inbox.txt', runs: ['01-inbox'],
+    functions: ['filter', 'annotate'], input: 'inbox.txt', forms: ['inbox-form.json'], runs: ['01-inbox'],
     see: { '01-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The thank-you note drops out.' },
   },
   {
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
     said: 'Sort the clear studies in or out, and hand a person only the unclear ones, best first. `decide` sets them aside. `rank` orders them.',
     functions: ['decide', 'rank'], input: 'studies.txt', runs: ['03-studies'],
-    see: { '03-studies': 'The survey with a result and the opinion essay are settled. The pilot with early numbers and the interviews come back for a person, the pilot first.' },
+    see: { '03-studies': 'The survey with a result and the opinion essay are settled. The case study with no comparison group and the pilot with early numbers come back for a person, the case study first.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',

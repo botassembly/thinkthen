@@ -2,9 +2,9 @@
   "dry-run": {
     "name": "dry-run",
     "command": "thinkthen decide --dry-run 'Does the customer ask for a refund?' < vague.txt | jq '.'",
-    "input": "I was charged twice. Can you fix this?",
+    "input": "I want to send this back.",
     "inputFile": "vague.txt",
-    "output": "{\n  \"url\": \"https://api.typesafe.ai/v1/systemone\",\n  \"model\": \"jev-latest\",\n  \"key_env\": \"THINKTHEN_API_KEY\",\n  \"request\": {\n    \"state\": \"I was charged twice. Can you fix this?\\n\",\n    \"model\": \"jev-latest\",\n    \"questions\": {\n      \"q1\": {\n        \"type\": \"noul\",\n        \"instructions\": \"Does the customer ask for a refund?\"\n      }\n    }\n  }\n}",
+    "output": "{\n  \"url\": \"https://api.typesafe.ai/v1/systemone\",\n  \"model\": \"jev-latest\",\n  \"key_env\": \"THINKTHEN_API_KEY\",\n  \"request\": {\n    \"state\": \"I want to send this back.\\n\",\n    \"model\": \"jev-latest\",\n    \"questions\": {\n      \"q1\": {\n        \"type\": \"noul\",\n        \"instructions\": \"Does the customer ask for a refund?\"\n      }\n    }\n  }\n}",
     "exit": 0
   }
 }

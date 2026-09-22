@@ -4,10 +4,16 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "Please fix the wrong amount on my invoice.\nJust saying thanks, no reply needed.\nOrder never arrived. Week three now.\nDo you ship to Canada?",
     "inputFile": "inbox.txt",
+    "forms": [
+      {
+        "name": "inbox-form.json",
+        "text": "{\n  \"version\": 1,\n  \"questions\": {\n    \"kind\": {\n      \"choose\": \"What kind of message is this?\",\n      \"options\": [\"billing\", \"delivery\", \"question\"]},\n    \"urgency\": {\n      \"score\": \"How urgent is this?\",\n      \"levels\": [\"Routine.\", \"Soon.\", \"Immediate.\"]}\n  }\n}"
+      }
+    ],
     "steps": [
       {
         "name": "01-inbox",
-        "command": "thinkthen filter 'Does this need a reply?' --lines < inbox.txt \\\n    | thinkthen annotate triage.json --lines --details \\\n    | jq -r '\"\\(.value.kind) \\(.value.urgency)  \\(.input)\"'",
+        "command": "thinkthen filter 'Does this need a reply?' --lines < inbox.txt \\\n    | thinkthen annotate inbox-form.json --lines --details \\\n    | jq -r '\"\\(.value.kind) \\(.value.urgency)  \\(.input)\"'",
         "output": "billing 0.58  Please fix the wrong amount on my invoice.\ndelivery 1.45  Order never arrived. Week three now.\nquestion 0.01  Do you ship to Canada?",
         "exit": 0
       }
@@ -16,13 +22,14 @@
   "screen-studies-for-a-review": {
     "status": "run",
     "source": "deck usecases/run.sh and usecases/out/",
-    "input": "Survey of 900 remote workers: output rose 4%.\nOpinion essay on open-plan offices.\nInterviews with 12 managers on hybrid teams.\nPilot of remote work at one small firm, with early numbers.",
+    "input": "Survey of 900 remote workers: output rose 4%.\nOpinion essay on open-plan offices.\nCase study of one team: before and after numbers, no comparison group.\nPilot of remote work at one small firm, with early numbers.",
     "inputFile": "studies.txt",
+    "forms": [],
     "steps": [
       {
         "name": "03-studies",
         "command": "thinkthen decide 'Does this report measured results on remote work?' \\\n      --lines --threshold 0.1:0.9 --details < studies.txt \\\n    | jq -r 'select(.value == null) | .input' \\\n    | thinkthen rank 'Is this close to a study with measured results?' --lines",
-        "output": "Pilot of remote work at one small firm, with early numbers.\nInterviews with 12 managers on hybrid teams.",
+        "output": "Case study of one team: before and after numbers, no comparison group.\nPilot of remote work at one small firm, with early numbers.",
         "exit": 0
       }
     ]
@@ -32,6 +39,7 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "Setup took ten minutes. Support helped.\nToo expensive for what it does.\nThe app crashes when I upload a file.\nEverything works and the reports are quick.",
     "inputFile": "answers.txt",
+    "forms": [],
     "steps": [
       {
         "name": "04-answers",
@@ -46,6 +54,7 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "Card charges fail at checkout.\nExport finished hours late again.",
     "inputFile": "tickets.txt",
+    "forms": [],
     "steps": [
       {
         "name": "05-join",
@@ -60,6 +69,7 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "INC-1 checkout returns 500 at payment\nINC-2 search results load slowly\nINC-3 nightly export ran late",
     "inputFile": "incidents-open.txt",
+    "forms": [],
     "steps": [
       {
         "name": "06-alert",
@@ -74,6 +84,7 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "We need 200 seats next quarter. Please send a quote.\nPlease remove me from this list.\nOur team of six wants to buy today. How do we pay?\nLoved your talk at the conference last week.",
     "inputFile": "leads.txt",
+    "forms": [],
     "steps": [
       {
         "name": "07-leads",
@@ -88,6 +99,7 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "The author is an idiot and this take is lazy.",
     "inputFile": "post.txt",
+    "forms": [],
     "steps": [
       {
         "name": "08-insult",
@@ -114,6 +126,7 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "Meals with a client: up to $75 a head.\nFlights: economy only, booked 14 days out.\nSoftware: needs a manager's approval.",
     "inputFile": "policy.txt",
+    "forms": [],
     "steps": [
       {
         "name": "09-expense",
@@ -128,6 +141,7 @@
     "source": "deck usecases/run.sh and usecases/out/",
     "input": "Invoice 7 for Northwind. Page 1 of 2.\nInvoice 7 for Northwind. Page 2 of 2. Total due $1,200.\nInvoice 8 for Contoso. Page 1 of 1. Total due $310.\nNotice to all customers. Page 1 of 1. New terms from May 1.",
     "inputFile": "pages.txt",
+    "forms": [],
     "steps": [
       {
         "name": "11-kinds",

@@ -26,7 +26,7 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
   <p>The model reports a probability. Your threshold turns it into an answer, and nothing else does. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
   <p>The same evidence, under two rules:</p>
   <Terminal run={cut} caption="Recorded from the real command. At a cut of 0.9 the message answers no." />
-  <Terminal run={band} caption="Recorded from the real command. Under a band the same 0.74 comes back null." />
+  <Terminal run={band} caption="Recorded from the real command. Under a band the same 0.51 comes back null." />
   <p>You choose the threshold. The model never does.</p>
   <p><code>jev-latest</code> follows the vendor’s newest model. Pin a run by naming a version, and check your labeled cases again when you change it.</p>
 

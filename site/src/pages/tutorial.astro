@@ -24,24 +24,10 @@ const kept = cell('filter', 'shell').runs.find((r) => r.name === 'filter');
 const sorted = cell('rank', 'shell').runs.find((r) => r.name === 'rank');
 const triage = HOWTO_RUNS['triage-a-support-inbox'];
 
-const refundFile = `{
-  "decide": "Does the customer ask for a refund?",
-  "true": "The customer asks for money back.",
-  "false": "Anything else, such as a question or a complaint.",
-  "threshold": "0.2:0.8"
-}`;
-
-const triageFile = `{
-  "version": 1,
-  "questions": {
-    "kind": {
-      "choose": "What kind of message is this?",
-      "options": ["billing", "delivery", "question"]},
-    "urgency": {
-      "score": "How urgent is this?",
-      "levels": ["Routine.", "Soon.", "Immediate."]}
-  }
-}`;
+// The question file and the form come from the recorded runs, so the page
+// shows the bytes the runs read.
+const refundFile = savedYes.also.find((f) => f.name === 'refund.json').text;
+const triageForm = triage.forms[0];
 ---
 <Base title="Tutorial" description="From the install line to a pipeline that sorts a stream of messages.">
   <h1>Tutorial</h1>
@@ -66,15 +52,15 @@ const triageFile = `{
   <p>That number is the model's own. The tool passes it through and computes nothing.</p>
 
   <h2>4. Set your own bar</h2>
-  <p>A weaker message still comes back <code>true</code> at the default bar of 0.5.</p>
-  <Terminal run={vague} caption="Recorded from the real command. The vague message still answers yes." />
+  <p>"I want to send this back." could mean an exchange or money back. The model puts it at 0.51, so it comes back <code>true</code> at the default bar of 0.5.</p>
+  <Terminal run={vague} caption="Recorded from the real command. The send-back message answers yes at the default bar." />
   <p><code>--threshold</code> is your bar on the probability. Raise it and the same message answers no.</p>
   <Terminal run={cut} caption="Recorded from the real command. At a cut of 0.9 the same message answers no." />
   <p>The threshold is an input. The model never chooses it, and it never changes the probability. It changes what you call a yes.</p>
 
   <h2>5. Leave a middle</h2>
   <p>Two numbers make a band. An answer under the low bar is no, an answer over the high bar is yes, and anything between is not sure.</p>
-  <Terminal run={band} caption="Recorded from the real command. The 0.74 lands in the band, so the value is null." />
+  <Terminal run={band} caption="Recorded from the real command. The 0.51 lands in the band, so the value is null." />
   <p>Not sure prints <code>null</code> and exits 3. It means the number landed in your middle. A pipeline uses it to hand a person the calls it should not make alone.</p>
 
   <h2>6. Save the question to a file</h2>
@@ -82,8 +68,8 @@ const triageFile = `{
   <Code code={refundFile} status="run" caption="refund.json, the file the two runs below read." copy={true} />
   <p>Write <code>@refund.json</code> in place of the question words. A clear message passes.</p>
   <Terminal run={savedYes} caption="Recorded from the real command. The clear message answers yes." />
-  <p>The weak message lands inside the band and goes to a person.</p>
-  <Terminal run={savedUnsure} caption="Recorded from the real command. The weak message prints null and exits 3." />
+  <p>The send-back message could mean an exchange or money back. It lands inside the band and goes to a person.</p>
+  <Terminal run={savedUnsure} caption="Recorded from the real command. The send-back message prints null and exits 3." />
   <p>Tune the file once. Your git hook, your test, and your pipeline then ask the same question.</p>
 
   <h2>7. Judge a stream</h2>
@@ -96,7 +82,7 @@ const triageFile = `{
 
   <h2>8. Ask many questions at once</h2>
   <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file, under <code>"version": 1</code>.</p>
-  <Code code={triageFile} status="run" caption="triage.json, the question set the run below fills out." copy={true} />
+  <Code code={triageForm.text} status="run" caption={`${triageForm.name}, the question set the run below fills out.`} copy={true} />
   <div class="block">
     <div class="caption"><span class="status run">run</span><span class="grow">{triage.inputFile}, the file the pipeline reads.</span></div>
     <pre>{triage.input}</pre>
