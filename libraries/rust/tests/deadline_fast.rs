@@ -10,14 +10,20 @@
 //! behaviors.
 //!
 //! Run through `./check.sh`, which sets `ENGINE_NULL=1`; the crate forbids
-//! `unsafe`, so this test reads the environment rather than setting it.
+//! `unsafe`, so this test reads the environment rather than setting it, and
+//! a bare `cargo test` skips it with a note.
 
 use std::time::{Duration, Instant};
 
 use thinkthen::{Engine, ErrorKind, Options, Question};
 
+mod common;
+
 #[test]
 fn a_fast_backend_hears_a_spent_deadline_within_a_tick() {
+    if !common::note_missing_env("a_fast_backend_hears_a_spent_deadline_within_a_tick") {
+        return;
+    }
     assert_eq!(
         std::env::var("ENGINE_NULL").as_deref(),
         Ok("1"),

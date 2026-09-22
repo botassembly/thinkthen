@@ -10,7 +10,8 @@
 //! beside it must answer what the file says. That is the mechanical tie
 //! between the site's text and the run.
 //!
-//! Run through `./check.sh`, which sets `ENGINE_NULL=1`.
+//! Run through `./check.sh`, which sets `ENGINE_NULL=1`; a bare
+//! `cargo test` names no backend and skips the test with a note.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -18,6 +19,8 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use thinkthen::{Annotated, Edge, Engine, Error, Question, Recognize, Recognized, Relate};
+
+mod common;
 
 fn engine() -> Engine {
     Engine::from_env().expect("the stand-in never fails to build")
@@ -62,6 +65,9 @@ fn file() -> HashMap<String, Example> {
 
 #[test]
 fn every_function_example_answers_as_the_file_says() -> Result<(), Error> {
+    if !common::note_missing_env("every_function_example_answers_as_the_file_says") {
+        return Ok(());
+    }
     let examples = file();
     assert_eq!(examples.len(), 10, "the ten functions are all here");
     let source = include_str!("examples.rs");

@@ -4,9 +4,12 @@
 //! `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md`.
 //! The setup above each sample (`ticket`, `reviews`, the two piles) is the
 //! slide's context, not its code. Run through `./check.sh`, which sets
-//! `ENGINE_NULL=1`; the wire twin lives in `tests/wire.rs`.
+//! `ENGINE_NULL=1` (a bare `cargo test` skips it with a note); the wire
+//! twin lives in `tests/wire.rs`.
 
 use thinkthen::{Answer, Engine, Question};
+
+mod common;
 
 struct Ticket {
     body: String,
@@ -14,6 +17,9 @@ struct Ticket {
 
 #[test]
 fn the_slide_runs_as_drawn() -> Result<(), Box<dyn std::error::Error>> {
+    if !common::note_missing_env("the_slide_runs_as_drawn") {
+        return Ok(());
+    }
     // The slide's context.
     let ticket = Ticket {
         body: "I want a refund for order 9".to_owned(),

@@ -88,10 +88,40 @@ def c_names() -> set[str]:
     ))
 
 
+def strip_test_code(text: str) -> str:
+    """Drop `#[cfg(test)]` items: a name a test spells is not a public
+    name. The SQLite surface's panic test names `thinkthen_probe` in a
+    string, which the registration scan would otherwise read as a
+    function nobody ruled."""
+    out = []
+    index = 0
+    while True:
+        found = text.find("#[cfg(test)]", index)
+        if found < 0:
+            out.append(text[index:])
+            break
+        out.append(text[index:found])
+        brace = text.find("{", found)
+        if brace < 0:
+            break
+        depth = 0
+        end = len(text)
+        for position in range(brace, len(text)):
+            if text[position] == "{":
+                depth += 1
+            elif text[position] == "}":
+                depth -= 1
+                if depth == 0:
+                    end = position + 1
+                    break
+        index = end
+    return "".join(out)
+
+
 def sql_names(source: Path) -> set[str]:
     names: set[str] = set()
     for path in source.rglob("*.rs"):
-        text = path.read_text()
+        text = strip_test_code(path.read_text())
         # The SQL-visible names: registration strings and pg_extern
         # declarations. Entry points such as the C API init are symbols,
         # not SQL functions, and are skipped.
