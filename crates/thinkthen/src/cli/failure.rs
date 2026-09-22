@@ -29,9 +29,15 @@ pub(crate) enum Failure {
     /// The flags and the environment name no backend.
     Backend(BackendError),
     /// The selected profile file could not be opened.
-    OpenProfile { path: PathBuf, error: io::Error },
+    OpenProfile {
+        path: PathBuf,
+        error: io::Error,
+    },
     /// The selected profile file was refused.
-    Profile { path: PathBuf, error: ProfileError },
+    Profile {
+        path: PathBuf,
+        error: ProfileError,
+    },
     /// A prepared request exceeds an explicit profile limit.
     ProfileLimit(ProfileLimit),
     /// Two views of one answer were asked for at once.
@@ -87,7 +93,9 @@ pub(crate) enum Failure {
     /// `--input` named a directory rather than a file.
     InputDirectory,
     /// Input bytes were not UTF-8; the noun depends on the framing.
-    InvalidUtf8 { record: bool },
+    InvalidUtf8 {
+        record: bool,
+    },
     /// A record command read a question file of the wrong kind.
     QuestionKind {
         command: &'static str,
@@ -126,31 +134,24 @@ pub(crate) enum Failure {
     DryRunWithRecording,
     /// `--cache` was given beside one of the two options it stands for.
     CacheWithRecording,
-    /// `--jobs` was given to a run that sends one request.
     JobsOutsideRecords,
-    /// Find was given a unit count outside its policy's range.
-    FindCount { none: bool },
-    /// Find's complete original input exceeded its aggregate ceiling.
+    FindCount {
+        none: bool,
+    },
     FindTooLarge,
-    /// `--top` was asked for none of the order, which prints nothing.
     TopIsZero,
-    /// `--quiet` was given to a verb whose answer is the records it prints.
     QuietOverKept(&'static str),
-    /// `--raw` was given where no label is ever printed.
     RawOverKept(&'static str),
-    /// A verb that maps over records was given no framing to read them by.
     NoFraming(&'static str),
-    /// The replay folder holds no entry for the request being made.
     ReplayMiss(String),
-    /// The entry the digest names cannot answer the request being made.
     Entry(String, String),
-    /// The entry already keeps another response for this request.
     RecordingConflict(String),
-    /// The recording folder could not be read or written.
     RecordingStorage,
-    /// A recording directory argument names a regular file.
     RecordingPathIsFile,
-    /// An invariant inside `thinkthen` broke.
+    DefaultCacheUnavailable,
+    DefaultCachePrivate,
+    Configuration(&'static str),
+    CacheEntry,
     Defect(&'static str),
     /// A document `thinkthen` built could not be written as JSON.
     Render(RenderError),
@@ -166,8 +167,6 @@ impl Failure {
     }
 }
 
-/// Say what failed and give the exit code `specification/channels.md` fixes.
-///
 /// Every message a user reads is written here. No message carries a key or any
 /// evidence text. A backend that answers with an error status is named by that
 /// status and by the fixed phrase its status carries, never by its body,
@@ -176,8 +175,6 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
     ExitCode::from(say(failure, &mut writer))
 }
 
-/// Write the diagnostic and give back the exit code, over one boxed writer.
-///
 /// A stopped run reports its cause and then says where it stopped, so this
 /// calls itself once. The writer is a trait object, because a generic call
 /// into itself has no end.
@@ -356,6 +353,17 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             5,
             "`--input` names a directory, and a directory is not an input file".to_owned(),
         ),
+        Failure::DefaultCacheUnavailable => (
+            5,
+            "no default cache folder is available; set THINKTHEN_CACHE or use --no-cache".to_owned(),
+        ),
+        Failure::DefaultCachePrivate => (
+            5,
+            "the default cache folder is not private; set its permissions to 0700 or use --no-cache"
+                .to_owned(),
+        ),
+        Failure::Configuration(message) => (5, (*message).to_owned()),
+        Failure::CacheEntry => (5, "the cache contains a malformed final entry".to_owned()),
         Failure::InvalidUtf8 { record } => (
             5,
             if *record {
@@ -498,6 +506,8 @@ impl From<EngineError> for Failure {
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
+            EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
+            EngineError::CacheEntry => Self::CacheEntry,
             EngineError::Defect(message) => Self::Defect(message),
             EngineError::Usage(message) => Self::Usage(message),
             EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),

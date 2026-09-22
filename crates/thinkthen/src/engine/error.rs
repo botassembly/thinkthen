@@ -43,6 +43,8 @@ pub(crate) enum Error {
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
+    DefaultCachePrivate,
+    CacheEntry,
     Defect(&'static str),
     Usage(&'static str),
     ProfileLimit(ProfileLimit),
@@ -62,7 +64,9 @@ impl Error {
             | Self::Entry(_, _)
             | Self::RecordingConflict(_)
             | Self::RecordingStorage
-            | Self::RecordingPathIsFile => Kind::Local,
+            | Self::RecordingPathIsFile
+            | Self::DefaultCachePrivate => Kind::Local,
+            Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_) | Self::ProfileLimit(_) => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,

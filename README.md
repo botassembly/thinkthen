@@ -22,6 +22,8 @@ Those commands are the design. `specification/` is the contract, and code follow
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first decider model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
 
+The answer cache is on by default. Cache entries contain the complete request and response, including the text being judged. Filesystem access and backups can copy that text. A platform-default cache is created for its owner alone and an existing Unix folder must already have mode `0700`; an explicitly named `--cache` folder keeps its user-owned mode. No key enters an entry. Use `--no-cache` for a run that must neither read nor write cached answers.
+
 ## What it is not for
 
 - **A loop that needs many decisions a second.** One measured call took over 300 ms, and a shell tool adds a process start on top of that. No pipeline of separate processes reaches that rate. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.

@@ -95,6 +95,8 @@ pub(crate) enum Source {
     CommandLine,
     /// The value the question file holds.
     File,
+    /// The value the read-only process configuration holds.
+    Configuration,
     /// The value nobody named, which the tool supplies.
     Default,
 }
@@ -106,6 +108,7 @@ impl Source {
         match self {
             Self::CommandLine => "command line",
             Self::File => "file",
+            Self::Configuration => "configuration",
             Self::Default => "default",
         }
     }
@@ -254,7 +257,7 @@ fn named(source: Source, key: &str) -> String {
             _ => String::new(),
         },
         Source::File => format!("the question file's `{key}`: "),
-        Source::Default => String::new(),
+        Source::Configuration | Source::Default => String::new(),
     }
 }
 
@@ -266,7 +269,7 @@ fn pointed(source: Source, key: &str) -> String {
     match source {
         Source::CommandLine => format!("--{key} "),
         Source::File => format!("the question file's `{key}` "),
-        Source::Default => String::new(),
+        Source::Configuration | Source::Default => String::new(),
     }
 }
 

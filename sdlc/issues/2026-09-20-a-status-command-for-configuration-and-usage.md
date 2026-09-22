@@ -2,6 +2,8 @@
 
 Status: Open
 
+Ticket 0062 lands the read-only configuration and cache maintenance foundation on 2026-09-22. This issue stays open. The next cache ticket owns `status` and persistent numeric counters.
+
 Asked by Ian on 2026-09-20. He ran the repository's own spend wrapper and liked what it printed:
 
 ```

@@ -78,15 +78,17 @@ The fifth outcome is selected for release preparation: a read-only `thinkthen tr
 
 The earlier `specification/report.md` holds what the command knew about accuracy at coverage and about the fixed JSON shape of a report. It stays in the git history.
 
-### The configuration file, address profiles, and the `config` command
+### Named address profiles and the `config` command
 
 The file lived at `$XDG_CONFIG_HOME/thinkthen/config.json`. It held a map of named profiles, a default profile name, and three run settings: `timeout_seconds`, `max_retries`, and `jobs`. A profile held four values: the URL, the adapter, the model, and the name of the key variable. It never held a key. `config path`, `config show`, and `config check` read it and printed it, and the tool never wrote it. The options `--profile`, `--adapter`, `--key-env`, and `--config` and the variables `THINKTHEN_PROFILE` and `THINKTHEN_CONFIG` selected against it.
 
 Ian took all of that configuration surface out of version one on 2026-09-19, in the configuration section of ADR 0010. Rulings 1 and 2 emptied an address profile out. One wire shape leaves nothing for an adapter to name, and `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `--model` already say the other three values. An address profile was then a second spelling of what a shell user writes in front of the command, and two spellings of one thing cost more than they return.
 
+ADR 0033 later returned one smaller read-only configuration file for the bounded default cache. Its closed shape holds one address, one model, the cache switch, and the prune target. It has no named profiles, selection command, key name, adapter, retry setting, width, or write command. The `config` command and named address profiles remain held here.
+
 ADR 0032 later reused `--profile FILE` for a smaller explicit file. That file carries a safe calibration name and local evidence-byte, encoded-request-byte, or expanded-question limits. It carries no address, model, adapter, key name, retry setting, width, default, or discovery rule. A user names its path on each run. It does not restore the configuration surface this section holds out.
 
-A user with several endpoints for whom a variable in front of the command is not enough would bring the configuration file back. The shape to return to is the one above, minus the adapter: named address profiles over an address, a model, and a key variable. The explicit limits-and-calibration file remains a separate input.
+A user with several endpoints for whom a variable in front of the command is not enough would bring named address profiles back. The shape to return to is the one above, minus the adapter: named address profiles over an address, a model, and a key variable. The bounded-cache configuration and explicit limits-and-calibration file remain separate inputs.
 
 `specification/config.md` and demo 10, `demos/10-another-backend/`, stay in the git history. Ticket 0007 removed both, and 10 stays an empty number.
 

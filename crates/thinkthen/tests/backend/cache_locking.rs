@@ -111,6 +111,7 @@ impl Drop for ReapedChild {
 fn start(base: &str, folder: &str) -> io::Result<ReapedChild> {
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         .args(arguments(base, folder))

@@ -2,6 +2,7 @@
 
 pub(crate) mod annotate_schedule;
 pub(crate) mod cache_lock;
+pub(crate) mod cache_prune;
 pub(crate) mod error;
 pub(crate) mod http;
 pub(crate) mod prepared_request;

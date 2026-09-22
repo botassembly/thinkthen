@@ -14,6 +14,7 @@ Ian can overturn any placement here.
 - Landed: 0059. Explicit backend profiles enforce local byte and question limits before replay, cache, key lookup, or network access. Saved calibration names warn once at the ordered result boundary and appear in detailed metadata.
 - Landed: 0060. Default streamed value rows keep each parsed record under `input` beside its answer under `value`. Streamed annotation still enriches object records and wraps non-object records. One-document and explicit views stay unchanged.
 - Landed: 0061. Recording writers preflight storage, repair damaged entries atomically, handle file-size signals safely, sync complete entries, preserve valid old bytes, and remove new digest locks after a valid entry lands.
+- In progress: 0062 enables the bounded platform cache, its read-only configuration, `--no-cache`, and explicit prune. `status` and persistent numeric counters are the next cache ticket.
 - Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
@@ -41,7 +42,7 @@ Tickets 0056 through 0058 completed every row below. Lane A continues with backe
 
 **A4. The cache, and the money bugs with it.** Proposed tickets 6, 7, and 14 together, because a cache that is on by default puts these bugs in front of every user. They are one body of work in the files 0055 just moved:
 
-Ticket 0061 completed the durability foundation before any default cache: corrupt-entry repair, write preflight, file-size failure handling, temporary cleanup, synced installation, and completed-lock removal.
+Tickets 0061 and 0062 complete recording durability and the bounded default cache. The next cache ticket adds `status` and numeric counters without changing entry contents.
 
 - Engine settings for the cache and the counters.
 - The default bounded cache, the smallest config file, `--no-cache`, prune, and `thinkthen status` (`the-disk-cache-is-never-on-unless-the-user-names-a-folder`, `a-status-command-for-configuration-and-usage`).

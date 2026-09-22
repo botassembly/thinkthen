@@ -472,6 +472,7 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
         Listener::answering(move |_| Canned::ok(response).after(20)).expect("a listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "decide",

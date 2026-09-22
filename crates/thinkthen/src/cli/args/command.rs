@@ -1,6 +1,8 @@
 //! The verbs and their command-level help.
 
-use clap::Subcommand;
+use std::path::PathBuf;
+
+use clap::{Args, Subcommand};
 
 use super::{
     AnnotateArguments, ChooseArguments, DecideArguments, FilterArguments, FindArguments,
@@ -155,6 +157,36 @@ pub(crate) enum Command {
         before_help = "thinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\n"
     )]
     Annotate(AnnotateArguments),
+
+    /// Inspect and maintain answer-cache folders without sending a request.
+    Cache(CacheArguments),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct CacheArguments {
+    #[command(subcommand)]
+    pub(crate) command: CacheCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub(crate) enum CacheCommand {
+    /// Remove selected entries, then the oldest entries above the size target.
+    Prune(PruneArguments),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct PruneArguments {
+    /// The cache or recording folder to maintain.
+    pub(crate) directory: PathBuf,
+    /// Keep recognized entries at or below this many allocated bytes.
+    #[arg(long, value_name = "BYTES")]
+    pub(crate) max_size: Option<String>,
+    /// Remove entries strictly older than a duration such as 30d or 12h.
+    #[arg(long, value_name = "Nd|Nh|Nm|Ns")]
+    pub(crate) older_than: Option<String>,
+    /// Remove entries answered by any other model.
+    #[arg(long, value_name = "MODEL")]
+    pub(crate) answered_by_other_than: Option<String>,
 }
 
 impl Command {
@@ -169,6 +201,7 @@ impl Command {
             Self::Rank(arguments) => arguments.common.input.as_deref(),
             Self::Find(arguments) => arguments.common.input.as_deref(),
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
+            Self::Cache(_) => None,
         }
     }
 
@@ -183,6 +216,7 @@ impl Command {
             Self::Rank(arguments) => arguments.common.timeout,
             Self::Find(arguments) => arguments.common.timeout,
             Self::Annotate(arguments) => arguments.common.timeout,
+            Self::Cache(_) => 1,
         }
     }
 }

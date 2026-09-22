@@ -279,6 +279,7 @@ fn a_closed_output_pipe_ends_find_quietly_after_the_paid_answer_finishes() {
     let listener = Listener::serving(vec![Canned::ok(PICKED).after(30)]).expect("listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args(["find", "Which unit answers?", "--url", listener.base()])
         .stdin(Stdio::piped())

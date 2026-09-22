@@ -82,6 +82,7 @@ fn raw_child(
     arguments.extend(extra);
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args(arguments)
         .stdin(Stdio::piped())

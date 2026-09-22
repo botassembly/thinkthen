@@ -13,6 +13,7 @@ fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io:
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -409,6 +410,14 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
         long.contains("[default: 4]"),
         "the help does not name the jobs default: {long}"
     );
+    for cache_rule in [
+        "cached by default in the platform cache folder",
+        "Entries contain the judged text",
+        "overriding THINKTHEN_CACHE and the platform default",
+        "An explicit recording folder suppresses the platform default cache",
+    ] {
+        assert!(long.contains(cache_rule), "{cache_rule}: {long}");
+    }
 }
 
 #[test]

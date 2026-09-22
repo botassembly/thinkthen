@@ -12,12 +12,66 @@ pub(crate) struct CacheLock {
     folder: PathBuf,
 }
 
+/// A shared or exclusive lock on an already-open recording directory.
+#[derive(Debug)]
+pub(crate) struct FolderGate {
+    _directory: File,
+}
+
+pub(crate) enum TryAcquire {
+    Acquired(CacheLock),
+    Active,
+}
+
+pub(crate) fn shared_folder(folder: &Path) -> io::Result<FolderGate> {
+    let directory = File::open(folder)?;
+    File::lock_shared(&directory)?;
+    Ok(FolderGate {
+        _directory: directory,
+    })
+}
+
+pub(crate) fn exclusive_folder(folder: &Path) -> io::Result<FolderGate> {
+    let directory = File::open(folder)?;
+    File::lock(&directory)?;
+    Ok(FolderGate {
+        _directory: directory,
+    })
+}
+
 /// Wait for exclusive ownership of one digest in this recording folder.
 pub(crate) fn acquire(folder: &Path, digest: &str) -> io::Result<CacheLock> {
     acquire_after_open(folder, digest, || {})
 }
 
+/// Take an inactive digest lock without waiting for an older process.
+pub(crate) fn try_acquire(folder: &Path, digest: &str) -> io::Result<TryAcquire> {
+    use std::fs::TryLockError;
+
+    let (file, path, locks) = opened_lock(folder, digest)?;
+    match file.try_lock() {
+        Ok(()) => Ok(TryAcquire::Acquired(CacheLock {
+            _file: file,
+            path,
+            folder: locks,
+        })),
+        Err(TryLockError::WouldBlock) => Ok(TryAcquire::Active),
+        Err(TryLockError::Error(error)) => Err(error),
+    }
+}
+
 fn acquire_after_open(folder: &Path, digest: &str, opened: impl FnOnce()) -> io::Result<CacheLock> {
+    let (file, path, locks) = opened_lock(folder, digest)?;
+    opened();
+    file.lock()?;
+    Ok(CacheLock {
+        _file: file,
+        path,
+        folder: locks,
+    })
+}
+
+fn opened_lock(folder: &Path, digest: &str) -> io::Result<(File, PathBuf, PathBuf)> {
     let locks = folder.join(".locks");
     make_private(&locks)?;
     let path = locks.join(digest);
@@ -29,13 +83,7 @@ fn acquire_after_open(folder: &Path, digest: &str, opened: impl FnOnce()) -> io:
         options.mode(0o600);
     }
     let file = options.open(&path)?;
-    opened();
-    file.lock()?;
-    Ok(CacheLock {
-        _file: file,
-        path,
-        folder: locks,
-    })
+    Ok((file, path, locks))
 }
 
 impl CacheLock {

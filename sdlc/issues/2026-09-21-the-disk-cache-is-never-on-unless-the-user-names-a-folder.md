@@ -2,6 +2,8 @@
 
 Status: Open
 
+Ticket 0062 implements Ian's later XDG ruling on 2026-09-22. The cache is now on by default with the privacy guard, `--no-cache`, read-only configuration, and explicit prune. This page stays open because its earlier off-by-default rule remains useful decision history and the broader `status` work has not landed.
+
 Ian asked on 2026-09-21 whether the cache is always there. His worry: a side effect nobody asked for is strange to people. This page states the rule for all ten surfaces, so the ADR 0017 rewrite and step 4 of the engine plan have it. It authorizes nothing.
 
 ## What is true today

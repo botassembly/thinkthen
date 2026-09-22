@@ -58,14 +58,26 @@ pub(crate) struct FindCommon {
     )]
     pub(crate) model: Option<String>,
     /// Write the completed exchange into DIR.
+    ///
+    /// An explicit recording folder suppresses the platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
     /// Answer from DIR alone.
+    ///
+    /// An explicit replay folder suppresses the platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) replay: Option<PathBuf>,
-    /// Replay and record through one DIR.
+    /// Replay and record through one DIR, overriding THINKTHEN_CACHE and the platform default.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) cache: Option<PathBuf>,
+    /// Do not read or write answers in the default cache.
+    ///
+    /// Answers are otherwise cached by default in the platform cache folder.
+    /// Entries contain the judged text. A new default folder is private to its
+    /// owner. This option conflicts with --cache but may accompany an explicit
+    /// --record or --replay folder.
+    #[arg(long, conflicts_with = "cache")]
+    pub(crate) no_cache: bool,
     /// Positive seconds one attempt may take.
     #[arg(
         long,
@@ -97,6 +109,7 @@ impl FindCommon {
             record: self.record.clone(),
             replay: self.replay.clone(),
             cache: self.cache.clone(),
+            no_cache: self.no_cache,
             timeout: self.timeout,
             jobs: None,
             max_retries: self.max_retries,

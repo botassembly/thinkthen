@@ -401,9 +401,16 @@ pub(crate) fn spawn(
     environment: &[(&str, &str)],
     evidence: &[u8],
 ) -> io::Result<Output> {
+    static SPAWNS: AtomicUsize = AtomicUsize::new(0);
+    let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "spawn-home-{}-{}",
+        std::process::id(),
+        SPAWNS.fetch_add(1, Ordering::Relaxed)
+    ));
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
+        .env("HOME", home)
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         .args(arguments)
         .stdin(Stdio::piped())

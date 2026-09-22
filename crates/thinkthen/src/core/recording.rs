@@ -42,6 +42,9 @@ pub(crate) enum EntryError {
     /// The message names no cause, for the reason [`Self::Malformed`] gives.
     #[error("the entry could not be written as JSON")]
     Unwritable,
+    /// A cache entry cannot support model-based maintenance.
+    #[error("the recorded response does not name a nonblank model")]
+    MissingModel,
 }
 
 /// The name one exchange is filed under: its SHA-256 in lowercase hex.
@@ -175,6 +178,25 @@ impl Entry {
             return Err(EntryError::Mismatched);
         }
         Ok(entry.response.get().as_bytes().to_owned())
+    }
+
+    /// Validate one final cache entry and return its digest and response model.
+    pub(crate) fn inspected(bytes: &[u8]) -> Result<(Digest, String), EntryError> {
+        #[derive(Deserialize)]
+        struct StoredResponse {
+            model: String,
+        }
+        let entry: Self = serde_json::from_slice(bytes).map_err(place)?;
+        if entry.schema != SCHEMA || entry.adapter != built_in::NAME {
+            return Err(EntryError::Schema);
+        }
+        let url = Url::new(&entry.url).map_err(|_| EntryError::Mismatched)?;
+        let exchange = Exchange::new(&url, entry.request.get().as_bytes());
+        let response: StoredResponse = serde_json::from_str(entry.response.get()).map_err(place)?;
+        if response.model.trim().is_empty() {
+            return Err(EntryError::MissingModel);
+        }
+        Ok((exchange.digest(), response.model))
     }
 }
 

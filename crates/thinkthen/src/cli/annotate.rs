@@ -2,7 +2,6 @@
 
 use std::fs;
 use std::io::{Read, Write};
-use std::path::Path;
 use std::process::ExitCode;
 use std::time::Duration;
 
@@ -15,7 +14,7 @@ use crate::core::{
 };
 
 use crate::args::{AnnotateArguments, Common};
-use crate::asking::ask_prepared;
+use crate::asking::{Folders, ask_prepared};
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::Client;
@@ -50,14 +49,15 @@ pub(crate) fn run(
         }
         Err(error) => return Err(error.into()),
     };
-    let folders = folders(&arguments.common)?;
-    if arguments.common.dry_run && (folders.0.is_some() || folders.1.is_some()) {
+    let folders = Folders::of(&arguments.common, environment)?;
+    if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
     let model = arguments
         .common
         .model
         .as_deref()
+        .or_else(|| environment.model())
         .unwrap_or(built_in::DEFAULT_MODEL);
     let backend = Backend::resolve(
         arguments.common.url.as_deref(),
@@ -84,7 +84,11 @@ pub(crate) fn run(
         let judging = Judging {
             common: &arguments.common,
             environment,
-            recorder: Recorder::of(folders.0, folders.1)?,
+            recorder: Recorder::of_private(
+                folders.record.as_deref(),
+                folders.replay.as_deref(),
+                folders.private_default,
+            )?,
             client: Client::new(
                 Duration::from_secs(arguments.common.timeout),
                 backend.is_secure(),
@@ -94,6 +98,7 @@ pub(crate) fn run(
             profile,
             mismatch,
             streams: reading.streams(),
+            recording_reported: folders.reported(),
         };
         let mut output = Output::Streaming(&mut writer);
         let jobs = arguments.common.jobs.map_or(4, usize::from);
@@ -120,7 +125,11 @@ pub(crate) fn run(
     let judging = Judging {
         common: &arguments.common,
         environment,
-        recorder: Recorder::of(folders.0, folders.1)?,
+        recorder: Recorder::of_private(
+            folders.record.as_deref(),
+            folders.replay.as_deref(),
+            folders.private_default,
+        )?,
         client: Client::new(
             Duration::from_secs(arguments.common.timeout),
             backend.is_secure(),
@@ -130,6 +139,7 @@ pub(crate) fn run(
         profile,
         mismatch,
         streams: reading.streams(),
+        recording_reported: folders.reported(),
     };
     let mut output = Output::Streaming(&mut writer);
     let jobs = arguments.common.jobs.map_or(4, usize::from);
@@ -175,22 +185,6 @@ fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
         .is_some_and(|text| QuestionSet::parse(&text).is_ok())
 }
 
-type FolderPair<'a> = (Option<&'a Path>, Option<&'a Path>);
-
-fn folders(common: &Common) -> Result<FolderPair<'_>, Failure> {
-    if let Some(cache) = common.cache.as_deref() {
-        if common.record.is_some() || common.replay.is_some() {
-            return Err(Failure::CacheWithRecording);
-        }
-        return Ok((Some(cache), Some(cache)));
-    }
-    if matches!((&common.record, &common.replay), (Some(record), Some(replay)) if record != replay)
-    {
-        return Err(Failure::TwoFolders);
-    }
-    Ok((common.record.as_deref(), common.replay.as_deref()))
-}
-
 fn framing(common: &Common) -> Framing {
     if common.lines {
         Framing::Lines
@@ -233,11 +227,12 @@ pub(crate) struct Judging<'a> {
     profile: Option<BackendProfile>,
     mismatch: Mismatch,
     streams: bool,
+    recording_reported: bool,
 }
 
 impl Judging<'_> {
     pub(crate) const fn recording_named(&self) -> bool {
-        self.recorder.named()
+        self.recording_reported
     }
 
     pub(crate) fn record(

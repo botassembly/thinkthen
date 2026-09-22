@@ -138,6 +138,16 @@ impl Sources {
     pub(crate) const fn question_is_from_file(&self) -> bool {
         matches!(self.question, Source::File)
     }
+
+    pub(crate) const fn model_is_default(&self) -> bool {
+        matches!(self.model, Source::Default)
+    }
+
+    #[must_use]
+    pub(crate) const fn with_configuration_model(mut self) -> Self {
+        self.model = Source::Configuration;
+        self
+    }
 }
 
 impl Serialize for Sources {

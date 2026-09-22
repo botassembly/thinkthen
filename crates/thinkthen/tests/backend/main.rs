@@ -10,8 +10,12 @@ mod harness;
 mod address;
 mod annotate;
 mod asked;
+mod cache_configuration;
 mod cache_locking;
+#[cfg(target_os = "linux")]
+mod cache_prune_locking;
 mod choosing;
+mod default_cache;
 mod distribution_total;
 mod exchange;
 mod find;

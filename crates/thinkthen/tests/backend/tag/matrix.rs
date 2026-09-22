@@ -247,6 +247,7 @@ fn a_closed_tag_output_pipe_stops_quietly() {
         Listener::answering(|_| Canned::ok(&answer(&[0.9])).after(20)).expect("listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "tag",

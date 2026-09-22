@@ -5,6 +5,8 @@ pub(crate) mod annotate_schedule;
 pub(crate) mod args;
 pub(crate) mod asked;
 pub(crate) mod asking;
+pub(crate) mod cache;
+pub(crate) mod config;
 pub(crate) mod edge;
 pub(crate) mod failure;
 pub(crate) mod find;
@@ -52,7 +54,7 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
             "--timeout takes a whole number of seconds greater than zero",
         ));
     }
-    let environment = Environment::read();
+    let environment = Environment::read()?;
     if let Some(command) = cli.command.as_ref() {
         edge::waiting(command.input(), io::stderr().lock());
     }
@@ -66,6 +68,9 @@ fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
         Some(Command::Rank(arguments)) => judge::rank(arguments, &environment, input, writer),
         Some(Command::Find(arguments)) => find::run(arguments, &environment, input, writer),
         Some(Command::Annotate(arguments)) => annotate::run(arguments, &environment, input, writer),
+        Some(Command::Cache(arguments)) => match &arguments.command {
+            args::CacheCommand::Prune(arguments) => cache::prune(arguments, &environment, writer),
+        },
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

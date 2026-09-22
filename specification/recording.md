@@ -15,6 +15,14 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 
 Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads nothing.
 
+With none of these options, normal commands use the platform answer cache: `$XDG_CACHE_HOME/thinkthen`, then `$HOME/.cache/thinkthen` on Linux, and `$HOME/Library/Caches/thinkthen` on macOS. `THINKTHEN_CACHE` selects another folder. `--no-cache` disables answer-cache lookup and writing for one run. Explicit `--record` or `--replay` suppresses the default cache. Dry runs, help, version, and `cache prune` create no default cache.
+
+An XDG home or `HOME` participates in these paths only when it is absolute. A relative or blank home is unusable and never resolves below the working directory.
+
+The default cache folder is created only when the first valid prepared request reaches recording setup. A rejected record or invalid `find` set creates nothing. Replay of a missing explicit directory reports the request's normal replay miss and creates no directory. Replay of an existing read-only directory locks its already-open directory handle and changes no file or directory metadata.
+
+The optional read-only configuration file is `$XDG_CONFIG_HOME/thinkthen/config.json`, then `$HOME/.config/thinkthen/config.json` on Linux, and `$HOME/Library/Application Support/thinkthen/config.json` on macOS. It has schema `thinkthen.config/1` and optional `url`, `model`, `cache`, and positive `cache_bytes` fields. Unknown fields are refused. The default is cache enabled with a target of 100,000,000 allocated bytes. The tool never creates or edits this file.
+
 A recording directory argument that names a regular file is a local failure at exit 5. The diagnostic says to choose another path or remove the file. It repeats neither the path nor an operating-system error.
 
 Both options on one folder are also the resume for a record run. [records.md](records.md) shows it.
@@ -44,6 +52,7 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
 - The first valid complete entry installed for a digest stays there until the user removes it. Recording the same stored JSON response again succeeds without changing the entry. Whitespace outside the backend's JSON value and formatting around a valid version-one envelope do not distinguish responses. A different stored response is a local failure at exit 5. The message names the entry and repeats neither response. Replay alone refuses a damaged entry locally. A successful answer through `--record` or `--cache` replaces a damaged entry atomically, and a later replay reads the repair.
 - New writes require hard-link support in `DIR`. A filesystem that refuses hard links returns a local recording failure at exit 5 and leaves an existing entry untouched.
 - A missing or damaged entry takes an exclusive operating-system lock for its digest, then checks the entry again. Concurrent callers that share a cache send one backend request when the owner installs a complete entry. Waiters replay that entry and report `meta.replayed: true`. A record-only caller also uses this lock while an entry is missing or damaged. It releases the old lock before sending when the recheck finds a valid entry, so concurrent record-only callers against a valid entry each send once.
+- Every recording or cache operation also holds a shared lock on the already-open directory handle from its first lookup through replay or installation. Replay creates no gate file and remains read-only. `cache prune` holds the exclusive side of the same gate, so it cannot split the digest-lock namespace while a request uses the folder.
 - A completed lock file is removed while its owner still holds the original inode and after a valid final entry exists. An existing waiter remains on that inode, rechecks the valid entry, and does not send a duplicate cache request. A failed owner with no valid final entry leaves one empty lock file. Lock files carry only the lowercase digest as their name and contain no data. On Unix the `.locks` directory has mode `0700` and files created by the tool have mode `0600`. Closing a file releases its lock after success, failure, or process death. Lock files left by an older version remain until a later prune command. No owner record or recovery step exists.
 
 Every recording storage failure exits 5 and prints `thinkthen: the recording folder could not be read or written; check its permissions and free space`. The message carries no path, entry bytes, evidence, credential, or operating-system error. On Unix the process safely handles `SIGXFSZ`, so a file-size limit reaches this failure and the normal temporary cleanup path instead of terminating the process. A later disk-full or sync failure can still discard an answer the backend already returned.
@@ -63,3 +72,9 @@ A recorded partial reply replays the same good answers, failed markers, failure 
 ## A recording holds the evidence
 
 The request body carries the evidence. A recording is as private as the input it was made from. Record only what may be kept, and keep a recording of private input out of version control.
+
+## Pruning a cache
+
+`thinkthen cache prune DIR` is the only cache-entry removal surface, and `DIR` is always explicit. `--older-than Nd|Nh|Nm|Ns` and `--answered-by-other-than MODEL` select a union. `--max-size BYTES` sets a separate target; without it, the configuration target applies. Selected entries leave first, then the oldest modification time leaves until recognized allocated bytes reach the target. Every chosen entry is deleted in modification-time order, with equal times sorted by digest name. An active digest lock is skipped without waiting. Its entry and allocated bytes remain in the final counts and may leave the cache over target. The command prints `removed N entries and B bytes; N entries and B bytes remain`.
+
+Prune validates every digest-named regular file before it deletes one. The name must match the digest recomputed from the fixed adapter, stored URL, and exact request bytes, and the response must name a nonblank model. A digest-shaped symlink or other non-regular object is refused without following it. Unknown names, directories, locks, and dot-prefixed temporary files are ignored. A scan refusal deletes nothing. A later filesystem failure can leave an oldest prefix deleted and prints no success line.

@@ -9,6 +9,7 @@ use std::process::{Command, Output, Stdio};
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -25,6 +26,7 @@ fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
 fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::process::ExitStatus> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -91,6 +93,14 @@ fn help_leads_with_whole_set_disclosure_and_all_three_bounds() {
             assert!(help.contains(
                 "`find --none` prints nothing and exits 3 when `none` wins or ties for first."
             ));
+            for cache_rule in [
+                "cached by default in the platform cache folder",
+                "Entries contain the judged text",
+                "overriding THINKTHEN_CACHE and the platform default",
+                "An explicit replay folder suppresses the platform default cache",
+            ] {
+                assert!(help.contains(cache_rule), "{cache_rule}\n{help}");
+            }
         }
         for accepted in [
             "--lines",
@@ -270,6 +280,8 @@ fn syntax_and_no_recording_utf8_refusals_repeat_no_input() {
 #[test]
 fn a_named_recording_appears_in_a_find_preflight_stop() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("find-stopped-recording");
+    let _removed = fs::remove_dir_all(&folder);
+    fs::create_dir_all(&folder).expect("recording directory");
     let folder = folder.to_string_lossy();
     let output = run(
         &["find", "Which?", "--replay", &folder],

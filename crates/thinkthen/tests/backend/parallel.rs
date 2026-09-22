@@ -325,6 +325,7 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
         .expect("a loopback listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "decide",

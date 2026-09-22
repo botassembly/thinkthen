@@ -315,6 +315,7 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     let file = grouped("broken-pipe", 2);
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
@@ -382,6 +383,7 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     let file = grouped("closed-pipe-failure", 1);
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",

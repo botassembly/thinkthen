@@ -412,7 +412,7 @@ fn a_proxy_variable_carries_no_plain_http_request() {
 
     for variable in ["HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"] {
         let output = decide(
-            &["--url", backend.base()],
+            &["--url", backend.base(), "--no-cache"],
             &[
                 (variable, address.as_str()),
                 ("THINKTHEN_API_KEY", "sk-test-value"),

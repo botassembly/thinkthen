@@ -51,16 +51,23 @@ pub(crate) fn run(
         common
             .model
             .as_deref()
+            .or_else(|| environment.model())
             .unwrap_or(crate::core::DEFAULT_MODEL),
     )?;
     let profile = profile::read(common)?;
-    let folders = Folders::of(common)?;
+    let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
-    let recording = folders.named();
+    let recording = folders.reported();
     let recorder = (!common.dry_run)
-        .then(|| Recorder::of(folders.record, folders.replay))
+        .then(|| {
+            Recorder::of_private(
+                folders.record.as_deref(),
+                folders.replay.as_deref(),
+                folders.private_default,
+            )
+        })
         .transpose()?;
     let most = if arguments.none { 254 } else { 255 };
     let units = read_units(

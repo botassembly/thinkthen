@@ -3,11 +3,12 @@
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, ErrorKind, IsTerminal as _, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::core::KEY_VAR;
 
+use crate::cli::config::{self, Config};
 use crate::engine::http::Key;
 use crate::failure::Failure;
 
@@ -29,21 +30,53 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
+    cache: Option<PathBuf>,
+    cache_is_platform_default: bool,
+    config: Config,
     retry_wait_ms: Option<u64>,
 }
 
 impl Environment {
     /// Read the base address and the hidden test wait, which help never shows.
-    pub(crate) fn read() -> Self {
-        Self {
+    pub(crate) fn read() -> Result<Self, Failure> {
+        let named_cache = read("THINKTHEN_CACHE");
+        let config = Config::read(config::path().as_deref())?;
+        Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
+            cache: named_cache
+                .as_ref()
+                .map(PathBuf::from)
+                .or_else(config::cache_path),
+            cache_is_platform_default: named_cache.is_none(),
+            config,
             retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
-        }
+        })
+    }
+
+    /// The answer-cache folder selected by the environment or platform.
+    pub(crate) fn cache(&self) -> Option<&Path> {
+        self.cache.as_deref()
+    }
+
+    pub(crate) const fn cache_is_platform_default(&self) -> bool {
+        self.cache_is_platform_default
+    }
+
+    pub(crate) fn model(&self) -> Option<&str> {
+        self.config.model()
+    }
+
+    pub(crate) fn default_cache_enabled(&self) -> bool {
+        self.config.cache_enabled()
+    }
+
+    pub(crate) fn cache_bytes(&self) -> u64 {
+        self.config.cache_bytes()
     }
 
     /// The base the request is posted under, or `None` when the variable is empty.
     pub(crate) fn base_url(&self) -> Option<&str> {
-        self.base_url.as_deref()
+        self.base_url.as_deref().or_else(|| self.config.url())
     }
 
     /// How long the first retry waits before the wait doubles.

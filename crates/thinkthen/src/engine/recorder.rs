@@ -5,10 +5,10 @@ use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::core::recording::{Digest, Entry, Exchange};
-use crate::engine::cache_lock::{self, CacheLock};
+use crate::engine::cache_lock::{self, CacheLock, FolderGate};
 use crate::engine::error::Error;
 
 use self::fault::{StorageStageName, maybe_fail, maybe_fail_io};
@@ -26,6 +26,8 @@ pub(crate) struct Recorder {
     folder: Option<PathBuf>,
     recording: bool,
     replaying: bool,
+    private_default: bool,
+    gate: Mutex<Option<FolderGate>>,
 }
 
 /// Work selected before a key is read or a request is sent.
@@ -58,7 +60,16 @@ enum Existing {
 }
 
 impl Recorder {
+    #[cfg(test)]
     pub(crate) fn of(record: Option<&Path>, replay: Option<&Path>) -> Result<Self, Error> {
+        Self::of_private(record, replay, false)
+    }
+
+    pub(crate) fn of_private(
+        record: Option<&Path>,
+        replay: Option<&Path>,
+        private_default: bool,
+    ) -> Result<Self, Error> {
         let folder = match (record, replay) {
             (Some(recorded), Some(replayed)) if recorded != replayed => {
                 return Err(Error::Defect(
@@ -79,11 +90,32 @@ impl Recorder {
             folder,
             recording: record.is_some(),
             replaying: replay.is_some(),
+            private_default,
+            gate: Mutex::new(None),
         })
     }
 
-    pub(crate) const fn named(&self) -> bool {
-        self.folder.is_some()
+    fn ready(&self, name: &str) -> Result<(), Error> {
+        let Some(folder) = self.folder.as_deref() else {
+            return Ok(());
+        };
+        let mut gate = self
+            .gate
+            .lock()
+            .map_err(|_| Error::Defect("the recording folder gate is poisoned"))?;
+        if gate.is_some() {
+            return Ok(());
+        }
+        if self.recording {
+            make_folder(folder)?;
+        } else if !folder.exists() {
+            return Err(Error::ReplayMiss(name.to_owned()));
+        }
+        if self.private_default {
+            require_private(folder)?;
+        }
+        *gate = Some(cache_lock::shared_folder(folder).map_err(storage)?);
+        Ok(())
     }
 
     /// Decide replay or prepare every write resource before live work.
@@ -96,6 +128,7 @@ impl Recorder {
             return Ok(PreparedRecording::Live(WritePermit { write: None }));
         };
         let name = digest.file_name();
+        self.ready(&name)?;
         let entry = folder.join(&name);
         if self.recording {
             install_sigxfsz_handler()?;
@@ -131,6 +164,22 @@ impl Recorder {
             }
         }
     }
+}
+
+#[cfg(unix)]
+fn require_private(folder: &Path) -> Result<(), Error> {
+    use std::os::unix::fs::PermissionsExt as _;
+    let mode = fs::metadata(folder).map_err(storage)?.permissions().mode() & 0o777;
+    if mode == 0o700 {
+        Ok(())
+    } else {
+        Err(Error::DefaultCachePrivate)
+    }
+}
+
+#[cfg(not(unix))]
+fn require_private(_folder: &Path) -> Result<(), Error> {
+    Ok(())
 }
 
 impl WritePermit {

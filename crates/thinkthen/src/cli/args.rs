@@ -7,7 +7,7 @@ use clap::{Args, Parser};
 
 mod command;
 mod find;
-pub(crate) use command::Command;
+pub(crate) use command::{CacheCommand, Command, PruneArguments};
 pub(crate) use find::FindArguments;
 
 /// Put a decider model in the shell.
@@ -111,20 +111,33 @@ pub(crate) struct Common {
     pub(crate) model: Option<String>,
 
     /// Call the backend, then write the exchange into DIR. DIR is created when absent.
+    ///
+    /// An explicit recording folder suppresses the platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
 
     /// Answer from DIR alone. No connection opens, and no key is read.
+    ///
+    /// An explicit replay folder suppresses the platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) replay: Option<PathBuf>,
 
-    /// Replay DIR and record into it, which resumes a run that stopped.
+    /// Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
     ///
     /// It is --record DIR and --replay DIR together, so it stands beside
     /// neither of them. A finished record is answered from disk, and only the
     /// rest goes to the backend.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) cache: Option<PathBuf>,
+
+    /// Do not read or write the answer cache for this run.
+    ///
+    /// Answers are otherwise cached by default in the platform cache folder.
+    /// Entries contain the judged text. A new default folder is private to its
+    /// owner. This option conflicts with --cache but may accompany an explicit
+    /// --record or --replay folder.
+    #[arg(long, conflicts_with = "cache")]
+    pub(crate) no_cache: bool,
 
     /// Positive seconds one attempt may take, from connect to the last byte.
     #[arg(

@@ -105,14 +105,19 @@ pub(crate) fn run(
     } = asked;
     let threshold = settled.threshold();
     let view = view.checked()?;
-    let folders = Folders::of(common)?;
+    let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
+    let configured_model = settled
+        .sources()
+        .model_is_default()
+        .then(|| environment.model())
+        .flatten();
     let backend = Backend::resolve(
         common.url.as_deref(),
         environment.base_url(),
-        settled.model().as_str(),
+        configured_model.unwrap_or_else(|| settled.model().as_str()),
     )?;
     let profile = profile::read(common)?;
     let mismatch = Mismatch::new(settled.profile(), profile.as_ref());
@@ -137,10 +142,15 @@ pub(crate) fn run(
         streams: reading.streams(),
         profile,
         mismatch,
-        sources: settled
-            .sources()
-            .question_is_from_file()
-            .then(|| *settled.sources()),
+        sources: (settled.sources().question_is_from_file() || configured_model.is_some()).then(
+            || {
+                if configured_model.is_some() {
+                    settled.sources().with_configuration_model()
+                } else {
+                    *settled.sources()
+                }
+            },
+        ),
     };
 
     if let Some(kind) = table_kind(common) {
@@ -164,7 +174,7 @@ pub(crate) fn run(
         );
     }
 
-    let recording = configuration.folders.named();
+    let recording = configuration.folders.reported();
     let judging = Judging::new(configuration)?;
     if !judging.streams {
         let bytes = chunks.next().transpose()?.unwrap_or_default();
@@ -205,7 +215,7 @@ fn over_table(
             output.writer(),
         );
     }
-    let recording = configuration.folders.named();
+    let recording = configuration.folders.reported();
     let judging = Judging::new(configuration)?;
     schedule::over_records(
         &|record| judging.typed_row(reading, record),
@@ -351,7 +361,7 @@ struct Judging<'a> {
 struct JudgingInput<'a> {
     common: &'a Common,
     environment: &'a Environment,
-    folders: Folders<'a>,
+    folders: Folders,
     backend: Backend,
     asks: Asks,
     threshold: Option<Threshold>,
@@ -384,7 +394,11 @@ impl Judging<'_> {
             common,
             environment,
             client: Client::new(Duration::from_secs(common.timeout), secure),
-            recorder: Recorder::of(folders.record, folders.replay)?,
+            recorder: Recorder::of_private(
+                folders.record.as_deref(),
+                folders.replay.as_deref(),
+                folders.private_default,
+            )?,
             backend,
             asks,
             threshold,

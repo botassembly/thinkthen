@@ -14,6 +14,7 @@ fn run(arguments: &[&str]) -> io::Result<Output> {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
