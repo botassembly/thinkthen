@@ -281,10 +281,12 @@ with a test that would have failed before it.
 
 **PUBLIC loses EXECUTE.** A `finalize` `extension_sql!` block revokes the
 default PUBLIC grant on every function the extension installs — a DO loop
-over `pg_proc` in the extension's own schema, so both `thinkthen_decide`
-overloads and the `thinkthen_warm` aggregate are covered (`REVOKE ... ON
-FUNCTION` accepts an aggregate's signature; verified in a scratch
-container before wiring it). Before, any role could call and could read
+over `pg_proc` joined to `pg_depend`/`pg_extension`, so the rule is
+ownership, not name: both `thinkthen_decide` overloads, the
+`thinkthen_warm` aggregate, and its three support functions (`REVOKE ...
+ON FUNCTION` accepts an aggregate's signature; verified in a scratch
+container before wiring it). The check measures it as 13 named functions
+and 16 extension-owned ones, all without PUBLIC. Before, any role could call and could read
 server files through `'@path'`. The check now measures it: `PUBLIC holds
 EXECUTE on none of the 13 functions`, an ungranted role is refused with
 `permission denied for function thinkthen_decide`, and the documented
@@ -326,7 +328,7 @@ that test-only opt-in (`check.sh`); without it case 74 diverges.
 Saw (full `./check.sh`, stub up on 8219, exit 0):
 
 ```
-ok       PUBLIC holds EXECUTE on none of the 13 functions
+ok       PUBLIC holds EXECUTE on none of the 13 functions (16 extension-owned, aggregate helpers included)
 ok       an ungranted role is refused with permission denied
 ok       the documented one-line grant lets a role call (and read '@path')
 ok       a missing file in a batch names the file, not a stopped thread

@@ -108,12 +108,24 @@ WHERE p.proname LIKE 'thinkthen%'
 SELECT 'functions', count(*) FROM pg_proc p
 WHERE p.proname LIKE 'thinkthen%'
   AND p.pronamespace = (SELECT pronamespace FROM pg_proc WHERE proname = 'thinkthen_decide' LIMIT 1);
+SELECT 'owned_can', count(*) FROM pg_proc p
+JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+WHERE e.extname = 'thinkthen' AND has_function_privilege('public', p.oid, 'EXECUTE');
+SELECT 'owned', count(*) FROM pg_proc p
+JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+WHERE e.extname = 'thinkthen';
 SQL
 grep -qE "public_can *\| *0" .tmp-revoke.out \
   || { echo "FAILED   PUBLIC still holds EXECUTE" >&2; cat .tmp-revoke.out >&2; exit 1; }
+grep -qE "owned_can *\| *0" .tmp-revoke.out \
+  || { echo "FAILED   PUBLIC holds EXECUTE on an extension-owned function" >&2; cat .tmp-revoke.out >&2; exit 1; }
 known=$(grep -E "^ *functions *\|" .tmp-revoke.out | head -1 | awk -F'|' '{print $2}' | tr -d ' ')
+owned=$(grep -E "^ *owned *\|" .tmp-revoke.out | head -1 | awk -F'|' '{print $2}' | tr -d ' ')
 [ "$known" -ge 12 ] || { echo "FAILED   only $known thinkthen functions found" >&2; exit 1; }
-echo "ok       PUBLIC holds EXECUTE on none of the $known functions"
+[ "$owned" -ge "$known" ] || { echo "FAILED   only $owned extension-owned functions found" >&2; exit 1; }
+echo "ok       PUBLIC holds EXECUTE on none of the $known functions ($owned extension-owned, aggregate helpers included)"
 rm .tmp-revoke.out
 
 psql_in -c "CREATE ROLE tt_app;" >/dev/null

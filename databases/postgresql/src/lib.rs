@@ -760,9 +760,10 @@ extern "C-unwind" fn _PG_init() {
 //
 // PostgreSQL grants EXECUTE on a new function to PUBLIC by default, so
 // without this every role could make paid calls and read server files
-// through `@path`. The block covers both `thinkthen_decide` overloads and
-// the `thinkthen_warm` aggregate too: `REVOKE ... ON FUNCTION` accepts an
-// aggregate's signature.
+// through `@path`. The loop reads the functions the extension owns from
+// `pg_depend`, so it covers both `thinkthen_decide` overloads, the
+// `thinkthen_warm` aggregate, and the aggregate's own support functions
+// (`REVOKE ... ON FUNCTION` accepts an aggregate's signature).
 //
 // The one-line grant an administrator runs to let an application role
 // call the surface (which also grants the `@path` reads, so a role with
@@ -778,10 +779,11 @@ BEGIN
     FOR signature IN
         SELECT p.oid::regprocedure::text
         FROM pg_proc p
-        WHERE p.proname LIKE 'thinkthen%'
-          AND p.pronamespace = (
-              SELECT pronamespace FROM pg_proc WHERE proname = 'thinkthen_decide' LIMIT 1
-          )
+        JOIN pg_depend d
+          ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+        JOIN pg_extension e
+          ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+        WHERE e.extname = 'thinkthen'
     LOOP
         EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', signature);
     END LOOP;
