@@ -22,6 +22,9 @@ The ladder stays `install`, `lint`, `test`, `spec`. Wave 1 found nineteen issues
 | Dry-run parity: `--dry-run` accepts and refuses exactly what the live run does, and prints the request count | same | seconds |
 | Sizes battery: 40 bytes, 3 KB, 16 KB, 100 KB, 1.4 MB through each function against a loopback stand-in; nothing is sent that could never be answered | same | under a minute |
 | Membership invariance: for every function and every output-shaping flag (`--details`, `--raw`, `--quiet`, `--top`), the set of output units is identical with and without the flag; only the shape of a unit may change. The check runs each function both ways over the same mixed input and compares which records appear. Guards the `filter --details` ruling of 2026-09-21, found by a marketing reader of the deck after wave 1 missed it | the filter ruling, `sdlc/issues/2026-09-21-filter-details-must-still-filter.md` | seconds |
+| Row-mapping invariance, every surface: a table of repeated texts, NULLs, and 10,000 rows through every row-shaped function must give each row the same answer the single-row call gives it. One answer per distinct text is computed; the mapping back to rows is the bug the surfaces review found in DuckDB | the surfaces review, wrong-answers class 1 | seconds per surface |
+| Chunked-input invariance: the same table arriving in pieces (Arrow record batches, query chunks) produces the same rows in the same order as the whole table | the surfaces review, Python multi-piece annotate | seconds |
+| A gate that can fail: every conformance runner exits nonzero on any miss, compares answers exactly (never `want in got`), honors the file argument it is given, and runs from the repository root. The runner is run once against a deliberately broken case and must fail | the surfaces review, conformance-driver class | seconds |
 | SIGINT: a spawned record run stopped by SIGINT exits 130, prints the stopped-at line, and leaves every entry complete (needs a process spawn; skip on hosts that cannot signal) | issue 11 (silent stop) | ~2 s |
 
 ### `lint` (policy, pages, size, format; today ~1 minute)
@@ -63,6 +66,9 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 9. The cache rows that waves 1 could not run (default XDG folder, 100 MB cap, prune, `status`, one-command clear, full disk) pass, or the release record says why not.
 10. The vocabulary lint is zero-hit on help, README, demos, and the marketing pages.
 11. Every wave-1 issue file is closed or waived with a name beside the waiver.
+12. The surfaces review's classes are closed or waived: wrong answers with no error, host crashes at a boundary, cancel per host, and the security rows (file access behind the host's own switch, functions marked direct-only, PUBLIC revoked, relate on the caller's connection).
+13. The packages carry licenses and platforms, and no package ships recordings: a recording commits its evidence, and a published package publishes it.
+14. A mechanical hygiene check runs zero-hit: no private repository names, no home-directory paths, in shipped files and comments.
 
 ## Part 3: the exploring tester
 
@@ -85,6 +91,9 @@ Added 2026-09-21 after the `filter --details` miss. A marketing reader of the de
 1. **A flag that adds information never changes membership.** A flag may change what is printed about a unit of output. It never changes which units print. Any flag that widens, narrows, or reorders the set of output units is a finding, whatever the page says.
 2. **The page never outranks the stranger.** The standard is a careful new user. When behavior makes that user say "what the hell," it is filed against the page that permits it, not excused by it. A page is a claim, not a standard.
 3. **Two pages that disagree are a finding on their own.** When two specification pages describe the same behavior differently (`filter.md` said kept-or-not while `result.md` said same records as the bare values), the contradiction is filed the day it is found, even if the binary matches one of them and every printed example runs.
+4. **A check that cannot fail is not a check.** A runner that prints FAILED and exits 0, a comparison that tests `want in got`, a checker that ignores the file it was given: each is a green lie. Every check proves it can fail before it proves anything else.
+5. **No test fixture lives in product code.** Failure injection is a mode of the harness or the stand-in, never a constant in the engine that fails one fixed text on the live path.
+6. **Row answers are positional.** Repeats, NULLs, chunks, and packing must never move an answer to another row. And where packing legitimately changes an answer (neighbors matter, the wire probe measured 34 of 1,000 moving on regrouping), the page says so and the cache key covers the whole request.
 
 ## The first bounds, from wave 1
 
