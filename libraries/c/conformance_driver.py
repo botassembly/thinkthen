@@ -10,11 +10,12 @@ test and this driver is scaffolding.
 
 Skips, with their reasons: the backend-refusal cases need the wire or a
 dead address (tests/wire.rs proves the backend kind there), the usage case
-needs a cache and a reset the door does not carry, the cancel case needs a
-token the C header does not expose (a finding in NOTES.md), and the
-per-subject relate arm shares its input with the pairs arm while the
-stand-in serves the ruled pairs form (a conformance-data finding for the
-build team).
+needs a cache and a reset the door does not carry, the cancel case cancels
+after the second of four replies under the wire stub and the offline null
+backend cannot time that (tests/cancel.rs proves the token's pre-fired and
+mid-batch paths through the door), and the per-subject relate arm shares
+its input with the pairs arm while the stand-in serves the ruled pairs
+form (a conformance-data finding for the build team).
 """
 
 import ctypes
@@ -40,6 +41,11 @@ def load():
     lib.thinkthen_decide.argtypes = [
         ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p,
         ctypes.c_size_t, ctypes.POINTER(Answer),
+    ]
+    lib.thinkthen_decide_opts.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p,
+        ctypes.c_size_t, ctypes.c_long, ctypes.c_void_p,
+        ctypes.POINTER(Answer),
     ]
     lib.thinkthen_decide_many.argtypes = [
         ctypes.c_void_p, ctypes.c_char_p,
@@ -123,13 +129,29 @@ def byte_slice(text, start, end):
     return encoded[from_byte:to_byte]
 
 
-def typed_decide(lib, engine, question, evidence):
+def typed_decide(lib, engine, question, evidence, budget_ms=None):
+    """One decide call: the plain spelling, or the `_opts` spelling when a
+    budget is given (`THINKTHEN_NO_DEADLINE` is -1)."""
     answer = Answer()
-    code = lib.thinkthen_decide(
-        engine, question.encode(), evidence.encode(), len(evidence.encode()),
-        ctypes.byref(answer),
-    )
+    if budget_ms is None:
+        code = lib.thinkthen_decide(
+            engine, question.encode(), evidence.encode(), len(evidence.encode()),
+            ctypes.byref(answer),
+        )
+    else:
+        code = lib.thinkthen_decide_opts(
+            engine, question.encode(), evidence.encode(), len(evidence.encode()),
+            budget_ms, None, ctypes.byref(answer),
+        )
     return code, answer.outcome, answer.probability
+
+
+def usage_of(lib, engine):
+    """The door's own request counter; reading the counters sends nothing."""
+    reply, message, _ = call(lib, engine, {"usage": True})
+    if reply is None:
+        raise SystemExit(f"the counters did not answer: {message}")
+    return reply["requests"]
 
 
 def call(lib, engine, request):
@@ -171,7 +193,20 @@ def main():
         if "error" in expect and expect["error"]["kind"] == "backend":
             line = f"skip     {case_id}: the backend kind needs the wire or a dead address"
         elif "error" in expect and expect["error"]["kind"] == "deadline":
-            line = f"skip     {case_id}: the spent-budget case needs a deadline door this driver does not carry"
+            # The door's `deadline_ms` argument, with the case's own budget:
+            # zero is spent before the call starts, so nothing is sent.
+            budget = case.get("budget_ms", 0)
+            before = usage_of(lib, engine)
+            code, _, _ = typed_decide(lib, engine, json.dumps(question), evidence, budget)
+            sent = usage_of(lib, engine) - before
+            if code != 3:
+                line = f"FAIL     {case_id}: code {code}, expected the deadline kind"
+                failures += 1
+            elif sent != 0:
+                line = f"FAIL     {case_id}: {sent} request(s) left on a spent budget"
+                failures += 1
+            else:
+                line = f"ok       {case_id}: spent budget refused, nothing sent"
         elif verb == "decide":
             code, outcome, _ = typed_decide(lib, engine, json.dumps(question), evidence)
             wanted_kind = expect.get("error", {}).get("kind")
@@ -403,7 +438,11 @@ def main():
         elif verb == "usage":
             line = f"skip     {case_id}: the cache half and the reset need machinery the door does not carry"
         elif verb == "cancel":
-            line = f"skip     {case_id}: the C header exposes no cancel token (NOTES.md, finding 3)"
+            line = (
+                f"skip     {case_id}: the mid-batch cancel needs the wire "
+                "stub's reply timing; tests/cancel.rs proves the token's "
+                "pre-fired and mid-batch paths through the door"
+            )
         else:
             line = f"skip     {case_id}: the driver has no route for {verb}"
 

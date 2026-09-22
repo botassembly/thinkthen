@@ -39,11 +39,20 @@ else
     echo "== c surface: leak check skipped, no clang"
 fi
 
-echo "== c surface: null suite"
+echo "== c surface: null suite (the door, the error surface, and the twins)"
 ENGINE_NULL=1 cargo test --quiet --lib --test door -- --test-threads=1
 
+echo "== c surface: the null and length matrix"
+ENGINE_NULL=1 cargo test --quiet --test null_matrix -- --test-threads=1
+
+echo "== c surface: the cancel token, fired and fired across threads"
+ENGINE_NULL=1 cargo test --quiet --test cancel -- --test-threads=1
+
 echo "== c surface: fast-backend deadline, the poll-bug shape"
-ENGINE_NULL=1 cargo test --quiet --test deadline_fast
+ENGINE_NULL=1 cargo test --quiet --test deadline_fast -- --test-threads=1
+
+echo "== c surface: four threads over one engine"
+ENGINE_NULL=1 cargo test --quiet --test concurrency
 
 echo "== c surface: fork after the first call answers in the child"
 ENGINE_NULL=1 cargo test --quiet --test fork -- --test-threads=1

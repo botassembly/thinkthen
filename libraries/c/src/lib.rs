@@ -14,21 +14,36 @@
 //!
 //! Two findings from the slide, filed in `NOTES.md`, shape the code: the
 //! slide passes a bare question string where the header's doc promised the
-//! question-file grammar, so [`thinkthen_decide`] accepts either; and the
-//! header exposes no cancel token, deadline, or poll callback, so a C host
-//! cannot reach those today — recorded as a contract finding, not worked
-//! around.
+//! question-file grammar, so [`thinkthen_decide`] accepts either; and a
+//! host hears its interrupts by firing a token from another thread, so the
+//! door carries the token and the budget the engine already takes. The
+//! design behind the option arguments, the null matrix, and the thread
+//! promise is decided in `DESIGN.md`.
+//!
+//! Every plain spelling is exactly its `_opts` twin called with
+//! `THINKTHEN_NO_DEADLINE` and a null token, and the two share one body, so
+//! the equivalence cannot drift. A null engine is refused with the usage
+//! code and no message, because no engine holds one.
 //!
 //! [`contract/include/thinkthen.h`]: ../../contract/include/thinkthen.h
 
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{c_char, c_long, CStr, CString};
 use std::sync::Mutex;
 
 use thinkthen_contract::{
-    Annotated, Answer, Details, Engine as _, Error, ErrorKind, Options, Question,
-    QuestionSet, Ranked, Recognize, Relate, Scored, edges_json,
+    Annotated, Answer, Cancel, Details, Engine as _, Error, ErrorKind, Options, Question,
+    QuestionSet, Ranked, Recognize, Relate, Scored, edges_json, relate_checked,
 };
 use thinkthen_standin::BlockingEngine;
+
+/// The header's success code.
+const THINKTHEN_OK: i32 = 0;
+
+/// The header's usage code, which a null engine also returns.
+const THINKTHEN_EUSAGE: i32 = 1;
+
+/// The header's `THINKTHEN_NO_DEADLINE`: a negative budget sets none.
+const NO_DEADLINE: c_long = -1;
 
 /// The judgment the typed doors return: the outcome code and the
 /// probability behind it, matching `thinkthen_answer` in the header.
@@ -41,6 +56,15 @@ pub struct thinkthen_answer {
     pub outcome: i32,
     /// The probability the backend gave the yes side.
     pub probability: f64,
+}
+
+/// The opaque cancel token the header names. It wraps the contract's
+/// token: one flag, set from any thread and read between requests and on
+/// every tick of a wait.
+#[allow(non_camel_case_types)] // the header's own name for the token
+pub struct thinkthen_cancel_token {
+    /// The contract's token, the one every engine call reads.
+    cancel: Cancel,
 }
 
 /// The opaque engine value. The engine plus the last failure's message,
@@ -57,6 +81,8 @@ pub struct thinkthen_engine {
 
 /// The stored failure behind `thinkthen_error_message`.
 struct LastError {
+    /// The code the failing call returned.
+    code: i32,
     /// Whether a second try could help.
     retryable: bool,
     /// The message, kept alive until the next call replaces it.
@@ -104,6 +130,7 @@ impl thinkthen_engine {
             .last
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(LastError {
+            code,
             retryable: error.retryable,
             message,
         });
@@ -116,10 +143,11 @@ impl thinkthen_engine {
         &self,
         question: &Question,
         evidence: &str,
+        options: Options<'_>,
     ) -> Result<(Answer, f64), Error> {
         let mut judgments = self
             .engine
-            .decide_many_opts(question, &[evidence], Options::new(), None)?;
+            .decide_many_opts(question, &[evidence], options, None)?;
         let judgment = judgments.pop().ok_or_else(|| {
             Error::defect("the engine returned no judgment for one text")
         })?;
@@ -173,16 +201,19 @@ pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut thinkthen_engine) {
 }
 
 /// The message for the last failure on this engine, valid until the next
-/// call. Never null: before any failure it names that nothing failed yet.
+/// call. Never null: before any failure it names that nothing failed yet,
+/// and a null engine names that no engine came.
 ///
 /// # Safety
 ///
-/// `engine` is a value this door returned.
+/// `engine` is null or a value this door returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_message(
     engine: *const thinkthen_engine,
 ) -> *const c_char {
-    let engine = unsafe { engine.as_ref().expect("engine is not null") };
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return c"no engine came, so no failure is named".as_ptr();
+    };
     let guard = engine
         .last
         .lock()
@@ -194,14 +225,16 @@ pub unsafe extern "C" fn thinkthen_error_message(
 }
 
 /// Whether a second try could help the last failure: 1 when it could,
-/// 0 when it could not or nothing failed.
+/// 0 when it could not or nothing failed. Zero with a null engine.
 ///
 /// # Safety
 ///
-/// `engine` is a value this door returned.
+/// `engine` is null or a value this door returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_retryable(engine: *const thinkthen_engine) -> i32 {
-    let engine = unsafe { engine.as_ref().expect("engine is not null") };
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return 0;
+    };
     let guard = engine
         .last
         .lock()
@@ -209,15 +242,95 @@ pub unsafe extern "C" fn thinkthen_error_retryable(engine: *const thinkthen_engi
     i32::from(guard.as_ref().is_some_and(|last| last.retryable))
 }
 
-/// Ask one yes-or-no question of one text. `question_json` is one question
-/// in the question-file grammar or the bare text of a decide question;
-/// `text_len` is the evidence's byte length. The judgment lands in `out`
-/// on zero; any nonzero code left `out` untouched.
+/// The code of the last failure on this engine: the value the failing call
+/// returned, `THINKTHEN_OK` when nothing failed yet. Success does not
+/// clear it. A null engine is the usage code, because no engine holds a
+/// failure.
 ///
 /// # Safety
 ///
-/// `engine` is a value this door returned, `question_json` and `text` are
-/// readable for their lengths, and `out` is writable.
+/// `engine` is null or a value this door returned.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_error_code(engine: *const thinkthen_engine) -> i32 {
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return THINKTHEN_EUSAGE;
+    };
+    let guard = engine
+        .last
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    match guard.as_ref() {
+        Some(last) => last.code,
+        None => THINKTHEN_OK,
+    }
+}
+
+/// Create a cancel token. Free it with `thinkthen_cancel_token_free` after
+/// every call that carried it has returned.
+///
+/// # Safety
+///
+/// Takes no input. The returned pointer owns one flag and borrows nothing,
+/// and the host frees it exactly once.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_cancel_token_new() -> *mut thinkthen_cancel_token {
+    Box::into_raw(Box::new(thinkthen_cancel_token {
+        cancel: Cancel::new(),
+    }))
+}
+
+/// Fire a token: every call carrying it stops starting new requests and
+/// returns the cancelled kind with no results. One-shot: a fire leaves the
+/// token fired, a second fire is ignored, and no call re-arms it. One
+/// atomic store, so any thread may call it; a null token is accepted and
+/// ignored.
+///
+/// # Safety
+///
+/// `token` is null or a value this door returned and has not freed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_cancel(token: *mut thinkthen_cancel_token) {
+    if let Some(token) = unsafe { token.as_ref() } {
+        token.cancel.cancel();
+    }
+}
+
+/// Free a token. Null is accepted and ignored. Free it only after every
+/// call that carried it has returned.
+///
+/// # Safety
+///
+/// `token` is null or a value this door returned and no other call is
+/// using.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_cancel_token_free(token: *mut thinkthen_cancel_token) {
+    if !token.is_null() {
+        drop(unsafe { Box::from_raw(token) });
+    }
+}
+
+/// The options one call carries beside its arguments: the caller's budget
+/// and the caller's token. `THINKTHEN_NO_DEADLINE` sets no deadline; zero
+/// is a spent budget by the engine's own rule, so it refuses before
+/// anything is sent; any other value is a count of milliseconds from now.
+/// A null token is no token.
+fn control<'a>(deadline_ms: c_long, token: *const thinkthen_cancel_token) -> Options<'a> {
+    let token = unsafe { token.as_ref() };
+    let options = Options::new().maybe_cancel(token.map(|held| &held.cancel));
+    if deadline_ms < 0 {
+        options
+    } else {
+        options.deadline_in(std::time::Duration::from_millis(deadline_ms as u64))
+    }
+}
+
+/// Ask one yes-or-no question of one text, with no budget and no token:
+/// exactly [`thinkthen_decide_opts`] with `THINKTHEN_NO_DEADLINE` and a
+/// null token.
+///
+/// # Safety
+///
+/// The same rules as [`thinkthen_decide_opts`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_decide(
     engine: *const thinkthen_engine,
@@ -226,8 +339,48 @@ pub unsafe extern "C" fn thinkthen_decide(
     text_len: usize,
     out: *mut thinkthen_answer,
 ) -> i32 {
-    let engine = unsafe { engine.as_ref().expect("engine is not null") };
-    let (answer, probability) = match run_decide(engine, question_json, text, text_len) {
+    unsafe {
+        thinkthen_decide_opts(
+            engine,
+            question_json,
+            text,
+            text_len,
+            NO_DEADLINE,
+            std::ptr::null(),
+            out,
+        )
+    }
+}
+
+/// Ask one yes-or-no question of one text, with the options beside it.
+/// `question_json` is one question in the question-file grammar or the
+/// bare text of a decide question; `text_len` is the evidence's byte
+/// length. The judgment lands in `out` on zero; any nonzero code left
+/// `out` untouched.
+///
+/// # Safety
+///
+/// `engine` is null or a value this door returned, `question_json` and
+/// `text` are readable for their lengths, `cancel` is null or a live
+/// token, and `out` is writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_decide_opts(
+    engine: *const thinkthen_engine,
+    question_json: *const c_char,
+    text: *const c_char,
+    text_len: usize,
+    deadline_ms: c_long,
+    cancel: *const thinkthen_cancel_token,
+    out: *mut thinkthen_answer,
+) -> i32 {
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return THINKTHEN_EUSAGE;
+    };
+    if out.is_null() {
+        return engine.fail(Error::usage("a null out pointer"));
+    }
+    let options = control(deadline_ms, cancel);
+    let (answer, probability) = match run_decide(engine, question_json, text, text_len, options) {
         Ok(pair) => pair,
         Err(error) => return engine.fail(error),
     };
@@ -237,7 +390,7 @@ pub unsafe extern "C" fn thinkthen_decide(
             probability,
         };
     }
-    0
+    THINKTHEN_OK
 }
 
 /// The shared body of the two decide doors, safe on the Rust side.
@@ -246,24 +399,36 @@ fn run_decide(
     question_json: *const c_char,
     text: *const c_char,
     text_len: usize,
+    options: Options<'_>,
 ) -> Result<(Answer, f64), Error> {
-    let question_json = unsafe { CStr::from_ptr(question_json) }
-        .to_str()
-        .map_err(|_| Error::usage("the question is not UTF-8"))?;
-    let question = question_from(question_json)?;
+    let question = question_from(str_required(question_json, "question")?)?;
     let evidence = str_from(text, text_len)?;
-    engine.one_judgment(&question, evidence)
+    engine.one_judgment(&question, evidence, options)
 }
 
-/// Ask the same question of every text at once, at the engine's width,
-/// keeping every judgment in input order. `texts` holds `count` pointers
-/// and `lengths` their byte lengths; `out` holds room for `count`
-/// answers.
+/// One borrowed `&str` from a null-terminated pointer the caller passed,
+/// `what` naming it in the refusal. A null pointer is a usage failure: the
+/// door never guesses what a missing string meant.
+///
+/// # Errors
+///
+/// Returns the usage kind for a null pointer or bytes that are not UTF-8.
+fn str_required<'a>(text: *const c_char, what: &str) -> Result<&'a str, Error> {
+    if text.is_null() {
+        return Err(Error::usage(format!("a null {what}")));
+    }
+    unsafe { CStr::from_ptr(text) }
+        .to_str()
+        .map_err(|_| Error::usage(format!("the {what} is not UTF-8")))
+}
+
+/// Ask the same question of every text at once, with no budget and no
+/// token: exactly [`thinkthen_decide_many_opts`] with
+/// `THINKTHEN_NO_DEADLINE` and a null token.
 ///
 /// # Safety
 ///
-/// `engine` is a value this door returned, the arrays are readable for
-/// `count` entries, and `out` is writable for `count` answers.
+/// The same rules as [`thinkthen_decide_many_opts`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_decide_many(
     engine: *const thinkthen_engine,
@@ -273,12 +438,60 @@ pub unsafe extern "C" fn thinkthen_decide_many(
     count: usize,
     out: *mut thinkthen_answer,
 ) -> i32 {
-    let engine = unsafe { engine.as_ref().expect("engine is not null") };
-    let question = match unsafe { CStr::from_ptr(question_json) }
-        .to_str()
-        .map_err(|_| Error::usage("the question is not UTF-8"))
-        .and_then(question_from)
-    {
+    unsafe {
+        thinkthen_decide_many_opts(
+            engine,
+            question_json,
+            texts,
+            lengths,
+            count,
+            NO_DEADLINE,
+            std::ptr::null(),
+            out,
+        )
+    }
+}
+
+/// Ask the same question of every text at once, at the engine's width,
+/// keeping every judgment in input order, with the options beside it.
+/// `texts` holds `count` pointers and `lengths` their byte lengths; `out`
+/// holds room for `count` answers. The arrays are read, and the answers
+/// written, for `count` entries only; a count of zero reads and writes
+/// nothing.
+///
+/// # Safety
+///
+/// `engine` is null or a value this door returned, `question_json` is a
+/// readable null-terminated string or null, the arrays are readable for
+/// `count` entries, `cancel` is null or a live token, and `out` is
+/// writable for `count` answers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_decide_many_opts(
+    engine: *const thinkthen_engine,
+    question_json: *const c_char,
+    texts: *const *const c_char,
+    lengths: *const usize,
+    count: usize,
+    deadline_ms: c_long,
+    cancel: *const thinkthen_cancel_token,
+    out: *mut thinkthen_answer,
+) -> i32 {
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return THINKTHEN_EUSAGE;
+    };
+    if count > 0 {
+        if out.is_null() {
+            return engine.fail(Error::usage("a null out array with a nonzero count"));
+        }
+        if texts.is_null() {
+            return engine.fail(Error::usage("a null texts array with a nonzero count"));
+        }
+        if lengths.is_null() {
+            return engine.fail(Error::usage("a null lengths array with a nonzero count"));
+        }
+    }
+    let options = control(deadline_ms, cancel);
+    let question = match str_required(question_json, "question").and_then(question_from) {
         Ok(question) => question,
         Err(error) => return engine.fail(error),
     };
@@ -293,9 +506,9 @@ pub unsafe extern "C" fn thinkthen_decide_many(
     }
     match engine
         .engine
-        .decide_many_opts(&question, &records, Options::new(), None)
+        .decide_many_opts(&question, &records, options, None)
     {
-        Ok(judgments) => {
+        Ok(judgments) if judgments.len() == count => {
             for (index, judgment) in judgments.iter().enumerate() {
                 unsafe {
                     *out.add(index) = thinkthen_answer {
@@ -304,18 +517,24 @@ pub unsafe extern "C" fn thinkthen_decide_many(
                     };
                 }
             }
-            0
+            THINKTHEN_OK
         }
+        Ok(judgments) => engine.fail(Error::defect(format!(
+            "the engine returned {} judgments for {count} records",
+            judgments.len()
+        ))),
         Err(error) => engine.fail(error),
     }
 }
 
 /// One borrowed `&str` from a pointer and a byte length, refusing text
-/// that is not UTF-8 as a usage failure.
+/// that is not UTF-8 as a usage failure. A null pointer with a zero length
+/// is the empty text; a null pointer with a nonzero length is refused.
 ///
 /// # Errors
 ///
-/// Returns the usage kind when the bytes are not a UTF-8 string.
+/// Returns the usage kind when the bytes are not a UTF-8 string, and for
+/// a null pointer with a nonzero length.
 fn str_from<'a>(text: *const c_char, len: usize) -> Result<&'a str, Error> {
     if text.is_null() {
         return if len == 0 {
@@ -328,11 +547,26 @@ fn str_from<'a>(text: *const c_char, len: usize) -> Result<&'a str, Error> {
     std::str::from_utf8(bytes).map_err(|_| Error::usage("a text is not UTF-8"))
 }
 
+/// The JSON door with no budget and no token: exactly
+/// [`thinkthen_call_opts`] with `THINKTHEN_NO_DEADLINE` and a null token.
+///
+/// # Safety
+///
+/// The same rules as [`thinkthen_call_opts`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call(
+    engine: *const thinkthen_engine,
+    request_json: *const c_char,
+) -> *mut c_char {
+    unsafe { thinkthen_call_opts(engine, request_json, NO_DEADLINE, std::ptr::null()) }
+}
+
 /// The JSON door: any request of the eight verbs, with the answer as JSON
-/// text the caller frees with [`thinkthen_free_string`]. The request is
-/// the question file's own shape with the evidence beside it, and the
-/// door's reply shapes are listed in this crate's `NOTES.md`. Returns
-/// null on failure, with the code on the engine.
+/// text the caller frees with [`thinkthen_free_string`], and with the
+/// options beside it. The request is the question file's own shape with
+/// the evidence beside it, and the door's reply shapes are listed in this
+/// crate's `NOTES.md`. Returns null on failure, with the code on the
+/// engine.
 ///
 /// The request carries one verb:
 ///
@@ -344,32 +578,35 @@ fn str_from<'a>(text: *const c_char, len: usize) -> Result<&'a str, Error> {
 /// - `{"annotate": <the question set>, "records": ["...", ...]}`
 /// - `{"decide": "...", "evidence": "...", "details": true}` for the
 ///   audit view
-/// - `{"usage": true}` for the counters
+/// - `{"usage": true}` for the counters, which take no options
 ///
 /// # Safety
 ///
-/// `engine` is a value this door returned and `request_json` is a readable
-/// null-terminated string.
+/// `engine` is null or a value this door returned, `request_json` is a
+/// readable null-terminated string or null, and `cancel` is null or a
+/// live token.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_call(
+pub unsafe extern "C" fn thinkthen_call_opts(
     engine: *const thinkthen_engine,
     request_json: *const c_char,
+    deadline_ms: c_long,
+    cancel: *const thinkthen_cancel_token,
 ) -> *mut c_char {
-    let engine = unsafe { engine.as_ref().expect("engine is not null") };
-    let request = match unsafe { CStr::from_ptr(request_json) }
-        .to_str()
-        .map_err(|_| Error::usage("the request is not UTF-8"))
-        .and_then(|text| {
-            serde_json::from_str::<serde_json::Value>(text)
-                .map_err(|error| Error::usage(format!("the request is not JSON: {error}")))
-        }) {
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return std::ptr::null_mut();
+    };
+    let options = control(deadline_ms, cancel);
+    let request = match str_required(request_json, "request").and_then(|text| {
+        serde_json::from_str::<serde_json::Value>(text)
+            .map_err(|error| Error::usage(format!("the request is not JSON: {error}")))
+    }) {
         Ok(request) => request,
         Err(error) => {
             engine.fail(error);
             return std::ptr::null_mut();
         }
     };
-    match call_verb(engine, &request) {
+    match call_verb(engine, &request, options) {
         Ok(reply) => {
             let Ok(text) = CString::new(reply.to_string()) else {
                 engine.fail(Error::defect("the reply held a NUL"));
@@ -385,10 +622,13 @@ pub unsafe extern "C" fn thinkthen_call(
 }
 
 /// Route one parsed request to its verb. Every reply is a JSON value the
-/// caller reads; every error is the door's six kinds.
+/// caller reads; every error is the door's six kinds. The options ride to
+/// every verb that waits; the counters wait for nothing, so they ignore
+/// them.
 fn call_verb(
     engine: &thinkthen_engine,
     request: &serde_json::Value,
+    options: Options<'_>,
 ) -> Result<serde_json::Value, Error> {
     let object = request
         .as_object()
@@ -441,7 +681,7 @@ fn call_verb(
         ))
         .map_err(|error| Error::defect(format!("the question did not serialize: {error}")))?;
         let question = question_from(&question_text)?;
-        engine.one_judgment(&question, evidence)
+        engine.one_judgment(&question, evidence, options)
     };
 
     if object.contains_key("details") {
@@ -449,7 +689,7 @@ fn call_verb(
         let question_text = serde_json::to_string(&serde_json::Value::Object(question_object))
             .map_err(|error| Error::defect(format!("the question did not serialize: {error}")))?;
         let question = question_from(&question_text)?;
-        return details_json(engine, &question, &evidence);
+        return details_json(engine, &question, &evidence, options);
     }
     if let Some(annotate) = object.get("annotate") {
         let set_text = serde_json::to_string(annotate)
@@ -459,7 +699,7 @@ fn call_verb(
         let references: Vec<&str> = records.iter().map(String::as_str).collect();
         let answers = engine
             .engine
-            .annotate_opts(&set, &references, Options::new(), None)?;
+            .annotate_opts(&set, &references, options, None)?;
         return Ok(serde_json::json!({ "answer": annotated_json(&answers) }));
     }
     if let Some(find) = object.get("find").and_then(serde_json::Value::as_str) {
@@ -476,7 +716,7 @@ fn call_verb(
             .collect::<Result<Vec<&str>, Error>>()?;
         let question = Question::decide(find)?.cut(0.5)?;
         let found =
-            engine.engine.find_opts(&question, &units, Options::new())?;
+            engine.engine.find_opts(&question, &units, options)?;
         return Ok(serde_json::json!({
             "answer": found.index,
             "probability": found.probability,
@@ -494,12 +734,12 @@ fn call_verb(
             if object.contains_key("rank") {
                 let ranked = engine
                     .engine
-                    .rank_opts(&question, &references, Options::new(), None)?;
+                    .rank_opts(&question, &references, options, None)?;
                 return Ok(serde_json::json!({ "answer": ranked_json(&ranked) }));
             }
             let kept = engine
                 .engine
-                .filter_opts(&question, &references, Options::new(), None)?;
+                .filter_opts(&question, &references, options, None)?;
             return Ok(serde_json::json!({ "indexes": kept }));
         }
         let evidence = evidence("evidence")?;
@@ -514,7 +754,7 @@ fn call_verb(
         let question = object_question(&question_object)?;
         let chosen = engine
             .engine
-            .choose_opts(&question, &evidence, Options::new())?;
+            .choose_opts(&question, &evidence, options)?;
         return Ok(serde_json::json!({
             "answer": chosen,
         }));
@@ -523,7 +763,7 @@ fn call_verb(
         let evidence = evidence("evidence")?;
         let question = object_question(&question_object)?;
         let Scored { value, nearest } =
-            engine.engine.score_opts(&question, &evidence, Options::new())?;
+            engine.engine.score_opts(&question, &evidence, options)?;
         return Ok(serde_json::json!({
             "answer": value,
             "nearest": nearest,
@@ -532,7 +772,7 @@ fn call_verb(
     if question_object.contains_key("tag") {
         let evidence = evidence("evidence")?;
         let question = object_question(&question_object)?;
-        let labels = engine.engine.tag_opts(&question, &evidence, Options::new())?;
+        let labels = engine.engine.tag_opts(&question, &evidence, options)?;
         return Ok(serde_json::json!({ "answer": labels }));
     }
     Err(Error::usage(
@@ -555,6 +795,7 @@ fn details_json(
     engine: &thinkthen_engine,
     question: &Question,
     evidence: &str,
+    options: Options<'_>,
 ) -> Result<serde_json::Value, Error> {
     let Details {
         probability,
@@ -565,9 +806,7 @@ fn details_json(
         requests,
         failed_questions,
         nearest,
-    } = engine
-        .engine
-        .details_opts(question, evidence, Options::new())?;
+    } = engine.engine.details_opts(question, evidence, options)?;
     Ok(serde_json::json!({
         "probability": probability,
         "answer": json_of(&answer),
@@ -628,18 +867,13 @@ fn annotated_json(records: &[Vec<(String, Annotated)>]) -> serde_json::Value {
 }
 
 /// Find every name in one text, and the relations the rules allow, as one
-/// JSON string the caller frees with [`thinkthen_free_string`].
-/// `spec_json` is the recognize section of the question file; `text` and
-/// `text_len` are its bytes. In the answer, `start` and `end` count code
-/// points of `text`, so a C host converts once to byte offsets before it
-/// slices. The return is zero on success and the kind code on a failure,
-/// with the out parameters left alone.
+/// JSON string the caller frees with [`thinkthen_free_string`], with no
+/// budget and no token: exactly [`thinkthen_recognize_opts`] with
+/// `THINKTHEN_NO_DEADLINE` and a null token.
 ///
 /// # Safety
 ///
-/// `engine` is a value this door returned, `spec_json` is a readable
-/// null-terminated string, `text` is readable for `text_len` bytes, and
-/// `out` and `out_len` are writable.
+/// The same rules as [`thinkthen_recognize_opts`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_recognize(
     engine: *const thinkthen_engine,
@@ -649,8 +883,57 @@ pub unsafe extern "C" fn thinkthen_recognize(
     out: *mut *mut c_char,
     out_len: *mut usize,
 ) -> i32 {
-    let engine = unsafe { engine.as_ref().expect("engine is not null") };
-    match run_recognize(engine, spec_json, text, text_len) {
+    unsafe {
+        thinkthen_recognize_opts(
+            engine,
+            spec_json,
+            text,
+            text_len,
+            NO_DEADLINE,
+            std::ptr::null(),
+            out,
+            out_len,
+        )
+    }
+}
+
+/// Find every name in one text, and the relations the rules allow, as one
+/// JSON string the caller frees with [`thinkthen_free_string`], with the
+/// options beside it.
+/// `spec_json` is the recognize section of the question file; `text` and
+/// `text_len` are its bytes. In the answer, `start` and `end` count code
+/// points of `text`, so a C host converts once to byte offsets before it
+/// slices. The return is zero on success and the kind code on a failure,
+/// with the out parameters left alone.
+///
+/// # Safety
+///
+/// `engine` is null or a value this door returned, `spec_json` is a
+/// readable null-terminated string or null, `text` is readable for
+/// `text_len` bytes or null with a zero length, `cancel` is null or a live
+/// token, and `out` and `out_len` are writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_recognize_opts(
+    engine: *const thinkthen_engine,
+    spec_json: *const c_char,
+    text: *const c_char,
+    text_len: usize,
+    deadline_ms: c_long,
+    cancel: *const thinkthen_cancel_token,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+) -> i32 {
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return THINKTHEN_EUSAGE;
+    };
+    if out.is_null() {
+        return engine.fail(Error::usage("a null out pointer"));
+    }
+    if out_len.is_null() {
+        return engine.fail(Error::usage("a null out_len pointer"));
+    }
+    let options = control(deadline_ms, cancel);
+    match run_recognize(engine, spec_json, text, text_len, options) {
         Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
         Err(error) => engine.fail(error),
     }
@@ -662,27 +945,22 @@ fn run_recognize(
     spec_json: *const c_char,
     text: *const c_char,
     text_len: usize,
+    options: Options<'_>,
 ) -> Result<String, Error> {
-    let spec = unsafe { CStr::from_ptr(spec_json) }
-        .to_str()
-        .map_err(|_| Error::usage("the spec is not UTF-8"))?;
+    let spec = str_required(spec_json, "spec")?;
     let ask = Recognize::from_json(spec)?;
     let text = str_from(text, text_len)?;
-    Ok(engine.engine.recognize(&ask, text)?.to_json())
+    Ok(engine.engine.recognize_opts(&ask, text, options)?.to_json())
 }
 
 /// Say how every record relates to the others, as one JSON object the
-/// caller frees with [`thinkthen_free_string`]: `{"edges": [...]}`.
-/// `texts` holds `count` pointers and `lengths` their byte lengths; more
-/// than 255 records is refused with the usage kind before anything else.
-/// The return is zero on success and the kind code on a failure, with the
-/// out parameters left alone.
+/// caller frees with [`thinkthen_free_string`], with no budget and no
+/// token: exactly [`thinkthen_relate_opts`] with `THINKTHEN_NO_DEADLINE`
+/// and a null token.
 ///
 /// # Safety
 ///
-/// `engine` is a value this door returned, `spec_json` is a readable
-/// null-terminated string, the arrays are readable for `count` entries,
-/// and `out` and `out_len` are writable.
+/// The same rules as [`thinkthen_relate_opts`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_relate(
     engine: *const thinkthen_engine,
@@ -693,8 +971,58 @@ pub unsafe extern "C" fn thinkthen_relate(
     out: *mut *mut c_char,
     out_len: *mut usize,
 ) -> i32 {
-    let engine = unsafe { engine.as_ref().expect("engine is not null") };
-    match run_relate(engine, spec_json, texts, lengths, count) {
+    unsafe {
+        thinkthen_relate_opts(
+            engine,
+            spec_json,
+            texts,
+            lengths,
+            count,
+            NO_DEADLINE,
+            std::ptr::null(),
+            out,
+            out_len,
+        )
+    }
+}
+
+/// Say how every record relates to the others, as one JSON object the
+/// caller frees with [`thinkthen_free_string`]: `{"edges": [...]}`, with
+/// the options beside it.
+/// `texts` holds `count` pointers and `lengths` their byte lengths; more
+/// than 255 records is refused with the usage kind before anything else.
+/// The return is zero on success and the kind code on a failure, with the
+/// out parameters left alone.
+///
+/// # Safety
+///
+/// `engine` is null or a value this door returned, `spec_json` is a
+/// readable null-terminated string or null, the arrays are readable for
+/// `count` entries, `cancel` is null or a live token, and `out` and
+/// `out_len` are writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_relate_opts(
+    engine: *const thinkthen_engine,
+    spec_json: *const c_char,
+    texts: *const *const c_char,
+    lengths: *const usize,
+    count: usize,
+    deadline_ms: c_long,
+    cancel: *const thinkthen_cancel_token,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+) -> i32 {
+    let Some(engine) = (unsafe { engine.as_ref() }) else {
+        return THINKTHEN_EUSAGE;
+    };
+    if out.is_null() {
+        return engine.fail(Error::usage("a null out pointer"));
+    }
+    if out_len.is_null() {
+        return engine.fail(Error::usage("a null out_len pointer"));
+    }
+    let options = control(deadline_ms, cancel);
+    match run_relate(engine, spec_json, texts, lengths, count, options) {
         Ok(json) => unsafe { hand_over(engine, json, out, out_len) },
         Err(error) => engine.fail(error),
     }
@@ -707,18 +1035,25 @@ fn run_relate(
     texts: *const *const c_char,
     lengths: *const usize,
     count: usize,
+    options: Options<'_>,
 ) -> Result<String, Error> {
-    let spec = unsafe { CStr::from_ptr(spec_json) }
-        .to_str()
-        .map_err(|_| Error::usage("the spec is not UTF-8"))?;
+    let spec = str_required(spec_json, "spec")?;
     let ask = Relate::from_json(spec)?;
+    if count > 0 {
+        if texts.is_null() {
+            return Err(Error::usage("a null texts array with a nonzero count"));
+        }
+        if lengths.is_null() {
+            return Err(Error::usage("a null lengths array with a nonzero count"));
+        }
+    }
     let mut records = Vec::with_capacity(count);
     for index in 0..count {
         let pointer = unsafe { *texts.add(index) };
         let length = unsafe { *lengths.add(index) };
         records.push(str_from(pointer, length)?);
     }
-    let edges = engine.engine.relate(&ask, &records)?;
+    let edges = relate_checked(&engine.engine, &ask, &records, options)?;
     Ok(edges_json(&edges))
 }
 
@@ -777,6 +1112,11 @@ mod tests {
         let held = unsafe { &*engine };
         let code = held.fail(ContractError::defect("the engine broke its own contract"));
         assert_eq!(code, 6);
+        assert_eq!(
+            unsafe { thinkthen_error_code(engine) },
+            6,
+            "the failing code rides the engine's last-failure slot"
+        );
         let message = unsafe { CStr::from_ptr(thinkthen_error_message(engine)) };
         assert!(message
             .to_str()

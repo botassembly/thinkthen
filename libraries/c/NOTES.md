@@ -42,11 +42,16 @@ set's names in order with each verb's natural answer.
    header's sentence "with the code as the return of the next
    `thinkthen_error_message`" does not hold: that function returns a
    string. A `thinkthen_error_code` entry point would close it.
+   *Closed 2026-09-22: `thinkthen_error_code` exists; see the options
+   design section at the end of this file.*
 3. **The C header exposes no cancel token, no deadline, and no poll
    callback.** The ADR says the poll callback belongs to the binding, but
    the C door gives a host no way to install one, so a C program cannot
    stop a bulk call or cap one with a budget. Conformance case 18
    (cancel) cannot run on this surface for that reason.
+   *Closed 2026-09-22 for the token and the budget: every `_opts` spelling
+   carries both, and a C host fires the token from another thread. The
+   poll callback stays deferred, with the reason in `DESIGN.md`.*
 
 ## Commands and output, as they happened
 
@@ -389,3 +394,136 @@ lists all ten verbs including `filter` and `rank`; the audit JSON carries
 `nearest` (null on a decide question, the level's name on a score
 question, both asserted in `tests/door.rs`). The recorded cancel/deadline
 gaps stand as recorded. `check.sh` exit 0; the door's twelve tests green.
+
+## 2026-09-22 — the C options design (Ian's C ruling)
+
+Ian's ruling: the C door supports everything that can call a C library —
+C, C++, Go, Java — and the library team owns the C ABI design, not the
+architect. The supervisor approved the A-shape the same day: the drawn
+signatures freeze (the C slide is the surface's acceptance sample and
+`examples/slide.c` runs it as drawn), and the control spellings sit beside
+them. `DESIGN.md` holds the eight decided sections and the rationale.
+
+### The decisions, one line each
+
+1. **Cancellation.** `thinkthen_cancel_token_new`, `thinkthen_cancel`, and
+   `thinkthen_cancel_token_free`; every `_opts` spelling carries
+   `thinkthen_cancel_token *cancel`; null is no token; one-shot (a fire
+   stays fired, a second fire is ignored); the promise is the engine's: no
+   new request starts after the fire, sent requests finish, the calls
+   return THINKTHEN_ECANCELLED with no results. A C host hears its own
+   interrupt by firing from another thread; the fire is one atomic store
+   and allocates nothing.
+2. **Deadlines.** A flat `long deadline_ms` on every `_opts` spelling:
+   THINKTHEN_NO_DEADLINE (-1) sets none, zero is a spent budget (the
+   conformance file's own row 27), a positive value is the budget. Flat,
+   not a struct, because Go and Java FFI marshal scalars and because no
+   struct crosses the ABI. Every plain spelling is exactly its `_opts`
+   twin with THINKTHEN_NO_DEADLINE and a null token, and one test proves
+   the equivalence on the answer path and the error path.
+3. **Partial completion.** No partial rows: a cancelled or
+   deadline-expired call returns its code with every out parameter
+   untouched, because the engine reports a bulk call as one unit and the
+   boundary rule forbids the door from becoming a second scheduler. On
+   success the door requires one judgment a record; a short list is a
+   defect, never a success code over stale slots.
+4. **Null and length inputs.** The full matrix, every row refused with
+   the usage code before the engine is asked, so a refusal sends nothing;
+   a null engine is the usage code with no message; a count of zero reads
+   and writes nothing and accepts null arrays.
+5. **Allocated results.** One freer a pointer: strings with
+   `thinkthen_free_string`, tokens with `thinkthen_cancel_token_free`,
+   engines with `thinkthen_engine_free`; the message is borrowed; caller
+   buffers are borrowed for the call and never freed by the door. The
+   name stays `thinkthen_free_string` (finding 4: the docs that spell
+   `thinkthen_string_free` are corrected by their owners).
+6. **Concurrent callers.** Any number of threads over one engine, each
+   caller seeing its own answers; the last-failure slot is last-writer-wins
+   and the call's own return value is authoritative.
+7. **The error surface.** `thinkthen_error_code` returns the last
+   failure's code, THINKTHEN_OK before any, unchanged by success; finding
+   2 above is closed.
+8. **ABI stability at 0.1.** Symbol names, the `thinkthen_answer` layout,
+   the codes 0..6, and THINKTHEN_NO_DEADLINE freeze; additions are minor,
+   changes are major; `thinkthen_answer` is the one struct that crosses,
+   and options are flat scalars.
+
+### What shipped
+
+`contract/include/thinkthen.h`: the token block, the argument-rules block,
+`thinkthen_error_code`, the five `_opts` spellings beside the drawn
+signatures, and the corrected top block (the old sentence about a poll
+callback the host installs is gone; the token is the channel). The
+extractor in `scripts/check_public_names.py` learned the token return type
+and the nineteen-name set.
+
+`src/lib.rs`: the token type over the contract's `Cancel`, the `control`
+helper that turns `(deadline_ms, cancel)` into the engine's `Options`, the
+null checks (`str_required`, null engine, null out pointers, null arrays),
+the defect guard on a short judgment list, and the last-failure code. The
+plain functions are thin calls into their `_opts` twins, so the
+equivalence is structural.
+
+`tests/`: `null_matrix.rs` (5 tests, the matrix), `cancel.rs` (3 tests:
+fired token over every entry point with nothing sent, one-shot and null
+token, a cross-thread fire ending a two-million-record batch),
+`concurrency.rs` (four threads, twenty-five calls each, one send a call),
+`deadline_fast.rs` rewritten to drive the door (spent budget with nothing
+sent, and the poll-bug shape through `deadline_ms`), `door.rs` +2 tests
+(the retrievable JSON-door code; the plain/`_opts` equivalence over all
+five entry points). `check.sh` runs them all, serialized where a test
+reads the process-global counter.
+
+`conformance_driver.py`: routes case 27 through `thinkthen_decide_opts`
+with the case's own `budget_ms` and checks that nothing was sent; the
+cancel skip now names the real reason (the case's cancel-after-two-replies
+timing needs the wire stub; the token's paths live in `tests/cancel.rs`).
+
+### Commands and output, as they happened
+
+The whole surface check, exit 0:
+
+```
+$ ./check.sh
+slide ok: decide YES at 0.97, decide_many YES NO YES
+recognize and relate ok
+asan and lsan clean
+test result: ok. 14 passed; 0 failed   (door, with --test-threads=1)
+test result: ok. 5 passed; 0 failed    (null_matrix)
+test result: ok. 3 passed; 0 failed    (cancel, 0.51 s)
+test result: ok. 2 passed; 0 failed    (deadline_fast, 1.43 s)
+test result: ok. 1 passed; 0 failed    (concurrency)
+10 of 10 examples ok
+conformance slice: 63 ok, 11 skip, 0 fail
+== c surface: wire twin skipped, no stub on 8216
+```
+
+The deadline case, and the two skips that remain on this surface:
+
+```
+ok       27-deadline-spent-budget: spent budget refused, nothing sent
+skip     18-cancel-mid-batch: the mid-batch cancel needs the wire stub's
+         reply timing; tests/cancel.rs proves the token's pre-fired and
+         mid-batch paths through the door
+```
+
+The public names, from the repo root:
+
+```
+$ python3 scripts/check_public_names.py | grep "c:"
+ok c: 19 names, all ruled or documented
+```
+
+The four-thread proof asserts what the counter shows: seventy-five sends
+for seventy-five answering calls, none lost and none doubled, with the
+failing thread's twenty-five refusals sending nothing.
+
+### What was not run
+
+- No wire stub on 8216 in this lane's run, so the wire twin skipped; the
+  backend-kind test still runs alone with a dead address (`cargo test
+  --test wire`, without `ENGINE_NULL`).
+- Conformance case 18 stays a skip here, for the timing reason above.
+- No Windows: the first release is Linux and macOS.
+- The examples and the drawn slide are unchanged; the plain signatures
+  they call did not move, which is the point of the A-shape.

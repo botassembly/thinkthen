@@ -3,13 +3,22 @@
 //!
 //! Run through `./check.sh`, which sets `ENGINE_NULL=1`.
 
-use std::ffi::{c_char, CString};
+use std::ffi::{c_char, c_long, CString};
 
 use thinkthen::thinkthen_engine;
 
 const YES: i32 = 1;
 const NO: i32 = 0;
 const UNSURE: i32 = 2;
+
+/// A judgment that was never written, so a refusal is visible in the out.
+const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {
+    outcome: 7,
+    probability: -1.0,
+};
+
+/// The header's `THINKTHEN_NO_DEADLINE`.
+const NO_DEADLINE: c_long = -1;
 
 unsafe fn engine() -> *mut thinkthen_engine {
     thinkthen::thinkthen_engine_new()
@@ -298,14 +307,27 @@ unsafe fn recognize(
     spec: &str,
     text: &str,
 ) -> (i32, String) {
+    unsafe { recognize_with(engine, spec, text, NO_DEADLINE, std::ptr::null()) }
+}
+
+/// One `thinkthen_recognize_opts` call with the budget and token given.
+unsafe fn recognize_with(
+    engine: *const thinkthen_engine,
+    spec: &str,
+    text: &str,
+    deadline_ms: c_long,
+    cancel: *const thinkthen::thinkthen_cancel_token,
+) -> (i32, String) {
     let spec = CString::new(spec).expect("no NUL");
     let mut out: *mut c_char = std::ptr::null_mut();
     let mut out_len: usize = 0;
-    let code = thinkthen::thinkthen_recognize(
+    let code = thinkthen::thinkthen_recognize_opts(
         engine,
         spec.as_ptr(),
         text.as_ptr() as *const c_char,
         text.as_bytes().len(),
+        deadline_ms,
+        cancel,
         &mut out,
         &mut out_len,
     );
@@ -328,6 +350,17 @@ unsafe fn relate(
     spec: &str,
     records: &[&str],
 ) -> (i32, String) {
+    unsafe { relate_with(engine, spec, records, NO_DEADLINE, std::ptr::null()) }
+}
+
+/// One `thinkthen_relate_opts` call with the budget and token given.
+unsafe fn relate_with(
+    engine: *const thinkthen_engine,
+    spec: &str,
+    records: &[&str],
+    deadline_ms: c_long,
+    cancel: *const thinkthen::thinkthen_cancel_token,
+) -> (i32, String) {
     let spec = CString::new(spec).expect("no NUL");
     let texts: Vec<CString> = records
         .iter()
@@ -337,12 +370,14 @@ unsafe fn relate(
     let pointers: Vec<*const c_char> = texts.iter().map(|text| text.as_ptr()).collect();
     let mut out: *mut c_char = std::ptr::null_mut();
     let mut out_len: usize = 0;
-    let code = thinkthen::thinkthen_relate(
+    let code = thinkthen::thinkthen_relate_opts(
         engine,
         spec.as_ptr(),
         pointers.as_ptr(),
         lengths.as_ptr(),
         records.len(),
+        deadline_ms,
+        cancel,
         &mut out,
         &mut out_len,
     );
@@ -516,6 +551,238 @@ fn relate_refuses_more_than_255_records() {
         assert_eq!(code, 1, "the usage kind: {text}");
         assert!(text.contains("255"), "{text}");
         assert_eq!(usage_of(engine), usage_before, "a refusal sends nothing");
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+/// The error surface: the JSON door's failure code is retrievable, the
+/// last failure stays until the next failure, and a success does not
+/// clear it (NOTES finding 2, closed by `thinkthen_error_code`).
+#[test]
+fn the_json_doors_failure_code_is_retrievable() {
+    unsafe {
+        let engine = engine();
+        assert_eq!(
+            thinkthen::thinkthen_error_code(engine),
+            0,
+            "nothing failed yet"
+        );
+        let request = CString::new(r#"{"nope": true}"#).expect("static");
+        let reply = thinkthen::thinkthen_call(engine, request.as_ptr());
+        assert!(reply.is_null(), "the request carries no verb");
+        assert_eq!(
+            thinkthen::thinkthen_error_code(engine),
+            1,
+            "the usage refusal is readable as a code: {}",
+            message(engine)
+        );
+        assert!(message(engine).contains("no verb"), "{}", message(engine));
+
+        let counters = CString::new(r#"{"usage": true}"#).expect("static");
+        let reply = thinkthen::thinkthen_call(engine, counters.as_ptr());
+        assert!(!reply.is_null(), "the counters answer");
+        thinkthen::thinkthen_free_string(reply);
+        assert_eq!(
+            thinkthen::thinkthen_error_code(engine),
+            1,
+            "success does not clear the last failure"
+        );
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
+/// The header's promise: every plain spelling is exactly its `_opts` twin
+/// called with THINKTHEN_NO_DEADLINE and a null token, on the answer path
+/// and on the error path alike.
+#[test]
+fn the_plain_call_is_its_opts_twin() {
+    unsafe {
+        let engine = engine();
+        let question = CString::new("Does the customer ask for a refund?").expect("static");
+        let evidence = CString::new("I want a refund for order 9").expect("static");
+        let broken = CString::new(r#"{"choose": "Pick.", "options": []}"#).expect("static");
+
+        // decide: the answer path.
+        let mut plain = UNWRITTEN;
+        let mut opts = UNWRITTEN;
+        let plain_code = thinkthen::thinkthen_decide(
+            engine,
+            question.as_ptr(),
+            evidence.as_ptr(),
+            evidence.as_bytes().len(),
+            &mut plain,
+        );
+        let opts_code = thinkthen::thinkthen_decide_opts(
+            engine,
+            question.as_ptr(),
+            evidence.as_ptr(),
+            evidence.as_bytes().len(),
+            NO_DEADLINE,
+            std::ptr::null(),
+            &mut opts,
+        );
+        assert_eq!(plain_code, 0, "{}", message(engine));
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(opts.outcome, plain.outcome);
+        assert_eq!(opts.probability, plain.probability);
+
+        // decide: the error path.
+        let mut plain = UNWRITTEN;
+        let mut opts = UNWRITTEN;
+        let plain_code = thinkthen::thinkthen_decide(
+            engine,
+            broken.as_ptr(),
+            evidence.as_ptr(),
+            evidence.as_bytes().len(),
+            &mut plain,
+        );
+        let plain_message = message(engine);
+        let opts_code = thinkthen::thinkthen_decide_opts(
+            engine,
+            broken.as_ptr(),
+            evidence.as_ptr(),
+            evidence.as_bytes().len(),
+            NO_DEADLINE,
+            std::ptr::null(),
+            &mut opts,
+        );
+        assert_eq!(plain_code, 1);
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(message(engine), plain_message, "the same refusal names the same failure");
+        assert_eq!(plain.outcome, 7, "a refusal writes nothing");
+        assert_eq!(opts.outcome, 7);
+
+        // decide_many: both paths.
+        let texts: Vec<CString> = ["I want a refund for order 9", "just saying hi"]
+            .iter()
+            .map(|text| CString::new(*text).expect("no NUL"))
+            .collect();
+        let lengths: Vec<usize> = texts.iter().map(|text| text.as_bytes().len()).collect();
+        let pointers: Vec<*const c_char> = texts.iter().map(|text| text.as_ptr()).collect();
+        let mut plain = [UNWRITTEN; 2];
+        let mut opts = [UNWRITTEN; 2];
+        let plain_code = thinkthen::thinkthen_decide_many(
+            engine,
+            question.as_ptr(),
+            pointers.as_ptr(),
+            lengths.as_ptr(),
+            2,
+            plain.as_mut_ptr(),
+        );
+        let opts_code = thinkthen::thinkthen_decide_many_opts(
+            engine,
+            question.as_ptr(),
+            pointers.as_ptr(),
+            lengths.as_ptr(),
+            2,
+            NO_DEADLINE,
+            std::ptr::null(),
+            opts.as_mut_ptr(),
+        );
+        assert_eq!(plain_code, 0, "{}", message(engine));
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(opts[0].outcome, plain[0].outcome);
+        assert_eq!(opts[1].outcome, plain[1].outcome);
+
+        let mut plain = [UNWRITTEN; 2];
+        let mut opts = [UNWRITTEN; 2];
+        let plain_code = thinkthen::thinkthen_decide_many(
+            engine,
+            broken.as_ptr(),
+            pointers.as_ptr(),
+            lengths.as_ptr(),
+            2,
+            plain.as_mut_ptr(),
+        );
+        let plain_message = message(engine);
+        let opts_code = thinkthen::thinkthen_decide_many_opts(
+            engine,
+            broken.as_ptr(),
+            pointers.as_ptr(),
+            lengths.as_ptr(),
+            2,
+            NO_DEADLINE,
+            std::ptr::null(),
+            opts.as_mut_ptr(),
+        );
+        assert_eq!(plain_code, 1);
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(message(engine), plain_message);
+        assert_eq!(plain[0].outcome, 7);
+        assert_eq!(opts[0].outcome, 7);
+
+        // The JSON door: both paths.
+        let request = CString::new(
+            r#"{"decide": "Does the customer ask for a refund?", "evidence": "I want a refund for order 9"}"#,
+        )
+        .expect("static");
+        let plain_reply = thinkthen::thinkthen_call(engine, request.as_ptr());
+        let opts_reply =
+            thinkthen::thinkthen_call_opts(engine, request.as_ptr(), NO_DEADLINE, std::ptr::null());
+        assert!(!plain_reply.is_null());
+        assert_eq!(
+            std::ffi::CStr::from_ptr(plain_reply).to_bytes(),
+            std::ffi::CStr::from_ptr(opts_reply).to_bytes()
+        );
+        thinkthen::thinkthen_free_string(plain_reply);
+        thinkthen::thinkthen_free_string(opts_reply);
+
+        let broken_request = CString::new(r#"{"nope": true}"#).expect("static");
+        let plain_reply = thinkthen::thinkthen_call(engine, broken_request.as_ptr());
+        let plain_message = message(engine);
+        let opts_reply =
+            thinkthen::thinkthen_call_opts(engine, broken_request.as_ptr(), NO_DEADLINE, std::ptr::null());
+        assert!(plain_reply.is_null());
+        assert!(opts_reply.is_null());
+        assert_eq!(message(engine), plain_message);
+
+        // recognize: both paths.
+        let spec =
+            r#"{"kinds": ["person", "organization", "place"], "relations": [{"name": "works_for", "source": "person", "target": "organization"}]}"#;
+        let sentence = "Maria Chen joined Northwind Freight in Chicago last spring.";
+        let (plain_code, plain_json) = recognize(engine, spec, sentence);
+        let (opts_code, opts_json) =
+            recognize_with(engine, spec, sentence, NO_DEADLINE, std::ptr::null());
+        assert_eq!(plain_code, 0, "{plain_json}");
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(opts_json, plain_json);
+
+        let (plain_code, plain_message) = recognize(engine, r#"{"kinds": ["person"]}"#, "unrecorded.");
+        let (opts_code, opts_message) = recognize_with(
+            engine,
+            r#"{"kinds": ["person"]}"#,
+            "unrecorded.",
+            NO_DEADLINE,
+            std::ptr::null(),
+        );
+        assert_eq!(plain_code, 1);
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(opts_message, plain_message);
+
+        // relate: both paths.
+        let alerts = [
+            "Alert 1: Checkout returns 500 at the payment step.",
+            "Alert 2: Card charges are failing for every customer.",
+            "Alert 3: The nightly export ran two hours late.",
+            "Alert 4: The payments database ran out of disk space.",
+        ];
+        let rule = r#"{"relations": [{"name": "caused_by", "source": "*", "target": "*"}]}"#;
+        let (plain_code, plain_json) = relate(engine, rule, &alerts);
+        let (opts_code, opts_json) =
+            relate_with(engine, rule, &alerts, NO_DEADLINE, std::ptr::null());
+        assert_eq!(plain_code, 0, "{plain_json}");
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(opts_json, plain_json);
+
+        let many: Vec<String> = (0..256).map(|index| format!("record {index}")).collect();
+        let borrowed: Vec<&str> = many.iter().map(String::as_str).collect();
+        let (plain_code, plain_message) = relate(engine, rule, &borrowed);
+        let (opts_code, opts_message) =
+            relate_with(engine, rule, &borrowed, NO_DEADLINE, std::ptr::null());
+        assert_eq!(plain_code, 1);
+        assert_eq!(opts_code, plain_code);
+        assert_eq!(opts_message, plain_message);
+
         thinkthen::thinkthen_engine_free(engine);
     }
 }

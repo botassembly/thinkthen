@@ -82,7 +82,8 @@ def rust_names() -> set[str]:
 def c_names() -> set[str]:
     text = (ROOT / "contract/include/thinkthen.h").read_text()
     return set(re.findall(
-        r"^\s*(?:const\s+)?(?:char|int|void|thinkthen_engine|thinkthen_answer)\s*\*?\s*(thinkthen_[a-z_]+)\s*\(",
+        r"^\s*(?:const\s+)?(?:char|int|void|thinkthen_engine|thinkthen_answer|"
+        r"thinkthen_cancel_token)\s*\*?\s*(thinkthen_[a-z_]+)\s*\(",
         text, re.M,
     ))
 
@@ -168,14 +169,23 @@ SURFACES: list[dict] = [
         "extract": c_names,
         # The C door carries the verbs with SQL-like hot paths as functions
         # and the rest through `thinkthen_call`; the header documents both.
+        # The `_opts` spellings sit beside the plain ones (the drawn slide
+        # keeps the plain signatures), and the token and the error code are
+        # the options-design additions; libraries/c/DESIGN.md decides them.
         "expected": {
             "thinkthen_engine_new", "thinkthen_engine_free",
             "thinkthen_error_message", "thinkthen_error_retryable",
-            "thinkthen_decide", "thinkthen_decide_many",
-            "thinkthen_recognize", "thinkthen_relate",
-            "thinkthen_call", "thinkthen_free_string",
+            "thinkthen_error_code",
+            "thinkthen_cancel", "thinkthen_cancel_token_new",
+            "thinkthen_cancel_token_free",
+            "thinkthen_decide", "thinkthen_decide_opts",
+            "thinkthen_decide_many", "thinkthen_decide_many_opts",
+            "thinkthen_call", "thinkthen_call_opts",
+            "thinkthen_recognize", "thinkthen_recognize_opts",
+            "thinkthen_relate", "thinkthen_relate_opts",
+            "thinkthen_free_string",
         },
-        "doc": "the door set: contract/include/thinkthen.h",
+        "doc": "the door set and its option spellings: contract/include/thinkthen.h and libraries/c/DESIGN.md",
     },
     {
         "name": "duckdb",

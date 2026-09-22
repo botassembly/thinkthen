@@ -9,14 +9,34 @@
  *
  * The prefix is `thinkthen_` on every name, and the public word for the
  * middle answer is UNSURE. An engine value carries its settings, holds no
- * thread between calls, and rebuilds its state after a fork. No call ever
- * blocks with the host's signal check unreachable: bulk waits run the poll
- * callback the host installed, on the calling thread, while they wait.
+ * thread between calls, and rebuilds its state after a fork.
+ *
+ * Every call may carry two options beside its arguments: a budget in
+ * `deadline_ms` and a cancel token. Every `_opts` spelling takes them, and
+ * every plain spelling is exactly its `_opts` twin called with
+ * THINKTHEN_NO_DEADLINE and a null token. A C host hears its own
+ * interrupts by firing a token from another thread: the wait checks the
+ * token and the budget on every tick, so a cancel or a spent budget ends
+ * the call within one tick. One engine serves any number of threads at
+ * once, and each caller sees the answers it would get alone.
  *
  * The lifetime rules: an engine lives until `thinkthen_engine_free`; a
- * string from `thinkthen_call` lives until `thinkthen_free_string`; the
- * message from `thinkthen_error_message` lives until the next call on the
- * same engine. Nothing else is owned by the caller.
+ * string from `thinkthen_call`, `thinkthen_recognize`, or
+ * `thinkthen_relate` lives until `thinkthen_free_string`; a cancel token
+ * lives until `thinkthen_cancel_token_free`, and no call may carry a token
+ * the host has freed; the message from `thinkthen_error_message` lives
+ * until the next call on the same engine.
+ *
+ * The failure rule: a nonzero return leaves every out parameter holding
+ * what it held before the call, and `thinkthen_error_code`,
+ * `thinkthen_error_message`, and `thinkthen_error_retryable` name the
+ * failure. Nothing partial is delivered: a cancelled or deadline-expired
+ * bulk call returns its code with no rows.
+ *
+ * Version 0.1.0 freezes the symbol names, the `thinkthen_answer` layout,
+ * and the return codes. Every open-shaped result crosses as JSON text;
+ * `thinkthen_answer` is the one struct that crosses the boundary, and it
+ * never grows a field.
  */
 
 #ifndef THINKTHEN_H
@@ -33,16 +53,25 @@ extern "C" {
 
 /*
  * The return codes, one per error kind, and zero for success. A failure
- * never reads as an answer: on any nonzero code the out parameter holds
- * nothing and `thinkthen_error_message` names what failed.
+ * never reads as an answer: on any nonzero code every out parameter holds
+ * what it held before the call, and `thinkthen_error_code`,
+ * `thinkthen_error_message`, and `thinkthen_error_retryable` name what
+ * failed.
  */
 #define THINKTHEN_OK 0
-#define THINKTHEN_EUSAGE 1      /* the request broke the grammar; nothing was sent */
+#define THINKTHEN_EUSAGE 1      /* the request broke the grammar or the argument rules; nothing was sent */
 #define THINKTHEN_EBACKEND 2   /* the wire failed or refused */
-#define THINKTHEN_EDEADLINE 3  /* the caller's own budget ran out */
+#define THINKTHEN_EDEADLINE 3  /* the caller's own budget ran out; no rows came */
 #define THINKTHEN_ELOCAL 4     /* a named local file or recording failed */
-#define THINKTHEN_ECANCELLED 5 /* the token fired; sent requests finished */
+#define THINKTHEN_ECANCELLED 5 /* the token fired; sent requests finished and no rows came */
 #define THINKTHEN_EDEFECT 6    /* the engine broke its own contract */
+
+/*
+ * The budget an `_opts` call carries, in milliseconds. A positive value is
+ * the budget; zero is a spent budget, so the call refuses before anything
+ * is sent with THINKTHEN_EDEADLINE; THINKTHEN_NO_DEADLINE sets none.
+ */
+#define THINKTHEN_NO_DEADLINE (-1L)
 
 /* The three answers a yes-or-no question gives. UNSURE is the public word;
  * the specification keeps "unresolved" in its own grammar. */
@@ -52,6 +81,13 @@ extern "C" {
 
 /* Opaque engine value, built from the environment and freed by the host. */
 typedef struct thinkthen_engine thinkthen_engine;
+
+/* Opaque cancel token. Any number of calls on any engine may carry one
+ * token; a null token means no token. Create it with
+ * `thinkthen_cancel_token_new`, fire it with `thinkthen_cancel`, and free
+ * it with `thinkthen_cancel_token_free` after every call that carried it
+ * has returned. */
+typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 
 /* One judgment: the answer under the question's rule and the probability
  * behind it. `outcome` is THINKTHEN_YES, THINKTHEN_NO, or THINKTHEN_UNSURE;
@@ -66,53 +102,123 @@ typedef struct thinkthen_answer {
  * process cannot hold an engine at all. */
 thinkthen_engine *thinkthen_engine_new(void);
 
-/* Free an engine. NULL is accepted and ignored. */
+/* Free an engine. NULL is accepted and ignored. Free it only after every
+ * call on it has returned. */
 void thinkthen_engine_free(thinkthen_engine *engine);
 
 /* The message for the last failure on this engine, valid until the next
- * call. A deadline's message names the limit and its value. Never NULL. */
+ * call on the same engine. A deadline's message names the limit and its
+ * value. Never NULL: before any failure it names that nothing failed yet,
+ * and with a null engine it names that no engine came. */
 const char *thinkthen_error_message(const thinkthen_engine *engine);
 
 /* Whether a second try could help the last failure, in the caller's
- * fallback sense: busy and slow earn 1, refused and untrusted earn 0. */
+ * fallback sense: busy and slow earn 1, refused and untrusted earn 0.
+ * Zero when nothing failed and zero with a null engine. */
 int thinkthen_error_retryable(const thinkthen_engine *engine);
 
-/* Ask one yes-or-no question of one text. `question_json` is one question
- * in the question-file grammar; `text` and `text_len` are the evidence.
- * The judgment lands in `out` on THINKTHEN_OK. */
+/* The code of the last failure on this engine: the value the failing call
+ * returned, THINKTHEN_OK when nothing failed yet. Success does not clear
+ * it, so read it when a call fails. With a null engine it is
+ * THINKTHEN_EUSAGE, because no engine holds a failure. */
+int thinkthen_error_code(const thinkthen_engine *engine);
+
+/* Create a cancel token. */
+thinkthen_cancel_token *thinkthen_cancel_token_new(void);
+
+/* Fire a token: the calls carrying it stop starting new requests and
+ * return THINKTHEN_ECANCELLED with no results. A token is one-shot: a
+ * fire leaves it fired, a second fire is ignored, and no call re-arms it.
+ * Thread-safe from any thread; a null token is accepted and ignored. */
+void thinkthen_cancel(thinkthen_cancel_token *token);
+
+/* Free a token. NULL is accepted and ignored. */
+void thinkthen_cancel_token_free(thinkthen_cancel_token *token);
+
+/*
+ * The argument rules, one row per pointer:
+ *
+ * - `engine` null: THINKTHEN_EUSAGE, or NULL from `thinkthen_call` and its
+ *   `_opts` twin, with no message, because no engine holds one.
+ * - `question_json`, `request_json`, and `spec_json` null or not UTF-8:
+ *   THINKTHEN_EUSAGE. These strings are NUL-terminated; they carry no
+ *   length.
+ * - `text` null with `text_len` zero: the empty text, which the engine's
+ *   own blank-evidence rule refuses with the usage kind. `text` null with
+ *   a nonzero length: THINKTHEN_EUSAGE. A non-null `text` reads exactly
+ *   `text_len` bytes; no terminator is read.
+ * - `texts`, `lengths`, and the bulk `out` array: read or written for
+ *   `count` entries. Null is THINKTHEN_EUSAGE when `count` is nonzero; a
+ *   count of zero reads and writes nothing, so null is accepted.
+ * - `out` and `out_len` of recognize and relate, and `out` of decide:
+ *   always written on success, so null is THINKTHEN_EUSAGE.
+ * - a cancel token in an `_opts` call: null means no token.
+ *
+ * The door checks these before it asks the engine, so a refusal sends
+ * nothing.
+ */
+
+/* Ask one yes-or-no question of one text: exactly `thinkthen_decide_opts`
+ * with THINKTHEN_NO_DEADLINE and a null token. `question_json` is one
+ * question in the question-file grammar or the bare text of a decide
+ * question; `text` and `text_len` are the evidence. The judgment lands in
+ * `out` on THINKTHEN_OK. */
 int thinkthen_decide(const thinkthen_engine *engine, const char *question_json,
                      const char *text, unsigned long text_len,
                      thinkthen_answer *out);
 
+/* The same call with the options beside it: `deadline_ms` is the budget
+ * and `cancel` is the token, both described above. */
+int thinkthen_decide_opts(const thinkthen_engine *engine, const char *question_json,
+                          const char *text, unsigned long text_len,
+                          long deadline_ms, thinkthen_cancel_token *cancel,
+                          thinkthen_answer *out);
+
 /* Ask the same question of every text at once, at the engine's width, and
- * keep every judgment in input order. `texts` holds `count` pointers and
- * `lengths` holds their byte lengths; `out` holds room for `count`
- * answers. This is decide's bulk spelling, the one bulk entry point every
- * language loading this library uses. */
+ * keep every judgment in input order: exactly
+ * `thinkthen_decide_many_opts` with THINKTHEN_NO_DEADLINE and a null
+ * token. `texts` holds `count` pointers and `lengths` holds their byte
+ * lengths; `out` holds room for `count` answers. This is decide's bulk
+ * spelling, the one bulk entry point every language loading this library
+ * uses. */
 int thinkthen_decide_many(const thinkthen_engine *engine, const char *question_json,
                           const char *const *texts, const unsigned long *lengths,
                           unsigned long count, thinkthen_answer *out);
 
-/* The JSON door: any request of the eight verbs as a JSON object, and the
- * answer as JSON text, which `thinkthen_free_string` frees. The request
- * carries the question file's own shape with the evidence beside it. This
- * is how a host reaches choose, score, tag, filter, rank, find, and
- * annotate before it grows a typed door, and how a test replays a
- * recording. Returns NULL on failure; `thinkthen_error_message` names
- * what failed and `thinkthen_error_retryable` says whether a second try
- * could help. */
+/* The same bulk call with the options beside it. */
+int thinkthen_decide_many_opts(const thinkthen_engine *engine, const char *question_json,
+                               const char *const *texts, const unsigned long *lengths,
+                               unsigned long count, long deadline_ms,
+                               thinkthen_cancel_token *cancel, thinkthen_answer *out);
+
+/* The JSON door with no budget and no token: exactly
+ * `thinkthen_call_opts` with THINKTHEN_NO_DEADLINE and a null token. */
 char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
 
-/* Find every name in one text, and the relations the rules allow. The
- * result has no fixed size, so it crosses as one JSON string written to
- * `*out` (freed with `thinkthen_free_string`) with its length in `*out_len`:
- * `{"entities": [...], "relations": [...]}` with `start` and `end`
- * counting code points of `text`. `spec_json` is the recognize section of
- * the question file (`kinds`, `relations`, `threshold`, `relation_threshold`);
- * a text the recordings do not hold is refused with the usage kind. Returns
- * THINKTHEN_OK on success and the kind's code (1..6, THINKTHEN_EUSAGE
- * through THINKTHEN_EDEFECT) on failure, with `thinkthen_error_message`
- * naming what failed.
+/* The JSON door: any request of the eight verbs as a JSON object, and the
+ * answer as JSON text, which `thinkthen_free_string` frees, with the
+ * options beside it. The request carries the question file's own shape
+ * with the evidence beside it. This is how a host reaches choose, score,
+ * tag, filter, rank, find, and annotate before it grows a typed door, and
+ * how a test replays a recording. Returns NULL on failure;
+ * `thinkthen_error_code` and `thinkthen_error_message` name what failed
+ * and `thinkthen_error_retryable` says whether a second try could help.
+ * A request that only reads the counters (`{"usage": true}`) takes no
+ * options. */
+char *thinkthen_call_opts(const thinkthen_engine *engine, const char *request_json,
+                          long deadline_ms, thinkthen_cancel_token *cancel);
+
+/* Find every name in one text, and the relations the rules allow: exactly
+ * `thinkthen_recognize_opts` with THINKTHEN_NO_DEADLINE and a null
+ * token. The result has no fixed size, so it crosses as one JSON string
+ * written to `*out` (freed with `thinkthen_free_string`) with its length
+ * in `*out_len`: `{"entities": [...], "relations": [...]}` with `start`
+ * and `end` counting code points of `text`. `spec_json` is the recognize
+ * section of the question file (`kinds`, `relations`, `threshold`,
+ * `relation_threshold`); a text the recordings do not hold is refused
+ * with the usage kind. Returns THINKTHEN_OK on success and the kind's
+ * code (1..6, THINKTHEN_EUSAGE through THINKTHEN_EDEFECT) on failure,
+ * with `thinkthen_error_message` naming what failed.
  *
  * The ends of a relation carry `source` and `target` on every surface,
  * this returned JSON and the question file included; `from` and `to` are
@@ -121,21 +227,37 @@ int thinkthen_recognize(const thinkthen_engine *engine, const char *spec_json,
                         const char *text, unsigned long text_len, char **out,
                         unsigned long *out_len);
 
-/* Say how every record relates to the others, as one JSON object written
- * to `*out` (freed with `thinkthen_free_string`): `{"edges": [...]}`.
- * `texts` carries `count` records and `lengths` their lengths; `count` past
- * 255 is a usage refusal before anything else. `spec_json` is the relate
- * section (`relations` entries or bare names, `either`, optional
- * `kind_field`, `threshold`). Each edge carries `name`, `source`, `target`,
- * and `probability`. Returns THINKTHEN_OK on success and the kind's code
+/* The same call with the options beside it. */
+int thinkthen_recognize_opts(const thinkthen_engine *engine, const char *spec_json,
+                             const char *text, unsigned long text_len,
+                             long deadline_ms, thinkthen_cancel_token *cancel,
+                             char **out, unsigned long *out_len);
+
+/* Say how every record relates to the others: exactly
+ * `thinkthen_relate_opts` with THINKTHEN_NO_DEADLINE and a null token.
+ * The result is one JSON object written to `*out` (freed with
+ * `thinkthen_free_string`): `{"edges": [...]}`. `texts` carries `count`
+ * records and `lengths` their lengths; `count` past 255 is a usage
+ * refusal before anything else. `spec_json` is the relate section
+ * (`relations` entries or bare names, `either`, optional `kind_field`,
+ * `threshold`). Each edge carries `name`, `source`, `target`, and
+ * `probability`. Returns THINKTHEN_OK on success and the kind's code
  * (1..6, THINKTHEN_EUSAGE through THINKTHEN_EDEFECT) on failure, with
  * `thinkthen_error_message` naming what failed. */
 int thinkthen_relate(const thinkthen_engine *engine, const char *spec_json,
                      const char *const *texts, const unsigned long *lengths,
                      unsigned long count, char **out, unsigned long *out_len);
 
+/* The same call with the options beside it. */
+int thinkthen_relate_opts(const thinkthen_engine *engine, const char *spec_json,
+                          const char *const *texts, const unsigned long *lengths,
+                          unsigned long count, long deadline_ms,
+                          thinkthen_cancel_token *cancel, char **out,
+                          unsigned long *out_len);
+
 /* Free a string `thinkthen_call`, `thinkthen_recognize`, or
- * `thinkthen_relate` returned. NULL is accepted and ignored. */
+ * `thinkthen_relate` returned, or their `_opts` twins. NULL is accepted
+ * and ignored. */
 void thinkthen_free_string(char *text);
 
 #ifdef __cplusplus
