@@ -1,6 +1,6 @@
 # 0068: Cached result metadata
 
-Status: Independently accepted; final sequential local gates passed; hosted verification and landing pending.
+Status: Independently accepted; final integrated local gates passed; landing pending. Hosted run `35756403716` for `8912884` was cancelled after Ian disabled GitHub Actions. Ian explicitly authorized local full gates as the verification authority; no hosted success is claimed.
 
 ## Result and handoff
 
@@ -15,7 +15,7 @@ Cost, trials, and the find-probe read boundary accept old and new rows. A presen
 - Coordinator review rejected an attempted change to the preregistered probe helper and checksum. Re-reviewed design moved adaptation to a transient input copy before the frozen reader. `fixture.py`, `cases.json`, and `hashes.sha256` are byte-identical to baseline `7a0ccd4`; the original checksum check passes. Captured probe rows, recordings, and measurements are unchanged.
 - A fresh Sol code review required annotation-specific proof of exactly one canonical field and no legacy alias. The implementer added it and the same reviewer accepted it.
 - The first coordinator lint run refused the 501-line result module. Direct output-field names removed the two extra Serde attributes, restoring 499 nonblank lines without raising the 500-line limit. Re-review accepted this equivalent representation. The exact total ceiling is 33,840, one line above baseline after the strengthened annotation assertion; existing helpers/tests were reused.
-- Final coordinator command: `sdlc/scripts/install && sdlc/scripts/lint && sdlc/scripts/test && sdlc/scripts/spec && git diff --check`, with provider key empty and Cargo offline mode, run sequentially. Exit 0: policy, package checks, audit, format, clippy, docs, 568 Rust tests, one intentional child-harness ignore, doctests, cost/trials/probe checks, 27 specification checks, seven transform-page checks, replay comparisons, and nineteen green how-tos. Frozen-file diff and checksum checks also passed.
+- Final coordinator command: `sdlc/scripts/install && sdlc/scripts/lint && sdlc/scripts/test && sdlc/scripts/spec && git diff --check`, with provider key empty and Cargo offline mode, run sequentially. Exit 0: policy, package checks, audit, format, clippy, docs, 568 Rust tests, one intentional child-harness ignore, doctests, cost/trials/probe checks, 27 specification checks, seven transform-page checks, replay comparisons, and nineteen green how-tos. Frozen-file diff and checksum checks also passed. After integrating main `692ba59` and preserving its website/product updates, the coordinator proved all program, test, gate-script, probe, transform, demo, specification, and workflow files still matched the reviewed `8912884` tree and reran the full ladder on the combined tree. It again passed 568 Rust tests, the single intentional child-harness ignore, all replay/transform/specification checks, and nineteen how-tos. No workflow setting or workflow file was changed.
 
 ## Evidence limitation
 

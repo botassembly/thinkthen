@@ -1,0 +1,72 @@
+---
+import Base from '../layouts/Base.astro';
+import { KEY_VARIABLE } from '../data/catalog.mjs';
+---
+<Base title="Backends" description="The default vendor and model, where the key goes, the cache, what the tool counts, and the second backend.">
+  <h1>Backends</h1>
+  <p class="lede">A backend is an address and a model. The tool speaks one wire shape, and one adapter encodes it. Point the tool somewhere else and the same bytes go out.</p>
+
+  <h2>The default</h2>
+  <p>TypeSafe's Jev is the first decider model. The request goes to <code>https://api.typesafe.ai/v1/systemone</code> and carries the model name <code>jev-latest</code>. That name is how a run is pinned to one version.</p>
+  <table>
+    <tr><th>Setting</th><th>Default</th><th>Set it with</th></tr>
+    <tr><td>Address</td><td><code>https://api.typesafe.ai/v1</code></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code></td></tr>
+    <tr><td>Model</td><td><code>jev-latest</code></td><td><code>--model NAME</code></td></tr>
+    <tr><td>Adapter</td><td><code>systemone</code></td><td>Nothing. Version one compiles one adapter and nothing selects it.</td></tr>
+  </table>
+  <p>An adapter is two pure functions. One takes a plan and returns the request body as bytes. The other takes the response body as bytes and returns the model that answered, one answer per named question, and the usage the backend reported. An adapter touches no network, no file, no clock, and no process.</p>
+
+  <h2>The key</h2>
+  <p>The key is read from <code>{KEY_VARIABLE}</code>. No option names another variable, and no flag and no file carries one. An absent or empty variable is exit 4, and the message names the variable and never a value.</p>
+  <p>The key goes to the address you named, and nowhere else. You name the address yourself. A run pointed somewhere else carries the key from that one variable and nothing more. The key never appears in a plan, a result, a saved answer, a log line, or an error.</p>
+  <p>A base under plain <code>http://</code> may reach only the loopback host. Any other <code>http://</code> host is a usage error before a request leaves, because the key would cross the network in clear text. No option overrides it. Under <code>http://</code> every proxy variable is cancelled as well, because a proxy would otherwise carry the key and the evidence to another machine in clear text.</p>
+  <p>A base that carries user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a saved answer.</p>
+
+  <h2>Saved answers</h2>
+  <p>The cache is on by default. Ask the same question of the same text again and the tool reads the saved answer instead of sending a request, at no further cost.</p>
+  <ul>
+    <li>One exchange per file: the adapter name, the address, the request body, and the response body. Bodies only, never headers, so no key can reach one.</li>
+    <li>The file name is the SHA-256 of the adapter name, the address, and the request body exactly as the adapter encoded it.</li>
+    <li>An exchange is saved only when it succeeded and decoded. A failure is never saved.</li>
+    <li>An entry holds the text that was judged, so the folder is owner-only: mode 0700 on the folder and 0600 on each file.</li>
+    <li>The first write binds a folder to one backend. Reusing that folder against another address fails before the key is read and before any request. A change of address cannot quietly bill everything again.</li>
+    <li><code>--no-cache</code> turns off lookup and writing for one run. <code>--cache DIR</code> names a folder of your own.</li>
+  </ul>
+  <p>The <a href="/reference/">reference</a> carries the paths, the flags, and <code>cache prune</code>.</p>
+
+  <h2>What the tool counts</h2>
+  <p>Count-only usage totals sit beside the cache, in a folder of their own. One file per UTC month holds four numbers: requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key.</p>
+  <ul>
+    <li>Every HTTP attempt counts immediately before it is sent, a retry and a failed attempt included.</li>
+    <li>Token counts come from the backend, once for each successful live response, including a response whose answer is later refused.</li>
+    <li>A saved answer adds no tokens. A decoded hit in the cache counts as a cache answer.</li>
+    <li><code>THINKTHEN_CACHE</code> never moves the folder, and <code>--no-cache</code> never turns the counting off.</li>
+  </ul>
+  <p>Counting is best effort. A crash can undercount tokens or overcount one request that was already charged. These totals describe local observations and are not a provider bill.</p>
+  <p><code>thinkthen status</code> reads them back. It is read-only and opens no connection.</p>
+
+  <h2><code>--dry-run</code></h2>
+  <p><code>--dry-run</code> prints what the command would send and then stops. It calls no backend, it reads no key, and it sends nothing. <code>--record</code> or <code>--replay</code> beside it is a usage error.</p>
+  <p>The plan is one compact JSON document with four fields: <code>url</code>, <code>model</code>, <code>key_env</code>, and <code>request</code>. <code>request</code> is the body the adapter would send, as a JSON value and never as a string. <code>key_env</code> names the variable a key would be read from, so a script can prove that the key stayed home. The plan never holds the value.</p>
+  <p>The plan does carry the evidence, because the evidence would leave the machine. A plan deserves the same care as the request itself.</p>
+  <p>In record mode the plan gains an <code>input</code> field describing the framing and the pointers, and it prints for the first record only. A run that read a question file adds a <code>from</code> object naming each setting's source: the file, the command line, or the default.</p>
+
+  <h2>A second backend</h2>
+  <p>The specification is plain about the shipped state: version one compiles one adapter, <code>systemone</code>, and nothing selects it. One wire shape leaves nothing to choose between.</p>
+  <p>We tried a second decider model on 2026-09-21 and recorded the run. A small local server presented the same shape, <code>THINKTHEN_BASE_URL</code> alone pointed the released binary at it, and no paid call was made. Ten runs finished, every one at exit code 0, twice over with a fresh cache each time. Every number in this section comes from that record, <code>sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md</code>.</p>
+  <p>What it settled:</p>
+  <ul>
+    <li><b>Another server accepts our exact request bytes.</b> No code, no option, and no new adapter was needed. A backend is a URL and an adapter, and that held as written.</li>
+    <li><b>Unknown fields are ignored on decode.</b> A reply carrying extra fields decoded without complaint, so a compatible server need not strip its own extras.</li>
+    <li><b>The probability tolerance was never reached.</b> A distribution totalled one to within 0.0002.</li>
+  </ul>
+  <p>What it found, and what still has to be fixed:</p>
+  <ul>
+    <li><b>A threshold does not carry between backends.</b> The same text under the same question file exited 3 on one backend and exited 0 on the other. A question file that pins a threshold should name the backend it was calibrated against, or say plainly that it was not.</li>
+    <li><b>A small backend cannot tell a user its limit.</b> The second backend refused a long text and named its own budget in the reply. The user saw only that the backend refused the request, because the tool never repeats a response body. That rule is right. It costs the user the most useful sentence a backend can send. A profile carrying the backend's stated limits, checked before the request leaves, is the fix.</li>
+    <li><b>A backend that truncates in silence is the danger.</b> The second model's own library trims a long text and says nothing. Any page for a small backend has to state whether the backend truncates.</li>
+  </ul>
+  <p>No accuracy work came out of it. We compared sixteen answers against the first backend: twelve agreed on the value a script acts on, four differed, and two of the four were wrong. That is a smoke signal and not a measurement. The second backend is not a shipped choice, and nothing on this site depends on it.</p>
+
+  <p class="pagelinks"><a href="/reference/">Reference</a> · <a href="/trust/">Trust</a> · <a href="/install/">Install</a></p>
+</Base>

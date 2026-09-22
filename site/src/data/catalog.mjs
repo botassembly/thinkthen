@@ -33,7 +33,7 @@ const COMMON_OPTIONS = [
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
-  ['--jobs N', 'How many requests run at once, from 1 to 32. The default is 4.'],
+  ['--jobs N', 'How many requests run at once over a stream of records, from 1 to 32. The default is 4. Outside record mode every function refuses it, and annotate alone takes it on one document.'],
 ];
 
 export const FUNCTIONS = [
@@ -161,7 +161,7 @@ export const FUNCTIONS = [
       ['--dry-run', 'Prints the plan and sends nothing.'],
     ],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'a local failure'], [70, 'a defect in the tool']],
-    unsure: 'Without --none, find must pick a line, and it will pick a wrong one. --none is how it says nothing fits.',
+    unsure: 'Without --none, find must pick a line, and it will pick a wrong one. --none is how it says nothing fits. A document past the backend’s token limit is refused, and the command exits 4.',
     howtos: ['find-the-clause-then-check-it', 'group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
   },
   {
@@ -177,7 +177,7 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], [2, 'usage or input error'], [4, 'the backend failed'], [5, 'the question set could not be read'], [70, 'a defect in the tool']],
-    unsure: 'Each question carries its own threshold, so a question set mixes cuts and bands. A question the backend could not answer is marked failed, counted, and never turned into null.',
+    unsure: 'Each question carries its own threshold, so a question set mixes cuts and bands. A question the backend could not answer is marked failed, counted, and never turned into null. The questions and the evidence together can pass the backend’s token limit for one request. The backend refuses it, and the command exits 4.',
     howtos: ['triage-a-support-inbox'],
   },
   {

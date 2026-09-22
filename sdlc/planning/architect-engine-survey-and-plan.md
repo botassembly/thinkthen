@@ -4,6 +4,12 @@ Status: Execution resumed at Ian's direction on 2026-09-22. The accepted sequenc
 
 Resumption snapshot: main is clean at `c29e445`, surfaces is clean at `7fdb1fa`, and both match their remote branches with passing code gates. Ticket 0065 remains at `6618694`, outside main, with its original owner. The library team's committed `sdlc/records/2026-09-21-punch-list-report.md` now records Ruby's one-call probability fix and typed recognition/relation results, ownership tests, parser fixtures, and six scalar loops awaiting real-engine bulk entries. The findings below retain the original survey snapshot; do not duplicate fixes already on `surfaces`. The separate website Pages workflow failed at configuration; no website fix belongs to this engine plan.
 
+## Latest execution amendments
+
+Ticket 0065 landed at `ba60f04` after Ian transferred ownership and independent review repaired a directory-sync gap. Tickets 0066/0067 landed the reviewed help corrections. ADR 0036 and ticket 0068 implement the canonical `meta.cached` name while preserving stored-answer semantics and historical readers.
+
+Ian has paused GitHub Actions and selected full coordinator-run local gates for subsequent tickets; the earlier hosted-gate instructions below are historical. Incoming product rulings on main `692ba59` also move structured descriptions ahead of recognize/relate, superseding this survey's earlier after-0.1 exclusion. The current build queue and structured-description issue govern that placement; typed library builders remain with the library team. The many-state packing probe supplies evidence, not permission to change request grouping or make new paid calls. No relation-method decision is implied.
+
 ## Snapshot and verdict
 
 The code survey and local gates are pinned to clean main `76b3511`. During review, main advanced to `5c11eb9` through three documentation-only commits: the settled-library-details ledger and two marketing issue closures. The coordinator read that new ledger and observed the latest main hosted gate green. Ticket 0055 is complete; tickets through 0064 are on main. Ticket 0065 is clean and pushed at `6618694`, with its hosted gate green, but is still not an ancestor of main. Its owning agent keeps the landing. The library team keeps `surfaces`; it moved from `a9a967a` to `9ef50a6` during the survey. That change updates its Python fork-proof citation, and its hosted gate is green. No active team worktree was changed.

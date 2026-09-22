@@ -54,7 +54,7 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
   </ul>
 
   <h2>Saved answers</h2>
-  <p>The tool saves what it asked and what came back. Ask the same question of the same text again and it reads the saved answer instead of sending a request, at no further cost. Saving is not on by default yet. On SQLite, <code>thinkthen_warm</code> judges a table in one pass and every query after that reads the saved answers.</p>
+  <p>The tool saves what it asked and what came back. Ask the same question of the same text again and it reads the saved answer instead of sending a request, at no further cost. Saving is on by default, and <code>--no-cache</code> turns it off for one run. On SQLite, <code>thinkthen_warm</code> judges a table in one pass and every query after that reads the saved answers.</p>
 
   <h2>How big a text can be</h2>
   <table>
@@ -84,7 +84,7 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
     <li>It never writes text. Ten bounded questions, and nothing else.</li>
     <li>It never decides. It judges, and your rules decide. Use an <code>if</code>, a <code>case</code>, or a queue.</li>
     <li>It never holds a conversation. Each call stands alone.</li>
-    <li>It judges a text, not a person.</li>
+    <li>It judges the evidence. It never judges a person.</li>
     <li>It promises no accuracy. Measure it on your own records.</li>
   </ul>
 

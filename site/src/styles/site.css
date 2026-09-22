@@ -14,8 +14,10 @@
   --shadow: rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 
-  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
-  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas,
+    "Liberation Mono", "DejaVu Sans Mono", "Noto Sans Mono", monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, "Liberation Sans", "Noto Sans", sans-serif;
   --wide: 62rem;
 }
 
@@ -51,8 +53,12 @@
 
 * { box-sizing: border-box; }
 
+/* A short page still puts its footer at the bottom of the window. */
 body {
   margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--ground);
   color: var(--ink);
   font: 1rem/1.65 var(--sans);
@@ -79,7 +85,26 @@ p code, li code, td code { background: var(--card); border: 1px solid var(--line
 
 header.top { border-bottom: 1px solid var(--line); background: var(--card); }
 header.top .wrap { display: flex; align-items: center; gap: 1rem; min-height: 60px; flex-wrap: wrap; }
-header.top img { height: 22px; display: block; }
+header.top img { height: 22px; width: auto; display: block; }
+
+/* The wordmark follows the theme in CSS, so it is right before a script runs
+   and right with no script at all. */
+header.top .on-light { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) header.top .on-dark { display: none; }
+  :root:not([data-theme="dark"]) header.top .on-light { display: block; }
+}
+:root[data-theme="light"] header.top .on-dark { display: none; }
+:root[data-theme="light"] header.top .on-light { display: block; }
+:root[data-theme="dark"] header.top .on-dark { display: block; }
+:root[data-theme="dark"] header.top .on-light { display: none; }
+
+/* On a phone the nav takes its own row and the Theme button stays beside the
+   wordmark. */
+@media (max-width: 46rem) {
+  header.top .wrap { gap: .5rem 1rem; padding-top: .55rem; padding-bottom: .55rem; min-height: 0; }
+  header.top nav { order: 3; flex: 1 0 100%; }
+}
 header.top nav { display: flex; gap: .95rem; flex-wrap: wrap; font-size: .92rem; }
 header.top nav a { color: var(--ink); text-decoration: none; }
 header.top nav a:hover, header.top nav a[aria-current="page"] { color: var(--think); }
@@ -97,11 +122,17 @@ footer.bottom {
 }
 footer.bottom .wrap { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
 
-main { padding: 2rem 0 1rem; }
+main { flex: 1 0 auto; padding: 2rem 0 1rem; }
 
 /* ----------------------------------------------------------------- the page */
 
-.lede { font-size: 1.15rem; color: var(--muted); max-width: 44rem; }
+/* Prose holds a line of 60 to 80 characters. Tables, grids, and code panes
+   keep the full width of the wrap. */
+main .wrap > p, main .wrap > ul, main .wrap > ol, .note, .prose p, .prose ul, .prose ol {
+  max-width: 72ch;
+}
+
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 64ch; }
 .eyebrow { font-family: var(--mono); font-size: .82rem; color: var(--think); letter-spacing: .04em; }
 
 .status {
@@ -124,6 +155,11 @@ table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 
+/* A wide table scrolls inside itself. The page never scrolls sideways. */
+@media (max-width: 46rem) {
+  table { display: block; width: max-content; max-width: 100%; overflow-x: auto; }
+}
+
 .grid { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); margin: 1rem 0 1.6rem; }
 .tile {
   display: block; background: var(--card); border: 1px solid var(--line); border-radius: 10px;
@@ -140,22 +176,39 @@ th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 
 /* ------------------------------------------------------------------- code */
 
+/* A long line wraps inside the pane. Nothing is cut off and the page never
+   scrolls sideways. */
 pre {
   margin: 0; padding: .85rem 1rem; overflow-x: auto;
   font-family: var(--mono); font-size: .86rem; line-height: 1.55;
   background: var(--card); color: var(--ink);
+  white-space: pre-wrap; overflow-wrap: break-word;
 }
 .block { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 0 0 1.2rem; }
 .block .caption {
   padding: .4rem .8rem; border-bottom: 1px solid var(--line);
   color: var(--muted); font-size: .8rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
 }
+/* The exit row closes a block. It is ruled off the code above it, not off the
+   border below it. */
+.block .caption:last-child { border-bottom: 0; border-top: 1px solid var(--line); }
 .block .caption .grow { flex: 1 1 auto; }
 pre .p { color: var(--muted); }
 pre .q { color: var(--think); }
 pre .out { color: var(--then); }
 pre .in { color: var(--muted); }
 pre .cm { color: var(--muted); font-style: italic; }
+
+/* The article's code panes. Shiki writes both themes on every token and the
+   page theme picks one. The pane wears the same card and border as every
+   other code pane on the site. */
+pre.astro-code { background-color: var(--card) !important; border: 1px solid var(--line); border-radius: 10px; margin: 0 0 1.2rem; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .astro-code,
+  :root:not([data-theme="light"]) .astro-code span { color: var(--shiki-dark) !important; }
+}
+:root[data-theme="dark"] .astro-code,
+:root[data-theme="dark"] .astro-code span { color: var(--shiki-dark) !important; }
 
 .exit { font-family: var(--mono); font-size: .8rem; }
 .exit.yes { color: var(--then); }

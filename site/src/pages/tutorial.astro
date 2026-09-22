@@ -1,0 +1,118 @@
+---
+import Base from '../layouts/Base.astro';
+import Terminal from '../components/Terminal.astro';
+import Code from '../components/Code.astro';
+import InstallLine from '../components/InstallLine.astro';
+import { SURFACES, KEY_VARIABLE } from '../data/catalog.mjs';
+import { cell, HOWTO_RUNS } from '../data/examples.mjs';
+
+const shell = SURFACES.find((s) => s.slug === 'shell');
+const decide = cell('decide', 'shell').runs;
+const run = (name) => decide.find((r) => r.name === name);
+
+const plain = run('decide');
+const answer = run('decide-answer');
+const vague = run('decide-vague');
+const cut = run('decide-cut');
+const band = run('decide-band');
+
+const saved = cell('question-file', 'shell').runs;
+const savedYes = saved.find((r) => r.name === 'question-yes');
+const savedUnsure = saved.find((r) => r.name === 'question-unsure');
+
+const reading = HOWTO_RUNS['build-a-morning-reading-list'];
+const triage = HOWTO_RUNS['triage-a-support-inbox'];
+
+const refundFile = `{
+  "decide": "Does the customer ask for a refund?",
+  "true": "The customer asks for money back.",
+  "false": "Anything else, such as a question or a complaint.",
+  "threshold": "0.2:0.8"
+}`;
+
+const triageFile = `{
+  "version": 1,
+  "questions": {
+    "kind": {
+      "choose": "What kind of message is this?",
+      "options": ["billing", "delivery", "question"]},
+    "urgency": {
+      "score": "How urgent is this?",
+      "levels": ["Routine.", "Soon.", "Immediate."]}
+  }
+}`;
+---
+<Base title="Tutorial" description="One walk from the install line to a pipeline that judges a stream of records.">
+  <h1>Tutorial</h1>
+  <p class="lede">One walk, start to finish. You install the command, ask one question, look at the number behind the answer, set your own bar, save the question to a file, and end with a pipeline that judges a stream of records.</p>
+
+  <p>Every command below ran against the shipped command and was saved. The output is what the tool printed.</p>
+
+  <h2>1. Install it</h2>
+  <p>Two channels, neither built yet. Both arrive with 0.1.</p>
+  <InstallLine line={shell.install[0][0]} status="planned" note={shell.install[0][1]} caption="Homebrew tap" />
+  <InstallLine line={shell.install[1][0]} status="planned" note={shell.install[1][1]} caption="Download script" />
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key first. A new user waits for one. <code>--dry-run</code> needs no key, so you can read the plan while you wait. The <a href="/install/">install page</a> carries every other surface.</p>
+
+  <h2>2. Ask one question</h2>
+  <p>Put the evidence on standard in and the question in the arguments. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
+  <Terminal run={plain} />
+  <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
+
+  <h2>3. Look at the number</h2>
+  <p><code>true</code> hides a number. <code>--details</code> prints the whole result, and the model's probability sits under <code>.answer</code>.</p>
+  <Terminal run={answer} />
+  <p>That number is the model's own. The tool passes it through and computes nothing.</p>
+
+  <h2>4. Set your own bar</h2>
+  <p>A weaker text still comes back <code>true</code> at the default bar of 0.5.</p>
+  <Terminal run={vague} />
+  <p><code>--threshold</code> is your bar on the probability. Raise it and the same text answers no.</p>
+  <Terminal run={cut} />
+  <p>The threshold is an input. The model never chooses it, and it never changes the probability. It changes what you call a yes.</p>
+
+  <h2>5. Leave a middle</h2>
+  <p>Two numbers make a band. An answer under the low bar is no, an answer over the high bar is yes, and anything between is not sure.</p>
+  <Terminal run={band} />
+  <p>Not sure prints <code>null</code> and exits 3. It is not a guess and not a failure. A pipeline uses it to hand a person the calls it should not make alone.</p>
+
+  <h2>6. Save the question to a file</h2>
+  <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
+  <Code code={refundFile} status="run" caption="refund.json, the file the two runs below read." copy={true} />
+  <p>Write <code>@refund.json</code> in place of the question words. A clear text passes.</p>
+  <Terminal run={savedYes} />
+  <p>The weak text lands inside the band and goes to a person.</p>
+  <Terminal run={savedUnsure} />
+  <p>Tune the file once and the hook, the test, and the pipeline all ask the same question. A question file is not a function. It gives no answer. It carries a question, and every function accepts one.</p>
+
+  <h2>7. Judge a stream</h2>
+  <p>One of <code>--lines</code>, <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> says how the records are framed. <code>filter</code> keeps the records where the answer is yes, byte for byte and in order. <code>rank</code> sorts them by how likely the answer is yes. Put them in a pipe and the second question reads only what the first kept.</p>
+  <div class="block">
+    <div class="caption"><span class="status run">run</span><span class="grow">{reading.inputFile}, the file the pipeline reads.</span></div>
+    <pre>{reading.input}</pre>
+  </div>
+  {reading.steps.map((step) => <Terminal run={step} />)}
+  <p><code>--top 2</code> trims the printed list. Every record was still judged.</p>
+
+  <h2>8. Ask many questions at once</h2>
+  <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file, under <code>"version": 1</code>.</p>
+  <Code code={triageFile} status="run" caption="triage.json, the question set the run below fills out." copy={true} />
+  <div class="block">
+    <div class="caption"><span class="status run">run</span><span class="grow">{triage.inputFile}, the file the pipeline reads.</span></div>
+    <pre>{triage.input}</pre>
+  </div>
+  {triage.steps.map((step) => <Terminal run={step} />)}
+  <p>One message left the pipeline at the <code>filter</code>, so three records reached the form. Each record comes back with one field per question.</p>
+
+  <h2>What you have now</h2>
+  <ul>
+    <li>One question you can branch on, with the exit code carrying the answer.</li>
+    <li>The probability behind it, under <code>--details</code>.</li>
+    <li>A bar you set, and a band that sends the middle to a person.</li>
+    <li>A question saved to a file, shared by every place that asks it.</li>
+    <li>A pipeline that judges a stream and hands each record back with its answers.</li>
+  </ul>
+  <p>ThinkThen judges. Your rules decide. It never runs a command and it never writes a file you did not name.</p>
+
+  <p class="pagelinks"><a href="/reference/">Reference</a> · <a href="/functions/">Every function</a> · <a href="/how-tos/">How-tos</a> · <a href="/recipes/">Shell recipes</a> · <a href="/refusals/">What it will not do</a></p>
+</Base>
