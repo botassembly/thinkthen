@@ -16,7 +16,7 @@ const GLOBAL = [
   ['--replay DIR', 'a folder', 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', 'off'],
   ['--cache DIR', 'a folder', 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', 'off'],
   ['--no-cache', 'none', 'Turns off the platform cache for one run, both lookup and writing. It never turns off usage counting.', 'the cache is on'],
-  ['--profile FILE', 'a JSON file', 'Applies local byte and question limits before a request leaves, and names the calibration profile in use. It selects neither address nor model.', 'none'],
+  ['--profile FILE', 'a JSON file', 'Applies local byte and question limits before a request leaves, and names the profile in use. It selects neither address nor model.', 'none'],
   ['--input FILE', 'a path', 'Reads the evidence from a file instead of standard input. It names a path. It never names a framing.', 'standard input'],
 ];
 
@@ -70,10 +70,10 @@ const META = [
   ['model', 'The model that answered, as the backend reported it.'],
   ['usage', '{"input_tokens":INT,"output_tokens":INT}. Absent when the backend reports none.'],
   ['requests_sent', 'The HTTP attempts behind this result. A saved answer reports zero. Each retry adds one.'],
-  ['replayed', 'true when a saved answer served the row.'],
+  ['cached', 'true when a saved answer served the row, from the cache or from --replay.'],
   ['requests', 'The digests of the logical requests, in the order they were built.'],
   ['failed_questions', 'How many logical questions failed. Always present, including zero.'],
-  ['profile_warning', '{"calibrated":NAME,"running":NAME}. Absent unless both exist and differ.'],
+  ['profile_warning', '{"calibrated":NAME,"running":NAME}. The first name is the profile saved in the question file with its threshold. The second is the profile this run named with --profile. Absent unless both exist and differ.'],
 ];
 
 const BARE = [
@@ -100,7 +100,7 @@ const COUNTS = [
 ---
 <Base title="Reference" description="Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.">
   <h1>Reference</h1>
-  <p class="lede">Everything the command takes and everything it prints, from the specification. Read this page before you write a pipeline, and hand it to an agent.</p>
+  <p class="lede">Everything the <code>thinkthen</code> command takes and prints. Read this page before you write a pipeline, and hand it to an agent.</p>
   <div class="note">Where this page and the tool disagree, the tool is behind. The specification is the contract and the code follows it.</div>
 
   <h2>The ten functions</h2>
@@ -247,7 +247,7 @@ const COUNTS = [
     <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
     <li><code>thinkthen cache prune DIR</code> is the only way entries are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run.</li>
   </ul>
-  <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They are local observations and not a provider bill.</p>
+  <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They count what this machine saw. Your provider’s bill is the real cost.</p>
   <p><code>thinkthen status</code> is read-only and opens no connection. It reports the version, the resolved configuration and where each value came from, whether a key is present, the cache entry count and allocated bytes, and the local usage for the current UTC month and in all. <code>status --json</code> prints the same facts as one <code>thinkthen.status/1</code> object.</p>
 
   <h2>The configuration file</h2>
@@ -264,5 +264,5 @@ const COUNTS = [
   <p>A question file holds one saved question, and every function that takes a question accepts one. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> is a different file: it holds many questions under <code>"version": 1</code>.</p>
   <p>A question file that cannot be read, is not one JSON object, or breaks a rule is exit 5. A command that names the wrong verb for the file is exit 2. The <a href="/functions/question-file/">question file page</a> carries the keys.</p>
 
-  <p class="pagelinks"><a href="/tutorial/">Tutorial</a> · <a href="/functions/">Every function</a> · <a href="/trust/">Trust</a></p>
+  <p class="pagelinks"><a href="/tutorial/">Take the tutorial</a> · <a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
 </Base>

@@ -42,20 +42,20 @@ const triageFile = `{
   }
 }`;
 ---
-<Base title="Tutorial" description="One walk from the install line to a pipeline that judges a stream of records.">
+<Base title="Tutorial" description="From the install line to a pipeline that sorts a stream of messages.">
   <h1>Tutorial</h1>
-  <p class="lede">One walk, start to finish. You install the command, ask one question, look at the number behind the answer, set your own bar, save the question to a file, and end with a pipeline that judges a stream of records.</p>
+  <p class="lede">This tutorial takes you from installing ThinkThen to a pipeline that sorts a stream of messages. You ask one question, read the number behind the answer, set your own bar, and save the question to a file.</p>
 
-  <p>Every command below ran against the shipped command and was saved. The output is what the tool printed.</p>
+  <p>Every run below was recorded from the real command.</p>
 
   <h2>1. Install it</h2>
   <p>Two channels, neither built yet. Both arrive with 0.1.</p>
   <InstallLine line={shell.install[0][0]} status="planned" note={shell.install[0][1]} caption="Homebrew tap" />
   <InstallLine line={shell.install[1][0]} status="planned" note={shell.install[1][1]} caption="Download script" />
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key first. A new user waits for one. <code>--dry-run</code> needs no key, so you can read the plan while you wait. The <a href="/install/">install page</a> carries every other surface.</p>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key before you start. While you wait, <code>--dry-run</code> shows what would be sent. It needs no key. The <a href="/install/">install page</a> carries every other surface.</p>
 
   <h2>2. Ask one question</h2>
-  <p>Put the evidence on standard in and the question in the arguments. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
+  <p>Pipe the message in and put the question in the arguments. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
   <Terminal run={plain} />
   <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
 
@@ -74,7 +74,7 @@ const triageFile = `{
   <h2>5. Leave a middle</h2>
   <p>Two numbers make a band. An answer under the low bar is no, an answer over the high bar is yes, and anything between is not sure.</p>
   <Terminal run={band} />
-  <p>Not sure prints <code>null</code> and exits 3. It is not a guess and not a failure. A pipeline uses it to hand a person the calls it should not make alone.</p>
+  <p>Not sure prints <code>null</code> and exits 3. It means the number landed in your middle. A pipeline uses it to hand a person the calls it should not make alone.</p>
 
   <h2>6. Save the question to a file</h2>
   <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
@@ -83,7 +83,7 @@ const triageFile = `{
   <Terminal run={savedYes} />
   <p>The weak message lands inside the band and goes to a person.</p>
   <Terminal run={savedUnsure} />
-  <p>Tune the file once and the hook, the test, and the pipeline all ask the same question. A question file is not a function. It gives no answer. It carries a question, and every function accepts one.</p>
+  <p>Tune the file once. Your git hook, your test, and your pipeline then ask the same question.</p>
 
   <h2>7. Judge a stream</h2>
   <p>One of <code>--lines</code>, <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> says how the records are framed. <code>filter</code> keeps the records where the answer is yes, byte for byte and in order. <code>rank</code> sorts them by how likely the answer is yes. Put them in a pipe and the second question reads only what the first kept.</p>
@@ -106,13 +106,13 @@ const triageFile = `{
 
   <h2>What you have now</h2>
   <ul>
-    <li>One question you can branch on, with the exit code carrying the answer.</li>
+    <li>One question you can branch on: exit 0 for yes, 1 for no, 3 for not sure.</li>
     <li>The probability behind it, under <code>--details</code>.</li>
     <li>A bar you set, and a band that sends the middle to a person.</li>
     <li>A question saved to a file, shared by every place that asks it.</li>
     <li>A pipeline that judges a stream and hands each record back with its answers.</li>
   </ul>
-  <p>ThinkThen judges. Your rules decide. It never runs a command and it never writes a file you did not name.</p>
+  <p>ThinkThen answers. Your code acts. It never runs a command and it never writes a file you did not name.</p>
 
-  <p class="pagelinks"><a href="/reference/">Reference</a> · <a href="/functions/">Every function</a> · <a href="/how-tos/">How-tos</a> · <a href="/refusals/">What it will not do</a></p>
+  <p class="pagelinks"><a href="/reference/">Read the reference</a> · <a href="/functions/">See every function</a> · <a href="/how-tos/">Try a how-to</a> · <a href="/refusals/">See what it will not do</a></p>
 </Base>
