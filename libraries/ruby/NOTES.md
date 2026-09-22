@@ -329,3 +329,106 @@ slide sample: green; interrupt proofs: green; pairs: green
 
 The wire test skips, with a printed reason, when no stub is up or the stub
 runs without a delay; the timing proof needs one.
+
+## 2026-09-22 — wave 3: the second review's Ruby items
+
+The second review's Ruby findings, each with the command that proves it
+before and after. All runs inside the builder container on the null
+backend; the wire sections skip without a stub.
+
+**The unblock function is gone; the poll hears interrupts (item 15).** The
+crossing passed Ruby an unblock function, and Ruby calls one for *every*
+interrupt at all — a spurious `Thread#wakeup`, a trapped signal, a real
+raise alike. The callback fired the token the engine watched, which was the
+caller's own token when one was given, so a wake-up cancelled the batch and
+one call's interrupt cancelled every sibling sharing the token. Now the
+engine watches a fresh per-call token; the poll checks the caller's token
+(and fires only the call's own), then calls MRI's pending-interrupt
+handling with the VM lock taken (`rb_thread_check_ints` under
+`rb_protect`, so a raise cannot unwind across the Rust frames), then runs
+the caller's tick. A real `Thread#raise`, Ctrl-C, or kill cancels the call
+and re-raises; a wake-up and a trapped signal raise nothing and cancel
+nothing. Single verbs take no poll from the contract, so their channel is
+the engine's own stop checks on the token the caller gave; an interrupt
+that lands during one surfaces when the call returns. The trade-off is
+stated here, not hidden: no surface can stop a send mid-flight.
+
+Pre-fix, `tests/test_harmless_wakeups.rb` failed with all three:
+
+```
+a wake-up cancelled the call: ThinkThen::CancelledError: the wait was cancelled
+a trapped USR1 cancelled the call: ThinkThen::CancelledError: the wait was cancelled
+the interrupt cancelled the call sharing the token: ThinkThen::CancelledError: the wait was cancelled
+```
+
+Post-fix: `wake-ups and trapped signals leave calls alone; an interrupt
+fires only the call's own token`. The existing proofs still hold:
+`test_interrupt_fast.rb` raises in 0.467 s against a 0.3 s signal, and
+`test_cancel_fast.rb` in 1.045 s against a 1.0 s tick (17 ticks).
+
+**The tick is a GC root for the call's length (item 8).** The block is
+copied into Rust memory, and a bare copy there is not a root. `bulk` and
+`annotate` now hold it in a `magnus::value::BoxValue` — a registered
+address, unregistered when the call returns — and the poll reads the live
+value through that slot. Honest limit: `tests/test_tick_gc.rb` cannot
+provoke the old hole, because Ruby's conservative stack scan keeps the
+block alive by accident in this shape (two threads, `GC.start` and
+`GC.compact` every 5 ms, 88 ticks, no collection both before and after).
+The fix removes the reliance on that accident; the test is the two-thread
+GC stress test the review asked for, and it pins that the registered slot
+is released when the call ends (a `register_mark_object` "fix" would leak
+the block forever).
+
+**One error base, a refused bad deadline, records as JSON (leftovers).**
+`ThinkThen::Error < StandardError` is now the base of the six kind
+classes, and the wrapper's own refusals raise `UsageError`, so one
+`rescue ThinkThen::Error` hears them all (the old `UsageError` inherited
+`ArgumentError`; the test that pinned that now pins the base).
+`optional_deadline` raised instead of `.ok()`-dropping: `deadline: "soon"`
+is a `UsageError` naming the deadline. Records and evidence that are not
+strings cross as their JSON text (`ThinkThen.text_of`), so a Hash keeps its
+fields and a record object can speak its own `to_json`; Ruby's `to_s` form
+is never sent. Pre-fix, `tests/test_error_classes.rb` died on
+`ThinkThen::Error` (no such constant) and the JSON-record case answered
+`false` where the JSON text answers `true`.
+
+**The -1 sentinel stays, deliberately.** Ruby's deadline is seconds, its
+absent spelling is `nil`, and the contract's `NO_DEADLINE` (`-1`) still
+means no deadline here, as the wave-1 test pins. Python and Node refuse
+`-1` because their absent spelling (`None`, `null`) is the only way to say
+none; the C door keeps the sentinel because a number has to stand for
+none. If the ruling changes, this surface changes with it.
+
+**The gate needed three cross-lane repairs to go green** (the phase-1 and
+wave-2 commits landed after this surface's last gate run):
+
+- The stand-in's synthesized partial failure is compile-time now
+  (`standin/Cargo.toml`, `synthetic-partial`), so the old
+  `ENGINE_SYNTHETIC_PARTIAL` opt-in in `test_surface.rb` and
+  `conformance.rb` was dead. `Cargo.toml` declares the feature,
+  `build.sh synthetic` builds the gate's copy with it, `check.sh` uses
+  that build, and the tests no longer set the dead variable. The plain
+  `build.sh` (the packaging path) never carries the fixture.
+- The conformance runner wrapped case sets without `version`, which the
+  core's parser refuses now: it carries `"version" => 1` like the Python
+  runner.
+- The annotate example's expected field order was the old sorted order;
+  the ruled order is the file's, so it reads `{refund, complaint}`.
+
+**Commands and output (final gate).**
+
+```
+$ ./check.sh            # exit 0
+surface tests: 32 runs, 99 assertions, 0 failures, 0 errors, 0 skips
+deadline bounds: usage for hostile budgets, minus one means none, zero stays spent
+interrupt (no tick): raised Interrupt after 0.467 s (signal at 0.3 s)
+harmless wake-ups: green
+tick GC stress: green (67 ticks, 2,000,000 answers, no collection)
+error classes: green (one base, refused bad deadline, records as JSON)
+fast-backend cancel: raised Interrupt after 1.045 s (tick at 1.0 s, 17 ticks)
+fork: green; examples: 10 of 10; conformance slice: green; slide: green
+```
+
+`cargo test --lib` is 3 passed (the unblock-function test is gone with the
+unblock function; the panic test now asserts the contract's boundary
+message).

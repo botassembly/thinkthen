@@ -17,16 +17,23 @@ ThinkThen.score("How urgent is this?", outage, levels: [...])
 crosses into the engine once and runs at the process width: the width is
 the number of requests in flight, and each in-flight request holds its own
 connection — 1,000 records at width 32 measured 33 pooled connections. The
-bulk spelling is `decide_many`. The six error kinds are Ruby classes —
-`UsageError` under `ArgumentError`, the rest under `StandardError` — each
-carrying `kind` and `retryable`. The interrupt shape: `Thread#raise` and
-Ctrl-C stop any call, tick or no tick — the interrupt fires the call's own
-cancel token, sent requests finish, no new one starts, and the pending
-exception re-raises when the call returns; the proofs are
-`tests/test_interrupt_wire.rb` and `tests/test_interrupt_fast.rb`. A bulk
-call can also run a tick each wait interval with the VM lock taken, and a
-raise inside the tick cancels the engine the same way; the proof is
-`tests/test_cancel.rb`.
+bulk spelling is `decide_many`. Every failure is a `ThinkThen::Error`: the
+six kind classes — `UsageError`, `BackendError`, `DeadlineError`,
+`LocalError`, `CancelledError`, `DefectError` — inherit it, each carrying
+`kind` and `retryable`, and the wrapper's own refusals raise
+`UsageError`. A record or an evidence text that is not a `String` crosses
+as its JSON text. The interrupt shape: a bulk call hears `Thread#raise`,
+Ctrl-C, and `Thread#kill` through the poll, which runs each wait interval
+with the VM lock taken; the interrupt fires the call's own cancel token,
+sent requests finish, no new one starts, and the pending exception
+re-raises when the call returns. A spurious `Thread#wakeup` and a trapped
+signal raise nothing and cancel nothing, and an interrupt never fires a
+token the caller shared. Single calls take no poll, so an interrupt that
+lands during one surfaces when the call returns. The proofs are
+`tests/test_interrupt_fast.rb`, `tests/test_harmless_wakeups.rb`, and
+`tests/test_interrupt_wire.rb`. A bulk call can also run a tick each wait
+interval with the VM lock taken, and a raise inside the tick cancels the
+engine the same way; the proof is `tests/test_cancel.rb`.
 
 ## Question helpers, and the names the check allows
 
@@ -40,8 +47,8 @@ any other public name:
 - `ThinkThen.with_tick(&tick)` runs a block each wait interval with the VM
   lock taken, for a host that wants progress or its own stop gesture during
   a long bulk call; a raise inside the tick cancels the call as the section
-  above says. It is optional: plain calls already hear `Thread#raise` and
-  Ctrl-C.
+  above says. It is optional: a bulk call already hears a real
+  `Thread#raise`, Ctrl-C, and `Thread#kill` without one.
 - `ThinkThen.score_with_level(question, evidence, levels:)` and
   `ThinkThen.decide_many_with_probabilities(question, records)` are the
   level-carrying and probability-carrying forms the slide check and the
