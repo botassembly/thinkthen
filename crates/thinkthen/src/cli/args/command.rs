@@ -78,7 +78,7 @@ pub(crate) enum Command {
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
     #[command(
-        before_help = "thinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt\nthinkthen tag 'Which topics?' billing urgent < message.txt\n"
+        after_help = "Examples:\n\nthinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt\nthinkthen tag 'Which topics?' billing urgent < message.txt\n"
     )]
     Tag(TagArguments),
 
@@ -157,7 +157,7 @@ pub(crate) enum Command {
     /// failure. The printed values carry the individual answers. A completed
     /// run with one or more failed questions exits 6.
     #[command(
-        before_help = "thinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\n"
+        after_help = "Examples:\n\nthinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\n"
     )]
     Annotate(AnnotateArguments),
 

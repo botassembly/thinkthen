@@ -10,11 +10,10 @@ mod find;
 pub(crate) use command::{CacheCommand, Command, PruneArguments, StatusArguments};
 pub(crate) use find::FindArguments;
 
-/// Put a decider model in the shell.
+/// Semantic commands for the shell: if, grep, and sort that understand meaning
 #[derive(Debug, Parser)]
 #[command(
     name = crate::core::NAME,
-    about,
     disable_version_flag = true,
     arg_required_else_help = true
 )]
