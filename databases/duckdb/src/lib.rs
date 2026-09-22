@@ -360,18 +360,26 @@ impl VScalar for DecideScalar {
         let texts = read_strings(input, 1);
         let distinct = distinct_of(&questions, &[], &texts, None)?;
         let answers = judged_rows(&distinct)?;
+        // Every row reads its own pair's answer through its slot: one
+        // judgment per distinct text, one answer per row, so a repeated
+        // text answers on every row that carries it and no row reads a
+        // neighbor's slot.
+        let len = texts.len();
+        let row_value = |i: usize| -> Option<bool> {
+            distinct.slots[i].and_then(|slot| answers[slot]).and_then(Answer::value)
+        };
         {
             let mut out = output.flat_vector();
-            let values = unsafe { out.as_mut_slice_with_len::<bool>(answers.len()) };
-            for (i, answer) in answers.iter().enumerate() {
-                if let Some(value) = answer.and_then(Answer::value) {
+            let values = unsafe { out.as_mut_slice_with_len::<bool>(len) };
+            for i in 0..len {
+                if let Some(value) = row_value(i) {
                     values[i] = value;
                 }
             }
         }
         let mut out = output.flat_vector();
-        for (i, answer) in answers.iter().enumerate() {
-            if answer.and_then(Answer::value).is_none() {
+        for i in 0..len {
+            if row_value(i).is_none() {
                 out.set_null(i);
             }
         }
@@ -444,18 +452,21 @@ impl VScalar for ProbabilityScalar {
                 values[*slot] = Some(judgment.probability);
             }
         }
+        // Each row's own slot, never the pair's index: see `judged_rows`.
+        let len = texts.len();
+        let row_value = |i: usize| -> Option<f64> { distinct.slots[i].and_then(|slot| values[slot]) };
         {
             let mut out = output.flat_vector();
-            let slice = unsafe { out.as_mut_slice_with_len::<f64>(values.len()) };
-            for (i, value) in values.iter().enumerate() {
-                if let Some(number) = value {
-                    slice[i] = *number;
+            let slice = unsafe { out.as_mut_slice_with_len::<f64>(len) };
+            for i in 0..len {
+                if let Some(number) = row_value(i) {
+                    slice[i] = number;
                 }
             }
         }
         let mut out = output.flat_vector();
-        for (i, value) in values.iter().enumerate() {
-            if value.is_none() {
+        for i in 0..len {
+            if row_value(i).is_none() {
                 out.set_null(i);
             }
         }
@@ -554,18 +565,23 @@ impl VScalar for ScoreScalar {
                 .map_err(failure)?;
             scored[slot] = Some(answer);
         }
+        // Each row's own slot, never the pair's index: see `judged_rows`.
+        let len = texts.len();
+        let row_value = |i: usize| -> Option<f64> {
+            distinct.slots[i].and_then(|slot| scored[slot].as_ref()).map(|score| score.value)
+        };
         {
             let mut out = output.flat_vector();
-            let slice = unsafe { out.as_mut_slice_with_len::<f64>(scored.len()) };
-            for (i, value) in scored.iter().enumerate() {
-                if let Some(score) = value {
-                    slice[i] = score.value;
+            let slice = unsafe { out.as_mut_slice_with_len::<f64>(len) };
+            for i in 0..len {
+                if let Some(score) = row_value(i) {
+                    slice[i] = score;
                 }
             }
         }
         let mut out = output.flat_vector();
-        for (i, value) in scored.iter().enumerate() {
-            if value.is_none() {
+        for i in 0..len {
+            if row_value(i).is_none() {
                 out.set_null(i);
             }
         }
