@@ -41,3 +41,40 @@ The C header (`include/thinkthen.h`) declares `thinkthen_recognize` and
 `thinkthen_relate` in the out-param shapes the acceptance page shows, with
 the returned string freed by `thinkthen_free_string`. The C surface crate
 implements them in its own lane; R1 touched no surface folder.
+
+## 2026-09-22 — the review fix wave, the contract's two pieces
+
+Group 2 of the surfaces branch review: one checked deadline conversion,
+owned here. And item 2 of the wave: the connector door the surfaces bind
+through.
+
+**The checked deadline conversion.** `deadline_from_seconds` and
+`deadline_from_millis` are the one door a host's floating-point budget
+passes through, and `Options::with_deadline_seconds` /
+`with_deadline_millis` are the one call a host door makes. A NaN, a
+negative other than the sentinel, or a budget past `MAX_DEADLINE_SECONDS`
+(about 136 years) is the usage kind, so no host ever meets the panic
+`Duration::from_secs_f64` raises on infinity or a huge value. `NO_DEADLINE`
+(-1) means no deadline; zero stays a spent deadline, the settled rule.
+Before this, all four host surfaces copied the unchecked conversion, and a
+large budget crashed Node and aborted Ruby.
+
+**The connector door.** `EngineConfig` is the settings struct's
+construction-time name (`Settings` stays an alias, so nothing that imports
+it changes), now carrying `timeout` and `max_retries` too. `Connector` is
+the trait whose `connect` returns `Arc<dyn Engine>`; the stand-in's
+`StandinConnector` implements it and honors every field the config sets,
+with the environment as the fallback for what it leaves unset. Pointing a
+surface at the real engine's connector is the one line the merge changes.
+
+Commands and output:
+
+```
+$ cargo test
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+The two new tests: a host's deadline is converted checked (NaN, negative,
+infinity, 1e300, the sentinel, zero, and the largest accepted budget, in
+both seconds and milliseconds), and the Options helper arms a call without
+panicking on a hostile value.

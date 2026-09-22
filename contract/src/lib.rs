@@ -214,6 +214,80 @@ impl Error {
     }
 }
 
+/// The sentinel a host may send in place of a deadline: the C door's
+/// `THINKTHEN_NO_DEADLINE`, meaning the call carries no deadline at all.
+///
+/// Any other negative value is refused: a host that computed a negative
+/// budget meant something the engine cannot honor.
+pub const NO_DEADLINE: f64 = -1.0;
+
+/// The largest budget a host may name, in seconds: about 136 years.
+///
+/// A budget beyond this is refused as too large rather than turned into an
+/// instant, because an instant that far out cannot be represented and the
+/// arithmetic that builds it would end the host process.
+pub const MAX_DEADLINE_SECONDS: f64 = u32::MAX as f64;
+
+/// Convert a host's deadline in floating-point seconds into the budget a
+/// call carries.
+///
+/// `Ok(None)` means no deadline: the caller passed the [`NO_DEADLINE`]
+/// sentinel. `Ok(Some(budget))` is the deadline counted from now, and a
+/// zero budget is a spent deadline — legal, and the call returns the
+/// deadline kind having sent nothing.
+///
+/// # Errors
+///
+/// The usage kind for a NaN, a negative value other than the sentinel, or
+/// a budget larger than [`MAX_DEADLINE_SECONDS`].
+#[must_use = "the budget decides the call"]
+pub fn deadline_from_seconds(seconds: f64) -> Result<Option<std::time::Duration>, Error> {
+    if seconds == NO_DEADLINE {
+        return Ok(None);
+    }
+    if seconds.is_nan() {
+        return Err(Error::usage("the deadline is not a number"));
+    }
+    if seconds < 0.0 {
+        return Err(Error::usage(format!("the deadline of {seconds} s is negative")));
+    }
+    if seconds > MAX_DEADLINE_SECONDS {
+        return Err(Error::usage(format!(
+            "the deadline of {seconds} s is larger than the {MAX_DEADLINE_SECONDS} s the engine holds"
+        )));
+    }
+    Ok(Some(std::time::Duration::from_secs_f64(seconds)))
+}
+
+/// Convert a host's deadline in floating-point milliseconds, the C door's
+/// spelling of [`deadline_from_seconds`].
+///
+/// The sentinel, the NaN, and the negative rules are the same, with
+/// messages naming milliseconds.
+///
+/// # Errors
+///
+/// The usage kind for a NaN, a negative value other than the sentinel, or
+/// a budget larger than [`MAX_DEADLINE_SECONDS`].
+#[must_use = "the budget decides the call"]
+pub fn deadline_from_millis(millis: f64) -> Result<Option<std::time::Duration>, Error> {
+    if millis == NO_DEADLINE {
+        return Ok(None);
+    }
+    if millis.is_nan() {
+        return Err(Error::usage("the deadline is not a number"));
+    }
+    if millis < 0.0 {
+        return Err(Error::usage(format!("the deadline of {millis} ms is negative")));
+    }
+    if millis > MAX_DEADLINE_SECONDS * 1000.0 {
+        return Err(Error::usage(format!(
+            "the deadline of {millis} ms is larger than the {MAX_DEADLINE_SECONDS} s the engine holds"
+        )));
+    }
+    Ok(Some(std::time::Duration::from_secs_f64(millis / 1000.0)))
+}
+
 /// A cancellation token, set from any thread, checked between requests and
 /// on every tick of a wait.
 ///
@@ -329,6 +403,39 @@ impl<'a> Options<'a> {
     #[must_use]
     pub fn remaining(&self) -> Option<std::time::Duration> {
         self.deadline.map(|at| at.saturating_duration_since(std::time::Instant::now()))
+    }
+
+    /// Carry a host's deadline in floating-point seconds, checked by
+    /// [`deadline_from_seconds`]: `None` and the sentinel both mean no
+    /// deadline.
+    ///
+    /// This is the one conversion every host door calls, so a NaN, a
+    /// negative, or an oversized budget comes back as the usage kind
+    /// instead of a panic inside the host process.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind for a NaN, a negative value other than the sentinel,
+    /// or a budget larger than [`MAX_DEADLINE_SECONDS`].
+    pub fn with_deadline_seconds(self, seconds: Option<f64>) -> Result<Self, Error> {
+        match seconds.map(deadline_from_seconds).transpose()? {
+            Some(Some(budget)) => Ok(self.deadline_in(budget)),
+            _ => Ok(self),
+        }
+    }
+
+    /// Carry a host's deadline in floating-point milliseconds, the C
+    /// door's spelling of [`Options::with_deadline_seconds`].
+    ///
+    /// # Errors
+    ///
+    /// The usage kind for a NaN, a negative value other than the sentinel,
+    /// or a budget larger than [`MAX_DEADLINE_SECONDS`].
+    pub fn with_deadline_millis(self, millis: Option<f64>) -> Result<Self, Error> {
+        match millis.map(deadline_from_millis).transpose()? {
+            Some(Some(budget)) => Ok(self.deadline_in(budget)),
+            _ => Ok(self),
+        }
     }
 }
 
@@ -1139,8 +1246,11 @@ pub fn relate_checked(
 /// home, and a 100 MB cache cap. A setting the host passes always wins over
 /// the environment, and a folder the user names always wins over the cache
 /// home.
+///
+/// [`Settings`] is this struct's older name and stays an alias, so a host
+/// written against either name compiles.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Settings {
+pub struct EngineConfig {
     /// The backend address, overriding `THINKTHEN_BASE_URL`.
     pub address: Option<String>,
     /// The model, overriding the alias and the question's own name.
@@ -1157,9 +1267,19 @@ pub struct Settings {
     pub cache: Option<std::path::PathBuf>,
     /// The cache cap in bytes, overriding the 100 MB default.
     pub cache_bytes: Option<u64>,
+    /// How long one request may wait on the wire, overriding the
+    /// connector's own default.
+    pub timeout: Option<std::time::Duration>,
+    /// How many times one failed request is sent again, overriding the
+    /// connector's own default.
+    pub max_retries: Option<u32>,
 }
 
-impl Settings {
+/// The settings a host passes under their older name; the same struct as
+/// [`EngineConfig`].
+pub type Settings = EngineConfig;
+
+impl EngineConfig {
     /// Read the two environment variables that carry settings, empty or
     /// missing reading as `None`.
     ///
@@ -1635,6 +1755,22 @@ fn member_is_decide(fields: &serde_json::Map<String, serde_json::Value>) -> bool
     fields.contains_key("decide")
 }
 
+/// Builds an engine from a config: the seam every surface binds through,
+/// so replacing the stand-in with the real engine changes the one line
+/// that names the connector.
+pub trait Connector: Send + Sync {
+    /// Build an engine. Every field the config sets wins over the
+    /// environment; a connector reads its own environment only for what
+    /// the config leaves unset, and only its own knobs.
+    ///
+    /// # Errors
+    ///
+    /// The usage kind when the config cannot be honored (an unresolvable
+    /// address, for example), and the local kind when the connector's own
+    /// resources cannot be prepared.
+    fn connect(&self, config: &EngineConfig) -> Result<std::sync::Arc<dyn Engine>, Error>;
+}
+
 /// The one engine every surface binds.
 ///
 /// An implementation carries the settings it was built with, holds no
@@ -2084,6 +2220,63 @@ mod tests {
         assert_eq!(error.kind, ErrorKind::Deadline);
         assert!(error.message.contains("the deadline of 0 s"), "the message names the value: {error}");
         assert!(error.retryable, "a fresh budget may answer");
+    }
+
+    /// A host's deadline is converted, checked, at one door: a NaN, a
+    /// negative, or an oversized budget is the usage kind, the sentinel
+    /// means no deadline, and zero stays a spent deadline.
+    #[test]
+    fn a_hosts_deadline_is_converted_checked() {
+        use std::time::Duration;
+        assert_eq!(
+            super::deadline_from_seconds(2.5),
+            Ok(Some(Duration::from_secs_f64(2.5))),
+            "plain seconds pass through"
+        );
+        assert_eq!(super::deadline_from_seconds(0.0), Ok(Some(Duration::ZERO)), "zero is a spent deadline");
+        assert_eq!(super::deadline_from_seconds(super::NO_DEADLINE), Ok(None), "the sentinel means none");
+        assert_eq!(
+            super::deadline_from_seconds(f64::from(u32::MAX)),
+            Ok(Some(Duration::from_secs(u64::from(u32::MAX)))),
+            "the largest budget the engine holds is accepted"
+        );
+        assert_eq!(super::deadline_from_seconds(f64::NAN).unwrap_err().kind, ErrorKind::Usage, "NaN is refused");
+        assert_eq!(super::deadline_from_seconds(-0.5).unwrap_err().kind, ErrorKind::Usage, "a negative other than the sentinel is refused");
+        assert_eq!(super::deadline_from_seconds(f64::INFINITY).unwrap_err().kind, ErrorKind::Usage, "infinity is refused");
+        assert_eq!(super::deadline_from_seconds(1e300).unwrap_err().kind, ErrorKind::Usage, "an oversized budget is refused");
+        assert_eq!(
+            super::deadline_from_millis(250.0),
+            Ok(Some(Duration::from_millis(250))),
+            "milliseconds convert"
+        );
+        assert_eq!(super::deadline_from_millis(0.0), Ok(Some(Duration::ZERO)), "zero milliseconds is spent");
+        assert_eq!(super::deadline_from_millis(super::NO_DEADLINE), Ok(None), "the sentinel means none in milliseconds too");
+        assert_eq!(super::deadline_from_millis(f64::NAN).unwrap_err().kind, ErrorKind::Usage, "NaN milliseconds are refused");
+        assert_eq!(super::deadline_from_millis(-2.0).unwrap_err().kind, ErrorKind::Usage, "negative milliseconds are refused");
+        assert_eq!(super::deadline_from_millis(1e300).unwrap_err().kind, ErrorKind::Usage, "oversized milliseconds are refused");
+    }
+
+    /// The Options helper is the one call a host door makes: it carries a
+    /// checked budget, treats the sentinel as no deadline, and never
+    /// panics on a hostile value.
+    #[test]
+    fn a_hosts_deadline_arms_options() {
+        let armed = Options::new().with_deadline_seconds(Some(5.0)).expect("fine");
+        assert!(!armed.passed(), "five seconds is ahead");
+        assert!(armed.remaining().is_some(), "the deadline is carried");
+        let spent = Options::new().with_deadline_seconds(Some(0.0)).expect("legal");
+        assert!(spent.passed(), "zero is spent");
+        let none = Options::new().with_deadline_seconds(Some(super::NO_DEADLINE)).expect("legal");
+        assert!(!none.passed(), "the sentinel carries no deadline");
+        assert!(none.remaining().is_none(), "nothing to run out");
+        assert!(Options::new().with_deadline_seconds(None).expect("legal").remaining().is_none(), "None means no deadline");
+        let hostile = Options::new().with_deadline_seconds(Some(f64::INFINITY));
+        assert_eq!(hostile.err().expect("refused").kind, ErrorKind::Usage, "no panic, the usage kind");
+        let millis = Options::new().with_deadline_millis(Some(250.0)).expect("fine");
+        assert!(millis.remaining().is_some_and(|left| left <= std::time::Duration::from_millis(250)), "the millis budget is carried");
+        assert!(Options::new().with_deadline_millis(Some(super::NO_DEADLINE)).expect("legal").remaining().is_none());
+        let hostile = Options::new().with_deadline_millis(Some(f64::NAN));
+        assert_eq!(hostile.err().expect("refused").kind, ErrorKind::Usage, "no panic, the usage kind");
     }
 
     /// The door JSON for `find` and `rank` is the ruled pair, one shape:
