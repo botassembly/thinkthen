@@ -8,12 +8,13 @@ cd "$(dirname "$0")"
 
 NAME=laneb-pg
 WIRE_NAME=laneb-pg-wire
+KEY_NAME=laneb-pg-key
 
 # Sibling sessions on this box start and stop their own postgres containers,
 # so a fixed port is a race. Take the first free port from a quiet range.
 free_port() {
   for candidate in 5460 5461 5462 5463 5464 5465 5466 5467 5468 5469; do
-    [ "$candidate" = "${1:-}" ] && continue
+    case " $* " in *" $candidate "*) continue ;; esac
     if ! ss -ltn 2>/dev/null | grep -q ":$candidate "; then
       echo "$candidate"; return
     fi
@@ -22,6 +23,11 @@ free_port() {
 }
 PORT=$(free_port)
 WIRE_PORT=$(free_port "$PORT")
+KEY_PORT=$(free_port "$PORT" "$WIRE_PORT")
+# A port nothing listens on: the credential arm's engine points at it, so a
+# call that reaches the wire is refused there and a call that refuses
+# first never touches it.
+REFUSED_PORT=$(free_port "$PORT" "$WIRE_PORT" "$KEY_PORT")
 
 # Wait on the container's own socket, the same path the checks use. A TCP
 # probe races the entrypoint's init phase and a sibling session's port.
@@ -37,7 +43,7 @@ wait_ready() {
 EXT=target/release/thinkthen-pg16/usr
 
 cleanup() {
-  docker rm -f -v "$NAME" "$WIRE_NAME" >/dev/null 2>&1 || true
+  docker rm -f -v "$NAME" "$WIRE_NAME" "$KEY_NAME" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -208,6 +214,62 @@ awk -v e="$timeout_elapsed" 'BEGIN { exit !(e <= 2.5) }' \
   || { echo "FAILED   the timeout run took ${timeout_elapsed}s" >&2; exit 1; }
 echo "ok       statement_timeout returned ${timeout_elapsed}s in (1 s timeout; full run about 3.6 s)"
 rm -f .tmp-timeout.out
+
+echo "== postgres surface: a configured credential refuses, a refused address answers loudly"
+# Punch-list item 5: the ruled `thinkthen.api_key` setting cannot reach
+# this engine build, so a set value must refuse instead of being silently
+# ignored, and a missing credential must fail loudly on the wire. The
+# value below is made up; no real key is read or sent anywhere.
+docker rm -f -v "$KEY_NAME" >/dev/null 2>&1 || true
+docker run -d --name "$KEY_NAME" --network host \
+  -e POSTGRES_PASSWORD=postgres -e PGPORT=$KEY_PORT \
+  -e ENGINE_BASE_URL=http://127.0.0.1:$REFUSED_PORT/v1 \
+  postgres:16 >/dev/null
+wait_ready "$KEY_NAME"
+docker cp "$EXT/lib/postgresql/16/lib/thinkthen.so" "$KEY_NAME:/usr/lib/postgresql/16/lib/thinkthen.so"
+docker cp "$EXT/share/postgresql/16/extension/thinkthen.control" \
+  "$KEY_NAME:/usr/share/postgresql/16/extension/thinkthen.control"
+docker cp "$EXT/share/postgresql/16/extension/thinkthen--0.0.1.sql" \
+  "$KEY_NAME:/usr/share/postgresql/16/extension/thinkthen--0.0.1.sql"
+docker cp fixtures/refund.json "$KEY_NAME:/var/lib/postgresql/data/refund.json"
+psql_key() {
+  docker exec -i -e PGHOST=/run/postgresql "$KEY_NAME" \
+    psql -U postgres -P footer=off "$@"
+}
+psql_key -c "CREATE EXTENSION thinkthen;" >/dev/null
+
+# The setting set: the call refuses with the usage kind, names the setting
+# and the substitute channel, and never echoes the value.
+psql_key -c '\set VERBOSITY verbose' \
+  -c "SET thinkthen.api_key = 'made-up-not-a-key';" \
+  -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" \
+  > .tmp-key.out 2>&1 || true
+grep -q "22023" .tmp-key.out \
+  || { echo "FAILED   the configured key did not refuse with the usage kind" >&2; cat .tmp-key.out >&2; exit 1; }
+grep -q "thinkthen.api_key" .tmp-key.out \
+  || { echo "FAILED   the refusal does not name the setting" >&2; cat .tmp-key.out >&2; exit 1; }
+grep -q "THINKTHEN_API_KEY" .tmp-key.out \
+  || { echo "FAILED   the refusal does not name the substitute channel" >&2; cat .tmp-key.out >&2; exit 1; }
+if grep -q "made-up-not-a-key" .tmp-key.out; then
+  echo "FAILED   the refusal echoed the value" >&2; exit 1
+fi
+
+# The setting reset: the same call reaches the wire and the refused port
+# answers loudly — the control proving the refusal above is the setting's,
+# and the missing-credential arm at once.
+psql_key -c '\set VERBOSITY verbose' \
+  -c "RESET thinkthen.api_key;" \
+  -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" \
+  > .tmp-key.out 2>&1 || true
+grep -q "38000" .tmp-key.out \
+  || { echo "FAILED   the refused address did not answer with the backend kind" >&2; cat .tmp-key.out >&2; exit 1; }
+grep -q "the address refused the connection" .tmp-key.out \
+  || { echo "FAILED   the refused address's message is missing" >&2; cat .tmp-key.out >&2; exit 1; }
+rm -f .tmp-key.out
+if docker logs "$KEY_NAME" 2>&1 | grep -q "made-up-not-a-key"; then
+  echo "FAILED   the value appeared in the server log" >&2; exit 1
+fi
+echo "ok       a configured key refuses with 22023 naming the setting; reset, the refused address answers with 38000"
 
 echo "== postgres surface: the function examples"
 docker cp fixtures/names.json "$NAME:/var/lib/postgresql/data/names.json"

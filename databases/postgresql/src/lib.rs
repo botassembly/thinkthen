@@ -42,10 +42,40 @@ pgrx::pg_module_magic!();
 /// into the send is the database ADR's preload question, not this lane's.
 static API_KEY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 
+/// Why a set `thinkthen.api_key` refuses on this build, or `None` when the
+/// setting is absent. Blank reads as absent, the rule the command uses for
+/// its key variable. Pure, so the rule is unit-tested without a backend.
+///
+/// This engine build takes no key from the host: the stand-in reads no key
+/// at all, and which channel delivers the setting to the send is the
+/// database ADR's open question 4. A configured value therefore refuses
+/// loudly, naming the setting and the substitution, instead of being
+/// silently ignored. The message never carries a value.
+fn unwired_key_refusal(setting: Option<&str>) -> Option<Error> {
+    let set = setting.is_some_and(|key| !key.trim().is_empty());
+    set.then(|| {
+        Error::usage(
+            "the thinkthen.api_key setting cannot reach this engine build; unset it and \
+             let the engine read THINKTHEN_API_KEY from the server's environment",
+        )
+    })
+}
+
 /// The engine, lazy in each backend. Built on first use, after the fork.
 static ENGINE: OnceLock<BlockingEngine> = OnceLock::new();
 
+/// The engine value, with the configured key's refusal in front of it.
+///
+/// Called on the backend's own thread only: the setting read behind it
+/// (`GucSetting::get`) checks the active thread and panics elsewhere. The
+/// batch closures take the reference before `run_batch` spawns, so no
+/// worker thread reads a setting.
 fn engine() -> &'static BlockingEngine {
+    if let Some(key) = API_KEY.get() {
+        if let Some(error) = unwired_key_refusal(Some(&key.to_string_lossy())) {
+            raise(error);
+        }
+    }
     ENGINE.get_or_init(BlockingEngine::from_env)
 }
 
@@ -94,8 +124,10 @@ fn raise(error: Error) -> ! {
 }
 
 /// The PostgreSQL surface of a contract failure: the SQLSTATE a caller
-/// sees and the message a reader sees. Pure, so the mapping is unit-tested
-/// without a running backend.
+/// sees and the message a reader sees. One `thinkthen {kind}:` prefix,
+/// the contract's own message, and the retry signal — the shape the other
+/// two surfaces render. Pure, so the mapping is unit-tested without a
+/// running backend.
 fn surface(error: &Error) -> (PgSqlErrorCode, String) {
     let code = match error.kind {
         ErrorKind::Usage => PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
@@ -105,7 +137,7 @@ fn surface(error: &Error) -> (PgSqlErrorCode, String) {
         ErrorKind::Defect => PgSqlErrorCode::ERRCODE_INTERNAL_ERROR,
     };
     let retry = if error.retryable { "yes" } else { "no" };
-    let text = format!("thinkthen {}: {error} (retryable: {retry})", error.kind);
+    let text = format!("thinkthen {}: {} (retryable: {retry})", error.kind, error.message);
     (code, text)
 }
 
@@ -463,10 +495,11 @@ fn thinkthen_relate(
     });
     let rows = rows.unwrap_or_else(|error| raise(error));
     let owned: Vec<String> = rows.iter().map(|(_, body)| body.clone()).collect();
+    let engine = engine();
     let edges = run_batch(move |cancel| {
         let texts: Vec<&str> = owned.iter().map(String::as_str).collect();
         let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
-        relate_checked(engine(), &ask, &texts, options)
+        relate_checked(engine, &ask, &texts, options)
     })
     .unwrap_or_else(|error| raise(error));
     let out: Vec<_> = edges
@@ -545,11 +578,12 @@ fn thinkthen_decide_array(
         .collect();
     let distinct = distinct_of(rows.iter().map(|text| text.as_deref()));
     let owned = distinct.clone();
+    let engine = engine();
     let judged = run_batch(move |cancel| {
         let question = question_of(Some(&question_text));
         let records: Vec<&str> = owned.iter().map(String::as_str).collect();
         let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
-        engine().decide_many_opts(&question, &records, options, None)
+        engine.decide_many_opts(&question, &records, options, None)
     });
     let by_text: HashMap<String, Option<bool>> = match judged {
         Ok(judged) => distinct
@@ -616,11 +650,12 @@ impl Aggregate<Warm> for Warm {
         let mut judged: i64 = 0;
         for (question_text, evidences) in by_question {
             let distinct = distinct_of(evidences.iter().map(|text| Some(text.as_str())));
+            let engine = engine();
             let outcome = run_batch(move |cancel| {
                 let question = question_of(Some(&question_text));
                 let records: Vec<&str> = distinct.iter().map(String::as_str).collect();
                 let options = thinkthen_contract::Options::new().maybe_cancel(cancel);
-                engine().decide_many_opts(&question, &records, options, None)
+                engine.decide_many_opts(&question, &records, options, None)
             });
             match outcome {
                 Ok(held) => judged += i64::try_from(held.len()).unwrap_or(i64::MAX),
@@ -650,6 +685,21 @@ extern "C-unwind" fn _PG_init() {
 mod mapping_tests {
     use super::*;
 
+    /// Punch-list item 5: a configured key must never be silently ignored.
+    /// A set, non-blank value refuses with the usage kind and a message
+    /// naming the setting and the substitute channel; an absent or blank
+    /// value passes, and no value ever rides the message.
+    #[test]
+    fn a_configured_key_refuses_but_a_blank_one_passes() {
+        assert!(unwired_key_refusal(None).is_none());
+        assert!(unwired_key_refusal(Some("   ")).is_none());
+        let error = unwired_key_refusal(Some("made-up-not-a-key")).expect("a set key refuses");
+        assert_eq!(error.kind, ErrorKind::Usage);
+        assert!(error.message.contains("thinkthen.api_key"), "{}", error.message);
+        assert!(error.message.contains("THINKTHEN_API_KEY"), "{}", error.message);
+        assert!(!error.message.contains("made-up-not-a-key"), "the value never rides the message");
+    }
+
     /// Ruling 2 of the product rulings: the defect kind maps to this
     /// engine's own error surface, with the internal-error SQLSTATE and
     /// the kind named in the message. No public door carries a fault hook;
@@ -660,5 +710,20 @@ mod mapping_tests {
         assert_eq!(code, PgSqlErrorCode::ERRCODE_INTERNAL_ERROR);
         assert!(text.contains("thinkthen defect:"), "{text}");
         assert!(text.contains("the relate plan lost its bind data"), "{text}");
+    }
+
+    /// The message shape the other two surfaces render: one
+    /// `thinkthen {kind}:` prefix, the contract's own message, and the
+    /// retry signal. The kind word appeared twice before this lane
+    /// touched the function (`thinkthen usage: usage: ...`), because the
+    /// contract's Display already carries it.
+    #[test]
+    fn the_kind_word_appears_once() {
+        let (code, text) = surface(&Error::usage("the question is empty"));
+        assert_eq!(code, PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE);
+        assert_eq!(text, "thinkthen usage: the question is empty (retryable: no)");
+        let (code, text) = surface(&Error::backend_retryable("the backend is busy"));
+        assert_eq!(code, PgSqlErrorCode::ERRCODE_EXTERNAL_ROUTINE_EXCEPTION);
+        assert_eq!(text, "thinkthen backend: the backend is busy (retryable: yes)");
     }
 }

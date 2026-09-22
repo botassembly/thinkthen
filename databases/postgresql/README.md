@@ -46,3 +46,40 @@ every other member — PostgreSQL serializes the contract's own `Details`
 struct, so the field needed no wiring in this shim — and the conformance
 slice proves it: case 13's `nearest_level` (`mid`) is compared against
 `(details->>'nearest')` in `runner.py`.
+
+## Authority: who may do what
+
+- **Question-file access.** `'@name'` reads one file, resolved against
+  the backend's working directory (the official image's data directory),
+  exactly as named. `thinkthen_relate` reads no file: it runs the query
+  text it is given through SPI. Nothing else is read.
+- **Backend selection.** The engine builds lazily in each backend, after
+  the fork, from the server process's environment (`THINKTHEN_BASE_URL`,
+  or the stand-in's `ENGINE_BASE_URL`; `ENGINE_NULL=1` for the in-process
+  backend). SQL cannot name a backend, and `_PG_init` registers settings
+  and touches nothing else.
+- **Credential source.** The ruled channel is the `thinkthen.api_key`
+  setting (`Suset`, no view shows it, `ALTER SYSTEM` cannot write it).
+  This engine build takes no key from the host, so a set, non-blank value
+  refuses every call with a usage error naming the setting and the
+  engine's own channel, `THINKTHEN_API_KEY` in the server environment —
+  a configured credential is never silently ignored, and the value never
+  rides a message or the log. Which channel wins when both are present
+  is the database ADR's open question 4; the refusal is the placeholder
+  until it is answered.
+- **Query execution.** The backend runs the SQL on its main thread, and
+  every judging function is `PARALLEL RESTRICTED`, so a parallel plan
+  cannot multiply the width. The batch paths (the array overload and
+  `thinkthen_warm`) run the engine call on one worker thread while the
+  backend polls its interrupt flag; `thinkthen_relate` executes its
+  query through SPI and stops reading at the 256th row. No thread lives
+  between calls.
+- **Connection lifetime.** The engine and its pool live as long as the
+  backend process; the engine stamps its process ID and rebuilds after a
+  fork, and nothing is built in the postmaster.
+- **Cancellation channel.** PostgreSQL's own interrupt flag: the batch
+  poll reads `InterruptPending`, cancels the engine's token, and the
+  proper error raises through `check_for_interrupts!()`, so
+  `pg_cancel_backend` and `statement_timeout` both stop a waiting batch
+  (the check measures 0.33 s and 1.24 s). A scalar call carries no token:
+  the flag is read when it returns.

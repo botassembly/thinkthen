@@ -217,3 +217,58 @@ ok       19-decide-many-judgments rows
 - **`nearest` rides details here like every member.** PostgreSQL serializes the contract's own `Details` struct, so the settled field needed no wiring in this shim; what it needed was a proof and an honest page. The conformance runner's details branch now carries a fifth field — `(details->>'nearest')` — and compares it against the case's `nearest_level` when the case carries one; case 13 (`mid`) passes through it. The README's old line ("carries no nearest level until the contract gains the field") is replaced by the settled statement.
 - **One bug on the way, mine:** the first version of the runner change carried one extra closing parenthesis in the concatenated SQL, and case 73 caught it as "raised when no failure was expected". Fixed in one edit; the run below is after the fix.
 - **Evidence from the run after the fix:** `ok 13-score-levels`, `ok 73-details-carries-requests`, `73 of 74 cases ok, 1 diverged` (the named stand-in gap, 17-usage-and-cache: the stand-in never credits its in-process memory in `cache_answers`), `12 of 12 examples ok`, wire suite skipped by design without the stub on 8219, `check.sh` exit 0, and zero containers left (`docker ps -a` shows none).
+
+## 2026-09-22 — the credential refusal, the message shape, the authority section (punch-list item 5)
+
+Item 5: a configured credential must reach the engine safely or be
+refused; it must not silently do nothing.
+
+**The refusal.** `thinkthen.api_key` is the ruled setting; this engine
+build takes no key from the host (the stand-in reads no key, and which
+channel delivers the setting to the send is the database ADR's open
+question 4). `engine()` now checks the setting on every call and raises a
+usage error naming the setting and the substitute channel; blank reads as
+absent, the rule the command uses for its key variable. A set value is
+never silently ignored, and no value rides a message.
+
+**The check**, in a third disposable container (`laneb-pg-key`, its
+engine pointed at a free port nothing listens on, a made-up value, no
+real key anywhere):
+
+```
+ok       a configured key refuses with 22023 naming the setting; reset, the refused address answers with 38000
+```
+
+Arm one: `SET thinkthen.api_key = 'made-up-not-a-key'` then a call gives
+`22023` (invalid parameter) with the setting and `THINKTHEN_API_KEY`
+named, and the value absent from the psql output and the server log
+(`docker logs` checked). Arm two: `RESET` then the same call gives
+`38000` (external routine) with `the address refused the connection` —
+the control proving the refusal above is the setting's, and the
+missing-credential case answering loudly.
+
+**Two fixes found on the way, both in this commit.** (1) The message
+shape: `surface()` formatted `{error}`, whose Display already carries
+`usage: `, so every error read `thinkthen usage: usage: ...`. The other
+two surfaces render `thinkthen {kind}: {message} (retryable: ...)`, and
+this surface now does too, pinned by `the_kind_word_appears_once`. (2)
+The first attempt put the setting read inside `engine()`, which the batch
+closures call on their worker thread — and `GucSetting::get` checks the
+active thread and panics off the backend's own thread, so cases 19, 69,
+70, and 72 died with `the batch thread stopped` (recorded here because it
+was caught by this lane's own run, not by review). The batch closures now
+take the engine reference before `run_batch` spawns, so no worker thread
+reads a setting; the conformance slice is back to 73 of 74 with the known
+case 17 divergence.
+
+**README.** A new "Authority: who may do what" section names the six
+items, including the refusal and the open question it stands in for.
+
+**Evidence from the full run** (`./check.sh`, after both fixes): the
+error-mapping tests 3 passed; conformance `73 of 74 cases ok, 1 diverged`
+(the named stand-in gap, 17-usage-and-cache); `pg_cancel_backend` stopped
+the batch 0.33 s past the signal and `statement_timeout` returned 1.24 s
+in; the credential arm green; `12 of 12 examples ok`; wire suite skipped
+by design without the stub on 8219; `check.sh` exit 0; the exit trap
+removed all three containers and `docker ps -a` shows no `laneb-*` left.
+No key, no paid call, nothing published.
