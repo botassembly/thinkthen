@@ -49,6 +49,10 @@ fn engine() -> &'static BlockingEngine {
 
 /// One saved answer, keyed by the question's digest and the evidence.
 ///
+/// Temporary, the stand-in's: the engine's own cache replaces this map at
+/// the engine swap, and the map and its hit counter are deleted together
+/// then (ADR 0017 puts the cache and the counters in the engine).
+///
 /// The map is the session memory a database holds when no cache folder is
 /// named: `thinkthen_warm` fills it, and every scalar call reads it before
 /// the wire. Equal pairs of question and text are judged once.
@@ -73,7 +77,8 @@ fn answers() -> &'static Mutex<HashMap<(String, String), Saved>> {
     ANSWERS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Answers the map served without a send.
+/// Answers the map served without a send. Temporary, deleted with the
+/// map at the engine swap.
 fn cache_hits() -> &'static AtomicU64 {
     static HITS: AtomicU64 = AtomicU64::new(0);
     &HITS
@@ -357,13 +362,18 @@ fn details(context: &Context<'_>) -> Result<Option<String>, Error> {
 
 /// `thinkthen_usage()`: the process counters as one JSON object — sends,
 /// answers the session map served with no send, and the tokens the
-/// replies reported. `thinkthen_usage('reset')` zeroes them, clears the
-/// saved answers, and returns the zeros.
+/// replies reported. The counters are cumulative and are never reset;
+/// a caller takes two snapshots and subtracts them. The removed reset
+/// spelling refuses and names that substitution.
 fn usage(context: &Context<'_>) -> Result<String, Error> {
-    if context.len() == 1 && context.get_raw(0).as_str()? == "reset" {
-        thinkthen_standin::reset_usage();
-        cache_hits().store(0, Ordering::Relaxed);
-        answers().lock().unwrap().clear();
+    if context.len() != 0 {
+        let argument = context.get_raw(0).as_str()?;
+        let message = if argument == "reset" {
+            "the reset spelling is removed; the counters are cumulative, so take two snapshots and subtract them"
+        } else {
+            "thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots"
+        };
+        return Err(failure(thinkthen_contract::Error::usage(message)));
     }
     let held = engine().usage();
     let object = serde_json::json!({

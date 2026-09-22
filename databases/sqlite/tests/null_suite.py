@@ -78,13 +78,27 @@ check(
 )
 
 # The filter pattern: warm fills, WHERE reads, count agrees, no new sends.
-conn.execute("SELECT thinkthen_usage('reset')")
+# The counters are cumulative, so every check here reads a delta between
+# two snapshots (the punch-list ruling: no reset, subtract snapshots).
+# Two of the five rows were already answered by the decide checks above,
+# so warm judges the three uncached rows and serves the other two.
+hits_before = json.loads(conn.execute("SELECT thinkthen_usage()").fetchone()[0])[
+    "cache_answers"
+]
 check(
-    "warm judges every row",
+    "warm judges the uncached rows",
     conn.execute(
         "SELECT thinkthen_warm('Is this a complaint?', body) FROM reviews"
     ).fetchone()[0],
-    5,
+    3,
+)
+check(
+    "warm serves the already-answered rows from the session map",
+    json.loads(conn.execute("SELECT thinkthen_usage()").fetchone()[0])[
+        "cache_answers"
+    ]
+    - hits_before,
+    2,
 )
 before = json.loads(conn.execute("SELECT thinkthen_usage()").fetchone()[0])
 kept = conn.execute(
@@ -99,13 +113,30 @@ check("filter keeps the complaint rows", [row[0] for row in kept], [1, 3, 4])
 check("count agrees with the filter", counted, 3)
 check("the WHERE passes send nothing", middle["requests"], before["requests"])
 check("the count sends nothing", after["requests"], before["requests"])
-check("served answers counted", after["cache_answers"] >= 10, True)
+check("served answers counted", after["cache_answers"] - before["cache_answers"] >= 10, True)
 
-# usage and its reset arm.
+# usage is cumulative; the removed reset spelling refuses and names the
+# subtraction pattern (the punch-list ruling).
+try:
+    conn.execute("SELECT thinkthen_usage('reset')").fetchall()
+    check("the reset spelling refuses", "no error", "a usage error")
+except sqlite3.OperationalError as failure:
+    check(
+        "the reset spelling refuses, naming the subtraction pattern",
+        "cumulative" in str(failure) and "subtract" in str(failure),
+        True,
+    )
+snapshot = json.loads(conn.execute("SELECT thinkthen_usage()").fetchone()[0])
+conn.execute(
+    "SELECT thinkthen_decide('Is this a complaint?', 'a sentence no earlier check asked')"
+).fetchone()
+grown = json.loads(conn.execute("SELECT thinkthen_usage()").fetchone()[0])
 check(
-    "usage reset zeroes the counters",
-    json.loads(conn.execute("SELECT thinkthen_usage('reset')").fetchone()[0]),
-    {"requests": 0, "cache_answers": 0, "tokens": 0},
+    "the counters are cumulative, never reset",
+    grown["requests"] == snapshot["requests"] + 1
+    and grown["cache_answers"] >= snapshot["cache_answers"]
+    and grown["tokens"] >= snapshot["tokens"],
+    True,
 )
 
 # A question file named with the command's spelling.

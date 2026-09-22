@@ -205,3 +205,42 @@ The message is built by a pure `version_refusal(host)` so the failure path is un
 - **The named divergences and the gap are on the page.** The shim's session answer map is recorded as the stand-in's divergence that the real engine's cache replaces (map and hit counter deleted together at the swap); the volatile-flag rule is stated; and the missing per-call deadline option is named with case 27's skip, per the settled rule that a gap is named rather than implied.
 
 The full check is green with no stub: build, null suite, the table-valued functions suite, the conformance slice (74 cases), the wire suite skipped by design without the stub.
+
+## 2026-09-21 — the hidden reset removed (punch-list item 4)
+
+The architect's punch list, item 4: SQLite still accepted
+`thinkthen_usage('reset')`, which cleared the process counters and the
+shim cache — the removed reset capability under another spelling. The
+spelling now refuses, the counters are cumulative only, and callers
+subtract snapshots.
+
+Code. `usage()` in `src/lib.rs`: the reset branch is gone; any argument
+refuses with the usage kind. `'reset'` gets the message that names the
+substitution — "the reset spelling is removed; the counters are
+cumulative, so take two snapshots and subtract them" — and any other
+argument gets "thinkthen_usage takes no arguments". The shim cache stays,
+now marked in its doc comments as temporary and deleted together with
+its hit counter at the engine swap (the README's named divergence already
+said so; the source comments now say it too).
+
+Tests. `tests/null_suite.py`: the pre-warm reset is gone, so the warm
+check tells the cumulative truth — two of the five review rows were
+already answered by the decide checks above, so warm judges 3 and serves
+2 from the session map (both proven as deltas). The reset check now
+proves the refusal (message contains "cumulative" and "subtract") and a
+new check proves the counters are cumulative: a fresh sentence grows
+`requests` by one and never lowers a counter. 23 of 23 pass.
+`tests/conformance_driver.py` case 17 is read as deltas between two
+snapshots, and its `after_reset` arm — data from the old capability — is
+superseded in place by the refusal check.
+
+```
+$ ENGINE_NULL=1 python3 tests/conformance_driver.py | grep 17
+ok       17-usage-and-cache: sends and served answers counted by delta; the reset spelling refuses (after_reset superseded)
+$ ./check.sh
+... 73 and 74 green, conformance slice done, wire suite skipped (no stub)
+```
+
+The shared conformance file is untouched: case 17 keeps its recorded
+`after_reset` arm as history, and the driver names the supersession in
+its line. Nothing published, no key, no paid call.

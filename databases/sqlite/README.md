@@ -14,8 +14,10 @@ own connection: 1,000 records at width 32 measured 33 pooled connections.
 `thinkthen_warm` — the ruled names with the `thinkthen_` prefix. `NULL` is
 "not sure". A question argument is plain text, a JSON question, or a
 question file named with the command's spelling `'@refund.json'`, resolved
-relative to the process working directory. `thinkthen_usage('reset')`
-zeroes the counters and clears the session's saved answers.
+relative to the process working directory. `thinkthen_usage` is
+cumulative and is never reset; take two snapshots and subtract them for a
+delta, and the removed `'reset'` spelling refuses with a usage error
+naming that substitution.
 
 `thinkthen_recognize` and `thinkthen_relate` are table-valued functions
 over the same engine. `SELECT t.id, n.text, n.kind FROM tickets t,

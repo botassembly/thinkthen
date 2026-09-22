@@ -102,8 +102,12 @@ def main():
         try:
             if verb in ("decide", "details", "usage", "cancel"):
                 if verb == "usage":
-                    requests = json.loads(
-                        conn.execute("SELECT thinkthen_usage('reset')").fetchone()[0]
+                    # The counters are cumulative (the reset-removal ruling),
+                    # so the case is read as deltas between snapshots; its
+                    # after_reset arm is superseded and its place is taken
+                    # by the reset spelling's refusal.
+                    before = json.loads(
+                        conn.execute("SELECT thinkthen_usage()").fetchone()[0]
                     )
                     conn.execute(
                         "SELECT thinkthen_decide(?, ?)",
@@ -117,21 +121,31 @@ def main():
                         conn.execute("SELECT thinkthen_usage()").fetchone()[0]
                     )
                     wanted = expect
-                    zeroed = json.loads(
-                        conn.execute(
-                            "SELECT thinkthen_usage('reset')"
-                        ).fetchone()[0]
-                    )
+                    sent = held["requests"] - before["requests"]
+                    served = held["cache_answers"] - before["cache_answers"]
+                    try:
+                        conn.execute("SELECT thinkthen_usage('reset')").fetchall()
+                        refusal = "accepted"
+                    except sqlite3.OperationalError as failure:
+                        refusal = str(failure)
                     if (
-                        held["requests"] == wanted["requests"]
-                        and held["cache_answers"] == wanted["cache_answers"]
-                        and zeroed["requests"] == wanted["after_reset"]["requests"]
-                        and zeroed["cache_answers"]
-                        == wanted["after_reset"]["cache_answers"]
+                        sent == wanted["requests"]
+                        and served == wanted["cache_answers"]
+                        and "cumulative" in refusal
+                        and "subtract" in refusal
                     ):
-                        report(case_id, "sends and served answers counted")
+                        report(
+                            case_id,
+                            "sends and served answers counted by delta; "
+                            "the reset spelling refuses (after_reset superseded)",
+                        )
                     else:
-                        report(case_id, f"usage {held}, expected {wanted}", failed=True)
+                        report(
+                            case_id,
+                            f"usage delta {sent}/{served}, refusal {refusal!r}, "
+                            f"expected {wanted}",
+                            failed=True,
+                        )
                     continue
                 if verb == "cancel":
                     print(
