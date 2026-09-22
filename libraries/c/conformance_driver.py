@@ -334,7 +334,7 @@ def main():
                 line = f"ok       {case_id}"
         elif verb == "annotate":
             held_records = case.get("records") or [evidence]
-            request = {"annotate": {"questions": case["set"]}, "records": held_records}
+            request = {"annotate": {"version": 1, "questions": case["set"]}, "records": held_records}
             reply, message, _ = call(lib, engine, request)
             if reply is None:
                 line = f"FAIL     {case_id}: {message}"

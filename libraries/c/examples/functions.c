@@ -62,7 +62,7 @@ int main(void) {
 
     door(tt, "find", "{\"find\":\"Which line asks for money back?\",\"units\":[\"good morning\",\"I want a refund\"]}");
 
-    door(tt, "annotate", "{\"annotate\":{\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}},\"records\":[\"maybe later\"]}");
+    door(tt, "annotate", "{\"annotate\":{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}},\"records\":[\"maybe later\"]}");
 
     char *found = NULL;
     unsigned long found_len = 0;

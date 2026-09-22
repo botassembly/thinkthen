@@ -14,7 +14,10 @@ publish = false
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# `preserve_order` keeps a question set's members in file order, so the
+# contract's answer columns carry the order the file names, the core's own
+# rule.
+serde_json = { version = "1", features = ["preserve_order"] }
 thiserror = "2"
 thinkthen-core = { version = "0.0.1", path = "../crates/thinkthen-core" }
 

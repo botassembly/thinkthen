@@ -33,8 +33,8 @@
       "expected": "find: {\"answer\":1,\"probability\":0.97}"
     },
     "annotate": {
-      "c": "door(tt, \"annotate\", \"{\\\"annotate\\\":{\\\"questions\\\":{\\\"refund\\\":{\\\"decide\\\":\\\"Does the customer ask for a refund?\\\"},\\\"complaint\\\":{\\\"decide\\\":\\\"Is this a complaint?\\\",\\\"threshold\\\":0.5}}},\\\"records\\\":[\\\"maybe later\\\"]}\");",
-      "expected": "annotate: {\"answer\":[{\"complaint\":true,\"refund\":true}]}"
+      "c": "door(tt, \"annotate\", \"{\\\"annotate\\\":{\\\"version\\\":1,\\\"questions\\\":{\\\"refund\\\":{\\\"decide\\\":\\\"Does the customer ask for a refund?\\\"},\\\"complaint\\\":{\\\"decide\\\":\\\"Is this a complaint?\\\",\\\"threshold\\\":0.5}}},\\\"records\\\":[\\\"maybe later\\\"]}\");",
+      "expected": "annotate: {\"answer\":[{\"refund\":true,\"complaint\":true}]}"
     },
     "recognize": {
       "c": "rc = thinkthen_recognize(tt, \"{\\\"kinds\\\":[\\\"person\\\",\\\"organization\\\",\\\"place\\\"]}\", sentence, strlen(sentence), &found, &found_len);",

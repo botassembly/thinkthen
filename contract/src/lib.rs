@@ -1708,9 +1708,13 @@ impl ChoiceBuilder {
 
 /// A set of named questions, as `annotate` asks of one record.
 ///
-/// The set's grammar is the specification's: an object of named questions,
-/// each with the shape of one question file. The order is the set's own
-/// name order.
+/// The set's grammar is the specification's: a `version` of 1, an optional
+/// top-level `threshold` that every `decide` member without its own
+/// inherits, and `questions`, an object of named questions each with the
+/// shape of one question file. `from_json` accepts exactly what the command
+/// line's own parser accepts — that parser judges the text — and keeps the
+/// members in file order, so the answer columns carry the order the file
+/// names.
 #[derive(Clone, Debug)]
 pub struct QuestionSet {
     questions: Vec<Question>,
@@ -1720,16 +1724,20 @@ pub struct QuestionSet {
 impl QuestionSet {
     /// Read a set from its JSON grammar.
     ///
-    /// The grammar is the specification's: a `version`, an optional
-    /// top-level `threshold` that every `decide` member without its own
-    /// inherits, and `questions`, an object of named questions each with
-    /// the shape of one question file.
+    /// The core's own question-set parser judges the text, so a set the
+    /// command line refuses is refused here with the same words, and one it
+    /// accepts is accepted. The members are then rebuilt in file order.
     ///
     /// # Errors
     ///
     /// Returns an error of the usage kind when the text is not a set the
     /// grammar accepts.
     pub fn from_json(text: &str) -> Result<Self, Error> {
+        // One judge for acceptance: the command line's parser. The rebuild
+        // below cannot widen what it accepts, only carry the questions into
+        // this crate's own type in the file's order.
+        thinkthen_core::QuestionSet::parse(text)
+            .map_err(|error| Error::usage(error.to_string()))?;
         let value: serde_json::Value = serde_json::from_str::<serde_json::Value>(text)
             .map_err(|error| Error::usage(error.to_string()))?;
         let object = match &value {
@@ -1755,11 +1763,7 @@ impl QuestionSet {
             parsed.push(Question::from_json(&text)?);
             names.push(name.clone());
         }
-        let mut order: Vec<usize> = (0..names.len()).collect();
-        order.sort_by(|one, two| names[*one].cmp(&names[*two]));
-        let names = order.iter().map(|place| names[*place].clone()).collect();
-        let questions = order.iter().map(|place| parsed[*place].clone()).collect();
-        Ok(Self { questions, names })
+        Ok(Self { questions: parsed, names })
     }
 
     /// Read a set from a file the caller named.
@@ -2216,7 +2220,7 @@ mod tests {
         assert_eq!(bad.unwrap_err().kind, ErrorKind::Usage);
     }
 
-    /// A set reads with its names in the set's order, and the verbs carry.
+    /// A set reads with its names in file order, and the verbs carry.
     #[test]
     fn a_set_reads_with_names() {
         let set = QuestionSet::from_json(
@@ -2225,8 +2229,8 @@ mod tests {
                 "kind":{"choose":"Which kind?","options":["bug","feature"]}}}"#,
         )
         .expect("the set parses");
-        assert_eq!(set.names(), ["kind", "spam"]);
-        assert_eq!(set.questions()[0].members(), ["bug", "feature"]);
+        assert_eq!(set.names(), ["spam", "kind"], "file order, not name order");
+        assert_eq!(set.questions()[1].members(), ["bug", "feature"]);
     }
 
     /// A missing file fails with the local kind.
@@ -2358,7 +2362,11 @@ mod tests {
                 "threshold":0.4,"relation_threshold":0.6}"#,
         )
         .expect("the file parses");
-        assert_eq!(ask.kinds, ["organization", "person", "place"]);
+        assert_eq!(
+            ask.kinds,
+            ["person", "organization", "place"],
+            "an object of kinds carries the file's order; the list form always did"
+        );
         assert_eq!(ask.relations.len(), 3);
         assert_eq!(ask.relations[1].from, super::Kind::Any);
         assert!(ask.relations[2].either);

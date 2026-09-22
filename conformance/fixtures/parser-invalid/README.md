@@ -2,10 +2,10 @@
 
 Every file here is synthetic: written 2026-09-21 while preparing the
 question-set parser's replacement (the architect's punch list, wait-list
-item 1). The production parser must refuse each `bad-*` case and preserve
-file order; the current contract parser accepts most of them and sorts
-names. `contract/tests/parser_fixtures.rs` locks today's behavior so the
-engine swap changes it deliberately, never by accident.
+item 1). Since 2026-09-22 the contract's parser hands every set to the
+core's own parser first, so the contract accepts exactly what the command
+line accepts: each `bad-*` case is refused with the core's own words, and
+file order is kept. `contract/tests/parser_fixtures.rs` pins each verdict.
 
 | file | why it is invalid | production |
 | --- | --- | --- |
@@ -15,5 +15,5 @@ engine swap changes it deliberately, never by accident.
 | `unknown-top-key.json` | a top-level key no grammar names | refuse |
 | `empty-set.json` | a set with no questions | refuse |
 | `empty-name.json` | a question named with the empty string | refuse |
-| `on-collision.json` | two members, one `on` group, the same question twice | refuse |
+| `on-collision.json` | two members sharing one `on` pointer; the core ACCEPTS them and groups them (measured 2026-09-22: `thinkthen_core::QuestionSet::parse` returns two questions, `["a", "b"]`), so the contract accepts them too | accepted, grouped |
 | `file-order.json` | valid; the order expectation: names stay in file order (zeta, alpha) | keep file order |

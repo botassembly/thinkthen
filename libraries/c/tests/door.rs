@@ -266,7 +266,7 @@ fn the_new_shapes_ride_the_json_door() {
         // ruled JSON object, and the good answer beside it.
         let annotated = take(json(
             engine,
-            r#"{"annotate": {"questions": {"refund": {"decide": "Is this a refund request?", "threshold": 0.5}, "topic": {"decide": "Is this a billing problem?", "threshold": 0.5}}}, "records": ["order 4471: charged twice, please refund"]}"#,
+            r#"{"annotate": {"version": 1, "questions": {"refund": {"decide": "Is this a refund request?", "threshold": 0.5}, "topic": {"decide": "Is this a billing problem?", "threshold": 0.5}}}, "records": ["order 4471: charged twice, please refund"]}"#,
         ));
         let row = &annotated["answer"][0];
         assert_eq!(row["refund"], serde_json::json!(true));
