@@ -3,7 +3,7 @@
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
-use crate::core::text::{Meaning, QuestionText};
+use crate::core::text::{Description, Meaning, QuestionText};
 
 /// Why a list of options or levels is not one the verb takes.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -95,7 +95,7 @@ const MOST_TAGS: usize = 20;
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Label {
     name: String,
-    description: Option<String>,
+    description: Option<Description>,
 }
 
 /// The options `choose` picks from, or the levels `score` places on.
@@ -139,12 +139,14 @@ impl Labels {
     /// A description that is blank is no description, so a list of names, a map
     /// whose values are `null`, and a map whose values are white space all name
     /// the same question. `question-file.md` writes that rule out.
-    pub(crate) fn described(values: Vec<(String, Option<String>)>) -> Result<Self, LabelsError> {
+    pub(crate) fn described(
+        values: Vec<(String, Option<Description>)>,
+    ) -> Result<Self, LabelsError> {
         let labels = values
             .into_iter()
             .map(|(name, description)| Label {
                 name,
-                description: description.filter(|text| !text.trim().is_empty()),
+                description: description.filter(|held| !held.blank()),
             })
             .collect();
         Self::checked(
@@ -161,26 +163,32 @@ impl Labels {
     /// # Errors
     ///
     /// Returns [`LabelsError`] when the count or one label is invalid.
-    pub(crate) fn tags(values: Vec<(String, Option<String>)>) -> Result<Self, LabelsError> {
+    pub(crate) fn tags(values: Vec<(String, Option<Description>)>) -> Result<Self, LabelsError> {
         let labels = values
             .into_iter()
             .map(|(name, description)| Label {
                 name,
-                description: description.filter(|text| !text.trim().is_empty()),
+                description: description.filter(|held| !held.blank()),
             })
             .collect();
         Self::checked(labels, 1, MOST_TAGS, LabelsError::TagCount, LabelKind::Tag)
     }
 
-    /// Take 2 to 10 levels, lowest first.
+    /// Take 2 to 10 levels, lowest first, with the description each map member
+    /// held. A `null` the map named stays a description of `null`, so the model
+    /// reads the null and never the level's name.
     ///
     /// # Errors
     ///
     /// Returns [`LabelsError`] when the list is too short or too long, when a
     /// level is blank, or when one level was given twice.
-    pub(crate) fn levels(values: Vec<String>) -> Result<Self, LabelsError> {
+    pub(crate) fn levels(values: Vec<(String, Option<Description>)>) -> Result<Self, LabelsError> {
+        let labels = values
+            .into_iter()
+            .map(|(name, description)| Label { name, description })
+            .collect();
         Self::checked(
-            bare(values),
+            labels,
             2,
             MOST_LEVELS,
             LabelsError::LevelCount,
@@ -231,10 +239,15 @@ impl Labels {
     }
 
     /// Read each name with its description, in the order they were given.
-    pub(crate) fn descriptions(&self) -> impl Iterator<Item = (&String, Option<&str>)> {
+    pub(crate) fn descriptions(&self) -> impl Iterator<Item = (&String, Option<&Description>)> {
         self.0
             .iter()
-            .map(|label| (&label.name, label.description.as_deref()))
+            .map(|label| (&label.name, label.description.as_ref()))
+    }
+
+    /// True when every label carries a description, as a `score` map does.
+    pub(crate) fn fully_described(&self) -> bool {
+        self.0.iter().all(|label| label.description.is_some())
     }
 
     /// How many labels the list holds.

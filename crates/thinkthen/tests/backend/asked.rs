@@ -207,6 +207,65 @@ fn a_placement_reads_its_levels_from_either_home_and_sends_one_body() {
 }
 
 #[test]
+fn a_score_map_sends_descriptions_in_order_and_reports_the_names() {
+    let file = written(
+        "levels-map",
+        concat!(
+            r#"{"score":"how much disruption","levels":{"#,
+            r#""None.":{"what":"No impact."},"Some.":"Partial.","Blocked.":null}}"#,
+        ),
+    );
+    let answered = concat!(
+        r#"{"model":"local-1","answers":{"q1":{"type":"score","score":0.4,"#,
+        r#""legend":{"0":"None.","1":"Some.","2":"Blocked."},"#,
+        r#""probabilities":{"0":0.7,"1":0.2,"2":0.1}}},"#,
+        r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
+    );
+    let listener = Listener::serving(vec![Canned::ok(answered)]).expect("a loopback listener");
+    let output = spawn(
+        &[
+            "score",
+            &file,
+            "--details",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"Refund me please.",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(
+        String::from_utf8_lossy(&requests[0].body),
+        concat!(
+            r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"score","#,
+            r#""instructions":"how much disruption","#,
+            r#""criteria":[{"what":"No impact."},"Partial.",null]}}}"#,
+        )
+    );
+    let printed = String::from_utf8_lossy(&output.stdout).into_owned();
+    assert!(
+        printed.contains(r#""levels":["None.","Some.","Blocked."]"#),
+        "{printed}"
+    );
+    assert!(printed.contains(r#""level":"None.""#), "{printed}");
+    assert!(
+        printed.contains(r#""probabilities":{"None.":0.7,"Some.":0.2,"Blocked.":0.1}"#),
+        "{printed}"
+    );
+    assert!(printed.contains(r#""value":0.4"#), "{printed}");
+}
+
+#[test]
 fn a_typed_setting_beside_a_file_reaches_the_wire() {
     let file = written(
         "override",

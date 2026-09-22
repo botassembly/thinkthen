@@ -6,7 +6,7 @@ Read first: `handoff-to-the-architect-2026-09-21.md`, then `build-queue-2026-09-
 
 ## Where the engine stands
 
-Tickets 0001 to 0067 have landed. Lane A0 (ticket 0055, the one-crate move), A2 (backend profiles), and A3 (record with answer) are done. Tickets 0062 and 0063 shipped the default cache and `thinkthen status`, and 0064 bounded retries. After Ian transferred completion to the architect, 0065 landed at `ba60f04` with an independently reviewed directory-sync repair and passing combined local/hosted gates. Tickets 0066 and 0067 corrected help introductions, examples, and teaching order. The remaining wording and shared-metadata work is tracked in the amended queue.
+Tickets 0001 to 0068 have landed. Lane A0 (ticket 0055, the one-crate move), A2 (backend profiles), and A3 (record with answer) are done. Tickets 0062 and 0063 shipped the default cache and `thinkthen status`, and 0064 bounded retries. After Ian transferred completion to the architect, 0065 landed at `ba60f04` with an independently reviewed directory-sync repair and passing combined local/hosted gates. Tickets 0066 and 0067 corrected help introductions, examples, and teaching order. Ticket 0068 landed `meta.cached` with historical-reader compatibility and full local gates under Ian's Actions pause. Ticket 0069 now bounds structured descriptions under rulings 1–12 before private controls and recognition; typed builders remain with the library team.
 
 ## Execution amendment, 2026-09-22
 

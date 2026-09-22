@@ -229,6 +229,155 @@ fn tag_keeps_record_order_at_each_supported_job_count() {
 }
 
 #[test]
+fn a_described_tag_file_sends_the_same_bytes_as_typed_labels() {
+    let listener = Listener::serving(vec![Canned::ok(ANSWER)]).expect("listener");
+    let question = file(
+        "described",
+        r#"{"tag":"Which topics?","labels":{"billing":"The item concerns a charge.","urgent":"The item needs prompt attention."}}"#,
+    );
+    let output = spawn(
+        &[
+            "tag",
+            &format!("@{}", question.to_string_lossy()),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"The invoice failed.",
+    )
+    .expect("tag runs");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(
+        String::from_utf8_lossy(&requests[0].body),
+        concat!(
+            r#"{"state":"The invoice failed.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{"true":"The item concerns a charge."}},"#,
+            r#""q2":{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{"true":"The item needs prompt attention."}}}}"#,
+        )
+    );
+}
+
+#[test]
+fn one_structured_description_expands_every_label_and_sends_exact_bytes() {
+    let listener = Listener::serving(vec![Canned::ok(ANSWER)]).expect("listener");
+    let question = file(
+        "structured",
+        r#"{"tag":"Which topics?","labels":{"billing":{"what":"Money and invoices."},"urgent":"The item needs prompt attention."}}"#,
+    );
+    let output = spawn(
+        &[
+            "tag",
+            &format!("@{}", question.to_string_lossy()),
+            "--details",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"The invoice failed.",
+    )
+    .expect("tag runs");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let line = String::from_utf8_lossy(&output.stdout);
+    assert!(line.contains(r#""value":["billing"]"#), "{line}");
+    assert!(
+        line.contains(
+            r#""question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]}"#
+        ),
+        "{line}"
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(
+        String::from_utf8_lossy(&requests[0].body),
+        concat!(
+            r#"{"state":"The invoice failed.","model":"local-1","questions":{"q1":{"type":"noul","#,
+            r#""instructions":["Which topics?",{"label":"billing","description":{"what":"Money and invoices."}}],"#,
+            r#""criteria":{"true":{"what":"Money and invoices."}}},"#,
+            r#""q2":{"type":"noul","#,
+            r#""instructions":["Which topics?",{"label":"urgent","description":"The item needs prompt attention."}],"#,
+            r#""criteria":{"true":"The item needs prompt attention."}}}}"#,
+        )
+    );
+}
+
+#[test]
+fn a_structured_tag_text_carries_labels_without_criteria() {
+    let listener = Listener::serving(vec![Canned::ok(ANSWER)]).expect("listener");
+    let question = file(
+        "structured-text",
+        r#"{"tag":["Which topics?","Ask which apply."],"labels":["billing","urgent"]}"#,
+    );
+    let output = spawn(
+        &[
+            "tag",
+            &format!("@{}", question.to_string_lossy()),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        b"The invoice failed.",
+    )
+    .expect("tag runs");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(
+        String::from_utf8_lossy(&requests[0].body),
+        concat!(
+            r#"{"state":"The invoice failed.","model":"local-1","questions":{"q1":{"type":"noul","#,
+            r#""instructions":[["Which topics?","Ask which apply."],{"label":"billing"}]},"#,
+            r#""q2":{"type":"noul","#,
+            r#""instructions":[["Which topics?","Ask which apply."],{"label":"urgent"}]}}}"#,
+        )
+    );
+}
+
+#[test]
+fn an_invalid_tag_description_sends_no_request() {
+    let listener = Listener::serving(Vec::new()).expect("listener");
+    let bad = file("bad-description", r#"{"tag":"x","labels":{"a":3,"b":"y"}}"#);
+    let output = spawn(
+        &[
+            "tag",
+            &format!("@{}", bad.to_string_lossy()),
+            "--url",
+            listener.base(),
+        ],
+        &[],
+        b"evidence",
+    )
+    .expect("tag refuses");
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: `labels` in the question file is a list of labels, or a map from each label to its description\n"
+    );
+    assert!(listener.requests().is_empty());
+}
+
+#[test]
 fn a_tag_recording_replays_without_a_request() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("tag-replay");
     let folder_text = folder.to_string_lossy();

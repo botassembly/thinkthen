@@ -21,6 +21,14 @@ for tool in cargo python3 node mustmatch jq script; do
 	fi
 done
 
+# The question-file schema self-test under rung 2 needs one Python module:
+# jsonschema, with Draft 2020-12 support. It is a test-only tool; nothing the
+# crate builds or runs imports it.
+if ! python3 -c 'from jsonschema import Draft202012Validator' >/dev/null 2>&1; then
+	printf '%s\n' 'install: the python3 module jsonschema (Draft 2020-12) is not importable, and rung 2 runs the question-file schema self-test' >&2
+	exit 1
+fi
+
 # cargo-deny is a cargo subcommand, so `command -v` does not find it.
 if ! cargo deny --version >/dev/null 2>&1; then
 	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2

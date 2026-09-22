@@ -84,6 +84,16 @@ Options may sit before the question, and `--` ends option parsing, so a question
 printf 'x' | thinkthen decide --dry-run -- '--asks for a refund' | grep -c '"instructions":"--asks for a refund"' | mustmatch like "1"
 ```
 
+A question file carries the same settings under `@FILE`, and its question text and criteria may be objects or lists, which the request passes through as written.
+
+```bash
+cat > question.json <<'JSON'
+{"decide":{"ask":"Does this message ask for a refund?","lang":"en"},"true":{"means":"Money back."},"false":null}
+JSON
+printf 'Refund me please.' | thinkthen decide @question.json --dry-run | grep -c '"instructions":{"ask":"Does this message ask for a refund?","lang":"en"},"criteria":{"true":{"means":"Money back."},"false":null}' | mustmatch like "1"
+rm question.json
+```
+
 A model given as white space is a usage error, and the exit code is 2.
 
 ```bash

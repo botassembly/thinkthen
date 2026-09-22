@@ -107,13 +107,13 @@ The response body:
 | thinkthen | `systemone` |
 | --- | --- |
 | The evidence | `state`, as one string |
-| A yes/no question and its text | `type` `noul`, with the question as `instructions` |
-| What true means and what false means | `criteria.true` and `criteria.false` under the `noul` question. A text that was not given is absent, and a question with neither sends no `criteria` at all |
+| A yes/no question and its text | `type` `noul`, with the question as `instructions`, as the string, object, or list the question held |
+| What true means and what false means | `criteria.true` and `criteria.false` under the `noul` question, each the string, object, list, or `null` the question held. A text that was not given is absent, and a question with neither sends no `criteria` at all |
 | A yes/no answer's probability | `noul` |
 | Pick one from a list | `type` `choice`, with the options as the keys of `criteria` and each description as the value, or `null` |
-| Place on named levels | `type` `score`, with the levels as the `criteria` array |
+| Place on named levels | `type` `score`, with the `criteria` array in level order: a level with no description sends its name, and a described level sends the description the map held, `null` included |
 | A choice answer's probability per option | `probabilities` under the `choice` answer, keyed by option name. The key order carries no meaning, and the adapter rebuilds the distribution in the order the options were sent |
-| A score answer's probability per level | `probabilities` under the `score` answer, keyed by the level's position as a string, counting from `"0"`. The adapter maps each key back to the level text it sent |
+| A score answer's probability per level | `probabilities` under the `score` answer, keyed by the level's position as a string, counting from `"0"`. The adapter maps each key back to the configured level name |
 | The backend's own confidence | `confidence`, kept and never cut on. The vendor sends it on a pick and a placement, and never on a yes/no answer |
 | A score's number | Computed locally from the level probabilities. Nothing is read from the wire |
 | Several questions over one evidence | One `questions` map with one entry per question. One request, one `state` |

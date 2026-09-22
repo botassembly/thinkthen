@@ -9,8 +9,10 @@ use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
 
 use crate::core::adapters::systemone::{EncodeError, wire_name};
+use crate::core::json::Json;
 use crate::core::plan::Plan;
-use crate::core::question::Question;
+use crate::core::question::{Labels, Question};
+use crate::core::text::{Description, QuestionText};
 
 /// The body one request carries.
 #[derive(Debug, Serialize)]
@@ -57,19 +59,19 @@ impl<'de> Deserialize<'de> for Questions {
 pub(crate) enum RequestQuestion {
     /// A yes/no question, which the vendor calls `noul`.
     Noul {
-        instructions: String,
+        instructions: Json,
         #[serde(skip_serializing_if = "Option::is_none")]
         criteria: Option<NoulCriteria>,
     },
     /// A pick, with the options as the keys of `criteria`.
     Choice {
-        instructions: String,
+        instructions: Json,
         criteria: Criteria,
     },
     /// A placement, with the levels as the `criteria` array, lowest first.
     Score {
-        instructions: String,
-        criteria: Vec<String>,
+        instructions: Json,
+        criteria: Vec<Json>,
     },
 }
 
@@ -83,9 +85,9 @@ pub(crate) enum RequestQuestion {
 #[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
 pub(crate) struct NoulCriteria {
     #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
-    yes: Option<String>,
+    yes: Option<Json>,
     #[serde(rename = "false", skip_serializing_if = "Option::is_none")]
-    no: Option<String>,
+    no: Option<Json>,
 }
 
 /// The options of a pick, as a map from each option to its description.
@@ -96,7 +98,7 @@ pub(crate) struct NoulCriteria {
 /// moves the odds.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) struct Criteria(Vec<(String, Option<String>)>);
+pub(crate) struct Criteria(Vec<(String, Option<Json>)>);
 
 impl Serialize for Criteria {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -118,7 +120,7 @@ impl<'de> serde::de::Visitor<'de> for Keys {
 
     fn visit_map<M: serde::de::MapAccess<'de>>(self, mut map: M) -> Result<Criteria, M::Error> {
         let mut options = Vec::new();
-        while let Some((option, described)) = map.next_entry::<String, Option<String>>()? {
+        while let Some((option, described)) = map.next_entry::<String, Option<Json>>()? {
             options.push((option, described));
         }
         Ok(Criteria(options))
@@ -158,19 +160,19 @@ fn questions(plan: &Plan) -> Result<Questions, EncodeError> {
     for question in plan.questions() {
         match question {
             Question::Tag { text, labels } => {
+                // A string question over only string descriptions keeps the
+                // sentence every older request carried. One structured value
+                // turns every label into the array form instead, so no JSON is
+                // ever interpolated into a sentence.
+                let sentence = tag_sentence(text, labels);
                 for (label, description) in labels.descriptions() {
-                    let label =
-                        serde_json::to_string(label).map_err(|error| EncodeError::of(&error))?;
-                    let instructions = format!(
-                        "{}\n\nDetermine whether the label {label} applies to this item.",
-                        text.as_str()
-                    );
+                    let instructions = tag_instructions(text, label, description, sentence)?;
                     written.push((
                         wire_name(written.len()),
                         RequestQuestion::Noul {
                             instructions,
                             criteria: description.map(|description| NoulCriteria {
-                                yes: Some(description.to_owned()),
+                                yes: Some(description.as_json().clone()),
                                 no: None,
                             }),
                         },
@@ -188,29 +190,77 @@ fn questions(plan: &Plan) -> Result<Questions, EncodeError> {
     Ok(Questions(written))
 }
 
+/// The sentence a string-only tag question keeps, or none when the text or one
+/// description is structured.
+fn tag_sentence<'a>(text: &'a QuestionText, labels: &Labels) -> Option<&'a str> {
+    text.as_json().as_str().filter(|_| {
+        labels
+            .descriptions()
+            .all(|(_, described)| described.is_none_or(|held| held.as_json().as_str().is_some()))
+    })
+}
+
+/// The instruction one tag label asks: the sentence a string-only question has
+/// always sent, or the array form a structured value requires.
+fn tag_instructions(
+    text: &QuestionText,
+    label: &str,
+    description: Option<&Description>,
+    sentence: Option<&str>,
+) -> Result<Json, EncodeError> {
+    match sentence {
+        Some(sentence) => {
+            let label = serde_json::to_string(label).map_err(|error| EncodeError::of(&error))?;
+            Ok(Json::String(format!(
+                "{sentence}\n\nDetermine whether the label {label} applies to this item."
+            )))
+        }
+        None => {
+            let mut members = vec![("label".to_owned(), Json::String(label.to_owned()))];
+            if let Some(description) = description {
+                members.push(("description".to_owned(), description.as_json().clone()));
+            }
+            Ok(Json::Array(vec![
+                text.as_json().clone(),
+                Json::Object(members),
+            ]))
+        }
+    }
+}
+
 impl RequestQuestion {
     /// Write one question in the shape its verb asks for.
     fn asking(question: &Question) -> Option<Self> {
         Some(match question {
             Question::Decide { text, yes, no } => Self::Noul {
-                instructions: text.as_str().to_owned(),
+                instructions: text.as_json().clone(),
                 criteria: (yes.is_some() || no.is_some()).then(|| NoulCriteria {
-                    yes: yes.as_ref().map(|meaning| meaning.as_str().to_owned()),
-                    no: no.as_ref().map(|meaning| meaning.as_str().to_owned()),
+                    yes: yes.as_ref().map(|meaning| meaning.as_json().clone()),
+                    no: no.as_ref().map(|meaning| meaning.as_json().clone()),
                 }),
             },
             Question::Choose { text, options } => Self::Choice {
-                instructions: text.as_str().to_owned(),
+                instructions: text.as_json().clone(),
                 criteria: Criteria(
                     options
                         .descriptions()
-                        .map(|(name, described)| (name.clone(), described.map(str::to_owned)))
+                        .map(|(name, described)| {
+                            (name.clone(), described.map(|held| held.as_json().clone()))
+                        })
                         .collect(),
                 ),
             },
             Question::Score { text, levels } => Self::Score {
-                instructions: text.as_str().to_owned(),
-                criteria: levels.names().cloned().collect(),
+                instructions: text.as_json().clone(),
+                criteria: levels
+                    .descriptions()
+                    .map(|(name, described)| {
+                        described.map_or_else(
+                            || Json::String(name.clone()),
+                            |held| held.as_json().clone(),
+                        )
+                    })
+                    .collect(),
             },
             Question::Tag { .. } => return None,
         })
@@ -223,6 +273,10 @@ mod tests {
     use crate::core::adapters::systemone::tests::{
         disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
     };
+    use crate::core::json::Json;
+    use crate::core::plan::Plan;
+    use crate::core::question_file::{QuestionFile, Typed, Verb, resolve};
+    use crate::core::text::Evidence;
     use proptest::collection::vec;
     use proptest::prelude::{Strategy, any};
     use proptest::{prop_assert_eq, proptest};
@@ -279,14 +333,94 @@ mod tests {
         assert_eq!(
             written.questions.get("q1"),
             Some(&RequestQuestion::Noul {
-                instructions: "Which topics?\n\nDetermine whether the label \"bill\\\\\\\"ing\" applies to this item."
-                    .to_owned(),
+                instructions: Json::String(
+                    "Which topics?\n\nDetermine whether the label \"bill\\\\\\\"ing\" applies to this item."
+                        .to_owned()
+                ),
                 criteria: None,
             })
         );
         assert!(
             text.find(r#""q1""#).expect("q1") < text.find(r#""q2""#).expect("q2"),
             "{text}"
+        );
+    }
+
+    /// A plan over one question file the test writes out.
+    fn file_plan(text: &str, verb: Verb) -> Plan {
+        let file = QuestionFile::parse(text).expect("a question file");
+        let resolved =
+            resolve(verb, None, Some(&file), &Typed::default()).expect("a resolved question");
+        Plan::new(
+            Evidence::new("Refund me please.").expect("not blank"),
+            resolved.model().clone(),
+            vec![resolved.question().expect("a question").clone()],
+        )
+        .expect("a plan")
+    }
+
+    #[test]
+    fn a_structured_decide_writes_the_object_and_both_criteria() {
+        let bytes = encode(&file_plan(
+            r#"{"decide":{"ask":"Refund?"},"true":{"means":"Money back."},"false":null}"#,
+            Verb::Decide,
+        ))
+        .expect("a plan is writable");
+        let text = String::from_utf8(bytes).expect("a request is text");
+        assert!(
+            text.contains(r#""instructions":{"ask":"Refund?"}"#),
+            "{text}"
+        );
+        assert!(
+            text.contains(r#""criteria":{"true":{"means":"Money back."},"false":null}"#),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_structured_choice_writes_descriptions_in_member_order() {
+        let bytes = encode(&file_plan(
+            r#"{"choose":"Which?","options":{"a":{"k":1},"b":null}}"#,
+            Verb::Choose,
+        ))
+        .expect("a plan is writable");
+        let text = String::from_utf8(bytes).expect("a request is text");
+        assert!(
+            text.contains(r#""criteria":{"a":{"k":1},"b":null}"#),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_score_map_writes_its_descriptions_in_order_and_null_stays_null() {
+        let bytes = encode(&file_plan(
+            r#"{"score":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#,
+            Verb::Score,
+        ))
+        .expect("a plan is writable");
+        let text = String::from_utf8(bytes).expect("a request is text");
+        assert!(
+            text.contains(r#""criteria":[{"what":"Little."},null]"#),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn one_structured_tag_value_expands_every_label_into_the_array_form() {
+        let bytes = encode(&file_plan(
+            r#"{"tag":"Which?","labels":{"a":{"d":1},"b":null}}"#,
+            Verb::Tag,
+        ))
+        .expect("a plan is writable");
+        let text = String::from_utf8(bytes).expect("a request is text");
+        assert_eq!(
+            text,
+            concat!(
+                r#"{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","#,
+                r#""instructions":["Which?",{"label":"a","description":{"d":1}}],"#,
+                r#""criteria":{"true":{"d":1}}},"#,
+                r#""q2":{"type":"noul","instructions":["Which?",{"label":"b"}]}}}"#,
+            )
         );
     }
 
@@ -298,8 +432,8 @@ mod tests {
             Some(RequestQuestion::Noul { instructions, .. }) => instructions.clone(),
             _ => panic!("one yes/no question per name"),
         };
-        assert_eq!(named("q1"), "is urgent");
-        assert_eq!(named("q2"), "asks for a refund");
+        assert_eq!(named("q1").as_str(), Some("is urgent"));
+        assert_eq!(named("q2").as_str(), Some("asks for a refund"));
     }
 
     fn texts() -> impl Strategy<Value = String> {
@@ -324,7 +458,7 @@ mod tests {
             else {
                 panic!("a decide plan writes a yes/no question");
             };
-            prop_assert_eq!(sent, &instructions);
+            prop_assert_eq!(sent.as_str(), Some(instructions.as_str()));
         }
     }
 }

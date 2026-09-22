@@ -517,8 +517,8 @@ mod tests {
     #[test]
     fn a_verb_that_takes_no_rule_prints_a_null_threshold() {
         let text = QuestionText::new("How much disruption does this report?").expect("not empty");
-        let levels =
-            Labels::levels(vec!["None.".to_owned(), "Blocked.".to_owned()]).expect("two levels");
+        let named = [("None.", None), ("Blocked.", None)].map(|(n, d)| (n.to_owned(), d));
+        let levels = Labels::levels(named.into()).expect("two levels");
         let answer = Answer::new_yes_no(Probability::new(0.25).expect("a probability"));
         let result = DecisionResult::new(
             Value::Score(0.25),

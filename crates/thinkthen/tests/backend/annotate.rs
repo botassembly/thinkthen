@@ -40,6 +40,7 @@ fn questions() -> PathBuf {
 mod partial_failure;
 mod request_identity;
 mod scheduling;
+mod structured;
 
 #[test]
 fn same_evidence_packs_mixed_questions_and_appends_answers() {

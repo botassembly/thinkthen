@@ -16,7 +16,7 @@ use crate::core::backend_profile::ProfileName;
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::{Pointer, PointerError};
 use crate::core::question::LabelsError;
-use crate::core::text::{BlankTextError, Meaning, ModelName, QuestionText};
+use crate::core::text::{BlankTextError, Description, Meaning, ModelName, QuestionText};
 use crate::core::threshold::{Threshold, ThresholdError};
 
 /// Which question type a file holds or a command asks.
@@ -70,7 +70,7 @@ impl fmt::Display for Verb {
 }
 
 /// A list of labels, each with the description that rides beside it or none.
-pub(crate) type Described = Vec<(String, Option<String>)>;
+pub(crate) type Described = Vec<(String, Option<Description>)>;
 
 /// Every key any question file may hold, so an unknown one is told apart.
 const EVERY_KEY: [&str; 12] = [
@@ -347,13 +347,7 @@ impl QuestionFile {
         }
         Ok(Self {
             verb,
-            text: QuestionText::new(text_at(&value, verb.word())?).map_err(|error| {
-                QuestionFileError::Blank {
-                    origin: Source::File,
-                    key: verb.word(),
-                    error,
-                }
-            })?,
+            text: question_text(&value, verb.word())?,
             yes: meaning(&value, "true")?,
             no: meaning(&value, "false")?,
             labels: labels_in(&value, verb)?,
@@ -380,151 +374,13 @@ fn verb_of(members: &[(String, Json)]) -> Result<Verb, QuestionFileError> {
     found.ok_or(QuestionFileError::NoVerb)
 }
 
-/// The text under one key, or the refusal that names the key.
-fn text_at<'a>(value: &'a Json, key: &'static str) -> Result<&'a str, QuestionFileError> {
-    value
-        .member(key)
-        .and_then(Json::as_str)
-        .ok_or(QuestionFileError::Shape {
-            key,
-            wanted: "is text",
-        })
-}
-
-/// The text that says what yes or what no means, when the file holds one.
-fn meaning(value: &Json, key: &'static str) -> Result<Option<Meaning>, QuestionFileError> {
-    if value.member(key).is_none() {
-        return Ok(None);
-    }
-    Meaning::new(text_at(value, key)?)
-        .map(Some)
-        .map_err(|error| QuestionFileError::Blank {
-            origin: Source::File,
-            key,
-            error,
-        })
-}
-
-/// The model name the file names, when it names one.
-fn model_in(value: &Json) -> Result<Option<ModelName>, QuestionFileError> {
-    if value.member("model").is_none() {
-        return Ok(None);
-    }
-    ModelName::new(text_at(value, "model")?)
-        .map(Some)
-        .map_err(|error| QuestionFileError::Blank {
-            origin: Source::File,
-            key: "model",
-            error,
-        })
-}
-
-/// The options or the levels the file holds, in the order it holds them.
-fn labels_in(value: &Json, verb: Verb) -> Result<Option<Described>, QuestionFileError> {
-    let (key, wanted) = match verb {
-        Verb::Decide => return Ok(None),
-        Verb::Choose => (
-            "options",
-            "is a list of labels, or a map from each label to its description",
-        ),
-        Verb::Tag => (
-            "labels",
-            "is a list of labels, or a map from each label to its description",
-        ),
-        Verb::Score => ("levels", "is a list of levels, lowest first"),
-    };
-    let Some(held) = value.member(key) else {
-        return Ok(None);
-    };
-    let shape = QuestionFileError::Shape { key, wanted };
-    let listed = match held {
-        Json::Array(items) => items
-            .iter()
-            .map(|item| match item {
-                Json::String(name) => Ok((name.clone(), None)),
-                _ => Err(shape.clone()),
-            })
-            .collect::<Result<Vec<_>, QuestionFileError>>()?,
-        Json::Object(members) if matches!(verb, Verb::Choose | Verb::Tag) => members
-            .iter()
-            .map(|(name, described)| match described {
-                Json::String(text) => Ok((name.clone(), Some(text.clone()))),
-                Json::Null => Ok((name.clone(), None)),
-                _ => Err(shape.clone()),
-            })
-            .collect::<Result<Vec<_>, QuestionFileError>>()?,
-        _ => return Err(shape),
-    };
-    Ok(Some(listed))
-}
-
-/// The rule the file holds, as a number for a cut or a string for either form.
-fn threshold_in(value: &Json) -> Result<Option<Threshold>, QuestionFileError> {
-    let Some(held) = value.member("threshold") else {
-        return Ok(None);
-    };
-    let refused = |error| QuestionFileError::Threshold {
-        origin: Source::File,
-        error,
-    };
-    match held {
-        Json::String(text) => text.parse().map(Some).map_err(refused),
-        Json::Number(number) => number
-            .as_f64()
-            .ok_or(ThresholdError::NotFinite)
-            .and_then(Threshold::cut)
-            .map(Some)
-            .map_err(refused),
-        _ => Err(QuestionFileError::Shape {
-            key: "threshold",
-            wanted: "is a cut as a number, or a cut or a band as text",
-        }),
-    }
-}
-
-/// The pointers the file names under `on`, as one or as a list.
-fn pointers_in(value: &Json) -> Result<Option<Vec<Pointer>>, QuestionFileError> {
-    let Some(held) = value.member("on") else {
-        return Ok(None);
-    };
-    let shape = QuestionFileError::Shape {
-        key: "on",
-        wanted: "is a pointer, or a list of pointers",
-    };
-    let typed: Vec<&str> = match held {
-        Json::String(one) => vec![one.as_str()],
-        Json::Array(items) => items
-            .iter()
-            .map(|item| item.as_str().ok_or_else(|| shape.clone()))
-            .collect::<Result<Vec<_>, QuestionFileError>>()?,
-        _ => return Err(shape),
-    };
-    pointers(&typed, Source::File, "on").map(Some)
-}
-
-/// Read a list of pointers, naming the source of one that is not a pointer.
-pub(crate) fn pointers(
-    typed: &[&str],
-    source: Source,
-    key: &'static str,
-) -> Result<Vec<Pointer>, QuestionFileError> {
-    typed
-        .iter()
-        .map(|one| {
-            Pointer::new(*one).map_err(|error| QuestionFileError::Pointer {
-                origin: source,
-                key,
-                typed: (*one).to_owned(),
-                error,
-            })
-        })
-        .collect()
-}
-
+mod fields;
 mod profile;
 mod resolve;
 
+pub(crate) use crate::core::question_file::fields::pointers;
 pub(crate) use crate::core::question_file::resolve::{Cutting, Resolved, Sources, Typed, resolve};
+use fields::{labels_in, meaning, model_in, pointers_in, question_text, threshold_in};
 use profile::profile_in;
 
 #[cfg(test)]

@@ -37,7 +37,7 @@ On one document, `true`, `false`, or `null`. `null` is an unresolved answer, and
 
 They are for a question whose two sides are not obvious from the question text. "The writer asks for money back" and "The writer asks for anything else" separate a refund from a complaint. They are not a place for instructions to the model, and they are not a second question.
 
-Both texts have a home in a question file, under `true` and `false`. A text that is empty or holds only white space is a usage error.
+Both texts have a home in a question file, under `true` and `false`. A file may also give either one as an object, a list, or `null`; a written `null` is a present criterion, and the object or list reaches the model as written. A text that is empty or holds only white space is a usage error.
 
 ## Exit codes
 

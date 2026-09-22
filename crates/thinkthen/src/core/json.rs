@@ -62,7 +62,7 @@ impl fmt::Debug for JsonError {
 ///
 /// An object keeps its members in document order, because the record is
 /// printed back under `input` and a reader compares it with what they wrote.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Json {
     /// `null`.
     Null,

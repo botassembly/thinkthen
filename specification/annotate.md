@@ -1,6 +1,6 @@
 # `annotate`
 
-Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one.
+Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one; ADR 0037 amends that exclusion.
 
 Asks a saved question set about each record and adds one field per question.
 
@@ -27,7 +27,7 @@ thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--detai
 }
 ```
 
-Each entry has the shape of one question file, and [question-file.md](question-file.md) holds that grammar once. A question has exactly one of `decide`, `choose`, `tag`, or `score`, and its value is the question text. A `decide` question takes `true` and `false`, the two texts that say what each side means. `options` and `labels` are lists or ordered maps from label to description. `levels` is a list, lowest first. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name is not empty and uses only lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error. A set without the required `questions` object says that the wrapper is missing before it reports any unknown top-level key.
+Each entry has the shape of one question file, and [question-file.md](question-file.md) holds that grammar once. A question has exactly one of `decide`, `choose`, `tag`, or `score`, and its value is the question text, as a string, an object, or a list. A `decide` question takes `true` and `false`, the two values that say what each side means. `options` and `labels` are lists or ordered maps from label to description. `levels` is a list, lowest first, or an ordered map from each name to its description. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name is not empty and uses only lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error. A set without the required `questions` object says that the wrapper is missing before it reports any unknown top-level key.
 
 The top-level `threshold` applies to every `decide` question that names none. The optional top-level `profile` names the backend profile used to calibrate the set's thresholds. `version`, `threshold`, `profile`, and `questions` are the only top-level keys. A nested question cannot carry another profile. The set holds no backend address, model, output path, or format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 

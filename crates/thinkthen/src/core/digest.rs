@@ -95,28 +95,32 @@ impl Serialize for Canonical<'_> {
         match self.question {
             Question::Decide { text, yes, no } => {
                 map.serialize_entry("verb", "decide")?;
-                map.serialize_entry("text", text.as_str())?;
+                map.serialize_entry("text", text.as_json())?;
                 if let Some(yes) = yes {
-                    map.serialize_entry("true", yes.as_str())?;
+                    map.serialize_entry("true", yes.as_json())?;
                 }
                 if let Some(no) = no {
-                    map.serialize_entry("false", no.as_str())?;
+                    map.serialize_entry("false", no.as_json())?;
                 }
             }
             Question::Choose { text, options } => {
                 map.serialize_entry("verb", "choose")?;
-                map.serialize_entry("text", text.as_str())?;
+                map.serialize_entry("text", text.as_json())?;
                 map.serialize_entry("options", &Described(options))?;
             }
             Question::Tag { text, labels } => {
                 map.serialize_entry("verb", "tag")?;
-                map.serialize_entry("text", text.as_str())?;
+                map.serialize_entry("text", text.as_json())?;
                 map.serialize_entry("labels", &Described(labels))?;
             }
             Question::Score { text, levels } => {
                 map.serialize_entry("verb", "score")?;
-                map.serialize_entry("text", text.as_str())?;
-                map.serialize_entry("levels", levels)?;
+                map.serialize_entry("text", text.as_json())?;
+                if levels.fully_described() {
+                    map.serialize_entry("levels", &Described(levels))?;
+                } else {
+                    map.serialize_entry("levels", levels)?;
+                }
             }
         }
         if let Some(threshold) = self.threshold {
@@ -144,8 +148,9 @@ mod tests {
     use super::{Canonical, question_sha256, question_sha256_with_profile};
     use crate::core::ProfileName;
     use crate::core::question::{Labels, Question};
+    use crate::core::question_file::{QuestionFile, Typed, Verb, resolve};
     use crate::core::render::json_line;
-    use crate::core::text::{Meaning, QuestionText};
+    use crate::core::text::{Description, Meaning, QuestionText};
     use crate::core::threshold::Threshold;
 
     fn text(value: &str) -> QuestionText {
@@ -177,8 +182,14 @@ mod tests {
                 Question::Choose {
                     text: text("Which team owns this request?"),
                     options: Labels::described(vec![
-                        ("billing".to_owned(), Some("Money and invoices.".to_owned())),
-                        ("shipping".to_owned(), Some("Parcels and dates.".to_owned())),
+                        (
+                            "billing".to_owned(),
+                            Some(Description::text("Money and invoices.")),
+                        ),
+                        (
+                            "shipping".to_owned(),
+                            Some(Description::text("Parcels and dates.")),
+                        ),
                         ("other".to_owned(), None),
                     ])
                     .expect("three options"),
@@ -188,8 +199,13 @@ mod tests {
             (
                 Question::Score {
                     text: text("How much disruption does this report?"),
-                    levels: Labels::levels(listed(&["None.", "Some.", "Blocked."]))
-                        .expect("three levels"),
+                    levels: Labels::levels(
+                        listed(&["None.", "Some.", "Blocked."])
+                            .into_iter()
+                            .map(|name| (name, None))
+                            .collect(),
+                    )
+                    .expect("three levels"),
                 },
                 None,
             ),
@@ -258,7 +274,7 @@ mod tests {
                 ("billing".to_owned(), None),
                 (
                     "urgent".to_owned(),
-                    Some("The item needs prompt attention.".to_owned()),
+                    Some(Description::text("The item needs prompt attention.")),
                 ),
             ])
             .expect("two tags"),
@@ -287,6 +303,73 @@ mod tests {
             question_sha256_with_profile(&question, Some(Threshold::default()), Some(&profile))
                 .expect("digest");
         assert_ne!(plain, calibrated);
+    }
+
+    /// The question a file resolves to, with the rule it settled.
+    fn settled(file_text: &str, verb: Verb) -> (Question, Option<Threshold>) {
+        let file = QuestionFile::parse(file_text).expect("a question file");
+        let resolved =
+            resolve(verb, None, Some(&file), &Typed::default()).expect("a resolved question");
+        (
+            resolved.question().expect("a question").clone(),
+            resolved.threshold(),
+        )
+    }
+
+    #[test]
+    fn a_structured_question_writes_the_json_it_holds() {
+        let (question, threshold) = settled(
+            r#"{"decide":{"ask":"Refund?","lang":"en"},"true":{"means":"Money back."},"false":null}"#,
+            Verb::Decide,
+        );
+        assert_eq!(
+            json_line(&Canonical::new(&question, threshold)).expect("canonical JSON"),
+            concat!(
+                r#"{"verb":"decide","text":{"ask":"Refund?","lang":"en"},"#,
+                r#""true":{"means":"Money back."},"false":null,"threshold":0.5}"#,
+            )
+        );
+    }
+
+    #[test]
+    fn a_score_map_writes_its_names_and_descriptions_in_order() {
+        let (question, threshold) = settled(
+            r#"{"score":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#,
+            Verb::Score,
+        );
+        assert_eq!(
+            json_line(&Canonical::new(&question, threshold)).expect("canonical JSON"),
+            r#"{"verb":"score","text":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#
+        );
+        let (listed, threshold) = settled(
+            r#"{"score":"How much?","levels":["low","high"]}"#,
+            Verb::Score,
+        );
+        assert_eq!(
+            json_line(&Canonical::new(&listed, threshold)).expect("canonical JSON"),
+            r#"{"verb":"score","text":"How much?","levels":["low","high"]}"#
+        );
+        assert_ne!(
+            question_sha256(&question, threshold).expect("digest"),
+            question_sha256(&listed, threshold).expect("digest")
+        );
+    }
+
+    #[test]
+    fn whitespace_never_reaches_a_structured_digest_but_content_and_order_do() {
+        let digest_of = |text: &str| {
+            let (question, threshold) = settled(text, Verb::Choose);
+            question_sha256(&question, threshold).expect("a question is writable")
+        };
+        let compact = digest_of(r#"{"choose":"Which?","options":{"a":{"k":1,"j":2},"b":null}}"#);
+        let spaced = digest_of(
+            "{ \"choose\" : \"Which?\" , \"options\" : { \"a\" : { \"k\" : 1 , \"j\" : 2 } , \"b\" : null } }",
+        );
+        assert_eq!(compact, spaced);
+        let reordered = digest_of(r#"{"choose":"Which?","options":{"a":{"j":2,"k":1},"b":null}}"#);
+        assert_ne!(compact, reordered);
+        let changed = digest_of(r#"{"choose":"Which?","options":{"a":{"k":1,"j":3},"b":null}}"#);
+        assert_ne!(compact, changed);
     }
 
     #[test]
@@ -318,13 +401,16 @@ mod tests {
         let listed = of(Labels::options(listed(&["billing", "other"])).expect("two options"));
         let mapped = of(Labels::described(vec![
             ("billing".to_owned(), None),
-            ("other".to_owned(), Some("   ".to_owned())),
+            ("other".to_owned(), Some(Description::text("   "))),
         ])
         .expect("two options"));
         assert_eq!(listed, mapped);
 
         let described = of(Labels::described(vec![
-            ("billing".to_owned(), Some("Money and invoices.".to_owned())),
+            (
+                "billing".to_owned(),
+                Some(Description::text("Money and invoices.")),
+            ),
             ("other".to_owned(), None),
         ])
         .expect("two options"));

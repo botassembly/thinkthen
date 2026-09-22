@@ -5,7 +5,7 @@ use crate::core::json::JsonError;
 use crate::core::pointer::Pointer;
 use crate::core::question::LabelsError;
 use crate::core::render::json_line;
-use crate::core::text::BlankTextError;
+use crate::core::text::{BlankTextError, Description};
 use proptest::collection::vec;
 use proptest::prelude::{Strategy, any};
 use proptest::{prop_assert_eq, proptest};
@@ -212,8 +212,14 @@ fn a_record_carries_its_own_candidate_list_as_a_list_or_as_a_map() {
     assert_eq!(
         mapped.descriptions().collect::<Vec<_>>(),
         [
-            (&"late".to_owned(), Some("It arrived late.")),
-            (&"lost".to_owned(), Some("It never came.")),
+            (
+                &"late".to_owned(),
+                Some(&Description::text("It arrived late.")),
+            ),
+            (
+                &"lost".to_owned(),
+                Some(&Description::text("It never came."))
+            ),
         ]
     );
 }

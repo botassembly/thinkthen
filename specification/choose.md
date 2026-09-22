@@ -38,7 +38,7 @@ On one document, a JSON string or `null` when the answer is unresolved. In the d
 
 `--option LABEL=DESCRIPTION` gives one option and what it means. It may repeat, and the first `=` splits the label from the description. Positional options and `--option` together are a usage error, because the order of options matters and two lists have no order between them. An `--option` with no `=` is a usage error.
 
-The description travels with the option, and [backends.md](backends.md) gives the field it lands in. An option with no description still travels, with nothing under its label. Descriptions have a home in a question file too, as a map under `options`.
+The description travels with the option, and [backends.md](backends.md) gives the field it lands in. An option with no description still travels, with nothing under its label. Descriptions have a home in a question file too, as a map under `options`, where one description is a string, an object, a list, or `null`.
 
 ```sh
 thinkthen choose 'Which team owns this request?' \

@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:thinkthen:question-file",
+  "title": "thinkthen question file",
+  "description": "The structural grammar of a question file, shared by the parser and this schema. A question file is one object that names exactly one verb, so it validates under exactly one of the four entry definitions. Semantic checks the schema cannot express are listed in specification/question-file.md: blank-string and control-character rules beyond the name pattern, unique and unrepeated names, threshold ranges and band form, RFC 6901 pointers, and the duplicate-member rejection the parser performs before any member is read.",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/decide"
+    },
+    {
+      "$ref": "#/$defs/choose"
+    },
+    {
+      "$ref": "#/$defs/tag"
+    },
+    {
+      "$ref": "#/$defs/score"
+    }
+  ],
+  "$defs": {
+    "decide": {
+      "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under.",
+      "type": "object",
+      "required": [
+        "decide"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "decide": {
+          "$ref": "#/$defs/questionText"
+        },
+        "true": {
+          "$ref": "#/$defs/criterion"
+        },
+        "false": {
+          "$ref": "#/$defs/criterion"
+        },
+        "threshold": {
+          "$ref": "#/$defs/threshold"
+        },
+        "on": {
+          "$ref": "#/$defs/pointers"
+        },
+        "model": {
+          "$ref": "#/$defs/name"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        }
+      }
+    },
+    "choose": {
+      "description": "A `choose` entry: the question text and its options, read under a single cut.",
+      "type": "object",
+      "required": [
+        "choose"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "choose": {
+          "$ref": "#/$defs/questionText"
+        },
+        "options": {
+          "$ref": "#/$defs/options"
+        },
+        "threshold": {
+          "$ref": "#/$defs/cut"
+        },
+        "on": {
+          "$ref": "#/$defs/pointers"
+        },
+        "model": {
+          "$ref": "#/$defs/name"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        }
+      }
+    },
+    "tag": {
+      "description": "A `tag` entry: the question text and its labels, each read under the same single cut.",
+      "type": "object",
+      "required": [
+        "tag"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tag": {
+          "$ref": "#/$defs/questionText"
+        },
+        "labels": {
+          "$ref": "#/$defs/labels"
+        },
+        "threshold": {
+          "$ref": "#/$defs/cut"
+        },
+        "on": {
+          "$ref": "#/$defs/pointers"
+        },
+        "model": {
+          "$ref": "#/$defs/name"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        }
+      }
+    },
+    "score": {
+      "description": "A `score` entry: the question text and its levels, lowest first. A score takes no threshold; the answer is a number.",
+      "type": "object",
+      "required": [
+        "score"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "score": {
+          "$ref": "#/$defs/questionText"
+        },
+        "levels": {
+          "$ref": "#/$defs/levels"
+        },
+        "on": {
+          "$ref": "#/$defs/pointers"
+        },
+        "model": {
+          "$ref": "#/$defs/name"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        }
+      }
+    },
+    "questionText": {
+      "description": "The question text: a nonblank string, an object, or a list. An object or a list may be empty; the value is the text.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        }
+      ]
+    },
+    "criterion": {
+      "description": "What a side of a decide means, or what a score level means: nonblank text, an object, a list, or null.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "description": {
+      "description": "A description an option or a label carries: text, an object, a list, or null. A blank string counts as a description in the grammar; the parser reads it as absent.",
+      "type": [
+        "string",
+        "object",
+        "array",
+        "null"
+      ]
+    },
+    "name": {
+      "description": "A label or level name: text holding a printable character and no control character.",
+      "type": "string",
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+    },
+    "profile": {
+      "description": "A calibration identity: lowercase letters, digits, hyphens, and underscores.",
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "options": {
+      "description": "Two to 255 options, as a list of names or a map from each name to its description.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/name"
+          },
+          "minItems": 2,
+          "maxItems": 255
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/description"
+          },
+          "minProperties": 2,
+          "maxProperties": 255
+        }
+      ]
+    },
+    "labels": {
+      "description": "One to 20 tag labels, as a list of names or a map from each name to its description.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/name"
+          },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/description"
+          },
+          "minProperties": 1,
+          "maxProperties": 20
+        }
+      ]
+    },
+    "levels": {
+      "description": "Two to 10 levels, lowest first, as a list of names or a map from each name to what the level means.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/name"
+          },
+          "minItems": 2,
+          "maxItems": 10
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/criterion"
+          },
+          "minProperties": 2,
+          "maxProperties": 10
+        }
+      ]
+    },
+    "threshold": {
+      "description": "A cut as a number, or a cut or a band as text. The parser checks the range and the band form.",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "cut": {
+      "description": "A single cut as a number or as text. A band, written LOW:HIGH, is not a cut; the parser also checks the range.",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "pattern": "^[^:]*$"
+        }
+      ]
+    },
+    "pointers": {
+      "description": "One JSON Pointer, or a list of them. The parser checks RFC 6901.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,55 @@
+#!/bin/sh
+# The published question-file schema is a valid Draft 2020-12 schema, and it
+# agrees with the shared corpus the production parser also runs. Every case is
+# judged twice: by the whole schema and by the one entry definition its verb
+# names, so the definitions are honest on their own.
+set -eu
+
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+python3 - "$HERE" <<'PY'
+import json
+import sys
+
+from jsonschema import Draft202012Validator
+
+here = sys.argv[1]
+with open(f"{here}/../../question-file.schema.json", encoding="utf-8") as held:
+    schema = json.load(held)
+Draft202012Validator.check_schema(schema)
+validator = Draft202012Validator(schema)
+
+verbs = ("decide", "choose", "tag", "score")
+missing = [verb for verb in verbs if verb not in schema.get("$defs", {})]
+if missing:
+    print(
+        "the schema holds no entry definition for: " + ", ".join(missing),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+entries = {
+    verb: Draft202012Validator(
+        {"$ref": f"#/$defs/{verb}", "$defs": schema["$defs"]}
+    )
+    for verb in verbs
+}
+
+with open(f"{here}/corpus.json", encoding="utf-8") as held:
+    corpus = json.load(held)
+
+missed = []
+for case in corpus["cases"]:
+    verdict = validator.is_valid(case["file"])
+    if verdict != case["valid"]:
+        missed.append(case["name"])
+    entry = entries[case["verb"]].is_valid(case["file"])
+    if entry != case["valid"]:
+        missed.append(f'{case["name"]} ({case["verb"]} entry)')
+
+if missed:
+    print(
+        "the schema disagrees with the corpus on: " + ", ".join(missed),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY

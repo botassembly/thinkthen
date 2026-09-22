@@ -1,0 +1,359 @@
+{
+  "schema": "thinkthen.question-file-corpus/1",
+  "cases": [
+    {
+      "name": "decide-text",
+      "verb": "decide",
+      "file": {
+        "decide": "Does this message ask for a refund?"
+      },
+      "valid": true
+    },
+    {
+      "name": "decide-structured-everything",
+      "verb": "decide",
+      "file": {
+        "decide": {
+          "ask": "Does this message ask for a refund?",
+          "lang": "en"
+        },
+        "true": {
+          "means": "Money back."
+        },
+        "false": null,
+        "threshold": 0.5,
+        "model": "jev-1.13.0"
+      },
+      "valid": true
+    },
+    {
+      "name": "decide-text-list",
+      "verb": "decide",
+      "file": {
+        "decide": [
+          "Does this ask for a refund?",
+          "Read every line."
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "choose-bare-list",
+      "verb": "choose",
+      "file": {
+        "choose": "Which team?",
+        "options": [
+          "billing",
+          "other"
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "choose-described-map",
+      "verb": "choose",
+      "file": {
+        "choose": "Which team?",
+        "options": {
+          "billing": {
+            "what": "Money and invoices."
+          },
+          "other": null,
+          "triaged": [
+            "later"
+          ]
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "tag-described-map",
+      "verb": "tag",
+      "file": {
+        "tag": "Which topics?",
+        "labels": {
+          "billing": "The item concerns a charge.",
+          "urgent": null
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "score-bare-list",
+      "verb": "score",
+      "file": {
+        "score": "How much disruption?",
+        "levels": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "score-described-map",
+      "verb": "score",
+      "file": {
+        "score": "How much disruption?",
+        "levels": {
+          "low": {
+            "what": "Little disruption."
+          },
+          "medium": "Some.",
+          "high": null
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "empty-structure-is-a-value",
+      "verb": "choose",
+      "file": {
+        "choose": {},
+        "options": {
+          "billing": {},
+          "other": []
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "nested-numbers-and-booleans",
+      "verb": "decide",
+      "file": {
+        "decide": {
+          "ask": "Refund?",
+          "retry": 3,
+          "strict": true,
+          "band": 0.5
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "question-text-null",
+      "verb": "decide",
+      "file": {
+        "decide": null
+      },
+      "valid": false
+    },
+    {
+      "name": "question-text-number",
+      "verb": "decide",
+      "file": {
+        "decide": 7
+      },
+      "valid": false
+    },
+    {
+      "name": "question-text-boolean",
+      "verb": "decide",
+      "file": {
+        "decide": true
+      },
+      "valid": false
+    },
+    {
+      "name": "criteria-boolean",
+      "verb": "decide",
+      "file": {
+        "decide": "x",
+        "true": false
+      },
+      "valid": false
+    },
+    {
+      "name": "description-number",
+      "verb": "choose",
+      "file": {
+        "choose": "x",
+        "options": {
+          "a": 3,
+          "b": "y"
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "description-boolean",
+      "verb": "tag",
+      "file": {
+        "tag": "x",
+        "labels": {
+          "a": true,
+          "b": "y"
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "score-list-object-entry",
+      "verb": "score",
+      "file": {
+        "score": "x",
+        "levels": [
+          "low",
+          {
+            "what": "high"
+          }
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "score-map-number",
+      "verb": "score",
+      "file": {
+        "score": "x",
+        "levels": {
+          "low": 3,
+          "high": "h"
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "options-under-count",
+      "verb": "choose",
+      "file": {
+        "choose": "x",
+        "options": [
+          "only"
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "labels-empty",
+      "verb": "tag",
+      "file": {
+        "tag": "x",
+        "labels": []
+      },
+      "valid": false
+    },
+    {
+      "name": "unknown-key",
+      "verb": "decide",
+      "file": {
+        "decide": "x",
+        "answer": "yes"
+      },
+      "valid": false
+    },
+    {
+      "name": "two-verbs",
+      "verb": "decide",
+      "file": {
+        "decide": "x",
+        "choose": "y",
+        "options": [
+          "a",
+          "b"
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "file-not-object",
+      "verb": "decide",
+      "file": [
+        "not",
+        "an",
+        "object"
+      ],
+      "valid": false
+    },
+    {
+      "name": "on-not-pointer",
+      "verb": "decide",
+      "file": {
+        "decide": "x",
+        "on": 3
+      },
+      "valid": false
+    },
+    {
+      "name": "decide-blank-criterion",
+      "verb": "decide",
+      "file": {
+        "decide": "x",
+        "true": "  "
+      },
+      "valid": false
+    },
+    {
+      "name": "decide-band",
+      "verb": "decide",
+      "file": {
+        "decide": "x",
+        "threshold": "0.1:0.9"
+      },
+      "valid": true
+    },
+    {
+      "name": "choose-band",
+      "verb": "choose",
+      "file": {
+        "choose": "x",
+        "options": [
+          "a",
+          "b"
+        ],
+        "threshold": "0.1:0.9"
+      },
+      "valid": false
+    },
+    {
+      "name": "tag-band",
+      "verb": "tag",
+      "file": {
+        "tag": "x",
+        "labels": [
+          "a"
+        ],
+        "threshold": "0.1:0.9"
+      },
+      "valid": false
+    },
+    {
+      "name": "choose-blank-option-description",
+      "verb": "choose",
+      "file": {
+        "choose": "x",
+        "options": {
+          "a": "  ",
+          "b": "y"
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "score-blank-level-description",
+      "verb": "score",
+      "file": {
+        "score": "x",
+        "levels": {
+          "low": "  ",
+          "high": "h"
+        }
+      },
+      "valid": false
+    },
+    {
+      "name": "score-threshold-key",
+      "verb": "score",
+      "file": {
+        "score": "x",
+        "levels": [
+          "a",
+          "b"
+        ],
+        "threshold": 0.5
+      },
+      "valid": false
+    }
+  ]
+}

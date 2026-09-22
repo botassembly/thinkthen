@@ -6,7 +6,7 @@
 
 use std::fs;
 
-use crate::core::{Cutting, QuestionFile, Resolved, Typed, Verb, resolve};
+use crate::core::{Cutting, Description, QuestionFile, Resolved, Typed, Verb, resolve};
 
 use crate::args::{
     ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, RankArguments,
@@ -137,7 +137,9 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
             arguments
                 .described
                 .iter()
-                .map(|entry| split(entry))
+                .map(|entry| {
+                    split(entry).map(|(name, described)| (name, described.map(Description::text)))
+                })
                 .collect::<Result<Vec<_>, Failure>>()?,
         ),
         _ => None,
@@ -178,7 +180,10 @@ pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
             arguments
                 .described
                 .iter()
-                .map(|entry| split_label(entry))
+                .map(|entry| {
+                    split_label(entry)
+                        .map(|(name, described)| (name, described.map(Description::text)))
+                })
                 .collect::<Result<Vec<_>, Failure>>()?,
         ),
         _ => None,

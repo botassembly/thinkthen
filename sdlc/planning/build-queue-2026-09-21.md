@@ -11,11 +11,12 @@ Ian directed the architect to resume the reviewed plan, record this queue amendm
 1. Finish and land ticket 0065. Ian subsequently confirmed its original owner had stopped and transferred completion and landing to the architect. Preserve the existing implementation and review record; reverify the integrated tree before landing. The library team's ownership of `surfaces` is unchanged.
 2. Recheck the forty command wording/help items against the current binary. Fix only surviving items in bounded reviewed tickets; leave unsettled wording or safety changes out of an otherwise independent correction.
 3. Reconcile shared settings and result metadata, including the planned `replayed` to `cached` change, against settled contracts. Preserve existing validation, durability, and accounting guarantees.
-4. Complete private engine controls: process-wide width, cancellation, deadlines, fast failure, fork recovery, and host signal ownership. Keep the command as the production caller and prove the behavior on local listeners before opening the public API.
-5. Settle recognition policies and the optional instruction-packing decision. Preserve the baseline when packing lacks authorized evidence. The conflicting relation request forms remain blocked pending an explicit ruling; this amendment chooses neither form.
-6. Build pure recognition/relation behavior and its engine/command callers after the relevant contracts are settled.
-7. Expose the public Rust API over all ten functions after controls and result shapes are stable. Then complete C and separately review real-engine surface integration.
-8. Finish installed-artifact QA and release checks. Publication, names, paid calls, and upstream reports retain their separate authorization boundaries.
+4. Carry structured descriptions through the question file, canonical identity, wire requests and detailed results, and publish its JSON Schema. Ticket 0069 implements the explicit product rulings, including named score maps and structured tag arrays. Preserve existing string-only behavior. Typed builders stay with the library team.
+5. Complete private engine controls: process-wide width, cancellation, deadlines, fast failure, fork recovery, and host signal ownership. Keep the command as the production caller and prove the behavior on local listeners before opening the public API.
+6. Settle recognition policies and the optional instruction-packing decision. Preserve the baseline when packing lacks authorized evidence. The conflicting relation request forms remain blocked pending an explicit ruling; this amendment chooses neither form.
+7. Build pure recognition/relation behavior and its engine/command callers after the relevant contracts are settled.
+8. Expose the public Rust API over all ten functions after controls and result shapes are stable. Then complete C and separately review real-engine surface integration.
+9. Finish installed-artifact QA and release checks. Publication, names, paid calls, and upstream reports retain their separate authorization boundaries.
 
 The library team remains the only writer on `surfaces`. Use SWE-2 for bounded research, accepted implementation, and remediation; use separate Sol sessions for design and code review. Keep complexity floors and escalate irreducible high-risk implementation. The architect's full plan and library handoff are `architect-engine-survey-and-plan.md` and `library-team-architecture-punch-list.md`.
 

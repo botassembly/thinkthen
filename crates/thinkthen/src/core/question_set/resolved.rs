@@ -43,25 +43,29 @@ impl Serialize for ResolvedQuestion<'_> {
         let mut map = serializer.serialize_map(None)?;
         match question.question() {
             Question::Decide { text, yes, no } => {
-                map.serialize_entry("decide", text.as_str())?;
+                map.serialize_entry("decide", text.as_json())?;
                 if let Some(yes) = yes {
-                    map.serialize_entry("true", yes.as_str())?;
+                    map.serialize_entry("true", yes.as_json())?;
                 }
                 if let Some(no) = no {
-                    map.serialize_entry("false", no.as_str())?;
+                    map.serialize_entry("false", no.as_json())?;
                 }
             }
             Question::Choose { text, options } => {
-                map.serialize_entry("choose", text.as_str())?;
+                map.serialize_entry("choose", text.as_json())?;
                 map.serialize_entry("options", &ResolvedDescriptions(options))?;
             }
             Question::Tag { text, labels } => {
-                map.serialize_entry("tag", text.as_str())?;
+                map.serialize_entry("tag", text.as_json())?;
                 map.serialize_entry("labels", &ResolvedDescriptions(labels))?;
             }
             Question::Score { text, levels } => {
-                map.serialize_entry("score", text.as_str())?;
-                map.serialize_entry("levels", levels)?;
+                map.serialize_entry("score", text.as_json())?;
+                if levels.fully_described() {
+                    map.serialize_entry("levels", &ResolvedDescriptions(levels))?;
+                } else {
+                    map.serialize_entry("levels", levels)?;
+                }
             }
         }
         if let Some(threshold) = question.threshold() {

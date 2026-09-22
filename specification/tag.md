@@ -12,6 +12,8 @@ The command takes 1 to 20 unique labels in order. A described label is `--label 
 
 All labels ride in one request. Each becomes a yes-or-no backend question whose instruction is `QUESTION`, a blank line, then `Determine whether the label JSON_STRING applies to this item.` A description becomes the true criterion. The backend answer for every label must be a yes-or-no probability.
 
+When a question file gives the question text or any description as an object or a list, the sentence form would interpolate JSON, so every label of that question takes the array form instead: `instructions` is `[QUESTION, {"label": NAME, "description": DESCRIPTION}]`, with `description` absent where the label has none. One structured value switches every sibling label, so a request never mixes the two forms.
+
 One cut applies independently to every probability. The default is 0.5, equality passes, and a band is refused. On one document the bare result is one compact JSON array in label order. In record mode that array sits under `value` beside the parsed `input` record. An empty array is a successful answer and exits 0. `tag` has no raw or quiet view.
 
 ```json

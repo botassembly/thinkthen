@@ -446,9 +446,7 @@ fn labels_of(
     let built = match verb {
         Verb::Choose => Labels::described(listed),
         Verb::Tag => Labels::tags(listed),
-        Verb::Decide | Verb::Score => {
-            Labels::levels(listed.into_iter().map(|(name, _)| name).collect())
-        }
+        Verb::Decide | Verb::Score => Labels::levels(listed),
     };
     built
         .map(|labels| (labels, source))

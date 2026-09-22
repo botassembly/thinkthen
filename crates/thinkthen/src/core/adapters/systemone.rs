@@ -141,7 +141,7 @@ pub(crate) mod tests {
     use super::diagnostic_model;
     use crate::core::plan::Plan;
     use crate::core::question::{Labels, Question};
-    use crate::core::text::{Evidence, ModelName, QuestionText};
+    use crate::core::text::{Description, Evidence, ModelName, QuestionText};
 
     #[test]
     fn only_safe_expected_or_versioned_model_names_reach_diagnostics() {
@@ -238,7 +238,13 @@ pub(crate) mod tests {
             Question::Score {
                 text: QuestionText::new("How much disruption does this report?")
                     .expect("not blank"),
-                levels: Labels::levels(labels(&LEVELS)).expect("three levels"),
+                levels: Labels::levels(
+                    labels(&LEVELS)
+                        .into_iter()
+                        .map(|name| (name, None))
+                        .collect(),
+                )
+                .expect("three levels"),
             },
         )
     }
@@ -253,7 +259,7 @@ pub(crate) mod tests {
                     (r#"bill\"ing"#.to_owned(), None),
                     (
                         "urgent".to_owned(),
-                        Some("The item needs prompt attention.".to_owned()),
+                        Some(Description::text("The item needs prompt attention.")),
                     ),
                 ])
                 .expect("two tags"),

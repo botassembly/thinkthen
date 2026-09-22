@@ -49,9 +49,9 @@ fn every_refusal_of_the_grammar_names_the_key_at_fault() {
             r#"{"decide":7}"#,
             Refused::Shape {
                 key: "decide",
-                wanted: "is text",
+                wanted: "is text, an object, or a list",
             },
-            "`decide` in the question file is text",
+            "`decide` in the question file is text, an object, or a list",
         ),
         (
             r#"{"decide":"  "}"#,

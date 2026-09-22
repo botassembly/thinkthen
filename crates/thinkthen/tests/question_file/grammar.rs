@@ -104,7 +104,7 @@ const SAID: [&str; 20] = [
     "the question file's `levels`: `score` takes 2 to 10 levels, lowest first",
     "the question file is not valid JSON: the JSON at line 1 column 2 is not one",
     "a question file is one JSON object",
-    "`true` in the question file is text",
+    "`true` in the question file is text, an object, a list, or null",
     "the question file's `decide`: a question is text, not white space",
     "the question file's `on` `body`: a pointer is RFC 6901, so it is empty or begins with `/`",
 ];

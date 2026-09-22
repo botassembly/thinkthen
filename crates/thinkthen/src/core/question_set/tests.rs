@@ -130,6 +130,47 @@ fn a_missing_questions_wrapper_precedes_unknown_top_level_keys() {
 }
 
 #[test]
+fn a_set_inherits_the_structured_grammar_and_digests_it() {
+    let set = QuestionSet::parse(
+        r#"{"version":1,"questions":{"topics":{"tag":["Which topics?"],"labels":{"billing":{"what":"Money"},"urgent":null}}}}"#,
+    )
+    .expect("valid set");
+    let resolved = set.resolved_json().expect("resolved set renders");
+    assert!(
+        resolved.contains(r#""tag":["Which topics?"]"#),
+        "{resolved}"
+    );
+    assert!(
+        resolved.contains(r#""labels":{"billing":{"what":"Money"},"urgent":null}"#),
+        "{resolved}"
+    );
+    let spaced = QuestionSet::parse(
+        "{ \"version\":1, \"questions\":{\"topics\":{\"tag\":[\"Which topics?\"],\"labels\":{\"billing\":{\"what\":\"Money\"},\"urgent\":null}}}}",
+    )
+    .expect("valid set");
+    assert_eq!(
+        set.sha256().expect("digest"),
+        spaced.sha256().expect("digest")
+    );
+    let changed = QuestionSet::parse(
+        r#"{"version":1,"questions":{"topics":{"tag":["Which topics?"],"labels":{"billing":{"what":"Money!"},"urgent":null}}}}"#,
+    )
+    .expect("valid set");
+    assert_ne!(
+        set.sha256().expect("digest"),
+        changed.sha256().expect("digest")
+    );
+    let refused = QuestionSet::parse(
+        r#"{"version":1,"questions":{"bad":{"tag":"x","labels":{"a":3,"b":"y"}}}}"#,
+    )
+    .expect_err("a structured refusal names its path");
+    assert!(
+        refused.to_string().contains("questions.bad.labels"),
+        "{refused}"
+    );
+}
+
+#[test]
 fn groups_keep_first_question_order() {
     let set = QuestionSet::parse(r#"{"version":1,"questions":{"a":{"decide":"a","on":"/x"},"b":{"score":"b","levels":["low","high"],"on":"/y"},"c":{"decide":"c","on":"/x"}}}"#).expect("valid set");
     assert_eq!(set.groups(), vec![vec![0, 2], vec![1]]);

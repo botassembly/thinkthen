@@ -77,6 +77,44 @@ fn a_file_of_each_verb_holds_the_settings_it_names() {
 }
 
 #[test]
+fn a_score_map_carries_descriptions_beside_the_names_results_use() {
+    let held = file(r#"{"score":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#);
+    let resolved =
+        resolve(Verb::Score, None, Some(&held), &Typed::default()).expect("a resolved placement");
+    let Some(Question::Score { levels, .. }) = resolved.question() else {
+        panic!("a score question");
+    };
+    assert_eq!(
+        levels.names().collect::<Vec<_>>(),
+        [&"low".to_owned(), &"high".to_owned()]
+    );
+    assert!(levels.fully_described());
+}
+
+#[test]
+fn a_typed_list_replaces_the_files_described_list_and_the_text_stays() {
+    let held = file(r#"{"choose":{"ask":"Which?"},"options":{"a":{"what":"A"},"b":null}}"#);
+    let typed = Typed {
+        labels: typed_labels(&["x", "y"]),
+        ..Typed::default()
+    };
+    let resolved = resolve(Verb::Choose, None, Some(&held), &typed).expect("a resolved pick");
+    let Some(Question::Choose { text, options }) = resolved.question() else {
+        panic!("a choose question");
+    };
+    assert_eq!(text.as_json().as_str(), None);
+    assert_eq!(
+        options.names().collect::<Vec<_>>(),
+        [&"x".to_owned(), &"y".to_owned()]
+    );
+    assert!(
+        options
+            .descriptions()
+            .all(|(_, described)| described.is_none())
+    );
+}
+
+#[test]
 fn a_command_that_does_not_match_the_file_is_refused_by_name() {
     let held = file(r#"{"choose":"Which team?","options":["a","b"]}"#);
     assert_eq!(
@@ -253,7 +291,7 @@ fn options_that_each_record_carries_settle_every_other_setting_once() {
     };
     let resolved = resolve(Verb::Choose, None, Some(&held), &typed).expect("a resolved pick");
     assert_eq!(resolved.question(), None);
-    assert_eq!(resolved.text().as_str(), "Which code fits?");
+    assert_eq!(resolved.text().as_json().as_str(), Some("Which code fits?"));
     assert!(resolved.threshold().expect("a cut").is_cut());
     assert_eq!(
         json_line(resolved.sources()).expect("sources are writable"),

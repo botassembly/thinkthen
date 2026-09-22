@@ -126,6 +126,51 @@ fn a_list_in_each_record_becomes_that_record_s_own_options() {
 }
 
 #[test]
+fn a_structured_file_text_pairs_with_each_records_string_options() {
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("from-record");
+    std::fs::create_dir_all(&folder).expect("a scratch folder");
+    let file = folder.join("structured-options.json");
+    std::fs::write(
+        &file,
+        r#"{"choose":{"ask":"Which of these codes fits the note?"},"on":"/note"}"#,
+    )
+    .expect("a question file");
+
+    let listener =
+        Listener::serving(vec![Canned::ok(&picked(&["late", "lost"]))]).expect("a listener");
+    let output = spawn(
+        &[
+            "choose",
+            &format!("@{}", file.to_string_lossy()),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--jsonl",
+            "--options",
+            "/codes",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        NOTES.split_once('\n').expect("a first line").0.as_bytes(),
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    let sent = bodies(&listener);
+    assert_eq!(sent.len(), 1);
+    assert!(
+        sent[0].contains(r#""instructions":{"ask":"Which of these codes fits the note?"}"#),
+        "{}",
+        sent[0]
+    );
+    assert!(
+        sent[0].contains(r#""criteria":{"late":null,"lost":null}"#),
+        "{}",
+        sent[0]
+    );
+}
+
+#[test]
 fn a_map_in_a_record_sends_each_description_under_its_own_option() {
     let listener = Listener::serving(vec![Canned::ok(&picked(&["late", "lost"]))])
         .expect("a loopback listener");

@@ -6,7 +6,7 @@
 )]
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::support::{digest, encoded_decide, plant_recording};
@@ -117,6 +117,108 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
             body.len()
         )
     );
+}
+
+const STRUCTURED_TAG_BODY: &str = concat!(
+    r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"noul","#,
+    r#""instructions":[["Which topics?"],{"label":"billing"}]},"#,
+    r#""q2":{"type":"noul","instructions":[["Which topics?"],{"label":"urgent"}]}}}"#,
+);
+const STRUCTURED_TAG_ANSWERS: &str = concat!(
+    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92},"#,
+    r#""q2":{"type":"noul","noul":0.08}},"#,
+    r#""usage":{"input_tokens":3,"output_tokens":1}}"#,
+);
+
+fn structured_tag() -> (String, PathBuf, PathBuf) {
+    let question = file(
+        "structured-tag",
+        r#"{"tag":["Which topics?"],"labels":["billing","urgent"]}"#,
+    );
+    let limited =
+        |name: &str, bytes: usize| profile(name, &format!(r#""max_request_bytes":{bytes}"#));
+    let exact = limited("edge-structured", STRUCTURED_TAG_BODY.len());
+    let under = limited("under-structured", STRUCTURED_TAG_BODY.len() - 1);
+    (format!("@{}", question.to_string_lossy()), exact, under)
+}
+
+#[test]
+fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
+    let (question, exact, under) = structured_tag();
+    let base = ["tag", question.as_str(), "--model", "local-1"];
+    let plan = |profile: &Path| {
+        spawn(
+            &[
+                &base[..],
+                &["--dry-run", "--profile", &profile.to_string_lossy()],
+            ]
+            .concat(),
+            &[],
+            b"Refund me please.",
+        )
+        .expect("command")
+    };
+
+    let planned = plan(&exact);
+    assert_eq!(
+        planned.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&planned.stderr)
+    );
+    assert_eq!(plan(&under).status.code(), Some(2));
+}
+
+#[test]
+fn a_structured_request_counts_its_complete_body_at_the_edge() {
+    let (question, exact, under) = structured_tag();
+    let base = ["tag", question.as_str(), "--model", "local-1"];
+    let send = |profile: &Path, listener: &Listener| {
+        spawn(
+            &[
+                &base[..],
+                &[
+                    "--profile",
+                    &profile.to_string_lossy(),
+                    "--url",
+                    listener.base(),
+                ],
+            ]
+            .concat(),
+            &[("THINKTHEN_API_KEY", "secret-key")],
+            b"Refund me please.",
+        )
+        .expect("command")
+    };
+
+    let listener = Listener::answering(|_| Canned::ok(STRUCTURED_TAG_ANSWERS)).expect("listener");
+    let sent = send(&exact, &listener);
+    assert_eq!(
+        sent.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&sent.stderr)
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(
+        String::from_utf8_lossy(&requests[0].body),
+        STRUCTURED_TAG_BODY
+    );
+
+    let refused_listener =
+        Listener::answering(|_| Canned::ok(STRUCTURED_TAG_ANSWERS)).expect("listener");
+    let refused = send(&under, &refused_listener);
+    assert_eq!(refused.status.code(), Some(2));
+    assert_eq!(
+        String::from_utf8_lossy(&refused.stderr),
+        format!(
+            "thinkthen: profile under-structured allows at most {} request bytes; this request has {}\n",
+            STRUCTURED_TAG_BODY.len() - 1,
+            STRUCTURED_TAG_BODY.len()
+        )
+    );
+    assert!(refused_listener.requests().is_empty());
 }
 
 #[test]

@@ -9,6 +9,7 @@ cargo test --locked --workspace --all-targets --all-features
 RUSTFLAGS='--cfg thinkthen_internal_doctest' \
 RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
     cargo test --locked --workspace --doc --all-features
+sh specification/fixtures/question-file/self-test
 sh probes/probability-total-0038/self-test
 sh probes/find-0040/self-test
 sh transforms/compare/test.sh

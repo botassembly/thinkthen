@@ -1,5 +1,6 @@
 use super::{Labels, LabelsError, Question};
-use crate::core::text::{Meaning, QuestionText};
+use crate::core::json::Json;
+use crate::core::text::{Description, Meaning, QuestionText};
 
 fn meaning(text: &str) -> Option<Meaning> {
     Some(Meaning::new(text).expect("not blank"))
@@ -15,6 +16,13 @@ fn asking() -> Question {
 
 fn listed(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
+}
+
+fn named(values: &[&str]) -> Vec<(String, Option<Description>)> {
+    listed(values)
+        .into_iter()
+        .map(|name| (name, None))
+        .collect()
 }
 
 fn text() -> QuestionText {
@@ -64,7 +72,7 @@ fn a_question_serializes_with_its_verb_and_what_the_verb_needs() {
     assert_eq!(
         rendered(&Question::Score {
             text: text(),
-            levels: Labels::levels(listed(&["None.", "Some."])).expect("two levels"),
+            levels: Labels::levels(named(&["None.", "Some."])).expect("two levels"),
         }),
         r#"{"verb":"score","text":"Which team owns this request?","levels":["None.","Some."]}"#
     );
@@ -75,7 +83,7 @@ fn a_question_serializes_with_its_verb_and_what_the_verb_needs() {
                 ("billing".to_owned(), None),
                 (
                     "urgent".to_owned(),
-                    Some("Needs prompt attention.".to_owned())
+                    Some(Description::text("Needs prompt attention."))
                 ),
             ])
             .expect("two tags"),
@@ -91,8 +99,11 @@ fn a_list_the_verb_does_not_take_names_its_own_cause() {
         (Labels::options(listed(&["only"])), LabelsError::OptionCount),
         (Labels::options(Vec::new()), LabelsError::OptionCount),
         (Labels::options(many(256)), LabelsError::OptionCount),
-        (Labels::levels(listed(&["only"])), LabelsError::LevelCount),
-        (Labels::levels(many(11)), LabelsError::LevelCount),
+        (Labels::levels(named(&["only"])), LabelsError::LevelCount),
+        (
+            Labels::levels(many(11).into_iter().map(|name| (name, None)).collect()),
+            LabelsError::LevelCount,
+        ),
         (
             Labels::options(listed(&["bug", " "])),
             LabelsError::OptionBlank,
@@ -139,7 +150,7 @@ fn each_list_kind_names_its_own_invalid_member_without_echoing_it() {
             "a label is text, not white space",
         ),
         (
-            Labels::levels(listed(&["a", " "])),
+            Labels::levels(named(&["a", " "])),
             "a level is text, not white space",
         ),
     ];
@@ -162,7 +173,12 @@ fn a_list_at_each_edge_of_the_range_is_taken_and_keeps_its_order() {
         Labels::options(many(255)).expect("255 options").count(),
         255
     );
-    assert_eq!(Labels::levels(many(10)).expect("ten levels").count(), 10);
+    assert_eq!(
+        Labels::levels(many(10).into_iter().map(|name| (name, None)).collect())
+            .expect("ten levels")
+            .count(),
+        10
+    );
 }
 
 #[test]
@@ -174,14 +190,14 @@ fn a_label_holding_a_control_character_is_refused_without_being_quoted() {
         let refused = Labels::options(listed(&["other", typed])).expect_err("a refused list");
         assert_eq!(refused, LabelsError::OptionControl, "{typed:?}");
         assert_eq!(
-            Labels::levels(listed(&["none", typed])),
+            Labels::levels(named(&["none", typed])),
             Err(LabelsError::LevelControl),
             "{typed:?}"
         );
         assert_eq!(
             Labels::described(vec![
                 ("other".to_owned(), None),
-                (typed.to_owned(), Some("a description".to_owned())),
+                (typed.to_owned(), Some(Description::text("a description"))),
             ]),
             Err(LabelsError::OptionControl),
             "{typed:?}"
@@ -197,29 +213,35 @@ fn a_label_holding_a_control_character_is_refused_without_being_quoted() {
 #[test]
 fn a_described_list_keeps_each_description_beside_its_own_label() {
     let described = Labels::described(vec![
-        ("late".to_owned(), Some("It arrived late.".to_owned())),
+        (
+            "late".to_owned(),
+            Some(Description::text("It arrived late.")),
+        ),
         ("lost".to_owned(), None),
     ])
     .expect("two options");
     assert_eq!(
         described.descriptions().collect::<Vec<_>>(),
         [
-            (&"late".to_owned(), Some("It arrived late.")),
+            (
+                &"late".to_owned(),
+                Some(&Description::text("It arrived late."))
+            ),
             (&"lost".to_owned(), None),
         ]
     );
     assert_eq!(
         Labels::described(vec![
             ("late".to_owned(), None),
-            ("late".to_owned(), Some("twice".to_owned())),
+            ("late".to_owned(), Some(Description::text("twice"))),
         ]),
         Err(LabelsError::OptionDuplicate)
     );
     // A description that is blank is no description at all, so three
     // spellings of the same list are the same list.
     let blank = Labels::described(vec![
-        ("late".to_owned(), Some("  ".to_owned())),
-        ("lost".to_owned(), Some(String::new())),
+        ("late".to_owned(), Some(Description::text("  "))),
+        ("lost".to_owned(), Some(Description::text(String::new()))),
     ])
     .expect("two options");
     assert_eq!(
@@ -236,7 +258,7 @@ fn a_question_shows_its_own_text_and_labels_in_debug_and_nothing_else() {
     };
     let placement = Question::Score {
         text: text(),
-        levels: Labels::levels(listed(&["None.", "Some."])).expect("two levels"),
+        levels: Labels::levels(named(&["None.", "Some."])).expect("two levels"),
     };
 
     // A question never receives the evidence or the key, so its `Debug` has
@@ -246,5 +268,33 @@ fn a_question_shows_its_own_text_and_labels_in_debug_and_nothing_else() {
         for kept_out in ["state", "Evidence", "key", "api", "sk-"] {
             assert!(!shown.contains(kept_out), "{kept_out} in {shown}");
         }
+    }
+}
+
+#[test]
+fn a_question_never_shows_a_description_or_a_meaning_in_debug() {
+    let private = "private marker words";
+    let tagged = Question::Tag {
+        text: text(),
+        labels: Labels::tags(vec![(
+            "billing".to_owned(),
+            Some(Description::text(private)),
+        )])
+        .expect("a tag"),
+    };
+    let decided = Question::Decide {
+        text: text(),
+        yes: Some(
+            Meaning::structured(
+                &Json::parse(&format!(r#"{{"means":"{private}"}}"#)).expect("JSON"),
+            )
+            .expect("a meaning"),
+        ),
+        no: None,
+    };
+
+    for shown in [format!("{tagged:?}"), format!("{decided:?}")] {
+        assert!(shown.contains("Which team owns this request?"), "{shown}");
+        assert!(!shown.contains(private), "{shown}");
     }
 }

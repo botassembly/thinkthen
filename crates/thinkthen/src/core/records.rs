@@ -12,7 +12,7 @@ use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, LabelsError};
 use crate::core::render::{RenderError, json_line};
-use crate::core::text::{BlankTextError, Evidence};
+use crate::core::text::{BlankTextError, Description, Evidence};
 
 /// The most one record may hold before the tool refuses to judge it.
 ///
@@ -173,7 +173,7 @@ impl Record {
             Json::Object(members) => members
                 .iter()
                 .map(|(name, held)| match held {
-                    Json::String(text) => Ok((name.clone(), Some(text.clone()))),
+                    Json::String(text) => Ok((name.clone(), Some(Description::text(text.clone())))),
                     _ => Err(shape()),
                 })
                 .collect::<Result<Vec<_>, RecordError>>()?,
