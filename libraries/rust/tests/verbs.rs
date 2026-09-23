@@ -3,7 +3,7 @@
 //! The null backend answers with the conformance file's own numbers, so
 //! these assertions are the same expectations the conformance runner
 //! checks. Run through `./check.sh`, which sets `ENGINE_NULL=1`; a
-//! bare `cargo test` names no backend and skips each test with a note.
+//! bare `cargo test` names no backend and fails each test by name.
 
 use thinkthen::{
     Annotated, Answer, Engine, ErrorKind, Options, Question, QuestionSet, Row, failed_questions,
@@ -28,9 +28,7 @@ fn refund_text() -> &'static str {
 
 #[test]
 fn decide_cut_and_band() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("decide_cut_and_band") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let cut = Question::decide("Does the customer ask for a refund?")?.cut(0.8)?;
     assert_eq!(tt.decide(&cut, refund_text())?, Answer::Yes);
@@ -43,9 +41,7 @@ fn decide_cut_and_band() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn text_form_uses_the_grammar_default() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("text_form_uses_the_grammar_default") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     assert_eq!(
         tt.decide("Does the customer ask for a refund?", refund_text())?,
@@ -60,9 +56,7 @@ fn text_form_uses_the_grammar_default() -> Result<(), Box<dyn std::error::Error>
 
 #[test]
 fn decide_many_keeps_order() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("decide_many_keeps_order") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = default_cut("Does the customer ask for a refund?")?;
     let records = vec![refund_text(), "good morning", "maybe later"];
@@ -79,9 +73,7 @@ fn decide_many_keeps_order() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn choose_picks_the_top_option() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("choose_picks_the_top_option") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = Question::choose(
         "Which team should handle this?",
@@ -97,9 +89,7 @@ fn choose_picks_the_top_option() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn score_places_on_the_levels() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("score_places_on_the_levels") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = Question::score("How strong is the refund claim?", &["low", "mid", "high"])?;
     let scored = tt.score(&question, refund_text())?;
@@ -113,9 +103,7 @@ fn score_places_on_the_levels() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn tag_names_the_labels_that_held() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("tag_names_the_labels_that_held") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = Question::tag("What is this message about?", &["refund", "greeting"])?;
     let labels = tt.tag(&question, refund_text())?;
@@ -128,9 +116,7 @@ fn tag_names_the_labels_that_held() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn filter_keeps_the_marked_records() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("filter_keeps_the_marked_records") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = default_cut("Does the writer ask for a refund?")?;
     let records = vec!["i want a refund now", "good morning", "refund, please"];
@@ -146,9 +132,7 @@ fn filter_keeps_the_marked_records() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn rank_orders_most_likely_first() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("rank_orders_most_likely_first") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = default_cut("Does the writer ask for a refund?")?;
     let records = vec!["good morning", "refund, please", "maybe later"];
@@ -164,9 +148,7 @@ fn rank_orders_most_likely_first() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn find_picks_a_unit() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("find_picks_a_unit") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = default_cut("Which line asks for a refund?")?;
     let units = vec!["good morning", "refund, please"];
@@ -177,9 +159,7 @@ fn find_picks_a_unit() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn annotate_adds_one_field_a_question() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("annotate_adds_one_field_a_question") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let set = QuestionSet::from_json(
         r#"{
@@ -208,9 +188,7 @@ fn annotate_adds_one_field_a_question() -> Result<(), Box<dyn std::error::Error>
 
 #[test]
 fn details_carries_the_audit_trail() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("details_carries_the_audit_trail") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let question = default_cut("Does the customer ask for a refund?")?;
     let details = tt.details(&question, refund_text())?;
@@ -230,28 +208,12 @@ fn details_carries_the_audit_trail() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn annotate_preserves_the_good_answers_and_marks_the_failed_one()
 -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("annotate_preserves_the_good_answers_and_marks_the_failed_one") {
-        return Ok(());
-    }
-    // The failed marker needs the compile-time fixture the gate arms
-    // (`check.sh` builds with `--features synthetic-partial`); a bare
-    // `THINKTHEN_NULL=1 cargo test` does not carry it, so the test says
-    // so instead of failing on a fixture that was never built.
-    // The failed marker needs the compile-time fixture the gate arms
-    // (`check.sh` builds with `--features synthetic-partial`); a bare
-    // `THINKTHEN_NULL=1 cargo test` does not carry it, so the test says
-    // so instead of failing on a fixture that was never built. The note
-    // is captured by libtest like every test print; `-- --nocapture`
-    // shows it (surfaces-review-4 records the limitation).
-    #[cfg(not(feature = "synthetic-partial"))]
-    {
-        eprintln!(
-            "skip annotate_preserves_the_good_answers_and_marks_the_failed_one: the synthetic-partial fixture is not compiled; run ./check.sh"
-        );
-        return Ok(());
-    }
-    #[cfg(feature = "synthetic-partial")]
-    {}
+    common::require_backend();
+    // The failed marker needs the compile-time fixture the gate arms.
+    assert!(
+        fixture_compiled(),
+        "the synthetic-partial fixture is not compiled; ./check.sh builds it"
+    );
     // The stand-in's one synthesized partial failure (0054): the reply
     // answers one question and omits the last in name order, so its field
     // carries the ruled typed marker while its neighbour answers, and the
@@ -288,9 +250,7 @@ fn annotate_preserves_the_good_answers_and_marks_the_failed_one()
 
 #[test]
 fn the_record_row_is_the_ruled_shape() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("the_record_row_is_the_ruled_shape") {
-        return Ok(());
-    }
+    common::require_backend();
     // The ruled `{"input","value"}` row (go-ahead item 4) in this host's
     // own type, serialized by the contract's `rows_json`.
     let rows = vec![
@@ -306,9 +266,7 @@ fn the_record_row_is_the_ruled_shape() -> Result<(), Box<dyn std::error::Error>>
 
 #[test]
 fn usage_counts_the_sends() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("usage_counts_the_sends") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
     let before = tt.usage().requests;
     let question = default_cut("Does the customer ask for a refund?")?;
@@ -324,9 +282,7 @@ fn usage_counts_the_sends() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn the_error_kinds_reach_the_caller() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("the_error_kinds_reach_the_caller") {
-        return Ok(());
-    }
+    common::require_backend();
     let tt = engine();
 
     let band = Question::decide("Does the writer ask for a refund?")?.band(0.2, 0.8)?;
@@ -380,4 +336,9 @@ fn the_error_kinds_reach_the_caller() -> Result<(), Box<dyn std::error::Error>> 
         "a fired token cancels the call"
     );
     Ok(())
+}
+
+/// Whether this build carries the stand-in's synthesized partial failure.
+fn fixture_compiled() -> bool {
+    cfg!(feature = "synthetic-partial")
 }

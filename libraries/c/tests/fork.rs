@@ -31,6 +31,11 @@ unsafe fn call(engine: *const thinkthen_engine, text: &str) -> bool {
 
 #[test]
 fn a_fork_after_the_first_call_answers_in_the_child() {
+    assert_eq!(
+        std::env::var("THINKTHEN_NULL").as_deref(),
+        Ok("1"),
+        "run this through check.sh, which sets THINKTHEN_NULL=1"
+    );
     unsafe {
         let engine = thinkthen::thinkthen_engine_new();
 

@@ -22,6 +22,7 @@ const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {
 };
 
 unsafe fn engine() -> *mut thinkthen_engine {
+    null_backend();
     unsafe {
         thinkthen::thinkthen_engine_new()
     }

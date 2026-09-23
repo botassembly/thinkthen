@@ -4,7 +4,7 @@
 //! the product deck's surfaces page.
 //! The setup above each sample (`ticket`, `reviews`, the two piles) is the
 //! slide's context, not its code. Run through `./check.sh`, which sets
-//! `ENGINE_NULL=1` (a bare `cargo test` skips it with a note); the wire
+//! `ENGINE_NULL=1` (a bare `cargo test` fails it by name); the wire
 //! twin lives in `tests/wire.rs`.
 
 use thinkthen::{Answer, Engine, Question};
@@ -17,9 +17,7 @@ struct Ticket {
 
 #[test]
 fn the_slide_runs_as_drawn() -> Result<(), Box<dyn std::error::Error>> {
-    if !common::note_missing_env("the_slide_runs_as_drawn") {
-        return Ok(());
-    }
+    common::require_backend();
     // The slide's context.
     let ticket = Ticket {
         body: "I want a refund for order 9".to_owned(),

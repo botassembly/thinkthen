@@ -762,3 +762,34 @@ the second review, one wave:
   on every door (ADR 0041, review 5 amendment). The door checks its
   `int64_t` as an integer, so `INT64_MIN` reads back exactly, and the
   header states the upper bound and the clamp rule.
+
+## 2026-09-23 — wave 7: every bare-run failure names its switch (R2-28)
+
+A bare `cargo test` here cannot pass: the door's suites need the null
+backend, and `check.sh` is the entry point. At 14f12f5 a bare run failed
+with named reasons in most files but with bare assertions in eleven
+tests: seven door tests, one cancel test, the fork test, and, under
+`THINKTHEN_NULL=1`, the door's partial-failure check and the wire test.
+
+Decision, which Ian can overturn: a test that cannot run fails and names
+the switch; none passes silently. The door's and the cancel suite's
+`engine()` helpers and the fork test check `THINKTHEN_NULL=1` first. The
+door's partial-failure check names the `synthetic-partial` fixture. The
+wire test needs no stub, so it clears the null switch itself and now
+passes in a null run too.
+
+Evidence: a bare `cargo test --no-fail-fast` now fails 25 tests, each
+with `run this through check.sh, which sets THINKTHEN_NULL=1`. A null run
+without the feature fails only the partial-failure check, with `the
+synthetic-partial fixture is not compiled; check.sh builds it`.
+
+## 2026-09-23 — wave 7: the deadline spellings hold at the door (R2-10)
+
+No C or stand-in leftover remains for R2-10. The header, `DESIGN.md`
+section 2, and `src/lib.rs` agree: -1 is no deadline, 0 is spent, any
+other negative is the usage kind, and a budget past 4294967295 s is the
+usage kind. The wave-7 prober's `leftovers.c` answered the same at w7
+5f36536: -1 answered, 0 spent, -2 and INT64_MIN negative, INT64_MAX and
+u32max s + 1 s too large, u32max s answered. The remaining R2-10
+leftovers sit outside this surface: `libraries/typescript/DIVERGENCES.md`
+lines 49-57 and R's integer deadlines.

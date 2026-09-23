@@ -34,12 +34,13 @@ fn serve(stream: TcpStream) {
     let mut reader = BufReader::new(stream.try_clone().expect("the stream clones"));
     let mut writer = stream;
     while read_request(&mut reader).is_some() {
-        let head = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n",
+        // One write: a second small write waits on the client's delayed
+        // acknowledgement, about 40 ms a request on Linux.
+        let reply = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{REPLY}",
             REPLY.len()
         );
-        if writer.write_all(head.as_bytes()).is_err() || writer.write_all(REPLY.as_bytes()).is_err()
-        {
+        if writer.write_all(reply.as_bytes()).is_err() {
             return;
         }
     }

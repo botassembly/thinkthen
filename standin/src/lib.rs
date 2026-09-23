@@ -58,7 +58,7 @@ use thinkthen_contract::{
 };
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{Backend, Evidence, ModelName, Plan, Reply, Value};
-use ureq::unversioned::resolver::DefaultResolver;
+use ureq::unversioned::resolver::{DefaultResolver, ResolvedSocketAddrs, Resolver};
 use ureq::unversioned::transport::{
     Buffers, ConnectionDetails, Connector, DefaultConnector, NextTimeout, Transport,
 };
@@ -319,8 +319,17 @@ impl BlockingEngine {
                             Err(_) => break,
                         }
                     })
-                    .expect("a worker thread starts");
-                drop(born);
+;
+                match born {
+                    Ok(born) => drop(born),
+                    // Fewer workers still answer every record; none cannot.
+                    Err(error) => {
+                        if worker == 0 {
+                            first_failure = Some(no_thread(&error));
+                        }
+                        break;
+                    }
+                }
             }
 
             // The original sender dies here, so the wait below can see the
@@ -328,6 +337,9 @@ impl BlockingEngine {
             // the workers discard what is left, and the only end of the
             // wait is the disconnect, not a count.
             drop(done_tx);
+            if first_failure.is_some() {
+                return;
+            }
 
             let feed_stop = Arc::clone(&stop);
             let feed = thread::Builder::new()
@@ -342,8 +354,13 @@ impl BlockingEngine {
                         }
                     }
                 })
-                .expect("the feed thread starts");
-            drop(feed);
+;
+            if let Err(error) = feed {
+                // The unsent feed dropped its sender, so every worker
+                // leaves and the wait below ends on the disconnect.
+                stop.store(true, Ordering::Relaxed);
+                first_failure = Some(no_thread(&error));
+            }
 
             let mut received = 0_usize;
             // The poll must run on a busy channel too, or a fast backend
@@ -398,6 +415,12 @@ impl BlockingEngine {
             .collect::<Option<Vec<_>>>()
             .ok_or_else(|| Error::defect("a worker stopped before its record was answered"))
     }
+}
+
+/// The failure when the engine cannot start a thread: the process is out
+/// of threads or memory, and a later try may find room (R4-12).
+fn no_thread(error: &std::io::Error) -> Error {
+    Error { retryable: true, ..Error::defect(format!("the engine could not start a thread: {error}")) }
 }
 
 /// The connector a surface names today: it builds stand-in engines, and
@@ -1415,6 +1438,74 @@ fn lock<T>(held: &Mutex<T>) -> MutexGuard<'_, T> {
     held.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
+/// Every pool's resolver: it never leaves a thread behind to detach.
+///
+/// ureq's default resolver starts a lookup thread for every request that
+/// carries a timeout, an IP literal included, and drops its handle. The
+/// drop detaches a thread that is usually exiting, and glibc's
+/// `pthread_detach` can then read the thread's record after its stack
+/// was unmapped: two churn cores fault on exactly that read (R4-1,
+/// R7-1). This resolver parses a numeric address on the calling thread.
+/// A name still gets a lookup thread, so the timeout still bounds it, and
+/// the thread is joined once it answers. Only a lookup that outlives its
+/// timeout is left to finish on its own.
+#[derive(Debug)]
+struct Lookup;
+
+/// The addresses ureq's resolved list holds (`MAX_ADDRS` in ureq 3.4).
+const MAX_ADDRS: usize = 16;
+
+impl Resolver for Lookup {
+    fn resolve(
+        &self,
+        uri: &ureq::http::Uri,
+        config: &ureq::config::Config,
+        timeout: NextTimeout,
+    ) -> Result<ResolvedSocketAddrs, ureq::Error> {
+        let Some(addr) = uri
+            .scheme()
+            .zip(uri.authority())
+            .and_then(|(scheme, authority)| DefaultResolver::host_and_port(scheme, authority))
+        else {
+            // The default resolver names what is wrong with the address.
+            return DefaultResolver::default().resolve(uri, config, timeout);
+        };
+        let found: Vec<std::net::SocketAddr> = match addr.parse() {
+            Ok(numeric) => vec![numeric],
+            Err(_) => look_up(addr, timeout)?,
+        };
+        let mut out = self.empty();
+        for wanted in config.ip_family().keep_wanted(found.into_iter()).take(MAX_ADDRS) {
+            out.push(wanted);
+        }
+        if out.is_empty() { Err(ureq::Error::HostNotFound) } else { Ok(out) }
+    }
+}
+
+/// Look a name up within the timeout, and join the lookup thread when it
+/// answers in time.
+fn look_up(addr: String, timeout: NextTimeout) -> Result<Vec<std::net::SocketAddr>, ureq::Error> {
+    use std::net::ToSocketAddrs;
+    if timeout.after.is_not_happening() {
+        return Ok(addr.to_socket_addrs()?.collect());
+    }
+    let (sender, answer) = mpsc::sync_channel(1);
+    let lookup = thread::Builder::new().name("ttb-lookup".to_owned()).spawn(move || {
+        let _ = sender.send(addr.to_socket_addrs().map(Iterator::collect));
+    })?;
+    match answer.recv_timeout(*timeout.after) {
+        Ok(found) => {
+            let _ = lookup.join();
+            Ok(found?)
+        }
+        Err(mpsc::RecvTimeoutError::Timeout) => Err(ureq::Error::Timeout(timeout.reason)),
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            let _ = lookup.join();
+            Err(ureq::Error::HostNotFound)
+        }
+    }
+}
+
 /// The last link in every pool's connector chain: ureq's default chain,
 /// with each connection's reads resumed after a signal (see [`Resuming`]).
 #[derive(Debug)]
@@ -1545,7 +1636,7 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
         agent: ureq::Agent::with_parts(
             builder.build(),
             DefaultConnector::new().chain(ResumeConnector),
-            DefaultResolver::default(),
+            Lookup,
         ),
         gate: Gate {
             counts: Mutex::new(GateCounts { busy: 0, limit: width }),
@@ -2388,5 +2479,28 @@ mod tests {
         let tt = BlockingEngine::from_settings(settings);
         let details = tt.details(&question, evidence).expect("details");
         assert_eq!(details.requests[0], here, "the engine's trail names its own address");
+    }
+
+    /// The resolver reads a literal on the calling thread and still looks a
+    /// name up within the timeout (R4-1).
+    #[test]
+    fn the_resolver_reads_literals_and_names() {
+        use ureq::unversioned::resolver::Resolver;
+        use ureq::unversioned::transport::NextTimeout;
+        let config = ureq::config::Config::default();
+        let within = NextTimeout {
+            after: ureq::unversioned::transport::time::Duration::from(Duration::from_secs(5)),
+            reason: ureq::Timeout::Global,
+        };
+        let resolve = |uri: &str| -> Vec<String> {
+            let uri: ureq::http::Uri = uri.parse().expect("the uri parses");
+            let found = super::Lookup.resolve(&uri, &config, within).expect("resolves");
+            found.iter().map(ToString::to_string).collect()
+        };
+        assert_eq!(resolve("http://127.0.0.1:9/v1"), ["127.0.0.1:9"]);
+        assert_eq!(resolve("http://[::1]/v1"), ["[::1]:80"]);
+        assert!(resolve("https://localhost/v1").iter().all(|addr| addr.ends_with(":443")));
+        let bad: ureq::http::Uri = "/v1".parse().expect("parses");
+        assert!(super::Lookup.resolve(&bad, &config, within).is_err(), "no host, no address");
     }
 }
