@@ -16,7 +16,7 @@ wait raises ``Cancelled``, a subclass of both ``KeyboardInterrupt`` and
 
 Every verb takes ``deadline`` — seconds from the moment of the call —
 and ``token``, a ``CancelToken`` any thread can set to stop the call.
-No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0031).
+No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041).
 Zero is a spent deadline: the call sends nothing and raises
 ``DeadlineError``. Every other negative, a bool, and any non-number are
 refused as a usage error, so compute a budget as ``max(0, end - now)``:

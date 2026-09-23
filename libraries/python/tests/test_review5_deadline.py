@@ -1,4 +1,4 @@
-"""Review-5: a deadline is seconds from now, a real number (ADR 0031).
+"""Review-5: a deadline is seconds from now, a real number (ADR 0041).
 
 Python's bool is an int, so `deadline=True` used to run as a one-second
 deadline while the Node surface refused `true`. A bool (Python's or
@@ -39,10 +39,10 @@ def test_the_ruled_spellings_still_run(spelled):
 
 def test_the_docs_state_the_ruled_spelling():
     # Review-5: the module docstring and the README said "a negative is
-    # refused" after ADR 0031 made -1 the no-deadline sentinel.
+    # refused" after ADR 0041 made -1 the no-deadline sentinel.
     readme = (Path(__file__).parents[1] / "README.md").read_text()
     assert "`None` or `-1` is no deadline, zero is a spent one," in readme
-    assert "No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0031)." in tt.__doc__
+    assert "No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041)." in tt.__doc__
     for text in (readme, tt.__doc__):
         assert "a negative is refused" not in text
         assert "a negative number is refused" not in text
