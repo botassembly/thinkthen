@@ -102,6 +102,17 @@ One case is different: names inside one text, where the sentence around them dec
 
 `from` is a reserved word in Python and in SQL, so four of the nine surfaces could never say it. The library team chose `source` and `target` for every host. The product side extends that to the command's own JSON and to the question file, so no door converts anything and a user sees one pair of words on every surface. The rule on the command line is unchanged, `--relation NAME=FROM:TO`, because it names no field. This section overrides any older line on this page that says `from`, `to`, `head`, or `tail`. Ian can overturn it.
 
+## Direction 2026-09-23: rebuild the graph from strings, and relate plans its own questions
+
+Ian's direction on 2026-09-23. The user hands relate a list of entities, each a name and a kind, the same shape recognize returns: `John Lennon, person`, `Octopus's Garden, song`, `Help!, album`, `Help!, song`. The user also names the relations: `sung_by=song:person`, `appears_on=song:album`. Relate returns the graph as edges. The user never picks a method, and relate plans the questions per relation.
+
+- A relation between two different kinds asks one `choose` per source entity over the legal targets plus "none". Every option above the cut becomes an edge, so a duet yields two `sung_by` edges.
+- A relation within one kind (duplicates, contradicts, causes) asks method H.
+- One entity name may carry two kinds (`Help!` the song and `Help!` the album). An entity is its name plus its kind.
+- Recognize's relation step runs the same planner over the names it found. `recognize | relate` and relate over a user's own list give one output shape.
+
+The open question is whether the kind shape alone picks the method, or whether a rule needs a `one` or `many` marker. Choose splits one probability across its picks, so a source with three true targets may fall under the cut (experiment 237, duplicate clusters). The Beatles graph test answers it: about 200 official songs, the four Beatles, and the albums, with sourced truth from `experiments/238-beatles-real-data/data/songs.tsv`. That test runs the planner against method H alone. Ticket 0081's design review waits for it. The edge shape does not change.
+
 ## Ruled 2026-09-23, revised after experiment 237: method H for every relation
 
 Ian passed this to the build team on 2026-09-23, after the bake-off in `sdlc/issues/2026-09-23-relate-methods-bake-off.md` (`2a8d43f`). Every relation, and recognize's relation step, uses method H. H asks one yes/no per pair per relation, and the wording the questions share rides once per request. Each direction of a one-way relation is its own yes/no. The three-way choice for one-way relations is withdrawn. The default cut stays 0.5, and requests are split under the size budget. Across seven sets H found 89 of 89 true links with 11 false ones, at the fewest tokens on every set. Matching one list against another is `choose` per record, not relate. The edge shape ruled below and in ticket 0081 does not change. This section overrides the method in the section that follows.
