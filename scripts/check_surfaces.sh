@@ -79,7 +79,7 @@ stub_url="http://127.0.0.1:${STUB_PORT:-8231}/v1"
 stub_bin=$repo/tools/wire-stub/target/release/stub-backend
 if [ ! -x "$stub_bin" ]; then
   printf '\n== wire stub: build tools/wire-stub\n'
-  (cd tools/wire-stub && cargo build --release --offline) || fail=1
+  (cd tools/wire-stub && cargo build --release --offline --locked) || fail=1
 fi
 
 # Start one stub per surface port that has no stub already. Every port
@@ -128,13 +128,20 @@ else
   skip_note='wire tests skipped: no stub on the loopback'
 fi
 
-run_step "contract" bash -c 'cd contract && cargo test --quiet' || fail=1
+run_step "surfaces ratchet" node sdlc/scripts/surfaces-ratchet.mjs || fail=1
 
-run_step "stand-in, null backend" bash -c 'cd standin && cargo test --quiet --lib' || fail=1
+# The ceiling rule and the lint rules run before any surface: a tip the
+# ratchet or Clippy refuses cannot buy a green gate with green suites
+# (third review: the lint rung was red at the tip the gate called green).
+run_step "workspace lint rules" sdlc/scripts/lint-workspaces || fail=1
+
+run_step "contract" bash -c 'cd contract && cargo test --quiet --locked' || fail=1
+
+run_step "stand-in, null backend" bash -c 'cd standin && cargo test --quiet --locked --lib' || fail=1
 
 if [ "$wire" = yes ]; then
   run_step "stand-in, wire against the stub" bash -c \
-    'cd standin && ENGINE_BASE_URL="$0" ENGINE_WIDTH=32 cargo test --quiet --test wire -- --nocapture' \
+    'cd standin && ENGINE_BASE_URL="$0" ENGINE_WIDTH=32 cargo test --quiet --test wire --locked -- --nocapture' \
     "$stub_url" || fail=1
 else
   printf '\n== stand-in, wire against the stub\n%s\n' "$skip_note"

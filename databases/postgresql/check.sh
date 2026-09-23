@@ -68,7 +68,7 @@ echo "== postgres surface: the error-mapping test"
 # conformance case 74 replays that record. The packaged test artifact is
 # built with the feature; the release rehearsal in package.sh builds
 # without it.
-cargo test --release --quiet --lib --features synthetic-partial
+cargo test --release --quiet --lib --features synthetic-partial --locked
 
 echo "== postgres surface: package the extension"
 (cd . && cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null

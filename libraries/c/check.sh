@@ -16,7 +16,7 @@ case "$(uname -s)" in
 esac
 
 echo "== c surface: build the door (libthinkthen.$LIB_EXT and libthinkthen.a)"
-cargo build --release --quiet
+cargo build --release --quiet --locked
 ls -l target/release/libthinkthen.$LIB_EXT target/release/libthinkthen.a
 
 echo "== c surface: compile the slide with a plain cc"
@@ -65,29 +65,29 @@ echo "== c surface: null suite (the door, the error surface, and the twins)"
 # door's shape test and conformance case 74 replay that record. The release
 # library the ctypes driver loads is rebuilt with the same feature, then
 # restored to the production shape below.
-cargo build --release --quiet --features synthetic-partial
-ENGINE_NULL=1 cargo test --quiet --features synthetic-partial --lib --test door -- --test-threads=1
+cargo build --release --quiet --features synthetic-partial --locked
+ENGINE_NULL=1 cargo test --quiet --features synthetic-partial --lib --test door --locked -- --test-threads=1
 
 echo "== c surface: the null and length matrix"
-ENGINE_NULL=1 cargo test --quiet --test null_matrix -- --test-threads=1
+ENGINE_NULL=1 cargo test --quiet --test null_matrix --locked -- --test-threads=1
 
 echo "== c surface: the cancel token, fired and fired across threads"
-ENGINE_NULL=1 cargo test --quiet --test cancel -- --test-threads=1
+ENGINE_NULL=1 cargo test --quiet --test cancel --locked -- --test-threads=1
 
 echo "== c surface: fast-backend deadline, the poll-bug shape"
-ENGINE_NULL=1 cargo test --quiet --test deadline_fast -- --test-threads=1
+ENGINE_NULL=1 cargo test --quiet --test deadline_fast --locked -- --test-threads=1
 
 echo "== c surface: four threads over one engine"
-ENGINE_NULL=1 cargo test --quiet --test concurrency
+ENGINE_NULL=1 cargo test --quiet --test concurrency --locked
 
 echo "== c surface: two threads read their own error messages"
-ENGINE_NULL=1 cargo test --quiet --test error_threads
+ENGINE_NULL=1 cargo test --quiet --test error_threads --locked
 
 echo "== c surface: failures stay on their own engine, and a reused address starts clean"
-cargo test --quiet --test error_engines -- --test-threads=1
+cargo test --quiet --test error_engines --locked -- --test-threads=1
 
 echo "== c surface: fork after the first call answers in the child"
-ENGINE_NULL=1 cargo test --quiet --test fork -- --test-threads=1
+ENGINE_NULL=1 cargo test --quiet --test fork --locked -- --test-threads=1
 
 echo "== c surface: the function examples"
 python3 examples.py
@@ -96,13 +96,13 @@ echo "== c surface: conformance slice through ctypes"
 ENGINE_NULL=1 python3 conformance_driver.py
 
 echo "== c surface: back to the production shape (no fixture code compiled)"
-cargo build --release --quiet
+cargo build --release --quiet --locked
 
 if curl -sf --max-time 1 http://127.0.0.1:8216/v1/stats >/dev/null 2>&1; then
     echo "== c surface: the slide on the wire, stub on 8216"
     ENGINE_BASE_URL=http://127.0.0.1:8216/v1 ./build/slide
     echo "== c surface: wire suite (a dead address proves the backend kind)"
-    cargo test --quiet --test wire
+    cargo test --quiet --test wire --locked
 else
     echo "== c surface: wire twin skipped, no stub on 8216"
 fi

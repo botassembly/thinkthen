@@ -60,7 +60,7 @@ BASEP=$(.venv/bin/python -c 'import sys; print(sys.base_prefix)')
 PYO3_PYTHON="$PWD/.venv/bin/python" \
   env "$LIB_PATH_VAR=${LIBDIR}${!LIB_PATH_VAR:+:${!LIB_PATH_VAR}}" \
   PYTHONHOME="$BASEP" \
-  cargo test --quiet --no-default-features --lib
+  cargo test --quiet --no-default-features --lib --locked
 
 echo "== surface tests, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_surface.py -q

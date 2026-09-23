@@ -20,7 +20,7 @@ echo "== sqlite surface: build the extension"
 # that asks for it (standin/Cargo.toml, the `synthetic-partial` feature):
 # the conformance slice replays that record (case 74). The release
 # artifact built by package.sh carries no fixture.
-cargo build --release --quiet --features synthetic-partial
+cargo build --release --quiet --features synthetic-partial --locked
 cp target/release/libthinkthen0.$LIB_EXT thinkthen.so
 
 # The floor is 3.50.0 (below it a CHECK constraint in an untrusted
@@ -38,7 +38,7 @@ python3 -c 'import sqlite3,sys; sys.exit(0 if tuple(int(x) for x in sqlite3.sqli
 echo "   host SQLite $HOST"
 
 echo "== sqlite surface: the error-mapping test"
-cargo test --release --quiet --lib --features synthetic-partial
+cargo test --release --quiet --lib --features synthetic-partial --locked
 
 echo "== sqlite surface: the slide, as drawn, in the stock CLI"
 if [ ! -x .runtimes/sqlite3 ]; then
