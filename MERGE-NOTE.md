@@ -10,8 +10,10 @@ text merge.
 
 ## 1. The conformance file: one name, one union, the defect case kept
 
-Main owns `conformance/cases.json` (27 cases, consumed by
-`crates/thinkthen-core/tests/conformance.rs`). The branch owns
+Main owns `conformance/cases.json` (27 cases; consumed by a test file
+under `crates/` whose path the fold moved — the fourth review names the
+stale cite, so re-point it at `crates/thinkthen`'s own conformance test
+at merge time rather than trusting this line). The branch owns
 `conformance/conformance.json` (84 cases; validator at
 `conformance/tools/validate_conformance.py`; divergence record at
 `conformance/DIVERGENCES.md`). Per ruling 2: the build team picks the one
@@ -156,7 +158,8 @@ so the note is self-contained):
 - **(a) Keep `crates/thinkthen-core` through the merge** by restoring the
   crate as of the merge base (`git checkout b11a2b0 -- crates/thinkthen-core`).
   Proven: contract and stand-in then `cargo check` exit 0 on the merged
-  tree and the 11 lockfiles keep resolving. Costs one crate the fold
+  tree and the 13 lockfiles keep resolving (the earlier "11" was a
+  miscount; the lint rung covers 13). Costs one crate the fold
   intended to remove; retires when the production engine consumes
   `contract/` and the stand-in goes.
 - **(b) Expose an equivalent public API from `crates/thinkthen`.** That is
@@ -166,9 +169,13 @@ so the note is self-contained):
   production engine lands. Empties the surfaces' acceptance coverage on
   main; recorded for completeness, not recommended.
 
-**Recommendation: (a)**, with (b) recorded as the follow-on when the
-production API exists — at which point the connector swap described in
-`HANDOFF.md` becomes the only change the surfaces need. Run the merge as a
+**Decision: (a), accepted 2026-09-23** (was a recommendation; the fourth
+review's records group asked for the decision with its review line).
+Second-agent review: the trial-merge issue on main (`4b4f85b`) re-ran the
+merged tree's `cargo check` by its own commands, and the independent
+verifier's table re-checked the manifest facts. (b) stays recorded as the
+follow-on when the production API exists — at which point the connector
+swap described in `HANDOFF.md` becomes the only change the surfaces need. Run the merge as a
 build: merge, restore or retarget, `cargo check` contract, stand-in, and
 the consumer workspaces, then the branch's gate, then the conformance
 union.

@@ -91,9 +91,9 @@ The test churns 100 settings values past 64 slots and counts `Inner` drops: the 
 
 **What landed in the fix:** one state per settings value behind atomic slots; evictions pick a vanished pid's idle state first, then the least-recently-used idle one (a logical lookup clock), and a busy or caller-held state only when every slot is; the home slot is claimed first so two publishers of one settings value race one compare-and-swap; every publish passes a full dedup scan whose retraction retires behind a five-second grace and retries the lookup; retired pools close once no request holds them, keeping file descriptors flat; the fork rule holds throughout — no lock is taken on the rebuild path that any request path holds.
 
-## ADR draft: one deadline spelling (review finding 21) — for the ADR owner
+## One deadline spelling (review finding 21) — landed as ADR 0031
 
-Status: DRAFT, decision made here, needs the ADR's own review.
+Status: ACCEPTED as `sdlc/planning/adr/0031-one-deadline-spelling-across-every-surface.md`; the text below is the working record the ADR superseded.
 
 **Decision.** Exactly one spelling of "no deadline" exists across every surface: the sentinel −1, the C header's `THINKTHEN_NO_DEADLINE`. Every other negative value is refused with the usage kind. Zero is a spent deadline, legal, and the call returns the deadline kind having sent nothing. The contract owns the conversion and the sentinel (`deadline_from_seconds` / `deadline_from_millis`, `NO_DEADLINE = -1.0`) and its tests pin all of this.
 
