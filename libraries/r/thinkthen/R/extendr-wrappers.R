@@ -81,17 +81,6 @@ tt_usage_counters <- function() .Call(wrap__tt_usage_counters)
 #' and after a call.
 tt_interrupt_pending <- function() .Call(wrap__tt_interrupt_pending)
 
-#' Deliver R's own interrupt for real, from pure R-side code where no Rust
-#' frame owns anything. The synthetic condition this replaces was raised
-#' through `stop()`, so a user's `options(error = ...)` hook fired on an
-#' interrupt - the third review's probe - and R continued instead of
-#' halting. This is the real check, unguarded: the jump it makes is R's
-#' own interrupt delivery, caught by `tryCatch(interrupt = ...)` exactly
-#' as a genuine Ctrl-C is. Called only after the guarded check reported a
-#' pending interrupt and the call's cleanup ran; if the poll finds nothing
-#' left to deliver, it returns and the R half's fallback stops the call.
-tt_raise_interrupt <- function() invisible(.Call(wrap__tt_raise_interrupt))
-
 #' Stop the call in flight, when an interrupt jumped out of its frame.
 tt_cancel_active <- function() .Call(wrap__tt_cancel_active)
 

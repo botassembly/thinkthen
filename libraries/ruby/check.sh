@@ -15,6 +15,18 @@ stub_url="http://127.0.0.1:8214/v1"
 # The gate arms the stand-in's synthesized partial failure at compile
 # time (`build.sh synthetic`), so conformance case 74 and the marker test
 # run; the packaged build never carries the fixture.
+# The fixture build, with the production restore armed on any exit - the
+# fourth review's finding caught the restore running only on success,
+# leaving the fixture build behind a failed gate.
+restore_production() {
+  echo "== ruby surface: restore the production build (no fixture)"
+  if ./build.sh >/dev/null 2>&1; then
+    echo "restored: $(ls -1 *.gem 2>/dev/null | tail -1)"
+  else
+    echo "RESTORE FAILED: the fixture build is still in place" >&2
+  fi
+}
+trap restore_production EXIT
 ./build.sh synthetic
 
 wire=no
@@ -94,9 +106,7 @@ else
 fi
 
 # The gate ran on the fixture build (synthetic-partial); the shape any
-# package is made from never carries it. Rebuild plain so the folder the
-# gate leaves behind is the production shape - the third review caught
-# the test build left in place.
-echo "== ruby surface: restore the production build (no fixture)"
-./build.sh >/dev/null
-echo "restored: $(ls -1 *.gem 2>/dev/null | tail -1)"
+# package is made from never carries it. The EXIT trap above already
+# rebuilt the plain shape on any exit, so this proves the restore rather
+# than performing it.
+ENGINE_NULL=1 ruby -I lib -e 'require "thinkthen"; require "json"; q = ThinkThen.question(decide: "Is this a complaint?"); ans = ThinkThen.decide(q, "order 4471: charged twice, please refund"); puts("production build in place: the fixture text answers (#{ans.inspect[0, 20]})")'

@@ -167,18 +167,24 @@ fn charsxp_text(charsxp: SEXP, what: &str) -> StdResult<String, String> {
         )));
     }
     if mark == CE_NATIVE {
-        // A native-marked string under a non-UTF-8 locale (LC_ALL=C is the
-        // review's probe) has no meaning the surface can know: translating
-        // it guesses, and the guess sent mangled bytes. The raw bytes are
-        // checked as UTF-8 before any translation: valid ones cross as
-        // themselves (what a UTF-8 locale would produce), invalid ones
-        // refuse with the conversion named. Latin1 and UTF-8 marks keep
-        // their locale-independent translation below.
+        // A native-marked string under a non-UTF-8 locale has no meaning
+        // the surface can know, and translating it guesses: the fourth
+        // review's probe caught a mid-session LC_CTYPE switch to C sending
+        // mangled bytes for native-marked text that was already valid
+        // UTF-8, because R's translator re-encoded each byte through the
+        // new locale. The raw bytes are therefore checked as UTF-8 before
+        // any translation: valid ones cross as themselves - what a UTF-8
+        // locale would produce, under any locale - and invalid ones refuse
+        // with the conversion named. Latin1 and UTF-8 marks keep their
+        // locale-independent translation below.
         let raw = unsafe { std::ffi::CStr::from_ptr(R_CHAR(charsxp)) }.to_bytes();
-        if std::str::from_utf8(raw).is_err() {
-            return Err(usage(format!(
-                "{what} carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first"
-            )));
+        match std::str::from_utf8(raw) {
+            Ok(text) => return Ok(text.to_owned()),
+            Err(_) => {
+                return Err(usage(format!(
+                    "{what} carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first"
+                )))
+            }
         }
     }
     let translated = unsafe { Rf_translateCharUTF8(charsxp) };
@@ -259,19 +265,14 @@ fn interrupt_pending() -> bool {
     unsafe { R_ToplevelExec(check, std::ptr::null_mut()) == 0 }
 }
 
-/// Deliver R's own interrupt for real, from pure R-side code where no Rust
-/// frame owns anything. The synthetic condition this replaces was raised
-/// through `stop()`, so a user's `options(error = ...)` hook fired on an
-/// interrupt - the third review's probe - and R continued instead of
-/// halting. This is the real check, unguarded: the jump it makes is R's
-/// own interrupt delivery, caught by `tryCatch(interrupt = ...)` exactly
-/// as a genuine Ctrl-C is. Called only after the guarded check reported a
-/// pending interrupt and the call's cleanup ran; if the poll finds nothing
-/// left to deliver, it returns and the R half's fallback stops the call.
-#[extendr]
-fn tt_raise_interrupt() {
-    unsafe { R_CheckUserInterrupt() }
-}
+/// The fourth review deleted the extendr-wrapped `tt_raise_interrupt`
+/// whose `R_CheckUserInterrupt` longjmp crossed its own Rust frame:
+/// nothing in this crate may let R jump across a Rust frame. The R half
+/// delivers the real interrupt from pure R-side code instead - it sends
+/// the real SIGINT and sleeps, so the jump lands inside R's own delivery
+/// machinery, caught by `tryCatch(interrupt = ...)` exactly as a genuine
+/// Ctrl-C is, and uncaught it halts without firing a user's
+/// `options(error = ...)` hook (the third review's probe).
 
 /// One engine call on a fresh worker thread, R's guarded interrupt check on
 /// the main thread while it runs, a fresh cancel token registered for the
@@ -596,7 +597,7 @@ fn tt_annotate_file(path: Robj, records: Robj, deadline: Robj) -> StdResult<List
                 })
                 .collect();
             List::from_names_and_values(names, values)
-                .map_err(|_| "usage{ERROR_SEP}false{ERROR_SEP}an annotate row could not become a list".to_owned())
+                .map_err(|_| format!("usage{ERROR_SEP}false{ERROR_SEP}an annotate row could not become a list"))
         })
         .collect::<StdResult<Vec<_>, _>>()?;
     Ok(List::from_values(built))
@@ -881,7 +882,6 @@ extendr_module! {
     fn tt_details_one;
     fn tt_usage_counters;
     fn tt_interrupt_pending;
-    fn tt_raise_interrupt;
     fn tt_cancel_active;
     fn tt_question_digest;
     fn tt_question_parts;

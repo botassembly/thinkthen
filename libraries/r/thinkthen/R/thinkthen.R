@@ -24,58 +24,96 @@ tt_raise <- function(text) {
 # condition, a pending interrupt raises R's own interrupt condition, and
 # the cleanup stops any call still in flight. The Rust half never lets R's
 # interrupt jump cross its frames: it checks for a pending interrupt under
-# a guard before entering and on every tick of a wait, cancels the call's
-# token, and reports the marker this function raises.
+# a guard before entering and cancels the call's token, and reports the
+# marker this function raises.
+#
+# The error hook ordering, fourth review: R consults options(error) at
+# signal time, not at unwind time - a hook held aside for the crossing
+# and restored by on.exit is restored too late, so a thinkthen error
+# under a set hook skipped the hook, continued the script, and exited
+# zero. The crossing therefore captures the mapped condition as data,
+# restores the hook while the stack is quiet, and only then stops: the
+# hook runs for a thinkthen error exactly as it runs for any other.
 .tt_call <- function(expr) {
   on.exit(.tt_cleanup(), add = TRUE)
   # R's own interrupt signaling runs the user's options(error = ...) hook
   # while the guarded check below consumes the interrupt - the third
   # review's probe caught the hook firing on a plain Ctrl-C. The hook is
-  # held aside for the length of the call and restored on the way out, so
-  # it fires for genuinely uncaught errors and never for an interrupt.
+  # held aside for the crossing itself and restored below, before any
+  # error is raised, so it fires for genuinely uncaught errors and never
+  # for an interrupt.
   had_hook <- getOption("error")
   if (!is.null(had_hook)) {
     options(error = NULL)
     on.exit(options(error = had_hook), add = TRUE)
   }
   if (tt_interrupt_pending()) .tt_interrupt()
-  held <- tryCatch(expr, error = .tt_error)
-  if (tt_interrupt_pending()) .tt_interrupt()
-  held
+  held <- tryCatch(list(value = expr), error = function(e) list(cond = .tt_error_condition(e)))
+  # Restore the hook while nothing is raising: the stop below meets the
+  # same options(error) a plain stop would.
+  if (!is.null(had_hook)) options(error = had_hook)
+  if (is.null(held$cond)) {
+    if (tt_interrupt_pending()) .tt_interrupt()
+    return(held$value)
+  }
+  stop(held$cond)
 }
 
-# An engine call's error as its condition: the interrupt marker becomes
-# R's own interrupt condition, and anything else is one of the six kinds.
-.tt_error <- function(e) {
+# The condition one engine error maps to, without stopping: the same
+# packing tt_raise reads, returned as data so .tt_call can restore the
+# error hook before the raise. An interrupt marker is delivered for real
+# instead, from inside the handler where cleanup has already run.
+.tt_error_condition <- function(e) {
   text <- conditionMessage(e)
   parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
   if (length(parts) == 3L && identical(parts[[1]], "interrupt")) {
     .tt_interrupt()
   }
-  tt_raise(text)
+  .tt_condition(text)
+}
+
+# The condition tt_raise raises, built as data.
+.tt_condition <- function(text) {
+  parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
+  if (length(parts) != 3L) {
+    return(simpleError(text))
+  }
+  kind <- parts[[1]]
+  retryable <- identical(parts[[2]], "true")
+  message <- parts[[3]]
+  structure(
+    class = c(paste0("thinkthen_", kind), "thinkthen_error", "error", "condition"),
+    list(message = message, kind = kind, retryable = retryable, call = NULL)
+  )
 }
 
 # R's own interrupt, delivered for real. The guarded check that reported
-# it consumed the pending signal, so raising a synthetic condition through
-# `stop()` was the only path left - and that ran a user's
-# `options(error = ...)` hook on an interrupt, the third review's probe,
-# while R continued instead of halting. Instead the process sends itself
-# the real SIGINT and steps into the event loop: the jump lands in R's own
-# interrupt delivery, caught by `tryCatch(interrupt = ...)` exactly as a
-# genuine Ctrl-C is, and uncaught it halts without the error hook. The
-# synthetic condition is only the fallback when the signal cannot be
-# delivered or does not land, so the call still stops rather than
-# silently continuing.
+# it consumed the pending signal, so the process sends itself the real
+# SIGINT and waits: the jump lands inside R's own delivery machinery,
+# caught by `tryCatch(interrupt = ...)` exactly as a genuine Ctrl-C is,
+# and uncaught it halts without the error hook - the third review's
+# probe. No Rust frame sits under that jump: the old fallback called the
+# extendr-wrapped tt_raise_interrupt, whose R_CheckUserInterrupt longjmp
+# crossed the wrapper's own Rust frame - the fourth review's finding -
+# and it is deleted. If the real signal does not land, the synthetic
+# condition below is the fallback, with the error hook held aside so an
+# interrupt never fires it; the call still stops rather than silently
+# continuing.
 .tt_interrupt <- function() {
   delivered <- FALSE
   if (.Platform$OS.type == "unix" && requireNamespace("tools", quietly = TRUE)) {
     try(delivered <- tools::pskill(Sys.getpid(), 2L), silent = TRUE)
     if (isTRUE(delivered)) {
+      # The signal's flag is set; Sys.sleep is an R checkpoint, and the
+      # real jump lands inside it if it lands at all - pure R frames.
       Sys.sleep(0.1)
-      # The signal's flag is set; this unguarded check makes the real
-      # jump from R-side frames that own nothing.
-      invisible(tt_raise_interrupt())
+      return(invisible(NULL))
     }
+  }
+  had_hook <- getOption("error")
+  if (!is.null(had_hook)) {
+    options(error = NULL)
+    on.exit(options(error = had_hook), add = TRUE)
   }
   stop(structure(
     class = c("interrupt", "condition"),

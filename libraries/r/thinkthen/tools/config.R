@@ -15,7 +15,53 @@ env_not_cran <- Sys.getenv("NOT_CRAN")
   ""
 }
 
-.cran_flags <- ""
+# Two shapes, decided by whether the registry vendor tree is present.
+#
+# The tarball shape (make-tarball.sh): every registry dependency is
+# vendored under src/rust/vendor/registry with a config.toml redirecting
+# crates-io there, so the install needs no network and no populated
+# CARGO_HOME - the fourth review's fresh-checkout probe failed on an
+# empty, gitignored src/.cargo. CARGO_HOME points at the shipped
+# rust/.cargo so cargo finds that config, the build runs --offline, and
+# the document step is skipped: the wrappers ship in the tarball, so the
+# install never builds the debug binary that step pulled in.
+#
+# The repository shape: no vendored registry, so CARGO_HOME stays the
+# developer's own (the empty-dir override is gone), the build runs
+# --locked with the network available for a first fetch, and the
+# document step regenerates the wrappers as before.
+.tarball_shape <- dir.exists("src/rust/vendor/registry")
+
+if (.tarball_shape) {
+  .cran_flags <- paste("--locked --offline", .synthetic_flags)
+  .cargo_export <- "export CARGO_HOME=$(CURDIR)/rust/.cargo && "
+  .doc <- ""
+  if (!file.exists("R/extendr-wrappers.R")) {
+    stop("the tarball shape must ship R/extendr-wrappers.R (make-tarball.sh verifies it)")
+  }
+  # R CMD build may strip dot-directories, so the vendored-sources config
+  # is also written here, at install time, where Makevars' CARGO_HOME
+  # finds it. Idempotent: the tarball ships the same bytes.
+  dir.create("src/rust/.cargo", showWarnings = FALSE, recursive = TRUE)
+  writeLines(
+    c(
+      "[source.crates-io]",
+      "replace-with = \"vendored-sources\"",
+      "",
+      "[source.vendored-sources]",
+      "directory = \"vendor/registry\""
+    ),
+    "src/rust/.cargo/config.toml"
+  )
+} else {
+  .cran_flags <- paste("--locked", .synthetic_flags)
+  .cargo_export <- ""
+  .doc <- paste(
+    "&& cargo run --locked --bin document",
+    "--manifest-path=./rust/Cargo.toml --target-dir $(TARGET_DIR)"
+  )
+}
+
 .profile <- "--release"
 .clean_targets <- "$(TARGET_DIR)"
 
@@ -34,7 +80,9 @@ configure_file(
   "src/Makevars",
   list(
     LIBDIR = .LIBDIR,
-    CRAN_FLAGS = paste(.cran_flags, .synthetic_flags),
+    CRAN_FLAGS = .cran_flags,
+    CARGO_EXPORT = .cargo_export,
+    DOC = .doc,
     PROFILE = .profile,
     TARGET = "",
     CLEAN_TARGET = .clean_targets,

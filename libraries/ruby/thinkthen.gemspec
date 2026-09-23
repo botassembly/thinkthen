@@ -19,7 +19,10 @@ Gem::Specification.new do |spec|
   spec.files = ["lib/thinkthen.rb", "lib/thinkthen/version.rb", extension].compact
   spec.require_paths = ["lib"]
   # What is actually built and tested: the builder image carries 3.4, and
-  # no earlier minor has been proven. Widen only when one is built and
-  # run (the third review caught the untested ">= 3.1" claim).
-  spec.required_ruby_version = ">= 3.4"
+  # no earlier minor has been proven. The upper bound is real, not
+  # decoration: 4.x is a different ABI that nothing here has been built
+  # against, and "admits anything above" was the fourth review's finding
+  # - "guarded, not guessed". Widen only when a 4.x build is made and run
+  # (the third review caught the untested ">= 3.1" claim).
+  spec.required_ruby_version = [">= 3.4", "< 4"].freeze
 end

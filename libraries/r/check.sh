@@ -28,6 +28,15 @@ echo "== r surface: the defect kind crosses as its own kind (shim unit test)"
 # The gate installs a build that asks for it, runs the suites below, and
 # restores the production shape at the end.
 echo "== r surface: install the fixture build (synthetic-partial)"
+restore_production() {
+  echo "== r surface: restore the production install (no fixture code)"
+  if (cd thinkthen && R CMD INSTALL -l ../rlib . >/dev/null 2>&1); then
+    echo "restored"
+  else
+    echo "RESTORE FAILED: rlib still carries the fixture build" >&2
+  fi
+}
+trap restore_production EXIT
 (cd thinkthen && THINKTHEN_R_SYNTHETIC_PARTIAL=1 R CMD INSTALL -l ../rlib .)
 
 echo "== r surface: null suite"
@@ -72,7 +81,7 @@ else
 fi
 
 # The production shape the README installs: no fixture code, proven by the
-# plainest call answering on the restored package.
-echo "== r surface: restore the production install (no fixture code)"
-(cd thinkthen && R CMD INSTALL -l ../rlib .)
+# plainest call answering on the restored package. The EXIT trap above
+# already restored it - on success and on failure alike, the fourth
+# review's finding - so this proves the restore rather than performing it.
 ENGINE_NULL=1 Rscript -e '.libPaths(c("rlib", .libPaths())); library(thinkthen); stopifnot(isTRUE(tt_decide("Is this a complaint?", "I want a refund for order 9"))); cat("production install answers\n")'

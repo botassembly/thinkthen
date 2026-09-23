@@ -36,6 +36,43 @@ check("the latin1 and utf-8 forms answer the same",
       identical(tt_decide("Is this a complaint?", latin1),
                 tt_decide("Is this a complaint?", enc2utf8(latin1))))
 
+# Native-marked bytes that are already valid utf-8 cross unchanged under
+# any locale, and native-marked bytes that are not valid utf-8 refuse by
+# name - the fourth review's LC_ALL=C probe. Pinned here after the
+# second-review fix: both cases hold at the tip, and this file runs under
+# whatever locale check.sh was invoked with, so an explicit C-locale
+# child pins the first case where it was reported.
+native_valid <- "caf\u00e9 complaint"
+Encoding(native_valid) <- "native"
+held <- tryCatch(tt_recognize(native_valid), error = function(e) conditionMessage(e))
+check("native-marked valid utf-8 crosses unchanged",
+      is.character(held) && validUTF8(held) && grepl(enc2utf8("caf\u00e9 complaint"), held, fixed = TRUE))
+c_locale <- Sys.setlocale("LC_CTYPE", "C")
+held <- tryCatch(tt_recognize(native_valid), error = function(e) conditionMessage(e))
+Sys.setlocale("LC_CTYPE", c_locale)
+# The comparison is by bytes, not by grepl: the message the refusal
+# carried came back under a C-locale checkpoint and R marked it native,
+# and grepl under any locale may refuse to translate the utf-8 needle.
+# The bytes are the fact; nothing locale-sensitive may judge them.
+bytes_contain <- function(haystack, needle) {
+  h <- charToRaw(haystack)
+  n <- charToRaw(needle)
+  if (length(n) == 0L) return(TRUE)
+  hits <- which(h == n[[1]])
+  for (start in hits) {
+    end <- start + length(n) - 1L
+    if (end <= length(h) && identical(h[start:end], n)) return(TRUE)
+  }
+  FALSE
+}
+check("native-marked valid utf-8 crosses unchanged under LC_CTYPE=C",
+      is.character(held) && bytes_contain(held, enc2utf8("caf\u00e9 complaint")))
+native_invalid <- "caf\xe9 complaint"
+Encoding(native_invalid) <- "native"
+held <- tryCatch(tt_recognize(native_invalid), error = function(e) conditionMessage(e))
+check("native-marked invalid bytes refuse by name",
+      is.character(held) && grepl("not valid UTF-8", held, fixed = TRUE))
+
 # Clean utf-8 keeps answering as before.
 clean <- tt_decide("Is this a complaint?", "caf\u00e9 complaint")
 check("clean utf-8 still answers", is.logical(clean) && length(clean) == 1L)
