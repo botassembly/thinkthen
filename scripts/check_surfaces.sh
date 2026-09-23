@@ -45,6 +45,7 @@ stub_pids=()
 wire_expected=" "
 wire_ran=0
 wire_lost=0
+wire_failed=0
 stop_stubs() {
   for pid in ${stub_pids[@]+${stub_pids[@]}}; do
     kill "$pid" 2>/dev/null || true
@@ -67,6 +68,7 @@ run_step() {
   "$@" >"$step_log" 2>&1 || status=$?
   cat "$step_log"
   count_lines "$step_log"
+  step_verdict "$label" "$status"
   return "$status"
 }
 
@@ -144,9 +146,14 @@ run_step "stand-in, null backend and loopback stubs" bash -c \
   'cd standin && set -- --lib && for t in tests/*.rs; do n=$(basename "$t" .rs); [ "$n" = wire ] || set -- "$@" --test "$n"; done && cargo test --quiet --locked "$@"' || fail=1
 
 if [ "$wire" = yes ]; then
-  run_step "stand-in, wire against the stub" bash -c \
+  if run_step "stand-in, wire against the stub" bash -c \
     'cd standin && THINKTHEN_WIRE_REQUIRED=1 ENGINE_BASE_URL="$0" ENGINE_WIDTH=32 cargo test --quiet --test wire --locked -- --nocapture' \
-    "$stub_url" && wire_ran=$((wire_ran + 1)) || fail=1
+    "$stub_url"; then
+    wire_ran=$((wire_ran + 1))
+  else
+    fail=1
+    wire_failed=$((wire_failed + 1))
+  fi
 else
   printf '\n== stand-in, wire against the stub\n%s\n' "$skip_note"
   skipped=$((skipped + 1))
@@ -203,7 +210,7 @@ for surface in python typescript ruby r rust c; do
     port=$(surface_port "$surface")
     status=0
     run_surface "libraries/$surface" "$port" || status=$?
-    [ "$status" -eq 0 ] || fail=1
+    surface_verdict "$surface" "$status" || fail=1
     wire_verdict "$surface" "$port" "$status" || fail=1
   else
     echo "not landed: libraries/$surface"
@@ -214,7 +221,7 @@ for engine in duckdb sqlite postgresql; do
     port=$(surface_port "$engine")
     status=0
     run_surface "databases/$engine" "$port" || status=$?
-    [ "$status" -eq 0 ] || fail=1
+    surface_verdict "$engine" "$status" || fail=1
     wire_verdict "$engine" "$port" "$status" || fail=1
   else
     echo "not landed: databases/$engine"
@@ -243,7 +250,7 @@ fi
 
 run_step "host builds remap the builder's home" bash scripts/check_artifact_paths.sh || fail=1
 
-wire_word="$wire_ran of 10 wire suites ran in a passing surface, $wire_lost lost"
+wire_word="$wire_ran of 10 wire suites ran in a passing surface, $wire_failed in a failed surface, $wire_lost lost"
 if [ "$fail" -ne 0 ] || [ "$failed" -ne 0 ]; then
   echo "summary: green=$green skipped=$skipped diverged=$diverged failed=$failed (wire: $wire_word)"
   echo 'a surface check failed' >&2

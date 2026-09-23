@@ -17,11 +17,11 @@ stub_url="http://127.0.0.1:8214/v1"
 # toolchain, and its cargo reads .runtimes/cargo. Both are one-time steps
 # on a networked machine; the gate fails here and names them.
 if ! docker image inspect "$image" >/dev/null 2>&1 || [ Dockerfile -nt .runtimes/builder-image.built ]; then
-  echo "FAIL     ruby-builder: $image is missing or older than its Dockerfile; on a networked machine run ./build.sh in libraries/ruby once, then rerun"
+  echo "FAIL     surface-ruby: not set up ($image is missing or older than its Dockerfile; on a networked machine run ./build.sh in libraries/ruby once)"
   exit 1
 fi
 if [ ! -d .runtimes/cargo/registry ]; then
-  echo "FAIL     ruby-cargo-home: .runtimes/cargo is empty; on a networked machine run \`CARGO_HOME=.runtimes/cargo cargo fetch --locked\` in libraries/ruby once, then rerun"
+  echo "FAIL     surface-ruby: not set up (.runtimes/cargo is empty; on a networked machine run \`CARGO_HOME=.runtimes/cargo cargo fetch --locked\` in libraries/ruby once)"
   exit 1
 fi
 

@@ -1,6 +1,7 @@
 # Sourced by scripts/check_surfaces.sh and scripts/test_gate_lib.sh: the
 # gate's counting and its wire verdict. The caller owns the counters
-# (green, skipped, diverged, failed, wire_ran, wire_lost), step_log, and
+# (green, skipped, diverged, failed, wire_ran, wire_lost, wire_failed),
+# step_log, and
 # wire_expected (a space-padded list of ports whose stub must answer).
 # `skip` and `diverge` are defined once, in conformance/skiptable.py.
 
@@ -35,10 +36,38 @@ wire_verdict() {
       wire_lost=$((wire_lost + 1))
       return 1
     fi
+  elif grep -qE "^FAIL[[:space:]]+surface-$surface: not set up" "$step_log"; then
+    # The surface never started, so its wire suite never ran
+    # (surfaces-review-5: this read as "not in a passing surface").
+    if wire_expected_on "$port"; then
+      echo "FAIL     wire-$surface: the stub on $port was expected and the surface never started"
+      failed=$((failed + 1))
+      wire_lost=$((wire_lost + 1))
+      return 1
+    fi
   elif [ "$status" -eq 0 ]; then
     wire_ran=$((wire_ran + 1))
+  else
+    wire_failed=$((wire_failed + 1))
   fi
   return 0
+}
+
+# One surface's own verdict. A check.sh that exits nonzero is a counted
+# FAIL line, never only a step status (surfaces-review-5: DuckDB and
+# SQLite never ran, and the summary named only three name-check
+# failures). A surface that already printed its own `FAIL     surface-`
+# line (a missing one-time setup step) is not counted twice.
+surface_verdict() {
+  local surface=$1 status=$2 last
+  [ "$status" -eq 0 ] && return 0
+  if grep -qE "^FAIL[[:space:]]+surface-$surface:" "$step_log"; then
+    return 1
+  fi
+  last=$(grep -v '^[[:space:]]*$' "$step_log" | tail -n 1 | cut -c1-200)
+  echo "FAIL     surface-$surface: check.sh exited $status; last line: ${last:-(no output)}"
+  failed=$((failed + 1))
+  return 1
 }
 
 # Whether this run expects the stub on a port (the gate started it or
@@ -83,4 +112,18 @@ start_stub() {
     sleep 0.1
   done
   echo "stub on $port did not answer; its wire suites will skip"
+}
+
+# One gate step's verdict: a step that exits nonzero without a counted
+# failure line of its own gets one, so the summary names every failed
+# step (surfaces-review-5).
+step_verdict() {
+  local label=$1 status=$2 last
+  [ "$status" -eq 0 ] && return 0
+  if grep -qE '^(FAIL|not ok|# fail [1-9])' "$step_log"; then
+    return 0
+  fi
+  last=$(grep -v '^[[:space:]]*$' "$step_log" | tail -n 1 | cut -c1-200)
+  echo "FAIL     step $label: exited $status; last line: ${last:-(no output)}"
+  failed=$((failed + 1))
 }

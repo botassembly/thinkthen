@@ -13,7 +13,7 @@ step "build"
 # gate never fetches (surfaces-review-5). An empty cache fails here with
 # the one fetch to run on a networked machine.
 if ! npm ci --offline --no-audit --no-fund --silent; then
-  echo "FAIL     typescript-deps: npm's cache lacks a locked package; on a networked machine run \`npm ci\` in libraries/typescript once, then rerun"
+  echo "FAIL     surface-typescript: not set up (npm's cache lacks a locked package; on a networked machine run \`npm ci\` in libraries/typescript once)"
   exit 1
 fi
 # The gate's copy arms the stand-in's compile-time synthesized partial
