@@ -33,7 +33,7 @@
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::ffi::c_int;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -466,6 +466,31 @@ enum CheckedReadError {
     OverCap,
 }
 
+/// The part of `path` inside the directory, judged by spelling alone. The
+/// path may name the directory as configured or by its real path. A `..`
+/// step, a path outside both spellings, or the directory itself answers
+/// `None`. A relative path is taken from the working directory, as
+/// `open` takes it.
+fn beneath(path: &Path, base: &Path, real_base: &Path) -> Option<PathBuf> {
+    use std::path::Component;
+    let absolute = |spelled: &Path| -> Option<PathBuf> {
+        if spelled.is_absolute() {
+            Some(spelled.to_path_buf())
+        } else {
+            Some(std::env::current_dir().ok()?.join(spelled))
+        }
+    };
+    let path = absolute(path)?;
+    if path.components().any(|part| part == Component::ParentDir) {
+        return None;
+    }
+    let rel = path
+        .strip_prefix(absolute(base)?)
+        .or_else(|_| path.strip_prefix(real_base))
+        .ok()?;
+    (!rel.as_os_str().is_empty()).then(|| rel.to_path_buf())
+}
+
 /// Read `path` as a regular file of at most `cap` bytes, optionally
 /// confined to `base`, opening the path exactly once and validating the
 /// opened handle rather than the path (review 4, item 7): the flags carry
@@ -475,8 +500,10 @@ enum CheckedReadError {
 /// a path swapped between open and check still names the file this
 /// function holds.
 ///
-/// A confined read settles confinement before anything else about the
-/// file (review 5): the descriptor's own path must sit inside the base,
+/// A confined read refuses a path spelled outside the base before any
+/// open (review 6), then opens beneath the base (`openat2` on Linux).
+/// It settles confinement before anything else about the file
+/// (review 5): the descriptor's own path must sit inside the base,
 /// so an intermediate symlink cannot point out, and the file must carry
 /// exactly one link, so a hard link placed inside cannot name an outside
 /// file (and a file unlinked while held refuses too). Only then is the
@@ -492,13 +519,22 @@ fn read_within(
     confined: Option<&Path>,
 ) -> Result<String, CheckedReadError> {
     use std::io::Read;
-    use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
-    // Open once, never following the final component, never blocking.
-    let file = std::fs::OpenOptions::new()
-        .read(true)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
-        .open(path)
-        .map_err(|_| CheckedReadError::Refused)?;
+    use std::os::unix::fs::MetadataExt;
+    // A confined read judges the spelling before any open, so an outside
+    // path costs the same whether or not it exists, and no device behind
+    // it sees an open (review 6).
+    let real_base = match confined {
+        None => None,
+        Some(base) => Some(std::fs::canonicalize(base).map_err(|_| CheckedReadError::Refused)?),
+    };
+    let file = match (confined, &real_base) {
+        (Some(base), Some(real_base)) => {
+            let rel = beneath(path, base, real_base).ok_or(CheckedReadError::Refused)?;
+            descriptor_path::open_beneath(real_base, &rel)
+        }
+        _ => descriptor_path::open_plain(path),
+    }
+    .map_err(|_| CheckedReadError::Refused)?;
     // The metadata of what was opened, not of what the path names now.
     let meta = file.metadata().map_err(|_| CheckedReadError::Refused)?;
     // A fifo opened non-blocking, a character device, a directory: all
@@ -506,10 +542,9 @@ fn read_within(
     if !meta.is_file() {
         return Err(CheckedReadError::Refused);
     }
-    if let Some(base) = confined {
-        let base = std::fs::canonicalize(base).map_err(|_| CheckedReadError::Refused)?;
+    if let Some(real_base) = &real_base {
         let real = descriptor_path::of(&file).ok_or(CheckedReadError::Refused)?;
-        if meta.nlink() != 1 || !real.starts_with(&base) {
+        if meta.nlink() != 1 || !real.starts_with(real_base) {
             return Err(CheckedReadError::Refused);
         }
     }
@@ -1576,10 +1611,16 @@ mod mapping_tests {
             let made = unsafe { libc::mkfifo(spelled.as_ptr(), 0o644) };
             assert_eq!(made, 0);
             assert_eq!(read_within(&fifo, 1024, None), Err(CheckedReadError::Refused));
-            // An intermediate directory that is a symlink resolves on the
-            // descriptor, so a real file reached through it still reads.
+            // A confined path is spelled under the directory: an outside
+            // alias to it refuses, and an inside symlink that stays inside
+            // still reads.
             std::os::unix::fs::symlink("base", held.join("alias")).expect("the alias");
-            assert!(read_within(held.join("alias/inside.json").as_path(), 1024, Some(&base)).is_ok());
+            assert_eq!(
+                read_within(held.join("alias/inside.json").as_path(), 1024, Some(&base)),
+                Err(CheckedReadError::Refused)
+            );
+            std::os::unix::fs::symlink(".", base.join("here")).expect("the inside alias");
+            assert!(read_within(base.join("here/inside.json").as_path(), 1024, Some(&base)).is_ok());
         }
         // The cap: a file over it names the cap; one exactly at it reads.
         std::fs::write(held.join("base/big.json"), vec![b'x'; 2048]).expect("the big file writes");
@@ -1637,5 +1678,60 @@ mod mapping_tests {
             Err(CheckedReadError::OverCap)
         );
         let _ = std::fs::remove_dir_all(&held);
+    }
+
+    /// Review 6: an outside path refuses before any open, so its existence
+    /// shows in no timing and no device sees an open. A writer blocked on
+    /// an outside fifo wakes only when some reader opens it; it must stay
+    /// blocked through the confined read.
+    #[test]
+    fn an_outside_path_refuses_before_any_open() {
+        use std::os::unix::fs::OpenOptionsExt;
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let held = std::env::temp_dir().join(format!("thinkthen-unopened-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&held);
+        std::fs::create_dir_all(held.join("base")).expect("the base directory creates");
+        let base = held.join("base");
+        let fifo = held.join("pipe.json");
+        let spelled = std::ffi::CString::new(fifo.as_os_str().as_encoded_bytes())
+            .expect("the fifo path has no NUL");
+        // SAFETY: a NUL-terminated path the test owns.
+        assert_eq!(unsafe { libc::mkfifo(spelled.as_ptr(), 0o644) }, 0);
+        let (opening, opened) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(false)));
+        let writer = {
+            let (fifo, opening, opened) = (fifo.clone(), Arc::clone(&opening), Arc::clone(&opened));
+            std::thread::spawn(move || {
+                opening.store(true, Ordering::SeqCst);
+                let _held = std::fs::OpenOptions::new().write(true).open(&fifo);
+                opened.store(true, Ordering::SeqCst);
+            })
+        };
+        while !opening.load(Ordering::SeqCst) {
+            std::thread::yield_now();
+        }
+        // The writer is now at, or about to enter, its blocking open.
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::os::unix::fs::symlink("..", base.join("escape")).expect("the escaping alias");
+        let mut spellings = vec![fifo.clone(), base.join("../pipe.json"), base.join("./../pipe.json")];
+        // Spelled inside, reached through an inside symlink that leaves:
+        // only the kernel walk (`openat2` beneath the directory) stops it
+        // before the open.
+        if cfg!(target_os = "linux") {
+            spellings.push(base.join("escape/pipe.json"));
+        }
+        for path in &spellings {
+            assert_eq!(read_within(path, 1024, Some(&base)), Err(CheckedReadError::Refused));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let woke = opened.load(Ordering::SeqCst);
+        // Release the writer whatever happened, then judge.
+        let _reader = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_NONBLOCK)
+            .open(&fifo);
+        writer.join().expect("the writer joins");
+        let _ = std::fs::remove_dir_all(&held);
+        assert!(!woke, "a confined read opened a path outside its directory");
     }
 }
