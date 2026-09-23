@@ -26,7 +26,10 @@ The default cut of 0.5 says yes too often on knowledge questions. The recordings
 
 Ask: the trust page and a how-to show the loop on real labeled cases. The loop runs with `--details`, joins a truth file, and prints right and wrong at each cut. Ian set `report` aside for `jq` transforms (`specification/roadmap.md`). So the loop is a documented transform, and it must also cover relate edges and recognize names, not only yes/no rows.
 
-## Tuning the question, not the model
+## Prompt optimization: tuning the question, not the model
+
+Ian's word on 2026-09-23: this is prompt optimization, as GEPA does it. It is not fine-tuning.
+
 
 "You train nothing" stays true. What a user tunes is the question: its wording, the option descriptions, and the cut. The question file already carries the tuned cut with the question (`specification/question-file.md`, rule 8). Ask:
 
