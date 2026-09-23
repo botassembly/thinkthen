@@ -2,7 +2,7 @@
 
 Status: Open. Filed on the `surfaces` branch per ruling 9.
 
-The marketing page `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`
+The marketing page `the product deck's recognize-surfaces page (2026-09-21 semantic-commands deck)`
 draws the beta relations call for all three databases as
 
 ```sql
