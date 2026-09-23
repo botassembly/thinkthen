@@ -16,12 +16,17 @@ pub(crate) struct Cancel {
 }
 
 impl Cancel {
-    #[allow(
-        dead_code,
-        reason = "the command token stays unfired until the separately authorized signal ticket"
-    )]
+    #[cfg(test)]
     pub(crate) fn fire(&self) {
         self.fired.store(true, Ordering::Release);
+    }
+
+    pub(crate) fn reset(&self) {
+        self.fired.store(false, Ordering::Release);
+    }
+
+    pub(crate) fn flag(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.fired)
     }
 
     pub(crate) fn fired(&self) -> bool {

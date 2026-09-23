@@ -21,6 +21,8 @@ mod distribution_total;
 mod exchange;
 mod find;
 mod from_record;
+#[cfg(unix)]
+mod interrupt;
 mod json_syntax;
 mod keeping;
 mod limits;

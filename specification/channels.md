@@ -2,7 +2,7 @@
 
 Status: **Settled** for version one, by ADR 0007.
 
-`thinkthen` is an ordinary Unix program. Every command obeys these rules.
+`thinkthen` is an ordinary Unix program. Every command obeys these rules. On SIGINT, it stops starting work, finishes and flushes work already started, then terminates with the normal signal status.
 
 ## The five channels
 

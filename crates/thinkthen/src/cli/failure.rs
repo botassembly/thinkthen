@@ -10,14 +10,11 @@ use crate::core::{
     ReadingError, RecordError, RenderError, Source,
 };
 
-use crate::engine::error::Error as EngineError;
-use crate::engine::error::TransportKind;
+use crate::engine::error::{Error as EngineError, TransportKind};
 use crate::table;
 
 mod recording;
 mod status;
-
-use status::said;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
@@ -112,6 +109,7 @@ pub(crate) enum Failure {
         /// What stopped the record, which sets the exit code.
         cause: Box<Failure>,
     },
+    Cancelled,
     /// Standard input could not be read.
     Input(io::Error),
     /// Standard output could not be written.
@@ -178,6 +176,9 @@ pub(crate) fn report(failure: &Failure, mut writer: impl Write) -> ExitCode {
 /// calls itself once. The writer is a trait object, because a generic call
 /// into itself has no end.
 fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
+    if matches!(failure, Failure::Cancelled) {
+        return 130;
+    }
     if let Some(code) = stopped(failure, writer) {
         return code;
     }
@@ -219,7 +220,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
-        Failure::Status(status) => (4, said(*status)),
+        Failure::Status(status) => (4, status::said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::ReplayMiss(_)
         | Failure::Entry(_, _)
@@ -512,9 +513,7 @@ impl From<EngineError> for Failure {
             EngineError::Defect(message) => Self::Defect(message),
             EngineError::Usage(message) => Self::Usage(message),
             EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
-            EngineError::Cancelled => {
-                Self::Defect("an unavailable cancel token reached the command")
-            }
+            EngineError::Cancelled => Self::Cancelled,
             EngineError::Deadline => Self::Defect("an unavailable deadline reached the command"),
         }
     }

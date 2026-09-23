@@ -40,6 +40,7 @@ ACCEPTED_DEPENDENCIES = {
         "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook", "thiserror", "ureq"
     },
 }
+ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}}
 ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": {"proptest"}}
 MAX_FILE_LINES = 500
 INHERITED = {"workspace": True}
@@ -241,20 +242,31 @@ def check_crates() -> None:
             fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
         if set(manifest.get("dependencies", {})) != ACCEPTED_DEPENDENCIES[name]:
             fail("dependencies", f"{name} declares the accepted direct dependency set")
+        target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
+        if set(target) != ACCEPTED_TARGET_DEPENDENCIES[name]:
+            fail("dependencies", f"{name} declares the accepted target dependency set")
+        if target.get("nix") != {
+            "version": "0.29",
+            "default-features": False,
+            "features": ["signal"],
+            "optional": True,
+        }:
+            fail("dependencies", "nix is optional on Unix with only its signal feature")
         if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:
             fail("dependencies", f"{name} declares the accepted development dependency set")
         optional = {
-            name for name, dependency in manifest.get("dependencies", {}).items()
-            if isinstance(dependency, dict) and dependency.get("optional") is True
+            dependency for dependency, specification in
+            (manifest.get("dependencies", {}) | target).items()
+            if isinstance(specification, dict) and specification.get("optional") is True
         }
-        if optional != {"clap", "csv-core"}:
+        if optional != {"clap", "csv-core", "nix"}:
             fail("dependencies", "exactly the command dependencies are optional")
         binary = manifest.get("bin", [])
         if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
             fail("workspace", "the binary requires the cli feature")
         features = manifest.get("features", {})
         if features.get("default") != ["cli"] or set(features.get("cli", [])) != {
-            "dep:clap", "dep:csv-core",
+            "dep:clap", "dep:csv-core", "dep:nix",
         }:
             fail("dependencies", "the default cli feature selects only command dependencies")
 
@@ -819,7 +831,11 @@ def check_dependencies() -> None:
     resolved_names: set[str] = set()
     for name, identifier in members.items():
         resolved = {packages[dependency]["name"] for dependency in nodes[identifier]["dependencies"]}
-        accepted = ACCEPTED_DEPENDENCIES[name] | ACCEPTED_DEV_DEPENDENCIES[name]
+        accepted = (
+            ACCEPTED_DEPENDENCIES[name]
+            | ACCEPTED_TARGET_DEPENDENCIES[name]
+            | ACCEPTED_DEV_DEPENDENCIES[name]
+        )
         if resolved != accepted:
             fail("dependencies", f"{name} resolves the accepted direct dependency set, found {sorted(resolved)}")
 
@@ -863,7 +879,7 @@ def check_dependencies() -> None:
         return
     node = next(item for item in graph["resolve"]["nodes"] if item["id"] == package["id"])
     direct = {packages[item["pkg"]]["name"] for item in node["deps"]}
-    if direct & {"clap", "csv-core"}:
+    if direct & {"clap", "csv-core", "nix"}:
         fail("dependencies", "the default-features-off graph excludes command dependencies")
 
 

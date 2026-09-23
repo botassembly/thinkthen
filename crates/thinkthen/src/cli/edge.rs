@@ -25,8 +25,9 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 /// The environment the command reads, read once.
 ///
 /// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
-/// variable shortens the retry wait, and only a test sets it. The key itself is
-/// read later, by name, and only when a request is about to go out.
+/// variables shorten the retry wait and acknowledge SIGINT, and only tests set
+/// them. The key itself is read later, by name, and only when a request is about
+/// to go out.
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
@@ -36,7 +37,8 @@ pub(crate) struct Environment {
     config: Config,
     config_path: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
-    cancel: crate::engine::Cancel,
+    pub(super) sigint_ack: Option<PathBuf>,
+    pub(super) cancel: crate::engine::Cancel,
     usage: crate::engine::usage::Counters,
     usage_path: Option<PathBuf>,
 }
@@ -59,6 +61,7 @@ impl Environment {
             config,
             config_path,
             retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
+            sigint_ack: read("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             cancel: crate::engine::Cancel::default(),
             usage: crate::engine::usage::Counters::new(usage_path.clone()),
             usage_path,

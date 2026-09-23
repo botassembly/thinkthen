@@ -10,6 +10,7 @@ pub(crate) mod config;
 pub(crate) mod edge;
 pub(crate) mod failure;
 pub(crate) mod find;
+mod interrupt;
 pub(crate) mod judge;
 pub(crate) mod normalize;
 pub(crate) mod profile;
@@ -41,8 +42,12 @@ pub fn entry() -> ExitCode {
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
     }
-    let environment = match Environment::read() {
+    let mut environment = match Environment::read() {
         Ok(environment) => environment,
+        Err(failure) => return failure::report(&failure, stderr.lock()),
+    };
+    let activation = match interrupt::activate(&mut environment) {
+        Ok(activation) => activation,
         Err(failure) => return failure::report(&failure, stderr.lock()),
     };
     let result = run(&cli, &environment, stdout.lock());
@@ -55,7 +60,10 @@ pub fn entry() -> ExitCode {
         let _unwritten = writeln!(writer, "thinkthen: usage counters could not be updated; check the usage folder permissions and free space")
             .and_then(|()| writer.flush());
     }
-    code
+    match activation.finish(code) {
+        Ok(code) => code,
+        Err(failure) => failure::report(&failure, stderr.lock()),
+    }
 }
 
 fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitCode, Failure> {

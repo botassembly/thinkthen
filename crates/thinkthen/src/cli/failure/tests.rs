@@ -3,7 +3,7 @@ use crate::core::recording::{Entry, Exchange as Recorded};
 use crate::core::{
     LimitKind, ProfileError, ProfileLimit, ProfileName, QuestionSetError, RecordError, Url,
 };
-use crate::engine::error::TransportKind;
+use crate::engine::error::{Error as EngineError, TransportKind};
 use std::process::ExitCode;
 use std::time::Duration;
 
@@ -287,31 +287,54 @@ fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
 }
 
 #[test]
+fn cancellation_is_typed_and_silent_except_for_a_stopped_summary() {
+    assert!(matches!(
+        Failure::from(EngineError::Cancelled),
+        Failure::Cancelled
+    ));
+
+    let mut bare = Vec::new();
+    assert_eq!(report(&Failure::Cancelled, &mut bare), ExitCode::from(130));
+    assert!(bare.is_empty());
+}
+
+#[test]
 fn stopped_counts_use_record_only_at_one() {
     let cases = [
         (
             1,
             1,
+            Failure::Record(RecordError::TooLarge),
             "thinkthen: stopped at record 2; 1 record finished, 1 record from a recording\n",
         ),
         (
             2,
             0,
+            Failure::Record(RecordError::TooLarge),
             "thinkthen: stopped at record 3; 2 records finished, 0 records from a recording\n",
         ),
+        (
+            1,
+            1,
+            Failure::Cancelled,
+            "thinkthen: stopped at record 2; 1 record finished, 1 record from a recording\n",
+        ),
     ];
-    for (finished, replayed, summary) in cases {
+    for (finished, replayed, cause, summary) in cases {
+        let cancelled = matches!(cause, Failure::Cancelled);
         let failure = Failure::Stopped {
             at: finished + 1,
             finished,
             replayed,
             recording: true,
             held: false,
-            cause: Box::new(Failure::Record(RecordError::TooLarge)),
+            cause: Box::new(cause),
         };
         let mut written = Vec::new();
-        report(&failure, &mut written);
+        let code = report(&failure, &mut written);
         let said = String::from_utf8(written).expect("a diagnostic is text");
+        assert_eq!(code, ExitCode::from(if cancelled { 130 } else { 2 }));
+        assert_eq!(said == summary, cancelled);
         assert!(said.ends_with(summary), "{said}");
     }
 }
