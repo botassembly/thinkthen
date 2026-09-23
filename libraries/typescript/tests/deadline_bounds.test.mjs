@@ -15,7 +15,9 @@ import assert from 'node:assert/strict';
 
 import * as tt from '../index.mjs';
 
-const offline = process.env.ENGINE_NULL === '1';
+// THINKTHEN_NULL is the spelling check.sh sets; ENGINE_NULL is the old one
+// (surfaces-review-5: these proofs skipped in the gate).
+const offline = (process.env.THINKTHEN_NULL === '1' || process.env.ENGINE_NULL === '1');
 
 async function rejection(call) {
   try {

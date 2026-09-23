@@ -71,7 +71,12 @@ run_surface() {
   local dir=$1
   printf '\n== %s\n' "$dir"
   local status=0
-  (cd "$dir" && ./check.sh) >"$step_log" 2>&1 || status=$?
+  # A surface whose stub this run expects must not skip its wire tests:
+  # THINKTHEN_WIRE_REQUIRED=1 turns a lost stub into a failure inside the
+  # suites (surfaces-review-5: a stub that died mid-run passed green).
+  local required=
+  if wire_expected_on "$2"; then required=1; fi
+  (cd "$dir" && THINKTHEN_WIRE_REQUIRED=$required ./check.sh) >"$step_log" 2>&1 || status=$?
   cat "$step_log"
   count_lines "$step_log"
   return "$status"
@@ -93,30 +98,7 @@ fi
 # interrupt proofs need requests still in flight when they trip, and a
 # zero-delay stub lets whole batches finish before anything can stop them.
 # Only stubs this script starts are stopped.
-start_stub() {
-  local port=$1 delay=$2
-  if curl -sf --max-time 1 "http://127.0.0.1:$port/v1/stats" >/dev/null 2>&1; then
-    echo "stub already up on $port; using it"
-    wire_expected="$wire_expected$port "
-    return
-  fi
-  if [ ! -x "$stub_bin" ]; then
-    echo "no stub binary; wire suites on $port will skip"
-    return
-  fi
-  STUB_PORT=$port STUB_DELAY_MS=$delay "$stub_bin" >/dev/null 2>&1 &
-  stub_pids+=($!)
-  local _
-  for _ in $(seq 1 30); do
-    if curl -sf --max-time 1 "http://127.0.0.1:$port/v1/stats" >/dev/null 2>&1; then
-      echo "stub up on $port (delay ${delay}ms)"
-      wire_expected="$wire_expected$port "
-      return
-    fi
-    sleep 0.1
-  done
-  echo "stub on $port did not answer; its wire suites will skip"
-}
+# start_stub lives in scripts/gate_lib.sh, where its own test runs it.
 printf '\n== wire stubs\n'
 start_stub 8211 300   # python: the cancel proof needs a delay
 start_stub 8212 300   # typescript: the abort and deadline proofs need a delay
@@ -159,12 +141,17 @@ run_step "stand-in, null backend and loopback stubs" bash -c \
 
 if [ "$wire" = yes ]; then
   run_step "stand-in, wire against the stub" bash -c \
-    'cd standin && ENGINE_BASE_URL="$0" ENGINE_WIDTH=32 cargo test --quiet --test wire --locked -- --nocapture' \
-    "$stub_url" || fail=1
-  wire_ran=$((wire_ran + 1))
+    'cd standin && THINKTHEN_WIRE_REQUIRED=1 ENGINE_BASE_URL="$0" ENGINE_WIDTH=32 cargo test --quiet --test wire --locked -- --nocapture' \
+    "$stub_url" && wire_ran=$((wire_ran + 1)) || fail=1
 else
   printf '\n== stand-in, wire against the stub\n%s\n' "$skip_note"
   skipped=$((skipped + 1))
+  if wire_expected_on 8231; then
+    echo "FAIL     wire-standin: the stub on 8231 was expected and the wire suite did not run"
+    failed=$((failed + 1))
+    wire_lost=$((wire_lost + 1))
+    fail=1
+  fi
 fi
 
 run_step "conformance file" python3 conformance/tools/validate_conformance.py || fail=1
@@ -189,6 +176,8 @@ run_step "gate counting and wire-verdict tests" bash scripts/test_gate_lib.sh ||
 
 run_step "every build-tool call carries the lock" python3 scripts/check_locked_calls.py || fail=1
 
+run_step "lock-checker tests" python3 scripts/test_check_locked_calls.py || fail=1
+
 # Each surface lands in Phase B with a check of its own. A surface is
 # checked by running its slide sample against the stand-in and its slice of
 # the conformance file; the hook is the surface's folder, named here in the
@@ -203,16 +192,22 @@ surface_port() {
 }
 for surface in python typescript ruby r rust c; do
   if [ -x "libraries/$surface/check.sh" ]; then
-    run_surface "libraries/$surface" || fail=1
-    wire_verdict "$surface" "$(surface_port "$surface")" || fail=1
+    port=$(surface_port "$surface")
+    status=0
+    run_surface "libraries/$surface" "$port" || status=$?
+    [ "$status" -eq 0 ] || fail=1
+    wire_verdict "$surface" "$port" "$status" || fail=1
   else
     echo "not landed: libraries/$surface"
   fi
 done
 for engine in duckdb sqlite postgresql; do
   if [ -x "databases/$engine/check.sh" ]; then
-    run_surface "databases/$engine" || fail=1
-    wire_verdict "$engine" "$(surface_port "$engine")" || fail=1
+    port=$(surface_port "$engine")
+    status=0
+    run_surface "databases/$engine" "$port" || status=$?
+    [ "$status" -eq 0 ] || fail=1
+    wire_verdict "$engine" "$port" "$status" || fail=1
   else
     echo "not landed: databases/$engine"
   fi
@@ -226,19 +221,21 @@ if command -v cargo-zigbuild >/dev/null 2>&1 && command -v zig >/dev/null 2>&1; 
     bash -c 'cd databases/sqlite && ./package.sh --dry-run' || fail=1
 else
   printf '\n== package dry-run: databases/sqlite\n%s\n' \
-    'skipped: cargo-zigbuild or zig is not on PATH'
+    'skip     package-dry-run-sqlite: cargo-zigbuild or zig is not on PATH'
+  skipped=$((skipped + 1))
 fi
 if command -v cargo-pgrx >/dev/null 2>&1 && command -v pg_config >/dev/null 2>&1; then
   run_step "package dry-run: databases/postgresql" \
     bash -c 'cd databases/postgresql && ./package.sh --dry-run' || fail=1
 else
   printf '\n== package dry-run: databases/postgresql\n%s\n' \
-    'skipped: cargo-pgrx or pg_config is not on PATH'
+    'skip     package-dry-run-postgresql: cargo-pgrx or pg_config is not on PATH'
+  skipped=$((skipped + 1))
 fi
 
 run_step "host builds remap the builder's home" bash scripts/check_artifact_paths.sh || fail=1
 
-wire_word="$wire_ran of 10 wire suites ran, $wire_lost lost"
+wire_word="$wire_ran of 10 wire suites ran in a passing surface, $wire_lost lost"
 if [ "$fail" -ne 0 ] || [ "$failed" -ne 0 ]; then
   echo "summary: green=$green skipped=$skipped diverged=$diverged failed=$failed (wire: $wire_word)"
   echo 'a surface check failed' >&2

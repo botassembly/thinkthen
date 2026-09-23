@@ -55,6 +55,65 @@ count_lines "$step_log"
 expect "diverge green" "$green" 0
 expect "diverge counted" "$diverged" 1
 
+# A TAP skip or todo is a skip, never green.
+reset
+printf 'ok 1 - ran\nok 2 - held # SKIP no stub\nok 3 - later # TODO\n' >"$step_log"
+count_lines "$step_log"
+expect "tap green" "$green" 1
+expect "tap skipped" "$skipped" 2
+
+# A surface that failed before its wire section never ran it.
+reset
+wire_expected=" 8213 "
+printf 'FAIL     early\n' >"$step_log"
+wire_verdict rust 8213 1
+expect "failed surface wire ran" "$wire_ran" 0
+
+# The gate calls the verdict for every surface and hands each suite the
+# requirement, and the stand-in's own wire run carries it too.
+for needle in 'wire_verdict "$surface" "$port" "$status"' 'wire_verdict "$engine" "$port" "$status"' \
+  'THINKTHEN_WIRE_REQUIRED=$required ./check.sh' 'THINKTHEN_WIRE_REQUIRED=1 ENGINE_BASE_URL'; do
+  if ! grep -qF -- "$needle" scripts/check_surfaces.sh; then
+    echo "FAIL scripts/check_surfaces.sh no longer carries: $needle"
+    bad=1
+  fi
+done
+
+# A running stub with another delay is refused, and one with the asked
+# delay is reused. Ports 8640-8649 belong to this test.
+stub_bin=$PWD/tools/wire-stub/target/release/stub-backend
+stub_pids=()
+if [ -x "$stub_bin" ]; then
+  STUB_PORT=8640 STUB_DELAY_MS=0 "$stub_bin" >/dev/null 2>&1 &
+  held_pid=$!
+  trap 'rm -f "$step_log"; kill "$held_pid" 2>/dev/null || true' EXIT
+  for _ in $(seq 1 50); do
+    curl -sf --max-time 1 http://127.0.0.1:8640/v1/stats >/dev/null 2>&1 && break
+    sleep 0.1
+  done
+  reset; fail=0; wire_expected=" "
+  said=$(start_stub 8640 300; echo "failed=$failed fail=$fail expected=[$wire_expected]")
+  expect "a stub with another delay" "$said" "FAIL     stub on 8640: it answers with delay '0' ms and this run needs 300 ms; stop it or free the port
+failed=1 fail=1 expected=[ ]"
+  said=$(start_stub 8640 0; echo "expected=[$wire_expected]")
+  expect "a stub with the asked delay" "$said" "stub already up on 8640 with delay 0ms; using it
+expected=[ 8640 ]"
+  kill "$held_pid" 2>/dev/null || true
+  wait "$held_pid" 2>/dev/null || true
+else
+  echo "skip     stub-delay-refusal: no stub binary at tools/wire-stub/target/release"
+fi
+
+# A built artifact that carries the builder's home fails the gate's
+# artifact check, even when every build script carries the remap.
+planted=$(mktemp -d "${TMPDIR:-/tmp}/gate-artifact.XXXXXX")
+mkdir -p "$planted/release"
+printf 'x\0%s/src/lib.rs\0' "$HOME" >"$planted/release/libplanted.so"
+status=0
+said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh) || status=$?
+rm -rf "$planted"
+expect "a planted home path" "$status:$said" "1:FAIL     $planted/release/libplanted.so: 1 strings carry the builder's home"
+
 # Every surface check prints the counted spelling for its own wire skip.
 for pair in libraries/python:python libraries/typescript:typescript libraries/rust:rust \
   libraries/ruby:ruby libraries/r:r libraries/c:c databases/duckdb:duckdb \

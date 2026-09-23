@@ -96,7 +96,7 @@ async fn handle(
     let path = request.uri().path().to_owned();
     let answer = match (&method, path.as_str()) {
         (&Method::POST, "/v1/systemone") => Ok(answer_judgment(request, &stats, delay).await),
-        (&Method::GET, "/v1/stats") => Ok(stats_page(&stats)),
+        (&Method::GET, "/v1/stats") => Ok(stats_page(&stats, delay)),
         (&Method::POST, "/v1/reset") => {
             reset(&stats);
             Ok(text(StatusCode::OK, "{\"reset\":true}"))
@@ -144,9 +144,11 @@ async fn answer_judgment(
     text(StatusCode::OK, &reply.to_string())
 }
 
-/// The counters, as JSON text.
-fn stats_page(stats: &Stats) -> Response<Full<Bytes>> {
+/// The counters, as JSON text, with the delay this stub was started with
+/// so a caller can refuse a stub whose delay is not the one it needs.
+fn stats_page(stats: &Stats, delay: Duration) -> Response<Full<Bytes>> {
     let page = serde_json::json!({
+        "delay_ms": u64::try_from(delay.as_millis()).unwrap_or(u64::MAX),
         "requests": stats.requests.load(Ordering::Relaxed),
         "max_in_flight": stats.max_in_flight.load(Ordering::Relaxed),
         "connections": stats.connections.load(Ordering::Relaxed),

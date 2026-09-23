@@ -48,7 +48,7 @@ test('backend: a malformed reply is not retryable', { skip: process.env.THEN_TS_
   assert.match(held.message, /422|malformed/);
 });
 
-test('backend: a refused address is not retryable', { skip: process.env.ENGINE_NULL === '1' }, async () => {
+test('backend: a refused address is not retryable', { skip: (process.env.THINKTHEN_NULL === '1' || process.env.ENGINE_NULL === '1') }, async () => {
   // The addon reads the address once per process, so check.sh runs this
   // suite a second time in a child pointed at a dead port, with only this
   // test unskipped and THEN_TS_DEAD set.

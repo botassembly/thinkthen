@@ -30,7 +30,16 @@ rescue StandardError
   nil
 end
 
+# The gate sets THINKTHEN_WIRE_REQUIRED=1 when it started this stub, so a
+# lost stub or a stub without the delay fails instead of skipping
+# (surfaces-review-5).
+REQUIRED = ENV["THINKTHEN_WIRE_REQUIRED"] == "1"
+
 if stats.nil?
+  if REQUIRED
+    puts "FAIL interrupt wire proof: the stub on 8214 is required and did not answer"
+    exit 1
+  end
   puts "interrupt wire proof skipped: no stub on 8214"
   exit 0
 end
@@ -44,6 +53,11 @@ round_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 ThinkThen.decide(question, "I want a refund")
 round = Process.clock_gettime(Process::CLOCK_MONOTONIC) - round_started
 if round < 0.05
+  if REQUIRED
+    puts format("FAIL interrupt wire proof: the stub round is %.0f ms; the timing proof needs a delay",
+                round * 1000)
+    exit 1
+  end
   puts format("interrupt wire proof skipped: the stub round is %.0f ms; the timing proof needs a delay",
               round * 1000)
   exit 0

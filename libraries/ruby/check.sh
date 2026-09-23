@@ -109,6 +109,7 @@ if [ "$wire" = yes ]; then
       -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
     -e ENGINE_WIDTH=8 \
+    -e THINKTHEN_WIRE_REQUIRED="${THINKTHEN_WIRE_REQUIRED:-}" \
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_interrupt_wire.rb'
   echo "== ruby surface: interrupts are bounded on the wire (bulk one wave, single one request)"

@@ -11,7 +11,9 @@ import { getEventListeners } from 'node:events';
 
 import * as tt from '../index.mjs';
 
-const offline = process.env.ENGINE_NULL === '1';
+// THINKTHEN_NULL is the spelling check.sh sets; ENGINE_NULL is the old one
+// (surfaces-review-5: these proofs skipped in the gate).
+const offline = (process.env.THINKTHEN_NULL === '1' || process.env.ENGINE_NULL === '1');
 
 test('one shared AbortSignal gains no listener per call', { skip: !offline }, async () => {
   const controller = new AbortController();

@@ -12,8 +12,16 @@ fn engine() -> Engine {
 }
 
 fn stub_is_configured() -> bool {
-    std::env::var_os("ENGINE_BASE_URL").is_some()
-        || std::env::var_os("THINKTHEN_BASE_URL").is_some()
+    let named = std::env::var_os("ENGINE_BASE_URL").is_some()
+        || std::env::var_os("THINKTHEN_BASE_URL").is_some();
+    // The gate sets THINKTHEN_WIRE_REQUIRED=1; a null run names no stub.
+    let null = std::env::var_os("ENGINE_NULL").is_some()
+        || std::env::var_os("THINKTHEN_NULL").is_some();
+    assert!(
+        named || null || std::env::var("THINKTHEN_WIRE_REQUIRED").as_deref() != Ok("1"),
+        "the stub is required (THINKTHEN_WIRE_REQUIRED=1) and no stub is named"
+    );
+    named
 }
 
 struct Ticket {

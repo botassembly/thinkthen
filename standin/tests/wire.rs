@@ -71,7 +71,14 @@ fn stub(path: &str) -> String {
 
 /// Whether the stub answers its stats door.
 fn stub_up() -> bool {
-    stub_client().get(stub("/stats")).call().is_ok()
+    let up = stub_client().get(stub("/stats")).call().is_ok();
+    // The gate sets THINKTHEN_WIRE_REQUIRED=1 when it started this stub.
+    assert!(
+        up || std::env::var("THINKTHEN_WIRE_REQUIRED").as_deref() != Ok("1"),
+        "the stub is required (THINKTHEN_WIRE_REQUIRED=1) and did not answer at {}",
+        stub("/stats")
+    );
+    up
 }
 
 /// The stub's counters as JSON.
