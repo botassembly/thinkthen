@@ -362,9 +362,9 @@ fn install_cancel() -> &'static Cancel {
 ///
 /// A pointer, not a set-once cell, so an install that finds SIGINT
 /// changed beneath it records the action it actually replaced (review 7
-/// verification). The handler reads it with one atomic load. A replaced
-/// record is leaked, once per such install, because a handler may be
-/// reading it.
+/// verification). The handler reads it with one atomic load. Each install
+/// that reads SIGINT, failed or raced ones included, leaks the record it
+/// replaces, because a handler may be reading it.
 static HOST_ACTION: AtomicPtr<libc::sigaction> = AtomicPtr::new(std::ptr::null_mut());
 
 /// Record `action` as the host's, for the handler to chain to.
@@ -401,7 +401,7 @@ extern "C" fn on_interrupt(
     // registry walk locks and allocates, so it runs there (review 5,
     // finding 1: walking it here deadlocked a thread that held it).
     crate::connections::wake_interrupt_bridge();
-    // A OnceLock read locks nothing: taking a mutex in a signal
+    // An atomic load locks nothing: taking a mutex in a signal
     // handler can deadlock against the thread the signal interrupted
     // (review 4).
     let recorded = HOST_ACTION.load(Ordering::SeqCst);
