@@ -30,9 +30,16 @@ docker run --rm \
   -w /src/libraries/ruby \
   "$image" \
   bash -eu -c "
+    # The container builds offline: every crate the lockfile names lives
+    # in CARGO_HOME, inside the mounted repository, so no build needs the
+    # network. The first pull is the one network step: on a fresh clone,
+    # run `cargo fetch --locked` in this folder once, which populates
+    # .runtimes/cargo; every later build — here and in check.sh — passes
+    # --offline and needs none. --locked refuses lockfile drift the gem
+    # would otherwise swallow silently.
     export PATH=\$(ls -d /root/.rustup/toolchains/*/bin | head -1):\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo
     mkdir -p lib/thinkthen
-    cargo build --release $features
+    cargo build --release --locked --offline $features
     cp target/release/libthinkthen_native.so lib/thinkthen/thinkthen.so
     gem build thinkthen.gemspec --silent >/dev/null
   "
