@@ -109,17 +109,25 @@ slice proves it: case 13's `nearest_level` (`mid`) is compared against
   `pg_read_server_files` (PostgreSQL's own rule for server-file reads,
   which superusers satisfy) or read inside the one directory an
   administrator configured as `thinkthen.file_directory`. The path is
-  opened once and never through a symlink as its last component; a
-  symlink in a middle directory is followed. Confinement judges the
-  opened file itself: its own path must sit inside the directory, and it
-  must have exactly one link, so a hard link placed inside cannot name
-  an outside file. Linux reads that path from `/proc/self/fd` and macOS
-  from `fcntl(F_GETPATH)`; any other platform refuses every confined
-  read. Confinement is settled before the size, so a path outside the
-  directory gets the one refusal whatever its size, and only a file the
-  role may read can answer "over the cap". Every unreadable cause
+  opened once and never through a symlink as its last component. A
+  confined path must be spelled inside the directory, by its configured
+  name or its real path, with no `..` step. That check runs before any
+  open, so a path outside costs the same whether or not it exists, and
+  no device behind it sees an open. On Linux the kernel then walks the
+  path beneath the directory (`openat2` with `RESOLVE_BENEATH`), so an
+  inside symlink that leaves refuses before it reaches the outside
+  name. A kernel or sandbox without `openat2` (probed once per
+  process) falls back to a plain open. The fallback follows an inside
+  symlink that points out, so that open reaches the outside file and
+  its timing shows. The checks below still refuse the read. Confinement then judges the opened file itself: its own path
+  must sit inside the directory, and it must have exactly one link, so
+  a hard link placed inside cannot name an outside file. Linux reads
+  that path from `/proc/self/fd` and macOS from `fcntl(F_GETPATH)`; any
+  other platform refuses every confined read. Confinement is settled
+  before the size, so only a file the role may read can answer "over
+  the cap". Every unreadable cause
   carries one message, so a refused read tells nothing about the
-  filesystem (review 3, items 2 and 8; review 4, item 7; review 5). `thinkthen_relate` reads no file: it
+  filesystem (review 3, items 2 and 8; review 4, item 7; reviews 5 and 6). `thinkthen_relate` reads no file: it
   runs the query text it is given through SPI. Nothing else is read.
 - **An update's new functions.** The event trigger re-revokes PUBLIC on
   functions the extension itself creates, and only those: an

@@ -439,30 +439,92 @@ struct Watch {
 /// with no watcher thread, so the child never touches it: the first watch
 /// in a new process builds a fresh hub and its own thread, and the
 /// inherited one is left alone (review 5, item 12: a child's interrupt
-/// was lost, and a fork during a tick hung the child on the lock). No
-/// `pthread_atfork` handler is used, because a handler would outlive an
-/// unloaded extension.
+/// was lost, and a fork during a tick hung the child on the lock). A hub
+/// is this process's when both its pid and its fork generation match. A
+/// `pthread_atfork` child handler bumps the generation, so a descendant
+/// that reuses the builder's pid still builds its own (review 6). The
+/// handler is installed only after the library pins itself in memory, so
+/// it can never outlive an unloaded extension. A library that cannot pin
+/// itself keys on the pid alone.
 struct Hub {
     pid: u32,
+    generation: u64,
     watches: Mutex<Vec<Watch>>,
     wake: Condvar,
 }
 
+impl Hub {
+    fn is_current(&self) -> bool {
+        self.pid == std::process::id() && self.generation == FORK_GENERATION.load(Ordering::Acquire)
+    }
+}
+
 static HUB: AtomicPtr<Hub> = AtomicPtr::new(std::ptr::null_mut());
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+/// Bumped in every forked child by the handler `watch_forks` installs.
+static FORK_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+extern "C" fn forked_child() {
+    FORK_GENERATION.fetch_add(1, Ordering::AcqRel);
+}
+
+/// Pin this library and install the fork handler. `INSTALLED` is set
+/// only after the handler is registered, so a fork racing the first call
+/// leaves a child that installs it again; a second registration only
+/// bumps the generation twice. A failed pin is remembered and not retried.
+fn watch_forks() {
+    use std::sync::atomic::AtomicBool;
+    static INSTALLED: AtomicBool = AtomicBool::new(false);
+    static UNPINNED: AtomicBool = AtomicBool::new(false);
+    if INSTALLED.load(Ordering::Acquire) || UNPINNED.load(Ordering::Acquire) {
+        return;
+    }
+    if !pinned() {
+        UNPINNED.store(true, Ordering::Release);
+        return;
+    }
+    // SAFETY: the handler only bumps an atomic, which is async-signal-safe,
+    // and its code stays mapped because the library is pinned.
+    if unsafe { libc::pthread_atfork(None, None, Some(forked_child)) } == 0 {
+        INSTALLED.store(true, Ordering::Release);
+    }
+}
+
+/// Keep this library loaded for the life of the process: reopen it by
+/// the name the loader gave it, with `RTLD_NODELETE`, and never close the
+/// handle. The watcher thread's code needs this as much as the handler.
+#[cfg(not(test))]
+fn pinned() -> bool {
+    let mut info: libc::Dl_info = unsafe { std::mem::zeroed() };
+    // SAFETY: `dladdr` fills `info` for an address inside a loaded image.
+    let found = unsafe { libc::dladdr(forked_child as *const libc::c_void, &mut info) };
+    if found == 0 || info.dli_fname.is_null() {
+        return false;
+    }
+    // SAFETY: a name the loader owns; NOLOAD only reopens what is loaded.
+    let flags = libc::RTLD_NOW | libc::RTLD_NOLOAD | libc::RTLD_NODELETE;
+    !unsafe { libc::dlopen(info.dli_fname, flags) }.is_null()
+}
+
+/// A test binary is the executable itself, which never unloads.
+#[cfg(test)]
+fn pinned() -> bool {
+    true
+}
 
 /// This process's hub, built with its thread on first use here.
 fn hub() -> &'static Hub {
-    let pid = std::process::id();
+    watch_forks();
     let current = HUB.load(Ordering::Acquire);
     // SAFETY: a published hub is leaked and never freed.
     if let Some(held) = unsafe { current.as_ref() }
-        && held.pid == pid
+        && held.is_current()
     {
         return held;
     }
     let fresh = Box::into_raw(Box::new(Hub {
-        pid,
+        pid: std::process::id(),
+        generation: FORK_GENERATION.load(Ordering::Acquire),
         watches: Mutex::new(Vec::new()),
         wake: Condvar::new(),
     }));
@@ -478,7 +540,7 @@ fn hub() -> &'static Hub {
         }
         Err(winner) => {
             // Another thread of this process published first; its hub
-            // carries this pid, because the inherited one was `current`.
+            // is current, because the inherited one was `current`.
             // SAFETY: `fresh` was never published.
             drop(unsafe { Box::from_raw(fresh) });
             // SAFETY: a published hub is never freed.
@@ -1874,6 +1936,36 @@ mod mapping_tests {
             "the forked child's interrupt never armed its token"
         );
         drop(parent);
+    }
+
+    /// Review 6: a hub is keyed on the fork generation as well as the
+    /// pid, so a descendant that reuses the builder's pid still builds
+    /// its own. A hub carrying this pid but an earlier generation is not
+    /// this process's, and a fork bumps the generation in the child.
+    #[test]
+    fn a_hub_from_before_a_fork_is_never_current() {
+        let hub = hub();
+        assert!(hub.is_current());
+        let stale = Hub {
+            pid: std::process::id(),
+            generation: hub.generation.wrapping_sub(1),
+            watches: Mutex::new(Vec::new()),
+            wake: Condvar::new(),
+        };
+        assert!(!stale.is_current(), "a pid match alone made an inherited hub current");
+        let before = FORK_GENERATION.load(Ordering::SeqCst);
+        // SAFETY: the child reads one atomic and leaves with `_exit`.
+        let pid = unsafe { libc::fork() };
+        assert!(pid >= 0, "fork failed");
+        if pid == 0 {
+            let bumped = FORK_GENERATION.load(Ordering::SeqCst) != before;
+            unsafe { libc::_exit(if bumped { 0 } else { 3 }) };
+        }
+        let mut status = 0;
+        // SAFETY: waits for the child this test forked.
+        unsafe { libc::waitpid(pid, &mut status, 0) };
+        assert!(libc::WIFEXITED(status), "the child died: {status}");
+        assert_eq!(libc::WEXITSTATUS(status), 0, "the fork left the generation unchanged");
     }
 
     #[test]
