@@ -93,6 +93,23 @@ struct ResolvedConfig {
     width: usize,
 }
 
+/// Parse one environment switch as a value, so `THINKTHEN_NULL=0` and
+/// `=false` mean OFF rather than enabling the in-process backend by the
+/// accident of being set (review finding, 2026-09-22).
+///
+/// An unrecognized spelling also means OFF: a typo never invents answers,
+/// and a test that needs the null backend must spell its switch correctly.
+fn env_bool(name: &str, older: &str) -> Option<bool> {
+    let value = std::env::var(name)
+        .ok()
+        .or_else(|| std::env::var(older).ok())?;
+    match value.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" | "t" => Some(true),
+        "0" | "false" | "no" | "off" | "f" | "" => Some(false),
+        _ => None,
+    }
+}
+
 impl ResolvedConfig {
     /// Resolve one engine value's knobs: every config field set wins, the
     /// environment answers for what it leaves unset, and the built-in
@@ -107,7 +124,7 @@ impl ResolvedConfig {
             setting(name, older).and_then(|value| value.parse::<u64>().ok())
         };
         Self {
-            null: setting("THINKTHEN_NULL", "ENGINE_NULL").is_some(),
+            null: env_bool("THINKTHEN_NULL", "ENGINE_NULL").unwrap_or(false),
             base: config
                 .address
                 .clone()
@@ -1302,12 +1319,69 @@ fn state_lookup(pid: u32, settings: &ResolvedConfig) -> Option<Arc<Inner>> {
 }
 
 #[cfg(test)]
+/// The one backend-availability helper every surface's test suites call,
+/// so a bare `cargo test` never silently passes a suite that only ran under
+/// the gate's environment (review finding, 2026-09-22).
+///
+/// [`testkit::backend_kind`] recognizes the settled `THINKTHEN_` spellings
+/// and the deprecated `ENGINE_` ones, and [`testkit::skip_note`] renders the
+/// visible skip a suite prints when no backend is reachable. A surface's
+/// runner replaces its private early-return with one call:
+///
+/// ```text
+/// if let Some(note) = thinkthen_standin::testkit::skip_note("verbs") {
+///     println!("SKIP {note}");
+///     return;
+/// }
+/// ```
+pub mod testkit {
+    /// Which backend a bare test run can reach, if any.
+    ///
+    /// `Some("null")` is the in-process backend (`THINKTHEN_NULL` parsed as
+    /// a value, so `=0` does not arm it), `Some("wire")` is a stub named by
+    /// `THINKTHEN_BASE_URL`, and `None` means no backend is reachable.
+    #[must_use]
+    pub fn backend_kind() -> Option<&'static str> {
+        if super::env_bool("THINKTHEN_NULL", "ENGINE_NULL") == Some(true) {
+            return Some("null");
+        }
+        let set = |name: &str| {
+            std::env::var(name)
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+                .is_some()
+        };
+        if set("THINKTHEN_BASE_URL") || set("ENGINE_BASE_URL") {
+            return Some("wire");
+        }
+        None
+    }
+
+    /// The skip a suite prints when no backend is reachable: `None` when a
+    /// backend exists and the suite must run.
+    ///
+    /// The note names the suite and the switch that arms the in-process
+    /// backend, so a reader of a bare `cargo test` log sees the skip and how
+    /// to end it.
+    #[must_use = "the skip must be printed, never swallowed"]
+    pub fn skip_note(suite: &str) -> Option<String> {
+        backend_kind().map_or_else(
+            || {
+                Some(format!(
+                    "{suite}: no backend is reachable; set THINKTHEN_NULL=1 for the in-process backend or THINKTHEN_BASE_URL for a stub"
+                ))
+            },
+            |_| None,
+        )
+    }
+}
+
 mod tests {
     use std::sync::Mutex as StdMutex;
     use std::sync::MutexGuard as StdMutexGuard;
 
     use thinkthen_contract::{
-        Annotated, Answer, Engine, ErrorKind, Options, Question, QuestionSet,
+        Annotated, Answer, Engine, EngineConfig, ErrorKind, Options, Question, QuestionSet,
     };
 
     use super::BlockingEngine;
@@ -1331,6 +1405,68 @@ mod tests {
     #[cfg(feature = "synthetic-partial")]
     fn synthetic() -> StdMutexGuard<'static, ()> {
         null()
+    }
+
+    /// Run one environment scenario under the null seat, restoring the
+    /// seat's own switch afterwards. Sound for the same reason `null` is:
+    /// every reader of these variables waits on the seat.
+    fn switches(scenario: impl FnOnce()) {
+        let _seat = null();
+        // Sound in this binary: the seat is held (see `null`).
+        unsafe {
+            std::env::remove_var("ENGINE_NULL");
+            std::env::remove_var("THINKTHEN_NULL");
+            std::env::remove_var("THINKTHEN_BASE_URL");
+            std::env::remove_var("ENGINE_BASE_URL");
+        }
+        scenario();
+        // Sound in this binary: the seat is still held.
+        unsafe { std::env::set_var("ENGINE_NULL", "1") };
+    }
+
+    /// `THINKTHEN_NULL` is parsed as a value: `=0` and `=false` mean OFF,
+    /// only truthy spellings arm the in-process backend, and a typo means
+    /// OFF rather than inventing answers (review finding 16).
+    #[test]
+    fn the_null_switch_is_parsed_as_a_value() {
+        let resolve_null = || super::ResolvedConfig::resolve(&EngineConfig::default()).null;
+        switches(|| {
+            unsafe { std::env::set_var("THINKTHEN_NULL", "0") };
+            assert!(!resolve_null(), "THINKTHEN_NULL=0 must not arm the null backend");
+            unsafe { std::env::set_var("THINKTHEN_NULL", "false") };
+            assert!(!resolve_null(), "THINKTHEN_NULL=false must not arm the null backend");
+            unsafe { std::env::set_var("THINKTHEN_NULL", "1") };
+            assert!(resolve_null(), "THINKTHEN_NULL=1 arms the null backend");
+            unsafe { std::env::set_var("THINKTHEN_NULL", "true") };
+            assert!(resolve_null(), "THINKTHEN_NULL=true arms the null backend");
+            unsafe { std::env::set_var("THINKTHEN_NULL", "flase") };
+            assert!(!resolve_null(), "a typo means OFF, never an invented answer");
+            unsafe { std::env::remove_var("THINKTHEN_NULL") };
+            unsafe { std::env::set_var("ENGINE_NULL", "0") };
+            assert!(!resolve_null(), "the deprecated ENGINE_NULL=0 means OFF too");
+        });
+    }
+
+    /// The shared test helper recognizes both spellings, refuses to call
+    /// `=0` a backend, and renders a visible skip naming the way out
+    /// (review finding: tests that silently pass without a backend).
+    #[test]
+    fn the_testkit_reports_a_visible_skip() {
+        switches(|| {
+            assert_eq!(super::testkit::backend_kind(), None, "nothing is reachable by default");
+            let note = super::testkit::skip_note("verbs").expect("a skip is rendered");
+            assert!(note.contains("verbs"), "the note names the suite");
+            assert!(note.contains("THINKTHEN_NULL=1"), "the note names the switch");
+            unsafe { std::env::set_var("THINKTHEN_NULL", "0") };
+            assert_eq!(super::testkit::backend_kind(), None, "=0 is not a backend");
+            assert!(super::testkit::skip_note("verbs").is_some(), "=0 still skips visibly");
+            unsafe { std::env::set_var("THINKTHEN_NULL", "1") };
+            assert_eq!(super::testkit::backend_kind(), Some("null"));
+            assert_eq!(super::testkit::skip_note("verbs"), None, "a real backend runs the suite");
+            unsafe { std::env::remove_var("THINKTHEN_NULL") };
+            unsafe { std::env::set_var("THINKTHEN_BASE_URL", "http://127.0.0.1:9/v1") };
+            assert_eq!(super::testkit::backend_kind(), Some("wire"));
+        });
     }
 
     /// Every verb answers on the null backend with the conformance
