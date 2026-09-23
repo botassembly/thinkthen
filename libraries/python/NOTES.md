@@ -739,3 +739,60 @@ owner.
 
 `./check.sh` at the committed tree: exit 0, `78 passed, 0 failed, 6 skipped`
 (offline stages), the crate's 7 Rust tests green.
+
+## The fourth review's python items, closed with probes (2026-09-23)
+
+Item 3, the Arrow crash family: the per-string cap came down from 64 MiB to
+4 MiB, because the C data interface carries no buffer lengths and the cap
+is the only bound the door can enforce; the reviewer's own probe — a view
+at offset 60,000,000 over a 100-byte buffer — names sixty million, past
+the cap, and refuses before any read. Null tables (buffers, offsets,
+children in a frame root) refuse; a 2^40 length refuses instead of
+aborting `Vec::with_capacity`; negative lengths refuse; the data-buffer
+count arithmetic is pinned at its boundary (index == count refused), and
+the conformant two-data-buffer round trip — the layout real producers
+export, with an inline view — passes where the old unit tests built
+layouts producers do not make.
+
+Fail-then-pass, grafted onto the old code (the test module lifted onto the
+pre-fix validation):
+
+- `the_reviewers_sixty_million_offset_is_refused` — old: SIGSEGV; new: ok.
+- `a_two_to_the_forty_length_is_refused_not_allocated` — old: SIGABRT; new: ok.
+- `a_null_buffer_table_is_refused_not_dereferenced` — old: SIGSEGV; new: ok.
+- `a_null_offsets_pointer_is_refused` — old: panic/abort; new: ok.
+- `view_index_equal_to_the_data_count_is_refused` — refused on both: the
+  boundary pin, answering the review's off-by-one claim with a test.
+
+Item 14, signals: `step` now runs every call on a worker holding the
+call's own cancel token while the calling thread polls
+`py.check_signals`, so a signal lands on the token before the next
+request and the raise returns without waiting for the in-flight send.
+Fail-then-pass through `tests/test_review4_signals.py` against the
+counting stub: old code — both signal tests FAIL (the raise held behind
+the send, and the score column ran on); new code — 3 passed. The stub
+counts the requests: one signal, one served request, and a column stops
+before its later rows.
+
+Item 15: the builder refuses two verbs ("question() takes one verb") —
+fail-then-pass: old extension FAILED the new test (the old
+'options-does-not-belong' message), new passes. The pandas advice is
+`pd.Series(answers, index=text.index)` on every docstring that names it,
+because the zero-indexed form turns every aligned join into NaN on a
+non-default index — pinned by a test that builds the NaN shape first.
+
+Leftovers: the review-3 suites and the review-4 signal suite run from
+`check.sh` in their own stages; `thinkthen/py.typed` and
+`thinkthen/__init__.pyi` carry the typed face (every name in the stub
+exists at runtime, verified); the wheel is tagged `manylinux_2_34` and
+matches the glibc floor the extension needs (verified by building it);
+cross-kind calls refuse as usage naming the question's own kind, not as
+backend answer-shape errors (old: `kind: backend`; new: UsageError), and
+the one test that expected the ambiguity wording for a cross-kind call
+was corrected to expect the kind wording.
+
+One operational note: a `git stash` in this shared worktree popped the
+build team's preserved ticket-0074 stash; the tree was restored by
+command (conflicts resolved to the pre-pop side, the stash's untracked
+files removed, the stash entry itself left intact in the list for its
+owner). File copies under /tmp are the only safe swap here.
