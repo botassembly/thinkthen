@@ -887,3 +887,9 @@ wording, which is the point of finding 8's fix.
 
 The full check at this tree: exit 0, 223 ok, wire skipped without the
 stub on 8217.
+
+## The fifth review's DuckDB findings (2026-09-23)
+
+Each finding was reproduced on 398d7bb first, then fixed, then rerun.
+
+- **The check failed on a fresh tree.** `check.sh` never created `build/fixture`, so the metadata append failed with "No such file or directory". The fixture build also ran twice. The directory is now made, and the second copy is gone.

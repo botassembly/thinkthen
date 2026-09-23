@@ -31,6 +31,9 @@ echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
 # door test. The default extension stays the one every other step loads.
 DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
   cargo build --locked --release --quiet --features synthetic-partial
+# A fresh checkout has no build/fixture yet (review 5: the append failed
+# with "No such file or directory" on a clean tree).
+mkdir -p build/fixture
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
   -o build/fixture/thinkthen.duckdb_extension \
   -l target/release/libthinkthen.$LIB_EXT \
@@ -94,20 +97,6 @@ echo "== duckdb surface: the host's SIGINT coexistence, the job-2 shape"
 
 echo "== duckdb surface: the function examples"
 python3 tools/examples.py
-
-echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
-# The stand-in's partial-failure opt-in is a compile-time door, so the one
-# conformance case that replays the failed marker (74) runs against a
-# second build that carries it, exactly the way the C surface builds its
-# door test. The default extension stays the one every other step loads.
-DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
-  cargo build --locked --release --quiet --features synthetic-partial
-./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
-  -l target/release/libthinkthen.$LIB_EXT \
-  -o build/fixture/thinkthen.duckdb_extension \
-  -n thinkthen -dv "$DUCKDB_VERSION" \
-  -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
-test -s build/fixture/thinkthen.duckdb_extension
 
 echo "== duckdb surface: conformance slice"
 python3 tools/conformance.py
