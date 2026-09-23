@@ -1063,14 +1063,15 @@ impl SchemaTree {
     }
 
     /// The struct node every frame hands out: the `+s` format, no name,
-    /// and the caller's own schema metadata when it has some.
+    /// and the caller's own schema metadata when it has some. `memory`
+    /// checks that metadata; a table built whole passes none and `None`.
     fn branch(
         &mut self,
         children: Vec<*mut ArrowSchema>,
         metadata: *const c_char,
-        memory: &Readable,
+        memory: Option<&Readable>,
     ) -> PyResult<*mut ArrowSchema> {
-        let metadata = self.metadata(metadata, Some(memory))?;
+        let metadata = self.metadata(metadata, memory)?;
         let format =
             CString::new("+s").map_err(|_| UsageError::new_err("a column format holds a NUL"))?;
         let format_ptr = format.as_ptr();
@@ -1210,7 +1211,7 @@ pub(crate) fn build_frame(
     for (place, name) in names.iter().enumerate() {
         schema_children.push(schema.leaf(Some(name), formats_for_new[place], 2)?);
     }
-    let schema_root = schema.branch(schema_children, hold.schema.metadata, &memory)?;
+    let schema_root = schema.branch(schema_children, hold.schema.metadata, Some(&memory))?;
     let _ = schema_root;
     // One batch out per batch in, so aliased originals stay per-batch and
     // every batch keeps its own root.
@@ -1496,7 +1497,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
     for (name, value) in columns {
         schema_children.push(schema.leaf(Some(name), value.format(), 2)?);
     }
-    let schema_root = schema.branch(schema_children, std::ptr::null(), &Readable::snapshot()?)?;
+    let schema_root = schema.branch(schema_children, std::ptr::null(), None)?;
     let _ = schema_root;
 
     let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);

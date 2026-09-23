@@ -159,3 +159,66 @@ def test_a_guard_page_is_refused_without_process_vm_readv():
     )
     assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
     assert done.stdout.strip() == "refused: the column's buffers declare bytes this process cannot read"
+
+
+# Review 7, third pass: a frame this surface builds whole reads no
+# producer memory, so it must not need the memory map. This child process
+# forbids every file open (EACCES through seccomp) after its imports. The
+# frame door still builds, and a column read gets the map refusal instead
+# of an unchecked read.
+NO_OPEN = r"""
+import ctypes as C
+import polars as pl
+import pyarrow as pa
+import thinkthen as tt
+from thinkthen import _thinkthen as native
+
+# One call first, so every module the door imports lazily is loaded
+# before the filter blocks file opens.
+tt.decide_many("Is this a refund?", pa.chunked_array([pa.array(["hi"])]))
+native._probe_frame_rebuild(pl.DataFrame())
+libc = C.CDLL(None, use_errno=True)
+class Filter(C.Structure):
+    _fields_ = [("code", C.c_uint16), ("jt", C.c_uint8), ("jf", C.c_uint8), ("k", C.c_uint32)]
+class Program(C.Structure):
+    _fields_ = [("len", C.c_uint16), ("filter", C.POINTER(Filter))]
+ALLOW, EACCES = 0x7FFF0000, 0x00050000 | 13
+# open (2), openat (257), and openat2 (437) answer EACCES on x86_64.
+rules = (Filter * 9)(
+    Filter(0x20, 0, 0, 4), Filter(0x15, 1, 0, 0xC000003E), Filter(0x06, 0, 0, ALLOW),
+    Filter(0x20, 0, 0, 0), Filter(0x15, 2, 0, 2), Filter(0x15, 1, 0, 257), Filter(0x15, 0, 1, 437),
+    Filter(0x06, 0, 0, EACCES), Filter(0x06, 0, 0, ALLOW))
+assert libc.prctl(38, 1, 0, 0, 0) == 0 and libc.prctl(22, 2, C.byref(Program(9, rules)), 0, 0) == 0
+try:
+    open("/proc/self/maps").close()
+    raise SystemExit("the filter did not hold")
+except PermissionError:
+    pass
+native._probe_frame_rebuild(pl.DataFrame())
+print("table built")
+try:
+    tt.decide_many("Is this a refund?", pa.chunked_array([pa.array(["hi"])]))
+    print("answered")
+except tt.UsageError as refused:
+    print("refused:", refused)
+"""
+
+
+def test_a_table_builds_without_the_memory_map():
+    import platform
+
+    import pytest
+
+    if sys.platform != "linux" or platform.machine() != "x86_64":
+        pytest.skip("the seccomp filter here is written for Linux on x86_64")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", NO_OPEN],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    assert done.stdout.splitlines() == [
+        "table built",
+        "refused: this process cannot read its memory map (/proc/self/maps), "
+        "so the Arrow door cannot check a column before it reads it",
+    ]

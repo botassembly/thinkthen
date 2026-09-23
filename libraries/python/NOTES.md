@@ -922,3 +922,7 @@ Observed: `meta.py` went from 5 crashes to 0. The two sound shapes still carry t
 
 The comment at `emit_batch` said the batch pointers were single-threaded by contract. The C data interface lets a consumer release the root and each moved child from any thread, and the shares count atomically. The comment now says that.
 
+## Surfaces review 7, third pass: the second-agent review's follow-ups (refs R4-15, R5-6)
+
+A table this surface builds whole (`build_table`, behind `recognize`, `relate`, and the frame-rebuild probe) reads no producer memory. It took a memory-map snapshot only to pass a null metadata pointer, so a process that cannot read `/proc/self/maps` could not build one. `branch` now takes an optional snapshot, and `build_table` passes none. `test_a_table_builds_without_the_memory_map` forbids file opens through seccomp in a child process. The table builds, and a column read gets the map refusal. On the previous build the table step raised the map refusal.
+
