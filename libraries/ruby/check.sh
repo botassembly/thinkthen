@@ -68,6 +68,12 @@ echo "== ruby surface: fast-backend cancel, the poll-bug shape"
 docker_run 'ruby -I lib tests/test_cancel_fast.rb'
 docker_run 'ruby -I lib tests/test_fork.rb'
 
+echo "== ruby surface: the flood shape, VM survives a raising trap flood"
+docker_run 'ruby -I lib tests/test_flood.rb'
+
+echo "== ruby surface: annotate unions every record's keys"
+docker_run 'ruby -I lib tests/test_annotate_union.rb'
+
 echo "== ruby surface: the function examples"
 docker_run 'ruby -I lib tests/examples.rb'
 
@@ -94,6 +100,14 @@ if [ "$wire" = yes ]; then
     -e ENGINE_WIDTH=8 \
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_interrupt_wire.rb'
+  echo "== ruby surface: interrupts are bounded on the wire (bulk one wave, single one request)"
+  docker run --rm --network host \
+    -v "$root":/src \
+      -w /src/libraries/ruby \
+    -e ENGINE_BASE_URL="$stub_url" \
+    -e ENGINE_WIDTH=8 \
+    "$image" \
+    bash -eu -c 'ruby -I lib tests/test_interrupt_bounded.rb'
   echo "== ruby surface: probabilities cost no extra sends (punch-list item 1)"
   docker run --rm --network host \
     -v "$root":/src \
@@ -109,4 +123,4 @@ fi
 # package is made from never carries it. The EXIT trap above already
 # rebuilt the plain shape on any exit, so this proves the restore rather
 # than performing it.
-ENGINE_NULL=1 ruby -I lib -e 'require "thinkthen"; require "json"; q = ThinkThen.question(decide: "Is this a complaint?"); ans = ThinkThen.decide(q, "order 4471: charged twice, please refund"); puts("production build in place: the fixture text answers (#{ans.inspect[0, 20]})")'
+docker_run 'ruby -I lib -e '"'"'require "thinkthen"; q = ThinkThen.question(decide: "Is this a complaint?"); ans = ThinkThen.decide(q, "order 4471: charged twice, please refund"); puts("production build in place: the fixture text answers (#{ans.inspect[0, 20]})")'"'"''
