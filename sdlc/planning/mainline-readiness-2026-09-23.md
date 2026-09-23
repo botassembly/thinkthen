@@ -4,7 +4,9 @@ Date: 2026-09-23. Budget: 12,000 characters. Ian requested this assessment and p
 
 ## Assessment
 
-Eight commands work and local checks are strong. Ctrl-C, two new functions, the public Rust API, adapter integration, and installation remain unfinished. The source-package gate does not establish an installable 0.1 release.
+Current update: ticket 0074 now passes independent review and the full integrated local ladder on current main. Landing is in progress. The authorized launch-first queue is 0079, 0080, 0081, 0082–0083, 0087, 0076–0078, then 0084–0086. Non-overlapping ticket design and documentation lanes may run in parallel; dependent code does not bypass this order.
+
+Eight commands work, Ctrl-C is complete on the accepted branch, and local checks are strong. Two new functions, the public Rust API, adapter integration, and installation remain unfinished. The source-package gate does not establish an installable 0.1 release.
 
 ## Repository snapshot
 

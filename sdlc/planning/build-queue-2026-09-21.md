@@ -6,7 +6,11 @@ Ian can overturn any placement here.
 
 ## Current handoff, 2026-09-23
 
-The [mainline assessment and 0074 checklist](mainline-readiness-2026-09-23.md) refresh the evidence without changing the accepted dependency order. Main `2b63c87` includes 0069, 0072, and 0073. Ticket 0074's amended design and partial Ctrl-C implementation remain uncommitted in its worktree; complete its deterministic tests, independent review, and integrated local gates next. Width, deadlines, fork recovery, and host signal ownership still precede recognize/relate and the public Rust API. The separate `surfaces` branch at `f942e06` is unmerged. Its latest independent verification closes most previously reported failures and names the remaining proofs. Release installers and installed-artifact checks remain open. Earlier snapshots below are historical.
+Ticket 0074 now passes independent code review and the full integrated local ladder. Its landing is in progress. Ian replaced the older controls-first remainder with this launch-first order: 0079 request splitting; 0080 recognize; 0081 relate; 0082–0083 command completion; 0087 documentation corrections; 0076–0078 shared width, deadlines, fork recovery, and host signal ownership; then 0084–0086 public Rust API and packaging. Independent ticket lanes may proceed in parallel when their write sets and dependencies do not overlap. Dependent implementation still waits: recognize uses 0079 splitting, relate follows the settled planner, command completion follows both functions, and the public API follows stable controls and result shapes.
+
+The final relate planner is in `relate-design.md`: different kinds choose from the smaller kind while asking the larger kind; same-kind relations use lean yes/no pairs; over-limit choose questions fall back to pairs; the default cut remains 0.5; recognize reuses this planner. Ticket 0077 follows ADR 0017's one process cap: an implicit engine sets no cap, the first explicit width sets it, implicit engines follow it, and only a later conflicting explicit width fails locally.
+
+The [mainline assessment and 0074 checklist](mainline-readiness-2026-09-23.md) preserve the evidence that completed 0074. Their original snapshot and controls-first ordering are historical where the update above differs. The separate `surfaces` branch remains unmerged. Release installers and installed-artifact checks remain open. Earlier snapshots below are historical.
 
 ## Execution amendment, 2026-09-22
 

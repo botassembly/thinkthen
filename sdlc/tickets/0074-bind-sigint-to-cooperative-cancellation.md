@@ -6,7 +6,7 @@ opens: crates/thinkthen/Cargo.toml Cargo.lock sdlc/scripts/policy.py crates/thin
 
 # 0074: Bind SIGINT to cooperative cancellation
 
-Status: implementation accepted; integrated gates pending
+Status: implementation and integrated local gates accepted; landing pending
 
 ## Outcome and authority
 
