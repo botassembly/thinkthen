@@ -37,6 +37,8 @@ use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+mod descriptor_path;
+
 use pgrx::datum::{Array, JsonB};
 use pgrx::pg_sys::FunctionCallInfo;
 use pgrx::prelude::*;
@@ -417,23 +419,26 @@ enum CheckedReadError {
 /// `O_NONBLOCK`, so a swapped-in fifo opens instead of parking the
 /// backend in `open()`; the metadata then comes from the descriptor, so
 /// a path swapped between open and check still names the file this
-/// function holds. Confinement resolves the descriptor through
-/// `/proc/self/fd`, so an intermediate symlink cannot point out of the
-/// base either. `Refused` is every unreadable cause — missing,
-/// permission, not a regular file, a symlink final component, outside
-/// the confinement — one class on purpose, so a caller cannot learn
-/// whether a path exists; `OverCap` is the file that grew past the cap,
-/// named because only a caller allowed to read the file can reach it.
-/// Pure: no PostgreSQL state, no environment, and the same behavior
-/// under `cargo test` as in a backend.
+/// function holds.
+///
+/// A confined read settles confinement before anything else about the
+/// file (review 5): the descriptor's own path must sit inside the base,
+/// so an intermediate symlink cannot point out, and the file must carry
+/// exactly one link, so a hard link placed inside cannot name an outside
+/// file (and a file unlinked while held refuses too). Only then is the
+/// size read, so an outside path answers with the one refusal whatever
+/// its size. `Refused` is every unreadable cause, one class on purpose,
+/// so a caller cannot learn whether a path exists; `OverCap` names the
+/// cap for a file the caller may read. Pure: no PostgreSQL state, no
+/// environment, and the same behavior under `cargo test` as in a
+/// backend.
 fn read_within(
     path: &Path,
     cap: u64,
     confined: Option<&Path>,
 ) -> Result<String, CheckedReadError> {
     use std::io::Read;
-    use std::os::fd::AsRawFd;
-    use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
     // Open once, never following the final component, never blocking.
     let file = std::fs::OpenOptions::new()
         .read(true)
@@ -447,34 +452,15 @@ fn read_within(
     if !meta.is_file() {
         return Err(CheckedReadError::Refused);
     }
-    if meta.len() > cap {
-        return Err(CheckedReadError::OverCap);
-    }
     if let Some(base) = confined {
         let base = std::fs::canonicalize(base).map_err(|_| CheckedReadError::Refused)?;
-        // Resolve the descriptor, not the path: `/proc/self/fd/N` is the
-        // file this function holds, whatever the path points at now. A
-        // file unlinked while held carries " (deleted)" after its name.
-        let mut name = [0u8; libc::PATH_MAX as usize];
-        let wrote = unsafe {
-            let target = format!("/proc/self/fd/{}\0", file.as_raw_fd());
-            libc::readlink(
-                target.as_ptr() as *const libc::c_char,
-                name.as_mut_ptr() as *mut libc::c_char,
-                name.len(),
-            )
-        };
-        if wrote < 0 {
+        let real = descriptor_path::of(&file).ok_or(CheckedReadError::Refused)?;
+        if meta.nlink() != 1 || !real.starts_with(&base) {
             return Err(CheckedReadError::Refused);
         }
-        let mut real = &name[..wrote as usize];
-        if real.ends_with(b" (deleted)") {
-            real = &real[..real.len() - b" (deleted)".len()];
-        }
-        let real = std::str::from_utf8(real).map_err(|_| CheckedReadError::Refused)?;
-        if !Path::new(real).starts_with(&base) {
-            return Err(CheckedReadError::Refused);
-        }
+    }
+    if meta.len() > cap {
+        return Err(CheckedReadError::OverCap);
     }
     let mut text = String::new();
     // One byte past the cap tells a file that grew after the check from
@@ -527,7 +513,8 @@ fn read_named_file(what: &str, path: &str) -> String {
         Ok(text) => text,
         Err(CheckedReadError::Refused) => raise(Error::local(format!(
             "the {what} file '@{path}' did not read: it must be a regular file \
-             at most {FILE_CAP} bytes, inside thinkthen.file_directory when one is set"
+             at most {FILE_CAP} bytes, and inside thinkthen.file_directory with one link when \
+             one is set"
         ))),
         Err(CheckedReadError::OverCap) => raise(Error::local(format!(
             "the {what} file '@{path}' is over the {FILE_CAP} byte cap"
@@ -1484,9 +1471,10 @@ mod mapping_tests {
             // A fifo opened non-blocking refuses instead of parking the
             // process in open() (the reviewer's PostgreSQL hang).
             let fifo = held.join("base/pipe.json");
-            #[cfg(unix)]
-            let made = unsafe { libc::mkfifo(fifo.as_os_str().as_encoded_bytes().as_ptr() as *const libc::c_char, 0o644) };
-            #[cfg(unix)]
+            let spelled = std::ffi::CString::new(fifo.as_os_str().as_encoded_bytes())
+                .expect("the fifo path has no NUL");
+            // SAFETY: a NUL-terminated path the test owns.
+            let made = unsafe { libc::mkfifo(spelled.as_ptr(), 0o644) };
             assert_eq!(made, 0);
             assert_eq!(read_within(&fifo, 1024, None), Err(CheckedReadError::Refused));
             // An intermediate directory that is a symlink resolves on the
@@ -1510,6 +1498,43 @@ mod mapping_tests {
         std::fs::write(held.join("base/growing.json"), vec![b'x'; 1025]).expect("the growing file");
         assert_eq!(
             read_within(held.join("base/growing.json").as_path(), 1024, None),
+            Err(CheckedReadError::OverCap)
+        );
+        let _ = std::fs::remove_dir_all(&held);
+    }
+
+    /// Review 5: a confined role learns nothing about a path outside the
+    /// directory. The size was checked before confinement, so a large
+    /// outside file answered "over the cap" while a small one answered
+    /// with the one refusal, an existence and size oracle. A hard link
+    /// inside the directory to an outside file resolved to its inside
+    /// name and read the outside bytes; a confined read now takes only a
+    /// file with one link.
+    #[test]
+    fn a_confined_read_refuses_outside_files_by_one_rule() {
+        let held = std::env::temp_dir().join(format!("thinkthen-confined-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&held);
+        std::fs::create_dir_all(held.join("base")).expect("the base directory creates");
+        std::fs::create_dir_all(held.join("outside")).expect("the outside directory creates");
+        let base = held.join("base");
+        std::fs::write(held.join("outside/big.json"), vec![b'x'; 2048]).expect("the big file");
+        std::fs::write(held.join("outside/secret.json"), b"{}").expect("the secret");
+        std::fs::hard_link(held.join("outside/secret.json"), held.join("base/linked.json"))
+            .expect("the hard link");
+        std::fs::write(held.join("base/big.json"), vec![b'x'; 2048]).expect("the inside big file");
+        assert_eq!(
+            read_within(held.join("outside/big.json").as_path(), 1024, Some(&base)),
+            Err(CheckedReadError::Refused)
+        );
+        assert_eq!(
+            read_within(held.join("base/linked.json").as_path(), 1024, Some(&base)),
+            Err(CheckedReadError::Refused)
+        );
+        // A role that may read server files reads the linked file, and an
+        // inside file over the cap still names the cap.
+        assert_eq!(read_within(held.join("base/linked.json").as_path(), 1024, None).as_deref(), Ok("{}"));
+        assert_eq!(
+            read_within(held.join("base/big.json").as_path(), 1024, Some(&base)),
             Err(CheckedReadError::OverCap)
         );
         let _ = std::fs::remove_dir_all(&held);
