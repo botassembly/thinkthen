@@ -8,15 +8,15 @@ A backend is an address and a model. `THINKTHEN_BASE_URL` names the address, `TH
 
 ## Explicit profiles and local preflight
 
-Settled by ADR 0032.
+Settled by ADR 0032 and amended by ADR 0040.
 
-`--profile FILE` reads one UTF-8 JSON object with schema `thinkthen.backend-profile/1`. It requires `name` and at least one of `max_evidence_bytes`, `max_request_bytes`, or `max_questions`. The name is nonempty and uses lowercase letters, digits, hyphens, and underscores. Each limit is a positive integer. No other key is accepted.
+`--profile FILE` reads one UTF-8 JSON object with schema `thinkthen.backend-profile/1`. It requires `name` and at least one of `max_evidence_bytes`, `max_request_bytes`, `max_questions`, or `max_options`. The name is nonempty and uses lowercase letters, digits, hyphens, and underscores. Each limit is a positive integer. No other key is accepted.
 
-Evidence bytes are the UTF-8 bytes after field extraction and JSON normalization. Request bytes are the exact bytes the adapter encoded. Questions are the expanded wire questions, so each `tag` label counts once. An exact limit passes. One unit over exits 2 and names the profile, limit, unit, and actual count. The diagnostic repeats no evidence or request bytes.
+Evidence bytes are the UTF-8 bytes after field extraction and JSON normalization. Request bytes are the exact bytes the adapter encoded. Questions are the expanded wire questions, so each `tag` label counts once. Options are the labels in one `choose` question. An exact limit passes. One unit over exits 2 and names the profile, limit, unit, and actual count. The diagnostic repeats no evidence or request bytes.
 
-The engine checks a complete encoded logical request before reading a recording or cache entry, reading the key, or opening a connection. `annotate` checks every group for one record before starting any group. Dry runs perform the same check before printing a plan. Profiles apply equally to live calls, replay, cache, and recording.
+The engine encodes, digests, and checks every request chunk before reading a recording or cache entry, reading the key, or opening a connection. An ordered multi-question plan takes the longest next contiguous prefix that fits both exact request bytes and expanded questions, then repeats until all questions belong to a chunk. Evidence is repeated unchanged. A plan that fits keeps its exact body and digest. Evidence, one-question request, and choice-option overflows fail before any request because splitting them would change meaning.
 
-The profile estimates no tokens and performs no splitting. A backend whose published limit is only tokens needs a tokenizer or a verified byte ceiling before its file can enforce the limit. `--url`, `THINKTHEN_BASE_URL`, and `--model` still select the backend. A profile contains none of them.
+`annotate` checks every chunk of every group for one record before starting any group. Dry runs perform the same checks before printing a plan. Profiles apply equally to live calls, replay, cache, and recording. The profile estimates no tokens. A backend whose published limit is only tokens needs a tokenizer or a verified byte ceiling before its file can enforce the limit. `--url`, `THINKTHEN_BASE_URL`, and `--model` still select the backend. A profile contains none of them.
 
 ## The key
 

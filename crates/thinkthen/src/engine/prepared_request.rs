@@ -11,6 +11,75 @@ pub(crate) struct PreparedRequest {
     pub(crate) digest: Digest,
 }
 
+/// One contiguous plan chunk and the exact request prepared from it.
+pub(crate) struct PreparedChunk {
+    pub(crate) plan: Plan,
+    pub(crate) request: PreparedRequest,
+}
+
+/// Every chunk prepared and checked before execution starts.
+pub(crate) struct PreparedRequests {
+    chunks: Vec<PreparedChunk>,
+}
+
+impl PreparedRequests {
+    pub(crate) fn with_profile(
+        backend: &Backend,
+        plan: &Plan,
+        profile: Option<&BackendProfile>,
+    ) -> Result<Self, Error> {
+        let mut chunks = Vec::new();
+        let mut consumed = 0;
+        while consumed < plan.questions().len() {
+            let remaining = plan.questions().len() - consumed;
+            let mut longest = None;
+            for count in 1..=remaining {
+                match prepare_chunk(backend, plan, profile, consumed, count) {
+                    Ok(chunk) => longest = Some((count, chunk)),
+                    Err(Error::ProfileLimit(limit)) if limit.permits_split() => break,
+                    Err(error) => return Err(error),
+                }
+            }
+            let Some((count, chunk)) = longest else {
+                let _impossible = prepare_chunk(backend, plan, profile, consumed, 1)?;
+                return Err(Error::Defect(
+                    "an impossible request chunk passed preflight",
+                ));
+            };
+            chunks.push(chunk);
+            consumed += count;
+        }
+        Ok(Self { chunks })
+    }
+
+    pub(crate) fn into_chunks(self) -> Vec<PreparedChunk> {
+        self.chunks
+    }
+}
+
+fn prepare_chunk(
+    backend: &Backend,
+    plan: &Plan,
+    profile: Option<&BackendProfile>,
+    consumed: usize,
+    count: usize,
+) -> Result<PreparedChunk, Error> {
+    let questions = plan
+        .questions()
+        .iter()
+        .skip(consumed)
+        .take(count)
+        .cloned()
+        .collect();
+    let chunk = Plan::new(plan.evidence().clone(), plan.model().clone(), questions)
+        .map_err(|_| Error::Defect("a request chunk asks nothing"))?;
+    let request = PreparedRequest::with_profile(backend, &chunk, profile)?;
+    Ok(PreparedChunk {
+        plan: chunk,
+        request,
+    })
+}
+
 impl PreparedRequest {
     #[cfg(test)]
     pub(crate) fn new(backend: &Backend, plan: &Plan) -> Result<Self, Error> {

@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/backend_profile.rs crates/thinkthen/src/core/pl
 
 # 0079: Split requests under backend limits
 
-Status: ready
+Status: in progress
 
 ## Outcome
 
@@ -46,5 +46,5 @@ Re-score if implementation introduces concurrent chunk sends, text splitting, a 
 
 ## Review
 
-- Design review: rejected the first draft for mutating ADR 0032, stale limit claims, incomplete aggregation/accounting rules and dependencies, the full `annotate.rs` owner, and no level-3 floor. Re-review required the stale handoff correction too. This revision addresses every finding; re-review pending.
-- Code review: pending
+- Design review: rejected the first draft for mutating ADR 0032, stale limit claims, incomplete aggregation/accounting rules and dependencies, the full `annotate.rs` owner, and no level-3 floor. Re-review required the stale handoff correction too. The final design closed every finding and was accepted.
+- Code review: rejected stale whole-group cache wording and missing exact-boundary `max_options` proof. Remediation documented chunk identities and added the positive boundary case. The same reviewer accepted the final diff after focused tests and the offline lint gate passed.

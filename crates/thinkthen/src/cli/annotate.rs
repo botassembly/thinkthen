@@ -7,10 +7,7 @@ use std::time::Duration;
 
 use crate::core::adapters::built_in;
 use crate::core::{
-    AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, AnswerOutcome, Backend, BackendProfile, FailedValue, Framing, ModelName,
-    NamedValues, Outcome, Plan, Pointer, QuestionSet, Reading, Record, RecordValue, Reply,
-    RequestMeta, Usage, json_line,
+    Backend, BackendProfile, Framing, ModelName, Plan, Pointer, QuestionSet, Reading, Record,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -18,14 +15,16 @@ use crate::asking::{Folders, ask_prepared};
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::Client;
-use crate::prepared_request::PreparedRequest;
+use crate::prepared_request::{PreparedRequest, PreparedRequests};
 use crate::profile::{self, Mismatch};
 use crate::recorder::Recorder;
 use crate::schedule::{Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
+mod aggregation;
 mod plan;
 
+pub(crate) use aggregation::{GroupAnswer, check_model};
 use plan::{dry_run, dry_run_record};
 
 #[expect(
@@ -265,75 +264,7 @@ impl Judging<'_> {
         record: Record,
         answered: Vec<GroupAnswer>,
     ) -> Result<Judged, Failure> {
-        let mut values: Vec<Option<AnnotatedValue>> = vec![None; self.set.questions().len()];
-        let mut details: Vec<Option<AnnotatedEntry>> = vec![None; self.set.questions().len()];
-        let mut model: Option<ModelName> = None;
-        let mut requests = Vec::with_capacity(answered.len());
-        let mut usage: Option<Usage> = Some(Usage::new(0, 0));
-        let mut requests_sent = 0_u64;
-        let mut replayed = true;
-        let mut failed_questions = 0;
-        for answered in answered {
-            let GroupAnswer {
-                places,
-                reply,
-                digest,
-                requests_sent: group_requests_sent,
-                replayed: was_replayed,
-            } = answered;
-            check_model(&mut model, reply.model(), self.backend.model())?;
-            requests.push(digest.clone());
-            usage = match (usage, reply.usage()) {
-                (Some(total), Some(next)) => {
-                    Some(total.checked_plus(next).ok_or(Failure::UsageOverflow)?)
-                }
-                _ => None,
-            };
-            replayed &= was_replayed;
-            requests_sent = requests_sent
-                .checked_add(group_requests_sent)
-                .ok_or(Failure::Defect("a request count overflowed"))?;
-            failed_questions += take_answers(
-                &self.set,
-                &places,
-                &reply,
-                &digest,
-                &mut values,
-                &mut details,
-            )?;
-        }
-        let named_values = pair(&self.set, values, "a question has no value")?;
-        let printed = if self.common.details {
-            let named_details = pair(&self.set, details, "a question has no detailed answer")?;
-            let meta = AnnotateMeta::new(
-                env!("CARGO_PKG_VERSION"),
-                self.set.sha256()?,
-                self.backend.url().clone(),
-                model.ok_or(Failure::Defect("no group reported a model"))?,
-                usage,
-                RequestMeta::new(replayed, requests_sent, requests)
-                    .with_failed_questions(failed_questions)
-                    .with_profile_warning(self.mismatch.warning()),
-            );
-            json_line(&AnnotateResult::new(
-                record,
-                named_values,
-                named_details,
-                meta,
-            ))?
-        } else if self.streams && !record.is_object() {
-            json_line(&RecordValue::new(record, NamedValues::new(named_values)))?
-        } else {
-            json_line(&record.annotated(named_values))?
-        };
-        Ok(Judged {
-            printed: Some(printed),
-            outcome: Outcome::Yes,
-            replayed,
-            probability: None,
-            partial_failure: failed_questions > 0,
-            profile_mismatch: self.mismatch.notice(),
-        })
+        aggregation::finish(self, record, answered)
     }
 
     pub(crate) fn prepare_group(
@@ -343,44 +274,52 @@ impl Judging<'_> {
         places: Vec<usize>,
     ) -> Result<PreparedGroup, Failure> {
         let plan = plan_for(&self.set, &places, &self.backend, base, record)?;
-        let prepared = PreparedRequest::with_profile(&self.backend, &plan, self.profile.as_ref())?;
-        Ok(PreparedGroup {
-            places,
-            plan,
-            prepared,
-        })
+        let prepared = PreparedRequests::with_profile(&self.backend, &plan, self.profile.as_ref())?;
+        let mut places = places.into_iter();
+        let chunks = prepared
+            .into_chunks()
+            .into_iter()
+            .map(|chunk| PreparedGroupChunk {
+                places: places.by_ref().take(chunk.plan.questions().len()).collect(),
+                plan: chunk.plan,
+                prepared: chunk.request,
+            })
+            .collect();
+        Ok(PreparedGroup { chunks })
     }
 
     pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
-        let answered = ask_prepared(
-            &self.backend,
-            &group.plan,
-            group.prepared,
-            self.common,
-            self.environment,
-            &self.recorder,
-            &self.client,
-        )?;
-        Ok(GroupAnswer {
-            places: group.places,
-            reply: answered.reply,
-            digest: answered.request.as_str().to_owned(),
-            requests_sent: answered.requests_sent,
-            replayed: answered.replayed,
-        })
+        let mut answered = Vec::with_capacity(group.chunks.len());
+        let mut model = None;
+        for chunk in group.chunks {
+            let result = ask_prepared(
+                &self.backend,
+                &chunk.plan,
+                chunk.prepared,
+                self.common,
+                self.environment,
+                &self.recorder,
+                &self.client,
+            )?;
+            check_model(&mut model, result.reply.model(), self.backend.model())?;
+            answered.push(aggregation::ChunkAnswer {
+                places: chunk.places,
+                reply: result.reply,
+                digest: result.request.as_str().to_owned(),
+                requests_sent: result.requests_sent,
+                replayed: result.replayed,
+            });
+        }
+        Ok(GroupAnswer { answered, model })
     }
 }
 
-pub(crate) struct GroupAnswer {
-    pub(crate) places: Vec<usize>,
-    pub(crate) reply: Reply,
-    pub(crate) digest: String,
-    pub(crate) requests_sent: u64,
-    pub(crate) replayed: bool,
+pub(crate) struct PreparedGroup {
+    chunks: Vec<PreparedGroupChunk>,
 }
 
-pub(crate) struct PreparedGroup {
-    pub(crate) places: Vec<usize>,
+struct PreparedGroupChunk {
+    places: Vec<usize>,
     plan: Plan,
     prepared: PreparedRequest,
 }
@@ -427,100 +366,4 @@ fn plan_for(
         .collect::<Result<Vec<_>, _>>()?;
     Plan::new(evidence, backend.model().clone(), questions)
         .map_err(|_| Failure::Defect("an annotate group asks nothing"))
-}
-
-fn take_answers(
-    set: &QuestionSet,
-    group: &[usize],
-    reply: &Reply,
-    digest: &str,
-    values: &mut [Option<AnnotatedValue>],
-    details: &mut [Option<AnnotatedEntry>],
-) -> Result<usize, Failure> {
-    if group.len() != reply.outcomes().len() {
-        return Err(Failure::Defect(
-            "the adapter answered the wrong number of questions",
-        ));
-    }
-    let mut failed = 0;
-    for (place, outcome) in group.iter().zip(reply.outcomes()) {
-        let question = set
-            .questions()
-            .get(*place)
-            .ok_or(Failure::Defect("a group points outside its set"))?;
-        let value_slot = values
-            .get_mut(*place)
-            .ok_or(Failure::Defect("an answer points outside its set"))?;
-        let detail_slot = details
-            .get_mut(*place)
-            .ok_or(Failure::Defect("an answer points outside its set"))?;
-        match outcome {
-            AnswerOutcome::Answered(answer) => {
-                let (value, _) = answer.read(question.threshold());
-                *value_slot = Some(AnnotatedValue::Answered(value.clone()));
-                *detail_slot = Some(AnnotatedEntry::Answered(AnnotatedAnswer::new(
-                    value,
-                    question.question().clone(),
-                    answer.clone(),
-                    question.threshold(),
-                    digest.to_owned(),
-                )));
-            }
-            AnswerOutcome::Failed(failure) => {
-                failed += 1;
-                *value_slot = Some(AnnotatedValue::Failed(FailedValue::new(*failure)));
-                *detail_slot = Some(AnnotatedEntry::Failed(AnnotatedFailure::new(
-                    question.question().clone(),
-                    *failure,
-                    digest.to_owned(),
-                )));
-            }
-        }
-    }
-    Ok(failed)
-}
-
-fn pair<T>(
-    set: &QuestionSet,
-    values: Vec<Option<T>>,
-    absent: &'static str,
-) -> Result<Vec<(String, T)>, Failure> {
-    set.questions()
-        .iter()
-        .zip(values)
-        .map(|(question, value)| {
-            Ok((
-                question.name().to_owned(),
-                value.ok_or(Failure::Defect(absent))?,
-            ))
-        })
-        .collect()
-}
-
-pub(crate) fn check_model(
-    first: &mut Option<ModelName>,
-    next: &ModelName,
-    requested: &ModelName,
-) -> Result<(), Failure> {
-    let Some(held) = first else {
-        *first = Some(next.clone());
-        return Ok(());
-    };
-    if held == next {
-        return Ok(());
-    }
-    let safe = built_in::diagnostic_model(held.as_str(), requested.as_str())
-        .then(|| held.as_str().to_owned())
-        .zip(
-            built_in::diagnostic_model(next.as_str(), requested.as_str())
-                .then(|| next.as_str().to_owned()),
-        )
-        .map(|(first, second)| {
-            if first <= second {
-                (first, second)
-            } else {
-                (second, first)
-            }
-        });
-    Err(Failure::ModelsDiffer(safe))
 }

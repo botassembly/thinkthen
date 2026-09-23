@@ -48,11 +48,11 @@ where
         |input| prepare(judging, reading, input),
         &|work: Work| judging.answer_group(work.group),
         |answers, answer| {
-            check_model(
-                &mut answers.model,
-                answer.reply.model(),
-                judging.requested_model(),
-            )?;
+            let model = answer
+                .model
+                .as_ref()
+                .ok_or(Failure::Defect("an annotate group reported no model"))?;
+            check_model(&mut answers.model, model, judging.requested_model())?;
             answers.ordered.push(answer);
             Ok(())
         },

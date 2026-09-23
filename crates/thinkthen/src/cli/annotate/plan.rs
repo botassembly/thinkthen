@@ -6,7 +6,7 @@ use std::process::ExitCode;
 use crate::core::{Backend, BackendProfile, PlanDocument, QuestionSet, Reading, Record, json_line};
 use crate::edge;
 use crate::failure::Failure;
-use crate::prepared_request::PreparedRequest;
+use crate::prepared_request::PreparedRequests;
 use crate::profile::Mismatch;
 
 use super::{collisions, plan_for};
@@ -56,7 +56,7 @@ pub(super) fn dry_run_record(
         .map(|group| plan_for(set, &group, backend, base, &record))
         .collect::<Result<Vec<_>, _>>()?;
     for plan in &plans {
-        let _prepared = PreparedRequest::with_profile(backend, plan, profile)?;
+        let _prepared = PreparedRequests::with_profile(backend, plan, profile)?;
     }
     mismatch.print_once()?;
     let plan = plans.first().ok_or(Failure::Defect("a set has no group"))?;

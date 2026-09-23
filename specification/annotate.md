@@ -103,19 +103,19 @@ One record makes one request per distinct `on`, and the plan shows one request. 
 
 ## Requests
 
-One record makes one request for each distinct `on`. Every question with the same evidence rides in that one request, and the evidence is billed once. The project measured forty clear yes-or-no questions over 120 cases. Packed requests changed no answer and used 20.8 times fewer billed input tokens than separate requests. A second measurement packed one decision, one choice, and one score. The values stayed the same, and billed input fell from 915 tokens across three requests to 371 in one request. Neither measurement found a lower question-count limit.
+One record makes one logical request group for each distinct `on`. Every question with the same evidence rides in that group. An explicit backend profile splits a group into the fewest contiguous requests that satisfy its exact request-byte and expanded-question limits. Every chunk repeats the same evidence, and the model sees no answer from another chunk. Without a profile, or when the group fits, the historical single request stays byte for byte unchanged. The project measured forty clear yes-or-no questions over 120 cases. Packed requests changed no answer and used 20.8 times fewer billed input tokens than separate requests. A second measurement packed one decision, one choice, and one score. The values stayed the same, and billed input fell from 915 tokens across three requests to 371 in one request. Neither measurement found a lower question-count limit.
 
 Records never share a request. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
 
-`--details` reports `meta.usage` as the sum over the record's requests. `meta.requests` lists their recording digests in question-set group order. Each answer also carries the digest of the request that produced it. [result.md](result.md) gives the shape.
+`--details` reports `meta.usage` as the checked sum over the record's requests only when every reply reports usage. `meta.requests` lists every chunk's recording digest in question-set group and chunk order. `meta.requests_sent` sums actual sends, including retries. `meta.cached` is true only when every chunk replayed. Each answer also carries the digest of the chunk that produced it. Every chunk must report the same model. [result.md](result.md) gives the shape.
 
 A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detailed output its entry carries `question`, `failure`, and `request`, and carries no `value`, `answer`, or `threshold`. `meta.failed_questions` counts failed logical questions. It is always present, including zero. `null` means not sure and never means failed.
 
 ## Cautions
 
-The questions and the evidence together can pass the backend's token limit for one request. The backend refuses, and the exit code is 4. Fewer questions per file is the answer.
+A profile enforces only limits stated in bytes, expanded questions, or options. A backend limit stated only in tokens remains unenforceable without a tokenizer or a measured byte ceiling.
 
-The cache key covers the whole request group. Adding or changing one question asks the whole group again for every record. An answer near its threshold can move when neighboring questions change. In six deliberately borderline cases, one answer moved from `false` to unresolved when neighboring questions joined it. The largest probability shift was 0.04. Keep the group fixed while comparing runs and retain `--details` probabilities. Use a narrower, distinct `on` group when the record permits it and the questions need separate stability.
+Each exact encoded chunk has its own cache key. A group that fits remains one historical chunk, so adding or changing one question asks that whole group again for every record. A split group reuses only chunks whose exact bytes and positions remain unchanged; changing one question can also move later chunk boundaries and their keys. An answer near its threshold can move when neighboring questions change. In six deliberately borderline cases, one answer moved from `false` to unresolved when neighboring questions joined it. The largest probability shift was 0.04. Keep the group fixed while comparing runs and retain `--details` probabilities. Use a narrower, distinct `on` group when the record permits it and the questions need separate stability.
 
 ## An eval is `annotate` and a saved run
 
