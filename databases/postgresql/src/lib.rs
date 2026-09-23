@@ -286,7 +286,8 @@ fn question_of(arg: Option<&str>) -> Question {
     }
     match arg_form(text, "question").unwrap_or_else(|error| raise(error)) {
         ArgForm::File(path) => {
-            Question::from_file(Path::new(path)).unwrap_or_else(|error| raise(error))
+            let held = read_named_file("question", path);
+            Question::from_json(&held).unwrap_or_else(|error| raise(error))
         }
         ArgForm::Json(text) => {
             Question::from_json(text).unwrap_or_else(|error| raise(error))
@@ -304,7 +305,8 @@ fn set_of(arg: Option<&str>) -> QuestionSet {
     }
     match arg_form(text, "question set").unwrap_or_else(|error| raise(error)) {
         ArgForm::File(path) => {
-            QuestionSet::from_file(Path::new(path)).unwrap_or_else(|error| raise(error))
+            let held = read_named_file("question set", path);
+            QuestionSet::from_json(&held).unwrap_or_else(|error| raise(error))
         }
         ArgForm::Json(text) => {
             QuestionSet::from_json(text).unwrap_or_else(|error| raise(error))
@@ -342,12 +344,115 @@ fn distinct_of<'a>(texts: impl Iterator<Item = Option<&'a str>>) -> Vec<String> 
     out
 }
 
-/// Read a spec file named by the caller with the command's `@name`
-/// spelling, or a bare path; a failure is the local kind.
-fn read_spec(path: &str) -> String {
-    std::fs::read_to_string(Path::new(path)).unwrap_or_else(|error| {
-        raise(Error::local(format!("the spec file {path} did not read: {error}")))
-    })
+/// The directory an unprivileged named-file read is confined to, set by
+/// an administrator (`Suset`, so only they set it). Empty means no
+/// directory is configured, and a role without `pg_read_server_files`
+/// then cannot read a file at all (review 3, item 8).
+static FILE_DIRECTORY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
+
+/// The largest file a named file argument may read, in bytes. A question
+/// file or a recognize spec is kilobytes; the cap leaves a hundredfold
+/// margin while refusing an endless `@/dev/zero` read before the
+/// backend's memory grows (review 3, item 2).
+const FILE_CAP: u64 = 1024 * 1024;
+
+/// The pure shape of a checked read, so the rules are unit-tested without
+/// a backend. `Refused` is every unreadable cause — missing, permission,
+/// not a regular file, outside the confinement — one class on purpose, so
+/// a caller cannot learn whether a path exists; `OverCap` is the file
+/// that grew past the cap, named because only a caller allowed to read
+/// the file can reach it.
+#[derive(Debug, PartialEq, Eq)]
+enum CheckedReadError {
+    Refused,
+    OverCap,
+}
+
+/// Read `path` as a regular file of at most `cap` bytes, optionally
+/// confined to `base` by resolved path, so a symlink cannot point out.
+/// The read is bounded at one byte past the cap, so a file that grows
+/// after its size check still refuses. Pure: no PostgreSQL state, no
+/// environment, and the same behavior under `cargo test` as in a backend.
+fn read_within(
+    path: &Path,
+    cap: u64,
+    confined: Option<&Path>,
+) -> Result<String, CheckedReadError> {
+    use std::io::Read;
+    let meta = std::fs::metadata(path).map_err(|_| CheckedReadError::Refused)?;
+    // `/dev/zero` is a character device, a fifo is not a regular file, a
+    // directory is not either: all refuse before any byte is read.
+    if !meta.is_file() {
+        return Err(CheckedReadError::Refused);
+    }
+    if let Some(base) = confined {
+        let base = std::fs::canonicalize(base).map_err(|_| CheckedReadError::Refused)?;
+        let real = std::fs::canonicalize(path).map_err(|_| CheckedReadError::Refused)?;
+        if !real.starts_with(&base) {
+            return Err(CheckedReadError::Refused);
+        }
+    }
+    if meta.len() > cap {
+        return Err(CheckedReadError::OverCap);
+    }
+    let file = std::fs::File::open(path).map_err(|_| CheckedReadError::Refused)?;
+    let mut text = String::new();
+    // One byte past the cap tells a file that grew after the check from
+    // one that sits at the cap.
+    file.take(cap + 1).read_to_string(&mut text).map_err(|_| CheckedReadError::Refused)?;
+    if text.len() as u64 > cap {
+        return Err(CheckedReadError::OverCap);
+    }
+    Ok(text)
+}
+
+/// Whether the current role may read server files by the rule the core
+/// functions use: a superuser, or a role with the privileges of
+/// `pg_read_server_files`. The check reads only catalog state and touches
+/// no file, so it reveals nothing about the filesystem.
+fn may_read_files() -> bool {
+    unsafe {
+        if pg_sys::superuser() {
+            return true;
+        }
+        let user = pg_sys::GetUserId();
+        let role = pg_sys::get_role_oid(c"pg_read_server_files".as_ptr(), false);
+        pg_sys::has_privs_of_role(user, role)
+    }
+}
+
+/// Read a file a caller named with `@`: the privilege gate first, then
+/// the capped, regular-file-checked read. A role without
+/// `pg_read_server_files` reads only inside a configured
+/// `thinkthen.file_directory`, by resolved path so a symlink cannot point
+/// out. Every unreadable cause carries one message, so the refusal tells
+/// nothing about the filesystem.
+fn read_named_file(what: &str, path: &str) -> String {
+    let confined = if may_read_files() {
+        None
+    } else {
+        let directory = FILE_DIRECTORY
+            .get()
+            .map(|held| held.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        if directory.trim().is_empty() {
+            raise(Error::usage(
+                "a named file needs pg_read_server_files, or an administrator's \
+                 thinkthen.file_directory",
+            ));
+        }
+        Some(std::path::PathBuf::from(directory))
+    };
+    match read_within(Path::new(path), FILE_CAP, confined.as_deref()) {
+        Ok(text) => text,
+        Err(CheckedReadError::Refused) => raise(Error::local(format!(
+            "the {what} file '@{path}' did not read: it must be a regular file \
+             at most {FILE_CAP} bytes, inside thinkthen.file_directory when one is set"
+        ))),
+        Err(CheckedReadError::OverCap) => raise(Error::local(format!(
+            "the {what} file '@{path}' is over the {FILE_CAP} byte cap"
+        ))),
+    }
 }
 
 /// Resolve the `recognize` spec argument: `'@name'` names a file (the
@@ -366,7 +471,7 @@ fn recognizer_of(arg: Option<&str>) -> Recognize {
         raise(Error::usage("the recognize spec is empty"));
     }
     let json = match arg_form(text, "recognize spec").unwrap_or_else(|error| raise(error)) {
-        ArgForm::File(path) => read_spec(path),
+        ArgForm::File(path) => read_named_file("recognize spec", path),
         ArgForm::Json(text) => text.to_owned(),
     };
     let mut value: serde_json::Value = serde_json::from_str(&json).unwrap_or_else(|error| {
@@ -834,6 +939,14 @@ extern "C-unwind" fn _PG_init() {
         GucContext::Suset,
         GucFlags::NO_SHOW_ALL | GucFlags::SUPERUSER_ONLY | GucFlags::DISALLOW_IN_AUTO_FILE,
     );
+    GucRegistry::define_string_guc(
+        c"thinkthen.file_directory",
+        c"the only directory an unprivileged named-file read may touch",
+        c"",
+        &FILE_DIRECTORY,
+        GucContext::Suset,
+        GucFlags::NO_SHOW_ALL,
+    );
 }
 
 // Keep every function this extension owns out of PUBLIC's hands: revoke
@@ -1028,5 +1141,73 @@ mod mapping_tests {
         );
         let refusal = budget_of(-2).expect_err("a negative below the sentinel refuses");
         assert_eq!(refusal.kind, ErrorKind::Usage, "{refusal:?}");
+    }
+
+    /// The checked read's rules (review 3, items 2 and 8), on the real
+    /// filesystem of the test host, no backend needed: a regular file
+    /// reads; a character device (`/dev/zero`) and a missing path take the
+    /// one refusal class, so the cause is indistinguishable; a symlink
+    /// out of the confined directory refuses while one inside passes; a
+    /// file past the cap names the cap; a file that grows past the cap
+    /// between check and read still refuses.
+    #[test]
+    fn a_checked_read_takes_only_regular_files_within_the_cap_and_confinement() {
+        let held = std::env::temp_dir().join("thinkthen-checked-read");
+        let _ = std::fs::remove_dir_all(&held);
+        std::fs::create_dir_all(held.join("base")).expect("the base directory creates");
+        std::fs::create_dir_all(held.join("outside")).expect("the outside directory creates");
+        let inside = held.join("base/inside.json");
+        std::fs::write(&inside, b"{\"decide\": \"ok?\"}").expect("the inside file writes");
+        std::fs::write(held.join("outside/secret.json"), b"{}").expect("the secret writes");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&inside, held.join("base/link-in.json")).expect("the inside link");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(
+            held.join("outside/secret.json"),
+            held.join("base/link-out.json"),
+        )
+        .expect("the outside link");
+        let base = held.join("base");
+
+        assert_eq!(read_within(&inside, 1024, None).as_deref(), Ok("{\"decide\": \"ok?\"}"));
+        // The one refusal class: a character device, a missing path, and a
+        // broken permission all carry the same error, so a caller learns
+        // nothing about the filesystem.
+        assert_eq!(read_within(Path::new("/dev/zero"), 1024, None), Err(CheckedReadError::Refused));
+        assert_eq!(read_within(Path::new("/no/such/file"), 1024, None), Err(CheckedReadError::Refused));
+        // Confinement by resolved path: inside passes, a link that points
+        // out refuses with the same class as a missing file.
+        assert!(read_within(&inside, 1024, Some(&base)).is_ok());
+        #[cfg(unix)]
+        {
+            assert!(read_within(held.join("base/link-in.json").as_path(), 1024, Some(&base)).is_ok());
+            assert_eq!(
+                read_within(held.join("base/link-out.json").as_path(), 1024, Some(&base)),
+                Err(CheckedReadError::Refused)
+            );
+            assert_eq!(
+                read_within(held.join("outside/secret.json").as_path(), 1024, Some(&base)),
+                Err(CheckedReadError::Refused)
+            );
+        }
+        // The cap: a file over it names the cap; one exactly at it reads.
+        std::fs::write(held.join("base/big.json"), vec![b'x'; 2048]).expect("the big file writes");
+        assert_eq!(
+            read_within(held.join("base/big.json").as_path(), 1024, None),
+            Err(CheckedReadError::OverCap)
+        );
+        assert_eq!(
+            read_within(held.join("base/big.json").as_path(), 2048, None)
+                .map(|text| text.len()),
+            Ok(2048)
+        );
+        // A file that grew past the cap after its size was read still
+        // refuses, because the read itself is bounded past the cap.
+        std::fs::write(held.join("base/growing.json"), vec![b'x'; 1025]).expect("the growing file");
+        assert_eq!(
+            read_within(held.join("base/growing.json").as_path(), 1024, None),
+            Err(CheckedReadError::OverCap)
+        );
+        let _ = std::fs::remove_dir_all(&held);
     }
 }

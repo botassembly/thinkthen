@@ -366,6 +366,114 @@ grep -q "@form.json" .tmp-bare.out \
 echo "ok       bare text is refused with the @ form named, and never read"
 rm -f .tmp-bare.out
 
+echo "== postgres surface: named files read through the gate, the cap, and the regular-file rule"
+# Review 3, items 2 and 8: every @file read is capped, regular-file, and
+# behind the privilege gate. /dev/zero and a fifo refuse instantly with
+# one uniform message that carries no cause; an over-cap file names the
+# cap; a role holding only EXECUTE cannot read a file without
+# pg_read_server_files or the configured directory, and the directory
+# confines by resolved path, so a symlink cannot point out.
+docker exec "$NAME" sh -c 'head -c 1048577 /dev/zero | tr "\\0" "x" > /var/lib/postgresql/data/big.json'
+docker exec "$NAME" mkfifo /var/lib/postgresql/data/pipe.fifo
+
+zero_start=$(date +%s.%N)
+if timeout 10 psql_in -Atqc "SELECT thinkthen_decide('@/dev/zero', 'refund');" > .tmp-gate.out 2>&1; then
+  echo "FAILED   @/dev/zero answered" >&2; cat .tmp-gate.out >&2; exit 1
+fi
+zero_elapsed=$(awk -v a="$zero_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+grep -q "did not read" .tmp-gate.out \
+  || { echo "FAILED   the /dev/zero refusal's message is missing" >&2; cat .tmp-gate.out >&2; exit 1; }
+if grep -qE "No such file|Permission denied|Text file busy" .tmp-gate.out; then
+  echo "FAILED   the refusal carries a filesystem cause" >&2; cat .tmp-gate.out >&2; exit 1
+fi
+awk -v e="$zero_elapsed" 'BEGIN { exit !(e <= 2.0) }' \
+  || { echo "FAILED   @/dev/zero took ${zero_elapsed}s" >&2; exit 1; }
+psql_in -Atqc "SELECT 1;" >/dev/null
+echo "ok       @/dev/zero refused in ${zero_elapsed}s with the uniform message, and the backend lived"
+
+fifo_start=$(date +%s.%N)
+if timeout 5 psql_in -Atqc "SELECT thinkthen_decide('@/var/lib/postgresql/data/pipe.fifo', 'refund');" > .tmp-gate.out 2>&1; then
+  echo "FAILED   a fifo answered" >&2; cat .tmp-gate.out >&2; exit 1
+fi
+fifo_elapsed=$(awk -v a="$fifo_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+grep -q "did not read" .tmp-gate.out \
+  || { echo "FAILED   the fifo refusal's message is missing" >&2; cat .tmp-gate.out >&2; exit 1; }
+awk -v e="$fifo_elapsed" 'BEGIN { exit !(e <= 2.0) }' \
+  || { echo "FAILED   the fifo refusal took ${fifo_elapsed}s" >&2; exit 1; }
+echo "ok       a fifo refused in ${fifo_elapsed}s instead of blocking"
+
+if psql_in -Atqc "SELECT thinkthen_decide('@/var/lib/postgresql/data/big.json', 'refund');" > .tmp-gate.out 2>&1; then
+  echo "FAILED   an over-cap file answered" >&2; cat .tmp-gate.out >&2; exit 1
+fi
+grep -q "over the 1048576 byte cap" .tmp-gate.out \
+  || { echo "FAILED   the over-cap refusal does not name the cap" >&2; cat .tmp-gate.out >&2; exit 1; }
+echo "ok       an over-cap file refuses naming the cap"
+rm -f .tmp-gate.out
+
+# The privilege gate: a role with EXECUTE and nothing else. Before the
+# gate such a role read any file the server process could; now the
+# refusal names the two doors an administrator may open.
+psql_in -c "CREATE ROLE tt_file;" >/dev/null
+psql_in << 'SQL' >/dev/null
+DO $thinkthen_grant$
+DECLARE signature text;
+BEGIN
+    FOR signature IN
+        SELECT p.oid::regprocedure::text
+        FROM pg_proc p
+        JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+        JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+        WHERE e.extname = 'thinkthen'
+    LOOP
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO tt_file', signature);
+    END LOOP;
+END
+$thinkthen_grant$;
+SQL
+if psql_in -c "SET ROLE tt_file;" \
+    -Atqc "SELECT thinkthen_decide('@/etc/hostname', 'refund');" > .tmp-gate.out 2>&1; then
+  echo "FAILED   an EXECUTE-only role read a server file" >&2; cat .tmp-gate.out >&2; exit 1
+fi
+grep -q "pg_read_server_files" .tmp-gate.out \
+  || { echo "FAILED   the gate refusal does not name the requirement" >&2; cat .tmp-gate.out >&2; exit 1; }
+grep -q "thinkthen.file_directory" .tmp-gate.out \
+  || { echo "FAILED   the gate refusal does not name the directory door" >&2; cat .tmp-gate.out >&2; exit 1; }
+echo "ok       an EXECUTE-only role cannot read any file; the refusal names both doors"
+
+# With a directory configured: inside reads, a symlink that points out
+# refuses with the same uniform message, and the directory itself stays
+# the administrator's act (Suset).
+docker exec "$NAME" ln -sf /etc/hostname /var/lib/postgresql/data/leak.json
+psql_in -c "ALTER SYSTEM SET thinkthen.file_directory = '/var/lib/postgresql/data';" \
+  -Atqc "SELECT pg_reload_conf();" >/dev/null
+psql_in -c "SET ROLE tt_file;" \
+  -Atqc "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" > .tmp-gate.out
+[ "$(cat .tmp-gate.out)" = "t" ] \
+  || { echo "FAILED   the configured directory's inside read failed" >&2; cat .tmp-gate.out >&2; exit 1; }
+if psql_in -c "SET ROLE tt_file;" \
+    -Atqc "SELECT thinkthen_decide('@leak.json', 'refund');" > .tmp-gate.out 2>&1; then
+  echo "FAILED   a symlink pointed out of the configured directory" >&2; cat .tmp-gate.out >&2; exit 1
+fi
+grep -q "did not read" .tmp-gate.out \
+  || { echo "FAILED   the leak refusal's message is missing" >&2; cat .tmp-gate.out >&2; exit 1; }
+psql_in -c "RESET ROLE;" -c "ALTER SYSTEM RESET thinkthen.file_directory;" \
+  -Atqc "SELECT pg_reload_conf();" >/dev/null
+docker exec "$NAME" rm -f /var/lib/postgresql/data/leak.json
+echo "ok       the configured directory reads inside and refuses a symlink pointing out"
+
+# With the core privilege: the role reads anywhere the server can, which
+# is the rule PostgreSQL's own file-reading functions use.
+docker cp fixtures/refund.json "$NAME:/tmp/anywhere.json"
+psql_in -c "GRANT pg_read_server_files TO tt_file;" >/dev/null
+psql_in -c "SET ROLE tt_file;" \
+  -Atqc "SELECT thinkthen_decide('@/tmp/anywhere.json', 'I demand a refund today');" > .tmp-gate.out
+[ "$(cat .tmp-gate.out)" = "t" ] \
+  || { echo "FAILED   the core privilege did not read the file" >&2; cat .tmp-gate.out >&2; exit 1; }
+psql_in -c "RESET ROLE;" -c "DROP OWNED BY tt_file;" -c "DROP ROLE tt_file;" >/dev/null
+echo "ok       pg_read_server_files reads anywhere, PostgreSQL's own rule"
+rm -f .tmp-gate.out
+docker exec "$NAME" rm -f /var/lib/postgresql/data/big.json /var/lib/postgresql/data/pipe.fifo /tmp/anywhere.json
+
 echo "== postgres surface: from and to are refused"
 docker cp fixtures/names-legacy.json "$NAME:/var/lib/postgresql/data/names-legacy.json"
 if psql_in -c "SELECT thinkthen_relations('Maria Chen joined Northwind Freight in Chicago last spring.', '@names-legacy.json');" > .tmp-legacy.out 2>&1; then
