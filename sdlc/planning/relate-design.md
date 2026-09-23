@@ -6,7 +6,7 @@ Read `recognize-design.md` first. `relate` reuses its relation rule unchanged, a
 
 ## The one line
 
-**Say how the records relate to each other.**
+**Find records that clash, repeat, or rely on each other.**
 
 Beta, like the relations in `recognize`, and every page says so in the same sentence.
 
