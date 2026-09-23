@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# each ticket goes to the team its words name:\n# billing, shipping, and account\nteams = [\"billing\", \"shipping\", \"account\"]\n[\"I was billed twice for one order.\",\n \"My parcel is a week late.\",\n \"I am locked out of my account.\"].each do |text|\n  puts ThinkThen.choose(\"Which team owns this?\", text, options: teams)\nend",
+  "code": "require \"thinkthen\"\n\n# three messages name one team each: billing, shipping,\n# and account. The fourth names a parcel and a login, so\n# no team reaches 0.9 and it prints nil\nteams = [\"billing\", \"shipping\", \"account\"]\n[\"Please refund the extra fee on my invoice.\",\n \"My parcel went to the wrong address.\",\n \"I cannot reset my password.\",\n \"My parcel never came, and now I cannot log in to track it.\"].each do |text|\n  p ThinkThen.choose(\"Which team owns this?\", text,\n    options: teams, threshold: 0.9)\nend",
   "function": "choose",
   "surface": "ruby"
 }

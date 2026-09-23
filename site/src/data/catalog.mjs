@@ -440,7 +440,7 @@ export const HOWTOS = [
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
     functions: ['decide'], input: 'studies.txt', runs: ['03-studies'],
-    see: { '03-studies': 'The survey with a result is true and the opinion essay is false. The abstract with no methods or results and the bare title give too little to judge, so both come back null for a person.' },
+    see: { '03-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge, so it comes back null for a person.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
@@ -462,9 +462,12 @@ export const HOWTOS = [
   {
     slug: 'group-alerts-into-incidents', title: 'Group alerts into incidents', reader: 'for on-call engineers',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
-    functions: ['find', 'decide'], input: 'incidents-open.txt', runs: ['06-alert'],
-    given: '`$alert` holds the new alert: Card charges fail with 500 at checkout.',
-    see: { '06-alert': 'find prints the matching incident, INC-1, and decide confirms it with true.' },
+    functions: ['find', 'decide'], input: 'incidents-open.txt', runs: ['06-alert', '06-alert-none'],
+    given: '`$alert` holds the new alert. The first run sets it to "Card charges fail with 500 at checkout" and the second to "Disk is full on the backup server".',
+    see: {
+      '06-alert': 'The card failure matches INC-1. find prints it, and decide confirms it with true.',
+      '06-alert-none': 'No open incident covers a full disk. find prints nothing and exits 3, so decide never runs.',
+    },
   },
   {
     slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
@@ -474,12 +477,11 @@ export const HOWTOS = [
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
-    said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule. Insults take the default bar, and spam and off topic take a high bar of 0.8.',
-    functions: ['decide'], input: 'post.txt', runs: ['08-insult', '08-spam', '08-topic'],
+    said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
+    functions: ['decide'], input: 'post.txt', runs: ['08-insult', '08-spam'],
     see: {
       '08-insult': 'The post calls the author an idiot, so decide says true and exits 0.',
       '08-spam': 'The post is not spam, so decide says false and exits 1.',
-      '08-topic': 'The post stays on topic, so decide says false and exits 1.',
     },
   },
   {

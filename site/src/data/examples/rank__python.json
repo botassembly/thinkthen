@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "python",
-  "code": "import thinkthen as tt\n\n# the outage first at 0.94, the quote second at 0.93\ninbox = [\"Newsletter: our autumn catalog is here\",\n    \"Our checkout page is down and customers cannot pay\",\n    \"The client needs the signed quote by 5 pm today.\",\n    \"Reminder: your invoice is due in 30 days\"]\nfor one in tt.rank(\"Does this need an answer today?\",\n        inbox, top=2):\n    print(one[\"probability\"], one[\"record\"])",
+  "code": "import thinkthen as tt\n\n# the outage first, then the Friday quote, then the bill\n# due in a month, and the newsletter last\ninbox = [\"Newsletter: our autumn catalog is here. No reply needed.\",\n    \"Our checkout page is down and customers cannot pay\",\n    \"Reminder: your invoice is due in 30 days\",\n    \"Please send the signed quote by Friday\"]\nfor one in tt.rank(\"Does this need an answer today?\", inbox):\n    print(one[\"record\"])",
   "function": "rank",
   "surface": "python"
 }

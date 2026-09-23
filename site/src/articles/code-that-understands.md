@@ -137,36 +137,22 @@ $ cat form.json
 }
 ```
 
-And here is a bug report:
-
-```
-$ cat report.txt
-CSV export fails every time. Steps: open a report,
-click Export, pick CSV. My month-end numbers are stuck.
-```
-
-`annotate` fills in the form:
-
-```
-$ thinkthen annotate form.json < report.txt
-{"steps":true,"area":"export","impact":1.99}
-```
-
-ThinkThen answers three questions in one request.
-
-Many reports go in as JSONL. Each record keeps its id and gains the three answers, one area each:
+Three bug reports go in as JSONL, one for each area on the form. Each record keeps its id and gains the three answers. `jq` leaves the body out, so each line fits:
 
 ```
 $ cat reports.jsonl
-{"id": "B-7", "body": "Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in."}
-{"id": "B-8", "body": "The Pay button on the billing page is a slightly different blue. No steps, I just noticed it."}
-{"id": "B-9", "body": "Steps: open a report and click Export. The file takes ten minutes to arrive."}
+{"id": "B-7", "body": "Steps: click Log in. Nobody gets in."}
+{"id": "B-8", "body": "The Pay button on billing is too blue."}
+{"id": "B-9", "body": "Steps: click Export. It is very slow."}
 
-$ thinkthen annotate form.json --jsonl --field /body --jobs 8 < reports.jsonl
-{"id":"B-7","body":"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.","steps":true,"area":"login","impact":2.0}
-{"id":"B-8","body":"The Pay button on the billing page is a slightly different blue. No steps, I just noticed it.","steps":false,"area":"billing","impact":0.01}
-{"id":"B-9","body":"Steps: open a report and click Export. The file takes ten minutes to arrive.","steps":true,"area":"export","impact":1.07}
+$ thinkthen annotate form.json --jsonl --field /body --jobs 8 < reports.jsonl \
+    | jq -r 'del(.body) | tojson'
+{"id":"B-7","steps":true,"area":"login","impact":1.98}
+{"id":"B-8","steps":false,"area":"billing","impact":0.09}
+{"id":"B-9","steps":true,"area":"export","impact":1.04}
 ```
+
+ThinkThen answers the three questions about each report in one request.
 
 ## What it costs, and where it breaks
 

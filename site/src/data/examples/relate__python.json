@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "python",
-  "code": "edges = tt.relate(bugs, either=[\"same_as\"], threshold=0.9)\nedges[0].name, edges[0].source, edges[0].target, edges[0].probability   # \"same_as\", 1, 3, 1.0\nedges_df = tt.relate(df, on=\"body\", either=[\"same_as\"])                  # a Polars frame in, a Polars frame of edges out",
+  "code": "bugs = [\"The login button does nothing in Safari.\",\n    \"Export to CSV adds a blank row at the top.\",\n    \"Cannot sign in on Safari. The button never responds.\",\n    \"Dark mode resets to light after every restart.\",\n    \"The CSV download starts with an empty line.\"]\nfor edge in tt.relate(bugs, either=[\"same_as\"], threshold=0.9):\n    print(edge.name, edge.source, edge.target)\n# same_as 1 3: the Safari sign-in bug, twice\n# same_as 2 5: the blank first line in the CSV, twice",
   "function": "relate",
   "surface": "python"
 }

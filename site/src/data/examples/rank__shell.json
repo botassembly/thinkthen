@@ -4,21 +4,12 @@
   "runs": [
     {
       "name": "rank",
-      "command": "thinkthen rank 'Does this need an answer today?' --lines --top 2 < inbox.txt",
-      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nThe client needs the signed quote by 5 pm today.\nReminder: your invoice is due in 30 days",
+      "command": "thinkthen rank 'Does this need an answer today?' --lines < inbox.txt",
+      "input": "Newsletter: our autumn catalog is here. No reply needed.\nOur checkout page is down and customers cannot pay\nReminder: your invoice is due in 30 days\nPlease send the signed quote by Friday",
       "inputFile": "inbox.txt",
-      "output": "Our checkout page is down and customers cannot pay\nThe client needs the signed quote by 5 pm today.",
+      "output": "Our checkout page is down and customers cannot pay\nPlease send the signed quote by Friday\nReminder: your invoice is due in 30 days\nNewsletter: our autumn catalog is here. No reply needed.",
       "exit": 0,
-      "see": "The checkout outage comes first, and the quote the client needs by 5 pm today comes second."
-    },
-    {
-      "name": "rank-answer",
-      "command": "thinkthen rank --details 'Does this need an answer today?' --lines --top 2 < inbox.txt | jq -r '\"\\(.answer.probability)  \\(.input)\"'",
-      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nThe client needs the signed quote by 5 pm today.\nReminder: your invoice is due in 30 days",
-      "inputFile": "inbox.txt",
-      "output": "0.94  Our checkout page is down and customers cannot pay\n0.93  The client needs the signed quote by 5 pm today.",
-      "exit": 0,
-      "see": "The details put the outage at 0.94 and the quote due today at 0.93. Both need an answer today."
+      "see": "The outage comes first and the Friday quote second. The bill due in a month comes third, and the newsletter that needs no reply comes last."
     },
     {
       "name": "rank-jsonl",

@@ -22,14 +22,14 @@
   "screen-studies-for-a-review": {
     "status": "run",
     "source": "deck usecases/run.sh and usecases/out/",
-    "input": "Survey of 900 remote workers: output rose 4%.\nOpinion essay on open-plan offices.\nAbstract only: we studied remote work. No methods or results.\nTitle only: Remote work and output.",
+    "input": "Survey of 900 remote workers: output rose 4%.\nOpinion essay on open-plan offices.\nTitle only: Remote work and output.",
     "inputFile": "studies.txt",
     "forms": [],
     "steps": [
       {
         "name": "03-studies",
         "command": "thinkthen decide 'Does this report measured results on remote work?' \\\n      --lines --threshold 0.1:0.9 --details < studies.txt \\\n    | jq -r '\"\\(.value)  \\(.input)\"'",
-        "output": "true  Survey of 900 remote workers: output rose 4%.\nfalse  Opinion essay on open-plan offices.\nnull  Abstract only: we studied remote work. No methods or results.\nnull  Title only: Remote work and output.",
+        "output": "true  Survey of 900 remote workers: output rose 4%.\nfalse  Opinion essay on open-plan offices.\nnull  Title only: Remote work and output.",
         "exit": 0
       }
     ]
@@ -76,6 +76,12 @@
         "command": "hit=$(thinkthen find --none \"Which incident covers: $alert\" \\\n      < incidents-open.txt) && echo \"$hit\" &&\n    echo \"$hit\" | thinkthen decide \"Is this the same failure as: $alert\"",
         "output": "INC-1 checkout returns 500 at payment\ntrue",
         "exit": 0
+      },
+      {
+        "name": "06-alert-none",
+        "command": "hit=$(thinkthen find --none \"Which incident covers: $alert\" \\\n      < incidents-open.txt) && echo \"$hit\" &&\n    echo \"$hit\" | thinkthen decide \"Is this the same failure as: $alert\"",
+        "output": "",
+        "exit": 3
       }
     ]
   },
@@ -109,13 +115,7 @@
       },
       {
         "name": "08-spam",
-        "command": "thinkthen decide 'Is this post spam?' --threshold 0.8 < post.txt",
-        "output": "false",
-        "exit": 1
-      },
-      {
-        "name": "08-topic",
-        "command": "thinkthen decide 'Is this post off topic for a reply to an article?' \\\n      --threshold 0.8 < post.txt",
+        "command": "thinkthen decide 'Is this post spam?' < post.txt",
         "output": "false",
         "exit": 1
       }

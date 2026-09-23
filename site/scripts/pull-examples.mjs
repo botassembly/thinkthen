@@ -322,14 +322,13 @@ function recognizeCells() {
     let n = 0;
     for (const block of blocks) {
       if (block.lang === 'sql') {
-        // One comment line naming a database, then the statement under it.
-        const rows = block.code.split('\n');
-        for (let i = 0; i < rows.length; i += 1) {
-          const hint = /^--\s*(DuckDB|SQLite|PostgreSQL)/i.exec(rows[i]);
-          if (!hint || !rows[i + 1]) continue;
-          const slug = hint[1].toLowerCase();
-          const key = `${section.fn}|${slug}`;
-          if (!cells[key]) cells[key] = { lang: 'sql', code: `${rows[i]}\n${rows[i + 1]}` };
+        // One chunk per database, split on blank lines. Its first line is a
+        // comment naming the database.
+        for (const chunk of chunksOf(block.code)) {
+          const hint = /^--\s*(DuckDB|SQLite|PostgreSQL)/i.exec(chunk);
+          if (!hint) continue;
+          const key = `${section.fn}|${hint[1].toLowerCase()}`;
+          if (!cells[key]) cells[key] = { lang: 'sql', code: chunk };
         }
         continue;
       }

@@ -39,15 +39,6 @@
       "see": "The details put yes at 0.99 for this ticket."
     },
     {
-      "name": "decide-band",
-      "command": "thinkthen decide --lines --threshold 0.2:0.8 --details 'Does the customer ask for a refund?' < vague.txt | jq -r '[.value, .answer.probability]|tojson'",
-      "input": "I want to send this back.",
-      "inputFile": "vague.txt",
-      "output": "[null,0.54]",
-      "exit": 0,
-      "see": "Alone, the send-back line lands at 0.54, the same number as in the three-line run, inside the 0.2 to 0.8 band, so the value comes back null."
-    },
-    {
       "name": "decide-means",
       "command": "thinkthen decide 'Does the customer ask for a refund?' --true 'The customer asks for money back.' --false 'Anything else, such as a cancellation or a question.' < cancel.txt",
       "input": "Please cancel my plan at the end of this month.",

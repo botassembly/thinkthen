@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "c",
-  "code": "int rc = thinkthen_relate(tt, spec_json, texts, lens, COUNT, &out, &out_len);",
+  "code": "const char *bugs[] = {\"The login button does nothing in Safari.\",\n    \"Export to CSV adds a blank row at the top.\",\n    \"Cannot sign in on Safari. The button never responds.\",\n    \"Dark mode resets to light after every restart.\",\n    \"The CSV download starts with an empty line.\"};\nsize_t lens[5];\nfor (int i = 0; i < 5; i++) lens[i] = strlen(bugs[i]);\nint rc = thinkthen_relate(tt, \"{\\\"either\\\": [\\\"same_as\\\"]}\", bugs, lens, 5, &out, &out_len);\n/* same_as 1 ↔ 3, the Safari sign-in bug, and same_as\n   2 ↔ 5, the blank first line in the CSV */",
   "function": "relate",
   "surface": "c"
 }

@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "sql",
-  "code": "-- PostgreSQL: set-returning\nSELECT * FROM thinkthen_relate('SELECT id, body FROM bugs', ARRAY['same_as']);",
+  "code": "-- PostgreSQL: set-returning\nCREATE TABLE bugs (id int, body text);\nINSERT INTO bugs VALUES\n    (1, 'The login button does nothing in Safari.'),\n    (2, 'Export to CSV adds a blank row at the top.'),\n    (3, 'Cannot sign in on Safari. The button never responds.'),\n    (4, 'Dark mode resets to light after every restart.'),\n    (5, 'The CSV download starts with an empty line.');\nSELECT * FROM thinkthen_relate('SELECT id, body FROM bugs', ARRAY['same_as']);\n--  same_as | 1 | 3\n--  same_as | 2 | 5",
   "function": "relate",
   "surface": "postgresql"
 }

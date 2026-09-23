@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "ruby",
-  "code": "edges = ThinkThen.relate(bugs, either: %w[same_as])",
+  "code": "bugs = [\"The login button does nothing in Safari.\",\n  \"Export to CSV adds a blank row at the top.\",\n  \"Cannot sign in on Safari. The button never responds.\",\n  \"Dark mode resets to light after every restart.\",\n  \"The CSV download starts with an empty line.\"]\n# same_as 1 ↔ 3, the Safari sign-in bug, and same_as\n# 2 ↔ 5, the blank first line in the CSV\nThinkThen.relate(bugs, either: %w[same_as], threshold: 0.9)\n  .each { |edge| puts \"#{edge.name} #{edge.source} #{edge.target}\" }",
   "function": "relate",
   "surface": "ruby"
 }
