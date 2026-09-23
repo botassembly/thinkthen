@@ -84,7 +84,75 @@ module ThinkThen
   # process keeps one width gate and one set of counters.
   @engine = Native::Engine.new
 
+  # The watchdog: one Ruby thread that bounds every crossing's wait for a
+  # real interrupt. Each call registers a row — its own cancel token, the
+  # caller's token, and the thread's tick — and the watchdog polls the
+  # rows about ten times a second: a pending interrupt on the calling
+  # thread fires the call's token, the caller's fired token fires the
+  # call's token, and the tick runs. It never fires a token the caller
+  # shares, so an interrupt cannot cancel a sibling call, and a spurious
+  # Thread#wakeup or a trapped signal that raises nothing leaves
+  # `pending_interrupt?` clear and cancels nothing. The native crossing
+  # itself never re-takes the VM lock — the fourth review's probe crashed
+  # the old in-wait poll under a raising trap flood — so this thread is
+  # the only thing between a slow call and its host's gesture, and the
+  # raise itself surfaces where MRI delivers it natively, at the
+  # crossing's exit.
+  WATCHDOG_INTERVAL = 0.1
+  Row = Struct.new(:thread, :token, :tick, :caller, :error)
+
+  @rows = {}
+  @rows_mutex = Mutex.new
+
   class << self
+    # Start (or find) the one watchdog thread. It is created lazily and
+    # recreated after a fork, which does not carry Ruby threads into the
+    # child.
+    def watchdog
+      current = @watchdog
+      return current if current&.alive?
+      @watchdog = Thread.new do
+        Thread.current.name = "tt-watchdog" if Thread.current.respond_to?(:name=)
+        loop do
+          sleep WATCHDOG_INTERVAL
+          rows = begin
+            @rows_mutex.synchronize { @rows.values }
+          rescue StandardError
+            next
+          end
+          rows.each do |row|
+            begin
+              row.token.cancel if row.caller&.cancelled?
+              row.token.cancel if row.thread.pending_interrupt?
+              row.tick&.call
+            rescue Exception => e # rubocop:disable Lint/RescueException
+              # A tick that raises cancels its own call and rides out.
+              row.error ||= e
+              row.token.cancel
+            end
+          end
+        end
+      end
+    end
+
+    # Run one crossing under the watchdog: register the row, hand the
+    # call's own token to the block, unregister, and surface a tick's
+    # raise after the call is fully finished. `cancel` is the caller's
+    # own token, watched here and never fired; `tick` is this thread's
+    # progress block, run by the watchdog while the call is in flight.
+    def crossing(cancel: nil, tick: nil)
+      watchdog
+      row = Row.new(Thread.current, nil, tick, cancel, nil)
+      token = Cancel.new
+      row.token = token
+      @rows_mutex.synchronize { @rows[row.object_id] = row }
+      begin
+        yield token
+      ensure
+        @rows_mutex.synchronize { @rows.delete(row.object_id) }
+        raise row.error if row.error
+      end
+    end
     # Build a question from keywords: the verb key (decide, choose, score,
     # tag), its text, and threshold, options, levels, or labels. Returns a
     # built question any verb accepts.
@@ -124,12 +192,14 @@ module ThinkThen
     end
 
     def decide(question, evidence, cancel: nil, deadline: nil)
-      @engine.decide(built(question), text_of(evidence), cancel, deadline)
+      crossing(cancel: cancel) { |own| @engine.decide(built(question), text_of(evidence), own, deadline) }
     end
 
     def decide_many(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      @engine.decide_many(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
+      crossing(cancel: cancel, tick: Thread.current[:thinkthen_tick]) do |own|
+        @engine.decide_many(built(question), list.map { |one| text_of(one) }, own, deadline)
+      end
     end
 
     # The bulk answer with each judgment's probability beside it, for
@@ -140,50 +210,60 @@ module ThinkThen
     # symbol-keyed shape.
     def decide_many_with_probabilities(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      pairs = @engine.decide_many_with_probabilities(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
-      pairs.map { |pair| { answer: pair["answer"], probability: pair["probability"] } }
+      crossing(cancel: cancel, tick: Thread.current[:thinkthen_tick]) do |own|
+        pairs = @engine.decide_many_with_probabilities(built(question), list.map { |one| text_of(one) }, own, deadline)
+        pairs.map { |pair| { answer: pair["answer"], probability: pair["probability"] } }
+      end
     end
 
     def filter(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      kept = @engine.filter(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
-      kept.map { |index| list[index] }
+      crossing(cancel: cancel, tick: Thread.current[:thinkthen_tick]) do |own|
+        kept = @engine.filter(built(question), list.map { |one| text_of(one) }, own, deadline)
+        kept.map { |index| list[index] }
+      end
     end
 
     def rank(question, records, top: nil, cancel: nil, deadline: nil)
       list = records.to_a
-      placed = @engine.rank(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
-      ordered = placed.map { |index, probability| Ranked.new(index, list[index], probability) }
-      top ? ordered.first(top) : ordered
+      crossing(cancel: cancel, tick: Thread.current[:thinkthen_tick]) do |own|
+        placed = @engine.rank(built(question), list.map { |one| text_of(one) }, own, deadline)
+        ordered = placed.map { |index, probability| Ranked.new(index, list[index], probability) }
+        top ? ordered.first(top) : ordered
+      end
     end
 
     def find(question, units, cancel: nil, deadline: nil)
       list = units.to_a
-      index, probability = @engine.find(built(question), list.map { |one| text_of(one) }, cancel, deadline)
-      Found.new(index, index.nil? ? nil : list[index], probability)
+      crossing(cancel: cancel) do |own|
+        index, probability = @engine.find(built(question), list.map { |one| text_of(one) }, own, deadline)
+        Found.new(index, index.nil? ? nil : list[index], probability)
+      end
     end
 
     def choose(question, evidence, options: nil, cancel: nil, deadline: nil)
       question = choose_question(question, options)
-      @engine.choose(question, text_of(evidence), cancel, deadline)
+      crossing(cancel: cancel) { |own| @engine.choose(question, text_of(evidence), own, deadline) }
     end
 
     def score(question, evidence, levels: nil, cancel: nil, deadline: nil)
       question = score_question(question, levels)
-      @engine.score(question, text_of(evidence), cancel, deadline).first
+      crossing(cancel: cancel) { |own| @engine.score(question, text_of(evidence), own, deadline).first }
     end
 
     # The score with its nearest level beside it, for callers that want
     # the level's name without a second call.
     def score_with_level(question, evidence, levels: nil, cancel: nil, deadline: nil)
       question = score_question(question, levels)
-      value, nearest = @engine.score(question, text_of(evidence), cancel, deadline)
-      [value, nearest]
+      crossing(cancel: cancel) do |own|
+        value, nearest = @engine.score(question, text_of(evidence), own, deadline)
+        [value, nearest]
+      end
     end
 
     def tag(question, evidence, labels: nil, cancel: nil, deadline: nil)
       question = tag_question(question, labels)
-      @engine.tag(question, text_of(evidence), cancel, deadline)
+      crossing(cancel: cancel) { |own| @engine.tag(question, text_of(evidence), own, deadline) }
     end
 
     def annotate(set, records, on: nil, cancel: nil, deadline: nil)
@@ -196,11 +276,13 @@ module ThinkThen
       else
         list.map { |one| text_of(one) }
       end
-      # The input's keys are preserved: a question landing on one of their
-      # names refuses before any request is paid - the third review's
-      # probe caught the on column itself overwritten otherwise.
+      # The input's keys are preserved: a question landing on any
+      # record's key refuses before any request is paid. The check unions
+      # every record's keys — the fourth review's probe caught a question
+      # landing on the second record's column overwriting it silently,
+      # because only the first record was checked.
       if on
-        existing = list.first&.keys&.map(&:to_sym) || []
+        existing = list.flat_map { |record| record.keys.to_a }.map(&:to_sym).uniq
         clashes = set.names.map(&:to_sym) & existing
         unless clashes.empty?
           raise UsageError.new(
@@ -208,7 +290,9 @@ module ThinkThen
             "input already has a key by that name; rename one", "usage")
         end
       end
-      answers = @engine.annotate(set, evidence, cancel, deadline, Thread.current[:thinkthen_tick])
+      answers = crossing(cancel: cancel, tick: Thread.current[:thinkthen_tick]) do |own|
+        @engine.annotate(set, evidence, own, deadline)
+      end
       answers.each_with_index.map do |fields, place|
         if on
           record = list[place].transform_keys(&:to_sym)
@@ -221,7 +305,7 @@ module ThinkThen
     end
 
     def details(question, evidence, cancel: nil, deadline: nil)
-      @engine.details(built(question), text_of(evidence), cancel, deadline)
+      crossing(cancel: cancel) { |own| @engine.details(built(question), text_of(evidence), own, deadline) }
     end
 
     # Find every name in a text and say what kind it is.
@@ -240,7 +324,7 @@ module ThinkThen
     def recognize(text, kinds: nil, relations: nil, threshold: nil,
                   relation_threshold: nil, cancel: nil, deadline: nil)
       spec = recognize_spec(kinds, relations, threshold, relation_threshold)
-      answer = @engine.recognize(JSON.generate(spec), text_of(text), cancel, deadline)
+      answer = crossing(cancel: cancel) { |own| @engine.recognize(JSON.generate(spec), text_of(text), own, deadline) }
       Recognized.new(
         answer.fetch("entities").map do |one|
           Entity.new(one["id"], one["text"], one["kind"], one["start"], one["end"],
@@ -266,7 +350,7 @@ module ThinkThen
                kind_field: nil, cancel: nil, deadline: nil)
       list = records.to_a
       spec = relate_spec(relations, either, threshold, kind_field)
-      answer = @engine.relate(JSON.generate(spec), list.map { |one| text_of(one) }, cancel, deadline)
+      answer = crossing(cancel: cancel) { |own| @engine.relate(JSON.generate(spec), list.map { |one| text_of(one) }, own, deadline) }
       answer.map do |one|
         Edge.new(one["name"], one["source"], one["target"], one["probability"],
                  one["source_kind"], one["target_kind"])
@@ -277,24 +361,21 @@ module ThinkThen
       @engine.usage
     end
 
-    # Run one bulk call on a tick: the engine runs the block every wait
-    # interval with the VM lock taken, and a raise inside it cancels the
-    # call, lets sent requests finish, and re-raises. A tick is for
-    # progress reporting or a host's own gesture.
+    # Run bulk calls with a tick: the watchdog runs the block about ten
+    # times a second while a call from this thread is in flight, and a
+    # raise inside it cancels the call, lets sent requests finish, and
+    # re-raises after the call returns. A tick is for progress reporting
+    # or a host's own gesture.
     #
     # The tick is this thread's own: it rides Thread.current, so two
     # threads sharing one engine each hear their own block and never each
-    # other's - the third review's probe caught 1,113 of 3,448 ticks
-    # running on the wrong thread under the old shared slot. A block
-    # alone sets the tick for this thread's later calls; a positional
-    # tick with a block scopes it to the block's calls.
+    # other's. A block alone sets the tick for this thread's later calls;
+    # a positional tick with a block scopes it to the block's calls.
     #
-    # Honesty about single verbs: one-evidence calls (decide, choose,
-    # score, tag, details, find, recognize, relate) run one crossing with
-    # no poll, so an interrupt cannot stop the request already sent - it
-    # is heard the moment the crossing returns and raised there. Bulk
-    # verbs stop mid-batch: the poll fires the call's token, sent requests
-    # finish, and the raise surfaces with the call cancelled.
+    # Honesty about the cadence: the tick runs on the watchdog's clock,
+    # roughly every tenth of a second while a call is in flight, not once
+    # per request; a call that finishes between ticks runs its tick zero
+    # times.
     def with_tick(tick = nil, &block)
       # A block alone is the tick, set for this thread's later calls (the
       # historical shape). A positional tick with a block scopes the tick

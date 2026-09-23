@@ -36,12 +36,12 @@ tick = lambda do
   raise Interrupt, "the tick interrupts the bulk call"
 end
 
-engine = ThinkThen.with_tick(&tick)
+ThinkThen.with_tick(&tick)
 raised = nil
 wall = nil
 
 begin
-  engine.decide_many(question, records, token, nil, Thread.current[:thinkthen_tick])
+  ThinkThen.decide_many(question, records, cancel: token)
   warn "the batch ran deaf: no interrupt raised"
   exit 1
 rescue Interrupt => e

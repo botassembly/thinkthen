@@ -7,32 +7,34 @@
 //! keyword shapes and the record handling; everything that crosses into
 //! Rust happens here, one crossing a call.
 //!
-//! The 211 poll shape, ported: a bulk call releases the VM lock for the
-//! whole run, and each tick of the engine's wait re-takes the lock through
-//! `rb_thread_call_with_gvl` to run the surface's poll. The poll checks
-//! the caller's own cancel token and calls MRI's pending-interrupt
-//! handling, so a real `Thread#raise`, Ctrl-C, or kill cancels the call's
-//! own token, sent requests finish, no new one starts, and the exception
-//! is re-raised when the engine call returns. A spurious `Thread#wakeup`
-//! and a trapped signal raise nothing and cancel nothing. The engine
-//! watches the call's own token, never a token the caller shares, so an
-//! interrupt cannot cancel a sibling call; the caller's token is heard by
-//! the poll and fired only by the caller's own `cancel`. A token fired
-//! without a raise returns the `cancelled` kind.
+//! The interrupt story, fourth-review shape: the crossing itself never
+//! re-takes the VM lock. The whole engine call runs under one
+//! `rb_thread_call_without_gvl` with no callback into Ruby anywhere
+//! beneath it, and the host's interrupts are heard where MRI delivers
+//! them natively — at the crossing's exit, in ordinary Ruby frames. The
+//! Ruby-side watchdog thread (lib/thinkthen.rb) bounds the wait for a
+//! slow call: it polls `pending_interrupt?` and the caller's token about
+//! ten times a second and fires the call's own token, so a real
+//! `Thread#raise`, Ctrl-C, or kill cancels the call — sent requests
+//! finish, no new one starts — and the raise itself surfaces at the
+//! exit. A spurious `Thread#wakeup` and a trapped signal that raises
+//! nothing leave `pending_interrupt?` clear, so they cancel nothing. The
+//! engine watches the call's own token, never one the caller shares, so
+//! an interrupt cannot cancel a sibling call; a token fired without a
+//! raise returns the `cancelled` kind.
 //!
-//! The crossing carries no unblock function: Ruby calls one for every
-//! interrupt at all — wake-up, signal, and raise alike — and a callback
-//! without the VM lock cannot tell them apart, which is exactly the bug
-//! the poll replaces. Single verbs have no poll to run (the contract's
-//! single entry points take none), so their cancel channel is the
-//! engine's own stop checks on the token the caller gave, and an
-//! interrupt that lands during one surfaces when the call returns.
+//! The fourth review's probe crashed the previous shape — a poll that
+//! re-took the lock through `rb_thread_call_with_gvl` under an outer
+//! `rb_protect` — four of four under a raising trap flood: the raise
+//! lands at the lock's reacquire checkpoint and its jump crosses the
+//! with-gvl machinery, and `coroutine_transfer` faults. No code under
+//! the engine call now touches Ruby at all, so there is no such jump to
+//! make.
 
 use std::ffi::c_void;
 use std::sync::Arc;
 
 use magnus::prelude::*;
-use magnus::value::BoxValue;
 use magnus::{
     class, define_module, exception, function, method, DataTypeFunctions, Error, ExceptionClass,
     IntoValue, RArray, RClass, RHash, TryConvert, TypedData, Value,
@@ -85,6 +87,13 @@ impl CancelValue {
     /// Fire the token. Sent requests finish; no new one starts.
     fn cancel(&self) {
         self.token.cancel();
+    }
+
+    /// Whether the token has been fired. The Ruby-side watchdog polls
+    /// this on the caller's token so it can stop the call through the
+    /// call's own token, never by firing the caller's.
+    fn is_fired(&self) -> bool {
+        self.token.is_cancelled()
     }
 }
 
@@ -342,103 +351,19 @@ enum Bulk {
     Rank,
 }
 
-/// What a many-record crossing carries in and out.
+/// What a many-record crossing carries in and out. The token is the
+/// call's own, created on the Ruby side and handed in: the engine
+/// watches it, the Ruby-side watchdog fires it, and no token the caller
+/// shares is ever fired by this surface.
 struct BulkJob {
     engine: Arc<dyn ContractEngine>,
     question: Question,
     records: Vec<String>,
-    /// The call's own token: the engine watches this one, and only the
-    /// poll fires it. The caller's token is `caller`, checked by the same
-    /// poll, so an interrupt never fires a token two calls share.
     token: Cancel,
-    caller: Option<Cancel>,
     deadline: Option<f64>,
     which: Bulk,
-    /// The caller's block, held in a registered slot for the whole call
-    /// so the collector cannot take it while Rust still calls it.
-    tick: Option<*const Value>,
     /// The crossing's answer, written by the body on this same thread.
     answer: Option<Crossing<BulkOut>>,
-    /// A raise the poll caught mid-batch, riding out beside the answer.
-    raised: Option<Error>,
-}
-
-/// The poll state a bulk crossing threads into the engine's wait.
-struct BulkTick {
-    tick: Option<*const Value>,
-    caller: Option<Cancel>,
-    raised: Option<Error>,
-    token: Cancel,
-}
-
-impl BulkTick {
-    fn poll(&mut self) {
-        if self.raised.is_some() {
-            return;
-        }
-        let state = self as *mut BulkTick as *mut c_void;
-        // The whole with-gvl body runs under one protection: a raise
-        // landing at its GVL reacquire - or inside the caller's tick - is
-        // caught here as data instead of jumping across the engine's wait
-        // frames with this state pointer dangling behind it. That jump was
-        // the drain-boundary SEGV the stress probe caught.
-        let outcome = magnus::rb_sys::protect(|| unsafe {
-            rb_sys::rb_thread_call_with_gvl(Some(bulk_tick_body), state) as rb_sys::VALUE
-        });
-        if let Err(raised) = outcome {
-            self.token.cancel();
-            self.raised = Some(raised);
-        }
-    }
-}
-
-unsafe extern "C" fn bulk_tick_body(pointer: *mut c_void) -> *mut c_void {
-    let state = unsafe { &mut *(pointer as *mut BulkTick) };
-    // The caller's own token stops this call through the call's own
-    // token. Checking it here, never firing it, keeps a token shared by
-    // several calls the caller's own gesture: an interrupt elsewhere
-    // cannot cancel a sibling call.
-    if state.caller.as_ref().is_some_and(Cancel::is_cancelled) {
-        state.token.cancel();
-        // A raise that landed in the same breath as the caller's cancel
-        // must be caught here, with the VM lock held; left pending, MRI
-        // delivers it at a later checkpoint - a GVL reacquisition inside
-        // the batch - and the jump out skips the scope that joins this
-        // batch's workers, which then live on over freed memory (the
-        // review's repro: eight `ttb-worker` threads faulting in
-        // `Error::guard` after the call had returned).
-        if let Err(raised) = hear_interrupts() {
-            state.raised = Some(raised);
-        }
-        return std::ptr::null_mut();
-    }
-    // Hear the host's own interrupts: a real Thread#raise, Ctrl-C, or
-    // kill lands here as a caught error and rides out after the call; a
-    // spurious Thread#wakeup and a trapped signal raise nothing.
-    if let Err(raised) = hear_interrupts() {
-        state.token.cancel();
-        state.raised = Some(raised);
-        return std::ptr::null_mut();
-    }
-    // The caller's own tick, when one was given. The slot is registered
-    // for the call's length, so this read is the live value.
-    if let Some(pointer) = state.tick {
-        let tick = unsafe { *pointer };
-        let outcome: Result<Value, Error> = tick.funcall("call", ());
-        if let Err(raised) = outcome {
-            state.token.cancel();
-            state.raised = Some(raised);
-        }
-    }
-    // A raise can arrive while the tick runs Ruby code; drain again so it
-    // is caught here rather than at an MRI checkpoint later.
-    if state.raised.is_none() {
-        if let Err(raised) = hear_interrupts() {
-            state.token.cancel();
-            state.raised = Some(raised);
-        }
-    }
-    std::ptr::null_mut()
 }
 
 enum BulkOut {
@@ -455,40 +380,25 @@ unsafe extern "C" fn bulk_body(pointer: *mut c_void) -> *mut c_void {
     let records: Vec<String> = job.records.clone();
     let deadline = job.deadline;
     let token = job.token.clone();
-    let tick = job.tick;
-    // The poll always runs: the caller's token and the host's own
-    // interrupts are heard there even when no tick was given.
-    let mut tick_state = Some(BulkTick {
-        tick,
-        caller: job.caller.clone(),
-        raised: None,
-        token: token.clone(),
-    });
     let answer: Crossing<BulkOut> = guarded(|| {
         let options = options_for(&token, deadline)?;
-        let mut closure = || {
-            if let Some(state) = tick_state.as_mut() {
-                state.poll();
-            }
-        };
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
         match job.which {
             Bulk::DecideMany => engine
-                .decide_many_opts(&question, &slices, options, Some(&mut closure))
+                .decide_many_opts(&question, &slices, options, None)
                 .map(BulkOut::Judgments),
             Bulk::DecideManyWithProbabilities => engine
-                .decide_many_opts(&question, &slices, options, Some(&mut closure))
+                .decide_many_opts(&question, &slices, options, None)
                 .map(BulkOut::JudgedPairs),
             Bulk::Filter => engine
-                .filter_opts(&question, &slices, options, Some(&mut closure))
+                .filter_opts(&question, &slices, options, None)
                 .map(BulkOut::Kept),
             Bulk::Rank => engine
-                .rank_opts(&question, &slices, options, Some(&mut closure))
+                .rank_opts(&question, &slices, options, None)
                 .map(BulkOut::Ranked),
         }
     });
     job.answer = Some(answer);
-    job.raised = tick_state.and_then(|state| state.raised);
     std::ptr::null_mut()
 }
 
@@ -498,11 +408,8 @@ struct AnnotateJob {
     set: QuestionSet,
     records: Vec<String>,
     token: Cancel,
-    caller: Option<Cancel>,
     deadline: Option<f64>,
-    tick: Option<*const Value>,
     answer: Option<Crossing<Vec<Vec<(String, Annotated)>>>>,
-    raised: Option<Error>,
 }
 
 unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
@@ -512,25 +419,12 @@ unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
     let records: Vec<String> = job.records.clone();
     let deadline = job.deadline;
     let token = job.token.clone();
-    let tick = job.tick;
-    let mut tick_state = Some(BulkTick {
-        tick,
-        caller: job.caller.clone(),
-        raised: None,
-        token: token.clone(),
-    });
     let answer: Crossing<Vec<Vec<(String, Annotated)>>> = guarded(|| {
         let options = options_for(&token, deadline)?;
-        let mut closure = || {
-            if let Some(state) = tick_state.as_mut() {
-                state.poll();
-            }
-        };
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        engine.annotate_opts(&set, &slices, options, Some(&mut closure))
+        engine.annotate_opts(&set, &slices, options, None)
     });
     job.answer = Some(answer);
-    job.raised = tick_state.and_then(|state| state.raised);
     std::ptr::null_mut()
 }
 
@@ -586,25 +480,19 @@ impl QuestionValue {
     }
 }
 
-/// A nil-tolerant read of the optional cancel token.
-fn optional_cancel(value: Value) -> Result<Option<Cancel>, Error> {
+/// The token a crossing carries: the one the Ruby side hands in — the
+/// call's own, created beside its watchdog row — or a fresh one nothing
+/// holds, which keeps an unarmed call unarmed.
+fn own_cancel(value: Value) -> Result<Cancel, Error> {
     if value.is_nil() {
-        return Ok(None);
+        return Ok(Cancel::new());
     }
     match <&CancelValue as magnus::TryConvert>::try_convert(value) {
-        Ok(held) => Ok(Some(held.token.clone())),
+        Ok(held) => Ok(held.token.clone()),
         Err(_) => Err(map_error(ContractError::usage(
             "cancel is a ThinkThen::Cancel or nil",
         ))),
     }
-}
-
-/// The token a single crossing carries: the caller's own, or a fresh one
-/// nothing holds. Single verbs run without a poll, so the engine's own
-/// stop checks are the only place a cancel is heard; a fresh token keeps
-/// an unarmed call unarmed.
-fn single_token(cancel: Value) -> Result<Cancel, Error> {
-    Ok(optional_cancel(cancel)?.unwrap_or_default())
 }
 
 /// A nil-tolerant read of the optional deadline in seconds. A value that
@@ -621,22 +509,6 @@ fn optional_deadline(value: Value) -> Result<Option<f64>, Error> {
         ))),
     }
 }
-
-/// A nil-tolerant read of the optional tick.
-fn optional_tick(value: Value) -> Option<Value> {
-    (!value.is_nil()).then_some(value)
-}
-
-/// The tick a bulk call runs: the caller's block, or the engine's own
-/// `@tick` set by `ThinkThen.with_tick`, or none. The documented helper
-/// stores its block in the ivar; the argument wins when both are given.
-fn tick_from(_rb_self: Value, tick: Value) -> Result<Value, Error> {
-    // The wrapper passes this thread's own tick explicitly (Thread.current
-    // on the Ruby side); the old shared-ivar fallback is gone, because it
-    // let one thread's tick run on another thread's calls.
-    Ok(tick)
-}
-
 impl EngineValue {
     fn new_engine() -> Result<Self, Error> {
         let connector = StandinConnector;
@@ -653,10 +525,10 @@ impl EngineValue {
         which: Single,
         question: &QuestionValue,
         evidence: String,
-        cancel: Value,
+        own: Value,
         deadline: Value,
     ) -> Result<Value, Error> {
-        let token = single_token(cancel)?;
+        let token = own_cancel(own)?;
         let mut job = SingleJob {
             engine: Arc::clone(&self.engine),
             question: question.question.clone(),
@@ -707,43 +579,34 @@ impl EngineValue {
     }
 
     /// Any many-record verb, one crossing with the lock released and the
-    /// tick running each wait interval.
+    /// watchdog watching from the Ruby side.
     fn bulk(
         &self,
         which: Bulk,
         question: &QuestionValue,
         records: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
-        tick: Value,
     ) -> Result<Value, Error> {
-        // The engine watches the call's own token, and the poll fires it
-        // for the caller's token and for the host's real interrupts, so a
-        // token two calls share is only ever fired by its own `cancel`.
-        let token = Cancel::new();
-        let caller = optional_cancel(cancel)?;
-        if caller.as_ref().is_some_and(Cancel::is_cancelled) {
-            token.cancel();
-        }
-        let held_tick = optional_tick(tick).map(BoxValue::new);
+        // The engine watches the call's own token, handed in from the
+        // Ruby side, where the watchdog fires it for the host's real
+        // interrupts and for the caller's token; a token two calls share
+        // is only ever fired by its own `cancel`.
+        let token = own_cancel(own)?;
         let mut job = BulkJob {
             engine: Arc::clone(&self.engine),
             question: question.question.clone(),
             records,
             token: token.clone(),
-            caller,
             deadline: optional_deadline(deadline)?,
             which,
-            tick: held_tick.as_ref().map(|held| held.as_ref() as *const Value),
             answer: None,
-            raised: None,
         };
-        // The tick's registration and the job live on this frame, outside
-        // the protection: whatever raise MRI delivers inside, the
-        // registration drops and the answer slot empties on this line.
-        let outcome = protected(|| {
+        // The job lives on this frame, so whatever raise MRI delivers
+        // inside, its answer slot drops here.
+        protected(|| {
             let pending = without_gvl(&mut job, bulk_body);
-            if let Some(raised) = job.raised.take().or(pending) {
+            if let Some(raised) = pending {
                 return Err(raised);
             }
             let answer = job
@@ -786,10 +649,8 @@ impl EngineValue {
                 }
                 Ok(list.as_value())
             }
-        }
-        });
-        drop(held_tick);
-        outcome
+            }
+        })
     }
 
     fn decide(
@@ -811,11 +672,11 @@ impl EngineValue {
         &self,
         spec: String,
         text: String,
-        cancel: Value,
+        own: Value,
         deadline: Value,
     ) -> Result<Value, Error> {
         let ask = Recognize::from_json(&spec).map_err(map_error)?;
-        let token = single_token(cancel)?;
+        let token = own_cancel(own)?;
         let mut job = RecognizeJob {
             engine: Arc::clone(&self.engine),
             ask,
@@ -845,11 +706,11 @@ impl EngineValue {
         &self,
         spec: String,
         records: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
     ) -> Result<Value, Error> {
         let ask = Relate::from_json(&spec).map_err(map_error)?;
-        let token = single_token(cancel)?;
+        let token = own_cancel(own)?;
         let mut job = RelateJob {
             engine: Arc::clone(&self.engine),
             ask,
@@ -876,12 +737,11 @@ impl EngineValue {
         rb_self: Value,
         question: &QuestionValue,
         records: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
-        tick: Value,
     ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
-        engine.bulk(Bulk::DecideMany, question, records, cancel, deadline, tick_from(rb_self, tick)?)
+        engine.bulk(Bulk::DecideMany, question, records, own, deadline)
     }
 
     /// The same one crossing as `decide_many`, with each judgment's
@@ -892,18 +752,16 @@ impl EngineValue {
         rb_self: Value,
         question: &QuestionValue,
         records: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
-        tick: Value,
     ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
         engine.bulk(
             Bulk::DecideManyWithProbabilities,
             question,
             records,
-            cancel,
+            own,
             deadline,
-            tick_from(rb_self, tick)?,
         )
     }
 
@@ -911,24 +769,22 @@ impl EngineValue {
         rb_self: Value,
         question: &QuestionValue,
         records: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
-        tick: Value,
     ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
-        engine.bulk(Bulk::Filter, question, records, cancel, deadline, tick_from(rb_self, tick)?)
+        engine.bulk(Bulk::Filter, question, records, own, deadline)
     }
 
     fn rank(
         rb_self: Value,
         question: &QuestionValue,
         records: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
-        tick: Value,
     ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
-        engine.bulk(Bulk::Rank, question, records, cancel, deadline, tick_from(rb_self, tick)?)
+        engine.bulk(Bulk::Rank, question, records, own, deadline)
     }
 
     fn choose(
@@ -975,10 +831,10 @@ impl EngineValue {
         &self,
         question: &QuestionValue,
         units: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
     ) -> Result<Value, Error> {
-        let token = single_token(cancel)?;
+        let token = own_cancel(own)?;
         let mut job = FindJob {
             engine: Arc::clone(&self.engine),
             question: question.question.clone(),
@@ -1011,33 +867,24 @@ impl EngineValue {
         rb_self: Value,
         set: &SetValue,
         records: Vec<String>,
-        cancel: Value,
+        own: Value,
         deadline: Value,
-        tick: Value,
     ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
-        let token = Cancel::new();
-        let caller = optional_cancel(cancel)?;
-        if caller.as_ref().is_some_and(Cancel::is_cancelled) {
-            token.cancel();
-        }
-        let held_tick = optional_tick(tick_from(rb_self, tick)?).map(BoxValue::new);
+        let token = own_cancel(own)?;
         let mut job = AnnotateJob {
             engine: Arc::clone(&engine.engine),
             set: set.set.clone(),
             records,
             token: token.clone(),
-            caller,
             deadline: optional_deadline(deadline)?,
-            tick: held_tick.as_ref().map(|held| held.as_ref() as *const Value),
             answer: None,
-            raised: None,
         };
-        // The tick's registration lives outside the protection, so it
-        // drops on the next line whatever happened inside.
-        let outcome = protected(|| {
+        // The job lives on this frame, so whatever raise MRI delivers
+        // inside, its answer slot drops here.
+        protected(|| {
             let pending = without_gvl(&mut job, annotate_body);
-            if let Some(raised) = job.raised.take().or(pending) {
+            if let Some(raised) = pending {
                 return Err(raised);
             }
             let records_out = job
@@ -1057,9 +904,7 @@ impl EngineValue {
                 outer.push(inner).map_err(|error| error)?;
             }
             Ok(outer.as_value())
-        });
-        drop(held_tick);
-        outcome
+        })
     }
 
     fn usage(&self) -> Result<RHash, Error> {
@@ -1259,24 +1104,25 @@ fn init() -> Result<(), Error> {
     let cancel = module.define_class("Cancel", class::object())?;
     cancel.define_singleton_method("new", function!(cancel_new, 0))?;
     cancel.define_method("cancel", method!(CancelValue::cancel, 0))?;
+    cancel.define_method("cancelled?", method!(CancelValue::is_fired, 0))?;
 
     let native = module.define_module("Native")?;
     let engine = native.define_class("Engine", class::object())?;
     engine.define_singleton_method("new", function!(EngineValue::new_engine, 0))?;
     engine.define_method("decide", method!(EngineValue::decide, 4))?;
-        engine.define_method("decide_many", method!(EngineValue::decide_many, 5))?;
+        engine.define_method("decide_many", method!(EngineValue::decide_many, 4))?;
         engine.define_method(
             "decide_many_with_probabilities",
-            method!(EngineValue::decide_many_with_probabilities, 5),
+            method!(EngineValue::decide_many_with_probabilities, 4),
         )?;
-    engine.define_method("filter", method!(EngineValue::filter, 5))?;
-    engine.define_method("rank", method!(EngineValue::rank, 5))?;
+    engine.define_method("filter", method!(EngineValue::filter, 4))?;
+    engine.define_method("rank", method!(EngineValue::rank, 4))?;
     engine.define_method("choose", method!(EngineValue::choose, 4))?;
     engine.define_method("score", method!(EngineValue::score, 4))?;
     engine.define_method("tag", method!(EngineValue::tag, 4))?;
     engine.define_method("details", method!(EngineValue::details, 4))?;
     engine.define_method("find", method!(EngineValue::find, 4))?;
-    engine.define_method("annotate", method!(EngineValue::annotate, 5))?;
+    engine.define_method("annotate", method!(EngineValue::annotate, 4))?;
     engine.define_method("recognize", method!(EngineValue::recognize, 4))?;
     engine.define_method("relate", method!(EngineValue::relate, 4))?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;

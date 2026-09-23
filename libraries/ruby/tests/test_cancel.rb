@@ -30,7 +30,6 @@ Net::HTTP.post(STUB + "/v1/reset", "")
 
 records = Array.new(1000) { |i| i.zero? ? "I want a refund" : "filler record #{i}" }
 token = ThinkThen::Cancel.new
-engine = ThinkThen::Native::Engine.new
 question = ThinkThen.question(decide: "Is this a complaint?")
 
 started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -45,7 +44,7 @@ watcher = Thread.new do
 end
 
 begin
-  engine.decide_many(question, records, token, nil, -> {})
+  ThinkThen.decide_many(question, records, cancel: token)
   warn "the call returned instead of raising"
   exit 1
 rescue Interrupt => e
