@@ -70,6 +70,26 @@ if [[ -n "$standin_extra" ]]; then
 fi
 echo "ok       the only stand-in reference is the connector import"
 
+echo "== duckdb surface: every logical type the source creates is destroyed"
+# A created logical type the caller never destroys leaks; review 5 found
+# five in warm.rs and usage.rs, the usage ones on every bind. A crude
+# count, per file, with no exception list: a new create needs its destroy
+# beside it.
+unbalanced=""
+for source in src/*.rs; do
+  made=$(grep -c "duckdb_create_logical_type(\|duckdb_create_list_type(" "$source" || true)
+  freed=$(grep -c "duckdb_destroy_logical_type(" "$source" || true)
+  if [[ "$made" != "$freed" ]]; then
+    unbalanced+="$source: $made created, $freed destroyed"$'\n'
+  fi
+done
+if [[ -n "$unbalanced" ]]; then
+  echo "FAILED   logical types created without a matching destroy:"
+  printf '%s' "$unbalanced"
+  exit 1
+fi
+echo "ok       every created logical type has its destroy"
+
 echo "== duckdb surface: the conformance driver can fail"
 tools/conformance_selftest.sh
 
