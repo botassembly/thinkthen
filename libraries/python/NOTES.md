@@ -677,3 +677,65 @@ the nightly toolchain and refused at the dependency build
 trap for the next lane: a scratch copy of this crate that shares its
 `target/` dir can leave a stale artifact under the same package name;
 `cargo clean --release -p thinkthen-python` clears it.
+
+## 2026-09-23: the third review's Python findings (refs surfaces-review-3)
+
+**Item 4, malformed Arrow views and offsets (HIGH).** The guards: one cap,
+`MAX_ONE_STRING` (64 MiB — far past any text the engine classifies), applied to
+a view's size, its data-buffer offset, their sum, and a regular string array's
+offset span; reversed or negative offsets refuse by name; the dead `index < 0`
+sign check became the correct `u32` compare. The probes are four FFI-level
+tests in `src/arrow.rs::malformed_tests`, hand-built C structs over real small
+buffers — the reviewer's exact shapes.
+
+- Probe `reversed_offsets_are_refused_not_wrapped`, pre-fix:
+  `thread panicked ... null pointer dereference occurred ... SIGABRT` (debug
+  catches the underflow; release wraps into the reviewer's exit 139).
+- Post-fix: `test result: ok. 4 passed` (`cargo test --no-default-features
+  --lib malformed`).
+- Real columns unchanged: `pytest tests/test_polars_door.py
+  tests/test_pandas_checks.py tests/test_surface.py` → `57 passed` with the
+  synthetic build.
+
+**Item 14, a pre-fired token spent a full batch.** The bulk door watched the
+caller's token only in its poll, so the first batch flew; the single verbs
+handed the token to the engine, which refuses at entry. Both doors now read
+the token before any request is built (`bulk` pre-check; `call_options`
+pre-check). Probe `tests/test_review3_wire.py`, the server counts:
+
+- Pre-fix (lib.rs stashed): `AssertionError: a cancelled token must not spend:
+  1 requests` — `2 failed` (bulk and column forms).
+- Post-fix: `4 passed`, including the guard-against-overfire test: a live
+  token still sends and a controller's cancel lands between rows
+  (`ENGINE_WIDTH=1`, spent < all).
+
+**Item 21, one deadline spelling.** The surface's own blanket negative
+refusal is gone; the contract's `deadline_from_seconds` owns the conversion:
+-1 crosses as the sentinel, every other negative refuses, zero stays spent,
+NaN and the oversized refuse. `pytest tests/test_review3_offline.py` → 9
+passed; the two review-era tests that asserted the superseded "-1 refused"
+rule were rewritten to the decided one (`test_surface.py`,
+`test_review2_findings.py`, and the crate's own
+`the_deadline_conversion_refuses_what_cannot_be_a_budget`).
+
+**Item 22, the builder's silent drops.** `question` now refuses by name:
+options beside decide, levels beside choose, labels beside score, true/false
+beside choose/score/tag, and anything beside `file`. Fail side: the new test
+raised `DID NOT RAISE` on `question(decide=..., options=[...])`; fix side: 9
+passed.
+
+**Item 22, the pandas advice.** Every pandas line the shipped docstrings
+advise now runs as a test (`test_the_decide_docstring_advice_round_trips`,
+`test_the_annotate_docstring_advice_round_trips`). The reviewer's all-NaN
+column reproduced and is diagnosed, not papered over: the null backend
+answers the `form.json` tag question with None, and pandas spells a null
+answer NaN — the round trip is honest, and the test pins `team.isna().all()`
+so a real drop cannot hide behind it. A separate standin defect was found on
+the way and is out of this folder's scope: under `ENGINE_NULL=1`,
+`tt.score` with two levels raises `BackendError` because the null backend's
+Score arm always invents three odds regardless of the question's level count
+(`standin/src/lib.rs` null_reply, Score arm) — recorded here for the standin
+owner.
+
+`./check.sh` at the committed tree: exit 0, `78 passed, 0 failed, 6 skipped`
+(offline stages), the crate's 7 Rust tests green.

@@ -249,11 +249,18 @@ fn call_options<'a>(
     deadline: Option<f64>,
     token: Option<&'a Bound<'a, CancelToken>>,
 ) -> Result<Options<'a>, Error> {
-    if let Some(seconds) = deadline {
-        if seconds < 0.0 {
-            return Err(Error::usage(format!(
-                "the deadline of {seconds} s is negative; no deadline is spelled None, and a computed budget below zero is refused rather than silently disabling the deadline"
-            )));
+    // A token already cancelled before the call spends nothing: the
+    // refusal happens here, before any request is built or sent. The
+    // deadline conversion below owns the spellings: -1 is the one
+    // no-deadline sentinel, every other negative is refused, and zero is
+    // a spent deadline the engine answers with the deadline kind.
+    if let Some(held) = token {
+        if held.get().inner.is_cancelled() {
+            return Err(Error {
+                kind: ErrorKind::Cancelled,
+                message: "the token was already cancelled; no request was sent".into(),
+                retryable: false,
+            });
         }
     }
     let options = Options::new().with_deadline_seconds(deadline)?;
@@ -386,6 +393,14 @@ fn bulk<T: Send>(
     token: Option<&Bound<'_, CancelToken>>,
     call: impl FnOnce(Options<'_>, Option<&mut dyn FnMut()>) -> Result<T, Error> + Send,
 ) -> PyResult<T> {
+    if let Some(held) = token {
+        if held.get().inner.is_cancelled() {
+            return Err(cancelled_error(
+                py,
+                "the token was already cancelled; no request was sent",
+            ));
+        }
+    }
     let options = call_options(deadline, None).map_err(|error| python_error(py, error))?;
     let flagged = Arc::new(AtomicBool::new(false));
     let war = Cancel::new();
@@ -466,12 +481,53 @@ fn question(
     file: Option<String>,
 ) -> PyResult<Question> {
     if let Some(path) = file {
+        // A file carries its own whole question set; anything beside it
+        // would be silently dropped, so every other argument refuses.
+        let stray = [
+            ("decide", decide.is_some()),
+            ("choose", choose.is_some()),
+            ("score", score.is_some()),
+            ("tag", tag.is_some()),
+            ("threshold", threshold.is_some()),
+            ("options", options.is_some()),
+            ("labels", labels.is_some()),
+            ("levels", levels.is_some()),
+            ("true", true_.is_some()),
+            ("false", false_.is_some()),
+            ("model", model.is_some()),
+        ];
+        if let Some((name, _)) = stray.iter().find(|(_, held)| *held) {
+            return Err(UsageError::new_err(format!(
+                "question(file=...) takes nothing beside the file; '{name}' would be dropped"
+            )));
+        }
         let inner = ContractQuestion::from_file(std::path::Path::new(&path))
             .map_err(|error| python_error(py, error))?;
         return Ok(Question { inner });
     }
+    // An argument that does not belong to the chosen verb was silently
+    // dropped before; now it refuses by name, because a dropped argument
+    // is a misshapen question the caller believed they asked.
+    let refuse_stray = |verb: &str, allowed: &[(&str, bool)]| -> PyResult<()> {
+        for (name, held) in allowed {
+            if *held {
+                return Err(UsageError::new_err(format!(
+                    "'{name}' does not belong to a {verb} question; it would be dropped"
+                )));
+            }
+        }
+        Ok(())
+    };
     let mut body = serde_json::Map::new();
     if let Some(text) = decide {
+        refuse_stray(
+            "decide",
+            &[
+                ("options", options.is_some()),
+                ("labels", labels.is_some()),
+                ("levels", levels.is_some()),
+            ],
+        )?;
         body.insert("decide".into(), serde_json::json!(text));
         if let Some(yes) = true_ {
             body.insert("true".into(), serde_json::json!(yes));
@@ -480,6 +536,15 @@ fn question(
             body.insert("false".into(), serde_json::json!(no));
         }
     } else if let Some(text) = choose {
+        refuse_stray(
+            "choose",
+            &[
+                ("labels", labels.is_some()),
+                ("levels", levels.is_some()),
+                ("true", true_.is_some()),
+                ("false", false_.is_some()),
+            ],
+        )?;
         body.insert("choose".into(), serde_json::json!(text));
         body.insert(
             "options".into(),
@@ -488,6 +553,15 @@ fn question(
             })?),
         );
     } else if let Some(text) = score {
+        refuse_stray(
+            "score",
+            &[
+                ("options", options.is_some()),
+                ("labels", labels.is_some()),
+                ("true", true_.is_some()),
+                ("false", false_.is_some()),
+            ],
+        )?;
         body.insert("score".into(), serde_json::json!(text));
         body.insert(
             "levels".into(),
@@ -496,6 +570,15 @@ fn question(
             })?),
         );
     } else if let Some(text) = tag {
+        refuse_stray(
+            "tag",
+            &[
+                ("options", options.is_some()),
+                ("levels", levels.is_some()),
+                ("true", true_.is_some()),
+                ("false", false_.is_some()),
+            ],
+        )?;
         body.insert("tag".into(), serde_json::json!(text));
         body.insert(
             "labels".into(),
@@ -1439,18 +1522,21 @@ mod tests {
 
     #[test]
     fn the_deadline_conversion_refuses_what_cannot_be_a_budget() {
-        // NaN, an infinity, and every negative — the C door's sentinel
-        // included — are usage errors at this door, never arithmetic that
-        // ends the host and never a silent "no deadline".
-        for refused in [f64::NAN, f64::INFINITY, -1.0, -2.0, 1e300] {
+        // One spelling everywhere (third review, item 21): -1 is the
+        // no-deadline sentinel and crosses; NaN, an infinity, every other
+        // negative, and an oversized budget are usage errors at this
+        // door, never arithmetic that ends the host.
+        for refused in [f64::NAN, f64::INFINITY, -2.0, -0.5, 1e300] {
             let error = match call_options(Some(refused), None) {
                 Ok(_) => panic!("{refused} must be refused"),
                 Err(error) => error,
             };
             assert_eq!(error.kind, ErrorKind::Usage, "{refused}");
         }
-        // `None` is the one no-deadline spelling; zero is a spent one.
+        // `None` and the -1 sentinel both spell no deadline; zero is
+        // a spent one the engine answers with the deadline kind.
         assert!(call_options(None, None).is_ok());
+        assert!(call_options(Some(-1.0), None).is_ok());
         assert!(call_options(Some(0.0), None).is_ok());
     }
 }

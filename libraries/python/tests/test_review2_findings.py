@@ -42,14 +42,14 @@ SET = str(pathlib.Path(__file__).with_name("fixture") / "form.json")
 # ---------------------------------------------------------------------------
 
 
-def test_the_c_doors_sentinel_is_not_a_deadline():
-    # -1 secretly meant "no deadline"; it is refused now, and the message
-    # names the one no-deadline spelling.
-    for refused in (-1.0, -2.0):
-        with pytest.raises(tt.UsageError) as caught:
-            tt.decide(QUESTION, "please refund", deadline=refused)
-        assert "None" in str(caught.value)
-        assert "negative" in str(caught.value)
+def test_the_sentinel_minus_one_means_no_deadline():
+    # One spelling everywhere (third review, item 21): -1 is the C door's
+    # sentinel, adopted by every surface; every other negative still
+    # refuses, and the message names the rule.
+    assert tt.decide(QUESTION, "please refund", deadline=-1.0) is True
+    with pytest.raises(tt.UsageError) as caught:
+        tt.decide(QUESTION, "please refund", deadline=-2.0)
+    assert "negative" in str(caught.value)
 
 
 def test_a_computed_budget_that_landed_below_zero_is_refused():

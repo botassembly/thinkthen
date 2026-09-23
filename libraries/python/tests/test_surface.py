@@ -86,23 +86,22 @@ def test_a_past_deadline_is_spent_not_refused():
     assert "deadline of" in str(seen.value)
 
 
-def test_the_sentinel_is_refused_like_every_other_negative():
-    """Minus one is the C door's sentinel, where a number has to stand for
-    "none"; Python's one no-deadline spelling is ``None``, so the sentinel
-    is refused with the rest of the negatives (second review, item 10)."""
-    with pytest.raises(tt.UsageError) as seen:
-        tt.decide(cut_question(), "i want a refund now", deadline=-1.0)
-    assert "None" in str(seen.value)
+def test_minus_one_is_the_one_no_deadline_number():
+    """One spelling everywhere (third review, item 21, decided in the
+    rulings wave): -1 is the no-deadline sentinel on every surface, every
+    other negative refuses, zero is a spent deadline, and ``None`` stays
+    Python's own spelling of the same thing."""
+    assert tt.decide(cut_question(), "i want a refund now", deadline=-1.0) is True
     assert tt.decide(cut_question(), "i want a refund now", deadline=None) is True
 
 
 def test_deadlines_that_cannot_be_budgets_are_usage_errors():
-    """NaN, an infinity, and every negative — the sentinel included — are
-    usage errors at this door. Before the review's fix the same values
+    """NaN, an infinity, and every negative other than the -1 sentinel
+    are usage errors at this door. Before the review's fix the same values
     reached `Duration::from_secs_f64` and raised an error that `except
-    ThinkThenError` did not catch; before the second review's fix, -1
-    silently meant "no deadline" and a computed budget could land there."""
-    for budget in (float("nan"), float("inf"), -0.001, -1.0, -2.0, 1e300):
+    ThinkThenError` did not catch; the third review unified the
+    spellings, so -1 alone crosses as "none"."""
+    for budget in (float("nan"), float("inf"), -0.001, -2.0, 1e300):
         with pytest.raises(tt.UsageError):
             tt.decide(cut_question(), "i want a refund now", deadline=budget)
 
