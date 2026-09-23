@@ -90,42 +90,79 @@ static DEADLINE_MS: GucSetting<i32> = GucSetting::<i32>::new(-1);
 /// The engine, lazy in each backend. Built on first use, after the fork.
 static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 
+/// The most bytes of question digests and evidence the per-backend
+/// answer table holds (review 5: 270,000 warmed answers grew one backend
+/// from 13 MB to 150 MB, never released). Past the budget the oldest
+/// answers leave first, so a working set larger than the budget turns
+/// over and a later decide on an evicted pair sends again. 16 MiB holds
+/// eight full warm passes (each is capped at 2 MiB of state).
+const SAVED_ANSWER_BYTES: usize = 16 * 1024 * 1024;
+
+/// The per-backend answer table: every decision a warm pass or a single
+/// decide judged, keyed by the question's digest and the evidence, read
+/// by `thinkthen_decide` before it sends (review 4, item 15: warm then
+/// decide on 20,000 pairs used 40,000 requests, because nothing saved).
+/// A backend is one process, so the table dies with it, and the byte
+/// budget bounds it while the backend lives.
+struct SavedAnswers {
+    map: HashMap<(String, String), thinkthen_contract::Answer>,
+    order: std::collections::VecDeque<(String, String)>,
+    bytes: usize,
+    budget: usize,
+}
+
+impl SavedAnswers {
+    fn with_budget(budget: usize) -> Self {
+        SavedAnswers { map: HashMap::new(), order: std::collections::VecDeque::new(), bytes: 0, budget }
+    }
+
+    /// The bytes one entry costs: its key, held twice (map and order).
+    fn cost(key: &(String, String)) -> usize {
+        2 * (key.0.len() + key.1.len())
+    }
+
+    /// Save one answer, evicting the oldest past the budget.
+    fn insert(&mut self, key: (String, String), answer: thinkthen_contract::Answer) {
+        if self.map.insert(key.clone(), answer).is_none() {
+            self.bytes += Self::cost(&key);
+            self.order.push_back(key);
+        }
+        while self.bytes > self.budget {
+            let Some(oldest) = self.order.pop_front() else { break };
+            self.bytes -= Self::cost(&oldest);
+            self.map.remove(&oldest);
+        }
+    }
+}
+
+fn answers() -> &'static std::sync::Mutex<SavedAnswers> {
+    static ANSWERS: OnceLock<std::sync::Mutex<SavedAnswers>> = OnceLock::new();
+    ANSWERS.get_or_init(|| std::sync::Mutex::new(SavedAnswers::with_budget(SAVED_ANSWER_BYTES)))
+}
+
+/// Answers read back from the table instead of sent. The engine's own
+/// usage never sees them, so `thinkthen_usage` adds them to its
+/// `cache_answers` column.
+static SAVED_HITS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The saved decision for a question and evidence, if one was judged.
+fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contract::Answer> {
+    let answer = answers()
+        .lock()
+        .unwrap()
+        .map
+        .get(&(question.digest(), evidence.to_string()))
+        .copied()?;
+    SAVED_HITS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    Some(answer)
+}
+
 /// The engine value, with the configured key's refusal in front of it.
 ///
 /// Called on the backend's own thread only: the setting read behind it
 /// (`GucSetting::get`) checks the active thread and panics elsewhere. The
 /// batch closures take the reference before `run_batch` spawns, so no
 /// worker thread reads a setting.
-/// One answer a warm pass judged, held for the row-by-row queries to
-/// read back: a decision (with its full value), a choice, a score, or
-/// tags. Warm fills this table; decide, choose, score, and tag read it
-/// before sending anything (review 4, item 15: warm then decide on
-/// 20,000 pairs used 40,000 requests, because nothing saved).
-enum Saved {
-    Decision(thinkthen_contract::Answer),
-}
-
-/// The per-backend answer table, keyed by the question's digest and the
-/// evidence. A backend is one process, so the table dies with it — no
-/// cross-backend leakage and no server-wide unbounded growth.
-fn answers() -> &'static std::sync::Mutex<std::collections::HashMap<(String, String), Saved>> {
-    static ANSWERS: OnceLock<std::sync::Mutex<std::collections::HashMap<(String, String), Saved>>> =
-        OnceLock::new();
-    ANSWERS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
-}
-
-/// The cached decision for a question and evidence, if warm judged it.
-fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contract::Answer> {
-    match answers()
-        .lock()
-        .unwrap()
-        .get(&(question.digest(), evidence.to_string()))
-    {
-        Some(Saved::Decision(answer)) => Some(*answer),
-        _ => None,
-    }
-}
-
 fn engine() -> &'static Arc<dyn Engine> {
     if let Some(key) = API_KEY.get() {
         if let Some(error) = unwired_key_refusal(Some(&key.to_string_lossy())) {
@@ -591,7 +628,7 @@ fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bo
             answers()
                 .lock()
                 .unwrap()
-                .insert((question.digest(), evidence.to_string()), Saved::Decision(answer));
+                .insert((question.digest(), evidence.to_string()), answer);
             value
         }
         Err(error) => raise(error),
@@ -686,7 +723,12 @@ fn thinkthen_usage(
     let usage = engine().usage();
     let row = (
         i64::try_from(usage.requests).unwrap_or(i64::MAX),
-        i64::try_from(usage.cache_answers).unwrap_or(i64::MAX),
+        i64::try_from(
+            usage
+                .cache_answers
+                .saturating_add(SAVED_HITS.load(std::sync::atomic::Ordering::Relaxed)),
+        )
+        .unwrap_or(i64::MAX),
         i64::try_from(usage.tokens).unwrap_or(i64::MAX),
     );
     TableIterator::new(vec![row])
@@ -956,9 +998,12 @@ const WARM_ROW_CAP: u64 = 20_000;
 
 /// The most escaped question-plus-evidence bytes one warm aggregate
 /// accumulates. Each step copies the whole state across the datum
-/// boundary, so the total copy work is rows times this cap; at 2 MB the
-/// worst full aggregate copies 2 GB, which stays inside seconds, and a
-/// longer judge splits.
+/// boundary, so the total copy work is the sum of the state's sizes, about
+/// rows times half this cap when the rows are even. The worst full
+/// aggregate is 20,000 rows of about 100 bytes, which copies about 20 GB:
+/// review 5 measured 4.98 s to reach the cap at 15,971 rows of 100-byte
+/// evidence, and 1.08 s for 1,000 rows of 2 KB. The cap is a constant, not
+/// a setting; a longer judge splits into several aggregates.
 const WARM_STATE_CAP: usize = 2 * 1024 * 1024;
 
 /// One aggregate step, pure: the count at the head grows, the tail
@@ -1113,10 +1158,7 @@ impl Aggregate<Warm> for Warm {
                 Ok(held) => {
                     let mut saved = answers().lock().unwrap();
                     for (evidence, judgment) in judged_keys.iter().zip(held) {
-                        saved.insert(
-                            (digest.clone(), evidence.clone()),
-                            Saved::Decision(judgment.answer),
-                        );
+                        saved.insert((digest.clone(), evidence.clone()), judgment.answer);
                     }
                     judged += i64::try_from(judged_keys.len()).unwrap_or(i64::MAX);
                 }
@@ -1373,6 +1415,28 @@ mod mapping_tests {
         assert_eq!(warm_count(&merged), 3);
         assert_eq!(warm_rows(&merged).len(), 3);
         assert_eq!(warm_rows(&merged)[2].0, "second question");
+    }
+
+    /// The answer table's byte budget (review 5): past it the oldest
+    /// answers leave, the newest stay, and the held bytes never pass the
+    /// budget, however many distinct pairs one backend judges.
+    #[test]
+    fn the_answer_table_keeps_its_byte_budget() {
+        use thinkthen_contract::Answer;
+        let mut table = SavedAnswers::with_budget(4_000);
+        for row in 0..1_000 {
+            table.insert(("digest".to_owned(), format!("evidence {row:04}")), Answer::Yes);
+            assert!(table.bytes <= 4_000, "{} bytes after row {row}", table.bytes);
+        }
+        // Each pair costs 2 * (6 + 13) = 38 bytes, so 105 fit.
+        assert_eq!(table.map.len(), 105);
+        assert_eq!(table.order.len(), 105);
+        assert!(table.map.contains_key(&("digest".to_owned(), "evidence 0999".to_owned())));
+        assert!(!table.map.contains_key(&("digest".to_owned(), "evidence 0000".to_owned())));
+        // Saving a pair again replaces its answer without growing the table.
+        table.insert(("digest".to_owned(), "evidence 0999".to_owned()), Answer::No);
+        assert_eq!(table.map.len(), 105);
+        assert_eq!(table.map.get(&("digest".to_owned(), "evidence 0999".to_owned())), Some(&Answer::No));
     }
 
     /// The warm byte cap (review 4, item 15): the state's length is the

@@ -152,6 +152,13 @@ slice proves it: case 13's `nearest_level` (`mid`) is compared against
 - **Connection lifetime.** The engine and its pool live as long as the
   backend process; the engine stamps its process ID and rebuilds after a
   fork, and nothing is built in the postmaster.
+- **Saved answers.** Every decision a warm pass or a single
+  `thinkthen_decide` judges is saved in the backend, keyed by the
+  question and the evidence, and `thinkthen_decide` reads it before
+  sending. The table holds at most 16 MiB of question digests and
+  evidence per backend. Past that the oldest answers leave first, and a
+  later decide on an evicted pair sends again. `thinkthen_usage` counts
+  an answer read back from the table in `cache_answers`.
 - **Cancellation channel.** PostgreSQL's own interrupt flag: the batch
   poll reads `InterruptPending`, cancels the engine's token, and the
   proper error raises through `check_for_interrupts!()`, so
