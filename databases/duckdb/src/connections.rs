@@ -456,6 +456,8 @@ pub(crate) fn start_interrupt_bridge() {
                 } else if read < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
                     continue;
                 } else {
+                    // The read end stays open on the way out, so a late
+                    // write from the handler never raises SIGPIPE.
                     return;
                 }
             }

@@ -486,6 +486,7 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     );
     let outcome = unsafe {
         under_search_path(connection, search.as_deref(), || {
+            ensure_bounded_plan(connection, &capped)?;
             run_statement(connection, &capped)
         })
     };
@@ -494,6 +495,148 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     let _ = unsafe { execute(connection, c"ROLLBACK") };
     let _ = unsafe { execute(connection, c"RESET search_path") };
     outcome
+}
+
+/// The most rows the planner may estimate flowing into one step that
+/// holds its whole input before the LIMIT can stop it: a sort, a
+/// grouping, a window, an ungrouped aggregate, or a join's build side.
+/// The outer LIMIT bounds what a streaming query produces, but such a
+/// step reads everything first (review 5, finding 2: a window over
+/// eight million rows held 455 MB and a GROUP BY 627 MB before the
+/// 256-row refusal). A million rows keeps an honest grouped or joined
+/// record source over an ordinary table; the per-connection alternative,
+/// `memory_limit`, is a database-wide setting in DuckDB and would squeeze
+/// the host's own queries while a relate runs. The guard reads the
+/// planner's estimates, so it is a best effort: a `range` sized at run
+/// time, an `unnest`, or a recursive query can be under-estimated, and a
+/// selective filter over a large table over-estimated.
+const HOLDING_INPUT_CAP: u64 = 1_000_000;
+
+/// Plan the capped query and refuse it when a step that holds its whole
+/// input is estimated to take more than [`HOLDING_INPUT_CAP`] rows, so
+/// the refusal lands before anything materializes.
+unsafe fn ensure_bounded_plan(connection: ffi::duckdb_connection, capped: &str) -> Result<(), String> {
+    let text = unsafe { first_plan_text(connection, &format!("EXPLAIN (FORMAT JSON) {capped}")) }?;
+    let plan: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|error| format!("thinkthen defect: the relate plan did not read as JSON: {error}"))?;
+    match heaviest_holding_step(&plan) {
+        Some((step, rows)) if rows > HOLDING_INPUT_CAP => Err(format!(
+            "thinkthen usage: the relate query feeds about {rows} rows into the {step} step before its LIMIT, and relate lets at most {HOLDING_INPUT_CAP} rows into a sorting, grouping, windowing, or joining step; filter the rows first"
+        )),
+        _ => Ok(()),
+    }
+}
+
+/// The plan text an `EXPLAIN (FORMAT JSON)` returns: the second column
+/// of its one row.
+unsafe fn first_plan_text(connection: ffi::duckdb_connection, sql: &str) -> Result<String, String> {
+    let Ok(sql_c) = CString::new(sql) else {
+        return Err("thinkthen usage: the relate query holds a NUL byte".into());
+    };
+    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
+    if unsafe { ffi::duckdb_query(connection, sql_c.as_ptr(), &mut result) } != ffi::DuckDBSuccess {
+        let message = unsafe { ffi::duckdb_result_error(&mut result) };
+        let text = if message.is_null() {
+            "the plan failed".to_owned()
+        } else {
+            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
+        };
+        unsafe { ffi::duckdb_destroy_result(&mut result) };
+        return Err(format!("thinkthen usage: the relate query failed: {text}"));
+    }
+    let rows = unsafe { ffi::duckdb_row_count(&mut result) };
+    let columns = unsafe { ffi::duckdb_column_count(&mut result) };
+    let text = if rows > 0 && columns > 1 {
+        let value = unsafe { ffi::duckdb_value_varchar(&mut result, 1, 0) };
+        if value.is_null() {
+            Err("thinkthen defect: the relate plan came back empty".to_owned())
+        } else {
+            let text = unsafe { CStr::from_ptr(value) }.to_string_lossy().into_owned();
+            unsafe { ffi::duckdb_free(value as *mut c_void) };
+            Ok(text)
+        }
+    } else {
+        Err("thinkthen defect: the relate plan came back empty".to_owned())
+    };
+    unsafe { ffi::duckdb_destroy_result(&mut result) };
+    text
+}
+
+/// The holding step with the largest estimated input anywhere in the
+/// plan, as its operator name and row estimate.
+fn heaviest_holding_step(plan: &serde_json::Value) -> Option<(String, u64)> {
+    let nodes: Vec<&serde_json::Value> = match plan {
+        serde_json::Value::Array(nodes) => nodes.iter().collect(),
+        node => vec![node],
+    };
+    let mut heaviest: Option<(String, u64)> = None;
+    for node in nodes {
+        let name = node.get("name").and_then(serde_json::Value::as_str).unwrap_or("");
+        let children: Vec<&serde_json::Value> = node
+            .get("children")
+            .and_then(serde_json::Value::as_array)
+            .map(|children| children.iter().collect())
+            .unwrap_or_default();
+        // A join holds its build side (every child after the probe), a
+        // delim join holds its input too, a materialized WITH holds the
+        // query it stores (its first child), and the other holding steps
+        // hold every input.
+        let held = if name.contains("DELIM_JOIN") {
+            &children[..]
+        } else if name.contains("JOIN") || name == "CROSS_PRODUCT" {
+            children.get(1..).unwrap_or_default()
+        } else if name == "CTE" {
+            children.get(..1).unwrap_or_default()
+        } else if holds_its_input(name) {
+            &children[..]
+        } else {
+            &[][..]
+        };
+        let input = held.iter().filter_map(|child| nearest_estimate(child)).max();
+        let below = children.iter().filter_map(|child| heaviest_holding_step(child));
+        for candidate in input.map(|rows| (name.to_owned(), rows)).into_iter().chain(below) {
+            if heaviest.as_ref().is_none_or(|(_, rows)| candidate.1 > *rows) {
+                heaviest = Some(candidate);
+            }
+        }
+    }
+    heaviest
+}
+
+/// Whether an operator reads its whole input before it emits a row.
+fn holds_its_input(name: &str) -> bool {
+    matches!(
+        name,
+        "ORDER_BY" | "WINDOW" | "HASH_GROUP_BY" | "PERFECT_HASH_GROUP_BY" | "UNGROUPED_AGGREGATE"
+    )
+}
+
+/// The planner's row estimate for this node, or for the nearest nodes
+/// below it that carry one. A LIMIT without its own estimate bounds
+/// what is below it, so the walk stops there: DuckDB rewrites a small
+/// LIMIT over a table into a rowid join whose build side is that LIMIT
+/// over the whole scan, and the scan's estimate is not what the join
+/// holds (review 5). Above a larger LIMIT the planner already carries
+/// the limited estimate on the nodes over it.
+fn nearest_estimate(node: &serde_json::Value) -> Option<u64> {
+    let own = node
+        .get("extra_info")
+        .and_then(|info| info.get("Estimated Cardinality"))
+        .and_then(|value| match value {
+            serde_json::Value::String(text) => text.trim().parse().ok(),
+            other => other.as_u64(),
+        });
+    let name = node.get("name").and_then(serde_json::Value::as_str).unwrap_or("");
+    if own.is_none() && name.ends_with("LIMIT") {
+        return None;
+    }
+    own.or_else(|| {
+        node.get("children")
+            .and_then(serde_json::Value::as_array)?
+            .iter()
+            .filter_map(nearest_estimate)
+            .max()
+    })
 }
 
 /// The most records one relate may ask about; the contract's own
