@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "python",
-  "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.DataFrame({\"body\": [\n    \"Export crashes. Steps: open a report, click Export.\",\n    \"The invoice button is a slightly different blue.\",\n]})\n\n# score gives a number column: 0 is \"Routine.\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nurgency = tt.score(\"How urgent?\", df[\"body\"], levels)",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "score",
   "surface": "polars"
 }

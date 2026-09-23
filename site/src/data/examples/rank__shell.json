@@ -5,20 +5,20 @@
     {
       "name": "rank",
       "command": "thinkthen rank 'Does this need an answer today?' --lines --top 2 < inbox.txt",
-      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nCan we move our Thursday call to next week?\nReminder: your invoice is due in 30 days",
+      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nThe client needs the signed quote by 5 pm today.\nReminder: your invoice is due in 30 days",
       "inputFile": "inbox.txt",
-      "output": "Our checkout page is down and customers cannot pay\nCan we move our Thursday call to next week?",
+      "output": "Our checkout page is down and customers cannot pay\nThe client needs the signed quote by 5 pm today.",
       "exit": 0,
-      "see": "The checkout outage comes first, and the call request comes second."
+      "see": "The checkout outage comes first, and the quote the client needs by 5 pm today comes second."
     },
     {
       "name": "rank-answer",
       "command": "thinkthen rank --details 'Does this need an answer today?' --lines --top 2 < inbox.txt | jq -r '\"\\(.answer.probability)  \\(.input)\"'",
-      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nCan we move our Thursday call to next week?\nReminder: your invoice is due in 30 days",
+      "input": "Newsletter: our autumn catalog is here\nOur checkout page is down and customers cannot pay\nThe client needs the signed quote by 5 pm today.\nReminder: your invoice is due in 30 days",
       "inputFile": "inbox.txt",
-      "output": "0.94  Our checkout page is down and customers cannot pay\n0.49  Can we move our Thursday call to next week?",
+      "output": "0.94  Our checkout page is down and customers cannot pay\n0.93  The client needs the signed quote by 5 pm today.",
       "exit": 0,
-      "see": "The details show the outage at 0.94 and the call at 0.49."
+      "see": "The details put the outage at 0.94 and the quote due today at 0.93. Both need an answer today."
     },
     {
       "name": "rank-jsonl",

@@ -121,7 +121,7 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'A label under the bar is left out. An empty list is a good answer and exits 0.',
-    howtos: ['code-open-ended-survey-answers', 'screen-a-post-before-it-goes-up'],
+    howtos: ['code-open-ended-survey-answers'],
   },
   {
     name: 'score',
@@ -172,7 +172,7 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'rank takes no threshold, so nothing is dropped and nothing is not sure. The sort happens on this machine.',
-    howtos: ['screen-studies-for-a-review', 'rank-the-inbound-leads'],
+    howtos: ['rank-the-inbound-leads'],
   },
   {
     name: 'find',
@@ -328,7 +328,7 @@ export const SURFACES = [
   {
     slug: 'polars', name: 'Polars', deckHeading: 'Polars', status: 'planned', release: null,
     lang: 'python', tab: 'Python',
-    blurb: 'A Polars column goes in and a column comes out.',
+    blurb: 'A Polars frame goes in, and it comes back with one new column for each question.',
     unsureWord: 'None',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
@@ -392,7 +392,6 @@ export const SURFACES = [
     slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB', status: 'planned', release: '0.1',
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
-    captions: { score: 'This query also orders by score.' },
     unsureWord: 'NULL',
     install: [['duckdb -unsigned', 'The build loads unsigned today. The query loads the extension file first.']],
     particular: ['A whole column chunk crosses at once.'],
@@ -435,19 +434,19 @@ export const HOWTOS = [
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'], input: 'inbox.txt', forms: ['inbox-form.json'], runs: ['01-inbox'],
-    see: { '01-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The thank-you note drops out.' },
+    see: { '01-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
   },
   {
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
-    said: 'Sort the clear studies in or out, and hand a person only the unclear ones, best first. `decide` sets them aside. `rank` orders them.',
-    functions: ['decide', 'rank'], input: 'studies.txt', runs: ['03-studies'],
-    see: { '03-studies': 'The survey with a result and the opinion essay are settled. The case study with no comparison group and the pilot with early numbers come back for a person, the case study first.' },
+    said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
+    functions: ['decide'], input: 'studies.txt', runs: ['03-studies'],
+    see: { '03-studies': 'The survey with a result is true and the opinion essay is false. The abstract with no methods or results and the bare title give too little to judge, so both come back null for a person.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
     functions: ['score', 'tag'], input: 'answers.txt', runs: ['04-answers'],
-    see: { '04-answers': 'Two answers are unhappy. Each prints beside its tag, one price and one bugs.' },
+    see: { '04-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed.' },
   },
   {
     slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
@@ -475,7 +474,7 @@ export const HOWTOS = [
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
-    said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule, and each rule sets its own threshold.',
+    said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule. Insults take the default bar, and spam and off topic take a high bar of 0.8.',
     functions: ['decide'], input: 'post.txt', runs: ['08-insult', '08-spam', '08-topic'],
     see: {
       '08-insult': 'The post calls the author an idiot, so decide says true and exits 0.',
@@ -509,7 +508,7 @@ export const RECIPES = [
     said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body, so the id and the date ride through. Run it again and the saved answers come back at no further cost.',
     files: ['tickets.json', 'triage.json'], runs: ['tickets', 'tickets-again'],
     see: {
-      tickets: 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2.',
+      tickets: 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
       'tickets-again': 'The same command again. Every answer comes from the saved answers, and no request is sent.',
     },
   },

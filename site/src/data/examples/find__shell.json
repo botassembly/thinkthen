@@ -30,15 +30,6 @@
       "see": "No line says how to cancel, so find prints nothing and exits 3."
     },
     {
-      "name": "find-forced",
-      "command": "thinkthen find 'Which line says how to cancel an order?' < policy.txt",
-      "input": "Returns need the original receipt.\nRefunds are issued within 30 days of purchase.\nShipping is free on orders over $50.\nGift cards cannot be exchanged for cash.",
-      "inputFile": "policy.txt",
-      "output": "Returns need the original receipt.",
-      "exit": 0,
-      "see": "Without --none, find must pick a line, so it prints the receipt rule."
-    },
-    {
       "name": "find-jsonl",
       "command": "thinkthen find 'Which answer says how to reset a password?' --jsonl --field /text --input faq.jsonl",
       "input": "{\"id\": \"Q1\", \"text\": \"Open Settings and choose Reset password.\"}\n{\"id\": \"Q2\", \"text\": \"Invoices are emailed on the first of the month.\"}\n{\"id\": \"Q3\", \"text\": \"We ship to the US and Canada.\"}",

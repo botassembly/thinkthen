@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ts",
-  "code": "import * as tt from \"thinkthen\";\n\n// a parcel stuck in transit: \"shipping\"\nconst options = [\"billing\", \"shipping\", \"account\"];\nconsole.log(await tt.choose(\"Which team owns this?\",\n    \"My parcel is stuck in transit.\", { options }));",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "choose",
   "surface": "typescript"
 }

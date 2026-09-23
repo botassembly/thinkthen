@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "r",
-  "code": "library(dplyr)\nlibrary(thinkthen)\n\ntickets <- tibble(body = c(\n  \"I was billed twice for one order. Fix it.\",\n  \"My parcel is a week late. Not okay.\",\n  \"Thanks for the quick help yesterday!\"\n))\nteams <- c(\"billing\", \"shipping\", \"account\")\nlevels <- c(\"Routine.\", \"Soon.\", \"Immediate.\")\n\n# a column goes in and a column comes out.\n# a thank-you is no complaint, so filter() drops it\ntickets |>\n  filter(tt_decide(\"Is this a complaint?\", body)) |>\n  mutate(\n    team = tt_choose(\"Which team owns this?\", body, teams),\n    urgency = tt_score(\"How urgent is this?\", body, levels)\n  )",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "score",
   "surface": "r"
 }

@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "sql",
-  "code": "LOAD './thinkthen.duckdb_extension';\n\n-- three tickets, written inline\nCREATE TABLE tickets AS SELECT * FROM (VALUES\n    (1, 'My parcel is a week late. Not okay.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'We are locked out of our account. Fix it.')\n) t(id, body);\n\n-- the question reads like any other condition.\n-- the thank-you drops out. The lockout comes first\nSELECT id,\n    thinkthen_choose('Which team owns this?', body,\n        ['billing', 'shipping', 'account']) AS team\nFROM tickets\nWHERE thinkthen_decide('Is this a complaint?', body)\nORDER BY thinkthen_score('How urgent is this?', body,\n    ['Routine.', 'Soon.', 'Immediate.']) DESC;",
+  "code": "LOAD './thinkthen.duckdb_extension';\n\nCREATE TABLE tickets AS SELECT * FROM (VALUES\n    (1, 'My parcel is a week late. Not okay.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'We are locked out of our account.'),\n    (4, 'I was billed twice for one order.')\n) t(id, body);\n\n-- the thank-you is no complaint, so it drops out\nSELECT id, thinkthen_choose('Which team owns this?',\n    body, ['billing', 'shipping', 'account']) AS team\nFROM tickets\nWHERE thinkthen_decide('Is this a complaint?', body);",
   "function": "decide",
   "surface": "duckdb"
 }

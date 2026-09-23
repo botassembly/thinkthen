@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# your own scale, 0 to 2. An outage sits near the top\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nputs ThinkThen.score(\"How urgent is this?\",\n    \"Our checkout page is down.\", levels:)",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "score",
   "surface": "ruby"
 }

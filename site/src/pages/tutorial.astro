@@ -12,9 +12,8 @@ const run = (name) => decide.find((r) => r.name === name);
 
 const plain = run('decide');
 const answer = run('decide-answer');
-const vague = run('decide-vague');
-const cut = run('decide-cut');
-const band = run('decide-band');
+const lines = run('decide-lines');
+const branch = run('decide-case');
 
 const saved = cell('question-file', 'shell').runs;
 const savedYes = saved.find((r) => r.name === 'question-yes');
@@ -51,17 +50,15 @@ const triageForm = triage.forms[0];
   <Terminal run={answer} caption="Recorded from the real command. The model puts yes at 0.99." />
   <p>That number is the model's own. The tool passes it through and computes nothing.</p>
 
-  <h2>4. Set your own bar</h2>
-  <p>"I want to send this back." could mean an exchange or money back. The model puts it at 0.51, so it comes back <code>true</code> at the default bar of 0.5.</p>
-  <Terminal run={vague} caption="Recorded from the real command. The send-back message answers yes at the default bar." />
-  <p><code>--threshold</code> is your bar on the probability. Raise it and the same message answers no.</p>
-  <Terminal run={cut} caption="Recorded from the real command. At a cut of 0.9 the same message answers no." />
+  <h2>4. Set a band</h2>
+  <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, over the high bar is yes, and anything between is not sure.</p>
+  <p>Three messages go in, one per line. A plain refund request is yes. A thank-you is no. "I want to send this back." could mean an exchange or money back, so it lands in the band.</p>
+  <Terminal run={lines} caption={`Recorded from the real command. ${lines.see}`} />
   <p>The threshold is an input. The model never chooses it, and it never changes the probability. It changes what you call a yes.</p>
 
-  <h2>5. Leave a middle</h2>
-  <p>Two numbers make a band. An answer under the low bar is no, an answer over the high bar is yes, and anything between is not sure.</p>
-  <Terminal run={band} caption="Recorded from the real command. The 0.51 lands in the band, so the value is null." />
-  <p>Not sure prints <code>null</code> and exits 3. It means the number landed in your middle. A pipeline uses it to hand a person the calls it should not make alone.</p>
+  <h2>5. Branch on the answer</h2>
+  <p>Not sure prints <code>null</code> and exits 3. A script reads the exit code and hands a person the calls it should not make alone.</p>
+  <Terminal run={branch} caption={`Recorded from the real command. ${branch.see}`} />
 
   <h2>6. Save the question to a file</h2>
   <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>

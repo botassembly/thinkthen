@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ts",
-  "code": "import * as tt from \"thinkthen\";\n\n// praise and a bug in one message: [\"praise\", \"bug\"]\nconst labels = [\"praise\", \"bug\", \"billing\", \"shipping\"];\nconsole.log(await tt.tag(\"Which labels fit this message?\",\n    \"Love the app, but export crashes.\", { labels }));",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "tag",
   "surface": "typescript"
 }

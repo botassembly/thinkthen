@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# praise, a bug, and a double charge in one message\nlabels = [\"praise\", \"bug\", \"billing\"]\np ThinkThen.tag(\"Which labels fit this message?\",\n    \"Love it, but export crashes and I was billed twice.\",\n    labels:)",
   "function": "tag",
   "surface": "ruby"
 }

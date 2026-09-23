@@ -4,8 +4,7 @@ import Terminal from '../components/Terminal.astro';
 import { OUTCOMES, FACTS, KEY_VARIABLE } from '../data/catalog.mjs';
 import { cell } from '../data/examples.mjs';
 
-const band = cell('decide', 'shell').runs.find((r) => r.name === 'decide-band');
-const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
+const lines = cell('decide', 'shell').runs.find((r) => r.name === 'decide-lines');
 ---
 <Base title="Trust" description="Outcomes, thresholds, the cache, what leaves the machine, and how to check a question against your own labeled records.">
   <h1>Test it before you trust it</h1>
@@ -24,9 +23,8 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
 
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer, and nothing else does. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
-  <p>The same evidence, under two rules:</p>
-  <Terminal run={cut} caption="Recorded from the real command. At a cut of 0.9 the message answers no." />
-  <Terminal run={band} caption="Recorded from the real command. Under a band the same 0.51 comes back null." />
+  <p>Three messages under one band:</p>
+  <Terminal run={lines} caption="Recorded from the real command. The refund request is yes and the thank-you is no. The send-back line could mean an exchange or money back, so its 0.54 lands in the band as null." />
   <p>You choose the threshold. The model never does.</p>
   <p><code>jev-latest</code> follows the vendor’s newest model. Pin a run by naming a version, and check your labeled cases again when you change it.</p>
 
@@ -45,7 +43,7 @@ const cut = cell('decide', 'shell').runs.find((r) => r.name === 'decide-cut');
     <tr><td>strength</td><td>The number on a recognized name. We compute it, and it claims nothing about chance.</td></tr>
   </table>
   <p>We do not print a confidence of our own. The one field named confidence is the vendor's number for how lopsided the probabilities are, it shows only under <code>--details</code>, and it failed as a gate in our tests.</p>
-  <p>The test was experiment 220, on the words <code>recognize</code> reads. As a gate between name words and ordinary words, <code>confidence</code> scored 0.22 on a scale where 0.5 is a coin flip and 1 is perfect. The probability of the picked option scored 0.99. The record is <code>sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md</code>.</p>
+  <p>The test was experiment 220, on the words <code>recognize</code> reads. As a gate between name words and ordinary words, <code>confidence</code> scored 0.22 on a scale where 0.5 is chance and 1 is perfect. The probability of the picked option scored 0.99. The record is <code>sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md</code>.</p>
 
   <h2>What leaves the machine</h2>
   <ul>

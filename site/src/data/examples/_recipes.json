@@ -5,7 +5,7 @@
     "inputs": [
       {
         "name": "tickets.json",
-        "text": "[{\"id\": \"T-101\", \"created\": \"2026-09-20\", \"body\": \"The login page rejects my new password after a reset.\"},\n {\"id\": \"T-102\", \"created\": \"2026-09-21\", \"body\": \"The export button does nothing in Safari.\"},\n {\"id\": \"T-103\", \"created\": \"2026-09-21\", \"body\": \"How do I add a second admin?\"},\n {\"id\": \"T-104\", \"created\": \"2026-09-22\", \"body\": \"The site has been down for our whole team since 9am.\"}]"
+        "text": "[{\"id\": \"T-101\", \"created\": \"2026-09-20\", \"body\": \"The login page rejects my new password after a reset.\"},\n {\"id\": \"T-102\", \"created\": \"2026-09-21\", \"body\": \"The export button does nothing in Safari.\"},\n {\"id\": \"T-103\", \"created\": \"2026-09-21\", \"body\": \"How do I add a second admin?\"},\n {\"id\": \"T-104\", \"created\": \"2026-09-22\", \"body\": \"The site has been down for our whole team since 9am.\"},\n {\"id\": \"T-105\", \"created\": \"2026-09-22\", \"body\": \"I was billed twice in September.\"}]"
       },
       {
         "name": "triage.json",
@@ -16,13 +16,13 @@
       {
         "name": "tickets",
         "command": "jq -c '.[]' tickets.json \\\n    | thinkthen annotate triage.json --jsonl --field /body --jobs 16 --details \\\n    | jq -c '.input + .value | del(.body)'",
-        "output": "{\"id\":\"T-101\",\"created\":\"2026-09-20\",\"kind\":\"bug\",\"urgency\":1.16}\n{\"id\":\"T-102\",\"created\":\"2026-09-21\",\"kind\":\"bug\",\"urgency\":0.88}\n{\"id\":\"T-103\",\"created\":\"2026-09-21\",\"kind\":\"question\",\"urgency\":0.01}\n{\"id\":\"T-104\",\"created\":\"2026-09-22\",\"kind\":\"bug\",\"urgency\":1.99}",
+        "output": "{\"id\":\"T-101\",\"created\":\"2026-09-20\",\"kind\":\"bug\",\"urgency\":1.16}\n{\"id\":\"T-102\",\"created\":\"2026-09-21\",\"kind\":\"bug\",\"urgency\":0.88}\n{\"id\":\"T-103\",\"created\":\"2026-09-21\",\"kind\":\"question\",\"urgency\":0.01}\n{\"id\":\"T-104\",\"created\":\"2026-09-22\",\"kind\":\"bug\",\"urgency\":1.99}\n{\"id\":\"T-105\",\"created\":\"2026-09-22\",\"kind\":\"billing\",\"urgency\":0.77}",
         "exit": 0
       },
       {
         "name": "tickets-again",
         "command": "jq -c '.[]' tickets.json \\\n    | thinkthen annotate triage.json --jsonl --field /body --jobs 16 --details \\\n    | jq -c '{id: .input.id, cached: .meta.cached, requests_sent: .meta.requests_sent}'",
-        "output": "{\"id\":\"T-101\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-102\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-103\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-104\",\"cached\":true,\"requests_sent\":0}",
+        "output": "{\"id\":\"T-101\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-102\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-103\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-104\",\"cached\":true,\"requests_sent\":0}\n{\"id\":\"T-105\",\"cached\":true,\"requests_sent\":0}",
         "exit": 0
       }
     ]
@@ -43,7 +43,7 @@
     "steps": [
       {
         "name": "diff",
-        "command": "jq -cRnf hunks.jq change.diff \\\n    | thinkthen decide 'Does this change what the code does when it runs?' \\\n        --jsonl --field /hunk --threshold 0.2:0.8 --details \\\n    | jq -c '{file: .input.file, at: .input.at, changes: .value}'",
+        "command": "jq -cRnf hunks.jq change.diff \\\n    | thinkthen decide 'Does this change what the code does when it runs?' \\\n        --jsonl --field /hunk --details \\\n    | jq -c '{file: .input.file, at: .input.at, changes: .value}'",
         "output": "{\"file\":\"billing.py\",\"at\":\"@@ -3,2 +3,2 @@ def late_fee(days):\",\"changes\":false}\n{\"file\":\"billing.py\",\"at\":\"@@ -8,2 +8,2 @@ def refund(amount, limit):\",\"changes\":true}\n{\"file\":\"billing.py\",\"at\":\"@@ -14,3 +14,3 @@ def total(items):\",\"changes\":false}\n{\"file\":\"billing.py\",\"at\":\"@@ -20,1 +20,1 @@ def tax(amount):\",\"changes\":true}",
         "exit": 0
       }

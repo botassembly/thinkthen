@@ -1,92 +1,102 @@
 {
   "python": {
     "lang": "python",
-    "code": "import thinkthen as tt\n\nask = \"Does the customer ask for a refund?\"\n\n# a plain ask for money back: True\nprint(tt.decide(ask,\n    \"Please refund my order. It arrived broken.\"))\n\n# build a question once. The band's middle is \"not sure\"\nrefund = tt.question(decide=ask, threshold=(0.2, 0.8))\n\n# an exchange, or money back? not sure: None\nprint(tt.decide(refund,\n    \"I want to send this back.\"))\n\n# a list goes in, and one filled form per report comes out\nreports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\"]\nfor form in tt.annotate(\"form.json\", reports):\n    print(form)",
+    "code": "import thinkthen as tt\n\nask = \"Does the customer ask for a refund?\"\n\n# a plain ask for money back: True\nprint(tt.decide(ask,\n    \"Please refund my order. It arrived broken.\"))\n\n# build a question once. The band's middle is \"not sure\"\nrefund = tt.question(decide=ask, threshold=(0.2, 0.8))\n\n# an exchange, or money back? not sure: None\nprint(tt.decide(refund,\n    \"I want to send this back.\"))\n\n# a list goes in, and one filled form per report comes out\nreports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\",\n    \"The Pay button on the billing page is too blue.\"]\nfor form in tt.annotate(\"form.json\", reports):\n    print(form)",
     "install": "pip install thinkthen",
     "printed": {
       "command": "python sample.py",
-      "output": "True\nNone\n{'steps': True, 'area': 'export', 'impact': 1.95}\n{'steps': False, 'area': 'login', 'impact': 2.0}",
-      "see": "The refund request prints True, the send-back line prints None, and each bug report gets its own form."
+      "output": "True\nNone\n{'steps': True, 'area': 'export', 'impact': 1.94}\n{'steps': False, 'area': 'login', 'impact': 2.0}\n{'steps': False, 'area': 'billing', 'impact': 0.06}",
+      "see": "The refund request prints True, the send-back line prints None, and each bug report gets its own form: export, login, and billing."
     }
   },
   "polars": {
     "lang": "python",
-    "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.DataFrame({\"body\": [\n    \"Export crashes. Steps: open a report, click Export.\",\n    \"The invoice button is a slightly different blue.\",\n]})\n\n# a column goes in and a column comes out\nask = \"Does this stop someone from working?\"\ndf = df.with_columns(blocks=tt.decide(ask, df[\"body\"]))\n\n# score gives a number column: 0 is \"Routine.\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nurgency = tt.score(\"How urgent?\", df[\"body\"], levels)\n\n# a whole frame goes in with on=, and it comes back\n# with one new column for each question in the form\ndf = tt.annotate(\"form.json\", df, on=\"body\")\nprint(df.drop(\"body\").with_columns(urgency=urgency))",
+    "code": "import polars as pl\nimport thinkthen as tt\ndf = pl.DataFrame({\"body\": [\n    \"Export crashes. Steps: open a report, click Export.\",\n    \"The login page spins and nobody can sign in.\",\n    \"The Pay button on the billing page is too blue.\"]})\ndf = tt.annotate(\"form.json\", df, on=\"body\")\nprint(df.drop(\"body\"))",
     "install": "pip install thinkthen[polars]",
     "printed": {
       "command": "python sample.py",
-      "output": "shape: (2, 5)\n┌────────┬───────┬─────────┬────────┬─────────┐\n│ blocks ┆ steps ┆ area    ┆ impact ┆ urgency │\n│ ---    ┆ ---   ┆ ---     ┆ ---    ┆ ---     │\n│ bool   ┆ bool  ┆ str     ┆ f64    ┆ f64     │\n╞════════╪═══════╪═════════╪════════╪═════════╡\n│ true   ┆ true  ┆ export  ┆ 1.98   ┆ 1.32    │\n│ false  ┆ false ┆ billing ┆ 0.18   ┆ 0.04    │\n└────────┴───────┴─────────┴────────┴─────────┘",
-      "see": "The export crash blocks work and gets the higher urgency. The off-color button blocks nothing."
+      "output": "shape: (3, 3)\n┌───────┬─────────┬────────┐\n│ steps ┆ area    ┆ impact │\n│ ---   ┆ ---     ┆ ---    │\n│ bool  ┆ str     ┆ f64    │\n╞═══════╪═════════╪════════╡\n│ true  ┆ export  ┆ 1.99   │\n│ false ┆ login   ┆ 2.0    │\n│ false ┆ billing ┆ 0.07   │\n└───────┴─────────┴────────┘",
+      "see": "The export crash gives steps and blocks work. The login page blocks work and gives no steps. The blue Pay button is billing and blocks nothing."
     }
   },
   "typescript": {
     "lang": "ts",
-    "code": "import * as tt from \"thinkthen\";\n\n// a parcel stuck in transit: \"shipping\"\nconst options = [\"billing\", \"shipping\", \"account\"];\nconsole.log(await tt.choose(\"Which team owns this?\",\n    \"My parcel is stuck in transit.\", { options }));\n\n// praise and a bug in one message: [\"praise\", \"bug\"]\nconst labels = [\"praise\", \"bug\", \"billing\", \"shipping\"];\nconsole.log(await tt.tag(\"Which labels fit this message?\",\n    \"Love the app, but export crashes.\", { labels }));\n\n// a batch you can cancel: abort() stops the requests\nconst inbox = [\"Can we move Thursday's call?\",\n    \"Checkout is down and nobody can pay.\"];\nconst stop = new AbortController();\nconst urgent = await tt.rank(\"Is this urgent?\",\n    inbox, { top: 1, signal: stop.signal });\n// the outage is the most urgent\nconsole.log(urgent[0].record);",
+    "code": "import * as tt from \"thinkthen\";\n\n// keep the complaints: the zipper and the strap\nconst reviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\",\n    \"The strap snapped on day two.\"];\nconsole.log(await tt.filter(\"Is this a complaint?\",\n    reviews));\n// your own scale, 0 to 2. An outage is \"Immediate.\"\nconst levels = [\"Routine.\", \"Soon.\", \"Immediate.\"];\nconst urgency = { score: \"How urgent is this?\", levels };\nconsole.log(await tt.score(urgency,\n    \"Checkout is down and nobody can pay.\"));",
     "install": "npm install thinkthen",
     "printed": {
       "command": "node sample.mjs",
-      "output": "shipping\n[ 'praise', 'bug' ]\nCheckout is down and nobody can pay.",
-      "see": "The parcel goes to shipping, the message gets praise and bug, and the outage ranks first."
+      "output": "[\n  'The zipper broke the first time I used it.',\n  'The strap snapped on day two.'\n]\n2",
+      "see": "filter keeps the broken zipper and the snapped strap. The outage scores 2, and 2 is Immediate."
     }
   },
   "ruby": {
     "lang": "ruby",
-    "code": "require \"thinkthen\"\n\n# keep the records where the answer is yes: the zipper\nreviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\"]\nputs ThinkThen.filter(\"Is this a complaint?\", reviews)\n\n# any Enumerable works, and it crosses to the engine once\ninbox = [\"Can we move Thursday's call?\",\n    \"Checkout is down and nobody can pay.\"]\nputs ThinkThen.rank(\"Is this urgent?\", inbox, top: 1)\n\n# your own scale, 0 to 2. An outage sits near the top\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nputs ThinkThen.score(\"How urgent is this?\",\n    \"Our checkout page is down.\", levels:)",
-    "install": "gem install thinkthen"
+    "code": "require \"thinkthen\"\n\n# the one line that gives the refund deadline\npolicy = [\"Returns need the original receipt.\",\n    \"Refunds are issued within 30 days of purchase.\",\n    \"Shipping is free on orders over $50.\"]\nask = \"Which line gives the refund deadline?\"\nputs ThinkThen.find(ask, policy).unit\n\n# praise, a bug, and a double charge in one message\nlabels = [\"praise\", \"bug\", \"billing\"]\np ThinkThen.tag(\"Which labels fit this message?\",\n    \"Love it, but export crashes and I was billed twice.\",\n    labels:)",
+    "install": "gem install thinkthen",
+    "printed": {
+      "command": "ruby sample.rb",
+      "output": "Refunds are issued within 30 days of purchase.\n[\"praise\", \"bug\", \"billing\"]",
+      "see": "find picks the line with the 30-day refund deadline. The message gets praise, bug, and billing."
+    }
   },
   "r": {
     "lang": "r",
-    "code": "library(dplyr)\nlibrary(thinkthen)\n\ntickets <- tibble(body = c(\n  \"I was billed twice for one order. Fix it.\",\n  \"My parcel is a week late. Not okay.\",\n  \"Thanks for the quick help yesterday!\"\n))\nteams <- c(\"billing\", \"shipping\", \"account\")\nlevels <- c(\"Routine.\", \"Soon.\", \"Immediate.\")\n\n# a column goes in and a column comes out.\n# a thank-you is no complaint, so filter() drops it\ntickets |>\n  filter(tt_decide(\"Is this a complaint?\", body)) |>\n  mutate(\n    team = tt_choose(\"Which team owns this?\", body, teams),\n    urgency = tt_score(\"How urgent is this?\", body, levels)\n  )",
+    "code": "library(thinkthen)\nbody <- c(\"I was billed twice for one order.\",\n  \"My parcel is a week late.\",\n  \"I am locked out of my account.\")\nteams <- c(\"billing\", \"shipping\", \"account\")\n# each ticket goes to the team its words name\ndata.frame(body, team = tt_choose(\"Which team owns this?\",\n  body, teams))\n# only the double bill is about money, so it ranks first\ntt_rank(\"Is this about money?\", body, top = 1)",
     "install": "install.packages(\"thinkthen\")",
     "printed": {
       "command": "Rscript sample.R",
-      "output": "# A tibble: 2 × 3\n  body                                      team     urgency\n  <chr>                                     <chr>      <dbl>\n1 I was billed twice for one order. Fix it. billing     1.37\n2 My parcel is a week late. Not okay.       shipping    0.97",
-      "see": "The thank-you drops out. The double bill goes to billing and the late parcel to shipping."
+      "output": "                               body     team\n1 I was billed twice for one order.  billing\n2         My parcel is a week late. shipping\n3    I am locked out of my account.  account\n  place                            record probability\n1     1 I was billed twice for one order.        0.98",
+      "see": "Each ticket goes to the team its words name. Only the double bill is about money, so it ranks first."
     }
   },
   "rust": {
     "lang": "rust",
-    "code": "use thinkthen::{Answer, Engine, Question};\n\n// blocking calls, and no async runtime comes with it\nlet tt = Engine::from_env()?;\n\nlet asks = \"Does the customer ask for a refund?\";\nlet refund = Question::decide(asks)?.band(0.2, 0.8)?;\nlet texts = [\"Please refund my order. It came broken.\",\n    \"I want to send this back.\"];\n// the compiler makes you handle \"not sure\"\nfor text in texts {\n    match tt.decide(&refund, text)? {\n        Answer::Yes => println!(\"refund: {text}\"),\n        Answer::No => println!(\"no: {text}\"),\n        Answer::Unsure => println!(\"a person: {text}\"),\n    }\n}",
+    "code": "use thinkthen::{Engine, Question};\nlet tt = Engine::from_env()?;\nlet teams = [\"billing\", \"shipping\", \"account\"];\nlet owner = Question::choose(\"Which team owns this?\",\n    &teams)?.build()?;\nlet texts = [\"My card was charged twice.\",\n    \"The courier lost my parcel.\",\n    \"I cannot reset my password.\"];\n// the compiler makes you handle \"not sure\"\nfor text in texts {\n    match tt.choose(&owner, text)? {\n        Some(team) => println!(\"{team}: {text}\"),\n        None => println!(\"a person: {text}\"),\n    }\n}",
     "install": "cargo add thinkthen",
     "printed": {
       "command": "cargo run",
-      "output": "refund: Please refund my order. It came broken.\na person: I want to send this back.",
-      "see": "The broken order is a refund, and the send-back line lands in the Unsure arm for a person."
+      "output": "billing: My card was charged twice.\nshipping: The courier lost my parcel.\naccount: I cannot reset my password.",
+      "see": "Each text lands in the Some arm with its team: billing, shipping, and account."
     }
   },
   "c": {
     "lang": "c",
-    "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\nconst char *q = \"Does the customer ask for a refund?\";\nconst char *t = \"Please refund my order. It came broken.\";\n\n/* every call returns 0, or one of six error kinds */\nthinkthen_answer a;\nint rc = thinkthen_decide(tt, q, t, strlen(t), &a);\n\n/* a plain ask for money back prints 1 0.99.\n   1 is THINKTHEN_YES */\nif (rc == THINKTHEN_OK)\n    printf(\"%d %.2f\\n\", a.outcome, a.probability);\nelse\n    puts(thinkthen_error_message(tt));\n\nthinkthen_engine_free(tt);",
+    "code": "#include <stdio.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* score takes the JSON door: a request in, JSON out */\nconst char *ask = \"{\\\"score\\\": \\\"How urgent is this?\\\", \"\n    \"\\\"levels\\\": [\\\"Routine.\\\", \\\"Soon.\\\", \"\n    \"\\\"Immediate.\\\"], \"\n    \"\\\"evidence\\\": \\\"Checkout is down for everyone.\\\"}\";\nchar *out = thinkthen_call(tt, ask);\n\n/* an outage lands near 2, \"Immediate.\" */\nputs(out ? out : thinkthen_error_message(tt));\nthinkthen_free_string(out);\nthinkthen_engine_free(tt);",
     "install": "thinkthen.h + libthinkthen",
     "printed": {
       "command": "cc sample.c -lthinkthen && ./sample",
-      "output": "1 0.99",
-      "see": "The refund request prints outcome 1, THINKTHEN_YES, at 0.99."
+      "output": "{\"answer\":2.0,\"nearest\":\"Immediate.\"}",
+      "see": "The outage scores 2.0, and the nearest level is Immediate."
     }
   },
   "duckdb": {
     "lang": "sql",
-    "code": "LOAD './thinkthen.duckdb_extension';\n\n-- three tickets, written inline\nCREATE TABLE tickets AS SELECT * FROM (VALUES\n    (1, 'My parcel is a week late. Not okay.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'We are locked out of our account. Fix it.')\n) t(id, body);\n\n-- the question reads like any other condition.\n-- the thank-you drops out. The lockout comes first\nSELECT id,\n    thinkthen_choose('Which team owns this?', body,\n        ['billing', 'shipping', 'account']) AS team\nFROM tickets\nWHERE thinkthen_decide('Is this a complaint?', body)\nORDER BY thinkthen_score('How urgent is this?', body,\n    ['Routine.', 'Soon.', 'Immediate.']) DESC;",
+    "code": "LOAD './thinkthen.duckdb_extension';\n\nCREATE TABLE tickets AS SELECT * FROM (VALUES\n    (1, 'My parcel is a week late. Not okay.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'We are locked out of our account.'),\n    (4, 'I was billed twice for one order.')\n) t(id, body);\n\n-- the thank-you is no complaint, so it drops out\nSELECT id, thinkthen_choose('Which team owns this?',\n    body, ['billing', 'shipping', 'account']) AS team\nFROM tickets\nWHERE thinkthen_decide('Is this a complaint?', body);",
     "install": "duckdb -unsigned",
     "printed": {
-      "command": "duckdb -unsigned < sample.sql",
-      "output": "┌───────┬──────────┐\n│  id   │   team   │\n│ int32 │ varchar  │\n├───────┼──────────┤\n│     3 │ account  │\n│     1 │ shipping │\n└───────┴──────────┘",
-      "see": "The thank-you drops out, the lockout comes first, and each ticket gets its team."
+      "command": "duckdb -unsigned -list < sample.sql",
+      "output": "id|team\n1|shipping\n3|account\n4|billing",
+      "see": "The thank-you drops out. The late parcel goes to shipping, the lockout to account, and the double bill to billing."
     }
   },
   "sqlite": {
     "lang": "sql",
-    "code": "CREATE TABLE reviews(id INTEGER, body TEXT);\nINSERT INTO reviews VALUES\n    (1, 'Arrived a day early. Thank you!'),\n    (2, 'The zipper broke the first time I used it.'),\n    (3, 'Does this come in blue?');\n\n-- SQLite asks row by row, so warm the table first:\n-- one pass, 32 requests at a time, answers saved\n-- warm prints how many rows it judged\nSELECT thinkthen_warm('Is this a complaint?', body)\nFROM reviews;\n\n-- this query reads the saved answers: the zipper\nSELECT id, body\nFROM reviews\nWHERE thinkthen_decide('Is this a complaint?', body);",
+    "code": "CREATE TABLE messages(id INTEGER, body TEXT);\nINSERT INTO messages VALUES\n    (1, 'Love the app, but export crashes.'),\n    (2, 'How do I change my billing address?');\n\n-- the labels ride inside the question, as JSON\nSELECT id, thinkthen_tag(\n    '{\"tag\": \"Which labels fit this message?\",\n      \"labels\": [\"praise\", \"bug\", \"billing\"]}',\n    body)\nFROM messages;",
     "install": ".load ./thinkthen",
     "printed": {
       "command": "sqlite3 < sample.sql",
-      "output": "3\n2|The zipper broke the first time I used it.",
-      "see": "The warm pass judged 3 reviews, and the query kept only the broken zipper."
+      "output": "1|[\"praise\",\"bug\"]\n2|[\"billing\"]",
+      "see": "The first message gets praise and bug. The billing address question gets billing."
     }
   },
   "postgresql": {
     "lang": "sql",
-    "code": "-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body\nFROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;\n\n-- fill out form.json for every row, as jsonb\nSELECT id, a->>'team' AS team,\n    (a->>'urgency')::float AS urgency\nFROM tickets,\n    thinkthen_annotate('@form.json', body) AS a\nORDER BY urgency DESC;",
-    "install": "CREATE EXTENSION thinkthen;"
+    "code": "CREATE TABLE tickets (id int, body text);\nINSERT INTO tickets VALUES\n    (1, 'Please refund my order. It came broken.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'I want to send this back.');\n\n-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body FROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;",
+    "install": "CREATE EXTENSION thinkthen;",
+    "printed": {
+      "command": "psql -q -f sample.sql",
+      "output": " id |           body            \n----+---------------------------\n  3 | I want to send this back.\n(1 row)",
+      "see": "Only the send-back line comes back NULL. It could mean an exchange or money back, so a person reads it."
+    }
   }
 }

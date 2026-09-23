@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "sql",
-  "code": "-- fill out form.json for every row, as jsonb\nSELECT id, a->>'team' AS team,\n    (a->>'urgency')::float AS urgency\nFROM tickets,\n    thinkthen_annotate('@form.json', body) AS a\nORDER BY urgency DESC;",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "annotate",
   "surface": "postgresql"
 }

@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "python",
-  "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.DataFrame({\"body\": [\n    \"Export crashes. Steps: open a report, click Export.\",\n    \"The invoice button is a slightly different blue.\",\n]})\n\n# a column goes in and a column comes out\nask = \"Does this stop someone from working?\"\ndf = df.with_columns(blocks=tt.decide(ask, df[\"body\"]))",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "decide",
   "surface": "polars"
 }
