@@ -1,12 +1,43 @@
 #!/bin/sh
 # Rung 1: the accepted policies, the size ceiling, formatting, clippy, and docs.
+#
+# `lint --changed BASE` is the quick loop for a lane. It runs every cheap
+# check in full and runs the build checks (the package proofs, cargo deny,
+# Clippy, and docs) only where a path changed since the merge base with
+# BASE can change their answer; `lint-workspaces --select` holds the rule.
+# It never replaces the full rung, which runs with no argument before a
+# hand-back (sdlc/records/surfaces-notes/NOTES-speed.md).
 set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
+root=yes
+surfaces=all
+case $# in
+0) ;;
+2)
+	[ "$1" = --changed ] || { echo 'usage: sdlc/scripts/lint [--changed BASE]' >&2; exit 2; }
+	fork=$(git merge-base "$2" HEAD)
+	paths=$(mktemp)
+	trap 'rm -f "$paths"' EXIT
+	# Committed, staged, unstaged, and untracked paths alike; a rename
+	# names both its sides.
+	{ git diff --no-renames --name-only "$fork"; git ls-files --others --exclude-standard; } > "$paths"
+	selected=$(sdlc/scripts/lint-workspaces --select "$paths")
+	case "$selected" in
+	.*) root=yes ;;
+	*) root=no ;;
+	esac
+	surfaces=$(printf '%s\n' "$selected" | grep -vx '\.' | tr '\n' ' ' || true)
+	printf 'lint --changed %s: root workspace %s; surface workspaces: %s\n' \
+		"$2" "$( [ "$root" = yes ] && echo selected || echo unchanged)" "${surfaces:-none}"
+	;;
+*) echo 'usage: sdlc/scripts/lint [--changed BASE]' >&2; exit 2 ;;
+esac
+
 python3 sdlc/scripts/policy.py
-sh sdlc/scripts/package
+[ "$root" = no ] || sh sdlc/scripts/package
 python3 sdlc/scripts/pages-self-test
 python3 sdlc/scripts/pages
 node sdlc/scripts/ratchet.mjs
@@ -14,13 +45,21 @@ sdlc/scripts/surfaces-ratchet-self-test
 node sdlc/scripts/surfaces-ratchet.mjs
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
-cargo deny --offline check advisories bans licenses
+[ "$root" = no ] || cargo deny --offline check advisories bans licenses
 cargo fmt --all -- --check
-cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
-RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
+if [ "$root" = yes ]; then
+	cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+	RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
+fi
 # The contract, the stand-in, and every surface build through their own
 # Cargo.toml, which `--workspace` above never sees; the workspace pass
 # runs Clippy over each with the rules its own manifest declares. Its
 # self-test first proves it stays offline and portable with stub tools.
 sdlc/scripts/lint-workspaces-self-test
-sdlc/scripts/lint-workspaces
+case "$surfaces" in
+all) sdlc/scripts/lint-workspaces ;;
+'') printf '%s\n' 'lint-workspaces: no surface workspace changed' ;;
+# Word splitting is the intent: each name is one argument.
+# shellcheck disable=SC2086
+*) sdlc/scripts/lint-workspaces $surfaces ;;
+esac

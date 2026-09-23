@@ -70,6 +70,62 @@ if grep -n "'s/[^']*\\\\n" "$REPO/sdlc/scripts/lint-workspaces"; then
 	fail=1
 fi
 
+# The changed-only scope (lint --changed): a path inside one workspace
+# selects that workspace alone, a shared input selects every workspace and
+# the root, and a path no build reads selects none.
+all_workspaces='.
+contract
+standin
+thinkthen-core
+libraries/rust
+libraries/c
+libraries/python
+libraries/r/thinkthen/src/rust
+libraries/typescript/addon
+libraries/ruby
+databases/duckdb
+databases/sqlite
+databases/postgresql
+tools/wire-stub'
+expect_select() {
+	printf '%s\n' "$1" > "$work/paths"
+	got=$(sh "$REPO/sdlc/scripts/lint-workspaces" --select "$work/paths") || got="exit $?"
+	[ "$got" = "$2" ] || {
+		printf 'FAIL %s selected [%s], want [%s]\n' "$1" "$got" "$2"
+		fail=1
+	}
+}
+expect_select 'libraries/c/src/lib.rs' 'libraries/c'
+expect_select 'libraries/typescript/addon/src/lib.rs' 'libraries/typescript/addon'
+expect_select 'libraries/typescript/src/index.ts' ''
+expect_select 'libraries/r/thinkthen/src/rust/src/lib.rs' 'libraries/r/thinkthen/src/rust'
+expect_select 'crates/thinkthen/src/main.rs' '.'
+expect_select 'sdlc/records/surfaces-notes/NOTES-speed.md' ''
+expect_select 'contract/src/lib.rs' "$all_workspaces"
+expect_select 'libraries/c/Cargo.lock' "$all_workspaces"
+expect_select 'rust-toolchain.toml' "$all_workspaces"
+expect_select 'deny.toml' "$all_workspaces"
+expect_select 'conformance/conformance.json' "$all_workspaces"
+expect_select "libraries/c/src/lib.rs
+databases/sqlite/src/lib.rs" 'libraries/c
+databases/sqlite'
+
+# A named workspace the list does not hold fails; a typo never skips a lint.
+if STUB_LOG="$work/log" STUB_CFG="$work/cfg" PATH="$work/bin:$PATH" \
+	sh "$REPO/sdlc/scripts/lint-workspaces" libraries/cc > "$work/out" 2>&1; then
+	echo "FAIL lint-workspaces accepted a workspace it does not know"
+	fail=1
+fi
+# A named workspace runs alone.
+: > "$work/log"
+STUB_LOG="$work/log" STUB_CFG="$work/cfg" PATH="$work/bin:$PATH" \
+	sh "$REPO/sdlc/scripts/lint-workspaces" libraries/c > "$work/out" 2>&1 || true
+ran=$(grep -c '|clippy ' "$work/log" || true)
+[ "$ran" -eq 1 ] || {
+	echo "FAIL lint-workspaces libraries/c ran $ran clippy calls, want 1"
+	fail=1
+}
+
 # A missing pinned toolchain fails with its remedy; cargo never runs on it.
 printf '#!/bin/sh\necho 1.93.1-x86_64-unknown-linux-gnu\n' > "$work/bin/rustup"
 : > "$work/log"
