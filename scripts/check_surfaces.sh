@@ -205,6 +205,7 @@ surface_port() {
   duckdb) echo 8217 ;; sqlite) echo 8218 ;; postgresql) echo 8219 ;;
   esac
 }
+built=()
 for surface in python typescript ruby r rust c; do
   if [ -x "libraries/$surface/check.sh" ]; then
     port=$(surface_port "$surface")
@@ -212,6 +213,8 @@ for surface in python typescript ruby r rust c; do
     run_surface "libraries/$surface" "$port" || status=$?
     surface_verdict "$surface" "$status" || fail=1
     wire_verdict "$surface" "$port" "$status" || fail=1
+    # Rust and R leave no release artifact in the tree.
+    case "$status:$surface" in 0:rust | 0:r | [1-9]*) ;; *) built+=("libraries/$surface") ;; esac
   else
     echo "not landed: libraries/$surface"
   fi
@@ -223,6 +226,7 @@ for engine in duckdb sqlite postgresql; do
     run_surface "databases/$engine" "$port" || status=$?
     surface_verdict "$engine" "$status" || fail=1
     wire_verdict "$engine" "$port" "$status" || fail=1
+    [ "$status" -ne 0 ] || built+=("databases/$engine")
   else
     echo "not landed: databases/$engine"
   fi
@@ -248,7 +252,7 @@ else
   skipped=$((skipped + 1))
 fi
 
-run_step "host builds remap the builder's home" bash scripts/check_artifact_paths.sh || fail=1
+run_step "host builds remap the builder's home" bash scripts/check_artifact_paths.sh --built ${built[@]+"${built[@]}"} || fail=1
 
 wire_word="$wire_ran of 10 wire suites ran in a passing surface, $wire_failed in a failed surface, $wire_lost lost"
 if [ "$fail" -ne 0 ] || [ "$failed" -ne 0 ]; then

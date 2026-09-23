@@ -159,8 +159,19 @@ mkdir -p "$planted/release"
 printf 'x\0%s/src/lib.rs\0' "$HOME" >"$planted/release/libplanted.so"
 status=0
 said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh) || status=$?
-rm -rf "$planted"
 expect "a planted home path" "$status:$said" "1:FAIL     $planted/release/libplanted.so: 1 strings carry the builder's home"
+
+# A surface whose check passed must leave an artifact for the scan
+# (surfaces-review-7 R7-5: the gate form passed with 0 artifacts).
+printf 'x\0/build/src/lib.rs\0' >"$planted/release/libplanted.so"
+mkdir -p "$planted/empty"
+status=0
+said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh --built "$planted/empty") || status=$?
+expect "a built surface with no artifact" "$status:$said" "1:FAIL     $planted/empty: its check passed and left no built artifact to scan"
+status=0
+said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh --built "$planted") || status=$?
+expect "a built surface with a clean artifact" "$status" "0"
+rm -rf "$planted"
 
 # Every surface check prints the counted spelling for its own wire skip.
 for pair in libraries/python:python libraries/typescript:typescript libraries/rust:rust \
