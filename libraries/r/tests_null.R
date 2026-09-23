@@ -224,6 +224,19 @@ check("a negative deadline is usage", identical(
 check("an oversized deadline is usage", identical(
   tryCatch(tt_decide("Q?", "refund me", deadline = Inf), thinkthen_error = function(e) e$kind),
   "usage"))
+# An R integer is a number too (the seventh review refused -1L and 5L).
+# It takes the same rules as a double, and NA_integer_ refuses as NA.
+check("an integer sentinel means no deadline", isTRUE(tt_decide("Q?", "refund me", deadline = -1L)))
+check("integer seconds are a deadline", isTRUE(tt_decide("Q?", "refund me", deadline = 5L)))
+check("an integer zero stays the spent deadline", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = 0L), thinkthen_error = function(e) e$kind),
+  "deadline"))
+check("a negative integer deadline is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = -2L), thinkthen_error = function(e) e$kind),
+  "usage"))
+check("an NA integer deadline is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = NA_integer_), thinkthen_error = function(e) conditionMessage(e)),
+  "the deadline is NA: pass -1 for no deadline, seconds as a number, or NULL"))
 
 # the counters count sends. No reset exists (ruling 4): the difference
 # across the three sends carries the same proof.

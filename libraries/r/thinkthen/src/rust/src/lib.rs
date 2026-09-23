@@ -87,6 +87,8 @@ extern "C" {
     fn R_CHAR(x: SEXP) -> *const std::os::raw::c_char;
     fn REAL_ELT(x: SEXP, i: isize) -> f64;
     fn R_IsNA(x: f64) -> i32;
+    fn INTEGER_ELT(x: SEXP, i: isize) -> i32;
+    static R_NaInt: i32;
 }
 
 /// The one engine value, built through the contract's connector door at the
@@ -214,18 +216,26 @@ fn deadline_of(value: &Robj) -> StdResult<Option<f64>, String> {
     if value.is_null() {
         return Ok(None);
     }
-    if value.rtype() == Rtype::Doubles && value.len() == 1 {
-        let held = unsafe { REAL_ELT(value.get(), 0) };
-        if unsafe { R_IsNA(held) } != 0 || held.is_nan() {
+    // An R integer is a number too: `-1L` and `5L` read as `-1` and `5`
+    // (the seventh review found them refused). NA_integer_ reads as NA.
+    let held = match value.rtype() {
+        Rtype::Doubles if value.len() == 1 => unsafe { REAL_ELT(value.get(), 0) },
+        Rtype::Integers if value.len() == 1 => match unsafe { INTEGER_ELT(value.get(), 0) } {
+            whole if whole == unsafe { R_NaInt } => f64::NAN,
+            whole => f64::from(whole),
+        },
+        _ => {
             return Err(usage(
-                "the deadline is NA: pass -1 for no deadline, seconds as a number, or NULL".to_owned(),
-            ));
+                "the deadline is seconds as a number, -1 for no deadline, or NULL".to_owned(),
+            ))
         }
-        return Ok(Some(held));
+    };
+    if unsafe { R_IsNA(held) } != 0 || held.is_nan() {
+        return Err(usage(
+            "the deadline is NA: pass -1 for no deadline, seconds as a number, or NULL".to_owned(),
+        ));
     }
-    Err(usage(
-        "the deadline is seconds as a number, -1 for no deadline, or NULL".to_owned(),
-    ))
+    Ok(Some(held))
 }
 
 /// One R value as one string.

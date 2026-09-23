@@ -28,6 +28,7 @@ fn a_fast_backend_hears_a_spent_deadline_within_a_tick() {
     let texts: Vec<String> = (0..2_000_000).map(|i| format!("record {i}")).collect();
     let records: Vec<&str> = texts.iter().map(String::as_str).collect();
     let budget = Duration::from_secs(1);
+    let before = tt.usage().requests;
     let started = Instant::now();
     let outcome = tt.decide_many_opts(
         &question,
@@ -41,5 +42,12 @@ fn a_fast_backend_hears_a_spent_deadline_within_a_tick() {
     assert!(
         took < Duration::from_millis(1_500),
         "the deadline landed at {took:?}; the deaf batch runs about 5.6 s"
+    );
+    // A budget spent at the door answers fast too. The sends prove the
+    // deadline stopped a batch in flight (R4-18: the old assert checked nothing).
+    let sent = tt.usage().requests - before;
+    assert!(
+        sent > 0 && sent < 2_000_000,
+        "the batch sent {sent} of 2000000 requests; a mid-batch deadline sends some and not all"
     );
 }

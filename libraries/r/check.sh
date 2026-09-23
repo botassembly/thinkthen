@@ -57,6 +57,9 @@ ENGINE_NULL=1 Rscript hook_check.R
 echo "== r surface: fast-backend interrupt, the poll-bug shape"
 ./interrupt_fast.sh
 
+echo "== r surface: a Ctrl-C during a call meets the error hook as plain R does"
+run_limited 200 ./interrupt_hook.sh
+
 echo "== r surface: fork after the first call answers in the child"
 run_limited 60 env ENGINE_NULL=1 Rscript fork_check.R
 

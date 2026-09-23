@@ -20,41 +20,47 @@
 .tt_call <- function(expr) {
   on.exit(.tt_cleanup(), add = TRUE)
   # R's own interrupt signaling runs the user's options(error = ...) hook
-  # while the guarded check below consumes the interrupt - the third
-  # review's probe caught the hook firing on a plain Ctrl-C. The hook is
-  # held aside for the crossing itself and restored below, before any
-  # error is raised, so it fires for genuinely uncaught errors and never
-  # for an interrupt.
+  # while the guarded check consumes the interrupt - the third review's
+  # probe caught the hook firing on a caught Ctrl-C. The hook is held
+  # aside while the guarded checks and the crossing run, and restored
+  # before anything is raised. An engine error then meets the hook as a
+  # plain stop does, and an interrupt meets it as a genuine Ctrl-C does:
+  # uncaught, the hook runs once; caught, it never runs. The seventh
+  # review found the hook still aside when the interrupt was delivered,
+  # so an uncaught Ctrl-C skipped it and the script went on (R7-13).
   had_hook <- getOption("error")
   if (!is.null(had_hook)) {
     options(error = NULL)
     on.exit(options(error = had_hook), add = TRUE)
   }
-  if (tt_interrupt_pending()) .tt_interrupt()
-  held <- tryCatch(list(value = expr), error = function(e) list(cond = .tt_error_condition(e)))
-  # Restore the hook while nothing is raising: the stop below meets the
-  # same options(error) a plain stop would.
-  if (!is.null(had_hook)) options(error = had_hook)
-  if (is.null(held$cond)) {
-    if (tt_interrupt_pending()) .tt_interrupt()
-    return(held$value)
+  held <- if (tt_interrupt_pending()) {
+    list(interrupt = TRUE)
+  } else {
+    tryCatch(list(value = expr), error = function(e) .tt_error_condition(e))
   }
-  stop(held$cond)
+  if (is.null(held$cond) && is.null(held$interrupt) && tt_interrupt_pending()) {
+    held <- list(interrupt = TRUE)
+  }
+  # Restore the hook while nothing is raising.
+  if (!is.null(had_hook)) options(error = had_hook)
+  if (!is.null(held$interrupt)) .tt_interrupt()
+  if (!is.null(held$cond)) stop(held$cond)
+  held$value
 }
 
-# The condition one engine error maps to, without stopping, returned as
-# data so .tt_call can restore the error hook before the raise. An interrupt marker is delivered for real
-# instead, from inside the handler where cleanup has already run.
+# What one engine error maps to, without stopping, returned as data so
+# .tt_call can restore the error hook before the raise: an interrupt
+# marker as `interrupt`, and every other error as its condition.
 .tt_error_condition <- function(e) {
   # A refusal the R half already raised with its kind keeps it; a lazy
   # argument evaluated inside the crossing lands here too.
-  if (inherits(e, "thinkthen_error")) return(e)
+  if (inherits(e, "thinkthen_error")) return(list(cond = e))
   text <- conditionMessage(e)
   parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
   if (length(parts) == 3L && identical(parts[[1]], "interrupt")) {
-    .tt_interrupt()
+    return(list(interrupt = TRUE))
   }
-  .tt_condition(text)
+  list(cond = .tt_condition(text))
 }
 
 # One of the six kinds as an R condition, carrying retryable. The Rust
@@ -87,9 +93,9 @@
 # R's own interrupt, delivered for real. The guarded check that reported
 # it consumed the pending signal, so the process sends itself the real
 # SIGINT and waits: the jump lands inside R's own delivery machinery,
-# caught by `tryCatch(interrupt = ...)` exactly as a genuine Ctrl-C is,
-# and uncaught it halts without the error hook - the third review's
-# probe. No Rust frame sits under that jump: the old fallback called the
+# caught by `tryCatch(interrupt = ...)` exactly as a genuine Ctrl-C is.
+# Uncaught, it meets the user's error hook as a genuine Ctrl-C does, and
+# without a hook it halts. No Rust frame sits under that jump: the old fallback called the
 # extendr-wrapped tt_raise_interrupt, whose R_CheckUserInterrupt longjmp
 # crossed the wrapper's own Rust frame - the fourth review's finding -
 # and it is deleted. If the real signal does not land within the sleep,

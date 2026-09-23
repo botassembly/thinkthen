@@ -46,17 +46,18 @@ the score cases' `nearest_level` is now asserted against
    Each host's own cancellation gesture, with the same semantics: no new
    request starts, sent requests finish, and an interrupt never fires a
    token the caller shared.
-5. **The deadline spelling and the negative budget.** Python takes
-   `deadline=` in seconds and refuses every negative (its `None` is the
-   one no-deadline spelling); TypeScript takes `deadlineMs=` in
-   milliseconds, refuses every negative including the contract's `-1`
-   sentinel, and spells no deadline as `null` or by leaving the key out.
-   Ruby takes `deadline=` in seconds and still honors `-1` as the
-   contract's sentinel, as its wave-1 test pins. A computed
-   `end - Date.now()` landing on `-1` must never disable a deadline, so
-   the millisecond hosts refuse it; Ruby's seconds spelling and its
-   documented sentinel are the reason it does not, and a ruling could
-   align it.
+5. **The deadline unit.** Python, Ruby, R, C, and Rust take seconds.
+   TypeScript takes `deadlineMs` in milliseconds, the unit of
+   `Date.now()`. The rules are the same on all six surfaces, because each
+   one converts through the contract's `deadline_from_seconds`: `-1` means
+   no deadline, zero is a spent deadline, every other negative and a NaN
+   are usage errors, and a budget above 4294967295 seconds is a usage
+   error. Each host also spells no deadline its own way (`None`, `nil`,
+   `NULL`, `null`, or a missing key). R takes an integer as well as a
+   double, so `-1L` and `5L` read as `-1` and `5`. The seventh review's
+   probes (R2-10) checked every spelling on all six surfaces. One cost
+   remains: a computed `end - Date.now()` that lands exactly on `-1`
+   means no deadline. `index.d.ts` documents it on `deadlineMs`.
 6. **The question value.** Python's `tt.question(...)` returns a Question
    object (with `.digest()`); TypeScript's returns a function carrying the
    spec, so no spread or stringify turns it back into text by accident.
@@ -70,10 +71,27 @@ the score cases' `nearest_level` is now asserted against
    `recognize`, and `relate` take frames (`on=`); TypeScript has no column
    door. The Polars door is Python's Arrow work; a Node column form needs
    its own design and is not in this release.
-9. **Blocking against async.** Python's verbs block the calling thread;
-   TypeScript's return Promises and run on libuv worker threads. Node's
-   event loop must not block, and the engine call is the same blocking
-   call underneath.
+9. **Blocking against async.** Python's verbs block the calling thread.
+   TypeScript's return Promises, and each call runs on one worker of
+   libuv's thread pool for its whole length. Node's event loop must not
+   block, and the engine call is the same blocking call underneath.
+   The pool is shared. File reads, `dns.lookup`, `crypto`, and `zlib` run
+   on it too, and it holds `UV_THREADPOOL_SIZE` workers, 4 by default. A
+   fifth call in flight waits for a worker, and so does that other work.
+   The seventh review measured it (R2-27, R3-25): 8 decides against a
+   stub answering in 500 ms took 1053 ms on a pool of 4, and an
+   `fs.readFile` issued during them waited 1000 ms. On a pool of 8 the
+   decides took 539 ms and the read waited 484 ms. A caller that runs
+   many calls at once sets `UV_THREADPOOL_SIZE` (at most 1024) in the
+   environment before Node starts, to the calls it runs at once plus the
+   other pool work it needs. A bulk verb (`decideMany`, `filter`, `rank`,
+   `annotate`) sends a whole column from one worker at the engine's
+   width, so a column is one call and holds one worker.
+   Decision: the calls stay on the pool. A thread of their own per call
+   would free the pool, but it would put no bound on the threads a
+   `Promise.all` over many single calls starts. The pool is that bound.
+   Ian can overturn this; the other choice spawns a thread per call and
+   resolves the Promise from it.
 10. **The record text.** Python requires `str` records (a non-string is a
     type error); TypeScript requires strings; Ruby, this wave, serializes
     a non-string record as its JSON text. Ruby is the permissive one; the
