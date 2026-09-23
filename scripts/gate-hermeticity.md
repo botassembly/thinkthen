@@ -68,15 +68,16 @@ it.
 
 The gate itself fetches nothing. Each step below reads a local cache that
 one network step fills once. Without that cache, the gate step fails and
-names the remedy. `scripts/check_offline_calls.py` fails any uv, pip,
+names the remedy in one counted line, `FAIL     surface-<name>: not set
+up (<the step>)`. `scripts/check_offline_calls.py` fails any uv, pip,
 npm, npx, docker, or curl call in a gate script that could fetch, and
 `scripts/check_surfaces.sh` exports the offline switches cargo, rustup,
 uv, and npm honor.
 
 - **The SQLite amalgamation** (`databases/sqlite/tests/host_sqlite.sh`):
   a host whose stock SQLite is below 3.50.0 needs the amalgamation under
-  `databases/sqlite/.runtimes`. The script names the one fetch and exits 1
-  without it.
+  `databases/sqlite/.runtimes`. Without it the SQLite check fails with
+  `FAIL     surface-sqlite: not set up (...)` naming the one fetch.
 - **The R tarball's registry crates** (`libraries/r/tools/make-tarball.sh`):
   `cargo vendor` reads the builder's cargo home, and the R check runs it
   with `CARGO_NET_OFFLINE=true`. The old step pointed at an empty home and
@@ -99,8 +100,8 @@ uv, and npm honor.
   `--pull never`, and so do the PostgreSQL check's containers.
 - **The DuckDB configure step** (`make configure` in `databases/duckdb`):
   it builds the extension's venv with pip from the package index. The
-  gate never runs it. `make release` fails with "run make configure"
-  until it has run once.
+  gate never runs it. Until it has run once, the DuckDB check fails with
+  `FAIL     surface-duckdb: not set up (...)` naming the step.
 - **The per-workspace deny check** (`sdlc/scripts/lint-workspaces`):
   every call passes `--offline`, and a workspace whose metadata is cold
   fails with the `cargo fetch --locked` command to run on a networked

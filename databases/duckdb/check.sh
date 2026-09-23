@@ -24,6 +24,15 @@ case "$(uname -s)" in
   *)      LIB_EXT=so ;;
 esac
 
+# The extension build needs the configure step's venv, a one-time step
+# that installs from the package index. The gate never runs it, so its
+# absence fails here by name (surfaces-review-5: the gate read this as a
+# quiet exit).
+if [ ! -f configure/platform.txt ] || [ ! -d configure/venv ]; then
+  echo "FAIL     surface-duckdb: not set up (run \`make configure\` in databases/duckdb once on a networked machine)"
+  exit 1
+fi
+
 echo "== duckdb surface: build the extension"
 make release >/dev/null
 test -s build/release/thinkthen.duckdb_extension

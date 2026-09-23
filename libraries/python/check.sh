@@ -29,7 +29,7 @@ if [ ! -x .venv/bin/python ]; then
   if ! { uv venv --offline .venv &&
     uv pip install --offline --python .venv/bin/python -r requirements-dev.txt; }; then
     rm -rf .venv
-    echo "FAIL     python-venv: uv's cache lacks a pinned package; on a networked machine run \`uv pip install --python .venv/bin/python -r requirements-dev.txt\` in libraries/python once, then rerun"
+    echo "FAIL     surface-python: not set up (uv's cache lacks a pinned package; on a networked machine run \`uv pip install --python .venv/bin/python -r requirements-dev.txt\` in libraries/python once)"
     exit 1
   fi
 fi

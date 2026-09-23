@@ -30,7 +30,10 @@ cp "target/release/libthinkthen0.$LIB_EXT" thinkthen.so
 # 3.51.0) is used as-is; otherwise the amalgamation in .runtimes supplies
 # one (see tests/host_sqlite.sh for the one-time fetch).
 if ! python3 -c 'import sqlite3,sys; sys.exit(0 if tuple(int(x) for x in sqlite3.sqlite_version.split(".")) >= (3,50,0) else 1)'; then
-    HOST_DIR=$(tests/host_sqlite.sh)
+    if ! HOST_DIR=$(tests/host_sqlite.sh); then
+        echo "FAIL     surface-sqlite: not set up (fetch a SQLite amalgamation of 3.50.0 or newer into databases/sqlite/.runtimes once, per tests/host_sqlite.sh)"
+        exit 1
+    fi
     export "$LIB_PATH_VAR=$HOST_DIR${!LIB_PATH_VAR:+:${!LIB_PATH_VAR}}"
 fi
 HOST=$(python3 -c 'import sqlite3;print(sqlite3.sqlite_version)')
