@@ -56,6 +56,9 @@ the values await a backend that distinguishes options.
   go unestimated (review 6). A timer therefore stops the relate
   query, its planning included, once `thinkthen_relate_seconds` pass
   (default 60; `0` turns the limit off, `NULL` reads as the default).
+  A relate waiting behind another relate on the same database counts
+  its wait against the same limit, and a SIGINT that arrives during a
+  relate is the error it reports, even when the timer fired too.
   With the limit at 2 s, the misjudged join stopped at 2.0 s holding
   415 MB instead of 5.4 s and 1,058 MB, and the `unnest` shape at 4.8 s
   instead of 36 s (review 7, R5-22). The limit bounds time, not memory:

@@ -311,6 +311,11 @@ fn current_cancel() -> &'static Cancel {
     install_cancel()
 }
 
+/// How many SIGINTs the handler has seen in this process.
+pub(crate) fn signal_count() -> u64 {
+    SIGNAL_SEQ.load(Ordering::SeqCst)
+}
+
 /// Whether a cancelled token is live: a call that reaches the gate
 /// after the interrupt fired must refuse before running its query, not
 /// start six seconds of work nobody asked for anymore (review 4,
