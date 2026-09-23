@@ -24,3 +24,7 @@ Pair the helpers with the harvest issue (`2026-09-23-harvest-the-beatles-and-rel
 - Whether a chat-model backend belongs in ThinkThen at all. Beatles Bench runs GLM-5.3 Flash beside Jev through a separate script.
 
 Ian can overturn any line.
+
+## Added 2026-09-23: Beatles Bench as the proving ground, and the cache
+
+Ian's direction: if a helper works, use Beatles Bench to design ThinkThen's own wording, including the questions that `tag`, `recognize`, and `relate` write for the user. A changed wording changes the request, so it misses the cache and costs new calls. The old answers stay in the cache, and the two wordings compare side by side. A default must also hold on a second set outside the Beatles (reversal-general, or the site's recorded examples), so it does not fit one band.
