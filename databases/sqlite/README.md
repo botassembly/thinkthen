@@ -153,7 +153,14 @@ Two named divergences and one gap, stated rather than implied:
   engine, is watched by one shared watcher thread per process that reads
   the same flag every 5 ms while a call runs and parks while none does.
   A forked child never uses the parent's watcher: its first watched call
-  builds its own, so a child's interrupt lands too (review 5).
+  builds its own, so a child's interrupt lands too (review 5). The
+  extension pins itself in memory (`RTLD_NODELETE`), so closing the
+  loading connection never unmaps the watcher thread. Once pinned, it
+  installs a `pthread_atfork` child handler that bumps a fork
+  generation, and the watcher is keyed on the process ID and that
+  generation, so a descendant that reuses an ancestor's process ID
+  builds its own too. If the pin fails, no handler is installed and the
+  watcher is keyed on the process ID alone (review 6).
 
 ## Building and checking
 
