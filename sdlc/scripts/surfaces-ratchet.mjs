@@ -63,7 +63,9 @@ if (total !== max) {
 // Every commit after the recorded base that touches the ceiling file
 // must show a real second-agent review. The last mover is not enough,
 // because a later compliant commit would hide an earlier unreviewed one.
-// A commit passes in one of three ways:
+// A commit that lowers max below its first parent's needs only a body:
+// the count must equal the ceiling, so a lower cannot hide growth.
+// Any other commit passes in one of three ways:
 //   1. Its body has a paragraph that starts "Second-agent review:" and
 //      cites an existing sdlc/ record or a commit SHA, with no word that
 //      says the review is pending or missing.
@@ -142,10 +144,22 @@ if (!gitOk(["rev-parse", "--git-dir"])) {
   const range = base === "" ? ["HEAD"] : [`${base}..HEAD`];
   const movers = git(["log", "--format=%H", ...range, "--", FILE]).split("\n").filter(Boolean);
   const records = reviewRecords();
+  const ceilingAt = (rev) => {
+    try {
+      return JSON.parse(git(["show", `${rev}:${FILE}`])).max;
+    } catch {
+      return undefined;
+    }
+  };
+  const lowers = (sha) => {
+    const before = ceilingAt(`${sha}^1`);
+    return before !== undefined && ceilingAt(sha) < before;
+  };
   const unreviewed = movers.filter((sha) => {
     if (Object.keys(grandfathered).some((g) => sha.startsWith(g))) return false;
     if (records.some((text) => new RegExp(`\\b${sha.slice(0, 7)}[0-9a-f]*\\b`).test(text))) return false;
     const body = git(["log", "-1", "--format=%B", sha]).split("\n\n").slice(1).join("\n\n");
+    if (lowers(sha)) return body.trim() === "";
     const line = reviewLine(body);
     return line === "" || MISSING.test(line) || !citesRecord(line);
   });

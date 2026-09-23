@@ -89,6 +89,19 @@ expect fail "review: ${early:0:7}." "refuses an unreviewed raise that a later re
 echo "The review of ${early:0:7} approves it." > sdlc/records/REVIEW-early.md
 expect pass '' "accepts a raise that a review record names"
 
-rm sdlc/records/REVIEW-early.md
+lower() {
+  lines=$((lines - 1))
+  sed '$d' src/a.rs > src/a.rs.new && mv src/a.rs.new src/a.rs
+  ceiling
+  git add -A
+  git commit -q -m "Shrink the tree" ${1:+-m "$1"}
+}
+lower "The tree shrank by one line."
+expect pass '' "accepts a lower with a body and no review"
+lower ""
+expect fail "review: $(git rev-parse --short=7 HEAD)." "refuses a lower with no body"
+git reset -q --hard HEAD~2; lines=$((lines + 2))
+
+rm -f sdlc/records/REVIEW-early.md
 reviews "$root" "\"${early:0:12}\": \"test\""
 expect fail "grandfathers ${early:0:12}, which is not in the history up to $root" "refuses to grandfather a raise newer than the cutoff"
