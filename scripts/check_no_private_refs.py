@@ -20,10 +20,19 @@ set when the root is not a git checkout, so an exported tree answers
 too). Untracked build output (target/, dist/) is not shipped and never
 was the finding.
 
-Usage: check_no_private_refs.py [--root DIR]
+The private name is held as the SHA-256 of its one word, so this public
+file never spells it (surfaces-review-5). Every word of a scanned line is
+hashed and compared. The test plants a word of its own and passes that
+word's hash with --name-sha256.
+
+The root defaults to the repository that holds this script, so a tree
+without git walks that bounded tree instead of refusing.
+
+Usage: check_no_private_refs.py [--root DIR] [--name-sha256 HEX]
 Exit 0 when clean, 1 with one `path:line: what` line per violation.
 """
 
+import hashlib
 import os
 import re
 import subprocess
@@ -34,14 +43,14 @@ import sys
 IGNORED_DIRS = {"target", "build", "dist", "node_modules", ".venv", ".cargo", ".runtimes"}
 PACKAGE_SUFFIXES = (".node", ".so", ".dylib", ".dll", ".a", ".gem", ".tgz", ".gz")
 
-# The private repository's directory name, and the home-directory roots to
-# refuse. Written as patterns here and nowhere else in the tree.
-PRIVATE_NAME = "mktg"
+# The SHA-256 of the private repository's directory name, and the
+# home-directory roots to refuse.
+PRIVATE_SHA256 = "eff9de6855d51a876662055ed6a6a8702179a1b5c335f3b1f66acaaa8a8e22ee"
 HOME_ROOTS = ("home", "Users")
 
 SELF = {"scripts/check_no_private_refs.py", "scripts/test_check_no_private_refs.py"}
 
-PRIVATE_RE = re.compile(r"\b" + PRIVATE_NAME + r"\b")
+WORD_RE = re.compile(r"\w+")
 HOME_RE = re.compile(r"/(?:" + "|".join(HOME_ROOTS) + r")/[A-Za-z0-9._-]+")
 
 
@@ -69,8 +78,22 @@ def tracked_files(root):
     return names
 
 
-def violations(root):
+def names_private(line, digest, seen):
+    """True when any word of the line hashes to the private name's digest.
+    `seen` caches each distinct word's verdict across the whole scan."""
+    for word in WORD_RE.findall(line):
+        verdict = seen.get(word)
+        if verdict is None:
+            verdict = hashlib.sha256(word.encode()).hexdigest() == digest
+            seen[word] = verdict
+        if verdict:
+            return True
+    return False
+
+
+def violations(root, digest=PRIVATE_SHA256):
     found = []
+    seen = {}
     for path in tracked_files(root):
         if path in SELF or path == "sdlc" or path.startswith("sdlc/"):
             continue
@@ -81,7 +104,7 @@ def violations(root):
             continue
         text = data.decode("utf-8", errors="replace")
         for number, line in enumerate(text.splitlines(), start=1):
-            if PRIVATE_RE.search(line):
+            if names_private(line, digest, seen):
                 found.append(f"{path}:{number}: names the private repository")
             if HOME_RE.search(line):
                 found.append(f"{path}:{number}: carries a home-directory path")
@@ -89,33 +112,25 @@ def violations(root):
 
 
 def main():
-    root = "."
-    explicit = False
-    if len(sys.argv) == 3 and sys.argv[1] == "--root":
-        root = sys.argv[2]
-        explicit = True
-    elif len(sys.argv) != 1:
-        print("usage: check_no_private_refs.py [--root DIR]", file=sys.stderr)
-        return 2
-    if not explicit:
-        probe = subprocess.run(
-            ["git", "-C", root, "ls-files"],
-            capture_output=True,
-        )
-        if probe.returncode != 0:
-            print(
-                "refusing an unbounded walk: cwd is not a git checkout; "
-                "pass --root DIR to check an exported tree",
-                file=sys.stderr,
-            )
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    digest = PRIVATE_SHA256
+    args = sys.argv[1:]
+    while args:
+        if len(args) >= 2 and args[0] == "--root":
+            root = args[1]
+        elif len(args) >= 2 and args[0] == "--name-sha256":
+            digest = args[1]
+        else:
+            print("usage: check_no_private_refs.py [--root DIR] [--name-sha256 HEX]", file=sys.stderr)
             return 2
-    found = violations(root)
+        args = args[2:]
+    found = violations(root, digest)
     if found:
         for line in found:
             print(line)
         print(f"FAIL: {len(found)} private reference(s) outside sdlc/", file=sys.stderr)
         return 1
-    print(f"ok: no private repository names or home paths outside sdlc/")
+    print("ok: no private repository names or home paths outside sdlc/")
     return 0
 
 

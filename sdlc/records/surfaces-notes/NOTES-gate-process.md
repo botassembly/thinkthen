@@ -89,7 +89,7 @@ repository names or home paths outside sdlc/`.
 **sdlc/ cleaned with the scope decision recorded at the enforcement
 point** (`507b978` + this lane's commits): the historical records keep
 their evidence with the private name genericized to "the deck
-repository" and home paths made relative; the Mac log's `/Users/ian`
+repository" and home paths made relative; the Mac log's absolute home-directory
 forms became `~/…`; `libraries/typescript/NOTES.md`'s literal path in
 prose became words. The private-name and home-path grep over `sdlc/`
 (spelled in `scripts/check_no_private_refs.py`, not here, so this file

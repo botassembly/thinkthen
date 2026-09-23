@@ -22,13 +22,15 @@ if ! command -v python3 >/dev/null 2>&1; then
 	exit 1
 fi
 
+# The full check runs the offline three as its own steps, so they run
+# here only when it cannot (surfaces-review-5: each ran twice, and the
+# name check's lines were counted twice).
+if command -v cargo >/dev/null 2>&1; then
+	exec bash -- scripts/check_surfaces.sh
+fi
+
 python3 scripts/generate_functions.py --check
 python3 scripts/check_public_names.py
 (cd conformance && python3 tools/validate_conformance.py conformance.json)
-
-if ! command -v cargo >/dev/null 2>&1; then
-	printf '%s\n' 'surfaces: cargo is not on PATH; the offline checks above ran, the full surfaces check skipped'
-	exit 0
-fi
-
-exec bash -- scripts/check_surfaces.sh
+printf '%s\n' 'surfaces: cargo is not on PATH; the offline checks above ran, the full surfaces check skipped'
+exit 0

@@ -9,7 +9,9 @@ registration. Each test would have failed before the fix, which scanned
 Run: python3 scripts/test_check_public_names.py   (from anywhere)
 """
 
+import contextlib
 import importlib.util
+import io
 import pathlib
 import sys
 import tempfile
@@ -71,10 +73,16 @@ def test_real_registrations_still_found():
 
 
 def test_the_repository_passes():
+    # The check's own per-surface lines are captured, not printed: the
+    # gate runs the real check as its own step, and a second copy of its
+    # `ok` lines inflated the green count (surfaces-review-5).
+    said = io.StringIO()
+    with contextlib.redirect_stdout(said):
+        status = MODULE.main()
     report(
         "the repository's own names pass the check",
-        MODULE.main() == 0,
-        "the check failed on the repository",
+        status == 0,
+        f"the check failed on the repository:\n{said.getvalue()}",
     )
 
 
