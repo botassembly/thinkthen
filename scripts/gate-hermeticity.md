@@ -21,10 +21,10 @@ it.
   `postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6`
   (resolved on this host, 2026-09-22) in
   `databases/postgresql/package.sh` and `databases/postgresql/check.sh`.
-- **The Rust toolchain in the Ruby builder**: the container's PATH is
-  resolved from `/root/.rustup/toolchains/*/bin` instead of naming one
-  toolchain directory, so a host toolchain that is not
-  `stable-x86_64-unknown-linux-gnu` still works.
+- **The Rust toolchain in the Ruby builder**: `libraries/ruby/Dockerfile`
+  installs Rust 1.93.1 into the builder image with rustup, and the
+  container's PATH names `/root/.cargo/bin`. No host toolchain is
+  mounted. The rustup download happens once, when the image is built.
 
 ## The DuckDB extension build's Python installs (review 4 follow-up)
 

@@ -188,9 +188,13 @@ so the note is self-contained):
 
 **Decision: (a), accepted 2026-09-23** (was a recommendation; the fourth
 review's records group asked for the decision with its review line).
-Second-agent review: the trial-merge issue on main (`4b4f85b`) re-ran the
-merged tree's `cargo check` by its own commands, and the independent
-verifier's table re-checked the manifest facts. (b) stays recorded as the
+Second-agent review: the trial-merge issue on main (`4b4f85b`,
+2026-09-22) re-ran the merged tree's `cargo check` by its own commands,
+and the independent verifier's table re-checked the manifest facts. Both
+predate this decision and cover the restore mechanics only. The review of
+the landed merge is
+`sdlc/records/surfaces-notes/REVIEW-wave-7-ceiling-raises.md`: it accepts
+`29cceff`, the root location, and the ceiling, with two follow-ups. (b) stays recorded as the
 follow-on when the production API exists — at which point the connector
 swap described in `HANDOFF.md` becomes the only change the surfaces need. Run the merge as a
 build: merge, restore or retarget, `cargo check` contract, stand-in, and
@@ -209,3 +213,11 @@ copy is a workspace of its own with the lints `b11a2b0` declared, and
 ceiling. The surfaces ratchet counts `thinkthen-core` and rose by its
 8,102 lines. The contract, the stand-in, and the R tarball point at the
 new path. Ian can overturn the location.
+
+**Final resolution (surfaces-review-7 R1-26).** Option (a) is done. The
+crate lives at `thinkthen-core/` at the repository root, not at
+`crates/thinkthen-core`. It is the `b11a2b0` source with its own
+`Cargo.toml`, a new `Cargo.lock`, and six fixture paths one level
+shorter. It retires when the production engine exposes the API that
+option (b) describes. Main's crates ratchet was not raised, so the
+46,172 figure above no longer applies.
