@@ -124,7 +124,10 @@ def main():
             why, disposition = central
             print(f"{disposition:<8} {case_id}: {why}")
             continue
-        question = case["question"]
+        # The file-door spelling (the local-kind cases): the named file
+        # goes through this surface's own read door, so a missing file
+        # surfaces as the local failure instead of crashing the driver.
+        question = case.get("question") or case.get("question_file")
         evidence = case.get("evidence")
         expect = case["expect"]
 
@@ -181,7 +184,10 @@ def main():
                     if verb == "details"
                     else "SELECT thinkthen_decide(?, ?)"
                 )
-                params = (json.dumps(question), evidence)
+                # A file spelling rides raw: the door reads the leading '@'
+                # of the argument itself, not of a JSON-quoted string.
+                held_arg = question if "question_file" in case else json.dumps(question)
+                params = (held_arg, evidence)
                 if "budget_ms" in case:
                     # The per-call deadline door: the ruled third argument
                     # carries the case's budget (case 27). The shared skip
@@ -198,6 +204,10 @@ def main():
                         report(case_id, f"refused ({failure})")
                     elif kind == "deadline" and "thinkthen deadline" in text:
                         report(case_id, f"refused ({failure})")
+                    elif kind == "local" and "did not read" in text:
+                        # The local kind is this surface's own read door:
+                        # the one refusal message, no cause named.
+                        report(case_id, f"refused at the file door ({failure})")
                     else:
                         report(case_id, text, failed=True)
                     continue
