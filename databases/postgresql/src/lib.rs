@@ -381,33 +381,71 @@ enum CheckedReadError {
 }
 
 /// Read `path` as a regular file of at most `cap` bytes, optionally
-/// confined to `base` by resolved path, so a symlink cannot point out.
-/// The read is bounded at one byte past the cap, so a file that grows
-/// after its size check still refuses. Pure: no PostgreSQL state, no
-/// environment, and the same behavior under `cargo test` as in a backend.
+/// confined to `base`, opening the path exactly once and validating the
+/// opened handle rather than the path (review 4, item 7): the flags carry
+/// `O_NOFOLLOW`, so the final component cannot be a symlink, and
+/// `O_NONBLOCK`, so a swapped-in fifo opens instead of parking the
+/// backend in `open()`; the metadata then comes from the descriptor, so
+/// a path swapped between open and check still names the file this
+/// function holds. Confinement resolves the descriptor through
+/// `/proc/self/fd`, so an intermediate symlink cannot point out of the
+/// base either. `Refused` is every unreadable cause — missing,
+/// permission, not a regular file, a symlink final component, outside
+/// the confinement — one class on purpose, so a caller cannot learn
+/// whether a path exists; `OverCap` is the file that grew past the cap,
+/// named because only a caller allowed to read the file can reach it.
+/// Pure: no PostgreSQL state, no environment, and the same behavior
+/// under `cargo test` as in a backend.
 fn read_within(
     path: &Path,
     cap: u64,
     confined: Option<&Path>,
 ) -> Result<String, CheckedReadError> {
     use std::io::Read;
-    let meta = std::fs::metadata(path).map_err(|_| CheckedReadError::Refused)?;
-    // `/dev/zero` is a character device, a fifo is not a regular file, a
-    // directory is not either: all refuse before any byte is read.
+    use std::os::fd::AsRawFd;
+    use std::os::unix::fs::OpenOptionsExt;
+    // Open once, never following the final component, never blocking.
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .open(path)
+        .map_err(|_| CheckedReadError::Refused)?;
+    // The metadata of what was opened, not of what the path names now.
+    let meta = file.metadata().map_err(|_| CheckedReadError::Refused)?;
+    // A fifo opened non-blocking, a character device, a directory: all
+    // refuse before any byte is read.
     if !meta.is_file() {
         return Err(CheckedReadError::Refused);
-    }
-    if let Some(base) = confined {
-        let base = std::fs::canonicalize(base).map_err(|_| CheckedReadError::Refused)?;
-        let real = std::fs::canonicalize(path).map_err(|_| CheckedReadError::Refused)?;
-        if !real.starts_with(&base) {
-            return Err(CheckedReadError::Refused);
-        }
     }
     if meta.len() > cap {
         return Err(CheckedReadError::OverCap);
     }
-    let file = std::fs::File::open(path).map_err(|_| CheckedReadError::Refused)?;
+    if let Some(base) = confined {
+        let base = std::fs::canonicalize(base).map_err(|_| CheckedReadError::Refused)?;
+        // Resolve the descriptor, not the path: `/proc/self/fd/N` is the
+        // file this function holds, whatever the path points at now. A
+        // file unlinked while held carries " (deleted)" after its name.
+        let mut name = [0u8; libc::PATH_MAX as usize];
+        let wrote = unsafe {
+            let target = format!("/proc/self/fd/{}\0", file.as_raw_fd());
+            libc::readlink(
+                target.as_ptr() as *const libc::c_char,
+                name.as_mut_ptr() as *mut libc::c_char,
+                name.len(),
+            )
+        };
+        if wrote < 0 {
+            return Err(CheckedReadError::Refused);
+        }
+        let mut real = &name[..wrote as usize];
+        if real.ends_with(b" (deleted)") {
+            real = &real[..real.len() - b" (deleted)".len()];
+        }
+        let real = std::str::from_utf8(real).map_err(|_| CheckedReadError::Refused)?;
+        if !Path::new(real).starts_with(&base) {
+            return Err(CheckedReadError::Refused);
+        }
+    }
     let mut text = String::new();
     // One byte past the cap tells a file that grew after the check from
     // one that sits at the cap.
@@ -1321,12 +1359,24 @@ mod mapping_tests {
         // nothing about the filesystem.
         assert_eq!(read_within(Path::new("/dev/zero"), 1024, None), Err(CheckedReadError::Refused));
         assert_eq!(read_within(Path::new("/no/such/file"), 1024, None), Err(CheckedReadError::Refused));
-        // Confinement by resolved path: inside passes, a link that points
-        // out refuses with the same class as a missing file.
+        // Confinement is judged on the opened descriptor's resolved path:
+        // the plain inside file passes, an outside file refuses with the
+        // same class as a missing one.
         assert!(read_within(&inside, 1024, Some(&base)).is_ok());
         #[cfg(unix)]
         {
-            assert!(read_within(held.join("base/link-in.json").as_path(), 1024, Some(&base)).is_ok());
+            // Review 4, item 7: the final component may not be a symlink at
+            // all, even one that resolves inside the base — the swap attack
+            // rides on a changeable final link, so `O_NOFOLLOW` refuses it
+            // and the file must be reached by its real name.
+            assert_eq!(
+                read_within(held.join("base/link-in.json").as_path(), 1024, Some(&base)),
+                Err(CheckedReadError::Refused)
+            );
+            assert_eq!(
+                read_within(held.join("base/link-out.json").as_path(), 1024, None),
+                Err(CheckedReadError::Refused)
+            );
             assert_eq!(
                 read_within(held.join("base/link-out.json").as_path(), 1024, Some(&base)),
                 Err(CheckedReadError::Refused)
@@ -1335,6 +1385,18 @@ mod mapping_tests {
                 read_within(held.join("outside/secret.json").as_path(), 1024, Some(&base)),
                 Err(CheckedReadError::Refused)
             );
+            // A fifo opened non-blocking refuses instead of parking the
+            // process in open() (the reviewer's PostgreSQL hang).
+            let fifo = held.join("base/pipe.json");
+            #[cfg(unix)]
+            let made = unsafe { libc::mkfifo(fifo.as_os_str().as_encoded_bytes().as_ptr() as *const libc::c_char, 0o644) };
+            #[cfg(unix)]
+            assert_eq!(made, 0);
+            assert_eq!(read_within(&fifo, 1024, None), Err(CheckedReadError::Refused));
+            // An intermediate directory that is a symlink resolves on the
+            // descriptor, so a real file reached through it still reads.
+            std::os::unix::fs::symlink("base", held.join("alias")).expect("the alias");
+            assert!(read_within(held.join("alias/inside.json").as_path(), 1024, Some(&base)).is_ok());
         }
         // The cap: a file over it names the cap; one exactly at it reads.
         std::fs::write(held.join("base/big.json"), vec![b'x'; 2048]).expect("the big file writes");

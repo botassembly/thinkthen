@@ -202,23 +202,32 @@ const FILE_CAP: u64 = 1024 * 1024;
 /// every surface reads by (review 3, item 2): a regular file of at most
 /// [`FILE_CAP`] bytes, read no further than one byte past the cap, with
 /// one message for every unreadable cause so a caller learns nothing
-/// about the filesystem. Where a database may read question files from
-/// is the database ADR's to rule; the process directory is this surface's
-/// pick, named here so a ruling can move it in one place.
+/// about the filesystem. The path is opened exactly once with
+/// `O_NOFOLLOW` and `O_NONBLOCK` and the checks read the opened
+/// descriptor, so a path swapped between check and open cannot smuggle
+/// another file in or park the process on a fifo (review 4, item 7).
+/// Where a database may read question files from is the database ADR's
+/// to rule; the process directory is this surface's pick, named here so
+/// a ruling can move it in one place.
 fn named_file(argument: &str) -> Result<String, String> {
     use std::io::Read;
+    use std::os::unix::fs::OpenOptionsExt;
     let path = Path::new(&argument[1..]);
     let refused = || format!("the question file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes");
-    let meta = std::fs::metadata(path).map_err(|_| refused())?;
+    // Open once, never following the final component, never blocking.
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .open(path)
+        .map_err(|_| refused())?;
+    // The metadata of what was opened, not of what the path names now.
+    let meta = file.metadata().map_err(|_| refused())?;
     if !meta.is_file() {
-        // A fifo blocks forever on read; a character device like
-        // /dev/zero never ends: both refuse before any byte is read.
         return Err(refused());
     }
     if meta.len() > FILE_CAP {
         return Err(format!("the question file '{argument}' is over the {FILE_CAP} byte cap"));
     }
-    let file = std::fs::File::open(path).map_err(|_| refused())?;
     let mut text = String::new();
     // One byte past the cap tells a file that grew after the check from
     // one that sits at the cap.

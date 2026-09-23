@@ -528,6 +528,7 @@ dependencies = [
 name = "thinkthen-sqlite"
 version = "0.0.1"
 dependencies = [
+ "libc",
  "rusqlite",
  "serde_json",
  "thinkthen-contract",
