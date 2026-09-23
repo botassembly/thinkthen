@@ -14,7 +14,7 @@ Re-audit all 45 items in `sdlc/issues/2026-09-22-command-wording-and-help-fixes-
 
 The issue's approved vocabulary and the later clarification in `sdlc/issues/2026-09-21-the-help-first-lines-and-the-public-words.md` govern outcome words. Public teaching copy says **not sure** and **broken**. The specification may introduce `unresolved` once as the formal contract/schema term and then use it where exact contract language needs it. `failed` remains valid for one question that a backend could not answer inside an otherwise usable `annotate` result; it does not name the whole broken outcome. This ticket makes that bounded reconciliation. Ian can overturn these words before implementation.
 
-Item 44 remains an outward-facing decision and is a prerequisite to implementation. Ian must choose between the existing `meta.profile_warning.calibrated` key and the proposed `tuned_for` key before this ticket starts. `calibrated` preserves the accepted ADR 0032 shape but overclaims what the profile records. `tuned_for` matches the measured meaning but changes a public result object, tests, examples, and readers. Recommendation: choose `tuned_for` before 0.1. Cost: one public field migration and a second-agent public-surface review. The implementation applies the ruling and closes item 44; it does not defer the item while claiming the command contract is closed.
+Ian ruled on 2026-09-23 that item 44 uses `meta.profile_warning.tuned_for`. The existing `calibrated` key overclaims what the profile records: the saved name identifies the backend profile under which a person tuned the threshold, but it does not prove statistical calibration. `tuned_for` states the measured meaning. The implementation changes the public result object, tests, examples, and readers before 0.1 and receives a second-agent public-surface review. It closes item 44 rather than deferring it.
 
 ## Required audit and disposition
 
@@ -67,7 +67,7 @@ The expected disposition below is the ticket's bounded design. If the post-merge
 | 41 | already fixed | The landed 0080/0081 work must leave the specification index and result-kind count at ten functions and the current result kinds. |
 | 42 | already fixed | Live-call text promises robustness or reports measured variation; only replay promises the same recorded answer. |
 | 43 | fixed here | Remove `decider model` and `decision model` from current public command, README, specification, and how-to prose. Use `System One model` when naming the product type and `the model` otherwise. |
-| 44 | fixed here | After Ian's prerequisite ruling, apply it to the profile-warning field and every owning schema, example, reader, and exact test. Preserve compatibility only if the ruling requires it. |
+| 44 | fixed here | Rename the profile-warning field from `calibrated` to `tuned_for` in every owning schema, example, reader, and exact test. New results emit only `tuned_for`; no compatibility reader is required because ThinkThen has not released 0.1. |
 | 45 | fixed here | Make `annotate` begin exactly `Answer a saved set of questions about every record.` everywhere its command introduction is owned in this repository. |
 
 ## Scope
@@ -99,7 +99,7 @@ Stop and re-score if the audit needs more than these budgets, changes a result k
 
 ## Dependencies
 
-Ticket 0080, designed at `5908f3551cacc85484a3edb7ba286c08d9079051`, must land first with `recognize`, its help, specification, result shape, and tests. Ticket 0081, designed at `ca7cf7442a5d208d0f6f538716c83568ccf5bba2`, must then land with `relate`, its help, specification, result shape, and tests. This ticket starts its audit only from main containing both landing records. Ian's item-44 ruling is also a hard prerequisite. Tickets 0057, 0058, 0066, 0067, and 0087 supply the accepted prior fixes. ADR 0032 owns the current field until Ian rules otherwise.
+Ticket 0080, designed at `5908f3551cacc85484a3edb7ba286c08d9079051`, must land first with `recognize`, its help, specification, result shape, and tests. Ticket 0081, designed at `ca7cf7442a5d208d0f6f538716c83568ccf5bba2`, must then land with `relate`, its help, specification, result shape, and tests. This ticket starts its audit only from main containing both landing records. Ian's 2026-09-23 item-44 ruling selects `tuned_for`. Tickets 0057, 0058, 0066, 0067, and 0087 supply the accepted prior fixes. ADR 0032 owns the old field and this ticket records its replacement before 0.1.
 
 ## Complexity
 
