@@ -199,6 +199,129 @@ const MAX_DATA: usize = 1024 * 1024 * 1024;
 /// before it indexes the table's last slot (the sizes buffer).
 const MAX_BUFFERS: i64 = 64;
 
+/// The refusal for an extent that names memory this process cannot read.
+const UNREADABLE: &str = "the column's buffers declare bytes this process cannot read";
+
+/// The stride of the readability probe: one byte a page. 4 KiB is the
+/// smallest page any supported platform uses, so a larger page is only
+/// probed more than once.
+const PROBE_STRIDE: usize = 4096;
+
+/// True when every byte of `[start, start + length)` can be read.
+///
+/// The interface gives no allocation length, so a declared extent past a
+/// short allocation would read into whatever follows it. When nothing
+/// follows (an unmapped page, a guard page, a reservation), the read would
+/// kill the host. This asks the kernel before the read instead. On Linux,
+/// `process_vm_readv` against this process copies one byte a page and
+/// fails on any page it cannot read, protected or unmapped. Elsewhere, or
+/// when that call is not permitted, `mincore` finds unmapped pages. Memory
+/// that is mapped and readable but belongs to another allocation cannot be
+/// told apart by any reader; that lie stays the producer's.
+fn readable(start: *const u8, length: usize) -> bool {
+    if length == 0 {
+        return true;
+    }
+    let Some(last) = (start as usize).checked_add(length - 1) else {
+        return false;
+    };
+    #[cfg(target_os = "linux")]
+    if let Some(answer) = probe::vm_readable(start as usize, last) {
+        return answer;
+    }
+    probe::mapped(start as usize, last)
+}
+
+/// The two kernel questions `readable` asks, declared here because the
+/// surface carries no libc binding.
+mod probe {
+    use std::ffi::c_void;
+    use std::os::raw::c_int;
+
+    extern "C" {
+        fn mincore(address: *mut c_void, length: usize, pages: *mut u8) -> c_int;
+        fn getpagesize() -> c_int;
+    }
+
+    /// True when every page from `first` to `last` is mapped.
+    pub(super) fn mapped(first: usize, last: usize) -> bool {
+        // SAFETY: getpagesize takes no argument and cannot fail.
+        let page = usize::try_from(unsafe { getpagesize() }).unwrap_or(super::PROBE_STRIDE);
+        let base = first - first % page;
+        let span = last - base + 1;
+        let mut pages = vec![0u8; span.div_ceil(page)];
+        // SAFETY: mincore reads no byte of the range; it writes one byte a
+        // page into `pages`, which holds a byte for every page asked about.
+        unsafe { mincore(base as *mut c_void, span, pages.as_mut_ptr()) == 0 }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[repr(C)]
+    struct IoVec {
+        base: *mut c_void,
+        length: usize,
+    }
+
+    #[cfg(target_os = "linux")]
+    extern "C" {
+        fn getpid() -> c_int;
+        fn process_vm_readv(
+            pid: c_int,
+            local: *const IoVec,
+            local_count: std::os::raw::c_ulong,
+            remote: *const IoVec,
+            remote_count: std::os::raw::c_ulong,
+            flags: std::os::raw::c_ulong,
+        ) -> isize;
+    }
+
+    /// Copy one byte out of every page from `first` to `last` through the
+    /// kernel, which answers a fault with an error instead of a signal.
+    /// `None` when the call itself is not available here.
+    #[cfg(target_os = "linux")]
+    pub(super) fn vm_readable(first: usize, last: usize) -> Option<bool> {
+        /// The iovec batch every Linux kernel accepts (`IOV_MAX`).
+        const BATCH: usize = 1024;
+        const EFAULT: i32 = 14;
+        let mut places = Vec::new();
+        let mut at = first;
+        loop {
+            places.push(at);
+            let next = (at - at % super::PROBE_STRIDE).saturating_add(super::PROBE_STRIDE);
+            if next > last {
+                break;
+            }
+            at = next;
+        }
+        if places.last() != Some(&last) {
+            places.push(last);
+        }
+        let mut sink = [0u8; BATCH];
+        // SAFETY: getpid takes no argument and cannot fail.
+        let pid = unsafe { getpid() };
+        for batch in places.chunks(BATCH) {
+            let remote: Vec<IoVec> = batch
+                .iter()
+                .map(|&place| IoVec { base: place as *mut c_void, length: 1 })
+                .collect();
+            let local = IoVec { base: sink.as_mut_ptr().cast(), length: batch.len() };
+            // SAFETY: the kernel writes at most `batch.len()` bytes into
+            // `sink`, and reads the remote bytes itself, failing on a fault.
+            let copied = unsafe {
+                process_vm_readv(pid, &local, 1, remote.as_ptr(), remote.len() as _, 0)
+            };
+            if copied < 0 {
+                let code = std::io::Error::last_os_error().raw_os_error();
+                return (code == Some(EFAULT)).then_some(false);
+            }
+            if copied as usize != batch.len() {
+                return Some(false);
+            }
+        }
+        Some(true)
+    }
+}
+
 /// Borrow one already-validated array's strings out of its buffers.
 ///
 /// `skip` is where the caller's rows begin and `count` how many there
@@ -214,9 +337,12 @@ const MAX_BUFFERS: i64 = 64;
 /// views and offsets buffers. A string view's trailing sizes buffer
 /// declares each data buffer. A Utf8 array's offset at `offset + length`
 /// declares its data buffer. Every read below sits inside one of those
-/// declarations, checked before the read. A producer whose declarations
-/// are self-consistent but whose allocations are shorter cannot be told
-/// from a correct one by any reader; that lie stays the producer's.
+/// declarations, checked before the read. Each declared extent is then
+/// probed readable (`readable`), so a producer whose declarations agree
+/// but whose allocation is shorter gets a refusal when the extent runs
+/// into unreadable memory. An extent that runs into another readable
+/// allocation cannot be told from a correct one by any reader; that lie
+/// stays the producer's.
 ///
 /// # Safety
 /// `array` must point at a live `ArrowArray` of the given text layout,
@@ -262,19 +388,24 @@ unsafe fn borrow_strings(
     };
     let mut texts = Vec::with_capacity(count);
     for (start, length) in spans {
-        // A per-row ceiling, not a bound: it keeps `from_raw_parts` far
-        // inside its isize contract and refuses a giant row before the read.
-        if length > MAX_ONE_STRING {
-            return Err(UsageError::new_err(
-                "a row names a size no text column carries",
-            ));
-        }
         let bytes = std::slice::from_raw_parts(start, length);
         let value = std::str::from_utf8(bytes)
             .map_err(|_| UsageError::new_err("the column's buffer is not valid UTF-8"))?;
         texts.push(value);
     }
     Ok(texts)
+}
+
+/// One row's span, refused when it is longer than any row: a per-row
+/// ceiling, not a bound. It keeps `from_raw_parts` far inside its isize
+/// contract and refuses a giant row before any probe or read.
+fn row_span(start: *const u8, length: usize) -> PyResult<(*const u8, usize)> {
+    if length > MAX_ONE_STRING {
+        return Err(UsageError::new_err(
+            "a row names a size no text column carries",
+        ));
+    }
+    Ok((start, length))
 }
 
 /// One buffer pointer out of the table, as bytes.
@@ -311,12 +442,20 @@ unsafe fn view_spans(
             "the string-view array lacks its views or its buffer-sizes buffer",
         ));
     }
+    // The views the rows read and the whole sizes buffer the count
+    // declares must be readable before either is read.
+    if !readable(views.wrapping_add(skip * 16), count * 16)
+        || !readable(sizes, data_buffers * 8)
+    {
+        return Err(UsageError::new_err(UNREADABLE));
+    }
+    let mut probed = vec![false; data_buffers];
     let mut spans = Vec::with_capacity(count);
     for place in skip..skip + count {
         let view = views.add(place * 16);
         let size = u32::from_le_bytes(word(view)) as usize;
         if size <= 12 {
-            spans.push((view.add(4), size));
+            spans.push(row_span(view.add(4), size)?);
             continue;
         }
         let index = u32::from_le_bytes(word(view.add(8))) as usize;
@@ -338,7 +477,16 @@ unsafe fn view_spans(
                 "a string view reaches past the length its data buffer declares",
             ));
         }
-        spans.push((base.add(offset as usize), size));
+        let span = row_span(base.add(offset as usize), size)?;
+        // Each data buffer a view names is probed once, over the whole
+        // extent its size declares.
+        if !probed[index] {
+            if !readable(base, declared as usize) {
+                return Err(UsageError::new_err(UNREADABLE));
+            }
+            probed[index] = true;
+        }
+        spans.push(span);
     }
     Ok(spans)
 }
@@ -366,7 +514,11 @@ unsafe fn offset_spans(
         ));
     }
     // SAFETY: `place` never passes `carried`, and the array's offset plus
-    // length declares `carried + 1` offsets.
+    // length declares `carried + 1` offsets, probed readable here first.
+    let width = if matches!(text, Text::LargeUtf8) { 8 } else { 4 };
+    if !readable(offsets.wrapping_add(skip * width), (carried - skip + 1) * width) {
+        return Err(UsageError::new_err(UNREADABLE));
+    }
     let at = |place: usize| -> i64 {
         unsafe {
             if matches!(text, Text::LargeUtf8) {
@@ -394,9 +546,14 @@ unsafe fn offset_spans(
             ));
         }
         if place <= skip + count {
-            spans.push((values.add(start as usize), (end - start) as usize));
+            spans.push(row_span(values.add(start as usize), (end - start) as usize)?);
         }
         start = end;
+    }
+    // The last offset declares the values buffer's extent, and every row
+    // read sits inside it, so that extent must be readable first.
+    if count > 0 && !readable(values, start as usize) {
+        return Err(UsageError::new_err(UNREADABLE));
     }
     Ok(spans)
 }
@@ -1943,5 +2100,92 @@ mod malformed_tests {
             panic!("a conformant view column borrows");
         };
         assert_eq!(texts, ["ha runs longer than twen", "gamma", " also runs long past "]);
+    }
+
+    /// A region whose first page is readable and whose rest is reserved
+    /// but unreadable, so a read past the page faults on every run.
+    #[cfg(target_os = "linux")]
+    struct Guarded {
+        base: *mut u8,
+        size: usize,
+    }
+
+    #[cfg(target_os = "linux")]
+    extern "C" {
+        fn mmap(address: *mut c_void, length: usize, protect: c_int, flags: c_int, fd: c_int, offset: i64) -> *mut c_void;
+        fn mprotect(address: *mut c_void, length: usize, protect: c_int) -> c_int;
+        fn munmap(address: *mut c_void, length: usize) -> c_int;
+    }
+
+    #[cfg(target_os = "linux")]
+    impl Guarded {
+        /// `bytes` placed so they end exactly at the readable page's end,
+        /// with 64 MiB of unreadable reservation after them.
+        fn ending_with(bytes: &[u8]) -> (Self, *const u8) {
+            const PAGE: usize = 4096;
+            let size = PAGE + (64 << 20);
+            // PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, then PROT_READ | PROT_WRITE on page one.
+            let base = unsafe { mmap(std::ptr::null_mut(), size, 0, 0x02 | 0x20, -1, 0) } as *mut u8;
+            assert!(!base.is_null() && base as isize != -1, "the reservation maps");
+            assert_eq!(unsafe { mprotect(base.cast(), PAGE, 0x1 | 0x2) }, 0);
+            let at = unsafe { base.add(PAGE - bytes.len()) };
+            unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), at, bytes.len()) };
+            (Self { base, size }, at)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    impl Drop for Guarded {
+        fn drop(&mut self) {
+            unsafe { munmap(self.base.cast(), self.size) };
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn utf8_at(offsets: &[i32], values: *const u8, text: Text) -> PyResult<Vec<&'static str>> {
+        let bytes: Vec<u8> = match text {
+            Text::LargeUtf8 => offsets.iter().flat_map(|one| i64::from(*one).to_le_bytes()).collect(),
+            _ => offsets.iter().flat_map(|one| one.to_le_bytes()).collect(),
+        };
+        let held = [std::ptr::null(), bytes.as_ptr().cast(), values.cast()];
+        let rows = offsets.len() - 1;
+        let outer = array_of(&held, rows as i64);
+        unsafe { borrow_strings(&outer, text, 0, rows) }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn an_extent_past_readable_memory_is_refused() {
+        // Review 7 (R3-4, R5-6): offsets 60,000,000 .. 60,000,001 over a
+        // three-byte buffer clear the per-row cap and the 1 GiB extent cap,
+        // and so do offsets 0 .. 200. Each read lands in unreadable memory
+        // and killed the host; the readability probe refuses them first.
+        let (_region, abc) = Guarded::ending_with(b"abc");
+        for text in [Text::Utf8, Text::LargeUtf8] {
+            for offsets in [[60_000_000, 60_000_001], [0, 200]] {
+                assert_eq!(refusal(utf8_at(&offsets, abc, text)), UNREADABLE);
+            }
+            assert_eq!(utf8_at(&[0, 3], abc, text).expect("the real bytes borrow"), ["abc"]);
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_sizes_buffer_shorter_than_its_count_is_refused() {
+        // Review 7 (R5-6): a table of two data buffers whose sizes buffer
+        // holds one i64 against a guard page. The view names data buffer
+        // 1, so the reader needs the second size, past the guard.
+        let data = [b'x'; 100];
+        let (_region, sizes) = Guarded::ending_with(&100i64.to_le_bytes());
+        let views = one_view(13, 1, 0);
+        let held = [std::ptr::null(), views.as_ptr().cast(), data.as_ptr().cast(), data.as_ptr().cast(), sizes.cast()];
+        let outer = array_of(&held, 1);
+        assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
+        // A view whose data buffer declares more than the readable page.
+        let (_short, abc) = Guarded::ending_with(&[b'y'; 20]);
+        let sizes = [200i64, 200].map(i64::to_le_bytes).concat();
+        let held = [std::ptr::null(), views.as_ptr().cast(), abc.cast(), abc.cast(), sizes.as_ptr().cast()];
+        let outer = array_of(&held, 1);
+        assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
     }
 }

@@ -845,7 +845,10 @@ must fall in `0 ..= MAX_DATA`, checked before any data byte is read. Every
 offset and view is then bounded by that extent, so the start is bounded
 too. `MAX_BUFFERS` (64) bounds the buffer-table length before the reader
 reads the last (sizes) entry, so a view array claiming 2^40 buffers, or a
-sizes buffer shorter than the count, is refused instead of walked.
+sizes buffer shorter than the count, is refused instead of walked. (Review 7
+corrected this sentence: the bound covered the 2^40 table only. A sizes
+buffer shorter than its count was still read past until the review 7
+readability probe below.)
 
 The trade-off. 1 GiB sits below 2 GiB, so an i32-max offset is refused; it
 is 256x the 4 MiB per-row cap, so a legitimate producer that keeps any one
@@ -866,3 +869,15 @@ read garbage that happened to be refused for another reason; each now pins
 the exact refusal sentence, and mutating the view-index check (`>=` to `>`)
 or removing the offsets-order check turns its test red for the changed
 sentence.
+
+## Surfaces review 7: the reader probes each extent before it reads (refs R3-4, R7-2, R5-6, R7-8)
+
+R3-4 and R7-2 found a regression. Utf8 offsets `60000000, 60000001` over a three-byte buffer crashed the host (exit 139) at the wave 7 tip. The wave 5 build refused the shape because it capped every absolute offset at 4 MiB. Review 5 dropped that cap because it refused every ordinary column past 4 MiB. Review 6 then capped the declared extent at 1 GiB, and 60,000,001 sits under it. No size cap can refuse this shape and keep a 60 MB column. The two carry the same declarations.
+
+Decision: the reader asks the kernel before it reads. `readable` in `src/arrow.rs` checks each extent the reader relies on: the offsets or views the rows read, the whole sizes buffer the table's count declares, and each data buffer's declared extent (a Utf8 array's last offset, a view buffer's declared size). On Linux it copies one byte a page through `process_vm_readv` against this process. The kernel answers an unreadable page (unmapped, guard, or reservation) with an error instead of a signal. Elsewhere, or where that call is refused, `mincore` finds unmapped pages. An extent that fails is refused as usage: "the column's buffers declare bytes this process cannot read". The per-row 4 MiB cap and the 1 GiB extent cap stay. The per-row cap now runs before the probe, so a giant row keeps its own sentence.
+
+Observed (t7b probes against this build): R3-4.sh 0 crashes (was 1). R5-6.sh 0 crashes and 0 over-reads served (was 3 crashes: `u_end_past_guard`, `U_end_past_guard`, `sizes_short_idx1`). `sizes_short_idx0` is now refused too, because its table declares two data buffers and its sizes buffer holds one. A 60,000-row, 40 MB column borrows whole as `pa.string`, `pa.large_string`, and a Polars view column, and a pyarrow slice of its tail borrows. The probe adds one system call per 1,024 pages of extent. The unit tests `an_extent_past_readable_memory_is_refused` and `a_sizes_buffer_shorter_than_its_count_is_refused` build each shape against a 64 MiB unreadable reservation. With `readable` forced to answer yes, both test binaries die of SIGSEGV.
+
+R5-6 waiver, recorded. Two shapes stay open and are waived. First, an extent that runs into another readable allocation reads that allocation's bytes. No reader can see an allocation's end, so this remains the producer's lie. Second, off Linux, `mincore` sees unmapped pages only, so a guard page (mapped, unreadable) still faults there. macOS is the only such platform, and check.sh already names it experimental. Ian can overturn this waiver. The lever is a stronger probe on macOS (`mach_vm_read_overwrite`), or refusing input off Linux.
+
+Ian can overturn the probe decision too. The lever is to restore the absolute 4 MiB cap, which refuses this shape and every column past 4 MiB.
