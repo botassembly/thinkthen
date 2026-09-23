@@ -151,6 +151,24 @@ impl ResolvedConfig {
         Self::resolve(&EngineConfig::from_env())
     }
 
+    /// Refuse a width beyond [`MAX_WIDTH`] before any thread, pool, or
+    /// request exists, on every backend: every lane is a thread a batch
+    /// spawns and a socket a pool may hold (review 4: width 100,000
+    /// panicked at 322 MB spawning threads; review 5: the null backend
+    /// skipped the check and still did).
+    ///
+    /// # Errors
+    ///
+    /// The usage kind, naming the width and the ceiling.
+    fn check_width(&self) -> Result<(), Error> {
+        if self.width > MAX_WIDTH {
+            return Err(Error::usage(format!(
+                "width {} exceeds the ceiling {MAX_WIDTH}: the gate and the pool are built for at most {MAX_WIDTH} lanes",
+                self.width
+            )));
+        }
+        Ok(())
+    }
 }
 
 /// The engine every surface binds until the real one lands.
@@ -203,6 +221,7 @@ impl BlockingEngine {
         options: &Options<'_>,
     ) -> Result<(thinkthen_core::Answer, u32, String), Error> {
         Error::guard(options)?;
+        self.config.check_width()?;
         let text = Evidence::new(evidence).map_err(|error| Error::usage(error.to_string()))?;
         let model_name = match &self.model {
             Some(named) => named.as_str(),
@@ -245,6 +264,7 @@ impl BlockingEngine {
         mut poll: Option<&mut dyn FnMut()>,
     ) -> Result<Vec<Judgment>, Error> {
         Error::guard(&options)?;
+        self.config.check_width()?;
         self.limit(records.len())?;
         if records.is_empty() {
             return Ok(Vec::new());
@@ -1367,18 +1387,6 @@ fn lock<T>(held: &Mutex<T>) -> MutexGuard<'_, T> {
 
 /// Build fresh state for this pid and transport shape.
 fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
-    // The width ceiling: every lane is a thread the batch spawns and a
-    // socket the pool may hold, so a width beyond this is a host error,
-    // refused with the ceiling named, before any thread or allocation is
-    // attempted (review finding, 2026-09-23: width 100,000 panicked at
-    // 322 MB in thread spawning). The ceiling is recorded here and in the
-    // surfaces notes; a host that needs more names a number that fits.
-    if settings.width > MAX_WIDTH {
-        return Err(Error::usage(format!(
-            "width {} exceeds the ceiling {}: the gate and the pool are built for at most {} lanes",
-            settings.width, MAX_WIDTH, MAX_WIDTH
-        )));
-    }
     let width = settings.width.max(1);
     let secure = Backend::resolve(None, Some(&settings.base), "jev-latest")
         .map(|backend| backend.is_secure())
@@ -2073,6 +2081,43 @@ mod tests {
             json,
             r#"[{"input":"i want a refund now","value":true},{"input":"good morning","value":false}]"#,
             "the ruled row list"
+        );
+    }
+
+    /// The width ceiling holds on every backend (review 5: the null
+    /// backend skipped it, and width 100,000 over 100,000 records panicked
+    /// spawning threads at 334 MB). The ceiling itself still runs.
+    #[test]
+    fn an_absurd_width_is_refused_on_every_backend() {
+        let _seat = null();
+        let question =
+            Question::from_json(r#"{"decide":"Refund?","threshold":0.5}"#).expect("parses");
+        let wide = |width| {
+            BlockingEngine::from_settings(thinkthen_contract::Settings {
+                width: Some(width),
+                ..thinkthen_contract::Settings::default()
+            })
+        };
+        let expected = "width 100000 exceeds the ceiling 4096: the gate and the pool are built for at most 4096 lanes";
+        let single = wide(100_000)
+            .decide(&question, "please refund")
+            .unwrap_err();
+        assert_eq!(
+            (single.kind, single.message.as_str()),
+            (ErrorKind::Usage, expected)
+        );
+        let bulk = wide(100_000)
+            .decide_many(&question, &["a", "b", "c"], None)
+            .unwrap_err();
+        assert_eq!(
+            (bulk.kind, bulk.message.as_str()),
+            (ErrorKind::Usage, expected)
+        );
+        assert!(
+            wide(4_096)
+                .decide_many(&question, &["a", "b"], None)
+                .is_ok(),
+            "the ceiling runs"
         );
     }
 
