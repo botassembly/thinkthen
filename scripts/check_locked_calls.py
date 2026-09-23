@@ -34,8 +34,8 @@ RESOLVING = re.compile(
     r"|\bmaturin\s+(build|develop)\b"
     r"|\bnapi\s+build\b"
 )
-PIP = re.compile(r"\bpip3?\s+install\b(.*)")
-PINNED = re.compile(r"^(\S+==\S+|git\+\S+@[0-9a-f]{40}|\$[({]?\w+[)}]?)$")
+PIP = re.compile(r"\bpip[0-9.]*\s+install\b(.*)")
+PINNED = re.compile(r"^([^\s=*]+==[^\s*]+|git\+\S+@[0-9a-f]{40}|\$[({]?\w+[)}]?)$")
 PGRX = re.compile(r"\bcargo\s+pgrx\s+package\b")
 PGRX_HOME = "scripts/pgrx-package-locked.sh"
 
@@ -81,7 +81,7 @@ def problems(root):
                         if taken or word.startswith("-"):
                             taken = word in ("-r", "--requirement", "--python")
                             continue
-                        if not PINNED.match(word):
+                        if not PINNED.match(word.strip("'\"")):
                             found.append(f"{name}:{number}: pip install {word} without an exact pin")
                 if PGRX.search(code) and name != PGRX_HOME:
                     found.append(f"{name}:{number}: cargo pgrx package outside {PGRX_HOME}")
