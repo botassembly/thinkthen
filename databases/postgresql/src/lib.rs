@@ -37,6 +37,8 @@ use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+mod descriptor_path;
+
 use pgrx::datum::{Array, JsonB};
 use pgrx::pg_sys::FunctionCallInfo;
 use pgrx::prelude::*;
@@ -88,42 +90,96 @@ static DEADLINE_MS: GucSetting<i32> = GucSetting::<i32>::new(-1);
 /// The engine, lazy in each backend. Built on first use, after the fork.
 static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 
+/// The most bytes of question digests and evidence the per-backend
+/// answer table holds (review 5: 270,000 warmed answers grew one backend
+/// from 13 MB to 150 MB, never released). Past the budget the oldest
+/// answers leave first, so a working set larger than the budget turns
+/// over and a later decide on an evicted pair sends again. The budget
+/// counts each key twice (the map and the eviction order), so it holds
+/// about 8 MiB of distinct digests and evidence: about four full warm
+/// passes (each is capped at 2 MiB of state).
+const SAVED_ANSWER_BYTES: usize = 16 * 1024 * 1024;
+
+/// The per-backend answer table: every decision a warm pass or a single
+/// decide judged, keyed by the question's digest and the evidence, read
+/// by `thinkthen_decide` before it sends (review 4, item 15: warm then
+/// decide on 20,000 pairs used 40,000 requests, because nothing saved).
+/// A backend is one process, so the table dies with it, and the byte
+/// budget bounds it while the backend lives.
+struct SavedAnswers {
+    map: HashMap<(String, String), thinkthen_contract::Answer>,
+    order: std::collections::VecDeque<(String, String)>,
+    bytes: usize,
+    budget: usize,
+}
+
+impl SavedAnswers {
+    fn with_budget(budget: usize) -> Self {
+        SavedAnswers { map: HashMap::new(), order: std::collections::VecDeque::new(), bytes: 0, budget }
+    }
+
+    /// The bytes one entry costs: its key, held twice (map and order).
+    fn cost(key: &(String, String)) -> usize {
+        2 * (key.0.len() + key.1.len())
+    }
+
+    /// Save one answer, evicting the oldest past the budget.
+    fn insert(&mut self, key: (String, String), answer: thinkthen_contract::Answer) {
+        if self.map.insert(key.clone(), answer).is_none() {
+            self.bytes += Self::cost(&key);
+            self.order.push_back(key);
+        }
+        while self.bytes > self.budget {
+            let Some(oldest) = self.order.pop_front() else { break };
+            self.bytes -= Self::cost(&oldest);
+            self.map.remove(&oldest);
+        }
+    }
+}
+
+fn answers() -> &'static std::sync::Mutex<SavedAnswers> {
+    static ANSWERS: OnceLock<std::sync::Mutex<SavedAnswers>> = OnceLock::new();
+    ANSWERS.get_or_init(|| std::sync::Mutex::new(SavedAnswers::with_budget(SAVED_ANSWER_BYTES)))
+}
+
+/// Answers read back from the table instead of sent. The engine's own
+/// usage never sees them, so `thinkthen_usage` adds them to its
+/// `cache_answers` column.
+static SAVED_HITS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The part of the table's key a question gives: its digest (the text,
+/// the verb's members, and the threshold) and the model it asks, which
+/// the digest leaves out. Two question files that differ only in the
+/// model ask different judges (review 5, contract reviewer). The engine
+/// is one per backend, and no setting changes an answer (the deadline
+/// only bounds the wait), so nothing else enters the key.
+fn question_key(question: &Question) -> String {
+    format!("{} {}", question.digest(), question.model())
+}
+
+/// The table's key for one question and evidence.
+fn answer_key(question: &Question, evidence: &str) -> (String, String) {
+    (question_key(question), evidence.to_owned())
+}
+
+/// The saved decision for a question and evidence, if one was judged.
+fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contract::Answer> {
+    let answer = answers()
+        .lock()
+        .unwrap()
+        .map
+        .get(&answer_key(question, evidence))
+        .copied()?;
+    SAVED_HITS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    Some(answer)
+}
+
 /// The engine value, with the configured key's refusal in front of it.
 ///
 /// Called on the backend's own thread only: the setting read behind it
 /// (`GucSetting::get`) checks the active thread and panics elsewhere. The
 /// batch closures take the reference before `run_batch` spawns, so no
 /// worker thread reads a setting.
-/// One answer a warm pass judged, held for the row-by-row queries to
-/// read back: a decision (with its full value), a choice, a score, or
-/// tags. Warm fills this table; decide, choose, score, and tag read it
-/// before sending anything (review 4, item 15: warm then decide on
-/// 20,000 pairs used 40,000 requests, because nothing saved).
-enum Saved {
-    Decision(thinkthen_contract::Answer),
-}
-
-/// The per-backend answer table, keyed by the question's digest and the
-/// evidence. A backend is one process, so the table dies with it — no
-/// cross-backend leakage and no server-wide unbounded growth.
-fn answers() -> &'static std::sync::Mutex<std::collections::HashMap<(String, String), Saved>> {
-    static ANSWERS: OnceLock<std::sync::Mutex<std::collections::HashMap<(String, String), Saved>>> =
-        OnceLock::new();
-    ANSWERS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
-}
-
-/// The cached decision for a question and evidence, if warm judged it.
-fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contract::Answer> {
-    match answers()
-        .lock()
-        .unwrap()
-        .get(&(question.digest(), evidence.to_string()))
-    {
-        Some(Saved::Decision(answer)) => Some(*answer),
-        _ => None,
-    }
-}
-
 fn engine() -> &'static Arc<dyn Engine> {
     if let Some(key) = API_KEY.get() {
         if let Some(error) = unwired_key_refusal(Some(&key.to_string_lossy())) {
@@ -417,23 +473,26 @@ enum CheckedReadError {
 /// `O_NONBLOCK`, so a swapped-in fifo opens instead of parking the
 /// backend in `open()`; the metadata then comes from the descriptor, so
 /// a path swapped between open and check still names the file this
-/// function holds. Confinement resolves the descriptor through
-/// `/proc/self/fd`, so an intermediate symlink cannot point out of the
-/// base either. `Refused` is every unreadable cause — missing,
-/// permission, not a regular file, a symlink final component, outside
-/// the confinement — one class on purpose, so a caller cannot learn
-/// whether a path exists; `OverCap` is the file that grew past the cap,
-/// named because only a caller allowed to read the file can reach it.
-/// Pure: no PostgreSQL state, no environment, and the same behavior
-/// under `cargo test` as in a backend.
+/// function holds.
+///
+/// A confined read settles confinement before anything else about the
+/// file (review 5): the descriptor's own path must sit inside the base,
+/// so an intermediate symlink cannot point out, and the file must carry
+/// exactly one link, so a hard link placed inside cannot name an outside
+/// file (and a file unlinked while held refuses too). Only then is the
+/// size read, so an outside path answers with the one refusal whatever
+/// its size. `Refused` is every unreadable cause, one class on purpose,
+/// so a caller cannot learn whether a path exists; `OverCap` names the
+/// cap for a file the caller may read. Pure: no PostgreSQL state, no
+/// environment, and the same behavior under `cargo test` as in a
+/// backend.
 fn read_within(
     path: &Path,
     cap: u64,
     confined: Option<&Path>,
 ) -> Result<String, CheckedReadError> {
     use std::io::Read;
-    use std::os::fd::AsRawFd;
-    use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
     // Open once, never following the final component, never blocking.
     let file = std::fs::OpenOptions::new()
         .read(true)
@@ -447,34 +506,15 @@ fn read_within(
     if !meta.is_file() {
         return Err(CheckedReadError::Refused);
     }
-    if meta.len() > cap {
-        return Err(CheckedReadError::OverCap);
-    }
     if let Some(base) = confined {
         let base = std::fs::canonicalize(base).map_err(|_| CheckedReadError::Refused)?;
-        // Resolve the descriptor, not the path: `/proc/self/fd/N` is the
-        // file this function holds, whatever the path points at now. A
-        // file unlinked while held carries " (deleted)" after its name.
-        let mut name = [0u8; libc::PATH_MAX as usize];
-        let wrote = unsafe {
-            let target = format!("/proc/self/fd/{}\0", file.as_raw_fd());
-            libc::readlink(
-                target.as_ptr() as *const libc::c_char,
-                name.as_mut_ptr() as *mut libc::c_char,
-                name.len(),
-            )
-        };
-        if wrote < 0 {
+        let real = descriptor_path::of(&file).ok_or(CheckedReadError::Refused)?;
+        if meta.nlink() != 1 || !real.starts_with(&base) {
             return Err(CheckedReadError::Refused);
         }
-        let mut real = &name[..wrote as usize];
-        if real.ends_with(b" (deleted)") {
-            real = &real[..real.len() - b" (deleted)".len()];
-        }
-        let real = std::str::from_utf8(real).map_err(|_| CheckedReadError::Refused)?;
-        if !Path::new(real).starts_with(&base) {
-            return Err(CheckedReadError::Refused);
-        }
+    }
+    if meta.len() > cap {
+        return Err(CheckedReadError::OverCap);
     }
     let mut text = String::new();
     // One byte past the cap tells a file that grew after the check from
@@ -527,7 +567,8 @@ fn read_named_file(what: &str, path: &str) -> String {
         Ok(text) => text,
         Err(CheckedReadError::Refused) => raise(Error::local(format!(
             "the {what} file '@{path}' did not read: it must be a regular file \
-             at most {FILE_CAP} bytes, inside thinkthen.file_directory when one is set"
+             at most {FILE_CAP} bytes, and inside thinkthen.file_directory with one link when \
+             one is set"
         ))),
         Err(CheckedReadError::OverCap) => raise(Error::local(format!(
             "the {what} file '@{path}' is over the {FILE_CAP} byte cap"
@@ -595,16 +636,19 @@ fn annotated_as_json(held: &Annotated) -> serde_json::Value {
 fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bool> {
     let question = question_of(question);
     let evidence = evidence?;
+    // The engine first: a configured key refuses every call, a saved
+    // answer included.
+    let engine = engine();
     if let Some(answer) = saved_decision(&question, evidence) {
         return answer.value();
     }
-    match engine().decide_opts(&question, evidence, call_options()) {
+    match engine.decide_opts(&question, evidence, call_options()) {
         Ok(answer) => {
             let value = answer.value();
             answers()
                 .lock()
                 .unwrap()
-                .insert((question.digest(), evidence.to_string()), Saved::Decision(answer));
+                .insert(answer_key(&question, evidence), answer);
             value
         }
         Err(error) => raise(error),
@@ -699,7 +743,12 @@ fn thinkthen_usage(
     let usage = engine().usage();
     let row = (
         i64::try_from(usage.requests).unwrap_or(i64::MAX),
-        i64::try_from(usage.cache_answers).unwrap_or(i64::MAX),
+        i64::try_from(
+            usage
+                .cache_answers
+                .saturating_add(SAVED_HITS.load(std::sync::atomic::Ordering::Relaxed)),
+        )
+        .unwrap_or(i64::MAX),
         i64::try_from(usage.tokens).unwrap_or(i64::MAX),
     );
     TableIterator::new(vec![row])
@@ -969,9 +1018,12 @@ const WARM_ROW_CAP: u64 = 20_000;
 
 /// The most escaped question-plus-evidence bytes one warm aggregate
 /// accumulates. Each step copies the whole state across the datum
-/// boundary, so the total copy work is rows times this cap; at 2 MB the
-/// worst full aggregate copies 2 GB, which stays inside seconds, and a
-/// longer judge splits.
+/// boundary, so the total copy work is the sum of the state's sizes, about
+/// rows times half this cap when the rows are even. The worst full
+/// aggregate is 20,000 rows of about 100 bytes, which copies about 20 GB:
+/// review 5 measured 4.98 s to reach the cap at 15,971 rows of 100-byte
+/// evidence, and 1.08 s for 1,000 rows of 2 KB. The cap is a constant, not
+/// a setting; a longer judge splits into several aggregates.
 const WARM_STATE_CAP: usize = 2 * 1024 * 1024;
 
 /// One aggregate step, pure: the count at the head grows, the tail
@@ -1110,7 +1162,7 @@ impl Aggregate<Warm> for Warm {
             // worker spawns: a bad question file raises its own error
             // (naming the file) instead of dying inside the worker.
             let question = question_of(Some(&question_text));
-            let digest = question.digest();
+            let key = question_key(&question);
             let engine = engine();
             let judged_keys = distinct.clone();
             let outcome = run_batch(move |cancel, budget| {
@@ -1126,10 +1178,7 @@ impl Aggregate<Warm> for Warm {
                 Ok(held) => {
                     let mut saved = answers().lock().unwrap();
                     for (evidence, judgment) in judged_keys.iter().zip(held) {
-                        saved.insert(
-                            (digest.clone(), evidence.clone()),
-                            Saved::Decision(judgment.answer),
-                        );
+                        saved.insert((key.clone(), evidence.clone()), judgment.answer);
                     }
                     judged += i64::try_from(judged_keys.len()).unwrap_or(i64::MAX);
                 }
@@ -1388,6 +1437,43 @@ mod mapping_tests {
         assert_eq!(warm_rows(&merged)[2].0, "second question");
     }
 
+    /// The answer table's key (review 5, contract reviewer): two
+    /// questions with the same text and threshold digest alike, but a
+    /// question file that names another model asks another judge, so its
+    /// saved answer must not answer the first.
+    #[test]
+    fn the_answer_key_separates_models() {
+        let first = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-a"}"#)
+            .expect("the first question parses");
+        let second = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-b"}"#)
+            .expect("the second question parses");
+        assert_eq!(first.digest(), second.digest(), "the digest leaves the model out");
+        assert_ne!(answer_key(&first, "apple"), answer_key(&second, "apple"));
+        assert_eq!(answer_key(&first, "apple"), answer_key(&first, "apple"));
+    }
+
+    /// The answer table's byte budget (review 5): past it the oldest
+    /// answers leave, the newest stay, and the held bytes never pass the
+    /// budget, however many distinct pairs one backend judges.
+    #[test]
+    fn the_answer_table_keeps_its_byte_budget() {
+        use thinkthen_contract::Answer;
+        let mut table = SavedAnswers::with_budget(4_000);
+        for row in 0..1_000 {
+            table.insert(("digest".to_owned(), format!("evidence {row:04}")), Answer::Yes);
+            assert!(table.bytes <= 4_000, "{} bytes after row {row}", table.bytes);
+        }
+        // Each pair costs 2 * (6 + 13) = 38 bytes, so 105 fit.
+        assert_eq!(table.map.len(), 105);
+        assert_eq!(table.order.len(), 105);
+        assert!(table.map.contains_key(&("digest".to_owned(), "evidence 0999".to_owned())));
+        assert!(!table.map.contains_key(&("digest".to_owned(), "evidence 0000".to_owned())));
+        // Saving a pair again replaces its answer without growing the table.
+        table.insert(("digest".to_owned(), "evidence 0999".to_owned()), Answer::No);
+        assert_eq!(table.map.len(), 105);
+        assert_eq!(table.map.get(&("digest".to_owned(), "evidence 0999".to_owned())), Some(&Answer::No));
+    }
+
     /// The warm byte cap (review 4, item 15): the state's length is the
     /// honest bound on the datum-copy cost, so the step's product is what
     /// the cap reads.
@@ -1484,9 +1570,10 @@ mod mapping_tests {
             // A fifo opened non-blocking refuses instead of parking the
             // process in open() (the reviewer's PostgreSQL hang).
             let fifo = held.join("base/pipe.json");
-            #[cfg(unix)]
-            let made = unsafe { libc::mkfifo(fifo.as_os_str().as_encoded_bytes().as_ptr() as *const libc::c_char, 0o644) };
-            #[cfg(unix)]
+            let spelled = std::ffi::CString::new(fifo.as_os_str().as_encoded_bytes())
+                .expect("the fifo path has no NUL");
+            // SAFETY: a NUL-terminated path the test owns.
+            let made = unsafe { libc::mkfifo(spelled.as_ptr(), 0o644) };
             assert_eq!(made, 0);
             assert_eq!(read_within(&fifo, 1024, None), Err(CheckedReadError::Refused));
             // An intermediate directory that is a symlink resolves on the
@@ -1510,6 +1597,43 @@ mod mapping_tests {
         std::fs::write(held.join("base/growing.json"), vec![b'x'; 1025]).expect("the growing file");
         assert_eq!(
             read_within(held.join("base/growing.json").as_path(), 1024, None),
+            Err(CheckedReadError::OverCap)
+        );
+        let _ = std::fs::remove_dir_all(&held);
+    }
+
+    /// Review 5: a confined role learns nothing about a path outside the
+    /// directory. The size was checked before confinement, so a large
+    /// outside file answered "over the cap" while a small one answered
+    /// with the one refusal, an existence and size oracle. A hard link
+    /// inside the directory to an outside file resolved to its inside
+    /// name and read the outside bytes; a confined read now takes only a
+    /// file with one link.
+    #[test]
+    fn a_confined_read_refuses_outside_files_by_one_rule() {
+        let held = std::env::temp_dir().join(format!("thinkthen-confined-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&held);
+        std::fs::create_dir_all(held.join("base")).expect("the base directory creates");
+        std::fs::create_dir_all(held.join("outside")).expect("the outside directory creates");
+        let base = held.join("base");
+        std::fs::write(held.join("outside/big.json"), vec![b'x'; 2048]).expect("the big file");
+        std::fs::write(held.join("outside/secret.json"), b"{}").expect("the secret");
+        std::fs::hard_link(held.join("outside/secret.json"), held.join("base/linked.json"))
+            .expect("the hard link");
+        std::fs::write(held.join("base/big.json"), vec![b'x'; 2048]).expect("the inside big file");
+        assert_eq!(
+            read_within(held.join("outside/big.json").as_path(), 1024, Some(&base)),
+            Err(CheckedReadError::Refused)
+        );
+        assert_eq!(
+            read_within(held.join("base/linked.json").as_path(), 1024, Some(&base)),
+            Err(CheckedReadError::Refused)
+        );
+        // A role that may read server files reads the linked file, and an
+        // inside file over the cap still names the cap.
+        assert_eq!(read_within(held.join("base/linked.json").as_path(), 1024, None).as_deref(), Ok("{}"));
+        assert_eq!(
+            read_within(held.join("base/big.json").as_path(), 1024, Some(&base)),
             Err(CheckedReadError::OverCap)
         );
         let _ = std::fs::remove_dir_all(&held);
