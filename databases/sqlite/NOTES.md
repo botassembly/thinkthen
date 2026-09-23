@@ -543,3 +543,49 @@ is byte-identical before and after (`diff` empty, 13 lines).
 
 **Full check.** `databases/sqlite/check.sh`: exit 0, 174 ok lines, null
 suite 28 of 28.
+
+## Review 4, items 7, 15 — the fourth-review fix wave (2026-09-23)
+
+**Item 7, the check-then-open race** (`named_file`): opened once with
+`O_NONBLOCK|O_NOFOLLOW`, checks on the descriptor. Evidence,
+fail-then-pass with the reviewer's shapes (tools/file_door.py, against
+the .runtimes 3.50.0 host):
+
+- PRE build: `FAIL symlink read through to: thinkthen usage: a question
+  file holds one of decide, choose, tag, or score` — the parser ran, so
+  the link's target was read; exit 1.
+- POST build: `file door: regular reads, symlink refused at the door,
+  fifo refused at the door`; exit 0.
+- The race hammer (tools/swap_hammer.py, 20,000 reads with symlink and
+  fifo flashes): PRE leaked=0 hang=0 (the straddle window is
+  nanoseconds; the reviewer caught it at iteration 59 with wire
+  timings); POST leaked=0 hang=0. The straddle is closed by
+  construction — the open cannot block — and the stable shapes are
+  pinned deterministically by the door probe, which runs in check.sh.
+
+**Item 15, the question cache**: named files cache with their
+`(mtime, size)` and re-read on change; both caches hold 4,096 entries
+with oldest-first eviction. Evidence (tools/question_cache_probe.py):
+PRE fails all three — rewrite served the stale parse (rc=100), delete
+served the stale parse (rc=100), 50,000 distinct questions grew RSS
+222 MB; POST passes — rewrite re-reads (the new bytes' parse error),
+delete refuses, growth 36.9 MB (the bound plus statement churn).
+
+**Item 15, interleaved warm**: the aggregate keeps one pending group per
+question, so alternating questions accumulate instead of flushing on
+every change. The check's warm suite stays green.
+
+**Item 15, empty options**: recognize and relate carry a cancel token
+armed by the shared interrupt watcher (the recognize table now passes
+the connection handle from connect through the cursor for it).
+
+**Packaging floor**: the rehearsal's `apt-get install sqlite3` gave
+3.45.1, which the extension's own floor refuses — the container half
+could never pass. The CLI in the container is now built from the pinned
+source (sqlite-autoconf-3500200, sha256 in package.sh, verified before
+the copy), and the README names both honest install paths (pinned
+source, or a host already at the floor — no stock Linux distribution
+checked ships one today).
+
+**Test-name discovery**: the nine Python tests glob the built library
+(`.so` or `.dylib`) instead of hard-coding `libthinkthen0.so`.

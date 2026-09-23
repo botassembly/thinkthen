@@ -175,6 +175,15 @@ unzip -q sqlite-amalgamation-3500000.zip -d .runtimes
 `LD_LIBRARY_PATH`, prints the host version, and refuses a host below
 3.50.0.
 
+No stock Linux distribution the project has checked ships a SQLite at
+the floor today (Ubuntu 24.04 carries 3.45.1, which the load refuses by
+name), so a deployment host gets its SQLite one of two ways: the pinned
+source build (the exact tarball, sha256, and commands the packaging
+rehearsal uses are in `package.sh`), or a host that already carries
+3.50.0 or newer (macOS 26 carries 3.51.0). The extension reads the
+host's own version at load and refuses below the floor with the reason,
+so a wrong host names itself.
+
 The full record — the build traps, the wire numbers, the unchecked list —
 is `NOTES.md`. The divergences the conformance slice reports are recorded
 in `conformance/DIVERGENCES.md` as real-engine requirements.

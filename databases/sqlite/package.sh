@@ -47,6 +47,18 @@ TARGET=x86_64-unknown-linux-gnu.2.28
 LIB=target/x86_64-unknown-linux-gnu/release/libthinkthen0.so
 SLIDE=tests/slide.sql
 
+# Review 4: the rehearsal's stock `apt-get install sqlite3` gave Ubuntu
+# 24.04's 3.45.1, which the extension's own 3.50.0 floor refuses at load
+# — the container half could never pass. The CLI in the container is
+# built from the same pinned source the floor names, fetched once on the
+# host and copied in (the tarball's sha256 is pinned here; a mismatch
+# refuses).
+SQLITE_YEAR=2025
+SQLITE_VERSION=sqlite-autoconf-3500200
+SQLITE_TARBALL=$SQLITE_VERSION.tar.gz
+SQLITE_URL=https://sqlite.org/$SQLITE_YEAR/$SQLITE_TARBALL
+SQLITE_SHA256=84a616ffd31738e4590b65babb3a9e1ef9370f3638e36db220ee0e73f8ad2156
+
 cleanup() {
   docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
 }
@@ -84,24 +96,31 @@ if [ "$dry_run" = yes ]; then
   echo "dist/thinkthen.so staged and verified; the container half is not run"
   exit 0
 fi
-echo "== sqlite package: clean ubuntu:24.04 container with stock sqlite3"
+echo "== sqlite package: clean ubuntu:24.04 container, sqlite from the pinned source"
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker pull "$IMAGE"
   echo "image digest to record in the pinning story: $(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
 else
   echo "image present: $(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
 fi
+# The pinned source, fetched once on the host and verified by sha256.
+if [ ! -s "$SQLITE_TARBALL" ]; then
+  curl -sL --max-time 120 -o "$SQLITE_TARBALL" "$SQLITE_URL"
+fi
+echo "$SQLITE_SHA256  $SQLITE_TARBALL" | sha256sum -c - || exit 1
 docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
 docker run -d --name "$CONTAINER" -e ENGINE_NULL=1 "$IMAGE" sleep infinity >/dev/null
 docker exec "$CONTAINER" apt-get update -qq >/dev/null
-docker exec "$CONTAINER" apt-get install -y -qq --no-install-recommends sqlite3 >/dev/null
-docker exec "$CONTAINER" sqlite3 --version
+docker exec "$CONTAINER" apt-get install -y -qq --no-install-recommends build-essential tcl >/dev/null
+docker cp "$SQLITE_TARBALL" "$CONTAINER":/tmp/
+docker exec "$CONTAINER" sh -c "cd /tmp && tar xzf $SQLITE_TARBALL && cd $SQLITE_VERSION && ./configure --prefix=/usr/local >/dev/null && make -j2 >/dev/null && make install >/dev/null"
+docker exec "$CONTAINER" /usr/local/bin/sqlite3 --version
 docker exec "$CONTAINER" mkdir -p /pkg
 docker cp dist/thinkthen.so "$CONTAINER":/pkg/thinkthen.so
 docker cp "$SLIDE" "$CONTAINER":/pkg/slide.sql
 
 echo "== sqlite package: the slide sample, as drawn, in the container"
-docker exec -i -w /pkg "$CONTAINER" sqlite3 :memory: < "$SLIDE"
+docker exec -i -w /pkg "$CONTAINER" /usr/local/bin/sqlite3 :memory: < "$SLIDE"
 
 echo "== sqlite package: cleanup"
 docker rm -f -v "$CONTAINER"

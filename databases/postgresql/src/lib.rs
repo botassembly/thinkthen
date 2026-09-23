@@ -94,6 +94,36 @@ static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 /// (`GucSetting::get`) checks the active thread and panics elsewhere. The
 /// batch closures take the reference before `run_batch` spawns, so no
 /// worker thread reads a setting.
+/// One answer a warm pass judged, held for the row-by-row queries to
+/// read back: a decision (with its full value), a choice, a score, or
+/// tags. Warm fills this table; decide, choose, score, and tag read it
+/// before sending anything (review 4, item 15: warm then decide on
+/// 20,000 pairs used 40,000 requests, because nothing saved).
+enum Saved {
+    Decision(thinkthen_contract::Answer),
+}
+
+/// The per-backend answer table, keyed by the question's digest and the
+/// evidence. A backend is one process, so the table dies with it — no
+/// cross-backend leakage and no server-wide unbounded growth.
+fn answers() -> &'static std::sync::Mutex<std::collections::HashMap<(String, String), Saved>> {
+    static ANSWERS: OnceLock<std::sync::Mutex<std::collections::HashMap<(String, String), Saved>>> =
+        OnceLock::new();
+    ANSWERS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// The cached decision for a question and evidence, if warm judged it.
+fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contract::Answer> {
+    match answers()
+        .lock()
+        .unwrap()
+        .get(&(question.digest(), evidence.to_string()))
+    {
+        Some(Saved::Decision(answer)) => Some(answer.clone()),
+        _ => None,
+    }
+}
+
 fn engine() -> &'static Arc<dyn Engine> {
     if let Some(key) = API_KEY.get() {
         if let Some(error) = unwired_key_refusal(Some(&key.to_string_lossy())) {
@@ -565,8 +595,18 @@ fn annotated_as_json(held: &Annotated) -> serde_json::Value {
 fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bool> {
     let question = question_of(question);
     let Some(evidence) = evidence else { return None };
+    if let Some(answer) = saved_decision(&question, evidence) {
+        return answer.value();
+    }
     match engine().decide_opts(&question, evidence, call_options()) {
-        Ok(answer) => answer.value(),
+        Ok(answer) => {
+            let value = answer.value();
+            answers()
+                .lock()
+                .unwrap()
+                .insert((question.digest(), evidence.to_string()), Saved::Decision(answer));
+            value
+        }
         Err(error) => raise(error),
     }
 }
@@ -917,9 +957,19 @@ struct Warm;
 
 /// The most rows one warm aggregate holds. The text state crosses the
 /// datum boundary once per row, so the total copy grows with the square
-/// of the row count; the cap keeps a full aggregate inside seconds, and
-/// a larger judge runs as two aggregates (review 3, item 23).
+/// of the row count; the byte cap below is the honest bound on that
+/// cost, and a larger judge runs as two aggregates (review 3, item 23;
+/// review 4, item 15: 2 KB evidence measured 1.3/14.3/37.5 s at
+/// 2,000/4,000/8,000 rows — the row cap alone let the copy work grow
+/// past seconds).
 const WARM_ROW_CAP: u64 = 20_000;
+
+/// The most escaped question-plus-evidence bytes one warm aggregate
+/// accumulates. Each step copies the whole state across the datum
+/// boundary, so the total copy work is rows times this cap; at 2 MB the
+/// worst full aggregate copies 2 GB, which stays inside seconds, and a
+/// longer judge splits.
+const WARM_STATE_CAP: usize = 2 * 1024 * 1024;
 
 /// One aggregate step, pure: the count at the head grows, the tail
 /// carries over untouched, the new row appends. The `#[pg_aggregate]`
@@ -1020,7 +1070,15 @@ impl Aggregate<Warm> for Warm {
                      judge larger sets as two aggregates"
                 )));
             }
-            warm_step(&current, &question, &evidence)
+            let next = warm_step(&current, &question, &evidence);
+            if next.len() > WARM_STATE_CAP {
+                raise(Error::usage(format!(
+                    "thinkthen_warm holds at most {WARM_STATE_CAP} bytes of questions and \
+                     evidence in one pass ({} rows so far); judge larger sets as two aggregates",
+                    warm_count(&current)
+                )));
+            }
+            next
         } else {
             current
         }
@@ -1049,14 +1107,29 @@ impl Aggregate<Warm> for Warm {
             // worker spawns: a bad question file raises its own error
             // (naming the file) instead of dying inside the worker.
             let question = question_of(Some(&question_text));
+            let digest = question.digest();
             let engine = engine();
+            let judged_keys = distinct.clone();
             let outcome = run_batch(move |cancel, budget| {
                 let records: Vec<&str> = distinct.iter().map(String::as_str).collect();
                 let options = batch_options(cancel, budget);
                 engine.decide_many_opts(&question, &records, options, None)
             });
             match outcome {
-                Ok(held) => judged += i64::try_from(held.len()).unwrap_or(i64::MAX),
+                // Every judgment is saved under its evidence, so the
+                // row-by-row queries after the warm pass read instead of
+                // sending (review 4, item 15: 20,000 warmed pairs then
+                // 20,000 decide calls used 40,000 requests).
+                Ok(held) => {
+                    let mut saved = answers().lock().unwrap();
+                    for (evidence, judgment) in judged_keys.iter().zip(held) {
+                        saved.insert(
+                            (digest.clone(), evidence.clone()),
+                            Saved::Decision(judgment.answer),
+                        );
+                    }
+                    judged += i64::try_from(judged_keys.len()).unwrap_or(i64::MAX);
+                }
                 Err(error) => raise(error),
             }
         }
@@ -1310,6 +1383,26 @@ mod mapping_tests {
         assert_eq!(warm_count(&merged), 3);
         assert_eq!(warm_rows(&merged).len(), 3);
         assert_eq!(warm_rows(&merged)[2].0, "second question");
+    }
+
+    /// The warm byte cap (review 4, item 15): the state's length is the
+    /// honest bound on the datum-copy cost, so the step's product is what
+    /// the cap reads.
+    #[test]
+    fn the_warm_state_grows_by_its_bytes() {
+        let mut state = String::from("0");
+        let two_kb = "x".repeat(2048);
+        let mut rows = 0;
+        while state.len() <= WARM_STATE_CAP {
+            state = warm_step(&state, "q", &two_kb);
+            rows += 1;
+        }
+        // The cap lands within one 2 KB row of the boundary.
+        assert!(state.len() > WARM_STATE_CAP && state.len() <= WARM_STATE_CAP + 2 * 1024 + 64);
+        // 2 KB evidence: the cap holds about a thousand rows, the shape
+        // the reviewer measured at 1.3 s for 2,000 rows of short evidence
+        // and 37.5 s for 8,000 — the copy cost stays linear in the cap.
+        assert!((1000..=1030).contains(&rows), "{rows}");
     }
 
     /// The deadline setting's conversion: `-1` is no deadline, `0` is a

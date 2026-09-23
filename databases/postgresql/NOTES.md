@@ -533,3 +533,44 @@ gained the facets the table already used (`none`, `error`,
 
 **Full checks.** `databases/postgresql/check.sh`: exit 0, 112 ok lines.
 SQLite's check runs in its own NOTES section below.
+
+## Review 4, items 7, 15, 20 — the fourth-review fix wave (2026-09-23)
+
+**Item 7, the check-then-open race** (`read_within`): the path is opened
+once with `O_NONBLOCK|O_NOFOLLOW` and every check reads the opened
+descriptor — `fstat` for regular and cap, and the confinement resolves
+through `/proc/self/fd`, so an intermediate symlink cannot point out of
+the base. A symlink as the final component refuses everywhere now, even
+one resolving inside the base (the swap attack rides on a changeable
+final link; the strictening is deliberate and unit-tested). Evidence:
+`cargo test --release --quiet --lib` → `9 passed` including the fifo
+refusal (deterministic, opened non-blocking) and the link-in refusal.
+The reviewer's 26-of-20,000 escape and the fifo hang are closed by
+construction: the open can no longer block, and the file the checks read
+is the file the process holds.
+
+**Item 15, warm saves nothing**: a per-backend answers cache now holds
+every judgment warm makes, keyed by question digest and evidence;
+`thinkthen_decide` reads it before sending. Evidence, null path
+(check.sh): warm judged 20,000 pairs in 3.80 s, the row-by-row read pass
+answered from the saved judgments in 1.06 s, stable across two reads.
+Evidence, wire path (tools/warm_wire_probe.sh, one session — the cache
+and counters are per-backend, so separate sessions reset both): warm
+sent its rounds (2,000 requests counted), the decide pass over the same
+2,000 pairs added 0 sends. PASS.
+
+**Item 15, the quadratic warm state**: beside the row cap, the state is
+byte-capped at 2 MiB of escaped question-plus-evidence. The reviewer's
+shape — 2 KB evidence at 2,000/4,000/8,000 rows measuring
+1.3/14.3/37.5 s — is unreachable: the aggregate refuses at 903 rows of
+2,048-byte evidence with `thinkthen_warm holds at most 2097152 bytes ...
+judge larger sets as two aggregates`, and a full-at-cap aggregate
+(900 rows × 2 KB) completes in 459 ms under the null backend (the state
+copy is the only cost there). Unit test `the_warm_state_grows_by_its_bytes`
+pins the boundary within one row.
+
+**Item 20, package under --locked**: `cargo pgrx package` 0.17 has no
+`--locked` flag (checked by command: `error: unexpected argument
+'--locked' found`), so the same guarantee runs one step ahead —
+`cargo check --quiet --locked` gates the package step and fails when the
+lockfile would change. The gate line is in check.sh with this reason.

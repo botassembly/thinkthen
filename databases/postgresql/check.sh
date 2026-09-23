@@ -71,6 +71,11 @@ echo "== postgres surface: the error-mapping test"
 cargo test --release --quiet --lib --features synthetic-partial --locked
 
 echo "== postgres surface: package the extension"
+# Review 4, item 20 asked the package step under --locked; cargo-pgrx
+# 0.17 carries no --locked flag, so the same guarantee is enforced one
+# step ahead: --locked fails the build when the lockfile would change,
+# and the package step then runs against the checked tree.
+cargo check --quiet --locked --features synthetic-partial
 (cd . && cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null
 
 echo "== postgres surface: disposable container, null backend"
@@ -119,6 +124,33 @@ grep -q " 2 | maybe this is on our side" .tmp-slide.out
 grep -q "1.7" .tmp-slide.out
 rm .tmp-slide.out
 echo "slide sample green: the maybe row reads, urgency ordered 1.7/1.05/0.99"
+
+echo "== postgres surface: warm saves, decide reads (review 4, item 15)"
+# The reviewer's shape, scaled for the null path: warm judges 20,000
+# pairs, then the row-by-row decide pass must answer from the saved
+# judgments — instant and identical — instead of re-judging.
+warm_start=$(date +%s.%N)
+psql_in -Atq -c "SELECT thinkthen_warm('@refund.json',
+    'order ' || g || ': charged twice, please refund')
+  FROM generate_series(1, 20000) g;" > .tmp-warm-count.out
+warm_end=$(date +%s.%N)
+warm_elapsed=$(awk -v a="$warm_start" -v b="$warm_end" 'BEGIN { printf "%.2f", b - a }')
+grep -q "20000" .tmp-warm-count.out || { echo "FAILED   warm judged $(cat .tmp-warm-count.out) rows" >&2; exit 1; }
+read_start=$(date +%s.%N)
+read_count=$(psql_in -Atq -c "SELECT count(*) FROM generate_series(1, 20000) g
+  WHERE thinkthen_decide('@refund.json',
+    'order ' || g || ': charged twice, please refund');")
+read_again=$(psql_in -Atq -c "SELECT count(*) FROM generate_series(1, 20000) g
+  WHERE thinkthen_decide('@refund.json',
+    'order ' || g || ': charged twice, please refund');")
+read_end=$(date +%s.%N)
+read_elapsed=$(awk -v a="$read_start" -v b="$read_end" 'BEGIN { printf "%.2f", b - a }')
+[ "$read_count" = "$read_again" ] \
+  || { echo "FAILED   the saved judgments read differently twice ($read_count, $read_again)" >&2; exit 1; }
+awk -v e="$read_elapsed" 'BEGIN { exit !(e <= 5) }' \
+  || { echo "FAILED   reading 20,000 saved judgments took ${read_elapsed}s" >&2; exit 1; }
+echo "ok       warm judged 20,000 pairs in ${warm_elapsed}s; the read pass answered from the saved judgments in ${read_elapsed}s"
+rm -f .tmp-warm-count.out
 
 echo "== postgres surface: PUBLIC cannot call, a granted role can"
 # Group 3: CREATE EXTENSION revokes the default PUBLIC grant on every
@@ -739,6 +771,22 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
     -c "SELECT thinkthen_decide('@refund.json', 'please refund the duplicate');" | grep -q t
   psql_wire -c "SELECT * FROM thinkthen_usage();" | grep -Eq "^[0-9]+\|[0-9]+\|[0-9]+$"
   echo "wire green: decide answers on the wire, usage counts sends and tokens"
+
+  echo "== postgres surface: warm then decide sends nothing extra (review 4, item 15)"
+  # The reviewer's shape on the wire, scaled: warm judges 2,000 pairs
+  # (63 sends at width 32 against the 300 ms stub), then the row-by-row
+  # decide pass over the same pairs must add zero sends.
+  psql_wire -c "SELECT thinkthen_warm('@refund.json',
+      'order ' || g || ': charged twice, please refund')
+    FROM generate_series(1, 2000) g;" >/dev/null
+  before=$(psql_wire -Atq -c "SELECT requests FROM thinkthen_usage();")
+  after_read=$(psql_wire -Atq -c "SELECT count(*) FROM generate_series(1, 2000) g
+    WHERE thinkthen_decide('@refund.json',
+      'order ' || g || ': charged twice, please refund');")
+  after=$(psql_wire -Atq -c "SELECT requests FROM thinkthen_usage();")
+  [ "$((after - before))" = "0" ] \
+    || { echo "FAILED   the read pass added $((after - before)) sends after warm" >&2; exit 1; }
+  echo "ok       warm sent its rounds; the decide pass over the same 2,000 pairs added 0 sends"
 
   echo "== postgres surface: a deadline shorter than the stub's delay"
   # The enforced tool on the single-row path, against the 300 ms stub: a

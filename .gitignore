@@ -3,3 +3,6 @@ target/
 **/.locks/
 /contract/target
 /standin/target
+
+# The pinned SQLite source the packaging rehearsal fetches (verified by sha256 in package.sh)
+databases/sqlite/sqlite-autoconf-*.tar.gz
