@@ -782,3 +782,14 @@ Evidence: a bare `cargo test --no-fail-fast` now fails 25 tests, each
 with `run this through check.sh, which sets THINKTHEN_NULL=1`. A null run
 without the feature fails only the partial-failure check, with `the
 synthetic-partial fixture is not compiled; check.sh builds it`.
+
+## 2026-09-23 — wave 7: the deadline spellings hold at the door (R2-10)
+
+No C or stand-in leftover remains for R2-10. The header, `DESIGN.md`
+section 2, and `src/lib.rs` agree: -1 is no deadline, 0 is spent, any
+other negative is the usage kind, and a budget past 4294967295 s is the
+usage kind. The wave-7 prober's `leftovers.c` answered the same at w7
+5f36536: -1 answered, 0 spent, -2 and INT64_MIN negative, INT64_MAX and
+u32max s + 1 s too large, u32max s answered. The remaining R2-10
+leftovers sit outside this surface: `libraries/typescript/DIVERGENCES.md`
+lines 49-57 and R's integer deadlines.

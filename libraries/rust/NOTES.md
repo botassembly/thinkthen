@@ -342,3 +342,14 @@ Evidence: at 14f12f5 a bare `cargo test` passed verbs 15, wire 3, slide
 1, examples 1, and deadline_fast 1, all through the skip note. Now the
 bare run fails those 18 armed tests with the note, and it and the null
 run report the 3 wire tests as ignored.
+
+## 2026-09-23 — wave 7: `from_settings` keeps its `expect` (R4-12)
+
+Decision, which Ian can overturn: `Engine::from_settings` keeps
+`.expect("the stand-in connector has no failure path")`. The stand-in's
+`connect` returns `Ok` on every path, so the panic cannot fire today,
+and the doc comment's `# Panics` section says so. Returning a `Result`
+would change a public signature for a failure that does not exist. The
+lever is the real engine's connector: when it can refuse, this signature
+changes with it. The stand-in's two thread-start `expect`s are gone
+(standin/NOTES.md, wave 7).
