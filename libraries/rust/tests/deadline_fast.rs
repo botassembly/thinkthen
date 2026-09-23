@@ -11,7 +11,7 @@
 //!
 //! Run through `./check.sh`, which sets `ENGINE_NULL=1`; the crate forbids
 //! `unsafe`, so this test reads the environment rather than setting it, and
-//! a bare `cargo test` skips it with a note.
+//! a bare `cargo test` fails it by name.
 
 use std::time::{Duration, Instant};
 
@@ -21,13 +21,7 @@ mod common;
 
 #[test]
 fn a_fast_backend_hears_a_spent_deadline_within_a_tick() {
-    if !common::note_missing_env("a_fast_backend_hears_a_spent_deadline_within_a_tick") {
-        return;
-    }
-    assert!(
-        common::engine_env_is_set(),
-        "the guard armed this test, so a backend must be named (THINKTHEN_NULL=1 or THINKTHEN_BASE_URL)"
-    );
+    common::require_backend();
     let tt = Engine::from_env().expect("the stand-in never fails to build");
     let question =
         Question::from_json(r#"{"decide":"Is this a complaint?"}"#).expect("the question parses");

@@ -296,8 +296,8 @@ pre-existing breaks repaired while proving it:
   conformance 84 green, wire twin skipped (no stub on 8213)
   ```
 
-  A bare `cargo test` (no env) exits 0: the suites skip their bodies
-  through `common::note_missing_env`.
+  A bare `cargo test` (no env) exited 0 then: the suites skipped their
+  bodies. Wave 7 made those tests fail by name (see below).
 
 ## 2026-09-23: the fifteen verb tests adopt the shared testkit (refs surfaces-review-3)
 
@@ -320,3 +320,25 @@ reasoned skip instead of failing on a fixture that was never built, and the
 gate's feature build runs it for real. Bare `cargo test` with no backend
 still prints the shared note and skips visibly; `./check.sh` exits 0
 (89 green lines, wire skipped without a stub).
+
+## 2026-09-23 — wave 7: a bare `cargo test` never counts a skipped test as passed (R2-28)
+
+The wave-7 prober found 21 tests that passed a bare `cargo test` by
+returning early with a skip note on stderr: fifteen verb tests, the
+slide, the examples, the fast-deadline test, and the three wire tests.
+The null run also passed the three wire tests without a stub, inside
+`check.sh`'s own null step.
+
+Decision, which Ian can overturn: `./check.sh` is the entry point, and a
+test that cannot run fails or is ignored, never passed. A test that
+needs a backend calls `common::require_backend()`, which fails with the
+switch that arms it. The annotate partial-failure test fails by name
+when the `synthetic-partial` fixture is not compiled. The wire tests are
+`#[ignore]`d, so a bare or null run reports them as ignored, and
+`check.sh` runs them with `--ignored` when the stub is up. The crate
+forbids `unsafe`, so a test cannot arm the null backend itself.
+
+Evidence: at 14f12f5 a bare `cargo test` passed verbs 15, wire 3, slide
+1, examples 1, and deadline_fast 1, all through the skip note. Now the
+bare run fails those 18 armed tests with the note, and it and the null
+run report the 3 wire tests as ignored.

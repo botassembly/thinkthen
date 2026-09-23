@@ -1,9 +1,10 @@
 //! The slide sample on the wire, plus the shapes only the wire proves.
 //!
 //! Run by `./check.sh` when the stub is up on the surface's port, with
-//! `ENGINE_BASE_URL` pointing at it, the same pattern as the stand-in's
-//! wire suite. When neither `ENGINE_NULL` nor `ENGINE_BASE_URL` is set the
-//! tests skip with a note, so a bare `cargo test` passes.
+//! `ENGINE_BASE_URL` pointing at it and `--ignored`. Every test here is
+//! ignored by default, so a bare or null `cargo test` counts them as
+//! ignored and never as passed (R2-28). A run that asks for them without
+//! a stub fails by name.
 
 use thinkthen::{Answer, Cancel, Engine, ErrorKind, Options, Question};
 
@@ -11,17 +12,11 @@ fn engine() -> Engine {
     Engine::from_env().expect("the stand-in never fails to build")
 }
 
-fn stub_is_configured() -> bool {
+/// Fail the calling test unless an address names the stub.
+fn require_stub() {
     let named = std::env::var_os("ENGINE_BASE_URL").is_some()
         || std::env::var_os("THINKTHEN_BASE_URL").is_some();
-    // The gate sets THINKTHEN_WIRE_REQUIRED=1; a null run names no stub.
-    let null = std::env::var_os("ENGINE_NULL").is_some()
-        || std::env::var_os("THINKTHEN_NULL").is_some();
-    assert!(
-        named || null || std::env::var("THINKTHEN_WIRE_REQUIRED").as_deref() != Ok("1"),
-        "the stub is required (THINKTHEN_WIRE_REQUIRED=1) and no stub is named"
-    );
-    named
+    assert!(named, "no stub is named: set ENGINE_BASE_URL to the stub's /v1 address");
 }
 
 struct Ticket {
@@ -29,11 +24,9 @@ struct Ticket {
 }
 
 #[test]
+#[ignore = "needs the wire stub; ./check.sh runs it with --ignored"]
 fn the_slide_runs_as_drawn_on_the_wire() -> Result<(), Box<dyn std::error::Error>> {
-    if !stub_is_configured() {
-        eprintln!("wire test skipped: no stub is named; run ./check.sh with the stub up");
-        return Ok(());
-    }
+    require_stub();
     let ticket = Ticket {
         body: "I want a refund for order 9".to_owned(),
     };
@@ -69,11 +62,9 @@ fn the_slide_runs_as_drawn_on_the_wire() -> Result<(), Box<dyn std::error::Error
 }
 
 #[test]
+#[ignore = "needs the wire stub; ./check.sh runs it with --ignored"]
 fn a_cancelled_bulk_call_returns_the_cancelled_kind() -> Result<(), Box<dyn std::error::Error>> {
-    if !stub_is_configured() {
-        eprintln!("wire test skipped: no stub is named; run ./check.sh with the stub up");
-        return Ok(());
-    }
+    require_stub();
     let tt = engine();
     let question = Question::from_json(r#"{"decide": "Does the writer ask for a refund?"}"#)?;
     let records: Vec<&str> = vec!["refund now"; 40];
@@ -100,12 +91,10 @@ fn a_cancelled_bulk_call_returns_the_cancelled_kind() -> Result<(), Box<dyn std:
 }
 
 #[test]
+#[ignore = "needs the wire stub; ./check.sh runs it with --ignored"]
 fn a_refused_request_is_a_backend_error_that_is_not_retryable()
 -> Result<(), Box<dyn std::error::Error>> {
-    if !stub_is_configured() {
-        eprintln!("wire test skipped: no stub is named; run ./check.sh with the stub up");
-        return Ok(());
-    }
+    require_stub();
     // The stub refuses "malformed" evidence with HTTP 422, which is a
     // backend answer a second try cannot fix. The dead-address shape needs
     // an engine value that honors Settings.address; the stand-in does not,

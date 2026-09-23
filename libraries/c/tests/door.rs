@@ -20,7 +20,14 @@ const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {
 /// The header's `THINKTHEN_NO_DEADLINE`.
 const NO_DEADLINE: i64 = -1;
 
+/// A null-backend engine. A bare `cargo test` fails here by name, never
+/// on an answer it could not get (R2-28).
 unsafe fn engine() -> *mut thinkthen_engine {
+    assert_eq!(
+        std::env::var("THINKTHEN_NULL").as_deref(),
+        Ok("1"),
+        "run this through check.sh, which sets THINKTHEN_NULL=1"
+    );
     unsafe {
         thinkthen::thinkthen_engine_new()
     }
@@ -293,6 +300,10 @@ fn the_new_shapes_ride_the_json_door() {
 
         // The failed marker on the one synthesized partial record: the
         // ruled JSON object, and the good answer beside it.
+        assert!(
+            fixture_compiled(),
+            "the synthetic-partial fixture is not compiled; check.sh builds it"
+        );
         let annotated = take(json(
             engine,
             r#"{"annotate": {"version": 1, "questions": {"refund": {"decide": "Is this a refund request?", "threshold": 0.5}, "topic": {"decide": "Is this a billing problem?", "threshold": 0.5}}}, "records": ["order 4471: charged twice, please refund"]}"#,
@@ -872,4 +883,9 @@ fn the_plain_call_is_its_opts_twin() {
 
         thinkthen::thinkthen_engine_free(engine);
     }
+}
+
+/// Whether this build carries the stand-in's synthesized partial failure.
+fn fixture_compiled() -> bool {
+    cfg!(feature = "synthetic-partial")
 }
