@@ -13,42 +13,29 @@ import pathlib
 import subprocess
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "conformance"))
+import skiptable  # noqa: E402 — the one shared skip-table reader (review 3)
+
 HERE = pathlib.Path(__file__).resolve().parent
 FILE = json.loads((HERE.parents[1] / "conformance" / "conformance.json").read_text())
 CASES = FILE["cases"]
-SKIPS = FILE.get("skips", [])
 CONTAINER = sys.argv[1] if len(sys.argv) > 1 else "thinkthen-pg"
 
 
 def central_skip(surface, case, wire):
-    """The shared skip table's reason for this case on this surface, or
-    None. First match wins; entries naming a surface apply only there."""
-    kind = case.get("expect", {}).get("error", {}).get("kind")
-    for entry in SKIPS:
-        if entry.get("surfaces") and surface not in entry["surfaces"]:
-            continue
-        if entry.get("unless") == "wire" and wire:
-            continue
-        when = entry["when"]
-        if "id" in when and case["id"] != when["id"]:
-            continue
-        if "verb" in when:
-            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
-            if case["verb"] not in listed:
-                continue
-        if "kind" in when and kind != when["kind"]:
-            continue
-        if "form" in when and case.get("form") != when["form"]:
-            continue
-        if "none" in when and bool(case.get("none")) != when["none"]:
-            continue
-        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
-            continue
-        if "record" in when and when["record"] == "null" \
-                and not any(record is None for record in case.get("records") or []):
-            continue
-        return entry["why"], entry.get("as", "skip")
-    return None
+    """The shared skip table's decision for this case on this surface, via
+    the one reader every runner imports (review 3 replaced the nine
+    private copies that disagreed on the table's fields)."""
+    asked = {
+        "kind": case.get("expect", {}).get("error", {}).get("kind"),
+        "form": case.get("form"),
+        "record": "null"
+        if any(record is None for record in case.get("records") or [])
+        else None,
+        "none": case.get("none"),
+        "error": "error" in case.get("expect", {}),
+    }
+    return skiptable.lookup_reason(surface, case["id"], asked, wire=wire)
 
 
 def sql(query: str) -> str:

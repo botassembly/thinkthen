@@ -27,55 +27,31 @@ import os
 import pathlib
 import sqlite3
 import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance"))
+import skiptable  # noqa: E402 — the one shared skip-table reader (review 3)
 import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 LIB = HERE.parent / "target" / "release" / "libthinkthen0.so"
 FILE = json.loads((HERE.parent.parent.parent / "conformance" / "conformance.json").read_text())
 CASES = FILE["cases"]
-SKIPS = FILE.get("skips", [])
 
 
 def central_skip(surface, case, wire):
-    """The shared skip table's reason for this case on this surface, or
-    None. First match wins; entries naming a surface apply only there."""
-    kind = case.get("expect", {}).get("error", {}).get("kind")
-    for entry in SKIPS:
-        if entry.get("surfaces") and surface not in entry["surfaces"]:
-            continue
-        if entry.get("unless") == "wire" and wire:
-            continue
-        when = entry["when"]
-        if "id" in when and case["id"] != when["id"]:
-            continue
-        if "verb" in when:
-            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
-            if case["verb"] not in listed:
-                continue
-        if "kind" in when and kind != when["kind"]:
-            continue
-        if "form" in when and case.get("form") != when["form"]:
-            continue
-        if "none" in when and bool(case.get("none")) != when["none"]:
-            continue
-        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
-            continue
-        if "record" in when and when["record"] == "null" \
-                and not any(record is None for record in case.get("records") or []):
-            continue
-        return entry["why"], entry.get("as", "skip")
-    return None
-
-os.environ.setdefault("ENGINE_NULL", "1")
-# Case 74 pins the failed-question marker for one synthesized record; the
-# stand-in arms that fixture only under this test-only opt-in, so a
-# production process never fails on that text (phase 1 of the review
-# fixes). Unset here would leave case 74 diverging.
-os.environ.setdefault("ENGINE_SYNTHETIC_PARTIAL", "1")
-
-FAILURES = 0
-TEMP = []
-
+    """The shared skip table's decision for this case on this surface, via
+    the one reader every runner imports (review 3 replaced the nine
+    private copies that disagreed on the table's fields)."""
+    asked = {
+        "kind": case.get("expect", {}).get("error", {}).get("kind"),
+        "form": case.get("form"),
+        "record": "null"
+        if any(record is None for record in case.get("records") or [])
+        else None,
+        "none": case.get("none"),
+        "error": "error" in case.get("expect", {}),
+    }
+    return skiptable.lookup_reason(surface, case["id"], asked, wire=wire)
 
 def fresh():
     connection = sqlite3.connect(":memory:")

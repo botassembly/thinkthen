@@ -11,10 +11,12 @@
 # anywhere.
 #
 # Why zig: the host build wants glibc 2.39, and the DuckDB rehearsal showed
-# what that costs on older distributions; the pin is 2.28 here too.
-# RUSTFLAGS carries the host's libsqlite3 for the link step (zig has no
-# stub for it); the artifact still demands only libsqlite3.so.0 at runtime,
-# which every SQLite host has.
+# what that costs on older distributions; the pin is 2.28 here too. The
+# artifact links no SQLite of its own: the host's API table is read
+# through the connection at load, and `readelf -d` shows no SQLite
+# `DT_NEEDED` (review 3's packaging-text fix — the old text claimed a
+# libsqlite3 link and a 3.41 floor; the floor is 3.50.0, the load check
+# the README names).
 #
 # The container is disposable: named dbpkg211-sqlite, removed with
 # docker rm -f -v at the end.
@@ -64,14 +66,17 @@ objdump -T "$LIB" | grep -o 'GLIBC_[0-9.]*' | sort -V | uniq | tail -1
 cat > dist/README.md << EOF
 # thinkthen for SQLite ${VERSION}
 
-A loadable extension for SQLite 3.41 or newer with visible symbols. The
-slide's install line is the whole install:
+A loadable extension for SQLite 3.50.0 or newer with visible symbols —
+below the floor the load refuses, naming the floor and why (an
+untrusted database's CHECK constraint could otherwise reach the
+functions). The slide's install line is the whole install:
 
     .load ./thinkthen
 
 Keep thinkthen.so beside the working directory the CLI loads from, or give
-the full path in .load. The extension links the host's own libsqlite3.so.0
-for its interrupt call; every SQLite host has it.
+the full path in .load. The extension links no SQLite of its own: it reads
+the host's API table through the connection at load, so the SQLite that
+loads it is the SQLite that serves it.
 EOF
 
 if [ "$dry_run" = yes ]; then

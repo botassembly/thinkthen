@@ -24,6 +24,7 @@ from pathlib import Path
 
 SURFACES = ("python", "typescript", "ruby", "r", "rust", "c", "duckdb", "sqlite", "postgresql")
 FACETS = ("verb", "kind", "form", "record")
+BOOL_FACETS = ("none", "error")
 
 
 def load(path):
@@ -61,7 +62,14 @@ def entry_matches(entry, case_id, facets):
         held = facets.get(facet)
         if held is None or not any(one in as_list(held) for one in wanted):
             return False
-    return bool(entry_facets(entry))
+    # The boolean facets: `none` matches a case whose records hold a
+    # null, `error` a case whose expectation is an error. The table used
+    # them before this reader existed, and the nine private copies read
+    # them nine ways (surfaces-review-3).
+    for facet in BOOL_FACETS:
+        if facet in when and bool(facets.get(facet)) != when[facet]:
+            return False
+    return bool(entry_facets(entry)) or any(facet in when for facet in BOOL_FACETS)
 
 
 def validate(path):
@@ -108,24 +116,43 @@ def validate(path):
     return 0
 
 
-def lookup(surface, case_id, asked):
+def lookup_reason(surface, case_id, asked=None, wire=False):
+    """The one decision for one case on one surface: `None` to run, or
+    `(why, 'skip' | 'diverge')`. The conformance runners import this, and
+    the command line wraps it, so there is one reader. `asked` carries the
+    run-context facets the table selects on but a case record alone does
+    not hold: `kind` (from the expectation's error), `record` (a `"null"`
+    string when the records hold one), `none`, and `error`. An entry
+    marked `"unless": "wire"` applies only when `wire` is false.
+    """
     if surface not in SURFACES:
-        print(f"skiptable: surface {surface} is not one of the nine", file=sys.stderr)
-        return 2
+        raise SystemExit(f"skiptable: surface {surface} is not one of the nine")
     table = load(None)
     facets = dict(case_facets(table).get(case_id, {}))
-    facets.update({k: v for k, v in asked.items() if v is not None})
+    facets.update({k: v for k, v in (asked or {}).items() if v is not None})
     for entry in table.get("skips", []):
         surfaces = entry.get("surfaces", [])
         if surfaces and surface not in surfaces:
             continue
+        if entry.get("unless") == "wire" and wire:
+            continue
         if not entry_matches(entry, case_id, facets):
             continue
-        status = "DIVERGE" if entry.get("as") == "diverge" else "SKIP"
-        why = entry.get("why", "").strip() or "no reason recorded"
-        print(f"{status}\t{why}")
+        return entry.get("why", "").strip() or "no reason recorded", entry.get("as", "skip")
+    return None
+
+
+def lookup(surface, case_id, asked):
+    if surface not in SURFACES:
+        print(f"skiptable: surface {surface} is not one of the nine", file=sys.stderr)
+        return 2
+    held = lookup_reason(surface, case_id, asked, wire=False)
+    if held is None:
+        print("RUN")
         return 0
-    print("RUN")
+    why, held_as = held
+    status = "DIVERGE" if held_as == "diverge" else "SKIP"
+    print(f"{status}\t{why}")
     return 0
 
 
