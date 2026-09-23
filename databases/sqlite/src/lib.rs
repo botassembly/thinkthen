@@ -506,6 +506,7 @@ impl InterruptWatch {
     }
 
     /// How many watches the shared watcher holds — for the tests.
+    #[cfg(test)]
     fn watched_for_test() -> usize {
         WATCHES.lock().unwrap().len()
     }
@@ -751,7 +752,7 @@ fn details(context: &Context<'_>) -> Result<Option<String>, Error> {
 /// spelling refuses and names that substitution.
 fn usage(context: &Context<'_>) -> Result<String, Error> {
     guarded("thinkthen_usage", || {
-        if context.len() != 0 {
+        if !context.is_empty() {
             let argument = context.get_raw(0).as_str()?;
             let message = if argument == "reset" {
                 "the reset spelling is removed; the counters are cumulative, so take two snapshots and subtract them"
@@ -766,8 +767,7 @@ fn usage(context: &Context<'_>) -> Result<String, Error> {
             "cache_answers": cache_hits().load(Ordering::Relaxed),
             "tokens": held.tokens,
         });
-        Ok(serde_json::to_string(&object)
-            .map_err(|failure| local_failure(failure.to_string()))?)
+        serde_json::to_string(&object).map_err(|failure| local_failure(failure.to_string()))
     })
 }
 
@@ -787,15 +787,10 @@ struct WarmGroup {
 /// questions accumulate instead of flushing on every change (review 4,
 /// item 15 — the single-group shape degraded an alternating query to one
 /// round per row).
+#[derive(Default)]
 struct WarmState {
     groups: Vec<WarmGroup>,
     judged: u64,
-}
-
-impl Default for WarmState {
-    fn default() -> Self {
-        WarmState { groups: Vec::new(), judged: 0 }
-    }
 }
 
 /// The `thinkthen_warm` aggregate: judge every row in one pass at the
@@ -1102,7 +1097,7 @@ unsafe impl<'vtab> VTab<'vtab> for RecognizeTab {
             let mut constraint = [usize::MAX; RECOGNIZE_COLUMNS];
             for (i, held) in info.constraints().enumerate() {
                 let column = held.column() as usize;
-                if column < RECOGNIZE_BODY || column >= RECOGNIZE_COLUMNS {
+                if !(RECOGNIZE_BODY..RECOGNIZE_COLUMNS).contains(&column) {
                     continue;
                 }
                 if !held.is_usable()
@@ -1293,7 +1288,7 @@ unsafe impl<'vtab> VTab<'vtab> for RelateTab {
             let mut constraint = [usize::MAX; RELATE_COLUMNS];
             for (i, held) in info.constraints().enumerate() {
                 let column = held.column() as usize;
-                if column < RELATE_TABLE || column >= RELATE_COLUMNS {
+                if !(RELATE_TABLE..RELATE_COLUMNS).contains(&column) {
                     continue;
                 }
                 if !held.is_usable()
@@ -1372,9 +1367,9 @@ unsafe impl VTabCursor for RelateCursor {
             }
             let mut rank = [usize::MAX; RELATE_COLUMNS];
             let mut n = 0;
-            for column in RELATE_TABLE..RELATE_COLUMNS {
+            for (column, place) in rank.iter_mut().enumerate() {
                 if idx_num & (1 << column) != 0 {
-                    rank[column] = n;
+                    *place = n;
                     n += 1;
                 }
             }
@@ -1402,7 +1397,7 @@ unsafe impl VTabCursor for RelateCursor {
             })?;
             let ask: Relate;
             let slots: Vec<&str> = (RELATE_R1..=RELATE_R4)
-                .filter_map(|column| get(column))
+                .filter_map(get)
                 .filter(|value| !value.is_empty())
                 .collect();
             if slots.len() == 1 && slots[0].starts_with('@') {
@@ -1635,6 +1630,10 @@ fn init(connection: Connection) -> Result<bool, Error> {
 /// only the host may hand them over (clippy's `not_unsafe_ptr_arg_deref`
 /// names the same contract).
 #[unsafe(no_mangle)]
+/// # Safety
+///
+/// The three pointers are SQLite's own, and only the host may hand them
+/// over, at extension load time, on the connection's own thread.
 pub unsafe extern "C" fn sqlite3_thinkthen_init(
     db: *mut ffi::sqlite3,
     message: *mut *mut c_char,
@@ -1724,7 +1723,7 @@ mod mapping_tests {
 
         WATCH_FLAG.store(false, Ordering::SeqCst);
         let token = Cancel::new();
-        let handle = 1_usize as *mut ffi::sqlite3;
+        let handle = std::ptr::NonNull::<ffi::sqlite3>::dangling().as_ptr();
         let watch = InterruptWatch::start_with(handle, token.clone(), watch_flag as *mut ());
         std::thread::sleep(Duration::from_millis(30));
         assert!(!token.is_cancelled(), "the token is armed only by the host flag");
@@ -1833,7 +1832,7 @@ mod cancel_tests {
             thread::sleep(Duration::from_millis(150));
             HOST_INTERRUPTED.store(true, AtomicOrdering::SeqCst);
         });
-        let handle = 1_usize as *mut ffi::sqlite3;
+        let handle = std::ptr::NonNull::<ffi::sqlite3>::dangling().as_ptr();
         let mut poll = {
             let token = token.clone();
             let polls = Arc::clone(&polls);
