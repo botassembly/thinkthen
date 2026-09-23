@@ -29,7 +29,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
 use duckdb::{
@@ -168,6 +168,13 @@ fn burst_active() -> bool {
         && now_ms().saturating_sub(last) < BURST_MS
 }
 
+/// When the handler last cancelled a token, on the activity clock: a
+/// call starting within one burst window of the signal serves the
+/// cancelled token too, so two queries running at the signal both stop
+/// even when one was between calls when it landed (review 3, finding
+/// 13).
+static SIGNAL_AT: AtomicU64 = AtomicU64::new(0);
+
 /// The in-flight guard: counted on entry, uncounted however the call
 /// ends, a panic included; the last one out clears a spent or stale
 /// interrupt so the next query starts clean.
@@ -218,8 +225,12 @@ fn current_cancel() -> &'static Cancel {
     // This call already counts in flight, so more than one means another
     // call is running with this token and both stop together; a burst
     // means the query that produced the interrupt is still producing
-    // calls, and this is one of them.
-    if IN_FLIGHT.load(Ordering::SeqCst) > 1 || burst_active() {
+    // calls, and this is one of them; a start within one burst window of
+    // the signal belongs to the query the signal aimed at, whichever of
+    // the running queries it is.
+    let signal = SIGNAL_AT.load(Ordering::SeqCst);
+    let in_wave = signal != 0 && now_ms().saturating_sub(signal) < BURST_MS;
+    if IN_FLIGHT.load(Ordering::SeqCst) > 1 || burst_active() || in_wave {
         return token;
     }
     install_cancel()
@@ -252,47 +263,93 @@ fn install_cancel() -> &'static Cancel {
     }
 }
 
-/// The handler SIGINT replaced, so the CLI's own interrupt still runs.
-static HANDLER_CHAIN: AtomicUsize = AtomicUsize::new(0);
+/// The host's own SIGINT action, taken before ours, so the host's
+/// choice still runs after our work: a handler is called with the
+/// signature its flags name, `SIG_DFL` is restored and the signal
+/// re-raised so the default action still terminates, and `SIG_IGN`
+/// stops the install entirely (review 3, finding 13: `libc::signal`
+/// replaced the disposition, and an `SA_SIGINFO` host handler received
+/// garbage arguments).
+static HOST_ACTION: Mutex<Option<libc::sigaction>> = Mutex::new(None);
 
 /// Whether the handler is already installed, so a second LOAD does not
 /// chain a handler to itself.
 static HANDLER_SET: AtomicBool = AtomicBool::new(false);
 
 /// Cancel the live token while an engine call is in flight or while calls
-/// are arriving in a burst, then run whatever handler was there before.
-/// SIG_DFL and SIG_IGN sit at 0 and 1 and are never called as functions.
-/// A signal that lands after a query's last call is the host's own
-/// gesture: cancelling here would only poison the next query.
-extern "C" fn on_interrupt(signal: libc::c_int) {
+/// are arriving in a burst, then run the host's own action with the
+/// signature its flags name. A signal that lands after a query's last
+/// call is the host's own gesture: cancelling here would only poison the
+/// next query.
+extern "C" fn on_interrupt(
+    signal: libc::c_int,
+    info: *mut libc::siginfo_t,
+    context: *mut libc::c_void,
+) {
     if let Some(token) = live_cancel() {
         if !token.is_cancelled() && (IN_FLIGHT.load(Ordering::SeqCst) > 0 || burst_active()) {
+            SIGNAL_AT.store(now_ms(), Ordering::SeqCst);
             token.cancel();
         }
     }
-    let previous = HANDLER_CHAIN.load(Ordering::SeqCst);
-    if previous > 1 {
-        let chained: extern "C" fn(libc::c_int) = unsafe { std::mem::transmute(previous) };
+    let host = match HOST_ACTION
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .as_ref()
+    {
+        Some(host) => *host,
+        // Installed without a recorded host action: nothing to chain.
+        None => return,
+    };
+    if host.sa_sigaction == libc::SIG_DFL as usize {
+        // The host ran on the default action: restore it and re-raise,
+        // so the signal still terminates the process as the host chose.
+        unsafe {
+            libc::signal(libc::SIGINT, libc::SIG_DFL);
+            libc::raise(signal);
+        }
+    } else if host.sa_flags & libc::SA_SIGINFO != 0 {
+        let chained = unsafe {
+            std::mem::transmute::<usize, extern "C" fn(i32, *mut libc::siginfo_t, *mut libc::c_void)>(
+                host.sa_sigaction,
+            )
+        };
+        chained(signal, info, context);
+    } else if host.sa_sigaction > 1 {
+        let chained = unsafe {
+            std::mem::transmute::<usize, extern "C" fn(libc::c_int)>(host.sa_sigaction)
+        };
         chained(signal);
     }
 }
 
-/// Take SIGINT for the token, keeping the previous handler on the chain.
+/// Take SIGINT for the token through `sigaction`, keeping the host's own
+/// action for the chain. A host that ignored SIGINT is left ignoring it:
+/// ours never installs, because the host's choice outranks our
+/// interruption.
 unsafe fn install_interrupt_handler() {
     if HANDLER_SET.swap(true, Ordering::SeqCst) {
         return;
     }
     // The activity clock starts now, long before any handler can read it.
     let _ = now_ms();
-    let previous = unsafe {
-        libc::signal(
-            libc::SIGINT,
-            on_interrupt as *const () as libc::sighandler_t,
-        )
-    };
-    if previous != libc::SIG_ERR && previous > 1 {
-        HANDLER_CHAIN.store(previous, Ordering::SeqCst);
+    let mut action: libc::sigaction = unsafe { std::mem::zeroed() };
+    action.sa_sigaction = on_interrupt as usize;
+    action.sa_flags = libc::SA_SIGINFO;
+    unsafe { libc::sigemptyset(&mut action.sa_mask) };
+    let mut previous: libc::sigaction = unsafe { std::mem::zeroed() };
+    if unsafe { libc::sigaction(libc::SIGINT, &action, &mut previous) } != 0 {
+        return;
     }
+    if previous.sa_sigaction == libc::SIG_IGN as usize {
+        // The host ignored SIGINT: put its action back untouched.
+        unsafe { libc::sigaction(libc::SIGINT, &previous, std::ptr::null_mut()) };
+        HANDLER_SET.store(false, Ordering::SeqCst);
+        return;
+    }
+    *HOST_ACTION
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(previous);
 }
 
 /// A contract failure as the SQL error a reader sees, with the kind and
@@ -335,6 +392,39 @@ fn resolve_question(arg: &str) -> Result<Question, String> {
 /// query), and an edited file is read again on its next use.
 static QUESTION_FILES: LazyLock<Mutex<HashMap<String, (std::time::SystemTime, Question)>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// The question file texts this process has read, keyed by canonical
+/// path and modification time: a per-row reader (annotate, relations)
+/// reads the file once per query, not once per row (review 3, finding
+/// 27: 20,000 rows opened the file 20,000 times).
+static QUESTION_TEXTS: LazyLock<Mutex<HashMap<String, (std::time::SystemTime, String)>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// One question file's text, read once per file version. The
+/// modification time decides whether the cached text still describes the
+/// file.
+pub(crate) fn question_text_cached(path: &str) -> Result<String, String> {
+    let stamp = std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
+    let key = std::fs::canonicalize(path)
+        .map(|real| real.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| path.to_owned());
+    if let Some(stamp) = stamp {
+        let cached = QUESTION_TEXTS.lock().expect("the file cache");
+        if let Some((held, text)) = cached.get(&key) {
+            if *held == stamp {
+                return Ok(text.clone());
+            }
+        }
+    }
+    let text = connections::read_question_file(path, None)?;
+    if let Some(stamp) = stamp {
+        QUESTION_TEXTS
+            .lock()
+            .expect("the file cache")
+            .insert(key, (stamp, text.clone()));
+    }
+    Ok(text)
+}
 
 /// One question file's question, read once per file version. The
 /// modification time decides whether the cached question still describes
@@ -407,7 +497,17 @@ use thinkthen_contract::ChoiceBuilder as ChoiceBuilt;
 /// Judge one built question's texts at the engine's width. One text asks
 /// once; many cross once through the batch door.
 fn judged(question: &Question, texts: &[&str]) -> Result<Vec<Judgment>, String> {
-    engine_call(|engine| engine.decide_many_opts(question, texts, options(), None))
+    judged_with(question, texts, None)
+}
+
+/// `judged` with a deadline budget for the batch's calls.
+fn judged_with(
+    question: &Question,
+    texts: &[&str],
+    budget: Option<f64>,
+) -> Result<Vec<Judgment>, String> {
+    let opts = options_for(budget)?;
+    engine_call(|engine| engine.decide_many_opts(question, texts, opts, None))
 }
 
 /// The warm aggregate's judge: resolve the question argument, judge every
@@ -433,6 +533,10 @@ struct Distinct {
     questions: Vec<Question>,
     /// The distinct (digest index, text) pairs the rows hold.
     pairs: Vec<(usize, String)>,
+    /// Each pair's deadline budget in milliseconds, from the row that
+    /// first raised the pair; `None` when the call carries no deadline
+    /// column or that row's budget is the no-deadline sentinel.
+    budgets: Vec<Option<f64>>,
     /// Each row's pair, or `None` where a NULL made the row NULL.
     slots: Vec<Option<usize>>,
 }
@@ -445,10 +549,12 @@ fn distinct_of(
     members: &[Option<Vec<String>>],
     texts: &[Option<String>],
     kind: Option<QuestionKind>,
+    budgets: &[Option<f64>],
 ) -> Result<Distinct, String> {
     let mut built: HashMap<String, usize> = HashMap::new();
     let mut questions: Vec<Question> = Vec::new();
     let mut pairs: Vec<(usize, String)> = Vec::new();
+    let mut pair_budgets: Vec<Option<f64>> = Vec::new();
     let mut pair_index: HashMap<(usize, String), usize> = HashMap::new();
     let mut slots: Vec<Option<usize>> = vec![None; texts.len()];
     for i in 0..texts.len() {
@@ -470,8 +576,10 @@ fn distinct_of(
             questions.len() - 1
         });
         let key = (question_at, text.to_owned());
+        let budget = budgets.get(i).copied().flatten();
         let slot = *pair_index.entry(key).or_insert_with(|| {
             pairs.push((question_at, text.to_owned()));
+            pair_budgets.push(budget);
             pairs.len() - 1
         });
         slots[i] = Some(slot);
@@ -479,8 +587,45 @@ fn distinct_of(
     Ok(Distinct {
         questions,
         pairs,
+        budgets: pair_budgets,
         slots,
     })
+}
+
+/// Read one BIGINT column of a `VScalar` chunk as per-row deadline
+/// budgets in milliseconds. A NULL anywhere in the arguments never
+/// reaches this door: DuckDB's default NULL handling answers NULL for
+/// the whole row before the function runs, the same silence a NULL
+/// question or text carries, and the no-deadline spelling is `-1`.
+fn read_budgets(input: &mut DataChunkHandle, column: usize) -> Result<Vec<Option<f64>>, String> {
+    let len = input.len();
+    let vector = input.flat_vector(column);
+    let raw = unsafe { vector.as_slice_with_len::<i64>(len) };
+    (0..len).map(|i| Some(raw[i] as f64)).collect()
+}
+
+/// The chunk's deadline column, as budgets: an empty slice when the
+/// call carries no deadline argument (the drawn spelling), the column's
+/// rows when it does. The verb names the deadline's position — column 2
+/// beside two drawn arguments, column 3 beside the list the choose,
+/// score, and tag spellings carry.
+fn deadline_column(input: &mut DataChunkHandle, at: usize) -> Result<Vec<Option<f64>>, String> {
+    if input.num_columns() <= at {
+        return Ok(Vec::new());
+    }
+    read_budgets(input, at)
+}
+
+/// The options one engine call carries: the process-wide cancel token,
+/// and the per-call deadline when the pair's row carried one, converted
+/// by the contract's one checked door (`-1` none, `0` spent, a positive
+/// budget, every other negative refused).
+fn options_for(budget: Option<f64>) -> Result<Options<'static>, String> {
+    let mut options = options();
+    if let Some(millis) = budget {
+        options = options.with_deadline_millis(Some(millis)).map_err(failure)?;
+    }
+    Ok(options)
 }
 
 /// Read one VARCHAR column of a `VScalar` chunk as owned strings.
@@ -553,6 +698,23 @@ pub(crate) unsafe fn read_raw_column(
         .collect()
 }
 
+/// One verb's two spellings: the drawn call, and the same call with the
+/// ruled third (or fourth) deadline argument in milliseconds — `-1` none,
+/// `0` spent, a positive budget, every other negative refused by the
+/// contract's one checked door.
+fn drawn_and_deadline(
+    mut params: impl FnMut() -> Vec<LogicalTypeHandle>,
+    mut return_type: impl FnMut() -> LogicalTypeHandle,
+) -> Vec<ScalarFunctionSignature> {
+    let mut with_deadline = params();
+    with_deadline.push(LogicalTypeId::Bigint.into());
+    let drawn = ScalarFunctionSignature::exact(params(), return_type());
+    vec![
+        drawn,
+        ScalarFunctionSignature::exact(with_deadline, return_type()),
+    ]
+}
+
 /// `thinkthen_decide(question, text)`: the database's boolean, `NULL` for
 /// "not sure".
 struct DecideScalar;
@@ -567,7 +729,8 @@ impl VScalar for DecideScalar {
     ) -> std::result::Result<(), Box<dyn Error>> {
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
-        let distinct = distinct_of(&questions, &[], &texts, None)?;
+        let budgets = deadline_column(input, 2)?;
+        let distinct = distinct_of(&questions, &[], &texts, None, &budgets)?;
         let answers = judged_rows(&distinct)?;
         // Every row reads its own pair's answer through its slot: one
         // judgment per distinct text, one answer per row, so a repeated
@@ -596,10 +759,10 @@ impl VScalar for DecideScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
-            LogicalTypeId::Boolean.into(),
-        )]
+        drawn_and_deadline(
+            || vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
+            || LogicalTypeId::Boolean.into(),
+        )
     }
 
     fn volatile() -> bool {
@@ -608,6 +771,8 @@ impl VScalar for DecideScalar {
 }
 
 /// Every row's decide answer, drawn from the chunk's distinct pairs.
+/// Each question group's calls carry the group's first pair's budget, so
+/// a deadline column bounds the batch the group becomes.
 fn judged_rows(distinct: &Distinct) -> std::result::Result<Vec<Option<Answer>>, String> {
     let mut answers: Vec<Option<Answer>> = vec![None; distinct.pairs.len()];
     let mut groups: HashMap<usize, Vec<usize>> = HashMap::new();
@@ -619,9 +784,10 @@ fn judged_rows(distinct: &Distinct) -> std::result::Result<Vec<Option<Answer>>, 
             .iter()
             .map(|slot| distinct.pairs[*slot].1.as_str())
             .collect();
+        let budget = slots.first().map(|slot| distinct.budgets[*slot]).flatten();
         for (slot, judgment) in slots
             .iter()
-            .zip(judged(&distinct.questions[question_at], &texts)?)
+            .zip(judged_with(&distinct.questions[question_at], &texts, budget)?)
         {
             answers[*slot] = Some(judgment.answer);
         }
@@ -643,7 +809,8 @@ impl VScalar for ProbabilityScalar {
     ) -> std::result::Result<(), Box<dyn Error>> {
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
-        let distinct = distinct_of(&questions, &[], &texts, None)?;
+        let budgets = deadline_column(input, 2)?;
+        let distinct = distinct_of(&questions, &[], &texts, None, &budgets)?;
         let mut values: Vec<Option<f64>> = vec![None; distinct.pairs.len()];
         let mut groups: HashMap<usize, Vec<usize>> = HashMap::new();
         for (slot, (question_at, _)) in distinct.pairs.iter().enumerate() {
@@ -654,9 +821,10 @@ impl VScalar for ProbabilityScalar {
                 .iter()
                 .map(|slot| distinct.pairs[*slot].1.as_str())
                 .collect();
+            let budget = slots.first().map(|slot| distinct.budgets[*slot]).flatten();
             for (slot, judgment) in slots
                 .iter()
-                .zip(judged(&distinct.questions[question_at], &texts)?)
+                .zip(judged_with(&distinct.questions[question_at], &texts, budget)?)
             {
                 values[*slot] = Some(judgment.probability);
             }
@@ -683,10 +851,10 @@ impl VScalar for ProbabilityScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
-            LogicalTypeId::Double.into(),
-        )]
+        drawn_and_deadline(
+            || vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
+            || LogicalTypeId::Double.into(),
+        )
     }
 
     fn volatile() -> bool {
@@ -709,16 +877,19 @@ impl VScalar for ChooseScalar {
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let option_lists = read_list_strings(input, 2);
+        let budgets = deadline_column(input, 3)?;
         let distinct = distinct_of(
             &questions,
             &option_lists,
             &texts,
             Some(QuestionKind::Choose),
+            &budgets,
         )?;
         let mut picked: Vec<Option<Option<String>>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
+            let opts = options_for(distinct.budgets[slot])?;
             let answer =
-                engine_call(|engine| engine.choose_opts(&distinct.questions[*question_at], text, options()))?;
+                engine_call(|engine| engine.choose_opts(&distinct.questions[*question_at], text, opts))?;
             picked[slot] = Some(answer);
         }
         let mut out = output.flat_vector();
@@ -734,14 +905,14 @@ impl VScalar for ChooseScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![
+        drawn_and_deadline(
+            || vec![
                 LogicalTypeId::Varchar.into(),
                 LogicalTypeId::Varchar.into(),
                 LogicalTypeHandle::list(&LogicalTypeId::Varchar.into()),
             ],
-            LogicalTypeId::Varchar.into(),
-        )]
+            || LogicalTypeId::Varchar.into(),
+        )
     }
 
     fn volatile() -> bool {
@@ -765,11 +936,13 @@ impl VScalar for ScoreScalar {
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let levels = read_list_strings(input, 2);
-        let distinct = distinct_of(&questions, &levels, &texts, Some(QuestionKind::Score))?;
+        let budgets = deadline_column(input, 3)?;
+        let distinct = distinct_of(&questions, &levels, &texts, Some(QuestionKind::Score), &budgets)?;
         let mut scored: Vec<Option<Scored>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
+            let opts = options_for(distinct.budgets[slot])?;
             let answer =
-                engine_call(|engine| engine.score_opts(&distinct.questions[*question_at], text, options()))?;
+                engine_call(|engine| engine.score_opts(&distinct.questions[*question_at], text, opts))?;
             scored[slot] = Some(answer);
         }
         // Each row's own slot, never the pair's index: see `judged_rows`.
@@ -796,14 +969,14 @@ impl VScalar for ScoreScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![
+        drawn_and_deadline(
+            || vec![
                 LogicalTypeId::Varchar.into(),
                 LogicalTypeId::Varchar.into(),
                 LogicalTypeHandle::list(&LogicalTypeId::Varchar.into()),
             ],
-            LogicalTypeId::Double.into(),
-        )]
+            || LogicalTypeId::Double.into(),
+        )
     }
 
     fn volatile() -> bool {
@@ -826,11 +999,13 @@ impl VScalar for TagScalar {
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let labels = read_list_strings(input, 2);
-        let distinct = distinct_of(&questions, &labels, &texts, Some(QuestionKind::Tag))?;
+        let budgets = deadline_column(input, 3)?;
+        let distinct = distinct_of(&questions, &labels, &texts, Some(QuestionKind::Tag), &budgets)?;
         let mut held: Vec<Option<Vec<String>>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
+            let opts = options_for(distinct.budgets[slot])?;
             let answer =
-                engine_call(|engine| engine.tag_opts(&distinct.questions[*question_at], text, options()))?;
+                engine_call(|engine| engine.tag_opts(&distinct.questions[*question_at], text, opts))?;
             held[slot] = Some(answer);
         }
         let len = texts.len();
@@ -862,14 +1037,14 @@ impl VScalar for TagScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![
+        drawn_and_deadline(
+            || vec![
                 LogicalTypeId::Varchar.into(),
                 LogicalTypeId::Varchar.into(),
                 LogicalTypeHandle::list(&LogicalTypeId::Varchar.into()),
             ],
-            LogicalTypeHandle::list(&LogicalTypeId::Varchar.into()),
-        )]
+            || LogicalTypeHandle::list(&LogicalTypeId::Varchar.into()),
+        )
     }
 
     fn volatile() -> bool {
@@ -896,18 +1071,24 @@ impl VScalar for AnnotateScalar {
     ) -> std::result::Result<(), Box<dyn Error>> {
         let sets = read_strings(input, 0);
         let texts = read_strings(input, 1);
+        let budgets = deadline_column(input, 2)?;
         let mut distinct: HashMap<(String, String), usize> = HashMap::new();
         let mut unique: Vec<(String, String)> = Vec::new();
+        let mut unique_budgets: Vec<Option<f64>> = Vec::new();
         let mut slots: Vec<Option<usize>> = vec![None; texts.len()];
         for i in 0..texts.len() {
             let (Some(arg), Some(text)) = (sets[i].as_deref(), texts[i].as_deref()) else {
                 continue;
             };
+            let budget = budgets.get(i).copied().flatten();
             let key = (arg.to_owned(), text.to_owned());
+            let fresh = !distinct.contains_key(&key);
             let slot = *distinct.entry(key).or_insert_with(|| {
                 unique.push((arg.to_owned(), text.to_owned()));
+                unique_budgets.push(budget);
                 unique.len() - 1
             });
+            let _ = fresh;
             slots[i] = Some(slot);
         }
         let mut judged: Vec<Option<String>> = vec![None; unique.len()];
@@ -916,7 +1097,7 @@ impl VScalar for AnnotateScalar {
                 if let Some(refusal) = file_read_refusal(path) {
                     return Err(refusal.into());
                 }
-                let text = connections::read_question_file(path, None)?;
+                let text = question_text_cached(path)?;
                 QuestionSet::from_json(&text).map_err(failure)?
             } else if arg.starts_with('{') {
                 QuestionSet::from_json(arg).map_err(failure)?
@@ -925,8 +1106,9 @@ impl VScalar for AnnotateScalar {
                     "thinkthen usage: annotate names a question set as '@form.json' or JSON".into(),
                 );
             };
+            let opts = options_for(unique_budgets[slot])?;
             let records =
-                engine_call(|engine| engine.annotate_opts(&set, &[text.as_str()], options(), None))?;
+                engine_call(|engine| engine.annotate_opts(&set, &[text.as_str()], opts, None))?;
             judged[slot] = Some(annotate_json(&records[0]).map_err(failure)?);
         }
         let mut out = output.flat_vector();
@@ -942,10 +1124,10 @@ impl VScalar for AnnotateScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
-            LogicalTypeId::Varchar.into(),
-        )]
+        drawn_and_deadline(
+            || vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
+            || LogicalTypeId::Varchar.into(),
+        )
     }
 
     fn volatile() -> bool {
@@ -1029,20 +1211,32 @@ impl VScalar for DetailsScalar {
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let len = texts.len();
-        let distinct = distinct_of(&questions, &[], &texts, None)?;
+        let budgets = deadline_column(input, 2)?;
+        let distinct = distinct_of(&questions, &[], &texts, None, &budgets)?;
         let mut trail: Vec<Option<TrailRow>> = vec![None; distinct.pairs.len()];
         for (slot, (question_at, text)) in distinct.pairs.iter().enumerate() {
             let question = &distinct.questions[*question_at];
             // Every kind's audit comes through the engine's own details
             // door, the contract's: a score reports its nearest level and
-            // its request digests, and a choose or tag reply reports the
-            // engine's own refusal, because no surface invents an audit
-            // the engine did not give it.
-            let details = engine_call(|engine| {
-                ContractEngine::details_opts(engine, question, text, options())
-            })?;
-            let row = if question.kind() == QuestionKind::Decide {
-                TrailRow {
+            // its request digests. A choose or tag question has no
+            // details door in the engine yet, so the row reads NULL in
+            // every audit member rather than failing the whole call
+            // (review 3, finding 11: the README promises NULL and the
+            // call raised the engine's refusal instead); the digest is
+            // the question's own, so the row still names its question.
+            // No surface invents an audit the engine did not give it.
+            let details = if matches!(question.kind(), QuestionKind::Choose | QuestionKind::Tag) {
+                None
+            } else {
+                let opts = options_for(distinct.budgets[slot])?;
+                Some(
+                    engine_call(|engine| {
+                        ContractEngine::details_opts(engine, question, text, opts)
+                    })?,
+                )
+            };
+            let row = match details {
+                Some(details) if question.kind() == QuestionKind::Decide => TrailRow {
                     probability: Some(details.probability),
                     answer: Some(details.answer.to_string()),
                     model: details.model,
@@ -1051,12 +1245,11 @@ impl VScalar for DetailsScalar {
                     sends: Some(u64::from(details.sends)),
                     requests: details.requests,
                     failed_questions: details.failed_questions,
-                }
-            } else {
-                // A non-decide reply carries no yes-probability and no
-                // sends, so those read NULL; the question's own audit
-                // fields come from the engine's own details.
-                TrailRow {
+                },
+                Some(details) => TrailRow {
+                    // A score reply carries no yes-probability and no
+                    // sends, so those read NULL; the question's own audit
+                    // fields come from the engine's own details.
                     probability: None,
                     answer: None,
                     model: details.model,
@@ -1065,7 +1258,19 @@ impl VScalar for DetailsScalar {
                     sends: None,
                     requests: details.requests,
                     failed_questions: details.failed_questions,
-                }
+                },
+                None => TrailRow {
+                    // A choose or tag question: no engine details exist,
+                    // so every audit member but the digest reads NULL.
+                    probability: None,
+                    answer: None,
+                    model: String::new(),
+                    digest: question.digest(),
+                    nearest: None,
+                    sends: None,
+                    requests: Vec::new(),
+                    failed_questions: 0,
+                },
             };
             trail[slot] = Some(row);
         }
@@ -1080,6 +1285,13 @@ impl VScalar for DetailsScalar {
         let structs = output.struct_vector();
         {
             let mut child = structs.child(0, len);
+            // The member reads NULL everywhere a value does not exist,
+            // never the buffer's zero (review 3, finding 11: a score's
+            // probability read 0.0). One wrapper at a time: the nulls
+            // first, then the values.
+            for i in 0..len {
+                child.set_null(i);
+            }
             let values = unsafe { child.as_mut_slice_with_len::<f64>(len) };
             for (i, slot) in distinct.slots.iter().enumerate() {
                 if let Some(row) = slot.and_then(|slot| trail[slot].as_ref()) {
@@ -1134,6 +1346,12 @@ impl VScalar for DetailsScalar {
         }
         {
             let mut child = structs.child(5, len);
+            // A member with no sends reads NULL, never the buffer's zero
+            // (review 3, finding 11: a score's sends read 0). One
+            // wrapper at a time: the nulls first, then the values.
+            for i in 0..len {
+                child.set_null(i);
+            }
             let values = unsafe { child.as_mut_slice_with_len::<u64>(len) };
             for (i, slot) in distinct.slots.iter().enumerate() {
                 if let Some(row) = slot.and_then(|slot| trail[slot].as_ref()) {
@@ -1185,9 +1403,9 @@ impl VScalar for DetailsScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
-            LogicalTypeHandle::struct_type(&[
+        drawn_and_deadline(
+            || vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
+            || LogicalTypeHandle::struct_type(&[
                 ("probability", LogicalTypeId::Double.into()),
                 ("answer", LogicalTypeId::Varchar.into()),
                 ("model", LogicalTypeId::Varchar.into()),
@@ -1200,7 +1418,7 @@ impl VScalar for DetailsScalar {
                 ),
                 ("failed_questions", LogicalTypeId::UBigint.into()),
             ]),
-        )]
+        )
     }
 
     fn volatile() -> bool {

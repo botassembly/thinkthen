@@ -38,14 +38,16 @@ impl VScalar for RelationsScalar {
     ) -> Result<(), Box<dyn Error>> {
         let bodies = read_strings(input, 0);
         let specs = read_strings(input, 1);
+        let budgets = crate::deadline_column(input, 2)?;
         let mut rows: Vec<Option<Vec<RelationRow>>> = Vec::with_capacity(bodies.len());
-        for (body, spec) in bodies.iter().zip(specs.iter()) {
+        for ((body, spec), budget) in bodies.iter().zip(specs.iter()).zip(budgets.iter()) {
             let (Some(body), Some(spec)) = (body.as_deref(), spec.as_deref()) else {
                 rows.push(None);
                 continue;
             };
             let ask = build_ask(spec)?;
-            let found = engine_call(|engine| engine.recognize_opts(&ask, body, options()))?;
+            let opts = crate::options_for(*budget)?;
+            let found = engine_call(|engine| engine.recognize_opts(&ask, body, opts))?;
             rows.push(Some(relation_rows(&found)?));
         }
         write_lists(output, &rows);
@@ -53,9 +55,9 @@ impl VScalar for RelationsScalar {
     }
 
     fn signatures() -> Vec<ScalarFunctionSignature> {
-        vec![ScalarFunctionSignature::exact(
-            vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
-            LogicalTypeHandle::list(&LogicalTypeHandle::struct_type(&[
+        crate::drawn_and_deadline(
+            || vec![LogicalTypeId::Varchar.into(), LogicalTypeId::Varchar.into()],
+            || LogicalTypeHandle::list(&LogicalTypeHandle::struct_type(&[
                 ("name", LogicalTypeId::Varchar.into()),
                 ("source", LogicalTypeId::Varchar.into()),
                 ("source_kind", LogicalTypeId::Varchar.into()),
@@ -63,7 +65,7 @@ impl VScalar for RelationsScalar {
                 ("target_kind", LogicalTypeId::Varchar.into()),
                 ("probability", LogicalTypeId::Double.into()),
             ])),
-        )]
+        )
     }
 
     fn volatile() -> bool {
@@ -120,7 +122,7 @@ fn build_ask(spec: &str) -> Result<Recognize, String> {
         if let Some(refusal) = crate::connections::file_read_refusal(path) {
             return Err(refusal);
         }
-        let text = crate::connections::read_question_file(path, None)?;
+        let text = crate::question_text_cached(path)?;
         let value: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
             format!("thinkthen usage: the question file {path} is not JSON: {error}")
         })?;
