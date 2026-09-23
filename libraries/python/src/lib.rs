@@ -425,8 +425,9 @@ fn settle_for(
     if let Ok(text) = object.extract::<String>() {
         return text_question(py, &text);
     }
-    Err(UsageError::new_err(
-        "the question is text or a built question from tt.question",
+    Err(python_error(
+        py,
+        Error::usage("the question is text or a built question from tt.question"),
     ))
 }
 
@@ -456,9 +457,12 @@ fn settle_verb_question(
         return Ok(asked);
     }
     let text = object.extract::<String>().map_err(|_| {
-        UsageError::new_err(format!(
-            "a {verb} question is text plus its {key}, or a built question"
-        ))
+        python_error(
+            py,
+            Error::usage(format!(
+                "a {verb} question is text plus its {key}, or a built question"
+            )),
+        )
     })?;
     let list = members.ok_or_else(|| {
         UsageError::new_err(format!("a {verb} question needs its {key} beside the text"))

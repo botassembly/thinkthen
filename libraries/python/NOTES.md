@@ -826,3 +826,43 @@ over a 3-byte buffer, or `60000000, 60000001` over one. The last offset
 is the only data length the interface gives, so such a column cannot be
 told from a real one of that size. That lie stays the producer's; the
 per-row ceiling keeps any one such read under 4 MiB.
+
+## Surfaces review 6, verifier P1: the extent cap bounds where a read starts
+
+The verifier found the review-5 cap incomplete. The 4 MiB per-row ceiling
+bounds how far a single row reaches past its start, not where the start
+sits. An offset (Utf8) or view data-offset that is itself enormous starts
+the read far past the buffer, and the small row length then clears the
+per-row check. Four shapes that review 5 refused now crashed: a
+string-view data-offset near 2^32, LargeUtf8 offsets near i64 max, Utf8
+offsets near i32 max, and offsets `2^40 .. 2^40 + 13` over a three-byte
+buffer.
+
+The fix caps the declared data extent absolutely, not just the per-row
+reach. `MAX_DATA` is 1 GiB: a view's declared data-buffer size, and a
+Utf8/LargeUtf8 final offset (the data length the interface gives), each
+must fall in `0 ..= MAX_DATA`, checked before any data byte is read. Every
+offset and view is then bounded by that extent, so the start is bounded
+too. `MAX_BUFFERS` (64) bounds the buffer-table length before the reader
+reads the last (sizes) entry, so a view array claiming 2^40 buffers, or a
+sizes buffer shorter than the count, is refused instead of walked.
+
+The trade-off. 1 GiB sits below 2 GiB, so an i32-max offset is refused; it
+is 256x the 4 MiB per-row cap, so a legitimate producer that keeps any one
+row under the per-row ceiling and any one data buffer under 1 GiB passes.
+Real string columns chunk, so a large column is many buffers, none near
+the cap. Confirmed on the new reader through the wire stub: a 6 MB
+`pa.string` column of 6000 rows (`pa_big_5mib_total`) sends all 6000, five
+1 MiB rows (`pa_5x1mib`) send all five, and utf8/large/view slices with a
+nonzero first offset borrow their bytes. A single row past 4 MiB
+(`pa_one_row_5mib`) is still refused by the per-row cap — the documented
+cost, and the reason the cap is per-buffer, not per-column.
+
+Fail-then-pass, end to end: the four crash shapes run against a wheel
+built from the committed reader dump core (SIGSEGV, exit 139); against the
+new reader each refuses as usage with a sentence naming the extent. Two of
+the review-5 unit tests stayed green when their fix was broken because they
+read garbage that happened to be refused for another reason; each now pins
+the exact refusal sentence, and mutating the view-index check (`>=` to `>`)
+or removing the offsets-order check turns its test red for the changed
+sentence.

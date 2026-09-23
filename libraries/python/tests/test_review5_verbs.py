@@ -35,6 +35,15 @@ def test_a_question_that_is_not_text_names_its_verb(verb, wrong):
     with pytest.raises(tt.UsageError) as raised:
         call(wrong)
     assert str(raised.value) == f"a {verb} question is text plus its {key}, or a built question"
+    assert raised.value.kind == "usage"
+
+
+@pytest.mark.parametrize("wrong", [5, {"choose": "x"}])
+def test_a_decide_question_that_is_not_text_carries_the_usage_kind(wrong):
+    with pytest.raises(tt.UsageError) as raised:
+        tt.decide(wrong, "some evidence")
+    assert str(raised.value) == "the question is text or a built question from tt.question"
+    assert raised.value.kind == "usage"
 
 
 @pytest.mark.parametrize("verb", VERBS)
