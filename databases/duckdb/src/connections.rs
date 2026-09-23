@@ -195,19 +195,21 @@ pub(crate) fn register(database: ffi::duckdb_database) -> Result<ffi::duckdb_con
     Ok(raw)
 }
 
-/// 128 bits of OS randomness as hex: two independently seeded hashers'
-/// outputs, which the platform seeds from its own entropy pool. Not a
-/// cryptographic guarantee, but beyond enumeration, which is the
-/// review's bar — clock, counter, and PID are gone (review 4, finding 5).
-fn random_hex() -> String {
-    use std::hash::{BuildHasher, Hasher};
-    let mut hex = String::with_capacity(32);
-    for _ in 0..2 {
-        let mut hasher = std::hash::RandomState::new().build_hasher();
-        hasher.write_usize(0);
-        hex.push_str(&format!("{:016x}", hasher.finish()));
-    }
-    hex
+/// 128 bits of OS randomness as hex, read from `/dev/urandom` (Linux and
+/// macOS both carry it; no new dependency). The name and the marker are
+/// the identity's whole secret: a caller that learned another database's
+/// pair could attach it under its own instance and be routed there
+/// (review 4, finding 5), so they come from the kernel's generator, not
+/// from the standard library's hash-map keys, whose SipHash output of a
+/// fixed input shares one per-thread seed across every name this
+/// process mints (review 5, finding 7).
+fn random_hex() -> Result<String, String> {
+    use std::io::Read;
+    let mut bytes = [0_u8; 16];
+    std::fs::File::open("/dev/urandom")
+        .and_then(|mut source| source.read_exact(&mut bytes))
+        .map_err(|error| format!("the OS random source did not answer: {error}"))?;
+    Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
 }
 
 /// The uniquely named in-memory database attached as this instance's
@@ -222,8 +224,8 @@ fn random_hex() -> String {
 /// attach keeps `None` and is never routed to while other databases are
 /// loaded (no name fallback — finding 5, forge3).
 fn attach_probe(connection: ffi::duckdb_connection) -> Result<(String, String), String> {
-    let probe = format!("thinkthen_instance_{}", random_hex());
-    let marker = format!("thinkthen_marker_{}", random_hex());
+    let probe = format!("thinkthen_instance_{}", random_hex()?);
+    let marker = format!("thinkthen_marker_{}", random_hex()?);
     let sql = format!("ATTACH ':memory:' AS {probe}");
     let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
     let Ok(sql_c) = CString::new(sql) else {
@@ -1131,4 +1133,18 @@ pub(crate) fn with_registry_held<R>(body: impl FnOnce() -> R) -> R {
 /// leaves it: the data is still the registry or the gate.
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[cfg(test)]
+mod identity_tests {
+    /// The identity's names are 32 lowercase hex digits from the OS
+    /// source, and a thousand of them never repeat.
+    #[test]
+    fn the_identity_names_are_random_hex() {
+        let names: std::collections::HashSet<String> =
+            (0..1_000).map(|_| super::random_hex().expect("the OS source answers")).collect();
+        assert_eq!(names.len(), 1_000);
+        assert!(names.iter().all(|name| name.len() == 32
+            && name.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))));
+    }
 }
