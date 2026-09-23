@@ -26,6 +26,28 @@ it.
   toolchain directory, so a host toolchain that is not
   `stable-x86_64-unknown-linux-gnu` still works.
 
+## The DuckDB extension build's Python installs (review 4 follow-up)
+
+- **`duckdb==$(DUCKDB_TEST_VERSION)`** in the vendored
+  `extension-ci-tools/makefiles/c_api_extensions/base.Makefile`: the
+  variable is EMPTY by default ("latest stable on PyPI" per its own
+  comment), so the venv's duckdb floats unless the caller sets it. The
+  DuckDB surface's check.sh sets it: it exports
+  `DUCKDB_TEST_VERSION=$(tools/version.env)` beside
+  `DUCKDB_EXTENSION_MIN_DUCKDB_VERSION`, so the venv installs exactly
+  v1.5.5, the version the extension targets. The pin lives once, in
+  tools/version.env (review 4: the Makefile's own copy of the constant
+  is gone; it reads the same file).
+- **`git+https://duckdb/duckdb-sqllogictest-python@2ac8dbc0…`** (same
+  makefile): already commit-pinned, but a network fetch on first
+  provision. The sqllogictest runner is not on the DuckDB surface's
+  check path; the venv provision is the only network use, cold-cache
+  once, like every other first-provision above.
+- **`pip install packaging`** (same makefile): unpinned, on the venv
+  provision path only. Recorded here rather than editing the vendored
+  tool's makefile: the vendored tree is recorded upstream (see its
+  README) and gets its pins from upstream on re-vendor.
+
 ## Not pinnable here, with the reason
 
 - **ubuntu:24.04** (`databases/sqlite/package.sh`) and

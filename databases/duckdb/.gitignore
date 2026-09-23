@@ -13,3 +13,4 @@ tools/wire-run
 .cargo/registry
 dist
 tools/recognize-run
+target-panic/

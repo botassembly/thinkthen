@@ -8,8 +8,9 @@ EXTENSION_NAME=thinkthen
 # Note: currently extension-template-rs requires this, as duckdb-rs relies on unstable C API functionality
 USE_UNSTABLE_C_API=1
 
-# Target DuckDB version
-TARGET_DUCKDB_VERSION=v1.5.5
+# Target DuckDB version: the one pin is tools/version.env (review 4:
+# the Makefile kept its own copy of the same constant).
+TARGET_DUCKDB_VERSION=$(shell sed -n 's/^DUCKDB_VERSION=//p' tools/version.env)
 
 all: configure debug
 

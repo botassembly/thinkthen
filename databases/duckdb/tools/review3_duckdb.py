@@ -119,11 +119,14 @@ def main() -> int:
     hit, text = raises(
         con,
         f"SELECT * FROM thinkthen_relate('SELECT id, body FROM big', {rules})",
-        "8000000 records",
+        # Review 4, finding 8: the cap is enforced during the scan under
+        # a LIMIT, so the refusal names the cap and the 256th row it
+        # read, never the total a second execution would have counted.
+        "at most 255 records and 256 came",
     )
     elapsed = time.monotonic() - started
     failures += not check(
-        f"the 8-million-row cap names the count (refused in {elapsed:.1f}s)",
+        f"the 8-million-row cap refuses during the scan (in {elapsed:.1f}s)",
         hit and elapsed < 30,
         text[:90],
     )

@@ -9,8 +9,19 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 ROOT=$(cd .. && pwd)
-EXT="$ROOT/build/release/thinkthen.duckdb_extension"
+EXT="$ROOT/build/panic/thinkthen.duckdb_extension"
 CLI="$ROOT/duckdb-bin/duckdb"
+
+# The panic arm is compile-time (review 4): build the armed extension
+# once here, beside the default one the rest of the check loads.
+mkdir -p "$ROOT/build/panic"
+DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$(cat "$ROOT/tools/version.env" | grep -oP 'DUCKDB_VERSION=\K.*')" \
+  cargo build --locked --release --quiet --features test-panic \
+  --target-dir "$ROOT/target-panic" >/dev/null 2>&1 || { echo "FAILED   the panic-armed build"; exit 1; }
+"$ROOT/configure/venv/bin/python" "$ROOT/extension-ci-tools/scripts/append_extension_metadata.py" \
+  -o "$EXT" -l "$ROOT/target-panic/release/libthinkthen.so" \
+  -n thinkthen -dv "$(grep -oP 'DUCKDB_VERSION=\K.*' "$ROOT/tools/version.env")" \
+  -evf "$ROOT/configure/extension_version.txt" -pf "$ROOT/configure/platform.txt" --abi-type C_STRUCT_UNSTABLE >/dev/null
 
 armed() {
   local boundary=$1 sql=$2

@@ -8,6 +8,10 @@ cd "$(dirname "$0")"
 
 # The one DuckDB version pin (tools/version.env).
 source "$(dirname "$0")/tools/version.env"
+# The venv's duckdb installs the same pin, not "latest stable": the
+# vendored base makefile defaults its DUCKDB_TEST_VERSION to empty
+# (review 4's unpinned duckdb install).
+export DUCKDB_TEST_VERSION="$DUCKDB_VERSION"
 
 # Experimental on macOS: the library spelling below takes the Darwin form
 # (dylib); Linux is the gate's platform.

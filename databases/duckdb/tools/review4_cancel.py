@@ -37,9 +37,15 @@ def main() -> int:
     # Three rows whose per-row work is a 200M-element sum, so the
     # record cap does not bound the runtime and the interrupt has a
     # window to land mid-query.
+    # One row whose work is a 120k-step md5 chain (~5 s in this
+    # engine, and the optimizer cannot fold a hash chain into a
+    # constant the way it folded earlier synthetic shapes), so the
+    # record cap does not bound the runtime and the interrupt has a
+    # window to land mid-query.
     query = (
-        "SELECT i, ''refund please'' FROM range(3) t(i), "
-        "LATERAL (SELECT sum(w * w) FROM range(200000000) heavy(w)) slow(s)"
+        "SELECT 1, ''refund'' || h FROM (WITH RECURSIVE cnt(x, h) AS "
+        "(SELECT 1, ''seed'' UNION ALL SELECT x+1, md5(h) FROM cnt "
+        "WHERE x < 120000) SELECT h FROM cnt WHERE x = 120000) slow(h)"
     )
     outcomes: list[tuple[float, str]] = []
     lock = threading.Lock()
@@ -94,9 +100,10 @@ def main() -> int:
     except KeyboardInterrupt:
         live = [i for i, thread in enumerate(threads) if thread.is_alive()]
         detail = "the driver absorbed the host's own raise"
+    stopped_early = [took for took, _ in outcomes if took < 3.0]
     return verdict(
-        "cancel: one SIGINT stops both running relates",
-        not live and len(outcomes) == 2,
+        "cancel: one SIGINT stops both running relates, mid-query",
+        not live and len(outcomes) == 2 and len(stopped_early) == 2,
         detail or "neither relate returned before the join timed out",
     )
 

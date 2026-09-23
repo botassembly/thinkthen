@@ -836,3 +836,54 @@ the way: the empty budget slice starved the relations zip and the
 function answered `[]` for everything; the at-file suite caught it
 (zero file opens, a `not-a-spec` string answering instead of erroring)
 before it could land.
+
+## The fourth review's DuckDB wave, closed with its probes (2026-09-23)
+
+Items 4, 5, 6, 8, 9 and the first half of 13 are fixed, each with a
+probe that failed on the reviewed tip (`37240fd`) and passes on this
+tree — `tools/review4_fastpath.py` (the reaped database's caller read
+the next database's table; now the reload refusal), `tools/review4_forge.py`
+(both forgeries routed the attacker onto the victim; now refused, and a
+read-only database is never routed to while others load),
+`tools/review4_retired_read.py` (the read succeeded past the retired
+refusal; now refused), `tools/review4_rowcap.py` (the reviewed code
+crashed the probe outright; twelve trials now finish under 0.01 s with
+the cap visible), `tools/review4_details.py` (probability and sends
+read NULL, model read ''; now 0.97 and 1 and NULL), and
+`tools/review4_cancel.py` (one Ctrl-C left a queued relate running six
+seconds past the signal; the running query now dies at the interrupt
+and the queued one refuses before starting, both at one second).
+
+Item 13's remaining half is a boundary, recorded here instead of
+papered over: `con.interrupt()` interrupts the CALLER's task, and the
+stable C API offers no door from a client context into the query the
+kept connection is running. What the cap already bounds (rows) is
+bounded; a genuinely slow per-row query finishes its current run and
+the outer query cancels at the next chunk boundary. The SIGINT path
+bridges fully: the handler interrupts every busy kept connection
+through `duckdb_interrupt`.
+
+The leftovers this wave: `ENGINE_TEST_PANIC` is compile-time now
+(`--features test-panic`; the default build answers `true` under
+`ENGINE_TEST_PANIC=*` where it used to fire); the signal handler reads
+its host action through a OnceLock, never a mutex; warnings are zero;
+the Makefile reads the one pin from `tools/version.env`; the check
+exports `DUCKDB_TEST_VERSION` so the venv installs v1.5.5 instead of
+"latest stable", recorded in `scripts/gate-hermeticity.md` with the
+git-pinned sqllogictest fetch; the canonical-path cache keys on mtime
+so twenty thousand @file calls pay one stat each (the atfile suite's
+open-count proofs still green, and an edited file still re-reads).
+
+Open, with state: the logical-type leaks in `warm.rs` and `usage.rs`
+(handles not destroyed — the reviewer's lines moved under the parallel
+clippy pass; unfixed); the nine deprecated flat-API result sites
+(reading values through `duckdb_value_*` — working, unfixed);
+`tools/review4_rowcap.py` crashes this ctypes harness roughly one run
+in six AFTER all verdicts print — a layout-sensitive teardown
+corruption in the probe harness itself, not the extension (the same
+twelve trials run clean inline and in the other probes); and the
+review-3 suite's cap expectation was updated to the during-scan
+wording, which is the point of finding 8's fix.
+
+The full check at this tree: exit 0, 223 ok, wire skipped without the
+stub on 8217.

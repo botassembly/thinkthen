@@ -34,6 +34,11 @@ unimplemented = "deny"
 # conformance case can run against a fixture-armed build (check.sh builds
 # one beside the default extension); a shipped build never carries it.
 synthetic-partial = ["thinkthen-standin/synthetic-partial"]
+# The panic-containment test arm: off in every shipped build, on only in
+# the check's second build, exactly like the stand-in's fixture (review
+# 4: a shipped binary must not honor an environment variable that makes
+# a boundary panic).
+test-panic = []
 
 [dependencies]
 duckdb = { version = "~1.10505.0", features = ["loadable-extension", "vscalar", "vscalar-arrow"] }
