@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/tests/backend/exchan
 
 # 0072: Fail fast when a backend refuses a connection
 
-Status: verified; landing pending
+Status: landed
 
 ## Outcome and authority
 

@@ -1,6 +1,6 @@
 # 0072: Refused connections fail fast
 
-Status: Verified on the ticket branch after independent acceptance and the final sequential local ladder. Landing and pushed-main ancestry remain pending. GitHub Actions remains manually disabled; no hosted success is claimed.
+Status: Landed on main as `47650c1` after independent acceptance and the final sequential local ladder. Main was pushed and ancestry verified. GitHub Actions remains manually disabled; no hosted success is claimed.
 
 ## Result
 
