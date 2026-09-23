@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# The surfaces ratchet in a depth-1 clone names the shallow history
+# instead of blaming the grafted commit's message (surfaces-review-5).
+# The lint rung runs this before the real ratchet. The clone is local
+# (file://) and lives in a temporary directory removed on exit.
+set -euo pipefail
+REPO=$(cd "$(dirname "$0")/../.." && pwd)
+work=$(mktemp -d "${TMPDIR:-/tmp}/ratchet-shallow.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+git -C "$work" init -q .
+git -C "$work" fetch -q --depth 1 "file://$REPO" HEAD
+git -C "$work" checkout -q FETCH_HEAD
+cp "$REPO/sdlc/scripts/surfaces-ratchet.mjs" "$work/sdlc/scripts/surfaces-ratchet.mjs"
+status=0
+said=$(cd "$work" && node sdlc/scripts/surfaces-ratchet.mjs 2>&1) || status=$?
+want="surfaces-ratchet: the history is too shallow to find the commit that moved sdlc/surfaces-ratchet.json; fetch the full history (git fetch --unshallow, or fetch-depth: 0 in the checkout step)"
+if [ "$status" -ne 1 ] || [ "$said" != "$want" ]; then
+  echo "FAIL surfaces-ratchet in a shallow clone: exit $status, said: $said"
+  exit 1
+fi
+echo "ok:      the surfaces ratchet names a shallow history"

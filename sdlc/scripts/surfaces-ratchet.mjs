@@ -66,12 +66,23 @@ if (total !== max) {
 // compliant commit moves the ceiling again. In a tree without .git (a
 // frozen export) the check says so and skips only itself; the count
 // check above never skips.
+// In a shallow clone (actions/checkout fetches depth 1 by default) the
+// grafted root looks like the last mover of every file, and its message
+// is whatever commit was checked out (surfaces-review-5). The check then
+// fails for the wrong reason, so it names the real one.
+const git = (args) =>
+  execFileSync("git", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
 try {
-  const commit = execFileSync(
-    "git",
-    ["log", "-1", "--format=%B", "--", "sdlc/surfaces-ratchet.json"],
-    { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-  ).trim();
+  const mover = git(["log", "-1", "--format=%H", "--", "sdlc/surfaces-ratchet.json"]);
+  const grafted = mover !== "" && git(["rev-parse", "--is-shallow-repository"]) === "true" &&
+    git(["log", "-1", "--format=%P", mover]) === "";
+  if (grafted) {
+    console.error(
+      "surfaces-ratchet: the history is too shallow to find the commit that moved sdlc/surfaces-ratchet.json; fetch the full history (git fetch --unshallow, or fetch-depth: 0 in the checkout step)",
+    );
+    process.exit(1);
+  }
+  const commit = mover === "" ? "" : git(["log", "-1", "--format=%B", mover]);
   if (commit !== "") {
     const body = commit.split("\n\n").slice(1).join("\n\n").trim();
     if (body === "" || !/second agent/i.test(body)) {
