@@ -111,9 +111,10 @@ impl Drop for KeptGuard {
 
 /// One database's registry entry.
 struct Kept {
-    /// The database's own `current_database()` name, for messages and
-    /// the catalog a no-probe entry would once have matched by (never
-    /// a routing identity — review 4, finding 5's forgery).
+    /// The database's own `current_database()` name, kept for the
+    /// inspector; routing never reads it (review 4, finding 5's forgery
+    /// moved identity to the unforgeable probe).
+    #[allow(dead_code, reason = "kept for the inspector; routing is by probe")]
     name: String,
     /// The attached in-memory database that identifies this instance:
     /// `thinkthen_instance_<128-bit random hex>`, carrying the marker
@@ -448,8 +449,8 @@ fn kept_connection_id(connection: ffi::duckdb_connection) -> u64 {
         return 0;
     }
     let id = unsafe { ffi::duckdb_client_context_get_connection_id(context) } as u64;
-    let mut context = context;
-    unsafe { ffi::duckdb_destroy_client_context(&mut context) };
+    let mut held = context;
+    unsafe { ffi::duckdb_destroy_client_context(&mut held) };
     id
 }
 
@@ -479,8 +480,8 @@ pub(crate) fn file_read_refusal(path: &str) -> Option<String> {
             continue;
         }
         let refusal = read_refusal(context, path);
-        let mut context = context;
-        unsafe { ffi::duckdb_destroy_client_context(&mut context) };
+        let mut held = context;
+        unsafe { ffi::duckdb_destroy_client_context(&mut held) };
         if refusal.is_some() {
             return refusal;
         }
@@ -513,11 +514,8 @@ pub(crate) fn read_refusal(context: ffi::duckdb_client_context, path: &str) -> O
 /// Whether this context's database allows external file access, read
 /// through the DuckDB API so the database's own setting answers.
 pub(crate) fn external_access_enabled(context: ffi::duckdb_client_context) -> bool {
-    match option_bool(context, "enable_external_access") {
-        Some(enabled) => enabled,
-        // An option this DuckDB does not know cannot forbid anything.
-        None => true,
-    }
+    // An option this DuckDB does not know cannot forbid anything.
+    option_bool(context, "enable_external_access").unwrap_or(true)
 }
 
 /// Whether `disabled_filesystems` names the LocalFileSystem.
@@ -530,14 +528,46 @@ fn local_files_disabled(context: ffi::duckdb_client_context) -> bool {
         .unwrap_or(false)
 }
 
+/// The canonical-spelling cache: a path's canonical form keyed by its
+/// mtime, so twenty thousand @file calls over one file pay one stat each
+/// instead of a canonicalize walk apiece (review 4: 20,000 rows made
+/// 20,000 statx and readlink calls). A path whose mtime moved
+/// re-canonicalizes, so a symlink swap cannot be served stale.
+static CANON: Mutex<Vec<(String, std::time::SystemTime, String)>> = Mutex::new(Vec::new());
+
+/// The canonical spelling of `path`, from the cache when its mtime has
+/// not moved.
+fn canonical_of(path: &str) -> String {
+    let stamped = std::fs::metadata(path)
+        .and_then(|meta| meta.modified())
+        .ok();
+    if let Some(stamp) = stamped {
+        let mut cache = lock(&CANON);
+        if let Some((_, held, canonical)) = cache
+            .iter()
+            .find(|(held, held_stamp, _)| held == path && *held_stamp == stamp)
+        {
+            let _ = held;
+            return canonical.clone();
+        }
+        let canonical = std::fs::canonicalize(path)
+            .map(|real| real.to_string_lossy().replace('\\', "/"))
+            .unwrap_or_else(|_| path.replace('\\', "/"));
+        cache.retain(|(held, _, _)| held != path);
+        cache.push((path.to_owned(), stamp, canonical.clone()));
+        return canonical;
+    }
+    std::fs::canonicalize(path)
+        .map(|real| real.to_string_lossy().replace('\\', "/"))
+        .unwrap_or_else(|_| path.replace('\\', "/"))
+}
+
 /// Whether the path is one `allowed_paths` or `allowed_directories` names.
 /// The settings hold canonical paths with forward slashes; the path is
 /// canonicalized the same way before the comparison, falling back to its
 /// own text when it does not canonicalize.
 fn allowed_path(context: ffi::duckdb_client_context, path: &str) -> bool {
-    let canonical = std::fs::canonicalize(path)
-        .map(|real| real.to_string_lossy().replace('\\', "/"))
-        .unwrap_or_else(|_| path.replace('\\', "/"));
+    let canonical = canonical_of(path);
     if option_texts(context, "allowed_paths")
         .iter()
         .any(|allowed| allowed.replace('\\', "/") == canonical)
@@ -643,7 +673,7 @@ pub(crate) fn read_question_file(
     path: &str,
     caller: Option<ffi::duckdb_client_context>,
 ) -> Result<String, String> {
-    let outcome = match caller {
+    match caller {
         Some(context) => unsafe { read_through_file_system(context, path) },
         None => {
             let Some(held) = kept_context() else {
@@ -653,8 +683,7 @@ pub(crate) fn read_question_file(
             };
             unsafe { read_through_file_system(held.context(), path) }
         }
-    };
-    outcome
+    }
 }
 
 /// A holding-guarded kept connection, its context, and the gate that
@@ -664,8 +693,12 @@ pub(crate) fn read_question_file(
 /// the KeptGuard in here keeps the DbState — and with it the gate's
 /// mutex — alive exactly as long as this holder lives.
 pub(crate) struct HeldContext {
+    /// Held for drop alone: the guard keeps the state alive, the gate
+    /// holds the database's serialization for the context's whole life.
+    #[allow(dead_code, reason = "RAII fields; their Drop is the read")]
     guard: KeptGuard,
     context: ffi::duckdb_client_context,
+    #[allow(dead_code, reason = "RAII fields; their Drop is the read")]
     gate: std::sync::MutexGuard<'static, ()>,
 }
 
@@ -698,7 +731,14 @@ fn kept_context() -> Option<HeldContext> {
         return None;
     }
     Some(HeldContext {
-        gate: unsafe { std::mem::transmute(gate) },
+        // The gate's lifetime is 'static behind our holder; the guard
+        // ties it to the holder's own drop.
+        gate: unsafe {
+            std::mem::transmute::<
+                std::sync::MutexGuard<'_, ()>,
+                std::sync::MutexGuard<'static, ()>,
+            >(gate)
+        },
         guard,
         context,
     })
@@ -782,19 +822,6 @@ pub(crate) fn search_path_of(caller: ffi::duckdb_client_context) -> Option<Strin
     option_text(caller, "search_path")
 }
 
-/// Whether the caller's context resolves a catalog with this name.
-fn catalog_exists(caller: ffi::duckdb_client_context, name: &str) -> bool {
-    let Ok(name) = CString::new(name) else {
-        return false;
-    };
-    let mut catalog =
-        unsafe { ffi::duckdb_client_context_get_catalog(caller, name.as_ptr()) };
-    let exists = !catalog.is_null();
-    if exists {
-        unsafe { ffi::duckdb_destroy_catalog(&mut catalog) };
-    }
-    exists
-}
 
 /// The database's own name, through `current_database()` on its kept
 /// connection.
@@ -942,7 +969,6 @@ fn reap_once() -> usize {
         // Alone and unguarded: retire, remove, and disconnect under one
         // registry lock, with a final users re-check so a holding guard
         // that arrived under the lock is honored, not orphaned.
-        let connection = connection;
         let removed = {
             let mut kept = lock(&KEPT);
             if state.users.load(Ordering::Acquire) > 0 {

@@ -84,9 +84,9 @@ fn write_lists(output: &mut dyn WritableVector, found: &[Option<Recognized>]) {
         .sum();
     let mut lists = output.list_vector();
     let capacity = total.max(1);
-    let mut child = lists.struct_child(capacity);
-    let mut text = child.child(0, capacity);
-    let mut kind = child.child(1, capacity);
+    let child = lists.struct_child(capacity);
+    let text = child.child(0, capacity);
+    let kind = child.child(1, capacity);
     let mut starts = child.child(2, capacity);
     let mut ends = child.child(3, capacity);
     let mut strengths = child.child(4, capacity);

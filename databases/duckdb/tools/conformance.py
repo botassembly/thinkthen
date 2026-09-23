@@ -140,6 +140,15 @@ def main() -> int:
         if verb == "relate":
             check_relate(name, case)
             continue
+        # A question-set file case: this surface's own door, @path, where
+        # the error the file cannot produce becomes the local kind's own
+        # refusal (the table stopped skipping local cases for the file
+        # doors — surfaces-review-4).
+        if "question_file" in case:
+            file_arg = sql_string("@" + case["question_file"])
+            wanted = f"thinkthen {case['expect']['error']['kind']}"
+            check_error(name, f"SELECT thinkthen_decide({file_arg}, {sql_string(case.get('evidence') or '')});", wanted)
+            continue
         question = case["question"]
         expect = case["expect"]
         kind = question.get("choose", question.get("score", question.get("tag", question.get("decide"))))

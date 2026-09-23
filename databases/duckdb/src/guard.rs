@@ -16,6 +16,7 @@
 //! than a missing row.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
+#[cfg(feature = "test-panic")]
 use std::sync::OnceLock;
 
 use thinkthen_contract::panic_text;
@@ -63,8 +64,10 @@ pub(crate) fn contained_with<T>(what: &str, fallback: T, body: impl FnOnce() -> 
 
 /// The test-only arm: `ENGINE_TEST_PANIC` names one boundary to panic
 /// in, so the surface check proves a panic inside a callback becomes a
-/// query error and a live process. Unset in every production process,
-/// where the check costs one `OnceLock` read per callback.
+/// query error and a live process. Compile-time gated: a shipped build
+/// carries no arm at all, so no environment variable can make a
+/// boundary panic (review 4).
+#[cfg(feature = "test-panic")]
 pub(crate) fn test_arm(what: &str) {
     static ARMED: OnceLock<Option<String>> = OnceLock::new();
     let armed = ARMED.get_or_init(|| std::env::var("ENGINE_TEST_PANIC").ok());
@@ -72,6 +75,9 @@ pub(crate) fn test_arm(what: &str) {
         panic!("the test arm fired for {what}");
     }
 }
+
+#[cfg(not(feature = "test-panic"))]
+pub(crate) fn test_arm(_what: &str) {}
 
 /// One contained panic, as the message every channel carries: the
 /// contract's one panic-to-text, not a local copy (review 3: the

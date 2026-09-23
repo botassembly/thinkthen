@@ -209,10 +209,10 @@ unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
 }
 
 unsafe extern "C" fn init(info: ffi::duckdb_init_info) {
-    if let Err(message) = guard::contained("relate init", || unsafe { init_scan(info) }) {
-        if let Ok(text) = CString::new(message) {
-            unsafe { ffi::duckdb_init_set_error(info, text.as_ptr()) };
-        }
+    if let Err(message) = guard::contained("relate init", || unsafe { init_scan(info) })
+        && let Ok(text) = CString::new(message)
+    {
+        unsafe { ffi::duckdb_init_set_error(info, text.as_ptr()) };
     }
 }
 
@@ -235,6 +235,10 @@ unsafe fn init_scan(info: ffi::duckdb_init_info) -> Result<(), String> {
 /// Emit the edges, up to one vector per call; the first call builds them.
 /// The callback is contained: a panic becomes the scan's error.
 unsafe extern "C" fn function(info: ffi::duckdb_function_info, output: ffi::duckdb_data_chunk) {
+    // The scan counts as a live call, so an interrupt cancels the token
+    // for the queued check below beside interrupting the running query
+    // (review 4, finding 13).
+    let _in_flight = crate::scan_in_flight();
     if let Err(message) = guard::contained("relate scan", || unsafe { scan(info, output) }) {
         if let Ok(text) = CString::new(message) {
             unsafe { ffi::duckdb_function_set_error(info, text.as_ptr()) };
@@ -322,6 +326,18 @@ fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String>
         }
     }
     let _busy = BusyGuard(&bind.connection);
+    // A call that reached this gate after the interrupt fired refuses
+    // before running its query: the bridge stopped the query that was
+    // running, and this stops the one that was queued behind the gate
+    // (review 4, finding 13's queued half). The check sits AFTER the
+    // gate is held, so a waiting call re-decides with the token's live
+    // state, not the one it entered with.
+    if crate::cancel_pending() {
+        return Err(
+            "thinkthen interrupted: this relate was waiting when the cancel arrived and did not run its query"
+                .into(),
+        );
+    }
     let records = unsafe { run_query(bind) }.map_err(|message| boundary_note(bind, message))?;
     if records.is_empty() {
         // No records, no pairs, nothing to ask: zero edges is arithmetic,
@@ -513,8 +529,8 @@ unsafe fn ensure_select_statement(
         return Err(format!("thinkthen usage: the relate query failed: {text}"));
     }
     let kind = unsafe { ffi::duckdb_prepared_statement_type(prepared) };
-    let mut prepared = prepared;
-    unsafe { ffi::duckdb_destroy_prepare(&mut prepared) };
+    let mut held_prepare = prepared;
+    unsafe { ffi::duckdb_destroy_prepare(&mut held_prepare) };
     if kind != ffi::duckdb_statement_type_DUCKDB_STATEMENT_TYPE_SELECT {
         return Err(format!(
             "thinkthen usage: the relate query must be a SELECT; this one is a {} statement, and relate reads records, it does not write files, attach databases, change settings, or load extensions",
@@ -527,6 +543,7 @@ unsafe fn ensure_select_statement(
 /// The statement kind's own name, for the refusal a non-SELECT earns.
 fn statement_kind_name(kind: ffi::duckdb_statement_type) -> &'static str {
     use ffi::*;
+    #[allow(non_upper_case_globals, reason = "duckdb's generated constant names")]
     match kind {
         duckdb_statement_type_DUCKDB_STATEMENT_TYPE_INSERT => "INSERT",
         duckdb_statement_type_DUCKDB_STATEMENT_TYPE_UPDATE => "UPDATE",

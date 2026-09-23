@@ -188,6 +188,23 @@ impl InFlight {
     }
 }
 
+/// The relate scan's in-flight guard: the scan counts as a live call
+/// AND installs the cancel token, so the interrupt handler cancels it
+/// beside interrupting the busy kept connections, and a relate queued
+/// behind the gate can see the cancellation before it starts its own
+/// query (review 4, finding 13's queued half).
+pub(crate) struct ScanFlight {
+    _in_flight: InFlight,
+    _token: &'static Cancel,
+}
+
+pub(crate) fn scan_in_flight() -> ScanFlight {
+    ScanFlight {
+        _in_flight: InFlight::new(),
+        _token: current_cancel(),
+    }
+}
+
 impl Drop for InFlight {
     fn drop(&mut self) {
         if IN_FLIGHT.fetch_sub(1, Ordering::SeqCst) == 1 {
@@ -200,11 +217,12 @@ impl Drop for InFlight {
 /// an interrupt that reached its query, or reached none, is over with it.
 /// Mid-burst the token stays, because the query's next call serves it.
 fn clear_finished_cancel() {
-    if let Some(token) = live_cancel() {
-        if token.is_cancelled() && !burst_active() {
-            CANCEL_CONSUMED.store(false, Ordering::SeqCst);
-            install_cancel();
-        }
+    if let Some(token) = live_cancel()
+        && token.is_cancelled()
+        && !burst_active()
+    {
+        CANCEL_CONSUMED.store(false, Ordering::SeqCst);
+        install_cancel();
     }
 }
 
@@ -234,6 +252,15 @@ fn current_cancel() -> &'static Cancel {
         return token;
     }
     install_cancel()
+}
+
+/// Whether a cancelled token is live: a call that reaches the gate
+/// after the interrupt fired must refuse before running its query, not
+/// start six seconds of work nobody asked for anymore (review 4,
+/// finding 13's queued half: the bridge stops the RUNNING query, and
+/// this check stops the QUEUED one).
+pub(crate) fn cancel_pending() -> bool {
+    live_cancel().is_some_and(|token| token.is_cancelled())
 }
 
 /// The live token, when one exists, without installing anything.
@@ -270,7 +297,7 @@ fn install_cancel() -> &'static Cancel {
 /// stops the install entirely (review 3, finding 13: `libc::signal`
 /// replaced the disposition, and an `SA_SIGINFO` host handler received
 /// garbage arguments).
-static HOST_ACTION: Mutex<Option<libc::sigaction>> = Mutex::new(None);
+static HOST_ACTION: std::sync::OnceLock<Option<libc::sigaction>> = std::sync::OnceLock::new();
 
 /// Whether the handler is already installed, so a second LOAD does not
 /// chain a handler to itself.
@@ -286,27 +313,26 @@ extern "C" fn on_interrupt(
     info: *mut libc::siginfo_t,
     context: *mut libc::c_void,
 ) {
-    if let Some(token) = live_cancel() {
-        if !token.is_cancelled() && (IN_FLIGHT.load(Ordering::SeqCst) > 0 || burst_active()) {
-            SIGNAL_AT.store(now_ms(), Ordering::SeqCst);
-            token.cancel();
-        }
+    if let Some(token) = live_cancel()
+        && !token.is_cancelled()
+        && (IN_FLIGHT.load(Ordering::SeqCst) > 0 || burst_active())
+    {
+        SIGNAL_AT.store(now_ms(), Ordering::SeqCst);
+        token.cancel();
     }
     // Every kept connection running a relate query is interrupted too,
     // so one Ctrl-C stops both of two concurrent relates and reaches a
     // slow relate the caller's own interrupt cannot (review 4, finding
     // 13: the query runs on the kept connection, not the caller's).
     crate::connections::interrupt_busy();
-    let host = match HOST_ACTION
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .as_ref()
-    {
-        Some(host) => *host,
+    // A OnceLock read locks nothing: taking a mutex in a signal
+    // handler can deadlock against the thread the signal interrupted
+    // (review 4).
+    let Some(Some(host)) = HOST_ACTION.get().map(|action| action.to_owned()) else {
         // Installed without a recorded host action: nothing to chain.
-        None => return,
+        return;
     };
-    if host.sa_sigaction == libc::SIG_DFL as usize {
+    if host.sa_sigaction == libc::SIG_DFL {
         // The host ran on the default action: restore it and re-raise,
         // so the signal still terminates the process as the host chose.
         unsafe {
@@ -339,22 +365,20 @@ unsafe fn install_interrupt_handler() {
     // The activity clock starts now, long before any handler can read it.
     let _ = now_ms();
     let mut action: libc::sigaction = unsafe { std::mem::zeroed() };
-    action.sa_sigaction = on_interrupt as usize;
+    action.sa_sigaction = on_interrupt as extern "C" fn(libc::c_int, *mut libc::siginfo_t, *mut libc::c_void) as usize;
     action.sa_flags = libc::SA_SIGINFO;
     unsafe { libc::sigemptyset(&mut action.sa_mask) };
     let mut previous: libc::sigaction = unsafe { std::mem::zeroed() };
     if unsafe { libc::sigaction(libc::SIGINT, &action, &mut previous) } != 0 {
         return;
     }
-    if previous.sa_sigaction == libc::SIG_IGN as usize {
+    if previous.sa_sigaction == libc::SIG_IGN {
         // The host ignored SIGINT: put its action back untouched.
         unsafe { libc::sigaction(libc::SIGINT, &previous, std::ptr::null_mut()) };
         HANDLER_SET.store(false, Ordering::SeqCst);
         return;
     }
-    *HOST_ACTION
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(previous);
+    let _ = HOST_ACTION.set(Some(previous));
 }
 
 /// A contract failure as the SQL error a reader sees, with the kind and
@@ -415,10 +439,10 @@ pub(crate) fn question_text_cached(path: &str) -> Result<String, String> {
         .unwrap_or_else(|_| path.to_owned());
     if let Some(stamp) = stamp {
         let cached = QUESTION_TEXTS.lock().expect("the file cache");
-        if let Some((held, text)) = cached.get(&key) {
-            if *held == stamp {
-                return Ok(text.clone());
-            }
+        if let Some((held, text)) = cached.get(&key)
+            && *held == stamp
+        {
+            return Ok(text.clone());
         }
     }
     let text = connections::read_question_file(path, None)?;
@@ -441,10 +465,10 @@ fn question_from_file(path: &str) -> Result<Question, String> {
         .unwrap_or_else(|_| path.to_owned());
     if let Some(stamp) = stamp {
         let cached = QUESTION_FILES.lock().expect("the file cache");
-        if let Some((held, question)) = cached.get(&key) {
-            if *held == stamp {
-                return Ok(question.clone());
-            }
+        if let Some((held, question)) = cached.get(&key)
+            && *held == stamp
+        {
+            return Ok(question.clone());
         }
     }
     let text = connections::read_question_file(path, None)?;
@@ -748,9 +772,9 @@ impl VScalar for DecideScalar {
         {
             let mut out = output.flat_vector();
             let values = unsafe { out.as_mut_slice_with_len::<bool>(len) };
-            for i in 0..len {
+            for (i, place) in values.iter_mut().enumerate() {
                 if let Some(value) = row_value(i) {
-                    values[i] = value;
+                    *place = value;
                 }
             }
         }
@@ -789,7 +813,7 @@ fn judged_rows(distinct: &Distinct) -> std::result::Result<Vec<Option<Answer>>, 
             .iter()
             .map(|slot| distinct.pairs[*slot].1.as_str())
             .collect();
-        let budget = slots.first().map(|slot| distinct.budgets[*slot]).flatten();
+        let budget = slots.first().and_then(|slot| distinct.budgets.get(*slot)).copied().flatten();
         for (slot, judgment) in slots
             .iter()
             .zip(judged_with(&distinct.questions[question_at], &texts, budget)?)
@@ -826,7 +850,7 @@ impl VScalar for ProbabilityScalar {
                 .iter()
                 .map(|slot| distinct.pairs[*slot].1.as_str())
                 .collect();
-            let budget = slots.first().map(|slot| distinct.budgets[*slot]).flatten();
+            let budget = slots.first().and_then(|slot| distinct.budgets.get(*slot)).copied().flatten();
             for (slot, judgment) in slots
                 .iter()
                 .zip(judged_with(&distinct.questions[question_at], &texts, budget)?)
@@ -840,9 +864,9 @@ impl VScalar for ProbabilityScalar {
         {
             let mut out = output.flat_vector();
             let slice = unsafe { out.as_mut_slice_with_len::<f64>(len) };
-            for i in 0..len {
+            for (i, place) in slice.iter_mut().enumerate() {
                 if let Some(number) = row_value(i) {
-                    slice[i] = number;
+                    *place = number;
                 }
             }
         }
@@ -958,9 +982,9 @@ impl VScalar for ScoreScalar {
         {
             let mut out = output.flat_vector();
             let slice = unsafe { out.as_mut_slice_with_len::<f64>(len) };
-            for i in 0..len {
+            for (i, place) in slice.iter_mut().enumerate() {
                 if let Some(score) = row_value(i) {
-                    slice[i] = score;
+                    *place = score;
                 }
             }
         }
@@ -1298,17 +1322,18 @@ impl VScalar for DetailsScalar {
             // and sends read NULL beside real values). The value lands,
             // then the null covers only what stayed absent.
             let values = unsafe { child.as_mut_slice_with_len::<f64>(len) };
-            for i in 0..len {
-                values[i] = 0.0;
+            for value in values.iter_mut() {
+                *value = 0.0;
             }
             for (i, slot) in distinct.slots.iter().enumerate() {
-                if let Some(row) = slot.and_then(|slot| trail[slot].as_ref()) {
-                    if let Some(number) = row.probability {
-                        values[i] = number;
-                    }
+                if let Some(row) = slot.and_then(|slot| trail[slot].as_ref())
+                    && let Some(number) = row.probability
+                {
+                    values[i] = number;
                 }
             }
-            drop(values);
+            // The slice's borrow ends here; the explicit drop was a
+            // no-op on a reference (surfaces-review-4).
             for (i, slot) in distinct.slots.iter().enumerate() {
                 if slot.and_then(|slot| trail[slot].as_ref()).and_then(|row| row.probability)
                     .is_none()
@@ -1371,17 +1396,18 @@ impl VScalar for DetailsScalar {
             // finding 9): the value lands, then the null covers only
             // what stayed absent.
             let values = unsafe { child.as_mut_slice_with_len::<u64>(len) };
-            for i in 0..len {
-                values[i] = 0;
+            for value in values.iter_mut() {
+                *value = 0;
             }
             for (i, slot) in distinct.slots.iter().enumerate() {
-                if let Some(row) = slot.and_then(|slot| trail[slot].as_ref()) {
-                    if let Some(sends) = row.sends {
-                        values[i] = sends;
-                    }
+                if let Some(row) = slot.and_then(|slot| trail[slot].as_ref())
+                    && let Some(sends) = row.sends
+                {
+                    values[i] = sends;
                 }
             }
-            drop(values);
+            // The slice's guard ends with the block; the explicit drop
+            // was a no-op on a reference (surfaces-review-4).
             for (i, slot) in distinct.slots.iter().enumerate() {
                 if slot.and_then(|slot| trail[slot].as_ref()).and_then(|row| row.sends)
                     .is_none()
@@ -1460,6 +1486,10 @@ impl VScalar for DetailsScalar {
 /// The entrypoint is contained like the other C boundaries: a panic
 /// during load becomes a load error, never an abort.
 #[unsafe(no_mangle)]
+/// # Safety
+///
+/// DuckDB calls this at LOAD with its own extension info and access
+/// table; the pointers are valid for the call's duration only.
 pub unsafe extern "C" fn thinkthen_init_c_api(
     info: ffi::duckdb_extension_info,
     access: *const ffi::duckdb_extension_access,
@@ -1497,10 +1527,10 @@ unsafe fn report_load_error(
         if access.is_null() {
             return;
         }
-        if let Some(set_error) = (*access).set_error {
-            if let Ok(text) = std::ffi::CString::new(message) {
-                set_error(info, text.as_ptr());
-            }
+        if let Some(set_error) = (*access).set_error
+            && let Ok(text) = std::ffi::CString::new(message)
+        {
+            set_error(info, text.as_ptr());
         }
     }
 }
@@ -1514,9 +1544,8 @@ unsafe fn init(
     if !unsafe { ffi::duckdb_rs_extension_api_init(info, access, "v1.5.5") }? {
         return Ok(());
     }
-    let get_database = unsafe { (*access) }
-        .get_database
-        .ok_or("the extension access names no get_database")?;
+    let get_database =
+        unsafe { (*access).get_database }.ok_or("the extension access names no get_database")?;
     let database = unsafe { *get_database(info) };
     let connection = unsafe { Connection::open_from_raw(database) }?;
     connection.register_scalar_function::<DecideScalar>("thinkthen_decide")?;

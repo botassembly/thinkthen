@@ -24,10 +24,11 @@ unsafe extern "C" fn drop_flag(payload: *mut c_void) {
 /// function itself carries no result-column call on this API. The
 /// callback is contained: a panic becomes the bind error.
 unsafe extern "C" fn bind(info: ffi::duckdb_bind_info) {
-    if let Err(message) = guard::contained("usage bind", || unsafe { plan(info) }) {
-        if let Ok(text) = CString::new(message) {
-            unsafe { ffi::duckdb_bind_set_error(info, text.as_ptr()) };
-        }
+    let outcome = guard::contained("usage bind", || unsafe { plan(info) }).err();
+    if let Some(message) = outcome
+        && let Ok(text) = CString::new(message)
+    {
+        unsafe { ffi::duckdb_bind_set_error(info, text.as_ptr()) };
     }
 }
 
@@ -48,10 +49,11 @@ unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
 
 /// Init: one emitted flag per scan, contained like its siblings.
 unsafe extern "C" fn init(info: ffi::duckdb_init_info) {
-    if let Err(message) = guard::contained("usage init", || unsafe { init_scan(info) }) {
-        if let Ok(text) = CString::new(message) {
-            unsafe { ffi::duckdb_init_set_error(info, text.as_ptr()) };
-        }
+    let outcome = guard::contained("usage init", || unsafe { init_scan(info) }).err();
+    if let Some(message) = outcome
+        && let Ok(text) = CString::new(message)
+    {
+        unsafe { ffi::duckdb_init_set_error(info, text.as_ptr()) };
     }
 }
 

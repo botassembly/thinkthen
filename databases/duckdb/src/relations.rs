@@ -20,7 +20,7 @@ use duckdb::vscalar::{ScalarFunctionSignature, VScalar};
 use duckdb::vtab::arrow::WritableVector;
 use thinkthen_contract::{Error as EngineError, Recognize};
 
-use crate::{engine_call, failure, options, read_strings};
+use crate::{engine_call, failure, read_strings};
 
 /// One relation as a row-shaped struct.
 type RelationRow = (String, String, String, String, String, f64);
@@ -147,12 +147,12 @@ fn write_lists(output: &mut dyn WritableVector, found: &[Option<Vec<RelationRow>
     let total: usize = found.iter().flatten().map(Vec::len).sum();
     let mut lists = output.list_vector();
     let capacity = total.max(1);
-    let mut child = lists.struct_child(capacity);
-    let mut name = child.child(0, capacity);
-    let mut source_text = child.child(1, capacity);
-    let mut source_kind = child.child(2, capacity);
-    let mut target_text = child.child(3, capacity);
-    let mut target_kind = child.child(4, capacity);
+    let child = lists.struct_child(capacity);
+    let name = child.child(0, capacity);
+    let source_text = child.child(1, capacity);
+    let source_kind = child.child(2, capacity);
+    let target_text = child.child(3, capacity);
+    let target_kind = child.child(4, capacity);
     let mut probabilities = child.child(5, capacity);
     let mut values: Vec<&RelationRow> = Vec::with_capacity(total);
     let mut entries: Vec<Option<(usize, usize)>> = Vec::with_capacity(found.len());
