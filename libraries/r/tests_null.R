@@ -237,6 +237,16 @@ check("a negative integer deadline is usage", identical(
 check("an NA integer deadline is usage", identical(
   tryCatch(tt_decide("Q?", "refund me", deadline = NA_integer_), thinkthen_error = function(e) conditionMessage(e)),
   "the deadline is NA: pass -1 for no deadline, seconds as a number, or NULL"))
+# A classed value is not seconds: a factor's integer is its level code,
+# and a difftime carries its own unit (the seventh review's verifier
+# found factor("5") read as one second).
+classed_message <- "the deadline is seconds as a number, -1 for no deadline, or NULL"
+check("a factor deadline is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = factor("5")), thinkthen_error = function(e) conditionMessage(e)),
+  classed_message))
+check("a difftime deadline is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = as.difftime(1, units = "mins")), thinkthen_error = function(e) conditionMessage(e)),
+  classed_message))
 
 # the counters count sends. No reset exists (ruling 4): the difference
 # across the three sends carries the same proof.
