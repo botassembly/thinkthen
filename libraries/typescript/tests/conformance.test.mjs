@@ -341,7 +341,7 @@ async function runVerb(held, spec, text, list, call) {
 }
 
 test('the conformance slice runs against the null backend', async () => {
-  assert.ok(file.cases.length >= 84, `the conformance file must carry its cases: ${file.cases.length}`);
+  assert.ok(file.cases.length >= 83, `the conformance file must carry its cases: ${file.cases.length}`);
   const results = {};
   for (const one of file.cases) {
     try {

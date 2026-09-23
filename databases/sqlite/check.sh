@@ -118,6 +118,9 @@ ENGINE_NULL=1 python3 tests/tvf_suite.py
 echo "== sqlite surface: conformance slice, offline"
 ENGINE_NULL=1 python3 tests/conformance_driver.py
 
+echo "== sqlite surface: a refused case fails by name"
+ENGINE_NULL=1 python3 tests/test_conformance_driver_fail.py
+
 if curl -sf --max-time 1 http://127.0.0.1:8218/v1/stats >/dev/null 2>&1; then
     echo "== sqlite surface: wire suite against the stub on 8218"
     curl -s -X POST http://127.0.0.1:8218/v1/reset >/dev/null

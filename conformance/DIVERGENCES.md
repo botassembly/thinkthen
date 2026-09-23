@@ -91,12 +91,9 @@ pages:
   naming the rule and the covered set, so the deck's samples as written
   cannot run against the stand-in until the deck or a new recording aligns
   the name. The finding is the name, not the shape.
-- **The per-subject relate arm is pinned, not replayed.** R03 and R04 share
-  one text byte for byte. The stand-in serves the method-H recording of
-  those records (`conformance/relate-h`, set `staff-10`, the ruled method),
-  so the R03 case carries `"form": "per-subject"` and a note, and both the
-  validator and the Rust replay test skip it after asserting the marking.
-  Every other relate case replays exactly.
+- **The per-subject relate arm is retired (2026-09-23).** It held a method
+  main no longer uses, and its records now answer from the method-H
+  recording in case `71-relate-staff`. Every relate case replays exactly.
 - **The recordings carry no failed-question cases**, so the build team's
   failed marker (`{"failed": {"kind", "cause"}}`) is unexercised by the
   replay; nothing here fabricates one.

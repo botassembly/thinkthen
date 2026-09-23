@@ -37,7 +37,7 @@ static const char SENTENCE[] =
 static const char EMOJI[] = "Le café 😀 Maria Chen arrived.";
 
 /* The four alerts, recorded as one text; the method-H relate answer at the
- * 0.7 bar: caused_by 1 -> 4 at 0.71 and caused_by 2 -> 4 at 0.73. */
+ * 0.68 bar: caused_by 1 -> 4 at 0.71 and caused_by 2 -> 4 at 0.73. */
 static const char *ALERTS[4] = {
     "Alert 1: Checkout returns 500 at the payment step.",
     "Alert 2: Card charges are failing for every customer.",
@@ -60,7 +60,7 @@ static const char SPEC_DECK[] =
 static const char SPEC_EMOJI[] = "{\"kinds\": [\"person\"]}";
 static const char SPEC_RELATE[] =
     "{\"relations\": [{\"name\": \"caused_by\", \"source\": \"*\", \"target\": \"*\"}],"
-    " \"either\": [\"same_as\"], \"threshold\": 0.7}";
+    " \"either\": [\"same_as\"], \"threshold\": 0.68}";
 
 static int contains(const char *haystack, const char *needle) {
     return strstr(haystack, needle) != NULL;

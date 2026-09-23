@@ -123,7 +123,6 @@ fn every_case_replays_exactly() {
     let engine = engine();
     let mut recognize_cases = 0;
     let mut relate_cases = 0;
-    let mut per_subject_skipped = 0;
     for case in data["cases"].as_array().expect("cases") {
         let verb = case["verb"].as_str().expect("verb");
         match verb {
@@ -157,15 +156,6 @@ fn every_case_replays_exactly() {
                 assert!(case["pairs"].is_u64(), "{} pairs pinned", case["id"]);
             }
             "relate" => {
-                if case.get("form").and_then(Value::as_str) == Some("per-subject") {
-                    // The per-subject arm shares its records with the
-                    // method-H staff set, and the ruled relate asks method
-                    // H; the stand-in serves that recording, so this case
-                    // is pinned for the record and skipped in the replay,
-                    // recorded in DIVERGENCES.md.
-                    per_subject_skipped += 1;
-                    continue;
-                }
                 relate_cases += 1;
                 let ask = build_relate(&case["question"]);
                 let records: Vec<&str> = case["records"]
@@ -190,9 +180,7 @@ fn every_case_replays_exactly() {
         }
     }
     assert_eq!(recognize_cases, 41, "forty recorded cases plus the offset case");
-    assert_eq!(relate_cases, 3, "the alerts, founders, and staff sets replay by method H; R03 is the skipped per-subject arm");
-    assert_eq!(relate_cases + per_subject_skipped, 4, "every relate arm is accounted for");
-    assert_eq!(per_subject_skipped, 1, "the per-subject arm is the one skip");
+    assert_eq!(relate_cases, 3, "the alerts, founders, and staff sets replay by method H, none skipped");
 }
 
 fn edges_json_has_from(edges: &[Edge]) -> bool {
@@ -224,7 +212,7 @@ fn the_door_json_carries_the_ruled_names() {
     assert!(!json.contains("\"confidence\""), "{json}");
 }
 
-/// The alerts' relate call at the 0.7 bar returns the two sound edges
+/// The alerts' relate call at the 0.68 bar returns the two sound edges
 /// under method H, the first from record 1 to record 4.
 #[test]
 fn the_high_bar_keeps_the_sound_edges() {
@@ -234,7 +222,7 @@ fn the_high_bar_keeps_the_sound_edges() {
         .expect("a legal rule")
         .either("same_as", Kind::Any)
         .expect("a legal rule")
-        .threshold(0.7)
+        .threshold(0.68)
         .expect("a legal threshold");
     let records = [
         "Checkout returns 500 at the payment step.",

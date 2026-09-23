@@ -1581,6 +1581,7 @@
  "relate": [
   {
    "id": "H-alerts",
+   "case": "69-relate-alerts",
    "replaces": [
     "R01-demo"
    ],
@@ -1807,6 +1808,7 @@
   },
   {
    "id": "H-founders-24",
+   "case": "70-relate-founders",
    "replaces": [
     "R02-pickone"
    ],
@@ -13999,6 +14001,7 @@
   },
   {
    "id": "H-staff-10",
+   "case": "71-relate-staff",
    "replaces": [
     "R04-pairs-10",
     "R03-persubject-10"
@@ -15022,6 +15025,7 @@
   },
   {
    "id": "H-s2-contradictions",
+   "case": null,
    "replaces": [],
    "requests": [
     ".thinkthen-backend",
@@ -15658,6 +15662,7 @@
   },
   {
    "id": "H-s3-cause-chain",
+   "case": null,
    "replaces": [],
    "requests": [
     ".thinkthen-backend",

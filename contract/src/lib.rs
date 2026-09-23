@@ -2026,8 +2026,8 @@ pub trait Engine: Send + Sync {
         options: Options<'_>,
     ) -> Result<Recognized, Error>;
 
-    /// Say how every record relates to the others: one pick-one question
-    /// per legal pair, all records crossing at once.
+    /// Say how every record relates to the others: one yes/no question per
+    /// legal pair per relation, all records crossing at once.
     ///
     /// More than [`MAX_RELATE_RECORDS`] records is a usage error before
     /// anything happens; [`relate_checked`] enforces that for every caller

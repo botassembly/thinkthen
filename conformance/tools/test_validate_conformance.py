@@ -148,6 +148,29 @@ def test_skip_table_entries_are_checked():
     )
 
 
+def test_an_unrecorded_request_id_fails():
+    """A case must name only requests its replay-table row recorded. A
+    request id the table does not hold means the case outlived its row."""
+    data = json.loads(CASES.read_text())
+    changed = None
+    for case in data["cases"]:
+        if case["verb"] in ("relate", "recognize") and case["requests"]:
+            case["requests"][0] = "0" * 64
+            changed = case["id"]
+            break
+    with tempfile.TemporaryDirectory() as scratch:
+        copy = pathlib.Path(scratch) / "unrecorded.json"
+        copy.write_text(json.dumps(data))
+        done = run([str(copy)], scratch)
+    report(
+        "a request id the replay table does not hold fails the check",
+        changed is not None and done.returncode == 1
+        and f"{changed} requests are recorded in the replay table" in (done.stdout + done.stderr),
+        f"exit {done.returncode}, wanted {changed!r} named: "
+        f"{(done.stdout + done.stderr).strip()[:200]}",
+    )
+
+
 def main():
     test_default_from_repo_root()
     test_explicit_relative_path()
@@ -156,6 +179,7 @@ def main():
     test_missing_file_reports_cleanly()
     test_wrong_case_count_fails()
     test_skip_table_entries_are_checked()
+    test_an_unrecorded_request_id_fails()
     if FAILURES:
         print(f"{FAILURES} checker test(s) failed")
         return 1

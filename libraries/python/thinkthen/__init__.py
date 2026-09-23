@@ -283,7 +283,7 @@ def relate(records, *, relations=None, either=None, threshold=None, on=None,
     The slide's call, at the bar that keeps the two sound edges::
 
         edges = tt.relate(alerts, relations=["caused_by"],
-                          either=["same_as"], threshold=0.7)
+                          either=["same_as"], threshold=0.68)
         edges[0].name, edges[0].source, edges[0].target  # "caused_by", 1, 4
 
     Every record crosses at once, and more than 255 records refuses with a

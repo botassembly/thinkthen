@@ -1534,8 +1534,8 @@ fn recognize_stream(
     Ok(arrow::ArrowFrame::new(table))
 }
 
-/// Say how the records relate to each other: one pick-one question per
-/// legal pair, every record crossing at once. More than 255 records is a
+/// Say how the records relate to each other: one yes/no question per
+/// legal pair per relation, every record crossing at once. More than 255 records is a
 /// usage error before anything happens. `relations` is a list of names or
 /// name-to-pair mappings, or a question file path; `either` names the
 /// both-ways rules.

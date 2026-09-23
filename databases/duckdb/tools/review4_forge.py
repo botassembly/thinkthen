@@ -37,8 +37,8 @@ def fill(harness, con, case: dict) -> str:
 
 def main() -> int:
     harness = Harness()
-    first = case_by_id("69-relate-R01-demo")
-    second = case_by_id("70-relate-R02-pickone")
+    first = case_by_id("69-relate-alerts")
+    second = case_by_id("70-relate-founders")
 
     with tempfile.TemporaryDirectory() as tmp:
         victim_path = f"{tmp}/victim.duckdb"

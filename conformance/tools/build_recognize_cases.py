@@ -407,8 +407,13 @@ def main():
     path = f"{ROOT}/conformance/conformance.json"
     data = load(path)
     kept = [case for case in data["cases"] if case["verb"] not in ("recognize", "relate")]
-    method_h = {case["id"]: case for case in data["cases"] if case.get("form") == "yes-no"}
-    relate_conf = [method_h.get(case["id"], case) for case in relate_conf]
+    # The package cases of retired rows leave; the method-H cases that
+    # replaced them stay, in their place.
+    method_h = [case for case in data["cases"] if case.get("form") == "yes-no"]
+    relate_conf = method_h + [
+        case for case in relate_conf
+        if not any(case["id"].endswith(f"-relate-{arm}") for arm in retired)
+    ]
     data["cases"] = kept + recognize_conf + relate_conf
     data["case_count"] = len(data["cases"])
     with open(path, "w", encoding="utf-8") as handle:

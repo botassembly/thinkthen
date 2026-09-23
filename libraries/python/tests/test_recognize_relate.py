@@ -93,7 +93,7 @@ def test_a_named_end_outside_the_kinds_is_a_usage_error():
 
 def test_the_slide_relate_call():
     edges = tt.relate(ALERTS, relations=["caused_by"], either=["same_as"],
-                      threshold=0.7)
+                      threshold=0.68)
     first = edges[0]
     assert (first.name, first.source, first.target, first.probability) == (
         "caused_by", 1, 4, 0.71)
@@ -145,7 +145,7 @@ def test_relate_question_file(tmp_path):
             "relations": ["caused_by"],
             "either": ["same_as"],
         },
-        "threshold": 0.7,
+        "threshold": 0.68,
     }))
     edges = tt.relate(ALERTS, relations=str(path))
     assert [(edge.name, edge.source, edge.target) for edge in edges] == [
@@ -179,7 +179,7 @@ def test_recognize_frame_form_refuses_relation_rules():
 def test_relate_over_a_polars_frame_is_a_frame_of_edges():
     pl = pytest.importorskip("polars")
     frame = pl.DataFrame({"body": ALERTS})
-    edges = tt.relate(frame, on="body", relations=["caused_by"], threshold=0.7)
+    edges = tt.relate(frame, on="body", relations=["caused_by"], threshold=0.68)
     assert isinstance(edges, pl.DataFrame)
     assert edges.columns == ["name", "source", "target", "probability"]
     assert edges.row(0) == ("caused_by", 1, 4, 0.71)

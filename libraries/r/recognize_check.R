@@ -101,8 +101,8 @@ check("the first edge", identical(edges$name[[1]], "same_as") &&
   identical(as.integer(edges$target[[1]]), 2L) &&
   isTRUE(all.equal(edges$probability[[1]], 0.61)))
 
-# The 0.7 bar keeps the two sound edges, as the Python docstring shows.
-strict <- tt_relate(alerts$body, relations = "caused_by", threshold = 0.7)
+# The 0.68 bar keeps the two sound edges, as the Python docstring shows.
+strict <- tt_relate(alerts$body, relations = "caused_by", threshold = 0.68)
 check("the bar keeps the 0.71 edge", nrow(strict) == 2L &&
   identical(as.integer(strict$source[[1]]), 1L) &&
   identical(as.integer(strict$target[[1]]), 4L))

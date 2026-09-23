@@ -38,8 +38,8 @@ def main() -> int:
     import duckdb  # noqa: PLC0415 - imported after the environment is set
 
     cases = json.loads(CASES.read_text())["cases"]
-    first_case = case_by_id(cases, "69-relate-R01-demo")
-    second_case = case_by_id(cases, "70-relate-R02-pickone")
+    first_case = case_by_id(cases, "69-relate-alerts")
+    second_case = case_by_id(cases, "70-relate-founders")
 
     with tempfile.TemporaryDirectory() as tmp:
 

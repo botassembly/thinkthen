@@ -23,7 +23,7 @@ const SENTENCE: &str = "Maria Chen joined Northwind Freight in Chicago last spri
 /// name, built for the per-host offset proofs.
 const EMOJI: &str = "Le café 😀 Maria Chen arrived.";
 
-/// The four alerts behind `69-relate-R01-demo`.
+/// The four alerts behind `69-relate-alerts`.
 const ALERTS: [&str; 4] = [
     "Checkout returns 500 at the payment step.",
     "Card charges are failing for every customer.",
@@ -181,9 +181,9 @@ fn the_relate_slide_runs_as_drawn() -> Result<(), Box<dyn std::error::Error>> {
     for (got, wanted) in probabilities.iter().zip([0.61, 0.71, 0.65, 0.73, 0.55]) {
         assert!((got - wanted).abs() < 1e-9, "expected {wanted}, got {got}");
     }
-    // The Python docstring's bar, 0.7, keeps the two sound edges, and the
+    // The Python docstring's bar, 0.68, keeps the two sound edges, and the
     // first is the 1-to-4 one at 0.71.
-    let strict = ask.threshold(0.7)?;
+    let strict = ask.threshold(0.68)?;
     let edges = tt.relate(&strict, &ALERTS)?;
     assert_eq!(edges.len(), 2);
     assert_eq!(edges[0].source, 1);

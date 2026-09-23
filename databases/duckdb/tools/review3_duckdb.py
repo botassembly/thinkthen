@@ -60,9 +60,9 @@ def raises(con, sql: str, needle: str) -> tuple[bool, str]:
 
 def relate_case() -> dict:
     for case in json.loads(CASES.read_text())["cases"]:
-        if case["id"] == "69-relate-R01-demo":
+        if case["id"] == "69-relate-alerts":
             return case
-    raise SystemExit("no 69-relate-R01-demo case")
+    raise SystemExit("no 69-relate-alerts case")
 
 
 def fill(con, case: dict) -> None:
