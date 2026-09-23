@@ -80,6 +80,7 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 14. A mechanical hygiene check runs zero-hit: no private repository names, no home-directory paths, in shipped files and comments.
 15. The transform catalog surface exists (`thinkthen transform list` and `show`, ticket 0050's promise) or the release record names who deferred it; no open ticket owns it today.
 16. Issue statuses are normalized to a two-value vocabulary (Open and everything-else) before the waiver sweep runs; the record currently carries nine status words and two files with none.
+17. The surfaces branch's error index (the fifth review's companion page) has a row for every confirmed defect across all five rounds, each row closed or waived by an independent probe named in the row, and the release pass re-runs the proving probes, because the branch's own history shows a closed item can stop holding.
 
 ## Part 3: the exploring tester
 
@@ -92,6 +93,15 @@ A standing brief for one agent that pokes around after each release and on a sch
 - **The standing rules.** No paid call without Ian's authorization for that test through `sdlc/scripts/live`; the run's log states which address each command will reach before anything runs; no key is set unless the step needs one, and then it is a canary value; an explicit `--url` on every command that reads a key; test only this workspace's software on this workspace's machines; temporary files die with the test.
 
 ## The two reviews, both gates
+
+Both reviews are gates, not opinions. The library and database tier now has its own review lane on the surfaces branch, and its process rules from the 2026-09-23 fourth review are binding on every fix, ours included:
+
+1. Every closing probe is shown failing on the old code and passing on the new code, with both outputs in the record.
+2. The verifier runs the reviewer's probe. A lane's own test does not close an item.
+3. The gate runs at the exact tip right before a closure note is written.
+4. A fix that held in one review can stop holding; the branch's third review (fixes that did not hold) is the reason every closed item keeps its proving probe named, and the release pass re-runs the probe.
+
+Our own findings obey the same rules: the wave fragments carry the failing output and the passing output, and the release checklist re-runs the proving probes.
 
 A review by someone who types commands and a review by someone who calls the tool from a program find different classes of fault, and the plan names both as gates. The typing review is the how-to and demo ladder above. The caller review is the parity, dry-run, sizes, and refused-question tests, and it joins the exploring tester's rotation. (Standing rule added 2026-09-21 from the caller's review that found four things wave 1 missed.)
 
