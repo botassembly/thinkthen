@@ -55,7 +55,7 @@
    "surfaces": [
     "ruby"
    ],
-   "why": "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+   "why": "the stand-in refuses a pre-fired token where the surface accepts one; conformance/DIVERGENCES.md carries this as a real-engine requirement"
   },
   {
    "when": {
@@ -68,7 +68,7 @@
     "sqlite"
    ],
    "as": "diverge",
-   "why": "the stand-in ignores a pre-fired token; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+   "why": "the stand-in refuses a pre-fired token where the surface accepts one; conformance/DIVERGENCES.md carries this as a real-engine requirement"
   },
   {
    "when": {

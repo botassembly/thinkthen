@@ -100,3 +100,13 @@ Status: DRAFT, decision made here, needs the ADR's own review.
 **Adoption state.** C, Ruby, R, and the contract already follow the rule (review 3 confirmed each). Python and Node currently REFUSE −1; they adopt "−1 means none" through the contract's converter in the next surfaces pass. Node additionally stops coercing `true`, `"5"`, and `[]` into numbers, and documents that a computed budget must clamp to zero (`Math.max(0, end - now)`) because −1 is reserved. DuckDB gains a deadline door when its phase lands.
 
 **Why −1 and not a separate explicit-none argument.** The C ABI is flat scalars; a second boolean argument would touch every signature the deck draws, and −1 is already the shipped, tested spelling on four surfaces. The hazard — a computed budget landing on −1 by accident — is answered by the clamp rule, which is the semantically correct statement anyway: a deadline that already passed is zero, not none.
+
+## 2026-09-23: the one skip-table reader and the corrected reasons (refs surfaces-review-3)
+
+`conformance/skiptable.py` is the single reader: `lookup SURFACE CASE_ID [--verb V] [--kind K] [--form F] [--record R]` prints `RUN`, `SKIP<TAB>why`, or `DIVERGE<TAB>why`; `validate` checks the table's structure (22 entries valid at commit time). The table's five selector kinds — `id`, `verb`, `kind`, `form`, `record` — are exactly the fields the nine private readers disagreed on; this reader names them all, entries with no surface list apply to every surface, and an `id` selector wins over facet selectors.
+
+The two false reasons ("the stand-in ignores a pre-fired token") are corrected in the data: the stand-in refuses a pre-fired token where the surfaces accept one, and DIVERGENCES.md carries that as the real-engine requirement.
+
+Adoption contract for the surface lanes (phase 2): each runner replaces its private skip/divergence logic with one call — `python3 ../../conformance/skiptable.py lookup <surface> <case-id> --verb <verb> --kind <kind> --form <form> --record <record>` as its facets apply — and moves any skip still living only in the runner's own code into the table. Until adoption lands, the reader and the private lists coexist; the reader is the source of truth for the entries the table already carries.
+
+**Open, exactly stated:** the nine runners still carry their private paths (SQLite, DuckDB, C, Ruby, R, PostgreSQL were named by the review); adoption is surface-folder work and was outside this lane's contract/standin-only scope.
