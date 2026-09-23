@@ -820,25 +820,21 @@ fn usage(context: &Context<'_>) -> Result<String, Error> {
     })
 }
 
-/// The `thinkthen_warm` accumulator: the texts one flush holds, under the
-/// question that was live when they arrived. A different question closes
-/// the group it held — before, the first question judged every later
-/// row's text, and a pair absent from the cache was served from it
-/// (review 3, item 17).
 /// One question's open group of pending texts.
 struct WarmGroup {
     question: Arc<Question>,
-    digest: String,
     pending: Vec<String>,
 }
 
-/// The warm aggregate's state: one group per question, so interleaved
-/// questions accumulate instead of flushing on every change (review 4,
-/// item 15 — the single-group shape degraded an alternating query to one
-/// round per row).
+/// The warm aggregate's state: one group per question, keyed by its
+/// digest, so interleaved questions accumulate instead of flushing on
+/// every change (review 4, item 15 — the single-group shape degraded an
+/// alternating query to one round per row). The map finds a row's group
+/// in constant time (review 5: a linear search over the groups made
+/// 40,000 distinct questions take 6.57 s against 2.67 s before).
 #[derive(Default)]
 struct WarmState {
-    groups: Vec<WarmGroup>,
+    groups: HashMap<String, WarmGroup>,
     judged: u64,
 }
 
@@ -867,35 +863,22 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
         guarded("thinkthen_warm", || {
             let question = question(context.get_raw(0).as_str()?)?;
             let text = context.get_raw(1).as_str()?.to_string();
-            if answers().lock().unwrap().contains_key(&(question.digest(), text.clone())) {
+            let digest = question.digest();
+            if answers().lock().unwrap().contains_key(&(digest.clone(), text.clone())) {
                 cache_hits().fetch_add(1, Ordering::Relaxed);
                 return Ok(());
             }
-            let digest = question.digest();
-            // The question's own group accumulates, wherever the rows
-            // interleave (review 4, item 15: the single-group shape
-            // degraded an alternating query to one round per row).
-            let index = match state.groups.iter().position(|group| group.digest == digest) {
-                Some(index) => index,
-                None => {
-                    state.groups.push(WarmGroup {
-                        question: question.clone(),
-                        digest: digest.clone(),
-                        pending: Vec::new(),
-                    });
-                    state.groups.len() - 1
+            let group = state.groups.entry(digest.clone()).or_insert_with(|| WarmGroup {
+                question: question.clone(),
+                pending: Vec::new(),
+            });
+            group.pending.push(text);
+            if group.pending.len() >= CHUNK {
+                // The drained group leaves the map: a later row for the
+                // same question opens a fresh one.
+                if let Some(group) = state.groups.remove(&digest) {
+                    state.judged += flush(connection_of(context), &digest, group)?;
                 }
-            };
-            let chunk_full = {
-                let group = &mut state.groups[index];
-                group.pending.push(text);
-                group.pending.len() >= CHUNK
-            };
-            if chunk_full {
-                // The drained group is dropped: a later row for the same
-                // question opens a fresh group, so no emptied group lingers.
-                let mut group = state.groups.swap_remove(index);
-                flush(state, connection_of(context), &mut group)?;
             }
             Ok(())
         })
@@ -908,11 +891,8 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
     ) -> Result<Option<i64>, Error> {
         guarded("thinkthen_warm", || {
             if let Some(state) = state.as_mut() {
-                while !state.groups.is_empty() {
-                    let mut rest = state.groups.split_off(1);
-                    std::mem::swap(&mut rest, &mut state.groups);
-                    let mut only = rest.into_iter().next().expect("one group");
-                    flush(state, connection_of(context), &mut only)?;
+                for (digest, group) in std::mem::take(&mut state.groups) {
+                    state.judged += flush(connection_of(context), &digest, group)?;
                 }
                 return Ok(Some(state.judged as i64));
             }
@@ -921,32 +901,28 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
     }
 }
 
-/// Judge the pending texts at once, saving every judgment. A set
-/// interrupt cancels the token through the poll, which reads the calling
-/// connection's own handle; no new request starts, the requests sent
-/// finish, and the statement ends with the cancelled kind.
-fn flush(
-    state: &mut WarmState,
-    db: *mut ffi::sqlite3,
-    group: &mut WarmGroup,
-) -> Result<(), Error> {
+/// Judge one group's pending texts at once, saving every judgment, and
+/// answer how many were judged. A set interrupt cancels the token
+/// through the poll, which reads the calling connection's own handle; no
+/// new request starts, the requests sent finish, and the statement ends
+/// with the cancelled kind.
+fn flush(db: *mut ffi::sqlite3, digest: &str, group: WarmGroup) -> Result<u64, Error> {
     if group.pending.is_empty() {
-        return Ok(());
+        return Ok(0);
     }
-    let question = group.question.clone();
     let token = Cancel::new();
     let records: Vec<&str> = group.pending.iter().map(String::as_str).collect();
     let mut poll = || hear_interrupts(db, &token);
     let judgments = engine()
-        .decide_many_opts(&question, &records, Options::new().cancel(&token), Some(&mut poll))
+        .decide_many_opts(&group.question, &records, Options::new().cancel(&token), Some(&mut poll))
         .map_err(failure)?;
-    let digest = group.digest.clone();
     let mut saved = answers().lock().unwrap();
-    for (text, judgment) in group.pending.drain(..).zip(judgments) {
-        saved.insert((digest.clone(), text), Saved::Decision(judgment.answer));
-        state.judged += 1;
+    let mut judged = 0;
+    for (text, judgment) in group.pending.into_iter().zip(judgments) {
+        saved.insert((digest.to_owned(), text), Saved::Decision(judgment.answer));
+        judged += 1;
     }
-    Ok(())
+    Ok(judged)
 }
 
 // ---------------------------------------------------------------------
