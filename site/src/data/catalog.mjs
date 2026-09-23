@@ -227,9 +227,9 @@ export const FUNCTIONS = [
   },
   {
     name: 'relate',
-    primitive: 'Pick one, per pair of records',
-    line: 'Say how the records relate to each other.',
-    lede: 'Find the duplicate bug reports in a list. You give it a set of records and the relations you allow. You get back one edge for each related pair, with a probability. An edge is a link between two records. Here <code>same_as</code> links two reports that describe the same bug.',
+    primitive: 'Yes or no, or a direction, per pair of records',
+    line: 'Find records that clash, repeat, or rely on each other.',
+    lede: 'Find the rules in a policy that contradict each other. You give it a set of records and the relations you allow. You get back one edge for each related pair, with a probability. An edge is a link between two records. Here <code>contradicts</code> links two rules that cannot both be followed.',
     takes: 'a set of records and the relations you allow',
     gives: 'one edge for each related pair, with a probability',
     requests: 'The specification does not yet carry relate, so the request count is not settled.',

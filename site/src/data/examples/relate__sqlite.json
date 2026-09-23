@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "sql",
-  "code": "-- SQLite: table-valued\nCREATE TABLE bugs(id INTEGER, body TEXT);\nINSERT INTO bugs VALUES\n    (1, 'The login button does nothing in Safari.'),\n    (2, 'Export to CSV adds a blank row at the top.'),\n    (3, 'Cannot sign in on Safari. The button never responds.'),\n    (4, 'Dark mode resets to light after every restart.'),\n    (5, 'The CSV download starts with an empty line.');\nSELECT * FROM thinkthen_relate('bugs', 'id', 'body', 'either:same_as');\n-- same_as|1|3\n-- same_as|2|5",
+  "code": "-- SQLite: table-valued\nCREATE TABLE rules(id INTEGER, body TEXT);\nINSERT INTO rules VALUES\n    (1, 'Book economy class for every flight under six hours.'),\n    (2, 'Submit receipts within 30 days of the trip.'),\n    (3, 'Hotel stays are capped at 200 dollars a night.'),\n    (4, 'Employees may book business class on any flight.'),\n    (5, 'Rental cars need a manager''s approval.'),\n    (6, 'Receipts may be submitted at any time, with no deadline.'),\n    (7, 'Meals are reimbursed up to 60 dollars a day.'),\n    (8, 'Use the company travel portal for all bookings.');\nSELECT * FROM thinkthen_relate('rules', 'id', 'body', 'either:contradicts');\n-- contradicts|1|4|0.84\n-- contradicts|2|6|0.99",
   "function": "relate",
   "surface": "sqlite"
 }

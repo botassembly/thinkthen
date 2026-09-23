@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "ts",
-  "code": "const bugs = [\"The login button does nothing in Safari.\",\n  \"Export to CSV adds a blank row at the top.\",\n  \"Cannot sign in on Safari. The button never responds.\",\n  \"Dark mode resets to light after every restart.\",\n  \"The CSV download starts with an empty line.\"];\n// same_as 1 ↔ 3, the Safari sign-in bug, and same_as\n// 2 ↔ 5, the blank first line in the CSV\nfor (const edge of await tt.relate(bugs, { either: [\"same_as\"], threshold: 0.9 }))\n  console.log(edge.name, edge.source, edge.target);",
+  "code": "const rules = [\"Book economy class for every flight under six hours.\",\n  \"Submit receipts within 30 days of the trip.\",\n  \"Hotel stays are capped at 200 dollars a night.\",\n  \"Employees may book business class on any flight.\",\n  \"Rental cars need a manager's approval.\",\n  \"Receipts may be submitted at any time, with no deadline.\",\n  \"Meals are reimbursed up to 60 dollars a day.\",\n  \"Use the company travel portal for all bookings.\"];\n// contradicts 1 ↔ 4 at 0.84, the class of flight, and\n// contradicts 2 ↔ 6 at 0.99, the receipt deadline\nfor (const edge of await tt.relate(rules, { either: [\"contradicts\"], threshold: 0.5 }))\n  console.log(edge.name, edge.source, edge.target, edge.probability);",
   "function": "relate",
   "surface": "typescript"
 }
