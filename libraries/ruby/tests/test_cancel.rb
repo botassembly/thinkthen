@@ -3,9 +3,8 @@
 # The interrupt proof, brief item 7 for Ruby: an interrupt raised on the
 # calling thread while a bulk call runs stops the call within one in-flight
 # round, nothing is served after the return, and the interrupt itself
-# re-raises. The engine's poll runs the tick with the VM lock taken each
-# wait interval, so Thread#raise lands inside the tick, which cancels the
-# token, lets sent requests finish, and re-raises.
+# re-raises. The crossing hears Thread#raise between its wait slices,
+# fires the call's token, lets sent requests finish, and re-raises.
 #
 # Shape picked: a watcher thread fires ThinkThen::Cancel AND Thread#raise
 # (Interrupt) one second in. Skipped when no stub is up on 8214.

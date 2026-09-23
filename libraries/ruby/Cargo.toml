@@ -18,6 +18,10 @@ name = "thinkthen_native"
 [dependencies]
 magnus = { version = "0.7", features = ["rb-sys"] }
 rb-sys = "0.9"
+# The call's own thread blocks asynchronous signals (pthread_sigmask),
+# which the standard library does not expose; already in the lock
+# through the stand-in.
+libc = "0.2"
 thinkthen-contract = { path = "../../contract" }
 thinkthen-standin = { path = "../../standin" }
 

@@ -154,7 +154,7 @@ class TestSurface < Minitest::Test
     # answers one question and omits the last in name order, so its field
     # carries the ruled marker in this host's spelling (a Hash), never
     # nil.
-    set = ThinkThen._parse_set(JSON.generate(
+    set = ThinkThen.send(:_parse_set, JSON.generate(
       "version" => 1,
       "questions" => {
         "refund" => { "decide" => "Is this a refund request?", "threshold" => 0.5 },
