@@ -444,3 +444,92 @@ minicbor), and — when deny coverage extends over the surface workspaces at
 merge — record an explicit `ignore` for RUSTSEC-2021-0127 in deny.toml with
 this note as the argument, or block on the pgrx bump. The build team owns
 that call; the ticket beside the review findings carries it.
+
+## The third review's PostgreSQL fixes: the probes, both outputs (2026-09-23)
+
+Every probe ran against the pushed pre-fix build first and the fixed build
+second, in disposable postgres:16 containers (removed after). Commands and
+outputs as observed.
+
+**Item 2 — `@/dev/zero` grows the backend until the kernel kills it.**
+Pre-fix probe (`pre-fix-pg` container, pre-fix artifact packaged from the
+pushed tip, `SELECT thinkthen_decide('@/dev/zero', 'refund');`): the call
+never returned; `docker logs` carried `server process (PID 92) was
+terminated by signal 9: Killed` and `checkpoint starting: end-of-recovery
+immediate wait`; the server ran crash recovery for roughly 40 s before
+`database system is ready to accept connections`. Post-fix (check.sh, the
+gate section): `ok  @/dev/zero refused in 0.08s with the uniform message,
+and the backend lived`. The message carries no filesystem cause — a
+missing file and a permission failure print the same line.
+
+**Item 2 — a fifo blocks the read forever.** Pre-fix: the same call on a
+created fifo passed its own 4 s timeout (exit 124, the query still in
+`pg_stat_activity`). Post-fix: `ok  a fifo refused in 0.09s instead of
+blocking`.
+
+**Item 2 — the cap.** A 1,048,577-byte file: post-fix
+`ok  an over-cap file refuses naming the cap` (`over the 1048576 byte
+cap`). The unit test `a_checked_read_takes_only_regular_files_within_the_cap_and_confinement`
+proves the pure rules without a backend: `/dev/zero`, a missing path, a
+symlink pointing out of the configured directory, and a permission failure
+all take the one refusal class; a file at the cap reads; a file past it
+names the cap; one that grows between check and read still refuses
+(bounded read at cap+1).
+
+**Item 8 — an EXECUTE-only role read server files.** Pre-fix probe
+(`pre-fix-pg`, role `tt_file` holding only the extension's EXECUTE
+grants): `SELECT thinkthen_decide('@/etc/hostname', 'refund');` returned
+`thinkthen usage: the question file is not valid JSON: the JSON at line 1
+column 1 is not one` — the file's contents reached the parser, so the
+read happened. Post-fix: `ok  an EXECUTE-only role cannot read any file;
+the refusal names both doors` (`a named file needs pg_read_server_files,
+or an administrator's thinkthen.file_directory`). With
+`thinkthen.file_directory` configured: `ok  the configured directory reads
+inside and refuses a symlink pointing out` (a `leak.json` symlink to
+`/etc/hostname` refuses with the uniform message). With the core
+privilege: `ok  pg_read_server_files reads anywhere, PostgreSQL's own
+rule`.
+
+**Item 9 — the README's grant.** The one-line
+`GRANT ... ON ALL FUNCTIONS IN SCHEMA public` is replaced by the
+named-functions DO block (README.md, "Who may call"); the check's control
+function still proves the named grant covers the extension's own
+functions and not the schema's others.
+
+**Item 10 — the trigger undid an admin's hand.** Pre-fix probe
+(`pre-fix-pg2`): `GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text)
+TO PUBLIC;` then an unrelated `CREATE FUNCTION tt_d` left
+`has_function_privilege('public', 'thinkthen_decide(text, text)',
+'EXECUTE')` = `f` — the trigger revoked the deliberate grant. Post-fix:
+`ok  a deliberate PUBLIC grant on thinkthen_decide survives an unrelated
+CREATE FUNCTION`. The positive arm still holds:
+`ok  the update path's new function is extension-owned and out of
+PUBLIC's hands`. The replica-mode boundary (event triggers do not fire
+under `session_replication_role = replica`) is stated in the README with
+the update-script guidance.
+
+**Item 23 — warm's JSON state re-serialized every row.** The review
+measured 54.6 s at 20,000 rows. Post-fix (check.sh):
+`ok  twenty thousand warm rows answered in 2390ms` — the concatenated
+state appends without parsing (`warm_step`, `warm_merge`, unit test
+`the_warm_state_round_trips_and_counts`), and
+`ok  the twenty-thousand-and-first row refuses naming the cap and the
+two-aggregate spelling` (WARM_ROW_CAP, measured: 2,390 ms at the cap).
+
+**Item 24 — the batch's unconditional 100 ms pre-sleep.** Pre-fix: every
+batch paid the floor (the loop slept before looking). Post-fix
+(check.sh, measured inside the server with `clock_timestamp`):
+`ok  a two-record batch answered in 1ms (the pre-fix floor was 100ms)` —
+the ready channel answers the instant the worker finishes, and the cancel
+check rides the 50 ms timeout ticks.
+
+**Skip-table adoption.** Both database runners import
+`conformance/skiptable.py` (`lookup_reason`); the sqlite and postgresql
+skip/diverge sets are byte-identical before and after (`diff` empty on
+both captured lists: sqlite 13 lines, postgresql 12). The shared reader
+gained the facets the table already used (`none`, `error`,
+`unless: wire`), which the nine private copies read differently;
+`skiptable.py validate` prints `22 entries valid`.
+
+**Full checks.** `databases/postgresql/check.sh`: exit 0, 112 ok lines.
+SQLite's check runs in its own NOTES section below.
