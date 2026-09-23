@@ -73,12 +73,38 @@ def test_real_registrations_still_found():
 def test_the_repository_passes():
     report(
         "the repository's own names pass the check",
-        MODULE.main() == 0,
+        MODULE.main([]) == 0,
         "the check failed on the repository",
     )
 
 
+def test_ruby_privacy_markers_are_read():
+    text = "  private_constant :Row, :Native\n  private_class_method :_parse_set,\n    :text_of\n"
+    constants = MODULE._marked(text, "private_constant", r"[A-Z]\w*")
+    methods = MODULE._marked(text, "private_class_method", r"[a-z_]\w*")
+    report(
+        "Ruby privacy markers name what they hide",
+        constants == {"Row", "Native"} and methods == {"_parse_set", "text_of"},
+        f"read {sorted(constants)} and {sorted(methods)}",
+    )
+
+
+def test_a_leaked_runtime_name_fails():
+    # surfaces-review-5: the loaded module listed Native and _parse_question.
+    with tempfile.TemporaryDirectory() as scratch:
+        names = pathlib.Path(scratch) / "names.json"
+        loaded = sorted(MODULE.ruby_names() | {"Native"})
+        names.write_text(MODULE.json.dumps(loaded))
+        report(
+            "a runtime name the source hides fails the check",
+            MODULE.main(["--ruby-runtime", str(names)]) == 1,
+            "a loaded Native passed",
+        )
+
+
 def main():
+    test_ruby_privacy_markers_are_read()
+    test_a_leaked_runtime_name_fails()
     test_test_code_is_ignored()
     test_real_registrations_still_found()
     test_the_repository_passes()

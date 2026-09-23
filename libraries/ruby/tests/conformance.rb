@@ -45,7 +45,7 @@ def central_skip(surface, one, wire)
 end
 
 def built(text)
-  ThinkThen._parse_question(text)
+  ThinkThen.send(:_parse_question, text)
 rescue ThinkThen::UsageError => e
   raise "the call failed: #{e.kind} (#{e.message})"
 end
@@ -71,7 +71,7 @@ end
 
 def check_error(verb, question_text, evidence, records, kind)
   begin
-    question = ThinkThen._parse_question(question_text)
+    question = ThinkThen.send(:_parse_question, question_text)
   rescue ThinkThen::UsageError => e
     return if e.kind == kind
 
@@ -164,7 +164,7 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
     labels = ThinkThen.tag(question, evidence)
     ok_if(labels == expect["answer"], "expected #{expect['answer'].inspect}, got #{labels.inspect}")
   when "annotate"
-    set = ThinkThen._parse_set(JSON.generate({ "version" => 1, "questions" => set_json }))
+    set = ThinkThen.send(:_parse_set, JSON.generate({ "version" => 1, "questions" => set_json }))
     held = records.empty? ? [evidence] : records
     answers = ThinkThen.annotate(set, held)
     if expect["rows"]

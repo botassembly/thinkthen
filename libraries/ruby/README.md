@@ -41,7 +41,8 @@ thread, and a raise inside the tick cancels the engine; the proof is
 
 Beyond the fourteen ruled functions, the module carries exactly these
 documented helpers, and `scripts/check_public_names.py` fails the tree on
-any other public name:
+any other public name. `check.sh` runs it over the loaded module, so a
+name the native half defines counts too:
 
 - `ThinkThen.question(**keywords)` and `ThinkThen.set(path)` build the same
   question value from keywords and from a question file, and
@@ -55,6 +56,10 @@ any other public name:
   `ThinkThen.decide_many_with_probabilities(question, records)` are the
   level-carrying and probability-carrying forms the slide check and the
   conformance runner read; the plain verbs return the bare answers.
+- `ThinkThen::Error` is the base of the six kind classes,
+  `ThinkThen::Cancel` is the token the `cancel:` keyword takes,
+  `ThinkThen::Question` and `ThinkThen::QuestionSet` are the values
+  `question` and `set` return, and `ThinkThen::VERSION` is the gem version.
 
 Ruby is not installed on this machine; `./build.sh` and `./check.sh` run
 everything inside the `ruby:3.4-trixie` container (removed after each

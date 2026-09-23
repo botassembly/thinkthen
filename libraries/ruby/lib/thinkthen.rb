@@ -96,9 +96,10 @@ module ThinkThen
   # (src/lib.rs, `cross`).
   WATCHDOG_INTERVAL = 0.1
   Row = Struct.new(:thread, :token, :tick, :caller, :error)
-  # Crossing internals, not the ruled surface (surfaces-review-4's names
-  # drift: the check must not read them as API).
-  private_constant :WATCHDOG_INTERVAL, :Row
+  # Crossing internals, not the ruled surface (surfaces-review-4 and -5:
+  # the check reads the loaded module and must not find them as API).
+  private_constant :WATCHDOG_INTERVAL, :Row, :Native
+  private_class_method :_parse_question, :_parse_set, :text_of
 
   @rows = {}
   @rows_mutex = Mutex.new

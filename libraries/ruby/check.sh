@@ -76,6 +76,12 @@ docker_run 'ruby -I lib tests/test_flood.rb'
 echo "== ruby surface: a signal never resends a paid request; Ctrl-C stops a call within one in-flight round"
 docker_run 'ruby -I lib tests/test_signal_no_resend.rb'
 
+echo "== ruby surface: the loaded module's public names are ruled or documented"
+names="$(mktemp)"
+docker_run 'ruby -I lib tests/public_names.rb' > "$names"
+python3 ../../scripts/check_public_names.py --ruby-runtime "$names"
+rm -f "$names"
+
 echo "== ruby surface: annotate unions every record's keys"
 docker_run 'ruby -I lib tests/test_annotate_union.rb'
 
