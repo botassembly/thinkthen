@@ -381,6 +381,9 @@ module ThinkThen
       watchdog
       row = Row.new(Thread.current, nil, tick, cancel, nil)
       token = Cancel.new
+      # A token fired before the call stops it before any send; the
+      # watchdog's poll would come a round late (surfaces-review-5).
+      token.cancel if cancel&.cancelled?
       row.token = token
       @rows_mutex.synchronize { @rows[row.object_id] = row }
       begin

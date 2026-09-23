@@ -130,6 +130,8 @@ fn carry(error: thinkthen_contract::Error) -> String {
     // and the conversion this message rides would abort the process. The
     // four-character escape keeps the message printable and the process
     // alive - the third review's probe aborted R with a core dump here.
+    // The separator itself is escaped too: quoted caller text carrying it
+    // split the packing and lost the kind (surfaces-review-5).
     format!(
         "{}{ERROR_SEP}{}{ERROR_SEP}{}",
         error.kind,
@@ -138,6 +140,7 @@ fn carry(error: thinkthen_contract::Error) -> String {
             .message
             .replace('%', "%%")
             .replace('\0', "\\u0000")
+            .replace(ERROR_SEP, "\\u001f")
     )
 }
 
@@ -911,6 +914,13 @@ mod tests {
         let carried = interrupt_carried();
         let parts: Vec<&str> = carried.split(ERROR_SEP).collect();
         assert_eq!(parts, ["interrupt", "false", "the call was interrupted"]);
+    }
+
+    #[test]
+    fn a_separator_in_a_message_is_escaped() {
+        let carried = carry(thinkthen_contract::Error::usage("no recorded answer for \"a\u{1f}b\""));
+        let parts: Vec<&str> = carried.split(ERROR_SEP).collect();
+        assert_eq!(parts, ["usage", "false", "no recorded answer for \"a\\u001fb\""]);
     }
 
     #[test]

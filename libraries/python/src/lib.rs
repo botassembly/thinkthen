@@ -445,14 +445,14 @@ fn settle_verb_question(
     key: &str,
     members: Option<Vec<String>>,
 ) -> PyResult<ContractQuestion> {
-    let asked = settle_for(py, object, verb)?;
-    if let Ok(question) = object.extract::<Question>() {
+    // Only a built question takes the kind check; text is this verb's own.
+    if object.extract::<Question>().is_ok() {
+        let asked = settle_for(py, object, verb)?;
         if members.is_some() {
             return Err(UsageError::new_err(format!(
                 "the question is built and the call also names {key}: the question carries its {key} once, so drop one"
             )));
         }
-        let _ = question;
         return Ok(asked);
     }
     let text = object.extract::<String>().map_err(|_| {

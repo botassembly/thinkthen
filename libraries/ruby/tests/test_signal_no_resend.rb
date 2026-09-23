@@ -112,3 +112,22 @@ records = Array.new(40) { |i| "bulk #{i} #{rand}" }
 outcome, elapsed, bodies = measured("INT", 0.5) { ThinkThen.decide_many(QUESTION, records) }
 check("bulk-int-prompt", outcome == Interrupt && elapsed < 1.9 && bodies <= 16,
       "Ctrl-C raised #{outcome} after #{format('%.1f', elapsed)} s with #{bodies} of 40 request bodies")
+
+# A token cancelled before the call sends nothing, single or bulk: the
+# crossing fires the call's own token before it starts, not on the
+# watchdog's next poll (surfaces-review-5).
+STUB.delay = 0.2
+fired = ThinkThen::Cancel.new
+fired.cancel
+[["single", -> { ThinkThen.decide(QUESTION, "pre #{rand}", cancel: fired) }],
+ ["bulk", -> { ThinkThen.decide_many(QUESTION, Array.new(8) { |i| "pre #{i} #{rand}" }, cancel: fired) }]].each do |shape, call|
+  STUB.reset
+  outcome = begin
+    call.call
+  rescue ThinkThen::CancelledError => e
+    e.class
+  end
+  sleep 0.5
+  check("pre-cancelled-#{shape}-sends-nothing", outcome == ThinkThen::CancelledError && STUB.bodies.zero?,
+        "a cancelled token answered #{outcome.inspect} with #{STUB.bodies} request bodies")
+end

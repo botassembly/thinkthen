@@ -73,7 +73,7 @@ docker_run 'ruby -I lib tests/test_fork.rb'
 echo "== ruby surface: the flood shape, VM survives a raising trap flood"
 docker_run 'ruby -I lib tests/test_flood.rb'
 
-echo "== ruby surface: a signal never resends a paid request; Ctrl-C stops a call within one in-flight round"
+echo "== ruby surface: a signal never resends a paid request; Ctrl-C stops a call within one in-flight round; a fired token sends nothing"
 docker_run 'ruby -I lib tests/test_signal_no_resend.rb'
 
 echo "== ruby surface: the loaded module's public names are ruled or documented"

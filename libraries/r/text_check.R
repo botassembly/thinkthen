@@ -47,9 +47,11 @@ Encoding(native_valid) <- "native"
 held <- tryCatch(tt_recognize(native_valid), error = function(e) conditionMessage(e))
 check("native-marked valid utf-8 crosses unchanged",
       is.character(held) && validUTF8(held) && grepl(enc2utf8("caf\u00e9 complaint"), held, fixed = TRUE))
-c_locale <- Sys.setlocale("LC_CTYPE", "C")
+# Sys.setlocale returns the new setting, so the old one is read first.
+c_locale <- Sys.getlocale("LC_CTYPE")
+invisible(Sys.setlocale("LC_CTYPE", "C"))
 held <- tryCatch(tt_recognize(native_valid), error = function(e) conditionMessage(e))
-Sys.setlocale("LC_CTYPE", c_locale)
+invisible(Sys.setlocale("LC_CTYPE", c_locale))
 # The comparison is by bytes, not by grepl: the message the refusal
 # carried came back under a C-locale checkpoint and R marked it native,
 # and grepl under any locale may refuse to translate the utf-8 needle.
@@ -72,6 +74,40 @@ Encoding(native_invalid) <- "native"
 held <- tryCatch(tt_recognize(native_invalid), error = function(e) conditionMessage(e))
 check("native-marked invalid bytes refuse by name",
       is.character(held) && grepl("not valid UTF-8", held, fixed = TRUE))
+
+# The grammar's own text under LC_CTYPE=C (surfaces-review-5): question
+# text, choose options, and the recognize and relate specs reach the
+# engine as the UTF-8 the caller meant, never as "caf<c3><a9>". The
+# question's own parts, read back from the Rust half, are the bytes the
+# request carries.
+# Sys.setlocale returns the new setting, so the old one is read first.
+c_locale <- Sys.getlocale("LC_CTYPE")
+invisible(Sys.setlocale("LC_CTYPE", "C"))
+utf8_bytes <- charToRaw(enc2utf8("caf\u00e9"))
+native_word <- rawToChar(utf8_bytes)
+parts_of <- function(q) thinkthen:::tt_question_parts(q)
+built <- parts_of(tt_question(decide = paste("Is", native_word, "a complaint?")))
+plain <- parts_of(thinkthen:::.tt_settled(paste("Is", native_word, "a complaint?"), NULL))
+choice <- parts_of(tt_question(choose = "Which?", options = c(native_word, "tea")))
+recognize_spec <- thinkthen:::.tt_recognize_spec(c(native_word, "place"), NULL, NULL, NULL)
+relate_spec <- thinkthen:::.tt_relate_spec(native_word, NULL, NULL, NULL)
+invisible(Sys.setlocale("LC_CTYPE", c_locale))
+check("a built question's native text crosses as utf-8 under LC_CTYPE=C", bytes_contain(built$text, rawToChar(utf8_bytes)))
+check("a plain question's native text crosses as utf-8 under LC_CTYPE=C", bytes_contain(plain$text, rawToChar(utf8_bytes)))
+check("native choose options cross as utf-8 under LC_CTYPE=C", bytes_contain(choice$members[[1]], rawToChar(utf8_bytes)))
+check("a native recognize kind crosses as utf-8 under LC_CTYPE=C", bytes_contain(recognize_spec, rawToChar(utf8_bytes)))
+check("a native relate rule crosses as utf-8 under LC_CTYPE=C", bytes_contain(relate_spec, rawToChar(utf8_bytes)))
+
+# The packing's separator inside quoted caller text keeps the error's kind
+# (surfaces-review-5: it came back as a plain simpleError).
+held <- tryCatch(tt_recognize("Alice\x1fmet Bob"), error = function(e) e)
+check("a separator in quoted text keeps the usage kind", inherits(held, "thinkthen_usage"))
+# An empty option list still reaches the engine's refusal, not an R
+# assignment error from the text crossing (surfaces-review-5 second review).
+held <- tryCatch(tt_question(choose = "Which?", options = character(0)), error = function(e) e)
+check("empty options refuse as usage", inherits(held, "thinkthen_usage"))
+held <- tryCatch(tt_recognize("x", kinds = character(0)), error = function(e) e)
+check("empty kinds do not break the text crossing", !inherits(held, "error") || inherits(held, "thinkthen_error"))
 
 # Clean utf-8 keeps answering as before.
 clean <- tt_decide("Is this a complaint?", "caf\u00e9 complaint")
