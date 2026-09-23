@@ -6,6 +6,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# The one DuckDB version pin (tools/version.env).
+source "$(dirname "$0")/tools/version.env"
+
 # Experimental on macOS: the library spelling below takes the Darwin form
 # (dylib); Linux is the gate's platform.
 case "$(uname -s)" in
@@ -22,12 +25,12 @@ echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
 # conformance case that replays the failed marker (74) runs against a
 # second build that carries it, exactly the way the C surface builds its
 # door test. The default extension stays the one every other step loads.
-DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
+DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
   cargo build --release --quiet --features synthetic-partial
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
   -o build/fixture/thinkthen.duckdb_extension \
   -l target/release/libthinkthen.$LIB_EXT \
-  -n thinkthen -dv v1.5.5 \
+  -n thinkthen -dv "$DUCKDB_VERSION" \
   -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
 test -s build/fixture/thinkthen.duckdb_extension
 
@@ -69,6 +72,9 @@ echo "== duckdb surface: one interrupt, one query (the re-arm proof)"
 echo "== duckdb surface: two databases, each on its own connection"
 ./configure/venv/bin/python tools/two_databases.py
 
+echo "== duckdb surface: the third review's probes"
+./configure/venv/bin/python tools/review3_duckdb.py
+
 echo "== duckdb surface: the panic guards contain a callback panic"
 tools/panic_suite.sh
 
@@ -90,12 +96,12 @@ echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
 # conformance case that replays the failed marker (74) runs against a
 # second build that carries it, exactly the way the C surface builds its
 # door test. The default extension stays the one every other step loads.
-DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
+DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
   cargo build --release --quiet --features synthetic-partial
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
   -l target/release/libthinkthen.$LIB_EXT \
   -o build/fixture/thinkthen.duckdb_extension \
-  -n thinkthen -dv v1.5.5 \
+  -n thinkthen -dv "$DUCKDB_VERSION" \
   -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
 test -s build/fixture/thinkthen.duckdb_extension
 

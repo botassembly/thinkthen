@@ -11,6 +11,12 @@ EXT="$ROOT/build/release/thinkthen.duckdb_extension"
 CLI="$ROOT/duckdb-bin/duckdb"
 CUT="$ROOT/tools/null-cut.json"
 
+# The fixture the trace counts opens of: generated here, because the
+# file is gitignored (review 3: the suite needed a file another suite
+# happened to leave behind).
+printf '{"decide": "Is this a complaint?", "threshold": 0.9}\n' > "$CUT"
+
+
 if ! command -v strace >/dev/null 2>&1; then
   echo "skip     no strace on this host; the open count is not measured"
   exit 0
@@ -28,9 +34,39 @@ ENGINE_NULL=1 strace -f -e trace=openat -o "$TRACE" \
 
 OPENS=$(grep -c "null-cut.json" "$TRACE" || true)
 if [[ "$OPENS" == "1" ]]; then
-  echo "ok       one question file open for twenty thousand rows"
+  echo "ok       one question file open for twenty thousand decide rows"
 else
-  echo "FAILED   the question file was opened $OPENS times for twenty thousand rows"
+  echo "FAILED   the question file was opened $OPENS times for twenty thousand decide rows"
+  exit 1
+fi
+
+# Annotate and relations read through the same per-query cache (review 3,
+# finding 27: they opened the file once per row).
+ANN_SET=$(mktemp /tmp/thinkthen-annotset-XXXX.json)
+printf '{"version":1,"questions":{"spam":{"decide":"Is this spam?"}}}\n' > "$ANN_SET"
+ANN_OPENS=$(ENGINE_NULL=1 strace -f -e trace=openat -o "$TRACE" \
+  "$CLI" -unsigned -noheader -list \
+  -c "LOAD '$EXT'; SELECT count(thinkthen_annotate('@$ANN_SET', 'buy now')) FROM range(2000);" \
+  >/dev/null 2>&1; grep -c "$(basename "$ANN_SET")" "$TRACE" || true)
+rm -f "$ANN_SET"
+if [[ "$ANN_OPENS" == "1" ]]; then
+  echo "ok       one question file open for two thousand annotate rows"
+else
+  echo "FAILED   the annotate set file was opened $ANN_OPENS times for two thousand rows"
+  exit 1
+fi
+
+REL_SPEC=$(mktemp /tmp/thinkthen-relspec-XXXX.json)
+printf '{"recognize":{"kinds":["person","action"],"relations":[{"name":"caused_by","source":"person","target":"action"}]}}\n' > "$REL_SPEC"
+REL_OPENS=$(ENGINE_NULL=1 strace -f -e trace=openat -o "$TRACE" \
+  "$CLI" -unsigned -noheader -list \
+  -c "LOAD '$EXT'; SELECT count(thinkthen_relations('buy now', '@$REL_SPEC')) FROM range(2000);" \
+  >/dev/null 2>&1; grep -c "$(basename "$REL_SPEC")" "$TRACE" || true)
+rm -f "$REL_SPEC"
+if [[ "$REL_OPENS" == "1" ]]; then
+  echo "ok       one question file open for two thousand relations rows"
+else
+  echo "FAILED   the relations spec file was opened $REL_OPENS times for two thousand rows"
   exit 1
 fi
 

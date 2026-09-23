@@ -31,17 +31,25 @@ cleanup() {
   docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
+
+# The one DuckDB version pin (tools/version.env).
+source "$(dirname "$0")/tools/version.env"
 # The duckdb/duckdb:1.5.5 digest was not resolvable offline at pinning
 # time (no local copy); the pull below prints the resolved digest to
 # record. The pinning story is in scripts/gate-hermeticity.md.
-IMAGE=duckdb/duckdb:1.5.5
-TARGET=x86_64-unknown-linux-gnu.2.28
-LIB=target/x86_64-unknown-linux-gnu/release/libthinkthen.so
+IMAGE="duckdb/duckdb:${DUCKDB_VERSION#v}"
+# The build target follows the host (review 3: x86_64 was hard-coded);
+# the glibc-2.28 floor stays the Linux x86_64 default.
+TARGET="${DUCKDB_TARGET:-x86_64-unknown-linux-gnu.2.28}"
+case "$(uname -m)" in
+  arm64|aarch64) TARGET="${DUCKDB_TARGET:-aarch64-unknown-linux-gnu.2.28}" ;;
+esac
+LIB="target/${TARGET%%.*}/release/libthinkthen.so"
 WORK=dist/.rehearsal
 SLIDE=tools/slide.sql
 
 echo "== duckdb package: build the release extension at glibc 2.28"
-DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION=v1.5.5 \
+DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
   cargo zigbuild --release --target "$TARGET" 2>&1 | tail -2
 test -s "$LIB"
 
@@ -52,7 +60,7 @@ configure/venv/bin/python3 extension-ci-tools/scripts/append_extension_metadata.
   -l "$LIB" \
   -o dist/thinkthen.duckdb_extension \
   -n thinkthen \
-  -dv v1.5.5 \
+  -dv "$DUCKDB_VERSION" \
   -evf configure/extension_version.txt \
   -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
 sha256sum dist/thinkthen.duckdb_extension
@@ -61,7 +69,7 @@ objdump -T "$LIB" | grep -o 'GLIBC_[0-9.]*' | sort -V | uniq | tail -1
 cat > dist/README.md << EOF
 # thinkthen for DuckDB ${VERSION}
 
-Built for DuckDB v1.5.5, the pinned version; the host CLI and the extension
+Built for DuckDB "$DUCKDB_VERSION", the pinned version; the host CLI and the extension
 must move together. The Linux binary is pinned to glibc 2.28
 (manylinux_2_28), so it loads in the official duckdb image and on older
 distributions.
@@ -73,7 +81,7 @@ The community-repository form (\`INSTALL thinkthen FROM community;\`) awaits
 the signed community build. Nothing was published from this rehearsal.
 EOF
 
-echo "== duckdb package: fixture parquet with the stock v1.5.5 CLI"
+echo "== duckdb package: fixture parquet with the stock "$DUCKDB_VERSION" CLI"
 ./duckdb-bin/duckdb -c "
 CREATE TABLE tickets(id INTEGER, body VARCHAR);
 INSERT INTO tickets VALUES
