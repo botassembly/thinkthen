@@ -38,3 +38,7 @@ Ian's word on 2026-09-23: this is prompt optimization, as GEPA does it. It is no
 3. Later, measured before any build: automatic rewording against labeled cases, the way a prompt optimizer revises instructions from feedback. An outside write-up reports large gains for Jev this way. Record it as an experiment first.
 
 Found by the product side from experiments 235 and 236. Ian can overturn any line.
+
+## Added 2026-09-23: the default cut on knowledge yes/no questions
+
+Experiment 242 found that the yes/no functions say yes too readily at 0.5 on knowledge questions. "Is this a Ringo song?" gave 32 yeses, and 7 were right. Yet the probabilities ranked the songs well (AUC 0.87). The same looseness showed in the DuckDB sample (241) and in relate (239). The cut is the problem, not the question's direction. The build team should weigh whether the default for `decide` and `filter` stays 0.5, using the harvested runs as evidence. The threshold how-to above becomes the first thing a user reads.
