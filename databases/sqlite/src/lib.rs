@@ -16,7 +16,8 @@
 //! Nothing here sends, retries, or schedules: the engine behind the
 //! [`Engine`] trait owns all of that. Load-time init registers the
 //! functions and touches no wire; the engine is built lazily on the first
-//! call, and a fork is repaired by the engine's process check.
+//! call, and a fork is repaired by the engine's process check and by the
+//! interrupt watcher's own per-process hub.
 //!
 //! Every function is volatile and direct-only: no paid call is legal from
 //! a view, a trigger, a default, an index expression, or a CHECK
@@ -36,7 +37,7 @@ use std::collections::{HashMap, VecDeque};
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, Once, OnceLock};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
 use rusqlite::vtab::{
@@ -421,29 +422,69 @@ struct Watch {
 /// spawned its own thread, and a stop landing in the tick window paid the
 /// full 5 ms because the loop never read the stop flag before waiting
 /// (review 3, item 25).
-static WATCHES: Mutex<Vec<Watch>> = Mutex::new(Vec::new());
-static WAKE: Condvar = Condvar::new();
-static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
-static WATCH_THREAD: Once = Once::new();
+///
+/// The hub belongs to one process. A forked child inherits the parent's
+/// hub with its lock in whatever state the parent's threads left it and
+/// with no watcher thread, so the child never touches it: the first watch
+/// in a new process builds a fresh hub and its own thread, and the
+/// inherited one is left alone (review 5, item 12: a child's interrupt
+/// was lost, and a fork during a tick hung the child on the lock). No
+/// `pthread_atfork` handler is used, because a handler would outlive an
+/// unloaded extension.
+struct Hub {
+    pid: u32,
+    watches: Mutex<Vec<Watch>>,
+    wake: Condvar,
+}
 
-fn start_watch_thread() {
-    WATCH_THREAD.call_once(|| {
-        std::thread::Builder::new()
-            .name("thinkthen-watch".to_owned())
-            .spawn(hub_thread)
-            .expect("the watcher thread starts");
-    });
+static HUB: AtomicPtr<Hub> = AtomicPtr::new(std::ptr::null_mut());
+static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+/// This process's hub, built with its thread on first use here.
+fn hub() -> &'static Hub {
+    let pid = std::process::id();
+    let current = HUB.load(Ordering::Acquire);
+    // SAFETY: a published hub is leaked and never freed.
+    if let Some(held) = unsafe { current.as_ref() }
+        && held.pid == pid
+    {
+        return held;
+    }
+    let fresh = Box::into_raw(Box::new(Hub {
+        pid,
+        watches: Mutex::new(Vec::new()),
+        wake: Condvar::new(),
+    }));
+    match HUB.compare_exchange(current, fresh, Ordering::AcqRel, Ordering::Acquire) {
+        Ok(_) => {
+            // SAFETY: just published, never freed.
+            let held: &'static Hub = unsafe { &*fresh };
+            std::thread::Builder::new()
+                .name("thinkthen-watch".to_owned())
+                .spawn(move || hub_thread(held))
+                .expect("the watcher thread starts");
+            held
+        }
+        Err(winner) => {
+            // Another thread of this process published first; its hub
+            // carries this pid, because the inherited one was `current`.
+            // SAFETY: `fresh` was never published.
+            drop(unsafe { Box::from_raw(fresh) });
+            // SAFETY: a published hub is never freed.
+            unsafe { &*winner }
+        }
+    }
 }
 
 /// The watcher's whole body: tick the registry under the lock, cancel the
 /// tokens whose connections show an interrupt, drop those watches, then
 /// wait one tick — or park entirely while the registry is empty, woken by
 /// the next registration.
-fn hub_thread() {
-    let mut held = WATCHES.lock().unwrap();
+fn hub_thread(hub: &'static Hub) {
+    let mut held = hub.watches.lock().unwrap();
     loop {
         if held.is_empty() {
-            held = WAKE.wait(held).unwrap();
+            held = hub.wake.wait(held).unwrap();
             continue;
         }
         // SAFETY: the addresses and the function pointer came from the
@@ -461,7 +502,7 @@ fn hub_thread() {
             }
         }
         *held = keep;
-        held = WAKE.wait_timeout(held, WATCH_TICK).unwrap().0;
+        held = hub.wake.wait_timeout(held, WATCH_TICK).unwrap().0;
     }
 }
 
@@ -478,7 +519,8 @@ fn hub_thread() {
 /// Dropping the handle removes the watch under the registry lock, so the
 /// watcher never reads a connection whose call has returned.
 struct InterruptWatch {
-    id: Option<u64>,
+    /// The watch's id and the hub it registered with.
+    id: Option<(u64, &'static Hub)>,
 }
 
 impl InterruptWatch {
@@ -496,26 +538,32 @@ impl InterruptWatch {
         if db.is_null() || check.is_null() {
             return Self { id: None };
         }
-        start_watch_thread();
+        let hub = hub();
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let mut held = WATCHES.lock().unwrap();
+        let mut held = hub.watches.lock().unwrap();
         held.push(Watch { db: db as usize, check: check as usize, token, id });
         drop(held);
-        WAKE.notify_all();
-        Self { id: Some(id) }
+        hub.wake.notify_all();
+        Self { id: Some((id, hub)) }
     }
 
     /// How many watches the shared watcher holds — for the tests.
     #[cfg(test)]
     fn watched_for_test() -> usize {
-        WATCHES.lock().unwrap().len()
+        hub().watches.lock().unwrap().len()
+    }
+
+    /// The registry lock itself, so a test can fork while it is held.
+    #[cfg(test)]
+    fn registry_for_test() -> std::sync::MutexGuard<'static, Vec<Watch>> {
+        hub().watches.lock().unwrap()
     }
 }
 
 impl Drop for InterruptWatch {
     fn drop(&mut self) {
-        let Some(id) = self.id else { return };
-        let mut held = WATCHES.lock().unwrap();
+        let Some((id, hub)) = self.id else { return };
+        let mut held = hub.watches.lock().unwrap();
         held.retain(|watch| watch.id != id);
     }
 }
@@ -1752,6 +1800,66 @@ mod mapping_tests {
             "the watch left the registry"
         );
         drop(watch);
+    }
+
+    /// The flag the fork test's child sets for its own fake host check.
+    static CHILD_FLAG: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+
+    unsafe extern "C" fn child_flag(_: *mut ffi::sqlite3) -> c_int {
+        CHILD_FLAG.load(Ordering::SeqCst) as c_int
+    }
+
+    /// Review 5, item 12: a forked child inherits the registry as the
+    /// parent left it and none of the parent's threads. The fork here
+    /// lands while the parent holds the registry lock, the worst instant;
+    /// the child's interrupt must still arm its token within a second.
+    /// Before, the child either hung on the inherited lock or registered
+    /// with no watcher thread and lost the interrupt.
+    #[test]
+    fn a_forked_child_hears_its_own_interrupt() {
+        use std::time::{Duration, Instant};
+
+        let handle = std::ptr::NonNull::<ffi::sqlite3>::dangling().as_ptr();
+        // The parent's watcher is running before the fork.
+        let parent = InterruptWatch::start_with(handle, Cancel::new(), child_flag as *mut ());
+        let held = InterruptWatch::registry_for_test();
+        // SAFETY: the child only arms a watch, waits, and leaves with
+        // `_exit`; the parent only waits for it.
+        let pid = unsafe { libc::fork() };
+        assert!(pid >= 0, "fork failed");
+        if pid == 0 {
+            CHILD_FLAG.store(true, Ordering::SeqCst);
+            let token = Cancel::new();
+            let _watch = InterruptWatch::start_with(handle, token.clone(), child_flag as *mut ());
+            let started = Instant::now();
+            while !token.is_cancelled() && started.elapsed() < Duration::from_secs(1) {
+                std::thread::sleep(Duration::from_millis(2));
+            }
+            unsafe { libc::_exit(if token.is_cancelled() { 0 } else { 3 }) };
+        }
+        drop(held);
+        let started = Instant::now();
+        let mut status = 0;
+        loop {
+            let done = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
+            if done == pid {
+                break;
+            }
+            if started.elapsed() > Duration::from_secs(5) {
+                unsafe { libc::kill(pid, libc::SIGKILL) };
+                unsafe { libc::waitpid(pid, &mut status, 0) };
+                panic!("the forked child hung on the inherited watcher lock");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(libc::WIFEXITED(status), "the child died: {status}");
+        assert_eq!(
+            libc::WEXITSTATUS(status),
+            0,
+            "the forked child's interrupt never armed its token"
+        );
+        drop(parent);
     }
 
     #[test]
