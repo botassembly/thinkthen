@@ -202,124 +202,106 @@ const MAX_BUFFERS: i64 = 64;
 /// The refusal for an extent that names memory this process cannot read.
 const UNREADABLE: &str = "the column's buffers declare bytes this process cannot read";
 
-/// The stride of the readability probe: one byte a page. 4 KiB is the
-/// smallest page any supported platform uses, so a larger page is only
-/// probed more than once.
-const PROBE_STRIDE: usize = 4096;
+/// The refusal when this process cannot list its own readable memory.
+#[cfg(target_os = "linux")]
+const NO_MAP: &str = "this process cannot read its memory map (/proc/self/maps), so the Arrow door cannot check a column before it reads it";
 
-/// True when every byte of `[start, start + length)` can be read.
+/// The memory this process can read, taken once before a column is read.
 ///
 /// The interface gives no allocation length, so a declared extent past a
 /// short allocation would read into whatever follows it. When nothing
-/// follows (an unmapped page, a guard page, a reservation), the read would
-/// kill the host. This asks the kernel before the read instead. On Linux,
-/// `process_vm_readv` against this process copies one byte a page and
-/// fails on any page it cannot read, protected or unmapped. Elsewhere, or
-/// when that call is not permitted, `mincore` finds unmapped pages. Memory
-/// that is mapped and readable but belongs to another allocation cannot be
-/// told apart by any reader; that lie stays the producer's.
-fn readable(start: *const u8, length: usize) -> bool {
-    if length == 0 {
-        return true;
-    }
-    let Some(last) = (start as usize).checked_add(length - 1) else {
-        return false;
-    };
+/// readable follows (an unmapped page, a guard page, a reservation), the
+/// read would kill the host. The reader checks each extent against this
+/// snapshot first. On Linux the snapshot is the readable mappings in
+/// `/proc/self/maps`, adjacent ones merged, so a protected page and an
+/// unmapped page both fail the check. The check reads a file and makes no
+/// system call a sandbox might forbid or answer with a kill, and it faults
+/// in no page. A process that cannot read its own map gets a refusal for
+/// every Arrow column. Off Linux, `mincore` finds unmapped pages only.
+/// Memory that is mapped and readable but belongs to another allocation
+/// cannot be told apart by any reader; that lie stays the producer's.
+pub(crate) struct Readable {
     #[cfg(target_os = "linux")]
-    if let Some(answer) = probe::vm_readable(start as usize, last) {
-        return answer;
-    }
-    probe::mapped(start as usize, last)
+    ranges: Vec<(usize, usize)>,
 }
 
-/// The two kernel questions `readable` asks, declared here because the
-/// surface carries no libc binding.
-mod probe {
-    use std::ffi::c_void;
-    use std::os::raw::c_int;
+impl Readable {
+    /// Take the snapshot.
+    pub(crate) fn snapshot() -> PyResult<Self> {
+        #[cfg(target_os = "linux")]
+        {
+            let map = std::fs::read_to_string("/proc/self/maps")
+                .map_err(|_| UsageError::new_err(NO_MAP))?;
+            Ok(Self { ranges: readable_ranges(&map) })
+        }
+        #[cfg(not(target_os = "linux"))]
+        Ok(Self {})
+    }
 
+    /// True when every byte of `[start, start + length)` can be read.
+    fn covers(&self, start: *const u8, length: usize) -> bool {
+        if length == 0 {
+            return true;
+        }
+        let first = start as usize;
+        let Some(end) = first.checked_add(length) else {
+            return false;
+        };
+        #[cfg(target_os = "linux")]
+        {
+            let place = self.ranges.partition_point(|&(_, high)| high <= first);
+            self.ranges
+                .get(place)
+                .is_some_and(|&(low, high)| low <= first && end <= high)
+        }
+        #[cfg(not(target_os = "linux"))]
+        mapped(first, end - 1)
+    }
+}
+
+/// The readable ranges of a `/proc/self/maps` text, in address order, with
+/// touching ranges merged so an extent across two mappings still checks.
+#[cfg(target_os = "linux")]
+fn readable_ranges(map: &str) -> Vec<(usize, usize)> {
+    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    for line in map.lines() {
+        let mut fields = line.split_whitespace();
+        let (Some(span), Some(access)) = (fields.next(), fields.next()) else {
+            continue;
+        };
+        let Some((low, high)) = span.split_once('-') else {
+            continue;
+        };
+        let (Ok(low), Ok(high)) = (usize::from_str_radix(low, 16), usize::from_str_radix(high, 16))
+        else {
+            continue;
+        };
+        if !access.starts_with('r') {
+            continue;
+        }
+        match ranges.last_mut() {
+            Some(last) if last.1 == low => last.1 = high,
+            _ => ranges.push((low, high)),
+        }
+    }
+    ranges
+}
+
+/// True when every page from `first` to `last` is mapped (off Linux).
+#[cfg(not(target_os = "linux"))]
+fn mapped(first: usize, last: usize) -> bool {
     extern "C" {
         fn mincore(address: *mut c_void, length: usize, pages: *mut u8) -> c_int;
         fn getpagesize() -> c_int;
     }
-
-    /// True when every page from `first` to `last` is mapped.
-    pub(super) fn mapped(first: usize, last: usize) -> bool {
-        // SAFETY: getpagesize takes no argument and cannot fail.
-        let page = usize::try_from(unsafe { getpagesize() }).unwrap_or(super::PROBE_STRIDE);
-        let base = first - first % page;
-        let span = last - base + 1;
-        let mut pages = vec![0u8; span.div_ceil(page)];
-        // SAFETY: mincore reads no byte of the range; it writes one byte a
-        // page into `pages`, which holds a byte for every page asked about.
-        unsafe { mincore(base as *mut c_void, span, pages.as_mut_ptr()) == 0 }
-    }
-
-    #[cfg(target_os = "linux")]
-    #[repr(C)]
-    struct IoVec {
-        base: *mut c_void,
-        length: usize,
-    }
-
-    #[cfg(target_os = "linux")]
-    extern "C" {
-        fn getpid() -> c_int;
-        fn process_vm_readv(
-            pid: c_int,
-            local: *const IoVec,
-            local_count: std::os::raw::c_ulong,
-            remote: *const IoVec,
-            remote_count: std::os::raw::c_ulong,
-            flags: std::os::raw::c_ulong,
-        ) -> isize;
-    }
-
-    /// Copy one byte out of every page from `first` to `last` through the
-    /// kernel, which answers a fault with an error instead of a signal.
-    /// `None` when the call itself is not available here.
-    #[cfg(target_os = "linux")]
-    pub(super) fn vm_readable(first: usize, last: usize) -> Option<bool> {
-        /// The iovec batch every Linux kernel accepts (`IOV_MAX`).
-        const BATCH: usize = 1024;
-        const EFAULT: i32 = 14;
-        let mut places = Vec::new();
-        let mut at = first;
-        loop {
-            places.push(at);
-            let next = (at - at % super::PROBE_STRIDE).saturating_add(super::PROBE_STRIDE);
-            if next > last {
-                break;
-            }
-            at = next;
-        }
-        if places.last() != Some(&last) {
-            places.push(last);
-        }
-        let mut sink = [0u8; BATCH];
-        // SAFETY: getpid takes no argument and cannot fail.
-        let pid = unsafe { getpid() };
-        for batch in places.chunks(BATCH) {
-            let remote: Vec<IoVec> = batch
-                .iter()
-                .map(|&place| IoVec { base: place as *mut c_void, length: 1 })
-                .collect();
-            let local = IoVec { base: sink.as_mut_ptr().cast(), length: batch.len() };
-            // SAFETY: the kernel writes at most `batch.len()` bytes into
-            // `sink`, and reads the remote bytes itself, failing on a fault.
-            let copied = unsafe {
-                process_vm_readv(pid, &local, 1, remote.as_ptr(), remote.len() as _, 0)
-            };
-            if copied < 0 {
-                let code = std::io::Error::last_os_error().raw_os_error();
-                return (code == Some(EFAULT)).then_some(false);
-            }
-            if copied as usize != batch.len() {
-                return Some(false);
-            }
-        }
-        Some(true)
-    }
+    // SAFETY: getpagesize takes no argument and cannot fail.
+    let page = usize::try_from(unsafe { getpagesize() }).unwrap_or(4096).max(1);
+    let base = first - first % page;
+    let span = last - base + 1;
+    let mut pages = vec![0u8; span.div_ceil(page)];
+    // SAFETY: mincore reads no byte of the range; it writes one byte a
+    // page into `pages`, which holds a byte for every page asked about.
+    unsafe { mincore(base as *mut c_void, span, pages.as_mut_ptr()) == 0 }
 }
 
 /// Borrow one already-validated array's strings out of its buffers.
@@ -338,7 +320,7 @@ mod probe {
 /// declares each data buffer. A Utf8 array's offset at `offset + length`
 /// declares its data buffer. Every read below sits inside one of those
 /// declarations, checked before the read. Each declared extent is then
-/// probed readable (`readable`), so a producer whose declarations agree
+/// checked readable (`Readable`), so a producer whose declarations agree
 /// but whose allocation is shorter gets a refusal when the extent runs
 /// into unreadable memory. An extent that runs into another readable
 /// allocation cannot be told from a correct one by any reader; that lie
@@ -382,9 +364,10 @@ unsafe fn borrow_strings(
             "the frame's struct root asks for rows its column does not carry",
         ));
     }
+    let memory = Readable::snapshot()?;
     let spans = match text {
-        Text::View => view_spans(array, skip, count)?,
-        Text::Utf8 | Text::LargeUtf8 => offset_spans(array, text, skip, count, carried)?,
+        Text::View => view_spans(array, &memory, skip, count)?,
+        Text::Utf8 | Text::LargeUtf8 => offset_spans(array, &memory, text, skip, count, carried)?,
     };
     let mut texts = Vec::with_capacity(count);
     for (start, length) in spans {
@@ -426,6 +409,7 @@ unsafe fn word<const N: usize>(at: *const u8) -> [u8; N] {
 /// the table minus three, and no view can name the sizes buffer itself.
 unsafe fn view_spans(
     array: *const ArrowArray,
+    memory: &Readable,
     skip: usize,
     count: usize,
 ) -> PyResult<Vec<(*const u8, usize)>> {
@@ -444,8 +428,8 @@ unsafe fn view_spans(
     }
     // The views the rows read and the whole sizes buffer the count
     // declares must be readable before either is read.
-    if !readable(views.wrapping_add(skip * 16), count * 16)
-        || !readable(sizes, data_buffers * 8)
+    if !memory.covers(views.wrapping_add(skip * 16), count * 16)
+        || !memory.covers(sizes, data_buffers * 8)
     {
         return Err(UsageError::new_err(UNREADABLE));
     }
@@ -481,7 +465,7 @@ unsafe fn view_spans(
         // Each data buffer a view names is probed once, over the whole
         // extent its size declares.
         if !probed[index] {
-            if !readable(base, declared as usize) {
+            if !memory.covers(base, declared as usize) {
                 return Err(UsageError::new_err(UNREADABLE));
             }
             probed[index] = true;
@@ -498,6 +482,7 @@ unsafe fn view_spans(
 /// offset, and nonnegative, before any data byte is touched.
 unsafe fn offset_spans(
     array: *const ArrowArray,
+    memory: &Readable,
     text: Text,
     skip: usize,
     count: usize,
@@ -516,7 +501,7 @@ unsafe fn offset_spans(
     // SAFETY: `place` never passes `carried`, and the array's offset plus
     // length declares `carried + 1` offsets, probed readable here first.
     let width = if matches!(text, Text::LargeUtf8) { 8 } else { 4 };
-    if !readable(offsets.wrapping_add(skip * width), (carried - skip + 1) * width) {
+    if !memory.covers(offsets.wrapping_add(skip * width), (carried - skip + 1) * width) {
         return Err(UsageError::new_err(UNREADABLE));
     }
     let at = |place: usize| -> i64 {
@@ -552,7 +537,7 @@ unsafe fn offset_spans(
     }
     // The last offset declares the values buffer's extent, and every row
     // read sits inside it, so that extent must be readable first.
-    if count > 0 && !readable(values, start as usize) {
+    if count > 0 && !memory.covers(values, start as usize) {
         return Err(UsageError::new_err(UNREADABLE));
     }
     Ok(spans)
@@ -2314,5 +2299,22 @@ mod malformed_tests {
         assert_eq!(unsafe { std::slice::from_raw_parts(copied as *const u8, blob.len()) }, blob.as_slice());
         let negative = (-1i32).to_le_bytes();
         assert!(tree.metadata(negative.as_ptr().cast()).is_null());
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn the_memory_map_keeps_readable_ranges_and_merges_touching_ones() {
+        // Review 7, second pass: a protected page (`---p`) is mapped but
+        // unreadable, so it must leave a gap the check refuses.
+        let map = "1000-2000 r--p 0 00:00 0 /lib\n2000-3000 rw-p 0 00:00 0\n3000-4000 ---p 0 00:00 0\n5000-6000 r-xp 0 00:00 0\nbad line\n";
+        assert_eq!(readable_ranges(map), [(0x1000, 0x3000), (0x5000, 0x6000)]);
+        let memory = Readable { ranges: readable_ranges(map) };
+        let at = |place: usize| place as *const u8;
+        assert!(memory.covers(at(0x1800), 0x1000));
+        assert!(!memory.covers(at(0x2800), 0x1000));
+        assert!(!memory.covers(at(0x4800), 0x10));
+        assert!(memory.covers(at(0x5000), 0x1000));
+        assert!(!memory.covers(at(0x5000), 0x1001));
+        assert!(memory.covers(at(0x4800), 0));
     }
 }

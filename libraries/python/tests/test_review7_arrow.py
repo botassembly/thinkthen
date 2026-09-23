@@ -101,3 +101,61 @@ def test_field_and_schema_metadata_ride_through():
     back = pa.RecordBatchReader.from_stream(native.annotate_stream(FORM, src, "body")).read_all()
     assert back.schema.field("tag").metadata == {b"unit": b"cm"}
     assert back.schema.metadata == {b"origin": b"probe"}
+
+
+# Review 7, second pass: the reader's check must not lean on a system call a
+# sandbox can refuse. This child process forbids process_vm_readv (EPERM
+# through seccomp), then hands the reader a Utf8 column whose offsets
+# declare 200 bytes over three that end at a PROT_NONE page. A reader whose
+# fallback cannot see a protected page reads into it and dies.
+GUARDED = r"""
+import ctypes as C, mmap, struct
+import pyarrow as pa
+import thinkthen as tt
+
+libc = C.CDLL(None, use_errno=True)
+class Filter(C.Structure):
+    _fields_ = [("code", C.c_uint16), ("jt", C.c_uint8), ("jf", C.c_uint8), ("k", C.c_uint32)]
+class Program(C.Structure):
+    _fields_ = [("len", C.c_uint16), ("filter", C.POINTER(Filter))]
+NR_PROCESS_VM_READV, AUDIT_ARCH_X86_64 = 310, 0xC000003E
+# Allow every other architecture and call; answer process_vm_readv with EPERM.
+rules = (Filter * 7)(
+    Filter(0x20, 0, 0, 4), Filter(0x15, 1, 0, AUDIT_ARCH_X86_64), Filter(0x06, 0, 0, 0x7FFF0000),
+    Filter(0x20, 0, 0, 0), Filter(0x15, 0, 1, NR_PROCESS_VM_READV), Filter(0x06, 0, 0, 0x00050000 | 1),
+    Filter(0x06, 0, 0, 0x7FFF0000))
+program = Program(7, rules)
+assert libc.prctl(38, 1, 0, 0, 0) == 0 and libc.prctl(22, 2, C.byref(program), 0, 0) == 0
+# The filter holds: the call now fails with EPERM.
+assert libc.syscall(NR_PROCESS_VM_READV, 0, 0, 0, 0, 0, 0) == -1 and C.get_errno() == 1
+
+page = mmap.PAGESIZE
+region = mmap.mmap(-1, 2 * page)
+base = C.addressof(C.c_char.from_buffer(region))
+assert libc.mprotect(C.c_void_p(base + page), page, 0) == 0
+C.memmove(base + page - 3, b"abc", 3)
+# pyarrow checks offsets against the size it is told; it never reads the bytes.
+values = pa.foreign_buffer(base + page - 3, 200, base=region)
+column = pa.StringArray.from_buffers(1, pa.py_buffer(struct.pack("<2i", 0, 200)), values)
+try:
+    tt.decide_many("Is this a refund?", pa.chunked_array([column]))
+    print("answered")
+except tt.UsageError as refused:
+    print("refused:", refused)
+"""
+
+
+def test_a_guard_page_is_refused_without_process_vm_readv():
+    import platform
+
+    import pytest
+
+    if sys.platform != "linux" or platform.machine() != "x86_64":
+        pytest.skip("the seccomp filter here is written for Linux on x86_64")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", GUARDED],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    assert done.stdout.strip() == "refused: the column's buffers declare bytes this process cannot read"
