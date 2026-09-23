@@ -134,6 +134,12 @@ The registry names are Ian's alone and were on his list before this rewrite.
 - Items 3 and 9 of the 2026-09-19 draft are replaced by sections 1 and 9 here. The port-per-language design of the sdk study stays on record as the fallback if the merge fails, and nothing in it is built.
 - Exit codes, `--quiet`, and `--raw` stay in the command. A library returns values and raises its own errors.
 
+## Proposed amendment, 2026-09-23: ten judgment functions
+
+Ian authorized `recognize` and `relate` after this ADR fixed the original eight-function surface. Replace section 6 item 1's public list with ten functions: `decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find`, `annotate`, `recognize`, and `relate`. `question`, `details`, usage counters, and each language's bulk spelling remain supporting forms. References to eight public functions in sections 7 and 8 describe the evidence and draft surface that existed when Ian accepted this ADR; they no longer limit the product surface or the shared conformance file.
+
+Tickets 0080 and 0081 own command behavior and the shared planner and exclude public library APIs. Ticket 0084 owns the Rust builders, calls, and values. Its design may be reviewed and recorded before ticket 0078 lands, but its `Engine`, `EngineBuilder`, and `default_engine` declarations remain provisional. Ticket 0078 must land before that portion is frozen and before 0085 or 0086 implementation. Then reconcile construction, `Engine`'s `Clone + Send + Sync + Debug` promises, implicit-engine initialization, omitted-width registration, fork recovery, and signal dependency placement. A change outside that list reopens full 0084 design review. This amendment changes no behavior by itself. Ian can overturn it before implementation.
+
 ### Ruled after acceptance, 2026-09-21: the data frame is Polars
 
 Ian ruled on 2026-09-21 that Python's data frame container is Polars, not pandas: `annotate` and `recognize` take and return Polars DataFrames, the bulk form accepts a Polars column, Polars rides as an optional dependency behind `pip install thinkthen[polars]`, and pandas leaves the surface. The ruling is recorded with its reasons in `sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md`.
