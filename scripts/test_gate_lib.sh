@@ -173,6 +173,18 @@ said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh --built "$
 expect "a built surface with a clean artifact" "$status" "0"
 rm -rf "$planted"
 
+# The portable-shell check names each GNU-only spelling and passes the
+# portable ones (surfaces-review-7 R3-32).
+planted=$(mktemp "${TMPDIR:-/tmp}/gate-shell.XXXXXX")
+printf '%s\n' 'sed -i "s/a/b/" f' 't=$(date +%s.%N)' 'if timeout 5 true; then :; fi' \
+  '# timeout 5 in a comment' 'sed -i.bak "s/a/b/" f' '"$TIMEOUT" 5 true' 'psql --timeout 5' >"$planted"
+status=0
+said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
+rm -f "$planted"
+expect "GNU-only shell spellings" "$status:$said" "1:FAIL     $planted:1:sed -i \"s/a/b/\" f
+FAIL     $planted:2:t=\$(date +%s.%N)
+FAIL     $planted:3:if timeout 5 true; then :; fi"
+
 # Every surface check prints the counted spelling for its own wire skip.
 for pair in libraries/python:python libraries/typescript:typescript libraries/rust:rust \
   libraries/ruby:ruby libraries/r:r libraries/c:c databases/duckdb:duckdb \

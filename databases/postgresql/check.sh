@@ -7,6 +7,11 @@
 # the Darwin spellings (lsof, no ss); Linux is the gate's platform.
 set -euo pipefail
 cd "$(dirname "$0")"
+# Portable across Linux and macOS (surfaces-review-7 R3-32): BSD date
+# has no %N, and macOS ships GNU timeout only as gtimeout (coreutils).
+now() { perl -MTime::HiRes=time -e 'printf "%.3f\n", time'; }
+TIMEOUT=$(command -v timeout || command -v gtimeout || true)
+[ -n "$TIMEOUT" ] || { echo "FAIL     timeout (gtimeout on macOS, from coreutils) is not on PATH" >&2; exit 1; }
 
 # The builder's home stays out of every artifact this check builds, the
 # same remap the C, SQLite, Python, and Node builds carry
@@ -135,21 +140,21 @@ echo "== postgres surface: warm saves, decide reads (review 4, item 15)"
 # The reviewer's shape, scaled for the null path: warm judges 20,000
 # pairs, then the row-by-row decide pass must answer from the saved
 # judgments — instant and identical — instead of re-judging.
-warm_start=$(date +%s.%N)
+warm_start=$(now)
 psql_in -Atq -c "SELECT thinkthen_warm('@refund.json',
     'order ' || g || ': charged twice, please refund')
   FROM generate_series(1, 20000) g;" > .tmp-warm-count.out
-warm_end=$(date +%s.%N)
+warm_end=$(now)
 warm_elapsed=$(awk -v a="$warm_start" -v b="$warm_end" 'BEGIN { printf "%.2f", b - a }')
 grep -q "20000" .tmp-warm-count.out || { echo "FAILED   warm judged $(cat .tmp-warm-count.out) rows" >&2; exit 1; }
-read_start=$(date +%s.%N)
+read_start=$(now)
 read_count=$(psql_in -Atq -c "SELECT count(*) FROM generate_series(1, 20000) g
   WHERE thinkthen_decide('@refund.json',
     'order ' || g || ': charged twice, please refund');")
 read_again=$(psql_in -Atq -c "SELECT count(*) FROM generate_series(1, 20000) g
   WHERE thinkthen_decide('@refund.json',
     'order ' || g || ': charged twice, please refund');")
-read_end=$(date +%s.%N)
+read_end=$(now)
 read_elapsed=$(awk -v a="$read_start" -v b="$read_end" 'BEGIN { printf "%.2f", b - a }')
 [ "$read_count" = "$read_again" ] \
   || { echo "FAILED   the saved judgments read differently twice ($read_count, $read_again)" >&2; exit 1; }
@@ -308,14 +313,14 @@ psql_in -c "RESET thinkthen.deadline_ms;" >/dev/null
 # Mid-flight: a budget inside a long batch ends it at the deadline, not at
 # the end (the same batch without a stop runs about a second on the null
 # backend and answers a count).
-batch_start=$(date +%s.%N)
+batch_start=$(now)
 if psql_in -c '\set VERBOSITY verbose' \
     -c "SET thinkthen.deadline_ms = 50;" \
     -c "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', (SELECT array_agg('refund ' || g) FROM generate_series(1, 300000) g));" \
     > .tmp-batch.out 2>&1; then
   echo "FAILED   the 50 ms budget's batch completed" >&2; cat .tmp-batch.out >&2; exit 1
 fi
-batch_elapsed=$(awk -v a="$batch_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+batch_elapsed=$(awk -v a="$batch_start" -v b="$(now)" 'BEGIN { printf "%.2f", b - a }')
 grep -q "57014" .tmp-batch.out \
   || { echo "FAILED   the 50 ms budget's batch did not return the deadline kind" >&2; cat .tmp-batch.out >&2; exit 1; }
 awk -v e="$batch_elapsed" 'BEGIN { exit !(e <= 2.0) }' \
@@ -470,11 +475,11 @@ echo "== postgres surface: named files read through the gate, the cap, and the r
 docker exec "$NAME" sh -c 'head -c 1048577 /dev/zero | tr "\\0" "x" > /var/lib/postgresql/data/big.json'
 docker exec "$NAME" mkfifo /var/lib/postgresql/data/pipe.fifo
 
-zero_start=$(date +%s.%N)
-if timeout 10 docker exec -e PGHOST=/run/postgresql "$NAME" psql -U postgres -Atqc "SELECT thinkthen_decide('@/dev/zero', 'refund');" > .tmp-gate.out 2>&1; then
+zero_start=$(now)
+if "$TIMEOUT" 10 docker exec -e PGHOST=/run/postgresql "$NAME" psql -U postgres -Atqc "SELECT thinkthen_decide('@/dev/zero', 'refund');" > .tmp-gate.out 2>&1; then
   echo "FAILED   @/dev/zero answered" >&2; cat .tmp-gate.out >&2; exit 1
 fi
-zero_elapsed=$(awk -v a="$zero_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+zero_elapsed=$(awk -v a="$zero_start" -v b="$(now)" 'BEGIN { printf "%.2f", b - a }')
 grep -q "did not read" .tmp-gate.out \
   || { echo "FAILED   the /dev/zero refusal's message is missing" >&2; cat .tmp-gate.out >&2; exit 1; }
 if grep -qE "No such file|Permission denied|Text file busy" .tmp-gate.out; then
@@ -485,11 +490,11 @@ awk -v e="$zero_elapsed" 'BEGIN { exit !(e <= 2.0) }' \
 psql_in -Atqc "SELECT 1;" >/dev/null
 echo "ok       @/dev/zero refused in ${zero_elapsed}s with the uniform message, and the backend lived"
 
-fifo_start=$(date +%s.%N)
-if timeout 5 docker exec -e PGHOST=/run/postgresql "$NAME" psql -U postgres -Atqc "SELECT thinkthen_decide('@/var/lib/postgresql/data/pipe.fifo', 'refund');" > .tmp-gate.out 2>&1; then
+fifo_start=$(now)
+if "$TIMEOUT" 5 docker exec -e PGHOST=/run/postgresql "$NAME" psql -U postgres -Atqc "SELECT thinkthen_decide('@/var/lib/postgresql/data/pipe.fifo', 'refund');" > .tmp-gate.out 2>&1; then
   echo "FAILED   a fifo answered" >&2; cat .tmp-gate.out >&2; exit 1
 fi
-fifo_elapsed=$(awk -v a="$fifo_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+fifo_elapsed=$(awk -v a="$fifo_start" -v b="$(now)" 'BEGIN { printf "%.2f", b - a }')
 grep -q "did not read" .tmp-gate.out \
   || { echo "FAILED   the fifo refusal's message is missing" >&2; cat .tmp-gate.out >&2; exit 1; }
 awk -v e="$fifo_elapsed" 'BEGIN { exit !(e <= 2.0) }' \
@@ -621,10 +626,10 @@ psql_in -c "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a compl
 cancel_bg=$!
 sleep 1.2
 victim=$(psql_in -Atqc "SELECT pid FROM pg_stat_activity WHERE query LIKE '%thinkthen_decide%' AND pid <> pg_backend_pid() ORDER BY backend_start DESC LIMIT 1")
-cancel_start=$(date +%s.%N)
+cancel_start=$(now)
 psql_in -Atqc "SELECT pg_cancel_backend($victim)" >/dev/null
 wait "$cancel_bg" || true
-cancel_end=$(date +%s.%N)
+cancel_end=$(now)
 cancel_elapsed=$(awk -v a="$cancel_start" -v b="$cancel_end" 'BEGIN { printf "%.2f", b - a }')
 grep -q "canceling statement due to user request" .tmp-cancel.out \
   || { echo "FAILED   the cancel did not land" >&2; cat .tmp-cancel.out >&2; exit 1; }
@@ -633,11 +638,11 @@ awk -v e="$cancel_elapsed" 'BEGIN { exit !(e <= 1.5) }' \
 echo "ok       pg_cancel_backend stopped the batch ${cancel_elapsed}s past the signal (full run about 3.6 s)"
 rm -f .tmp-cancel.out
 
-timeout_start=$(date +%s.%N)
+timeout_start=$(now)
 if psql_in -c "SET statement_timeout='1s'; SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', (SELECT array_agg('refund ' || g) FROM generate_series(1, 1000000) g));" > .tmp-timeout.out 2>&1; then
   echo "FAILED   the statement_timeout run completed" >&2; exit 1
 fi
-timeout_end=$(date +%s.%N)
+timeout_end=$(now)
 timeout_elapsed=$(awk -v a="$timeout_start" -v b="$timeout_end" 'BEGIN { printf "%.2f", b - a }')
 grep -q "statement timeout" .tmp-timeout.out \
   || { echo "FAILED   the timeout error is missing" >&2; cat .tmp-timeout.out >&2; exit 1; }
@@ -815,14 +820,14 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   # The enforced tool on the single-row path, against the 300 ms stub: a
   # 50 ms budget must return the deadline kind in about a tick, not after
   # the send returns.
-  deadline_start=$(date +%s.%N)
+  deadline_start=$(now)
   if psql_wire -c '\set VERBOSITY verbose' \
       -c "SET thinkthen.deadline_ms = 50;" \
       -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" \
       > .tmp-wire-deadline.out 2>&1; then
     echo "FAILED   the 50 ms budget did not refuse" >&2; exit 1
   fi
-  deadline_end=$(date +%s.%N)
+  deadline_end=$(now)
   deadline_elapsed=$(awk -v a="$deadline_start" -v b="$deadline_end" 'BEGIN { printf "%.2f", b - a }')
   grep -q "57014" .tmp-wire-deadline.out \
     || { echo "FAILED   the wire deadline did not return 57014" >&2; cat .tmp-wire-deadline.out >&2; exit 1; }
@@ -838,14 +843,14 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   # Review 1/2 leftovers against the 300 ms stub: a batch of 64 distinct
   # texts at width 32 needs two rounds (about 0.6 s) without a stop; a
   # 100 ms budget must end it at the engine's tick, not at the end.
-  batch_wire_start=$(date +%s.%N)
+  batch_wire_start=$(now)
   if psql_wire -c '\set VERBOSITY verbose' \
       -c "SET thinkthen.deadline_ms = 100;" \
       -c "SELECT count(*) FROM thinkthen_decide('@refund.json', (SELECT array_agg('refund ' || g) FROM generate_series(1, 64) g));" \
       > .tmp-wire-batch.out 2>&1; then
     echo "FAILED   the wire batch's 100 ms budget completed" >&2; cat .tmp-wire-batch.out >&2; exit 1
   fi
-  batch_wire_elapsed=$(awk -v a="$batch_wire_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
+  batch_wire_elapsed=$(awk -v a="$batch_wire_start" -v b="$(now)" 'BEGIN { printf "%.2f", b - a }')
   grep -q "57014" .tmp-wire-batch.out \
     || { echo "FAILED   the wire batch did not return the deadline kind" >&2; cat .tmp-wire-batch.out >&2; exit 1; }
   awk -v e="$batch_wire_elapsed" 'BEGIN { exit !(e <= 1.5) }' \

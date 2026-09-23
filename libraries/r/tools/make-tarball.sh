@@ -44,15 +44,17 @@ for crate in contract standin thinkthen-core; do
     | tar -C "$STAGE/thinkthen/src/rust/vendor" -xf -
 done
 
-sed -i \
-  -e "s|path = '../../../../../contract'|path = 'vendor/contract'|" \
-  -e "s|path = '../../../../../standin'|path = 'vendor/standin'|" \
+# perl -pi, because GNU and BSD sed spell in-place editing differently
+# (surfaces-review-7 R3-32).
+perl -pi \
+  -e "s|path = '../../../../../contract'|path = 'vendor/contract'|;" \
+  -e "s|path = '../../../../../standin'|path = 'vendor/standin'|;" \
   "$STAGE/thinkthen/src/rust/Cargo.toml"
 
 # The vendored trees are their own workspace roots (contract and
 # standin each declare one), and cargo refuses multiple roots in one
 # tree: the package's own [workspace] section excludes them.
-sed -i '/^\[workspace\]$/a exclude = ["vendor"]' \
+perl -pi -e '$_ .= "exclude = [\"vendor\"]\n" if /^\[workspace\]$/' \
   "$STAGE/thinkthen/src/rust/Cargo.toml"
 
 grep -n "vendor/" "$STAGE/thinkthen/src/rust/Cargo.toml"

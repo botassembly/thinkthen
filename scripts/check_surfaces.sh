@@ -184,6 +184,7 @@ run_step "private references" python3 scripts/check_no_private_refs.py || fail=1
 run_step "private-reference check tests" python3 scripts/test_check_no_private_refs.py || fail=1
 
 run_step "gate counting and wire-verdict tests" bash scripts/test_gate_lib.sh || fail=1
+run_step "portable shell spellings" bash scripts/check_portable_shell.sh || fail=1
 
 run_step "every build-tool call carries the lock" python3 scripts/check_locked_calls.py || fail=1
 

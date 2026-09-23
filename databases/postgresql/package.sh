@@ -85,7 +85,7 @@ PY
 # ('form.json'); this surface requires the ruled '@name' spelling for a
 # file (review 2, item 4), so the rehearsal substitutes it. The deck's
 # line is recorded for its owner in README.md.
-sed -i "s/thinkthen_annotate('form.json'/thinkthen_annotate('@form.json'/" "$WORK/slide.sql"
+perl -pi -e "s/thinkthen_annotate\('form.json'/thinkthen_annotate('\@form.json'/" "$WORK/slide.sql"
 cat "$WORK/slide.sql"
 
 echo "== postgres package: clean postgres:16 container"
