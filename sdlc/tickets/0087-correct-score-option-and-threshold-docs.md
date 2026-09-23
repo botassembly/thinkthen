@@ -6,7 +6,7 @@ opens: specification/score.md sdlc/planning/handoff-to-the-architect-2026-09-21.
 
 # 0087: Correct score, option-limit, and threshold documentation
 
-Status: ready
+Status: accepted
 
 ## Outcome and authority
 
@@ -41,7 +41,7 @@ Edit exactly the four files in `opens`.
 | `recognize` | Complete labeled name candidates, or one recording-backed rerun per tested cut | entity `strength`; explicit tested cuts only, never reconstruct omitted names |
 | `relate` | Complete labeled candidate edges, or one recording-backed rerun per tested cut | edge `probability`; explicit tested cuts only, never reconstruct omitted edges |
 
-4. Extend the trust page's existing sketch with a concise summary and this exact repository link to the executable page: `https://github.com/botassembly/thinkthen/tree/main/demos/13-pick-a-threshold`. Do not invent an internal site route. Say that complete saved details can test another cut without a model request, while filtered outputs need complete candidate collection or recording-backed per-cut reruns.
+4. Extend the trust page's existing sketch with a concise summary of the executable threshold how-to. Do not link to the private repository or invent an internal site route. Say that complete saved details can test another cut without a model request, while filtered outputs need complete candidate collection or recording-backed per-cut reruns.
 
 Excluded: changing `transforms/sweep/sweep.jq` or any other transform; adding fixtures, recordings, commands, options, or result fields; implementing `recognize`, `relate`, request splitting, `--compare-threshold`, or automatic question rewriting; reconstructing lower-cut candidates from filtered output; changing the 255 product ceiling, backend size policy, score arithmetic, defaults, or any runtime behavior; editing the source issues or making a live or paid call.
 
@@ -53,7 +53,7 @@ Excluded: changing `transforms/sweep/sweep.jq` or any other transform; adding fi
 - The executable example uses only committed or inline synthetic local rows, asserts fixed output with `mustmatch`, and sends no request. A sweep uses complete labeled candidate rows with their unfiltered signals; a filtered-output example instead reruns each shown cut from a committed recording and joins the result to the full labeled input. It never derives a lower cut from an already filtered result.
 - The annotate row states the existing mapped support for decide, choose, and tag. It states that mapped score is unsupported and demonstrates or describes projection of one named score into ordinary score rows before using integer boundaries 1 through K minus 1.
 - The how-to never says every function accepts `--threshold`. It says a cut belongs to one question, model, output signal, labeled population, and collection boundary; a changed question, model, or incomplete candidate set requires another measured run.
-- The trust page uses exactly `https://github.com/botassembly/thinkthen/tree/main/demos/13-pick-a-threshold`, makes the complete-details qualification, and does not duplicate the full recipe.
+- The trust page names the executable threshold how-to, makes the complete-details qualification, does not duplicate the full recipe, and exposes no private-repository link.
 - The four owning files have an observed baseline of 272 nonblank lines: 54 in `specification/score.md`, 75 in the handoff, 69 in how-to 13, and 74 in the trust page. Their post-change total is at most 302 nonblank lines. How-to 13 remains at most 120 physical lines and 900 words. The implementer may consolidate or delete existing prose to meet either limit. No source ratchet changes.
 - From the repository root, fixed-string checks prove the old score and 100-option claims are absent and the measured replacements are present. An exact expected-lines comparison checks the ten mapping rows rather than merely counting function names. With `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, `mustmatch test demos/13-pick-a-threshold/README.md`, `npm --prefix site run build`, the full specification rung, and `git diff --check` pass.
 
@@ -75,3 +75,7 @@ The three source issues are `sdlc/issues/2026-09-23-score-spec-says-the-vendor-s
 - Selected implementation model: Luna with high reasoning. Independent review checks factual fidelity, the no-behavior boundary, all-ten-function coverage, and the line budget.
 
 Re-score and stop if the recipe needs transform code, a new output shape, a command option, a changed product ceiling, or a new claim about vendor internals.
+
+## Review
+
+The four opened documents now carry the experiment 235 score correction, the measured option and request-size facts, the exact ten-function threshold mapping, and the replay-versus-rerun boundary. Independent code review accepted the final change after the public trust page dropped a private-repository link and the ticket recorded the tested Node version. The coordinator ran `install`, `lint`, `test`, and `spec` in order with both backend environment variables unset. All passed. Under Node 22.22.3, the full Astro build produced 44 pages, wrote 44 Markdown twins and `llms.txt`, and passed the 44-page internal-link check. The four owning files total 268 nonblank lines. How-to 13 has 88 lines and 830 words. `git diff --check` passes.
