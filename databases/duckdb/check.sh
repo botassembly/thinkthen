@@ -26,7 +26,7 @@ echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
 # second build that carries it, exactly the way the C surface builds its
 # door test. The default extension stays the one every other step loads.
 DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
-  cargo build --release --quiet --features synthetic-partial
+  cargo build --locked --release --quiet --features synthetic-partial
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
   -o build/fixture/thinkthen.duckdb_extension \
   -l target/release/libthinkthen.$LIB_EXT \
@@ -37,7 +37,7 @@ test -s build/fixture/thinkthen.duckdb_extension
 export ENGINE_FIXTURE_EXTENSION="$PWD/build/fixture/thinkthen.duckdb_extension"
 
 echo "== duckdb surface: the error-mapping test"
-cargo test --release --quiet --lib
+cargo test --locked --release --quiet --lib
 
 echo "== duckdb surface: null suite"
 tools/null_suite.sh
@@ -97,7 +97,7 @@ echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
 # second build that carries it, exactly the way the C surface builds its
 # door test. The default extension stays the one every other step loads.
 DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
-  cargo build --release --quiet --features synthetic-partial
+  cargo build --locked --release --quiet --features synthetic-partial
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
   -l target/release/libthinkthen.$LIB_EXT \
   -o build/fixture/thinkthen.duckdb_extension \

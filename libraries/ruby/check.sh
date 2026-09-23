@@ -32,7 +32,7 @@ docker_run() {
 }
 
 echo "== ruby surface: the defect kind maps to its error class (shim unit test)"
-docker_run 'cargo test --quiet --lib'
+docker_run 'cargo test --locked --quiet --lib'
 
 echo "== ruby surface: surface tests, null backend"
 docker_run 'ruby -I lib -I tests tests/test_surface.rb'
