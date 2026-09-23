@@ -85,7 +85,7 @@ try {
   const commit = mover === "" ? "" : git(["log", "-1", "--format=%B", mover]);
   if (commit !== "") {
     const body = commit.split("\n\n").slice(1).join("\n\n").trim();
-    if (body === "" || !/second agent/i.test(body)) {
+    if (body === "" || !/second[- ]agent/i.test(body)) {
       console.error(
         "surfaces-ratchet: the last commit moving sdlc/surfaces-ratchet.json carries no body naming the growth and the second-agent review (CLAUDE.md). Raise the ceiling in a commit that does.",
       );
