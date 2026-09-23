@@ -171,6 +171,34 @@ const MAX_ONE_STRING: usize = 4 * 1024 * 1024;
 /// beyond it is refused as the usage kind instead of allocated or walked.
 const MAX_ROWS: usize = u32::MAX as usize;
 
+/// The most bytes one text column may declare its data buffer holds: a
+/// Utf8 array's final offset, or a string view's per-buffer declared size.
+///
+/// The interface gives no buffer length, so a producer that declares an
+/// extent past what it allocated still reads inside its own declaration.
+/// This cap bounds that residual read into a data buffer to at most a
+/// gibibyte past it, instead of the 2^63 an offset near `i64::MAX` — or an
+/// i32 offset at its own maximum, which no real 2 GiB allocation backs —
+/// would otherwise name. The bound sits on the whole declared extent, so
+/// the first byte a slice reads (the array's own offset into the buffer)
+/// is bounded by it too. A gibibyte is 256 times the per-row cap and past
+/// any single chunk of text a classifier is handed; a real column that
+/// large arrives in chunks, and one chunk declaring more is refused as
+/// usage.
+///
+/// This governs the data buffers only. The views buffer and the offsets
+/// buffer are declared by the row count, not by a byte extent, so their
+/// walk is bounded instead by `MAX_ROWS` (16 bytes a view, up to 8 a
+/// offset). That is a looser reach past a short buffer, and it is the
+/// pre-existing row-count regime, not a promise this cap makes.
+const MAX_DATA: usize = 1024 * 1024 * 1024;
+
+/// The most buffers a text array's table may hold. Utf8 carries three and a
+/// string view carries a handful of data buffers beside its views and
+/// sizes; a table claiming more is a malformed count the reader refuses
+/// before it indexes the table's last slot (the sizes buffer).
+const MAX_BUFFERS: i64 = 64;
+
 /// Borrow one already-validated array's strings out of its buffers.
 ///
 /// `skip` is where the caller's rows begin and `count` how many there
@@ -212,7 +240,12 @@ unsafe fn borrow_strings(
     if (*array).buffers.is_null() {
         return Err(UsageError::new_err("the column carries no buffer table"));
     }
-    let carried = (*array).offset as usize + (*array).length as usize;
+    if (*array).n_buffers < 0 || (*array).n_buffers > MAX_BUFFERS {
+        return Err(UsageError::new_err(
+            "the column's buffer table names more buffers than a text column carries",
+        ));
+    }
+    let carried = ((*array).offset as usize).saturating_add((*array).length as usize);
     if carried > MAX_ROWS {
         return Err(UsageError::new_err(
             "the column claims more rows than any text column carries",
@@ -294,8 +327,13 @@ unsafe fn view_spans(
             ));
         }
         let declared = i64::from_le_bytes(word(sizes.add(index * 8)));
+        if declared < 0 || declared as u64 > MAX_DATA as u64 {
+            return Err(UsageError::new_err(
+                "a string view's data buffer declares more bytes than a text column carries",
+            ));
+        }
         let base = buffer(array, 2 + index);
-        if declared < 0 || offset + size as u64 > declared as u64 || base.is_null() {
+        if offset + size as u64 > declared as u64 || base.is_null() {
             return Err(UsageError::new_err(
                 "a string view reaches past the length its data buffer declares",
             ));
@@ -345,6 +383,14 @@ unsafe fn offset_spans(
         if start < 0 || end < start {
             return Err(UsageError::new_err(
                 "the column's offsets are reversed or negative",
+            ));
+        }
+        // The final offset declares the values buffer's extent; the
+        // offsets rise to it, so bounding it bounds every byte read,
+        // including a slice's own first offset.
+        if end as usize > MAX_DATA {
+            return Err(UsageError::new_err(
+                "the column's offsets name more bytes than a text column carries",
             ));
         }
         if place <= skip + count {
@@ -1685,19 +1731,11 @@ mod malformed_tests {
 
     /// The trailing buffer the interface appends to a view array: one
     /// i64 length a data buffer.
-    fn sizes_of(data: &[&[u8]]) -> Vec<u8> {
-        data.iter().flat_map(|one| (one.len() as i64).to_le_bytes()).collect()
-    }
-
-    /// Borrow one view column laid out as `[validity, views, data.., sizes]`.
+    /// Borrow one view column laid out as `[validity, views, data.., sizes]`,
+    /// each data buffer's size declared as its real length.
     fn views_over(views: &[u8], data: &[&[u8]], rows: usize) -> PyResult<Vec<&'static str>> {
-        let sizes = sizes_of(data);
-        let mut table = vec![b"".as_slice(), views];
-        table.extend_from_slice(data);
-        table.push(&sizes);
-        let held = pointers(&table);
-        let outer = array_of(&held, rows as i64);
-        unsafe { borrow_strings(&outer, Text::View, 0, rows) }
+        let sizes: Vec<i64> = data.iter().map(|one| one.len() as i64).collect();
+        views_raw(views, data, &sizes, rows)
     }
 
     fn utf8_over(offsets: &[i32], values: &[u8]) -> PyResult<Vec<&'static str>> {
@@ -1706,6 +1744,41 @@ mod malformed_tests {
         let rows = offsets.len() / 4 - 1;
         let outer = array_of(&held, rows as i64);
         unsafe { borrow_strings(&outer, Text::Utf8, 0, rows) }
+    }
+
+    fn large_over(offsets: &[i64], values: &[u8]) -> PyResult<Vec<&'static str>> {
+        let bytes: Vec<u8> = offsets.iter().flat_map(|one| one.to_le_bytes()).collect();
+        let held = pointers(&[b"".as_slice(), &bytes, values]);
+        let rows = offsets.len() - 1;
+        let outer = array_of(&held, rows as i64);
+        unsafe { borrow_strings(&outer, Text::LargeUtf8, 0, rows) }
+    }
+
+    /// A view column whose sizes buffer is set by hand, so a test can
+    /// declare an extent the data buffer does not carry.
+    fn views_raw(views: &[u8], data: &[&[u8]], sizes: &[i64], rows: usize) -> PyResult<Vec<&'static str>> {
+        let sizes_bytes: Vec<u8> = sizes.iter().flat_map(|one| one.to_le_bytes()).collect();
+        let mut table = vec![b"".as_slice(), views];
+        table.extend_from_slice(data);
+        table.push(&sizes_bytes);
+        let held = pointers(&table);
+        let outer = array_of(&held, rows as i64);
+        unsafe { borrow_strings(&outer, Text::View, 0, rows) }
+    }
+
+    /// The exact sentence a refused shape carries. Pinning the words, not
+    /// just `is_err`, is what makes a test fail when a check is loosened
+    /// and the reader refuses the shape for a different reason (or reads
+    /// garbage that is then refused) instead of the reason under test.
+    fn refusal<T>(outcome: PyResult<T>) -> String {
+        Python::initialize();
+        Python::attach(|py| {
+            outcome
+                .err()
+                .expect("the shape must be refused, not read")
+                .value(py)
+                .to_string()
+        })
     }
 
     #[test]
@@ -1722,21 +1795,102 @@ mod malformed_tests {
     #[test]
     fn a_view_cannot_name_the_sizes_buffer() {
         // Review-5: the data count is the table minus three, so index 1
-        // over one data buffer is the sizes buffer and is refused.
+        // over one data buffer is the sizes buffer. Review-6: the exact
+        // refusal is pinned, so loosening the index check by one (`>`
+        // instead of `>=`) reads the sizes buffer as data and refuses for
+        // a different reason, which this test then catches.
         let data = vec![b'x'; 100];
-        assert!(views_over(&one_view(13, 1, 0), &[&data], 1).is_err());
-        assert!(views_over(&one_view(32, 5, 0), &[&data], 1).is_err());
+        assert_eq!(
+            refusal(views_over(&one_view(13, 1, 0), &[&data], 1)),
+            "a string view points past its data buffers"
+        );
+        assert_eq!(
+            refusal(views_over(&one_view(32, 5, 0), &[&data], 1)),
+            "a string view points past its data buffers"
+        );
     }
 
     #[test]
     fn a_utf8_row_past_the_final_offset_is_refused() {
         // Review-5: the final offset declares the data extent; a row that
-        // ends past it is non-monotone and refused before any read.
-        assert!(utf8_over(&[0, 200, 3], b"abc").is_err());
-        assert!(utf8_over(&[3, 1], b"abc").is_err());
-        assert!(utf8_over(&[-5, 3], b"abc").is_err());
+        // ends past it is non-monotone. Review-6: the exact refusal is
+        // pinned, so removing the order check reads `200` bytes of a
+        // three-byte buffer and refuses for a different reason, which
+        // this test then catches.
+        assert_eq!(
+            refusal(utf8_over(&[0, 200, 3], b"abc")),
+            "the column's offsets are reversed or negative"
+        );
+        assert_eq!(
+            refusal(utf8_over(&[3, 1], b"abc")),
+            "the column's offsets are reversed or negative"
+        );
+        assert_eq!(
+            refusal(utf8_over(&[-5, 3], b"abc")),
+            "the column's offsets are reversed or negative"
+        );
         // A row longer than the per-row ceiling is refused before the read.
-        assert!(utf8_over(&[0, 60_000_000], b"abc").is_err());
+        assert_eq!(
+            refusal(utf8_over(&[0, 60_000_000], b"abc")),
+            "a row names a size no text column carries"
+        );
+    }
+
+    #[test]
+    fn a_declared_data_extent_past_the_cap_is_refused_and_a_big_slice_borrows() {
+        // Review-6: the per-row cap bounds a row's length, not where it
+        // starts, so a view offset near 2^32, a large_utf8 offset near
+        // i64::MAX, a utf8 offset near i32::MAX, and offsets at 2^40 over a
+        // tiny buffer all read gigabytes past it. Bounding the declared
+        // extent refuses each one before the read.
+        assert_eq!(
+            refusal(views_raw(&one_view(13, 0, u32::MAX), &[b"abc".as_slice()], &[i64::MAX], 1)),
+            "a string view's data buffer declares more bytes than a text column carries"
+        );
+        assert_eq!(
+            refusal(large_over(&[i64::MAX - 13, i64::MAX], b"abc")),
+            "the column's offsets name more bytes than a text column carries"
+        );
+        assert_eq!(
+            refusal(utf8_over(&[i32::MAX - 13, i32::MAX], b"abc")),
+            "the column's offsets name more bytes than a text column carries"
+        );
+        assert_eq!(
+            refusal(large_over(&[1i64 << 40, (1i64 << 40) + 13], b"abc")),
+            "the column's offsets name more bytes than a text column carries"
+        );
+        // The trade-off, tested: a legitimate column whose first row starts
+        // partway into its values buffer (a slice's own offset) still
+        // borrows, as long as its declared extent stays under the cap.
+        assert_eq!(utf8_over(&[5, 9], b"-----SEEN").expect("a big slice borrows"), ["SEEN"]);
+        let values = vec![b'a'; 5 << 20];
+        let rows: Vec<i64> = (0..=5).map(|one| one << 20).collect();
+        assert_eq!(large_over(&rows, &values).expect("a 5 MiB large column borrows").len(), 5);
+    }
+
+    #[test]
+    fn a_buffer_table_far_longer_than_a_text_column_is_refused() {
+        // Review-6: the reader indexes the table's last slot for the sizes
+        // buffer, so a count near 2^40 walks the table far past its end.
+        // The count is bounded before any slot is read.
+        let offsets = [0i32, 3].map(i32::to_le_bytes).concat();
+        let values = b"abc".to_vec();
+        let held = pointers(&[b"".as_slice(), &offsets, &values]);
+        let mut outer = array_of(&held, 1);
+        outer.n_buffers = 1i64 << 40;
+        assert_eq!(
+            refusal(unsafe { borrow_strings(&outer, Text::Utf8, 0, 1) }),
+            "the column's buffer table names more buffers than a text column carries"
+        );
+        let views = one_view(3, 0, 0);
+        let big = vec![b'x'; 100];
+        let held = pointers(&[b"".as_slice(), &views, &big, &(100i64).to_le_bytes()]);
+        let mut outer = array_of(&held, 1);
+        outer.n_buffers = 1i64 << 40;
+        assert_eq!(
+            refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }),
+            "the column's buffer table names more buffers than a text column carries"
+        );
     }
 
     #[test]
