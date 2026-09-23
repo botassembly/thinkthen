@@ -199,6 +199,129 @@ const MAX_DATA: usize = 1024 * 1024 * 1024;
 /// before it indexes the table's last slot (the sizes buffer).
 const MAX_BUFFERS: i64 = 64;
 
+/// The refusal for an extent that names memory this process cannot read.
+const UNREADABLE: &str = "the column's buffers declare bytes this process cannot read";
+
+/// The stride of the readability probe: one byte a page. 4 KiB is the
+/// smallest page any supported platform uses, so a larger page is only
+/// probed more than once.
+const PROBE_STRIDE: usize = 4096;
+
+/// True when every byte of `[start, start + length)` can be read.
+///
+/// The interface gives no allocation length, so a declared extent past a
+/// short allocation would read into whatever follows it. When nothing
+/// follows (an unmapped page, a guard page, a reservation), the read would
+/// kill the host. This asks the kernel before the read instead. On Linux,
+/// `process_vm_readv` against this process copies one byte a page and
+/// fails on any page it cannot read, protected or unmapped. Elsewhere, or
+/// when that call is not permitted, `mincore` finds unmapped pages. Memory
+/// that is mapped and readable but belongs to another allocation cannot be
+/// told apart by any reader; that lie stays the producer's.
+fn readable(start: *const u8, length: usize) -> bool {
+    if length == 0 {
+        return true;
+    }
+    let Some(last) = (start as usize).checked_add(length - 1) else {
+        return false;
+    };
+    #[cfg(target_os = "linux")]
+    if let Some(answer) = probe::vm_readable(start as usize, last) {
+        return answer;
+    }
+    probe::mapped(start as usize, last)
+}
+
+/// The two kernel questions `readable` asks, declared here because the
+/// surface carries no libc binding.
+mod probe {
+    use std::ffi::c_void;
+    use std::os::raw::c_int;
+
+    extern "C" {
+        fn mincore(address: *mut c_void, length: usize, pages: *mut u8) -> c_int;
+        fn getpagesize() -> c_int;
+    }
+
+    /// True when every page from `first` to `last` is mapped.
+    pub(super) fn mapped(first: usize, last: usize) -> bool {
+        // SAFETY: getpagesize takes no argument and cannot fail.
+        let page = usize::try_from(unsafe { getpagesize() }).unwrap_or(super::PROBE_STRIDE);
+        let base = first - first % page;
+        let span = last - base + 1;
+        let mut pages = vec![0u8; span.div_ceil(page)];
+        // SAFETY: mincore reads no byte of the range; it writes one byte a
+        // page into `pages`, which holds a byte for every page asked about.
+        unsafe { mincore(base as *mut c_void, span, pages.as_mut_ptr()) == 0 }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[repr(C)]
+    struct IoVec {
+        base: *mut c_void,
+        length: usize,
+    }
+
+    #[cfg(target_os = "linux")]
+    extern "C" {
+        fn getpid() -> c_int;
+        fn process_vm_readv(
+            pid: c_int,
+            local: *const IoVec,
+            local_count: std::os::raw::c_ulong,
+            remote: *const IoVec,
+            remote_count: std::os::raw::c_ulong,
+            flags: std::os::raw::c_ulong,
+        ) -> isize;
+    }
+
+    /// Copy one byte out of every page from `first` to `last` through the
+    /// kernel, which answers a fault with an error instead of a signal.
+    /// `None` when the call itself is not available here.
+    #[cfg(target_os = "linux")]
+    pub(super) fn vm_readable(first: usize, last: usize) -> Option<bool> {
+        /// The iovec batch every Linux kernel accepts (`IOV_MAX`).
+        const BATCH: usize = 1024;
+        const EFAULT: i32 = 14;
+        let mut places = Vec::new();
+        let mut at = first;
+        loop {
+            places.push(at);
+            let next = (at - at % super::PROBE_STRIDE).saturating_add(super::PROBE_STRIDE);
+            if next > last {
+                break;
+            }
+            at = next;
+        }
+        if places.last() != Some(&last) {
+            places.push(last);
+        }
+        let mut sink = [0u8; BATCH];
+        // SAFETY: getpid takes no argument and cannot fail.
+        let pid = unsafe { getpid() };
+        for batch in places.chunks(BATCH) {
+            let remote: Vec<IoVec> = batch
+                .iter()
+                .map(|&place| IoVec { base: place as *mut c_void, length: 1 })
+                .collect();
+            let local = IoVec { base: sink.as_mut_ptr().cast(), length: batch.len() };
+            // SAFETY: the kernel writes at most `batch.len()` bytes into
+            // `sink`, and reads the remote bytes itself, failing on a fault.
+            let copied = unsafe {
+                process_vm_readv(pid, &local, 1, remote.as_ptr(), remote.len() as _, 0)
+            };
+            if copied < 0 {
+                let code = std::io::Error::last_os_error().raw_os_error();
+                return (code == Some(EFAULT)).then_some(false);
+            }
+            if copied as usize != batch.len() {
+                return Some(false);
+            }
+        }
+        Some(true)
+    }
+}
+
 /// Borrow one already-validated array's strings out of its buffers.
 ///
 /// `skip` is where the caller's rows begin and `count` how many there
@@ -214,9 +337,12 @@ const MAX_BUFFERS: i64 = 64;
 /// views and offsets buffers. A string view's trailing sizes buffer
 /// declares each data buffer. A Utf8 array's offset at `offset + length`
 /// declares its data buffer. Every read below sits inside one of those
-/// declarations, checked before the read. A producer whose declarations
-/// are self-consistent but whose allocations are shorter cannot be told
-/// from a correct one by any reader; that lie stays the producer's.
+/// declarations, checked before the read. Each declared extent is then
+/// probed readable (`readable`), so a producer whose declarations agree
+/// but whose allocation is shorter gets a refusal when the extent runs
+/// into unreadable memory. An extent that runs into another readable
+/// allocation cannot be told from a correct one by any reader; that lie
+/// stays the producer's.
 ///
 /// # Safety
 /// `array` must point at a live `ArrowArray` of the given text layout,
@@ -262,19 +388,24 @@ unsafe fn borrow_strings(
     };
     let mut texts = Vec::with_capacity(count);
     for (start, length) in spans {
-        // A per-row ceiling, not a bound: it keeps `from_raw_parts` far
-        // inside its isize contract and refuses a giant row before the read.
-        if length > MAX_ONE_STRING {
-            return Err(UsageError::new_err(
-                "a row names a size no text column carries",
-            ));
-        }
         let bytes = std::slice::from_raw_parts(start, length);
         let value = std::str::from_utf8(bytes)
             .map_err(|_| UsageError::new_err("the column's buffer is not valid UTF-8"))?;
         texts.push(value);
     }
     Ok(texts)
+}
+
+/// One row's span, refused when it is longer than any row: a per-row
+/// ceiling, not a bound. It keeps `from_raw_parts` far inside its isize
+/// contract and refuses a giant row before any probe or read.
+fn row_span(start: *const u8, length: usize) -> PyResult<(*const u8, usize)> {
+    if length > MAX_ONE_STRING {
+        return Err(UsageError::new_err(
+            "a row names a size no text column carries",
+        ));
+    }
+    Ok((start, length))
 }
 
 /// One buffer pointer out of the table, as bytes.
@@ -311,12 +442,20 @@ unsafe fn view_spans(
             "the string-view array lacks its views or its buffer-sizes buffer",
         ));
     }
+    // The views the rows read and the whole sizes buffer the count
+    // declares must be readable before either is read.
+    if !readable(views.wrapping_add(skip * 16), count * 16)
+        || !readable(sizes, data_buffers * 8)
+    {
+        return Err(UsageError::new_err(UNREADABLE));
+    }
+    let mut probed = vec![false; data_buffers];
     let mut spans = Vec::with_capacity(count);
     for place in skip..skip + count {
         let view = views.add(place * 16);
         let size = u32::from_le_bytes(word(view)) as usize;
         if size <= 12 {
-            spans.push((view.add(4), size));
+            spans.push(row_span(view.add(4), size)?);
             continue;
         }
         let index = u32::from_le_bytes(word(view.add(8))) as usize;
@@ -338,7 +477,16 @@ unsafe fn view_spans(
                 "a string view reaches past the length its data buffer declares",
             ));
         }
-        spans.push((base.add(offset as usize), size));
+        let span = row_span(base.add(offset as usize), size)?;
+        // Each data buffer a view names is probed once, over the whole
+        // extent its size declares.
+        if !probed[index] {
+            if !readable(base, declared as usize) {
+                return Err(UsageError::new_err(UNREADABLE));
+            }
+            probed[index] = true;
+        }
+        spans.push(span);
     }
     Ok(spans)
 }
@@ -366,7 +514,11 @@ unsafe fn offset_spans(
         ));
     }
     // SAFETY: `place` never passes `carried`, and the array's offset plus
-    // length declares `carried + 1` offsets.
+    // length declares `carried + 1` offsets, probed readable here first.
+    let width = if matches!(text, Text::LargeUtf8) { 8 } else { 4 };
+    if !readable(offsets.wrapping_add(skip * width), (carried - skip + 1) * width) {
+        return Err(UsageError::new_err(UNREADABLE));
+    }
     let at = |place: usize| -> i64 {
         unsafe {
             if matches!(text, Text::LargeUtf8) {
@@ -394,9 +546,14 @@ unsafe fn offset_spans(
             ));
         }
         if place <= skip + count {
-            spans.push((values.add(start as usize), (end - start) as usize));
+            spans.push(row_span(values.add(start as usize), (end - start) as usize)?);
         }
         start = end;
+    }
+    // The last offset declares the values buffer's extent, and every row
+    // read sits inside it, so that extent must be readable first.
+    if count > 0 && !readable(values, start as usize) {
+        return Err(UsageError::new_err(UNREADABLE));
     }
     Ok(spans)
 }
@@ -665,8 +822,8 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
 }
 
 /// One batch's whole allocation, handed to the consumer with the array.
-/// The array's `release` drops this box, so the memory lives exactly as
-/// long as the consumer owns the batch, per the C interface.
+/// The root and each child hold a share of it (`BatchShare`), so the
+/// memory lives until the consumer releases the last of them.
 ///
 /// Each batch carries its own root, because one stream may hand out
 /// several batches and every one must describe its own children: a shared
@@ -693,16 +850,61 @@ struct BatchKeep {
     hold: Option<std::sync::Arc<FrameColumn>>,
 }
 
-/// The batch release: the consumer is done with the arrays and their
-/// buffers, so the whole allocation goes. The release pointer is cleared
-/// as the C data interface requires, so a second call cannot free again.
-unsafe extern "C" fn batch_release(out: *mut ArrowArray) {
-    (*out).release = None;
-    let keep = (*out).private_data as *mut BatchKeep;
-    if !keep.is_null() {
-        (*out).private_data = std::ptr::null_mut();
-        drop(Box::from_raw(keep));
+/// One share of an emitted batch. The root and every child each carry one
+/// in `private_data`, so a consumer that moves a child out and releases the
+/// parent still owns the child's buffers, as the C data interface's rules
+/// for moving child arrays require. The batch is freed with its last share.
+type BatchShare = std::sync::Arc<BatchKeep>;
+
+/// Hand one batch to the consumer: every child gets its own share, then
+/// the root gets one.
+///
+/// # Safety
+/// `out` must be writable; the batch's child pointers point into its own
+/// boxes, which the shares keep alive.
+unsafe fn emit_batch(keep: BatchKeep, out: *mut ArrowArray) {
+    #[allow(clippy::arc_with_non_send_sync, reason = "raw Arrow pointers, single-threaded by contract")]
+    let share = std::sync::Arc::new(keep);
+    for &child in &share.child_ptrs {
+        (*child).private_data = Box::into_raw(Box::new(BatchShare::clone(&share))).cast();
+        (*child).release = Some(child_release);
     }
+    // The emitted root is this batch's own, so the second batch describes
+    // its own children rather than the first's.
+    *out = std::ptr::read(share.root.as_ref());
+    (*out).release = Some(root_release);
+    (*out).private_data = Box::into_raw(Box::new(share)).cast();
+}
+
+/// Drop the share a node carries and mark it released, as the C data
+/// interface requires, so a second call cannot free again.
+unsafe fn drop_share(node: *mut ArrowArray) {
+    (*node).release = None;
+    let share = (*node).private_data as *mut BatchShare;
+    if !share.is_null() {
+        (*node).private_data = std::ptr::null_mut();
+        drop(Box::from_raw(share));
+    }
+}
+
+/// A child's release: its share goes. The caller's aliased columns keep
+/// their producer's own children, which the frame hold releases when the
+/// last share drops, so this never walks below the child.
+unsafe extern "C" fn child_release(child: *mut ArrowArray) {
+    drop_share(child);
+}
+
+/// The root's release: release every child the consumer has not moved out
+/// (a moved child's slot reads released), then drop the root's share.
+unsafe extern "C" fn root_release(root: *mut ArrowArray) {
+    let count = (*root).n_children.max(0) as usize;
+    for place in 0..count {
+        let child = *(*root).children.add(place);
+        if let Some(release) = (*child).release {
+            release(child);
+        }
+    }
+    drop_share(root);
 }
 
 /// The owned pieces of one schema tree: every struct boxed, the
@@ -716,6 +918,8 @@ struct SchemaTree {
     boxes: Vec<Box<ArrowSchema>>,
     child_ptrs: Vec<Vec<*mut ArrowSchema>>,
     strings: Vec<CString>,
+    /// The metadata blobs the structs point at, copied byte for byte.
+    blobs: Vec<Vec<u8>>,
     /// The tree's root struct, the last node built; every build path ends
     /// with the root.
     root: *mut ArrowSchema,
@@ -727,6 +931,7 @@ impl Default for SchemaTree {
             boxes: Vec::new(),
             child_ptrs: Vec::new(),
             strings: Vec::new(),
+            blobs: Vec::new(),
             root: std::ptr::null_mut(),
         }
     }
@@ -745,12 +950,45 @@ impl SchemaTree {
         pointer
     }
 
+    /// Copy one metadata blob into the tree; a null stays null.
+    ///
+    /// The C data interface lays metadata out as an i32 pair count, then
+    /// each key and value as an i32 length and its bytes. Field metadata
+    /// carries a column's extension type (a Polars `Enum`, a timezone
+    /// rule), so the output keeps it. A blob naming a negative length is
+    /// malformed and is dropped instead of walked.
+    fn metadata(&mut self, value: *const c_char) -> *const c_char {
+        if value.is_null() {
+            return std::ptr::null();
+        }
+        let at = value as *const u8;
+        // SAFETY: the producer's blob is read only inside the lengths it
+        // declares, word by word, as the interface lays it out.
+        let length = |place: usize| i32::from_le_bytes(unsafe { word(at.add(place)) });
+        let Ok(pairs) = usize::try_from(length(0)) else {
+            return std::ptr::null();
+        };
+        let mut end = 4usize;
+        for _ in 0..pairs * 2 {
+            let Ok(size) = usize::try_from(length(end)) else {
+                return std::ptr::null();
+            };
+            end += 4 + size;
+        }
+        // SAFETY: `end` is the extent the blob's own lengths declare.
+        let blob = unsafe { std::slice::from_raw_parts(at, end) }.to_vec();
+        let pointer = blob.as_ptr() as *const c_char;
+        self.blobs.push(blob);
+        pointer
+    }
+
     /// One node over already-owned pieces; the child array is kept here so
     /// its pointer stays valid.
     fn node(
         &mut self,
         format: *const c_char,
         name: *const c_char,
+        metadata: *const c_char,
         flags: i64,
         children: Vec<*mut ArrowSchema>,
         dictionary: *mut ArrowSchema,
@@ -765,7 +1003,7 @@ impl SchemaTree {
         self.boxes.push(Box::new(ArrowSchema {
             format,
             name,
-            metadata: std::ptr::null(),
+            metadata,
             flags,
             n_children: count as i64,
             children: child_ptrs,
@@ -798,16 +1036,22 @@ impl SchemaTree {
             self.strings.push(text);
         }
         self.strings.push(format);
-        Ok(self.node(format_ptr, name_ptr, flags, Vec::new(), std::ptr::null_mut()))
+        Ok(self.node(format_ptr, name_ptr, std::ptr::null(), flags, Vec::new(), std::ptr::null_mut()))
     }
 
-    /// The struct node every frame hands out: the `+s` format, no name.
-    fn branch(&mut self, children: Vec<*mut ArrowSchema>) -> PyResult<*mut ArrowSchema> {
+    /// The struct node every frame hands out: the `+s` format, no name,
+    /// and the caller's own schema metadata when it has some.
+    fn branch(
+        &mut self,
+        children: Vec<*mut ArrowSchema>,
+        metadata: *const c_char,
+    ) -> PyResult<*mut ArrowSchema> {
+        let metadata = self.metadata(metadata);
         let format =
             CString::new("+s").map_err(|_| UsageError::new_err("a column format holds a NUL"))?;
         let format_ptr = format.as_ptr();
         self.strings.push(format);
-        Ok(self.node(format_ptr, std::ptr::null(), 0, children, std::ptr::null_mut()))
+        Ok(self.node(format_ptr, std::ptr::null(), metadata, 0, children, std::ptr::null_mut()))
     }
 
     /// Deep-copy one schema struct and its whole tree: names, formats,
@@ -820,6 +1064,7 @@ impl SchemaTree {
     unsafe fn copy(&mut self, source: *const ArrowSchema) -> *mut ArrowSchema {
         let format = self.text(unsafe { (*source).format });
         let name = self.text(unsafe { (*source).name });
+        let metadata = self.metadata(unsafe { (*source).metadata });
         let count = unsafe { (*source).n_children }.max(0) as usize;
         let mut children = Vec::with_capacity(count);
         for place in 0..count {
@@ -833,7 +1078,7 @@ impl SchemaTree {
             unsafe { self.copy(dictionary) }
         };
         let flags = unsafe { (*source).flags };
-        self.node(format, name, flags, children, dictionary)
+        self.node(format, name, metadata, flags, children, dictionary)
     }
 }
 
@@ -937,7 +1182,7 @@ pub(crate) fn build_frame(
     for (place, name) in names.iter().enumerate() {
         schema_children.push(schema.leaf(Some(name), formats_for_new[place], 2)?);
     }
-    let schema_root = schema.branch(schema_children)?;
+    let schema_root = schema.branch(schema_children, hold.schema.metadata)?;
     let _ = schema_root;
     // One batch out per batch in, so aliased originals stay per-batch and
     // every batch keeps its own root.
@@ -968,7 +1213,7 @@ pub(crate) fn build_frame(
                 buffers: buffers_ptr,
                 children: child.children,
                 dictionary: child.dictionary,
-                release: Some(batch_release),
+                release: None,
                 private_data: std::ptr::null_mut(),
             }));
         }
@@ -1069,15 +1314,10 @@ pub(crate) fn build_frame(
                     2i64
                 }
                 _ => {
-                    let mut offsets = Vec::with_capacity((length + 1) * 4);
-                    let mut values = Vec::new();
-                    offsets.extend_from_slice(&0i32.to_le_bytes());
-                    for text in &values_str {
-                        if let Some(text) = text {
-                            values.extend_from_slice(text.as_bytes());
-                        }
-                        offsets.extend_from_slice(&(values.len() as i32).to_le_bytes());
-                    }
+                    let (offsets, values) = utf8_buffers(
+                        values_str.iter().map(|text| text.as_deref().unwrap_or("")),
+                        length,
+                    )?;
                     local.push(validity);
                     local.push(offsets);
                     local.push(values);
@@ -1106,7 +1346,7 @@ pub(crate) fn build_frame(
                 buffers: std::ptr::null_mut(),
                 children: std::ptr::null_mut(),
                 dictionary: std::ptr::null_mut(),
-                release: Some(batch_release),
+                release: None,
                 private_data: std::ptr::null_mut(),
             }));
         }
@@ -1129,7 +1369,7 @@ pub(crate) fn build_frame(
             buffers: root_buffers.as_ptr() as *mut *const c_void,
             children: child_ptrs.as_ptr() as *mut *mut ArrowArray,
             dictionary: std::ptr::null_mut(),
-            release: Some(batch_release),
+            release: None,
             private_data: std::ptr::null_mut(),
         });
         batches.push(Some(BatchKeep {
@@ -1149,6 +1389,32 @@ pub(crate) fn build_frame(
         batches,
         emitted: 0,
         error: None,
+    })
+}
+
+/// The offsets and values buffers of one `u` column this surface builds.
+///
+/// The `u` layout's offsets are i32, so a column whose text passes 2 GiB
+/// cannot be described by it; that column is refused instead of handed
+/// out with offsets that wrapped negative.
+fn utf8_buffers<'a>(
+    texts: impl Iterator<Item = &'a str>,
+    length: usize,
+) -> PyResult<(Vec<u8>, Vec<u8>)> {
+    let mut offsets = Vec::with_capacity((length + 1) * 4);
+    let mut values = Vec::new();
+    offsets.extend_from_slice(&0i32.to_le_bytes());
+    for text in texts {
+        values.extend_from_slice(text.as_bytes());
+        offsets.extend_from_slice(&utf8_offset(values.len())?.to_le_bytes());
+    }
+    Ok((offsets, values))
+}
+
+/// One `u` offset, refused when the text before it passes i32.
+fn utf8_offset(end: usize) -> PyResult<i32> {
+    i32::try_from(end).map_err(|_| {
+        UsageError::new_err("an answer column's text passes the 2 GiB a text column's offsets can name")
     })
 }
 
@@ -1202,7 +1468,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
     for (name, value) in columns {
         schema_children.push(schema.leaf(Some(name), value.format(), 2)?);
     }
-    let schema_root = schema.branch(schema_children)?;
+    let schema_root = schema.branch(schema_children, std::ptr::null())?;
     let _ = schema_root;
 
     let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);
@@ -1219,13 +1485,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         let mut local: Vec<Vec<u8>> = Vec::new();
         let n_buffers = match value {
             TableValue::Texts(texts) => {
-                let mut offsets = Vec::with_capacity((length + 1) * 4);
-                let mut values = Vec::new();
-                offsets.extend_from_slice(&0i32.to_le_bytes());
-                for text in texts {
-                    values.extend_from_slice(text.as_bytes());
-                    offsets.extend_from_slice(&(values.len() as i32).to_le_bytes());
-                }
+                let (offsets, values) = utf8_buffers(texts.iter().map(String::as_str), length)?;
                 local.push(validity);
                 local.push(offsets);
                 local.push(values);
@@ -1272,7 +1532,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
             buffers: std::ptr::null_mut(),
             children: std::ptr::null_mut(),
             dictionary: std::ptr::null_mut(),
-            release: Some(batch_release),
+            release: None,
             private_data: std::ptr::null_mut(),
         }));
     }
@@ -1293,7 +1553,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         buffers: root_buffers.as_ptr() as *mut *const c_void,
         children: child_ptrs.as_ptr() as *mut *mut ArrowArray,
         dictionary: std::ptr::null_mut(),
-        release: Some(batch_release),
+        release: None,
         private_data: std::ptr::null_mut(),
     });
     let batches = vec![Some(BatchKeep {
@@ -1339,12 +1599,7 @@ unsafe extern "C" fn frame_get_next(stream: *mut ArrowArrayStream, out: *mut Arr
         let keep = state.batches[state.emitted].take();
         state.emitted += 1;
         if let Some(keep) = keep {
-            // The emitted root is this batch's own, so the second batch
-            // describes its own children rather than the first's.
-            *out = std::ptr::read(keep.root.as_ref());
-            let keep_ptr = Box::into_raw(Box::new(keep));
-            (*out).private_data = keep_ptr as *mut c_void;
-            (*out).release = Some(batch_release);
+            emit_batch(keep, out);
             return 0;
         }
     }
@@ -1943,5 +2198,121 @@ mod malformed_tests {
             panic!("a conformant view column borrows");
         };
         assert_eq!(texts, ["ha runs longer than twen", "gamma", " also runs long past "]);
+    }
+
+    /// A region whose first page is readable and whose rest is reserved
+    /// but unreadable, so a read past the page faults on every run.
+    #[cfg(target_os = "linux")]
+    struct Guarded {
+        base: *mut u8,
+        size: usize,
+    }
+
+    #[cfg(target_os = "linux")]
+    extern "C" {
+        fn mmap(address: *mut c_void, length: usize, protect: c_int, flags: c_int, fd: c_int, offset: i64) -> *mut c_void;
+        fn mprotect(address: *mut c_void, length: usize, protect: c_int) -> c_int;
+        fn munmap(address: *mut c_void, length: usize) -> c_int;
+    }
+
+    #[cfg(target_os = "linux")]
+    impl Guarded {
+        /// `bytes` placed so they end exactly at the readable page's end,
+        /// with 64 MiB of unreadable reservation after them.
+        fn ending_with(bytes: &[u8]) -> (Self, *const u8) {
+            const PAGE: usize = 4096;
+            let size = PAGE + (64 << 20);
+            // PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, then PROT_READ | PROT_WRITE on page one.
+            let base = unsafe { mmap(std::ptr::null_mut(), size, 0, 0x02 | 0x20, -1, 0) } as *mut u8;
+            assert!(!base.is_null() && base as isize != -1, "the reservation maps");
+            assert_eq!(unsafe { mprotect(base.cast(), PAGE, 0x1 | 0x2) }, 0);
+            let at = unsafe { base.add(PAGE - bytes.len()) };
+            unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), at, bytes.len()) };
+            (Self { base, size }, at)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    impl Drop for Guarded {
+        fn drop(&mut self) {
+            unsafe { munmap(self.base.cast(), self.size) };
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn utf8_at(offsets: &[i32], values: *const u8, text: Text) -> PyResult<Vec<&'static str>> {
+        let bytes: Vec<u8> = match text {
+            Text::LargeUtf8 => offsets.iter().flat_map(|one| i64::from(*one).to_le_bytes()).collect(),
+            _ => offsets.iter().flat_map(|one| one.to_le_bytes()).collect(),
+        };
+        let held = [std::ptr::null(), bytes.as_ptr().cast(), values.cast()];
+        let rows = offsets.len() - 1;
+        let outer = array_of(&held, rows as i64);
+        unsafe { borrow_strings(&outer, text, 0, rows) }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn an_extent_past_readable_memory_is_refused() {
+        // Review 7 (R3-4, R5-6): offsets 60,000,000 .. 60,000,001 over a
+        // three-byte buffer clear the per-row cap and the 1 GiB extent cap,
+        // and so do offsets 0 .. 200. Each read lands in unreadable memory
+        // and killed the host; the readability probe refuses them first.
+        let (_region, abc) = Guarded::ending_with(b"abc");
+        for text in [Text::Utf8, Text::LargeUtf8] {
+            for offsets in [[60_000_000, 60_000_001], [0, 200]] {
+                assert_eq!(refusal(utf8_at(&offsets, abc, text)), UNREADABLE);
+            }
+            assert_eq!(utf8_at(&[0, 3], abc, text).expect("the real bytes borrow"), ["abc"]);
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_sizes_buffer_shorter_than_its_count_is_refused() {
+        // Review 7 (R5-6): a table of two data buffers whose sizes buffer
+        // holds one i64 against a guard page. The view names data buffer
+        // 1, so the reader needs the second size, past the guard.
+        let data = [b'x'; 100];
+        let (_region, sizes) = Guarded::ending_with(&100i64.to_le_bytes());
+        let views = one_view(13, 1, 0);
+        let held = [std::ptr::null(), views.as_ptr().cast(), data.as_ptr().cast(), data.as_ptr().cast(), sizes.cast()];
+        let outer = array_of(&held, 1);
+        assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
+        // A view whose data buffer declares more than the readable page.
+        let (_short, abc) = Guarded::ending_with(&[b'y'; 20]);
+        let sizes = [200i64, 200].map(i64::to_le_bytes).concat();
+        let held = [std::ptr::null(), views.as_ptr().cast(), abc.cast(), abc.cast(), sizes.as_ptr().cast()];
+        let outer = array_of(&held, 1);
+        assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
+    }
+
+    #[test]
+    fn an_answer_column_past_i32_offsets_is_refused() {
+        // Review 7 (R4-15): the output offsets were `len as i32`, which
+        // wraps negative past 2 GiB of text.
+        assert_eq!(utf8_offset(i32::MAX as usize).ok(), Some(i32::MAX));
+        assert_eq!(
+            refusal(utf8_offset(i32::MAX as usize + 1)),
+            "an answer column's text passes the 2 GiB a text column's offsets can name"
+        );
+    }
+
+    #[test]
+    fn schema_metadata_is_copied_byte_for_byte() {
+        // Review 7 (R4-15): the output schema set every metadata pointer
+        // to null, so a Polars Enum came back Categorical and a field's
+        // own keys were lost.
+        let mut blob = 1i32.to_le_bytes().to_vec();
+        for part in [b"unit".as_slice(), b"cm"] {
+            blob.extend_from_slice(&(part.len() as i32).to_le_bytes());
+            blob.extend_from_slice(part);
+        }
+        let mut tree = SchemaTree::default();
+        let copied = tree.metadata(blob.as_ptr().cast());
+        assert_ne!(copied, blob.as_ptr().cast());
+        assert_eq!(unsafe { std::slice::from_raw_parts(copied as *const u8, blob.len()) }, blob.as_slice());
+        let negative = (-1i32).to_le_bytes();
+        assert!(tree.metadata(negative.as_ptr().cast()).is_null());
     }
 }

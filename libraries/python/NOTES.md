@@ -845,7 +845,10 @@ must fall in `0 ..= MAX_DATA`, checked before any data byte is read. Every
 offset and view is then bounded by that extent, so the start is bounded
 too. `MAX_BUFFERS` (64) bounds the buffer-table length before the reader
 reads the last (sizes) entry, so a view array claiming 2^40 buffers, or a
-sizes buffer shorter than the count, is refused instead of walked.
+sizes buffer shorter than the count, is refused instead of walked. (Review 7
+corrected this sentence: the bound covered the 2^40 table only. A sizes
+buffer shorter than its count was still read past until the review 7
+readability probe below.)
 
 The trade-off. 1 GiB sits below 2 GiB, so an i32-max offset is refused; it
 is 256x the 4 MiB per-row cap, so a legitimate producer that keeps any one
@@ -866,3 +869,28 @@ read garbage that happened to be refused for another reason; each now pins
 the exact refusal sentence, and mutating the view-index check (`>=` to `>`)
 or removing the offsets-order check turns its test red for the changed
 sentence.
+
+## Surfaces review 7: the reader probes each extent before it reads (refs R3-4, R7-2, R5-6, R7-8)
+
+R3-4 and R7-2 found a regression. Utf8 offsets `60000000, 60000001` over a three-byte buffer crashed the host (exit 139) at the wave 7 tip. The wave 5 build refused the shape because it capped every absolute offset at 4 MiB. Review 5 dropped that cap because it refused every ordinary column past 4 MiB. Review 6 then capped the declared extent at 1 GiB, and 60,000,001 sits under it. No size cap can refuse this shape and keep a 60 MB column. The two carry the same declarations.
+
+Decision: the reader asks the kernel before it reads. `readable` in `src/arrow.rs` checks each extent the reader relies on: the offsets or views the rows read, the whole sizes buffer the table's count declares, and each data buffer's declared extent (a Utf8 array's last offset, a view buffer's declared size). On Linux it copies one byte a page through `process_vm_readv` against this process. The kernel answers an unreadable page (unmapped, guard, or reservation) with an error instead of a signal. Elsewhere, or where that call is refused, `mincore` finds unmapped pages. An extent that fails is refused as usage: "the column's buffers declare bytes this process cannot read". The per-row 4 MiB cap and the 1 GiB extent cap stay. The per-row cap now runs before the probe, so a giant row keeps its own sentence.
+
+Observed (t7b probes against this build): R3-4.sh 0 crashes (was 1). R5-6.sh 0 crashes and 0 over-reads served (was 3 crashes: `u_end_past_guard`, `U_end_past_guard`, `sizes_short_idx1`). `sizes_short_idx0` is now refused too, because its table declares two data buffers and its sizes buffer holds one. A 60,000-row, 40 MB column borrows whole as `pa.string`, `pa.large_string`, and a Polars view column, and a pyarrow slice of its tail borrows. The probe adds one system call per 1,024 pages of extent. The unit tests `an_extent_past_readable_memory_is_refused` and `a_sizes_buffer_shorter_than_its_count_is_refused` build each shape against a 64 MiB unreadable reservation. With `readable` forced to answer yes, both test binaries die of SIGSEGV.
+
+R5-6 waiver, recorded. Two shapes stay open and are waived. First, an extent that runs into another readable allocation reads that allocation's bytes. No reader can see an allocation's end, so this remains the producer's lie. Second, off Linux, `mincore` sees unmapped pages only, so a guard page (mapped, unreadable) still faults there. macOS is the only such platform, and check.sh already names it experimental. Ian can overturn this waiver. The lever is a stronger probe on macOS (`mach_vm_read_overwrite`), or refusing input off Linux.
+
+Ian can overturn the probe decision too. The lever is to restore the absolute 4 MiB cap, which refuses this shape and every column past 4 MiB.
+
+## Surfaces review 7: each output child owns its buffers, and metadata rides through (refs R4-15)
+
+R4-15 found three faults in the frame that `annotate(on=)` returns.
+
+A moved child read freed memory. The C data interface lets a consumer move a child array out of a batch and release the parent, and the moved child must stay valid until its own release. Every child carried a release with no owner, and the root's release freed the whole batch. Decision: each emitted batch sits behind a reference count (`BatchShare`). The root and every child carry one share each. The root's release releases each child the consumer did not move out, then drops its own share. A moved child keeps its share, so the batch's buffers and the caller's aliased frame live until the moved child's release. An aliased original column still leaves its producer's own children to the producer, released when the last share drops.
+
+The output schema dropped every metadata pointer. A Polars `Enum` came back `Categorical`, and a field's own keys were lost. Decision: the schema copy keeps each field's metadata byte for byte, and the frame's root keeps the caller's schema metadata. A blob that names a negative length is dropped instead of walked.
+
+The answer columns' offsets were `values.len() as i32`, which wraps negative past 2 GiB of text. Decision: a text answer column past 2 GiB is refused as usage. The frame builder and the table builder share one offsets writer. Ian can overturn this. The lever is to widen such a column to the `U` layout (i64 offsets) instead of refusing it.
+
+Observed: t7b `R4-15a.py` under `MALLOC_PERTURB_=165` read the moved child's offsets pointer as `0xa5a5a5a5a5a5a5a5` and dumped core at the wave 7 tip, and passes on this build. `R4-15c.py` failed twice (Enum, field metadata) and passes. `tests/test_review7_arrow.py` runs from check.sh. It moves every child out in a child process under `MALLOC_PERTURB_`, releases the parent, and rereads each buffer table and the integer column's values. It also pins the Enum round trip and both metadata levels. Against a wheel whose children get no share and whose metadata copy returns null, all three tests fail. The unit tests `an_answer_column_past_i32_offsets_is_refused` and `schema_metadata_is_copied_byte_for_byte` fail against the matching one-line mutants.
+
