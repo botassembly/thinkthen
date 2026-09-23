@@ -25,7 +25,12 @@
 //!   names the limit.
 //!
 //! Text cutting, the question count per request, and the method belong to
-//! the build team; nothing here touches them.
+//! the build team; nothing here touches them. Main ruled method H for every
+//! relation on 2026-09-23. Rows of form `yes-no` hold method-H recordings
+//! from the relate-methods bake-off, one yes/no per pair per relation. The
+//! older rows hold the withdrawn pick-one method and answer until a method-H
+//! recording of their records exists
+//! (`sdlc/records/surfaces-notes/NOTES-main-parity.md`).
 
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
@@ -257,6 +262,9 @@ pub(crate) fn relate(ask: &Relate, records: &[&str]) -> Result<Vec<Edge>, Error>
             )));
         }
     }
+    if row.form.as_deref() == Some("yes-no") {
+        return yes_no_edges(ask, row);
+    }
     let mut edges = Vec::new();
     for entry in &row.entries {
         if is_no_relation(&entry.pick) {
@@ -299,23 +307,54 @@ pub(crate) fn relate(ask: &Relate, records: &[&str]) -> Result<Vec<Edge>, Error>
                 })?;
             (subject, target)
         };
-        let (source_kind, target_kind) = match (&rule.from, &rule.to) {
-            (thinkthen_contract::Kind::Named(from), thinkthen_contract::Kind::Named(to)) => {
-                (Some(from.clone()), Some(to.clone()))
-            }
-            _ => (None, None),
-        };
-        edges.push(Edge {
-            name: name.to_owned(),
-            source,
-            target,
-            probability,
-            source_kind,
-            target_kind,
-        });
+        edges.push(edge(rule, source, target, probability));
     }
+    Ok(sorted(edges))
+}
+
+/// The edges of a method-H row: one recorded yes/no per pair per relation,
+/// each direction of a one-way relation its own question (main's ruling of
+/// 2026-09-23). Every question whose yes reaches the bar is an edge, so one
+/// pair may carry several relations.
+fn yes_no_edges(ask: &Relate, row: &RelateRow) -> Result<Vec<Edge>, Error> {
+    let mut edges = Vec::new();
+    for entry in &row.entries {
+        let (Some(pair), Some(name)) = (entry.pair, entry.rule.as_deref()) else {
+            return Err(Error::defect("a recorded yes/no entry names no pair or no rule"));
+        };
+        let Some(rule) = ask.relations.iter().find(|rule| rule.name == name) else {
+            continue;
+        };
+        let probability = entry.options.get("yes").copied().ok_or_else(|| {
+            Error::defect(format!("the replay table holds no yes probability for {name}"))
+        })?;
+        if probability >= ask.threshold {
+            edges.push(edge(rule, pair[0], pair[1], probability));
+        }
+    }
+    Ok(sorted(edges))
+}
+
+/// One edge, with the rule's named ends as its kinds.
+fn edge(
+    rule: &thinkthen_contract::RelationRule,
+    source: u64,
+    target: u64,
+    probability: f64,
+) -> Edge {
+    let (source_kind, target_kind) = match (&rule.from, &rule.to) {
+        (thinkthen_contract::Kind::Named(from), thinkthen_contract::Kind::Named(to)) => {
+            (Some(from.clone()), Some(to.clone()))
+        }
+        _ => (None, None),
+    };
+    Edge { name: rule.name.clone(), source, target, probability, source_kind, target_kind }
+}
+
+/// Edges in source, target, and name order.
+fn sorted(mut edges: Vec<Edge>) -> Vec<Edge> {
     edges.sort_by(|one, two| {
         (one.source, one.target, &one.name).cmp(&(two.source, two.target, &two.name))
     });
-    Ok(edges)
+    edges
 }

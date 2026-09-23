@@ -2280,6 +2280,1121 @@
     "13fb7f0fefa8c21d699f46ee7fdbce4ecf682747680055ac6acc0484e5ca1dae"
    ],
    "pairs_count": 25
+  },
+  {
+   "id": "H-s2-contradictions",
+   "form": "yes-no",
+   "text": "Book economy class for every flight under six hours.\nSubmit receipts within 30 days of the trip.\nHotel stays are capped at 200 dollars a night.\nEmployees may book business class on any flight.\nRental cars need a manager's approval.\nReceipts may be submitted at any time, with no deadline.\nMeals are reimbursed up to 60 dollars a day.\nUse the company travel portal for all bookings.\nHotel stays may cost up to 350 dollars a night in any city.\nRental cars can be booked without anyone's approval.\nFlights over six hours may be booked in business class.",
+   "records": [
+    "Book economy class for every flight under six hours.",
+    "Submit receipts within 30 days of the trip.",
+    "Hotel stays are capped at 200 dollars a night.",
+    "Employees may book business class on any flight.",
+    "Rental cars need a manager's approval.",
+    "Receipts may be submitted at any time, with no deadline.",
+    "Meals are reimbursed up to 60 dollars a day.",
+    "Use the company travel portal for all bookings.",
+    "Hotel stays may cost up to 350 dollars a night in any city.",
+    "Rental cars can be booked without anyone's approval.",
+    "Flights over six hours may be booked in business class."
+   ],
+   "rules": [
+    "contradicts"
+   ],
+   "either": {
+    "contradicts": true
+   },
+   "entries": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.61
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      1,
+      5
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      6
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.17
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      7
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      8
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.13
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      5
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      6
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.91
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      2,
+      7
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      8
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      5
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      6
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      7
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      8
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.83
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      3,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      5
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      6
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      7
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      8
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.14
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.16
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      6
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      7
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      8
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.91
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      5,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      7
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      8
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      8
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      9
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      10
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      11
+     ],
+     "rule": "contradicts",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    }
+   ]
+  },
+  {
+   "id": "H-s3-cause-chain",
+   "form": "yes-no",
+   "text": "Heavy rain falls in the delivery area.\nA road on the delivery route is closed.\nThe package is delivered late.\nThe customer files a complaint.\nThe customer is given a refund.\nThe warehouse installs new shelves.\nThe office coffee machine is replaced.",
+   "records": [
+    "Heavy rain falls in the delivery area.",
+    "A road on the delivery route is closed.",
+    "The package is delivered late.",
+    "The customer files a complaint.",
+    "The customer is given a refund.",
+    "The warehouse installs new shelves.",
+    "The office coffee machine is replaced."
+   ],
+   "rules": [
+    "causes"
+   ],
+   "either": {
+    "causes": false
+   },
+   "entries": [
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.76
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.18
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      5
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      6
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      7
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      1
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.91
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      5
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      6
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      7
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      1
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      2
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.84
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      3,
+      5
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.14
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      6
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      7
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      1
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      2
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      3
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      5
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.76
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      4,
+      6
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      7
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      1
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      2
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      3
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      4
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      6
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      7
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      1
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      2
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      3
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      4
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      5
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      7
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      1
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      2
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      3
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      4
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      5
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      6
+     ],
+     "rule": "causes",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    }
+   ]
   }
  ]
 }

@@ -384,6 +384,11 @@ def main():
     recognize.append(synth_row)
     recognize_conf.append(synth_conf)
     relate, relate_conf = build_relate()
+    # build_relate_yes_no.py adds the method-H rows from a later
+    # experiment; a rebuild from this package keeps them.
+    table_path = f"{ROOT}/standin/data/recognize-replay.json"
+    if os.path.exists(table_path):
+        relate += [row for row in load(table_path)["relate"] if row.get("form") == "yes-no"]
     replay = {
         "schema": "thinkthen.replay/1",
         "source": "experiments/225-recognize-harvest-package, harvested 2026-09-21; "
