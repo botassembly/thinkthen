@@ -103,4 +103,4 @@ Ticket 0080, designed at `5908f3551cacc85484a3edb7ba286c08d9079051`, must land f
 
 ## Complexity
 
-Contract 2; state/timing 0; reach 3; proof 3; cost of error 2; total 10. Minimum floor: level 3 for a release-wide ten-command contract audit with mechanical enforcement and exact preservation of two newly landed commands. Final level: 3. Selected implementation model: `gpt-5.6-sol` with medium reasoning. Independent design and code review use separate Sol Medium sessions. Re-score and stop if work crosses any exclusion, changes runtime semantics, or starts item 44 without Ian's ruling.
+Contract 2; state/timing 0; reach 1; proof 2; cost of error 1; total 6. Final level: 2. Luna Extra High owns implementation design, case analysis, code, and remediation under the three-ticket trial. Independent Sol High sessions recheck this amended ticket after Ian's item-44 ruling and review the final diff. Re-score and stop if work crosses any exclusion, changes runtime semantics, or starts item 44 without Ian's ruling.
