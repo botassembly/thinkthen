@@ -37,7 +37,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== postgres package: package the extension"
-cargo pgrx package --locked --pg-config /usr/bin/pg_config >/dev/null 2>&1
+CARGO_NET_OFFLINE=true cargo pgrx package --pg-config /usr/bin/pg_config >/dev/null 2>&1
 ls -l "$EXT/lib/postgresql/16/lib/thinkthen.so"
 
 echo "== postgres package: stage dist/ (the tree as a tarball)"
