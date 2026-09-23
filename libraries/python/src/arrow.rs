@@ -157,25 +157,18 @@ unsafe fn require_text(schema: &ArrowSchema) -> PyResult<Text> {
     }
 }
 
-/// The largest single string the door will borrow from an Arrow buffer.
-///
-/// The C data interface carries no buffer lengths — a struct's views
-/// and offsets are claims, and only the claims are checkable — so this
-/// cap is the bound the door can actually enforce. Four mebibytes sits
-/// far past any text the engine classifies, and a view or offset naming
-/// more is refused as the usage kind instead of being turned into a
-/// slice the process would die reading. The reviewer's probe — a view
-/// at offset 60,000,000 over a 100-byte buffer — names sixty million,
-/// past this cap, and is refused before any read.
+/// The longest single row the door will borrow: far past any text the
+/// engine classifies. It caps one row's length, never a position in a
+/// buffer, so a column of any total size still borrows.
 const MAX_ONE_STRING: usize = 4 * 1024 * 1024;
 
-/// The most rows one borrowed column may claim.
+/// The most rows one borrowed column may claim, counting its offset.
 ///
-/// The C data interface types its length as i64, and `Vec::with_capacity`
-/// aborts the process on an allocation it cannot make — a length of 2^40
-/// kills the host before any guard could answer. Four billion rows is
-/// past every text column ever carried, so a count beyond it is refused
-/// as the usage kind instead of allocated.
+/// The C data interface types its length and offset as i64, and
+/// `Vec::with_capacity` aborts the process on an allocation it cannot
+/// make — a length of 2^40 kills the host before any guard could answer.
+/// Four billion rows is past every text column ever carried, so a claim
+/// beyond it is refused as the usage kind instead of allocated or walked.
 const MAX_ROWS: usize = u32::MAX as usize;
 
 /// Borrow one already-validated array's strings out of its buffers.
@@ -186,6 +179,16 @@ const MAX_ROWS: usize = u32::MAX as usize;
 /// are added, because the Arrow columnar format lets a sliced struct keep
 /// its slice on the root and leave the children whole — the reader
 /// applies the parent's offset when indexing.
+///
+/// What the reader can prove, and what it cannot (surfaces-review-5):
+/// the interface carries no byte length beside a buffer pointer. It
+/// declares extents instead. The array's `offset + length` declares the
+/// views and offsets buffers. A string view's trailing sizes buffer
+/// declares each data buffer. A Utf8 array's offset at `offset + length`
+/// declares its data buffer. Every read below sits inside one of those
+/// declarations, checked before the read. A producer whose declarations
+/// are self-consistent but whose allocations are shorter cannot be told
+/// from a correct one by any reader; that lie stays the producer's.
 ///
 /// # Safety
 /// `array` must point at a live `ArrowArray` of the given text layout,
@@ -206,134 +209,150 @@ unsafe fn borrow_strings(
             "the column's length or offset is negative; a malformed array is refused, not read",
         ));
     }
-    if count > MAX_ROWS {
+    if (*array).buffers.is_null() {
+        return Err(UsageError::new_err("the column carries no buffer table"));
+    }
+    let carried = (*array).offset as usize + (*array).length as usize;
+    if carried > MAX_ROWS {
         return Err(UsageError::new_err(
             "the column claims more rows than any text column carries",
         ));
     }
-    if (*array).buffers.is_null() {
-        return Err(UsageError::new_err("the column carries no buffer table"));
-    }
-    let carried = (*array).offset.max(0) as usize + (*array).length.max(0) as usize;
     if skip.saturating_add(count) > carried {
         return Err(UsageError::new_err(
             "the frame's struct root asks for rows its column does not carry",
         ));
     }
+    let spans = match text {
+        Text::View => view_spans(array, skip, count)?,
+        Text::Utf8 | Text::LargeUtf8 => offset_spans(array, text, skip, count, carried)?,
+    };
     let mut texts = Vec::with_capacity(count);
-    if let Text::View = text {
-        if (*array).n_buffers < 2 {
-            return Err(UsageError::new_err("the string-view array has no views buffer"));
+    for (start, length) in spans {
+        // A per-row ceiling, not a bound: it keeps `from_raw_parts` far
+        // inside its isize contract and refuses a giant row before the read.
+        if length > MAX_ONE_STRING {
+            return Err(UsageError::new_err(
+                "a row names a size no text column carries",
+            ));
         }
-        let buffers = (*array).buffers;
-        let views = *buffers.offset(1) as *const u8;
-        if views.is_null() {
-            return Err(UsageError::new_err("the string-view array has no views buffer"));
-        }
-        // A string-view array's buffer table is [validity, views, then
-        // the data buffers the long views name], so the data count is
-        // the table minus the two leading slots. The index check below
-        // pins the boundary: index == data count is refused, and the
-        // malformed tests corrupt exactly that edge.
-        let data_buffers = ((*array).n_buffers - 2).max(0) as usize;
-        let mut place = 0usize;
-        while place < count {
-            let view = views.add((skip + place) * 16);
-            let size = u32::from_le_bytes([
-                *view,
-                *view.add(1),
-                *view.add(2),
-                *view.add(3),
-            ]) as usize;
-            if size > MAX_ONE_STRING {
-                return Err(UsageError::new_err(
-                    "a string view names a size no text column carries",
-                ));
-            }
-            let (start, length) = if size <= 12 {
-                (view.add(4), size)
-            } else {
-                let index = u32::from_le_bytes([
-                    *view.add(8),
-                    *view.add(9),
-                    *view.add(10),
-                    *view.add(11),
-                ]) as usize;
-                let offset = u32::from_le_bytes([
-                    *view.add(12),
-                    *view.add(13),
-                    *view.add(14),
-                    *view.add(15),
-                ]) as usize;
-                if index >= data_buffers {
-                    return Err(UsageError::new_err(
-                        "a string view points past its data buffers",
-                    ));
-                }
-                // The interface carries no buffer lengths, so the cap is
-                // the bound: both the offset and the offset-plus-size
-                // must sit inside what a text column can carry, and a
-                // claim past the cap is refused before the read.
-                if offset > MAX_ONE_STRING || offset.saturating_add(size) > MAX_ONE_STRING {
-                    return Err(UsageError::new_err(
-                        "a string view points past where its data buffer can carry it",
-                    ));
-                }
-                let base = *buffers.offset(2 + index as isize) as *const u8;
-                if base.is_null() {
-                    return Err(UsageError::new_err("a string view names an empty buffer"));
-                }
-                (base.add(offset), size)
-            };
-            let bytes = std::slice::from_raw_parts(start, length);
-            let value = std::str::from_utf8(bytes)
-                .map_err(|_| UsageError::new_err("the column's buffer is not valid UTF-8"))?;
-            texts.push(value);
-            place += 1;
-        }
-        return Ok(texts);
+        let bytes = std::slice::from_raw_parts(start, length);
+        let value = std::str::from_utf8(bytes)
+            .map_err(|_| UsageError::new_err("the column's buffer is not valid UTF-8"))?;
+        texts.push(value);
     }
+    Ok(texts)
+}
+
+/// One buffer pointer out of the table, as bytes.
+unsafe fn buffer(array: *const ArrowArray, place: usize) -> *const u8 {
+    *(*array).buffers.add(place) as *const u8
+}
+
+/// Read one little-endian word of `N` bytes at `at`, unaligned.
+unsafe fn word<const N: usize>(at: *const u8) -> [u8; N] {
+    std::ptr::read_unaligned(at as *const [u8; N])
+}
+
+/// Where each string-view row's bytes are, each span proven inside the
+/// data buffer the sizes buffer declares.
+///
+/// The table is `[validity, views, data 0 .. data n-1, sizes]`: the C data
+/// interface appends one buffer of `n` i64 lengths, so the data count is
+/// the table minus three, and no view can name the sizes buffer itself.
+unsafe fn view_spans(
+    array: *const ArrowArray,
+    skip: usize,
+    count: usize,
+) -> PyResult<Vec<(*const u8, usize)>> {
     if (*array).n_buffers < 3 {
-        return Err(UsageError::new_err("the string array has no offsets buffer"));
+        return Err(UsageError::new_err(
+            "the string-view array lacks its views or its buffer-sizes buffer",
+        ));
     }
-    let buffers = (*array).buffers;
-    let offsets = *buffers.offset(1) as *const u8;
-    if offsets.is_null() {
-        return Err(UsageError::new_err("the string array has no offsets buffer"));
+    let data_buffers = ((*array).n_buffers - 3) as usize;
+    let views = buffer(array, 1);
+    let sizes = buffer(array, data_buffers + 2);
+    if views.is_null() || (data_buffers > 0 && sizes.is_null()) {
+        return Err(UsageError::new_err(
+            "the string-view array lacks its views or its buffer-sizes buffer",
+        ));
     }
-    let values = *buffers.offset(2) as *const u8;
-    if values.is_null() {
-        return Err(UsageError::new_err("the string array has no values buffer"));
+    let mut spans = Vec::with_capacity(count);
+    for place in skip..skip + count {
+        let view = views.add(place * 16);
+        let size = u32::from_le_bytes(word(view)) as usize;
+        if size <= 12 {
+            spans.push((view.add(4), size));
+            continue;
+        }
+        let index = u32::from_le_bytes(word(view.add(8))) as usize;
+        let offset = u32::from_le_bytes(word(view.add(12))) as u64;
+        if index >= data_buffers {
+            return Err(UsageError::new_err(
+                "a string view points past its data buffers",
+            ));
+        }
+        let declared = i64::from_le_bytes(word(sizes.add(index * 8)));
+        let base = buffer(array, 2 + index);
+        if declared < 0 || offset + size as u64 > declared as u64 || base.is_null() {
+            return Err(UsageError::new_err(
+                "a string view reaches past the length its data buffer declares",
+            ));
+        }
+        spans.push((base.add(offset as usize), size));
     }
-    let large = matches!(text, Text::LargeUtf8);
-    let mut place = 0usize;
-    while place < count {
-        let (start, end) = if large {
-            let offsets = *buffers.offset(1) as *const i64;
-            (*offsets.add(skip + place), *offsets.add(skip + place + 1))
-        } else {
-            let offsets = *buffers.offset(1) as *const i32;
-            let (low, high) = (*offsets.add(skip + place), *offsets.add(skip + place + 1));
-            (i64::from(low), i64::from(high))
-        };
+    Ok(spans)
+}
+
+/// Where each Utf8 or LargeUtf8 row's bytes are, each span proven inside
+/// the data extent the array's last offset declares.
+///
+/// The offsets are checked monotone from the first row read to the last
+/// offset, and nonnegative, before any data byte is touched.
+unsafe fn offset_spans(
+    array: *const ArrowArray,
+    text: Text,
+    skip: usize,
+    count: usize,
+    carried: usize,
+) -> PyResult<Vec<(*const u8, usize)>> {
+    let (offsets, values) = if (*array).n_buffers < 3 {
+        (std::ptr::null(), std::ptr::null())
+    } else {
+        (buffer(array, 1), buffer(array, 2))
+    };
+    if offsets.is_null() || values.is_null() {
+        return Err(UsageError::new_err(
+            "the string array lacks its offsets or its values buffer",
+        ));
+    }
+    // SAFETY: `place` never passes `carried`, and the array's offset plus
+    // length declares `carried + 1` offsets.
+    let at = |place: usize| -> i64 {
+        unsafe {
+            if matches!(text, Text::LargeUtf8) {
+                i64::from_le_bytes(word(offsets.add(place * 8)))
+            } else {
+                i64::from(i32::from_le_bytes(word(offsets.add(place * 4))))
+            }
+        }
+    };
+    let mut spans = Vec::with_capacity(count);
+    let mut start = at(skip);
+    for place in skip + 1..=carried {
+        let end = at(place);
         if start < 0 || end < start {
             return Err(UsageError::new_err(
                 "the column's offsets are reversed or negative",
             ));
         }
-        let (start, end) = (start as usize, end as usize);
-        if end - start > MAX_ONE_STRING || end > MAX_ONE_STRING {
-            return Err(UsageError::new_err(
-                "the column's offsets name a size no text column carries",
-            ));
+        if place <= skip + count {
+            spans.push((values.add(start as usize), (end - start) as usize));
         }
-        let bytes = std::slice::from_raw_parts(values.add(start), end - start);
-        let text = std::str::from_utf8(bytes)
-            .map_err(|_| UsageError::new_err("the column's buffer is not valid UTF-8"))?;
-        texts.push(text);
-        place += 1;
+        start = end;
     }
-    Ok(texts)
+    Ok(spans)
 }
 
 /// Read a stream's own error phrase, or fall back to the context.
@@ -1634,20 +1653,19 @@ unsafe extern "C" fn column_array_capsule_destructor(capsule: *mut pyo3::ffi::Py
 
 #[cfg(test)]
 mod malformed_tests {
-    //! The review's exit-139 probes, pinned as tests: a malformed string
-    //! view or reversed offsets must come back as a refusal, never as a
-    //! process crash. The arrays are hand-built C structs over real,
-    //! small buffers, so the failure the guards must catch is a read far
-    //! past a buffer's end — the exact shape the reviewer's probe sent.
+    //! The reviews' exit-139 probes, pinned as tests: a malformed string
+    //! view or offsets buffer must come back as a refusal, never as a read
+    //! past a buffer. The arrays are hand-built C structs over real, small
+    //! buffers in the layouts the C data interface names, so every
+    //! refusal below is a claim the reader could check before reading.
 
     use super::*;
 
-    fn array_of(held: &[*const c_void]) -> ArrowArray {
+    fn array_of(held: &[*const c_void], length: i64) -> ArrowArray {
         // SAFETY: an all-zero ArrowArray is the C interface's empty
         // producer state; the fields set below are the ones read.
         let mut outer = unsafe { std::mem::zeroed::<ArrowArray>() };
-        outer.length = 1;
-        outer.null_count = 0;
+        outer.length = length;
         outer.n_buffers = held.len() as i64;
         outer.buffers = held.as_ptr() as *mut *const c_void;
         outer
@@ -1665,163 +1683,111 @@ mod malformed_tests {
         one.to_vec()
     }
 
-    #[test]
-    fn oversized_view_is_refused_not_crashed() {
-        let views = one_view(0x4000_0000, 0, 0); // 1 GiB no buffer carries
-        let data = b"tiny".to_vec();
-        let held = pointers(&[b"".as_slice(), &views, &data]);
-        let outer = array_of(&held);
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
-        assert!(outcome.is_err(), "an oversized view must be refused");
+    /// The trailing buffer the interface appends to a view array: one
+    /// i64 length a data buffer.
+    fn sizes_of(data: &[&[u8]]) -> Vec<u8> {
+        data.iter().flat_map(|one| (one.len() as i64).to_le_bytes()).collect()
+    }
+
+    /// Borrow one view column laid out as `[validity, views, data.., sizes]`.
+    fn views_over(views: &[u8], data: &[&[u8]], rows: usize) -> PyResult<Vec<&'static str>> {
+        let sizes = sizes_of(data);
+        let mut table = vec![b"".as_slice(), views];
+        table.extend_from_slice(data);
+        table.push(&sizes);
+        let held = pointers(&table);
+        let outer = array_of(&held, rows as i64);
+        unsafe { borrow_strings(&outer, Text::View, 0, rows) }
+    }
+
+    fn utf8_over(offsets: &[i32], values: &[u8]) -> PyResult<Vec<&'static str>> {
+        let offsets: Vec<u8> = offsets.iter().flat_map(|one| one.to_le_bytes()).collect();
+        let held = pointers(&[b"".as_slice(), &offsets, values]);
+        let rows = offsets.len() / 4 - 1;
+        let outer = array_of(&held, rows as i64);
+        unsafe { borrow_strings(&outer, Text::Utf8, 0, rows) }
     }
 
     #[test]
-    fn the_reviewers_sixty_million_offset_is_refused() {
-        // Review-4's exact probe: a view at offset 60,000,000 over a
-        // 100-byte data buffer. The interface carries no lengths, so the
-        // cap is the bound, and sixty million sits past four mebibytes.
-        let views = one_view(100, 0, 60_000_000);
+    fn a_view_past_its_declared_length_is_refused() {
+        // Review-4's probe (offset 60,000,000) and review-5's (offset 200,
+        // and a view straddling the end): a 100-byte buffer declared 100.
         let data = vec![b'x'; 100];
-        let held = pointers(&[b"".as_slice(), &views, &data]);
-        let outer = array_of(&held);
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
-        assert!(outcome.is_err(), "the 60,000,000-offset view must be refused");
+        for (size, offset) in [(100, 60_000_000), (13, 200), (13, 90), (0x4000_0000, 0)] {
+            let views = one_view(size, 0, offset);
+            assert!(views_over(&views, &[&data], 1).is_err(), "{size} at {offset}");
+        }
     }
 
     #[test]
-    fn view_offset_past_its_cap_is_refused() {
-        let views = one_view(16, 0, 0x4000_0000); // an offset of 1 GiB
-        let data = b"tiny but real".to_vec();
-        let held = pointers(&[b"".as_slice(), &views, &data]);
-        let outer = array_of(&held);
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
-        assert!(outcome.is_err(), "an offset past the cap must be refused");
+    fn a_view_cannot_name_the_sizes_buffer() {
+        // Review-5: the data count is the table minus three, so index 1
+        // over one data buffer is the sizes buffer and is refused.
+        let data = vec![b'x'; 100];
+        assert!(views_over(&one_view(13, 1, 0), &[&data], 1).is_err());
+        assert!(views_over(&one_view(32, 5, 0), &[&data], 1).is_err());
     }
 
     #[test]
-    fn a_null_buffer_table_is_refused_not_dereferenced() {
-        // Review-4: a null `buffers` pointer must be refused before the
-        // reader dereferences the table it points at.
+    fn a_utf8_row_past_the_final_offset_is_refused() {
+        // Review-5: the final offset declares the data extent; a row that
+        // ends past it is non-monotone and refused before any read.
+        assert!(utf8_over(&[0, 200, 3], b"abc").is_err());
+        assert!(utf8_over(&[3, 1], b"abc").is_err());
+        assert!(utf8_over(&[-5, 3], b"abc").is_err());
+        // A row longer than the per-row ceiling is refused before the read.
+        assert!(utf8_over(&[0, 60_000_000], b"abc").is_err());
+    }
+
+    #[test]
+    fn a_column_past_four_mebibytes_borrows() {
+        // Review-5: the wave-5 cap compared absolute positions and refused
+        // any ordinary column whose text passed 4 MiB.
+        let values = vec![b'a'; 5 << 20];
+        let rows: Vec<i32> = (0..=5).map(|one| one << 20).collect();
+        assert!(utf8_over(&rows, &values).is_ok());
+        let views = one_view(13, 0, (5 << 20) - 13);
+        assert!(views_over(&views, &[&values], 1).is_ok());
+    }
+
+    #[test]
+    fn null_tables_and_row_claims_are_refused() {
+        // Review-4: a null table, a null offsets slot, a 2^40 row claim
+        // (length or offset), and a negative length never reach a read.
         let mut outer = unsafe { std::mem::zeroed::<ArrowArray>() };
         outer.length = 1;
         outer.n_buffers = 3;
-        outer.buffers = std::ptr::null_mut();
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
-        assert!(outcome.is_err(), "a null buffer table must be refused");
-    }
-
-    #[test]
-    fn a_null_offsets_pointer_is_refused() {
-        // Review-4: a Utf8 array whose offsets slot is null must be
-        // refused before the reader walks it.
+        assert!(unsafe { borrow_strings(&outer, Text::View, 0, 1) }.is_err());
         let values = b"abc".to_vec();
-        let held = [
-            b"".as_slice().as_ptr() as *const c_void,
-            std::ptr::null(),
-            values.as_ptr() as *const c_void,
-        ];
-        let outer = array_of(&held);
-        let outcome = unsafe { borrow_strings(&outer, Text::Utf8, 0, 1) };
-        assert!(outcome.is_err(), "a null offsets pointer must be refused");
-    }
-
-    #[test]
-    fn a_two_to_the_forty_length_is_refused_not_allocated() {
-        // Review-4: `Vec::with_capacity` aborts on an allocation it
-        // cannot make, so the row count is bounded before it allocates.
-        let views = one_view(4, 0, 0);
-        let data = b"tiny".to_vec();
-        let held = pointers(&[b"".as_slice(), &views, &data]);
-        let mut outer = array_of(&held);
-        outer.length = 1i64 << 40;
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1usize << 40) };
-        assert!(outcome.is_err(), "a 2^40 row claim must be refused");
-    }
-
-    #[test]
-    fn a_negative_length_is_refused() {
-        let views = one_view(4, 0, 0);
-        let data = b"tiny".to_vec();
-        let held = pointers(&[b"".as_slice(), &views, &data]);
-        let mut outer = array_of(&held);
-        outer.length = -1;
-        outer.offset = -1;
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
-        assert!(outcome.is_err(), "a negative length or offset must be refused");
-    }
-
-    #[test]
-    fn view_index_equal_to_the_data_count_is_refused() {
-        // The boundary the count arithmetic must hold: index == the
-        // number of data buffers names one past the last real buffer.
-        let views = one_view(16, 1, 0); // one data buffer exists (index 0)
-        let data = b"tiny but real".to_vec();
-        let held = pointers(&[b"".as_slice(), &views, &data]);
-        let outer = array_of(&held);
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
-        assert!(outcome.is_err(), "index == data count must be refused");
-    }
-
-    #[test]
-    fn reversed_offsets_are_refused_not_wrapped() {
-        let offsets = [3i32.to_le_bytes(), 1i32.to_le_bytes()].concat();
-        let values = b"abc".to_vec();
+        let held = [std::ptr::null(), std::ptr::null(), values.as_ptr().cast()];
+        let outer = array_of(&held, 1);
+        assert!(unsafe { borrow_strings(&outer, Text::Utf8, 0, 1) }.is_err());
+        let offsets = [0i32, 3].map(i32::to_le_bytes).concat();
         let held = pointers(&[b"".as_slice(), &offsets, &values]);
-        let outer = array_of(&held);
-        let outcome = unsafe { borrow_strings(&outer, Text::Utf8, 0, 1) };
-        assert!(outcome.is_err(), "reversed offsets must be refused");
+        for (length, offset) in [(1i64 << 40, 0), (1, 1i64 << 40), (-1, 0)] {
+            let mut outer = array_of(&held, length);
+            outer.offset = offset;
+            let skip = offset.max(0) as usize;
+            let rows = length.max(0) as usize;
+            assert!(unsafe { borrow_strings(&outer, Text::Utf8, skip, rows) }.is_err());
+        }
     }
 
     #[test]
-    fn view_past_the_data_buffers_stays_refused() {
-        let views = one_view(32, 5, 0); // buffer 5 of the one that exists
-        let data = b"tiny".to_vec();
-        let held = pointers(&[b"".as_slice(), &views, &data]);
-        let outer = array_of(&held);
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
-        assert!(outcome.is_err(), "a view past the buffers must be refused");
-    }
-
-    #[test]
-    fn a_conformant_two_buffer_view_column_round_trips() {
-        // The shape real producers export: one inline view (size <= 12,
-        // bytes carried in the view itself) and two long views naming
-        // two different data buffers. Review-4 noted the unit tests
-        // built views against a layout producers do not make; this one
-        // mirrors the spec's table: [validity, views, data, data].
+    fn a_conformant_view_column_round_trips() {
+        // The shape real producers export: one inline view and two long
+        // views naming two data buffers, then the sizes buffer, per the
+        // interface's table `[validity, views, data, data, sizes]`.
         let first = b"alpha runs longer than twentyfour".to_vec();
         let second = b"beta also runs long past twelve".to_vec();
-        let mut long_first = [0u8; 16];
-        long_first[0..4].copy_from_slice(&24u32.to_le_bytes());
-        long_first[8..12].copy_from_slice(&0u32.to_le_bytes());
-        long_first[12..16].copy_from_slice(&3u32.to_le_bytes());
-        let mut long_second = [0u8; 16];
-        long_second[0..4].copy_from_slice(&21u32.to_le_bytes());
-        long_second[8..12].copy_from_slice(&1u32.to_le_bytes());
-        long_second[12..16].copy_from_slice(&4u32.to_le_bytes());
-        let inline = one_view(5, 0, 0);
-        let mut inline_view = [0u8; 16];
-        inline_view.copy_from_slice(&inline);
-        inline_view[4..9].copy_from_slice(b"gamma");
-        let views = [long_first, inline_view, long_second].concat();
-        let held = pointers(&[b"".as_slice(), &views, &first, &second]);
-        let mut outer = array_of(&held);
-        outer.length = 3;
-        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 3) };
-        let texts = match outcome {
-            Ok(texts) => texts,
+        let mut inline = one_view(5, 0, 0);
+        inline[4..9].copy_from_slice(b"gamma");
+        let views = [one_view(24, 0, 3), inline, one_view(21, 1, 4)].concat();
+        let Ok(texts) = views_over(&views, &[&first, &second], 3) else {
             // Formatting a live PyErr needs the interpreter, which a bare
             // test thread cannot start, so the failure is said in words.
-            Err(_) => panic!("a conformant view column borrows"),
+            panic!("a conformant view column borrows");
         };
-        assert_eq!(
-            texts[0],
-            std::str::from_utf8(&first[3..3 + 24]).expect("test bytes are UTF-8")
-        );
-        assert_eq!(texts[1], "gamma");
-        assert_eq!(
-            texts[2],
-            std::str::from_utf8(&second[4..4 + 21]).expect("test bytes are UTF-8")
-        );
+        assert_eq!(texts, ["ha runs longer than twen", "gamma", " also runs long past "]);
     }
 }
