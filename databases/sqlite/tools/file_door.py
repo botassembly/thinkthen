@@ -1,43 +1,36 @@
 #!/usr/bin/env python3
+# usage: THINKTHEN_NULL=1 python3 tools/file_door.py target/release/libthinkthen0.so
 """The review-4 item-7 door probe for SQLite: deterministic, no race.
 
 The stable shapes the swap race rides on, each checked alone:
 
 - a regular file reads (the happy path stays happy);
-- a symlink — pointing anywhere — refuses at the door, never at the
-  parser: pre-fix, the same call read the link's target and reached the
-  question parser, which is the leak;
-- a fifo refuses at the door without hanging: pre-fix, a straddled
-  swap parked the process in open() (the reviewer hung at iteration 59).
+- a symlink to a regular file reads its target: this surface confines
+  nothing, so a link reads what naming the target would (review 5
+  relaxed the review-4 refusal of every link, which blocked users and
+  closed nothing);
+- a fifo, named directly or through a symlink, refuses at the door
+  without hanging: pre-fix, a straddled swap parked the process in
+  open() (the reviewer hung at iteration 59).
 
-Runs against the extension's own floor host: the pinned 3.50.2 source
-build (LIBSQLITE, default /tmp/sqlite350) or any libsqlite3 >= 3.50 the
-checker passes. Exit 0 = every door assertion held.
+Runs against the extension's own floor host: LIBSQLITE, default the
+.runtimes build that tests/host_sqlite.sh makes. Exit 0 = every door
+assertion held.
 """
 import ctypes
 import json
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
 
 LIB = sys.argv[1]
-def _default_host() -> str:
-    """The floor-or-newer host the suite runs against: the .runtimes
-    amalgamation build first, the pinned source build second."""
-    for candidate in (
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".runtimes", "host", "libsqlite3.so.0"),
-        "/tmp/sqlite350/lib/libsqlite3.so",
-    ):
-        if os.path.exists(candidate):
-            return candidate
-    return "/tmp/sqlite350/lib/libsqlite3.so"
-
-
-LIBSQLITE = os.environ.get("LIBSQLITE") or _default_host()
+LIBSQLITE = os.environ.get("LIBSQLITE") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".runtimes", "host", "libsqlite3.so.0"
+)
 
 GOOD = json.dumps({"decide": "is the order late?", "threshold": 0.5})
-OUTSIDE = json.dumps({"SECRET_KEY_NAME": "leaked"})
 
 
 def one(sql, db, question_file: str) -> tuple[int, str]:
@@ -56,8 +49,6 @@ def main() -> int:
     held = Path(tempfile.mkdtemp(prefix="file-door-"))
     good = held / "good.json"
     good.write_text(GOOD)
-    outside = held / "outside.json"
-    outside.write_text(OUTSIDE)
 
     sql = ctypes.CDLL(LIBSQLITE)
     sql.sqlite3_errmsg.restype = ctypes.c_char_p
@@ -77,14 +68,10 @@ def main() -> int:
         failures.append(f"regular file refused: {message[:120]}")
 
     link = held / "link.json"
-    os.symlink(outside, link)
+    os.symlink(good, link)
     rc, message = one(sql, db, f"@{link}")
-    # The door must refuse; a parse-stage message means the link's target
-    # was read.
-    if "did not read" not in message:
-        failures.append(f"symlink read through to: {message[:120]}")
-    if "SECRET_KEY_NAME" in message:
-        failures.append(f"symlink leaked the target's key names: {message[:120]}")
+    if rc != 100:
+        failures.append(f"symlink to a regular file refused: {message[:120]}")
 
     fifo = held / "pipe.json"
     os.mkfifo(fifo)
@@ -92,9 +79,16 @@ def main() -> int:
     if "did not read" not in message:
         failures.append(f"fifo was not refused at the door: {message[:120]}")
 
+    fifo_link = held / "pipe-link.json"
+    os.symlink(fifo, fifo_link)
+    rc, message = one(sql, db, f"@{fifo_link}")
+    if "did not read" not in message:
+        failures.append(f"symlink to a fifo was not refused at the door: {message[:120]}")
+
+    shutil.rmtree(held, ignore_errors=True)
     for failure in failures:
         print(f"FAIL {failure}")
-    print("file door: regular reads, symlink refused at the door, fifo refused at the door")
+    print("file door: regular reads, symlink reads its target, fifo refused at the door directly and through a link")
     return 1 if failures else 0
 
 

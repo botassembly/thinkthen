@@ -16,7 +16,8 @@
 //! Nothing here sends, retries, or schedules: the engine behind the
 //! [`Engine`] trait owns all of that. Load-time init registers the
 //! functions and touches no wire; the engine is built lazily on the first
-//! call, and a fork is repaired by the engine's process check.
+//! call, and a fork is repaired by the engine's process check and by the
+//! interrupt watcher's own per-process hub.
 //!
 //! Every function is volatile and direct-only: no paid call is legal from
 //! a view, a trigger, a default, an index expression, or a CHECK
@@ -36,7 +37,7 @@ use std::collections::{HashMap, VecDeque};
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, Once, OnceLock};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
 use rusqlite::vtab::{
@@ -147,15 +148,23 @@ fn cache_hits() -> &'static AtomicU64 {
 /// working set larger than the bound turns over rather than pinning.
 const QUESTION_CACHE_CAP: usize = 4096;
 
-/// One cached parse. A named file also carries the `(mtime, size)` its
-/// bytes had when read, so a delete or rewrite invalidates on the next
-/// lookup instead of serving the stale parse forever (review 4, item
-/// 15): the cost is one `stat` per lookup, which is the same cost the
-/// read itself would pay.
+/// A named file's `(mtime, size)`, read from the descriptor its bytes
+/// came through.
+type Stamp = (std::time::SystemTime, u64);
+
+/// One cached parse. A named file also carries the stamp its bytes had
+/// when read, so a delete or rewrite invalidates on the next lookup
+/// instead of serving the stale parse forever (review 4, item 15): the
+/// cost is one `stat` per lookup, taken outside the cache lock. The
+/// stamp comes from the same descriptor as the parsed bytes (review 5:
+/// a second open stamped a replacement file, and 5 of 400 raced entries
+/// served the old parse for good). One limit stays: a rewrite that
+/// keeps the size and restores the modified time is not seen, because a
+/// content hash would read the file on every row.
 struct Cached<T> {
     held: Arc<T>,
-    /// `Some((mtime, size))` when the argument names a file.
-    file: Option<(std::time::SystemTime, u64)>,
+    /// `Some(stamp)` when the argument names a file.
+    file: Option<Stamp>,
 }
 
 /// Insertion order for the bound's eviction, beside the map it orders.
@@ -170,7 +179,7 @@ impl<T> Ordered<T> {
     }
 
     /// Insert and evict past the cap, oldest first.
-    fn insert(&mut self, key: String, held: Arc<T>, file: Option<(std::time::SystemTime, u64)>) {
+    fn insert(&mut self, key: String, held: Arc<T>, file: Option<Stamp>) {
         if !self.map.contains_key(&key) {
             self.order.push_back(key.clone());
         }
@@ -181,20 +190,25 @@ impl<T> Ordered<T> {
         }
     }
 
-    /// The held parse when the key matches and, for a named file, the
-    /// bytes have not changed.
-    fn get(&self, key: &str) -> Option<Arc<T>> {
+    /// The held parse and its stamp, under the lock; [`fresh`] then
+    /// checks the stamp with the lock released.
+    fn get(&self, key: &str) -> Option<(Arc<T>, Option<Stamp>)> {
         let cached = self.map.get(key)?;
-        if let Some(path) = key.strip_prefix('@') {
-            let stamped = cached.file?;
-            let meta = std::fs::metadata(path).ok()?;
-            let mtime = meta.modified().ok()?;
-            if (mtime, meta.len()) != stamped {
-                return None;
-            }
-        }
-        Some(cached.held.clone())
+        Some((cached.held.clone(), cached.file))
     }
+}
+
+/// Whether a cached parse still stands: an inline argument always does,
+/// and a named file does while its stamp matches the file on disk now.
+/// Called with the cache lock released, so a slow `stat` holds up no
+/// other connection (review 5).
+fn fresh(key: &str, file: Option<Stamp>) -> bool {
+    let Some(path) = key.strip_prefix('@') else { return true };
+    let Some(stamp) = file else { return false };
+    std::fs::metadata(path)
+        .ok()
+        .and_then(|meta| Some((meta.modified().ok()?, meta.len())))
+        == Some(stamp)
 }
 
 /// Parsed questions by their argument text, so a row-by-row query parses
@@ -260,21 +274,25 @@ const FILE_CAP: u64 = 1024 * 1024;
 /// [`FILE_CAP`] bytes, read no further than one byte past the cap, with
 /// one message for every unreadable cause so a caller learns nothing
 /// about the filesystem. The path is opened exactly once with
-/// `O_NOFOLLOW` and `O_NONBLOCK` and the checks read the opened
-/// descriptor, so a path swapped between check and open cannot smuggle
-/// another file in or park the process on a fifo (review 4, item 7).
-/// Where a database may read question files from is the database ADR's
-/// to rule; the process directory is this surface's pick, named here so
-/// a ruling can move it in one place.
-fn named_file(argument: &str) -> Result<String, String> {
+/// `O_NONBLOCK` and the checks read the opened descriptor, so a path
+/// swapped between check and open cannot park the process on a fifo
+/// (review 4, item 7). A symlink is followed, the last component too:
+/// this surface confines nothing, so a link reads what its target would
+/// (review 5 relaxed the `O_NOFOLLOW` that refused every link). The
+/// stamp returned beside the text is the descriptor's own, so the cache
+/// can never pair these bytes with another file's stamp. Where a
+/// database may read question files from is the database ADR's to rule;
+/// the process directory is this surface's pick, named here so a ruling
+/// can move it in one place.
+fn named_file(argument: &str) -> Result<(String, Stamp), String> {
     use std::io::Read;
     use std::os::unix::fs::OpenOptionsExt;
     let path = Path::new(&argument[1..]);
     let refused = || format!("the question file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes");
-    // Open once, never following the final component, never blocking.
+    // Open once, never blocking.
     let file = std::fs::OpenOptions::new()
         .read(true)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .custom_flags(libc::O_NONBLOCK)
         .open(path)
         .map_err(|_| refused())?;
     // The metadata of what was opened, not of what the path names now.
@@ -294,63 +312,57 @@ fn named_file(argument: &str) -> Result<String, String> {
     if text.len() as u64 > FILE_CAP {
         return Err(format!("the question file '{argument}' is over the {FILE_CAP} byte cap"));
     }
-    Ok(text)
+    let stamp = (meta.modified().unwrap_or(std::time::UNIX_EPOCH), meta.len());
+    Ok((text, stamp))
+}
+
+/// The part of the answer map's key a question gives: its digest (the
+/// text, the verb's members, and the threshold) and the model it asks,
+/// which the digest leaves out. Two question files that differ only in
+/// the model ask different judges (review 5, contract reviewer). The
+/// engine is one per process, and the deadline only bounds the wait, so
+/// nothing else enters the key.
+fn question_key(question: &Question) -> String {
+    format!("{} {}", question.digest(), question.model())
 }
 
 /// The question one argument names: a file with the `'@'` spelling, a JSON
 /// question, or plain text with the default cut.
-/// The `(mtime, size)` of a named file's bytes right now, read through
-/// the same opened-once door so the stamp cannot disagree with the read
-/// it accompanies.
-fn stamped(argument: &str) -> Result<Option<(std::time::SystemTime, u64)>, String> {
-    if !argument.starts_with('@') {
-        return Ok(None);
-    }
-    use std::os::unix::fs::OpenOptionsExt;
-    let file = std::fs::OpenOptions::new()
-        .read(true)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
-        .open(Path::new(&argument[1..]))
-        .map_err(|_| format!("the question file '{argument}' did not read"))?;
-    let meta = file
-        .metadata()
-        .map_err(|_| format!("the question file '{argument}' did not read"))?;
-    if !meta.is_file() {
-        return Err(format!("the question file '{argument}' did not read"));
-    }
-    Ok(Some((meta.modified().unwrap_or(std::time::UNIX_EPOCH), meta.len())))
-}
-
 fn question(argument: &str) -> Result<Arc<Question>, Error> {
-    if let Some(held) = questions().lock().unwrap().get(argument) {
-        return Ok(held.clone());
+    let cached = questions().lock().unwrap().get(argument);
+    if let Some((held, file)) = cached
+        && fresh(argument, file)
+    {
+        return Ok(held);
     }
-    let parsed = if argument.starts_with('@') {
-        let text = named_file(argument).map_err(local_failure)?;
-        Question::from_json(&text).map_err(failure)?
+    let (parsed, file) = if argument.starts_with('@') {
+        let (text, stamp) = named_file(argument).map_err(local_failure)?;
+        (Question::from_json(&text).map_err(failure)?, Some(stamp))
     } else if argument.starts_with('{') {
-        Question::from_json(argument).map_err(failure)?
+        (Question::from_json(argument).map_err(failure)?, None)
     } else {
-        Question::decide(argument).map_err(failure)?.cut(0.5).map_err(failure)?
+        (Question::decide(argument).map_err(failure)?.cut(0.5).map_err(failure)?, None)
     };
     let held = Arc::new(parsed);
-    let file = stamped(argument).map_err(local_failure)?;
     questions().lock().unwrap().insert(argument.to_string(), held.clone(), file);
     Ok(held)
 }
 
 /// The question set one argument names, for `annotate`.
 fn set(argument: &str) -> Result<Arc<QuestionSet>, Error> {
-    if let Some(held) = sets().lock().unwrap().get(argument) {
-        return Ok(held.clone());
+    let cached = sets().lock().unwrap().get(argument);
+    if let Some((held, file)) = cached
+        && fresh(argument, file)
+    {
+        return Ok(held);
     }
-    let text = if argument.starts_with('@') {
-        named_file(argument).map_err(local_failure)?
+    let (text, file) = if argument.starts_with('@') {
+        let (text, stamp) = named_file(argument).map_err(local_failure)?;
+        (text, Some(stamp))
     } else {
-        argument.to_string()
+        (argument.to_string(), None)
     };
     let held = Arc::new(QuestionSet::from_json(&text).map_err(failure)?);
-    let file = stamped(argument).map_err(local_failure)?;
     sets().lock().unwrap().insert(argument.to_string(), held.clone(), file);
     Ok(held)
 }
@@ -421,29 +433,69 @@ struct Watch {
 /// spawned its own thread, and a stop landing in the tick window paid the
 /// full 5 ms because the loop never read the stop flag before waiting
 /// (review 3, item 25).
-static WATCHES: Mutex<Vec<Watch>> = Mutex::new(Vec::new());
-static WAKE: Condvar = Condvar::new();
-static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
-static WATCH_THREAD: Once = Once::new();
+///
+/// The hub belongs to one process. A forked child inherits the parent's
+/// hub with its lock in whatever state the parent's threads left it and
+/// with no watcher thread, so the child never touches it: the first watch
+/// in a new process builds a fresh hub and its own thread, and the
+/// inherited one is left alone (review 5, item 12: a child's interrupt
+/// was lost, and a fork during a tick hung the child on the lock). No
+/// `pthread_atfork` handler is used, because a handler would outlive an
+/// unloaded extension.
+struct Hub {
+    pid: u32,
+    watches: Mutex<Vec<Watch>>,
+    wake: Condvar,
+}
 
-fn start_watch_thread() {
-    WATCH_THREAD.call_once(|| {
-        std::thread::Builder::new()
-            .name("thinkthen-watch".to_owned())
-            .spawn(hub_thread)
-            .expect("the watcher thread starts");
-    });
+static HUB: AtomicPtr<Hub> = AtomicPtr::new(std::ptr::null_mut());
+static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+/// This process's hub, built with its thread on first use here.
+fn hub() -> &'static Hub {
+    let pid = std::process::id();
+    let current = HUB.load(Ordering::Acquire);
+    // SAFETY: a published hub is leaked and never freed.
+    if let Some(held) = unsafe { current.as_ref() }
+        && held.pid == pid
+    {
+        return held;
+    }
+    let fresh = Box::into_raw(Box::new(Hub {
+        pid,
+        watches: Mutex::new(Vec::new()),
+        wake: Condvar::new(),
+    }));
+    match HUB.compare_exchange(current, fresh, Ordering::AcqRel, Ordering::Acquire) {
+        Ok(_) => {
+            // SAFETY: just published, never freed.
+            let held: &'static Hub = unsafe { &*fresh };
+            std::thread::Builder::new()
+                .name("thinkthen-watch".to_owned())
+                .spawn(move || hub_thread(held))
+                .expect("the watcher thread starts");
+            held
+        }
+        Err(winner) => {
+            // Another thread of this process published first; its hub
+            // carries this pid, because the inherited one was `current`.
+            // SAFETY: `fresh` was never published.
+            drop(unsafe { Box::from_raw(fresh) });
+            // SAFETY: a published hub is never freed.
+            unsafe { &*winner }
+        }
+    }
 }
 
 /// The watcher's whole body: tick the registry under the lock, cancel the
 /// tokens whose connections show an interrupt, drop those watches, then
 /// wait one tick — or park entirely while the registry is empty, woken by
 /// the next registration.
-fn hub_thread() {
-    let mut held = WATCHES.lock().unwrap();
+fn hub_thread(hub: &'static Hub) {
+    let mut held = hub.watches.lock().unwrap();
     loop {
         if held.is_empty() {
-            held = WAKE.wait(held).unwrap();
+            held = hub.wake.wait(held).unwrap();
             continue;
         }
         // SAFETY: the addresses and the function pointer came from the
@@ -461,7 +513,7 @@ fn hub_thread() {
             }
         }
         *held = keep;
-        held = WAKE.wait_timeout(held, WATCH_TICK).unwrap().0;
+        held = hub.wake.wait_timeout(held, WATCH_TICK).unwrap().0;
     }
 }
 
@@ -478,7 +530,8 @@ fn hub_thread() {
 /// Dropping the handle removes the watch under the registry lock, so the
 /// watcher never reads a connection whose call has returned.
 struct InterruptWatch {
-    id: Option<u64>,
+    /// The watch's id and the hub it registered with.
+    id: Option<(u64, &'static Hub)>,
 }
 
 impl InterruptWatch {
@@ -496,26 +549,32 @@ impl InterruptWatch {
         if db.is_null() || check.is_null() {
             return Self { id: None };
         }
-        start_watch_thread();
+        let hub = hub();
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let mut held = WATCHES.lock().unwrap();
+        let mut held = hub.watches.lock().unwrap();
         held.push(Watch { db: db as usize, check: check as usize, token, id });
         drop(held);
-        WAKE.notify_all();
-        Self { id: Some(id) }
+        hub.wake.notify_all();
+        Self { id: Some((id, hub)) }
     }
 
     /// How many watches the shared watcher holds — for the tests.
     #[cfg(test)]
     fn watched_for_test() -> usize {
-        WATCHES.lock().unwrap().len()
+        hub().watches.lock().unwrap().len()
+    }
+
+    /// The registry lock itself, so a test can fork while it is held.
+    #[cfg(test)]
+    fn registry_for_test() -> std::sync::MutexGuard<'static, Vec<Watch>> {
+        hub().watches.lock().unwrap()
     }
 }
 
 impl Drop for InterruptWatch {
     fn drop(&mut self) {
-        let Some(id) = self.id else { return };
-        let mut held = WATCHES.lock().unwrap();
+        let Some((id, hub)) = self.id else { return };
+        let mut held = hub.watches.lock().unwrap();
         held.retain(|watch| watch.id != id);
     }
 }
@@ -556,7 +615,7 @@ fn decide(context: &Context<'_>) -> Result<Option<i64>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Decision(answer)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(answer.value().map(|held| if held { 1 } else { 0 }));
@@ -578,7 +637,7 @@ fn choose(context: &Context<'_>) -> Result<Option<String>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Choice(choice)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(choice.clone());
@@ -603,7 +662,7 @@ fn score(context: &Context<'_>) -> Result<Option<f64>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Score(scored)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(Some(scored.value));
@@ -628,7 +687,7 @@ fn tag(context: &Context<'_>) -> Result<Option<String>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Tags(labels)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(Some(serde_json::to_string(labels).unwrap()));
@@ -663,14 +722,15 @@ fn field_of(field: &Annotated) -> serde_json::Value {
     }
 }
 
-/// The digest of a question set over its members, so `annotate` saves
-/// under its own key.
+/// The key of a question set over its named members, so `annotate`
+/// saves under its own key.
 fn set_digest(set: &QuestionSet) -> String {
-    set.questions()
-        .iter()
-        .map(Question::digest)
-        .collect::<Vec<_>>()
-        .join("+")
+    // Each field's name beside its question's key: a cached object answers
+    // under the names it was built with (review 5: a renamed field was
+    // answered under the old name). JSON keeps the pairs unambiguous.
+    let pairs: Vec<(&String, String)> =
+        set.names().iter().zip(set.questions().iter().map(question_key)).collect();
+    serde_json::to_string(&pairs).unwrap_or_default()
 }
 
 /// `thinkthen_annotate(set, text)`: one object, one field per question in
@@ -771,25 +831,24 @@ fn usage(context: &Context<'_>) -> Result<String, Error> {
     })
 }
 
-/// The `thinkthen_warm` accumulator: the texts one flush holds, under the
-/// question that was live when they arrived. A different question closes
-/// the group it held — before, the first question judged every later
-/// row's text, and a pair absent from the cache was served from it
-/// (review 3, item 17).
 /// One question's open group of pending texts.
 struct WarmGroup {
     question: Arc<Question>,
-    digest: String,
     pending: Vec<String>,
 }
 
-/// The warm aggregate's state: one group per question, so interleaved
-/// questions accumulate instead of flushing on every change (review 4,
-/// item 15 — the single-group shape degraded an alternating query to one
-/// round per row).
+/// The warm aggregate's state: one group per question, keyed by its
+/// question key, so interleaved questions accumulate instead of flushing on
+/// every change (review 4, item 15 — the single-group shape degraded an
+/// alternating query to one round per row). The groups keep first-seen
+/// order, so finalize sends them in the order the rows named them, and
+/// the index finds a row's group in constant time (review 5: a linear
+/// search over the groups made 40,000 distinct questions take 6.57 s
+/// against 2.67 s before).
 #[derive(Default)]
 struct WarmState {
-    groups: Vec<WarmGroup>,
+    groups: Vec<(String, WarmGroup)>,
+    index: HashMap<String, usize>,
     judged: u64,
 }
 
@@ -818,35 +877,23 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
         guarded("thinkthen_warm", || {
             let question = question(context.get_raw(0).as_str()?)?;
             let text = context.get_raw(1).as_str()?.to_string();
-            if answers().lock().unwrap().contains_key(&(question.digest(), text.clone())) {
+            let key = question_key(&question);
+            if answers().lock().unwrap().contains_key(&(key.clone(), text.clone())) {
                 cache_hits().fetch_add(1, Ordering::Relaxed);
                 return Ok(());
             }
-            let digest = question.digest();
-            // The question's own group accumulates, wherever the rows
-            // interleave (review 4, item 15: the single-group shape
-            // degraded an alternating query to one round per row).
-            let index = match state.groups.iter().position(|group| group.digest == digest) {
-                Some(index) => index,
-                None => {
-                    state.groups.push(WarmGroup {
-                        question: question.clone(),
-                        digest: digest.clone(),
-                        pending: Vec::new(),
-                    });
-                    state.groups.len() - 1
-                }
-            };
-            let chunk_full = {
-                let group = &mut state.groups[index];
-                group.pending.push(text);
-                group.pending.len() >= CHUNK
-            };
-            if chunk_full {
-                // The drained group is dropped: a later row for the same
-                // question opens a fresh group, so no emptied group lingers.
-                let mut group = state.groups.swap_remove(index);
-                flush(state, connection_of(context), &mut group)?;
+            let at = *state.index.entry(key.clone()).or_insert_with(|| {
+                state.groups.push((key.clone(), WarmGroup { question: question.clone(), pending: Vec::new() }));
+                state.groups.len() - 1
+            });
+            let group = &mut state.groups[at].1;
+            group.pending.push(text);
+            if group.pending.len() >= CHUNK {
+                // A full chunk flushes in place; the emptied group stays
+                // in its place for the question's later rows.
+                let pending = std::mem::take(&mut group.pending);
+                let question = group.question.clone();
+                state.judged += flush(connection_of(context), &key, WarmGroup { question, pending })?;
             }
             Ok(())
         })
@@ -859,11 +906,9 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
     ) -> Result<Option<i64>, Error> {
         guarded("thinkthen_warm", || {
             if let Some(state) = state.as_mut() {
-                while !state.groups.is_empty() {
-                    let mut rest = state.groups.split_off(1);
-                    std::mem::swap(&mut rest, &mut state.groups);
-                    let mut only = rest.into_iter().next().expect("one group");
-                    flush(state, connection_of(context), &mut only)?;
+                for (digest, group) in std::mem::take(&mut state.groups) {
+                    // First-seen order, the order the rows named them.
+                    state.judged += flush(connection_of(context), &digest, group)?;
                 }
                 return Ok(Some(state.judged as i64));
             }
@@ -872,32 +917,28 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
     }
 }
 
-/// Judge the pending texts at once, saving every judgment. A set
-/// interrupt cancels the token through the poll, which reads the calling
-/// connection's own handle; no new request starts, the requests sent
-/// finish, and the statement ends with the cancelled kind.
-fn flush(
-    state: &mut WarmState,
-    db: *mut ffi::sqlite3,
-    group: &mut WarmGroup,
-) -> Result<(), Error> {
+/// Judge one group's pending texts at once, saving every judgment, and
+/// answer how many were judged. A set interrupt cancels the token
+/// through the poll, which reads the calling connection's own handle; no
+/// new request starts, the requests sent finish, and the statement ends
+/// with the cancelled kind.
+fn flush(db: *mut ffi::sqlite3, digest: &str, group: WarmGroup) -> Result<u64, Error> {
     if group.pending.is_empty() {
-        return Ok(());
+        return Ok(0);
     }
-    let question = group.question.clone();
     let token = Cancel::new();
     let records: Vec<&str> = group.pending.iter().map(String::as_str).collect();
     let mut poll = || hear_interrupts(db, &token);
     let judgments = engine()
-        .decide_many_opts(&question, &records, Options::new().cancel(&token), Some(&mut poll))
+        .decide_many_opts(&group.question, &records, Options::new().cancel(&token), Some(&mut poll))
         .map_err(failure)?;
-    let digest = group.digest.clone();
     let mut saved = answers().lock().unwrap();
-    for (text, judgment) in group.pending.drain(..).zip(judgments) {
-        saved.insert((digest.clone(), text), Saved::Decision(judgment.answer));
-        state.judged += 1;
+    let mut judged = 0;
+    for (text, judgment) in group.pending.into_iter().zip(judgments) {
+        saved.insert((digest.to_owned(), text), Saved::Decision(judgment.answer));
+        judged += 1;
     }
-    Ok(())
+    Ok(judged)
 }
 
 // ---------------------------------------------------------------------
@@ -1404,7 +1445,7 @@ unsafe impl VTabCursor for RelateCursor {
                 // The file form: the question file's `relate` section, or the
                 // whole file when it carries no section — the contract's own
                 // parser reads it, so no grammar lives here.
-                let text = named_file(slots[0]).map_err(local_failure)?;
+                let (text, _) = named_file(slots[0]).map_err(local_failure)?;
                 let value: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
                     failure(thinkthen_contract::Error::usage(format!(
                         "the question file {} is not JSON: {error}",
@@ -1754,6 +1795,87 @@ mod mapping_tests {
         drop(watch);
     }
 
+    /// The answer map's key (review 5, contract reviewer): a question
+    /// file that names another model asks another judge, and the digest
+    /// leaves the model out, so the key carries it.
+    #[test]
+    fn the_answer_key_separates_models() {
+        let first = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-a"}"#)
+            .expect("the first question parses");
+        let second = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-b"}"#)
+            .expect("the second question parses");
+        assert_eq!(first.digest(), second.digest(), "the digest leaves the model out");
+        assert_ne!(question_key(&first), question_key(&second));
+        // The annotate key carries each field's name: a cached object
+        // answers with the names it was built under, so two sets that ask
+        // the same question under different names must not share it. (A
+        // set cannot name a model; its questions ask the default.)
+        let set = |text: &str| QuestionSet::from_json(text).expect("the set parses");
+        let base = set(r#"{"version": 1, "questions": {"red": {"decide": "Is it red?"}}}"#);
+        let renamed = set(r#"{"version": 1, "questions": {"crimson": {"decide": "Is it red?"}}}"#);
+        assert_ne!(set_digest(&base), set_digest(&renamed));
+    }
+
+    /// The flag the fork test's child sets for its own fake host check.
+    static CHILD_FLAG: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+
+    unsafe extern "C" fn child_flag(_: *mut ffi::sqlite3) -> c_int {
+        CHILD_FLAG.load(Ordering::SeqCst) as c_int
+    }
+
+    /// Review 5, item 12: a forked child inherits the registry as the
+    /// parent left it and none of the parent's threads. The fork here
+    /// lands while the parent holds the registry lock, the worst instant;
+    /// the child's interrupt must still arm its token within a second.
+    /// Before, the child either hung on the inherited lock or registered
+    /// with no watcher thread and lost the interrupt.
+    #[test]
+    fn a_forked_child_hears_its_own_interrupt() {
+        use std::time::{Duration, Instant};
+
+        let handle = std::ptr::NonNull::<ffi::sqlite3>::dangling().as_ptr();
+        // The parent's watcher is running before the fork.
+        let parent = InterruptWatch::start_with(handle, Cancel::new(), child_flag as *mut ());
+        let held = InterruptWatch::registry_for_test();
+        // SAFETY: the child only arms a watch, waits, and leaves with
+        // `_exit`; the parent only waits for it.
+        let pid = unsafe { libc::fork() };
+        assert!(pid >= 0, "fork failed");
+        if pid == 0 {
+            CHILD_FLAG.store(true, Ordering::SeqCst);
+            let token = Cancel::new();
+            let _watch = InterruptWatch::start_with(handle, token.clone(), child_flag as *mut ());
+            let started = Instant::now();
+            while !token.is_cancelled() && started.elapsed() < Duration::from_secs(1) {
+                std::thread::sleep(Duration::from_millis(2));
+            }
+            unsafe { libc::_exit(if token.is_cancelled() { 0 } else { 3 }) };
+        }
+        drop(held);
+        let started = Instant::now();
+        let mut status = 0;
+        loop {
+            let done = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
+            if done == pid {
+                break;
+            }
+            if started.elapsed() > Duration::from_secs(5) {
+                unsafe { libc::kill(pid, libc::SIGKILL) };
+                unsafe { libc::waitpid(pid, &mut status, 0) };
+                panic!("the forked child hung on the inherited watcher lock");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(libc::WIFEXITED(status), "the child died: {status}");
+        assert_eq!(
+            libc::WEXITSTATUS(status),
+            0,
+            "the forked child's interrupt never armed its token"
+        );
+        drop(parent);
+    }
+
     #[test]
     fn a_panic_becomes_a_defect_not_an_unwind() {
         let held = guarded("thinkthen_probe", || -> rusqlite::Result<()> {
@@ -1828,10 +1950,21 @@ mod cancel_tests {
         let token = Cancel::new();
         let polls = Arc::new(AtomicUsize::new(0));
         let fired_at: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
-        let setter = thread::spawn(|| {
-            thread::sleep(Duration::from_millis(150));
-            HOST_INTERRUPTED.store(true, AtomicOrdering::SeqCst);
-        });
+        // The flag rises only after the first poll, so a loaded host that
+        // starts the batch late cannot let one poll both start and stop it.
+        let setter = {
+            let polls = Arc::clone(&polls);
+            thread::spawn(move || {
+                let give_up = Instant::now() + Duration::from_secs(30);
+                while polls.load(AtomicOrdering::SeqCst) == 0
+                    && Instant::now() < give_up
+                {
+                    thread::sleep(Duration::from_millis(1));
+                }
+                thread::sleep(Duration::from_millis(150));
+                HOST_INTERRUPTED.store(true, AtomicOrdering::SeqCst);
+            })
+        };
         let handle = std::ptr::NonNull::<ffi::sqlite3>::dangling().as_ptr();
         let mut poll = {
             let token = token.clone();

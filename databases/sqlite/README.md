@@ -115,7 +115,15 @@ Two named divergences and one gap, stated rather than implied:
 - **Question-file access.** The only file a call reads is the one its
   question argument names with the command's `'@name'` spelling, resolved
   against the process working directory. Nothing else is read: no
-  configuration file, no directory listing, no table.
+  configuration file, no directory listing, no table. The file must be a
+  regular file of at most 1 MiB. It is opened once without blocking, so
+  a fifo or a device refuses instead of hanging. This surface confines
+  nothing, so a symlink is followed, the last component too. A parsed
+  file is cached with the modified time and size its bytes were read
+  under, and each later call re-reads when the file on disk no longer
+  matches. One limit stays: a rewrite that keeps the size and restores
+  the modified time is not seen until the process restarts or the entry
+  is evicted, because a content hash would read the file on every row.
 - **Backend selection.** The engine builds lazily on the first call from
   the process environment (`THINKTHEN_BASE_URL`, or the stand-in's
   `ENGINE_BASE_URL`; `ENGINE_NULL=1` for the in-process backend). SQL
@@ -142,9 +150,10 @@ Two named divergences and one gap, stated rather than implied:
   `sqlite3_is_interrupted` on the loading connection, so the host's own
   `sqlite3_interrupt` (or a Ctrl-C in the CLI) cancels the token between
   records; a single-row call, whose calling thread sits inside the
-  engine, is watched by a short-lived watcher thread that reads the same
-  flag. No watcher exists between calls, and no query is left waiting on
-  a stop that never lands.
+  engine, is watched by one shared watcher thread per process that reads
+  the same flag every 5 ms while a call runs and parks while none does.
+  A forked child never uses the parent's watcher: its first watched call
+  builds its own, so a child's interrupt lands too (review 5).
 
 ## Building and checking
 

@@ -11,7 +11,8 @@ PG_IMAGE=postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f
 EXT=target/release/thinkthen-pg16/usr
 PORT=5471
 
-cleanup() { docker rm -f -v "$NAME" >/dev/null 2>&1 || true; }
+OUT_DIR=$(mktemp -d)
+cleanup() { docker rm -f -v "$NAME" >/dev/null 2>&1 || true; rm -rf "$OUT_DIR"; }
 trap cleanup EXIT
 
 for candidate in 5471 5472 5473; do
@@ -49,14 +50,14 @@ timeout 120 docker exec -e PGHOST=/run/postgresql "$NAME" \
     WHERE thinkthen_decide('@refund.json',
       'order ' || g || ': charged twice, please refund');" \
   -c "SELECT requests FROM thinkthen_usage();" \
-  > /tmp/warm-wire.out 2>/tmp/warm-wire.err
+  > "$OUT_DIR/warm-wire.out" 2>"$OUT_DIR/warm-wire.err"
 rc=$?
 echo "session rc=$rc"
-cat /tmp/warm-wire.err >&2
+cat "$OUT_DIR/warm-wire.err" >&2
 [ "$rc" = "0" ] || { echo "FAIL the session failed"; exit 1; }
 
 # Four answer lines: 2000 (warm count), requests, read-count, requests.
-mapfile -t lines < <(grep -vE "^$" /tmp/warm-wire.out)
+mapfile -t lines < <(grep -vE "^$" "$OUT_DIR/warm-wire.out")
 warm_count=${lines[0]}
 before=${lines[1]}
 read_count=${lines[2]}
