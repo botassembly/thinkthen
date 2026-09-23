@@ -37,7 +37,16 @@ import urllib.request
 MODE = sys.argv[1] if len(sys.argv) > 1 else "null"
 
 HERE = pathlib.Path(__file__).resolve().parent
-LIB = HERE.parent / "target" / "release" / "libthinkthen0.so"
+def _library() -> "pathlib.Path":
+    """The built extension, whatever the platform named it: .so or
+    .dylib (the name is derived from the crate's `thinkthen0`)."""
+    for candidate in (HERE.parent / "target" / "release").glob("libthinkthen0.*"):
+        if candidate.suffix in (".so", ".dylib"):
+            return candidate
+    raise SystemExit("no built extension under target/release; run cargo build --release")
+
+
+LIB = _library()
 ROWS = 1_024 if MODE == "wire" else 1_000_000
 AFTER = 0.5
 BOUND = AFTER + 1.5

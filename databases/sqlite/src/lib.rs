@@ -32,7 +32,7 @@
 //! own handle from SQLite's own context, never a process-wide one, so two
 //! connections can open, close, and interrupt independently.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
@@ -140,19 +140,76 @@ fn cache_hits() -> &'static AtomicU64 {
     &HITS
 }
 
-/// Parsed questions by their argument text, so a row-by-row query parses
-/// once.
-fn questions() -> &'static Mutex<HashMap<String, Arc<Question>>> {
-    static QUESTIONS: OnceLock<Mutex<HashMap<String, Arc<Question>>>> =
-        OnceLock::new();
-    QUESTIONS.get_or_init(|| Mutex::new(HashMap::new()))
+/// The most parsed questions the cache holds (review 4, item 15): a
+/// database of 300,000 questions grew the process by 422 MB with no
+/// bound and no release; the bound trades an unbounded map for a
+/// bounded one, and the eviction order is insertion order, which a
+/// working set larger than the bound turns over rather than pinning.
+const QUESTION_CACHE_CAP: usize = 4096;
+
+/// One cached parse. A named file also carries the `(mtime, size)` its
+/// bytes had when read, so a delete or rewrite invalidates on the next
+/// lookup instead of serving the stale parse forever (review 4, item
+/// 15): the cost is one `stat` per lookup, which is the same cost the
+/// read itself would pay.
+struct Cached<T> {
+    held: Arc<T>,
+    /// `Some((mtime, size))` when the argument names a file.
+    file: Option<(std::time::SystemTime, u64)>,
 }
 
-/// Parsed question sets by their argument text.
-fn sets() -> &'static Mutex<HashMap<String, Arc<QuestionSet>>> {
-    static SETS: OnceLock<Mutex<HashMap<String, Arc<QuestionSet>>>> =
+/// Insertion order for the bound's eviction, beside the map it orders.
+struct Ordered<T> {
+    map: HashMap<String, Cached<T>>,
+    order: VecDeque<String>,
+}
+
+impl<T> Ordered<T> {
+    fn new() -> Self {
+        Ordered { map: HashMap::new(), order: VecDeque::new() }
+    }
+
+    /// Insert and evict past the cap, oldest first.
+    fn insert(&mut self, key: String, held: Arc<T>, file: Option<(std::time::SystemTime, u64)>) {
+        if !self.map.contains_key(&key) {
+            self.order.push_back(key.clone());
+        }
+        self.map.insert(key.clone(), Cached { held, file });
+        while self.order.len() > QUESTION_CACHE_CAP {
+            let Some(oldest) = self.order.pop_front() else { break };
+            self.map.remove(&oldest);
+        }
+    }
+
+    /// The held parse when the key matches and, for a named file, the
+    /// bytes have not changed.
+    fn get(&self, key: &str) -> Option<Arc<T>> {
+        let cached = self.map.get(key)?;
+        if let Some(path) = key.strip_prefix('@') {
+            let stamped = cached.file?;
+            let meta = std::fs::metadata(path).ok()?;
+            let mtime = meta.modified().ok()?;
+            if (mtime, meta.len()) != stamped {
+                return None;
+            }
+        }
+        Some(cached.held.clone())
+    }
+}
+
+/// Parsed questions by their argument text, so a row-by-row query parses
+/// once. Bounded by [`QUESTION_CACHE_CAP`].
+fn questions() -> &'static Mutex<Ordered<Question>> {
+    static QUESTIONS: OnceLock<Mutex<Ordered<Question>>> =
         OnceLock::new();
-    SETS.get_or_init(|| Mutex::new(HashMap::new()))
+    QUESTIONS.get_or_init(|| Mutex::new(Ordered::new()))
+}
+
+/// Parsed question sets by their argument text, under the same bound.
+fn sets() -> &'static Mutex<Ordered<QuestionSet>> {
+    static SETS: OnceLock<Mutex<Ordered<QuestionSet>>> =
+        OnceLock::new();
+    SETS.get_or_init(|| Mutex::new(Ordered::new()))
 }
 
 /// A failure reading a named local file.
@@ -242,6 +299,28 @@ fn named_file(argument: &str) -> Result<String, String> {
 
 /// The question one argument names: a file with the `'@'` spelling, a JSON
 /// question, or plain text with the default cut.
+/// The `(mtime, size)` of a named file's bytes right now, read through
+/// the same opened-once door so the stamp cannot disagree with the read
+/// it accompanies.
+fn stamped(argument: &str) -> Result<Option<(std::time::SystemTime, u64)>, String> {
+    if !argument.starts_with('@') {
+        return Ok(None);
+    }
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .open(Path::new(&argument[1..]))
+        .map_err(|_| format!("the question file '{argument}' did not read"))?;
+    let meta = file
+        .metadata()
+        .map_err(|_| format!("the question file '{argument}' did not read"))?;
+    if !meta.is_file() {
+        return Err(format!("the question file '{argument}' did not read"));
+    }
+    Ok(Some((meta.modified().unwrap_or(std::time::UNIX_EPOCH), meta.len())))
+}
+
 fn question(argument: &str) -> Result<Arc<Question>, Error> {
     if let Some(held) = questions().lock().unwrap().get(argument) {
         return Ok(held.clone());
@@ -255,10 +334,8 @@ fn question(argument: &str) -> Result<Arc<Question>, Error> {
         Question::decide(argument).map_err(failure)?.cut(0.5).map_err(failure)?
     };
     let held = Arc::new(parsed);
-    questions()
-        .lock()
-        .unwrap()
-        .insert(argument.to_string(), held.clone());
+    let file = stamped(argument).map_err(local_failure)?;
+    questions().lock().unwrap().insert(argument.to_string(), held.clone(), file);
     Ok(held)
 }
 
@@ -273,9 +350,8 @@ fn set(argument: &str) -> Result<Arc<QuestionSet>, Error> {
         argument.to_string()
     };
     let held = Arc::new(QuestionSet::from_json(&text).map_err(failure)?);
-    sets().lock()
-        .unwrap()
-        .insert(argument.to_string(), held.clone());
+    let file = stamped(argument).map_err(local_failure)?;
+    sets().lock().unwrap().insert(argument.to_string(), held.clone(), file);
     Ok(held)
 }
 
@@ -700,11 +776,26 @@ fn usage(context: &Context<'_>) -> Result<String, Error> {
 /// the group it held — before, the first question judged every later
 /// row's text, and a pair absent from the cache was served from it
 /// (review 3, item 17).
-struct WarmState {
-    question: Option<Arc<Question>>,
-    digest: Option<String>,
+/// One question's open group of pending texts.
+struct WarmGroup {
+    question: Arc<Question>,
+    digest: String,
     pending: Vec<String>,
+}
+
+/// The warm aggregate's state: one group per question, so interleaved
+/// questions accumulate instead of flushing on every change (review 4,
+/// item 15 — the single-group shape degraded an alternating query to one
+/// round per row).
+struct WarmState {
+    groups: Vec<WarmGroup>,
     judged: u64,
+}
+
+impl Default for WarmState {
+    fn default() -> Self {
+        WarmState { groups: Vec::new(), judged: 0 }
+    }
 }
 
 /// The `thinkthen_warm` aggregate: judge every row in one pass at the
@@ -712,7 +803,6 @@ struct WarmState {
 /// chunk bounds memory and the width sets the speed. The wait hears the
 /// host's interrupt on every tick, so a stopped query ends between
 /// records, one in-flight round deep.
-#[derive(Default)]
 struct Warm;
 
 /// The warm flush bound, from the 256-row ruling.
@@ -721,7 +811,7 @@ const CHUNK: usize = 256;
 impl Aggregate<WarmState, Option<i64>> for Warm {
     fn init(&self, _: &mut Context<'_>) -> Result<WarmState, Error> {
         guarded("thinkthen_warm", || {
-            Ok(WarmState { question: None, digest: None, pending: Vec::new(), judged: 0 })
+            Ok(WarmState::default())
         })
     }
 
@@ -737,19 +827,31 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
                 cache_hits().fetch_add(1, Ordering::Relaxed);
                 return Ok(());
             }
-            if state.digest.as_deref() != Some(&question.digest()) {
-                // A new question closes the group the old one held, so
-                // every text is judged under the question that named it
-                // (review 3, item 17).
-                if !state.pending.is_empty() {
-                    flush(state, connection_of(context))?;
+            let digest = question.digest();
+            // The question's own group accumulates, wherever the rows
+            // interleave (review 4, item 15: the single-group shape
+            // degraded an alternating query to one round per row).
+            let index = match state.groups.iter().position(|group| group.digest == digest) {
+                Some(index) => index,
+                None => {
+                    state.groups.push(WarmGroup {
+                        question: question.clone(),
+                        digest: digest.clone(),
+                        pending: Vec::new(),
+                    });
+                    state.groups.len() - 1
                 }
-                state.digest = Some(question.digest());
-                state.question = Some(question.clone());
-            }
-            state.pending.push(text);
-            if state.pending.len() >= CHUNK {
-                flush(state, connection_of(context))?;
+            };
+            let chunk_full = {
+                let group = &mut state.groups[index];
+                group.pending.push(text);
+                group.pending.len() >= CHUNK
+            };
+            if chunk_full {
+                // The drained group is dropped: a later row for the same
+                // question opens a fresh group, so no emptied group lingers.
+                let mut group = state.groups.swap_remove(index);
+                flush(state, connection_of(context), &mut group)?;
             }
             Ok(())
         })
@@ -762,8 +864,11 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
     ) -> Result<Option<i64>, Error> {
         guarded("thinkthen_warm", || {
             if let Some(state) = state.as_mut() {
-                if !state.pending.is_empty() {
-                    flush(state, connection_of(context))?;
+                while !state.groups.is_empty() {
+                    let mut rest = state.groups.split_off(1);
+                    std::mem::swap(&mut rest, &mut state.groups);
+                    let mut only = rest.into_iter().next().expect("one group");
+                    flush(state, connection_of(context), &mut only)?;
                 }
                 return Ok(Some(state.judged as i64));
             }
@@ -776,19 +881,24 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
 /// interrupt cancels the token through the poll, which reads the calling
 /// connection's own handle; no new request starts, the requests sent
 /// finish, and the statement ends with the cancelled kind.
-fn flush(state: &mut WarmState, db: *mut ffi::sqlite3) -> Result<(), Error> {
-    let Some(question) = state.question.clone() else {
+fn flush(
+    state: &mut WarmState,
+    db: *mut ffi::sqlite3,
+    group: &mut WarmGroup,
+) -> Result<(), Error> {
+    if group.pending.is_empty() {
         return Ok(());
-    };
+    }
+    let question = group.question.clone();
     let token = Cancel::new();
-    let records: Vec<&str> = state.pending.iter().map(String::as_str).collect();
+    let records: Vec<&str> = group.pending.iter().map(String::as_str).collect();
     let mut poll = || hear_interrupts(db, &token);
     let judgments = engine()
         .decide_many_opts(&question, &records, Options::new().cancel(&token), Some(&mut poll))
         .map_err(failure)?;
-    let digest = question.digest();
+    let digest = group.digest.clone();
     let mut saved = answers().lock().unwrap();
-    for (text, judgment) in state.pending.drain(..).zip(judgments) {
+    for (text, judgment) in group.pending.drain(..).zip(judgments) {
         saved.insert((digest.clone(), text), Saved::Decision(judgment.answer));
         state.judged += 1;
     }
@@ -954,6 +1064,8 @@ const RECOGNIZE_COLUMNS: usize = 7;
 struct RecognizeTab {
     /// Base class. Must be first.
     base: ffi::sqlite3_vtab,
+    /// The connection that registered the table, for the interrupt door.
+    db: *mut ffi::sqlite3,
 }
 
 // SAFETY: the connect body registers a well-formed module; the cursor
@@ -973,11 +1085,14 @@ unsafe impl<'vtab> VTab<'vtab> for RecognizeTab {
         // Direct-only, like the eight functions: a view or trigger inside
         // an untrusted schema cannot reach the paid call.
         db.config(VTabConfig::DirectOnly)?;
+        // SAFETY: the handle belongs to this connection and outlives the
+        // virtual table.
+        let handle = unsafe { db.handle() };
         Ok((
             std::borrow::Cow::Borrowed(
                 c"CREATE TABLE x(text,kind,start,end,strength,body hidden,kinds hidden)",
             ),
-            RecognizeTab { base: ffi::sqlite3_vtab::default() },
+            RecognizeTab { base: ffi::sqlite3_vtab::default(), db: handle },
         ))
     }
 
@@ -1024,6 +1139,7 @@ unsafe impl<'vtab> VTab<'vtab> for RecognizeTab {
             base: ffi::sqlite3_vtab_cursor::default(),
             rows: Vec::new(),
             row: 0,
+            db: self.db,
         })
     }
 }
@@ -1035,6 +1151,9 @@ struct RecognizeCursor {
     base: ffi::sqlite3_vtab_cursor,
     rows: Vec<Entity>,
     row: usize,
+    /// The connection's handle, carried from the table for the
+    /// interrupt door.
+    db: *mut ffi::sqlite3,
 }
 
 // SAFETY: the cursor serves owned rows and does no unsafe work of its
@@ -1075,8 +1194,14 @@ unsafe impl VTabCursor for RecognizeCursor {
             } else {
                 Recognize::new().kinds(kinds)
             };
+            // The call carries the interrupt door every other verb has
+            // (review 4, item 15): a cancel token armed by the shared
+            // watcher, so a stopped query ends the recognition instead of
+            // running to completion past the interrupt.
+            let token = Cancel::new();
+            let _watch = InterruptWatch::start(self.db, token.clone());
             let recognized = engine()
-                .recognize_opts(&ask, &body, Options::new())
+                .recognize_opts(&ask, &body, Options::new().cancel(&token))
                 .map_err(failure)?;
             self.rows = recognized.entities;
             self.row = 0;
@@ -1331,8 +1456,12 @@ unsafe impl VTabCursor for RelateCursor {
             }
             let (ids, texts) = read_records(self.db, table, id_col, body_col).map_err(failure)?;
             let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+            // The same interrupt door (review 4, item 15): relate is the
+            // longest call on this surface, and it left the token empty.
+            let token = Cancel::new();
+            let _watch = InterruptWatch::start(self.db, token.clone());
             let edges: Vec<Edge> =
-                thinkthen_contract::relate_checked(engine().as_ref(), &ask, &refs, Options::new())
+                thinkthen_contract::relate_checked(engine().as_ref(), &ask, &refs, Options::new().cancel(&token))
                     .map_err(failure)?;
             let mut rows = Vec::with_capacity(edges.len());
             for edge in &edges {

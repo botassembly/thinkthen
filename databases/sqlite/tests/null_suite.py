@@ -10,7 +10,16 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
-LIB = HERE.parent / "target" / "release" / "libthinkthen0.so"
+def _library() -> "pathlib.Path":
+    """The built extension, whatever the platform named it: .so or
+    .dylib (the name is derived from the crate's `thinkthen0`)."""
+    for candidate in (HERE.parent / "target" / "release").glob("libthinkthen0.*"):
+        if candidate.suffix in (".so", ".dylib"):
+            return candidate
+    raise SystemExit("no built extension under target/release; run cargo build --release")
+
+
+LIB = _library()
 
 os.environ.setdefault("ENGINE_NULL", "1")
 
