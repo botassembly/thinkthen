@@ -55,11 +55,18 @@ ENGINE_NULL=1 python3 tests/null_suite.py
 echo "== sqlite surface: the untrusted-schema refusals, at the floor"
 python3 tests/schema_refusal.py
 
-echo "== sqlite surface: the named-file door (review 4, item 7)"
-# The deterministic shapes the swap race rides on: a symlink refuses at
-# the door (pre-fix it read through to the parser), a fifo refuses at
-# the door (pre-fix a straddled swap parked the process in open()).
+echo "== sqlite surface: the named-file door (review 4, item 7; review 5)"
+# The deterministic shapes the swap race rides on: a fifo refuses at the
+# door, directly or through a symlink (pre-fix a straddled swap parked
+# the process in open()); a symlink to a regular file reads its target,
+# because this surface confines nothing.
 THINKTHEN_NULL=1 python3 tools/file_door.py target/release/libthinkthen0.so
+
+echo "== sqlite surface: the question cache (review 4, item 15; review 5)"
+# A rewrite re-reads, a delete refuses, a file replaced during its first
+# read is re-read afterwards (the stamp comes from the parsed bytes'
+# own descriptor), and 50,000 questions stay inside the bound.
+ENGINE_NULL=1 THINKTHEN_NULL=1 python3 tools/question_cache_probe.py target/release/libthinkthen0.so
 
 echo "== sqlite surface: single-row deadline, offline"
 python3 tests/single_row_cancel.py null

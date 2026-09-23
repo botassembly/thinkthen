@@ -148,15 +148,23 @@ fn cache_hits() -> &'static AtomicU64 {
 /// working set larger than the bound turns over rather than pinning.
 const QUESTION_CACHE_CAP: usize = 4096;
 
-/// One cached parse. A named file also carries the `(mtime, size)` its
-/// bytes had when read, so a delete or rewrite invalidates on the next
-/// lookup instead of serving the stale parse forever (review 4, item
-/// 15): the cost is one `stat` per lookup, which is the same cost the
-/// read itself would pay.
+/// A named file's `(mtime, size)`, read from the descriptor its bytes
+/// came through.
+type Stamp = (std::time::SystemTime, u64);
+
+/// One cached parse. A named file also carries the stamp its bytes had
+/// when read, so a delete or rewrite invalidates on the next lookup
+/// instead of serving the stale parse forever (review 4, item 15): the
+/// cost is one `stat` per lookup, taken outside the cache lock. The
+/// stamp comes from the same descriptor as the parsed bytes (review 5:
+/// a second open stamped a replacement file, and 5 of 400 raced entries
+/// served the old parse for good). One limit stays: a rewrite that
+/// keeps the size and restores the modified time is not seen, because a
+/// content hash would read the file on every row.
 struct Cached<T> {
     held: Arc<T>,
-    /// `Some((mtime, size))` when the argument names a file.
-    file: Option<(std::time::SystemTime, u64)>,
+    /// `Some(stamp)` when the argument names a file.
+    file: Option<Stamp>,
 }
 
 /// Insertion order for the bound's eviction, beside the map it orders.
@@ -171,7 +179,7 @@ impl<T> Ordered<T> {
     }
 
     /// Insert and evict past the cap, oldest first.
-    fn insert(&mut self, key: String, held: Arc<T>, file: Option<(std::time::SystemTime, u64)>) {
+    fn insert(&mut self, key: String, held: Arc<T>, file: Option<Stamp>) {
         if !self.map.contains_key(&key) {
             self.order.push_back(key.clone());
         }
@@ -182,20 +190,25 @@ impl<T> Ordered<T> {
         }
     }
 
-    /// The held parse when the key matches and, for a named file, the
-    /// bytes have not changed.
-    fn get(&self, key: &str) -> Option<Arc<T>> {
+    /// The held parse and its stamp, under the lock; [`fresh`] then
+    /// checks the stamp with the lock released.
+    fn get(&self, key: &str) -> Option<(Arc<T>, Option<Stamp>)> {
         let cached = self.map.get(key)?;
-        if let Some(path) = key.strip_prefix('@') {
-            let stamped = cached.file?;
-            let meta = std::fs::metadata(path).ok()?;
-            let mtime = meta.modified().ok()?;
-            if (mtime, meta.len()) != stamped {
-                return None;
-            }
-        }
-        Some(cached.held.clone())
+        Some((cached.held.clone(), cached.file))
     }
+}
+
+/// Whether a cached parse still stands: an inline argument always does,
+/// and a named file does while its stamp matches the file on disk now.
+/// Called with the cache lock released, so a slow `stat` holds up no
+/// other connection (review 5).
+fn fresh(key: &str, file: Option<Stamp>) -> bool {
+    let Some(path) = key.strip_prefix('@') else { return true };
+    let Some(stamp) = file else { return false };
+    std::fs::metadata(path)
+        .ok()
+        .and_then(|meta| Some((meta.modified().ok()?, meta.len())))
+        == Some(stamp)
 }
 
 /// Parsed questions by their argument text, so a row-by-row query parses
@@ -261,21 +274,25 @@ const FILE_CAP: u64 = 1024 * 1024;
 /// [`FILE_CAP`] bytes, read no further than one byte past the cap, with
 /// one message for every unreadable cause so a caller learns nothing
 /// about the filesystem. The path is opened exactly once with
-/// `O_NOFOLLOW` and `O_NONBLOCK` and the checks read the opened
-/// descriptor, so a path swapped between check and open cannot smuggle
-/// another file in or park the process on a fifo (review 4, item 7).
-/// Where a database may read question files from is the database ADR's
-/// to rule; the process directory is this surface's pick, named here so
-/// a ruling can move it in one place.
-fn named_file(argument: &str) -> Result<String, String> {
+/// `O_NONBLOCK` and the checks read the opened descriptor, so a path
+/// swapped between check and open cannot park the process on a fifo
+/// (review 4, item 7). A symlink is followed, the last component too:
+/// this surface confines nothing, so a link reads what its target would
+/// (review 5 relaxed the `O_NOFOLLOW` that refused every link). The
+/// stamp returned beside the text is the descriptor's own, so the cache
+/// can never pair these bytes with another file's stamp. Where a
+/// database may read question files from is the database ADR's to rule;
+/// the process directory is this surface's pick, named here so a ruling
+/// can move it in one place.
+fn named_file(argument: &str) -> Result<(String, Stamp), String> {
     use std::io::Read;
     use std::os::unix::fs::OpenOptionsExt;
     let path = Path::new(&argument[1..]);
     let refused = || format!("the question file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes");
-    // Open once, never following the final component, never blocking.
+    // Open once, never blocking.
     let file = std::fs::OpenOptions::new()
         .read(true)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .custom_flags(libc::O_NONBLOCK)
         .open(path)
         .map_err(|_| refused())?;
     // The metadata of what was opened, not of what the path names now.
@@ -295,63 +312,47 @@ fn named_file(argument: &str) -> Result<String, String> {
     if text.len() as u64 > FILE_CAP {
         return Err(format!("the question file '{argument}' is over the {FILE_CAP} byte cap"));
     }
-    Ok(text)
+    let stamp = (meta.modified().unwrap_or(std::time::UNIX_EPOCH), meta.len());
+    Ok((text, stamp))
 }
 
 /// The question one argument names: a file with the `'@'` spelling, a JSON
 /// question, or plain text with the default cut.
-/// The `(mtime, size)` of a named file's bytes right now, read through
-/// the same opened-once door so the stamp cannot disagree with the read
-/// it accompanies.
-fn stamped(argument: &str) -> Result<Option<(std::time::SystemTime, u64)>, String> {
-    if !argument.starts_with('@') {
-        return Ok(None);
-    }
-    use std::os::unix::fs::OpenOptionsExt;
-    let file = std::fs::OpenOptions::new()
-        .read(true)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
-        .open(Path::new(&argument[1..]))
-        .map_err(|_| format!("the question file '{argument}' did not read"))?;
-    let meta = file
-        .metadata()
-        .map_err(|_| format!("the question file '{argument}' did not read"))?;
-    if !meta.is_file() {
-        return Err(format!("the question file '{argument}' did not read"));
-    }
-    Ok(Some((meta.modified().unwrap_or(std::time::UNIX_EPOCH), meta.len())))
-}
-
 fn question(argument: &str) -> Result<Arc<Question>, Error> {
-    if let Some(held) = questions().lock().unwrap().get(argument) {
-        return Ok(held.clone());
+    let cached = questions().lock().unwrap().get(argument);
+    if let Some((held, file)) = cached
+        && fresh(argument, file)
+    {
+        return Ok(held);
     }
-    let parsed = if argument.starts_with('@') {
-        let text = named_file(argument).map_err(local_failure)?;
-        Question::from_json(&text).map_err(failure)?
+    let (parsed, file) = if argument.starts_with('@') {
+        let (text, stamp) = named_file(argument).map_err(local_failure)?;
+        (Question::from_json(&text).map_err(failure)?, Some(stamp))
     } else if argument.starts_with('{') {
-        Question::from_json(argument).map_err(failure)?
+        (Question::from_json(argument).map_err(failure)?, None)
     } else {
-        Question::decide(argument).map_err(failure)?.cut(0.5).map_err(failure)?
+        (Question::decide(argument).map_err(failure)?.cut(0.5).map_err(failure)?, None)
     };
     let held = Arc::new(parsed);
-    let file = stamped(argument).map_err(local_failure)?;
     questions().lock().unwrap().insert(argument.to_string(), held.clone(), file);
     Ok(held)
 }
 
 /// The question set one argument names, for `annotate`.
 fn set(argument: &str) -> Result<Arc<QuestionSet>, Error> {
-    if let Some(held) = sets().lock().unwrap().get(argument) {
-        return Ok(held.clone());
+    let cached = sets().lock().unwrap().get(argument);
+    if let Some((held, file)) = cached
+        && fresh(argument, file)
+    {
+        return Ok(held);
     }
-    let text = if argument.starts_with('@') {
-        named_file(argument).map_err(local_failure)?
+    let (text, file) = if argument.starts_with('@') {
+        let (text, stamp) = named_file(argument).map_err(local_failure)?;
+        (text, Some(stamp))
     } else {
-        argument.to_string()
+        (argument.to_string(), None)
     };
     let held = Arc::new(QuestionSet::from_json(&text).map_err(failure)?);
-    let file = stamped(argument).map_err(local_failure)?;
     sets().lock().unwrap().insert(argument.to_string(), held.clone(), file);
     Ok(held)
 }
@@ -1452,7 +1453,7 @@ unsafe impl VTabCursor for RelateCursor {
                 // The file form: the question file's `relate` section, or the
                 // whole file when it carries no section — the contract's own
                 // parser reads it, so no grammar lives here.
-                let text = named_file(slots[0]).map_err(local_failure)?;
+                let (text, _) = named_file(slots[0]).map_err(local_failure)?;
                 let value: serde_json::Value = serde_json::from_str(&text).map_err(|error| {
                     failure(thinkthen_contract::Error::usage(format!(
                         "the question file {} is not JSON: {error}",
