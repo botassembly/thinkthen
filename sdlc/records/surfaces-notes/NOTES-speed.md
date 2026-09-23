@@ -18,6 +18,6 @@ Measured 2026-09-23 on the Linux box at `f6b8814`, four cargo jobs, sccache on a
 
 ## Open
 
-- A fresh worktree fails the Ruby surface as "not set up": `check.sh` compares the Dockerfile's file time with a stamp, and a checkout gives the Dockerfile a new time. A content check (a Dockerfile hash as an image label) would fix it without a rebuild.
+- Follow-up: a fresh checkout fails the Ruby surface as "not set up". `libraries/ruby/check.sh` and `build.sh` rebuild or refuse when the Dockerfile is newer than `.runtimes/builder-image.built`, and a checkout writes the Dockerfile after the stamp. Hashing the Dockerfile into the stamp, or into an image label, and comparing the hash fixes it without a rebuild.
 - Two timing tests failed in two of three warm gates under load and passed in the first: the Python cancelled-batch signal test and the DuckDB long-query interrupt.
 - Running lanes' full rungs one at a time, or giving each `-j4`, is the largest lever the box has. The rung alone is 5 minutes cold.
