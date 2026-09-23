@@ -16,10 +16,9 @@ an answer.
 - The recordings carry the number on a name under Jev's own field name; the
   replay maps it to the ruled field `strength` (settled 2026-09-21; the R1
   record's interim `number` is history).
-- Two relate arms (R03 per-subject, R04 pairs) share one text; the replay
-  prefers the pairs form, the ruled method, and the per-subject case is
-  pinned in the conformance file and skipped in the replay test, recorded in
-  `../conformance/DIVERGENCES.md`.
+- Every relate row holds a method-H recording, one yes/no per pair per
+  relation. The older pick-one rows and the per-subject arm are retired
+  (`../sdlc/records/surfaces-notes/NOTES-main-parity.md`, item 4).
 - The trait methods `recognize_opts` and `relate_opts` call
   `Error::guard(options)` first and then the replay; `relate_opts` also runs
   `guard_relate_records` so the limit holds even when a caller enters
@@ -36,10 +35,11 @@ lib: 4 passed; wire: 3 passed; recognize_replay: 7 passed
 ```
 
 The seven: every conformance case replays exactly (41 recognize cases and
-R01/R02/R04; R03 skips as marked); the door JSON carries `source`, `target`,
-`probability`, and `number` and never `from`/`to`/`confidence`; the alerts'
-relate call at the bar returns the two sound edges (0.9 under pick-one, 0.7
-since the method-H recording of 2026-09-23); the 255 refusal; missing
+the three method-H relate cases, none skipped); the door JSON carries
+`source`, `target`, `probability`, and `number` and never
+`from`/`to`/`confidence`; the alerts' relate call at the 0.68 bar returns the
+two sound edges (0.9 under pick-one, 0.68 since the method-H recording of
+2026-09-23); the 255 refusal; missing
 texts and unrecorded rules name themselves; the any-kind end replays on the
 C36 case; relate refuses kinds it cannot honour.
 

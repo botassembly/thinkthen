@@ -17,9 +17,10 @@ Each row has form `yes-no`. Each entry is one recorded question: the rule,
 the ordered pair it asked, and the recorded probability of yes. The row
 replaces any earlier row with the same records, so the script is
 idempotent, and the pick-one rows a set replaces leave the table. A set
-that replaces package rows also rewrites the conformance cases of those
-rows from its recording, keeping their ids. The script sends nothing and
-reads only recorded answers.
+that names a `case` id writes that conformance case from its recording,
+in the place of the package cases of the rows it replaces, and those
+package cases leave the file. The script sends nothing and reads only
+recorded answers.
 
 `build_recognize_cases.py` rewrites the table from the older package. It
 keeps every `yes-no` row and every `yes-no` case this script wrote.
@@ -73,6 +74,7 @@ def row(folder, name):
     text = "\n".join(f"{label} {k}: {record}" for k, record in enumerate(records, 1)) if label else "\n".join(records)
     return {
         "id": f"H-{name}",
+        "case": spec.get("case"),
         "replaces": spec.get("replaces", []),
         "requests": requests,
         "form": "yes-no",
@@ -84,9 +86,9 @@ def row(folder, name):
     }
 
 
-def case(new, old):
-    """The conformance case a replacing row answers, under the old case's id.
-    The edges are every recorded yes at or above the 0.5 bar."""
+def case(new):
+    """The conformance case a row answers, under the set's case id. The
+    edges are every recorded yes at or above the 0.5 bar."""
     relations = []
     for name in sorted(new["rules"]):
         rule = {"name": name, "source": "*", "target": "*"}
@@ -100,7 +102,7 @@ def case(new, old):
     ]
     edges.sort(key=lambda edge: (edge["source"], edge["target"], edge["name"]))
     return {
-        "id": old["id"],
+        "id": new["case"],
         "source": f"conformance/relate-h runs/{new['id'][2:]}/H (method-H recording, 2026-09-23)",
         "verb": "relate",
         "records": new["records"],
@@ -126,22 +128,30 @@ def main():
     rows = [row(LOCAL, name) for name in names]
     if BAKE_OFF:
         rows += [row(BAKE_OFF, name) for name in BAKE_OFF_SETS]
-    keys = {tuple(new["records"]) for new in rows}
     retired = {arm for new in rows for arm in new["replaces"]}
-    table["relate"] = [
-        old for old in table["relate"]
-        if tuple(old["records"]) not in keys and old["id"] not in retired
-    ] + rows
+    by_records = {tuple(new["records"]): new for new in rows}
+    kept = [
+        by_records.pop(tuple(old["records"]), old) for old in table["relate"]
+        if old["id"] not in retired or tuple(old["records"]) in by_records
+    ]
+    table["relate"] = kept + list(by_records.values())
     write(TABLE, table)
     with open(CASES, encoding="utf-8") as handle:
         data = json.load(handle)
     rewritten = 0
     for new in rows:
-        for arm in new["replaces"]:
-            for index, old in enumerate(data["cases"]):
-                if old["verb"] == "relate" and old["id"].endswith(f"-relate-{arm}") and old.get("form") != "per-subject":
-                    data["cases"][index] = case(new, old)
-                    rewritten += 1
+        if not new["case"]:
+            continue
+        stale = {f"-relate-{arm}" for arm in new["replaces"]}
+        spots = [
+            index for index, old in enumerate(data["cases"])
+            if old["id"] == new["case"] or (old["verb"] == "relate" and old["id"].endswith(tuple(stale)))
+        ]
+        at = spots[0] if spots else len(data["cases"])
+        data["cases"] = [old for index, old in enumerate(data["cases"]) if index not in spots]
+        data["cases"].insert(at, case(new))
+        rewritten += 1
+    data["case_count"] = len(data["cases"])
     write(CASES, data)
     print(f"wrote {len(rows)} yes-no rows, {sum(len(r['entries']) for r in rows)} recorded questions, "
           f"{rewritten} relate cases, retired {len(retired)} older rows")

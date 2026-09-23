@@ -262,8 +262,8 @@ impl Engine {
         self.inner.recognize(ask, text)
     }
 
-    /// Say how every record relates to the others: one pick-one question
-    /// per legal pair, every record crossing at once.
+    /// Say how every record relates to the others: one yes/no question per
+    /// legal pair per relation, every record crossing at once.
     ///
     /// More than [`MAX_RELATE_RECORDS`] records is a usage error before
     /// anything happens; the check lives in the contract, so every surface

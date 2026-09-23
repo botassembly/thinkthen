@@ -147,6 +147,8 @@ sweep:         no confidence, certainty, likelihood, cutoff, gray zone, calibrat
                no "score" used for a probability — empty greps above
 ```
 
+Resolved 2026-09-23: the per-subject case is retired, and the ten records answer by method H in case `71-relate-staff` (`sdlc/records/surfaces-notes/NOTES-main-parity.md`, item 4).
+
 **Means:** the deck's Ruby calls run as written with the recorded answers; `text[start...end]` slices names out of the original text in Ruby characters, proven on `"Le café 😀 Maria Chen arrived."` from C41; `relate` crosses every record at once and refuses 256 with a usage error naming 255; the any-kind end is the one-character string `"*"` (C36's `located_in` from `*` to `place`); `strength` on names and `probability` on relations are bound per the settled rule; results of no fixed size come back as `ThinkThen::Entity`, `Relation`, `Recognized`, and `Edge` records parsed from the door's one JSON string (the C-door pattern).
 
 **Finding for the parent, not touched here:** the contract's spec grammar still reads `from` and `to` keys in a relation rule (`relation_from_value` in `contract/src/lib.rs`), while the ruling says the question file says `source` and `target` too and no door converts. The Ruby wrapper builds `from`/`to` spec keys against the parser as it stands; when the contract flips, `lib/thinkthen.rb`'s `relation_rules` is the one place here to change.

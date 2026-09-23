@@ -31,8 +31,8 @@ The checks the task named, and where each lives:
 - every recognize case's entities and relations replay exactly, offsets
   slicing the name out of the text in code points, the numbers by their
   ruled names (`number` on a name, `probability` on a relation);
-- every relate case's edges replay exactly, except the per-subject arm,
-  which is marked and skipped (see DIVERGENCES);
+- every relate case's edges replay exactly from its method-H row, and
+  every request id a case names is one its row recorded;
 - the source/target spelling holds in every expected relation and edge and
   `from`/`to` never appear;
 - `requests` pins the recorded request digests (sorted; construction order

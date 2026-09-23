@@ -24,8 +24,8 @@ from review4_lib import Harness, case_by_id, finish, relate_rules, verdict
 
 def main() -> int:
     harness = Harness()
-    first = case_by_id("69-relate-R01-demo")
-    second = case_by_id("70-relate-R02-pickone")
+    first = case_by_id("69-relate-alerts")
+    second = case_by_id("70-relate-founders")
 
     # A: loads, external access off, its own table with the FIRST case.
     a = harness.open()

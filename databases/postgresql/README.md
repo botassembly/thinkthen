@@ -62,8 +62,8 @@ removes the container afterwards. The running log is `NOTES.md`.
 
 The known divergences: the stand-in never credits its in-process memory in
 `cache_answers` (its own record says so; a real-engine requirement). Case
-71's per-subject arm shares its input with the pairs arm and the stand-in
-serves the ruled pairs form: a conformance-data finding for the build team.
+69 asks `same_as` both ways, and this call takes bare names, which are
+one-way rules, so the shared skip table holds it back here.
 The contract's settled `nearest` field rides `thinkthen_details` here like
 every other member — PostgreSQL serializes the contract's own `Details`
 struct, so the field needed no wiring in this shim — and the conformance

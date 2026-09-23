@@ -219,17 +219,19 @@ def case_text(c):
 
 
 def replay_row(data, c):
-    """The replay-table row a case answers from; per-subject relate rows
-    give way to a pairs row on the same text, matching the stand-in."""
+    """The one replay-table row a case answers from, as the stand-in finds
+    it. The case's requests must be the ones that row recorded."""
     key = case_text(c).rstrip("\n")
     rows = [
         row
         for row in data["relate"] if row["text"].rstrip("\n") == key or "\n".join(row["records"]).rstrip("\n") == key
     ] if c["verb"] == "relate" else [row for row in data["recognize"] if row["text"] == c["text"]]
-    if c["verb"] == "relate":
-        rows.sort(key=lambda row: row.get("form") == "per-subject")
-    check(bool(rows), f"{c['id']} has no replay-table row")
-    return rows[0] if rows else None
+    check(len(rows) == 1, f"{c['id']} has exactly one replay-table row")
+    if not rows:
+        return None
+    check(set(c["requests"]) <= set(rows[0].get("requests", [])),
+          f"{c['id']} requests are recorded in the replay table")
+    return rows[0]
 
 
 def pick_rule(pick):
@@ -277,40 +279,20 @@ def replay_recognize(c, row):
 
 
 def replay_relate(c, row):
-    """Recompute the expected edges from the recorded row and the ask. A
-    `yes-no` row holds method H: every recorded yes at the bar is an edge."""
+    """Recompute the expected edges from the recorded method-H row and the
+    ask: every recorded yes at the bar is an edge."""
     q = c["question"]
     asked = {rule["name"]: rule for rule in q["relations"]}
-    edges = []
-    if row.get("form") == "yes-no":
-        check(c.get("form") == "yes-no", f"{c['id']} a method-H row answers a yes-no case")
-        for name, rule in asked.items():
-            check(row["either"].get(name) == rule.get("either", False),
-                  f"{c['id']} {name} asks the direction the recording asked")
-        edges = [
-            {"name": entry["rule"], "source": entry["pair"][0], "target": entry["pair"][1],
-             "probability": entry["options"]["yes"]}
-            for entry in row["entries"]
-            if entry["rule"] in asked and entry["options"]["yes"] >= q["threshold"]
-        ]
-        edges.sort(key=lambda edge: (edge["source"], edge["target"], edge["name"]))
-        return edges
-    for entry in row["entries"]:
-        pick = entry["pick"]
-        if pick in ("NO_RELATION", "NONE_OF_THESE"):
-            continue
-        name = entry.get("rule") if "pair" not in entry else pick_rule(pick)
-        if name not in asked:
-            continue
-        if entry["options"][pick] < q["threshold"]:
-            continue
-        if "pair" in entry:
-            source, target = pick_direction(pick, entry["pair"][0], entry["pair"][1])
-        else:
-            source, target = entry["subject"], int(pick[2:])
-        edges.append(
-            {"name": name, "source": source, "target": target, "probability": entry["options"][pick]}
-        )
+    check(row.get("form") == "yes-no", f"{c['id']} the replay row holds method H")
+    for name, rule in asked.items():
+        check(row.get("either", {}).get(name) == rule.get("either", False),
+              f"{c['id']} {name} asks the direction the recording asked")
+    edges = [
+        {"name": entry["rule"], "source": entry["pair"][0], "target": entry["pair"][1],
+         "probability": entry["options"]["yes"]}
+        for entry in row["entries"]
+        if entry.get("rule") in asked and entry["options"]["yes"] >= q["threshold"]
+    ]
     edges.sort(key=lambda edge: (edge["source"], edge["target"], edge["name"]))
     return edges
 
@@ -392,8 +374,7 @@ def check_relate_case(c):
         last = order
     check(isinstance(c["requests"], list), f"{c['id']} requests list")
     check(isinstance(c["pairs"], int) and c["pairs"] >= 0, f"{c['id']} pairs pinned")
-    if len({"\n".join(c["records"])}) and c.get("form") == "per-subject":
-        check("note" in c and "per-subject" in c["note"], f"{c['id']} the per-subject skip is noted")
+    check(c.get("form") == "yes-no", f"{c['id']} relate cases ask method H")
 
 
 def replay_recognize_and_relate(c):
@@ -412,10 +393,6 @@ def replay_recognize_and_relate(c):
         check(want_entities == c["expect"]["entities"], f"{c['id']} entities replay exactly")
         check(relations == c["expect"]["relations"], f"{c['id']} relations replay exactly")
     else:
-        if c.get("form") == "per-subject":
-            # The pairs recording on the same text is what the stand-in
-            # serves; the per-subject case is pinned for the record.
-            return
         edges = replay_relate(c, row)
         check(edges == c["expect"]["edges"], f"{c['id']} edges replay exactly")
 

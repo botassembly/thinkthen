@@ -288,8 +288,8 @@ module ThinkThen
       )
     end
 
-    # Say how the records relate to each other: one question per legal
-    # pair.
+    # Say how the records relate to each other: one yes/no question per
+    # legal pair per relation.
     #
     #   edges = ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])
     #   edges[0].name, edges[0].source, edges[0].target, edges[0].probability

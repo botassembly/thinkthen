@@ -322,7 +322,7 @@ Findings reported, not bent around:
    with `72-relate-R04-pairs-10`; the stand-in serves the ruled pairs
    form, so the per-subject expectation cannot be reached by a replay
    keyed on input. Recorded as a conformance-data finding for the build
-   team, same as the TypeScript lane.
+   team, same as the TypeScript lane. Resolved 2026-09-23: the per-subject case is retired, and the ten records answer by method H in case `71-relate-staff` (`sdlc/records/surfaces-notes/NOTES-main-parity.md`, item 4).
 3. The contract's `Relation` doc says the question file spells
    `source`/`target`, but the landed parser reads `from`/`to`, and the
    conformance cases use them. The file door here converts nothing on its

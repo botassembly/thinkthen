@@ -267,8 +267,8 @@ export function details(question: string | Question, text: string, options?: Cal
  * text in UTF-16 units, so `text.slice(start, end)` is the name. */
 export function recognize(text: string, options?: RecognizeOptions): Promise<Recognized>;
 
-/** Say how the records relate to each other: one question per legal pair,
- * every record crossing at once. More than 255 records is a usage error. */
+/** Say how the records relate to each other: one yes/no question per legal
+ * pair per relation, every record crossing at once. More than 255 records is a usage error. */
 export function relate(records: readonly string[], options?: RelateOptions): Promise<Edge[]>;
 
 /** The counters since the last reset: sends, cache answers, tokens. */

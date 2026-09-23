@@ -14,9 +14,7 @@ on any FAIL. Run through ./check.sh.
 Skips, with their reasons: the backend-refusal cases need the wire or a
 dead address (the wire suite proves the backend kind there), and the
 cancel case has no route in this driver: tests/cancel_fast.py and
-tests/single_row_cancel.py prove the interrupt instead. The
-relate per-subject arm is skipped: it is an engine-internal form, and the
-surface serves the ruled pairs form that case 72 covers. Recognize cases
+tests/single_row_cancel.py prove the interrupt instead. Recognize cases
 that ask relation rules assert their names only here: relations as rows
 ride the beta question-file function, which the build team's page leaves
 open.
@@ -43,7 +41,12 @@ def _library() -> "pathlib.Path":
 
 
 LIB = _library()
-FILE = json.loads((HERE.parent.parent.parent / "conformance" / "conformance.json").read_text())
+# THINKTHEN_CONFORMANCE_FILE names a planted copy for the driver's own
+# self-test; the gate reads the repository's file.
+FILE = json.loads(pathlib.Path(os.environ.get(
+    "THINKTHEN_CONFORMANCE_FILE",
+    HERE.parent.parent.parent / "conformance" / "conformance.json",
+)).read_text())
 CASES = FILE["cases"]
 
 
@@ -451,13 +454,6 @@ def main():
                 else:
                     report(case_id, f"held {held}, expected {wanted}", failed=True)
             elif verb == "relate":
-                if case.get("form") == "per-subject":
-                    print(
-                        f"skip     {case_id}: the per-subject form is an "
-                        "engine-internal arm; the surface serves the ruled "
-                        "pairs form, which case 72 covers"
-                    )
-                    continue
                 if case["question"].get("threshold", 0.5) != 0.5:
                     print(
                         f"skip     {case_id}: the SQLite call takes no "
@@ -512,7 +508,7 @@ def main():
                     report(case_id, f"held {held}, expected {wanted}", failed=True)
             else:
                 print(f"skip     {case_id}: {verb} is not this surface's shape offline")
-        except sqlite3.OperationalError as failure:
+        except sqlite3.Error as failure:
             report(case_id, f"unexpected: {failure}", failed=True)
 
     for path in TEMP:

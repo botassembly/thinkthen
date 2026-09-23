@@ -130,7 +130,7 @@ For the build team to lift:
 
 > ### relate over a query
 >
-> `relate` reads every record at once, because every pair is one pick-one question. Give it a query and the relation rules:
+> `relate` reads every record at once, because every pair is one yes/no question per relation. Give it a query and the relation rules:
 >
 > ```sql
 > SELECT * FROM thinkthen_relate('SELECT id, body FROM alerts', ['caused_by']);

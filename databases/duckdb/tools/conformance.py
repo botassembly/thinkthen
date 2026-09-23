@@ -377,9 +377,8 @@ def check_annotate_rows(name: str, case: dict, set_json: str, records: list) -> 
 
 
 def check_relate(name: str, case: dict) -> None:
-    """One relate case: the recorded edges as rows over the query's own
-    ids. The ruled form is `pairs`; the per-subject arm is the engine's
-    own and the stand-in serves the pairs row when the texts collide."""
+    """One relate case: the recorded method-H edges as rows over the
+    query's own ids."""
     records = case["records"]
     values = ",".join(
         f"({i + 1}, {sql_string(record)})" for i, record in enumerate(records)

@@ -154,10 +154,9 @@ rule, no second bulk implementation exists anywhere in the tree.
   `experiments/225-recognize-harvest-package` by
   `conformance/tools/build_recognize_cases.py`.
 - The three named divergences that remain:
-  1. **The per-subject relate arm.** Case R03 shares its text with R04
-     but records `"form": "per-subject"`; the replay serves the pairs
-     form, the ruled method, and the validator and the Rust replay test
-     skip the case after asserting its marking.
+  1. **The per-subject relate arm (retired 2026-09-23).** The relate cases
+     now replay method-H recordings, and the per-subject case left the file
+     (`sdlc/records/surfaces-notes/NOTES-main-parity.md`, item 4).
   2. **The defect case, engine-only.** No conformance case exercises a
      defect, on principle: a defect is a broken engine invariant, not a
      property of a recorded reply. Main's `25-defect-fault` stays marked
