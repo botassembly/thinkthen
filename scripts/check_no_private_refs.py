@@ -90,11 +90,25 @@ def violations(root):
 
 def main():
     root = "."
+    explicit = False
     if len(sys.argv) == 3 and sys.argv[1] == "--root":
         root = sys.argv[2]
+        explicit = True
     elif len(sys.argv) != 1:
         print("usage: check_no_private_refs.py [--root DIR]", file=sys.stderr)
         return 2
+    if not explicit:
+        probe = subprocess.run(
+            ["git", "-C", root, "ls-files"],
+            capture_output=True,
+        )
+        if probe.returncode != 0:
+            print(
+                "refusing an unbounded walk: cwd is not a git checkout; "
+                "pass --root DIR to check an exported tree",
+                file=sys.stderr,
+            )
+            return 2
     found = violations(root)
     if found:
         for line in found:

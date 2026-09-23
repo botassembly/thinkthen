@@ -24,10 +24,9 @@ fn a_fast_backend_hears_a_spent_deadline_within_a_tick() {
     if !common::note_missing_env("a_fast_backend_hears_a_spent_deadline_within_a_tick") {
         return;
     }
-    assert_eq!(
-        std::env::var("ENGINE_NULL").as_deref(),
-        Ok("1"),
-        "run this through check.sh, which sets ENGINE_NULL=1"
+    assert!(
+        common::engine_env_is_set(),
+        "the guard armed this test, so a backend must be named (THINKTHEN_NULL=1 or THINKTHEN_BASE_URL)"
     );
     let tt = Engine::from_env().expect("the stand-in never fails to build");
     let question =
