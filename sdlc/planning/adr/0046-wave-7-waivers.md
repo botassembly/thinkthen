@@ -28,8 +28,9 @@ digest. Three images still float by tag, and none runs in the gate:
 - `duckdb/duckdb:1.5.5`, the DuckDB package rehearsal's container half
   (`databases/duckdb/package.sh`), run by hand.
 
-Their digests were not resolvable offline at pinning time. Both package
-scripts say so, and `scripts/gate-hermeticity.md` lists them.
+The two package images had no digest resolvable offline at pinning time.
+Both package scripts say so, and `scripts/gate-hermeticity.md` lists
+them. The Ruby base image is named only in its Dockerfile.
 
 Overturn: ask for digest pins. The cost is one networked `docker pull`
 per image to resolve each digest.
