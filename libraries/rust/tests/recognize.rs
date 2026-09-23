@@ -52,8 +52,8 @@ fn the_slide_ask_meets_the_recordings_gap() -> Result<(), Box<dyn std::error::Er
         .relation("located_in", Kind::Any, Kind::named("place"))?;
     let error = tt
         .recognize(&ask, SENTENCE)
-        .err()
-        .expect("the recording does not carry located_in on the deck sentence");
+        .expect_err(
+        "the recording does not carry located_in on the deck sentence");
     assert_eq!(error.kind, ErrorKind::Usage);
     assert!(
         error.message.contains("located_in") && error.message.contains("works_for"),
@@ -198,8 +198,8 @@ fn relate_refuses_more_than_255() -> Result<(), Box<dyn std::error::Error>> {
     let records: Vec<&str> = vec!["one alert"; 256];
     let error = tt
         .relate(&ask, &records)
-        .err()
-        .expect("256 is past the limit");
+        .expect_err(
+        "256 is past the limit");
     assert_eq!(error.kind, ErrorKind::Usage);
     assert!(
         error.message.contains("255") && error.message.contains("256"),
@@ -219,8 +219,8 @@ fn the_reachable_error_kinds_map() -> Result<(), Box<dyn std::error::Error>> {
 
     let unknown = tt
         .recognize(&ask, "No recording covers this text.")
-        .err()
-        .expect("an unrecorded text answers the usage kind");
+        .expect_err(
+        "an unrecorded text answers the usage kind");
     assert_eq!(unknown.kind, ErrorKind::Usage);
 
     let rule = Recognize::new().kinds(["person"]).relation(
@@ -230,22 +230,22 @@ fn the_reachable_error_kinds_map() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     let outside = tt
         .recognize(&rule, SENTENCE)
-        .err()
-        .expect("a named end outside the asked kinds is a usage error");
+        .expect_err(
+        "a named end outside the asked kinds is a usage error");
     assert_eq!(outside.kind, ErrorKind::Usage);
 
     let spent = tt
         .recognize_opts(&ask, SENTENCE, Options::new().deadline_in(Duration::ZERO))
-        .err()
-        .expect("a spent deadline answers the deadline kind");
+        .expect_err(
+        "a spent deadline answers the deadline kind");
     assert_eq!(spent.kind, ErrorKind::Deadline);
 
     let token = Cancel::new();
     token.cancel();
     let stopped = tt
         .recognize_opts(&ask, SENTENCE, Options::new().cancel(&token))
-        .err()
-        .expect("a fired token answers the cancelled kind");
+        .expect_err(
+        "a fired token answers the cancelled kind");
     assert_eq!(stopped.kind, ErrorKind::Cancelled);
     Ok(())
 }

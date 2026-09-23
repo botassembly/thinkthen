@@ -157,8 +157,16 @@ for entry in \
 	fi
 	printf 'lint: %s\n' "$workspace"
 	# -D warnings and --all-features (surfaces-review-4): without them the
-	# pass counts as strict while ten of eleven workspaces still fail.
-	if ! (cd "$workspace" && cargo clippy --locked --quiet --all-targets --all-features -- -D warnings); then
+	# pass counts as strict while ten of eleven workspaces still fail. The
+	# Rust surface's Polars arm carries the one recorded toolchain
+	# exception (sysinfo 0.39 refuses 1.93; libraries/rust/NOTES.md): the
+	# same RUSTUP_TOOLCHAIN its check uses.
+	case "$workspace" in
+	libraries/rust)
+		toolchain='RUSTUP_TOOLCHAIN=1.95' ;;
+	*) toolchain='' ;;
+	esac
+	if ! (cd "$workspace" && env $toolchain cargo clippy --locked --quiet --all-targets --all-features -- -D warnings); then
 		fail=1
 	fi
 

@@ -251,7 +251,7 @@ fn run(tt: &Engine, verb: &str, question_text: &str, case: &Value) -> Result<(),
             let scored = tt.score(&question, evidence(case)).map_err(fail)?;
             let wanted = expect["answer"].as_f64();
             ok_if(
-                wanted.map_or(false, |wanted| (scored.value - wanted).abs() < 1e-9),
+                wanted.is_some_and(|wanted| (scored.value - wanted).abs() < 1e-9),
                 format!("expected {wanted:?}, got {}", scored.value),
             )?;
             let nearest = expect["details"]["nearest_level"].as_str();

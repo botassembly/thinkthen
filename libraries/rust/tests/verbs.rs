@@ -316,7 +316,7 @@ fn usage_counts_the_sends() -> Result<(), Box<dyn std::error::Error>> {
     // The counter is process-wide and the suite runs in parallel, so the
     // honest assertion is that this call's send was counted at all.
     assert!(
-        tt.usage().requests >= before + 1,
+        tt.usage().requests > before,
         "the send was not counted"
     );
     Ok(())
@@ -330,7 +330,7 @@ fn the_error_kinds_reach_the_caller() -> Result<(), Box<dyn std::error::Error>> 
     let tt = engine();
 
     let band = Question::decide("Does the writer ask for a refund?")?.band(0.2, 0.8)?;
-    let error = tt.filter(&band, &vec!["one", "two"]).unwrap_err();
+    let error = tt.filter(&band, &["one", "two"]).unwrap_err();
     assert_eq!(
         error.kind,
         ErrorKind::Usage,
@@ -340,14 +340,14 @@ fn the_error_kinds_reach_the_caller() -> Result<(), Box<dyn std::error::Error>> 
     let named = Question::from_json(
         r#"{"decide": "Does the writer ask for a refund?", "threshold": 0.9}"#,
     )?;
-    let error = tt.rank(&named, &vec!["one"]).unwrap_err();
+    let error = tt.rank(&named, &["one"]).unwrap_err();
     assert_eq!(
         error.kind,
         ErrorKind::Usage,
         "a named threshold on rank is refused"
     );
 
-    let error = tt.annotate("no-such-file.json", &vec!["one"]).unwrap_err();
+    let error = tt.annotate("no-such-file.json", &["one"]).unwrap_err();
     assert_eq!(
         error.kind,
         ErrorKind::Local,
