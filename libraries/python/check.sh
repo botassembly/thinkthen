@@ -92,6 +92,9 @@ echo "== the third review's wire findings (own loopback server)"
 echo "== the fourth review's signal findings (own counting stub)"
 .venv/bin/python -m pytest tests/test_review4_signals.py -q
 
+echo "== the fifth review's deadline spelling, null backend"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review5_deadline.py -q
+
 echo "== recognize and relate, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
 
