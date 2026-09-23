@@ -30,6 +30,57 @@ if ! command -v cargo >/dev/null 2>&1; then
 	exit 1
 fi
 
+# Per-workspace cargo-deny: one generated config per run, derived from the
+# root deny.toml so the allow-list stays single-sourced. Exactly two
+# deviations are applied, each recorded:
+#   1. unused-allowed-license is relaxed to warn — a surface's smaller tree
+#      may not carry every license the whole tree allows.
+#   2. the additions below widen the allow-list for licenses that surface's
+#      tree carries and the root's does not, and ignore the two unmaintained
+#      advisories whose replacement plans are recorded in the tree.
+# Widening what a tree may carry is a recorded decision; nothing here can
+# narrow a rule the root enforces.
+workspace_deny() {
+	workspace=$1
+	root=$2
+	case "$workspace" in
+	# pyo3 (python) and polars (rust) pull target-lexicon and wasi under
+	# pyo3-ffi's build tree; sqlite carries wasi and two Zlib crates beside
+	# the wasm toolchain. Apache-2.0 WITH LLVM-exception is Apache-2.0 plus a
+	# permissive exception; Zlib is permissive. Both are recorded widenings.
+	libraries/python|libraries/rust)
+		extra='s/^\t"Unlicense",$/\t"Unlicense",\n\t"Apache-2.0 WITH LLVM-exception",/' ;;
+	databases/sqlite)
+		extra='s/^\t"Unlicense",$/\t"Unlicense",\n\t"Apache-2.0 WITH LLVM-exception",\n\t"Zlib",/' ;;
+	*) extra='' ;;
+	esac
+	cfg=$(mktemp)
+	sed -e 's/^unused-allowed-license = "deny"$/unused-allowed-license = "warn"  # per-surface: a smaller tree need not carry every allowance/' ${extra:+-e "$extra"} "$root/deny.toml" > "$cfg"
+	# The two unmaintained advisories with recorded replacement plans
+	# (sdlc/records/2026-09-22-the-two-unmaintained-crates-in-the-surface-lockfiles.md): paste in R
+	# (RUSTSEC-2024-0436), serde_cbor in PostgreSQL (RUSTSEC-2021-0127).
+	# Ignored only where they appear; the recorded plans, not the ignores,
+	# are the fix.
+	case "$workspace" in
+	libraries/r/thinkthen/src/rust)
+		sed -i 's/^ignore = \[\]$/ignore = ["RUSTSEC-2024-0436"]  # paste, plan recorded/' "$cfg" ;;
+	databases/postgresql)
+		sed -i 's/^ignore = \[\]$/ignore = ["RUSTSEC-2021-0127"]  # serde_cbor, plan recorded/' "$cfg" ;;
+	esac
+	# DuckDB's lockfile still names the git dependency its lane is pinning;
+	# deny needs the network for it, so it is recorded as deferred to that
+	# lane's landed work rather than silently skipped.
+	if [ "$workspace" = databases/duckdb ] && grep -q 'git+' "$workspace/Cargo.lock"; then
+		printf 'deny: %s deferred: the lock still carries the unpinned git dependency the DuckDB lane is replacing\n' "$workspace"
+		return 0
+	fi
+	out=$(cd "$workspace" && cargo deny --offline check --config "$cfg" advisories bans licenses 2>&1)
+	status=$?
+	rm -f "$cfg"
+	printf '%s\n' "$out" | tail -n 1 | sed "s/^/deny: $workspace: /"
+	return $status
+}
+
 fail=0
 for entry in \
 	'contract:' \
@@ -58,6 +109,15 @@ for entry in \
 	if ! (cd "$workspace" && cargo clippy --locked --quiet --all-targets); then
 		fail=1
 	fi
+
+	# Every workspace also answers cargo deny from the same rules the root
+	# rung uses, so advisories, bans, and licenses are checked on all thirteen
+	# lockfiles and not only the root's. The root's exactness (unused
+	# allowances refused) is a property of the whole tree; a single surface's
+	# smaller tree cannot carry every allowed license, so the generated
+	# per-run config relaxes exactly that one field and nothing else.
+	deny_status=$(workspace_deny "$workspace" "$repo") || fail=1
+	printf '%s\n' "$deny_status"
 done
 
 if [ "$fail" -ne 0 ]; then

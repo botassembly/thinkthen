@@ -16,7 +16,7 @@
 //! the event loop. A bulk call blocks one worker while the engine's own
 //! scoped threads run at the process width, which is the ADR's Node shape.
 
-use std::panic::{self, AssertUnwindSafe};
+use std::panic;
 use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 
@@ -73,17 +73,29 @@ fn deadline_of(deadline_ms: Option<f64>) -> Result<Option<Instant>, tt::Error> {
 /// A cancel token the wrapper holds. The same token rides into the task,
 /// so an `AbortSignal` listener can stop a running batch from JavaScript.
 #[napi]
+#[derive(Debug)]
 pub struct CancelHandle {
     token: tt::Cancel,
 }
 
 #[napi]
 impl CancelHandle {
+    /// Build a token nothing has fired.
     #[napi(constructor)]
     pub fn new() -> Self {
         Self { token: tt::Cancel::new() }
     }
+}
 
+impl Default for CancelHandle {
+    /// Build a token nothing has fired, as `new` does.
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[napi]
+impl CancelHandle {
     /// Ask every wait that sees this token to stop.
     #[napi]
     pub fn cancel(&self) {
@@ -107,6 +119,8 @@ pub fn usage() -> String {
 /// The verbs the door carries. The wrapper names them; the contract owns
 /// their rules.
 #[derive(Clone, Copy)]
+/// Which door the task calls.
+#[derive(Debug)]
 enum Op {
     Decide,
     DecideMany,
@@ -148,6 +162,7 @@ impl Op {
 }
 
 /// One engine call, run on a libuv worker thread.
+#[derive(Debug)]
 pub struct CallTask {
     op: Op,
     /// The question's file-grammar JSON, or the set's path or JSON for

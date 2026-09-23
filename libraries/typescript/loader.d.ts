@@ -22,6 +22,7 @@ export declare function call(op: string, spec: string | undefined | null, payloa
  * so an `AbortSignal` listener can stop a running batch from JavaScript.
  */
 export declare class CancelHandle {
+  /** Build a token nothing has fired. */
   constructor()
   /** Ask every wait that sees this token to stop. */
   cancel(): void

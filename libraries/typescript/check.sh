@@ -18,7 +18,7 @@ npm ci --no-audit --no-fund --silent
 npm run build:synthetic --silent
 
 step "the defect kind maps into the failure envelope (shim unit test)"
-(cd addon && cargo test --quiet --lib) --locked
+(cd addon && cargo test --quiet --locked --lib)
 
 step "offline suites (null backend): verbs, errors, conformance, the ten examples, the fast-backend cancel"
 ENGINE_NULL=1 node --test tests/*.test.mjs

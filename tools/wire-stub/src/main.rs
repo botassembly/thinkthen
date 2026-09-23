@@ -74,7 +74,6 @@ async fn main() {
         let opened = stats.connections.fetch_add(1, Ordering::Relaxed) + 1;
         eprintln!("connection {opened} from {stream:?}");
         let stats = Arc::clone(&stats);
-        let delay = delay;
         tokio::spawn(async move {
             let served = http1::Builder::new().serve_connection(
                 TokioIo::new(stream),

@@ -1732,6 +1732,7 @@ pub mod testkit {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use std::sync::Arc;
     use std::sync::Mutex as StdMutex;

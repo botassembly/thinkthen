@@ -20,7 +20,7 @@ echo "== r surface: the tarball build vendors the contract crates"
 ./tools/make-tarball.sh --stage-only >/dev/null
 
 echo "== r surface: the defect kind crosses as its own kind (shim unit test)"
-(cd thinkthen/src/rust && cargo test --quiet --lib) --locked
+(cd thinkthen/src/rust && cargo test --quiet --locked --lib)
 
 # The fixture build. Conformance case 74 and the null suite's failed-marker
 # checks replay the stand-in's synthesized partial failure, and that fixture

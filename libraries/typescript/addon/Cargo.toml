@@ -13,6 +13,17 @@ crate-type = ["cdylib"]
 # repository workspace, so nine surfaces never race one members array.
 [workspace]
 
+# The same strict rules the surfaces carry; napi's macro output is exempt
+# where the derive generates code the rules cannot see (recorded below).
+[lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "forbid"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+
 [build-dependencies]
 napi-build = "2"
 
