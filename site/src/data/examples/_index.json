@@ -12,32 +12,32 @@
   {
     "function": "decide",
     "surface": "polars",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "decide",
     "surface": "typescript",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "decide",
     "surface": "ruby",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "decide",
     "surface": "r",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "decide",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "decide",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "decide",
@@ -47,7 +47,7 @@
   {
     "function": "decide",
     "surface": "sqlite",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "decide",
@@ -62,7 +62,7 @@
   {
     "function": "choose",
     "surface": "python",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "choose",
@@ -72,12 +72,12 @@
   {
     "function": "choose",
     "surface": "typescript",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "choose",
     "surface": "ruby",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "choose",
@@ -92,7 +92,7 @@
   {
     "function": "choose",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "choose",
@@ -102,12 +102,12 @@
   {
     "function": "choose",
     "surface": "sqlite",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "choose",
     "surface": "postgresql",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "tag",
@@ -117,7 +117,7 @@
   {
     "function": "tag",
     "surface": "python",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "tag",
@@ -127,7 +127,7 @@
   {
     "function": "tag",
     "surface": "typescript",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "tag",
@@ -137,22 +137,22 @@
   {
     "function": "tag",
     "surface": "r",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "tag",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "tag",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "tag",
     "surface": "duckdb",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "tag",
@@ -162,7 +162,7 @@
   {
     "function": "tag",
     "surface": "postgresql",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
@@ -172,12 +172,12 @@
   {
     "function": "score",
     "surface": "python",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
     "surface": "polars",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
@@ -187,37 +187,37 @@
   {
     "function": "score",
     "surface": "ruby",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
     "surface": "r",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
     "surface": "duckdb",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
     "surface": "sqlite",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "score",
     "surface": "postgresql",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
@@ -227,7 +227,7 @@
   {
     "function": "filter",
     "surface": "python",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
@@ -242,37 +242,37 @@
   {
     "function": "filter",
     "surface": "ruby",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
     "surface": "r",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
     "surface": "duckdb",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
     "surface": "sqlite",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "filter",
     "surface": "postgresql",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "rank",
@@ -282,7 +282,7 @@
   {
     "function": "rank",
     "surface": "python",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "rank",
@@ -292,12 +292,12 @@
   {
     "function": "rank",
     "surface": "typescript",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "rank",
     "surface": "ruby",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "rank",
@@ -307,17 +307,17 @@
   {
     "function": "rank",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "rank",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "rank",
     "surface": "duckdb",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "rank",
@@ -327,7 +327,7 @@
   {
     "function": "rank",
     "surface": "postgresql",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "find",
@@ -337,7 +337,7 @@
   {
     "function": "find",
     "surface": "python",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "find",
@@ -347,7 +347,7 @@
   {
     "function": "find",
     "surface": "typescript",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "find",
@@ -357,17 +357,17 @@
   {
     "function": "find",
     "surface": "r",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "find",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "find",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "find",
@@ -402,42 +402,42 @@
   {
     "function": "annotate",
     "surface": "typescript",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "annotate",
     "surface": "ruby",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "annotate",
     "surface": "r",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "annotate",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "annotate",
     "surface": "c",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "annotate",
     "surface": "duckdb",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "annotate",
     "surface": "sqlite",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "annotate",
     "surface": "postgresql",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "recognize",
@@ -562,27 +562,27 @@
   {
     "function": "question-file",
     "surface": "polars",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "question-file",
     "surface": "typescript",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "question-file",
     "surface": "ruby",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "question-file",
     "surface": "r",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "question-file",
     "surface": "rust",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "question-file",
@@ -592,12 +592,12 @@
   {
     "function": "question-file",
     "surface": "duckdb",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "question-file",
     "surface": "sqlite",
-    "status": "planned"
+    "status": "drawn"
   },
   {
     "function": "question-file",

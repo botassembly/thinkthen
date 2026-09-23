@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "python",
+  "code": "import thinkthen as tt\n\n# your own scale, 0 to 2: 0.06, 0.99, and 2.0\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nfor text in [\"Please update my mailing address when you can.\",\n        \"Can you send the signed contract by Friday?\",\n        \"Nobody can log in to the site right now.\"]:\n    print(tt.score(\"How urgent is this?\", text, levels))",
   "function": "score",
   "surface": "python"
 }

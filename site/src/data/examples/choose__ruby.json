@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# each ticket goes to the team its words name:\n# billing, shipping, and account\nteams = [\"billing\", \"shipping\", \"account\"]\n[\"I was billed twice for one order.\",\n \"My parcel is a week late.\",\n \"I am locked out of my account.\"].each do |text|\n  puts ThinkThen.choose(\"Which team owns this?\", text, options: teams)\nend",
   "function": "choose",
   "surface": "ruby"
 }

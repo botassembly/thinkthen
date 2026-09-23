@@ -62,7 +62,9 @@ const when = surface.release && !shipped
       <h3><a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a> — {fn.line}</h3>
       {data.status === 'run'
         ? <Terminal run={data.runs[0]} caption={`Recorded from the real command. ${data.runs[0].see}`} />
-        : <Code code={data.code} caption={surface.captions?.[fn.name] || null} />}
+        : data.printed
+          ? <p>The recorded sample at the top of this page calls it.</p>
+          : <Code code={data.code} caption={surface.captions?.[fn.name] || null} />}
     </section>
   ))}
   {missing.length > 0 && (

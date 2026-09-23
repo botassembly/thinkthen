@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "rust",
+  "code": "use thinkthen::{Answer, Engine, Question};\nlet tt = Engine::from_env()?;\n\n// keep the complaints: the zipper and the strap\nlet reviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\",\n    \"Does this come in blue?\",\n    \"The strap snapped on day two.\"];\nfor kept in tt.filter(\"Is this a complaint?\", &reviews)? {\n    println!(\"{kept}\");\n}",
   "function": "filter",
   "surface": "rust"
 }

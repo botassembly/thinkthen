@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ts",
+  "code": "import * as tt from \"thinkthen\";\n\n// one filled form per report: export, login, and billing\nconst reports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\",\n    \"The Pay button on the billing page is too blue.\"];\nfor (const form of await tt.annotate(\"form.json\", reports)) {\n  console.log(form);\n}",
   "function": "annotate",
   "surface": "typescript"
 }

@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "rust",
+  "code": "use thinkthen::{Answer, Engine, Question};\nlet tt = Engine::from_env()?;\n\n// your own scale, 0 to 2: 0.06, 0.99, and 2.0\nlet urgency = Question::score(\"How urgent is this?\",\n    &[\"Routine.\", \"Soon.\", \"Immediate.\"])?;\nfor text in [\"Please update my mailing address when you can.\",\n    \"Can you send the signed contract by Friday?\",\n    \"Nobody can log in to the site right now.\"] {\n    println!(\"{} {text}\", tt.score(&urgency, text)?.value);\n}",
   "function": "score",
   "surface": "rust"
 }

@@ -3,6 +3,11 @@
   "source": "deck surfaces.md",
   "lang": "sql",
   "code": "LOAD './thinkthen.duckdb_extension';\n\nCREATE TABLE tickets AS SELECT * FROM (VALUES\n    (1, 'My parcel is a week late. Not okay.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'We are locked out of our account.'),\n    (4, 'I was billed twice for one order.')\n) t(id, body);\n\n-- the thank-you is no complaint, so it drops out\nSELECT id, thinkthen_choose('Which team owns this?',\n    body, ['billing', 'shipping', 'account']) AS team\nFROM tickets\nWHERE thinkthen_decide('Is this a complaint?', body);",
+  "printed": {
+    "command": "duckdb -unsigned -list < sample.sql",
+    "output": "id|team\n1|shipping\n3|account\n4|billing",
+    "see": "The thank-you drops out. The late parcel goes to shipping, the lockout to account, and the double bill to billing."
+  },
   "function": "choose",
   "surface": "duckdb"
 }

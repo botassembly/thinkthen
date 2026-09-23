@@ -33,8 +33,14 @@ const tabs = SURFACES.map((s) => ({
       {t.data.status === 'run' && t.data.runs.slice(0, first).map((run) => (
         <Terminal run={run} />
       ))}
-      {t.data.status === 'drawn' && (
+      {t.data.status === 'drawn' && !t.data.printed && (
         <Code code={t.data.code} caption={`${t.surface.name} ${t.surface.release ? `comes with ${t.surface.release}` : 'is planned'}. The call will read like this.`} />
+      )}
+      {t.data.status === 'drawn' && t.data.printed && (
+        <>
+          <Code code={t.data.code} caption={`${t.surface.name} ${t.surface.release ? `comes with ${t.surface.release}` : 'is planned'}. The calls read like this.`} />
+          <Terminal run={{ command: t.data.printed.command, output: t.data.printed.output, exit: null }} caption={`Recorded from the branch build. ${t.data.printed.see}`} word={false} />
+        </>
       )}
       {t.data.status === 'planned' && (
         <div class="note">

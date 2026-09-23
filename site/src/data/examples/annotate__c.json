@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* one filled form per report: export, login, and billing */\nconst char *annotate = \"{\\\"annotate\\\": {\\\"version\\\": 1, \\\"questions\\\": {\"\n    \"\\\"steps\\\": {\\\"decide\\\": \\\"Does the report give steps to reproduce?\\\"}, \"\n    \"\\\"area\\\": {\\\"choose\\\": \\\"Which part of the app is this?\\\", \"\n    \"\\\"options\\\": [\\\"export\\\", \\\"login\\\", \\\"billing\\\"]}}}, \"\n    \"\\\"records\\\": [\\\"CSV export fails. Steps: click Export.\\\", \"\n    \"\\\"The login page spins and nobody can sign in.\\\", \"\n    \"\\\"The Pay button on the billing page is too blue.\\\"]}\";\nchar *forms = thinkthen_call(tt, annotate);\nputs(forms ? forms : thinkthen_error_message(tt));\nthinkthen_free_string(forms);",
   "function": "annotate",
   "surface": "c"
 }

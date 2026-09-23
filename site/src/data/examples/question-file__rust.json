@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "rust",
+  "code": "use thinkthen::{Answer, Engine, Question};\nlet tt = Engine::from_env()?;\n\n// build a question once. The band's middle is Unsure\nlet refund = Question::decide(\n    \"Does the customer ask for a refund?\")?.band(0.2, 0.8)?;\nmatch tt.decide(&refund, \"I want to send this back.\")? {\n    Answer::Unsure => println!(\"a person reads it\"),\n    other => println!(\"{other:?}\"),\n}",
   "function": "question-file",
   "surface": "rust"
 }

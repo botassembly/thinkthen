@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "rust",
+  "code": "use thinkthen::{Answer, Engine, Question};\nlet tt = Engine::from_env()?;\n\n// the outage first at 0.94, the quote second at 0.93\nlet inbox = [\"Newsletter: our autumn catalog is here\",\n    \"Our checkout page is down and customers cannot pay\",\n    \"The client needs the signed quote by 5 pm today.\",\n    \"Reminder: your invoice is due in 30 days\"];\nlet ranked = tt.rank(\"Does this need an answer today?\", &inbox)?;\nfor one in ranked.iter().take(2) {\n    println!(\"{} {}\", one.probability, inbox[one.index]);\n}",
   "function": "rank",
   "surface": "rust"
 }

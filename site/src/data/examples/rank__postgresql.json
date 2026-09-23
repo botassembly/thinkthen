@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "-- the outage first at 0.94, the quote second at 0.93\nSELECT body FROM (VALUES\n    ('Newsletter: our autumn catalog is here'),\n    ('Our checkout page is down and customers cannot pay'),\n    ('The client needs the signed quote by 5 pm today.'),\n    ('Reminder: your invoice is due in 30 days')) AS t(body)\nORDER BY thinkthen_probability(\n    '{\"decide\": \"Does this need an answer today?\"}', body) DESC\nLIMIT 2;",
   "function": "rank",
   "surface": "postgresql"
 }

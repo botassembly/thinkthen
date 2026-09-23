@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "r",
+  "code": "library(thinkthen)\n\n# one new column per question in form.json:\n# export, login, and billing\nreports <- data.frame(body = c(\n  \"CSV export fails. Steps: click Export.\",\n  \"The login page spins and nobody can sign in.\",\n  \"The Pay button on the billing page is too blue.\"))\ntt_annotate(\"form.json\", reports, on = \"body\")",
   "function": "annotate",
   "surface": "r"
 }

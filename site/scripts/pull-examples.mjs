@@ -191,7 +191,8 @@ function callPattern(surface, fn) {
     ruby: [`ThinkThen.${n}(`],
     r: [`tt_${n}(`],
     rust: [`tt.${n}(`, `Question::${n}(`, `Recognize::`, `Relate::`],
-    c: [`thinkthen_${n}(`],
+    // C takes decide typed and every other verb through the JSON door.
+    c: [`thinkthen_${n}(`, `{\\"${n}\\"`, `thinkthen_call(tt, ${n})`],
     duckdb: [`thinkthen_${n}(`],
     sqlite: [`thinkthen_${n}(`],
     postgresql: [`thinkthen_${n}(`],
@@ -201,6 +202,11 @@ function callPattern(surface, fn) {
       ruby: ['ThinkThen.question('], r: ['tt_question('], rust: ['Question::decide('],
       c: ['thinkthen_question('], duckdb: ["'@"], sqlite: ["'@"], postgresql: ["'@"] }[surface] || [];
   }
+  // SQL has no filter or rank call. A WHERE on decide keeps the yes rows,
+  // and an ORDER BY on the probability ranks them.
+  const sql = ['duckdb', 'sqlite', 'postgresql'].includes(surface);
+  if (sql && fn === 'filter') return [/WHERE thinkthen_decide\([^;]*\);/];
+  if (sql && fn === 'rank') return ['ORDER BY thinkthen_probability('];
   if (fn === 'recognize' && surface === 'rust') return ['Recognize::'];
   if (fn === 'relate' && surface === 'rust') return ['Relate::'];
   return forms;
@@ -214,7 +220,7 @@ function chunksOf(code) {
 
 function chunkCalls(chunk, surface, fn) {
   const body = chunk.split('\n').filter((l) => !COMMENT.test(l)).join('\n');
-  return callPattern(surface, fn).some((p) => body.includes(p));
+  return callPattern(surface, fn).some((p) => (p instanceof RegExp ? p.test(body) : body.includes(p)));
 }
 
 // Every fenced block under a `## Heading` in a Markdown file.
@@ -234,6 +240,28 @@ function fencedBySection(text) {
     }
   }
   return sections;
+}
+
+// One cell for each function a sample calls. A chunk that calls none joins
+// the preamble while it sits at the top. A recorded sample's cell is the whole
+// sample beside what it printed.
+function fillCells(cells, slug, lang, code, printed) {
+  const chunks = chunksOf(code);
+  const preamble = [];
+  chunks.forEach((chunk, place) => {
+    const owners = FUNCTIONS.filter((f) => chunkCalls(chunk, slug, f.name));
+    if (!owners.length) {
+      if (!preamble.length || place < 2) preamble.push(chunk);
+      return;
+    }
+    for (const owner of owners) {
+      const key = `${owner.name}|${slug}`;
+      if (cells[key]) continue;
+      cells[key] = printed
+        ? { lang, code, printed }
+        : { lang, code: [preamble.join('\n\n'), chunk].filter(Boolean).join('\n\n') };
+    }
+  });
 }
 
 function drawnCells() {
@@ -258,23 +286,12 @@ function drawnCells() {
       if (!see || !printed) throw new Error(`${surface.slug}: Printed by: needs a See: line and a text block`);
       wholeBlocks[surface.slug].printed = { command: run[1], output: printed.code, see: see[1] };
     }
-    const chunks = chunksOf(block.code);
-    const preamble = [];
-    for (const chunk of chunks) {
-      const owners = FUNCTIONS.filter((f) => chunkCalls(chunk, surface.slug, f.name));
-      if (!owners.length) {
-        if (!preamble.length || chunks.indexOf(chunk) < 2) preamble.push(chunk);
-        continue;
-      }
-      for (const owner of owners) {
-        const key = `${owner.name}|${surface.slug}`;
-        if (cells[key]) continue;
-        cells[key] = {
-          lang: block.lang,
-          code: [preamble.join('\n\n'), chunk].filter(Boolean).join('\n\n'),
-        };
-      }
-    }
+    // The sample the branch build ran fills its functions first, whole and
+    // with what it printed. The ```LANG cells block draws one call for each
+    // function the sample leaves out.
+    fillCells(cells, surface.slug, block.lang, block.code, wholeBlocks[surface.slug].printed || null);
+    const drawn = sections[surface.deckHeading].find((b) => b.lang.endsWith(' cells'));
+    if (drawn) fillCells(cells, surface.slug, drawn.lang.split(' ')[0], drawn.code, null);
   }
   return { cells, wholeBlocks };
 }
@@ -475,6 +492,7 @@ function main() {
           source: recognize[key] ? 'deck recognize-surfaces.md' : 'deck surfaces.md',
           lang: block.lang,
           code: block.code,
+          ...(block.printed ? { printed: block.printed } : {}),
         };
       } else {
         cell = { status: 'planned', source: 'no example drawn for this surface yet' };

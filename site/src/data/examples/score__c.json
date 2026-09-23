@@ -1,6 +1,13 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <stdio.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* score takes the JSON door: a request in, JSON out */\nconst char *ask = \"{\\\"score\\\": \\\"How urgent is this?\\\", \"\n    \"\\\"levels\\\": [\\\"Routine.\\\", \\\"Soon.\\\", \"\n    \"\\\"Immediate.\\\"], \"\n    \"\\\"evidence\\\": \\\"Checkout is down for everyone.\\\"}\";\nchar *out = thinkthen_call(tt, ask);\n\n/* an outage lands near 2, \"Immediate.\" */\nputs(out ? out : thinkthen_error_message(tt));\nthinkthen_free_string(out);\nthinkthen_engine_free(tt);",
+  "printed": {
+    "command": "cc sample.c -lthinkthen && ./sample",
+    "output": "{\"answer\":2.0,\"nearest\":\"Immediate.\"}",
+    "see": "The outage scores 2.0, and the nearest level is Immediate."
+  },
   "function": "score",
   "surface": "c"
 }

@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* each ticket goes to the team its words name:\n   billing, shipping, and account */\nconst char *texts[] = {\"I was billed twice for one order.\",\n    \"My parcel is a week late.\", \"I am locked out of my account.\"};\nchar choose[256];\nfor (int i = 0; i < 3; i++) {\n    snprintf(choose, sizeof choose,\n        \"{\\\"choose\\\": \\\"Which team owns this?\\\", \"\n        \"\\\"options\\\": [\\\"billing\\\", \\\"shipping\\\", \\\"account\\\"], \"\n        \"\\\"evidence\\\": \\\"%s\\\"}\", texts[i]);\n    char *out = thinkthen_call(tt, choose);\n    puts(out ? out : thinkthen_error_message(tt));\n    thinkthen_free_string(out);\n}",
   "function": "choose",
   "surface": "c"
 }

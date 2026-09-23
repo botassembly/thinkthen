@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ts",
+  "code": "import * as tt from \"thinkthen\";\n\n// the outage first at 0.94, the quote second at 0.93\nconst inbox = [\"Newsletter: our autumn catalog is here\",\n    \"Our checkout page is down and customers cannot pay\",\n    \"The client needs the signed quote by 5 pm today.\",\n    \"Reminder: your invoice is due in 30 days\"];\nconst ranked = await tt.rank(\"Does this need an answer today?\",\n    inbox, { top: 2 });\nfor (const one of ranked) console.log(one.probability, one.record);",
   "function": "rank",
   "surface": "typescript"
 }

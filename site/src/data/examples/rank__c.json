@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* rank: place 1, the outage, first at 0.94, and\n   place 2, the quote, second at 0.93 */\nconst char *rank = \"{\\\"decide\\\": \\\"Does this need an answer today?\\\", \"\n    \"\\\"rank\\\": true, \"\n    \"\\\"records\\\": [\\\"Newsletter: our autumn catalog is here\\\", \"\n    \"\\\"Our checkout page is down and customers cannot pay\\\", \"\n    \"\\\"The client needs the signed quote by 5 pm today.\\\", \"\n    \"\\\"Reminder: your invoice is due in 30 days\\\"]}\";\nchar *ranked = thinkthen_call(tt, rank);\nputs(ranked ? ranked : thinkthen_error_message(tt));\nthinkthen_free_string(ranked);",
   "function": "rank",
   "surface": "c"
 }

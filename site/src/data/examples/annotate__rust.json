@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "rust",
+  "code": "use thinkthen::{Answer, Engine, Question};\nlet tt = Engine::from_env()?;\n\n// one filled form per report: export, login, and billing\nlet reports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\",\n    \"The Pay button on the billing page is too blue.\"];\nfor form in tt.annotate(\"form.json\", &reports)? {\n    println!(\"{form:?}\");\n}",
   "function": "annotate",
   "surface": "rust"
 }

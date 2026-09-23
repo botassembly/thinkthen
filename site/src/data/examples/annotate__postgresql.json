@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "-- one filled form per report, as jsonb: export, login,\n-- and billing\nSELECT thinkthen_annotate('@form.json', body) AS form\nFROM (VALUES\n    ('CSV export fails. Steps: click Export.'),\n    ('The login page spins and nobody can sign in.'),\n    ('The Pay button on the billing page is too blue.')) AS t(body);",
   "function": "annotate",
   "surface": "postgresql"
 }

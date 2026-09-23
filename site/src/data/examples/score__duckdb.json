@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "LOAD './thinkthen.duckdb_extension';\n\n-- your own scale, 0 to 2: 0.06, 0.99, and 2.0\nSELECT body, thinkthen_score('How urgent is this?', body,\n    ['Routine.', 'Soon.', 'Immediate.']) AS urgency\nFROM (VALUES\n    ('Please update my mailing address when you can.'),\n    ('Can you send the signed contract by Friday?'),\n    ('Nobody can log in to the site right now.')) t(body);",
   "function": "score",
   "surface": "duckdb"
 }

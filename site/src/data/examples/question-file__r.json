@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "r",
+  "code": "library(thinkthen)\n\n# build a question once. The band's middle is NA,\n# \"not sure\": TRUE, FALSE, and NA for the send-back line\nrefund <- tt_question(decide = \"Does the customer ask for a refund?\",\n  threshold = c(0.2, 0.8))\ntt_decide(refund, c(\"Please refund my order. It arrived broken.\",\n  \"Thanks for the quick help yesterday!\",\n  \"I want to send this back.\"))",
   "function": "question-file",
   "surface": "r"
 }

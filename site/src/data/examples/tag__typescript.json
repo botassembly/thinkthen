@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ts",
+  "code": "import * as tt from \"thinkthen\";\n\n// praise, a bug, and a double charge in one message\nconst labels = [\"praise\", \"bug\", \"billing\"];\nconsole.log(await tt.tag(\"Which labels fit this message?\",\n    \"Love the new dashboard, but export crashes the app, \" +\n    \"and I was charged twice.\", { labels }));",
   "function": "tag",
   "surface": "typescript"
 }
