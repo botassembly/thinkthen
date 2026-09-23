@@ -9,6 +9,11 @@ drifted Cargo.lock from the local cache (surfaces-review-5). cargo-pgrx
 scripts/pgrx-package-locked.sh, which proves the lock before and after;
 a bare `cargo pgrx package` anywhere else fails this check.
 
+A `pip install` names every package at an exact version (`name==1.2`),
+a git URL at a full commit, a requirements file, or a variable that
+carries a pin (surfaces-review-7 R3-29: the DuckDB venv step installed
+`packaging` unpinned).
+
 Usage: python3 scripts/check_locked_calls.py [--root DIR]
 Exit 0 when clean, 1 with one `path:line: why` per call site.
 """
@@ -29,6 +34,8 @@ RESOLVING = re.compile(
     r"|\bmaturin\s+(build|develop)\b"
     r"|\bnapi\s+build\b"
 )
+PIP = re.compile(r"\bpip3?\s+install\b(.*)")
+PINNED = re.compile(r"^(\S+==\S+|git\+\S+@[0-9a-f]{40}|\$[({]?\w+[)}]?)$")
 PGRX = re.compile(r"\bcargo\s+pgrx\s+package\b")
 PGRX_HOME = "scripts/pgrx-package-locked.sh"
 
@@ -67,6 +74,15 @@ def problems(root):
                 code = line.split("#", 1)[0] if not line.lstrip().startswith("#") else ""
                 if not code.strip():
                     continue
+                pip = PIP.search(code)
+                if pip and not re.search(r"\b(echo|printf)\b", code[: pip.start()]):
+                    words, taken = re.split(r"[;&|]|\)\s|\}", pip.group(1))[0].split(), False
+                    for word in words:
+                        if taken or word.startswith("-"):
+                            taken = word in ("-r", "--requirement", "--python")
+                            continue
+                        if not PINNED.match(word):
+                            found.append(f"{name}:{number}: pip install {word} without an exact pin")
                 if PGRX.search(code) and name != PGRX_HOME:
                     found.append(f"{name}:{number}: cargo pgrx package outside {PGRX_HOME}")
                     continue

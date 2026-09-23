@@ -43,10 +43,11 @@ it.
   provision. The sqllogictest runner is not on the DuckDB surface's
   check path; the venv provision is the only network use, cold-cache
   once, like every other first-provision above.
-- **`pip install packaging`** (same makefile): unpinned, on the venv
-  provision path only. Recorded here rather than editing the vendored
-  tool's makefile: the vendored tree is recorded upstream (see its
-  README) and gets its pins from upstream on re-vendor.
+- **`pip install packaging==26.3`** (same makefile): pinned to the
+  version the provisioned venv holds (surfaces-review-7 R3-29). The pin
+  is a local edit to the vendored makefile, listed in that tree's
+  README. `scripts/check_locked_calls.py` fails any `pip install` that
+  names a package without an exact pin.
 
 ## Not pinnable here, with the reason
 
