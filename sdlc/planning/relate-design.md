@@ -102,6 +102,12 @@ One case is different: names inside one text, where the sentence around them dec
 
 `from` is a reserved word in Python and in SQL, so four of the nine surfaces could never say it. The library team chose `source` and `target` for every host. The product side extends that to the command's own JSON and to the question file, so no door converts anything and a user sees one pair of words on every surface. The rule on the command line is unchanged, `--relation NAME=FROM:TO`, because it names no field. This section overrides any older line on this page that says `from`, `to`, `head`, or `tail`. Ian can overturn it.
 
+## Ruled 2026-09-23: yes/no per both-ways relation, a three-way choice per one-way relation
+
+Ian ruled on 2026-09-23 and overturned the pick-one method of 2026-09-21. A relation that reads the same both ways, such as `same_as`, gets one yes/no question per pair. A relation with a direction gets one three-way choice per pair: source to target, target to source, or neither. A pair can hold several relations, and each direction keeps its own probability. The evidence is `experiments/225-recognize-harvest-package/relate/measurements/VERDICTS.md`, arm (a). Twelve pairs held two true relations each. Pick-one found 11 of 24 at 2,449 tokens, and yes/no found 22 of 24 at 1,714 tokens. With several rules, yes/no asks one question per rule and stays cheaper up to about three rules. This section overrides the method sentence above.
+
+Two more answers to the build team the same day. Recognition policy knobs stay out of this round, and only `--threshold` and `--relation-threshold` ship. Request packing is in this round and required. A request over the vendor's size budget of about 150,000 characters is split. Without the split, relate fails above about 25 records, and recognize fails on a long paragraph.
+
 ## What Ian can overturn
 
-All of it. He has ruled: `relate` is built with `recognize`, and it asks by choices over the legal pairs.
+All of it. He has ruled: `relate` is built with `recognize`, and it asks by yes/no for a both-ways relation and by a three-way choice for a one-way relation (2026-09-23).
