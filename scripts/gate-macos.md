@@ -22,7 +22,9 @@ The scripts spell in-place edits with `perl -pi`, read sub-second time
 through perl's Time::HiRes because BSD `date` has no `%N`, and resolve
 `timeout` or `gtimeout` once into `$TIMEOUT`.
 `scripts/check_portable_shell.sh` runs in the gate and fails on a bare
-`sed -i`, a `date` format with `%N`, or a bare `timeout`. The
+`sed -i`, a `date` format with `%N`, or a bare `timeout`. A line that
+names one of them as data ends with `# portable-shell: data`, and the
+check skips that line only. The
 `libthinkthen_native.so` name in `libraries/ruby/build.sh` stays,
 because that copy runs inside the Linux builder container (step 2).
 

@@ -176,14 +176,26 @@ rm -rf "$planted"
 # The portable-shell check names each GNU-only spelling and passes the
 # portable ones (surfaces-review-7 R3-32).
 planted=$(mktemp "${TMPDIR:-/tmp}/gate-shell.XXXXXX")
-printf '%s\n' 'sed -i "s/a/b/" f' 't=$(date +%s.%N)' 'if timeout 5 true; then :; fi' \
-  '# timeout 5 in a comment' 'sed -i.bak "s/a/b/" f' '"$TIMEOUT" 5 true' 'psql --timeout 5' >"$planted"
+gnu_sed='sed -i "s/a/b/" f'  # portable-shell: data
+gnu_date='t=$(date +%s.%N)'  # portable-shell: data
+gnu_timeout='if timeout 5 true; then :; fi'  # portable-shell: data
+printf '%s\n' "$gnu_sed" "$gnu_date" "$gnu_timeout" \
+  '# timeout 5 in a comment' 'sed -i.bak "s/a/b/" f' '"$TIMEOUT" 5 true' 'psql --timeout 5' >"$planted"  # portable-shell: data
 status=0
 said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
 rm -f "$planted"
-expect "GNU-only shell spellings" "$status:$said" "1:FAIL     $planted:1:sed -i \"s/a/b/\" f
-FAIL     $planted:2:t=\$(date +%s.%N)
-FAIL     $planted:3:if timeout 5 true; then :; fi"
+expect "GNU-only shell spellings" "$status:$said" "1:FAIL     $planted:1:$gnu_sed
+FAIL     $planted:2:$gnu_date
+FAIL     $planted:3:$gnu_timeout"
+
+# The data mark exempts only its own line. A file that marks one line
+# still fails on a real use on another line.
+planted=$(mktemp "${TMPDIR:-/tmp}/gate-shell.XXXXXX")
+printf '%s\n' "echo '$gnu_sed'  # portable-shell: data" "$gnu_sed" >"$planted"
+status=0
+said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
+rm -f "$planted"
+expect "a real use beside a data line" "$status:$said" "1:FAIL     $planted:2:$gnu_sed"
 
 # Every surface check prints the counted spelling for its own wire skip.
 for pair in libraries/python:python libraries/typescript:typescript libraries/rust:rust \
