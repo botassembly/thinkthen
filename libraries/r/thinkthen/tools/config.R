@@ -63,7 +63,13 @@ if (.tarball_shape) {
 }
 
 .profile <- "--release"
-.clean_targets <- "$(TARGET_DIR)"
+# The tarball shape removes its build folder after the install, as
+# rextendr does, so an installed tarball leaves nothing behind. The
+# repository shape keeps src/rust/target, which is gitignored and which
+# the workspace lint already builds into: the gate installs twice (the
+# fixture build, then the production restore), and each install compiled
+# every dependency again (sdlc/records/surfaces-notes/NOTES-speed.md).
+.clean_targets <- if (.tarball_shape) "$(TARGET_DIR)" else ""
 
 .LIBDIR <- "release"
 
