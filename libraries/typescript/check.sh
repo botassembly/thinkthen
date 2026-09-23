@@ -32,7 +32,7 @@ step "the conformance test can fail"
 # of the file carries each corruption in turn; the skip decisions still
 # come from the real table.
 for case_prefix in 13- 15- 19-; do
-  corrupt="$(mktemp /tmp/conf-corrupt.XXXXXX.json)"
+  corrupt="$(mktemp "${TMPDIR:-/tmp}/conf-corrupt.XXXXXX")"
   node -e '
     const fs = require("fs");
     const file = JSON.parse(fs.readFileSync("../../conformance/conformance.json", "utf8"));

@@ -59,7 +59,7 @@ echo "== sqlite surface: the named-file door (review 4, item 7)"
 # The deterministic shapes the swap race rides on: a symlink refuses at
 # the door (pre-fix it read through to the parser), a fifo refuses at
 # the door (pre-fix a straddled swap parked the process in open()).
-THINKTHEN_NULL=1 python3 tools/file_door.py target/release/libthinkthen0.so
+THINKTHEN_NULL=1 python3 tools/file_door.py "target/release/libthinkthen0.$LIB_EXT"
 
 echo "== sqlite surface: single-row deadline, offline"
 python3 tests/single_row_cancel.py null

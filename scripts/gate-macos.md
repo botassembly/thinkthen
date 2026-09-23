@@ -17,19 +17,25 @@ falls back to `curl`), GNU `sed -i` versus `sed -i ''`,
 `x86_64-unknown-linux-gnu` targets in the package scripts, which are
 Linux-only by design and skip on darwin.
 
-Recipe, one surface at a time:
+Recipe, one surface at a time. Steps 2, 4, and 5 cannot run on macOS
+today (surfaces-review-5). Each says why. Run the others, and record the
+three as not runnable with the reason below.
 
 1. `cd libraries/typescript && ./build-addon.sh` — the addon has
    `build.rs`; `npx napi build` produces the `.node` directly.
-2. `cd libraries/ruby && ./build.sh synthetic` — the gem platform comes
-   from `Gem::Platform::CURRENT`; verify the spec names `darwin-arm64`
-   and the built file is `thinkthen.bundle`, not `.so`.
+2. Not runnable on macOS. `libraries/ruby/build.sh` builds inside a Linux
+   builder container and copies `libthinkthen_native.so`, so it never
+   produces a darwin `thinkthen.bundle`. A native macOS gem build needs
+   its own script first.
 3. `cd libraries/c && ./check.sh` — the release build remaps the home
    prefix; verify `strings` on the `.dylib` shows no builder path.
-4. `cd databases/sqlite && ./package.sh --dry-run` — darwin builds a
-   plain `.dylib` (zig targets are Linux-only).
-5. `cd databases/duckdb && ./package.sh --dry-run` — the extension
-   suffix and architecture follow the host.
+4. Not runnable on macOS. `databases/sqlite/package.sh` exits 1 on
+   Darwin: "this rehearsal cross-builds for Linux; on macOS build
+   natively". Run `databases/sqlite/check.sh` instead, which builds the
+   `.dylib`.
+5. Not runnable on macOS. `databases/duckdb/package.sh` exits 1 on
+   Darwin with the same sentence, and it has no `--dry-run`. Run
+   `databases/duckdb/check.sh` instead.
 6. PostgreSQL on a Mac needs a local server; skip it and record why.
 
 Each step's log lands in the records folder with the tip's commit hash
