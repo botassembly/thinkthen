@@ -10,7 +10,9 @@ Run: python3 scripts/test_check_public_names.py   (from anywhere)
 """
 
 import contextlib
+import contextlib
 import importlib.util
+import io
 import io
 import pathlib
 import sys
@@ -103,9 +105,13 @@ def test_a_leaked_runtime_name_fails():
         names = pathlib.Path(scratch) / "names.json"
         loaded = sorted(MODULE.ruby_names() | {"Native"})
         names.write_text(MODULE.json.dumps(loaded))
+        # The check's own FAIL lines are the expected outcome here; the
+        # gate counts FAIL lines, so they stay out of this suite's output.
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            status = MODULE.main(["--ruby-runtime", str(names)])
         report(
             "a runtime name the source hides fails the check",
-            MODULE.main(["--ruby-runtime", str(names)]) == 1,
+            status == 1,
             "a loaded Native passed",
         )
 
