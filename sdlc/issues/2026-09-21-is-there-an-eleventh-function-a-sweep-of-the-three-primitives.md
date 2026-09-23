@@ -52,3 +52,13 @@ No. `recognize` was the one bundle, and `relate` came out of it. Its kind step i
 ## What Ian can overturn
 
 All of it. The cheap ones: widening `rank` before 0.1, and building the measuring command before 0.1.
+
+## Second sweep, 2026-09-23, after the tabular research and the card-game experiment
+
+Ian asked again whether anything jarred loose. No eleventh judgment function did: the three-primitives × iteration × output space stays closed, and every candidate collapsed into existing functions composed by the caller. What survived the sweep:
+
+1. `thinkthen audit` as a utility command (records plus an answer key in; agreement, confusion, and the probability curve out; never calls Jev, local math like `cache` and `status`). It closes the tuning loop the threshold how-to and Beatles Bench opened. Still a product ruling away from a ticket.
+2. Recipes, not functions: the band cascade, composed options for dependent choices, watch-a-stream, same-entity as `relate`, count-of as `annotate` plus a counter, discover-then-apply as `recognize` then `tag`. Feed `repos/mktg/products/thinkthen/recipes.md`.
+3. The consistency checker as a lead use case: spec-versus-tool, help-versus-manual, page-versus-page — `decide` over claim pairs, batched by `annotate`, ordered by `rank`. No new machinery.
+
+Ruled out loudly: schema validation (a validator's job, never judgment), and anything numeric-statistical (the tabular verdict, experiment 251).
