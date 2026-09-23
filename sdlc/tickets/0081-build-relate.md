@@ -6,117 +6,115 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0081: Build `relate` over the shared relation planner
 
-Status: ready
+Status: design remediation complete; Option A ruled by Ian; ready for Sol re-review.
 
-## Outcome and authority
+## Outcome
 
-Add the tenth command, `thinkthen relate`, to the Rust core, private engine, and command. It reads one bounded set of entities, applies the caller's relation rules, and prints self-contained edges. An entity is exactly its `name` plus its `kind`. The same name with two kinds names two entities.
+Add `thinkthen relate`. It reads a complete entity set, asks bounded relation questions, and emits self-contained edges. A standalone edge has only `relation`, `source.name`, `source.kind`, `target.name`, `target.kind`, and `probability`. Recognition keeps its existing endpoint offsets and strength. Both commands use one planner, question map, threshold rule, and edge assembler.
 
-Ian ruled `relate` in on 2026-09-21. The final planner comes from the 2026-09-23 direction and results recorded by commits `1c29acf`, `f17931e`, and `c0d5651` in `sdlc/planning/relate-design.md`. Those later commits supersede the older all-H and three-way-choice sections that remain on that page as history. Experiment 237 supplies method H and its shared wording. Experiment 239 supplies the cross-kind choice planner, the no-marker result, the ruled edge shape, and the known multi-target weakness. Ian can overturn the public grammar, result shape, and routing decisions below before implementation.
-
-The command forms are:
-
-```text
-thinkthen relate [OPTIONS] RELATION...
-thinkthen relate [OPTIONS] @links.json
-```
-
-A one-way rule is `NAME=SOURCE_KIND:TARGET_KIND`; bare `NAME` is shorthand for `NAME=*:*`. A both-ways rule uses `--either NAME=KIND:KIND`, with the same bare-name shorthand, or the equivalent question-file member. A question file may add a `reads` phrase. The command exposes no planner method, one/many marker, runner-up policy, or packing control. `--threshold` gates edges and defaults to `0.5`.
-
-## Entity input
-
-`relate` consumes the complete entity set before it asks anything. JSONL, CSV, and TSV records use `/name` and `/kind` by default. `--field` and `--kind-field` override those pointers through the existing record-field grammar. Each selected value must be a nonempty string.
-
-`--lines` treats every nonempty line as an entity name of kind `*`. Therefore line input admits only a bare rule or an explicit `*:*` rule. All line entities form one same-kind candidate set: a one-way rule asks method H once for each ordered pair, and `--either` asks it once for each unordered pair. A concrete kind in a rule over line input is absent and fails locally.
-
-```json
-{"name":"Octopus's Garden","kind":"song"}
-{"name":"Ringo Starr","kind":"person"}
-{"name":"Help!","kind":"song"}
-{"name":"Help!","kind":"album"}
-```
-
-Input order is stable planner order. Equal names with different kinds remain separate. An exact duplicate `name` plus `kind` is a usage error because the ruled entity identity and the public edge cannot distinguish two copies. More than 255 entities is a local usage error before cache, replay, key lookup, or a send.
-
-Rules are ordered and uniquely named. Validate their syntax even when input is empty. After input parsing, empty input succeeds with no questions and no edges; this is the sole exception to the rule-kind presence check. With any entity present, every concrete source and target kind named by a rule must occur in the input or the command fails locally. The shared planner expands `*` against the admitted concrete kinds in first-seen order. Never pair an entity with itself.
-
-## Result contract
-
-Default output is one JSON edge per line. Every edge reads on its own:
+The bare edge is:
 
 ```json
 {"relation":"sung_by","source":{"name":"Octopus's Garden","kind":"song"},"target":{"name":"Ringo Starr","kind":"person"},"probability":0.93}
 ```
 
-`relation` is the rule name. `source` and `target` are complete ruled entities, not row numbers or ids. `probability` is the backend's probability for that accepted option or yes answer, unchanged. Keep an edge when its probability is greater than or equal to the inclusive cut. Normalize every one-way edge to the rule's source-to-target direction even when the target side supplied the question. A both-ways edge prints once, with endpoints in input order.
+`--details` uses the ruled Option A shape below: ordered self-contained entries under `answer.questions`, while `value` contains accepted edges only.
 
-Edges print deterministically by relation declaration, concrete kind expansion, asking entity, then candidate entity. No edge prints twice. A finished run with no accepted edge exits 0 and prints nothing. A failed logical question preserves edges from completed questions and uses the existing partial-failure exit and diagnostic contract; absence from a failed question never becomes a negative answer.
+## Current facts
 
-`--details` returns the same ordered edges as the `value` of one standard `thinkthen.result/1` object. It carries every logical request digest in construction order, successful send counts under the existing rules, cache metadata, and the probability distribution needed to audit each accepted or rejected candidate. It does not replace an entity with an input position. Replay returns the same value and metadata except for the already ruled cache/send fields.
+- `crates/thinkthen/src/core/relation.rs` currently treats rule `*` as “match every entity” and returns the pair plan before concrete-kind expansion when `source == target`. Existing wildcard tests use one entity per kind and do not expose the gap.
+- The current pair planner puts `reads` and full entity references in every `Question::Decide` text. The final method-H ruling requires one numbered entity table and one relation wording copy in request state, with pair-only H questions.
+- `RelationEdge` is currently tied to `RecognizedName`. Relate needs name-and-kind endpoints without copying the planner or edge assembler.
 
-## Shared planner contract
+Ticket 0081 owns these shared corrections and must prove recognition compatibility. Ticket 0079 still owns request splitting, request identity, ordering, replay, cache behavior, and cancellation.
 
-Ticket 0080 owns the pure relation rule types, planner, question-to-edge map, thresholding, direction normalization, and self-contained edge assembly. This ticket calls those owners. It must not fork, wrap, or copy them.
+## Fixed command contract
 
-| Concrete rule shape | Plan |
-| --- | --- |
-| Different source and target kinds | Each entity on the larger side gets one choice over every legal entity on the smaller side plus `none`. On equal side counts, the rule's source side asks. Keep every non-`none` option at or above the cut and normalize direction. |
-| Same kind, both ways | Lean method H: one yes/no for each unordered legal pair. |
-| Same kind, one way | Lean method H: one yes/no for each legal ordered direction. |
-| Cross-kind choice exceeds a ceiling | Fall back for that whole concrete relation to method H. |
+`thinkthen relate [OPTIONS] RELATION...` and `thinkthen relate [OPTIONS] @entities.json` are the command forms. A one-way rule is `NAME=SOURCE_KIND:TARGET_KIND`; bare `NAME` means `NAME=*:*`; `--either` asks one unordered relation. A question file may provide `reads`. The command exposes no method, one-or-many, runner-up, or packing control. The threshold defaults to `0.5` and accepts the cut.
 
-Method H places the rule's shared wording in the request state once. Each question carries only its entity statement. One-way H keeps the two directions as separate questions and separate probabilities. Several rules over one pair remain separate judgments, so one edge never suppresses another.
+JSONL, CSV, and TSV input use `/name` and `/kind` with existing field overrides. Without a kind field, records receive synthetic kind `*`, and a rule naming a concrete kind fails locally. Both selected values are nonempty. Input order is stable. The same name with different kinds is two entities. An exact duplicate name and kind is a usage error. More than 255 local entities is a usage error. Empty input succeeds without questions or edges after syntax validation.
 
-A cross-kind relation falls back to H when one choice would exceed the fixed accepted ceiling of 255 total options, counting `none`, or when one exact encoded choice request with the complete state cannot fit the exact request-size budget supplied by ticket 0079. Therefore at most 254 candidate entities fit beside `none`. The fallback applies to the whole concrete relation so one rule never mixes probability meanings. A multi-question plan that merely exceeds one request does not fall back; ticket 0079 splits it into deterministic contiguous requests. If one H question with its complete state cannot fit, preflight refuses the run with zero sends.
+`--lines` assigns synthetic kind `*` to each nonempty line and accepts only a bare rule or `*:*`. It remains one same-kind set and does not expand. `--dry-run` sends nothing and reports the planned counts and fallback facts without token or price claims. Bare output emits one deterministic JSON edge per line, keeps edges at or above the inclusive cut, emits no duplicate, and preserves completed edges when a later logical question fails. A failed question never creates an edge. Existing exit codes remain in force, including 0 for a completed run with no edges.
 
-The user supplies no one/many marker. Experiment 239 found no useful F1 gain from that marker. The planner keeps every choice option at or above the cut. Multiple true targets remain a known weakness: both methods found every singer for only 1 of 19 Beatles duets at their compared settings. Runner-up confirmation is unmeasured, changes the method, and does not block this ticket.
+## Shared entity and edge owner
 
-## Engine and command work
+`core/relation` owns one validated `RelationEntity { name, kind }`, one `RelationEntityView { name(), kind() }`, and one generic `RelationEdge<E> { relation, source: E, target: E, probability }`. The planner stays index-based and generic over the view. The assembler keeps the single threshold comparison, direction normalization, self exclusion, and mapping interpretation.
 
-Add only the standalone `relate` orchestration around the shared planner:
+`RelationEntity` serializes only `name` and `kind`. `RecognizedName` implements the view and keeps offsets and strength. The relate reader constructs `RelationEntity`; its renderer serializes `RelationEdge<RelationEntity>`. Recognition serializes `RelationEdge<RecognizedName>` through its current result path. No second planner, mapping table, threshold comparison, edge type, or edge serializer is allowed.
 
-1. Parse and validate entities, ordered rules, optional `reads` phrases, and the cut before any external effect.
-2. Ask the shared planner for typed logical questions and their edge map.
-3. Submit every many-question plan through ticket 0079's exact-size request path.
-4. Merge typed answers in logical order and ask the shared edge assembler for the ordered edge stream.
-5. Render the bare stream, standard detailed result, dry-run plan, diagnostics, and exit code through existing owners.
+Migration adds the standalone entity and view, generalizes the existing edge and assembler, adapts recognition, then calls the same path from relate. Tests use both endpoint types with the same mappings, prove relate omits `start`, `end`, and `strength`, prove recognition retains them, and prove equal names with different kinds remain distinct.
 
-`--dry-run` sends nothing and reports the entity count, each relation's routed method, exact logical question count, fallback reason when present, exact split-request count, and exact encoded bytes per request. The public help describes the quadratic same-kind path and the 255-entity ceiling. It makes no token, price, or speed claim.
+## Shared planner corrections
 
-An under-budget request keeps the planner's established bytes and one logical request. Ticket 0079 preserves question order and request identity when it splits an oversized plan. Do not add relate-specific splitting or packing.
+The planner scans entities once and records concrete kinds in first-seen order. A concrete rule side expands to itself. A rule `*` expands to all admitted concrete kinds in that order. It plans each expanded kind pair separately, keeps rule/kind/entity order, and excludes self-pairs. `--either` removes reverse duplicates by first-seen order; one-way `*:*` keeps both directions and same-kind one-way rules keep ordered pairs.
 
-## Dependency and ownership boundary
+Same-kind pairs use H. Both-way rules ask one unordered yes/no per pair. One-way rules ask one yes/no for each ordered direction. Different-kind pairs ask from the larger side over the smaller side plus `none`; equal sides ask from the declared source side. Every non-`none` option at or above the cut becomes an edge.
 
-Implementation starts from main only after ticket 0079 has landed. Ticket 0079 owns generic exact-size splitting, preflight of every chunk before the first send, request identity, ordered aggregation, replay/cache behavior, cancellation between chunks, and under-budget byte preservation. This ticket consumes that path and adds no splitter proof.
+If one choice would exceed 255 wire options including `none`, or an explicit profile request-byte limit, that concrete relation falls back to H. Other expanded relations keep their own method. The preflight sends nothing when a plan cannot fit. The line synthetic kind is the one-set exception.
 
-Implementation also starts after ticket 0080 has landed its shared relation planner and edge assembler. Ticket 0080 owns planner policy because `recognize` needs it first. Ticket 0081 owns the `relate` command, whole-set entity grammar, 255-entity guard, relate-specific dry-run/help/specification/how-to pages, and standalone edge stream. It does not rebuild recognition, relation planning, fallback, thresholding, or edge serialization.
+H request state carries one numbered entity table and one copy of the relation's `reads` wording. Each H question carries only a pair statement such as `Does this hold: Item 1 and Item 2?`. Recognition keeps its original source text byte-for-byte as source context in this state; non-relation evidence remains unchanged. Request identity, recording, replay, and profile sizing use the final encoded state and questions.
 
-The new-row proposal in `sdlc/issues/2026-09-23-relate-in-a-database-kinds-new-rows-and-the-cache.md` has no ruled command grammar or cache policy. This ticket records it as follow-up work and ships whole-set relate only. It does not invent `--new`, a second input set, or incremental graph mutation.
+Required regressions cover wildcard expansion, one-sided wildcards, `*:*`, line input, direction, duplicate suppression, H state wording, and the 255/profile boundaries. A compiled recognition proof checks source text, one-copy wording, pair-only H questions, request order, offsets, and strength. The prior instruction forbidding shared regression tests is removed; existing 0080 tests remain.
+
+## Detailed-result ruling
+
+Details must show mixed choice and H answers, accepted candidates, rejected candidates, failed questions, request identity, and safe failure data. Ian ruled Option A on 2026-09-23 because it matches `recognize --details`, keeps each question self-contained and ordered, and supports run comparison through each entry's request digest without making public question ids permanent.
+
+### Option A: ordered question entries (ruled)
+
+Keep `value` as the accepted edge array and add `answer.questions` in logical construction order. A successful choice entry is:
+
+```json
+{"request":"<digest>","relation":"works_for","method":"choice","asker":{"name":"Ada","kind":"person"},"candidates":[{"entity":{"name":"Acme","kind":"organization"},"probability":0.84,"accepted":true},{"entity":{"name":"Other","kind":"organization"},"probability":0.10,"accepted":false},{"none":true,"probability":0.06,"accepted":false}],"pick":{"name":"Acme","kind":"organization"}}
+```
+
+An H entry uses `method: "yes_no"`, `source`, `target`, `probability`, and `accepted`; a rejected H entry sets `accepted` to false. A failed entry has the request and question identity plus the existing structured `failure` object and has no probability or accepted candidate. `meta.failed_questions` keeps its existing count and includes each failed entry. Cost: about 200 production and 300 test lines, plus a result specification update.
+
+### Option B: keyed standard answer entries
+
+Keep `value` as the accepted edge array and add `answers` keyed by stable ids such as `r1-q1`. Each entry reuses standard `question` and `answer` fields, adds accepted and rejected candidate lists, and carries either probability data or `failure`. Cost: about 150 production and 250 test lines; public ids become part of the contract.
+
+### Option C: separate audit and failure arrays
+
+Keep `value` as the accepted edge array and add `audit` and `failed_questions` arrays. Audit rows carry request digest, method, entities, all candidate probabilities, and acceptance; failure rows carry digest, question identity, and `failure`. Cost: about 100 production and 220 test lines; callers must join arrays and can lose ordering.
+
+Option A is the public shape. `value` contains accepted edges only. Exact JSON tests cover one choice entry, one yes/no entry, one rejected entry, and one failed entry.
 
 ## Scope and exclusions
 
-Allowed: `relate` specification and executable page; command arguments and help; question-file schema and canonical digest support; whole-set entity parsing; calls into the shared planner and edge assembler; private-engine submission through the 0079 request path; bare and detailed rendering; focused command, secrecy, replay, dry-run, and loopback tests; one mechanically adapted replay case from experiment 237 and one from experiment 239; one replay-only how-to; exact ratchet, ticket, queue, and record updates.
+Scope includes the shared entity/view and generic edge migration; wildcard and H-state corrections; relate input, syntax, field overrides, 255 guard, dry-run, help, specification, and replay-only how-to; calls through the shared planner and 0079 path; the selected detailed serializer; offline fixtures; the focused recognition regression; and focused policy, format, ratchet, test, and whitespace evidence.
 
-Excluded: recognition; a second planner or edge type; public Rust, C, language, Polars, or database APIs; the `surfaces` branch; annotate option sources; new-row or two-set syntax; graph traversal; graph storage or mutation; ids in place of entities; a one/many or method marker; runner-up confirmation; candidate blocking; threshold comparison; prompt optimization; a `0.4` default; packed records; token or price claims; dependencies; workflows; publication; credentials; live calls; and paid calls. Relations remain labeled beta everywhere they appear.
-
-Production changes may touch at most seven Rust files. Total additions may not exceed 450 nonblank production Rust lines or 900 nonblank Rust lines including tests. Add no dependency. Keep every source and test file under the repository's 500-line limit. Search the 0080 planner, question-file, request, result, and record-format owners before raising the exact ratchet. The implementation and review record must name each increase and why it earns its lines.
+Exclusions include a second planner, edge assembler, threshold rule, or splitter; unrelated recognize behavior; public Rust, C, language, library, database, or `surfaces` APIs; new-row input; runner-up questions; one-to-many controls; method flags; unmeasured Jev byte constants; credentials; production data; retained artifacts; live calls; and paid calls.
 
 ## Acceptance
 
-- Observe focused red tests before implementation. Pin the relate command's default and overridden entity pointers, Unicode names, same-name/different-kind identity, exact-duplicate refusal, empty-input exception, missing kinds on nonempty input, line-input `*:*` behavior, 255 entities accepted, 256 refused, and local no-send failures.
-- At the command boundary, use typed planner doubles or already-owned planner fixtures to prove that parsed entities and rules reach the 0080 planner unchanged, its routed method and fallback reason reach dry-run, and its typed edges reach rendering unchanged. Do not repeat 0080's routing, threshold, wording, option-ceiling, size-fallback, or edge-assembly tests.
-- Replay one recorded cross-kind case from experiment 239 and one same-kind H case from experiment 237 with no key or network. Prove the standalone command reaches the existing request path and prints the ruled self-contained edges at the default `0.5`. Keep experiment 239's tuned `0.4` and duet result as evidence only. Never edit a recorded response to make it agree.
-- Pin the exact bare edge line, empty output, standard detailed result, deterministic edge order, inclusive `0.5` default, both-ways endpoint order, no duplicate edge, partial-failure exit, dry-run report, and all ordinary exit codes.
-- Count loopback requests to prove malformed entities, malformed rules, impossible profile limits, 256 entities, and dry-run send nothing. Search stdout, stderr, Debug output, recordings, cache entries, and fixture files for credentials and unredacted failure evidence on every new success and failure path.
-- Publish `specification/relate.md`; update the specification index plus question-file, result, channels, backend-profile, and recording pages where the command changes them; and add one replay-only how-to in the ADR 0011 form. State that entities are name plus kind, edges are self-contained, relations are beta, same-kind cost grows with pairs, cross-kind multi-target recall is weak, and no public price is claimed.
-- Run focused tests, policy, exact ratchet, formatting, Clippy, and `git diff --check` before code review. An independent reviewer checks grammar and output, the 0080 and 0079 ownership seams, deterministic replay, local no-send paths, and budgets. The coordinator then runs all four local gates sequentially with the key and base-address variables unset. No live or paid call runs.
+- The command and input rules above pass focused no-send, ordering, duplicate, empty-input, wildcard, direction, threshold, failure, and line-mode tests.
+- Shared planner tests prove first-seen wildcard expansion, hybrid routing, no self-pairs, no reverse duplicates, H state wording, and exact 255/profile fallback boundaries. Existing 0080 tests remain.
+- Generic endpoint tests prove name-and-kind-only relate output and unchanged recognition offsets and strength.
+- The selected detailed result shows accepted and rejected candidates, failed questions, request identity, and safe failure data in the exact chosen shape.
+- Offline fixtures and fake backends cover replay, partial failure, secrecy, dry-run, and impossible-plan zero sends. No credential appears in output, logs, hashes, fixtures, or records.
+- Each changed Rust file stays below 500 nonblank lines. The exact ratchet, policy, formatting, focused tests, specification cases, and `git diff --check` pass before Sol review. No live or paid call runs.
 
-## Dependencies and blockers
+## Budget
 
-- Ticket 0079 must land on main with its reviewed splitter contract.
-- Ticket 0080 must land on main with the one pure planner and self-contained edge assembler.
-- No experiment blocks the ruled planner. The multi-target weakness is accepted and nonblocking. A later ticket may test runner-up confirmation without changing this ticket's public shape.
+Budgets are deltas from landed 0080. Its 15 production files, 8 test-only files, and 2,304 gross lines are not counted again.
 
-## Complexity
+| Owner and actual tree paths | Production files | Test-only files | Production lines | Test lines |
+| --- | ---: | ---: | ---: | ---: |
+| Shared relation entity/planner/state: `core/relation.rs`, `core/plan.rs`, `core/mod.rs`, one state split if needed | 4 | 3 | 360 | 320 |
+| Recognition/request proof: `core/recognize.rs`, `cli/recognize.rs`, `core/adapters/systemone/request.rs` | 3 | 2 | 220 | 260 |
+| Relate command: `cli/args.rs`, `cli/args/command.rs`, `cli/mod.rs`, new relate module | 4 | 3 | 520 | 420 |
+| Selected result/spec owner: one new private result owner and its fixtures | 1 | 1 | 180 | 180 |
+| **Maximum** | **12** | **9** | **1,100** | **900** |
 
-Contract 1; state/timing 2; reach 1; proof 2; cost of error 1; total 7. Final level: 3. Luna Max owns implementation design, case analysis, code, and remediation. Independent Sol High sessions recheck this amended ticket before code and review the final diff. Stop and re-score if the work needs a new public setting, a second planner or splitter, changed request bytes under budget, a live fixture, a public library API, more than seven production Rust files, or more than the stated line budget.
+The gross added Rust budget is 2,000 nonblank lines. The implementation records actual files and counts before Sol review. It splits an existing 0080 file before 500 lines. A budget increase requires a new ticket decision.
+
+## Dependencies and review
+
+Dependencies are landed 0079 request scheduling and landed 0080 shared relation planning. No dependency is added.
+
+Contract 1; state and timing 2; reach 1; proof 2; cost of error 1; total 7; final level 3; Luna Max owns implementation design and code; Sol High independently reviews the design and implementation.
+
+Sol rejected the first design for four substantive gaps: no shared name-and-kind endpoint owner; false wildcard and H-wording claims; no exact mixed detailed-result shape; and stale budgets that forbade required recognition regressions.
+
+This remediation assigns the shared owner, scopes both planner corrections, requires recognition proof, re-estimates budgets, and records Ian's Option A ruling. The design is ready for Sol re-review. No product code, surface file, live call, paid call, implementation gate, targeted Sol repair, reopened defect, or elapsed start-to-accept time exists for this pass. The full trial record is `sdlc/records/0081-build-relate.md`.

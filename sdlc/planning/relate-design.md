@@ -1,136 +1,106 @@
-# `relate`: the design for the command and the nine surfaces
+# `relate`: design authority for the command and future surfaces
 
-Status: Proposed by the marketing side on 2026-09-21, which holds the product and library shape job by Ian's word. Ian ruled the same day: "Let's have them build relate at the same time." `relate` is the tenth function and is built with `recognize`. The build team reviews this page before any ticket. It authorizes no build and no paid run.
+Status: amended 2026-09-23 after the independent Sol rejection of ticket 0081 and Ian's Option A ruling. This page authorizes no live or paid run.
 
-Read `recognize-design.md` first. `relate` reuses its relation rule unchanged, and step three of `recognize` is `relate` run over the names found in a text. The engine holds one pair-asking path for both.
+Read `recognize-design.md` first. `recognize` and `relate` use one shared relation planner and one shared edge assembler. Recognition keeps its complete name fields. Standalone relate returns name-and-kind endpoints.
 
 ## The one line
 
 **Find records that clash, repeat, or rely on each other.**
 
-Beta, like the relations in `recognize`, and every page says so in the same sentence.
+## Current command contract
 
-## The command
-
-```
-thinkthen relate [OPTIONS] [RELATION]...
-thinkthen relate [OPTIONS] @links.json
+```text
+thinkthen relate [OPTIONS] RELATION...
+thinkthen relate [OPTIONS] @entities.json
 ```
 
-The relations sit where `tag` puts its labels. A bare name is a one-way relation between any two records.
+One-way rules use `NAME=SOURCE_KIND:TARGET_KIND`. A bare `NAME` means `NAME=*:*`. `--either` makes one unordered relation. A question file carries the same rule and its `reads` phrase under `relate`.
 
-```
-thinkthen relate caused_by --either same_as --lines < alerts.txt
-thinkthen relate covers=test:requirement --jsonl --kind-field /type < items.jsonl
-```
+The command reads JSONL, CSV, or TSV entities. `/name` and `/kind` select fields, and command options can override those fields. Without a kind field, records receive synthetic kind `*`, and a rule naming a concrete kind fails locally. Both values must be nonempty. Input order stays stable. The same name with two kinds is two entities. An exact duplicate name and kind is a usage error. More than 255 entities is a usage error. Empty input succeeds without questions or edges.
 
-| Option | Does |
-| --- | --- |
-| `RELATION` as `NAME` or `NAME=FROM:TO` | A one-way rule. `NAME` alone means `NAME=*:*`. `FROM` and `TO` are a kind or `*` |
-| `--either NAME` or `--either NAME=KIND:KIND` | A rule that reads the same both ways. Asked once per pair |
-| `--kind-field POINTER` | Where each JSON record keeps its kind. Without it every record is kind `*`, and a rule that names a kind is a usage error |
-| `--threshold T` | The bar an edge must reach. Default 0.5 |
-| `--details`, `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`, `--dry-run`, `--cache`, `--replay`, `--no-cache` | As on every function |
+`--lines` assigns synthetic kind `*` to each nonempty line. It accepts a bare relation or `*:*` only. The line set uses the same-kind planner below and does not expand. `--dry-run` sends nothing and reports planned counts and fallback facts without token or price claims. No planner method, one-or-many marker, runner-up question, or packing control is public. The threshold defaults to `0.5` and accepts the cut. Existing exit codes remain in force, including 0 for a completed run with no edges.
 
-A question file carries the same rules with a `reads` phrase for each, exactly as in `recognize-design.md`, under the key `relate`.
+## Current output contract
 
-Exit codes: 0 when the run finished, including no edges. 2, 4, 5, and 70 as everywhere.
+Bare output emits one JSON edge per line:
 
-## How it asks
-
-Ian ruled the method on 2026-09-21: it is organized around choices.
-
-- The rules and the kinds give the list of legal pairs. A record is never paired with itself.
-- Each unordered pair is one pick-one question. The options are the relations that pair allows, each way round where the rule is one-way, plus "no relation". The user never writes "no relation".
-- All the records cross once, and as many pairs as the backend's question limit allows ride in each request.
-- `--dry-run` prints the pair count and the request count. Pairs grow with the square of the records. `relate` refuses more than 255 records, the `find` limit, with exit 2.
-
-## What comes back
-
-One JSON object per edge, one per line, so the output pipes:
-
-```
-{"name":"caused_by","source":1,"target":4,"probability":0.94}
-{"name":"caused_by","source":2,"target":4,"probability":0.94}
+```json
+{"relation":"sung_by","source":{"name":"Octopus's Garden","kind":"song"},"target":{"name":"Ringo Starr","kind":"person"},"probability":0.93}
 ```
 
-- `source` and `target` are record numbers, counted from 1 in input order. `source` is the subject and `target` is the object: record 1 was caused by record 4.
-- `--details` adds both records' text and every option's probability.
-- An `--either` edge prints once, with the lower record number in `source`.
-- `probability` is the probability of the picked option. It is a plain probability, so the vocabulary's word holds.
+`source` and `target` are complete input entities. One-way edges use the declared direction. `--either` normalizes them to input order. The command emits no duplicate edge. A failed later question preserves completed edges, and a failed question never creates an edge.
 
-**One thing to reconcile.** `recognize-design.md` calls the number on a relation `confidence`, because the recognize specification discounts it by the margin. One engine path should print one number under one name. The suggestion: relations print `probability` in both functions, and the margin discount stays on names only.
+The detailed result audits mixed choice and H questions through ordered entries under `answer.questions`. Each entry is self-contained and carries its request digest. It includes accepted candidates, rejected candidates, and failed questions. `value` contains accepted edges only. This Option A ruling matches the ordered `answer.tokens` shape from `recognize --details` without making public question ids permanent.
 
-## The first real output
+## Current final hybrid planner — authoritative
 
-`experiments/225-relate-demo/`, run on 2026-09-21 through the live guard. Four made-up alerts, two rules, six pairs, one request, 1,365 input tokens. At the default bar the model returned four `caused_by` edges. Two were sound, at 0.94 each. One tied a late export to a full disk at 0.84, which the text does not support. One split between `caused_by` at 0.59 and `same_as` at 0.31. A bar of 0.9 kept the two sound edges. The deck slide shows both runs, because the number and the bar are the product.
+This is the only current method ruling. It applies to `relate` and to the relation step inside `recognize`.
 
-## The libraries and the databases
+### Entity and wildcard preparation
 
-| Surface | The call | Returns |
+The shared core owns one validated `RelationEntity { name, kind }`, one `RelationEntityView` over that value and `RecognizedName`, and one generic `RelationEdge<E>`. The planner and question map use entity indexes. The assembler is generic over the endpoint value. Relate serializes only `name` and `kind`. Recognize continues to serialize offsets and strength.
+
+The planner scans the input once and records concrete kinds in first-seen order. A rule's concrete kind expands to itself. A rule's `*` expands to all admitted concrete kinds in that order. The synthetic line kind is one special same-kind set and does not expand.
+
+The planner plans each expanded concrete kind pair separately. It keeps rule order, kind order, and entity order. It excludes self-pairs. `--either` removes reverse duplicates by first-seen order. One-way `*:*` keeps both directions. A same-kind one-way rule keeps ordered pairs.
+
+### Method selection
+
+- A same-kind relation uses H. Both ways asks one unordered yes/no per pair. One way asks one yes/no for each ordered direction.
+- A different-kind relation asks from the side with more entities. Each question offers the smaller side's entities and `none`. Equal sides ask from the declared source side. Every accepted non-`none` option at or above the cut becomes an edge.
+- If a choice would exceed 255 wire options, including `none`, or an explicit backend profile's request-byte limit, that concrete relation uses H. Other concrete pairs from the same wildcard rule keep their own method.
+
+The 255 and profile checks happen before any request. A plan that cannot fit does not send. Ticket 0079 supplies request splitting, identity, ordering, replay, and cancellation. It does not choose a relation method.
+
+### H request wording
+
+H request state carries one numbered entity table and one copy of the relation's `reads` wording. Each H question carries only its pair statement, such as `Does this hold: Item 1 and Item 2?`. The question does not repeat the table, names, kinds, or `reads` wording.
+
+Recognition keeps its complete source context in the state. Its original source text remains byte-for-byte in the relation state. Relate uses the entity table as its source context. The state is private request data and is not a new public result type.
+
+0081 owns the wildcard and H-state correction because the landed planner does not yet provide either promise. Recognition regression tests must prove the source text, one-copy state wording, pair-only H questions, request order, offsets, and strength. The existing non-relation evidence path stays unchanged.
+
+## Shared ownership and evidence
+
+`core/relation` owns the entity view, generic edge, wildcard expansion, planner, question mappings, threshold assembly, and direction rules. `recognize` owns `RecognizedName` and recognition-only fields. `relate` owns entity input and the bare edge renderer. No command owns a second planner or edge serializer.
+
+Migration adds the standalone entity and view, generalizes the existing edge and assembler, adapts recognition, then calls the same generic path from relate. Tests prove that the same mappings produce name-and-kind-only relate endpoints and full recognize endpoints. They also prove equal names with different kinds remain distinct.
+
+Experiment 239 supports choice for different kinds. Its measured graph used one choice per larger-side entity and retained options above the cut. Same-kind H and the fallback boundary come from the 2026-09-23 planner direction and bounded probes. Duets remain a known model limit. The product does not add runner-up questions in this ticket.
+
+The relation rule continues to use `source` and `target` everywhere. The command rule spelling keeps `NAME=FROM:TO` because it names kinds, not JSON fields. Future library and database surfaces use the same source and target entity meaning.
+
+## Future surfaces
+
+Library and database surfaces remain future work. They must consume the same edge meaning and must not create a second planner. Ticket 0081 does not change the `surfaces` tree.
+
+| Surface | Future call | Edge result |
 | --- | --- | --- |
-| Python | `tt.relate(alerts, relations=["caused_by"], either=["same_as"])` | A list of edges. `tt.relate(df, on="body", ...)` returns a DataFrame of edges with the source indexes, ready for `networkx.from_pandas_edgelist` |
-| TypeScript | `await tt.relate(alerts, { relations: ["caused_by"], either: ["same_as"], signal })` | `Edge[]` |
-| Ruby | `ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])` | An array of structs |
-| R | `tt_relate(alerts$body, relations = "caused_by", either = "same_as")` | A data frame of edges, ready for `igraph::graph_from_data_frame` |
-| Rust | `tt.relate(&Relate::new().relation("caused_by", Kind::Any, Kind::Any)?.either("same_as", Kind::Any)?, &alerts)?` | `Vec<Edge>` |
-| C | `thinkthen_relate(tt, spec_json, texts, lens, count, &out_json, &out_len)` | The edges as a JSON string |
-| DuckDB | `SELECT * FROM thinkthen_relate((SELECT id, body FROM alerts), ['caused_by'])` | Rows `(name, from_id, to_id, probability)` |
-| SQLite | `thinkthen_relate('alerts', 'id', 'body', 'caused_by')`, table-valued | The same rows |
-| PostgreSQL | `thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by'])`, set-returning | The same rows |
+| Python | `tt.relate(records, relations=["caused_by"])` | Edges with `source`, `target`, and `probability` |
+| TypeScript | `await tt.relate(records, { relations: ["caused_by"] })` | `Edge[]` |
+| Ruby | `ThinkThen.relate(records, relations: %w[caused_by])` | An array of edges |
+| R | `tt_relate(records, relations = "caused_by")` | A data frame of edges |
+| Rust | `tt.relate(&spec, &records)?` | `Vec<Edge>` |
+| C | `thinkthen_relate(...)` | Edges as a JSON string |
+| DuckDB, SQLite, PostgreSQL | Table or query input | Rows with source, target, and probability |
 
-`relate` is the one function a database cannot run row by row, because it needs every record at once. Each engine therefore takes a table or a query. Edges as rows are what a recursive query walks, and the manual shows one.
+The table does not settle future detailed-result or host-language types.
 
-## What is open for the build team
+## Superseded history: 2026-09-21 pick-one proposal
 
-1. The `probability` and `confidence` question above.
-2. A pick-one question allows one relation per pair. The experiment brief measures how often that loses a true second relation.
-3. The one-question-per-subject form for a relation where a subject has one object. It costs one question per record. The brief measures it against pairs, and `find --in` is the same form.
-4. The record limit of 255 is a guess taken from `find`.
+The first proposal asked one pick-one question per unordered pair, with every legal relation and `no relation` as options. It used record numbers in output and packed pairs under backend limits. It predates the entity input, hybrid method, and name-and-kind edge rulings. It is retained for history only.
 
-## One tool, ten functions
+## Superseded history: 2026-09-23 all-H proposal
 
-`--details` prints the standard result object, `thinkthen.result/1`, with this function's value in `value` and the same `question`, `answer`, and `meta` keys as the other functions. The question file grammar, the exit-code table, the cache, and the recording are the same. A caller that handles one function's result handles this one. A question that fails inside a request that otherwise succeeded is marked on that answer and counted in `meta`. It never prints `null`, because `null` means "not sure".
+The all-H proposal said every relation, including `recognize` relation steps, should ask one yes/no per pair. It withdrew three-way choice and placed shared wording in request state. Ian's later final direction combines cross-kind choice with same-kind H. The all-H method is superseded and is not a current authority.
 
-## Ruled 2026-09-21: `relate` reads records, and names the user already has are records
+## Superseded history: 2026-09-23 three-way proposal
 
-The recognize team's closing note says `relate` works "over records or provided entities". The product side rules one form. `relate` reads records. A user who already has names passes each name as a record, with its kind in the field `--kind-field` points at, and the relation rules apply to those kinds. No second input form exists.
+The three-way proposal asked a one-way pair whether the direction was source to target, target to source, or neither. It is superseded. One-way relations now use the current hybrid rule: cross-kind choice from the larger side and same-kind ordered H. The three-way method must not return in ticket 0081.
 
-One case is different: names inside one text, where the sentence around them decides the relation. That is `recognize` given names the user already found. It stays in the backlog, in `sdlc/issues/2026-09-21-candidates-for-a-tenth-function-relate-and-find-in.md`. Ian can overturn this.
+## Ian ruling and current rule
 
-## Ruled 2026-09-21: a relation's ends are `source` and `target`, everywhere
+Ian chose Option A on 2026-09-23. Ordered self-contained entries represent choice, H, rejected candidates, and failures without a second join step. Each entry's request digest supports audit and run comparison without permanent public question ids. The estimated cost is about 200 production and 300 test lines.
 
-`from` is a reserved word in Python and in SQL, so four of the nine surfaces could never say it. The library team chose `source` and `target` for every host. The product side extends that to the command's own JSON and to the question file, so no door converts anything and a user sees one pair of words on every surface. The rule on the command line is unchanged, `--relation NAME=FROM:TO`, because it names no field. This section overrides any older line on this page that says `from`, `to`, `head`, or `tail`. Ian can overturn it.
-
-## Direction 2026-09-23: rebuild the graph from strings, and relate plans its own questions
-
-Ian's direction on 2026-09-23. The user hands relate a list of entities, each a name and a kind, the same shape recognize returns: `John Lennon, person`, `Octopus's Garden, song`, `Help!, album`, `Help!, song`. The user also names the relations: `sung_by=song:person`, `appears_on=song:album`. Relate returns the graph as edges. The user never picks a method, and relate plans the questions per relation.
-
-- A relation between two different kinds asks one `choose` per source entity over the legal targets plus "none". Every option above the cut becomes an edge, so a duet yields two `sung_by` edges.
-- A relation within one kind (duplicates, contradicts, causes) asks method H.
-- One entity name may carry two kinds (`Help!` the song and `Help!` the album). An entity is its name plus its kind.
-- Recognize's relation step runs the same planner over the names it found. `recognize | relate` and relate over a user's own list give one output shape.
-
-The open question is whether the kind shape alone picks the method, or whether a rule needs a `one` or `many` marker. Choose splits one probability across its picks, so a source with three true targets may fall under the cut (experiment 237, duplicate clusters). The Beatles graph test answers it: about 200 official songs, the four Beatles, and the albums, with sourced truth from `experiments/238-beatles-real-data/data/songs.tsv`. That test runs the planner against method H alone. Ticket 0081's design review waits for it. The edge shape does not change.
-
-### Result 2026-09-23: the kinds pick the method, and no marker is needed
-
-`experiments/239-beatles-graph/` ran the direction above on 184 songs, the four Beatles, and 13 albums from Wikipedia (386 true edges). The planner (choose per song) beat method H on precision and F1 for both relations at every cut. It asked 368 questions against 3,128 and used 116,011 input tokens against 140,283. At its best cut of 0.4 the planner scored precision 0.83, recall 0.68, F1 0.75. H scored 0.48, 0.72, 0.58 at 0.6. Taking only the top pick scored the same F1 as keeping every option above the cut, so a rule needs no one/many marker. The kind shape picks the method. Duets are a known limit. Both singers came back for 1 of 19 duets under either method, because the model is unsure of the second singer however the question is asked. `scripts/relate.py` there is the reference harness: entities and rules in, edges in the ruled shape out. The default cut stays 0.5 until a second set confirms 0.4. Ticket 0081 can start design review on this planner.
-
-### The planner's two remaining rules, 2026-09-23
-
-Decided by the product side and open to Ian's overturn. First, a relation between two kinds asks from the side with more entities and offers the smaller side as options. Songs pick among four people, and people never pick among 184 songs. Second, when the options for one question would pass the tool's 255-option ceiling or an explicit profile's request-byte limit, that relation falls back to method H. Probes accepted 101 and 255 options. No Jev byte ceiling is named until a measurement supports one. The duet limit stays open. A cheap second step would ask one yes/no for each runner-up option above a low floor. It is untested and does not block ticket 0081, because the method is internal and the edge shape does not change.
-
-## Ruled 2026-09-23, revised after experiment 237: method H for every relation
-
-Ian passed this to the build team on 2026-09-23, after the bake-off in `sdlc/issues/2026-09-23-relate-methods-bake-off.md` (`2a8d43f`). Every relation, and recognize's relation step, uses method H. H asks one yes/no per pair per relation, and the wording the questions share rides once per request. Each direction of a one-way relation is its own yes/no. The three-way choice for one-way relations is withdrawn. The default cut stays 0.5, and requests are split under an explicit profile's limits. Across seven sets H found 89 of 89 true links with 11 false ones, at the fewest tokens on every set. Matching one list against another is `choose` per record, not relate. The edge shape ruled below and in ticket 0081 does not change. This section overrides the method in the section that follows.
-
-## Ruled 2026-09-23: yes/no per both-ways relation, a three-way choice per one-way relation
-
-Ian ruled on 2026-09-23 and overturned the pick-one method of 2026-09-21. A relation that reads the same both ways, such as `same_as`, gets one yes/no question per pair. A relation with a direction gets one three-way choice per pair: source to target, target to source, or neither. A pair can hold several relations, and each direction keeps its own probability. The evidence is `experiments/225-recognize-harvest-package/relate/measurements/VERDICTS.md`, arm (a). Twelve pairs held two true relations each. Pick-one found 11 of 24 at 2,449 tokens, and yes/no found 22 of 24 at 1,714 tokens. With several rules, yes/no asks one question per rule and stays cheaper up to about three rules. This section overrides the method sentence above.
-
-Two more answers to the build team the same day. Recognition policy knobs stay out of this round, and only `--threshold` and `--relation-threshold` ship. Splitting is in this round and required. An explicit backend profile supplies exact byte, expanded-question, and choice-option limits. No Jev byte ceiling is known until measured. Splitting is a correctness fix and needs no paid measurement. Dry-run sizes and replay prove it. Packing to save money stays out of this round. A request that fits keeps its historical bytes, and no cost claim changes.
-
-## What Ian can overturn
-
-All of it. He has ruled: `relate` is built with `recognize`, and it asks by yes/no for a both-ways relation and by a three-way choice for a one-way relation (2026-09-23).
+Current rule: `relate` uses cross-kind choice over expanded concrete kinds and same-kind lean H, with shared H wording in request state once, an inclusive `0.5` default cut, 255/profile fallback, one shared generic planner and edge assembler, and name-and-kind-only standalone endpoints. `recognize` keeps offsets and strength. Detailed output uses Option A under `answer.questions`; normal `value` contains accepted edges only.
