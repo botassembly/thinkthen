@@ -22,6 +22,15 @@ CASES = [
     ("docker run --rm img true\n", "FAIL libraries/x/check.sh:1: docker run without --pull never\n"),
     ("docker pull img\n", "FAIL libraries/x/check.sh:1: docker pull pulls an image\n"),
     ("curl -sf https://example.org/x\n", "FAIL libraries/x/check.sh:1: curl reaches past the loopback\n"),
+    ("run() {\n  docker run --rm --pull never img bash -c \"$1\"\n}\nrun 'cargo test --locked --lib'\n",
+     "FAIL libraries/x/check.sh:4: cargo inside a container without --offline\n"),
+    ("docker run --rm --pull never img bash -c 'cargo test --locked'\n",
+     "FAIL libraries/x/check.sh:1: cargo inside a container without --offline\n"),
+    ("docker run --rm --pull never img bash -c \"\n  cd x\n  cargo build --locked\n\"\n",
+     "FAIL libraries/x/check.sh:3: cargo inside a container without --offline\n"),
+    ("run() {\n  docker run --rm --pull never img bash -c \"$1\"\n}\nrun 'cargo test --locked --offline'\n"
+     "cargo test --locked\n",
+     "ok:      every package-manager call in the gate's scripts stays offline\n"),
     ("uv venv --offline .venv\nuv pip install --offline -r r.txt\npip install --no-index x\n"
      "npm ci --offline\ndocker run --rm --pull never img true\ncurl -sf http://127.0.0.1:8211/v1/stats\n"
      "echo \"run npm ci once\"\n",

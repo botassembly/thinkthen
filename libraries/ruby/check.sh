@@ -54,12 +54,13 @@ docker_run() {
     -v "$root":/src \
       -w /src/libraries/ruby \
     -e ENGINE_NULL=1 \
+    -e CARGO_NET_OFFLINE=true \
     "$image" \
     bash -eu -c "export CARGO_HOME=/src/libraries/ruby/.runtimes/cargo; $1"
 }
 
 echo "== ruby surface: the defect kind maps to its error class (shim unit test)"
-docker_run 'cargo test --locked --quiet --lib'
+docker_run 'cargo test --locked --offline --quiet --lib'
 
 echo "== ruby surface: surface tests, null backend"
 docker_run 'ruby -I lib -I tests tests/test_surface.rb'
