@@ -78,6 +78,9 @@ extern "C" {
     fn Rf_translateCharUTF8(x: SEXP) -> *const std::os::raw::c_char;
     fn STRING_ELT(x: SEXP, i: isize) -> SEXP;
     static R_NaString: SEXP;
+    fn R_CHAR(x: SEXP) -> *const std::os::raw::c_char;
+    fn REAL_ELT(x: SEXP, i: isize) -> f64;
+    fn R_IsNA(x: f64) -> i32;
 }
 
 /// The one engine value, built through the contract's connector door at the
@@ -116,11 +119,19 @@ fn clear_active() {
 /// that do not exist, and the host dies. Doubling leaves the message R
 /// finally shows byte-for-byte the engine's own text.
 fn carry(error: thinkthen_contract::Error) -> String {
+    // A message the file grammar handed back can carry a NUL byte (a
+    // question name spelled with \\u0000, say); R strings cannot hold one,
+    // and the conversion this message rides would abort the process. The
+    // four-character escape keeps the message printable and the process
+    // alive - the third review's probe aborted R with a core dump here.
     format!(
         "{}{ERROR_SEP}{}{ERROR_SEP}{}",
         error.kind,
         error.retryable,
-        error.message.replace('%', "%%")
+        error
+            .message
+            .replace('%', "%%")
+            .replace('\0', "\\u0000")
     )
 }
 
@@ -155,6 +166,21 @@ fn charsxp_text(charsxp: SEXP, what: &str) -> StdResult<String, String> {
             "{what} carries a string R cannot translate to UTF-8; convert it with enc2utf8() or iconv() first"
         )));
     }
+    if mark == CE_NATIVE {
+        // A native-marked string under a non-UTF-8 locale (LC_ALL=C is the
+        // review's probe) has no meaning the surface can know: translating
+        // it guesses, and the guess sent mangled bytes. The raw bytes are
+        // checked as UTF-8 before any translation: valid ones cross as
+        // themselves (what a UTF-8 locale would produce), invalid ones
+        // refuse with the conversion named. Latin1 and UTF-8 marks keep
+        // their locale-independent translation below.
+        let raw = unsafe { std::ffi::CStr::from_ptr(R_CHAR(charsxp)) }.to_bytes();
+        if std::str::from_utf8(raw).is_err() {
+            return Err(usage(format!(
+                "{what} carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first"
+            )));
+        }
+    }
     let translated = unsafe { Rf_translateCharUTF8(charsxp) };
     let bytes = unsafe { std::ffi::CStr::from_ptr(translated) }.to_bytes();
     std::str::from_utf8(bytes).map(str::to_owned).map_err(|_| {
@@ -162,6 +188,29 @@ fn charsxp_text(charsxp: SEXP, what: &str) -> StdResult<String, String> {
             "{what} carries bytes that are not valid UTF-8; convert it with enc2utf8() or iconv() first"
         ))
     })
+}
+
+/// The deadline argument as the one decided spelling: `NULL` is absence,
+/// `-1` is the only no-deadline number (the contract checks it), zero is
+/// spent, and every other number is seconds. `NA` refuses: extendr maps an
+/// NA real to absence, which silently meant no deadline - the third
+/// review's probe answered under it.
+fn deadline_of(value: &Robj) -> StdResult<Option<f64>, String> {
+    if value.is_null() {
+        return Ok(None);
+    }
+    if value.rtype() == Rtype::Doubles && value.len() == 1 {
+        let held = unsafe { REAL_ELT(value.get(), 0) };
+        if unsafe { R_IsNA(held) } != 0 || held.is_nan() {
+            return Err(usage(
+                "the deadline is NA: pass -1 for no deadline, seconds as a number, or NULL".to_owned(),
+            ));
+        }
+        return Ok(Some(held));
+    }
+    Err(usage(
+        "the deadline is seconds as a number, -1 for no deadline, or NULL".to_owned(),
+    ))
 }
 
 /// One R value as one string.
@@ -208,6 +257,20 @@ fn interrupt_pending() -> bool {
         unsafe { R_CheckUserInterrupt() }
     }
     unsafe { R_ToplevelExec(check, std::ptr::null_mut()) == 0 }
+}
+
+/// Deliver R's own interrupt for real, from pure R-side code where no Rust
+/// frame owns anything. The synthetic condition this replaces was raised
+/// through `stop()`, so a user's `options(error = ...)` hook fired on an
+/// interrupt - the third review's probe - and R continued instead of
+/// halting. This is the real check, unguarded: the jump it makes is R's
+/// own interrupt delivery, caught by `tryCatch(interrupt = ...)` exactly
+/// as a genuine Ctrl-C is. Called only after the guarded check reported a
+/// pending interrupt and the call's cleanup ran; if the poll finds nothing
+/// left to deliver, it returns and the R half's fallback stops the call.
+#[extendr]
+fn tt_raise_interrupt() {
+    unsafe { R_CheckUserInterrupt() }
 }
 
 /// One engine call on a fresh worker thread, R's guarded interrupt check on
@@ -340,9 +403,10 @@ fn tt_question_grammared(body: Robj) -> StdResult<ExternalPtr<Question>, String>
 fn tt_decide_column(
     question: ExternalPtr<Question>,
     records: Robj,
-    deadline: Option<f64>,
+    deadline: Robj,
 ) -> StdResult<List, String> {
     let records = texts_of(&records, "the records")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     let (codes, probabilities) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -360,8 +424,9 @@ fn tt_decide_column(
 
 /// One `decide` of one evidence.
 #[extendr]
-fn tt_decide_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_decide_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Robj) -> StdResult<List, String> {
     let evidence = text_of(&evidence, "the evidence")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     let code = call(deadline, move |engine, options| {
         engine.decide_opts(&question, &evidence, options).map(answer_code)
@@ -374,9 +439,10 @@ fn tt_decide_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Opti
 fn tt_choose_one(
     question: ExternalPtr<Question>,
     evidence: Robj,
-    deadline: Option<f64>,
+    deadline: Robj,
 ) -> StdResult<Nullable<String>, String> {
     let evidence = text_of(&evidence, "the evidence")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     let pick = call(deadline, move |engine, options| {
         engine.choose_opts(&question, &evidence, options)
@@ -389,8 +455,9 @@ fn tt_choose_one(
 
 /// One `score`: the weighted position and the nearest level.
 #[extendr]
-fn tt_score_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_score_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Robj) -> StdResult<List, String> {
     let evidence = text_of(&evidence, "the evidence")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     let (value, nearest) = call(deadline, move |engine, options| {
         engine
@@ -402,8 +469,9 @@ fn tt_score_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Optio
 
 /// One `tag`: the labels that held, in the question's order.
 #[extendr]
-fn tt_tag_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<Vec<String>, String> {
+fn tt_tag_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Robj) -> StdResult<Vec<String>, String> {
     let evidence = text_of(&evidence, "the evidence")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     call(deadline, move |engine, options| engine.tag_opts(&question, &evidence, options))
 }
@@ -413,9 +481,10 @@ fn tt_tag_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<
 fn tt_filter_places(
     question: ExternalPtr<Question>,
     records: Robj,
-    deadline: Option<f64>,
+    deadline: Robj,
 ) -> StdResult<Vec<i32>, String> {
     let records = texts_of(&records, "the records")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -427,8 +496,9 @@ fn tt_filter_places(
 
 /// `rank` over records: places in rank order with their probabilities.
 #[extendr]
-fn tt_rank_all(question: ExternalPtr<Question>, records: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_rank_all(question: ExternalPtr<Question>, records: Robj, deadline: Robj) -> StdResult<List, String> {
     let records = texts_of(&records, "the records")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     let (places, probabilities) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -444,8 +514,9 @@ fn tt_rank_all(question: ExternalPtr<Question>, records: Robj, deadline: Option<
 
 /// `find` over units: the winner's place, one-based, and its probability.
 #[extendr]
-fn tt_find_one(question: ExternalPtr<Question>, units: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_find_one(question: ExternalPtr<Question>, units: Robj, deadline: Robj) -> StdResult<List, String> {
     let units = texts_of(&units, "the units")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     let (place, probability) = call(deadline, move |engine, options| {
         let slices: Vec<&str> = units.iter().map(String::as_str).collect();
@@ -463,9 +534,10 @@ fn tt_find_one(question: ExternalPtr<Question>, units: Robj, deadline: Option<f6
 /// `annotate` over records from a question set file: each row a named list
 /// in the set's own order, each field typed by its question's verb.
 #[extendr]
-fn tt_annotate_file(path: Robj, records: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_annotate_file(path: Robj, records: Robj, deadline: Robj) -> StdResult<List, String> {
     let path = text_of(&path, "the question set path")?;
     let records = texts_of(&records, "the records")?;
+    let deadline = deadline_of(&deadline)?;
     let rows: Vec<Vec<(String, Field)>> = call(deadline, move |engine, options| {
         let set = QuestionSet::from_file(Path::new(&path))?;
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -495,7 +567,14 @@ fn tt_annotate_file(path: Robj, records: Robj, deadline: Option<f64>) -> StdResu
     })?;
     let built: Vec<List> = rows
         .iter()
-        .map(|fields| {
+        .map::<StdResult<List, String>, _>(|fields| {
+            for (name, _) in fields {
+                if name.contains('\0') {
+                    return Err(usage(
+                        "a question set name carries a NUL byte; remove it from the file".to_owned(),
+                    ));
+                }
+            }
             let names: Vec<&str> = fields.iter().map(|(name, _)| name.as_str()).collect();
             let values: Vec<Robj> = fields
                 .iter()
@@ -517,19 +596,28 @@ fn tt_annotate_file(path: Robj, records: Robj, deadline: Option<f64>) -> StdResu
                 })
                 .collect();
             List::from_names_and_values(names, values)
-                .expect("one annotate row as a list")
+                .map_err(|_| "usage{ERROR_SEP}false{ERROR_SEP}an annotate row could not become a list".to_owned())
         })
-        .collect();
+        .collect::<StdResult<Vec<_>, _>>()?;
     Ok(List::from_values(built))
 }
 
 /// The question set's names and kinds, in the set's own name order, so the
 /// R half types each answer column by its question rather than by the first
-/// answer it happens to see.
+/// answer it happens to see. A name carrying a NUL byte (the file grammar
+/// can spell one) refuses here: R strings cannot hold one, and the
+/// conversion would abort the process.
 #[extendr]
 fn tt_annotate_kinds(path: Robj) -> StdResult<List, String> {
     let path = text_of(&path, "the question set path")?;
     let set = QuestionSet::from_file(Path::new(&path)).map_err(carry)?;
+    for name in set.names() {
+        if name.contains('\0') {
+            return Err(usage(
+                "a question set name carries a NUL byte; remove it from the file".to_owned(),
+            ));
+        }
+    }
     let kinds: Vec<String> = set
         .questions()
         .iter()
@@ -562,8 +650,9 @@ fn cause_word(cause: thinkthen_contract::Cause) -> String {
 /// The audit view of one judgment, with the logical requests' digests
 /// (0053) and the failed-question count (0054).
 #[extendr]
-fn tt_details_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Option<f64>) -> StdResult<List, String> {
+fn tt_details_one(question: ExternalPtr<Question>, evidence: Robj, deadline: Robj) -> StdResult<List, String> {
     let evidence = text_of(&evidence, "the evidence")?;
+    let deadline = deadline_of(&deadline)?;
     let question = take(question);
     let (probability, code, model, digest, sends, requests, failed_questions, nearest) =
         call(deadline, move |engine, options| {
@@ -670,9 +759,10 @@ fn tt_relate_grammared(spec: Robj) -> StdResult<ExternalPtr<Relate>, String> {
 fn tt_recognize_column(
     ask: ExternalPtr<Recognize>,
     texts: Robj,
-    deadline: Option<f64>,
+    deadline: Robj,
 ) -> StdResult<List, String> {
     let texts = texts_of(&texts, "the texts")?;
+    let deadline = deadline_of(&deadline)?;
     let ask = (*ask).clone();
     let answers: Vec<Recognized> = call(deadline, move |engine, options| {
         texts
@@ -727,9 +817,10 @@ fn tt_recognize_column(
 fn tt_relate_records(
     ask: ExternalPtr<Relate>,
     records: Robj,
-    deadline: Option<f64>,
+    deadline: Robj,
 ) -> StdResult<List, String> {
     let records = texts_of(&records, "the records")?;
+    let deadline = deadline_of(&deadline)?;
     let ask = (*ask).clone();
     let edges = call(deadline, move |engine, options| {
         let slices: Vec<&str> = records.iter().map(String::as_str).collect();
@@ -790,6 +881,7 @@ extendr_module! {
     fn tt_details_one;
     fn tt_usage_counters;
     fn tt_interrupt_pending;
+    fn tt_raise_interrupt;
     fn tt_cancel_active;
     fn tt_question_digest;
     fn tt_question_parts;

@@ -28,6 +28,16 @@ tt_raise <- function(text) {
 # token, and reports the marker this function raises.
 .tt_call <- function(expr) {
   on.exit(.tt_cleanup(), add = TRUE)
+  # R's own interrupt signaling runs the user's options(error = ...) hook
+  # while the guarded check below consumes the interrupt - the third
+  # review's probe caught the hook firing on a plain Ctrl-C. The hook is
+  # held aside for the length of the call and restored on the way out, so
+  # it fires for genuinely uncaught errors and never for an interrupt.
+  had_hook <- getOption("error")
+  if (!is.null(had_hook)) {
+    options(error = NULL)
+    on.exit(options(error = had_hook), add = TRUE)
+  }
   if (tt_interrupt_pending()) .tt_interrupt()
   held <- tryCatch(expr, error = .tt_error)
   if (tt_interrupt_pending()) .tt_interrupt()
@@ -45,9 +55,28 @@ tt_raise <- function(text) {
   tt_raise(text)
 }
 
-# R's own interrupt condition, raised where the guarded check caught the
-# jump: tryCatch(interrupt = ...) catches it exactly as it catches Ctrl-C.
+# R's own interrupt, delivered for real. The guarded check that reported
+# it consumed the pending signal, so raising a synthetic condition through
+# `stop()` was the only path left - and that ran a user's
+# `options(error = ...)` hook on an interrupt, the third review's probe,
+# while R continued instead of halting. Instead the process sends itself
+# the real SIGINT and steps into the event loop: the jump lands in R's own
+# interrupt delivery, caught by `tryCatch(interrupt = ...)` exactly as a
+# genuine Ctrl-C is, and uncaught it halts without the error hook. The
+# synthetic condition is only the fallback when the signal cannot be
+# delivered or does not land, so the call still stops rather than
+# silently continuing.
 .tt_interrupt <- function() {
+  delivered <- FALSE
+  if (.Platform$OS.type == "unix" && requireNamespace("tools", quietly = TRUE)) {
+    try(delivered <- tools::pskill(Sys.getpid(), 2L), silent = TRUE)
+    if (isTRUE(delivered)) {
+      Sys.sleep(0.1)
+      # The signal's flag is set; this unguarded check makes the real
+      # jump from R-side frames that own nothing.
+      invisible(tt_raise_interrupt())
+    }
+  }
   stop(structure(
     class = c("interrupt", "condition"),
     list(message = "", call = NULL)
@@ -305,6 +334,16 @@ tt_find <- function(question, units, deadline = NULL) {
 tt_annotate <- function(file, data, on, deadline = NULL) {
   column <- as.character(data[[on]])
   kinds <- .tt_call(tt_annotate_kinds(as.character(file)))
+  # The input's columns are preserved, so a question that would land on
+  # one of their names refuses before any request is paid: the third
+  # review's probe showed the on column itself overwritten otherwise.
+  clashes <- intersect(kinds$names, names(data))
+  if (length(clashes) > 0L) {
+    stop(sprintf(
+      paste0("annotate cannot add a question named '%s': the input already ",
+              "has a column by that name; rename one"),
+      clashes[[1L]]), call. = FALSE)
+  }
   rows <- .tt_call(tt_annotate_file(as.character(file), column, deadline))
   if (!identical(length(rows), length(column))) {
     stop("annotate returned a row a record or nothing", call. = FALSE)

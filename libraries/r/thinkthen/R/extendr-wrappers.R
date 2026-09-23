@@ -65,7 +65,9 @@ tt_annotate_file <- function(path, records, deadline) .Call(wrap__tt_annotate_fi
 
 #' The question set's names and kinds, in the set's own name order, so the
 #' R half types each answer column by its question rather than by the first
-#' answer it happens to see.
+#' answer it happens to see. A name carrying a NUL byte (the file grammar
+#' can spell one) refuses here: R strings cannot hold one, and the
+#' conversion would abort the process.
 tt_annotate_kinds <- function(path) .Call(wrap__tt_annotate_kinds, path)
 
 #' The audit view of one judgment, with the logical requests' digests
@@ -78,6 +80,17 @@ tt_usage_counters <- function() .Call(wrap__tt_usage_counters)
 #' Whether R holds a pending interrupt, for the R half's own checks before
 #' and after a call.
 tt_interrupt_pending <- function() .Call(wrap__tt_interrupt_pending)
+
+#' Deliver R's own interrupt for real, from pure R-side code where no Rust
+#' frame owns anything. The synthetic condition this replaces was raised
+#' through `stop()`, so a user's `options(error = ...)` hook fired on an
+#' interrupt - the third review's probe - and R continued instead of
+#' halting. This is the real check, unguarded: the jump it makes is R's
+#' own interrupt delivery, caught by `tryCatch(interrupt = ...)` exactly
+#' as a genuine Ctrl-C is. Called only after the guarded check reported a
+#' pending interrupt and the call's cleanup ran; if the poll finds nothing
+#' left to deliver, it returns and the R half's fallback stops the call.
+tt_raise_interrupt <- function() invisible(.Call(wrap__tt_raise_interrupt))
 
 #' Stop the call in flight, when an interrupt jumped out of its frame.
 tt_cancel_active <- function() .Call(wrap__tt_cancel_active)
