@@ -221,7 +221,9 @@ fn a_refused_thread_start_fails_the_call_or_leaves_fewer_workers() {
 
 #[test]
 fn no_request_to_a_numeric_address_detaches_a_thread() {
-    let _serial = SERIAL.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _serial = SERIAL
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     common::wire_only();
     let engine = engine(&common::answering_backend(), 4);
     let notes = notes(1000);
@@ -229,14 +231,21 @@ fn no_request_to_a_numeric_address_detaches_a_thread() {
 
     WATCHED.with(|watched| watched.set(true));
     let before = DETACHED.load(Ordering::SeqCst);
-    let judged = engine.decide_many(&question(), &records, None).expect("the backend answers");
+    let judged = engine
+        .decide_many(&question(), &records, None)
+        .expect("the backend answers");
     // The C door's shape: a batch of one a call.
     for record in &records[..200] {
-        engine.decide_many(&question(), &[record], None).expect("the backend answers");
+        engine
+            .decide_many(&question(), &[record], None)
+            .expect("the backend answers");
     }
     let detached = DETACHED.load(Ordering::SeqCst) - before;
     WATCHED.with(|watched| watched.set(false));
 
     assert_eq!(judged.len(), 1000, "every record was judged");
-    assert_eq!(detached, 0, "1,200 requests in 201 calls detached {detached} threads");
+    assert_eq!(
+        detached, 0,
+        "1,200 requests in 201 calls detached {detached} threads"
+    );
 }
