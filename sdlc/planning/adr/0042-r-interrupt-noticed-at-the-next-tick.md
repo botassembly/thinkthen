@@ -23,14 +23,35 @@ documentation:
 - An interrupt is noticed at the next tick, up to 100 ms after the signal.
 - A request already on the wire finishes on the backend. The call returns
   without waiting for it.
-- An uncaught re-raised interrupt prints one `Error:` line before
-  `Execution halted`. R's own interrupt prints none.
+- An interrupt during a call prints one blank line to standard error
+  that R's own interrupt does not print. The amendment below says why.
 
 ## Consequences
 
 No jump crosses a Rust frame. The latency is bounded by the tick, and
 the R suite measures it (0.886 s against a 1 s signal in record 0074).
 
-Ian can overturn this by asking for a shorter tick or a quieter uncaught
+Ian can overturn this by asking for a shorter tick or a quieter
 interrupt. A shorter tick costs more wake-ups per call. Silencing the
-`Error:` line needs a different condition class in the R half.
+blank line needs an interrupt check other than `R_CheckUserInterrupt`.
+
+## Amendment, 2026-09-23: the blank line, not an `Error:` line
+
+The seventh review's verifier ran an uncaught Ctrl-C during a call and
+during plain R code, with the full output kept. Neither printed an
+`Error:` line, before or after R7-13. The third window above said one
+did. That was wrong.
+
+The real difference is one blank line on standard error. Plain R prints
+one blank line and `Execution halted`; a call prints two blank lines and
+`Execution halted`, with the same exit status 1. A caught interrupt shows
+the source: plain R prints nothing before the handler runs, and a call
+prints one blank line. The guarded check runs `R_CheckUserInterrupt`
+under `R_ToplevelExec`, where no R handler stands, and R's own delivery
+prints that line before the jump the guard catches. The line comes from
+R, so the R half cannot suppress it. Removing it would mean reading R's
+pending-interrupt flag directly instead of calling R's check. That
+changes the mechanism four reviews have checked, for one blank line. Decision: keep it and record it. Ian can overturn this.
+
+Since R7-13 an uncaught interrupt meets a user's `options(error = ...)`
+hook as plain R does: the hook runs once and the script goes on.
