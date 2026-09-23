@@ -1950,10 +1950,21 @@ mod cancel_tests {
         let token = Cancel::new();
         let polls = Arc::new(AtomicUsize::new(0));
         let fired_at: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
-        let setter = thread::spawn(|| {
-            thread::sleep(Duration::from_millis(150));
-            HOST_INTERRUPTED.store(true, AtomicOrdering::SeqCst);
-        });
+        // The flag rises only after the first poll, so a loaded host that
+        // starts the batch late cannot let one poll both start and stop it.
+        let setter = {
+            let polls = Arc::clone(&polls);
+            thread::spawn(move || {
+                let give_up = Instant::now() + Duration::from_secs(30);
+                while polls.load(AtomicOrdering::SeqCst) == 0
+                    && Instant::now() < give_up
+                {
+                    thread::sleep(Duration::from_millis(1));
+                }
+                thread::sleep(Duration::from_millis(150));
+                HOST_INTERRUPTED.store(true, AtomicOrdering::SeqCst);
+            })
+        };
         let handle = std::ptr::NonNull::<ffi::sqlite3>::dangling().as_ptr();
         let mut poll = {
             let token = token.clone();
