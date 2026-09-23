@@ -153,7 +153,9 @@ recognition, relations — is the engine's.
   displaces the extension's and keeps its own (proven by
   `tools/host_signal.py`); the token is one shot per process, which the
   CLI never notices and a long-lived host should treat as a restart
-  signal.
+  signal. The handler itself only sets the token and writes one byte to
+  a pipe; a bridge thread interrupts the busy relate connections, so
+  the handler takes no lock and allocates nothing.
 
 ## Build and run
 

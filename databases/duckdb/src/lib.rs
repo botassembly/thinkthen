@@ -323,8 +323,10 @@ extern "C" fn on_interrupt(
     // Every kept connection running a relate query is interrupted too,
     // so one Ctrl-C stops both of two concurrent relates and reaches a
     // slow relate the caller's own interrupt cannot (review 4, finding
-    // 13: the query runs on the kept connection, not the caller's).
-    crate::connections::interrupt_busy();
+    // 13). The handler only wakes the bridge thread with one byte; the
+    // registry walk locks and allocates, so it runs there (review 5,
+    // finding 1: walking it here deadlocked a thread that held it).
+    crate::connections::wake_interrupt_bridge();
     // A OnceLock read locks nothing: taking a mutex in a signal
     // handler can deadlock against the thread the signal interrupted
     // (review 4).
@@ -362,8 +364,10 @@ unsafe fn install_interrupt_handler() {
     if HANDLER_SET.swap(true, Ordering::SeqCst) {
         return;
     }
-    // The activity clock starts now, long before any handler can read it.
+    // The activity clock starts now, long before any handler can read
+    // it, so the handler's read never initializes anything.
     let _ = now_ms();
+    crate::connections::start_interrupt_bridge();
     let mut action: libc::sigaction = unsafe { std::mem::zeroed() };
     action.sa_sigaction = on_interrupt as extern "C" fn(libc::c_int, *mut libc::siginfo_t, *mut libc::c_void) as usize;
     action.sa_flags = libc::SA_SIGINFO;
@@ -1653,6 +1657,59 @@ mod cancel_tests {
         assert!(
             heard <= Duration::from_millis(1_500),
             "the interrupt waited {heard:?} past the token; a fast backend starved the poll"
+        );
+    }
+}
+
+#[cfg(test)]
+mod signal_tests {
+    use super::*;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    /// The host's own handler in this test process: quiet, so the chain
+    /// after ours does not end the test binary.
+    extern "C" fn quiet_host(_: libc::c_int) {}
+
+    /// Review 5, finding 1: the SIGINT handler walked the kept-connection
+    /// registry under its mutex and allocated, so a signal landing on a
+    /// thread that held the registry deadlocked that thread against
+    /// itself. Two hundred signals land while the raising thread holds
+    /// the registry and a second thread churns the same lock; the whole
+    /// run must end well inside the timeout.
+    #[test]
+    fn a_sigint_landing_while_the_registry_is_held_returns() {
+        unsafe {
+            let mut host: libc::sigaction = std::mem::zeroed();
+            host.sa_sigaction = quiet_host as extern "C" fn(libc::c_int) as usize;
+            libc::sigemptyset(&mut host.sa_mask);
+            libc::sigaction(libc::SIGINT, &host, std::ptr::null_mut());
+            install_interrupt_handler();
+        }
+        let stop = Arc::new(AtomicBool::new(false));
+        {
+            let stop = Arc::clone(&stop);
+            thread::spawn(move || {
+                while !stop.load(Ordering::SeqCst) {
+                    connections::with_registry_held(thread::yield_now);
+                }
+            });
+        }
+        let (done, finished) = mpsc::channel();
+        thread::spawn(move || {
+            for _ in 0..200 {
+                connections::with_registry_held(|| unsafe {
+                    libc::raise(libc::SIGINT);
+                });
+            }
+            let _ = done.send(());
+        });
+        let outcome = finished.recv_timeout(Duration::from_secs(10));
+        stop.store(true, Ordering::SeqCst);
+        assert!(
+            outcome.is_ok(),
+            "a SIGINT landing on the thread holding the kept-connection registry deadlocked the handler"
         );
     }
 }

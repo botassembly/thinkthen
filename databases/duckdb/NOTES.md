@@ -893,3 +893,5 @@ stub on 8217.
 Each finding was reproduced on 398d7bb first, then fixed, then rerun.
 
 - **The check failed on a fresh tree.** `check.sh` never created `build/fixture`, so the metadata append failed with "No such file or directory". The fixture build also ran twice. The directory is now made, and the second copy is gone.
+led at 10.00 s with "deadlocked the handler". New: it passes in about 1 s. The handler now sets the token and writes one byte to a pipe, and the `thinkthen-interrupt` thread does the registry walk. The chained-host arm of `tools/host_signal.py` missed its 2.5 s bound intermittently while the load average on this machine sat near 300 from parallel builds. It missed on the old build too. At load 113, 10 of 10 trials passed on each build. The miss is the chunk-gap boundary the third review recorded, and heavy load widens it.
+- **The check failed on a fresh tree.** `check.sh` never created `build/fixture`, so the metadata append failed with "No such file or directory". The fixture build also ran twice. The directory is now made, and the second copy is gone.
