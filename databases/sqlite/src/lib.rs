@@ -36,7 +36,7 @@ use std::collections::HashMap;
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::sync::{Arc, Condvar, Mutex, Once, OnceLock};
 
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
 use rusqlite::vtab::{
@@ -315,24 +315,85 @@ fn guarded<T>(what: &str, body: impl FnOnce() -> rusqlite::Result<T>) -> rusqlit
     }
 }
 
-/// How often the single-row watcher reads the host's interrupt flag.
+/// How often the shared watcher reads each watched connection's
+/// interrupt flag.
 const WATCH_TICK: std::time::Duration = std::time::Duration::from_millis(5);
 
-/// The host's interrupt flag watched from a second thread while one
-/// blocking single-row call runs on the calling thread.
+/// One live watch: the connection's address, the host's interrupt check
+/// (resolved at load time), and the token the check arms.
+struct Watch {
+    db: usize,
+    check: usize,
+    token: Cancel,
+    id: u64,
+}
+
+/// The process-wide watcher: one thread, started on first use, that ticks
+/// every registered watch and parks while none are registered. All reads
+/// of a watched connection happen under the registry lock, and a call's
+/// removal takes the same lock, so the thread can never touch a
+/// connection whose call already returned. Before, every uncached call
+/// spawned its own thread, and a stop landing in the tick window paid the
+/// full 5 ms because the loop never read the stop flag before waiting
+/// (review 3, item 25).
+static WATCHES: Mutex<Vec<Watch>> = Mutex::new(Vec::new());
+static WAKE: Condvar = Condvar::new();
+static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+static WATCH_THREAD: Once = Once::new();
+
+fn start_watch_thread() {
+    WATCH_THREAD.call_once(|| {
+        std::thread::Builder::new()
+            .name("thinkthen-watch".to_owned())
+            .spawn(hub_thread)
+            .expect("the watcher thread starts");
+    });
+}
+
+/// The watcher's whole body: tick the registry under the lock, cancel the
+/// tokens whose connections show an interrupt, drop those watches, then
+/// wait one tick — or park entirely while the registry is empty, woken by
+/// the next registration.
+fn hub_thread() {
+    let mut held = WATCHES.lock().unwrap();
+    loop {
+        if held.is_empty() {
+            held = WAKE.wait(held).unwrap();
+            continue;
+        }
+        // SAFETY: the addresses and the function pointer came from the
+        // live connection and the host's API table at registration, and
+        // the registry lock is held for the whole tick, so no watched
+        // connection is freed mid-read.
+        let mut keep = Vec::with_capacity(held.len());
+        for watch in held.drain(..) {
+            let check: unsafe extern "C" fn(*mut ffi::sqlite3) -> c_int =
+                unsafe { std::mem::transmute(watch.check) };
+            if unsafe { check(watch.db as *mut ffi::sqlite3) } != 0 {
+                watch.token.cancel();
+            } else {
+                keep.push(watch);
+            }
+        }
+        *held = keep;
+        held = WAKE.wait_timeout(held, WATCH_TICK).unwrap().0;
+    }
+}
+
+/// The host's interrupt watched while one blocking single-row call runs
+/// on the calling thread.
 ///
 /// A batch hands the engine a poll that runs on the calling thread's
 /// ticks; a scalar call has no such hand, and the calling thread sits
 /// inside the engine, so nothing on it can read the host flag while a send
-/// or a backoff wait runs. This watcher reads the same flag
+/// or a backoff wait runs. The shared watcher reads the same flag
 /// (`sqlite3_is_interrupted` is an atomic read, safe from any thread) and
 /// arms the call's token; the engine's own waits then stop between
 /// requests, the ruled promise: no new request starts, sent ones finish.
-/// The thread stops with the call, so no watcher outlives it and no watcher
-/// exists between calls.
+/// Dropping the handle removes the watch under the registry lock, so the
+/// watcher never reads a connection whose call has returned.
 struct InterruptWatch {
-    stop: Arc<(Mutex<bool>, Condvar)>,
-    watcher: Option<std::thread::JoinHandle<()>>,
+    id: Option<u64>,
 }
 
 impl InterruptWatch {
@@ -347,53 +408,29 @@ impl InterruptWatch {
     /// in, so a unit test can drive the watcher with its own flag reader
     /// without touching the loader's one.
     fn start_with(db: *mut ffi::sqlite3, token: Cancel, check: *mut ()) -> Self {
-        let stop = Arc::new((Mutex::new(false), Condvar::new()));
         if db.is_null() || check.is_null() {
-            return Self { stop, watcher: None };
+            return Self { id: None };
         }
-        // SAFETY: the handle belongs to the calling connection, whose
-        // statement is running while this watcher lives; SQLite does not
-        // free a connection with a running statement, and the read is its
-        // own thread-safe flag read. The pointers cross as addresses
-        // because a raw pointer is not `Send`.
-        let address = db as usize;
-        let check = check as usize;
-        let watcher = std::thread::spawn({
-            let stop = Arc::clone(&stop);
-            move || loop {
-                let (lock, wake) = &*stop;
-                let stopping = lock.lock().unwrap();
-                let stopping = wake
-                    .wait_timeout(stopping, WATCH_TICK)
-                    .expect("the stop lock is not poisoned")
-                    .0;
-                if *stopping {
-                    return;
-                }
-                drop(stopping);
-                // SAFETY: both addresses came from the live connection and
-                // the host's own API table above; the function pointer's
-                // type is the one the table holds.
-                let check: unsafe extern "C" fn(*mut ffi::sqlite3) -> c_int =
-                    unsafe { std::mem::transmute(check) };
-                if unsafe { check(address as *mut ffi::sqlite3) } != 0 {
-                    token.cancel();
-                    return;
-                }
-            }
-        });
-        Self { stop, watcher: Some(watcher) }
+        start_watch_thread();
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        let mut held = WATCHES.lock().unwrap();
+        held.push(Watch { db: db as usize, check: check as usize, token, id });
+        drop(held);
+        WAKE.notify_all();
+        Self { id: Some(id) }
+    }
+
+    /// How many watches the shared watcher holds — for the tests.
+    fn watched_for_test() -> usize {
+        WATCHES.lock().unwrap().len()
     }
 }
 
 impl Drop for InterruptWatch {
     fn drop(&mut self) {
-        let (lock, wake) = &*self.stop;
-        *lock.lock().unwrap() = true;
-        wake.notify_all();
-        if let Some(watcher) = self.watcher.take() {
-            let _ = watcher.join();
-        }
+        let Some(id) = self.id else { return };
+        let mut held = WATCHES.lock().unwrap();
+        held.retain(|watch| watch.id != id);
     }
 }
 
@@ -1562,13 +1599,22 @@ mod mapping_tests {
             );
             std::thread::sleep(Duration::from_millis(2));
         }
-        let stopped = Instant::now();
-        drop(watch);
+        // The shared watcher (review 3, item 25): an interrupted watch is
+        // consumed by the watcher itself, and a live one leaves the
+        // registry the moment its handle drops — under the same lock the
+        // tick runs in, with no second thread spawned for the call (the
+        // one watcher thread serves every call).
+        WATCH_FLAG.store(false, Ordering::SeqCst);
+        let held = Cancel::new();
+        let second = InterruptWatch::start_with(handle, held, watch_flag as *mut ());
+        let grown = InterruptWatch::watched_for_test();
+        assert!(grown >= 1, "the second watch registered");
+        drop(second);
         assert!(
-            stopped.elapsed() < Duration::from_millis(100),
-            "the watcher stop waited {:?}",
-            stopped.elapsed()
+            InterruptWatch::watched_for_test() < grown,
+            "the watch left the registry"
         );
+        drop(watch);
     }
 
     #[test]
