@@ -1,4 +1,4 @@
-# Implementation review — `surfaces` at `0801a32` (worktree `/home/ian/workspace/worktrees/thinkthen-surfaces`)
+# Implementation review — `surfaces` at `0801a32` (worktree `the thinkthen-surfaces worktree`)
 
 ## Verdict
 
@@ -95,22 +95,22 @@ Smallest fix: on the merge, pick the one conformance file, re-point or retire th
   "testsAddedOrUpdated": [],
   "commandsRun": [
     {
-      "command": "git -C /home/ian/workspace/worktrees/thinkthen-surfaces status --porcelain=v1 --branch",
+      "command": "git -C the thinkthen-surfaces worktree status --porcelain=v1 --branch",
       "result": "not-run",
       "summary": "No shell tool in this session; untracked/uncommitted state unverified. Read-only inspection found no unignored junk except databases/duckdb/extension-ci-tools (finding 6)."
     },
     {
-      "command": "cd /home/ian/workspace/worktrees/thinkthen-surfaces && python3 scripts/generate_functions.py --check && (cd conformance && python3 tools/validate_conformance.py conformance.json)",
+      "command": "cd the thinkthen-surfaces worktree && python3 scripts/generate_functions.py --check && (cd conformance && python3 tools/validate_conformance.py conformance.json)",
       "result": "not-run",
       "summary": "Static read shows both should pass on the committed tree; must be run to attest."
     },
     {
-      "command": "cd /home/ian/workspace/worktrees/thinkthen-surfaces && ENGINE_NULL=1 bash scripts/check_surfaces.sh",
+      "command": "cd the thinkthen-surfaces worktree && ENGINE_NULL=1 bash scripts/check_surfaces.sh",
       "result": "not-run",
       "summary": "The branch's own gate; the wire half needs the loopback stub on the per-surface ports."
     },
     {
-      "command": "cd /home/ian/workspace/worktrees/thinkthen-surfaces && sdlc/scripts/lint && sdlc/scripts/test && sdlc/scripts/spec",
+      "command": "cd the thinkthen-surfaces worktree && sdlc/scripts/lint && sdlc/scripts/test && sdlc/scripts/spec",
       "result": "not-run",
       "summary": "The repository ladder; as configured it never touches the surfaces (finding 1)."
     },

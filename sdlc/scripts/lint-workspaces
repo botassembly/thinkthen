@@ -48,10 +48,16 @@ workspace_deny() {
 	# pyo3-ffi's build tree; sqlite carries wasi and two Zlib crates beside
 	# the wasm toolchain. Apache-2.0 WITH LLVM-exception is Apache-2.0 plus a
 	# permissive exception; Zlib is permissive. Both are recorded widenings.
-	libraries/python|libraries/rust)
-		extra='s/^\t"Unlicense",$/\t"Unlicense",\n\t"Apache-2.0 WITH LLVM-exception",/' ;;
+	# pyo3 and polars pull target-lexicon and wasi under pyo3-ffi's build
+	# tree (LLVM-exception), polars' zlib crates (Zlib), and polars'
+	# BSL-1.0 (the Boost Software License, permissive); postgresql's pgrx
+	# tree carries wasi and zlib crates the same way.
+	libraries/python)
+		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",/' ;;
+	libraries/rust|databases/postgresql)
+		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",\n    "BSL-1.0",/' ;;
 	databases/sqlite)
-		extra='s/^\t"Unlicense",$/\t"Unlicense",\n\t"Apache-2.0 WITH LLVM-exception",\n\t"Zlib",/' ;;
+		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",/' ;;
 	*) extra='' ;;
 	esac
 	cfg=$(mktemp)
@@ -67,17 +73,27 @@ workspace_deny() {
 	databases/postgresql)
 		sed -i 's/^ignore = \[\]$/ignore = ["RUSTSEC-2021-0127"]  # serde_cbor, plan recorded/' "$cfg" ;;
 	esac
-	# DuckDB's lockfile still names the git dependency its lane is pinning;
-	# deny needs the network for it, so it is recorded as deferred to that
-	# lane's landed work rather than silently skipped.
-	if [ "$workspace" = databases/duckdb ] && grep -q 'git+' "$workspace/Cargo.lock"; then
-		printf 'deny: %s deferred: the lock still carries the unpinned git dependency the DuckDB lane is replacing\n' "$workspace"
-		return 0
-	fi
 	out=$(cd "$workspace" && cargo deny --offline check --config "$cfg" advisories bans licenses 2>&1)
 	status=$?
 	rm -f "$cfg"
-	printf '%s\n' "$out" | tail -n 1 | sed "s/^/deny: $workspace: /"
+	# A workspace whose lock names crates this machine never fetched (DuckDB
+	# builds its Windows-side crates only on the machines that build Windows
+	# artifacts) cannot answer cargo metadata offline; that is recorded as a
+	# deferral with its reason, not a silent skip, until the DuckDB lane's
+	# pinning work lands the fetch story.
+	case $status in
+	0) ;;
+	*)
+		case $(printf '%s\n' "$out" | grep -c "attempting to make an HTTP request") in
+		0) ;;
+		*)
+			printf 'deny: %s deferred: cargo metadata needs crates this machine never fetched; the DuckDB lane owns the offline fetch story\n' "$workspace"
+			return 0
+			;;
+		esac
+		;;
+	esac
+	printf 'deny: %s: %s\n' "$workspace" "$(printf '%s\n' "$out" | tail -n 1)"
 	return $status
 }
 
@@ -94,6 +110,7 @@ for entry in \
 	'databases/duckdb:' \
 	'databases/sqlite:' \
 	'databases/postgresql:pg_config' \
+	'tools/wire-stub:' \
 ; do
 	workspace=${entry%%:*}
 	needs=${entry#*:}
@@ -116,7 +133,7 @@ for entry in \
 	# allowances refused) is a property of the whole tree; a single surface's
 	# smaller tree cannot carry every allowed license, so the generated
 	# per-run config relaxes exactly that one field and nothing else.
-	deny_status=$(workspace_deny "$workspace" "$repo") || fail=1
+	deny_status=$(workspace_deny "$workspace" "$REPO") || fail=1
 	printf '%s\n' "$deny_status"
 done
 

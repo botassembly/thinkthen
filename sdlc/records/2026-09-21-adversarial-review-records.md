@@ -2,7 +2,7 @@
 
 **Verdict: do not merge `surfaces` into main on the strength of the records as they stand.** The experiment's own claims are unusually well-kept — 18 cited commit hashes all resolve, the "not run" lists are real, and the vocabulary sweep held — but three records-level defects block a clean merge: the ruled question-file spelling for a relation's ends does not work in the shipped parser, two divergent conformance files both call themselves "the one file", and the branch's copy of the rulings issue now disagrees with main's copy in both directions. Read-only review: no commands, builds, or tests were run (read/grep/find/ls only); no files written.
 
-Snapshot used: branch `surfaces` head `0801a329f5a6…` (matches the pin), base `b11a2b03…`, thinkthen main `db19349…`, mktg main `95f17ee…`, date 2026-09-21.
+Snapshot used: branch `surfaces` head `0801a329f5a6…` (matches the pin), base `b11a2b03…`, thinkthen main `db19349…`, the deck repository's main `95f17ee…`, date 2026-09-21.
 
 ### Findings, by consequence
 
@@ -13,13 +13,13 @@ Reproduction not run; the code path is deterministic. Smallest fix: accept `sour
 
 **F2 — Two different files are "the one conformance file", with different case ids and coverage.**
 Classification: confirmed inconsistency, merge-blocking risk. Violated promise: ADR 0017's shared-case-contract amendment names `conformance/cases.json` with twenty-five initial cases (`sdlc/planning/adr/0017-libraries-over-one-bound-core.md:158-162`); FINDINGS.md:36-39 and `SURFACES.md` present the branch's 72-case file as the one file every surface reads.
-Evidence: branch `conformance/conformance.json:2-3` (`case_count: 72`, ids `01-decide-yes-cut` … `72-relate-R04-pairs-10`, no `defect` case by principle); main `/home/ian/workspace/repos/thinkthen/conformance/cases.json:2-4` (`case_count: 27`, ids `01-decide-yes-captured` … `25-defect-fault`, including a `defect` fault case the ADR amendment calls a schema contract); the branch's own Phase A record validated "20 cases" for `conformance/conformance.json` (worktree copy of the rulings issue, the `731a058` bullet). Three counts coexist (20, 25/27, 72) for one named artifact.
+Evidence: branch `conformance/conformance.json:2-3` (`case_count: 72`, ids `01-decide-yes-cut` … `72-relate-R04-pairs-10`, no `defect` case by principle); main `thinkthen main's conformance/cases.json:2-4` (`case_count: 27`, ids `01-decide-yes-captured` … `25-defect-fault`, including a `defect` fault case the ADR amendment calls a schema contract); the branch's own Phase A record validated "20 cases" for `conformance/conformance.json` (worktree copy of the rulings issue, the `731a058` bullet). Three counts coexist (20, 25/27, 72) for one named artifact.
 Smallest fix: decide the file name and union the case sets before the merge, and add the missing `defect` case or record why the branch drops it.
 
 **F3 — The deck's `thinkthen_relations` call cannot run as drawn on any of the three databases, and no finding was filed for it.**
 Classification: confirmed defect plus claim overreach. Violated promise: the update issue's read order says of `recognize-surfaces.md` "This page is the acceptance test. Each call must run as written"; its closing says "four findings, all filed".
-Evidence: the drawn line is in the recognize SQL block (`SELECT * FROM thinkthen_relations(body, '@names.json')`, `decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`, "all three, beta"). DuckDB: "The relations call cannot run as drawn either … the C API table functions take literal parameters only", working form is the scalar list (`databases/duckdb/NOTES.md:90-94`). PostgreSQL: the working form needs `LATERAL` (`databases/postgresql/NOTES.md:133-137`). SQLite: "**Not run, honestly:** the beta `thinkthen_relations` line in the deck's SQL block … nothing was invented for it" (`databases/sqlite/NOTES.md:95`). mktg carries three findings files, none for this.
-Smallest fix: file the finding in mktg (or paste the DuckDB lane note's finding 2 verbatim) and add it to FINDINGS.md's list; then change the deck line or mark it beta-unbuilt.
+Evidence: the drawn line is in the recognize SQL block (`SELECT * FROM thinkthen_relations(body, '@names.json')`, `decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`, "all three, beta"). DuckDB: "The relations call cannot run as drawn either … the C API table functions take literal parameters only", working form is the scalar list (`databases/duckdb/NOTES.md:90-94`). PostgreSQL: the working form needs `LATERAL` (`databases/postgresql/NOTES.md:133-137`). SQLite: "**Not run, honestly:** the beta `thinkthen_relations` line in the deck's SQL block … nothing was invented for it" (`databases/sqlite/NOTES.md:95`). the deck repository carries three findings files, none for this.
+Smallest fix: file the finding in the deck repository (or paste the DuckDB lane note's finding 2 verbatim) and add it to FINDINGS.md's list; then change the deck line or mark it beta-unbuilt.
 
 **F4 — `conformance/DIVERGENCES.md` still calls the name's number interim `number`.**
 Classification: confirmed inconsistency (record vs shipped code). Violated promise: the one-rule page's ruling (`sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`, "the computed number stays, and its name is `strength`") and FINDINGS.md:37 ("`Entity` with `strength`").
@@ -33,11 +33,11 @@ Smallest fix: two number edits and one sentence in ADR 0017's consequences bulle
 
 **F6 — "The findings, all pinned and filed" is not true as written, and the update issue's four-item list does not match the four files.**
 Classification: confirmed inconsistency (claim). Violated promise: FINDINGS.md:41 ("The findings, all pinned and filed"); the update issue's closing paragraph.
-Evidence: mktg `sdlc/issues/` holds exactly three files (Ruby score `3041f17`, `located_in` `30a7edb`, DuckDB `relate` `95f17ee`); the update issue's list of four names the `located_in` and DuckDB items but also "case 72 lost its `form` field … and is restored" (no file, no commit, no lane record; `conformance.json` case 72 does carry `"form": "pairs"`) and the `confidence`→`strength` overturn (a ruling change recorded in the one-rule page, not a finding); the list omits the Ruby-score finding that exists, and omits the `thinkthen_relations` failure (F3).
+Evidence: the deck repository's `sdlc/issues/` holds exactly three files (Ruby score `3041f17`, `located_in` `30a7edb`, DuckDB `relate` `95f17ee`); the update issue's list of four names the `located_in` and DuckDB items but also "case 72 lost its `form` field … and is restored" (no file, no commit, no lane record; `conformance.json` case 72 does carry `"form": "pairs"`) and the `confidence`→`strength` overturn (a ruling change recorded in the one-rule page, not a finding); the list omits the Ruby-score finding that exists, and omits the `thinkthen_relations` failure (F3).
 Smallest fix: name the file or commit for the case-72 item, or drop it from "filed"; add the missing items to the list.
 
 **F7 — "three sample findings filed, one defect fixed" overstates the filing, and FINDINGS item 3 contradicts itself.**
-Classification: inconsistency (claim). Evidence: the rulings issue's closing headline; FINDINGS.md:24-27 says "Every slide sample runs as drawn with the answer in its comment" and then names a finding whose comment does not hold (Ruby score 2.0 vs recorded 1.7, `mktg/sdlc/issues/2026-09-21-the-ruby-slide-pins-a-score…`) and one where the comment is the real backend's answer and not the stand-in's (`libraries/python/NOTES.md:51-59`, "The band comment does not reproduce"). Only the Ruby finding is filed in mktg; the TypeScript defect was fixed in-branch (`998b3a1`) and the band comment is recorded in the lane note.
+Classification: inconsistency (claim). Evidence: the rulings issue's closing headline; FINDINGS.md:24-27 says "Every slide sample runs as drawn with the answer in its comment" and then names a finding whose comment does not hold (Ruby score 2.0 vs recorded 1.7, `the deck repository's sdlc/issues/2026-09-21-the-ruby-slide-pins-a-score…`) and one where the comment is the real backend's answer and not the stand-in's (`libraries/python/NOTES.md:51-59`, "The band comment does not reproduce"). Only the Ruby finding is filed in the deck repository; the TypeScript defect was fixed in-branch (`998b3a1`) and the band comment is recorded in the lane note.
 Smallest fix: replace "filed" with the recorded locations, and split the sentence: samples run as drawn; two comments are known not to reproduce.
 
 **F8 — `reset_usage` is a public name on three surfaces that no ruling admits, and nothing enforces the name list.**
@@ -53,12 +53,12 @@ Classification: risk (merge integrity). Evidence: the worktree copy of `sdlc/iss
 
 ### Strengths
 
-- Every commit hash cited in FINDINGS.md resolves in the branch reflog (`ef3767c`, `69e9385`, `731a058`, `7145073`, `b622e5a`, `28e4025`, `998b3a1`, `8fc2db7`, `1ac9250`, `1af5290`, `78204cb`, `14f418e`, `2356976`, `ad1882f`, `26cea03`, base `b11a2b0`, head `0801a32`), and the three mktg hashes (`3041f17`, `30a7edb`, `95f17ee`) are real mktg commits; `95f17ee` is mktg's head.
+- Every commit hash cited in FINDINGS.md resolves in the branch reflog (`ef3767c`, `69e9385`, `731a058`, `7145073`, `b622e5a`, `28e4025`, `998b3a1`, `8fc2db7`, `1ac9250`, `1af5290`, `78204cb`, `14f418e`, `2356976`, `ad1882f`, `26cea03`, base `b11a2b0`, head `0801a32`), and the three deck-repository hashes (`3041f17`, `30a7edb`, `95f17ee`) are real deck-repository commits; `95f17ee` is the deck repository's head.
 - The count arithmetic is honest and self-consistent: 27 + 40 + 1 + 4 = 72, `case_count` equals the array length (`conformance.json:2-3`), the validator asserts it (`conformance/tools/validate_conformance.py:74`), and the six kinds including `deadline` match the contract enum exactly (`contract/src/lib.rs:94-111`).
 - The ruled picks really are in the code: `THINKTHEN_UNSURE` and `thinkthen_decide_many` (`contract/include/thinkthen.h:51,92`), `score` returning the position with the nearest level in details (`functions.toml:36`), Rust blocking with no `.await` (`sdlc/planning/libraries/rust.md:20`), `thinkthen_warm` in all three databases (`databases/*/src`), and the vendor's `confidence` only in detailed output (`crates/thinkthen-core/src/find.rs:222-232`).
-- The three mktg findings each cite a real path and a real error string, and their statuses are accurate: Ruby's is genuinely closed (the deck comment now reads `0 is "Routine.", 2 is "Immediate."`, `surfaces.md:107-109`), while the other two stay open with the decks unchanged.
+- The three the deck repository findings each cite a real path and a real error string, and their statuses are accurate: Ruby's is genuinely closed (the deck comment now reads `0 is "Routine.", 2 is "Immediate."`, `surfaces.md:107-109`), while the other two stay open with the decks unchanged.
 - The "not run, honestly" lists are true against the lane notes (no `defect` case, R's user-installed handler, macOS database artifacts, plugin expression), and `NOTES-maintainability.md` reports the test as a negative result — the count did not drop — which is the kind of honest record this lens rarely sees.
-- The one-rule page's numbers match the underlying experiment exactly (`experiments/227-name-number/report.md`: 0.8398/0.7608 computed, 0.7610/0.7217 minIN, 0.8239/0.7613 minAll), and the marketing vocabulary table agrees word for word (`mktg/products/thinkthen/vocabulary.md:171-181`).
+- The one-rule page's numbers match the underlying experiment exactly (`experiments/227-name-number/report.md`: 0.8398/0.7608 computed, 0.7610/0.7217 minIN, 0.8239/0.7613 minAll), and the marketing vocabulary table agrees word for word (`the deck repository/products/thinkthen/vocabulary.md:171-181`).
 
 ### Remediation roadmap
 
@@ -71,11 +71,11 @@ Classification: risk (merge integrity). Evidence: the worktree copy of `sdlc/iss
 
 ### Commands a supervisor should run (I ran none)
 
-- `cd /home/ian/workspace/worktrees/thinkthen-surfaces/conformance && python3 tools/validate_conformance.py conformance.json` (offline; expect OK over 72 cases)
-- `cd /home/ian/workspace/worktrees/thinkthen-surfaces && python3 scripts/generate_functions.py --check` (name-list drift; currently 15 rows, not 13)
-- `cd /home/ian/workspace/worktrees/thinkthen-surfaces && bash scripts/check_surfaces.sh` (builds contract/stand-in; wire tests self-skip without the loopback stub)
-- `git -C /home/ian/workspace/worktrees/thinkthen-surfaces log --oneline b11a2b0..HEAD` and `git -C /home/ian/workspace/repos/thinkthen rev-parse HEAD` / `git -C /home/ian/workspace/repos/mktg rev-parse HEAD` to confirm the pinned heads
-- `git -C /home/ian/workspace/repos/thinkthen merge-tree` (or a trial merge in a scratch worktree) to expose the two-sided edits to the rulings issue and the `conformance/` name collision
+- `cd conformance && python3 tools/validate_conformance.py conformance.json` (offline; expect OK over 72 cases)
+- `python3 scripts/generate_functions.py --check` (name-list drift; currently 15 rows, not 13)
+- `bash scripts/check_surfaces.sh` (builds contract/stand-in; wire tests self-skip without the loopback stub)
+- `git -C . log --oneline b11a2b0..HEAD` and `git -C ../thinkthen rev-parse HEAD` / `git -C ../the-deck-repository rev-parse HEAD` to confirm the pinned heads
+- `git -C ../thinkthen merge-tree` (or a trial merge in a scratch worktree) to expose the two-sided edits to the rulings issue and the `conformance/` name collision
 
 ```acceptance-report
 {
@@ -83,14 +83,14 @@ Classification: risk (merge integrity). Evidence: the worktree copy of `sdlc/iss
     {
       "id": "criterion-1",
       "status": "satisfied",
-      "evidence": "Ten findings with file:line evidence, classified, prioritized by consequence: F1 contract/src/lib.rs:696-719 vs :883-889 and recognize-design.md:188-190; F2 conformance/conformance.json:2-3 vs repos/thinkthen/conformance/cases.json:2-4 and ADR 0017:158-162; F3 databases/duckdb/NOTES.md:90-94, databases/sqlite/NOTES.md:95, databases/postgresql/NOTES.md:133-137; F4 conformance/DIVERGENCES.md R1 bullet 1 vs contract/src/lib.rs:873-880; F5 sdlc/planning/databases/README.md:49, postgres.md:75, ADR 0017:132; F6 FINDINGS.md:41 vs the three files in mktg/sdlc/issues; F7 rulings issue closing vs FINDINGS.md:24-27 and libraries/python/NOTES.md:51-59; F8 functions.toml:92 and libraries/python/thinkthen/__init__.py:43,53; F9 relate-design.md:78,86; F10 the two copies of the rulings issue."
+      "evidence": "Ten findings with file:line evidence, classified, prioritized by consequence: F1 contract/src/lib.rs:696-719 vs :883-889 and recognize-design.md:188-190; F2 conformance/conformance.json:2-3 vs repos/thinkthen/conformance/cases.json:2-4 and ADR 0017:158-162; F3 databases/duckdb/NOTES.md:90-94, databases/sqlite/NOTES.md:95, databases/postgresql/NOTES.md:133-137; F4 conformance/DIVERGENCES.md R1 bullet 1 vs contract/src/lib.rs:873-880; F5 sdlc/planning/databases/README.md:49, postgres.md:75, ADR 0017:132; F6 FINDINGS.md:41 vs the three files in the deck repository/sdlc/issues; F7 rulings issue closing vs FINDINGS.md:24-27 and libraries/python/NOTES.md:51-59; F8 functions.toml:92 and libraries/python/thinkthen/__init__.py:43,53; F9 relate-design.md:78,86; F10 the two copies of the rulings issue."
     }
   ],
   "changedFiles": [],
   "testsAddedOrUpdated": [],
   "commandsRun": [
     {
-      "command": "cd /home/ian/workspace/worktrees/thinkthen-surfaces/conformance && python3 tools/validate_conformance.py conformance.json",
+      "command": "cd conformance && python3 tools/validate_conformance.py conformance.json",
       "result": "not-run",
       "summary": "Recommended: no shell available in this review; validator asserts case_count == len(cases) per conformance/tools/validate_conformance.py:74"
     },
@@ -105,17 +105,17 @@ Classification: risk (merge integrity). Evidence: the worktree copy of `sdlc/iss
       "summary": "Recommended: builds contract and stand-in, validates the conformance file, runs each landed surface's check.sh; wire tests self-skip without the loopback stub"
     },
     {
-      "command": "git -C /home/ian/workspace/worktrees/thinkthen-surfaces log --oneline b11a2b0..HEAD",
+      "command": "git -C . log --oneline b11a2b0..HEAD",
       "result": "not-run",
       "summary": "Recommended: commit-hash existence was verified from .git/logs/refs/heads/surfaces instead"
     }
   ],
   "validationOutput": [
     "All 18 commit hashes cited in FINDINGS.md resolve in .git/logs/refs/heads/surfaces (head 0801a329f5a6ddb8e9678f0b7c30898d450dd3d6 matches the snapshot pin; base b11a2b03... matches).",
-    "mktg 3041f17, 30a7edb, 95f17ee are real commits in .git/logs/HEAD of mktg; 95f17ee is the mktg head.",
+    "the deck repository 3041f17, 30a7edb, 95f17ee are real commits in .git/logs/HEAD of the deck repository; 95f17ee is the the deck repository head.",
     "conformance/conformance.json: case_count 72 matches the pin arithmetic (27 + 40 + 1 + 4) and error_kinds lists the six kinds including deadline.",
-    "Counts of the three mktg findings files confirmed by directory listing: three files, not four.",
-    "Cited experiment and page paths exist: experiments/222-recognize-demo/output.json, 225-relate-demo/edges-0.5.jsonl, 226-graph-demo/arm/run.jsonl, 227-name-number/report.md, mktg/products/thinkthen/vocabulary.md."
+    "Counts of the three the deck repository findings files confirmed by directory listing: three files, not four.",
+    "Cited experiment and page paths exist: experiments/222-recognize-demo/output.json, 225-relate-demo/edges-0.5.jsonl, 226-graph-demo/arm/run.jsonl, 227-name-number/report.md, the deck repository/products/thinkthen/vocabulary.md."
   ],
   "residualRisks": [
     "F1 defect proven by code reading, not by executing a file door (no shell available here); a one-line run would confirm the usage error on 'source'/'target'.",
@@ -129,13 +129,13 @@ Classification: risk (merge integrity). Evidence: the worktree copy of `sdlc/iss
   "reviewFindings": [
     "blocker: worktrees/thinkthen-surfaces/contract/src/lib.rs:696-719 - the question-file relation parser requires 'from'/'to' while contract/src/lib.rs:883-889 and both design pages rule 'source'/'target' for the question file; the ruled spelling fails (confirmed defect).",
     "blocker: conformance/conformance.json vs repos/thinkthen/conformance/cases.json - two different 'one conformance file' artifacts (72 cases with ids 01-decide-yes-cut... vs 27 with ids 01-decide-yes-captured ... 25-defect-fault), and ADR 0017:158-162 names cases.json with twenty-five cases.",
-    "blocker: mktg/sdlc/issues holds three findings files, not four; the update issue's 'four findings, all filed' includes a case-72 item with no file or commit, and FINDINGS.md:41's 'all pinned and filed' omits the thinkthen_relations as-drawn failure recorded in databases/duckdb/NOTES.md:90-94.",
+    "blocker: the deck repository/sdlc/issues holds three findings files, not four; the update issue's 'four findings, all filed' includes a case-72 item with no file or commit, and FINDINGS.md:41's 'all pinned and filed' omits the thinkthen_relations as-drawn failure recorded in databases/duckdb/NOTES.md:90-94.",
     "major: conformance/DIVERGENCES.md R1 still declares the name's number interim 'number' while contract/src/lib.rs:873-880 and conformance.json ship 'strength'.",
     "major: sdlc/planning/databases/README.md:49 and postgres.md:75 still carry a 1 GiB cap after the 100 MB ruling, and ADR 0017:132 still attributes the superseded rule-5 wording to databases/README.md.",
     "minor: reset_usage is a public name on Python, TypeScript, and R that no ruling admits, and no check enumerates public names to enforce 'no surface adds one'.",
     "minor: relate-design.md:86 lists the settled probability/confidence question as open; recognize-design.md:167 leaves thinkthen_relations open while the deck draws it; the one-rule and pandas pages carry no Status line.",
     "no blockers found in: commit-hash existence, the 72-case arithmetic, the six error kinds with deadline, thinkthen_warm on all three databases, the 'not run' lists, or the one-rule page's numbers against experiments/227-name-number/report.md."
   ],
-  "manualNotes": "Review-only instructions won over the progress-file habit, so no progress.md was written; nothing was executed and no artifacts were created. The parent's premise of four mktg findings files is wrong on the record: three exist, and the mismatch is itself finding F6. The strongest single evidence the parent may want next is a merge dry run over sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md, which has disjoint additions on branch and main."
+  "manualNotes": "Review-only instructions won over the progress-file habit, so no progress.md was written; nothing was executed and no artifacts were created. The parent's premise of four the deck repository findings files is wrong on the record: three exist, and the mismatch is itself finding F6. The strongest single evidence the parent may want next is a merge dry run over sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md, which has disjoint additions on branch and main."
 }
 ```

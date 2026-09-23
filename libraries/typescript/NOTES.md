@@ -378,7 +378,7 @@ shape.
 Python wheel build has, and every build path goes through it (the gate's
 synthetic build, the packaging build). `prepack` runs the clean build, so
 `npm pack` can never ship the fixture-armed test binary: the packed
-`index.linux-x64-gnu.node` greps zero `/home/ian` strings (the on-disk
+`index.linux-x64-gnu.node` greps zero home-directory strings (the on-disk
 binary went 138 → 0 after the remap rebuild). The addon gained the
 conventional `build.rs` (`napi_build::setup()`) with `napi-build` as a
 build-dependency, so a plain `cargo build` of the addon works. One inert

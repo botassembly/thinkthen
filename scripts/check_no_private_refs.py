@@ -4,19 +4,35 @@
 The repository goes public, so no tracked file outside sdlc/ may name the
 private repository that carries the product deck, and none may carry an
 absolute home-directory path (the builder's home leaks through examples
-and logs). sdlc/ is the internal record and is exempt. This checker and its
-test are exempt because the refused strings are their own pattern data.
+and logs). sdlc/ is the internal record and is exempt.
 
-Only tracked files are scanned: untracked build output (target/, dist/) is
-not shipped and never was the finding.
+Scope decision (2026-09-22, recorded here because this checker is the
+enforcement point): sdlc/ is part of the public checkout, so the private
+name and home paths are cleaned there too even though the checker does
+not scan it — historical records keep their evidence (hashes, paths
+inside the deck repository) with the name genericized to "the deck
+repository" and home paths made relative. New records write the generic
+forms from the start. This checker and its test are exempt because the
+refused strings are their own pattern data.
+
+Only tracked files are scanned (the plain-tree fallback walks the same
+set when the root is not a git checkout, so an exported tree answers
+too). Untracked build output (target/, dist/) is not shipped and never
+was the finding.
 
 Usage: check_no_private_refs.py [--root DIR]
 Exit 0 when clean, 1 with one `path:line: what` line per violation.
 """
 
+import os
 import re
 import subprocess
 import sys
+
+# What the plain-tree fallback skips: git-ignored build output by name, and
+# the packaged trees that are never source.
+IGNORED_DIRS = {"target", "build", "dist", "node_modules", ".venv", ".cargo", ".runtimes"}
+PACKAGE_SUFFIXES = (".node", ".so", ".dylib", ".dll", ".a", ".gem", ".tgz", ".gz")
 
 # The private repository's directory name, and the home-directory roots to
 # refuse. Written as patterns here and nowhere else in the tree.
@@ -30,12 +46,27 @@ HOME_RE = re.compile(r"/(?:" + "|".join(HOME_ROOTS) + r")/[A-Za-z0-9._-]+")
 
 
 def tracked_files(root):
-    out = subprocess.run(
+    """The files a public checkout would carry: git-tracked when the root is
+    a checkout, and the plain tree otherwise, so the check answers outside a
+    clone too (an exported tree, a tarball unpacked) instead of crashing."""
+    run = subprocess.run(
         ["git", "-C", root, "ls-files", "-z"],
-        check=True,
         capture_output=True,
-    ).stdout
-    return [name.decode() for name in out.split(b"\0") if name]
+    )
+    if run.returncode == 0:
+        return [name.decode() for name in run.stdout.split(b"\0") if name]
+    # Not a git checkout (or git absent): walk the tree, skipping what git
+    # would ignore — build output and the checker's own pattern data.
+    names = []
+    for base, dirs, files in os.walk(root):
+        keep = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith(".")]
+        dirs[:] = keep
+        for file in files:
+            path = os.path.relpath(os.path.join(base, file), root)
+            if path.endswith(PACKAGE_SUFFIXES):
+                continue
+            names.append(path)
+    return names
 
 
 def violations(root):
