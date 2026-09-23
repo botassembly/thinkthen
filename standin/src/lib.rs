@@ -1046,7 +1046,12 @@ fn post(
         };
         let status = response.status().as_u16();
         if RETRIED.contains(&status) && attempt < limit && !options.passed() {
-            let wait = retry_wait(&response).unwrap_or(waited).min(MAX_RETRY_WAIT);
+            // Main's ticket 0064: no wait outlasts the attempt timeout. A
+            // header wait is also held to sixty seconds.
+            let wait = retry_wait(&response)
+                .unwrap_or(waited)
+                .min(MAX_RETRY_WAIT)
+                .min(settings.timeout);
             attempt += 1;
             let nap = match options.remaining() {
                 Some(left) => wait.min(left),
