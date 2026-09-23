@@ -26,6 +26,9 @@ fn encoded(evidence: &str, question: &str) -> Option<Vec<u8>> {
 /// The key a case sends when the case is not about the key itself.
 const KEY: Option<&str> = Some("sk-test-value");
 
+/// The diagnostic a refused connection earns.
+const REFUSED_DIAGNOSTIC: &str = "thinkthen: the backend refused the connection; check that it is running and that --url is correct\n";
+
 /// Run `decide` against one URL, with no environment but what the case names.
 ///
 /// `key` is the value `THINKTHEN_API_KEY` holds, or `None` for a run with the
@@ -530,6 +533,28 @@ fn a_close_before_headers_follows_the_transport_retry_rule() {
 }
 
 #[test]
+fn a_refused_port_fails_before_the_first_default_retry_wait() {
+    // Port zero can never listen, so the connection is refused at once. The
+    // wait variable restores the one-second default: a retried refusal would
+    // sit through three seconds of waits.
+    let base = "http://127.0.0.1:0/v1";
+    let started = Instant::now();
+    let output = spawn(
+        &["decide", "asks for a refund", "--url", base],
+        &[
+            ("THINKTHEN_API_KEY", "sk-secret"),
+            ("THINKTHEN_TEST_RETRY_WAIT_MS", "1000"),
+        ],
+        b"private evidence",
+    )
+    .expect("the compiled binary runs");
+    assert!(started.elapsed() < Duration::from_secs(2)); // only rules the waits out
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED_DIAGNOSTIC);
+}
+
+#[test]
 fn a_backend_that_answers_nothing_is_exit_four() {
     let listener = Listener::serving(Vec::new()).expect("a loopback listener");
 
@@ -538,10 +563,7 @@ fn a_backend_that_answers_nothing_is_exit_four() {
 
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend refused the connection; check that it is running and that --url is correct\n"
-    );
+    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED_DIAGNOSTIC);
 }
 
 #[test]

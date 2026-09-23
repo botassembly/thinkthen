@@ -262,6 +262,8 @@ fn io_transport(error: &io::Error) -> TransportKind {
 /// Say whether this failure earns another attempt.
 fn is_retried(failure: &Error) -> bool {
     match failure {
+        // A refused connection names a closed port; waiting cannot open one.
+        Error::Transport(TransportKind::Refused) => false,
         Error::Transport(_) => true,
         Error::Status(status) => RETRIED.contains(status),
         _ => false,
@@ -270,8 +272,11 @@ fn is_retried(failure: &Error) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{bounded_wait, honored, io_transport, transport};
-    use crate::engine::error::TransportKind;
+    use super::{
+        Client, Exchange, Key, bounded_wait, honored, io_transport, is_retried, transport,
+    };
+    use crate::engine::error::{Error, TransportKind};
+    use std::cell::Cell;
     use std::io;
     use std::time::Duration;
 
@@ -368,5 +373,49 @@ mod tests {
                 TransportKind::PrematureClose
             );
         }
+    }
+
+    #[test]
+    fn only_a_refused_transport_failure_loses_its_retry() {
+        let cases = [
+            (Error::Transport(TransportKind::Refused), false),
+            (Error::Transport(TransportKind::Timeout), true),
+            (Error::Transport(TransportKind::NameLookup), true),
+            (Error::Transport(TransportKind::PrematureClose), true),
+            (Error::Transport(TransportKind::Other), true),
+            (Error::Status(429), true),
+            (Error::Status(500), true),
+            (Error::Status(502), true),
+            (Error::Status(503), true),
+            (Error::Status(504), true),
+            (Error::Status(529), true),
+            (Error::Status(401), false),
+        ];
+        for (failure, expected) in cases {
+            assert_eq!(is_retried(&failure), expected, "{failure:?}");
+        }
+    }
+
+    /// Port zero can never listen, so the refusal is deterministic.
+    #[test]
+    fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
+        let key = Key::of("sk-test-value");
+        let client = Client::new(Duration::from_secs(4), false);
+        let observed = Cell::new(0_u32);
+        let exchange = Exchange {
+            url: "http://127.0.0.1:0/v1/systemone",
+            body: b"{}",
+            key: &key,
+            max_retries: 2,
+            retry_wait: Duration::from_millis(1),
+        };
+
+        let result = client.post_observed(&exchange, || observed.set(observed.get() + 1));
+
+        assert_eq!(observed.get(), 1);
+        assert!(matches!(
+            result,
+            Err(Error::Transport(TransportKind::Refused))
+        ));
     }
 }
