@@ -1,6 +1,4 @@
 {
-  "base": "64133279d3e17fd8a7054e3a5f870a2229cc8bc7",
-  "grandfather_until": "db270d2113e6d3e51d0db35ead6d6a781a97dfc8",
   "grandfathered": {
     "db270d2113e6": "review named in prose before the structured line",
     "33edbfe729d9": "merge; the lane commits name their reviews",
@@ -32,6 +30,12 @@
     "9f9f77bfe107": "no review line",
     "e11bb573821b": "empty body",
     "ce177c1e177b": "no review line",
-    "30253787df79": "no review line"
+    "30253787df79": "no review line",
+    "db2fde51b374": "merge; the lane commits name their reviews",
+    "4061c427183e": "merge; the lane commits name their reviews",
+    "1bdca73cf797": "merge; the lane commits name their reviews",
+    "d0c0b880c0c1": "review cited in prose before the structured verdict",
+    "dd2bcdc55601": "review cited in prose before the structured verdict",
+    "47ca0c81b379": "review cited in prose before the structured verdict"
   }
 }

@@ -39,9 +39,11 @@ per image to resolve each digest.
 
 Some commits that moved the surfaces ceiling lack the review the rule
 asks for. Rewriting published history would break every clone and
-worktree of the branch. The commits stay as they are, and
-`sdlc/surfaces-ratchet-reviews.json` names each one by SHA, so the
-ratchet accepts no new commit of the same kind.
+worktree of the branch. The commits stay as they are.
+`sdlc/surfaces-ratchet-reviews.json` names every historic raise among
+them by SHA, and the ratchet accepts no new commit of the same kind.
+`252f530` is a lower, so the ratchet accepts it on its body and the list
+does not name it.
 
 - Empty bodies: `e11bb57`, `4238ea5`.
 - Raised with no review line: `b7344fa` and `4252283`. `db3d09f` and

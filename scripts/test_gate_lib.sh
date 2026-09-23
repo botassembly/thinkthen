@@ -174,28 +174,57 @@ expect "a built surface with a clean artifact" "$status" "0"
 rm -rf "$planted"
 
 # The portable-shell check names each GNU-only spelling and passes the
-# portable ones (surfaces-review-7 R3-32).
+# portable ones (surfaces-review-7 R3-32 and the verifier's evasions).
 planted=$(mktemp "${TMPDIR:-/tmp}/gate-shell.XXXXXX")
-gnu_sed='sed -i "s/a/b/" f'  # portable-shell: data
-gnu_date='t=$(date +%s.%N)'  # portable-shell: data
-gnu_timeout='if timeout 5 true; then :; fi'  # portable-shell: data
-printf '%s\n' "$gnu_sed" "$gnu_date" "$gnu_timeout" \
+gnu=(
+  'sed -i "s/a/b/" f'  # portable-shell: data
+  't=$(date +%s.%N)'  # portable-shell: data
+  'if timeout 5 true; then :; fi'  # portable-shell: data
+  'sed --in-place "s/a/b/" f'  # portable-shell: data
+  'timeout -s KILL 5 true'  # portable-shell: data
+  'timeout "$T" true'  # portable-shell: data
+  't=$(date +%s%3N)'  # portable-shell: data
+  'sed -i "s/a/b/" f  # portable-shell: data'  # portable-shell: data
+)
+printf '%s\n' "${gnu[@]}" \
   '# timeout 5 in a comment' 'sed -i.bak "s/a/b/" f' '"$TIMEOUT" 5 true' 'psql --timeout 5' >"$planted"  # portable-shell: data
+want="1:$(for i in "${!gnu[@]}"; do printf 'FAIL     %s:%d:%s\n' "$planted" $((i + 1)) "${gnu[$i]}"; done)"
 status=0
 said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
 rm -f "$planted"
-expect "GNU-only shell spellings" "$status:$said" "1:FAIL     $planted:1:$gnu_sed
-FAIL     $planted:2:$gnu_date
-FAIL     $planted:3:$gnu_timeout"
+expect "GNU-only shell spellings, and a data mark outside the checker" "$status:$said" "$want"
 
-# The data mark exempts only its own line. A file that marks one line
-# still fails on a real use on another line.
-planted=$(mktemp "${TMPDIR:-/tmp}/gate-shell.XXXXXX")
-printf '%s\n' "echo '$gnu_sed'  # portable-shell: data" "$gnu_sed" >"$planted"
+# A missing file fails, and a tree without git fails rather than
+# reading no script.
 status=0
-said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
-rm -f "$planted"
-expect "a real use beside a data line" "$status:$said" "1:FAIL     $planted:2:$gnu_sed"
+said=$(bash scripts/check_portable_shell.sh /nonexistent/x.sh) || status=$?
+expect "a missing file" "$status:$said" "1:FAIL     /nonexistent/x.sh: no such file"
+bare=$(mktemp -d "${TMPDIR:-/tmp}/gate-bare.XXXXXX")
+mkdir -p "$bare/scripts"
+cp scripts/check_portable_shell.sh "$bare/scripts/"
+status=0
+said=$(GIT_CEILING_DIRECTORIES=$bare bash "$bare/scripts/check_portable_shell.sh") || status=$?
+rm -rf "$bare"
+expect "a tree without git" "$status:$said" "1:FAIL     no git here to list the scripts; pass the files to read"
+
+# The artifact scan's gate form fails in a tree with no artifact at all
+# (surfaces-review-7 R7-5).
+bare=$(mktemp -d "${TMPDIR:-/tmp}/gate-bare.XXXXXX")
+mkdir -p "$bare/scripts"
+cp scripts/check_artifact_paths.sh "$bare/scripts/"
+for entry in libraries/python/build-wheel.sh libraries/python/check.sh \
+  libraries/typescript/build-addon.sh libraries/c/check.sh \
+  libraries/r/thinkthen/src/Makevars.in \
+  databases/duckdb/check.sh databases/duckdb/package.sh \
+  databases/sqlite/check.sh databases/sqlite/package.sh \
+  databases/postgresql/check.sh databases/postgresql/package.sh; do
+  mkdir -p "$bare/$(dirname "$entry")"
+  echo '--remap-path-prefix=$HOME=/build' >"$bare/$entry"
+done
+status=0
+said=$(env -u CARGO_TARGET_DIR bash "$bare/scripts/check_artifact_paths.sh") || status=$?
+rm -rf "$bare"
+expect "a gate with no artifact" "$status:$said" "1:FAIL     the gate left no built artifact to scan"
 
 # Every surface check prints the counted spelling for its own wire skip.
 for pair in libraries/python:python libraries/typescript:typescript libraries/rust:rust \

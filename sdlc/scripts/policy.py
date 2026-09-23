@@ -210,6 +210,11 @@ def check_toolchain() -> None:
         fail("toolchain", "libraries/ruby/Dockerfile installs exactly the pinned channel")
     if re.findall(r"--component\s+(\S+)", dockerfile) != ["clippy,rustfmt"]:
         fail("toolchain", "libraries/ruby/Dockerfile installs exactly clippy and rustfmt")
+    # A later rustup call or a toolchain variable could switch away from
+    # the pin after the install line (surfaces-review-7 verifier).
+    code = [line for line in dockerfile.splitlines() if not line.lstrip().startswith("#")]
+    if any("rustup" in line and "sh.rustup.rs" not in line for line in code) or "RUSTUP_TOOLCHAIN" in dockerfile:
+        fail("toolchain", "libraries/ruby/Dockerfile calls rustup only in its one install line")
     if read_toml("rustfmt.toml") != {"style_edition": "2024"}:
         fail("rustfmt", "rustfmt.toml selects the 2024 style edition and nothing else")
 

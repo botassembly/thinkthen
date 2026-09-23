@@ -18,43 +18,54 @@ if ! git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
   echo "ok:      the surfaces ratchet names a tree without git history"
   exit "$status"
 fi
-work=$(mktemp -d "${TMPDIR:-/tmp}/ratchet-shallow.XXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/ratchet-self-test.XXXXXX")
 trap 'rm -rf "$work"' EXIT
-git -C "$work" init -q .
-git -C "$work" fetch -q --depth 1 "file://$REPO" HEAD
-git -C "$work" checkout -q FETCH_HEAD
-cp "$REPO/sdlc/scripts/surfaces-ratchet.mjs" "$work/sdlc/scripts/surfaces-ratchet.mjs"
-status=0
-said=$(cd "$work" && node sdlc/scripts/surfaces-ratchet.mjs 2>&1) || status=$?
-want="surfaces-ratchet: the history is too shallow to find the commit that moved sdlc/surfaces-ratchet.json; fetch the full history (git fetch --unshallow, or fetch-depth: 0 in the checkout step)"
-if [ "$status" -ne 1 ] || [ "$said" != "$want" ]; then
-  echo "FAIL surfaces-ratchet in a shallow clone: exit $status, said: $said"
-  exit 1
-fi
-echo "ok:      the surfaces ratchet names a shallow history"
+SCRIPT="$REPO/sdlc/scripts/surfaces-ratchet.mjs"
+shallow_said="surfaces-ratchet: the history is too shallow to find the commit that moved sdlc/surfaces-ratchet.json; fetch the full history (git fetch --unshallow, or fetch-depth: 0 in the checkout step)"
+for depth in 1 20; do
+  rm -rf "$work/shallow"
+  git init -q "$work/shallow"
+  git -C "$work/shallow" fetch -q --depth "$depth" "file://$REPO" HEAD
+  git -C "$work/shallow" checkout -q FETCH_HEAD
+  cp "$SCRIPT" "$work/shallow/sdlc/scripts/surfaces-ratchet.mjs"
+  status=0
+  said=$(cd "$work/shallow" && node sdlc/scripts/surfaces-ratchet.mjs 2>&1) || status=$?
+  if [ "$status" -ne 1 ] || [ "$said" != "$shallow_said" ]; then
+    echo "FAIL surfaces-ratchet in a depth-$depth clone: exit $status, said: $said"
+    exit 1
+  fi
+done
+echo "ok:      the surfaces ratchet names a shallow history at depth 1 and 20"
 
-# Every mover since the base needs a real review (surfaces-review-7,
-# R5-28 and R7-4). A small repository built here holds one Rust file
-# and the ratchet's two JSON files, so the cases do not depend on this
-# branch's own history.
-tiny="$work/tiny"
-mkdir -p "$tiny/sdlc/scripts" "$tiny/sdlc/records" "$tiny/src"
-cp "$REPO/sdlc/scripts/surfaces-ratchet.mjs" "$tiny/sdlc/scripts/"
-cd "$tiny"
-git init -q .
+# The review walk (surfaces-review-7 R5-28, R7-4, and the verifier's
+# attacks). Each case starts from a full local clone of HEAD, adds
+# commits, and runs this tree's script.
+clone="$work/clone"
+git clone -q --shared "$REPO" "$clone"
+cd "$clone"
 git config user.name self-test
 git config user.email self-test@example.invalid
-lines=1
-echo 'fn a() {}' > src/a.rs
-ceiling() { printf '{"directories":["src"],"extension":".rs","exclude":[],"max":%s}\n' "$lines" > sdlc/surfaces-ratchet.json; }
-reviews() { printf '{"base":"","grandfather_until":"%s","grandfathered":{%s}}\n' "$1" "$2" > sdlc/surfaces-ratchet-reviews.json; }
-grow() {
-  lines=$((lines + 1))
-  echo "fn f$lines() {}" >> src/a.rs
-  ceiling
-  git add -A
-  git commit -q -m "Grow the tree" -m "$1"
+start=$(git rev-parse HEAD)
+fresh() {
+  git checkout -q -B self-test "$start"
+  git reset -q --hard "$start"
+  git clean -qfd
+  cp "$SCRIPT" sdlc/scripts/surfaces-ratchet.mjs
 }
+bump() {
+  python3 - "$1" "${2:-}" <<'P'
+import json, sys
+p = "sdlc/surfaces-ratchet.json"
+d = json.load(open(p))
+d["max"] += int(sys.argv[1])
+if sys.argv[2]:
+    d["exclude"].append(sys.argv[2])
+open(p, "w").write(json.dumps(d, indent=2) + "\n")
+P
+}
+grow() { echo "fn self_test_$1() {}" >> contract/src/self_test_growth.rs; bump 1; }
+commit() { git add -A -- . ':!sdlc/scripts/surfaces-ratchet.mjs'; git commit -q -m "$1" ${2:+-m "$2"}; }
+review() { mkdir -p sdlc/records; printf '%s\n' "$2" > "sdlc/records/$1"; commit "Add a review" "Reviewed."; }
 expect() {
   status=0
   said=$(node sdlc/scripts/surfaces-ratchet.mjs 2>&1) || status=$?
@@ -65,43 +76,77 @@ expect() {
   esac
   echo "ok:      the surfaces ratchet $3"
 }
-echo reviewed > sdlc/records/review.md
-ceiling
-reviews HEAD ''
-git add -A
-git commit -q -m "Start the ceiling" -m "Second-agent review: sdlc/records/review.md"
-root=$(git rev-parse HEAD)
-expect pass '' "accepts a review line that cites a record"
+short() { git rev-parse --short=7 "$1"; }
 
-grow "No second agent reviewed this."
-expect fail "review: $(git rev-parse --short=7 HEAD)." "refuses a body that denies a review"
-git reset -q --hard HEAD~1; lines=1
+fresh
+expect pass '' "passes the committed history"
 
-grow "Second-agent review: pending, see sdlc/records/review.md"
-expect fail "review: $(git rev-parse --short=7 HEAD)." "refuses a pending review"
-git reset -q --hard HEAD~1; lines=1
+fresh; grow a; commit "Grow" "Second-agent review: skipped; see sdlc/README.md"
+expect fail "review: $(short HEAD)." "refuses a review line that cites a real file"
 
-grow "Nothing reviewed this one."
-early=$(git rev-parse HEAD)
-grow "Second-agent review: sdlc/records/review.md"
-expect fail "review: ${early:0:7}." "refuses an unreviewed raise that a later reviewed raise hides"
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+review REVIEW-denial.md "Commit $raise was NOT reviewed; Verdict: ACCEPT is withheld."
+expect fail "review: $raise." "refuses a record that names the SHA in prose"
 
-echo "The review of ${early:0:7} approves it." > sdlc/records/REVIEW-early.md
-expect pass '' "accepts a raise that a review record names"
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+mkdir -p sdlc/records; echo "Verdict: ACCEPT $raise" > sdlc/records/REVIEW-untracked.md
+expect fail "review: $raise." "ignores a review record that is not committed"
 
-lower() {
-  lines=$((lines - 1))
-  sed '$d' src/a.rs > src/a.rs.new && mv src/a.rs.new src/a.rs
-  ceiling
-  git add -A
-  git commit -q -m "Shrink the tree" ${1:+-m "$1"}
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+review REVIEW-good.md "Verdict: ACCEPT $raise"
+expect pass '' "accepts a committed verdict line"
+
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+review REVIEW-table.md "| \`$raise\` | 1 to 2 | REJECT |"
+expect fail "review: $raise." "refuses a table row that does not accept"
+review REVIEW-table2.md "| \`$raise\` | 1 to 2 | ACCEPT WITH FOLLOW-UP |"
+expect pass '' "accepts a table row that accepts"
+
+fresh; git checkout -q -b side; grow same; commit "Side grow" "Unreviewed."; side=$(short HEAD)
+git checkout -q self-test; grow same; commit "Main grow" "Unreviewed."
+review REVIEW-main.md "Verdict: ACCEPT $(short HEAD)"
+git merge -q --no-ff side -m "Merge side"
+expect fail "review: $side." "finds a side raise hidden behind an identical reviewed raise"
+
+fresh; git checkout -q -b side2; echo x >> README.md; commit "Side" "b"
+git checkout -q self-test; echo y >> SURFACES.md; commit "Main" "b"
+git merge -q --no-ff --no-commit side2 >/dev/null 2>&1; grow evil; commit "Merge side2" "merge"
+expect fail "review: $(short HEAD)." "refuses a merge that raises on its own"
+
+shrink() {
+  fresh; grow a; grow b; commit "Grow" "Unreviewed."
+  review REVIEW-grow.md "Verdict: ACCEPT $(short HEAD)"
+  sed '$d' contract/src/self_test_growth.rs > x.tmp && mv x.tmp contract/src/self_test_growth.rs
+  bump -1
+  commit "Shrink" "$1"
 }
-lower "The tree shrank by one line."
-expect pass '' "accepts a lower with a body and no review"
-lower ""
-expect fail "review: $(git rev-parse --short=7 HEAD)." "refuses a lower with no body"
-git reset -q --hard HEAD~2; lines=$((lines + 2))
+shrink "The tree shrank."
+expect pass '' "accepts a lower with a body"
+shrink ""
+expect fail "review: $(short HEAD)." "refuses a lower with no body"
 
-rm -f sdlc/records/REVIEW-early.md
-reviews "$root" "\"${early:0:12}\": \"test\""
-expect fail "grandfathers ${early:0:12}, which is not in the history up to $root" "refuses to grandfather a raise newer than the cutoff"
+fresh; echo "fn hidden() {}" >> libraries/rust/src/lib.rs
+bump 0 rust
+python3 - <<'P'
+import json, subprocess, re
+p = "sdlc/surfaces-ratchet.json"
+d = json.load(open(p))
+said = subprocess.run(["node", "sdlc/scripts/surfaces-ratchet.mjs"], capture_output=True, text=True).stderr
+m = re.search(r"is (\d+) non-blank", said)
+if m:
+    d["max"] = int(m.group(1))
+open(p, "w").write(json.dumps(d, indent=2) + "\n")
+P
+commit "Tidy the ceiling" "Lower the ceiling."
+expect fail "review: $(short HEAD)." "treats a lower that edits exclude as a raise"
+
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(git rev-parse HEAD)
+python3 - "${raise:0:12}" <<'P'
+import json, sys
+p = "sdlc/surfaces-ratchet-reviews.json"
+d = json.load(open(p))
+d["grandfathered"][sys.argv[1]] = "self-test"
+open(p, "w").write(json.dumps(d, indent=2) + "\n")
+P
+commit "Grandfather" "tidy"
+expect fail "grandfathers ${raise:0:12}, which is not in the history up to" "refuses to grandfather a raise newer than the cutoff"

@@ -74,6 +74,10 @@ CASES = [
     ("an unpinned pip install fails",
      {"databases/duckdb/x.mk": "\t$(PY) -m pip install packaging\n"},
      (1, "FAIL databases/duckdb/x.mk:1: pip install packaging without an exact pin\n")),
+    ("a versioned pip and a wildcard pin fail",
+     {"databases/duckdb/x.mk": "\tpip3.12 install packaging\n\tpip install \"packaging==26.*\"\n"},
+     (1, "FAIL databases/duckdb/x.mk:1: pip install packaging without an exact pin\n"
+         "FAIL databases/duckdb/x.mk:2: pip install \"packaging==26.*\" without an exact pin\n")),
     ("pinned pip installs pass",
      {"databases/duckdb/x.mk": "\t$(PY) -m pip install packaging==26.3 $(PIN) "
       "git+https://h/r@2ac8dbc012ddbd96a57dca37784fd8ee3c0eb021\n"
