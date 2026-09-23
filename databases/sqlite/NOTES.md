@@ -489,3 +489,57 @@ kind after 3.00 s, so every arm is discriminating.
 `thinkthen_contract::catch_panic` owns the boundary and the message
 ("a panic crossed thinkthen_probe: ..."), the same spelling every other
 surface's door uses.
+
+## The third review's SQLite fixes: the probes, both outputs (2026-09-23)
+
+Probes ran against the pre-fix build (the pushed tip, rebuilt with the
+lane's changes stashed) and the fixed build, through the 3.50.0 host
+`.runtimes` supplies. Commands and outputs as observed.
+
+**Item 2 — `named_file` read anything, unbounded.** Pre-fix probes
+(`/tmp/sqlite_prefix_probe.py`, `ulimit -v` bounded):
+`@/dev/zero` → `thinkthen local: cannot read question file "/dev/zero":
+out of memory` (the unbounded read ate the address space limit); a fifo
+blocked past its 8 s timeout; a 1,048,577-byte file was read whole and
+failed at JSON parse — no cap existed. Post-fix (`tests/null_suite.py`,
+28/28): `ok  26 a fifo refuses with the uniform message`, `ok  27 an
+endless device refuses with the uniform message`, `ok  28 an over-cap
+file names the cap`. The refusal names no cause — a missing file and a
+permission failure print the same line (the suite's check 14 asserts the
+message carries no filesystem cause).
+
+**Item 17 — warm judged every text under the first question.** Pre-fix
+probe: `thinkthen_warm` over `(q1, text), (q2, text)` sent 2 requests,
+then `thinkthen_decide(q2, text)` sent a third — the `(q2, text)` pair
+never landed in the cache (`PRE-FIX warm: requests after warm=2, after
+decide(q2,t)=3 -> CACHE MISS (bug)`). Post-fix: the same warm sends its
+rounds per question, and the decide answers from the cache
+(`ok  warm sent one round per question`, `ok  the second question's pair
+is cached` — the counter does not move). A question change now flushes
+the group it held (`step`, the `digest` field).
+
+**Item 25 — the interrupt watcher.** Pre-fix probe
+(`/tmp/sqlite_watch_probe.py`): 300 uncached calls took 672 ms, and 81 of
+200 single calls paid ≥ 4.5 ms (median 0.13 ms, p90 5.22 ms — the 5 ms
+stop penalty the review measured at 40%, here 40.5%). Post-fix: the same
+300 calls took 3 ms, median 0.01 ms, 0 of 200 over 4.5 ms, and the
+process grew exactly one thread (`1→2`, the shared watcher) where the
+old shape spawned a thread per uncached call. The one watcher thread
+ticks the registry entirely under its lock, so a call's removal
+serializes with every read of its connection; the unit test
+(`the_watcher_arms_the_token_and_stops_with_the_call`) proves arming and
+that a dropped handle leaves the registry at once.
+
+**Packaging text.** The staged artifact's `readelf -d` shows four
+`DT_NEEDED` entries and no SQLite among them — the extension reads the
+host's API table through the connection at load. The package README now
+states the 3.50.0 floor (naming why: below it a CHECK constraint in an
+untrusted database reaches the functions) and the no-link story; the old
+text claimed a libsqlite3 link and a 3.41 floor.
+
+**Skip-table adoption.** `tests/conformance_driver.py` imports
+`conformance/skiptable.py` (`lookup_reason`); the sqlite skip/diverge set
+is byte-identical before and after (`diff` empty, 13 lines).
+
+**Full check.** `databases/sqlite/check.sh`: exit 0, 174 ok lines, null
+suite 28 of 28.
