@@ -899,3 +899,7 @@ Each finding was reproduced on 398d7bb first, then fixed, then rerun.
 - **The drawn calls had drifted.** `tools/drawn-calls/recognize.sql` matched the deck page as it stood on 2026-09-21 (page sha256 `218c8e28…`). Five later deck revisions changed its relations and relate lines. The file is now a frozen fixture that records that hash, and `check.sh` pins the sha256 of its call lines. Re-vendoring the current deck lines is a decision for the steering session, because it changes the acceptance's pinned divergences.
 - **A connection's own interrupt** is a known limit, documented in the README with the header evidence. The item stays open.
 - **The check failed on a fresh tree.** `check.sh` never created `build/fixture`, so the metadata append failed with "No such file or directory". The fixture build also ran twice. The directory is now made, and the second copy is gone.
+
+### The first run of the rewritten conformance runner (2026-09-23)
+
+The gate lane rewrote `tools/conformance.py` without a DuckDB 1.5.5 CLI. Its first run came on the merged wave-6 tree (ff177aa) through `check.sh`. It printed 127 ok lines, 12 skips, and no FAILED line. The recognize cases compare their relations, and each skip prints its reason from the shared table. No code change was needed.

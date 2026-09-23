@@ -19,5 +19,7 @@ cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
 # The contract, the stand-in, and every surface build through their own
 # Cargo.toml, which `--workspace` above never sees; the workspace pass
-# runs Clippy over each with the rules its own manifest declares.
+# runs Clippy over each with the rules its own manifest declares. Its
+# self-test first proves it stays offline and portable with stub tools.
+sdlc/scripts/lint-workspaces-self-test
 sdlc/scripts/lint-workspaces

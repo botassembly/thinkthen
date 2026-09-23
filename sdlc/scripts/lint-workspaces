@@ -24,6 +24,10 @@ cd -- "$REPO"
 # A rung never answers to the shell that called it: a stray key or address
 # in the environment must not turn a check into a paid call.
 unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
+# A gate never touches the network (surfaces-review-5): every cargo call
+# here is offline, and a newer rustup must not install a toolchain.
+CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+export CARGO_NET_OFFLINE RUSTUP_AUTO_INSTALL
 
 if ! command -v cargo >/dev/null 2>&1; then
 	printf '%s\n' 'lint-workspaces: cargo is not on PATH' >&2
@@ -43,32 +47,52 @@ fi
 workspace_deny() {
 	workspace=$1
 	root=$2
+	# Each case swaps one line of the root deny.toml for its own lines.
+	# awk writes them, because BSD sed prints a replacement's backslash-n
+	# as a plain n (surfaces-review-5).
 	case "$workspace" in
-	# pyo3 (python) and polars (rust) pull target-lexicon and wasi under
-	# pyo3-ffi's build tree; sqlite carries wasi and two Zlib crates beside
-	# the wasm toolchain. Apache-2.0 WITH LLVM-exception is Apache-2.0 plus a
-	# permissive exception; Zlib is permissive. Both are recorded widenings.
 	# pyo3 and polars pull target-lexicon and wasi under pyo3-ffi's build
 	# tree (LLVM-exception), polars' zlib crates (Zlib), and polars'
 	# BSL-1.0 (the Boost Software License, permissive); postgresql's pgrx
-	# tree carries wasi and zlib crates the same way.
+	# tree carries wasi and zlib crates the same way, and sqlite carries
+	# wasi and two Zlib crates beside the wasm toolchain.
 	libraries/python)
-		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",/' ;;
+		match='    "Unlicense",'
+		lines='    "Unlicense",
+    "Apache-2.0 WITH LLVM-exception",' ;;
 	libraries/rust|databases/postgresql)
-		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",\n    "BSL-1.0",/' ;;
+		match='    "Unlicense",'
+		lines='    "Unlicense",
+    "Apache-2.0 WITH LLVM-exception",
+    "Zlib",
+    "BSL-1.0",' ;;
 	databases/sqlite)
-		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",/' ;;
+		match='    "Unlicense",'
+		lines='    "Unlicense",
+    "Apache-2.0 WITH LLVM-exception",
+    "Zlib",' ;;
 	# duckdb's tree needs three crate-scoped exceptions and no allow-list
 	# widening (review 5: the workspace-wide allowance would pass any
 	# future crate under these licenses). foldhash and zlib-rs are Zlib
 	# only, and tiny-keccak is CC0-1.0 only; every LLVM-exception crate
 	# there also offers MIT, so that allowance was never needed.
 	databases/duckdb)
-		extra='s/^exceptions = \[\]$/exceptions = [\n    { allow = ["Zlib"], crate = "foldhash" },\n    { allow = ["Zlib"], crate = "zlib-rs" },\n    { allow = ["CC0-1.0"], crate = "tiny-keccak" },\n]/' ;;
-	*) extra='' ;;
+		match='exceptions = []'
+		lines='exceptions = [
+    { allow = ["Zlib"], crate = "foldhash" },
+    { allow = ["Zlib"], crate = "zlib-rs" },
+    { allow = ["CC0-1.0"], crate = "tiny-keccak" },
+]' ;;
+	*) match='' lines='' ;;
 	esac
 	cfg=$(mktemp)
-	sed -e 's/^unused-allowed-license = "deny"$/unused-allowed-license = "warn"  # per-surface: a smaller tree need not carry every allowance/' ${extra:+-e "$extra"} "$root/deny.toml" > "$cfg"
+	MATCH=$match LINES=$lines awk '
+		$0 == "unused-allowed-license = \"deny\"" {
+			print "unused-allowed-license = \"warn\"  # per-surface: a smaller tree need not carry every allowance"
+			next
+		}
+		ENVIRON["MATCH"] != "" && $0 == ENVIRON["MATCH"] { print ENVIRON["LINES"]; next }
+		{ print }' "$root/deny.toml" > "$cfg"
 	# The two unmaintained advisories with recorded replacement plans
 	# (sdlc/records/2026-09-22-the-two-unmaintained-crates-in-the-surface-lockfiles.md): paste in R
 	# (RUSTSEC-2024-0436), serde_cbor in PostgreSQL (RUSTSEC-2021-0127).
@@ -82,7 +106,7 @@ workspace_deny() {
 	esac
 	out=$(cd "$workspace" && cargo deny --offline check --config "$cfg" advisories bans licenses 2>&1)
 	status=$?
-	rm -f "$cfg"
+	rm -f "$cfg" "$cfg.bak"
 	# A workspace whose lock names crates this machine never cached cannot
 	# answer cargo metadata offline, and the check fails with the remedy.
 	case $status in
@@ -171,7 +195,16 @@ for entry in \
 		toolchain='RUSTUP_TOOLCHAIN=1.95' ;;
 	*) toolchain='' ;;
 	esac
-	if ! (cd "$workspace" && env $toolchain cargo clippy --locked --quiet --all-targets --all-features -- -D warnings); then
+	# rustup 1.26 installs a missing pinned toolchain on first use, so a
+	# missing one fails here with its remedy instead of downloading.
+	want=${toolchain#RUSTUP_TOOLCHAIN=}
+	[ -n "$want" ] || want=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)
+	if command -v rustup >/dev/null 2>&1 && ! rustup toolchain list | grep -q "^$want-"; then
+		printf 'lint: %s FAILED: toolchain %s is not installed and the gate never downloads; run `rustup toolchain install %s` on a networked machine\n' "$workspace" "$want" "$want" >&2
+		fail=1
+		continue
+	fi
+	if ! (cd "$workspace" && env $toolchain cargo clippy --locked --offline --quiet --all-targets --all-features -- -D warnings); then
 		fail=1
 	fi
 

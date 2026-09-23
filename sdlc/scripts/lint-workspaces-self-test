@@ -1,0 +1,80 @@
+#!/bin/sh
+# The workspace lint never reaches the network and builds its deny configs
+# portably (surfaces-review-5). Usage: sdlc/scripts/lint-workspaces-self-test
+# Stub cargo, rustup, and runtimes record every call in a temporary
+# directory removed on exit; nothing real is built or fetched.
+set -eu
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+work=$(mktemp -d "${TMPDIR:-/tmp}/lint-ws-self-test.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+mkdir "$work/bin" "$work/cfg"
+
+cat > "$work/bin/cargo" <<'EOF'
+#!/bin/sh
+printf '%s|%s|%s\n' "${CARGO_NET_OFFLINE:-}" "${RUSTUP_TOOLCHAIN:-}" "$*" >> "$STUB_LOG"
+if [ "$1" = deny ]; then
+	while [ $# -gt 0 ]; do
+		[ "$1" = --config ] && cp "$2" "$STUB_CFG/$(pwd | tr / _)"
+		shift
+	done
+	echo 'advisories ok, bans ok, licenses ok'
+fi
+EOF
+cat > "$work/bin/rustup" <<'EOF'
+#!/bin/sh
+printf '%s\n' '1.93.1-x86_64-unknown-linux-gnu (override)' '1.95-x86_64-unknown-linux-gnu'
+EOF
+for tool in python3 R node ruby pg_config; do
+	printf '#!/bin/sh\nexit 0\n' > "$work/bin/$tool"
+done
+chmod +x "$work/bin/"*
+
+fail=0
+STUB_LOG="$work/log" STUB_CFG="$work/cfg" PATH="$work/bin:$PATH" \
+	sh "$REPO/sdlc/scripts/lint-workspaces" > "$work/out" 2>&1 || {
+	echo "FAIL lint-workspaces with stub tools: $(tail -n 3 "$work/out")"
+	fail=1
+}
+
+# Every cargo call is offline: the flag or the environment says so.
+if grep -v -e '^true|' -e '--offline' "$work/log" | grep . > "$work/online"; then
+	echo "FAIL a cargo call could fetch: $(head -n 1 "$work/online")"
+	fail=1
+fi
+
+# The generated configs carry each added line as its own line. BSD sed
+# writes a replacement's \n as a plain n, so no sed program may use it.
+duck="$work/cfg/$(printf '%s' "$REPO/databases/duckdb" | tr / _)"
+py="$work/cfg/$(printf '%s' "$REPO/libraries/python" | tr / _)"
+grep -qx '    { allow = \["CC0-1.0"\], crate = "tiny-keccak" },' "$duck" || {
+	echo "FAIL the duckdb deny config lacks its tiny-keccak exception line"
+	fail=1
+}
+grep -qx '    "Apache-2.0 WITH LLVM-exception",' "$py" || {
+	echo "FAIL the python deny config lacks its LLVM-exception line"
+	fail=1
+}
+if grep -n "'s/[^']*\\\\n" "$REPO/sdlc/scripts/lint-workspaces"; then
+	echo "FAIL lint-workspaces writes a newline with a backslash-n in sed, which BSD sed ignores"
+	fail=1
+fi
+
+# A missing pinned toolchain fails with its remedy; cargo never runs on it.
+printf '#!/bin/sh\necho 1.93.1-x86_64-unknown-linux-gnu\n' > "$work/bin/rustup"
+: > "$work/log"
+if STUB_LOG="$work/log" STUB_CFG="$work/cfg" PATH="$work/bin:$PATH" \
+	sh "$REPO/sdlc/scripts/lint-workspaces" > "$work/out" 2>&1; then
+	echo "FAIL a missing 1.95 toolchain passed the workspace lint"
+	fail=1
+fi
+grep -q 'lint: libraries/rust FAILED: toolchain 1.95 is not installed and the gate never downloads' "$work/out" || {
+	echo "FAIL the missing toolchain did not name its remedy"
+	fail=1
+}
+if grep -q '^[^|]*|1.95|' "$work/log"; then
+	echo "FAIL cargo ran on a toolchain that is not installed"
+	fail=1
+fi
+
+[ "$fail" -eq 0 ] || exit 1
+echo "ok:      the workspace lint stays offline and builds portable deny configs"
