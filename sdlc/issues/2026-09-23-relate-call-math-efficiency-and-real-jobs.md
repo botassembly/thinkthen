@@ -38,8 +38,9 @@ The docs say every question sharing a state belongs in one request, and that the
 | | N = 10 | N = 50 | N = 255 |
 | --- | --- | --- | --- |
 | Pairs, N(N−1)/2 | 45 | 1,225 | 32,385 |
-| Pick-one questions, either rule or one-way (the ruled design) | 45 | 1,225 | 32,385 |
-| Yes/no questions per both-ways rule / per one-way rule, both directions | 45 / 90 | 1,225 / 2,450 | 32,385 / 64,770 |
+| Old pick-one design: one question per pair for all rules together | 45 | 1,225 | 32,385 |
+| Ruled 2026-09-23: questions for each rule (a yes/no for both-ways, a three-way choice for one-way) | 45 | 1,225 | 32,385 |
+| Yes/no for each direction, the form the ruling avoids | 90 | 2,450 | 64,770 |
 | Planned request by `annotate --dry-run` (pairs) | 19,788 bytes | 527,035 bytes | 14,007,163 bytes |
 | Requests needed at the vendor budget | 1 | about 6 | about 145 |
 | Input tokens (pairs, about 124 per question plus the state per request) | about 5,700 | about 155,000 | about 4.5 million |
