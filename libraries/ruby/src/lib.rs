@@ -7,29 +7,18 @@
 //! keyword shapes and the record handling; everything that crosses into
 //! Rust happens here, one crossing a call.
 //!
-//! The interrupt story, fourth-review shape: the crossing itself never
-//! re-takes the VM lock. The whole engine call runs under one
-//! `rb_thread_call_without_gvl` with no callback into Ruby anywhere
-//! beneath it, and the host's interrupts are heard where MRI delivers
-//! them natively — at the crossing's exit, in ordinary Ruby frames. The
-//! Ruby-side watchdog thread (lib/thinkthen.rb) bounds the wait for a
-//! slow call: it polls `pending_interrupt?` and the caller's token about
-//! ten times a second and fires the call's own token, so a real
-//! `Thread#raise`, Ctrl-C, or kill cancels the call — sent requests
-//! finish, no new one starts — and the raise itself surfaces at the
-//! exit. A spurious `Thread#wakeup` and a trapped signal that raises
-//! nothing leave `pending_interrupt?` clear, so they cancel nothing. The
-//! engine watches the call's own token, never one the caller shares, so
-//! an interrupt cannot cancel a sibling call; a token fired without a
-//! raise returns the `cancelled` kind.
-//!
-//! The fourth review's probe crashed the previous shape — a poll that
-//! re-took the lock through `rb_thread_call_with_gvl` under an outer
-//! `rb_protect` — four of four under a raising trap flood: the raise
-//! lands at the lock's reacquire checkpoint and its jump crosses the
-//! with-gvl machinery, and `coroutine_transfer` faults. No code under
-//! the engine call now touches Ruby at all, so there is no such jump to
-//! make.
+//! The interrupt story, fifth-review shape: the engine call runs on its
+//! own thread while the Ruby thread waits in slices with the VM lock
+//! released and an unblock function set (see [`cross`]). Between slices
+//! MRI runs the host's interrupts in ordinary Ruby-level frames: Ctrl-C,
+//! `Thread#raise`, `Thread#kill`, and a raising trap fire the call's own
+//! token, while a trapped signal that raises nothing and a spurious
+//! `Thread#wakeup` leave the call alone. Sent requests finish, no new one
+//! starts, and the raise surfaces when they have. The call's thread
+//! blocks asynchronous signals, so no signal interrupts a send. The
+//! Ruby-side watchdog (lib/thinkthen.rb) runs the tick and relays the
+//! caller's token; the engine watches only the call's own token, so an
+//! interrupt cannot cancel a sibling call.
 
 // The magnus macros write the exported methods and the init function
 // themselves; the doc comments above each item name them, and the
@@ -37,7 +26,8 @@
 #![allow(missing_docs)]
 
 use std::ffi::c_void;
-use std::sync::Arc;
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
+use std::time::Duration;
 
 use magnus::prelude::*;
 use magnus::{
@@ -46,7 +36,7 @@ use magnus::{
 };
 use thinkthen_contract::{
     relate_checked, Annotated, Answer, Cancel, Connector as ContractConnector, Details, Edge,
-    Engine as ContractEngine, EngineConfig, Error as ContractError, ErrorKind, Found, Judgment,
+    Engine as ContractEngine, EngineConfig, Error as ContractError, ErrorKind, Judgment,
     Options, Question, QuestionSet, Ranked, Recognize, Recognized, Relate, Scored, Usage,
 };
 use thinkthen_standin::StandinConnector;
@@ -127,49 +117,133 @@ impl DataTypeFunctions for EngineValue {}
 /// One crossing's answer, or the engine's error carried back as data.
 type Crossing<T> = Result<T, ContractError>;
 
-/// Run `body` on this Ruby thread with the VM lock released, over a job
-/// the caller keeps. The crossing carries no unblock function: Ruby calls
-/// one on every interrupt, including a spurious `Thread#wakeup` and a
-/// trapped signal, and a callback without the VM lock cannot tell those
-/// from a real `Thread#raise`. Bulk calls hear their host's interrupts
-/// through the engine's poll instead, where the VM lock is taken again and
-/// the pending interrupt can be judged; the caller's own token rides the
-/// same poll.
-///
-/// The job is borrowed, not boxed across the C boundary: the body writes
-/// its answer into the job's slot and takes no ownership, so a raise
-/// landing at the GVL reacquire - before this function could consume any
-/// handoff - leaks nothing. The whole crossing runs inside one
-/// `rb_protect` at the call site (see [`protected`]), with the tick's
-/// registration and the job's slot owned outside it, so any jump MRI
-/// makes anywhere in the region is caught as data and every drop still
-/// runs.
-///
-/// On return, a real interrupt that arrived between the last poll and
-/// the return is drained here with the VM lock held and returned beside
-/// the answer; every caller surfaces it before touching the answer.
-fn without_gvl<A>(
-    job: &mut A,
-    body: unsafe extern "C" fn(*mut c_void) -> *mut c_void,
-) -> Option<Error> {
-    let pointer = job as *mut A as *mut c_void;
-    unsafe { rb_sys::rb_thread_call_without_gvl(Some(body), pointer, None, std::ptr::null_mut()) };
-    hear_interrupts().err()
+/// How long one wait slice holds before the crossing takes the VM lock
+/// back and hears the host's interrupts even without a wake-up.
+const WAIT_SLICE: Duration = Duration::from_millis(100);
+
+/// What the call's own thread hands back, beside the wake flag Ruby's
+/// unblock function sets.
+struct Handoff<T> {
+    state: Mutex<(Option<Crossing<T>>, bool)>,
+    changed: Condvar,
 }
 
-/// One crossing's whole Ruby-visible length under `rb_protect`: a raise
-/// landing anywhere inside - at the GVL reacquire, in the error mapping,
-/// in the answer conversion - comes back as `Err` instead of jumping
-/// across the Rust frames of the call. The closure converts the answer
-/// to a Value under the same protection, because the conversion itself
-/// can hit MRI checkpoints. Callers own the tick registration and the
-/// job outside this function and drop them after it returns, whatever it
-/// returns.
+impl<T> Handoff<T> {
+    fn lock(&self) -> MutexGuard<'_, (Option<Crossing<T>>, bool)> {
+        self.state.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// One wait slice with the VM lock released: it returns when the answer
+/// lands, when Ruby's unblock function wakes it, or after `WAIT_SLICE`.
+unsafe extern "C" fn wait_for<T>(pointer: *mut c_void) -> *mut c_void {
+    let handoff = unsafe { &*(pointer as *const Handoff<T>) };
+    let mut state = handoff.lock();
+    if state.0.is_none() && !state.1 {
+        state = match handoff.changed.wait_timeout(state, WAIT_SLICE) {
+            Ok((held, _)) => held,
+            Err(poisoned) => poisoned.into_inner().0,
+        };
+    }
+    state.1 = false;
+    std::ptr::null_mut()
+}
+
+/// Ruby's unblock function: MRI calls it for every interrupt aimed at the
+/// waiting thread - a signal, `Thread#raise`, `Thread#kill`, a spurious
+/// `Thread#wakeup`. It only wakes the wait; the judgment happens with the
+/// VM lock held, where MRI runs the interrupt itself.
+unsafe extern "C" fn wake<T>(pointer: *mut c_void) {
+    let handoff = unsafe { &*(pointer as *const Handoff<T>) };
+    handoff.lock().1 = true;
+    handoff.changed.notify_all();
+}
+
+/// Block the asynchronous signals on the call's own thread, so the
+/// kernel delivers them to a Ruby thread and never interrupts a send:
+/// the fifth review caught one trapped USR1 making the connector send a
+/// paid request twice. The engine's worker threads inherit the mask.
+/// Faults and aborts stay deliverable so Ruby's crash report sees them.
+fn quiet_signals() {
+    let mut set = std::mem::MaybeUninit::<libc::sigset_t>::uninit();
+    unsafe {
+        libc::sigfillset(set.as_mut_ptr());
+        let faults = [
+            libc::SIGSEGV, libc::SIGBUS, libc::SIGFPE, libc::SIGILL, libc::SIGSYS, libc::SIGTRAP, libc::SIGABRT,
+        ];
+        for fault in faults {
+            libc::sigdelset(set.as_mut_ptr(), fault);
+        }
+        libc::pthread_sigmask(libc::SIG_BLOCK, set.as_ptr(), std::ptr::null_mut());
+    }
+}
+
+/// Run one engine call on its own thread while this Ruby thread waits in
+/// slices with the VM lock released, never re-taken from inside the wait.
+///
+/// Between slices the lock is held in ordinary Ruby-level frames and MRI
+/// runs the pending interrupts under `rb_protect`: a trap handler that
+/// raises nothing, or a spurious `Thread#wakeup`, leaves the call alone;
+/// a real raise - Ctrl-C, `Thread#raise`, `Thread#kill`, a raising trap -
+/// fires the call's own token, the requests already sent finish, none
+/// starts after, and the first raise returns as `Err` when the call's
+/// thread is done: nothing is served after the return. A kill or a throw
+/// returns at once instead.
+///
+/// The fourth review's crash came from re-taking the lock through
+/// `rb_thread_call_with_gvl` inside the released region; this shape
+/// never does, and every jump MRI makes lands in `rb_protect` over frames
+/// that own nothing.
+fn cross<T: Send + 'static>(
+    token: &Cancel,
+    work: impl FnOnce() -> Crossing<T> + Send + 'static,
+) -> Result<Crossing<T>, Error> {
+    let handoff = Arc::new(Handoff { state: Mutex::new((None, false)), changed: Condvar::new() });
+    let feed = Arc::clone(&handoff);
+    let started = std::thread::Builder::new().name("thinkthen-call".into()).spawn(move || {
+        quiet_signals();
+        let answer = guarded(work);
+        feed.lock().0 = Some(answer);
+        feed.changed.notify_all();
+    });
+    if let Err(error) = started {
+        return Ok(Err(ContractError::local(format!("the call's thread could not start: {error}"))));
+    }
+    let pointer = Arc::as_ptr(&handoff) as *mut c_void;
+    let mut first: Option<Error> = None;
+    loop {
+        let heard = magnus::rb_sys::protect(|| {
+            unsafe {
+                rb_sys::rb_thread_call_without_gvl(
+                    Some(wait_for::<T>),
+                    pointer,
+                    Some(wake::<T>),
+                    pointer,
+                );
+                rb_sys::rb_thread_check_ints();
+            }
+            rb_sys::Qnil.into()
+        });
+        if let Err(raised) = heard {
+            token.cancel();
+            // A kill or a throw leaves MRI state in the error info that a
+            // later catch would clear, so it returns at once; the call's
+            // thread owns its data and finishes its sent requests alone.
+            if raised.value().is_none() {
+                return Err(raised);
+            }
+            first.get_or_insert(raised);
+        }
+        if let Some(answer) = handoff.lock().0.take() {
+            return first.map_or(Ok(answer), Err);
+        }
+    }
+}
+
+/// The answer conversion under `rb_protect`: an allocation failure or any
+/// other raise inside comes back as `Err` instead of jumping across the
+/// Rust frames that hold the answer.
 fn protected(build: impl FnOnce() -> Result<Value, Error>) -> Result<Value, Error> {
-    // The closure's outcome travels in this slot: `rb_protect` catches
-    // only Ruby's unwinding, so the crossing's own answer or failure
-    // rides out beside the nil placeholder and re-emerges below, never
-    // as a jump.
     let mut carried: Option<Result<Value, Error>> = None;
     let slot = &mut carried;
     let outcome = magnus::rb_sys::protect(move || {
@@ -179,7 +253,7 @@ fn protected(build: impl FnOnce() -> Result<Value, Error>) -> Result<Value, Erro
     match outcome {
         Ok(_) => carried.take().unwrap_or_else(|| {
             Err(map_error(thinkthen_contract::Error::defect(
-                "the protected crossing produced no outcome",
+                "the protected conversion produced no outcome",
             )))
         }),
         Err(raised) => Err(raised),
@@ -191,23 +265,6 @@ fn protected(build: impl FnOnce() -> Result<Value, Error>) -> Result<Value, Erro
 /// defect kind, never as an unwind into the host process.
 fn guarded<T>(call: impl FnOnce() -> Crossing<T>) -> Crossing<T> {
     thinkthen_contract::catch_panic("the Ruby call", call)
-}
-
-/// Hear the host's own interrupts with the VM lock taken: MRI's pending
-/// interrupt handling runs here, so a real `Thread#raise`, Ctrl-C, or
-/// `Thread#kill` comes back as a caught error while a spurious
-/// `Thread#wakeup` and a trapped signal's handler raise nothing. The
-/// contract's stop check cannot see a Ruby interrupt, so this poll is the
-/// surface's own channel, the shape experiment 211 measured for Python.
-///
-/// `rb_protect` carries the jump, because a raise here must not unwind
-/// across the Rust frames between the poll and the engine.
-fn hear_interrupts() -> Result<(), Error> {
-    magnus::rb_sys::protect(|| {
-        unsafe { rb_sys::rb_thread_check_ints() };
-        rb_sys::Qnil.into()
-    })
-    .map(|_| ())
 }
 
 /// The error class name of one kind.
@@ -252,41 +309,6 @@ enum Single {
     Details,
 }
 
-/// What a single-evidence crossing carries in and out.
-struct SingleJob {
-    engine: Arc<dyn ContractEngine>,
-    question: Question,
-    evidence: String,
-    token: Cancel,
-    deadline: Option<f64>,
-    which: Single,
-    /// The crossing's answer, written by the body on this same thread:
-    /// the job is borrowed across the C boundary, never boxed, so no
-    /// handoff can leak when a raise lands at the GVL reacquire.
-    answer: Option<Crossing<SingleOut>>,
-}
-
-/// What a recognize crossing carries in and out. The spec is parsed by the
-/// contract's one grammar before the VM lock is released.
-struct RecognizeJob {
-    engine: Arc<dyn ContractEngine>,
-    ask: Recognize,
-    text: String,
-    token: Cancel,
-    deadline: Option<f64>,
-    answer: Option<Crossing<Recognized>>,
-}
-
-/// What a relate crossing carries in and out: every record at once.
-struct RelateJob {
-    engine: Arc<dyn ContractEngine>,
-    ask: Relate,
-    records: Vec<String>,
-    token: Cancel,
-    deadline: Option<f64>,
-    answer: Option<Crossing<Vec<Edge>>>,
-}
-
 enum SingleOut {
     Answer(Answer),
     Choice(Option<String>),
@@ -295,72 +317,8 @@ enum SingleOut {
     Details(Details),
 }
 
-unsafe extern "C" fn single_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { &mut *(pointer as *mut SingleJob) };
-    let which = job.which;
-    let engine = job.engine.clone();
-    let question = job.question.clone();
-    let evidence = job.evidence.clone();
-    let deadline = job.deadline;
-    let token = job.token.clone();
-    let answer: Crossing<SingleOut> = guarded(move || {
-        let options = options_for(&token, deadline)?;
-        match which {
-            Single::Decide => engine
-                .decide_opts(&question, &evidence, options)
-                .map(SingleOut::Answer),
-            Single::Choose => engine
-                .choose_opts(&question, &evidence, options)
-                .map(SingleOut::Choice),
-            Single::Score => engine
-                .score_opts(&question, &evidence, options)
-                .map(SingleOut::Score),
-            Single::Tag => engine
-                .tag_opts(&question, &evidence, options)
-                .map(SingleOut::Tags),
-            Single::Details => engine
-                .details_opts(&question, &evidence, options)
-                .map(SingleOut::Details),
-        }
-    });
-    job.answer = Some(answer);
-    std::ptr::null_mut()
-}
-
-/// One recognize crossing, the VM lock released for its whole width.
-unsafe extern "C" fn recognize_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { &mut *(pointer as *mut RecognizeJob) };
-    let engine = job.engine.clone();
-    let ask = job.ask.clone();
-    let text = job.text.clone();
-    let deadline = job.deadline;
-    let token = job.token.clone();
-    let answer: Crossing<Recognized> = guarded(move || {
-        let options = options_for(&token, deadline)?;
-        engine.recognize_opts(&ask, &text, options)
-    });
-    job.answer = Some(answer);
-    std::ptr::null_mut()
-}
-
-/// One relate crossing: every record at once, the limit checked inside.
-unsafe extern "C" fn relate_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { &mut *(pointer as *mut RelateJob) };
-    let engine = job.engine.clone();
-    let ask = job.ask.clone();
-    let records: Vec<String> = job.records.clone();
-    let deadline = job.deadline;
-    let token = job.token.clone();
-    let answer: Crossing<Vec<Edge>> = guarded(move || {
-        let options = options_for(&token, deadline)?;
-        let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        relate_checked(engine.as_ref(), &ask, &slices, options)
-    });
-    job.answer = Some(answer);
-    std::ptr::null_mut()
-}
-
 /// Which many-record verb a crossing runs.
+#[derive(Clone, Copy)]
 enum Bulk {
     DecideMany,
     DecideManyWithProbabilities,
@@ -368,111 +326,11 @@ enum Bulk {
     Rank,
 }
 
-/// What a many-record crossing carries in and out. The token is the
-/// call's own, created on the Ruby side and handed in: the engine
-/// watches it, the Ruby-side watchdog fires it, and no token the caller
-/// shares is ever fired by this surface.
-struct BulkJob {
-    engine: Arc<dyn ContractEngine>,
-    question: Question,
-    records: Vec<String>,
-    token: Cancel,
-    deadline: Option<f64>,
-    which: Bulk,
-    /// The crossing's answer, written by the body on this same thread.
-    answer: Option<Crossing<BulkOut>>,
-}
-
 enum BulkOut {
     Judgments(Vec<Judgment>),
     JudgedPairs(Vec<Judgment>),
     Kept(Vec<usize>),
     Ranked(Vec<Ranked>),
-}
-
-unsafe extern "C" fn bulk_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { &mut *(pointer as *mut BulkJob) };
-    let engine = job.engine.clone();
-    let question = job.question.clone();
-    let records: Vec<String> = job.records.clone();
-    let deadline = job.deadline;
-    let token = job.token.clone();
-    let answer: Crossing<BulkOut> = guarded(|| {
-        let options = options_for(&token, deadline)?;
-        let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        match job.which {
-            Bulk::DecideMany => engine
-                .decide_many_opts(&question, &slices, options, None)
-                .map(BulkOut::Judgments),
-            Bulk::DecideManyWithProbabilities => engine
-                .decide_many_opts(&question, &slices, options, None)
-                .map(BulkOut::JudgedPairs),
-            Bulk::Filter => engine
-                .filter_opts(&question, &slices, options, None)
-                .map(BulkOut::Kept),
-            Bulk::Rank => engine
-                .rank_opts(&question, &slices, options, None)
-                .map(BulkOut::Ranked),
-        }
-    });
-    job.answer = Some(answer);
-    std::ptr::null_mut()
-}
-
-/// The annotate crossing, which takes a set instead of one question.
-struct AnnotateJob {
-    engine: Arc<dyn ContractEngine>,
-    set: QuestionSet,
-    records: Vec<String>,
-    token: Cancel,
-    deadline: Option<f64>,
-    answer: Option<Crossing<AnnotatedRows>>,
-}
-
-/// One annotate call's answer crossing: a row per record, a field per
-/// question name.
-type AnnotatedRows = Vec<Vec<(String, Annotated)>>;
-
-unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { &mut *(pointer as *mut AnnotateJob) };
-    let engine = job.engine.clone();
-    let set = job.set.clone();
-    let records: Vec<String> = job.records.clone();
-    let deadline = job.deadline;
-    let token = job.token.clone();
-    let answer: Crossing<Vec<Vec<(String, Annotated)>>> = guarded(|| {
-        let options = options_for(&token, deadline)?;
-        let slices: Vec<&str> = records.iter().map(String::as_str).collect();
-        engine.annotate_opts(&set, &slices, options, None)
-    });
-    job.answer = Some(answer);
-    std::ptr::null_mut()
-}
-
-/// The find crossing, which takes units and no tick.
-struct FindJob {
-    engine: Arc<dyn ContractEngine>,
-    question: Question,
-    units: Vec<String>,
-    token: Cancel,
-    deadline: Option<f64>,
-    answer: Option<Crossing<Found>>,
-}
-
-unsafe extern "C" fn find_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { &mut *(pointer as *mut FindJob) };
-    let engine = job.engine.clone();
-    let question = job.question.clone();
-    let units: Vec<String> = job.units.clone();
-    let deadline = job.deadline;
-    let token = job.token.clone();
-    let answer: Crossing<Found> = guarded(move || {
-        let options = options_for(&token, deadline)?;
-        let slices: Vec<&str> = units.iter().map(String::as_str).collect();
-        engine.find_opts(&question, &slices, options)
-    });
-    job.answer = Some(answer);
-    std::ptr::null_mut()
 }
 
 /// Build the call options the wrapper's two keywords control: the token
@@ -550,28 +408,21 @@ impl EngineValue {
         deadline: Value,
     ) -> Result<Value, Error> {
         let token = own_cancel(own)?;
-        let mut job = SingleJob {
-            engine: Arc::clone(&self.engine),
-            question: question.question.clone(),
-            evidence,
-            token: token.clone(),
-            deadline: optional_deadline(deadline)?,
-            which,
-            answer: None,
-        };
-        // The crossing and its whole conversion run under one protection:
-        // a raise anywhere inside - the GVL reacquire, the error mapping,
-        // the value building - returns as data. The job lives on this
-        // frame, so whatever happens inside, its answer slot drops here.
-        protected(|| {
-            let pending = without_gvl(&mut job, single_body);
-            if let Some(raised) = pending {
-                return Err(raised);
+        let deadline = optional_deadline(deadline)?;
+        let engine = Arc::clone(&self.engine);
+        let question = question.question.clone();
+        let call = token.clone();
+        let answer = cross(&token, move || {
+            let options = options_for(&call, deadline)?;
+            match which {
+                Single::Decide => engine.decide_opts(&question, &evidence, options).map(SingleOut::Answer),
+                Single::Choose => engine.choose_opts(&question, &evidence, options).map(SingleOut::Choice),
+                Single::Score => engine.score_opts(&question, &evidence, options).map(SingleOut::Score),
+                Single::Tag => engine.tag_opts(&question, &evidence, options).map(SingleOut::Tags),
+                Single::Details => engine.details_opts(&question, &evidence, options).map(SingleOut::Details),
             }
-            let answer = job
-                .answer
-                .take()
-                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+        })?;
+        protected(|| {
             let answer = answer.map_err(map_error)?;
             let ruby = magnus::Ruby::get().unwrap();
             let value = match answer {
@@ -609,31 +460,30 @@ impl EngineValue {
         own: Value,
         deadline: Value,
     ) -> Result<Value, Error> {
-        // The engine watches the call's own token, handed in from the
-        // Ruby side, where the watchdog fires it for the host's real
-        // interrupts and for the caller's token; a token two calls share
-        // is only ever fired by its own `cancel`.
+        // The engine watches the call's own token: the crossing fires it
+        // for the host's real interrupts and the watchdog for the
+        // caller's token; a token two calls share is only ever fired by
+        // its own `cancel`.
         let token = own_cancel(own)?;
-        let mut job = BulkJob {
-            engine: Arc::clone(&self.engine),
-            question: question.question.clone(),
-            records,
-            token: token.clone(),
-            deadline: optional_deadline(deadline)?,
-            which,
-            answer: None,
-        };
-        // The job lives on this frame, so whatever raise MRI delivers
-        // inside, its answer slot drops here.
-        protected(|| {
-            let pending = without_gvl(&mut job, bulk_body);
-            if let Some(raised) = pending {
-                return Err(raised);
+        let deadline = optional_deadline(deadline)?;
+        let engine = Arc::clone(&self.engine);
+        let question = question.question.clone();
+        let call = token.clone();
+        let answer = cross(&token, move || {
+            let options = options_for(&call, deadline)?;
+            let slices: Vec<&str> = records.iter().map(String::as_str).collect();
+            match which {
+                Bulk::DecideMany => engine
+                    .decide_many_opts(&question, &slices, options, None)
+                    .map(BulkOut::Judgments),
+                Bulk::DecideManyWithProbabilities => engine
+                    .decide_many_opts(&question, &slices, options, None)
+                    .map(BulkOut::JudgedPairs),
+                Bulk::Filter => engine.filter_opts(&question, &slices, options, None).map(BulkOut::Kept),
+                Bulk::Rank => engine.rank_opts(&question, &slices, options, None).map(BulkOut::Ranked),
             }
-            let answer = job
-                .answer
-                .take()
-                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+        })?;
+        protected(|| {
             let answer = answer.map_err(map_error)?;
             match answer {
             BulkOut::Judgments(judgments) => {
@@ -698,23 +548,14 @@ impl EngineValue {
     ) -> Result<Value, Error> {
         let ask = Recognize::from_json(&spec).map_err(map_error)?;
         let token = own_cancel(own)?;
-        let mut job = RecognizeJob {
-            engine: Arc::clone(&self.engine),
-            ask,
-            text,
-            token: token.clone(),
-            deadline: optional_deadline(deadline)?,
-            answer: None,
-        };
+        let deadline = optional_deadline(deadline)?;
+        let engine = Arc::clone(&self.engine);
+        let call = token.clone();
+        let answer = cross(&token, move || {
+            let options = options_for(&call, deadline)?;
+            engine.recognize_opts(&ask, &text, options)
+        })?;
         protected(|| {
-            let pending = without_gvl(&mut job, recognize_body);
-            if let Some(raised) = pending {
-                return Err(raised);
-            }
-            let answer = job
-                .answer
-                .take()
-                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
             let answer = answer.map_err(map_error)?;
             recognized_value(&answer)
         })
@@ -732,23 +573,15 @@ impl EngineValue {
     ) -> Result<Value, Error> {
         let ask = Relate::from_json(&spec).map_err(map_error)?;
         let token = own_cancel(own)?;
-        let mut job = RelateJob {
-            engine: Arc::clone(&self.engine),
-            ask,
-            records,
-            token: token.clone(),
-            deadline: optional_deadline(deadline)?,
-            answer: None,
-        };
+        let deadline = optional_deadline(deadline)?;
+        let engine = Arc::clone(&self.engine);
+        let call = token.clone();
+        let answer = cross(&token, move || {
+            let options = options_for(&call, deadline)?;
+            let slices: Vec<&str> = records.iter().map(String::as_str).collect();
+            relate_checked(engine.as_ref(), &ask, &slices, options)
+        })?;
         protected(|| {
-            let pending = without_gvl(&mut job, relate_body);
-            if let Some(raised) = pending {
-                return Err(raised);
-            }
-            let answer = job
-                .answer
-                .take()
-                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
             let answer = answer.map_err(map_error)?;
             edges_value(&answer)
         })
@@ -856,23 +689,16 @@ impl EngineValue {
         deadline: Value,
     ) -> Result<Value, Error> {
         let token = own_cancel(own)?;
-        let mut job = FindJob {
-            engine: Arc::clone(&self.engine),
-            question: question.question.clone(),
-            units,
-            token: token.clone(),
-            deadline: optional_deadline(deadline)?,
-            answer: None,
-        };
+        let deadline = optional_deadline(deadline)?;
+        let engine = Arc::clone(&self.engine);
+        let question = question.question.clone();
+        let call = token.clone();
+        let found = cross(&token, move || {
+            let options = options_for(&call, deadline)?;
+            let slices: Vec<&str> = units.iter().map(String::as_str).collect();
+            engine.find_opts(&question, &slices, options)
+        })?;
         protected(|| {
-            let pending = without_gvl(&mut job, find_body);
-            if let Some(raised) = pending {
-                return Err(raised);
-            }
-            let found = job
-                .answer
-                .take()
-                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
             let found = found.map_err(map_error)?;
             let pair = RArray::with_capacity(2);
             match found.index {
@@ -893,25 +719,16 @@ impl EngineValue {
     ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
         let token = own_cancel(own)?;
-        let mut job = AnnotateJob {
-            engine: Arc::clone(&engine.engine),
-            set: set.set.clone(),
-            records,
-            token: token.clone(),
-            deadline: optional_deadline(deadline)?,
-            answer: None,
-        };
-        // The job lives on this frame, so whatever raise MRI delivers
-        // inside, its answer slot drops here.
+        let deadline = optional_deadline(deadline)?;
+        let engine = Arc::clone(&engine.engine);
+        let set = set.set.clone();
+        let call = token.clone();
+        let records_out = cross(&token, move || {
+            let options = options_for(&call, deadline)?;
+            let slices: Vec<&str> = records.iter().map(String::as_str).collect();
+            engine.annotate_opts(&set, &slices, options, None)
+        })?;
         protected(|| {
-            let pending = without_gvl(&mut job, annotate_body);
-            if let Some(raised) = pending {
-                return Err(raised);
-            }
-            let records_out = job
-                .answer
-                .take()
-                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
             let records_out = records_out.map_err(map_error)?;
             let outer = RArray::with_capacity(records_out.len());
             for one in records_out {

@@ -151,7 +151,11 @@ run_step "workspace lint rules" sdlc/scripts/lint-workspaces || fail=1
 
 run_step "contract" bash -c 'cd contract && cargo test --quiet --locked' || fail=1
 
-run_step "stand-in, null backend" bash -c 'cd standin && cargo test --quiet --locked --lib' || fail=1
+# surfaces-review-5: the loopback-stub tests (a signal never resends a
+# paid request, billing, backoff) ran in no gate while only --lib ran.
+# Every test file but wire, which the next step runs against the stub.
+run_step "stand-in, null backend and loopback stubs" bash -c \
+  'cd standin && set -- --lib && for t in tests/*.rs; do n=$(basename "$t" .rs); [ "$n" = wire ] || set -- "$@" --test "$n"; done && cargo test --quiet --locked "$@"' || fail=1
 
 if [ "$wire" = yes ]; then
   run_step "stand-in, wire against the stub" bash -c \

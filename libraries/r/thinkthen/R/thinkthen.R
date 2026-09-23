@@ -3,23 +3,6 @@
 # shape: the tt_ prefix, NA as "not sure", a column in and a column out,
 # and the six error kinds as R conditions with the retry signal.
 
-# Raise one of the six kinds as an R condition, carrying retryable. The
-# Rust half packs "kind", "retryable", and "message" around \u{1f} marks;
-# anything else is a plain error and passes through unchanged.
-tt_raise <- function(text) {
-  parts <- strsplit(text, "", fixed = TRUE)[[1]]
-  if (length(parts) != 3L) {
-    stop(text, call. = FALSE)
-  }
-  kind <- parts[[1]]
-  retryable <- identical(parts[[2]], "true")
-  message <- parts[[3]]
-  stop(structure(
-    class = c(paste0("thinkthen_", kind), "thinkthen_error", "error", "condition"),
-    list(message = message, kind = kind, retryable = retryable, call = NULL)
-  ))
-}
-
 # Every call runs through here: the engine's failure raises as its
 # condition, a pending interrupt raises R's own interrupt condition, and
 # the cleanup stops any call still in flight. The Rust half never lets R's
@@ -59,9 +42,8 @@ tt_raise <- function(text) {
   stop(held$cond)
 }
 
-# The condition one engine error maps to, without stopping: the same
-# packing tt_raise reads, returned as data so .tt_call can restore the
-# error hook before the raise. An interrupt marker is delivered for real
+# The condition one engine error maps to, without stopping, returned as
+# data so .tt_call can restore the error hook before the raise. An interrupt marker is delivered for real
 # instead, from inside the handler where cleanup has already run.
 .tt_error_condition <- function(e) {
   text <- conditionMessage(e)
@@ -72,7 +54,9 @@ tt_raise <- function(text) {
   .tt_condition(text)
 }
 
-# The condition tt_raise raises, built as data.
+# One of the six kinds as an R condition, carrying retryable. The Rust
+# half packs "kind", "retryable", and "message" around \u{1f} marks and
+# escapes any mark inside the message; anything else is a plain error.
 .tt_condition <- function(text) {
   parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
   if (length(parts) != 3L) {
@@ -95,10 +79,11 @@ tt_raise <- function(text) {
 # probe. No Rust frame sits under that jump: the old fallback called the
 # extendr-wrapped tt_raise_interrupt, whose R_CheckUserInterrupt longjmp
 # crossed the wrapper's own Rust frame - the fourth review's finding -
-# and it is deleted. If the real signal does not land, the synthetic
-# condition below is the fallback, with the error hook held aside so an
-# interrupt never fires it; the call still stops rather than silently
-# continuing.
+# and it is deleted. If the real signal does not land within the sleep,
+# control falls through to the synthetic condition below, with the error
+# hook held aside so an interrupt never fires it; the call still stops
+# rather than silently continuing (surfaces-review-5: an early return
+# made this fallback unreachable).
 .tt_interrupt <- function() {
   delivered <- FALSE
   if (.Platform$OS.type == "unix" && requireNamespace("tools", quietly = TRUE)) {
@@ -107,7 +92,6 @@ tt_raise <- function(text) {
       # The signal's flag is set; Sys.sleep is an R checkpoint, and the
       # real jump lands inside it if it lands at all - pure R frames.
       Sys.sleep(0.1)
-      return(invisible(NULL))
     }
   }
   had_hook <- getOption("error")
@@ -125,6 +109,27 @@ tt_raise <- function(text) {
 # new request starts. Cheap when no call is active.
 .tt_cleanup <- function() {
   invisible(tt_cancel_active())
+}
+
+# The one JSON writer for the grammar's text: every string reaches
+# jsonlite as UTF-8 under any locale (surfaces-review-5: under LC_ALL=C a
+# native-marked question text went out as "caf<c3><a9>"). The rule is the
+# Rust half's own: native bytes that are valid UTF-8 are UTF-8, latin1
+# converts, and native bytes that are not valid UTF-8 refuse by name.
+.tt_json <- function(value) {
+  utf8 <- function(text) {
+    if (!is.character(text) || !length(text)) return(text)
+    native <- Encoding(text) == "unknown" & !is.na(text)
+    if (any(native & !validUTF8(text))) {
+      stop(.tt_condition(paste("usage", "false",
+        "a text carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first",
+        sep = "\u{1f}")))
+    }
+    Encoding(text)[native] <- "UTF-8"
+    enc2utf8(text)
+  }
+  held <- rapply(list(value), utf8, classes = "ANY", how = "replace")[[1L]]
+  jsonlite::toJSON(held, auto_unbox = TRUE)
 }
 
 # The question-file's own number text: 0.9, or 0.2:0.8 for a band.
@@ -161,7 +166,7 @@ tt_raise <- function(text) {
     names(held) <- "model"
     body <- c(body, held)
   }
-  jsonlite::toJSON(body, auto_unbox = TRUE)
+  .tt_json(body)
 }
 
 # Build a question value from parts: exactly one kind, named members for
@@ -227,7 +232,7 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
       body <- c(body, held)
     }
   }
-  .tt_call(tt_question_grammared(jsonlite::toJSON(body, auto_unbox = TRUE)))
+  .tt_call(tt_question_grammared(.tt_json(body)))
 }
 
 # decide: one evidence answers TRUE, FALSE, or NA; a column crosses once.
@@ -486,7 +491,7 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
   if (!is.null(relation_threshold)) {
     spec$relation_threshold <- as.numeric(relation_threshold)[[1L]]
   }
-  jsonlite::toJSON(spec, auto_unbox = TRUE)
+  .tt_json(spec)
 }
 
 # The relate section's JSON from the parts a caller gives.
@@ -505,7 +510,7 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
   }
   if (!is.null(kind_field)) spec$kind_field <- as.character(kind_field)[[1L]]
   if (!is.null(threshold)) spec$threshold <- as.numeric(threshold)[[1L]]
-  jsonlite::toJSON(spec, auto_unbox = TRUE)
+  .tt_json(spec)
 }
 
 # recognize: every name in each text with its kind, and the relations the

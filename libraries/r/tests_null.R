@@ -235,8 +235,8 @@ check("three judgments are three sends", identical(tt_usage()$requests - before,
 # the defect kind raises its own R condition; the Rust half's unit test
 # constructs the contract Error with kind defect and packs it (check.sh).
 defect_cond <- tryCatch(
-  thinkthen:::tt_raise(paste0("defect", "\u001f", "false", "\u001f",
-                              "the engine broke its own contract")),
+  stop(thinkthen:::.tt_condition(paste0("defect", "\u001f", "false", "\u001f",
+                                        "the engine broke its own contract"))),
   thinkthen_defect = function(e) e
 )
 check("the defect kind raises thinkthen_defect", inherits(defect_cond, "thinkthen_defect"))

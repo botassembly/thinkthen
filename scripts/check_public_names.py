@@ -20,6 +20,7 @@ same change that documents it.
 from __future__ import annotations
 
 import ast
+import json
 import re
 import sys
 import tomllib
@@ -55,16 +56,29 @@ def typescript_names() -> set[str]:
 
 def ruby_names() -> set[str]:
     text = (ROOT / "libraries/ruby/lib/thinkthen.rb").read_text()
+    native = (ROOT / "libraries/ruby/src/lib.rs").read_text()
+    version = (ROOT / "libraries/ruby/lib/thinkthen/version.rb").read_text()
     methods = set(re.findall(r"^    def ([a-z_]\w*)", text.split("\n    private", 1)[0], re.M))
+    methods |= set(re.findall(r"^  def self\.([a-z_]\w*)", text, re.M))
     constants = set(re.findall(r"^  ([A-Z]\w*) =", text, re.M))
-    # A private_constant line is Ruby's own privacy marker; the source
-    # regex cannot see runtime visibility, so the marked names leave the
-    # public set here (surfaces-review-4's names drift).
-    marked = set(re.findall(r"private_constant ((?::[A-Z]\w*,?\s*)+)", text))
-    private_constants = {name.strip(":, \n\t ") for group in marked for name in group.split(",")}
-    constants -= private_constants
+    constants |= set(re.findall(r"^\s*([A-Z]\w*) =", version, re.M))
+    # The native half defines names too: classes and modules straight on
+    # the ThinkThen module, and its module functions (surfaces-review-5).
+    constants |= set(re.findall(r'\bmodule\.define_(?:class|module)\("([A-Z]\w*)"', native))
+    methods |= set(re.findall(r'\bmodule\.define_module_function\("(\w+)"', native))
+    # private_constant and private_class_method are Ruby's own privacy
+    # markers; the marked names leave the public set here. check.sh also
+    # checks the loaded module (--ruby-runtime).
+    constants -= _marked(text, "private_constant", r"[A-Z]\w*")
+    methods -= _marked(text, "private_class_method", r"[a-z_]\w*")
     errors = set(re.findall(r"([A-Z]\w*Error|Cancelled)\b", text.split(".each", 1)[0]))
     return methods | constants | errors
+
+
+def _marked(text: str, marker: str, name: str) -> set[str]:
+    """The names one Ruby privacy marker lists, across every such line."""
+    groups = re.findall(rf"{marker} ((?::{name},?\s*)+)", text)
+    return {one.strip(":, \n\t ") for group in groups for one in group.split(",") if one.strip(":, \n\t ")}
 
 
 def r_names() -> set[str]:
@@ -176,7 +190,10 @@ SURFACES: list[dict] = [
         # item 2): rank and find return them instead of the bare record.
         # `to_s` is Ranked's print form, because the deck's sample prints
         # ranked records directly (`puts mail`).
-        | {"Ranked", "Found", "to_s"},
+        | {"Ranked", "Found", "to_s"}
+        # The base error, the cancel token, the two question values, and
+        # the gem version: live names the runtime check sees.
+        | {"Error", "Cancel", "Question", "QuestionSet", "VERSION"},
         "doc": "helpers: libraries/ruby/README.md",
     },
     {
@@ -269,9 +286,19 @@ SURFACES: list[dict] = [
 ]
 
 
-def main() -> int:
+def main(argv: list[str]) -> int:
+    surfaces = SURFACES
+    # `--ruby-runtime FILE` checks the Ruby surface's loaded module - the
+    # JSON name list libraries/ruby/tests/public_names.rb prints - instead
+    # of the source: the native half defines names no source scan sees.
+    if argv[:1] == ["--ruby-runtime"] and len(argv) == 2:
+        loaded = set(json.loads(Path(argv[1]).read_text()))
+        surfaces = [dict(row, extract=lambda: loaded) for row in SURFACES if row["name"] == "ruby"]
+    elif argv:
+        print("usage: check_public_names.py [--ruby-runtime NAMES.json]", file=sys.stderr)
+        return 2
     failures = 0
-    for surface in SURFACES:
+    for surface in surfaces:
         found = surface["extract"]()
         expected = surface["expected"]
         extra = sorted(found - expected)
@@ -295,4 +322,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
