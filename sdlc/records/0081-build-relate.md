@@ -1,15 +1,15 @@
 # 0081: Build `relate` over the shared relation planner
 
-Status: Option A ruled; design ready for Sol re-review.
+Status: Ian ruled partial output at exit 6; design ready for Sol re-review.
 
 ## Trial record
 
-The Luna-first route is Luna Max because this ticket crosses command, shared planner, request state, replay, and failure boundaries. Independent Sol rejected the first design before implementation.
+The Luna-first route remains level 3, Luna Max. Contract 2, state and timing 2, reach 1, proof 2, and cost of error 1 total 8; partial failure, request/cache identity, and secrecy set the level-3 floor.
 
-Sol found four substantive gaps: no shared name-and-kind endpoint owner, false wildcard and method-H claims, no exact mixed detailed-result shape, and stale file and line budgets that also forbade required recognition regressions.
+Sol rejected design round 1 for missing shared endpoint ownership, false wildcard and H-wording claims, an unresolved detailed shape, and stale budgets. Luna remediation pass 1 assigned the shared owner and planner corrections; Ian then ruled Option A.
 
-This remediation amends ticket 0081 and `sdlc/planning/relate-design.md`. It assigns one generic relation entity and edge owner, scopes wildcard expansion and H-state corrections into 0081, requires recognize regression proof, gives actual owner budgets, and records Ian's Option A ruling.
+Sol rejected design round 2 because budgets still omitted near-limit owner splits and full proof; Option A lacked exact outer, directional, H, and failure unions; `max_options` fallback and field mapping were ambiguous; H state was not byte-exact; and acceptance omitted the full gate and secrecy matrix. Sol also identified partial-failure exit behavior as an unresolved public decision.
 
-Ian chose ordered question entries under `answer.questions` on 2026-09-23. The shape matches `recognize --details`, keeps each entry complete and ordered, and uses request digests for audit and comparison without public question ids. `value` remains accepted edges only. Exact JSON tests must cover choice, yes/no, rejection, and failure entries.
+Luna remediation pass 2 fixes those design defects in ticket 0081 and `sdlc/planning/relate-design.md`. It defines structured pointers, exact effective option limits, typed relation state and H instructions, all Option A unions, realistic 18/12-file and 3,200-line ceilings, and sequential full-gate and shared secrecy proof.
 
-No product code changed. No surface file, live call, or paid call occurred. No focused or complete gate ran. No targeted Sol repair, reopened defect, or elapsed start-to-accept time is recorded. The design now proceeds to Sol re-review.
+The trial has reached its second Luna remediation pass. Ian chose partial output at exit 6 on 2026-09-23. Successful edges remain available, detailed output records failed questions, and the nonzero exit tells callers the graph is incomplete. A reply with no valid logical answer remains exit 4. The design now proceeds to Sol re-review. No product code, surface file, live call, paid call, focused or complete gate, targeted Sol repair, reopened implementation defect, or trustworthy elapsed start-to-accept time exists.
