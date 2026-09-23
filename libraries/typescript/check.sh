@@ -21,7 +21,7 @@ step "the defect kind maps into the failure envelope (shim unit test)"
 (cd addon && cargo test --quiet --locked --lib)
 
 step "offline suites (null backend): verbs, errors, conformance, the ten examples, the fast-backend cancel"
-ENGINE_NULL=1 node --test tests/*.test.mjs
+THINKTHEN_NULL=1 node --test tests/*.test.mjs
 
 step "the conformance test can fail"
 # The standing can-fail probe (review-4, item 17, extends to the arms that
@@ -54,7 +54,7 @@ for case_prefix in 13- 15- 19-; do
     }
     fs.writeFileSync(process.argv[1], JSON.stringify(file));
   ' "$corrupt" "$case_prefix"
-  if ENGINE_NULL=1 THEN_CONF="$corrupt" node --test tests/conformance.test.mjs >/dev/null 2>&1; then
+  if THINKTHEN_NULL=1 THEN_CONF="$corrupt" node --test tests/conformance.test.mjs >/dev/null 2>&1; then
     rm -f "$corrupt"
     echo "FAIL: corrupting case ${case_prefix}* passed the conformance test"
     exit 1

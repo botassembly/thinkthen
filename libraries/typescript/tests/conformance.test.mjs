@@ -25,7 +25,11 @@ const file = JSON.parse(readFileSync(held, 'utf8'));
 const outcomes = [];
 
 function note(id, text) {
+  // The gate's counting reads `skip <id>: why` lines, so the covered
+  // cases reach the gate totals and not only this test's own summary
+  // (surfaces-review-4: covered cases never reached the totals).
   outcomes.push(`${id}: ${text}`);
+  console.log(`skip ${id}: ${text}`);
 }
 
 // The one shared reader's decision for this case on this surface:

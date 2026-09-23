@@ -19,6 +19,7 @@
 // sdlc/surfaces-ratchet.json and nowhere else.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,5 +56,32 @@ if (total !== max) {
   const remedy = total < max ? `lower it to ${total}` : `raise it to ${total}`;
   console.error(`surfaces-ratchet: ${directories.join(", ")} is ${total} non-blank ${extension} lines, ceiling is ${max}. The ceiling must equal the total; ${remedy} in sdlc/surfaces-ratchet.json, in a commit that says why.`);
   process.exit(1);
+}
+
+// The raise discipline, checked at the rung instead of remembered
+// (surfaces-review-4, item 16): every commit that moves this ceiling
+// carries a body naming what grew and why it earns its lines, plus the
+// second-agent review line CLAUDE.md demands. The two empty-body raises
+// the fourth review found (e11bb57, 4238ea5) fail this check until a
+// compliant commit moves the ceiling again. In a tree without .git (a
+// frozen export) the check says so and skips only itself; the count
+// check above never skips.
+try {
+  const commit = execFileSync(
+    "git",
+    ["log", "-1", "--format=%B", "--", "sdlc/surfaces-ratchet.json"],
+    { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+  ).trim();
+  if (commit !== "") {
+    const body = commit.split("\n\n").slice(1).join("\n\n").trim();
+    if (body === "" || !/second agent/i.test(body)) {
+      console.error(
+        "surfaces-ratchet: the last commit moving sdlc/surfaces-ratchet.json carries no body naming the growth and the second-agent review (CLAUDE.md). Raise the ceiling in a commit that does.",
+      );
+      process.exit(1);
+    }
+  }
+} catch {
+  console.error("surfaces-ratchet: no git history here; the raise-body check cannot run");
 }
 console.log(`surfaces-ratchet: ${directories.join(", ")} ${total}/${max}`);

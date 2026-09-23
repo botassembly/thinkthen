@@ -40,11 +40,15 @@ trap 'rm -f "$step_log"; stop_stubs' EXIT
 count_lines() {
   local file=$1
   green=$((green + $(grep -cE '^(ok[[:space:]]|ok:|OK:)' "$file" || true)))
-  skipped=$((skipped + $(grep -cE '^skip[[:space:]]' "$file" || true)))
-  diverged=$((diverged + $(grep -cE '^diverge[[:space:]]' "$file" || true)))
+  # `# skip` is node --test, which prints a test's stdout as TAP comments
+  # (surfaces-review-4: the covered cases never reached the totals and
+  # node `# SKIP` lines were counted by no one).
+  skipped=$((skipped + $(grep -cE '^(skip[[:space:]]|# skip )' "$file" || true)))
+  diverged=$((diverged + $(grep -cE '^(diverge[[:space:]]|# diverge )' "$file" || true)))
   # `not ok` is TAP, which node --test prints; a node failure must land in
-  # the failed total and not only in the step's exit status.
-  failed=$((failed + $(grep -cE '^(FAIL|not ok)' "$file" || true)))
+  # the failed total and not only in the step's exit status. `# fail N` is
+  # node's own summary line, counted only when it names a failure.
+  failed=$((failed + $(grep -cE '^(FAIL|not ok|# fail [1-9])' "$file" || true)))
 }
 
 # Run one step, show its output as it happens, count its result lines, and
@@ -128,7 +132,13 @@ else
   skip_note='wire tests skipped: no stub on the loopback'
 fi
 
-run_step "surfaces ratchet" node sdlc/scripts/surfaces-ratchet.mjs || fail=1
+run_step "surfaces ratchet" node sdlc/scripts/surfaces-ratchet.mjs || {
+  # Rule 3 (surfaces-review-4): the gate runs at the exact tip, and a red
+  # ratchet prints no summary at all — neither the green line nor the
+  # counted one. The ratchet is the first check and stops the run.
+  echo 'gate stops: the surfaces ratchet is red at this tip' >&2
+  exit 1
+}
 
 # The ceiling rule and the lint rules run before any surface: a tip the
 # ratchet or Clippy refuses cannot buy a green gate with green suites
@@ -148,6 +158,8 @@ else
 fi
 
 run_step "conformance file" python3 conformance/tools/validate_conformance.py || fail=1
+
+run_step "the one skip table" python3 conformance/skiptable.py validate || fail=1
 
 run_step "conformance checker tests" python3 conformance/tools/test_validate_conformance.py || fail=1
 
