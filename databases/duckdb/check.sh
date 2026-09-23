@@ -4,14 +4,18 @@
 # this surface's port (8217). The wire stub is the in-repo
 # tools/wire-stub, which scripts/check_surfaces.sh builds and starts.
 set -euo pipefail
-cd "$(dirname "$0")"
+# Resolved once, absolute: a relative $0 read again after the cd pointed
+# beside the caller (surfaces-review-5: tools/version.env was not found
+# when the gate called this from another folder).
+HERE=$(cd "$(dirname "$0")" && pwd)
+cd "$HERE"
 
 # The builder's home stays out of every artifact (surfaces-review-5), the
 # same remap the C, SQLite, Python, and Node builds carry.
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 
 # The one DuckDB version pin (tools/version.env).
-source "$(dirname "$0")/tools/version.env"
+source "$HERE/tools/version.env"
 # The venv's duckdb installs the same pin, not "latest stable": the
 # vendored base makefile defaults its DUCKDB_TEST_VERSION to empty
 # (review 4's unpinned duckdb install).
@@ -32,6 +36,16 @@ if [ ! -f configure/platform.txt ] || [ ! -d configure/venv ]; then
   echo "FAIL     surface-duckdb: not set up (run \`make configure\` in databases/duckdb once on a networked machine)"
   exit 1
 fi
+
+# The entry self-test's door: stop after the setup, which it proves runs
+# from any folder.
+if [ -n "${CHECK_SETUP_ONLY:-}" ]; then
+  echo "setup ok"
+  exit 0
+fi
+
+echo "== duckdb surface: the check runs from any folder"
+tools/check_entry_selftest.sh
 
 echo "== duckdb surface: build the extension"
 make release >/dev/null
