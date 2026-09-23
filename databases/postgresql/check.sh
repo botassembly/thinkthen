@@ -164,8 +164,11 @@ echo "ok       an ungranted role is refused with permission denied"
 # Review 2, item 4: the grant names the extension's own functions, never
 # ALL FUNCTIONS IN SCHEMA public, which would also grant every other
 # function in the schema. The control below is exactly such a function.
+# Review 3, item 8: EXECUTE is no longer a file-read trust — the role
+# also holds the core file privilege for its '@refund.json' read.
 psql_in -c "CREATE FUNCTION tt_control(x integer) RETURNS integer LANGUAGE sql AS 'SELECT \$1';" \
-  -c "REVOKE ALL ON FUNCTION tt_control(integer) FROM PUBLIC;" >/dev/null
+  -c "REVOKE ALL ON FUNCTION tt_control(integer) FROM PUBLIC;" \
+  -c "GRANT pg_read_server_files TO tt_app;" >/dev/null
 psql_in << 'SQL' >/dev/null
 DO $thinkthen_grant$
 DECLARE
@@ -185,7 +188,8 @@ $thinkthen_grant$;
 SQL
 psql_in -Atq -c "SET ROLE tt_app;" \
   -c "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" > .tmp-role.out
-# The role reads a file the backend process owns: the grant is the trust.
+# The role reads a file by the core file privilege: EXECUTE plus
+# pg_read_server_files is the full trust the README documents.
 grep -q "^t$" .tmp-role.out \
   || { echo "FAILED   the narrowed grant's call did not answer" >&2; cat .tmp-role.out >&2; exit 1; }
 if psql_in -c "SET ROLE tt_app;" -c "SELECT tt_control(7);" > .tmp-control.out 2>&1; then
@@ -282,6 +286,58 @@ psql_in -c "RESET thinkthen.deadline_ms;" >/dev/null
 echo "ok       a spent budget sends nothing on both batch shapes; a 50 ms budget ends a long batch in ${batch_elapsed}s"
 rm -f .tmp-batch.out
 
+echo "== postgres surface: the batch poll checks completion first"
+# Review 3, item 24: the poll loop slept an unconditional 100 ms before
+# looking, so every batch paid that floor. The ready channel answers the
+# instant the worker finishes; a two-record batch on the null backend now
+# measures in single-digit milliseconds inside the server.
+batch_wall=$(psql_in 2>&1 <<'SQL' | grep -oE "batch wall ms: [0-9]+" | awk '{print $NF}'
+DO $probe$
+DECLARE t0 timestamptz; n bigint;
+BEGIN
+  t0 := clock_timestamp();
+  SELECT count(*) INTO n FROM thinkthen_decide('{"decide":"Is this a complaint?"}', ARRAY['a','b']);
+  RAISE NOTICE 'batch wall ms: %', (extract(epoch from clock_timestamp() - t0) * 1000)::int;
+END
+$probe$;
+SQL
+)
+[ -n "$batch_wall" ] || { echo "FAILED   the batch wall probe printed nothing" >&2; exit 1; }
+[ "$batch_wall" -le 90 ] \
+  || { echo "FAILED   a two-record batch took ${batch_wall}ms (the 100ms floor survived)" >&2; exit 1; }
+echo "ok       a two-record batch answered in ${batch_wall}ms (the pre-fix floor was 100ms)"
+
+echo "== postgres surface: warm holds twenty thousand rows in seconds, not a minute"
+# Review 3, item 23: the JSON state re-read and re-wrote the whole
+# aggregate on every row — 54.6 s at 20,000 rows, measured by the review.
+# The concatenated state appends without parsing; the same twenty
+# thousand rows now measure inside the server, and the cap refuses the
+# twenty-thousand-and-first with the two-aggregate spelling named.
+warm_wall=$(psql_in 2>&1 <<'SQL' | grep -oE "warm 20000 wall ms: [0-9]+" | awk '{print $NF}'
+DO $probe$
+DECLARE t0 timestamptz; n bigint;
+BEGIN
+  t0 := clock_timestamp();
+  SELECT thinkthen_warm('{"decide":"Is this a complaint?"}', 'refund ' || g) INTO n
+    FROM generate_series(1, 20000) g;
+  RAISE NOTICE 'warm 20000 wall ms: %', (extract(epoch from clock_timestamp() - t0) * 1000)::int;
+  RAISE NOTICE 'judged: %', n;
+END
+$probe$;
+SQL
+)
+[ -n "$warm_wall" ] || { echo "FAILED   the warm wall probe printed nothing" >&2; exit 1; }
+[ "$warm_wall" -le 15000 ] \
+  || { echo "FAILED   twenty thousand warm rows took ${warm_wall}ms" >&2; exit 1; }
+echo "ok       twenty thousand warm rows answered in ${warm_wall}ms (the JSON shape measured 54600ms)"
+if psql_in -Atqc "SELECT thinkthen_warm('{\"decide\":\"Is this a complaint?\"}', 'refund ' || g) FROM generate_series(1, 20001) g;" > .tmp-warm-cap.out 2>&1; then
+  echo "FAILED   the warm cap did not refuse" >&2; exit 1
+fi
+grep -q "holds at most 20000 rows" .tmp-warm-cap.out \
+  || { echo "FAILED   the warm cap refusal does not name the cap" >&2; cat .tmp-warm-cap.out >&2; exit 1; }
+echo "ok       the twenty-thousand-and-first row refuses naming the cap and the two-aggregate spelling"
+rm -f .tmp-warm-cap.out
+
 echo "== postgres surface: conformance slice, offline"
 python3 runner.py "$NAME"
 
@@ -377,7 +433,7 @@ docker exec "$NAME" sh -c 'head -c 1048577 /dev/zero | tr "\\0" "x" > /var/lib/p
 docker exec "$NAME" mkfifo /var/lib/postgresql/data/pipe.fifo
 
 zero_start=$(date +%s.%N)
-if timeout 10 psql_in -Atqc "SELECT thinkthen_decide('@/dev/zero', 'refund');" > .tmp-gate.out 2>&1; then
+if timeout 10 docker exec -e PGHOST=/run/postgresql "$NAME" psql -U postgres -Atqc "SELECT thinkthen_decide('@/dev/zero', 'refund');" > .tmp-gate.out 2>&1; then
   echo "FAILED   @/dev/zero answered" >&2; cat .tmp-gate.out >&2; exit 1
 fi
 zero_elapsed=$(awk -v a="$zero_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
@@ -392,7 +448,7 @@ psql_in -Atqc "SELECT 1;" >/dev/null
 echo "ok       @/dev/zero refused in ${zero_elapsed}s with the uniform message, and the backend lived"
 
 fifo_start=$(date +%s.%N)
-if timeout 5 psql_in -Atqc "SELECT thinkthen_decide('@/var/lib/postgresql/data/pipe.fifo', 'refund');" > .tmp-gate.out 2>&1; then
+if timeout 5 docker exec -e PGHOST=/run/postgresql "$NAME" psql -U postgres -Atqc "SELECT thinkthen_decide('@/var/lib/postgresql/data/pipe.fifo', 'refund');" > .tmp-gate.out 2>&1; then
   echo "FAILED   a fifo answered" >&2; cat .tmp-gate.out >&2; exit 1
 fi
 fifo_elapsed=$(awk -v a="$fifo_start" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')
@@ -442,9 +498,11 @@ echo "ok       an EXECUTE-only role cannot read any file; the refusal names both
 
 # With a directory configured: inside reads, a symlink that points out
 # refuses with the same uniform message, and the directory itself stays
-# the administrator's act (Suset).
+# the administrator's act (Suset). The library loads first — a setting
+# exists in a backend once the extension's library is in it.
 docker exec "$NAME" ln -sf /etc/hostname /var/lib/postgresql/data/leak.json
-psql_in -c "ALTER SYSTEM SET thinkthen.file_directory = '/var/lib/postgresql/data';" \
+psql_in -c "LOAD 'thinkthen.so';" \
+  -c "ALTER SYSTEM SET thinkthen.file_directory = '/var/lib/postgresql/data';" \
   -Atqc "SELECT pg_reload_conf();" >/dev/null
 psql_in -c "SET ROLE tt_file;" \
   -Atqc "SELECT thinkthen_decide('@refund.json', 'I demand a refund today');" > .tmp-gate.out

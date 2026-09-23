@@ -164,6 +164,11 @@ fn batch_options<'a>(
     }
 }
 
+/// How often the batch poll reads PostgreSQL's cancel flags while the
+/// worker runs: often enough that a cancel lands inside a quarter second,
+/// cheap enough that the loop is noise beside the engine's own work.
+const POLL_TICK: Duration = Duration::from_millis(50);
+
 /// Run one engine batch on a worker thread while the backend thread polls
 /// PostgreSQL's cancel flags. A real cancel first sets the engine's token
 /// — no new request starts, the sent ones finish — and the database's own
@@ -190,14 +195,21 @@ where
     let token = thinkthen_contract::Cancel::new();
     let worker = token.clone();
     let budget = batch_budget();
+    let (done, ready) = std::sync::mpsc::channel::<()>();
     let handle = std::thread::spawn(move || {
-        thinkthen_contract::catch_panic("the batch thread", || work(Some(&worker), budget))
+        let out =
+            thinkthen_contract::catch_panic("the batch thread", || work(Some(&worker), budget));
+        let _ = done.send(());
+        out
     });
-    while !handle.is_finished() {
+    // Completion first: the ready channel answers the instant the worker
+    // finishes, so no batch pays a fixed floor, and the cancel check runs
+    // on every timeout tick in between (review 3, item 24 — before, every
+    // batch slept at least 100 ms before even looking).
+    while ready.recv_timeout(POLL_TICK) == Err(std::sync::mpsc::RecvTimeoutError::Timeout) {
         if cancel_requested() {
             token.cancel();
         }
-        std::thread::sleep(Duration::from_millis(100));
     }
     let out = match handle.join() {
         Ok(out) => out,
@@ -854,16 +866,105 @@ fn thinkthen_decide_array(
     TableIterator::new(out.into_iter())
 }
 
-/// The warm aggregate's name carrier. The state travels as JSON text
-/// because pgrx 0.17 offers no internal state type.
+/// The warm aggregate's name carrier. The state travels as text
+/// because pgrx 0.17 offers no internal state type, so the shape is the
+/// cheapest text there is: a row count, then each row as the escaped
+/// question and evidence joined by unit separators. Appending never
+/// parses what is already there — the JSON shape re-read and re-wrote
+/// the whole state every row, which measured 54.6 s at 20,000 rows
+/// (review 3, item 23); the concatenated shape measures in seconds.
 #[derive(AggregateName)]
 #[aggregate_name = "thinkthen_warm"]
 struct Warm;
 
-/// The warm state as data: pairs of question and evidence, arrival order.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
-struct WarmRows {
-    rows: Vec<(String, String)>,
+/// The most rows one warm aggregate holds. The text state crosses the
+/// datum boundary once per row, so the total copy grows with the square
+/// of the row count; the cap keeps a full aggregate inside seconds, and
+/// a larger judge runs as two aggregates (review 3, item 23).
+const WARM_ROW_CAP: u64 = 20_000;
+
+/// One aggregate step, pure: the count at the head grows, the tail
+/// carries over untouched, the new row appends. The `#[pg_aggregate]`
+/// `state` is the cap check plus this.
+fn warm_step(state: &str, question: &str, evidence: &str) -> String {
+    let count = warm_count(state);
+    let mut next = format!("{}\x1e{}", count + 1, state.split_once('\x1e').map_or("", |(_, tail)| tail));
+    warm_push(&mut next, question, evidence, count);
+    next
+}
+
+/// Escape the two separators and the escape itself, so any question or
+/// evidence text round-trips.
+fn warm_escape(text: &str) -> String {
+    text.replace('\\', "\\\\").replace('\x1e', "\\e").replace('\x1f', "\\f")
+}
+
+/// One row appended: the count grows, the tail is copied once, nothing
+/// is parsed.
+fn warm_push(state: &mut String, question: &str, evidence: &str, count: u64) {
+    if count > 0 {
+        state.push('\x1e');
+    }
+    state.push_str(&warm_escape(question));
+    state.push('\x1f');
+    state.push_str(&warm_escape(evidence));
+}
+
+/// The count at the state's head — the only part `warm_push` reads.
+fn warm_count(state: &str) -> u64 {
+    state.split_once('\x1e').map_or(0, |(head, _)| {
+        head.parse().unwrap_or(0)
+    })
+}
+
+/// Every row back, unescaped, in arrival order.
+fn warm_rows(state: &str) -> Vec<(String, String)> {
+    let mut rows = Vec::new();
+    for row in state.split('\x1e').skip(1) {
+        let mut fields = row.split('\x1f');
+        let question = fields.next().unwrap_or_default();
+        let evidence = fields.next().unwrap_or_default();
+        rows.push((warm_unescape(question), warm_unescape(evidence)));
+    }
+    rows
+}
+
+/// Undo [`warm_escape`].
+fn warm_unescape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut held = text.chars();
+    while let Some(here) = held.next() {
+        if here == '\\' {
+            match held.next() {
+                Some('e') => out.push('\x1e'),
+                Some('f') => out.push('\x1f'),
+                Some('\\') => out.push('\\'),
+                Some(other) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => out.push('\\'),
+            }
+        } else {
+            out.push(here);
+        }
+    }
+    out
+}
+
+/// Merge two warm states: the counts add, the tails join with one
+/// separator, nothing is parsed. Pure, so the shape is unit-tested
+/// without a backend.
+fn warm_merge(one: &str, two: &str) -> String {
+    let (count_one, count_two) = (warm_count(one), warm_count(two));
+    let tail_one = one.split_once('\x1e').map_or("", |(_, tail)| tail);
+    let tail_two = two.split_once('\x1e').map_or("", |(_, tail)| tail);
+    let mut merged = format!("{}\x1e{}", count_one + count_two, tail_one);
+    if !tail_two.is_empty() {
+        merged.push('\x1e');
+        merged.push_str(tail_two);
+    }
+    merged
 }
 
 #[pg_aggregate]
@@ -871,27 +972,36 @@ impl Aggregate<Warm> for Warm {
     type State = String;
     type Args = (Option<String>, Option<String>);
     type Finalize = i64;
-    const INITIAL_CONDITION: Option<&'static str> = Some(r#"{"rows":[]}"#);
+    const INITIAL_CONDITION: Option<&'static str> = Some("0");
 
     fn state(current: String, args: Self::Args, _fcinfo: FunctionCallInfo) -> String {
-        let mut rows: WarmRows = serde_json::from_str(&current).unwrap_or_default();
         if let (Some(question), Some(evidence)) = args {
-            rows.rows.push((question, evidence));
+            if warm_count(&current) >= WARM_ROW_CAP {
+                raise(Error::usage(format!(
+                    "thinkthen_warm holds at most {WARM_ROW_CAP} rows in one pass; \
+                     judge larger sets as two aggregates"
+                )));
+            }
+            warm_step(&current, &question, &evidence)
+        } else {
+            current
         }
-        serde_json::to_string(&rows).expect("the warm state serializes")
     }
 
     fn combine(one: String, two: String, _fcinfo: FunctionCallInfo) -> String {
-        let mut one: WarmRows = serde_json::from_str(&one).unwrap_or_default();
-        let two: WarmRows = serde_json::from_str(&two).unwrap_or_default();
-        one.rows.extend(two.rows);
-        serde_json::to_string(&one).expect("the warm state serializes")
+        if warm_count(&one) + warm_count(&two) > WARM_ROW_CAP {
+            raise(Error::usage(format!(
+                "thinkthen_warm holds at most {WARM_ROW_CAP} rows in one pass; \
+                 judge larger sets as two aggregates"
+            )));
+        }
+        warm_merge(&one, &two)
     }
 
     fn finalize(current: String, _direct: Self::OrderedSetArgs, _fcinfo: FunctionCallInfo) -> i64 {
-        let rows: WarmRows = serde_json::from_str(&current).unwrap_or_default();
+        let rows = warm_rows(&current);
         let mut by_question: HashMap<String, Vec<String>> = HashMap::new();
-        for (question, evidence) in rows.rows {
+        for (question, evidence) in rows {
             by_question.entry(question).or_default().push(evidence);
         }
         let mut judged: i64 = 0;
@@ -1139,6 +1249,29 @@ mod mapping_tests {
         assert!(refusal.message.contains("never a path"), "{}", refusal.message);
         let refusal = arg_form("names.json", "recognize spec").expect_err("a bare name refuses");
         assert!(refusal.message.contains("@names.json"), "{}", refusal.message);
+    }
+
+    /// The warm state's text shape (review 3, item 23): push, count, and
+    /// read-back round-trip including separators inside the question and
+    /// evidence, the count rides the head without parsing the tail, and
+    /// combine merges two states with the sum of their counts.
+    #[test]
+    fn the_warm_state_round_trips_and_counts() {
+        let mut state = String::from("0");
+        state = warm_step(&state, "Is this a complaint?", "refund please");
+        state = warm_step(&state, "odd \x1e separators \x1f and slashes \\", "also \x1f here");
+        assert_eq!(warm_count(&state), 2);
+        let rows = warm_rows(&state);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0], ("Is this a complaint?".to_owned(), "refund please".to_owned()));
+        assert_eq!(rows[1].0, "odd \x1e separators \x1f and slashes \\");
+        assert_eq!(rows[1].1, "also \x1f here");
+        let mut other = String::from("0");
+        other = warm_step(&other, "second question", "text");
+        let merged = warm_merge(&state, &other);
+        assert_eq!(warm_count(&merged), 3);
+        assert_eq!(warm_rows(&merged).len(), 3);
+        assert_eq!(warm_rows(&merged)[2].0, "second question");
     }
 
     /// The deadline setting's conversion: `-1` is no deadline, `0` is a
