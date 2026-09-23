@@ -319,9 +319,10 @@ fn mapped(first: usize, last: usize) -> bool {
 /// views and offsets buffers. A string view's trailing sizes buffer
 /// declares each data buffer. A Utf8 array's offset at `offset + length`
 /// declares its data buffer. Every read below sits inside one of those
-/// declarations, checked before the read. Each declared extent is then
+/// declarations, checked before the read. The offsets, views, and sizes
+/// the rows rely on, and the data bytes the selected rows read, are then
 /// checked readable (`Readable`), so a producer whose declarations agree
-/// but whose allocation is shorter gets a refusal when the extent runs
+/// but whose allocation is shorter gets a refusal when a read would run
 /// into unreadable memory. An extent that runs into another readable
 /// allocation cannot be told from a correct one by any reader; that lie
 /// stays the producer's.
@@ -433,7 +434,8 @@ unsafe fn view_spans(
     {
         return Err(UsageError::new_err(UNREADABLE));
     }
-    let mut probed = vec![false; data_buffers];
+    // The lowest and highest byte the rows read in each data buffer.
+    let mut reach: Vec<Option<(usize, usize)>> = vec![None; data_buffers];
     let mut spans = Vec::with_capacity(count);
     for place in skip..skip + count {
         let view = views.add(place * 16);
@@ -462,15 +464,20 @@ unsafe fn view_spans(
             ));
         }
         let span = row_span(base.add(offset as usize), size)?;
-        // Each data buffer a view names is probed once, over the whole
-        // extent its size declares.
-        if !probed[index] {
-            if !memory.covers(base, declared as usize) {
+        let (low, high) = (offset as usize, offset as usize + size);
+        reach[index] = Some(reach[index].map_or((low, high), |(was_low, was_high)| {
+            (was_low.min(low), was_high.max(high))
+        }));
+        spans.push(span);
+    }
+    // Only the bytes the selected rows read are checked, so a short slice
+    // of a large buffer costs its own rows, and no unread page is touched.
+    for (index, reached) in reach.iter().enumerate() {
+        if let Some((low, high)) = *reached {
+            if !memory.covers(buffer(array, 2 + index).wrapping_add(low), high - low) {
                 return Err(UsageError::new_err(UNREADABLE));
             }
-            probed[index] = true;
         }
-        spans.push(span);
     }
     Ok(spans)
 }
@@ -514,7 +521,9 @@ unsafe fn offset_spans(
         }
     };
     let mut spans = Vec::with_capacity(count);
-    let mut start = at(skip);
+    let first = at(skip);
+    let mut start = first;
+    let mut read_end = first;
     for place in skip + 1..=carried {
         let end = at(place);
         if start < 0 || end < start {
@@ -532,12 +541,14 @@ unsafe fn offset_spans(
         }
         if place <= skip + count {
             spans.push(row_span(values.add(start as usize), (end - start) as usize)?);
+            read_end = end;
         }
         start = end;
     }
-    // The last offset declares the values buffer's extent, and every row
-    // read sits inside it, so that extent must be readable first.
-    if count > 0 && !memory.covers(values, start as usize) {
+    // The selected rows read from their first offset to their last, so
+    // only those bytes are checked: a short slice of a large column costs
+    // its own rows, and the bytes before and after it are never touched.
+    if count > 0 && !memory.covers(values.wrapping_add(first as usize), (read_end - first) as usize) {
         return Err(UsageError::new_err(UNREADABLE));
     }
     Ok(spans)
@@ -2185,8 +2196,9 @@ mod malformed_tests {
         assert_eq!(texts, ["ha runs longer than twen", "gamma", " also runs long past "]);
     }
 
-    /// A region whose first page is readable and whose rest is reserved
-    /// but unreadable, so a read past the page faults on every run.
+    /// A region with one readable page between an unreadable page and a
+    /// 64 MiB unreadable reservation, so a read before or past the page
+    /// faults on every run.
     #[cfg(target_os = "linux")]
     struct Guarded {
         base: *mut u8,
@@ -2202,18 +2214,32 @@ mod malformed_tests {
 
     #[cfg(target_os = "linux")]
     impl Guarded {
-        /// `bytes` placed so they end exactly at the readable page's end,
-        /// with 64 MiB of unreadable reservation after them.
-        fn ending_with(bytes: &[u8]) -> (Self, *const u8) {
-            const PAGE: usize = 4096;
-            let size = PAGE + (64 << 20);
+        const PAGE: usize = 4096;
+
+        /// The reservation with its one readable page, page one.
+        fn new() -> Self {
+            let size = 2 * Self::PAGE + (64 << 20);
             // PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, then PROT_READ | PROT_WRITE on page one.
             let base = unsafe { mmap(std::ptr::null_mut(), size, 0, 0x02 | 0x20, -1, 0) } as *mut u8;
             assert!(!base.is_null() && base as isize != -1, "the reservation maps");
-            assert_eq!(unsafe { mprotect(base.cast(), PAGE, 0x1 | 0x2) }, 0);
-            let at = unsafe { base.add(PAGE - bytes.len()) };
+            assert_eq!(unsafe { mprotect(base.add(Self::PAGE).cast(), Self::PAGE, 0x1 | 0x2) }, 0);
+            Self { base, size }
+        }
+
+        /// `bytes` copied into the readable page at `offset`.
+        fn place(&self, offset: usize, bytes: &[u8]) -> *const u8 {
+            assert!(offset + bytes.len() <= Self::PAGE);
+            let at = unsafe { self.base.add(Self::PAGE + offset) };
             unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), at, bytes.len()) };
-            (Self { base, size }, at)
+            at
+        }
+
+        /// `bytes` placed so they end exactly at the readable page's end,
+        /// with 64 MiB of unreadable reservation after them.
+        fn ending_with(bytes: &[u8]) -> (Self, *const u8) {
+            let region = Self::new();
+            let at = region.place(Self::PAGE - bytes.len(), bytes);
+            (region, at)
         }
     }
 
@@ -2264,9 +2290,11 @@ mod malformed_tests {
         let held = [std::ptr::null(), views.as_ptr().cast(), data.as_ptr().cast(), data.as_ptr().cast(), sizes.cast()];
         let outer = array_of(&held, 1);
         assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
-        // A view whose data buffer declares more than the readable page.
+        // A view whose own 13 bytes, at offset 10 of a 20-byte tail, run
+        // past the readable page into what its buffer declares.
         let (_short, abc) = Guarded::ending_with(&[b'y'; 20]);
         let sizes = [200i64, 200].map(i64::to_le_bytes).concat();
+        let views = one_view(13, 1, 10);
         let held = [std::ptr::null(), views.as_ptr().cast(), abc.cast(), abc.cast(), sizes.as_ptr().cast()];
         let outer = array_of(&held, 1);
         assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
@@ -2316,5 +2344,44 @@ mod malformed_tests {
         assert!(memory.covers(at(0x5000), 0x1000));
         assert!(!memory.covers(at(0x5000), 0x1001));
         assert!(memory.covers(at(0x4800), 0));
+    }
+
+    /// The strings a shape borrows, or a panic naming the refusal: a live
+    /// PyErr cannot be formatted without the interpreter.
+    fn borrowed(outcome: PyResult<Vec<&'static str>>) -> Vec<&'static str> {
+        match outcome {
+            Ok(texts) => texts,
+            Err(error) => panic!("refused: {}", refusal::<()>(Err(error))),
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn only_the_bytes_the_selected_rows_read_are_checked() {
+        // Review 7, second pass: the check covered a Utf8 buffer from byte 0
+        // to the last offset and a view buffer's whole declared size, so a
+        // 10-row tail slice of a 1 GiB column paid for the whole gibibyte.
+        // Here every byte outside the rows read is unreadable: the rows sit
+        // at the start of the readable page, the buffer pointer one page
+        // before it, and the declared extents run past the page's end.
+        let region = Guarded::new();
+        let page = region.place(0, b"alpha runs past twelve");
+        let values = page.wrapping_sub(Guarded::PAGE);
+        let at = Guarded::PAGE as i32;
+        assert_eq!(borrowed(utf8_at(&[at, at + 5], values, Text::Utf8)), ["alpha"]);
+        // A slice: rows 1 and 2 of a column whose row 0 and row 3 lie in
+        // unreadable memory on either side of the page.
+        let offsets = [0, at, at + 5, at + 10, at + 9000].map(i32::to_le_bytes).concat();
+        let held = [std::ptr::null(), offsets.as_ptr().cast(), values.cast()];
+        let mut outer = array_of(&held, 2);
+        outer.offset = 1;
+        assert_eq!(borrowed(unsafe { borrow_strings(&outer, Text::Utf8, 1, 2) }), ["alpha", " runs"]);
+        // A view reading 22 bytes one page into a buffer declared far past
+        // the readable page.
+        let views = one_view(22, 0, Guarded::PAGE as u32);
+        let sizes = (64i64 << 20).to_le_bytes();
+        let held = [std::ptr::null(), views.as_ptr().cast(), values.cast(), sizes.as_ptr().cast()];
+        let outer = array_of(&held, 1);
+        assert_eq!(borrowed(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), ["alpha runs past twelve"]);
     }
 }
