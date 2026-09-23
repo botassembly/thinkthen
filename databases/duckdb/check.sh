@@ -152,24 +152,28 @@ echo "== duckdb surface: slide sample, as drawn"
 ENGINE_NULL=1 tools/run_slide.sh >/dev/null
 echo "ok       the slide runs as drawn (output above its run in NOTES)"
 
-# The drawn calls are a frozen fixture (review 5: the copy had drifted
+# The drawn calls are a vendored fixture (review 5: the copy had drifted
 # from the deck with only a remembered rule to catch it). Their hash is
-# pinned, so a change to them is a visible, deliberate re-vendoring.
+# pinned, so a change to them is a visible, deliberate re-vendoring, and
+# the drift check compares them with the deck page when it is present.
 drawn_sha=$(grep -v "^--" tools/drawn-calls/recognize.sql | shasum -a 256 | cut -d' ' -f1)
-if [[ "$drawn_sha" != "d3581e25d68a44bec3096b84c68a448518de63441f3e269bb47a170f47092dc7" ]]; then
+if [[ "$drawn_sha" != "97d4f60f177fca5a55911db6bcbbff4173005fe4e94a183b9a6e07fed9db1099" ]]; then
   echo "FAILED   tools/drawn-calls/recognize.sql changed (sha256 $drawn_sha); re-vendoring updates this pin and the acceptance expectations together"
   exit 1
 fi
-echo "ok       the frozen drawn calls match their pinned hash"
+echo "ok       the vendored drawn calls match their pinned hash"
+python3 tools/drawn_calls_drift.py
 
 echo "== duckdb surface: recognize and relate acceptance, calls as drawn"
 ENGINE_NULL=1 tools/run_recognize.sh >/dev/null
-if grep -q "Binder Error: Table function cannot contain subqueries" tools/recognize-run/run.log \
+if grep -q "Catalog Error: Table Function with name thinkthen_relations does not exist!" tools/recognize-run/run.log \
+  && grep -q "│ contradicts │ 1       │ 4       │        0.61 │" tools/recognize-run/run.log \
+  && grep -q "│ contradicts │ 5       │ 10      │        0.91 │" tools/recognize-run/run.log \
   && grep -q "thinkthen usage: relate takes at most 255 records" tools/recognize-run/run.log \
   && [ "$(grep -c 'based_in │ Northwind Freight │ Denver' tools/recognize-run/run.log)" -ge 1 ] \
   && grep -q "│ Northwind Freight │ Dana    │        2 │" tools/recognize-run/run.log \
   && [ "$(grep -c 'usage after the join │ requests      │     0' tools/recognize-run/run.log)" -ge 1 ]; then
-    echo "ok       the recognize call runs as drawn; the relate subquery line is the pinned divergence"
+    echo "ok       the recognize and relate calls run as drawn; the relations table-function line is the pinned divergence"
     echo "ok       the working replacements ran with their evidence: the edges, the relations row, the mentions join, and the join's zero requests"
     echo "ok       the 255-record refusal is in the log"
 else
