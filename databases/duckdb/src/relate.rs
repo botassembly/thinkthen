@@ -48,13 +48,17 @@ use crate::{connections, engine_call, failure, guard, options};
 /// Bind data: the query and the rules, read once per query plan, plus
 /// the caller's own context (it carries the caller's database identity,
 /// the temp catalog the boundary check probes, and the settings every
-/// access check reads live) and the kept connection of the caller's
-/// database.
+/// access check reads live) and a counted guard on the kept connection
+/// of the caller's database. The guard is the use-after-free fix
+/// (review 3, finding 1): the reaper cannot disconnect a connection a
+/// prepared statement still holds, so a prepare → close-the-database →
+/// execute sequence that used to segfault in
+/// `duckdb_extract_statements` now finds its connection alive.
 struct Bind {
     query: String,
     rules: Vec<String>,
     caller: ffi::duckdb_client_context,
-    connection: ffi::duckdb_connection,
+    connection: connections::KeptGuard,
 }
 
 /// Scan data: the rows built once per scan, and the cursor over them.
@@ -183,8 +187,7 @@ unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
                 ffi::duckdb_destroy_client_context(&mut caller);
                 return Err(message);
             }
-        };
-        // A rules file the caller's database forbids fails the bind now,
+        };        // A rules file the caller's database forbids fails the bind now,
         // and the same check runs again at execution.
         if let Some(refusal) = rules_file_refusal(&rules, caller) {
             let mut caller = caller;
@@ -295,39 +298,45 @@ fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String>
     // A callback carrying the kept connection's own id runs inside a query
     // that connection is executing: a relate inside a relate. It must
     // refuse here, before it waits on the gate its own outer query holds.
-    if connections::caller_is_kept(bind.caller, bind.connection) {
+    if connections::caller_is_kept(bind.caller, bind.connection.connection()) {
         return Err(
             "thinkthen usage: the relate query calls thinkthen_relate while its own query is running; nested relate cannot run, because the outer query waits on the connection the inner one needs"
                 .into(),
         );
     }
-    connections::run_serialized(|| {
-        let records = unsafe { run_query(bind) }.map_err(|message| boundary_note(bind, message))?;
-        if records.is_empty() {
-            // No records, no pairs, nothing to ask: zero edges is arithmetic,
-            // not a judgment, so the recordings are not consulted.
-            return Ok(Vec::new());
-        }
-        let ask = build_ask(&bind.rules, bind.caller)?;
-        let bodies: Vec<&str> = records.iter().map(|(_, body)| body.as_str()).collect();
-        let edges = engine_call(|engine| relate_checked(engine, &ask, &bodies, options()))?;
-        let mut rows = Vec::with_capacity(edges.len());
-        for edge in edges {
-            let id = |record: u64| -> Result<String, String> {
-                records
-                    .get((record as usize).saturating_sub(1))
-                    .map(|(id, _)| id.clone())
-                    .ok_or_else(|| {
-                        failure(EngineError::defect(format!(
-                            "the engine returned an edge over record {record}, past the {} records the query returned",
-                            records.len()
-                        )))
-                    })
-            };
-            rows.push((edge.name, id(edge.source)?, id(edge.target)?, edge.probability));
-        }
-        Ok(rows)
-    })
+    // The caller's database's own gate, not a process-global one
+    // (review 3, finding 12): one database's long relate no longer
+    // blocks another database's.
+    let _gate = bind
+        .connection
+        .gate()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let records = unsafe { run_query(bind) }.map_err(|message| boundary_note(bind, message))?;
+    if records.is_empty() {
+        // No records, no pairs, nothing to ask: zero edges is arithmetic,
+        // not a judgment, so the recordings are not consulted.
+        return Ok(Vec::new());
+    }
+    let ask = build_ask(&bind.rules, bind.caller)?;
+    let bodies: Vec<&str> = records.iter().map(|(_, body)| body.as_str()).collect();
+    let edges = engine_call(|engine| relate_checked(engine, &ask, &bodies, options()))?;
+    let mut rows = Vec::with_capacity(edges.len());
+    for edge in edges {
+        let id = |record: u64| -> Result<String, String> {
+            records
+                .get((record as usize).saturating_sub(1))
+                .map(|(id, _)| id.clone())
+                .ok_or_else(|| {
+                    failure(EngineError::defect(format!(
+                        "the engine returned an edge over record {record}, past the {} records the query returned",
+                        records.len()
+                    )))
+                })
+        };
+        rows.push((edge.name, id(edge.source)?, id(edge.target)?, edge.probability));
+    }
+    Ok(rows)
 }
 
 /// The refusal a rules argument naming a file earns when the calling
@@ -425,19 +434,115 @@ fn temp_table_exists(caller: ffi::duckdb_client_context, name: &str) -> bool {
 }
 
 /// Run the query on the caller's database's kept connection and read
-/// `(id, text)` per row: exactly one statement, under the caller's own
-/// search path, inside a read-only transaction that always rolls back.
+/// `(id, text)` per row: exactly one statement, of the `SELECT` kind,
+/// inside a read-only transaction that always rolls back, with the
+/// record cap checked before any row is collected. The statement kind is
+/// checked before anything runs (review 3, finding 7: `COPY ... TO`,
+/// `EXPORT DATABASE`, `ATTACH`, `SET GLOBAL`, `LOAD`, and `SET VARIABLE`
+/// all passed the single-statement check because each is one
+/// statement), and the count runs first (review 3, finding 12: eight
+/// million rows materialized 2.35 GB before the cap refused).
 unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
-    let connection = bind.connection;
+    let connection = bind.connection.connection();
     unsafe { ensure_single_statement(connection, &bind.query)? };
+    unsafe { ensure_select_statement(connection, &bind.query)? };
     let search = connections::search_path_of(bind.caller);
     unsafe { begin_read_only(connection)? };
-    let outcome = unsafe { under_search_path(connection, search.as_deref(), || run_statement(connection, &bind.query)) };
+    let count_sql = format!("SELECT count(*) FROM ({}) AS thinkthen_count", bind.query);
+    let outcome = unsafe {
+        under_search_path(connection, search.as_deref(), || {
+            let count = count_records(connection, &count_sql)?;
+            if count > RECORD_CAP {
+                return Err(format!(
+                    "thinkthen usage: the relate query returned {count} records and relate asks about at most {RECORD_CAP}; add a LIMIT or a WHERE"
+                ));
+            }
+            run_statement(connection, &bind.query)
+        })
+    };
     // The read-only transaction ends either way; rollback and an unset
     // search path leave the kept connection as the next query expects it.
     let _ = unsafe { execute(connection, c"ROLLBACK") };
     let _ = unsafe { execute(connection, c"RESET search_path") };
     outcome
+}
+
+/// The most records one relate may ask about; the contract's own
+/// `relate_checked` carries the same guard.
+const RECORD_CAP: u64 = 255;
+
+/// The record count of the wrapped query, read before any row is
+/// collected. The wrapper is the caller's own query, so the count is the
+/// count its rows will have; a query whose rows change between the count
+/// and the read still cannot materialize past the belt cap inside
+/// `run_statement`.
+unsafe fn count_records(connection: ffi::duckdb_connection, count_sql: &str) -> Result<u64, String> {
+    let Ok(sql_c) = CString::new(count_sql) else {
+        return Err("thinkthen usage: the relate query holds a NUL byte".into());
+    };
+    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
+    if unsafe { ffi::duckdb_query(connection, sql_c.as_ptr(), &mut result) } != ffi::DuckDBSuccess {
+        let message = unsafe { ffi::duckdb_result_error(&mut result) };
+        let text = if message.is_null() {
+            "the count failed".to_owned()
+        } else {
+            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
+        };
+        unsafe { ffi::duckdb_destroy_result(&mut result) };
+        return Err(format!("thinkthen usage: the relate query failed: {text}"));
+    }
+    let raw = unsafe { ffi::duckdb_value_int64(&mut result, 0, 0) };
+    unsafe { ffi::duckdb_destroy_result(&mut result) };
+    Ok(raw.max(0) as u64)
+}
+
+/// Prepare the query and require the `SELECT` statement kind, so relate
+/// reads records and never writes files, attaches databases, changes
+/// settings, loads extensions, or leaves variables behind for the next
+/// caller.
+unsafe fn ensure_select_statement(
+    connection: ffi::duckdb_connection,
+    sql: &str,
+) -> Result<(), String> {
+    let Ok(sql_c) = CString::new(sql) else {
+        return Err("thinkthen usage: the relate query holds a NUL byte".into());
+    };
+    let mut prepared: ffi::duckdb_prepared_statement = std::ptr::null_mut();
+    if unsafe { ffi::duckdb_prepare(connection, sql_c.as_ptr(), &mut prepared) } != ffi::DuckDBSuccess
+        || prepared.is_null()
+    {
+        let mut prepared = prepared;
+        unsafe { ffi::duckdb_destroy_prepare(&mut prepared) };
+        return Err("thinkthen usage: the relate query did not prepare".into());
+    }
+    let kind = unsafe { ffi::duckdb_prepared_statement_type(prepared) };
+    let mut prepared = prepared;
+    unsafe { ffi::duckdb_destroy_prepare(&mut prepared) };
+    if kind != ffi::duckdb_statement_type_DUCKDB_STATEMENT_TYPE_SELECT {
+        return Err(format!(
+            "thinkthen usage: the relate query must be a SELECT; this one is a {} statement, and relate reads records, it does not write files, attach databases, change settings, or load extensions",
+            statement_kind_name(kind)
+        ));
+    }
+    Ok(())
+}
+
+/// The statement kind's own name, for the refusal a non-SELECT earns.
+fn statement_kind_name(kind: ffi::duckdb_statement_type) -> &'static str {
+    use ffi::*;
+    match kind {
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_INSERT => "INSERT",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_UPDATE => "UPDATE",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_DELETE => "DELETE",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_EXPLAIN => "EXPLAIN",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_CREATE => "CREATE",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_ALTER => "ALTER",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_TRANSACTION => "TRANSACTION",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_COPY => "COPY",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_PREPARE => "PREPARE",
+        duckdb_statement_type_DUCKDB_STATEMENT_TYPE_EXECUTE => "EXECUTE",
+        _ => "non-SELECT",
+    }
 }
 
 /// Refuse a query that holds more than one statement, so relate reads
@@ -552,8 +657,14 @@ unsafe fn run_statement(
         );
     }
     let rows = unsafe { ffi::duckdb_row_count(&mut result) };
-    let mut records = Vec::with_capacity(rows as usize);
-    for row in 0..rows {
+    if rows > RECORD_CAP + 1 {
+        unsafe { ffi::duckdb_destroy_result(&mut result) };
+        return Err(format!(
+            "thinkthen usage: the relate query returned {rows} records and relate asks about at most {RECORD_CAP}; add a LIMIT or a WHERE"
+        ));
+    }
+    let mut records = Vec::with_capacity(rows.min(RECORD_CAP + 1) as usize);
+    for row in 0..rows.min(RECORD_CAP + 1) {
         let id_null = unsafe { ffi::duckdb_value_is_null(&mut result, 0, row) };
         let text_null = unsafe { ffi::duckdb_value_is_null(&mut result, 1, row) };
         if id_null || text_null {
