@@ -295,7 +295,7 @@ caller-thread signal to answer with one body. The pool uses ureq's
 `unversioned` transport API, which may change between minor versions;
 the lock file pins 3.4.2.
 
-## 2026-09-23 — wave 7: no request detaches a thread, and a refused thread start is an error
+## 2026-09-23 — wave 7: no lookup thread for a numeric address, and a refused thread start is an error
 
 Every pool now resolves through the stand-in's own `Lookup` resolver
 (R4-1, R7-1). ureq 3.4.2's default resolver starts a lookup thread for
@@ -329,3 +329,29 @@ threads, and a refused first worker panicked with `a worker thread
 starts`. With the change the batch starts at most 3 and each refused
 start answers as above. The churn counts are in the branch issue
 `sdlc/issues/2026-09-23-the-c-door-churn-still-crashes-in-a-new-threads-start.md`.
+
+## 2026-09-23 — wave 7 verification: the batch joins its workers and its feeder
+
+The first wave-7 fix removed the lookup thread but left two detaches a
+call. The batch path dropped its scoped worker handles at spawn and kept
+the feeder handle until the scope ended. A scoped handle dropped unjoined
+calls `pthread_detach`, and the scope's own wait joins nothing. The
+verifier's detach shim counted 4,000 detaches over 2,000 door calls,
+about 2,000 of them on a thread already exiting.
+
+The batch now keeps every worker and feeder handle and joins each one
+before the scope ends. A thread's panic still reaches the caller through
+`resume_unwind`. After this change no request to a numeric address
+detaches a thread. A name lookup that outlives its timeout is still
+detached, and that thread is still blocked in the lookup.
+
+`Lookup` now refuses what ureq's own check refuses before it resolves:
+a scheme ureq does not know, even with an explicit port, goes to ureq's
+default resolver, which names the error before any lookup.
+
+Evidence: `tests/thread_starts.rs` counts detaches made on the calling
+thread and on the engine's `ttb-` threads. At f6b8814, 1,200 requests in
+201 calls detached 405 threads. Now none. The verifier's shim over 2,000
+door calls counts 0 detaches. The resolver unit test refuses
+`foo://127.0.0.1:9/v1` with `bad uri: unknown scheme: foo`; at f6b8814
+it resolved that address.
