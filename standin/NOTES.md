@@ -293,3 +293,38 @@ with `Err(Error { kind: Cancelled, ... "a signal interrupted the send;
 caller-thread signal to answer with one body. The pool uses ureq's
 `unversioned` transport API, which may change between minor versions;
 the lock file pins 3.4.2.
+
+## 2026-09-23 — wave 7: no request detaches a thread, and a refused thread start is an error
+
+Every pool now resolves through the stand-in's own `Lookup` resolver
+(R4-1, R7-1). ureq 3.4.2's default resolver starts a lookup thread for
+every request that carries a timeout, an IP literal included, and drops
+the handle. Dropping it calls `pthread_detach` on a thread that has just
+sent its answer and is usually exiting. Both wave-7 churn cores fault
+inside that call, on the read of the thread's record after the stack
+holding it was unmapped. `Lookup` parses a numeric address on the
+calling thread and starts no thread. A name still gets a lookup thread,
+so the timeout still bounds a slow lookup, and the thread is joined when
+it answers. Only a lookup that outlives its timeout is detached, and that
+thread is still blocked in the lookup, not exiting.
+
+Decision, which Ian can overturn: names keep a joined lookup thread
+rather than a blocking lookup on the calling thread. A blocking lookup
+would let a hung resolver hold a call past its deadline.
+
+The batch path no longer panics when a thread cannot start (R4-12). A
+refused first worker or a refused feeder fails the call with the defect
+kind, marked retryable, and the message `the engine could not start a
+thread: <the OS error>`. A refused later worker leaves the workers that
+started to answer every record.
+
+Decision, which Ian can overturn: the defect kind with `retryable` true.
+No kind names a local resource, and the door already mapped the old
+panic to the defect kind.
+
+Evidence: `tests/thread_starts.rs` counts every `pthread_create` in its
+process. At 14f12f5 a batch of 1,000 requests at width 1 started 1,003
+threads, and a refused first worker panicked with `a worker thread
+starts`. With the change the batch starts at most 3 and each refused
+start answers as above. The churn counts are in the branch issue
+`sdlc/issues/2026-09-23-the-c-door-churn-still-crashes-in-a-new-threads-start.md`.
