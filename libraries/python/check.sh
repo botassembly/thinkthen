@@ -15,7 +15,7 @@ esac
 
 stub_url="http://127.0.0.1:8211/v1"
 wire=no
-skip_note='wire suites skipped: no stub on 8211'
+skip_note='skip     wire-python: no stub on 127.0.0.1:8211'
 if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
   wire=yes
 fi

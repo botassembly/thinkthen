@@ -15,6 +15,12 @@
 # wire state: `all landed checks green` appears only when no check failed
 # and the skipped count is named with it. `skip` and `diverge` are defined
 # once, in conformance/skiptable.py; neither is ever counted as green.
+#
+# Wire honesty (surfaces-review-5): each surface's check prints
+# `skip     wire-<surface>: ...` when it finds no stub on its port, and that
+# line is counted. A surface whose stub this script started (or found up)
+# and which still skipped its wire suite fails the gate, and the summary
+# names how many wire suites ran instead of a single "stub up".
 set -euo pipefail
 cd "$(dirname "$0")/.."
 repo=$(pwd)
@@ -30,6 +36,11 @@ diverged=0
 failed=0
 step_log=$(mktemp)
 stub_pids=()
+# The ports whose stub is expected to answer for the whole run (a plain
+# word list: macOS's bash 3.2 has no associative arrays).
+wire_expected=" "
+wire_ran=0
+wire_lost=0
 stop_stubs() {
   for pid in ${stub_pids[@]+${stub_pids[@]}}; do
     kill "$pid" 2>/dev/null || true
@@ -37,20 +48,10 @@ stop_stubs() {
 }
 trap 'rm -f "$step_log"; stop_stubs' EXIT
 
-# Count one step's own result lines into the running totals.
-count_lines() {
-  local file=$1
-  green=$((green + $(grep -cE '^(ok[[:space:]]|ok:|OK:)' "$file" || true)))
-  # `# skip` is node --test, which prints a test's stdout as TAP comments
-  # (surfaces-review-4: the covered cases never reached the totals and
-  # node `# SKIP` lines were counted by no one).
-  skipped=$((skipped + $(grep -cE '^(skip[[:space:]]|# skip )' "$file" || true)))
-  diverged=$((diverged + $(grep -cE '^(diverge[[:space:]]|# diverge )' "$file" || true)))
-  # `not ok` is TAP, which node --test prints; a node failure must land in
-  # the failed total and not only in the step's exit status. `# fail N` is
-  # node's own summary line, counted only when it names a failure.
-  failed=$((failed + $(grep -cE '^(FAIL|not ok|# fail [1-9])' "$file" || true)))
-}
+# The counting and the wire verdict live in one sourced file so their own
+# test (scripts/test_gate_lib.sh) exercises the same code the gate runs.
+# shellcheck source=scripts/gate_lib.sh
+. "$repo/scripts/gate_lib.sh"
 
 # Run one step, show its output as it happens, count its result lines, and
 # keep its exit status.
@@ -96,6 +97,7 @@ start_stub() {
   local port=$1 delay=$2
   if curl -sf --max-time 1 "http://127.0.0.1:$port/v1/stats" >/dev/null 2>&1; then
     echo "stub already up on $port; using it"
+    wire_expected="$wire_expected$port "
     return
   fi
   if [ ! -x "$stub_bin" ]; then
@@ -108,6 +110,7 @@ start_stub() {
   for _ in $(seq 1 30); do
     if curl -sf --max-time 1 "http://127.0.0.1:$port/v1/stats" >/dev/null 2>&1; then
       echo "stub up on $port (delay ${delay}ms)"
+      wire_expected="$wire_expected$port "
       return
     fi
     sleep 0.1
@@ -130,7 +133,7 @@ if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
   wire=yes
 else
   wire=no
-  skip_note='wire tests skipped: no stub on the loopback'
+  skip_note='skip     wire-standin: no stub on 127.0.0.1:8231'
 fi
 
 run_step "surfaces ratchet" node sdlc/scripts/surfaces-ratchet.mjs || {
@@ -154,8 +157,10 @@ if [ "$wire" = yes ]; then
   run_step "stand-in, wire against the stub" bash -c \
     'cd standin && ENGINE_BASE_URL="$0" ENGINE_WIDTH=32 cargo test --quiet --test wire --locked -- --nocapture' \
     "$stub_url" || fail=1
+  wire_ran=$((wire_ran + 1))
 else
   printf '\n== stand-in, wire against the stub\n%s\n' "$skip_note"
+  skipped=$((skipped + 1))
 fi
 
 run_step "conformance file" python3 conformance/tools/validate_conformance.py || fail=1
@@ -176,14 +181,26 @@ run_step "private references" python3 scripts/check_no_private_refs.py || fail=1
 
 run_step "private-reference check tests" python3 scripts/test_check_no_private_refs.py || fail=1
 
+run_step "gate counting and wire-verdict tests" bash scripts/test_gate_lib.sh || fail=1
+
+run_step "every build-tool call carries the lock" python3 scripts/check_locked_calls.py || fail=1
+
 # Each surface lands in Phase B with a check of its own. A surface is
 # checked by running its slide sample against the stand-in and its slice of
 # the conformance file; the hook is the surface's folder, named here in the
 # slide order.
 printf '\n== surfaces\n'
+surface_port() {
+  case $1 in
+  python) echo 8211 ;; typescript) echo 8212 ;; rust) echo 8213 ;;
+  ruby) echo 8214 ;; r) echo 8215 ;; c) echo 8216 ;;
+  duckdb) echo 8217 ;; sqlite) echo 8218 ;; postgresql) echo 8219 ;;
+  esac
+}
 for surface in python typescript ruby r rust c; do
   if [ -x "libraries/$surface/check.sh" ]; then
     run_surface "libraries/$surface" || fail=1
+    wire_verdict "$surface" "$(surface_port "$surface")" || fail=1
   else
     echo "not landed: libraries/$surface"
   fi
@@ -191,6 +208,7 @@ done
 for engine in duckdb sqlite postgresql; do
   if [ -x "databases/$engine/check.sh" ]; then
     run_surface "databases/$engine" || fail=1
+    wire_verdict "$engine" "$(surface_port "$engine")" || fail=1
   else
     echo "not landed: databases/$engine"
   fi
@@ -214,7 +232,9 @@ else
     'skipped: cargo-pgrx or pg_config is not on PATH'
 fi
 
-wire_word=$([ "$wire" = yes ] && echo "stub up" || echo "no stub, wire suites skipped")
+run_step "host builds remap the builder's home" bash scripts/check_artifact_paths.sh || fail=1
+
+wire_word="$wire_ran of 10 wire suites ran, $wire_lost lost"
 if [ "$fail" -ne 0 ] || [ "$failed" -ne 0 ]; then
   echo "summary: green=$green skipped=$skipped diverged=$diverged failed=$failed (wire: $wire_word)"
   echo 'a surface check failed' >&2

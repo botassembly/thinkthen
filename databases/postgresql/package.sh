@@ -14,6 +14,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# The builder's home stays out of the packaged extension (surfaces-review-5:
+# it carried 163 home paths), the same remap the other surfaces carry.
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+PG_CONFIG=${PG_CONFIG:-$(command -v pg_config)}
+
 dry_run=no
 if [ "${1:-}" = "--dry-run" ]; then
   dry_run=yes
@@ -37,7 +42,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== postgres package: package the extension"
-CARGO_NET_OFFLINE=true cargo pgrx package --pg-config /usr/bin/pg_config >/dev/null 2>&1
+../../scripts/pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
 ls -l "$EXT/lib/postgresql/16/lib/thinkthen.so"
 
 echo "== postgres package: stage dist/ (the tree as a tarball)"

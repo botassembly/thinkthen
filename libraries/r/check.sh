@@ -77,7 +77,7 @@ if curl -sf --max-time 1 http://127.0.0.1:8215/v1/stats >/dev/null 2>&1; then
   ENGINE_NULL=1 Rscript conformance.R | grep "^ok" | wc -l | xargs \
     echo "wire conformance ok-lines (offline slice rerun for the record):"
 else
-  echo "== r surface: wire suite skipped, no stub on 8215"
+  echo "skip     wire-r: no stub on 127.0.0.1:8215"
 fi
 
 # The production shape the README installs: no fixture code, proven by the

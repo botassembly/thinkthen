@@ -116,7 +116,7 @@ if [ "$wire" = yes ]; then
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_pairs_one_crossing.rb'
 else
-  echo "== ruby surface: interrupt proof skipped, no stub on 8214"
+  echo "skip     wire-ruby: no stub on 127.0.0.1:8214"
 fi
 
 # The gate ran on the fixture build (synthetic-partial); the shape any

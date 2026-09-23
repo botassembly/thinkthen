@@ -8,6 +8,14 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# The builder's home stays out of every artifact this check builds, the
+# same remap the C, SQLite, Python, and Node builds carry
+# (surfaces-review-5: the extension carried 163 home paths).
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+# pg_config: the host's own, found on PATH (Homebrew and distributions
+# differ); PG_CONFIG overrides.
+PG_CONFIG=${PG_CONFIG:-$(command -v pg_config)}
+
 NAME=laneb-pg
 WIRE_NAME=laneb-pg-wire
 KEY_NAME=laneb-pg-key
@@ -71,12 +79,10 @@ echo "== postgres surface: the error-mapping test"
 cargo test --release --quiet --lib --features synthetic-partial --locked
 
 echo "== postgres surface: package the extension"
-# Review 4, item 20 asked the package step under --locked; cargo-pgrx
-# 0.17 carries no --locked flag, so the same guarantee is enforced one
-# step ahead: --locked fails the build when the lockfile would change,
-# and the package step then runs against the checked tree.
-cargo check --quiet --locked --features synthetic-partial
-(cd . && CARGO_NET_OFFLINE=true cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null
+# cargo-pgrx 0.17 carries no --locked flag: the one wrapper proves the
+# lock before and after the step (surfaces-review-5: the offline switch
+# alone still rewrote a drifted lock).
+../../scripts/pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features synthetic-partial >/dev/null
 
 echo "== postgres surface: disposable container, null backend"
 docker rm -f -v "$NAME" >/dev/null 2>&1 || true
@@ -848,5 +854,5 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   rm -f .tmp-wire-batch.out
   echo "ok       a 100 ms budget ended a 64-record wire batch in ${batch_wire_elapsed}s (two 300 ms rounds without it)"
 else
-  echo "== postgres surface: wire suite skipped, no stub on 8219"
+  echo "skip     wire-postgresql: no stub on 127.0.0.1:8219"
 fi

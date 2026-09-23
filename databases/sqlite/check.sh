@@ -115,5 +115,5 @@ if curl -sf --max-time 1 http://127.0.0.1:8218/v1/stats >/dev/null 2>&1; then
     echo "== sqlite surface: per-connection interrupt on the wire"
     STUB_PORT=8218 python3 tests/two_connections.py wire
 else
-    echo "== sqlite surface: wire suite skipped, no stub on 8218"
+    echo "skip     wire-sqlite: no stub on 127.0.0.1:8218"
 fi

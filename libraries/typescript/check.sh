@@ -69,7 +69,7 @@ if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
   ENGINE_BASE_URL="$stub_url" ENGINE_WIDTH=32 THEN_TS_WIRE_URL="$stub_url" \
     node --test tests/bulk.test.mjs
 else
-  echo "wire tests skipped: no stub on ${STUB_PORT:-8211}"
+  echo "skip     wire-typescript: no stub on 127.0.0.1:${STUB_PORT:-8212}"
 fi
 
 step "dead address"

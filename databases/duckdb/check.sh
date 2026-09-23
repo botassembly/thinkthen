@@ -6,6 +6,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# The builder's home stays out of every artifact (surfaces-review-5), the
+# same remap the C, SQLite, Python, and Node builds carry.
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+
 # The one DuckDB version pin (tools/version.env).
 source "$(dirname "$0")/tools/version.env"
 # The venv's duckdb installs the same pin, not "latest stable": the
@@ -135,5 +139,5 @@ if curl -sf --max-time 1 http://127.0.0.1:8217/v1/stats >/dev/null 2>&1; then
   echo "== duckdb surface: wire suite against the stub on 8217"
   ENGINE_BASE_URL=http://127.0.0.1:8217/v1 tools/wire_suite.sh
 else
-  echo "== duckdb surface: wire suite skipped, no stub on 8217"
+  echo "skip     wire-duckdb: no stub on 127.0.0.1:8217"
 fi

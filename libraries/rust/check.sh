@@ -33,5 +33,5 @@ if curl -sf --max-time 1 http://127.0.0.1:8213/v1/stats >/dev/null 2>&1; then
   ENGINE_BASE_URL=http://127.0.0.1:8213/v1 ENGINE_WIDTH=32 \
     cargo test --quiet --test wire --locked -- --nocapture
 else
-  echo "== rust surface: wire suite skipped, no stub on 8213"
+  echo "skip     wire-rust: no stub on 127.0.0.1:8213"
 fi

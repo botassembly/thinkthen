@@ -12,7 +12,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
-maturin build --release -o dist
+maturin build --locked --release -o dist
 
 wheel=$(ls -t dist/thinkthen-*.whl | head -1)
 python3 - "$wheel" "$HOME" << 'PY'

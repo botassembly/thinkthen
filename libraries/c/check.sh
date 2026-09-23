@@ -63,7 +63,7 @@ if command -v clang >/dev/null 2>&1; then
         -lthinkthen -Wl,-rpath,"$PWD/target/release"
     THINKTHEN_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/error_threads
 else
-    echo "== c surface: leak check skipped, no clang"
+    echo "skip     c-leak-check: no clang on PATH"
 fi
 
 echo "== c surface: null suite (the door, the error surface, and the twins)"
@@ -111,5 +111,5 @@ if curl -sf --max-time 1 http://127.0.0.1:8216/v1/stats >/dev/null 2>&1; then
     echo "== c surface: wire suite (a dead address proves the backend kind)"
     cargo test --quiet --test wire --locked
 else
-    echo "== c surface: wire twin skipped, no stub on 8216"
+    echo "skip     wire-c: no stub on 127.0.0.1:8216"
 fi

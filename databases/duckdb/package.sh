@@ -25,6 +25,10 @@ if [ "$(uname -s)" = Darwin ]; then
 fi
 cd "$(dirname "$0")"
 
+# The builder's home stays out of every artifact (surfaces-review-5), the
+# same remap the C, SQLite, Python, and Node builds carry.
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+
 VERSION=$(tail -1 ../../VERSION)
 CONTAINER=dbpkg211-duckdb
 cleanup() {
