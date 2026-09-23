@@ -86,6 +86,42 @@ fn unwired_key_refusal(setting: Option<&str>) -> Option<Error> {
 static DEADLINE_MS: GucSetting<i32> = GucSetting::<i32>::new(-1);
 
 /// The engine, lazy in each backend. Built on first use, after the fork.
+/// The recognize row set: one row a named span (pgrx names the columns).
+type RecognizeTable = TableIterator<
+    'static,
+    (
+        name!(text, Option<String>),
+        name!(kind, Option<String>),
+        name!(start, Option<i32>),
+        name!(end, Option<i32>),
+        name!(strength, Option<f64>),
+    ),
+>;
+
+/// The relate row set: one row an edge, ends as record numbers.
+type RelateTable = TableIterator<
+    'static,
+    (
+        name!(name, Option<String>),
+        name!(source, Option<i64>),
+        name!(target, Option<i64>),
+        name!(probability, Option<f64>),
+    ),
+>;
+
+/// The relations row set: one row a beta relation, ends as texts.
+type RelationsTable = TableIterator<
+    'static,
+    (
+        name!(name, Option<String>),
+        name!(source_text, Option<String>),
+        name!(source_kind, Option<String>),
+        name!(target_text, Option<String>),
+        name!(target_kind, Option<String>),
+        name!(probability, Option<f64>),
+    ),
+>;
+
 static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 
 /// The engine value, with the configured key's refusal in front of it.
@@ -119,7 +155,7 @@ fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contr
         .unwrap()
         .get(&(question.digest(), evidence.to_string()))
     {
-        Some(Saved::Decision(answer)) => Some(answer.clone()),
+        Some(Saved::Decision(answer)) => Some(*answer),
         _ => None,
     }
 }
@@ -594,7 +630,7 @@ fn annotated_as_json(held: &Annotated) -> serde_json::Value {
 #[pg_extern(parallel_restricted)]
 fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bool> {
     let question = question_of(question);
-    let Some(evidence) = evidence else { return None };
+    let evidence = evidence?;
     if let Some(answer) = saved_decision(&question, evidence) {
         return answer.value();
     }
@@ -614,7 +650,7 @@ fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bo
 #[pg_extern(parallel_restricted)]
 fn thinkthen_probability(question: Option<&str>, evidence: Option<&str>) -> Option<f64> {
     let question = question_of(question);
-    let Some(evidence) = evidence else { return None };
+    let evidence = evidence?;
     match engine().decide_many_opts(&question, &[evidence], call_options(), None) {
         Ok(mut judged) => judged.pop().map(|judgment| judgment.probability),
         Err(error) => raise(error),
@@ -628,7 +664,7 @@ fn thinkthen_choose(
     options: Option<Array<'_, &str>>,
 ) -> Option<String> {
     let question = with_members(&question_of(question), options);
-    let Some(evidence) = evidence else { return None };
+    let evidence = evidence?;
     match engine().choose_opts(&question, evidence, call_options()) {
         Ok(choice) => choice,
         Err(error) => raise(error),
@@ -642,7 +678,7 @@ fn thinkthen_score(
     levels: Option<Array<'_, &str>>,
 ) -> Option<f64> {
     let question = with_members(&question_of(question), levels);
-    let Some(evidence) = evidence else { return None };
+    let evidence = evidence?;
     match engine().score_opts(&question, evidence, call_options()) {
         Ok(scored) => Some(scored.value),
         Err(error) => raise(error),
@@ -656,7 +692,7 @@ fn thinkthen_tag(
     labels: Option<Array<'_, &str>>,
 ) -> Option<Vec<String>> {
     let question = with_members(&question_of(question), labels);
-    let Some(evidence) = evidence else { return None };
+    let evidence = evidence?;
     match engine().tag_opts(&question, evidence, call_options()) {
         Ok(held) => Some(held),
         Err(error) => raise(error),
@@ -666,11 +702,11 @@ fn thinkthen_tag(
 #[pg_extern(parallel_restricted)]
 fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
     let set = set_of(set);
-    let Some(evidence) = evidence else { return None };
+    let evidence = evidence?;
     match engine().annotate_opts(&set, &[evidence], call_options(), None) {
         Ok(mut answers) => {
             let mut object = serde_json::Map::new();
-            let Some(fields) = answers.pop() else { return None };
+            let fields = answers.pop()?;
             for (name, held) in fields {
                 object.insert(name, annotated_as_json(&held));
             }
@@ -683,7 +719,7 @@ fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB
 #[pg_extern(parallel_restricted)]
 fn thinkthen_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
     let question = question_of(question);
-    let Some(evidence) = evidence else { return None };
+    let evidence = evidence?;
     match engine().details_opts(&question, evidence, call_options()) {
         Ok(details) => Some(JsonB(serde_json::to_value(details).expect("details serializes"))),
         Err(error) => raise(error),
@@ -702,7 +738,7 @@ fn thinkthen_usage(
         i64::try_from(usage.cache_answers).unwrap_or(i64::MAX),
         i64::try_from(usage.tokens).unwrap_or(i64::MAX),
     );
-    TableIterator::new(vec![row].into_iter())
+    TableIterator::new(vec![row])
 }
 
 /// `recognize(text, kinds)`: every name in the text as a row, the five
@@ -715,16 +751,7 @@ fn thinkthen_usage(
 fn thinkthen_recognize(
     body: Option<&str>,
     kinds: Option<Array<'_, &str>>,
-) -> TableIterator<
-    'static,
-    (
-        name!(text, Option<String>),
-        name!(kind, Option<String>),
-        name!(start, Option<i32>),
-        name!(end, Option<i32>),
-        name!(strength, Option<f64>),
-    ),
-> {
+) -> RecognizeTable {
     let Some(body) = body else {
         return TableIterator::new(std::iter::empty());
     };
@@ -760,7 +787,7 @@ fn thinkthen_recognize(
             )
         })
         .collect();
-    TableIterator::new(rows.into_iter())
+    TableIterator::new(rows)
 }
 
 /// `relate(query, rules)`: every legal pair in the query's records judged
@@ -774,15 +801,7 @@ fn thinkthen_recognize(
 fn thinkthen_relate(
     query: Option<&str>,
     rules: Option<Array<'_, &str>>,
-) -> TableIterator<
-    'static,
-    (
-        name!(name, Option<String>),
-        name!(source, Option<i64>),
-        name!(target, Option<i64>),
-        name!(probability, Option<f64>),
-    ),
-> {
+) -> RelateTable {
     let query = query.unwrap_or_default().trim().trim_end_matches(';').to_owned();
     if query.is_empty() {
         raise(Error::usage("the relate query is empty"));
@@ -850,7 +869,7 @@ fn thinkthen_relate(
             )
         })
         .collect();
-    TableIterator::new(out.into_iter())
+    TableIterator::new(out)
 }
 
 /// The beta companion: `thinkthen_relations(body, '@names.json')` runs the
@@ -861,17 +880,7 @@ fn thinkthen_relate(
 fn thinkthen_relations(
     body: Option<&str>,
     spec: Option<&str>,
-) -> TableIterator<
-    'static,
-    (
-        name!(name, Option<String>),
-        name!(source_text, Option<String>),
-        name!(source_kind, Option<String>),
-        name!(target_text, Option<String>),
-        name!(target_kind, Option<String>),
-        name!(probability, Option<f64>),
-    ),
-> {
+) -> RelationsTable {
     let Some(body) = body else {
         return TableIterator::new(std::iter::empty());
     };
@@ -895,7 +904,7 @@ fn thinkthen_relations(
             ))
         })
         .collect();
-    TableIterator::new(rows.into_iter())
+    TableIterator::new(rows)
 }
 
 /// The array overload, the second bulk form `postgres.md` names: one array
@@ -941,7 +950,7 @@ fn thinkthen_decide_array(
             )
         })
         .collect::<Vec<_>>();
-    TableIterator::new(out.into_iter())
+    TableIterator::new(out)
 }
 
 /// The warm aggregate's name carrier. The state travels as text
