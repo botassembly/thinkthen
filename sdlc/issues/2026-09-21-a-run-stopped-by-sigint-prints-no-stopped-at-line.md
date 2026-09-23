@@ -1,6 +1,6 @@
 # A run stopped by SIGINT prints no stopped-at line
 
-Status: Open
+Status: Approved for ticket 0073 on 2026-09-22; implementation pending
 
 A run stopped by a bad record prints a line on standard error naming the record and the resume path. A run stopped by Ctrl-C prints nothing.
 
@@ -26,3 +26,7 @@ The same stopped-at line with the resume hint, or a documented reason SIGINT dif
 Minor. The run is safe to resume and the exit code is 130, but a user who stopped a batch gets no count of what finished.
 
 Found by experiment 218, wave 1, areas 4 and 8.
+
+## Product ruling, 2026-09-22
+
+Catch SIGINT cooperatively, stop starting requests after cancellation is observed, let requests already sent finish within the existing attempt timeout, print completed ordered output and the stopped-at line, then restore the normal shell meaning by re-raising SIGINT for exit 130. A single-document or aggregate request already sent also finishes within its attempt timeout; its completed output is written before SIGINT is re-raised. No new exit code is introduced. Ian can overturn this ruling.
