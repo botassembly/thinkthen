@@ -106,3 +106,25 @@ def test_the_annotate_docstring_advice_round_trips():
     # honest, not silent — pinned here so a real drop cannot hide.
     assert out["team"].isna().all()
     assert out["urgency"].notna().all()
+
+
+def test_the_builder_refuses_two_verbs():
+    # Review-4, item 15: question(decide=..., choose=...) dropped the
+    # choose silently; the pair is refused now.
+    with pytest.raises(tt.UsageError, match="one verb"):
+        tt.question(decide="a question?", choose="another?", options=["x", "y"])
+    with pytest.raises(tt.UsageError, match="one verb"):
+        tt.question(decide="a question?", score="another?", levels=["low"])
+
+
+def test_the_pandas_advice_aligns_on_a_non_default_index():
+    # Review-4, item 15: the docstring one-liner over a non-default index
+    # turned every aligned join into NaN; the corrected form carries the
+    # original index and aligns.
+    pd = pytest.importorskip("pandas")  # the module already imports it
+    frame = pd.DataFrame({"body": ["a", "b", "c"]}, index=[5, 7, 9])
+    answers = [True, False, True]
+    naive = frame.assign(x=pd.Series(answers))
+    assert naive["x"].isna().all(), "the old advice is the NaN shape"
+    corrected = frame.assign(x=pd.Series(answers, index=frame["body"].index))
+    assert corrected["x"].tolist() == answers, "the docstring advice aligns"

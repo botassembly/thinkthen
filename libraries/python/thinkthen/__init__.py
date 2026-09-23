@@ -113,7 +113,11 @@ def decide(question, text, *, deadline=None, token=None):
     nulls are "not sure" — the deck's ``with_columns(complaint=...)`` line
     runs as drawn. A pandas Series answers every row too, and comes back
     as the plain list (pandas cannot rebuild its own column from the
-    Arrow capsule), so ``pd.Series(answers)`` is the one line back.
+    Arrow capsule). The one line back is
+    ``pd.Series(answers, index=text.index)``: carrying the original index
+    keeps the answers aligned on any index, because a plain
+    ``pd.Series(answers)`` re-indexes from zero and a non-default index
+    turns every aligned join into NaN (review-4, item 15).
     """
     answer = _decide(question, text, deadline=deadline, token=token)
     return _column_or_value(text, answer)
@@ -125,8 +129,11 @@ def score(question, text, levels=None, *, deadline=None, token=None):
     A Polars column in returns a number column out, and the public call
     takes ``levels`` beside the text — ``tt.score(ask, df["body"], levels)``
     runs as the deck draws. A pandas Series comes back as the plain list
-    of numbers, the same as ``decide``. A token is read between rows, so
-    a controller thread stops the column before the next row is sent.
+    of numbers, the same as ``decide``, with the same one line back —
+    ``pd.Series(answers, index=text.index)`` — because a zero-based
+    ``pd.Series(answers)`` misaligns on any non-default index. A token is
+    read between rows, so a controller thread stops the column before
+    the next row is sent.
     """
     answer = _score(question, text, levels=levels, deadline=deadline, token=token)
     return _column_or_value(text, answer)
@@ -141,8 +148,10 @@ def _column_or_value(text, answer):
     Series handed the same object would silently wrap it as one object
     row, because pandas has no constructor over the Arrow PyCapsule
     interface; a host that is not the Polars family gets the answers as
-    the plain list the list door returns, so the settled one-liner
-    ``pd.Series(answers)`` stays the way back to a pandas column.
+    the plain list the list door returns, and the way back to a pandas
+    column is ``pd.Series(answers, index=text.index)`` — the original
+    index rides along, so a non-default index aligns instead of turning
+    every row to NaN.
     """
     if not hasattr(answer, "__arrow_c_array__"):
         return answer

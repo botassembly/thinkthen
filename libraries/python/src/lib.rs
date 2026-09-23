@@ -227,35 +227,113 @@ fn guarded<T>(step: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
     thinkthen_contract::catch_panic("the Python door", step)
 }
 
-/// Run one engine step on a detached call, with the panic guard armed.
-fn step<T: Send>(
+/// Bridge a caller's token to the call's own signal token: the engine
+/// watches one token, and both gestures — the caller's `token=` and the
+/// interpreter's Ctrl-C — must land on it. The bridge polls the caller's
+/// token until it fires or the call ends, which `Drop` guarantees by
+/// joining the watcher before the options it bridged for go away.
+struct TokenBridge {
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl TokenBridge {
+    fn watch(caller: Cancel, signal: &Cancel) -> Self {
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let armed = signal.clone();
+        let flag = stop.clone();
+        let handle = std::thread::spawn(move || {
+            while !flag.load(std::sync::atomic::Ordering::SeqCst) {
+                if caller.is_cancelled() {
+                    armed.cancel();
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+        });
+        Self { stop, handle: Some(handle) }
+    }
+}
+
+impl Drop for TokenBridge {
+    fn drop(&mut self) {
+        self.stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
+    }
+}
+
+/// Run one engine step with the panic guard armed and the interpreter's
+/// signals heard: the step runs on a worker thread holding its own cancel
+/// token, while the calling thread polls `py.check_signals` — Python's
+/// rule that handlers run on the thread that holds the interpreter — and
+/// cancels that token the moment a signal arrives, so the engine stops
+/// before its next request instead of sending again, and the raise the
+/// handler made comes back promptly instead of after the call.
+fn step<T: Send + 'static>(
     py: Python<'_>,
-    run: impl FnOnce() -> Result<T, Error> + Send,
-) -> Result<T, Error> {
-    py.detach(move || guarded(run))
+    run: impl FnOnce(&Cancel) -> Result<T, Error> + Send + 'static,
+) -> Result<T, PyErr> {
+    let signal = Cancel::new();
+    let armed = signal.clone();
+    let mut worker = Some(std::thread::spawn(move || guarded(move || run(&armed))));
+    let outcome = loop {
+        if let Err(raised) = py.check_signals() {
+            // Cancel first, then answer the raise without joining: the
+            // promise is exact — no new request starts, and a request
+            // already sent finishes in its own time on the worker. The
+            // closure owns its captures, so the thread outliving this
+            // step is safe, and joining here would hold the caller's
+            // interrupt hostage to the in-flight send.
+            signal.cancel();
+            drop(worker.take());
+            break Err(raised);
+        }
+        match &worker {
+            Some(handle) if !handle.is_finished() => {}
+            _ => break Ok(()),
+        }
+        // The poll nap releases the interpreter so other threads breathe.
+        py.detach(|| std::thread::sleep(std::time::Duration::from_millis(20)));
+    };
+    match outcome {
+        Err(raised) => Err(raised),
+        Ok(()) => match worker.take().expect("the worker is joined once").join() {
+            Ok(Ok(value)) => Ok(value),
+            Ok(Err(error)) => Err(python_error(py, error)),
+            Err(_) => Err(python_error(
+                py,
+                Error {
+                    kind: ErrorKind::Defect,
+                    message: "the engine step did not come back".into(),
+                    retryable: false,
+                },
+            )),
+        },
+    }
 }
 
 /// The options a call takes: a deadline from a budget in seconds,
-/// converted by the contract's one checked door, and the caller's cancel
-/// token when one was given.
+/// converted by the contract's one checked door, the caller's cancel
+/// token bridged onto the call's signal token, and the signal token the
+/// interpreter's own poll arms.
 ///
-/// No deadline is spelled `None` (or by omitting `deadline=`). A negative
-/// number is refused as a usage error — the contract's `-1` sentinel
-/// belongs to the C door, where a number has to stand for "none" — so a
-/// budget computed as `end - now` that lands below zero can never quietly
-/// disable the deadline. Zero stays what the contract settled: a spent
-/// deadline that sends nothing.
+/// No deadline is spelled `None` (or by omitting `deadline=`), and `-1`
+/// is the one spelled sentinel for the same thing — the ruling every
+/// surface shares. Every other negative is refused as a usage error, so
+/// a budget computed as `end - now` that lands below -1 can never
+/// quietly disable the deadline. Zero stays what the contract settled: a
+/// spent deadline that sends nothing.
 fn call_options<'a>(
     deadline: Option<f64>,
-    token: Option<&'a Bound<'a, CancelToken>>,
-) -> Result<Options<'a>, Error> {
+    caller: Option<Cancel>,
+    signal: &'a Cancel,
+) -> Result<(Options<'a>, Option<TokenBridge>), Error> {
     // A token already cancelled before the call spends nothing: the
-    // refusal happens here, before any request is built or sent. The
-    // deadline conversion below owns the spellings: -1 is the one
-    // no-deadline sentinel, every other negative is refused, and zero is
-    // a spent deadline the engine answers with the deadline kind.
-    if let Some(held) = token {
-        if held.get().inner.is_cancelled() {
+    // refusal happens here, before any request is built or sent.
+    if let Some(held) = &caller {
+        if held.is_cancelled() {
             return Err(Error {
                 kind: ErrorKind::Cancelled,
                 message: "the token was already cancelled; no request was sent".into(),
@@ -263,11 +341,9 @@ fn call_options<'a>(
             });
         }
     }
-    let options = Options::new().with_deadline_seconds(deadline)?;
-    Ok(match token {
-        Some(token) => options.cancel(&token.get().inner),
-        None => options,
-    })
+    let options = Options::new().with_deadline_seconds(deadline)?.cancel(signal);
+    let bridge = caller.map(|held| TokenBridge::watch(held, signal));
+    Ok((options, bridge))
 }
 
 /// Map a contract error to the Python exception of its kind, carrying the
@@ -401,11 +477,14 @@ fn bulk<T: Send>(
             ));
         }
     }
-    let options = call_options(deadline, None).map_err(|error| python_error(py, error))?;
     let flagged = Arc::new(AtomicBool::new(false));
+    // The batch spine keeps its own war token and its own poll below: the
+    // options carry one clone, the poll cancels the other, and the
+    // caller's token is bridged by the poll loop that already watches it.
     let war = Cancel::new();
     let armed_token = war.clone();
-    let armed = options.maybe_cancel(Some(&armed_token));
+    let (armed, _no_bridge) =
+        call_options(deadline, None, &armed_token).map_err(|error| python_error(py, error))?;
     let caller = token.map(|held| held.get().inner.clone());
     let escaped: Arc<Mutex<Option<PyErr>>> = Arc::new(Mutex::new(None));
     let result = {
@@ -480,6 +559,26 @@ fn question(
     model: Option<String>,
     file: Option<String>,
 ) -> PyResult<Question> {
+    // One question, one verb: a call carrying two verb texts would drop
+    // the second silently in the chain below, so the pair is refused
+    // here (review-4, item 15: `question(decide=..., choose=...)`
+    // dropped the choose).
+    let verbs: Vec<(&str, bool)> = [
+        ("decide", decide.is_some()),
+        ("choose", choose.is_some()),
+        ("score", score.is_some()),
+        ("tag", tag.is_some()),
+    ]
+    .into_iter()
+    .filter(|(_, held)| *held)
+    .collect();
+    if verbs.len() > 1 {
+        return Err(UsageError::new_err(format!(
+            "question() takes one verb; '{}' and '{}' are both given, and the second would be dropped",
+            verbs[0].0,
+            verbs[1].0
+        )));
+    }
     if let Some(path) = file {
         // A file carries its own whole question set; anything beside it
         // would be silently dropped, so every other argument refuses.
@@ -643,9 +742,11 @@ fn decide(
             "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
         )
     })?;
-    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
-    let answer = step(py, move || engine().decide_opts(&asked, &evidence, options))
-        .map_err(|error| python_error(py, error))?;
+    let caller = token.map(|held| held.get().inner.clone());
+    let answer = step(py, move |signal| {
+        let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
+        engine().decide_opts(&asked, &evidence, options)
+    })?;
     Ok(bare(py, answer))
 }
 
@@ -692,9 +793,11 @@ fn choose(
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_verb_question(py, question, "choose", "options", options)?;
-    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
-    let picked = step(py, move || engine().choose_opts(&asked, &evidence, options))
-        .map_err(|error| python_error(py, error))?;
+    let caller = token.map(|held| held.get().inner.clone());
+    let picked = step(py, move |signal| {
+        let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
+        engine().choose_opts(&asked, &evidence, options)
+    })?;
     Ok(plain(py, picked))
 }
 
@@ -723,8 +826,9 @@ fn score(
         // so a column cannot outlive the caller's budget row after row.
         // The caller's token is read between rows, so a controller thread
         // stops the column before the next row is sent.
-        let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
-        let values = step(py, move || {
+        let caller = token.map(|held| held.get().inner.clone());
+        let values = step(py, move |signal| {
+            let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
             let mut values = Vec::with_capacity(texts.len());
             for text in &texts {
                 if options.cancel_token().is_some_and(Cancel::is_cancelled) {
@@ -733,8 +837,7 @@ fn score(
                 values.push(engine().score_opts(&asked, text, options)?.value);
             }
             Ok::<Vec<f64>, Error>(values)
-        })
-        .map_err(|error| python_error(py, error))?;
+        })?;
         return Ok(Py::new(py, arrow::ArrowSeries::numbers("score", &values))?.into_any());
     }
     let evidence: String = evidence.extract().map_err(|_| {
@@ -742,10 +845,11 @@ fn score(
             "the evidence is text or a Polars column (an Arrow stream); a frame goes to annotate with on=",
         )
     })?;
-    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
-    let value = step(py, move || engine().score_opts(&asked, &evidence, options))
-        .map(|Scored { value, .. }| value)
-        .map_err(|error| python_error(py, error))?;
+    let caller = token.map(|held| held.get().inner.clone());
+    let value = step(py, move |signal| {
+        let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
+        Ok(engine().score_opts(&asked, &evidence, options)?.value)
+    })?;
     Ok(pyo3::types::PyFloat::new(py, value).unbind().into_any())
 }
 
@@ -760,9 +864,11 @@ fn tag(
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<String>> {
     let asked = settle_verb_question(py, question, "tag", "labels", labels)?;
-    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
-    step(py, move || engine().tag_opts(&asked, &evidence, options))
-        .map_err(|error| python_error(py, error))
+    let caller = token.map(|held| held.get().inner.clone());
+    step(py, move |signal| {
+        let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
+        engine().tag_opts(&asked, &evidence, options)
+    })
 }
 
 /// Keep the records whose evidence reached the mark, in order. The caller
@@ -822,10 +928,12 @@ fn find(
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Option<(usize, f64)>> {
     let asked = settle_question(py, question)?;
-    let references: Vec<&str> = units.iter().map(String::as_str).collect();
-    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
-    let found = step(py, move || engine().find_opts(&asked, &references, options))
-        .map_err(|error| python_error(py, error))?;
+    let caller = token.map(|held| held.get().inner.clone());
+    let found = step(py, move |signal| {
+        let references: Vec<&str> = units.iter().map(String::as_str).collect();
+        let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
+        engine().find_opts(&asked, &references, options)
+    })?;
     Ok(found.index.map(|place| (place, found.probability)))
 }
 
@@ -930,10 +1038,12 @@ fn details(
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
-    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
+    let caller = token.map(|held| held.get().inner.clone());
     let Details { probability, answer, nearest, model, digest, sends, requests, failed_questions } =
-        step(py, move || engine().details_opts(&asked, &evidence, options))
-            .map_err(|error| python_error(py, error))?;
+        step(py, move |signal| {
+            let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
+            engine().details_opts(&asked, &evidence, options)
+        })?;
     let dict = PyDict::new(py);
     dict.set_item("probability", probability)?;
     dict.set_item("answer", bare(py, answer))?;
@@ -1311,9 +1421,11 @@ fn recognize(
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Recognized> {
     let asked = build_recognize(py, kinds, relations, threshold, relation_threshold)?;
-    let options = call_options(deadline, token).map_err(|error| python_error(py, error))?;
-    let found = step(py, move || engine().recognize_opts(&asked, &text, options))
-        .map_err(|error| python_error(py, error))?;
+    let caller = token.map(|held| held.get().inner.clone());
+    let found = step(py, move |signal| {
+        let (options, _bridge) = call_options(deadline, caller.clone(), signal)?;
+        engine().recognize_opts(&asked, &text, options)
+    })?;
     Ok(recognized_record(found))
 }
 
@@ -1526,8 +1638,9 @@ mod tests {
         // no-deadline sentinel and crosses; NaN, an infinity, every other
         // negative, and an oversized budget are usage errors at this
         // door, never arithmetic that ends the host.
+        let signal = Cancel::new();
         for refused in [f64::NAN, f64::INFINITY, -2.0, -0.5, 1e300] {
-            let error = match call_options(Some(refused), None) {
+            let error = match call_options(Some(refused), None, &signal) {
                 Ok(_) => panic!("{refused} must be refused"),
                 Err(error) => error,
             };
@@ -1535,8 +1648,8 @@ mod tests {
         }
         // `None` and the -1 sentinel both spell no deadline; zero is
         // a spent one the engine answers with the deadline kind.
-        assert!(call_options(None, None).is_ok());
-        assert!(call_options(Some(-1.0), None).is_ok());
-        assert!(call_options(Some(0.0), None).is_ok());
+        assert!(call_options(None, None, &signal).is_ok());
+        assert!(call_options(Some(-1.0), None, &signal).is_ok());
+        assert!(call_options(Some(0.0), None, &signal).is_ok());
     }
 }
