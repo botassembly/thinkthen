@@ -19,7 +19,7 @@
    "surfaces": [
     "python"
    ],
-   "why": "the live interrupt runs as tests/test_cancel.py against the stub"
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-4: the real gap, not a pointer); the live interrupt proof runs as tests/test_cancel.py against the stub"
   },
   {
    "when": {
@@ -28,7 +28,7 @@
    "surfaces": [
     "typescript"
    ],
-   "why": "the live interrupt runs on the wire in bulk.test.mjs (the AbortSignal proof)"
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-4: the real gap); the live AbortSignal proof runs on the wire in bulk.test.mjs"
   },
   {
    "when": {
@@ -37,7 +37,7 @@
    "surfaces": [
     "c"
    ],
-   "why": "the mid-batch cancel needs the wire stub's reply timing; tests/cancel.rs proves the token's pre-fired and mid-batch paths through the door"
+   "why": "this driver carries no cancel path mid-batch (surfaces-review-4: the real gap); tests/cancel.rs proves the token's pre-fired and mid-batch paths through the door under the stub's timing"
   },
   {
    "when": {
@@ -46,7 +46,7 @@
    "surfaces": [
     "postgresql"
    ],
-   "why": "the engine token cannot be pre-fired through SQL; the statement_timeout proof in the surface's NOTES.md is its cancel shape"
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-4: the real gap); the engine token cannot be pre-fired through SQL, and the statement_timeout proof in the surface's NOTES.md is its cancel shape"
   },
   {
    "when": {
@@ -98,7 +98,14 @@
    "when": {
     "kind": "local"
    },
-   "why": "the local kind needs a file door this surface does not carry"
+   "surfaces": [
+    "python",
+    "typescript",
+    "ruby",
+    "rust",
+    "c"
+   ],
+   "why": "this door reads no file, so a missing question file cannot become its error; the file doors (duckdb, sqlite, postgresql at @path, r at annotate_file) run the case and answer the local kind (surfaces-review-4: the entry once named no surface)"
   },
   {
    "when": {

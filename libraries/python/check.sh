@@ -112,7 +112,7 @@ echo "== the function examples, run as one test"
 ENGINE_NULL=1 .venv/bin/python tests/examples.py
 
 echo "== conformance slice, offline"
-ENGINE_NULL=1 .venv/bin/python tests/conformance.py
+THINKTHEN_NULL=1 .venv/bin/python tests/conformance.py
 
 echo "== slide sample, as drawn, on the stand-in's offline backend"
 # The loopback stub answers one noul shape a request, so the choose, score,

@@ -17,40 +17,25 @@ import tempfile
 import thinkthen as tt
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "conformance"))
+from skiptable import lookup_reason  # noqa: E402 - the one skip reader
+
 FILE = json.loads((ROOT / "conformance" / "conformance.json").read_text())
 CASES = FILE["cases"]
-SKIPS = FILE.get("skips", [])
 
 
 def central_skip(surface, case, wire):
-    """The shared skip table's reason for this case on this surface, or
-    None. First match wins; entries naming a surface apply only there."""
-    kind = case.get("expect", {}).get("error", {}).get("kind")
-    for entry in SKIPS:
-        if entry.get("surfaces") and surface not in entry["surfaces"]:
-            continue
-        if entry.get("unless") == "wire" and wire:
-            continue
-        when = entry["when"]
-        if "id" in when and case["id"] != when["id"]:
-            continue
-        if "verb" in when:
-            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
-            if case["verb"] not in listed:
-                continue
-        if "kind" in when and kind != when["kind"]:
-            continue
-        if "form" in when and case.get("form") != when["form"]:
-            continue
-        if "none" in when and bool(case.get("none")) != when["none"]:
-            continue
-        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
-            continue
-        if "record" in when and when["record"] == "null" \
-                and not any(record is None for record in case.get("records") or []):
-            continue
-        return entry["why"]
-    return None
+    """The one reader's decision for this case on this surface (surfaces-
+    review-4: this surface used to carry its own copy; the copy and the
+    table drifted). `None` runs the case; otherwise (why, as)."""
+    expect = case.get("expect", {})
+    asked = {
+        "kind": expect.get("error", {}).get("kind"),
+        "record": "null" if any(r is None for r in case.get("records") or []) else None,
+        "none": bool(case.get("none")),
+        "error": "error" in expect,
+    }
+    return lookup_reason(surface, case["id"], asked, wire=wire)
 
 
 def built(body, set_body=None):
@@ -306,9 +291,10 @@ def main():
     passed, failed, skipped = [], [], []
     for case in CASES:
         name = case["id"]
-        reason = central_skip("python", case, wire=False)
-        if reason is not None:
-            skipped.append((name, reason))
+        held = central_skip("python", case, wire=False)
+        if held is not None:
+            why, _as = held
+            skipped.append((name, why))
             continue
         kind = case.get("expect", {}).get("error", {}).get("kind")
         try:

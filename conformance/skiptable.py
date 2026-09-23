@@ -142,11 +142,11 @@ def lookup_reason(surface, case_id, asked=None, wire=False):
     return None
 
 
-def lookup(surface, case_id, asked):
+def lookup(surface, case_id, asked, wire=False):
     if surface not in SURFACES:
         print(f"skiptable: surface {surface} is not one of the nine", file=sys.stderr)
         return 2
-    held = lookup_reason(surface, case_id, asked, wire=False)
+    held = lookup_reason(surface, case_id, asked, wire=wire)
     if held is None:
         print("RUN")
         return 0
@@ -164,6 +164,7 @@ def main(argv):
         return validate(argv[2] if len(argv) > 2 else None)
     if argv[1] == "lookup" and len(argv) >= 4:
         surface, case_id, asked = argv[2], argv[3], {}
+        wire = False
         rest = argv[4:]
         for index in range(0, len(rest) - 1, 2):
             flag = rest[index].lstrip("-")
@@ -171,7 +172,13 @@ def main(argv):
                 asked[flag] = rest[index + 1]
             elif flag in BOOL_FACETS:
                 asked[flag] = rest[index + 1].strip().lower() == "true"
-        return lookup(surface, case_id, asked)
+            elif flag == "wire":
+                # The caller's real wire state, so `unless: "wire"` entries
+                # apply where the stub is up and not where it is not
+                # (surfaces-review-4: the CLI hard-coded false, so the
+                # runners that shell out ignored the facet).
+                wire = rest[index + 1].strip().lower() == "true"
+        return lookup(surface, case_id, asked, wire=wire)
     print(__doc__, file=sys.stderr)
     return 2
 

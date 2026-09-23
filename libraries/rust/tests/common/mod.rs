@@ -26,7 +26,7 @@ pub(crate) fn note_missing_env(test: &str) -> bool {
         return true;
     }
     if let Some(note) = thinkthen_standin::testkit::skip_note(test) {
-        eprintln!("skip {note}");
+        eprintln!("skip {test}: {note}");
     }
     false
 }

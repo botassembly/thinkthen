@@ -17,73 +17,68 @@ use thinkthen::{
     Recognized, Relate, Row, byte_range, failed_questions, name_in, rows_json,
 };
 
-/// The shared skip table's entry for this case on this surface: the reason
-/// and whether it is a recorded divergence. First match wins; entries
-/// naming a surface apply only there.
-fn central_skip(file: &Value, case: &Value, wire: bool) -> Option<(String, bool)> {
-    let skips = file["skips"].as_array()?;
+/// The one skip-table reader's decision for this case on this surface,
+/// asked through conformance/skiptable.py so the table's logic lives in
+/// exactly one place (surfaces-review-4: this example carried its own
+/// copy, and the copies drifted on the wire and none facets). `Ok(None)`
+/// runs the case; `Err` fails it, because a reader that cannot answer
+/// must never turn into a silent run or a silent skip.
+fn central_skip(case: &Value, wire: bool) -> Result<Option<(String, bool)>, String> {
     let id = case["id"].as_str().unwrap_or("?");
-    let verb = case["verb"].as_str().unwrap_or("?");
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../conformance/skiptable.py");
     let kind = case["expect"]["error"]["kind"].as_str();
-    let form = case["form"].as_str();
-    let none = case["none"].as_bool().unwrap_or(false);
-    for entry in skips {
-        if let Some(surfaces) = entry["surfaces"].as_array() {
-            if !surfaces.iter().any(|one| one.as_str() == Some("rust")) {
-                continue;
-            }
-        }
-        if entry["unless"].as_str() == Some("wire") && wire {
-            continue;
-        }
-        let when = &entry["when"];
-        let matches_verb = when["verb"].as_str() == Some(verb)
-            || when["verb"]
-                .as_array()
-                .is_some_and(|list| list.iter().any(|one| one.as_str() == Some(verb)));
-        if when["verb"].as_str().is_some() || when["verb"].as_array().is_some() {
-            if !matches_verb {
-                continue;
-            }
-        }
-        if let Some(want) = when["id"].as_str() {
-            if want != id {
-                continue;
-            }
-        }
-        if let Some(want) = when["kind"].as_str() {
-            if Some(want) != kind {
-                continue;
-            }
-        }
-        if let Some(want) = when["form"].as_str() {
-            if Some(want) != form {
-                continue;
-            }
-        }
-        if let Some(want) = when["none"].as_bool() {
-            if want != none {
-                continue;
-            }
-        }
-        if let Some(want) = when["error"].as_bool() {
-            let has_error = !case["expect"]["error"].is_null();
-            if want != has_error {
-                continue;
-            }
-        }
-        if when["record"].as_str() == Some("null") {
-            let has_null = case["records"]
-                .as_array()
-                .is_some_and(|records| records.iter().any(Value::is_null));
-            if !has_null {
-                continue;
-            }
-        }
-        let why = entry["why"].as_str().unwrap_or_default().to_owned();
-        return Some((why, entry["as"].as_str() == Some("diverge")));
+    let has_error = !case["expect"]["error"].is_null();
+    let has_null = case["records"]
+        .as_array()
+        .is_some_and(|records| records.iter().any(Value::is_null));
+    let mut command = std::process::Command::new("python3");
+    command
+        .arg(script)
+        .arg("lookup")
+        .arg("rust")
+        .arg(id)
+        .env_remove("THINKTHEN_API_KEY")
+        .env_remove("THINKTHEN_BASE_URL");
+    if let Some(kind) = kind {
+        command.args(["--kind", kind]);
     }
-    None
+    if let Some(form) = case["form"].as_str() {
+        command.args(["--form", form]);
+    }
+    if has_null {
+        command.args(["--record", "null"]);
+    }
+    if case["none"].as_bool().unwrap_or(false) {
+        command.args(["--none", "true"]);
+    }
+    if has_error {
+        command.args(["--error", "true"]);
+    }
+    if wire {
+        command.args(["--wire", "true"]);
+    }
+    let output = command
+        .output()
+        .map_err(|error| format!("the one skip reader did not run: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "the one skip reader refused: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let line = String::from_utf8_lossy(&output.stdout);
+    let line = line.lines().next().unwrap_or("").trim();
+    if line == "RUN" {
+        return Ok(None);
+    }
+    let (status, why) = line
+        .split_once('\t')
+        .ok_or_else(|| format!("the one skip reader answered without a status: {line:?}"))?;
+    match status {
+        "SKIP" => Ok(Some((why.to_owned(), false))),
+        "DIVERGE" => Ok(Some((why.to_owned(), true))),
+        other => Err(format!("the one skip reader answered {other:?}")),
+    }
 }
 
 fn main() {
@@ -101,10 +96,15 @@ fn main() {
         let verb = case["verb"].as_str().unwrap_or("?");
         let question_text =
             serde_json::to_string(&case["question"]).expect("the question serializes");
-        let outcome = match central_skip(&file, case, wire_is_set()) {
-            Some((why, true)) => Err(Outcome::Diverge(why)),
-            Some((why, false)) => Err(Outcome::Skip(why)),
-            None => run(&tt, verb, &question_text, case),
+        let outcome = match central_skip(case, wire_is_set()) {
+            Err(reader) => {
+                println!("FAIL     {id}: {reader}");
+                failed += 1;
+                continue;
+            }
+            Ok(Some((why, true))) => Err(Outcome::Diverge(why)),
+            Ok(Some((why, false))) => Err(Outcome::Skip(why)),
+            Ok(None) => run(&tt, verb, &question_text, case),
         };
         match outcome {
             Ok(()) => println!("ok       {id}"),

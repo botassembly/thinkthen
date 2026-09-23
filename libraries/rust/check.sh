@@ -26,7 +26,7 @@ ENGINE_NULL=1 RUSTUP_TOOLCHAIN=1.95 cargo test --quiet --features polars --test 
 echo "== rust surface: conformance slice"
 # Case 74 replays the stand-in's compile-time fixture, same as the null
 # suite.
-ENGINE_NULL=1 cargo run --quiet --features synthetic-partial --example conformance
+THINKTHEN_NULL=1 cargo run --quiet --locked --features synthetic-partial --example conformance
 
 if curl -sf --max-time 1 http://127.0.0.1:8213/v1/stats >/dev/null 2>&1; then
   echo "== rust surface: wire suite against the stub on 8213"

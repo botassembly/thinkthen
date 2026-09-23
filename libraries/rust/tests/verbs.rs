@@ -237,6 +237,12 @@ fn annotate_preserves_the_good_answers_and_marks_the_failed_one()
     // (`check.sh` builds with `--features synthetic-partial`); a bare
     // `THINKTHEN_NULL=1 cargo test` does not carry it, so the test says
     // so instead of failing on a fixture that was never built.
+    // The failed marker needs the compile-time fixture the gate arms
+    // (`check.sh` builds with `--features synthetic-partial`); a bare
+    // `THINKTHEN_NULL=1 cargo test` does not carry it, so the test says
+    // so instead of failing on a fixture that was never built. The note
+    // is captured by libtest like every test print; `-- --nocapture`
+    // shows it (surfaces-review-4 records the limitation).
     #[cfg(not(feature = "synthetic-partial"))]
     {
         eprintln!(
