@@ -15,6 +15,10 @@ records <- rep("I want a refund for order 9", 2000000)
 started <- proc.time()["elapsed"]
 caught <- tryCatch(
   {
+    # The parent signals only after this line: a signal during the
+    # library load would halt the script before the tryCatch stands.
+    cat("ready\n")
+    flush(stdout())
     tt_decide("Is this a complaint?", records)
     "completed"
   },
