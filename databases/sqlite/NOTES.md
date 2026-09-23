@@ -195,7 +195,7 @@ thinkthen needs SQLite 3.41.0 or newer (the interrupt check uses sqlite3_is_inte
 
 The message is built by a pure `version_refusal(host)` so the failure path is unit-tested without an old SQLite; the live call sits in `init` where the loadable API is initialized and is exercised by the stock-CLI load in `check.sh` (host 3.53.4 passes). An old-host live test is not possible on this box — no 3.40 binary exists here; recorded, not pretended.
 
-**Numbers.** `libthinkthen0.so`: 4,654,056 bytes, `DT_NEEDED libsqlite3.so.0` resolving from `/lib/x86_64-linux-gnu/libsqlite3.so.0`; check host: SQLite 3.53.4 (`.runtimes/sqlite3`); floor: 3.41.0. Tests: 3 passed (the mapping test, the new refusal test, and the existing suite). The full check runs green through the stock-CLI slide load.
+**Numbers.** `libthinkthen0.so`: 4,654,056 bytes, `DT_NEEDED libsqlite3.so.0` resolving from `/lib/x86_64-linux-gnu/libsqlite3.so.0`; check host: SQLite 3.53.4 (`.runtimes/sqlite3`); floor: 3.41.0 (superseded 2026-09-22: the direct-only floor is 3.50.0, the README and the load check carry it). Tests: 3 passed (the mapping test, the new refusal test, and the existing suite). The full check runs green through the stock-CLI slide load.
 
 ## 2026-09-21, the settlement wiring (contract 1fe8173)
 

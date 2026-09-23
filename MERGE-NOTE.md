@@ -140,6 +140,10 @@ deleted crate:
 - `contract/Cargo.toml:19` and `standin/Cargo.toml:19`:
   `thinkthen-core = { version = "0.0.1", path = "../crates/thinkthen-core" }`.
   Cargo exits 101 before compiling anything.
+- `libraries/r/tools/make-tarball.sh:31` stages `crates/thinkthen-core`
+  into the R source tarball by path, a third reference the break list
+  first missed; whichever of (a) or (b) below is chosen, the tarball's
+  staged path follows it.
 - The minimal retarget to `crates/thinkthen` resolves the manifest and
 dies at the imports: the consolidated crate keeps `mod core;` and
 `mod engine;` private, so `question_sha256`, `Question`, `QuestionFile`,
