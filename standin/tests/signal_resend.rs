@@ -5,7 +5,10 @@
 //! 1. A signal interrupts the send. A host's handler without
 //!    `SA_RESTART` (a trapped USR1 in Ruby, `statement_timeout`'s SIGALRM
 //!    in a PostgreSQL backend) made the read fail with EINTR, and the
-//!    connector retried it after the backoff: two bodies, one call.
+//!    connector retried it after the backoff: two bodies, one call. The
+//!    read now resumes on the same connection, so the call answers with
+//!    one body (the verifier's worker-thread probe; see
+//!    `signal_worker.rs`).
 //! 2. The first send after a cancelled batch sends once.
 //!
 //! One test per file, because the engine reads the environment once per
@@ -84,12 +87,7 @@ fn no_paid_request_is_sent_twice() {
     signaller.join().expect("the signaller joins");
     std::thread::sleep(DELAY * 3);
     assert_eq!(count(&bodies, "interrupted-send"), 1, "an interrupted send was sent again");
-    let error = interrupted.expect_err("the interrupted send surfaces as an error");
-    assert_eq!(error.kind, ErrorKind::Cancelled);
-    assert_eq!(
-        error.message,
-        "a signal interrupted the send; it is not sent again because it may have left"
-    );
+    assert!(interrupted.is_ok(), "the interrupted read resumes and answers: {interrupted:?}");
 
     // Shape 2: a batch cancelled mid-flight, then one single call.
     let token = Cancel::new();

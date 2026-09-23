@@ -203,8 +203,8 @@ impl Error {
     /// [`MAX_DEADLINE_SECONDS`], the cancelled kind when the token is set,
     /// and the deadline's own kind when the budget is gone.
     pub fn guard(options: &Options<'_>) -> Result<(), Self> {
-        if options.too_long {
-            return Err(Self::usage(too_long_seconds(options.seconds)));
+        if let Some(budget) = options.too_long {
+            return Err(Self::usage(too_long_message(&exact_seconds(budget))));
         }
         if let Some(token) = options.cancel
             && token.is_cancelled()
@@ -256,14 +256,25 @@ pub fn deadline_from_seconds(seconds: f64) -> Result<Option<std::time::Duration>
         return Err(Error::usage(format!("the deadline of {seconds} s is negative")));
     }
     if seconds > MAX_DEADLINE_SECONDS {
-        return Err(Error::usage(too_long_seconds(seconds)));
+        return Err(Error::usage(too_long_message(&seconds.to_string())));
     }
     Ok(Some(std::time::Duration::from_secs_f64(seconds)))
 }
 
 /// The one refusal for a budget larger than [`MAX_DEADLINE_SECONDS`].
-fn too_long_seconds(seconds: f64) -> String {
+fn too_long_message(seconds: &str) -> String {
     format!("the deadline of {seconds} s is larger than the {MAX_DEADLINE_SECONDS} s the engine holds")
+}
+
+/// A budget in seconds, printed exactly: whole seconds, then the
+/// nanoseconds without trailing zeros. A float would round
+/// `Duration::MAX` to 18446744073709552000 (review 5).
+fn exact_seconds(budget: std::time::Duration) -> String {
+    let whole = budget.as_secs();
+    match budget.subsec_nanos() {
+        0 => whole.to_string(),
+        nanos => format!("{whole}.{}", format!("{nanos:09}").trim_end_matches('0')),
+    }
 }
 
 /// Convert a host's deadline in floating-point milliseconds, the C door's
@@ -385,16 +396,17 @@ pub struct Options<'a> {
     cancel: Option<&'a Cancel>,
     deadline: Option<std::time::Instant>,
     seconds: f64,
-    /// The budget was larger than [`MAX_DEADLINE_SECONDS`];
-    /// [`Error::guard`] refuses the call with the usage kind.
-    too_long: bool,
+    /// The budget, when it was larger than [`MAX_DEADLINE_SECONDS`];
+    /// [`Error::guard`] refuses the call with the usage kind and names it
+    /// exactly.
+    too_long: Option<std::time::Duration>,
 }
 
 impl<'a> Options<'a> {
     /// Neither a token nor a deadline.
     #[must_use]
     pub const fn new() -> Self {
-        Self { cancel: None, deadline: None, seconds: 0.0, too_long: false }
+        Self { cancel: None, deadline: None, seconds: 0.0, too_long: None }
     }
 
     /// Carry this token, checked between requests and on every tick.
@@ -431,7 +443,7 @@ impl<'a> Options<'a> {
     pub fn deadline_in(self, budget: std::time::Duration) -> Self {
         let seconds = budget.as_secs_f64();
         let deadline = std::time::Instant::now().checked_add(budget);
-        let too_long = seconds > MAX_DEADLINE_SECONDS || deadline.is_none();
+        let too_long = (seconds > MAX_DEADLINE_SECONDS || deadline.is_none()).then_some(budget);
         Self { deadline, seconds, too_long, ..self }
     }
 
@@ -2328,7 +2340,14 @@ mod tests {
         let host = Options::new().with_deadline_seconds(Some(4_294_967_296.0)).err().expect("refused");
         assert_eq!((host.kind, host.message.as_str()), (ErrorKind::Usage, refusal), "the host door says the same");
         let unnamed = super::Error::guard(&Options::new().deadline_in(std::time::Duration::MAX)).unwrap_err();
-        assert_eq!(unnamed.kind, ErrorKind::Usage, "a wall the clock cannot name is refused, not a panic");
+        assert_eq!(
+            (unnamed.kind, unnamed.message.as_str()),
+            (
+                ErrorKind::Usage,
+                "the deadline of 18446744073709551615.999999999 s is larger than the 4294967295 s the engine holds"
+            ),
+            "a wall the clock cannot name is refused exactly, not a panic"
+        );
         let ceiling = Options::new().deadline_in(std::time::Duration::from_secs(u64::from(u32::MAX)));
         assert!(super::Error::guard(&ceiling).is_ok(), "the ceiling itself is a budget");
         // A representable budget still arms.
