@@ -610,9 +610,14 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
 /// releases it.
 #[allow(dead_code)] // the fields anchor the pointers handed out in the array
 struct BatchKeep {
-    /// This batch's own root struct, read out on emission.
+    /// This batch's own root struct, read out on emission. The box is
+    /// load-bearing: the struct holds pointers into `root_buffers`, and
+    /// an unboxed value could move when the keeping Vec grows.
+    #[allow(clippy::vec_box, reason = "pointer stability for the C tree")]
     root: Box<ArrowArray>,
     root_buffers: Vec<*const c_void>,
+    /// Boxed for pointer stability, like `root`.
+    #[allow(clippy::vec_box, reason = "pointer stability for the C tree")]
     children: Vec<Box<ArrowArray>>,
     child_ptrs: Vec<*mut ArrowArray>,
     buffers: Vec<Vec<*const c_void>>,
@@ -640,6 +645,9 @@ unsafe extern "C" fn batch_release(out: *mut ArrowArray) {
 /// buffer lives on the heap, so pointers into them stay put when the tree
 /// moves.
 struct SchemaTree {
+    /// Boxed for the same reason as `BatchKeep::root`: the schema's
+    /// pointer arrays must not move when this Vec grows.
+    #[allow(clippy::vec_box, reason = "pointer stability for the C tree")]
     boxes: Vec<Box<ArrowSchema>>,
     child_ptrs: Vec<Vec<*mut ArrowSchema>>,
     strings: Vec<CString>,
@@ -846,6 +854,10 @@ pub(crate) fn build_frame(
         };
         formats_for_new.push(format);
     }
+    // The Arc holds the caller's frame so aliased columns outlive the
+    // call; it is deliberately not Send+Sync because the frame carries
+    // raw Arrow pointers single-threaded by contract.
+    #[allow(clippy::arc_with_non_send_sync, reason = "raw Arrow pointers, single-threaded by contract")]
     let hold = std::sync::Arc::new(frame);
     // The output schema: the caller's columns keep their own whole schema
     // trees — a dictionary, a struct's fields, a list's element — deep
@@ -1358,10 +1370,11 @@ pub(crate) fn _arrow_probe(records: &Bound<'_, PyAny>) -> PyResult<(usize, usize
         return Err(UsageError::new_err("the probe found no batch"));
     };
     unsafe {
+        let buffers = batch.buffers;
         Ok((
-            *(*batch).buffers.offset(2) as usize,
-            *(*batch).buffers.offset(1) as usize,
-            (*batch).length.max(0) as usize,
+            buffers.offset(2).read() as usize,
+            buffers.offset(1).read() as usize,
+            usize::try_from(batch.length).unwrap_or(0),
         ))
     }
 }

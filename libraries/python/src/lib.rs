@@ -1461,6 +1461,7 @@ fn recognize(
 /// `recognize` over a frame's `on` column: one row per name, with the
 /// source row's number counted from 1, in a long frame this surface
 /// builds whole. No relation rules here; ask them of the text form.
+#[allow(clippy::too_many_arguments, reason = "the pyfunction signature is the public API shape")]
 #[pyfunction(signature = (records, on, *, kinds = None, threshold = None, relation_threshold = None, deadline = None, token = None))]
 fn recognize_stream(
     py: Python<'_>,
@@ -1540,6 +1541,7 @@ fn relate(
 
 /// `relate` over a frame's `on` column: a frame of edges, one row per
 /// edge, the record numbers counted from 1 in input order.
+#[allow(clippy::too_many_arguments, reason = "the pyfunction signature is the public API shape")]
 #[pyfunction(signature = (records, on, *, relations = None, either = None, threshold = None, deadline = None, token = None))]
 fn relate_stream(
     py: Python<'_>,
