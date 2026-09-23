@@ -135,8 +135,41 @@ impl Drop for SchemaGuard {
     }
 }
 
+/// The most bytes a producer's format, name, or error string may hold
+/// before its NUL. Real ones run to a few dozen bytes.
+const MAX_TEXT: usize = 64 * 1024;
+
+/// The refusal for a producer string with no NUL inside readable memory.
+const BAD_TEXT: &str = "an Arrow format, name, or error string has no end within 64 KiB of readable memory";
+
+/// A producer's C string, read only inside readable memory; `None` for a
+/// null pointer. The NUL is searched for within the readable bytes from
+/// the start, up to `MAX_TEXT`, so a string that runs into a guard page or
+/// never ends is refused instead of scanned past.
+///
+/// # Safety
+/// `value` is a producer's pointer; nothing is read outside `memory`.
+unsafe fn checked_text<'a>(value: *const c_char, memory: &Readable) -> PyResult<Option<&'a CStr>> {
+    if value.is_null() {
+        return Ok(None);
+    }
+    let reach = memory.reach(value as *const u8, MAX_TEXT + 1);
+    let bytes = std::slice::from_raw_parts(value as *const u8, reach);
+    let Some(end) = bytes.iter().position(|byte| *byte == 0) else {
+        return Err(UsageError::new_err(BAD_TEXT));
+    };
+    Ok(Some(CStr::from_bytes_with_nul_unchecked(&bytes[..=end])))
+}
+
+/// A producer's format string, checked; a null format is refused.
+unsafe fn checked_format<'a>(schema: &ArrowSchema, memory: &Readable) -> PyResult<&'a [u8]> {
+    checked_text(schema.format, memory)?
+        .map(CStr::to_bytes)
+        .ok_or_else(|| UsageError::new_err("an Arrow schema carries no format"))
+}
+
 /// Check a schema is exactly a whole text column, and say what to do if not.
-unsafe fn require_text(schema: &ArrowSchema) -> PyResult<Text> {
+unsafe fn require_text(schema: &ArrowSchema, memory: &Readable) -> PyResult<Text> {
     if !schema.dictionary.is_null() {
         return Err(UsageError::new_err(
             "a dictionary-encoded column: the engine judges each distinct value once; this stand-in does not, so it is refused",
@@ -145,7 +178,7 @@ unsafe fn require_text(schema: &ArrowSchema) -> PyResult<Text> {
     if schema.n_children != 0 {
         return Err(UsageError::new_err("a nested column is not a column of text"));
     }
-    let format = CStr::from_ptr(schema.format).to_bytes();
+    let format = checked_format(schema, memory)?;
     match format {
         b"u" => Ok(Text::Utf8),
         b"U" => Ok(Text::LargeUtf8),
@@ -245,6 +278,34 @@ impl Readable {
         }
         #[cfg(not(target_os = "linux"))]
         Ok(Self {})
+    }
+
+    /// How many bytes from `start` can be read, up to `cap`.
+    fn reach(&self, start: *const u8, cap: usize) -> usize {
+        let first = start as usize;
+        #[cfg(target_os = "linux")]
+        {
+            let place = self.ranges.partition_point(|&(_, high)| high <= first);
+            match self.ranges.get(place) {
+                Some(&(low, high)) if low <= first => (high - first).min(cap),
+                _ => 0,
+            }
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            // One page at a time, 4 KiB being the smallest page any
+            // supported platform uses.
+            let mut reach = 0;
+            while reach < cap {
+                let at = first.saturating_add(reach);
+                let step = (4096 - at % 4096).min(cap - reach);
+                if !mapped(at, at + step - 1) {
+                    break;
+                }
+                reach += step;
+            }
+            reach
+        }
     }
 
     /// True when every byte of `[start, start + length)` can be read.
@@ -568,11 +629,12 @@ unsafe fn stream_error(stream: *mut ArrowArrayStream, context: &str) -> PyErr {
     let text = (*stream)
         .get_last_error
         .map_or(std::ptr::null(), |last| last(stream));
-    let phrase = if text.is_null() {
-        None
-    } else {
-        CStr::from_ptr(text).to_str().ok().map(str::to_owned)
-    };
+    // The phrase is the producer's string, read only inside readable
+    // memory; one that cannot be checked falls back to the context.
+    let phrase = Readable::snapshot()
+        .ok()
+        .and_then(|memory| checked_text(text, &memory).ok().flatten())
+        .and_then(|found| found.to_str().ok().map(str::to_owned));
     UsageError::new_err(phrase.unwrap_or_else(|| context.to_owned()))
 }
 
@@ -629,7 +691,7 @@ pub(crate) fn series_column(records: &Bound<'_, PyAny>) -> PyResult<SeriesColumn
         if got != 0 {
             return Err(stream_error(stream, "the column stream would not name its schema"));
         }
-        let large = require_text(schema.held())?;
+        let large = require_text(schema.held(), &Readable::snapshot()?)?;
         column.schemas.push(schema.take());
         loop {
             let mut array = std::mem::zeroed::<ArrowArray>();
@@ -716,7 +778,10 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
         if got != 0 {
             return Err(stream_error(stream, "the frame stream would not name its schema"));
         }
-        let format = CStr::from_ptr(schema.held().format).to_bytes();
+    }
+    let memory = Readable::snapshot()?;
+    unsafe {
+        let format = checked_format(schema.held(), &memory)?;
         if format != b"+s" {
             return Err(UsageError::new_err(format!(
                 "the stream is '{}', not a frame (a struct); annotate with on= needs a data frame, and a plain column rides the series door",
@@ -745,13 +810,8 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
             return Err(UsageError::new_err("the frame named a column it did not carry"));
         }
         let child_ref = unsafe { &*child };
-        let name = if child_ref.name.is_null() {
-            String::new()
-        } else {
-            unsafe { CStr::from_ptr(child_ref.name) }
-                .to_string_lossy()
-                .into_owned()
-        };
+        let name = unsafe { checked_text(child_ref.name, &memory) }?
+            .map_or_else(String::new, |found| found.to_string_lossy().into_owned());
         if name == on {
             on_index = Some(place);
         }
@@ -765,7 +825,7 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
     // The `on` column must be whole text, checked on its own schema.
     let large = unsafe {
         let child = *schema.held().children.add(on_index);
-        require_text(&*child)?
+        require_text(&*child, &memory)?
     };
 
     let mut column = FrameColumn {
@@ -945,16 +1005,22 @@ impl Default for SchemaTree {
 }
 
 impl SchemaTree {
-    /// Copy one C string into the tree; a null stays null.
-    fn text(&mut self, value: *const c_char) -> *const c_char {
-        if value.is_null() {
-            return std::ptr::null();
-        }
-        let owned = CString::new(unsafe { CStr::from_ptr(value) }.to_bytes())
-            .unwrap_or_default();
+    /// Copy one C string into the tree; a null stays null. A producer's
+    /// string is read against `memory`; `None` copies this surface's own.
+    fn text(&mut self, value: *const c_char, memory: Option<&Readable>) -> PyResult<*const c_char> {
+        let found = match memory {
+            // SAFETY: nothing is read outside the snapshot.
+            Some(memory) => unsafe { checked_text(value, memory) }?,
+            // SAFETY: this surface's own strings each end in a NUL.
+            None => (!value.is_null()).then(|| unsafe { CStr::from_ptr(value) }),
+        };
+        let Some(found) = found else {
+            return Ok(std::ptr::null());
+        };
+        let owned = CString::new(found.to_bytes()).unwrap_or_default();
         let pointer = owned.as_ptr();
         self.strings.push(owned);
-        pointer
+        Ok(pointer)
     }
 
     /// Copy one metadata blob into the tree; a null stays null.
@@ -1090,8 +1156,8 @@ impl SchemaTree {
     /// # Safety
     /// `source` must point at a live schema struct.
     unsafe fn copy(&mut self, source: *const ArrowSchema, memory: Option<&Readable>) -> PyResult<*mut ArrowSchema> {
-        let format = self.text(unsafe { (*source).format });
-        let name = self.text(unsafe { (*source).name });
+        let format = self.text(unsafe { (*source).format }, memory)?;
+        let name = self.text(unsafe { (*source).name }, memory)?;
         let metadata = self.metadata(unsafe { (*source).metadata }, memory)?;
         let count = unsafe { (*source).n_children }.max(0) as usize;
         let mut children = Vec::with_capacity(count);
@@ -2452,5 +2518,28 @@ mod malformed_tests {
         let held = [std::ptr::null(), views.as_ptr().cast(), values.cast(), sizes.as_ptr().cast()];
         let outer = array_of(&held, 1);
         assert_eq!(borrowed(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), ["alpha runs past twelve"]);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_producer_string_is_read_only_inside_readable_memory() {
+        // Review 7, third pass: a producer's format and name strings were
+        // read with CStr::from_ptr, which scans for a NUL with no bound. A string that runs into a guard page killed the host.
+        let snapshot = || {
+            let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+            memory
+        };
+        let (_region, open) = Guarded::ending_with(b"abc");
+        assert_eq!(refusal(SchemaTree::default().text(open.cast(), Some(&snapshot()))), BAD_TEXT);
+        let mut schema = unsafe { std::mem::zeroed::<ArrowSchema>() };
+        schema.format = open.cast();
+        assert_eq!(refusal(unsafe { require_text(&schema, &snapshot()) }), BAD_TEXT);
+        // A string that ends at the guard page's edge copies whole.
+        let (_region, closed) = Guarded::ending_with(b"u\0");
+        schema.format = closed.cast();
+        assert!(matches!(unsafe { require_text(&schema, &snapshot()) }, Ok(Text::Utf8)));
+        // A readable string with no NUL inside the cap is refused.
+        let long = vec![b'x'; MAX_TEXT + 8];
+        assert_eq!(refusal(SchemaTree::default().text(long.as_ptr().cast(), Some(&snapshot()))), BAD_TEXT);
     }
 }
