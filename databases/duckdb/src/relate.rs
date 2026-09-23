@@ -478,6 +478,7 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     unsafe { ensure_single_statement(connection, &bind.query)? };
     unsafe { ensure_select_statement(connection, &bind.query)? };
     let search = connections::search_path_of(bind.caller);
+    let holding = connections::option_count(bind.caller, HOLDING_ROWS_SETTING).unwrap_or(HOLDING_ROWS_DEFAULT);
     unsafe { begin_read_only(connection)? };
     let capped = format!(
         "SELECT * FROM ({}) AS thinkthen_capped LIMIT {}",
@@ -486,7 +487,7 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     );
     let outcome = unsafe {
         under_search_path(connection, search.as_deref(), || {
-            ensure_bounded_plan(connection, &capped)?;
+            ensure_bounded_plan(connection, &capped, holding)?;
             run_statement(connection, &capped)
         })
     };
@@ -497,31 +498,40 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     outcome
 }
 
-/// The most rows the planner may estimate flowing into one step that
-/// holds its whole input before the LIMIT can stop it: a sort, a
-/// grouping, a window, an ungrouped aggregate, or a join's build side.
-/// The outer LIMIT bounds what a streaming query produces, but such a
-/// step reads everything first (review 5, finding 2: a window over
-/// eight million rows held 455 MB and a GROUP BY 627 MB before the
-/// 256-row refusal). A million rows keeps an honest grouped or joined
-/// record source over an ordinary table; the per-connection alternative,
-/// `memory_limit`, is a database-wide setting in DuckDB and would squeeze
-/// the host's own queries while a relate runs. The guard reads the
-/// planner's estimates, so it is a best effort: a `range` sized at run
-/// time, an `unnest`, or a recursive query can be under-estimated, and a
-/// selective filter over a large table over-estimated.
-const HOLDING_INPUT_CAP: u64 = 1_000_000;
+/// The setting that holds the most rows the planner may estimate
+/// flowing into one step that holds its whole input before the LIMIT can
+/// stop it: a sort, a grouping, a window, an ungrouped aggregate, or a
+/// join's build side. The outer LIMIT bounds what a streaming query
+/// produces, but such a step reads everything first (review 5, finding
+/// 2: a window over eight million rows held 455 MB and a GROUP BY 627 MB
+/// before the 256-row refusal).
+///
+/// It is a row threshold on estimates, and a setting, because DuckDB
+/// 1.5.5 offers no bound an extension can scope to one query:
+/// `memory_limit`, `temp_directory`, and `max_temp_directory_size` are
+/// GLOBAL settings (`SET SESSION memory_limit` fails with "cannot be set
+/// locally"), so capping memory during a relate would squeeze the host's
+/// own queries. The guard reads the planner's estimates, so it is a best
+/// effort: a join the planner estimates at 20,000 rows can feed 40
+/// million into a window, and `unnest` and recursive queries go
+/// unestimated (review 6, D3); a caller whose honest grouping is larger
+/// raises the setting.
+pub(crate) const HOLDING_ROWS_SETTING: &str = "thinkthen_relate_holding_rows";
+
+/// The setting's default: a million rows keeps an honest grouped or
+/// joined record source over an ordinary table.
+const HOLDING_ROWS_DEFAULT: u64 = 1_000_000;
 
 /// Plan the capped query and refuse it when a step that holds its whole
-/// input is estimated to take more than [`HOLDING_INPUT_CAP`] rows, so
-/// the refusal lands before anything materializes.
-unsafe fn ensure_bounded_plan(connection: ffi::duckdb_connection, capped: &str) -> Result<(), String> {
+/// input is estimated to take more than `limit` rows, so the refusal
+/// lands before anything materializes.
+unsafe fn ensure_bounded_plan(connection: ffi::duckdb_connection, capped: &str, limit: u64) -> Result<(), String> {
     let text = unsafe { first_plan_text(connection, &format!("EXPLAIN (FORMAT JSON) {capped}")) }?;
     let plan: serde_json::Value = serde_json::from_str(&text)
         .map_err(|error| format!("thinkthen defect: the relate plan did not read as JSON: {error}"))?;
     match heaviest_holding_step(&plan) {
-        Some((step, rows)) if rows > HOLDING_INPUT_CAP => Err(format!(
-            "thinkthen usage: the relate query feeds about {rows} rows into the {step} step before its LIMIT, and relate lets at most {HOLDING_INPUT_CAP} rows into a sorting, grouping, windowing, or joining step; filter the rows first"
+        Some((step, rows)) if rows > limit => Err(format!(
+            "thinkthen usage: the relate query feeds about {rows} rows into the {step} step before its LIMIT, and relate lets at most {limit} rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET {HOLDING_ROWS_SETTING}"
         )),
         _ => Ok(()),
     }
@@ -867,6 +877,35 @@ pub unsafe fn register(connection: ffi::duckdb_connection) -> Result<(), String>
         }
         let mut table = table;
         ffi::duckdb_destroy_table_function(&mut table);
-        Ok(())
+        register_holding_setting(connection)
+    }
+}
+
+/// Register [`HOLDING_ROWS_SETTING`], a `UBIGINT` a caller sets with
+/// `SET`, defaulting to [`HOLDING_ROWS_DEFAULT`].
+unsafe fn register_holding_setting(connection: ffi::duckdb_connection) -> Result<(), String> {
+    unsafe {
+        let mut option = ffi::duckdb_create_config_option();
+        let name = CString::new(HOLDING_ROWS_SETTING).expect("the name holds no NUL byte");
+        ffi::duckdb_config_option_set_name(option, name.as_ptr());
+        let mut ubigint = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_UBIGINT);
+        ffi::duckdb_config_option_set_type(option, ubigint);
+        ffi::duckdb_destroy_logical_type(&mut ubigint);
+        let mut default = ffi::duckdb_create_uint64(HOLDING_ROWS_DEFAULT);
+        ffi::duckdb_config_option_set_default_value(option, default);
+        ffi::duckdb_destroy_value(&mut default);
+        ffi::duckdb_config_option_set_default_scope(
+            option,
+            ffi::duckdb_config_option_scope_DUCKDB_CONFIG_OPTION_SCOPE_SESSION,
+        );
+        let description = c"the most rows relate lets the planner estimate into one sorting, grouping, windowing, or joining step";
+        ffi::duckdb_config_option_set_description(option, description.as_ptr());
+        let state = ffi::duckdb_register_config_option(connection, option);
+        ffi::duckdb_destroy_config_option(&mut option);
+        if state == ffi::DuckDBSuccess {
+            Ok(())
+        } else {
+            Err(format!("thinkthen defect: {HOLDING_ROWS_SETTING} did not register"))
+        }
     }
 }

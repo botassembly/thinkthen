@@ -87,7 +87,9 @@ impl KeptGuard {
 
     /// Mark this database's kept connection as running a query, so the
     /// interrupt bridge can reach it; pair with [`Self::idle`].
+    /// A forked child builds its own bridge here, before its first relate.
     pub(crate) fn set_busy(&self) {
+        start_interrupt_bridge();
         self.state.busy.store(true, Ordering::Release);
     }
 
@@ -421,27 +423,68 @@ fn interrupt_busy() {
     }
 }
 
-/// The write end of the interrupt bridge's pipe; -1 until it starts.
-static BRIDGE_WRITE: AtomicI32 = AtomicI32::new(-1);
+/// The interrupt bridge's owner and write end, packed so the handler
+/// reads both in one load: the owning pid in the high 32 bits and the
+/// write end in the low 32. Zero until a bridge starts. A forked child
+/// inherits this value and the parent's pipe but no bridge thread, so
+/// the handler writes only when the pid is its own (review 6, D1: a
+/// SIGINT to a child woke the parent's bridge and cancelled the
+/// parent's relate).
+static BRIDGE: AtomicU64 = AtomicU64::new(0);
 
-/// Start the interrupt bridge once: a thread blocked on a pipe that, per
-/// wake, interrupts every busy kept connection. The SIGINT handler's
-/// whole share is one `write(2)`, which is async-signal-safe; the
-/// registry lock and the allocation happen here, on a normal thread
-/// (review 5, finding 1: the handler took the registry mutex, and a
-/// signal landing on a thread that held it deadlocked that thread).
+/// The read end beside [`BRIDGE`], so a child can close the inherited
+/// pair. Read only under [`BRIDGE_START`], never in the handler.
+static BRIDGE_READ: AtomicI32 = AtomicI32::new(-1);
+
+/// How many wakes this process's bridge thread has read; the fork test
+/// reads it to tell whose bridge a signal reached.
+static BRIDGE_WAKES: AtomicU64 = AtomicU64::new(0);
+
+/// Serializes bridge starts; the handler never takes it.
+static BRIDGE_START: Mutex<()> = Mutex::new(());
+
+fn pack_bridge(pid: u32, write_end: libc::c_int) -> u64 {
+    (u64::from(pid) << 32) | u64::from(write_end.cast_unsigned())
+}
+
+fn unpack_bridge(packed: u64) -> (u32, libc::c_int) {
+    ((packed >> 32) as u32, (packed as u32).cast_signed())
+}
+
+/// Start this process's interrupt bridge once: a thread blocked on a
+/// pipe that, per wake, interrupts every busy kept connection. The
+/// SIGINT handler's whole share is one `write(2)`, which is
+/// async-signal-safe; the registry lock and the allocation happen here,
+/// on a normal thread (review 5, finding 1: the handler took the
+/// registry mutex, and a signal landing on a thread that held it
+/// deadlocked that thread). A forked child calls this again before its
+/// first relate and gets its own pipe and thread; the inherited copies
+/// of the parent's ends are closed in the child only. No
+/// `pthread_atfork` handler is used, because it would outlive an
+/// unloaded extension (the SQLite hub makes the same choice).
 pub(crate) fn start_interrupt_bridge() {
-    if BRIDGE_WRITE.load(Ordering::Acquire) >= 0 {
+    let pid = std::process::id();
+    if unpack_bridge(BRIDGE.load(Ordering::Acquire)).0 == pid {
         return;
     }
-    let mut fds: [libc::c_int; 2] = [-1, -1];
-    if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+    let _start = lock(&BRIDGE_START);
+    let inherited = BRIDGE.load(Ordering::Acquire);
+    if inherited != 0 {
+        if unpack_bridge(inherited).0 == pid {
+            return;
+        }
+        // A forked child. The handler's pid check already skips the
+        // inherited pipe; clearing it too keeps a reused descriptor
+        // number out of reach, then this process's copies are closed.
+        BRIDGE.store(0, Ordering::Release);
+        unsafe {
+            libc::close(unpack_bridge(inherited).1);
+            libc::close(BRIDGE_READ.swap(-1, Ordering::AcqRel));
+        }
+    }
+    let Some([read_end, write_end]) = cloexec_pipe() else {
         return;
-    }
-    let [read_end, write_end] = fds;
-    for fd in fds {
-        unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) };
-    }
+    };
     // A full pipe already holds a pending wake, so the handler never
     // blocks on it.
     unsafe { libc::fcntl(write_end, libc::F_SETFL, libc::O_NONBLOCK) };
@@ -452,6 +495,7 @@ pub(crate) fn start_interrupt_bridge() {
             loop {
                 let read = unsafe { libc::read(read_end, bytes.as_mut_ptr().cast(), bytes.len()) };
                 if read > 0 {
+                    BRIDGE_WAKES.fetch_add(1, Ordering::AcqRel);
                     if !SHUTDOWN.load(Ordering::SeqCst) {
                         interrupt_busy();
                     }
@@ -471,14 +515,41 @@ pub(crate) fn start_interrupt_bridge() {
         }
         return;
     }
-    BRIDGE_WRITE.store(write_end, Ordering::Release);
+    BRIDGE_READ.store(read_end, Ordering::Release);
+    BRIDGE.store(pack_bridge(pid, write_end), Ordering::Release);
+}
+
+/// A pipe whose ends close on exec. Linux sets the flag atomically with
+/// `pipe2`, so a fork-and-exec on another thread cannot leak the ends
+/// (review 6, D1). macOS has no `pipe2`, so it sets the flag in a second
+/// step and keeps that small window.
+#[cfg(target_os = "linux")]
+fn cloexec_pipe() -> Option<[libc::c_int; 2]> {
+    let mut fds: [libc::c_int; 2] = [-1, -1];
+    (unsafe { libc::pipe2(fds.as_mut_ptr(), libc::O_CLOEXEC) } == 0).then_some(fds)
+}
+
+/// The macOS form of [`cloexec_pipe`]: no `pipe2`, so the flag is set in
+/// a second step.
+#[cfg(target_os = "macos")]
+fn cloexec_pipe() -> Option<[libc::c_int; 2]> {
+    let mut fds: [libc::c_int; 2] = [-1, -1];
+    if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+        return None;
+    }
+    for fd in fds {
+        unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) };
+    }
+    Some(fds)
 }
 
 /// The handler's whole share of the kept-connection interrupt: one byte
-/// to the bridge, with the interrupted thread's `errno` put back.
+/// to this process's bridge, with the interrupted thread's `errno` put
+/// back. `getpid` is async-signal-safe; an inherited bridge is skipped.
 pub(crate) fn wake_interrupt_bridge() {
-    let fd = BRIDGE_WRITE.load(Ordering::Acquire);
-    if fd < 0 {
+    let (owner, fd) = unpack_bridge(BRIDGE.load(Ordering::Acquire));
+    // `getpid` never sets errno, so the check needs no restore.
+    if owner == 0 || owner.cast_signed() != unsafe { libc::getpid() } {
         return;
     }
     let slot = errno_slot();
@@ -675,6 +746,15 @@ fn option_bool(context: ffi::duckdb_client_context, name: &str) -> Option<bool> 
     Some(answer)
 }
 
+/// A count setting's value, when the setting answers.
+pub(crate) fn option_count(context: ffi::duckdb_client_context, name: &str) -> Option<u64> {
+    let value = option_value(context, name)?;
+    let answer = unsafe { ffi::duckdb_get_uint64(value) };
+    let mut value = value;
+    unsafe { ffi::duckdb_destroy_value(&mut value) };
+    Some(answer)
+}
+
 /// A text setting's value, when the setting answers.
 fn option_text(context: ffi::duckdb_client_context, name: &str) -> Option<String> {
     let value = option_value(context, name)?;
@@ -723,7 +803,10 @@ fn option_texts(context: ffi::duckdb_client_context, name: &str) -> Vec<String> 
     entries
 }
 
-/// One setting's value as DuckDB answers it for this context.
+/// One setting's value as DuckDB answers it for this context; `None`
+/// when it is absent or NULL. A NULL must never reach a typed read:
+/// `duckdb_get_uint64` throws a C++ exception on one, and that aborts
+/// the host (review 6: `SET thinkthen_relate_holding_rows = NULL`).
 fn option_value(context: ffi::duckdb_client_context, name: &str) -> Option<ffi::duckdb_value> {
     let name = CString::new(name).ok()?;
     let mut scope = ffi::duckdb_config_option_scope_DUCKDB_CONFIG_OPTION_SCOPE_INVALID;
@@ -732,10 +815,14 @@ fn option_value(context: ffi::duckdb_client_context, name: &str) -> Option<ffi::
         ffi::duckdb_client_context_get_config_option(context, name.as_ptr(), &mut scope)
     };
     if value.is_null() {
-        None
-    } else {
-        Some(value)
+        return None;
     }
+    if unsafe { ffi::duckdb_is_null_value(value) } {
+        let mut value = value;
+        unsafe { ffi::duckdb_destroy_value(&mut value) };
+        return None;
+    }
+    Some(value)
 }
 
 /// Read a question file through DuckDB's own file system, so the rules
@@ -1120,6 +1207,11 @@ fn count_connections(connection: ffi::duckdb_connection) -> Result<u64, String> 
     count.ok_or_else(|| "the connection count did not read".to_owned())
 }
 
+/// Held by every test that raises SIGINT or counts bridge wakes, so one
+/// test's signals never land in another's count.
+#[cfg(test)]
+pub(crate) static SIGNAL_TESTS: Mutex<()> = Mutex::new(());
+
 /// Run `body` while this thread holds the kept-connection registry: the
 /// signal test's way to land a SIGINT exactly where the handler used to
 /// deadlock (review 5, finding 1).
@@ -1146,5 +1238,77 @@ mod identity_tests {
         assert_eq!(names.len(), 1_000);
         assert!(names.iter().all(|name| name.len() == 32
             && name.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))));
+    }
+}
+
+#[cfg(test)]
+mod bridge_tests {
+    use std::sync::atomic::Ordering;
+    use std::time::{Duration, Instant};
+
+    use super::{BRIDGE, BRIDGE_WAKES, start_interrupt_bridge, unpack_bridge, wake_interrupt_bridge};
+
+    /// Wait up to two seconds for this process's bridge to read `past` wakes.
+    fn woke_past(past: u64) -> bool {
+        let until = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < until {
+            if BRIDGE_WAKES.load(Ordering::Acquire) > past {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        false
+    }
+
+    /// A forked child's wake never reaches the parent's bridge, and the
+    /// child's own bridge answers once it starts (review 6, D1: a SIGINT
+    /// to a child cancelled the parent's relate at 1.03 s). The child
+    /// exits 0 when its wake stayed home and its own bridge woke.
+    #[test]
+    fn a_forked_childs_wake_stays_in_the_child() {
+        let _alone = super::lock(&super::SIGNAL_TESTS);
+        start_interrupt_bridge();
+        let before = BRIDGE_WAKES.load(Ordering::Acquire);
+        let child = unsafe { libc::fork() };
+        assert!(child >= 0, "fork failed");
+        if child == 0 {
+            // The handler's step, as a SIGINT to the child would run it.
+            wake_interrupt_bridge();
+            start_interrupt_bridge();
+            let owner = unpack_bridge(BRIDGE.load(Ordering::Acquire)).0;
+            let seen = BRIDGE_WAKES.load(Ordering::Acquire);
+            wake_interrupt_bridge();
+            let code = if owner != std::process::id() {
+                2
+            } else if !woke_past(seen) {
+                3
+            } else {
+                0
+            };
+            unsafe { libc::_exit(code) };
+        }
+        // Wait ten seconds at most, so a hung child fails the test
+        // instead of hanging it.
+        let mut status = 0;
+        let until = Instant::now() + Duration::from_secs(10);
+        while unsafe { libc::waitpid(child, &mut status, libc::WNOHANG) } == 0 {
+            if Instant::now() > until {
+                unsafe { libc::kill(child, libc::SIGKILL) };
+                unsafe { libc::waitpid(child, &mut status, 0) };
+                panic!("the forked child hung");
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(libc::WIFEXITED(status), "the forked child died by a signal: status {status}");
+        std::thread::sleep(Duration::from_millis(300));
+        let parent_wakes = BRIDGE_WAKES.load(Ordering::Acquire) - before;
+        assert_eq!(
+            (parent_wakes, libc::WEXITSTATUS(status)),
+            (0, 0),
+            "the parent's bridge read the child's wakes, or the child's own bridge did not answer (child exit 2: no bridge of its own, 3: it never woke)"
+        );
+        // The parent's own wake still reaches its bridge.
+        wake_interrupt_bridge();
+        assert!(woke_past(before), "the parent's own wake was lost");
     }
 }

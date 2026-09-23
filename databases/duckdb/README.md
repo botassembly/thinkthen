@@ -44,9 +44,20 @@ the values await a backend that distinguishes options.
   anything runs, so `COPY ... TO`, `EXPORT DATABASE`, `ATTACH`, `SET
   GLOBAL`, `LOAD`, and `SET VARIABLE` are refused as the writes they
   are — and it runs inside a read-only transaction that rolls back.
-  More than 255 records is a usage error named with the query's own
-  count, refused before any row is read, so a wide query cannot
-  materialize first.
+  More than 255 records is a usage error, read under a LIMIT of 256 so
+  the scan stops there. A sort, grouping, window, ungrouped aggregate,
+  materialized WITH, or join build side reads its whole input before
+  that LIMIT, so the plan is read first: a step the planner estimates
+  at more than `thinkthen_relate_holding_rows` input rows (default
+  1,000,000; `SET thinkthen_relate_holding_rows = 3000000` raises it)
+  refuses before anything runs. **Known limit: the guard trusts the
+  planner's estimates.** A join estimated at 20,000 rows fed 40 million
+  into a window and held 1,065 MB, and `unnest` and recursive queries
+  go unestimated (review 6). DuckDB 1.5.5 has no memory bound an
+  extension can scope to one query: `memory_limit`, `temp_directory`,
+  and `max_temp_directory_size` are GLOBAL, so setting them during a
+  relate would squeeze the host's other queries. Such a shape is bounded
+  by the host's own `memory_limit`.
 - The relate scan runs on a kept connection of the caller's own
   database, resolved through an identity no SQL can forge: a uniquely
   named in-memory database attached to that database's instance at LOAD.
@@ -155,7 +166,12 @@ recognition, relations — is the engine's.
   CLI never notices and a long-lived host should treat as a restart
   signal. The handler itself only sets the token and writes one byte to
   a pipe; a bridge thread interrupts the busy relate connections, so
-  the handler takes no lock and allocates nothing.
+  the handler takes no lock and allocates nothing. The pipe belongs to
+  the process that made it. A forked child skips the parent's pipe and
+  builds its own before its first relate, so a SIGINT to a child never
+  cancels the parent's relate. A child that forks while another parent
+  thread is loading the extension can inherit its locks held, as with
+  any threaded library, so a forking host should load before it forks.
 - **Known limit: a connection's own interrupt does not reach a running
   call.** `con.interrupt()` in Python, or `duckdb_interrupt` on the
   caller's connection from any host, sets DuckDB's flag for that

@@ -94,13 +94,13 @@ refuse "a prepared relate re-checks file access at execution" \
 # holds its whole input refuses before anything runs. The sentences are
 # pinned whole.
 refuse "a window over eight million rows refuses at the plan" \
-  "thinkthen usage: the relate query feeds about 8000000 rows into the WINDOW step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first" \
+  "thinkthen usage: the relate query feeds about 8000000 rows into the WINDOW step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows" \
   "$(run "SELECT count(*) FROM thinkthen_relate('SELECT i, ''b'' FROM (SELECT i, row_number() OVER (ORDER BY random()) AS rn FROM range(8000000) t(i))', ['caused_by']);")"
 refuse "a grouping over eight million rows refuses at the plan" \
-  "thinkthen usage: the relate query feeds about 8000000 rows into the HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first" \
+  "thinkthen usage: the relate query feeds about 8000000 rows into the HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows" \
   "$(run "SELECT count(*) FROM thinkthen_relate('SELECT i, ''b'' FROM (SELECT i % 8000000 AS i, count(*) FROM range(8000000) t(i) GROUP BY 1)', ['caused_by']);")"
 refuse "a materialized WITH over eight million rows refuses at the plan" \
-  "thinkthen usage: the relate query feeds about 8000000 rows into the CTE step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first" \
+  "thinkthen usage: the relate query feeds about 8000000 rows into the CTE step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows" \
   "$(run "SELECT count(*) FROM thinkthen_relate('WITH x AS MATERIALIZED (SELECT i FROM range(8000000) t(i)) SELECT i, ''b'' FROM x', ['caused_by']);")"
 # An honest grouped record source over an ordinary table passes the plan
 # and reaches the backend: the stand-in's own "no recorded answer" (so
@@ -112,3 +112,28 @@ if [[ "$small_grouped" != *"no recorded answer for the records"* ]]; then
   exit 1
 fi
 echo "ok       a small grouped relate query passes the plan check and reaches the backend"
+
+# The threshold is the caller's setting, because the guard reads the
+# planner's estimate and cannot tell an honest large grouping from a
+# runaway one (review 6, D3: a GROUP BY over two million rows to seven
+# records was refused). Raised, the grouping reaches the backend; lowered,
+# the small grouping above refuses with the setting's value in its
+# sentence.
+big_grouped="CREATE TABLE t AS SELECT i AS id, 'ticket ' || i AS body, i % 7 AS k FROM range(2000000) r(i); SELECT count(*) FROM thinkthen_relate('SELECT k, string_agg(body, '' '') FROM t GROUP BY k', ['caused_by']);"
+refuse "a grouping over two million rows refuses under the default" \
+  "thinkthen usage: the relate query feeds about 2000000 rows into the PERFECT_HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows" \
+  "$(run "$big_grouped")"
+raised=$(run "SET thinkthen_relate_holding_rows = 3000000; $big_grouped" || true)
+if [[ "$raised" != *"no recorded answer for the records"* ]]; then
+  echo "FAILED   a raised thinkthen_relate_holding_rows did not let the grouping through: '$raised'"
+  exit 1
+fi
+echo "ok       a raised thinkthen_relate_holding_rows lets a two-million-row grouping reach the backend"
+refuse "a lowered thinkthen_relate_holding_rows refuses the small grouping" \
+  "thinkthen usage: the relate query feeds about 2000 rows into the PERFECT_HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows" \
+  "$(run "SET thinkthen_relate_holding_rows = 1000; CREATE TABLE t AS SELECT i AS id, 'ticket ' || i AS body, i % 7 AS k FROM range(2000) r(i); SELECT count(*) FROM thinkthen_relate('SELECT k, string_agg(body, '' '') FROM t GROUP BY k', ['caused_by']);")"
+# A NULL setting reads as the default rather than aborting the host: the
+# C API's uint64 read throws on a NULL value.
+refuse "a NULL thinkthen_relate_holding_rows reads as the default" \
+  "thinkthen usage: the relate query feeds about 2000000 rows into the PERFECT_HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows" \
+  "$(run "SET thinkthen_relate_holding_rows = NULL; $big_grouped" || true)"
