@@ -482,3 +482,60 @@ delay), same test:
 The regression pin is `tests/test_cancel.rb` itself: it crashed against
 the pre-fix build and passes after, so the gate now fails if the drain
 regresses.
+
+## 2026-09-23: the third review's Ruby items, each with its probe
+
+Item 5 (the lock-exit window, HIGH): the whole crossing now runs under one
+`rb_protect` (`protected` in src/lib.rs) with the tick registration and the
+job's answer slot owned OUTSIDE it, and the poll's own with-gvl body under a
+nested protect. Probe (wire stub, 300 ms delay, `/tmp/rb3/probe_drain8.rb`):
+30 calls, one `Thread.main.raise Interrupt` mid-call each, raised at 0.05-0.15 s
+into every call - pre-fix: SEGV storm (`SEGV received in SEGV handler` x4,
+process death); post-fix: `raises landed: 30, delivered: 0, interrupted: 30,
+errored: 0, PASS settled, no crash`, exit 0. Retention (probe_drain2, class-
+counted via ObjectSpace after full GC): `live tick objects after GC: 0`.
+
+Item 19a (ticks ran on the wrong thread): the tick rides
+`Thread.current[:thinkthen_tick]`, and every module verb passes it explicitly;
+the shared `@tick` ivar and its Rust fallback are gone (`tick_from` is now the
+explicit argument only). Probe (probe_tick_owner.rb, wire stub): pre-fix
+`ticks ran: 3448, on owning thread: 2335, on foreign thread: 1113, FAIL`;
+post-fix (probe_tick2.rb) `ticks ran: 2, on owning thread: 2, on foreign
+thread: 0, PASS`.
+
+Item 19b (nil record crossed as "null"): `text_of` refuses nil. Probe
+(probe_nil.rb): pre-fix `ANSWERED (nil crossed as a record)`; post-fix
+`refused: ThinkThen::UsageError - a record is text or a JSON-able value, not nil`.
+
+Item 18 (annotate overwrote input columns): with `on:`, a question landing on
+any existing key refuses before any request. Probe (probe_annotate.rb):
+pre-fix `OVERWRITTEN: body is now false (original text lost)`; post-fix
+`refused: ... annotate cannot add a question named 'body'`.
+
+Item 19c (single-verb honesty): the with_tick doc now states it plainly - a
+single verb cannot stop the request already sent; the interrupt surfaces when
+the crossing returns. No claim of an unblock function remains.
+
+Skip-table adoption: tests/conformance.rb and libraries/r/conformance.R both
+decide through `conformance/skiptable.py lookup` (the one reader); the
+private matchers are gone. One shared fix was required: the CLI parsed
+`--none`/`--error` as strings, so boolean facets never matched
+(`python3 conformance/skiptable.py lookup r 25-find-none-fits --verb find
+--none true` printed RUN before, SKIP with the reason after). Both runners
+pass the verb, kind, form, record, none, and error facets. R conformance:
+`conformance slice green for the R surface` (76 ok). Ruby conformance:
+`conformance slice green for the Ruby surface` (72 ok, fixture build).
+
+Packaging: the gemspec stamps `Gem::Platform::CURRENT` and finds the
+extension by glob (`.so` or `.bundle`), so a Mac-built gem carries its own
+name; `required_ruby_version` is now `>= 3.4` - what is built and tested, the
+review caught the untested `>= 3.1`. The builder image installs the pinned
+Rust toolchain (1.93.1) itself and build.sh/check.sh no longer mount the
+host's `~/.rustup`, which could not work from a Mac; the image rebuild
+(`docker build -q -t thinkthen-ruby-builder:local` -> sha256:83143d0...) and
+`./build.sh synthetic` then `./check.sh` (exit 0, 90 PASS/ok lines) prove the
+self-contained image. check.sh ends with `./build.sh` so the gate leaves the
+production shape, mirroring the R surface's restore step.
+
+Full gate for this surface at this commit: `./check.sh` exit 0 (wire stub on
+8214), ending `restored: thinkthen-0.0.1-x86_64-linux.gem`.
