@@ -258,3 +258,38 @@ runs after. `churn_probe` and `scale_probe` now talk to a loopback backend
 that keeps its connections, so each state holds a real socket: the old
 table left 6,995 and 605 descriptors open, and the new one stays within
 three per slot.
+
+## 2026-09-23 — review 5: a signal resumes the read
+
+A host may install a handler without `SA_RESTART` (a child-exit handler,
+a profiler timer), and the kernel may deliver the signal to the engine's
+worker thread. The first no-resend fix turned the interrupted read into
+the cancelled kind, so a delivered and billed call failed with code 5
+although nobody cancelled. The verifier's `wsig.c` probe showed it at the
+C door: code 5 at 50, 300 and 1,000 ms.
+
+Every pool's connector chain now ends in `Resuming`, which wraps ureq's
+default chain. An interrupted read consumed nothing, so the read starts
+again on the same connection with the time it has left. The request is
+never sent again. The read stops on an interruption only when the call's
+own token fired. `post` holds that token in a thread-local for each send
+and returns the cancelled kind then, for the head and the body alike.
+Writes are not wrapped: they reach TCP through `write_all`, which
+already resumes. An interruption that still surfaces with no fired token
+is the backend kind and not retryable.
+
+Known gap, found by the second-agent review: over TLS the wrapper sits
+above rustls, and rustls 0.23 reads again after an interruption itself,
+with the full timeout. On an HTTPS base the token is not checked on an
+interruption, and a signal that repeats faster than the timeout can hold
+the read past the deadline. The request is still never sent again. The
+lever is a TCP-level wrapper under rustls that never returns an
+interrupted read, since rustls would loop on one.
+
+Evidence: `wsig.c` against the fixed library answered 0 with one body at
+50, 300 and 1,000 ms. `tests/signal_worker.rs` failed before the change
+with `Err(Error { kind: Cancelled, ... "a signal interrupted the send;
+..." })` and passes after. `tests/signal_resend.rs` now expects the
+caller-thread signal to answer with one body. The pool uses ureq's
+`unversioned` transport API, which may change between minor versions;
+the lock file pins 3.4.2.

@@ -58,6 +58,10 @@ use thinkthen_contract::{
 };
 use thinkthen_core::adapters::built_in;
 use thinkthen_core::{Backend, Evidence, ModelName, Plan, Reply, Value};
+use ureq::unversioned::resolver::DefaultResolver;
+use ureq::unversioned::transport::{
+    Buffers, ConnectionDetails, Connector, DefaultConnector, NextTimeout, Transport,
+};
 
 /// The recognize and relate replay over the recorded cases.
 mod replay;
@@ -567,6 +571,9 @@ impl Engine for BlockingEngine {
         options: Options<'_>,
         mut poll: Option<&mut dyn FnMut()>,
     ) -> Result<Vec<AnnotatedRecord>, Error> {
+        // Once before the loop, so zero records still meet the refusal
+        // (review 5: an oversized deadline answered Ok([])).
+        Error::guard(&options)?;
         self.limit(records.len().max(set.questions().len()))?;
         let mut rows = Vec::with_capacity(records.len());
         for record in records {
@@ -1000,6 +1007,7 @@ fn post(
             .build();
         // On the wire from the send to the read body's end.
         let _on_the_wire = WireGuard;
+        let _watch = TokenWatch::hold(options.cancel_token());
         wire_enter();
         // The counter counts what left the process. A send that left
         // counts, and a retry after a 429 or 5xx reply counts again because
@@ -1028,6 +1036,11 @@ fn post(
                 // body left sent the same paid request three times). The
                 // error still says whether the caller's own second try
                 // could help; the engine never makes that try for it.
+                // A read a signal interrupted surfaces only when the
+                // call's own token fired, and then it is that cancel.
+                if interrupted(&error) && options.cancel_token().is_some_and(Cancel::is_cancelled) {
+                    return Err(Error::cancelled());
+                }
                 return Err(classify_transport(&error));
             }
         };
@@ -1054,7 +1067,13 @@ fn post(
             .with_config()
             .limit(MAX_RESPONSE_BYTES)
             .read_to_vec()
-            .map_err(|error| Error::backend_not_retryable(error.to_string()))?;
+            .map_err(|error| {
+                if interrupted(&error) && options.cancel_token().is_some_and(Cancel::is_cancelled) {
+                    Error::cancelled()
+                } else {
+                    Error::backend_not_retryable(error.to_string())
+                }
+            })?;
         count_tokens(&body);
         return Ok((body, sends));
     }
@@ -1073,6 +1092,11 @@ fn count_tokens(body: &[u8]) {
     }
 }
 
+/// Whether a signal interrupted the transport.
+fn interrupted(error: &ureq::Error) -> bool {
+    matches!(error, ureq::Error::Io(io) if io.kind() == std::io::ErrorKind::Interrupted)
+}
+
 /// Split a transport failure by whether a second try could help.
 ///
 /// A refusal, a failed connect, a name that did not resolve, and a broken
@@ -1085,14 +1109,15 @@ fn count_tokens(body: &[u8]) {
 /// is marked retryable for the caller's own second try; the engine never
 /// makes that try itself (see [`post`]).
 fn classify_transport(error: &ureq::Error) -> Error {
-    // A signal interrupted the send after its bytes may have left: sending
-    // again would bill twice (surfaces-review-5), so it stops as cancelled
-    // with its own words, never as the caller's stop.
-    if matches!(error, ureq::Error::Io(io) if io.kind() == std::io::ErrorKind::Interrupted) {
-        return Error {
-            message: "a signal interrupted the send; it is not sent again because it may have left".into(),
-            ..Error::cancelled()
-        };
+    // Reads resume after a signal (see `Resuming`), so an interruption
+    // that still surfaces with no fired token came from the connect or a
+    // TLS write. The bytes may have left, and sending again would bill
+    // twice (surfaces-review-5). Nobody cancelled, so it is a backend
+    // failure, and the caller's own second try is not advised.
+    if interrupted(error) {
+        return Error::backend_not_retryable(
+            "a signal interrupted the connection; the request is not sent again because it may have left",
+        );
     }
     let refused = match error {
         ureq::Error::Io(io) => io.kind() == std::io::ErrorKind::ConnectionRefused,
@@ -1385,6 +1410,110 @@ fn lock<T>(held: &Mutex<T>) -> MutexGuard<'_, T> {
     held.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
+/// The last link in every pool's connector chain: ureq's default chain,
+/// with each connection's reads resumed after a signal (see [`Resuming`]).
+#[derive(Debug)]
+struct ResumeConnector;
+
+impl Connector<Box<dyn Transport>> for ResumeConnector {
+    type Out = Resuming;
+
+    fn connect(
+        &self,
+        _details: &ConnectionDetails,
+        chained: Option<Box<dyn Transport>>,
+    ) -> Result<Option<Resuming>, ureq::Error> {
+        Ok(chained.map(|inner| Resuming { inner }))
+    }
+}
+
+/// A connection whose read resumes when a signal interrupts it.
+///
+/// A host may install a handler without `SA_RESTART`, and the kernel may
+/// deliver a process signal to any thread, the engine's workers included.
+/// The interrupted read consumed nothing, so reading again on the same
+/// connection is exact, and the request is never sent again (review 5:
+/// a harmless signal on a worker failed a delivered, billed call as
+/// cancelled). The read stops only when the calling thread's token fired
+/// ([`CALL_TOKEN`]) or the read's own timeout is spent. Writes are not
+/// wrapped: they reach TCP through `write_all`, which already resumes
+/// after a signal.
+///
+/// Known gap: over TLS this wrapper sits above rustls, and rustls reads
+/// again after an interruption itself, with the full timeout. On an
+/// HTTPS base the token is not checked on an interruption, and a signal
+/// that repeats faster than the timeout can hold the read past the
+/// deadline. The request is still never sent again.
+#[derive(Debug)]
+struct Resuming {
+    inner: Box<dyn Transport>,
+}
+
+impl Transport for Resuming {
+    fn buffers(&mut self) -> &mut dyn Buffers {
+        self.inner.buffers()
+    }
+
+    fn transmit_output(&mut self, amount: usize, timeout: NextTimeout) -> Result<(), ureq::Error> {
+        self.inner.transmit_output(amount, timeout)
+    }
+
+    fn await_input(&mut self, timeout: NextTimeout) -> Result<bool, ureq::Error> {
+        let started = Instant::now();
+        let mut next = timeout;
+        loop {
+            match self.inner.await_input(next) {
+                Err(ureq::Error::Io(io))
+                    if io.kind() == std::io::ErrorKind::Interrupted && !token_fired() =>
+                {
+                    if !timeout.after.is_not_happening() {
+                        let left = timeout.after.saturating_sub(started.elapsed());
+                        if left.is_zero() {
+                            return Err(ureq::Error::Timeout(timeout.reason));
+                        }
+                        next = NextTimeout { after: left.into(), reason: timeout.reason };
+                    }
+                }
+                other => return other,
+            }
+        }
+    }
+
+    fn is_open(&mut self) -> bool {
+        self.inner.is_open()
+    }
+}
+
+thread_local! {
+    /// The token of the call this thread is sending, read when a signal
+    /// interrupts its read. Set by [`post`] around each send.
+    static CALL_TOKEN: std::cell::RefCell<Option<Cancel>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Whether the calling thread's current call carries a token that fired.
+fn token_fired() -> bool {
+    CALL_TOKEN
+        .try_with(|held| held.borrow().as_ref().is_some_and(Cancel::is_cancelled))
+        .unwrap_or(false)
+}
+
+/// Holds the call's token in [`CALL_TOKEN`] for one send and clears it on
+/// every exit.
+struct TokenWatch;
+
+impl TokenWatch {
+    fn hold(token: Option<&Cancel>) -> Self {
+        let _ = CALL_TOKEN.try_with(|held| *held.borrow_mut() = token.cloned());
+        Self
+    }
+}
+
+impl Drop for TokenWatch {
+    fn drop(&mut self) {
+        let _ = CALL_TOKEN.try_with(|held| held.borrow_mut().take());
+    }
+}
+
 /// Build fresh state for this pid and transport shape.
 fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
     let width = settings.width.max(1);
@@ -1408,7 +1537,11 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
         base: settings.base.clone(),
         width,
         timeout: settings.timeout,
-        agent: builder.build().into(),
+        agent: ureq::Agent::with_parts(
+            builder.build(),
+            DefaultConnector::new().chain(ResumeConnector),
+            DefaultResolver::default(),
+        ),
         gate: Gate {
             counts: Mutex::new(GateCounts { busy: 0, limit: width }),
             signal: Condvar::new(),
@@ -2084,6 +2217,28 @@ mod tests {
         );
     }
 
+    /// Annotate refuses an oversized deadline before its per-record loop,
+    /// so zero records meet the refusal too (review 5: it answered Ok([])).
+    #[test]
+    fn annotate_refuses_an_oversized_deadline_with_no_records() {
+        let _seat = null();
+        let set = QuestionSet::from_json(
+            r#"{"version":1,"questions":{"kind":{"decide":"Is this a refund request?","threshold":0.5}}}"#,
+        )
+        .expect("parses");
+        let options = Options::new().deadline_in(Duration::from_secs(u64::from(u32::MAX) + 1));
+        let refused = BlockingEngine::from_env()
+            .annotate_opts(&set, &[], options, None)
+            .unwrap_err();
+        assert_eq!(
+            (refused.kind, refused.message.as_str()),
+            (
+                ErrorKind::Usage,
+                "the deadline of 4294967296 s is larger than the 4294967295 s the engine holds"
+            )
+        );
+    }
+
     /// The width ceiling holds on every backend (review 5: the null
     /// backend skipped it, and width 100,000 over 100,000 records panicked
     /// spawning threads at 334 MB). The ceiling itself still runs.
@@ -2149,19 +2304,19 @@ mod tests {
         assert!(classified.to_string().contains("resolve"), "the refusal names why: {classified}");
     }
 
-    /// A send a signal interrupted is never sent again: its bytes may have
-    /// left, and the vendor bills each send, so it surfaces as the
-    /// cancelled kind (surfaces-review-5: one trapped USR1 sent a paid
-    /// request twice).
+    /// An interruption that surfaces with no fired token is never sent
+    /// again: its bytes may have left, and the vendor bills each send
+    /// (surfaces-review-5: one trapped USR1 sent a paid request twice).
+    /// Nobody cancelled, so it is the backend kind, never code 5.
     #[test]
-    fn an_interrupted_send_is_cancelled_not_retried() {
+    fn an_interrupted_send_is_not_retried_and_not_a_cancel() {
         let error = ureq::Error::Io(std::io::Error::from(std::io::ErrorKind::Interrupted));
         let classified = super::classify_transport(&error);
-        assert_eq!(classified.kind, ErrorKind::Cancelled);
+        assert_eq!(classified.kind, ErrorKind::Backend);
         assert!(!classified.retryable, "an interrupted send must not retry");
         assert_eq!(
             classified.message,
-            "a signal interrupted the send; it is not sent again because it may have left"
+            "a signal interrupted the connection; the request is not sent again because it may have left"
         );
     }
 
