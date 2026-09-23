@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The fast-backend interrupt proof, parent half (lane B item 5, the
 # poll-bug shape). Backgrounds the child directly (not a subshell, or the
-# signal reaches the wrong process), sends SIGINT one second into a
+# signal reaches the wrong process), sends SIGINT half a second into a
 # two-million-record null-backend column, and requires the child to report
 # the interrupt within 1.5 s — the batch runs about 9 s deaf, so the
 # threshold separates the two behaviors. Offline; check.sh calls it.
@@ -13,7 +13,13 @@ OUT=$(mktemp)
 
 Rscript interrupt_fast_child.R >"$OUT" 2>&1 &
 CHILD=$!
-sleep 1
+# Wait for the child to reach its call: on a loaded box the library load
+# alone took past the old fixed one-second signal (surfaces-review-5).
+for _ in $(seq 1 600); do
+  grep -q '^ready$' "$OUT" && break
+  sleep 0.1
+done
+sleep 0.5
 kill -INT "$CHILD"
 wait "$CHILD" 2>/dev/null || true
 
