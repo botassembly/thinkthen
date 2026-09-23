@@ -125,6 +125,16 @@ echo "== duckdb surface: slide sample, as drawn"
 ENGINE_NULL=1 tools/run_slide.sh >/dev/null
 echo "ok       the slide runs as drawn (output above its run in NOTES)"
 
+# The drawn calls are a frozen fixture (review 5: the copy had drifted
+# from the deck with only a remembered rule to catch it). Their hash is
+# pinned, so a change to them is a visible, deliberate re-vendoring.
+drawn_sha=$(grep -v "^--" tools/drawn-calls/recognize.sql | shasum -a 256 | cut -d' ' -f1)
+if [[ "$drawn_sha" != "d3581e25d68a44bec3096b84c68a448518de63441f3e269bb47a170f47092dc7" ]]; then
+  echo "FAILED   tools/drawn-calls/recognize.sql changed (sha256 $drawn_sha); re-vendoring updates this pin and the acceptance expectations together"
+  exit 1
+fi
+echo "ok       the frozen drawn calls match their pinned hash"
+
 echo "== duckdb surface: recognize and relate acceptance, calls as drawn"
 ENGINE_NULL=1 tools/run_recognize.sh >/dev/null
 if grep -q "Binder Error: Table function cannot contain subqueries" tools/recognize-run/run.log \
