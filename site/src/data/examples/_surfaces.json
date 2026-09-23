@@ -16,7 +16,7 @@
     "printed": {
       "command": "python sample.py",
       "output": "shape: (3, 3)\n┌───────┬─────────┬────────┐\n│ steps ┆ area    ┆ impact │\n│ ---   ┆ ---     ┆ ---    │\n│ bool  ┆ str     ┆ f64    │\n╞═══════╪═════════╪════════╡\n│ true  ┆ export  ┆ 1.99   │\n│ false ┆ login   ┆ 2.0    │\n│ false ┆ billing ┆ 0.07   │\n└───────┴─────────┴────────┘",
-      "see": "The export crash gives steps and blocks work. The login page blocks work and gives no steps. The blue Pay button is billing and blocks nothing."
+      "see": "The export crash gives steps and blocks work. The login page blocks work. The blue Pay button is billing."
     }
   },
   "typescript": {
