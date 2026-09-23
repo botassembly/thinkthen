@@ -796,3 +796,33 @@ build team's preserved ticket-0074 stash; the tree was restored by
 command (conflicts resolved to the pre-pop side, the stash's untracked
 files removed, the stash entry itself left intact in the list for its
 owner). File copies under /tmp are the only safe swap here.
+
+## Surfaces review 5, item 3: the Arrow door reads inside declared extents
+
+The C data interface carries no byte length beside a buffer pointer; it
+declares extents instead. `borrow_strings` now reads only inside them. A
+string view's data count is the table minus three (validity, views, and
+the trailing buffer-sizes buffer), so no view can name the sizes buffer,
+and every long view is checked against the length the sizes buffer
+declares for its data buffer. A Utf8 or LargeUtf8 array's offsets are
+checked nonnegative and monotone from the first row read to the array's
+last offset, which declares the data extent, before any data byte is
+read. A row claim past four billion (length or offset) is refused before
+it is allocated or walked. A single row longer than 4 MiB is refused; the
+old cap compared absolute buffer positions and refused every ordinary
+`pa.string` column whose text passed 4 MiB (200,000 rows, 10 MB: old
+UsageError, new 200,000 answers).
+
+Fail-then-pass: the module's `malformed_tests` against the old reader
+kill the test binary with SIGSEGV; against the new one, 9 passed. The
+reviewer's guard-page probes (buffers ending at an unreadable page): old,
+nine malformed shapes dump core; new, the view straddling or passing its
+declared end, a view index naming the sizes buffer, a Utf8 row past the
+last offset, and a 2^40 offset each refuse as usage.
+
+Still open, and not provable by any reader: a producer whose declarations
+agree with each other but whose allocation is shorter — offsets `0, 200`
+over a 3-byte buffer, or `60000000, 60000001` over one. The last offset
+is the only data length the interface gives, so such a column cannot be
+told from a real one of that size. That lie stays the producer's; the
+per-row ceiling keeps any one such read under 4 MiB.

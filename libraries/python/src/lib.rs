@@ -302,14 +302,7 @@ fn step<T: Send + 'static>(
         Ok(()) => match worker.take().expect("the worker is joined once").join() {
             Ok(Ok(value)) => Ok(value),
             Ok(Err(error)) => Err(python_error(py, error)),
-            Err(_) => Err(python_error(
-                py,
-                Error {
-                    kind: ErrorKind::Defect,
-                    message: "the engine step did not come back".into(),
-                    retryable: false,
-                },
-            )),
+            Err(_) => Err(python_error(py, Error::defect("the engine step did not come back"))),
         },
     }
 }
@@ -326,7 +319,7 @@ fn step<T: Send + 'static>(
 /// quietly disable the deadline. Zero stays what the contract settled: a
 /// spent deadline that sends nothing.
 fn call_options<'a>(
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     caller: Option<Cancel>,
     signal: &'a Cancel,
 ) -> Result<(Options<'a>, Option<TokenBridge>), Error> {
@@ -341,10 +334,36 @@ fn call_options<'a>(
             });
         }
     }
-    let options = Options::new().with_deadline_seconds(deadline)?.cancel(signal);
+    let options = Options::new()
+        .with_deadline_seconds(deadline.map(|held| held.0))?
+        .cancel(signal);
     let bridge = caller.map(|held| TokenBridge::watch(held, signal));
     Ok((options, bridge))
 }
+
+/// A `deadline=` in seconds, a real number. Python's bool is an int, so
+/// `True` would run as one second and `False` as a spent deadline; ADR
+/// 0031 refuses a bool (Python's or NumPy's) or any
+/// non-number as the usage kind, as Node does.
+#[derive(Clone, Copy, Debug)]
+struct Seconds(f64);
+
+impl<'a, 'py> FromPyObject<'a, 'py> for Seconds {
+    type Error = PyErr;
+
+    fn extract(held: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        // NumPy 1 names its bool `bool_`, NumPy 2 `bool`.
+        let named_bool = held.get_type().name().is_ok_and(|name| name == "bool" || name == "bool_");
+        match held.extract::<f64>() {
+            Ok(seconds) if !named_bool => Ok(Self(seconds)),
+            _ => Err(python_error(held.py(), Error::usage(DEADLINE_REFUSAL))),
+        }
+    }
+}
+
+/// The one sentence a non-number deadline is refused with.
+const DEADLINE_REFUSAL: &str =
+    "deadline is seconds from now, a number; no deadline is spelled None or -1";
 
 /// Map a contract error to the Python exception of its kind, carrying the
 /// kind's name and the retry signal on the instance.
@@ -494,7 +513,7 @@ fn plain(py: Python<'_>, value: Option<String>) -> Py<PyAny> {
 /// error — is carried out of the poll and raised when the call stops.
 fn bulk<T: Send>(
     py: Python<'_>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
     call: impl FnOnce(Options<'_>, Option<&mut dyn FnMut()>) -> Result<T, Error> + Send,
 ) -> PyResult<T> {
@@ -750,7 +769,7 @@ fn decide(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     evidence: &Bound<'_, PyAny>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
@@ -787,7 +806,7 @@ fn decide_many(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     records: &Bound<'_, PyAny>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<Py<PyAny>>> {
     let asked = settle_question(py, question)?;
@@ -818,7 +837,7 @@ fn choose(
     question: &Bound<'_, PyAny>,
     evidence: String,
     options: Option<Vec<String>>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_verb_question(py, question, "choose", "options", options)?;
@@ -842,7 +861,7 @@ fn score(
     question: &Bound<'_, PyAny>,
     evidence: &Bound<'_, PyAny>,
     levels: Option<Vec<String>>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_verb_question(py, question, "score", "levels", levels)?;
@@ -889,7 +908,7 @@ fn tag(
     question: &Bound<'_, PyAny>,
     evidence: String,
     labels: Option<Vec<String>>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<String>> {
     let asked = settle_verb_question(py, question, "tag", "labels", labels)?;
@@ -908,7 +927,7 @@ fn filter(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     records: Vec<String>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<String>> {
     let asked = settle_question(py, question)?;
@@ -931,7 +950,7 @@ fn rank(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     records: Vec<String>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<(usize, f64)>> {
     let asked = settle_question(py, question)?;
@@ -953,7 +972,7 @@ fn find(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     units: Vec<String>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Option<(usize, f64)>> {
     let asked = settle_question(py, question)?;
@@ -998,8 +1017,7 @@ fn annotated_row(py: Python<'_>, fields: Vec<(String, Annotated)>) -> PyResult<P
                 pyo3::types::PyFloat::new(py, value).unbind().into_any()
             }
             Annotated::Tags(held) => held
-                .into_pyobject(py)
-                .map_err(python_error_of)?
+                .into_pyobject(py)?
                 .unbind()
                 .into_any(),
             Annotated::Failed(failed) => failed_marker(py, &failed)?,
@@ -1018,7 +1036,7 @@ fn annotate_rows(
     py: Python<'_>,
     set: &Bound<'_, PyAny>,
     records: Vec<String>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<Py<PyAny>>> {
     let loaded = settle_set(py, set)?;
@@ -1038,7 +1056,7 @@ fn annotate_stream(
     set: &Bound<'_, PyAny>,
     records: &Bound<'_, PyAny>,
     on: String,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<arrow::ArrowFrame> {
     let loaded = settle_set(py, set)?;
@@ -1063,7 +1081,7 @@ fn details(
     py: Python<'_>,
     question: &Bound<'_, PyAny>,
     evidence: String,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Py<PyAny>> {
     let asked = settle_question(py, question)?;
@@ -1446,7 +1464,7 @@ fn recognize(
     relations: Option<&Bound<'_, PyAny>>,
     threshold: Option<f64>,
     relation_threshold: Option<f64>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Recognized> {
     let asked = build_recognize(py, kinds, relations, threshold, relation_threshold)?;
@@ -1470,7 +1488,7 @@ fn recognize_stream(
     kinds: Option<&Bound<'_, PyAny>>,
     threshold: Option<f64>,
     relation_threshold: Option<f64>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<arrow::ArrowFrame> {
     let asked = build_recognize(py, kinds, None, threshold, relation_threshold)?;
@@ -1525,7 +1543,7 @@ fn relate(
     relations: Option<&Bound<'_, PyAny>>,
     either: Option<&Bound<'_, PyAny>>,
     threshold: Option<f64>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<Vec<Edge>> {
     let asked = build_relate(py, relations, either, threshold)?;
@@ -1550,7 +1568,7 @@ fn relate_stream(
     relations: Option<&Bound<'_, PyAny>>,
     either: Option<&Bound<'_, PyAny>>,
     threshold: Option<f64>,
-    deadline: Option<f64>,
+    deadline: Option<Seconds>,
     token: Option<&Bound<'_, CancelToken>>,
 ) -> PyResult<arrow::ArrowFrame> {
     let asked = build_relate(py, relations, either, threshold)?;
@@ -1622,11 +1640,6 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-/// A conversion failure pyo3 itself reports, as a defect of this shim.
-fn python_error_of(error: pyo3::PyErr) -> PyErr {
-    error
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1671,7 +1684,7 @@ mod tests {
         // door, never arithmetic that ends the host.
         let signal = Cancel::new();
         for refused in [f64::NAN, f64::INFINITY, -2.0, -0.5, 1e300] {
-            let error = match call_options(Some(refused), None, &signal) {
+            let error = match call_options(Some(Seconds(refused)), None, &signal) {
                 Ok(_) => panic!("{refused} must be refused"),
                 Err(error) => error,
             };
@@ -1680,7 +1693,7 @@ mod tests {
         // `None` and the -1 sentinel both spell no deadline; zero is
         // a spent one the engine answers with the deadline kind.
         assert!(call_options(None, None, &signal).is_ok());
-        assert!(call_options(Some(-1.0), None, &signal).is_ok());
-        assert!(call_options(Some(0.0), None, &signal).is_ok());
+        assert!(call_options(Some(Seconds(-1.0)), None, &signal).is_ok());
+        assert!(call_options(Some(Seconds(0.0)), None, &signal).is_ok());
     }
 }

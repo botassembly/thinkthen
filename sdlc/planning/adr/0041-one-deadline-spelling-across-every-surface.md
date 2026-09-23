@@ -48,3 +48,14 @@ states the rule once, in the same words.
 Ian can overturn this by ruling a different sentinel or an explicit-none
 argument; the cost is touching every surface's door and every drawn
 signature that carries a deadline.
+
+## Amendment, 2026-09-23: only a number crosses on Python too
+
+The Consequences named Node alone. Python's bool is an int, so
+`deadline=True` ran as a one-second deadline and `deadline=False` as a
+spent one, while Node refused `true`. The fifth review found the split.
+Python now refuses a bool, Python's or NumPy's, or any non-number with
+the usage kind, in the same sentence on every door. A NumPy int or float
+is still a number and still crosses. Ian can overturn this by ruling
+that a bool is a number here; the cost is one extraction type in the
+Python shim.

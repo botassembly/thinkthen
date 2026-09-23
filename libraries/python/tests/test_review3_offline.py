@@ -12,6 +12,7 @@ Run offline: ``ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review3_offli
 """
 
 import os
+import re
 
 import pytest
 
@@ -87,11 +88,22 @@ def test_the_builder_still_builds_each_verb():
 # --- item 22: the docstrings' pandas advice, run as written ---------------
 
 
+def advice(function):
+    """The docstring's own one line back to a pandas column, as written."""
+    found = re.search(r"one line back[^`]*``([^`]+)``", function.__doc__)
+    assert found, f"{function.__name__}'s docstring names no one line back"
+    return found.group(1)
+
+
 def test_the_decide_docstring_advice_round_trips():
-    series = pd.Series([TEXT, "good morning"], dtype=object)
-    answers = tt.decide(ASK, series)
-    back = pd.Series(answers)
-    assert back.tolist() == [True, False]
+    # Review-5: run the docstring's one line itself on a filtered frame,
+    # whose non-default index turns a zero-based pd.Series(answers) into
+    # NaN rows, so reverting the advice fails here.
+    frame = pd.DataFrame({"body": [TEXT, "good morning", TEXT]}, index=[10, 11, 12])
+    text = frame.loc[frame.index >= 11, "body"]
+    answers = tt.decide(ASK, text)
+    back = eval(advice(tt.decide), {"pd": pd}, {"answers": answers, "text": text})
+    assert frame.loc[text.index].assign(ask=back)["ask"].tolist() == [False, True]
 
 
 def test_the_annotate_docstring_advice_round_trips():
