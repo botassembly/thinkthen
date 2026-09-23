@@ -81,6 +81,7 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 15. The transform catalog surface exists (`thinkthen transform list` and `show`, ticket 0050's promise) or the release record names who deferred it; no open ticket owns it today.
 16. Issue statuses are normalized to a two-value vocabulary (Open and everything-else) before the waiver sweep runs; the record currently carries nine status words and two files with none.
 17. The surfaces branch's error index (the fifth review's companion page) has a row for every confirmed defect across all five rounds, each row closed or waived by an independent probe named in the row, and the release pass re-runs the proving probes, because the branch's own history shows a closed item can stop holding.
+18. The naming and consistency review (quality plan Part 4) is green: vocabulary lint zero-hit, the nine-column matrix generated and drift-free, every public name documented with one shape example, every bound stated strict or inclusive, the stranger name-test run with its gaps filed or fixed.
 
 ## Part 3: the exploring tester
 
@@ -91,6 +92,39 @@ A standing brief for one agent that pokes around after each release and on a sch
 - **Where findings go.** `sdlc/issues/`, one file per finding, committed on main and pushed. A finding in a dependency stays in the notes.
 - **What it hands back.** One page: what was run, what passed, what failed, what was not run, the one thing most likely to embarrass us next, and a "what would not embarrass us" paragraph. The embarrassment order is money first, by Ian's ruling of 2026-09-21: silent spend leads, and the release checklist separately blocks on any open blocker.
 - **The standing rules.** No paid call without Ian's authorization for that test through `sdlc/scripts/live`; the run's log states which address each command will reach before anything runs; no key is set unless the step needs one, and then it is a canary value; an explicit `--url` on every command that reads a key; test only this workspace's software on this workspace's machines; temporary files die with the test.
+
+## Part 4: the naming and consistency review (the public API's face)
+
+The 0.1 release locks the public API first, so names, bounds, and documentation are release surface, not decoration. One function means one thing across all nine surfaces: Rust, Python, TypeScript, R, Ruby, C, DuckDB, PostgreSQL, SQLite. A surface may follow its language's norms for casing and calling; it may not differ in meaning, bounds, defaults, or errors. This review is a checklist the reader-tester walks before release, and most rows are mechanically checkable, because a convention worth keeping is a check.
+
+### The vocabulary check
+
+1. One word per concept, everywhere: code, help, errors, manuals, docstrings, and the site. The ruled public words are the single source (`mktg/products/thinkthen/vocabulary.md` and the manual); a vocabulary lint reads that list and fails on a banned word in shipped files. Ruled so far: the judged thing is `evidence`; the object a program holds is the `engine`, never `connection`; a question file's threshold carries `tuned_for` (ruled 2026-09-23 over `calibrated`, which claims a proof of probability correctness nobody made); `annotate` keeps its name (`structure` promises extraction, which is `recognize`'s job).
+2. Names say what the thing does, never how it is built: no implementation words, no internal jokes, no abbreviations a newcomer must learn.
+3. Functions are verbs, values are nouns, booleans read as predicates (`is_`, `has_`, `allow_`); a bare adjective that could mean either polarity is a finding.
+
+### The ambiguity check
+
+4. Every bound is named or documented as strict or inclusive, and inclusive is the stated default: `min` and `max` include their value, `under` and `over` exclude it, and any name that does not make this obvious carries it in its doc line. No public comparison whose strictness a reader must guess.
+5. Every number in a public name or type carries its unit, either in the name (`deadline_ms`) or in a type the language already times (`Duration`, `timedelta`). No bare numbers.
+6. Every option documents its default and the precedence order that resolves it (flag over file over environment, or whatever the contract rules), once, in the same words, in all nine surfaces.
+
+### The consistency check
+
+7. The nine-column matrix: one row per public concept, one column per surface, holding the local spelling, the parameter list, the default, the error, and the result field names. Two rows come from the same source of truth (the contract), generated where a generator exists, and the matrix test fails when surfaces drift. A concept that cannot exist in a surface is marked absent with the reason, not silently skipped.
+8. The same failure produces the same sentence, translated for the language's idiom, not reworded; exit codes and error kinds match across surfaces. Two surfaces disagreeing about the same failure is the two-pages finding inside one product.
+9. Differences among surfaces are only the language's norms: casing, positional versus keyword arguments, exceptions versus result types, blocking versus async. Anything beyond idiom is drift and a finding.
+
+### The documentation check
+
+10. Every public function, option, field, and error is documented in the surface's own home (rustdoc, docstrings, typedoc, help text), with one shape example each. Examples that can run, run: doctests are part of the ladder.
+11. Documentation is tested surface: help matches the manual matches the docstrings matches the site, and the words in one place that disagree with another are a finding the day they are found. The reader-tester reads the information a newcomer would read, in order, and asks whether each page predicts the behavior the binary showed.
+12. The stranger name-test: a reader who has never seen the product predicts what each public name does from the name alone; the gap between the prediction and the behavior is a naming finding. The blind tester runs this cold.
+
+### The lockdown check
+
+13. Public names change only with an architecture decision record and a version bump: a lint fails a pull request that renames or removes a public symbol without one. After 0.1 this is the compatibility wall.
+14. A vocabulary change lands everywhere in one commit: code, tests, help, errors, manuals, and the site, across all nine surfaces at once. No half-renamed state on main, ever.
 
 ## The two reviews, both gates
 
