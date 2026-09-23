@@ -16,9 +16,11 @@ wait raises ``Cancelled``, a subclass of both ``KeyboardInterrupt`` and
 
 Every verb takes ``deadline`` — seconds from the moment of the call —
 and ``token``, a ``CancelToken`` any thread can set to stop the call.
-No deadline is spelled ``deadline=None``; a negative number is refused
-as a usage error, so a budget computed as ``end - now`` that lands below
-zero can never quietly disable the deadline.
+No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0031).
+Zero is a spent deadline: the call sends nothing and raises
+``DeadlineError``. Every other negative, a bool, and any non-number are
+refused as a usage error, so compute a budget as ``max(0, end - now)``:
+a deadline that already passed is zero, never none.
 """
 
 from ._thinkthen import (
