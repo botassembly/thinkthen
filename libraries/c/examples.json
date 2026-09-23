@@ -42,7 +42,7 @@
     },
     "relate": {
       "c": "rc = thinkthen_relate(tt, \"{\\\"relations\\\":[{\\\"name\\\":\\\"caused_by\\\",\\\"source\\\":\\\"*\\\",\\\"target\\\":\\\"*\\\"}]}\", alerts, lengths, 4, &edges, &edges_len);",
-      "expected": "relate: {\"edges\":[{\"name\":\"caused_by\",\"source\":1,\"target\":2,\"probability\":0.59}"
+      "expected": "relate: {\"edges\":[{\"name\":\"caused_by\",\"source\":1,\"target\":4,\"probability\":0.71}"
     }
   }
 }

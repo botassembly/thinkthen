@@ -2,6 +2,7 @@
  "replaces": [
   "R01-demo"
  ],
+ "label": "Alert",
  "intro": "`text` lists alerts from one online shop's systems, numbered from 1.",
  "note": "",
  "names_in_questions": false,

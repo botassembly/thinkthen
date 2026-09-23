@@ -67,12 +67,13 @@ ALERTS = [
 ]
 DEMO_EDGES = sorted(
     [
-        ("caused_by", 1, 2, 0.59),
-        ("caused_by", 1, 4, 0.94),
-        ("caused_by", 2, 4, 0.94),
-        ("caused_by", 3, 4, 0.84),
+        ("caused_by", 1, 4, 0.71),
+        ("caused_by", 2, 1, 0.65),
+        ("caused_by", 2, 4, 0.73),
+        ("caused_by", 3, 4, 0.55),
     ]
 )
+SAME_AS_EDGE = ("same_as", 1, 2, 0.61)
 
 
 def main():
@@ -163,7 +164,7 @@ def main():
             True,
         )
 
-    # The deck's relate call, as drawn.
+    # The slide's relate call, answered by the method-H recording.
     conn.execute("CREATE TABLE alerts(id integer primary key, body text)")
     conn.executemany("INSERT INTO alerts(body) VALUES (?)", [(a,) for a in ALERTS])
     edges = sorted(
@@ -172,16 +173,16 @@ def main():
             "thinkthen_relate('alerts', 'id', 'body', 'caused_by')"
         ).fetchall()
     )
-    check("the deck's relate call returns the recorded edges", edges, DEMO_EDGES)
+    check("the slide's relate call returns the recorded edges", edges, DEMO_EDGES)
 
     # Two rules at once, and text ids riding through.
     both = sorted(
         conn.execute(
             "SELECT name, source, target, probability FROM "
-            "thinkthen_relate('alerts', 'id', 'body', 'caused_by', 'same_as')"
+            "thinkthen_relate('alerts', 'id', 'body', 'caused_by', 'either:same_as')"
         ).fetchall()
     )
-    check("two relation arguments ride at once", both, DEMO_EDGES)
+    check("two relation arguments ride at once", both, sorted(DEMO_EDGES + [SAME_AS_EDGE]))
 
     # The ruled rule grammar, all through the contract's one parser:
     # named ends with the star, the inline JSON spec, the file form, and
@@ -212,19 +213,24 @@ def main():
             ).fetchall()
         )
     check("the file form equals the bare rule", filed, DEMO_EDGES)
-    either = sorted(
+    either = conn.execute(
+        "SELECT name, source, target, probability FROM "
+        "thinkthen_relate('alerts', 'id', 'body', 'either:same_as')"
+    ).fetchall()
+    check("the either prefix reaches the engine", either, [SAME_AS_EDGE])
+    # The recording asked caused_by one way, so a both-ways ask of it has
+    # no recorded answer, and the refusal proves the prefix is not swallowed.
+    try:
         conn.execute(
-            "SELECT name, source, target, probability FROM "
-            "thinkthen_relate('alerts', 'id', 'body', 'either:caused_by')"
+            "SELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'either:caused_by')"
         ).fetchall()
-    )
-    check("the either prefix reaches the engine", either, DEMO_EDGES)
-    # `either:same_as` alone rides below the bar, so the empty answer is
-    # the correct one, and it proves the prefix is not swallowed.
-    either_low = conn.execute(
-        "SELECT count(*) FROM thinkthen_relate('alerts', 'id', 'body', 'either:same_as')"
-    ).fetchone()[0]
-    check("an either rule below the bar answers empty", either_low, 0)
+        check("a both-ways ask of a one-way recording refuses", "no error", "an error")
+    except sqlite3.Error as failure:
+        check(
+            "a both-ways ask of a one-way recording names the direction",
+            "the recording asks caused_by one way" in str(failure),
+            True,
+        )
     try:
         conn.execute(
             "SELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'caused_by=*')"
@@ -252,10 +258,10 @@ def main():
         text_ids,
         sorted(
             [
-                ("caused_by", "a1", "a2", 0.59),
-                ("caused_by", "a1", "a4", 0.94),
-                ("caused_by", "a2", "a4", 0.94),
-                ("caused_by", "a3", "a4", 0.84),
+                ("caused_by", "a1", "a4", 0.71),
+                ("caused_by", "a2", "a1", 0.65),
+                ("caused_by", "a2", "a4", 0.73),
+                ("caused_by", "a3", "a4", 0.55),
             ]
         ),
     )

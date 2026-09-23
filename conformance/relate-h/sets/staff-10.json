@@ -3,6 +3,7 @@
   "R04-pairs-10",
   "R03-persubject-10"
  ],
+ "label": "Record",
  "intro": "`text` lists records about people and organizations, numbered from 1. A record stands for the person or organization it names first.",
  "note": "",
  "names_in_questions": false,

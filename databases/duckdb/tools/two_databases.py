@@ -19,6 +19,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from review4_lib import relate_rules  # noqa: E402 - the one either-aware rule list
 
 ROOT = Path(__file__).resolve().parent.parent
 EXTENSION = ROOT / "build" / "release" / "thinkthen.duckdb_extension"
@@ -56,9 +57,7 @@ def main() -> int:
                 con.execute("INSERT INTO t VALUES (?, ?)", [index, body])
 
         def ask(con, case: dict) -> int:
-            rules = "[" + ",".join(
-                f"'{rule['name']}'" for rule in case["question"]["relations"]
-            ) + "]"
+            rules = relate_rules(case)
             rows = con.execute(
                 f"SELECT * FROM thinkthen_relate('SELECT id, body FROM t', {rules})"
             ).fetchall()

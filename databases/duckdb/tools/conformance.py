@@ -37,6 +37,7 @@ FIXTURE_EXTENSION = (
 DUCKDB = ROOT / "duckdb-bin" / "duckdb"
 sys.path.insert(0, str(ROOT.parent.parent / "conformance"))
 import skiptable  # noqa: E402 — the one shared skip-table reader
+from review4_lib import relate_rules  # noqa: E402 - the one either-aware rule list
 # Whether the extension this runner loads answers from a wire stub: the
 # caller says so, and the reader decides `unless: wire` from it. The
 # check runs this replay on the null backend, so it is unset there.
@@ -383,9 +384,7 @@ def check_relate(name: str, case: dict) -> None:
     values = ",".join(
         f"({i + 1}, {sql_string(record)})" for i, record in enumerate(records)
     )
-    rules = "[" + ",".join(
-        sql_string(rule["name"]) for rule in case["question"]["relations"]
-    ) + "]"
+    rules = relate_rules(case)
     wanted = "|".join(
         f"{e['name']}:{e['source']}:{e['target']}:{e['probability']}"
         for e in case["expect"]["edges"]

@@ -59,3 +59,20 @@ Ian approved option (a) on 2026-09-23, with a budget of at most $2 of paid calls
 The job first ran against a local stub on port 8451 with a placeholder key. The stub counted 3 requests of 18, 1,104, and 90 questions. A second run sent nothing, because the cache answered it.
 
 The paid job then ran once: `sdlc/scripts/live --max-tokens 100000 conformance/relate-h/job.sh`, with the key passed only by the live door. It sent 3 requests. `live --status` read 422,954,418 charged tokens before and 423,054,418 after, so the ledger charged 100,000 tokens. That is about $0.004 at the bake-off's rate. The backend reported 26,645 input tokens (768, 23,600, and 2,277) and 22,911 output tokens. Ian can overturn the wording choices in `sets/`. Changing them needs another paid run.
+
+### The replay switch
+
+`conformance/tools/build_relate_yes_no.py` now adds the three sets to `standin/data/recognize-replay.json` as `yes-no` rows. It removes the four pick-one rows they replace, and it rewrites conformance cases 69, 70, and 72 from the recording under their old ids. Each row keeps the package's numbered text ("Alert 1: ...") as its second match key. `build_recognize_cases.py` keeps these rows and cases when it rebuilds from the package. Case 71 stays as the pinned per-subject arm, and every runner still skips it by form.
+
+The stand-in's relate replay now reads only `yes-no` rows, and the pick-one path is gone from `standin/src/replay.rs`. It also refuses a rule asked in the other direction from the recording. The alerts recorded `caused_by` one way and `same_as` both ways. A one-way answer served for a both-ways ask would invent the lower-first order, so the ask is a usage error that names the recorded direction. The validator checks the same rule on every case.
+
+Proof, red then green:
+
+- `standin/tests/relate_yes_no.rs` gained four tests: the alerts, a founder pair that holds both relations, the staff records, and the direction refusal. Before the table change the first three returned the pick-one edges, for example `founded` 1 to 2 alone at 0.87. Before the refusal the both-ways ask returned `caused_by` 2 to 1. All pass after.
+- `validate_conformance.py` from before this change fails cases 69, 70, and 72 on the new file ("edges replay exactly"). The new validator passes all 84 cases.
+
+What changed for every surface. At the 0.5 bar the alerts now answer `caused_by` 1 to 4 (0.71), 2 to 1 (0.65), 2 to 4 (0.73), and 3 to 4 (0.55), plus `same_as` 1 and 2 (0.61) when asked. No edge reaches 0.9. The slide's bar moves from 0.9 to 0.7, which keeps the same two sound edges, 1 to 4 and 2 to 4. Each surface's test, example, and docstring moved with it. The slide itself lives outside this repository and still draws 0.9 and 0.94. Ian can overturn the 0.7 bar. The other choice is to keep 0.9 and show an empty answer.
+
+The direction refusal found three runners that dropped a rule's `either` flag and asked `same_as` one way. The pick-one replay had hidden it, because it ignored the flag. The SQLite driver now passes `either:NAME`. The DuckDB runner and its review tools now share `relate_rules` in `databases/duckdb/tools/review4_lib.py`, which sends the JSON spec when a case asks a both-ways rule. The PostgreSQL call takes bare names only, which its NOTES.md already records as a gap. Case 69 is skipped there with that reason in the skip table. Ian can overturn the skip by asking for an `either` spelling in the PostgreSQL call. That widens a public surface and needs a second-agent review.
+
+Checks run at this commit, with no stub: the stand-in suite, the conformance validator and its tests, the skip table, and the surface checks for Python, TypeScript, Rust, C, R, SQLite, DuckDB, and PostgreSQL all pass. The Ruby check could not run here, because the `thinkthen-ruby-builder:local` image is missing. Its two edits, `tests/test_surface.rb` and `examples.json`, are unproven until the gate runs. Under four parallel builds, timing tests failed once in Python, TypeScript, and DuckDB. Each passed when run alone.

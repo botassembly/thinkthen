@@ -145,7 +145,14 @@ class Harness:
 
 
 def relate_rules(case: dict) -> str:
-    names = ",".join(f"'{rule['name']}'" for rule in case["question"]["relations"])
+    """The rule list for a relate case. Bare names are one-way rules, so a
+    case that asks a both-ways rule rides the JSON spec instead."""
+    asked = case["question"]["relations"]
+    if any(rule.get("either") for rule in asked):
+        spec = {"relations": [{"name": r["name"], "source": "*", "target": "*"} for r in asked if not r.get("either")],
+                "either": [r["name"] for r in asked if r.get("either")]}
+        return "['" + json.dumps(spec).replace("'", "''") + "']"
+    names = ",".join(f"'{rule['name']}'" for rule in asked)
     return f"[{names}]"
 
 

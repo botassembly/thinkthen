@@ -555,17 +555,17 @@ fn relate_answers_from_the_recording() {
             "Alert 4: The payments database ran out of disk space.",
         ];
         let spec = r#"{"relations": [{"name": "caused_by", "source": "*", "target": "*"}],
-            "either": ["same_as"], "threshold": 0.9}"#;
+            "either": ["same_as"], "threshold": 0.7}"#;
         let (code, json) = relate(engine, spec, &alerts);
         assert_eq!(code, 0, "{json}");
         let answer: serde_json::Value = serde_json::from_str(&json).expect("JSON");
         let edges = answer["edges"].as_array().expect("edges");
-        assert_eq!(edges.len(), 2, "the 0.9 bar keeps two: {json}");
+        assert_eq!(edges.len(), 2, "the 0.7 bar keeps two: {json}");
         assert_eq!(edges[0]["name"], "caused_by");
         assert_eq!(edges[0]["source"], 1);
         assert_eq!(edges[0]["target"], 4);
         assert!(
-            (edges[0]["probability"].as_f64().expect("a number") - 0.94).abs() < 1e-9,
+            (edges[0]["probability"].as_f64().expect("a number") - 0.71).abs() < 1e-9,
             "{json}"
         );
         assert_eq!(edges[1]["source"], 2);

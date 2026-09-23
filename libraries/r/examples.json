@@ -45,7 +45,7 @@
   },
   "relate": {
    "r": "edges <- tt_relate(c(\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"), relations = \"caused_by\"); cat(edges$name, edges$source, edges$target, edges$probability, \"\\n\")",
-   "expected": "caused_by caused_by caused_by caused_by 1 1 2 3 2 4 4 4 0.59 0.94 0.94 0.84"
+   "expected": "caused_by caused_by caused_by caused_by 1 2 2 3 4 1 4 4 0.71 0.65 0.73 0.55"
   }
  }
 }

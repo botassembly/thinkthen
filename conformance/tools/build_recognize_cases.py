@@ -371,8 +371,8 @@ def build_relate():
         }
         if form == "per-subject":
             case["note"] = (
-                "measured per-subject form; the ruled relate asks pairs, and this "
-                "text's pairs recording (R04) is what the stand-in serves"
+                "measured per-subject form; the ruled relate asks method H, and this "
+                "text's method-H recording (conformance/relate-h staff-10) is what the stand-in serves"
             )
         conf.append(case)
     return table, conf
@@ -384,11 +384,15 @@ def main():
     recognize.append(synth_row)
     recognize_conf.append(synth_conf)
     relate, relate_conf = build_relate()
-    # build_relate_yes_no.py adds the method-H rows from a later
-    # experiment; a rebuild from this package keeps them.
+    # build_relate_yes_no.py adds the method-H rows and cases from later
+    # recordings. A rebuild from this package keeps them, and leaves out
+    # the pick-one rows they retired.
     table_path = f"{ROOT}/standin/data/recognize-replay.json"
+    yes_no = []
     if os.path.exists(table_path):
-        relate += [row for row in load(table_path)["relate"] if row.get("form") == "yes-no"]
+        yes_no = [row for row in load(table_path)["relate"] if row.get("form") == "yes-no"]
+    retired = {arm for row in yes_no for arm in row.get("replaces", [])}
+    relate = [row for row in relate if row["id"] not in retired] + yes_no
     replay = {
         "schema": "thinkthen.replay/1",
         "source": "experiments/225-recognize-harvest-package, harvested 2026-09-21; "
@@ -403,6 +407,8 @@ def main():
     path = f"{ROOT}/conformance/conformance.json"
     data = load(path)
     kept = [case for case in data["cases"] if case["verb"] not in ("recognize", "relate")]
+    method_h = {case["id"]: case for case in data["cases"] if case.get("form") == "yes-no"}
+    relate_conf = [method_h.get(case["id"], case) for case in relate_conf]
     data["cases"] = kept + recognize_conf + relate_conf
     data["case_count"] = len(data["cases"])
     with open(path, "w", encoding="utf-8") as handle:
