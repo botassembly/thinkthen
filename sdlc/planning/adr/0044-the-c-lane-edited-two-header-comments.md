@@ -18,7 +18,8 @@ locations in the contract header: the lifetime promise and the
 touched comments only. It landed in `be8374f`.
 
 The per-thread slot is the C door's error shape. A message lives until
-the same thread's next call on that engine. A per-engine slot comes back
+the same thread records its next failure on that engine, or until the
+engine is freed, as the header and `libraries/c/DESIGN.md` state. A per-engine slot comes back
 only with a ticket that names the caller who needs it.
 
 ## Consequences
