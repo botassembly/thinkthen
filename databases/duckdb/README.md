@@ -155,7 +155,12 @@ recognition, relations — is the engine's.
   CLI never notices and a long-lived host should treat as a restart
   signal. The handler itself only sets the token and writes one byte to
   a pipe; a bridge thread interrupts the busy relate connections, so
-  the handler takes no lock and allocates nothing.
+  the handler takes no lock and allocates nothing. The pipe belongs to
+  the process that made it. A forked child skips the parent's pipe and
+  builds its own before its first relate, so a SIGINT to a child never
+  cancels the parent's relate. A child that forks while another parent
+  thread is loading the extension can inherit its locks held, as with
+  any threaded library, so a forking host should load before it forks.
 - **Known limit: a connection's own interrupt does not reach a running
   call.** `con.interrupt()` in Python, or `duckdb_interrupt` on the
   caller's connection from any host, sets DuckDB's flag for that

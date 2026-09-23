@@ -1680,6 +1680,7 @@ mod signal_tests {
     /// run must end well inside the timeout.
     #[test]
     fn a_sigint_landing_while_the_registry_is_held_returns() {
+        let _alone = connections::SIGNAL_TESTS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         unsafe {
             let mut host: libc::sigaction = std::mem::zeroed();
             host.sa_sigaction = quiet_host as extern "C" fn(libc::c_int) as usize;
