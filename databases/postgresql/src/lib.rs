@@ -139,10 +139,26 @@ impl SavedAnswers {
         text + 2 * (map_slot + order_slot)
     }
 
-    /// Set the budget from the setting's kilobytes; a lower budget
-    /// evicts at the next insert.
+    /// Set the budget from the setting's kilobytes. A lower budget
+    /// evicts at once, so a lookup after `SET` to 0 serves nothing and
+    /// the memory goes back before the next insert.
     fn set_budget_kb(&mut self, kb: i32) {
         self.budget = usize::try_from(kb).unwrap_or(0).saturating_mul(1024);
+        self.evict();
+    }
+
+    /// Drop the oldest answers until the table fits its budget.
+    fn evict(&mut self) {
+        while self.bytes > self.budget {
+            let Some(oldest) = self.order.pop_front() else { break };
+            self.bytes -= Self::cost(&oldest);
+            self.map.remove(&oldest);
+        }
+        if self.map.is_empty() {
+            // An emptied table gives its slots back too.
+            self.map.shrink_to_fit();
+            self.order.shrink_to_fit();
+        }
     }
 
     /// Save one answer, evicting the oldest past the budget. An entry
@@ -152,11 +168,7 @@ impl SavedAnswers {
             self.bytes += Self::cost(&key);
             self.order.push_back(key);
         }
-        while self.bytes > self.budget {
-            let Some(oldest) = self.order.pop_front() else { break };
-            self.bytes -= Self::cost(&oldest);
-            self.map.remove(&oldest);
-        }
+        self.evict();
     }
 }
 
@@ -1550,8 +1562,11 @@ mod mapping_tests {
         table.insert(key(999), Answer::No);
         assert_eq!(table.map.len(), fit);
         assert_eq!(table.map.get(&key(999)), Some(&Answer::No));
-        // A lowered budget evicts at the next insert; zero saves nothing.
+        // A lowered budget evicts at once, before any insert (review 7
+        // verification: a zero budget kept serving held answers); zero
+        // serves and saves nothing.
         table.set_budget_kb(0);
+        assert_eq!((table.map.len(), table.order.len(), table.bytes), (0, 0, 0));
         table.insert(key(1_000), Answer::Yes);
         assert_eq!((table.map.len(), table.order.len(), table.bytes), (0, 0, 0));
     }

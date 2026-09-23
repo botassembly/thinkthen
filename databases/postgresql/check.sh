@@ -365,6 +365,9 @@ RESET thinkthen.saved_answer_kb;
 SELECT thinkthen_warm('{"decide":"Is it blue?"}', 'blue ' || g) FROM generate_series(1, 100) g;
 SELECT count(*) FROM generate_series(1, 100) g WHERE thinkthen_decide('{"decide":"Is it blue?"}', 'blue ' || g) IS NOT NULL;
 SELECT 'on', requests, cache_answers FROM thinkthen_usage();
+SET thinkthen.saved_answer_kb = 0;
+SELECT count(*) FROM generate_series(1, 100) g WHERE thinkthen_decide('{"decide":"Is it blue?"}', 'blue ' || g) IS NOT NULL;
+SELECT 'zeroed', requests, cache_answers FROM thinkthen_usage();
 SQL
 start=$(sed -n 's/^loaded|//p' .tmp-budget.out)
 grep -qx "16MB" .tmp-budget.out \
@@ -373,7 +376,9 @@ grep -qx "off|$((start + 200))|0" .tmp-budget.out \
   || { echo "FAILED   a zero budget still saved answers" >&2; cat .tmp-budget.out >&2; exit 1; }
 grep -qx "on|$((start + 300))|100" .tmp-budget.out \
   || { echo "FAILED   the default budget did not read the warm pass back" >&2; cat .tmp-budget.out >&2; exit 1; }
-echo "ok       thinkthen.saved_answer_kb defaults to 16MB; at 0 a decide sends again, reset it reads the warm pass back"
+grep -qx "zeroed|$((start + 400))|100" .tmp-budget.out \
+  || { echo "FAILED   answers saved before SET thinkthen.saved_answer_kb = 0 were still served" >&2; cat .tmp-budget.out >&2; exit 1; }
+echo "ok       thinkthen.saved_answer_kb defaults to 16MB; at 0 a decide sends again, reset it reads the warm pass back, and a later 0 serves nothing held"
 rm -f .tmp-budget.out
 
 echo "== postgres surface: warm holds twenty thousand rows in seconds, not a minute"

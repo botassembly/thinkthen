@@ -84,6 +84,7 @@ tools/security_suite.sh
 
 echo "== duckdb surface: the relate guard suite"
 tools/relate_guard_suite.sh
+./configure/venv/bin/python tools/relate_wait_timer.py
 
 echo "== duckdb surface: the @file open count"
 tools/atfile_suite.sh

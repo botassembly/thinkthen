@@ -311,6 +311,11 @@ fn current_cancel() -> &'static Cancel {
     install_cancel()
 }
 
+/// How many SIGINTs the handler has seen in this process.
+pub(crate) fn signal_count() -> u64 {
+    SIGNAL_SEQ.load(Ordering::SeqCst)
+}
+
 /// Whether a cancelled token is live: a call that reaches the gate
 /// after the interrupt fired must refuse before running its query, not
 /// start six seconds of work nobody asked for anymore (review 4,
@@ -354,7 +359,18 @@ fn install_cancel() -> &'static Cancel {
 /// stops the install entirely (review 3, finding 13: `libc::signal`
 /// replaced the disposition, and an `SA_SIGINFO` host handler received
 /// garbage arguments).
-static HOST_ACTION: std::sync::OnceLock<Option<libc::sigaction>> = std::sync::OnceLock::new();
+///
+/// A pointer, not a set-once cell, so an install that finds SIGINT
+/// changed beneath it records the action it actually replaced (review 7
+/// verification). The handler reads it with one atomic load. A replaced
+/// record is leaked, once per such install, because a handler may be
+/// reading it.
+static HOST_ACTION: AtomicPtr<libc::sigaction> = AtomicPtr::new(std::ptr::null_mut());
+
+/// Record `action` as the host's, for the handler to chain to.
+fn record_host_action(action: libc::sigaction) {
+    HOST_ACTION.store(Box::into_raw(Box::new(action)), Ordering::SeqCst);
+}
 
 /// Whether the handler is already installed, so a second LOAD does not
 /// chain a handler to itself.
@@ -388,10 +404,13 @@ extern "C" fn on_interrupt(
     // A OnceLock read locks nothing: taking a mutex in a signal
     // handler can deadlock against the thread the signal interrupted
     // (review 4).
-    let Some(Some(host)) = HOST_ACTION.get().map(|action| action.to_owned()) else {
+    let recorded = HOST_ACTION.load(Ordering::SeqCst);
+    if recorded.is_null() {
         // Installed without a recorded host action: nothing to chain.
         return;
-    };
+    }
+    // Never freed once stored, so the read cannot outlive the record.
+    let host = unsafe { *recorded };
     if host.sa_sigaction == libc::SIG_DFL {
         // The host ran on the default action: restore it and re-raise,
         // so the signal still terminates the process as the host chose.
@@ -435,28 +454,44 @@ unsafe fn install_interrupt_handler() {
     // chain to (review 7, R7-7: the record came after the install, so a
     // signal in that window skipped the host's own handler).
     let mut previous: libc::sigaction = unsafe { std::mem::zeroed() };
-    if unsafe { libc::sigaction(libc::SIGINT, std::ptr::null(), &mut previous) } != 0 {
+    if unsafe { libc::sigaction(libc::SIGINT, std::ptr::null(), &mut previous) } != 0
+        || previous.sa_sigaction == libc::SIG_IGN
+    {
+        // A failed read, or a host that ignores SIGINT: ours stays out,
+        // and a later install tries again.
         HANDLER_SET.store(false, Ordering::SeqCst);
         return;
     }
-    if previous.sa_sigaction == libc::SIG_IGN {
-        // The host ignored SIGINT: ours never installs.
-        HANDLER_SET.store(false, Ordering::SeqCst);
-        return;
+    record_host_action(previous);
+    #[cfg(test)]
+    if CHANGE_IN_WINDOW.swap(false, Ordering::SeqCst) {
+        unsafe { install_counting(second_host) };
     }
-    let _ = HOST_ACTION.set(Some(previous));
     let mut replaced: libc::sigaction = unsafe { std::mem::zeroed() };
-    if unsafe { libc::sigaction(libc::SIGINT, &action, &mut replaced) } != 0 {
+    #[cfg(test)]
+    let failing = FAIL_INSTALL.swap(false, Ordering::SeqCst);
+    #[cfg(not(test))]
+    let failing = false;
+    if failing || unsafe { libc::sigaction(libc::SIGINT, &action, &mut replaced) } != 0 {
+        // Nothing installed: the flag goes back down so a later install
+        // tries again (review 7 verification: it stayed up, and
+        // cancellation was off for the rest of the process).
+        HANDLER_SET.store(false, Ordering::SeqCst);
         return;
     }
     #[cfg(test)]
     if RAISE_IN_INSTALL_WINDOW.load(Ordering::SeqCst) {
         unsafe { libc::raise(libc::SIGINT) };
     }
-    if replaced.sa_sigaction != previous.sa_sigaction {
-        // Another thread changed SIGINT between the read and the install:
-        // put its action back, because ours would chain to a stale one.
+    if replaced.sa_sigaction == libc::SIG_IGN {
+        // Another thread set SIGINT to ignore before ours went in: the
+        // host's choice outranks ours, so put it back.
         unsafe { libc::sigaction(libc::SIGINT, &replaced, std::ptr::null_mut()) };
+        HANDLER_SET.store(false, Ordering::SeqCst);
+    } else if replaced.sa_sigaction != previous.sa_sigaction || replaced.sa_flags != previous.sa_flags {
+        // Another thread changed SIGINT between the read and the install:
+        // ours stays in and chains to the action it actually replaced.
+        record_host_action(replaced);
     }
 }
 
@@ -464,6 +499,48 @@ unsafe fn install_interrupt_handler() {
 /// there must reach the host's own handler.
 #[cfg(test)]
 static RAISE_IN_INSTALL_WINDOW: AtomicBool = AtomicBool::new(false);
+
+/// The test door between the read of the host's action and our install:
+/// another thread's change of SIGINT lands there.
+#[cfg(test)]
+static CHANGE_IN_WINDOW: AtomicBool = AtomicBool::new(false);
+
+/// The test door that makes the next install call fail once.
+#[cfg(test)]
+static FAIL_INSTALL: AtomicBool = AtomicBool::new(false);
+
+/// SIGINT deliveries each counting host handler saw, first and second.
+#[cfg(test)]
+static HOST_CALLS: [AtomicUsize; 2] = [AtomicUsize::new(0), AtomicUsize::new(0)];
+
+#[cfg(test)]
+extern "C" fn first_host(_: libc::c_int) {
+    HOST_CALLS[0].fetch_add(1, Ordering::SeqCst);
+}
+
+#[cfg(test)]
+extern "C" fn second_host(_: libc::c_int) {
+    HOST_CALLS[1].fetch_add(1, Ordering::SeqCst);
+}
+
+/// Put a counting host handler on SIGINT.
+#[cfg(test)]
+unsafe fn install_counting(handler: extern "C" fn(libc::c_int)) {
+    unsafe {
+        let mut host: libc::sigaction = std::mem::zeroed();
+        host.sa_sigaction = handler as usize;
+        libc::sigemptyset(&mut host.sa_mask);
+        libc::sigaction(libc::SIGINT, &host, std::ptr::null_mut());
+    }
+}
+
+/// Whether SIGINT runs our handler now.
+#[cfg(test)]
+fn ours_is_installed() -> bool {
+    let mut now: libc::sigaction = unsafe { std::mem::zeroed() };
+    unsafe { libc::sigaction(libc::SIGINT, std::ptr::null(), &mut now) };
+    now.sa_sigaction == on_interrupt as extern "C" fn(libc::c_int, *mut libc::siginfo_t, *mut libc::c_void) as usize
+}
 
 /// A contract failure as the SQL error a reader sees, with the kind and
 /// the retryable signal both carried. A cancellation serves its call and
@@ -1834,40 +1911,75 @@ mod signal_tests {
         assert!(!poisoned, "a SIGINT with no invoke running cancelled the next call");
     }
 
-    /// The count the window test's host handler keeps.
-    static HOST_CALLS: AtomicUsize = AtomicUsize::new(0);
-
-    extern "C" fn counting_host(_: libc::c_int) {
-        HOST_CALLS.fetch_add(1, Ordering::SeqCst);
-    }
-
-    /// Review 7, R7-7: the host's action was recorded after ours
-    /// installed, so a SIGINT landing between the two found nothing to
-    /// chain to and the host's handler never ran. The install happens
-    /// once per process, so the parent runs this test again in a fresh
-    /// child process, where the door raises inside the window.
-    #[test]
-    fn a_sigint_right_after_the_install_reaches_the_host() {
-        if std::env::var_os("THINKTHEN_INSTALL_WINDOW_CHILD").is_some() {
-            unsafe {
-                let mut host: libc::sigaction = std::mem::zeroed();
-                host.sa_sigaction = counting_host as extern "C" fn(libc::c_int) as usize;
-                libc::sigemptyset(&mut host.sa_mask);
-                libc::sigaction(libc::SIGINT, &host, std::ptr::null_mut());
-                RAISE_IN_INSTALL_WINDOW.store(true, Ordering::SeqCst);
-                install_interrupt_handler();
-            }
-            assert_eq!(HOST_CALLS.load(Ordering::SeqCst), 1, "the host handler missed the SIGINT in the install window");
-            return;
-        }
+    /// Run one test again in a fresh child process, where the install has
+    /// not happened yet; the child runs the body under the env marker.
+    fn in_a_fresh_child(test: &str) {
         let status = std::process::Command::new(std::env::current_exe().expect("the test binary"))
-            .args(["--exact", "signal_tests::a_sigint_right_after_the_install_reaches_the_host", "--test-threads=1"])
-            .env("THINKTHEN_INSTALL_WINDOW_CHILD", "1")
+            .args(["--exact", test, "--test-threads=1"])
+            .env("THINKTHEN_INSTALL_CHILD", "1")
             .stdin(std::process::Stdio::null())
             .output()
             .expect("the child runs");
         let said = String::from_utf8_lossy(&status.stdout);
         assert!(status.status.success() && said.contains("1 passed"), "{said}{}", String::from_utf8_lossy(&status.stderr));
+    }
+
+    fn in_the_child() -> bool {
+        std::env::var_os("THINKTHEN_INSTALL_CHILD").is_some()
+    }
+
+    /// Review 7, R7-7: the host's action was recorded after ours
+    /// installed, so a SIGINT landing between the two found nothing to
+    /// chain to and the host's handler never ran.
+    #[test]
+    fn a_sigint_right_after_the_install_reaches_the_host() {
+        if !in_the_child() {
+            return in_a_fresh_child("signal_tests::a_sigint_right_after_the_install_reaches_the_host");
+        }
+        unsafe {
+            install_counting(first_host);
+            RAISE_IN_INSTALL_WINDOW.store(true, Ordering::SeqCst);
+            install_interrupt_handler();
+        }
+        assert_eq!(HOST_CALLS[0].load(Ordering::SeqCst), 1, "the host handler missed the SIGINT in the install window");
+    }
+
+    /// Review 7 verification: another thread changing SIGINT between the
+    /// read and the install left ours uninstalled for good. Ours must go
+    /// in and chain to the action it actually replaced.
+    #[test]
+    fn a_change_during_the_install_still_installs_ours() {
+        if !in_the_child() {
+            return in_a_fresh_child("signal_tests::a_change_during_the_install_still_installs_ours");
+        }
+        unsafe {
+            install_counting(first_host);
+            CHANGE_IN_WINDOW.store(true, Ordering::SeqCst);
+            install_interrupt_handler();
+        }
+        assert!(ours_is_installed(), "a change of SIGINT during the install left ours out");
+        unsafe { libc::raise(libc::SIGINT) };
+        let calls = (HOST_CALLS[0].load(Ordering::SeqCst), HOST_CALLS[1].load(Ordering::SeqCst));
+        assert_eq!(calls, (0, 1), "ours chained to a stale host action");
+    }
+
+    /// Review 7 verification: a failed install left the installed flag
+    /// set, so no later install tried again and cancellation stayed off.
+    #[test]
+    fn a_failed_install_is_tried_again() {
+        if !in_the_child() {
+            return in_a_fresh_child("signal_tests::a_failed_install_is_tried_again");
+        }
+        unsafe {
+            install_counting(first_host);
+            FAIL_INSTALL.store(true, Ordering::SeqCst);
+            install_interrupt_handler();
+        }
+        assert!(!ours_is_installed());
+        unsafe { install_interrupt_handler() };
+        assert!(ours_is_installed(), "the install after a failed one did not try again");
+        unsafe { libc::raise(libc::SIGINT) };
+        assert_eq!(HOST_CALLS[0].load(Ordering::SeqCst), 1, "ours did not chain to the host");
     }
 
     #[test]

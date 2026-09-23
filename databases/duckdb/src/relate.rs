@@ -37,6 +37,7 @@
 //! prepared statement executes after its settings were read.
 
 use std::ffi::{CStr, CString, c_void};
+use std::time::{Duration, Instant};
 
 use duckdb::ffi;
 use thinkthen_contract::{Error as EngineError, Kind, Relate, relate_checked};
@@ -311,11 +312,12 @@ fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String>
     // blocks another database's. The busy flag around the held gate is
     // the interrupt bridge's target (review 4, finding 13): a Ctrl-C
     // interrupts exactly the connections whose queries are running.
-    let _gate = bind
-        .connection
-        .gate()
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let seconds = connections::option_count(bind.caller, SECONDS_SETTING).unwrap_or(SECONDS_DEFAULT);
+    // A limit too large to add to the clock is no limit.
+    let deadline = (seconds > 0)
+        .then(|| Instant::now().checked_add(Duration::from_secs(seconds)))
+        .flatten();
+    let _gate = wait_for_gate(bind.connection.gate(), deadline, seconds)?;
     bind.connection.set_busy();
     struct BusyGuard<'a>(&'a connections::KeptGuard);
     impl Drop for BusyGuard<'_> {
@@ -336,7 +338,7 @@ fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String>
                 .into(),
         );
     }
-    let records = unsafe { run_query(bind) }.map_err(|message| boundary_note(bind, message))?;
+    let records = unsafe { run_query(bind, deadline, seconds) }.map_err(|message| boundary_note(bind, message))?;
     if records.is_empty() {
         // No records, no pairs, nothing to ask: zero edges is arithmetic,
         // not a judgment, so the recordings are not consulted.
@@ -471,11 +473,11 @@ fn temp_table_exists(caller: ffi::duckdb_client_context, name: &str) -> bool {
 /// double execution was its own cost); the LIMIT bounds what the
 /// executor produces no matter what the query would return, and reading
 /// the cap plus one row is the refusal itself.
-unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
+unsafe fn run_query(bind: &Bind, deadline: Option<Instant>, seconds: u64) -> Result<Vec<(String, String)>, String> {
     let connection = bind.connection.connection();
     let search = connections::search_path_of(bind.caller);
     let holding = connections::option_count(bind.caller, HOLDING_ROWS_SETTING).unwrap_or(HOLDING_ROWS_DEFAULT);
-    let seconds = connections::option_count(bind.caller, SECONDS_SETTING).unwrap_or(SECONDS_DEFAULT);
+    let signals = crate::signal_count();
     let capped = format!(
         "SELECT COLUMNS(*)::VARCHAR FROM ({}) AS thinkthen_capped LIMIT {}",
         bind.query,
@@ -485,7 +487,11 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     // statement checks included: planning folds a constant like
     // `range(8000000)` into one list, and each plan of it took 22 s and
     // 600 MB before any row ran.
-    let (outcome, stopped) = under_time_limit(connection, seconds, || unsafe {
+    let left = deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
+    if left == Some(Duration::ZERO) {
+        return Err(time_limit_message(seconds));
+    }
+    let (outcome, stopped) = under_time_limit(connection, left, || unsafe {
         ensure_single_statement(connection, &bind.query)?;
         ensure_select_statement(connection, &bind.query)?;
         begin_read_only(connection)?;
@@ -498,11 +504,53 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     // search path leave the kept connection as the next query expects it.
     let _ = unsafe { execute(connection, c"ROLLBACK") };
     let _ = unsafe { execute(connection, c"RESET search_path") };
+    stop_outcome(outcome, stopped, crate::signal_count() != signals, seconds)
+}
+
+/// The refusal a relate earns when its time limit runs out.
+fn time_limit_message(seconds: u64) -> String {
+    format!(
+        "thinkthen usage: the relate query ran past its {seconds}-second limit and was stopped; filter the rows first or raise SET {SECONDS_SETTING} (0 turns the limit off)"
+    )
+}
+
+/// The error a stopped relate reports. When a SIGINT arrived during the
+/// relate, the user's interrupt is the cause the caller sees, even if the
+/// timer fired too (review 7 verification: a signal and the timer landing
+/// together named the limit).
+fn stop_outcome<T>(outcome: Result<T, String>, stopped: bool, signalled: bool, seconds: u64) -> Result<T, String> {
     match outcome {
-        Err(_) if stopped => Err(format!(
-            "thinkthen usage: the relate query ran past its {seconds}-second limit and was stopped; filter the rows first or raise SET {SECONDS_SETTING} (0 turns the limit off)"
-        )),
+        Err(_) if stopped && !signalled => Err(time_limit_message(seconds)),
         outcome => outcome,
+    }
+}
+
+/// Wait for the database's relate gate until `deadline`. A relate queued
+/// behind another relate on the same database counts its wait against
+/// its own time limit (review 7 verification: the wait was untimed, and a
+/// second relate at a 2 s limit ended at 4 s), and a SIGINT stops the
+/// wait. The timer never interrupts the connection while waiting, because
+/// the query running there belongs to the other relate.
+fn wait_for_gate(
+    gate: &std::sync::Mutex<()>,
+    deadline: Option<Instant>,
+    seconds: u64,
+) -> Result<std::sync::MutexGuard<'_, ()>, String> {
+    loop {
+        match gate.try_lock() {
+            Ok(held) => return Ok(held),
+            Err(std::sync::TryLockError::Poisoned(poisoned)) => return Ok(poisoned.into_inner()),
+            Err(std::sync::TryLockError::WouldBlock) => {}
+        }
+        if crate::cancel_pending() {
+            return Err(
+                "thinkthen interrupted: this relate was waiting when the cancel arrived and did not run its query".into(),
+            );
+        }
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return Err(time_limit_message(seconds));
+        }
+        std::thread::sleep(Duration::from_millis(5));
     }
 }
 
@@ -550,11 +598,10 @@ const SECONDS_DEFAULT: u64 = 60;
 /// timer fired. The timer is joined before this returns, so it never
 /// outlives the connection; an interrupt that lands after the body
 /// finished is cleared by DuckDB when the next query starts.
-fn under_time_limit<T>(connection: ffi::duckdb_connection, seconds: u64, body: impl FnOnce() -> T) -> (T, bool) {
-    if seconds == 0 {
+fn under_time_limit<T>(connection: ffi::duckdb_connection, limit: Option<Duration>, body: impl FnOnce() -> T) -> (T, bool) {
+    let Some(limit) = limit else {
         return (body(), false);
-    }
-    let limit = std::time::Duration::from_secs(seconds);
+    };
     let done = std::sync::Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
     let target = connection as usize;
     let timer = {
@@ -941,5 +988,21 @@ unsafe fn register_count_setting(
         } else {
             Err(format!("thinkthen defect: {setting} did not register"))
         }
+    }
+}
+
+#[cfg(test)]
+mod stop_tests {
+    use super::*;
+
+    /// Review 7 verification: when a SIGINT and the timer both land, the
+    /// user's interrupt is the error the caller sees; the timer alone
+    /// names the limit; an answer stays an answer.
+    #[test]
+    fn a_signal_outranks_the_timer_in_the_stop_message() {
+        let interrupted: Result<(), String> = Err("INTERRUPT Error: Interrupted!".into());
+        assert_eq!(stop_outcome(interrupted.clone(), true, true, 2), interrupted);
+        assert_eq!(stop_outcome(interrupted.clone(), true, false, 2), Err(time_limit_message(2)));
+        assert_eq!(stop_outcome(Ok(()), true, false, 2), Ok(()));
     }
 }
