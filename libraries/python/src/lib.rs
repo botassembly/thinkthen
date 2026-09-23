@@ -343,7 +343,7 @@ fn call_options<'a>(
 
 /// A `deadline=` in seconds, a real number. Python's bool is an int, so
 /// `True` would run as one second and `False` as a spent deadline; ADR
-/// 0031 refuses a bool (Python's or NumPy's) or any
+/// 0041 refuses a bool (Python's or NumPy's) or any
 /// non-number as the usage kind, as Node does.
 #[derive(Clone, Copy, Debug)]
 struct Seconds(f64);
