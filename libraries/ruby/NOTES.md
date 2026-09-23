@@ -539,3 +539,9 @@ production shape, mirroring the R surface's restore step.
 
 Full gate for this surface at this commit: `./check.sh` exit 0 (wire stub on
 8214), ending `restored: thinkthen-0.0.1-x86_64-linux.gem`.
+
+## 2026-09-23: the seventh review's Ruby items
+
+R7-9 (and the Ruby half of R4-18): `tests/test_tick_gc.rb` could not fail. The tick runs on the watchdog thread, so its drop cleared the watchdog's thread-local and left the caller's hold in place. The test now clears the caller's thread-local by name and checks the drop took. Evidence: the weak-row mutant (the row holds a `WeakRef`, the crossing drops its local) fails the new test with "the collector took the tick" after 1 tick. The old test passed the same mutant with 133 ticks. The production build passes the new test with 134 ticks.
+
+R7-10: the builder image installs its toolchain inside the container at image build time and cannot read `rust-toolchain.toml` there. Decision: keep the literal in the Dockerfile and hold it equal to the pin by check. `sdlc/scripts/policy.py` (lint rung) fails when the Dockerfile's `--default-toolchain` differs from the channel or its components differ from clippy and rustfmt. A pin bump therefore edits the Dockerfile, and `build.sh` rebuilds an image older than its Dockerfile. A build argument fed from the pin would give one source, but the edit would force an image rebuild that needs the network, and the check gives the same guarantee. Evidence: a scratch copy with the Dockerfile at 1.92.0 passes the old policy and fails the new one with "libraries/ruby/Dockerfile installs exactly the pinned channel". Ian can overturn this in favor of a build argument.

@@ -200,6 +200,16 @@ def check_toolchain() -> None:
         fail("toolchain", "profile is minimal")
     if sorted(toolchain["components"]) != ["clippy", "rustfmt"]:
         fail("toolchain", "components are exactly clippy and rustfmt")
+    # The Ruby builder image installs its toolchain with rustup inside a
+    # container and cannot read this file at image build time. Its
+    # Dockerfile names the pin again, and this check holds the two equal.
+    # A pin bump then edits the Dockerfile, which rebuilds the image.
+    dockerfile = (REPO / "libraries/ruby/Dockerfile").read_text(encoding="utf-8")
+    installs = re.findall(r"--default-toolchain\s+(\S+)", dockerfile)
+    if installs != [str(toolchain["channel"])]:
+        fail("toolchain", "libraries/ruby/Dockerfile installs exactly the pinned channel")
+    if re.findall(r"--component\s+(\S+)", dockerfile) != ["clippy,rustfmt"]:
+        fail("toolchain", "libraries/ruby/Dockerfile installs exactly clippy and rustfmt")
     if read_toml("rustfmt.toml") != {"style_edition": "2024"}:
         fail("rustfmt", "rustfmt.toml selects the 2024 style edition and nothing else")
 
