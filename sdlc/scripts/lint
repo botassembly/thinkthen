@@ -13,7 +13,7 @@ REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
 root=yes
-surfaces=all
+paths=
 case $# in
 0) ;;
 2)
@@ -25,13 +25,9 @@ case $# in
 	# names both its sides.
 	{ git diff --no-renames --name-only "$fork"; git ls-files --others --exclude-standard; } > "$paths"
 	selected=$(sdlc/scripts/lint-workspaces --select "$paths")
-	case "$selected" in
-	.*) root=yes ;;
-	*) root=no ;;
-	esac
-	surfaces=$(printf '%s\n' "$selected" | grep -vx '\.' | tr '\n' ' ' || true)
-	printf 'lint --changed %s: root workspace %s; surface workspaces: %s\n' \
-		"$2" "$( [ "$root" = yes ] && echo selected || echo unchanged)" "${surfaces:-none}"
+	printf '%s\n' "$selected" | grep -qx '\.' || root=no
+	printf 'lint --changed %s: %s changed paths; the root workspace is %s\n' \
+		"$2" "$(wc -l < "$paths" | tr -d ' ')" "$( [ "$root" = yes ] && echo selected || echo unchanged)"
 	;;
 *) echo 'usage: sdlc/scripts/lint [--changed BASE]' >&2; exit 2 ;;
 esac
@@ -56,10 +52,8 @@ fi
 # runs Clippy over each with the rules its own manifest declares. Its
 # self-test first proves it stays offline and portable with stub tools.
 sdlc/scripts/lint-workspaces-self-test
-case "$surfaces" in
-all) sdlc/scripts/lint-workspaces ;;
-'') printf '%s\n' 'lint-workspaces: no surface workspace changed' ;;
-# Word splitting is the intent: each name is one argument.
-# shellcheck disable=SC2086
-*) sdlc/scripts/lint-workspaces $surfaces ;;
-esac
+if [ -n "$paths" ]; then
+	sdlc/scripts/lint-workspaces --paths "$paths"
+else
+	sdlc/scripts/lint-workspaces
+fi

@@ -42,9 +42,9 @@ WORKSPACES=$(for entry in $ENTRIES; do printf '%s ' "${entry%%:*}"; done)
 # it. A shared input selects every workspace and the root: the path crates
 # every surface builds on, the files compiled in with include_str!, any
 # lock file, the toolchain, the lint and format rules, and this rung's own
-# scripts. `sdlc/scripts/lint --changed BASE` uses it.
-if [ "${1:-}" = --select ]; then
-	[ $# -eq 2 ] || { echo 'usage: lint-workspaces --select PATHS-FILE' >&2; exit 2; }
+# scripts. `--paths FILE` lints exactly the workspaces `--select` names.
+# `sdlc/scripts/lint --changed BASE` uses both.
+select_paths() {
 	WORKSPACES=$WORKSPACES awk '
 	BEGIN { n = split(ENVIRON["WORKSPACES"], ws, " ") }
 	/^(contract|thinkthen-core|standin|conformance|specification|\.cargo)\// ||
@@ -59,9 +59,21 @@ if [ "${1:-}" = --select ]; then
 	END {
 		if ("." in hit) print "."
 		for (i = 1; i <= n; i++) if (ws[i] in hit) print ws[i]
-	}' "$2"
-	exit
-fi
+	}' "$1"
+}
+case ${1:-} in
+--select | --paths)
+	[ $# -eq 2 ] || { printf 'usage: lint-workspaces %s PATHS-FILE\n' "$1" >&2; exit 2; }
+	selected=$(select_paths "$2") || exit 2
+	[ "$1" = --select ] && { [ -z "$selected" ] || printf '%s\n' "$selected"; exit 0; }
+	# The root workspace is lint's own business; the rest lint here.
+	set -- $(printf '%s\n' "$selected" | grep -vx '\.' || true)
+	if [ $# -eq 0 ]; then
+		printf '%s\n' 'lint-workspaces: no workspace reads a changed path'
+		exit 0
+	fi
+	;;
+esac
 
 # Named workspaces lint alone; none named lints every one. An unknown name
 # fails, so a typo never skips a lint.

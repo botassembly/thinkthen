@@ -126,6 +126,20 @@ ran=$(grep -c '|clippy ' "$work/log" || true)
 	fail=1
 }
 
+# `--paths FILE` lints the workspaces the changed paths select and no
+# other; a change no workspace reads runs no Clippy at all.
+for case in 'libraries/c/src/lib.rs:1' 'sdlc/records/x.md:0' 'contract/src/lib.rs:13'; do
+	printf '%s\n' "${case%:*}" > "$work/paths"
+	: > "$work/log"
+	STUB_LOG="$work/log" STUB_CFG="$work/cfg" PATH="$work/bin:$PATH" \
+		sh "$REPO/sdlc/scripts/lint-workspaces" --paths "$work/paths" > "$work/out" 2>&1 || true
+	ran=$(grep -c '|clippy ' "$work/log" || true)
+	[ "$ran" -eq "${case##*:}" ] || {
+		echo "FAIL lint-workspaces --paths with ${case%:*} ran $ran clippy calls, want ${case##*:}"
+		fail=1
+	}
+done
+
 # A missing pinned toolchain fails with its remedy; cargo never runs on it.
 printf '#!/bin/sh\necho 1.93.1-x86_64-unknown-linux-gnu\n' > "$work/bin/rustup"
 : > "$work/log"

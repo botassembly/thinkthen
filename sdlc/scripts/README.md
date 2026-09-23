@@ -6,7 +6,7 @@ The repository gate and its hand-run support scripts.
 | --- | --- |
 | `install` | Rung 0. Checks the gate tools, fetches the locked dependency closure, and fetches the advisory database |
 | `lint` | Rung 1. Runs policy, page, size, dependency, format, Clippy, and documentation checks. `lint --changed BASE` runs the cheap checks in full and the build checks only in the workspaces a change since BASE can reach; the full rung still runs before a hand-back |
-| `lint-workspaces`, `lint-workspaces-self-test` | Run Clippy and cargo-deny offline over each standalone workspace, or over the named ones, and prove with stub tools that no call can fetch and that `--select` maps changed paths to workspaces |
+| `lint-workspaces`, `lint-workspaces-self-test` | Run Clippy and cargo-deny offline over each standalone workspace, or over the named ones or those `--paths FILE` selects, and prove with stub tools that no call can fetch and that `--select` maps changed paths to workspaces |
 | `test` | Rung 2. Runs Rust tests and documentation tests, then `sdlc/live-test` on Linux |
 | `spec` | Rung 3. Runs executable specification pages, transforms, and green how-tos |
 | `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals |
