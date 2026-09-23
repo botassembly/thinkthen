@@ -881,3 +881,16 @@ Observed (t7b probes against this build): R3-4.sh 0 crashes (was 1). R5-6.sh 0 c
 R5-6 waiver, recorded. Two shapes stay open and are waived. First, an extent that runs into another readable allocation reads that allocation's bytes. No reader can see an allocation's end, so this remains the producer's lie. Second, off Linux, `mincore` sees unmapped pages only, so a guard page (mapped, unreadable) still faults there. macOS is the only such platform, and check.sh already names it experimental. Ian can overturn this waiver. The lever is a stronger probe on macOS (`mach_vm_read_overwrite`), or refusing input off Linux.
 
 Ian can overturn the probe decision too. The lever is to restore the absolute 4 MiB cap, which refuses this shape and every column past 4 MiB.
+
+## Surfaces review 7: each output child owns its buffers, and metadata rides through (refs R4-15)
+
+R4-15 found three faults in the frame that `annotate(on=)` returns.
+
+A moved child read freed memory. The C data interface lets a consumer move a child array out of a batch and release the parent, and the moved child must stay valid until its own release. Every child carried a release with no owner, and the root's release freed the whole batch. Decision: each emitted batch sits behind a reference count (`BatchShare`). The root and every child carry one share each. The root's release releases each child the consumer did not move out, then drops its own share. A moved child keeps its share, so the batch's buffers and the caller's aliased frame live until the moved child's release. An aliased original column still leaves its producer's own children to the producer, released when the last share drops.
+
+The output schema dropped every metadata pointer. A Polars `Enum` came back `Categorical`, and a field's own keys were lost. Decision: the schema copy keeps each field's metadata byte for byte, and the frame's root keeps the caller's schema metadata. A blob that names a negative length is dropped instead of walked.
+
+The answer columns' offsets were `values.len() as i32`, which wraps negative past 2 GiB of text. Decision: a text answer column past 2 GiB is refused as usage. The frame builder and the table builder share one offsets writer. Ian can overturn this. The lever is to widen such a column to the `U` layout (i64 offsets) instead of refusing it.
+
+Observed: t7b `R4-15a.py` under `MALLOC_PERTURB_=165` read the moved child's offsets pointer as `0xa5a5a5a5a5a5a5a5` and dumped core at the wave 7 tip, and passes on this build. `R4-15c.py` failed twice (Enum, field metadata) and passes. `tests/test_review7_arrow.py` runs from check.sh. It moves every child out in a child process under `MALLOC_PERTURB_`, releases the parent, and rereads each buffer table and the integer column's values. It also pins the Enum round trip and both metadata levels. Against a wheel whose children get no share and whose metadata copy returns null, all three tests fail. The unit tests `an_answer_column_past_i32_offsets_is_refused` and `schema_metadata_is_copied_byte_for_byte` fail against the matching one-line mutants.
+

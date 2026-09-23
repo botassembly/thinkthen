@@ -105,6 +105,9 @@ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review5_deadline.py -q
 echo "== the fifth review's verb questions, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review5_verbs.py -q
 
+echo "== the seventh review's Arrow ownership and metadata, null backend"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review7_arrow.py -q
+
 echo "== recognize and relate, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
 

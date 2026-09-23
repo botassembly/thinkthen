@@ -822,8 +822,8 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
 }
 
 /// One batch's whole allocation, handed to the consumer with the array.
-/// The array's `release` drops this box, so the memory lives exactly as
-/// long as the consumer owns the batch, per the C interface.
+/// The root and each child hold a share of it (`BatchShare`), so the
+/// memory lives until the consumer releases the last of them.
 ///
 /// Each batch carries its own root, because one stream may hand out
 /// several batches and every one must describe its own children: a shared
@@ -850,16 +850,61 @@ struct BatchKeep {
     hold: Option<std::sync::Arc<FrameColumn>>,
 }
 
-/// The batch release: the consumer is done with the arrays and their
-/// buffers, so the whole allocation goes. The release pointer is cleared
-/// as the C data interface requires, so a second call cannot free again.
-unsafe extern "C" fn batch_release(out: *mut ArrowArray) {
-    (*out).release = None;
-    let keep = (*out).private_data as *mut BatchKeep;
-    if !keep.is_null() {
-        (*out).private_data = std::ptr::null_mut();
-        drop(Box::from_raw(keep));
+/// One share of an emitted batch. The root and every child each carry one
+/// in `private_data`, so a consumer that moves a child out and releases the
+/// parent still owns the child's buffers, as the C data interface's rules
+/// for moving child arrays require. The batch is freed with its last share.
+type BatchShare = std::sync::Arc<BatchKeep>;
+
+/// Hand one batch to the consumer: every child gets its own share, then
+/// the root gets one.
+///
+/// # Safety
+/// `out` must be writable; the batch's child pointers point into its own
+/// boxes, which the shares keep alive.
+unsafe fn emit_batch(keep: BatchKeep, out: *mut ArrowArray) {
+    #[allow(clippy::arc_with_non_send_sync, reason = "raw Arrow pointers, single-threaded by contract")]
+    let share = std::sync::Arc::new(keep);
+    for &child in &share.child_ptrs {
+        (*child).private_data = Box::into_raw(Box::new(BatchShare::clone(&share))).cast();
+        (*child).release = Some(child_release);
     }
+    // The emitted root is this batch's own, so the second batch describes
+    // its own children rather than the first's.
+    *out = std::ptr::read(share.root.as_ref());
+    (*out).release = Some(root_release);
+    (*out).private_data = Box::into_raw(Box::new(share)).cast();
+}
+
+/// Drop the share a node carries and mark it released, as the C data
+/// interface requires, so a second call cannot free again.
+unsafe fn drop_share(node: *mut ArrowArray) {
+    (*node).release = None;
+    let share = (*node).private_data as *mut BatchShare;
+    if !share.is_null() {
+        (*node).private_data = std::ptr::null_mut();
+        drop(Box::from_raw(share));
+    }
+}
+
+/// A child's release: its share goes. The caller's aliased columns keep
+/// their producer's own children, which the frame hold releases when the
+/// last share drops, so this never walks below the child.
+unsafe extern "C" fn child_release(child: *mut ArrowArray) {
+    drop_share(child);
+}
+
+/// The root's release: release every child the consumer has not moved out
+/// (a moved child's slot reads released), then drop the root's share.
+unsafe extern "C" fn root_release(root: *mut ArrowArray) {
+    let count = (*root).n_children.max(0) as usize;
+    for place in 0..count {
+        let child = *(*root).children.add(place);
+        if let Some(release) = (*child).release {
+            release(child);
+        }
+    }
+    drop_share(root);
 }
 
 /// The owned pieces of one schema tree: every struct boxed, the
@@ -873,6 +918,8 @@ struct SchemaTree {
     boxes: Vec<Box<ArrowSchema>>,
     child_ptrs: Vec<Vec<*mut ArrowSchema>>,
     strings: Vec<CString>,
+    /// The metadata blobs the structs point at, copied byte for byte.
+    blobs: Vec<Vec<u8>>,
     /// The tree's root struct, the last node built; every build path ends
     /// with the root.
     root: *mut ArrowSchema,
@@ -884,6 +931,7 @@ impl Default for SchemaTree {
             boxes: Vec::new(),
             child_ptrs: Vec::new(),
             strings: Vec::new(),
+            blobs: Vec::new(),
             root: std::ptr::null_mut(),
         }
     }
@@ -902,12 +950,45 @@ impl SchemaTree {
         pointer
     }
 
+    /// Copy one metadata blob into the tree; a null stays null.
+    ///
+    /// The C data interface lays metadata out as an i32 pair count, then
+    /// each key and value as an i32 length and its bytes. Field metadata
+    /// carries a column's extension type (a Polars `Enum`, a timezone
+    /// rule), so the output keeps it. A blob naming a negative length is
+    /// malformed and is dropped instead of walked.
+    fn metadata(&mut self, value: *const c_char) -> *const c_char {
+        if value.is_null() {
+            return std::ptr::null();
+        }
+        let at = value as *const u8;
+        // SAFETY: the producer's blob is read only inside the lengths it
+        // declares, word by word, as the interface lays it out.
+        let length = |place: usize| i32::from_le_bytes(unsafe { word(at.add(place)) });
+        let Ok(pairs) = usize::try_from(length(0)) else {
+            return std::ptr::null();
+        };
+        let mut end = 4usize;
+        for _ in 0..pairs * 2 {
+            let Ok(size) = usize::try_from(length(end)) else {
+                return std::ptr::null();
+            };
+            end += 4 + size;
+        }
+        // SAFETY: `end` is the extent the blob's own lengths declare.
+        let blob = unsafe { std::slice::from_raw_parts(at, end) }.to_vec();
+        let pointer = blob.as_ptr() as *const c_char;
+        self.blobs.push(blob);
+        pointer
+    }
+
     /// One node over already-owned pieces; the child array is kept here so
     /// its pointer stays valid.
     fn node(
         &mut self,
         format: *const c_char,
         name: *const c_char,
+        metadata: *const c_char,
         flags: i64,
         children: Vec<*mut ArrowSchema>,
         dictionary: *mut ArrowSchema,
@@ -922,7 +1003,7 @@ impl SchemaTree {
         self.boxes.push(Box::new(ArrowSchema {
             format,
             name,
-            metadata: std::ptr::null(),
+            metadata,
             flags,
             n_children: count as i64,
             children: child_ptrs,
@@ -955,16 +1036,22 @@ impl SchemaTree {
             self.strings.push(text);
         }
         self.strings.push(format);
-        Ok(self.node(format_ptr, name_ptr, flags, Vec::new(), std::ptr::null_mut()))
+        Ok(self.node(format_ptr, name_ptr, std::ptr::null(), flags, Vec::new(), std::ptr::null_mut()))
     }
 
-    /// The struct node every frame hands out: the `+s` format, no name.
-    fn branch(&mut self, children: Vec<*mut ArrowSchema>) -> PyResult<*mut ArrowSchema> {
+    /// The struct node every frame hands out: the `+s` format, no name,
+    /// and the caller's own schema metadata when it has some.
+    fn branch(
+        &mut self,
+        children: Vec<*mut ArrowSchema>,
+        metadata: *const c_char,
+    ) -> PyResult<*mut ArrowSchema> {
+        let metadata = self.metadata(metadata);
         let format =
             CString::new("+s").map_err(|_| UsageError::new_err("a column format holds a NUL"))?;
         let format_ptr = format.as_ptr();
         self.strings.push(format);
-        Ok(self.node(format_ptr, std::ptr::null(), 0, children, std::ptr::null_mut()))
+        Ok(self.node(format_ptr, std::ptr::null(), metadata, 0, children, std::ptr::null_mut()))
     }
 
     /// Deep-copy one schema struct and its whole tree: names, formats,
@@ -977,6 +1064,7 @@ impl SchemaTree {
     unsafe fn copy(&mut self, source: *const ArrowSchema) -> *mut ArrowSchema {
         let format = self.text(unsafe { (*source).format });
         let name = self.text(unsafe { (*source).name });
+        let metadata = self.metadata(unsafe { (*source).metadata });
         let count = unsafe { (*source).n_children }.max(0) as usize;
         let mut children = Vec::with_capacity(count);
         for place in 0..count {
@@ -990,7 +1078,7 @@ impl SchemaTree {
             unsafe { self.copy(dictionary) }
         };
         let flags = unsafe { (*source).flags };
-        self.node(format, name, flags, children, dictionary)
+        self.node(format, name, metadata, flags, children, dictionary)
     }
 }
 
@@ -1094,7 +1182,7 @@ pub(crate) fn build_frame(
     for (place, name) in names.iter().enumerate() {
         schema_children.push(schema.leaf(Some(name), formats_for_new[place], 2)?);
     }
-    let schema_root = schema.branch(schema_children)?;
+    let schema_root = schema.branch(schema_children, hold.schema.metadata)?;
     let _ = schema_root;
     // One batch out per batch in, so aliased originals stay per-batch and
     // every batch keeps its own root.
@@ -1125,7 +1213,7 @@ pub(crate) fn build_frame(
                 buffers: buffers_ptr,
                 children: child.children,
                 dictionary: child.dictionary,
-                release: Some(batch_release),
+                release: None,
                 private_data: std::ptr::null_mut(),
             }));
         }
@@ -1226,15 +1314,10 @@ pub(crate) fn build_frame(
                     2i64
                 }
                 _ => {
-                    let mut offsets = Vec::with_capacity((length + 1) * 4);
-                    let mut values = Vec::new();
-                    offsets.extend_from_slice(&0i32.to_le_bytes());
-                    for text in &values_str {
-                        if let Some(text) = text {
-                            values.extend_from_slice(text.as_bytes());
-                        }
-                        offsets.extend_from_slice(&(values.len() as i32).to_le_bytes());
-                    }
+                    let (offsets, values) = utf8_buffers(
+                        values_str.iter().map(|text| text.as_deref().unwrap_or("")),
+                        length,
+                    )?;
                     local.push(validity);
                     local.push(offsets);
                     local.push(values);
@@ -1263,7 +1346,7 @@ pub(crate) fn build_frame(
                 buffers: std::ptr::null_mut(),
                 children: std::ptr::null_mut(),
                 dictionary: std::ptr::null_mut(),
-                release: Some(batch_release),
+                release: None,
                 private_data: std::ptr::null_mut(),
             }));
         }
@@ -1286,7 +1369,7 @@ pub(crate) fn build_frame(
             buffers: root_buffers.as_ptr() as *mut *const c_void,
             children: child_ptrs.as_ptr() as *mut *mut ArrowArray,
             dictionary: std::ptr::null_mut(),
-            release: Some(batch_release),
+            release: None,
             private_data: std::ptr::null_mut(),
         });
         batches.push(Some(BatchKeep {
@@ -1306,6 +1389,32 @@ pub(crate) fn build_frame(
         batches,
         emitted: 0,
         error: None,
+    })
+}
+
+/// The offsets and values buffers of one `u` column this surface builds.
+///
+/// The `u` layout's offsets are i32, so a column whose text passes 2 GiB
+/// cannot be described by it; that column is refused instead of handed
+/// out with offsets that wrapped negative.
+fn utf8_buffers<'a>(
+    texts: impl Iterator<Item = &'a str>,
+    length: usize,
+) -> PyResult<(Vec<u8>, Vec<u8>)> {
+    let mut offsets = Vec::with_capacity((length + 1) * 4);
+    let mut values = Vec::new();
+    offsets.extend_from_slice(&0i32.to_le_bytes());
+    for text in texts {
+        values.extend_from_slice(text.as_bytes());
+        offsets.extend_from_slice(&utf8_offset(values.len())?.to_le_bytes());
+    }
+    Ok((offsets, values))
+}
+
+/// One `u` offset, refused when the text before it passes i32.
+fn utf8_offset(end: usize) -> PyResult<i32> {
+    i32::try_from(end).map_err(|_| {
+        UsageError::new_err("an answer column's text passes the 2 GiB a text column's offsets can name")
     })
 }
 
@@ -1359,7 +1468,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
     for (name, value) in columns {
         schema_children.push(schema.leaf(Some(name), value.format(), 2)?);
     }
-    let schema_root = schema.branch(schema_children)?;
+    let schema_root = schema.branch(schema_children, std::ptr::null())?;
     let _ = schema_root;
 
     let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);
@@ -1376,13 +1485,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         let mut local: Vec<Vec<u8>> = Vec::new();
         let n_buffers = match value {
             TableValue::Texts(texts) => {
-                let mut offsets = Vec::with_capacity((length + 1) * 4);
-                let mut values = Vec::new();
-                offsets.extend_from_slice(&0i32.to_le_bytes());
-                for text in texts {
-                    values.extend_from_slice(text.as_bytes());
-                    offsets.extend_from_slice(&(values.len() as i32).to_le_bytes());
-                }
+                let (offsets, values) = utf8_buffers(texts.iter().map(String::as_str), length)?;
                 local.push(validity);
                 local.push(offsets);
                 local.push(values);
@@ -1429,7 +1532,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
             buffers: std::ptr::null_mut(),
             children: std::ptr::null_mut(),
             dictionary: std::ptr::null_mut(),
-            release: Some(batch_release),
+            release: None,
             private_data: std::ptr::null_mut(),
         }));
     }
@@ -1450,7 +1553,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
         buffers: root_buffers.as_ptr() as *mut *const c_void,
         children: child_ptrs.as_ptr() as *mut *mut ArrowArray,
         dictionary: std::ptr::null_mut(),
-        release: Some(batch_release),
+        release: None,
         private_data: std::ptr::null_mut(),
     });
     let batches = vec![Some(BatchKeep {
@@ -1496,12 +1599,7 @@ unsafe extern "C" fn frame_get_next(stream: *mut ArrowArrayStream, out: *mut Arr
         let keep = state.batches[state.emitted].take();
         state.emitted += 1;
         if let Some(keep) = keep {
-            // The emitted root is this batch's own, so the second batch
-            // describes its own children rather than the first's.
-            *out = std::ptr::read(keep.root.as_ref());
-            let keep_ptr = Box::into_raw(Box::new(keep));
-            (*out).private_data = keep_ptr as *mut c_void;
-            (*out).release = Some(batch_release);
+            emit_batch(keep, out);
             return 0;
         }
     }
@@ -2187,5 +2285,34 @@ mod malformed_tests {
         let held = [std::ptr::null(), views.as_ptr().cast(), abc.cast(), abc.cast(), sizes.as_ptr().cast()];
         let outer = array_of(&held, 1);
         assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
+    }
+
+    #[test]
+    fn an_answer_column_past_i32_offsets_is_refused() {
+        // Review 7 (R4-15): the output offsets were `len as i32`, which
+        // wraps negative past 2 GiB of text.
+        assert_eq!(utf8_offset(i32::MAX as usize).ok(), Some(i32::MAX));
+        assert_eq!(
+            refusal(utf8_offset(i32::MAX as usize + 1)),
+            "an answer column's text passes the 2 GiB a text column's offsets can name"
+        );
+    }
+
+    #[test]
+    fn schema_metadata_is_copied_byte_for_byte() {
+        // Review 7 (R4-15): the output schema set every metadata pointer
+        // to null, so a Polars Enum came back Categorical and a field's
+        // own keys were lost.
+        let mut blob = 1i32.to_le_bytes().to_vec();
+        for part in [b"unit".as_slice(), b"cm"] {
+            blob.extend_from_slice(&(part.len() as i32).to_le_bytes());
+            blob.extend_from_slice(part);
+        }
+        let mut tree = SchemaTree::default();
+        let copied = tree.metadata(blob.as_ptr().cast());
+        assert_ne!(copied, blob.as_ptr().cast());
+        assert_eq!(unsafe { std::slice::from_raw_parts(copied as *const u8, blob.len()) }, blob.as_slice());
+        let negative = (-1i32).to_le_bytes();
+        assert!(tree.metadata(negative.as_ptr().cast()).is_null());
     }
 }
