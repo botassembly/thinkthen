@@ -1769,6 +1769,11 @@ mod signal_tests {
     /// Install a quiet host handler, then ours chained after it: the
     /// chain arm's shape.
     fn install_after_a_quiet_host() {
+        // Once ours is installed, a second quiet host would replace it
+        // for good, and a later test's SIGINT would never reach ours.
+        if HANDLER_SET.load(Ordering::SeqCst) {
+            return;
+        }
         unsafe {
             let mut host: libc::sigaction = std::mem::zeroed();
             host.sa_sigaction = quiet_host as extern "C" fn(libc::c_int) as usize;
