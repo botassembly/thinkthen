@@ -154,11 +154,15 @@ slice proves it: case 13's `nearest_level` (`mid`) is compared against
   fork, and nothing is built in the postmaster.
 - **Saved answers.** Every decision a warm pass or a single
   `thinkthen_decide` judges is saved in the backend, keyed by the
-  question and the evidence, and `thinkthen_decide` reads it before
-  sending. The table holds at most 16 MiB of question digests and
-  evidence per backend. Past that the oldest answers leave first, and a
-  later decide on an evicted pair sends again. `thinkthen_usage` counts
-  an answer read back from the table in `cache_answers`.
+  question's digest, the model it asks, and the evidence, and
+  `thinkthen_decide` reads it before sending. A configured
+  `thinkthen.api_key` still refuses the call before the table is read.
+  The table's budget is 16 MiB per backend, counting each question
+  digest and evidence twice (the map and the eviction order), so it
+  holds about 8 MiB of distinct pairs. Past that the oldest answers
+  leave first, and a later decide on an evicted pair sends again.
+  `thinkthen_usage` counts an answer read back from the table in
+  `cache_answers`.
 - **Cancellation channel.** PostgreSQL's own interrupt flag: the batch
   poll reads `InterruptPending`, cancels the engine's token, and the
   proper error raises through `check_for_interrupts!()`, so

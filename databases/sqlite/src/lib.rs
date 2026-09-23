@@ -316,6 +316,16 @@ fn named_file(argument: &str) -> Result<(String, Stamp), String> {
     Ok((text, stamp))
 }
 
+/// The part of the answer map's key a question gives: its digest (the
+/// text, the verb's members, and the threshold) and the model it asks,
+/// which the digest leaves out. Two question files that differ only in
+/// the model ask different judges (review 5, contract reviewer). The
+/// engine is one per process, and the deadline only bounds the wait, so
+/// nothing else enters the key.
+fn question_key(question: &Question) -> String {
+    format!("{} {}", question.digest(), question.model())
+}
+
 /// The question one argument names: a file with the `'@'` spelling, a JSON
 /// question, or plain text with the default cut.
 fn question(argument: &str) -> Result<Arc<Question>, Error> {
@@ -605,7 +615,7 @@ fn decide(context: &Context<'_>) -> Result<Option<i64>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Decision(answer)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(answer.value().map(|held| if held { 1 } else { 0 }));
@@ -627,7 +637,7 @@ fn choose(context: &Context<'_>) -> Result<Option<String>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Choice(choice)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(choice.clone());
@@ -652,7 +662,7 @@ fn score(context: &Context<'_>) -> Result<Option<f64>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Score(scored)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(Some(scored.value));
@@ -677,7 +687,7 @@ fn tag(context: &Context<'_>) -> Result<Option<String>, Error> {
         let options = call_options(context, &token)?;
         let question = question(context.get_raw(0).as_str()?)?;
         let evidence = context.get_raw(1).as_str()?;
-        let key = (question.digest(), evidence.to_string());
+        let key = (question_key(&question), evidence.to_string());
         if let Some(Saved::Tags(labels)) = answers().lock().unwrap().get(&key) {
             cache_hits().fetch_add(1, Ordering::Relaxed);
             return Ok(Some(serde_json::to_string(labels).unwrap()));
@@ -712,14 +722,15 @@ fn field_of(field: &Annotated) -> serde_json::Value {
     }
 }
 
-/// The digest of a question set over its members, so `annotate` saves
-/// under its own key.
+/// The key of a question set over its named members, so `annotate`
+/// saves under its own key.
 fn set_digest(set: &QuestionSet) -> String {
-    set.questions()
-        .iter()
-        .map(Question::digest)
-        .collect::<Vec<_>>()
-        .join("+")
+    // Each field's name beside its question's key: a cached object answers
+    // under the names it was built with (review 5: a renamed field was
+    // answered under the old name). JSON keeps the pairs unambiguous.
+    let pairs: Vec<(&String, String)> =
+        set.names().iter().zip(set.questions().iter().map(question_key)).collect();
+    serde_json::to_string(&pairs).unwrap_or_default()
 }
 
 /// `thinkthen_annotate(set, text)`: one object, one field per question in
@@ -827,14 +838,17 @@ struct WarmGroup {
 }
 
 /// The warm aggregate's state: one group per question, keyed by its
-/// digest, so interleaved questions accumulate instead of flushing on
+/// question key, so interleaved questions accumulate instead of flushing on
 /// every change (review 4, item 15 — the single-group shape degraded an
-/// alternating query to one round per row). The map finds a row's group
-/// in constant time (review 5: a linear search over the groups made
-/// 40,000 distinct questions take 6.57 s against 2.67 s before).
+/// alternating query to one round per row). The groups keep first-seen
+/// order, so finalize sends them in the order the rows named them, and
+/// the index finds a row's group in constant time (review 5: a linear
+/// search over the groups made 40,000 distinct questions take 6.57 s
+/// against 2.67 s before).
 #[derive(Default)]
 struct WarmState {
-    groups: HashMap<String, WarmGroup>,
+    groups: Vec<(String, WarmGroup)>,
+    index: HashMap<String, usize>,
     judged: u64,
 }
 
@@ -863,22 +877,23 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
         guarded("thinkthen_warm", || {
             let question = question(context.get_raw(0).as_str()?)?;
             let text = context.get_raw(1).as_str()?.to_string();
-            let digest = question.digest();
-            if answers().lock().unwrap().contains_key(&(digest.clone(), text.clone())) {
+            let key = question_key(&question);
+            if answers().lock().unwrap().contains_key(&(key.clone(), text.clone())) {
                 cache_hits().fetch_add(1, Ordering::Relaxed);
                 return Ok(());
             }
-            let group = state.groups.entry(digest.clone()).or_insert_with(|| WarmGroup {
-                question: question.clone(),
-                pending: Vec::new(),
+            let at = *state.index.entry(key.clone()).or_insert_with(|| {
+                state.groups.push((key.clone(), WarmGroup { question: question.clone(), pending: Vec::new() }));
+                state.groups.len() - 1
             });
+            let group = &mut state.groups[at].1;
             group.pending.push(text);
             if group.pending.len() >= CHUNK {
-                // The drained group leaves the map: a later row for the
-                // same question opens a fresh one.
-                if let Some(group) = state.groups.remove(&digest) {
-                    state.judged += flush(connection_of(context), &digest, group)?;
-                }
+                // A full chunk flushes in place; the emptied group stays
+                // in its place for the question's later rows.
+                let pending = std::mem::take(&mut group.pending);
+                let question = group.question.clone();
+                state.judged += flush(connection_of(context), &key, WarmGroup { question, pending })?;
             }
             Ok(())
         })
@@ -892,6 +907,7 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
         guarded("thinkthen_warm", || {
             if let Some(state) = state.as_mut() {
                 for (digest, group) in std::mem::take(&mut state.groups) {
+                    // First-seen order, the order the rows named them.
                     state.judged += flush(connection_of(context), &digest, group)?;
                 }
                 return Ok(Some(state.judged as i64));
@@ -1777,6 +1793,27 @@ mod mapping_tests {
             "the watch left the registry"
         );
         drop(watch);
+    }
+
+    /// The answer map's key (review 5, contract reviewer): a question
+    /// file that names another model asks another judge, and the digest
+    /// leaves the model out, so the key carries it.
+    #[test]
+    fn the_answer_key_separates_models() {
+        let first = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-a"}"#)
+            .expect("the first question parses");
+        let second = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-b"}"#)
+            .expect("the second question parses");
+        assert_eq!(first.digest(), second.digest(), "the digest leaves the model out");
+        assert_ne!(question_key(&first), question_key(&second));
+        // The annotate key carries each field's name: a cached object
+        // answers with the names it was built under, so two sets that ask
+        // the same question under different names must not share it. (A
+        // set cannot name a model; its questions ask the default.)
+        let set = |text: &str| QuestionSet::from_json(text).expect("the set parses");
+        let base = set(r#"{"version": 1, "questions": {"red": {"decide": "Is it red?"}}}"#);
+        let renamed = set(r#"{"version": 1, "questions": {"crimson": {"decide": "Is it red?"}}}"#);
+        assert_ne!(set_digest(&base), set_digest(&renamed));
     }
 
     /// The flag the fork test's child sets for its own fake host check.

@@ -94,8 +94,10 @@ static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 /// answer table holds (review 5: 270,000 warmed answers grew one backend
 /// from 13 MB to 150 MB, never released). Past the budget the oldest
 /// answers leave first, so a working set larger than the budget turns
-/// over and a later decide on an evicted pair sends again. 16 MiB holds
-/// eight full warm passes (each is capped at 2 MiB of state).
+/// over and a later decide on an evicted pair sends again. The budget
+/// counts each key twice (the map and the eviction order), so it holds
+/// about 8 MiB of distinct digests and evidence: about four full warm
+/// passes (each is capped at 2 MiB of state).
 const SAVED_ANSWER_BYTES: usize = 16 * 1024 * 1024;
 
 /// The per-backend answer table: every decision a warm pass or a single
@@ -145,13 +147,28 @@ fn answers() -> &'static std::sync::Mutex<SavedAnswers> {
 /// `cache_answers` column.
 static SAVED_HITS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
+/// The part of the table's key a question gives: its digest (the text,
+/// the verb's members, and the threshold) and the model it asks, which
+/// the digest leaves out. Two question files that differ only in the
+/// model ask different judges (review 5, contract reviewer). The engine
+/// is one per backend, and no setting changes an answer (the deadline
+/// only bounds the wait), so nothing else enters the key.
+fn question_key(question: &Question) -> String {
+    format!("{} {}", question.digest(), question.model())
+}
+
+/// The table's key for one question and evidence.
+fn answer_key(question: &Question, evidence: &str) -> (String, String) {
+    (question_key(question), evidence.to_owned())
+}
+
 /// The saved decision for a question and evidence, if one was judged.
 fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contract::Answer> {
     let answer = answers()
         .lock()
         .unwrap()
         .map
-        .get(&(question.digest(), evidence.to_string()))
+        .get(&answer_key(question, evidence))
         .copied()?;
     SAVED_HITS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     Some(answer)
@@ -619,16 +636,19 @@ fn annotated_as_json(held: &Annotated) -> serde_json::Value {
 fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bool> {
     let question = question_of(question);
     let evidence = evidence?;
+    // The engine first: a configured key refuses every call, a saved
+    // answer included.
+    let engine = engine();
     if let Some(answer) = saved_decision(&question, evidence) {
         return answer.value();
     }
-    match engine().decide_opts(&question, evidence, call_options()) {
+    match engine.decide_opts(&question, evidence, call_options()) {
         Ok(answer) => {
             let value = answer.value();
             answers()
                 .lock()
                 .unwrap()
-                .insert((question.digest(), evidence.to_string()), answer);
+                .insert(answer_key(&question, evidence), answer);
             value
         }
         Err(error) => raise(error),
@@ -1142,7 +1162,7 @@ impl Aggregate<Warm> for Warm {
             // worker spawns: a bad question file raises its own error
             // (naming the file) instead of dying inside the worker.
             let question = question_of(Some(&question_text));
-            let digest = question.digest();
+            let key = question_key(&question);
             let engine = engine();
             let judged_keys = distinct.clone();
             let outcome = run_batch(move |cancel, budget| {
@@ -1158,7 +1178,7 @@ impl Aggregate<Warm> for Warm {
                 Ok(held) => {
                     let mut saved = answers().lock().unwrap();
                     for (evidence, judgment) in judged_keys.iter().zip(held) {
-                        saved.insert((digest.clone(), evidence.clone()), judgment.answer);
+                        saved.insert((key.clone(), evidence.clone()), judgment.answer);
                     }
                     judged += i64::try_from(judged_keys.len()).unwrap_or(i64::MAX);
                 }
@@ -1415,6 +1435,21 @@ mod mapping_tests {
         assert_eq!(warm_count(&merged), 3);
         assert_eq!(warm_rows(&merged).len(), 3);
         assert_eq!(warm_rows(&merged)[2].0, "second question");
+    }
+
+    /// The answer table's key (review 5, contract reviewer): two
+    /// questions with the same text and threshold digest alike, but a
+    /// question file that names another model asks another judge, so its
+    /// saved answer must not answer the first.
+    #[test]
+    fn the_answer_key_separates_models() {
+        let first = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-a"}"#)
+            .expect("the first question parses");
+        let second = Question::from_json(r#"{"decide": "Is it red?", "threshold": 0.5, "model": "judge-b"}"#)
+            .expect("the second question parses");
+        assert_eq!(first.digest(), second.digest(), "the digest leaves the model out");
+        assert_ne!(answer_key(&first, "apple"), answer_key(&second, "apple"));
+        assert_eq!(answer_key(&first, "apple"), answer_key(&first, "apple"));
     }
 
     /// The answer table's byte budget (review 5): past it the oldest
