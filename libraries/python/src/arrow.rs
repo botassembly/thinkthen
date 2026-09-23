@@ -2373,18 +2373,28 @@ mod malformed_tests {
         // Review 7, second pass: the metadata walk trusted every length.
         // A key length past a guard page, a value length past it, a pair
         // count of 2^31 - 1, and a 2 GiB key length in a readable blob
-        // each read past the blob and killed the host.
-        let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+        // each read past the blob and killed the host. Each snapshot is
+        // taken after its region maps, so the region's readable page is in
+        // it and only the length checks can refuse.
+        let snapshot = || {
+            let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+            memory
+        };
         let words = |parts: &[i32]| parts.iter().flat_map(|one| one.to_le_bytes()).collect::<Vec<u8>>();
         let mut value_past = words(&[1, 4]);
         value_past.extend_from_slice(b"unit");
         value_past.extend_from_slice(&5000i32.to_le_bytes());
         for blob in [words(&[1, 100]), value_past, words(&[i32::MAX])] {
             let (_region, at) = Guarded::ending_with(&blob);
-            assert_eq!(refusal(SchemaTree::default().metadata(at.cast(), Some(&memory))), BAD_METADATA);
+            assert_eq!(refusal(SchemaTree::default().metadata(at.cast(), Some(&snapshot()))), BAD_METADATA);
         }
         let huge = words(&[1, 0x7fff_fff0]);
-        assert_eq!(refusal(SchemaTree::default().metadata(huge.as_ptr().cast(), Some(&memory))), BAD_METADATA);
+        assert_eq!(refusal(SchemaTree::default().metadata(huge.as_ptr().cast(), Some(&snapshot()))), BAD_METADATA);
+        // A sound blob against the same guard page copies: the refusals
+        // above come from the lengths, not from a stale snapshot.
+        let sound = [words(&[1, 1]), b"k".to_vec(), words(&[1]), b"v".to_vec()].concat();
+        let (_region, at) = Guarded::ending_with(&sound);
+        assert!(SchemaTree::default().metadata(at.cast(), Some(&snapshot())).is_ok_and(|copied| !copied.is_null()));
     }
 
     #[test]
