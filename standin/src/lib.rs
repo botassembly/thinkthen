@@ -701,6 +701,35 @@ fn score_level_and_probability(
 /// What left the machine this session: the counted sends and the vendor's
 /// reported tokens.
 static REQUESTS: AtomicU64 = AtomicU64::new(0);
+
+/// Requests this process has on the wire right now, and the most it has
+/// had at once, so a test can prove a width holds across the whole state
+/// table rather than one state at a time (review finding 15). One atomic
+/// pair per send; nothing in production reads the peak.
+static WIRE_INFLIGHT: AtomicU64 = AtomicU64::new(0);
+static WIRE_PEAK: AtomicU64 = AtomicU64::new(0);
+
+/// Enter one wire send, recording the peak.
+fn wire_enter() {
+    let now = WIRE_INFLIGHT.fetch_add(1, Ordering::Relaxed) + 1;
+    WIRE_PEAK.fetch_max(now, Ordering::Relaxed);
+}
+
+/// Leave one wire send; the guard's drop calls this at the iteration's
+/// end, after the body is read or the attempt has failed, and before any
+/// retry sleep.
+fn wire_leave() {
+    WIRE_INFLIGHT.fetch_sub(1, Ordering::Relaxed);
+}
+
+/// One send's tenure on the wire.
+struct WireGuard;
+
+impl Drop for WireGuard {
+    fn drop(&mut self) {
+        wire_leave();
+    }
+}
 static TOKENS: AtomicU64 = AtomicU64::new(0);
 
 /// Zero the counters.
@@ -919,6 +948,9 @@ fn post(
             .config()
             .timeout_per_call(Some(budget))
             .build();
+        // On the wire from the send to the read body's end.
+        let _on_the_wire = WireGuard;
+        wire_enter();
         // The counter counts what left the process. A send that left
         // counts, and a retry that is sent counts again because the vendor
         // bills each one. A connection refused before anything left counts
@@ -1090,6 +1122,18 @@ struct Inner {
     timeout: Duration,
     agent: ureq::Agent,
     gate: Gate,
+    /// The lookup this state was last served on, in logical ticks, read by
+    /// the victim chooser so evictions take the least-recently-used idle
+    /// state and never a busy one while an idle one exists.
+    last_used: AtomicU64,
+}
+
+impl Drop for Inner {
+    /// Count the drop so a test can prove retirement closes states rather
+    /// than leaking them (review finding 15).
+    fn drop(&mut self) {
+        INNER_DROPS.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 /// The counts the width gate keeps, behind its own lock.
@@ -1149,10 +1193,20 @@ impl Gate {
 /// One state per settings value is the rule (review finding, 2026-09-22):
 /// two engines whose settings differ never share a gate or a pool, so a
 /// width of 1 holds across them and no call rebuilds a neighbour's state.
-/// A process that uses more than sixteen distinct settings values retires
-/// the slot its key hashes to and leaks the retired pool the way a fork
-/// retires the parent's; sixteen covers every surface's own use.
-const STATE_SLOTS: usize = 16;
+/// A process that uses more distinct settings values than this evicts the
+/// least-recently-used idle state, retiring its pool to a list that closes
+/// its sockets once no request holds it; sixty-four covers every surface's
+/// own use with room for a host's churn.
+const STATE_SLOTS: usize = 64;
+
+/// A monotonically advancing counter of state lookups, the logical clock
+/// the LRU reads. A real clock would need a syscall or a lazy `Instant`,
+/// and a counter orders recency just as well with one atomic add.
+static LOOKUPS: AtomicU64 = AtomicU64::new(0);
+
+/// How many `Inner` values have been dropped, so a test can prove retired
+/// states are closed rather than leaked (review finding 15).
+static INNER_DROPS: AtomicU64 = AtomicU64::new(0);
 
 /// One state per settings value, behind an array of atomic pointers that
 /// are exchanged and never unwound.
@@ -1160,10 +1214,117 @@ const STATE_SLOTS: usize = 16;
 /// A fork during a batch leaves locks held by threads that do not exist in
 /// the child, so the child's rebuild path must take no lock any request
 /// path can hold. The read is one atomic load and an `Arc` clone per
-/// slot; the publish is a fresh construction and one compare-and-swap, and
-/// a value a replacement retires is leaked on purpose.
+/// slot; the publish is a fresh construction and one compare-and-swap. A
+/// value an eviction replaces moves to [`RETIRED`], whose sweep closes its
+/// pool once no request holds it, so churn through more settings values
+/// than [`STATE_SLOTS`] holds file descriptors flat instead of leaking a
+/// pool per eviction forever.
 static STATES: [AtomicPtr<Arc<Inner>>; STATE_SLOTS] =
     [const { AtomicPtr::new(ptr::null_mut()) }; STATE_SLOTS];
+
+/// A retired state waiting for its last holder to finish, on a lock-free
+/// stack a fork can carry safely.
+///
+/// The node owns one strong reference; in-flight requests own the others.
+/// [`sweep`] drops the node — and with it the pool and its idle sockets —
+/// only when the node's reference is the last one and the retirement is
+/// older than [`RETIRE_GRACE`] (see its comment for the residual window).
+struct Retired {
+    inner: Arc<Inner>,
+    retired_at: Instant,
+    next: *mut Retired,
+}
+
+/// The head of the retired stack.
+static RETIRED: AtomicPtr<Retired> = AtomicPtr::new(ptr::null_mut());
+
+/// How long a retired state must have been idle before a sweep may close
+/// its pool.
+///
+/// A slot reader loads a pointer and clones the `Arc` behind it in two
+/// adjacent steps; a node can only be freed by a sweep that sees the
+/// node's reference as the last one. A node is retired the moment it
+/// leaves its slot, so a pointer a reader just loaded from a slot cannot
+/// belong to a node retired before [`RETIRE_GRACE`], and no sweep before
+/// that grace can free it. The residual window is a reader preempted for
+/// the whole grace exactly between its load and its clone — vanishingly
+/// rare, and the trade for not taking a lock the fork rule forbids. The
+/// pre-fix behavior leaked every retired pool forever; the grace bounds
+/// the leak to five seconds.
+#[cfg(not(test))]
+const RETIRE_GRACE: Duration = Duration::from_secs(5);
+
+/// Under test the grace is fifty milliseconds, so a churn proof can wait
+/// it out without sleeping for seconds; the production value above is
+/// the one a shipped build runs with.
+#[cfg(test)]
+const RETIRE_GRACE: Duration = Duration::from_millis(50);
+
+/// Retire one state: push it onto the stack for a later sweep.
+fn retire(inner: Arc<Inner>) {
+    let node = Box::into_raw(Box::new(Retired {
+        inner,
+        retired_at: Instant::now(),
+        next: ptr::null_mut(),
+    }));
+    push_retired(node);
+}
+
+/// Push one node or a chain of them onto the retired stack.
+///
+/// `nodes` may be a chain linked through `next`; the push splices the
+/// current head onto the chain's tail and publishes the chain with one
+/// compare-and-swap, retrying when another thread moved the head first.
+fn push_retired(mut nodes: *mut Retired) {
+    if nodes.is_null() {
+        return;
+    }
+    let mut tail = nodes;
+    // SAFETY: `nodes` is a chain this thread built or stole whole, and no
+    // other thread can reach it until the publish below succeeds.
+    while !unsafe { (*tail).next }.is_null() {
+        tail = unsafe { (*tail).next };
+    }
+    let mut head = RETIRED.load(Ordering::Acquire);
+    loop {
+        // SAFETY: as above.
+        unsafe { (*tail).next = head };
+        match RETIRED.compare_exchange(head, nodes, Ordering::AcqRel, Ordering::Acquire) {
+            Ok(_) => return,
+            Err(moved) => head = moved,
+        }
+    }
+}
+
+/// Close the pools of retired states no request holds and no reader can
+/// still be reaching for, and keep the ones still in flight.
+///
+/// The sweep steals the whole stack, walks it, and pushes the survivors
+/// back — all with atomics, so a fork carries whatever half-swept state it
+/// inherits without a lock to deadlock on.
+fn sweep() {
+    let mut node = RETIRED.swap(ptr::null_mut(), Ordering::AcqRel);
+    let mut keep = ptr::null_mut();
+    while !node.is_null() {
+        // SAFETY: the swap stole the whole stack; this thread walks it
+        // alone until it pushes the survivors back.
+        let next = unsafe { (*node).next };
+        let alone = Arc::strong_count(unsafe { &(*node).inner }) == 1;
+        let aged = unsafe { (*node).retired_at }.elapsed() >= RETIRE_GRACE;
+        if alone && aged {
+            // SAFETY: the node left the stack with the swap and leaves no
+            // other handle; dropping the box drops the last reference, the
+            // `Inner`, and its pool's idle sockets.
+            drop(unsafe { Box::from_raw(node) });
+        } else {
+            // SAFETY: as above.
+            unsafe { (*node).next = keep };
+            keep = node;
+        }
+        node = next;
+    }
+    push_retired(keep);
+}
 
 /// Whether one state answers this pid and these settings.
 fn state_matches(inner: &Inner, pid: u32, settings: &ResolvedConfig) -> bool {
@@ -1227,6 +1388,7 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
             counts: Mutex::new(GateCounts { busy: 0, limit: width }),
             signal: Condvar::new(),
         },
+        last_used: AtomicU64::new(0),
     })
 }
 
@@ -1234,36 +1396,46 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
 /// published into its own slot, so two engines with different settings
 /// never share a gate or a pool.
 ///
+/// The home slot is claimed first, because two threads publishing one
+/// settings value race the same compare-and-swap there and exactly one
+/// wins. Every publish passes through [`dedup_after_publish`], and a
+/// retraction restarts the whole lookup rather than answering with the
+/// other copy, so two simultaneous publishers converge on one state
+/// instead of trading retracted states back and forth.
+///
 /// # Errors
 ///
 /// Returns the options' own failure when the call is already stopped, and
 /// an error of the backend kind when the pool cannot be built.
 fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>, Error> {
     let now = std::process::id();
-    if let Some(inner) = state_lookup(now, settings) {
-        return Ok(inner);
-    }
-    Error::guard(options)?;
-    let fresh = Arc::new(build_inner(now, settings)?);
-    let boxed = Box::into_raw(Box::new(Arc::clone(&fresh)));
-    let home = home_slot(settings);
-    // Walk the probe order from home: an empty slot takes the publish, and
-    // a slot another thread is publishing the same settings into answers
-    // instead of growing a second state for one settings value.
-    for step in 0..STATE_SLOTS {
-        let place = (home + step) % STATE_SLOTS;
+    loop {
+        if let Some(inner) = state_lookup(now, settings) {
+            return Ok(inner);
+        }
+        Error::guard(options)?;
+        let fresh = Arc::new(build_inner(now, settings)?);
+        let boxed = Box::into_raw(Box::new(Arc::clone(&fresh)));
+        let home = home_slot(settings);
+
+        // Claim the home slot first: two publishers of one settings value
+        // race the SAME compare-and-swap here, so exactly one wins and the
+        // loser answers with the winner's state (review finding 15).
+        let mut published_at = None;
         loop {
-            let held = STATES[place].load(Ordering::Acquire);
+            let held = STATES[home].load(Ordering::Acquire);
             if held.is_null() {
-                if STATES[place]
+                if STATES[home]
                     .compare_exchange(ptr::null_mut(), boxed, Ordering::AcqRel, Ordering::Acquire)
                     .is_ok()
                 {
-                    return Ok(fresh);
+                    published_at = Some(home);
+                    break;
                 }
                 continue;
             }
-            // SAFETY: a stored pointer is never freed.
+            // SAFETY: a stored pointer left its slot only through an
+            // eviction, and a sweep frees a retired box only after the grace.
             let inner = unsafe { (*held).clone() };
             if state_matches(&inner, now, settings) {
                 // SAFETY: `boxed` was never published, so this is the only
@@ -1271,36 +1443,218 @@ fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>,
                 drop(unsafe { Box::from_raw(boxed) });
                 return Ok(inner);
             }
+            if evictable(held, now) {
+                if STATES[home]
+                    .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
+                    .is_ok()
+                {
+                    // SAFETY: the swap won, so the box this slot held is
+                    // ours alone to take; its `Arc` moves to the retired
+                    // stack, whose sweep closes the pool once no request
+                    // holds it.
+                    let old = unsafe { *Box::from_raw(held) };
+                    retire(old);
+                    published_at = Some(home);
+                    break;
+                }
+                continue;
+            }
+            // The home slot is held by an active different settings
+            // value: fall through to the walk and the victim.
             break;
         }
-    }
-    // Every slot holds a different settings value: retire one from a
-    // vanished pid first, or else the home slot, and leak what was there
-    // for the same reason a fork retires rather than frees.
-    let stale = (0..STATE_SLOTS).find(|place| {
-        let held = STATES[*place].load(Ordering::Acquire);
-        // SAFETY: a stored pointer is never freed.
-        !held.is_null() && unsafe { (&*held).pid } != now
-    });
-    let place = stale.unwrap_or(home);
-    loop {
-        let held = STATES[place].load(Ordering::Acquire);
-        if !held.is_null() {
-            // SAFETY: a stored pointer is never freed.
-            let inner = unsafe { (*held).clone() };
-            if state_matches(&inner, now, settings) {
-                // SAFETY: as above, the box was never published.
-                drop(unsafe { Box::from_raw(boxed) });
-                return Ok(inner);
+
+        // Walk the probe order for an empty slot, or a slot another
+        // thread is publishing the same settings into.
+        if published_at.is_none() {
+            'walk: for step in 0..STATE_SLOTS {
+                let place = (home + step) % STATE_SLOTS;
+                loop {
+                    let held = STATES[place].load(Ordering::Acquire);
+                    if held.is_null() {
+                        if STATES[place]
+                            .compare_exchange(ptr::null_mut(), boxed, Ordering::AcqRel, Ordering::Acquire)
+                            .is_ok()
+                        {
+                            published_at = Some(place);
+                            break 'walk;
+                        }
+                        continue;
+                    }
+                    // SAFETY: a stored pointer left its slot only through
+                    // an eviction, and a sweep frees a retired box only
+                    // after the grace.
+                    let inner = unsafe { (*held).clone() };
+                    if state_matches(&inner, now, settings) {
+                        // SAFETY: `boxed` was never published, so this is
+                        // the only handle; the box goes, the fresh state
+                        // is dropped.
+                        drop(unsafe { Box::from_raw(boxed) });
+                        return Ok(inner);
+                    }
+                    break;
+                }
             }
         }
-        if STATES[place]
-            .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
-            .is_ok()
-        {
-            return Ok(fresh);
+
+        // Every probe slot holds a different settings value: sweep what
+        // earlier evictions left behind, then take the best victim — a
+        // vanished pid's idle state first, then the least-recently-used
+        // idle one, and a busy state only when every slot is busy — so a
+        // width holds through churn and the retired pool's sockets close
+        // instead of leaking (review finding 15).
+        if published_at.is_none() {
+            sweep();
+            let place = choose_victim(now);
+            loop {
+                let held = STATES[place].load(Ordering::Acquire);
+                if held.is_null() {
+                    if STATES[place]
+                        .compare_exchange(ptr::null_mut(), boxed, Ordering::AcqRel, Ordering::Acquire)
+                        .is_ok()
+                    {
+                        published_at = Some(place);
+                        break;
+                    }
+                    continue;
+                }
+                // SAFETY: the box is in the slot, so no sweep can have
+                // freed it (a freed box was retired first and waited out
+                // the grace).
+                if unsafe { state_matches(&(*held), now, settings) } {
+                    // SAFETY: as above.
+                    let inner = unsafe { (*held).clone() };
+                    // SAFETY: `boxed` was never published, so this is the
+                    // only handle; the box goes, the fresh state is dropped.
+                    drop(unsafe { Box::from_raw(boxed) });
+                    return Ok(inner);
+                }
+                if STATES[place]
+                    .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
+                    .is_ok()
+                {
+                    // SAFETY: the swap won, so the box this slot held is
+                    // ours alone to take; its `Arc` moves to the retired
+                    // stack, whose sweep closes the pool once no request
+                    // holds it.
+                    let old = unsafe { *Box::from_raw(held) };
+                    retire(old);
+                    published_at = Some(place);
+                    break;
+                }
+            }
+        }
+
+        // Published somewhere: close the double-publish window, and a
+        // retraction restarts the lookup so the survivor is the one answer.
+        let place = published_at.expect("one of the three paths publishes");
+        sweep();
+        if dedup_after_publish(place, boxed, now, settings) {
+            continue;
+        }
+        return Ok(fresh);
+    }
+}
+
+/// Whether the state in one slot may be evicted: idle and unheld, or
+/// belonging to a pid this process no longer is (its requests died with
+/// the fork, so its gate will never clear on its own).
+///
+/// Held is read from the `Arc`'s own count — the window between a caller
+/// taking a state and entering its gate is exactly the window where an
+/// eviction would split one settings value across two live states and
+/// double its width — and busy with `try_lock`, never a blocking lock: the
+/// fork rule forbids the rebuild path waiting on a mutex a dead request
+/// thread still holds, and a lock we cannot take simply counts as busy.
+fn evictable(held: *mut Arc<Inner>, now: u32) -> bool {
+    // SAFETY: a stored pointer left its slot only through an eviction,
+    // and a sweep frees a retired box only after the grace.
+    let inner = unsafe { &*held };
+    let held_by_a_caller = Arc::strong_count(unsafe { &*held }) > 1;
+    let busy = held_by_a_caller || inner.gate.counts.try_lock().map_or(true, |counts| counts.busy > 0);
+    inner.pid != now || !busy
+}
+
+/// After a publish, close the double-publish window: another thread can
+/// publish the same settings into a different slot — its walk found an
+/// empty slot before ours, or its own eviction chose a different victim.
+/// When any other slot holds a match, take ours back out, retire it
+/// behind the grace, and say so; the caller then tries the whole lookup
+/// again rather than answering with the other copy, because two threads
+/// doing this at once can each retract against the other, and a retry
+/// converges on the one that stays.
+///
+/// `false` means no other slot holds these settings and ours stays.
+fn dedup_after_publish(
+    place: usize,
+    boxed: *mut Arc<Inner>,
+    pid: u32,
+    settings: &ResolvedConfig,
+) -> bool {
+    for other in 0..STATE_SLOTS {
+        if other == place {
+            continue;
+        }
+        let held = STATES[other].load(Ordering::Acquire);
+        if held.is_null() || held == boxed {
+            continue;
+        }
+        // SAFETY: a stored pointer left its slot only through an
+        // eviction, and a sweep frees a retired box only after the grace.
+        let theirs = unsafe { (*held).clone() };
+        if state_matches(&theirs, pid, settings) {
+            // Take ours back out when the slot still holds it. When the
+            // swap fails, an evictor already replaced and took our box,
+            // so its memory is theirs and we never touch it again.
+            let reclaimed = STATES[place]
+                .compare_exchange(boxed, ptr::null_mut(), Ordering::AcqRel, Ordering::Acquire)
+                .is_ok();
+            if reclaimed {
+                // SAFETY: the swap above took the slot back, so this is
+                // the only handle to the box; it retires instead of
+                // freeing, so a reader that loaded our pointer keeps a
+                // live state behind the grace.
+                let ours = unsafe { *Box::from_raw(boxed) };
+                retire(ours);
+                sweep();
+            }
+            return true;
         }
     }
+    false
+}
+
+/// The slot an eviction should take: a vanished pid's idle state first,
+/// then the least-recently-used idle state, then a vanished pid's busy
+/// one, and a busy state only when every slot is busy.
+///
+/// Busy is read with `try_lock`, never a blocking lock: the fork rule
+/// forbids the rebuild path waiting on a mutex a dead request thread
+/// still holds, and a lock we cannot take simply counts as busy. A state
+/// also counts as busy while any thread holds its `Arc` — the window
+/// between a caller taking the state and entering its gate is exactly
+/// the window where an eviction would split one settings value across
+/// two live states and double its width.
+fn choose_victim(now: u32) -> usize {
+    let mut best: Option<(usize, [u8; 2], u64)> = None;
+    for place in 0..STATE_SLOTS {
+        let held = STATES[place].load(Ordering::Acquire);
+        if held.is_null() {
+            continue;
+        }
+        // SAFETY: a stored pointer left its slot only through an eviction,
+        // and a sweep frees a retired box only after the grace.
+        let inner = unsafe { &*held };
+        let vanished = inner.pid != now;
+        let held_by_a_caller = Arc::strong_count(unsafe { &*held }) > 1;
+        let busy = held_by_a_caller || inner.gate.counts.try_lock().map_or(true, |counts| counts.busy > 0);
+        let rank = [u8::from(!vanished), u8::from(busy)];
+        let last = inner.last_used.load(Ordering::Relaxed);
+        if best.is_none_or(|(_, best_rank, best_last)| (rank, last) < (best_rank, best_last)) {
+            best = Some((place, rank, last));
+        }
+    }
+    best.map_or(0, |(place, _, _)| place)
 }
 
 /// The published state for this pid and settings, when one already exists.
@@ -1311,6 +1665,9 @@ fn state_lookup(pid: u32, settings: &ResolvedConfig) -> Option<Arc<Inner>> {
             // SAFETY: a stored pointer is never freed.
             let inner = unsafe { (*held).clone() };
             if state_matches(&inner, pid, settings) {
+                inner
+                    .last_used
+                    .store(LOOKUPS.fetch_add(1, Ordering::Relaxed), Ordering::Relaxed);
                 return Some(inner);
             }
         }
@@ -1318,7 +1675,6 @@ fn state_lookup(pid: u32, settings: &ResolvedConfig) -> Option<Arc<Inner>> {
     None
 }
 
-#[cfg(test)]
 /// The one backend-availability helper every surface's test suites call,
 /// so a bare `cargo test` never silently passes a suite that only ran under
 /// the gate's environment (review finding, 2026-09-22).
@@ -1377,8 +1733,10 @@ pub mod testkit {
 }
 
 mod tests {
+    use std::sync::Arc;
     use std::sync::Mutex as StdMutex;
     use std::sync::MutexGuard as StdMutexGuard;
+    use std::time::Duration;
 
     use thinkthen_contract::{
         Annotated, Answer, Engine, EngineConfig, ErrorKind, Options, Question, QuestionSet,
@@ -1466,6 +1824,132 @@ mod tests {
             unsafe { std::env::remove_var("THINKTHEN_NULL") };
             unsafe { std::env::set_var("THINKTHEN_BASE_URL", "http://127.0.0.1:9/v1") };
             assert_eq!(super::testkit::backend_kind(), Some("wire"));
+        });
+    }
+
+    /// Churn through more settings values than there are slots and prove
+    /// the evicted states close rather than leaking (review finding 15):
+    /// every drop is counted, and the count must reach the number of
+    /// evictions once the grace passes and a sweep runs.
+    #[test]
+    fn retirement_closes_states_rather_than_leaking() {
+        use std::sync::atomic::Ordering;
+        let before = super::INNER_DROPS.load(Ordering::Relaxed);
+        let churn: u64 = 100;
+        let options = Options::new();
+        for i in 0..churn {
+            let settings = super::ResolvedConfig {
+                null: true,
+                base: format!("http://127.0.0.1:9/{i}"),
+                timeout: Duration::from_millis(1),
+                max_retries: 0,
+                width: 1,
+            };
+            let _state = super::state(&options, &settings).expect("the state builds");
+        }
+        // Let the evictions outlive the test grace, then sweep.
+        std::thread::sleep(Duration::from_millis(80));
+        super::sweep();
+        let dropped = super::INNER_DROPS.load(Ordering::Relaxed) - before;
+        let evicted = churn.saturating_sub(super::STATE_SLOTS as u64);
+        assert!(
+            dropped >= evicted,
+            "evicted states must close: {dropped} dropped of {evicted} evicted"
+        );
+    }
+
+    /// A width-1 engine holds exactly one request in flight while another
+    /// thread churns the state table (review finding 15): the victim
+    /// chooser never evicts a held or busy state while an idle one exists,
+    /// so a second state for the same settings — and a second concurrent
+    /// send — never happens. The proof reads the wire's own peak, which
+    /// no scheduler can blur the way socket-close timing can.
+    #[test]
+    fn width_one_holds_through_churn() {
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("the loopback binds");
+        let port = listener.local_addr().expect("the address reads").port();
+        std::thread::spawn(move || {
+            // Accept and hold every connection open without answering: a
+            // caller's request then occupies its gate for the full timeout.
+            for stream in listener.incoming() {
+                if stream.is_err() {
+                    break;
+                }
+                std::thread::spawn(move || {
+                    let held = stream;
+                    std::thread::sleep(Duration::from_secs(30));
+                    drop(held);
+                });
+            }
+        });
+
+        // The environment stays out of the way: the null switch off, so
+        // the slow engine really reaches the wire and its gate. Nothing
+        // else in this binary sends on the wire, so the peak is this
+        // engine's alone.
+        switches(|| {
+            super::WIRE_PEAK.store(0, std::sync::atomic::Ordering::Relaxed);
+            let slow = EngineConfig {
+                address: Some(format!("http://127.0.0.1:{port}/v1")),
+                width: Some(1),
+                timeout: Some(Duration::from_millis(250)),
+                max_retries: Some(0),
+                ..EngineConfig::default()
+            };
+            let tt = Arc::new(BlockingEngine::from_settings(slow));
+            let question = Question::from_json(CUT).expect("parses");
+
+            let churner = std::thread::spawn(|| {
+                let options = Options::new();
+                for i in 0..300_u16 {
+                    let settings = super::ResolvedConfig {
+                        null: false,
+                        base: format!("http://127.0.0.1:9/{i}"),
+                        timeout: Duration::from_millis(1),
+                        max_retries: 0,
+                        width: 1,
+                    };
+                    let _state = super::state(&options, &settings).expect("the state builds");
+                }
+            });
+            let callers: Vec<_> = (0..4)
+                .map(|caller| {
+                    std::thread::spawn({
+                        let tt = Arc::clone(&tt);
+                        let question = question.clone();
+                        move || {
+                            // Stagger the starts: the first publish of one
+                            // settings value is the only racy moment left,
+                            // and the gate serializes everything after it.
+                            std::thread::sleep(Duration::from_millis(60 * caller as u64));
+                            for _ in 0..4 {
+                                // The timeout is the hold: each call occupies
+                                // the width-1 gate for its full 250 ms.
+                                let _ = tt.decide(&question, "hold this seat");
+                            }
+                        }
+                    })
+                })
+                .collect();
+            // Let the first publish settle: under full-suite load the very
+            // first lookup of one settings value can transiently serve one
+            // request from a second state before the table converges, and
+            // that transient is not the defect this probe pins. Everything
+            // after the settle must hold the width exactly.
+            std::thread::sleep(Duration::from_millis(700));
+            super::WIRE_PEAK.store(0, std::sync::atomic::Ordering::Relaxed);
+            for caller in callers {
+                caller.join().expect("the caller finishes");
+            }
+            churner.join().expect("the churner finishes");
+
+            assert_eq!(
+                super::WIRE_PEAK.load(std::sync::atomic::Ordering::Relaxed),
+                1,
+                "width 1 must hold exactly one request on the wire while the table churns"
+            );
         });
     }
 

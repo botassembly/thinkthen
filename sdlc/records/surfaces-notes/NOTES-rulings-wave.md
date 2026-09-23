@@ -69,3 +69,34 @@ all landed checks green
 
 Pasted output is in `/tmp/full-rung.log` at the time of writing; the
 verdict line is the done bar.
+
+## 2026-09-23: the stand-in's state table, review finding 15 (refs surfaces-review-3)
+
+Commit: the state-table fix on `surfaces` (this wave). Probes pasted from the runs in this lane's transcript.
+
+**The leak probe, fail-then-pass.** Pre-fix mimic (eviction leaks the box on purpose, `STATE_SLOTS` back to 16):
+
+```
+$ cargo test --lib retirement
+thread 'tests::retirement_closes_states_rather_than_leaking' panicked at src/lib.rs:1854:9:
+test result: FAILED. 0 passed; 1 failed; ...
+$ # fix applied (retire + grace + sweep):
+$ cargo test --lib retirement
+test result: ok. 1 passed; 0 failed; ... finished in 0.08s
+```
+
+The test churns 100 settings values past 64 slots and counts `Inner` drops: the mimic drops nothing (the reviewer's "40 values, open files 4 to 44" leak); the fix drops every evicted state once the 50 ms test grace passes and a sweep runs.
+
+**The width probe.** `width_one_holds_through_churn` holds a width-1 engine against a never-answering listener while 300 other settings values churn the table, and asserts the wire's own peak (`WIRE_PEAK`, counted at the send in `post`) stays exactly one after the first publish settles. It passed post-fix in every solo run, and it failed the pre-fix mimic earlier in this lane (`left: 2` pasted at that point in the transcript) — but that discrimination did not reproduce against the final code's structure within this lane's budget, so the probe ships with this caveat, not a clean fail-then-pass claim. It CAN fail: under the full lib suite it is intermittently red (about 2 of 25 runs) — a residual duplicate-state window under heavy contention that the home-claim plus retract-and-retry dedup narrows but does not provably close. That residual is OPEN: owner, the next surfaces pass; the structural defects (the permanent leak; eviction of busy states; blind home-slot replacement) are fixed and the leak proof above is deterministic.
+
+**What landed in the fix:** one state per settings value behind atomic slots; evictions pick a vanished pid's idle state first, then the least-recently-used idle one (a logical lookup clock), and a busy or caller-held state only when every slot is; the home slot is claimed first so two publishers of one settings value race one compare-and-swap; every publish passes a full dedup scan whose retraction retires behind a five-second grace and retries the lookup; retired pools close once no request holds them, keeping file descriptors flat; the fork rule holds throughout — no lock is taken on the rebuild path that any request path holds.
+
+## ADR draft: one deadline spelling (review finding 21) — for the ADR owner
+
+Status: DRAFT, decision made here, needs the ADR's own review.
+
+**Decision.** Exactly one spelling of "no deadline" exists across every surface: the sentinel −1, the C header's `THINKTHEN_NO_DEADLINE`. Every other negative value is refused with the usage kind. Zero is a spent deadline, legal, and the call returns the deadline kind having sent nothing. The contract owns the conversion and the sentinel (`deadline_from_seconds` / `deadline_from_millis`, `NO_DEADLINE = -1.0`) and its tests pin all of this.
+
+**Adoption state.** C, Ruby, R, and the contract already follow the rule (review 3 confirmed each). Python and Node currently REFUSE −1; they adopt "−1 means none" through the contract's converter in the next surfaces pass. Node additionally stops coercing `true`, `"5"`, and `[]` into numbers, and documents that a computed budget must clamp to zero (`Math.max(0, end - now)`) because −1 is reserved. DuckDB gains a deadline door when its phase lands.
+
+**Why −1 and not a separate explicit-none argument.** The C ABI is flat scalars; a second boolean argument would touch every signature the deck draws, and −1 is already the shipped, tested spelling on four surfaces. The hazard — a computed budget landing on −1 by accident — is answered by the clamp rule, which is the semantically correct statement anyway: a deadline that already passed is zero, not none.
