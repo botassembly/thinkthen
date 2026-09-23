@@ -12,6 +12,6 @@ export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 # --locked at the call site (surfaces-review-4, item 20): the lockfile is
 # the authority the check and the artifact both answer to.
 if [ "${1:-}" = "--synthetic" ]; then
-  exec npx napi build --release --platform --features synthetic-partial --cargo-cwd ./addon --cargo-flags=--locked --js loader.cjs --dts loader.d.ts .
+  exec node_modules/.bin/napi build --release --platform --features synthetic-partial --cargo-cwd ./addon --cargo-flags=--locked --js loader.cjs --dts loader.d.ts .
 fi
-exec npx napi build --release --platform --cargo-cwd ./addon --cargo-flags=--locked --js loader.cjs --dts loader.d.ts .
+exec node_modules/.bin/napi build --release --platform --cargo-cwd ./addon --cargo-flags=--locked --js loader.cjs --dts loader.d.ts .

@@ -86,7 +86,7 @@ echo "== postgres surface: package the extension"
 
 echo "== postgres surface: disposable container, null backend"
 docker rm -f -v "$NAME" >/dev/null 2>&1 || true
-docker run -d --name "$NAME" --network host \
+docker run -d --pull never --name "$NAME" --network host \
   -e POSTGRES_PASSWORD=postgres -e PGPORT=$PORT -e ENGINE_NULL=1 \
   "$PG_IMAGE" >/dev/null
 wait_ready "$NAME"
@@ -652,7 +652,7 @@ echo "== postgres surface: a configured credential refuses, a refused address an
 # ignored, and a missing credential must fail loudly on the wire. The
 # value below is made up; no real key is read or sent anywhere.
 docker rm -f -v "$KEY_NAME" >/dev/null 2>&1 || true
-docker run -d --name "$KEY_NAME" --network host \
+docker run -d --pull never --name "$KEY_NAME" --network host \
   -e POSTGRES_PASSWORD=postgres -e PGPORT=$KEY_PORT \
   -e ENGINE_BASE_URL=http://127.0.0.1:$REFUSED_PORT/v1 \
   "$PG_IMAGE" >/dev/null
@@ -758,7 +758,7 @@ echo "ok       a deliberate PUBLIC grant on thinkthen_decide survives an unrelat
 if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   echo "== postgres surface: wire suite against the stub on 8219"
   docker rm -f -v "$WIRE_NAME" >/dev/null 2>&1 || true
-  docker run -d --name "$WIRE_NAME" --network host \
+  docker run -d --pull never --name "$WIRE_NAME" --network host \
     -e POSTGRES_PASSWORD=postgres -e PGPORT=$WIRE_PORT \
     -e ENGINE_BASE_URL=http://127.0.0.1:8219/v1 -e ENGINE_WIDTH=32 \
     "$PG_IMAGE" >/dev/null

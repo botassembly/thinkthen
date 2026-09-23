@@ -21,10 +21,17 @@ if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
 fi
 
 if [ ! -x .venv/bin/python ]; then
-  uv venv .venv
-  # Pinned through requirements-dev.txt; the first provision needs the
-  # network (or uv's cache), every later run is offline.
-  uv pip install --python .venv/bin/python -r requirements-dev.txt
+  # The gate never fetches (surfaces-review-5: this step downloaded numpy,
+  # pyarrow, polars, and pandas). The venv is built offline from uv's
+  # cache, whose pinned, hashed contents requirements-dev.txt names. An
+  # empty cache fails here with the one fetch to run on a networked
+  # machine.
+  if ! { uv venv --offline .venv &&
+    uv pip install --offline --python .venv/bin/python -r requirements-dev.txt; }; then
+    rm -rf .venv
+    echo "FAIL     python-venv: uv's cache lacks a pinned package; on a networked machine run \`uv pip install --python .venv/bin/python -r requirements-dev.txt\` in libraries/python once, then rerun"
+    exit 1
+  fi
 fi
 # maturin develop installs into the active virtualenv. The wheel builds
 # with the stand-in's compile-time `synthetic-partial` feature so the

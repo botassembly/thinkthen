@@ -9,9 +9,13 @@ cd "$(dirname "$0")"
 step() { printf '\n== %s\n' "$*"; }
 
 step "build"
-# npm ci installs exactly package-lock.json; the first run needs the
-# network (or npm's cache), every later run is offline.
-npm ci --no-audit --no-fund --silent
+# npm ci installs exactly package-lock.json, offline from npm's cache: the
+# gate never fetches (surfaces-review-5). An empty cache fails here with
+# the one fetch to run on a networked machine.
+if ! npm ci --offline --no-audit --no-fund --silent; then
+  echo "FAIL     typescript-deps: npm's cache lacks a locked package; on a networked machine run \`npm ci\` in libraries/typescript once, then rerun"
+  exit 1
+fi
 # The gate's copy arms the stand-in's compile-time synthesized partial
 # failure so conformance case 74 and the marker test run; `npm run build`
 # is the packaging path and never carries the fixture.

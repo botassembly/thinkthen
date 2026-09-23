@@ -68,7 +68,10 @@ it.
 
 The gate itself fetches nothing. Each step below reads a local cache that
 one network step fills once. Without that cache, the gate step fails and
-names the remedy.
+names the remedy. `scripts/check_offline_calls.py` fails any uv, pip,
+npm, npx, docker, or curl call in a gate script that could fetch, and
+`scripts/check_surfaces.sh` exports the offline switches cargo, rustup,
+uv, and npm honor.
 
 - **The SQLite amalgamation** (`databases/sqlite/tests/host_sqlite.sh`):
   a host whose stock SQLite is below 3.50.0 needs the amalgamation under
@@ -82,6 +85,22 @@ names the remedy.
   container runs with `--network none` and `--offline` against
   `libraries/ruby/.runtimes/cargo`, the same home `build.sh` uses. An
   empty home fails the lint with the fetch command.
+- **The Python venv** (`libraries/python/check.sh`): `uv venv` and
+  `uv pip install` run with `--offline` from uv's cache. The old step
+  downloaded numpy, pyarrow, polars, and pandas. An empty cache fails
+  with the install command to run once.
+- **The TypeScript packages** (`libraries/typescript/check.sh`): `npm ci
+  --offline` from npm's cache, and the addon build calls
+  `node_modules/.bin/napi` instead of `npx`. An empty cache fails with
+  `npm ci` to run once.
+- **The Ruby builder image** (`libraries/ruby/check.sh`): a missing or
+  stale image fails with `./build.sh` to run once. Building the image
+  pulls its base and downloads a toolchain. Every container runs with
+  `--pull never`, and so do the PostgreSQL check's containers.
+- **The DuckDB configure step** (`make configure` in `databases/duckdb`):
+  it builds the extension's venv with pip from the package index. The
+  gate never runs it. `make release` fails with "run make configure"
+  until it has run once.
 - **The per-workspace deny check** (`sdlc/scripts/lint-workspaces`):
   every call passes `--offline`, and a workspace whose metadata is cold
   fails with the `cargo fetch --locked` command to run on a networked

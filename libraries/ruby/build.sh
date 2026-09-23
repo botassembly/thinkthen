@@ -30,7 +30,7 @@ if ! docker image inspect "$image" >/dev/null 2>&1 || [ Dockerfile -nt "$stamp" 
   touch "$stamp"
 fi
 
-docker run --rm \
+docker run --rm --pull never --network none \
   -v "$root":/src \
   -w /src/libraries/ruby \
   "$image" \

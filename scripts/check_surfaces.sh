@@ -23,6 +23,10 @@
 # names how many wire suites ran instead of a single "stub up".
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# The gate never fetches (surfaces-review-5). These switches hold every
+# tool that honors one to its local cache, beside the per-call spellings
+# scripts/check_offline_calls.py checks.
+export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 UV_OFFLINE=1 npm_config_offline=true
 repo=$(pwd)
 
 # A stray key or address in the caller's shell must not turn a check into a
@@ -177,6 +181,10 @@ run_step "gate counting and wire-verdict tests" bash scripts/test_gate_lib.sh ||
 run_step "every build-tool call carries the lock" python3 scripts/check_locked_calls.py || fail=1
 
 run_step "lock-checker tests" python3 scripts/test_check_locked_calls.py || fail=1
+
+run_step "every package-manager call stays offline" python3 scripts/check_offline_calls.py || fail=1
+
+run_step "offline-checker tests" python3 scripts/test_check_offline_calls.py || fail=1
 
 # Each surface lands in Phase B with a check of its own. A surface is
 # checked by running its slide sample against the stand-in and its slice of

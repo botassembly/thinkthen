@@ -12,6 +12,19 @@ root="$(cd ../.. && pwd)"
 image="thinkthen-ruby-builder:local"
 stub_url="http://127.0.0.1:8214/v1"
 
+# The gate never fetches (surfaces-review-5). build.sh rebuilds a missing
+# or stale builder image, which pulls a base image and downloads a
+# toolchain, and its cargo reads .runtimes/cargo. Both are one-time steps
+# on a networked machine; the gate fails here and names them.
+if ! docker image inspect "$image" >/dev/null 2>&1 || [ Dockerfile -nt .runtimes/builder-image.built ]; then
+  echo "FAIL     ruby-builder: $image is missing or older than its Dockerfile; on a networked machine run ./build.sh in libraries/ruby once, then rerun"
+  exit 1
+fi
+if [ ! -d .runtimes/cargo/registry ]; then
+  echo "FAIL     ruby-cargo-home: .runtimes/cargo is empty; on a networked machine run \`CARGO_HOME=.runtimes/cargo cargo fetch --locked\` in libraries/ruby once, then rerun"
+  exit 1
+fi
+
 # The gate arms the stand-in's synthesized partial failure at compile
 # time (`build.sh synthetic`), so conformance case 74 and the marker test
 # run; the packaged build never carries the fixture.
@@ -37,7 +50,7 @@ if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
 fi
 
 docker_run() {
-  docker run --rm --network host \
+  docker run --rm --pull never --network host \
     -v "$root":/src \
       -w /src/libraries/ruby \
     -e ENGINE_NULL=1 \
@@ -96,7 +109,7 @@ docker_run 'ruby -I lib tests/slide_sample.rb'
 
 if [ "$wire" = yes ]; then
   echo "== ruby surface: interrupt proof on the wire"
-  docker run --rm --network host \
+  docker run --rm --pull never --network host \
     -v "$root":/src \
       -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
@@ -104,7 +117,7 @@ if [ "$wire" = yes ]; then
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_cancel.rb'
   echo "== ruby surface: interrupt proof on a delayed stub, no tick and no token"
-  docker run --rm --network host \
+  docker run --rm --pull never --network host \
     -v "$root":/src \
       -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
@@ -113,7 +126,7 @@ if [ "$wire" = yes ]; then
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_interrupt_wire.rb'
   echo "== ruby surface: interrupts are bounded on the wire (bulk one wave, single one request)"
-  docker run --rm --network host \
+  docker run --rm --pull never --network host \
     -v "$root":/src \
       -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
@@ -121,7 +134,7 @@ if [ "$wire" = yes ]; then
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_interrupt_bounded.rb'
   echo "== ruby surface: probabilities cost no extra sends (punch-list item 1)"
-  docker run --rm --network host \
+  docker run --rm --pull never --network host \
     -v "$root":/src \
       -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
