@@ -4,10 +4,14 @@ The starvation this pins, found by the adversarial review and reproduced by
 the supervisor: before the fix, SIGINT one second into a three-million-record
 null batch raised only at 8.48 s, after the whole batch, because the poll ran
 only when the wait channel idled. The child here runs a two-million-record
-null batch, the parent sends SIGINT about one second in, and the child must
-raise ``KeyboardInterrupt`` within 1.5 s of its start — the batch would take
-about 5.6 s to finish deaf, so the threshold separates the two behaviors.
-Runs offline; check.sh calls it in the null section.
+null batch, the parent sends SIGINT about one second after the call starts,
+and the child must raise ``KeyboardInterrupt`` within 1.5 s of that start.
+The batch would take about 5.6 s to finish deaf, so the threshold separates
+the two behaviors. The child says ``ready`` just before the call, and the
+parent's second starts there. A second counted from the child's launch let
+a loaded host (load 370, wave 7) deliver the signal while the child was
+still building its records, before the call began. Runs offline; check.sh
+calls it in the null section.
 """
 
 import os
@@ -20,6 +24,7 @@ CHILD = r"""
 import thinkthen as tt
 import time
 records = [f"record {i}" for i in range(2_000_000)]
+print("ready", flush=True)
 start = time.time()
 try:
     tt.decide_many("Is this a complaint?", records)
@@ -38,6 +43,10 @@ def main() -> int:
         text=True,
         env={**os.environ, "ENGINE_NULL": "1"},
     )
+    if child.stdout.readline().strip() != "ready":
+        child.kill()
+        print("FAIL  the child never reached the call")
+        return 1
     time.sleep(1.0)
     child.send_signal(signal.SIGINT)
     try:
