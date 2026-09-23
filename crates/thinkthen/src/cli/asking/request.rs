@@ -26,6 +26,7 @@ pub(crate) fn ask(
         plan,
         profile,
         recorder,
+        environment.cancel(),
         crate::engine::request::Transport {
             client,
             max_retries: common.max_retries,
@@ -54,6 +55,7 @@ pub(crate) fn ask_prepared(
         plan,
         prepared,
         recorder,
+        environment.cancel(),
         environment.usage(),
         edge::key,
         |prepared, key| {
@@ -66,6 +68,7 @@ pub(crate) fn ask_prepared(
                         max_retries: common.max_retries,
                         retry_wait: environment.retry_wait(),
                     },
+                    environment.cancel(),
                     || environment.usage().request_sent(),
                 )
                 .map_err(Failure::from)

@@ -174,7 +174,6 @@ pub(crate) fn run(
         );
     }
 
-    let recording = configuration.folders.reported();
     let judging = Judging::new(configuration)?;
     if !judging.streams {
         let bytes = chunks.next().transpose()?.unwrap_or_default();
@@ -187,7 +186,8 @@ pub(crate) fn run(
         &|bytes: &Vec<u8>| judging.row(&reading, bytes),
         chunks,
         jobs,
-        recording,
+        judging.recorder.reported(),
+        judging.environment.cancel(),
         output,
     )
 }
@@ -215,13 +215,13 @@ fn over_table(
             output.writer(),
         );
     }
-    let recording = configuration.folders.reported();
     let judging = Judging::new(configuration)?;
     schedule::over_records(
         &|record| judging.typed_row(reading, record),
         rows,
         jobs,
-        recording,
+        judging.recorder.reported(),
+        judging.environment.cancel(),
         output,
     )
 }
@@ -389,11 +389,10 @@ impl Judging<'_> {
             profile,
             mismatch,
         } = input;
-        let secure = backend.is_secure();
         Ok(Judging {
             common,
             environment,
-            client: Client::new(Duration::from_secs(common.timeout), secure),
+            client: Client::new(Duration::from_secs(common.timeout), backend.is_secure()),
             recorder: Recorder::of_private(
                 folders.record.as_deref(),
                 folders.replay.as_deref(),

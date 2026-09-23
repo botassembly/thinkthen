@@ -2,7 +2,6 @@
 
 use std::fs;
 use std::io::{self, Write as _};
-use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -10,7 +9,7 @@ use std::sync::{Arc, Barrier, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, Observed, process_is_blocked_on_inode};
+use crate::harness::{Canned, Listener, Observed, process_has_file};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -93,9 +92,9 @@ fn prune(folder: &str) -> io::Result<Reaped> {
     Ok(Reaped(Some(child)))
 }
 
-fn wait_on(child: &Reaped, inode: u64, what: &str) -> io::Result<()> {
+fn wait_on(child: &Reaped, file: &fs::Metadata, what: &str) -> io::Result<()> {
     let deadline = Instant::now() + Duration::from_secs(2);
-    while !process_is_blocked_on_inode(child.id()?, inode)? {
+    while !process_has_file(child.id()?, file)? {
         assert!(Instant::now() < deadline, "{what} never waited on inode");
         thread::yield_now();
     }
@@ -135,13 +134,13 @@ fn prune_waits_for_owner_and_original_inode_waiter_before_a_later_fill() {
         .next()
         .expect("one lock")
         .expect("lock entry");
-    let lock_inode = lock.metadata().expect("lock metadata").ino();
+    let lock_file = lock.metadata().expect("lock metadata");
     let waiter = decide(listener.base(), &named).expect("waiter starts");
-    wait_on(&waiter, lock_inode, "waiter").expect("waiter state");
+    wait_on(&waiter, &lock_file, "waiter").expect("waiter state");
 
-    let directory_inode = fs::metadata(&cache).expect("cache metadata").ino();
+    let directory = fs::metadata(&cache).expect("cache metadata");
     let pruner = prune(&named).expect("pruner starts");
-    wait_on(&pruner, directory_inode, "pruner").expect("pruner state");
+    wait_on(&pruner, &directory, "pruner").expect("pruner state");
     assert_eq!(
         fs::read_dir(cache.join(".locks")).expect("locks").count(),
         1

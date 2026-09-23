@@ -1,7 +1,7 @@
 //! Ordered, bounded scheduling below every ordinary record command.
 
 use std::collections::BTreeMap;
-use std::sync::mpsc::{Receiver, Sender, SyncSender, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel};
 
 use crate::engine::workers;
 
@@ -184,7 +184,8 @@ impl<R, E> Run<R, E> {
     }
 }
 
-/// Schedule framed inputs over scoped workers and emit results in input order.
+/// Schedule framed inputs over scoped workers with an unfired compatibility token.
+#[cfg(test)]
 pub(crate) fn run<T, R, E>(
     jobs: usize,
     held: bool,
@@ -198,7 +199,49 @@ where
     R: Send,
     E: Send,
 {
-    run_observed(jobs, held, start_reader, answer, emit, defect, &|| ())
+    run_cancelled(
+        jobs,
+        held,
+        &crate::engine::Cancel::default(),
+        start_reader,
+        answer,
+        emit,
+        defect,
+        || defect("an unavailable cancel token fired"),
+    )
+}
+
+/// Schedule framed inputs over scoped workers and emit results in input order.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the private scheduler keeps cancellation and each typed bridge callback explicit"
+)]
+pub(crate) fn run_cancelled<T, R, E>(
+    jobs: usize,
+    held: bool,
+    cancel: &crate::engine::Cancel,
+    start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
+    answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
+    emit: impl FnMut(R) -> Result<bool, E>,
+    defect: fn(&'static str) -> E,
+    cancelled: impl Fn() -> E + Sync,
+) -> Result<Outcome<E>, E>
+where
+    T: Send + 'static,
+    R: Send,
+    E: Send,
+{
+    run_observed(
+        jobs,
+        held,
+        cancel,
+        start_reader,
+        answer,
+        emit,
+        defect,
+        &cancelled,
+        &|| (),
+    )
 }
 
 #[allow(
@@ -208,10 +251,12 @@ where
 fn run_observed<T, R, E, G>(
     jobs: usize,
     held: bool,
+    cancel: &crate::engine::Cancel,
     start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
     answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
     mut emit: impl FnMut(R) -> Result<bool, E>,
     defect: fn(&'static str) -> E,
+    cancelled: &(impl Fn() -> E + Sync),
     begin: &(impl Fn() -> G + Sync),
 ) -> Result<Outcome<E>, E>
 where
@@ -226,20 +271,37 @@ where
     workers::scoped_observed(
         jobs,
         events,
-        &|(place, value)| Event::Answered(place, answer(&value)),
+        &|(place, value)| {
+            Event::Answered(
+                place,
+                if cancel.fired() {
+                    Err(cancelled())
+                } else {
+                    answer(&value)
+                },
+            )
+        },
         begin,
         |work| {
             let mut state = Run::new();
             loop {
                 state.drain(&mut emit)?;
+                if cancel.fired() && !state.halted {
+                    state.refuse(cancelled());
+                    continue;
+                }
                 if state.done() {
                     break;
                 }
                 state.request(&ask, jobs, held, defect);
-                let event = received
-                    .recv()
-                    .map_err(|_| defect("the record scheduler ended early"))?;
-                state.accept(event, &work, defect);
+                cancel.observed_block();
+                match received.recv_timeout(crate::engine::Cancel::poll()) {
+                    Ok(event) => state.accept(event, &work, defect),
+                    Err(RecvTimeoutError::Timeout) => {}
+                    Err(RecvTimeoutError::Disconnected) => {
+                        return Err(defect("the record scheduler ended early"));
+                    }
+                }
             }
             drop(ask);
             Ok(state.finish(held))
@@ -263,6 +325,139 @@ mod tests {
     }
 
     #[test]
+    fn cancellation_while_waiting_for_input_requests_nothing_more() {
+        let (waiting_send, waiting) = std::sync::mpsc::channel();
+        let cancel = crate::engine::Cancel::observed(waiting_send);
+        let run_cancel = cancel.clone();
+        let (asked_send, asked_recv) = std::sync::mpsc::channel();
+        let (outcome_send, outcome_recv) = std::sync::mpsc::channel();
+        let run = thread::spawn(move || {
+            let outcome = super::run_cancelled(
+                1,
+                false,
+                &run_cancel,
+                move |asked, _events| asked_send.send(asked).expect("input requests"),
+                &|_: &()| -> Result<Completed<()>, &'static str> {
+                    unreachable!("withheld input cannot be dispatched")
+                },
+                |_| Ok(true),
+                |_| "defect",
+                || "cancelled",
+            );
+            outcome_send.send(outcome).expect("returned outcome");
+        });
+        let asked = asked_recv
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("request receiver");
+        asked
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("first input request");
+        waiting
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("scheduler entered recv_timeout");
+
+        cancel.fire();
+        let outcome = outcome_recv
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("cancelled scheduler returns")
+            .expect("cancelled outcome");
+        run.join().expect("scheduler thread");
+
+        assert_eq!(asked.try_iter().count(), 0);
+        assert!(matches!(
+            outcome,
+            Outcome::Stopped {
+                at: 1,
+                finished: 0,
+                cause: "cancelled",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    #[allow(clippy::excessive_nesting, reason = "synchronized reader fixture")]
+    fn cancellation_with_work_in_flight_ignores_later_input_and_joins() {
+        let cancel = crate::engine::Cancel::default();
+        let run_cancel = cancel.clone();
+        let started = Arc::new(Barrier::new(2));
+        let answer_started = Arc::clone(&started);
+        let second_requested = Arc::new(Barrier::new(2));
+        let reader_requested = Arc::clone(&second_requested);
+        let later_input = Arc::new(Barrier::new(2));
+        let reader_later = Arc::clone(&later_input);
+        let release = Arc::new(Barrier::new(2));
+        let answer_release = Arc::clone(&release);
+        let active = Arc::new(AtomicUsize::new(0));
+        let answer_active = Arc::clone(&active);
+        let starts = Arc::new(AtomicUsize::new(0));
+        let answer_starts = Arc::clone(&starts);
+        let (emitted_send, emitted) = std::sync::mpsc::channel();
+        let (outcome_send, outcome) = std::sync::mpsc::channel();
+
+        let run = thread::spawn(move || {
+            let result = super::run_cancelled(
+                2,
+                false,
+                &run_cancel,
+                move |asked, events| {
+                    thread::spawn(move || {
+                        asked.recv().expect("first input request");
+                        events.send(Input::Item(0)).expect("first input");
+                        asked.recv().expect("second input request");
+                        reader_requested.wait();
+                        reader_later.wait();
+                        let _ignored = events.send(Input::Item(1));
+                    });
+                },
+                &move |item| {
+                    answer_starts.fetch_add(1, Ordering::SeqCst);
+                    answer_active.fetch_add(1, Ordering::SeqCst);
+                    answer_started.wait();
+                    answer_release.wait();
+                    answer_active.fetch_sub(1, Ordering::SeqCst);
+                    Ok::<_, &'static str>(Completed {
+                        value: *item,
+                        replayed: false,
+                        partial_failure: false,
+                    })
+                },
+                |value| {
+                    emitted_send.send(value).expect("emitted result");
+                    Ok(true)
+                },
+                |_| "defect",
+                || "cancelled",
+            );
+            outcome_send.send(result).expect("returned outcome");
+        });
+
+        started.wait();
+        second_requested.wait();
+        cancel.fire();
+        later_input.wait();
+        release.wait();
+        let result = outcome
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("the cancelled run returns")
+            .expect("the scheduler returns metadata");
+        run.join().expect("scheduler thread");
+
+        assert_eq!(emitted.try_iter().collect::<Vec<_>>(), [0]);
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+        assert_eq!(active.load(Ordering::SeqCst), 0);
+        assert!(matches!(
+            result,
+            Outcome::Stopped {
+                at: 2,
+                finished: 1,
+                cause: "cancelled",
+                ..
+            }
+        ));
+    }
+
+    #[test]
     #[allow(
         clippy::excessive_nesting,
         reason = "the actual scheduler test starts its command-owned reader inline"
@@ -279,6 +474,7 @@ mod tests {
         let outcome = run_observed(
             3,
             true,
+            &crate::engine::Cancel::default(),
             |requests, events| {
                 thread::spawn(move || {
                     for item in 0..3 {
@@ -299,6 +495,7 @@ mod tests {
             },
             |_| Ok(true),
             |_| (),
+            &|| (),
             &worker_lifetime,
         )
         .expect("the scheduler runs");

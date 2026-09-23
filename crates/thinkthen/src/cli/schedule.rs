@@ -143,6 +143,7 @@ pub(crate) fn over_records<T, I>(
     chunks: I,
     jobs: usize,
     recording: bool,
+    cancel: &crate::engine::Cancel,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
 where
@@ -150,9 +151,10 @@ where
     I: Iterator<Item = Result<T, Failure>> + Send + 'static,
 {
     let held = output.holds();
-    let outcome = engine_schedule::run(
+    let outcome = engine_schedule::run_cancelled(
         jobs,
         held,
+        cancel,
         |requests, events| {
             thread::spawn(move || read_records(chunks, &requests, &events));
         },
@@ -165,6 +167,7 @@ where
         },
         |judged| output.take(judged),
         Failure::Defect,
+        || Failure::from(crate::engine::error::Error::Cancelled),
     )?;
     match outcome {
         RunOutcome::Complete => {

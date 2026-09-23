@@ -38,11 +38,16 @@ pub(crate) struct Transport<'a> {
     pub(crate) usage: &'a Counters,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one request carries explicit cancellation, transport, storage, and key boundaries"
+)]
 pub(crate) fn ask_profile<E>(
     backend: &Backend,
     plan: &Plan,
     profile: Option<&BackendProfile>,
     recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
     transport: Transport<'_>,
     key: impl FnOnce() -> Result<Key, E>,
 ) -> Result<Answered, E>
@@ -55,6 +60,7 @@ where
         plan,
         prepared,
         recorder,
+        cancel,
         transport.usage,
         key,
         |prepared, key| {
@@ -68,6 +74,7 @@ where
                         max_retries: transport.max_retries,
                         retry_wait: transport.retry_wait,
                     },
+                    cancel,
                     || transport.usage.request_sent(),
                 )
                 .map_err(E::from)
@@ -93,6 +100,7 @@ where
         plan,
         prepared,
         recorder,
+        &crate::engine::Cancel::default(),
         &usage,
         key,
         |prepared, key| {
@@ -113,6 +121,7 @@ pub(crate) fn ask_prepared<E>(
     plan: &Plan,
     prepared: PreparedRequest,
     recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
     usage: &Counters,
     key: impl FnOnce() -> Result<Key, E>,
     send: impl FnOnce(&PreparedRequest, &Key) -> Result<HttpAnswer, E>,
@@ -122,8 +131,9 @@ where
 {
     let recorded = prepared.recorded(backend);
     let operation = recorder
-        .prepare(&recorded, &prepared.digest)
+        .prepare_cancelled(&recorded, &prepared.digest, cancel)
         .map_err(E::from)?;
+    let operation = observe_cancel(operation, cancel)?;
     let (reply, replayed, requests_sent) = match operation {
         PreparedRecording::Replay(response) => (
             {
@@ -166,6 +176,22 @@ where
     })
 }
 
+fn observe_cancel<E>(
+    operation: PreparedRecording,
+    cancel: &crate::engine::Cancel,
+) -> Result<PreparedRecording, E>
+where
+    E: From<Error>,
+{
+    if !cancel.fired() {
+        return Ok(operation);
+    }
+    if let PreparedRecording::Live(permit) = operation {
+        permit.cancel().map_err(E::from)?;
+    }
+    Err(E::from(Error::Cancelled))
+}
+
 fn finish_or_cancel<T, E>(permit: WritePermit, result: Result<T, E>) -> Result<(WritePermit, T), E>
 where
     E: From<Error>,
@@ -176,5 +202,177 @@ where
             permit.cancel().map_err(E::from)?;
             Err(error)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::sync::{Arc, atomic::AtomicUsize, atomic::Ordering, mpsc};
+    use std::thread;
+    use std::time::Duration;
+
+    use crate::core::{Backend, Evidence, ModelName, Plan, Question, QuestionText};
+    use crate::engine::cache_lock;
+    use crate::engine::error::Error;
+    use crate::engine::http::Key;
+    use crate::engine::prepared_request::{Answered, PreparedRequest};
+    use crate::engine::recorder::Recorder;
+    use crate::engine::usage::Counters;
+
+    fn request() -> (Backend, Plan, PreparedRequest) {
+        let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "jev-latest")
+            .expect("backend");
+        let plan = Plan::new(
+            Evidence::new("evidence").expect("evidence"),
+            ModelName::new("jev-latest").expect("model"),
+            vec![Question::Decide {
+                text: QuestionText::new("Is this relevant?").expect("question"),
+                yes: None,
+                no: None,
+            }],
+        )
+        .expect("plan");
+        let prepared = PreparedRequest::new(&backend, &plan).expect("request");
+        (backend, plan, prepared)
+    }
+
+    type Counts = (Arc<AtomicUsize>, Arc<AtomicUsize>);
+
+    fn folder(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("thinkthen-cancel-{label}-{}", std::process::id()))
+    }
+
+    fn has_partial(folder: &Path) -> bool {
+        let prefix = format!(".{}.", std::process::id());
+        fs::read_dir(folder)
+            .expect("recording folder")
+            .filter_map(Result::ok)
+            .any(|entry| entry.file_name().to_string_lossy().starts_with(&prefix))
+    }
+
+    fn wait_on_request(
+        request: (Backend, Plan, PreparedRequest),
+        recorder: Recorder,
+        observed: (crate::engine::Cancel, Counts),
+    ) -> thread::JoinHandle<Result<Answered, Error>> {
+        let (backend, plan, prepared) = request;
+        let (cancel, counts) = observed;
+        thread::spawn(move || {
+            super::ask_prepared(
+                &backend,
+                &plan,
+                prepared,
+                &recorder,
+                &cancel,
+                &Counters::default(),
+                || {
+                    counts.0.fetch_add(1, Ordering::SeqCst);
+                    Ok(Key::of("unused"))
+                },
+                |_, _| {
+                    counts.1.fetch_add(1, Ordering::SeqCst);
+                    Err(Error::Defect("send unexpectedly reached"))
+                },
+            )
+        })
+    }
+
+    #[test]
+    fn a_held_folder_cancels_through_the_prepared_request_path() {
+        let path = folder("folder");
+        let _absent = fs::remove_dir_all(&path);
+        fs::create_dir_all(&path).expect("recording folder");
+        let owner = cache_lock::exclusive_folder(&path).expect("exclusive owner");
+        let (blocked_send, blocked) = mpsc::channel();
+        let cancel = crate::engine::Cancel::observed(blocked_send);
+        let counts = Counts::default();
+        let waiter = wait_on_request(
+            request(),
+            Recorder::of(Some(&path), None).expect("recorder"),
+            (cancel.clone(), counts.clone()),
+        );
+
+        blocked
+            .recv_timeout(Duration::from_secs(2))
+            .expect("shared lock received WouldBlock");
+        cancel.fire();
+        assert!(matches!(
+            waiter.join().expect("waiter"),
+            Err(Error::Cancelled)
+        ));
+        assert_eq!(counts.0.load(Ordering::SeqCst), 0);
+        assert_eq!(counts.1.load(Ordering::SeqCst), 0);
+        drop(owner);
+        assert!(!has_partial(&path));
+        fs::remove_dir_all(path).expect("fixture removed");
+    }
+
+    #[test]
+    fn a_held_digest_cancels_through_the_prepared_request_path() {
+        let path = folder("digest");
+        let _absent = fs::remove_dir_all(&path);
+        let (owner_backend, _, owner_prepared) = request();
+        let recorder = Recorder::of(Some(&path), None).expect("recorder");
+        let owner_recorded = owner_prepared.recorded(&owner_backend);
+        let crate::engine::recorder::PreparedRecording::Live(owner) = recorder
+            .prepare_cancelled(
+                &owner_recorded,
+                &owner_prepared.digest,
+                &crate::engine::Cancel::default(),
+            )
+            .expect("owner prepared")
+        else {
+            unreachable!("empty recording cannot replay");
+        };
+        let (blocked_send, blocked) = mpsc::channel();
+        let cancel = crate::engine::Cancel::observed(blocked_send);
+        let counts = Counts::default();
+        let (backend, plan, prepared) = request();
+        let digest = prepared.digest.as_str().to_owned();
+        let waiter = wait_on_request(
+            (backend, plan, prepared),
+            recorder,
+            (cancel.clone(), counts.clone()),
+        );
+
+        blocked
+            .recv_timeout(Duration::from_secs(2))
+            .expect("digest lock received WouldBlock");
+        cancel.fire();
+        assert!(matches!(
+            waiter.join().expect("waiter"),
+            Err(Error::Cancelled)
+        ));
+        assert_eq!(counts.0.load(Ordering::SeqCst), 0);
+        assert_eq!(counts.1.load(Ordering::SeqCst), 0);
+        owner.cancel().expect("owner cleanup");
+        assert!(!has_partial(&path));
+        assert!(path.join(".locks").join(digest).exists());
+        fs::remove_dir_all(path).expect("fixture removed");
+    }
+
+    #[test]
+    fn cleanup_failure_at_the_cancel_boundary_wins_and_keeps_owned_state() {
+        let (backend, _plan, prepared) = request();
+        let folder = folder("prepared");
+        let _absent = fs::remove_dir_all(&folder);
+        let recorder = Recorder::of(Some(&folder), None).expect("recorder");
+        let cancel = crate::engine::Cancel::default();
+        let operation = recorder
+            .prepare_cancelled(&prepared.recorded(&backend), &prepared.digest, &cancel)
+            .expect("prepared recording");
+        let lock = folder.join(".locks").join(prepared.digest.as_str());
+        assert!(has_partial(&folder));
+
+        crate::engine::recorder::fail_cleanup();
+        cancel.fire();
+        let result = super::observe_cancel::<Error>(operation, &cancel);
+
+        assert!(matches!(result, Err(Error::RecordingStorage)));
+        assert!(has_partial(&folder));
+        assert!(lock.exists());
+        fs::remove_dir_all(folder).expect("fixture removed");
     }
 }

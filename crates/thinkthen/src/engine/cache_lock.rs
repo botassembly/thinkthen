@@ -31,6 +31,19 @@ pub(crate) fn shared_folder(folder: &Path) -> io::Result<FolderGate> {
     })
 }
 
+pub(crate) fn shared_folder_cancelled(
+    folder: &Path,
+    cancel: &crate::engine::Cancel,
+) -> io::Result<Option<FolderGate>> {
+    let directory = File::open(folder)?;
+    if !lock_cancelled(&directory, true, cancel)? {
+        return Ok(None);
+    }
+    Ok(Some(FolderGate {
+        _directory: directory,
+    }))
+}
+
 pub(crate) fn exclusive_folder(folder: &Path) -> io::Result<FolderGate> {
     let directory = File::open(folder)?;
     File::lock(&directory)?;
@@ -40,8 +53,25 @@ pub(crate) fn exclusive_folder(folder: &Path) -> io::Result<FolderGate> {
 }
 
 /// Wait for exclusive ownership of one digest in this recording folder.
+#[cfg(test)]
 pub(crate) fn acquire(folder: &Path, digest: &str) -> io::Result<CacheLock> {
     acquire_after_open(folder, digest, || {})
+}
+
+pub(crate) fn acquire_cancelled(
+    folder: &Path,
+    digest: &str,
+    cancel: &crate::engine::Cancel,
+) -> io::Result<Option<CacheLock>> {
+    let (file, path, locks) = opened_lock(folder, digest)?;
+    if !lock_cancelled(&file, false, cancel)? {
+        return Ok(None);
+    }
+    Ok(Some(CacheLock {
+        _file: file,
+        path,
+        folder: locks,
+    }))
 }
 
 /// Take an inactive digest lock without waiting for an older process.
@@ -60,6 +90,7 @@ pub(crate) fn try_acquire(folder: &Path, digest: &str) -> io::Result<TryAcquire>
     }
 }
 
+#[cfg(test)]
 fn acquire_after_open(folder: &Path, digest: &str, opened: impl FnOnce()) -> io::Result<CacheLock> {
     let (file, path, locks) = opened_lock(folder, digest)?;
     opened();
@@ -69,6 +100,31 @@ fn acquire_after_open(folder: &Path, digest: &str, opened: impl FnOnce()) -> io:
         path,
         folder: locks,
     })
+}
+
+fn lock_cancelled(file: &File, shared: bool, cancel: &crate::engine::Cancel) -> io::Result<bool> {
+    use std::fs::TryLockError;
+
+    loop {
+        if cancel.fired() {
+            return Ok(false);
+        }
+        let attempted = if shared {
+            file.try_lock_shared()
+        } else {
+            file.try_lock()
+        };
+        match attempted {
+            Ok(()) => return Ok(true),
+            Err(TryLockError::WouldBlock) => {
+                cancel.observed_block();
+                if cancel.wait(crate::engine::Cancel::poll()) {
+                    return Ok(false);
+                }
+            }
+            Err(TryLockError::Error(error)) => return Err(error),
+        }
+    }
 }
 
 fn opened_lock(folder: &Path, digest: &str) -> io::Result<(File, PathBuf, PathBuf)> {

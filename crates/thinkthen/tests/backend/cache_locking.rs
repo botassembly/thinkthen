@@ -10,7 +10,7 @@ use std::thread;
 use std::time::Duration;
 
 #[cfg(target_os = "linux")]
-use crate::harness::process_is_blocked_on_inode;
+use crate::harness::process_has_file;
 use crate::harness::{Canned, Listener, Observed, spawn};
 use crate::result_assertions::normalized_details;
 
@@ -258,7 +258,6 @@ fn two_processes_share_one_request_and_the_keyless_waiter_replays() {
 #[cfg(target_os = "linux")]
 #[test]
 fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
-    use std::os::unix::fs::MetadataExt as _;
     use std::sync::{Arc, Barrier};
     use std::time::Instant;
 
@@ -286,11 +285,11 @@ fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
     let [lock] = locks.as_slice() else {
         panic!("one owner lock, found {locks:?}")
     };
-    let owner_inode = lock.metadata().expect("owner lock metadata").ino();
+    let owner_file = lock.metadata().expect("owner lock metadata");
 
     let mut waiter = start(listener.base(), &named).expect("waiter starts");
     let deadline = Instant::now() + Duration::from_secs(2);
-    while !process_is_blocked_on_inode(waiter.id().expect("waiter pid"), owner_inode)
+    while !process_has_file(waiter.id().expect("waiter pid"), &owner_file)
         .expect("waiter descriptors are readable")
     {
         assert!(

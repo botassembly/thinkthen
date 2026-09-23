@@ -36,6 +36,7 @@ pub(crate) struct Environment {
     config: Config,
     config_path: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
+    cancel: crate::engine::Cancel,
     usage: crate::engine::usage::Counters,
     usage_path: Option<PathBuf>,
 }
@@ -58,6 +59,7 @@ impl Environment {
             config,
             config_path,
             retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
+            cancel: crate::engine::Cancel::default(),
             usage: crate::engine::usage::Counters::new(usage_path.clone()),
             usage_path,
         })
@@ -114,6 +116,10 @@ impl Environment {
     /// How long the first retry waits before the wait doubles.
     pub(crate) fn retry_wait(&self) -> Duration {
         self.retry_wait_ms.map_or(RETRY_WAIT, Duration::from_millis)
+    }
+
+    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel {
+        &self.cancel
     }
 }
 

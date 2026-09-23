@@ -101,14 +101,14 @@ pub(crate) fn run(
             streams: reading.streams(),
             recording_reported: folders.reported(),
         };
-        let mut output = Output::Streaming(&mut writer);
         let jobs = arguments.common.jobs.map_or(4, usize::from);
         return crate::annotate_schedule::run(
             &judging,
             &reading,
             rows.map(|row| row.map(crate::annotate_schedule::Input::Record)),
             jobs,
-            &mut output,
+            environment.cancel(),
+            &mut Output::Streaming(&mut writer),
         );
     }
     let mut chunks = edge::Chunks::new(source, reading.streams());
@@ -143,14 +143,14 @@ pub(crate) fn run(
         streams: reading.streams(),
         recording_reported: folders.reported(),
     };
-    let mut output = Output::Streaming(&mut writer);
     let jobs = arguments.common.jobs.map_or(4, usize::from);
     crate::annotate_schedule::run(
         &judging,
         &reading,
         chunks.map(|row| row.map(crate::annotate_schedule::Input::Bytes)),
         jobs,
-        &mut output,
+        environment.cancel(),
+        &mut Output::Streaming(&mut writer),
     )
 }
 

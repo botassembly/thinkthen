@@ -2,7 +2,6 @@
 
 use std::fmt;
 use std::io;
-use std::thread;
 use std::time::Duration;
 
 use ureq::Agent;
@@ -103,11 +102,15 @@ impl Client {
     pub(crate) fn post_observed(
         &self,
         exchange: &Exchange<'_>,
+        cancel: &crate::engine::Cancel,
         before_attempt: impl Fn(),
     ) -> Result<HttpAnswer, Error> {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
+            if cancel.fired() {
+                return Err(Error::Cancelled);
+            }
             before_attempt();
             let attempt = match send(&self.agent, exchange) {
                 Ok(body) => {
@@ -121,7 +124,9 @@ impl Client {
             if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
                 return Err(attempt.failure);
             }
-            thread::sleep(bounded_wait(attempt.asked, wait, self.timeout));
+            if cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
+                return Err(Error::Cancelled);
+            }
             wait = wait.saturating_mul(2);
             retries += 1;
         }
@@ -277,7 +282,11 @@ mod tests {
     };
     use crate::engine::error::{Error, TransportKind};
     use std::cell::Cell;
-    use std::io;
+    use std::io::{self, Read as _, Write as _};
+    use std::net::TcpListener;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::thread;
     use std::time::Duration;
 
     #[test]
@@ -396,6 +405,52 @@ mod tests {
         }
     }
 
+    #[test]
+    #[allow(clippy::excessive_nesting, reason = "synchronized server fixture")]
+    fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+        let address = listener.local_addr().expect("address");
+        let received = Arc::new(AtomicUsize::new(0));
+        let counted = Arc::clone(&received);
+        let cancel = crate::engine::Cancel::default();
+        let server_cancel = cancel.clone();
+        let server = thread::spawn(move || {
+            for stream in listener.incoming().take(2) {
+                let mut stream = stream.expect("request");
+                let mut request = [0_u8; 1024];
+                let _read = stream.read(&mut request).expect("request bytes");
+                counted.fetch_add(1, Ordering::SeqCst);
+                stream
+                    .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
+                    .expect("response");
+                if server_cancel.fired() {
+                    break;
+                }
+            }
+        });
+        let url = format!("http://{address}/v1/systemone");
+        let key = Key::of("sk-test-value");
+        let client = Client::new(Duration::from_secs(2), false);
+        let attempts = Cell::new(0_u32);
+        let exchange = Exchange {
+            url: &url,
+            body: b"{}",
+            key: &key,
+            max_retries: 1,
+            retry_wait: Duration::from_secs(1),
+        };
+
+        let result = client.post_observed(&exchange, &cancel, || {
+            attempts.set(attempts.get() + 1);
+            cancel.fire();
+        });
+        server.join().expect("server thread");
+
+        assert!(matches!(result, Err(Error::Cancelled)));
+        assert_eq!(attempts.get(), 1);
+        assert_eq!(received.load(Ordering::SeqCst), 1);
+    }
+
     /// Port zero can never listen, so the refusal is deterministic.
     #[test]
     fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
@@ -410,7 +465,9 @@ mod tests {
             retry_wait: Duration::from_millis(1),
         };
 
-        let result = client.post_observed(&exchange, || observed.set(observed.get() + 1));
+        let result = client.post_observed(&exchange, &crate::engine::Cancel::default(), || {
+            observed.set(observed.get() + 1)
+        });
 
         assert_eq!(observed.get(), 1);
         assert!(matches!(

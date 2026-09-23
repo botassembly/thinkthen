@@ -95,6 +95,9 @@ pub(super) const fn maybe_fail_io(_stage: StorageStageName) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::io;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     use crate::core::Url;
     use crate::core::recording::{Entry, Exchange};
@@ -106,11 +109,113 @@ mod tests {
     const REQUEST: &[u8] = br#"{"state":"private evidence"}"#;
     const RESPONSE: &[u8] = br#"{"answer":true}"#;
     const OTHER_RESPONSE: &[u8] = br#"{"answer":false}"#;
+    static FOLDERS: AtomicU64 = AtomicU64::new(0);
 
     fn live(prepared: PreparedRecording) -> crate::engine::recorder::WritePermit {
         match prepared {
             PreparedRecording::Live(permit) => permit,
             PreparedRecording::Replay(_) => panic!("test unexpectedly replays"),
+        }
+    }
+
+    fn folder(stage: StorageStage) -> PathBuf {
+        let number = FOLDERS.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "thinkthen-storage-{}-{number}-{stage:?}",
+            std::process::id(),
+        ));
+        let _absent = fs::remove_dir_all(&path);
+        path
+    }
+
+    fn finish_with(stage: StorageStage) -> io::Result<(PathBuf, Error)> {
+        let folder = folder(stage);
+        let url = Url::new("http://127.0.0.1:1/v1/systemone")
+            .map_err(|_| io::Error::other("test address refused"))?;
+        let exchange = Exchange::new(&url, REQUEST);
+        let digest = exchange.digest();
+        let recorder = Recorder::of(Some(&folder), Some(&folder))
+            .map_err(|_| io::Error::other("test recorder refused"))?;
+        let permit = live(
+            recorder
+                .prepare(&exchange, &digest)
+                .map_err(|_| io::Error::other("test recording preflight failed"))?,
+        );
+        STORAGE_FAULT.with(|fault| fault.set(Some(stage)));
+        let error = permit
+            .finish(&exchange, RESPONSE, &digest.file_name())
+            .expect_err("injected storage stage fails");
+        Ok((folder, error))
+    }
+
+    fn files(folder: &Path) -> io::Result<Vec<PathBuf>> {
+        let mut found = Vec::new();
+        for entry in fs::read_dir(folder)? {
+            let path = entry?.path();
+            if path.is_dir() {
+                found.extend(
+                    fs::read_dir(path)?
+                        .filter_map(Result::ok)
+                        .map(|nested| nested.path()),
+                );
+            } else {
+                found.push(path);
+            }
+        }
+        Ok(found)
+    }
+
+    #[test]
+    fn every_injected_storage_stage_is_secret_safe_and_keeps_the_valid_final_rule() {
+        let cases = [
+            (StorageStage::Write, false, true, false),
+            (StorageStage::FileSync, false, true, false),
+            (StorageStage::Install, false, true, false),
+            (StorageStage::DirectorySync, true, false, false),
+            (StorageStage::Cleanup, true, false, true),
+            (StorageStage::LockRemove, true, true, false),
+            (StorageStage::LockDirectorySync, true, false, false),
+            (StorageStage::FinalRead, true, true, false),
+        ];
+        for (stage, final_exists, lock_exists, partial_exists) in cases {
+            let (folder, error) = finish_with(stage).expect("fault case runs");
+            assert!(matches!(error, Error::RecordingStorage));
+            assert_eq!(format!("{error:?}"), "RecordingStorage");
+            let paths = files(&folder).expect("fault folder is readable");
+            assert_eq!(
+                paths.iter().any(|path| {
+                    path.parent()
+                        .is_some_and(|parent| parent.ends_with(".locks"))
+                }),
+                lock_exists,
+                "{stage:?}: {paths:?}"
+            );
+            assert_eq!(
+                paths.iter().any(|path| {
+                    path.extension()
+                        .is_some_and(|extension| extension == "json")
+                        && path
+                            .file_name()
+                            .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+                }),
+                final_exists,
+                "{stage:?}: {paths:?}"
+            );
+            assert_eq!(
+                paths.iter().any(|path| {
+                    path.file_name()
+                        .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+                        && path
+                            .file_name()
+                            .is_some_and(|name| name.to_string_lossy() != ".thinkthen-backend.json")
+                        && !path
+                            .parent()
+                            .is_some_and(|parent| parent.ends_with(".locks"))
+                }),
+                partial_exists,
+                "{stage:?}: {paths:?}"
+            );
+            let _removed = fs::remove_dir_all(folder);
         }
     }
 

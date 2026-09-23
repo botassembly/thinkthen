@@ -32,6 +32,7 @@ pub(crate) fn run<I>(
     reading: &Reading,
     chunks: I,
     jobs: usize,
+    cancel: &crate::engine::Cancel,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
 where
@@ -40,6 +41,7 @@ where
     let outcome = engine_schedule::run(
         jobs,
         reading.streams(),
+        cancel,
         |requests, events| {
             thread::spawn(move || read(chunks, &requests, &events));
         },
@@ -65,6 +67,7 @@ where
         },
         |judged| output.take(judged),
         Failure::Defect,
+        || Failure::from(crate::engine::error::Error::Cancelled),
     )?;
     match outcome {
         RunOutcome::Complete { partial_failure } => Ok(if partial_failure {
