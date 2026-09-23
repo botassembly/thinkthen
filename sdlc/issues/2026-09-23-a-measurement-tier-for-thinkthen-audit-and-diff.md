@@ -41,3 +41,14 @@ Audit and diff are two halves of one loop: audit says which question is better; 
 ## What Ian can overturn
 
 All of it: both, one, or neither; the names; the placement as subcommands; and the timing (before or after 0.1 — this issue does not assume either).
+
+## Ruled 2026-09-23 (product owner, marketing side)
+
+Both, after 0.1. Beatles Bench already does both by hand: its `score/` computes agreement with intervals, calibration, the accuracy-by-coverage curve, and a cut tuned on a held-out half, and its paired test is a diff between two runs. The leaning-no report (`botassembly/beatles-bench`, `reports/leaning-no.md`) is ten diffs and one audit. That evidence settles the need.
+
+Two open issues fold into this one and close with it:
+
+- `2026-09-23-show-what-changes-when-the-cut-moves.md` becomes `diff` across two cuts on one run. The cache makes it free.
+- Its added accuracy-by-coverage report becomes part of `audit`, which also suggests a cut tuned on labeled cases and checked on a held-out part. The Beatles tests found that a tuned cut beat every wording change.
+
+`audit` reports, per question: agreement with a 95% interval, both disagreement directions, the yes/no AUC, calibration, accuracy at each coverage level, and a suggested cut. `diff` takes two runs over the same records, from two wordings or two cuts, and lists what flipped and which way. The Beatles recordings are the first corpus, and Beatles Bench switches its decide and choose scoring to `thinkthen audit` once it ships. Ian can overturn the ruling.
