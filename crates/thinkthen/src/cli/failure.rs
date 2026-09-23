@@ -13,6 +13,7 @@ use crate::core::{
 use crate::engine::error::{Error as EngineError, TransportKind};
 use crate::table;
 
+pub(crate) mod recognize;
 mod recording;
 mod status;
 
@@ -35,6 +36,7 @@ pub(crate) enum Failure {
         error: ProfileError,
     },
     ProfileLimit(ProfileLimit),
+    Recognize(recognize::Error),
     QuietWithDetails,
     RawWithAnotherView,
     /// The question file, or a value beside it, was refused.
@@ -154,16 +156,6 @@ pub(crate) enum Failure {
     Render(RenderError),
 }
 
-impl Failure {
-    /// Name invalid text by its framing while preserving every other record error.
-    pub(crate) fn record(error: RecordError, streamed: bool) -> Self {
-        match error {
-            RecordError::NotUtf8 => Self::InvalidUtf8 { record: streamed },
-            other => Self::Record(other),
-        }
-    }
-}
-
 /// Every message a user reads is written here. No message carries a key or any
 /// evidence text. A backend that answers with an error status is named by that
 /// status and by the fixed phrase its status carries, never by its body,
@@ -183,6 +175,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         return code;
     }
     if let Some((code, message)) = recording::message(failure) {
+        let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
+        return code;
+    }
+    if let Some((code, message)) = recognize::message(failure) {
         let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
         return code;
     }

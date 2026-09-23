@@ -389,7 +389,9 @@ fn evidence_of(named: &str) -> Vec<u8> {
 /// Drive one refusal over one verb and read everything the run wrote.
 fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -> io::Result<()> {
     let (name, own, _) = verb;
-    if !refusal.verbs.is_empty() && !refusal.verbs.contains(&name) {
+    if (!refusal.verbs.is_empty() && !refusal.verbs.contains(&name))
+        || (name == "recognize" && refusal.named == "a blank question")
+    {
         return Ok(());
     }
     let named = format!("{}-{name}", refusal.named.replace(' ', "-"));
@@ -406,7 +408,10 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
     } else {
         refusal.question
     };
-    let mut asked = vec![name.to_owned(), question.to_owned()];
+    let mut asked = vec![name.to_owned()];
+    if name != "recognize" {
+        asked.push(question.to_owned());
+    }
     asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
     // A row that names its own base keeps it. Every other row points at the
     // listener, which answers nothing, so a row that stopped refusing would
@@ -434,8 +439,13 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
         "{named}: a refusal prints nothing"
     );
     let message = String::from_utf8_lossy(&output.stderr);
+    let says = if name == "recognize" && refusal.named == "a blank model" {
+        "--model is text, not white space"
+    } else {
+        refusal.says
+    };
     assert!(
-        message.contains(refusal.says),
+        message.contains(says),
         "{named}: the message names another refusal\n{message}"
     );
     nothing_leaked(&named, &output, &into);

@@ -38,6 +38,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 19 | [Gate a risky command and fail closed](19-no-or-could-not-ask/) | `decide` | green |
 | 27 | [Test a script with no network](27-test-with-no-network/) | `decide` | green |
 | 18 | Point the tool at another server and compare two deciders | `decide` | coming, slice 13 |
+| 44 | [Find names in a text without a network](44-recognize-names/) | `recognize` | green |
 
 ## Gates and branches
 

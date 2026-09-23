@@ -38,7 +38,7 @@ fn help_opens_with_the_semantic_commands_introduction() {
 
 #[test]
 fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
-    const INTRODUCTIONS: [(&str, &str); 8] = [
+    const INTRODUCTIONS: [(&str, &str); 9] = [
         ("decide", "Answer one yes or no question about a text"),
         ("filter", "Keep the records where the answer is yes"),
         ("rank", "Sort records by how likely the answer is yes"),
@@ -50,6 +50,10 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         ("score", "Place a text on a scale you name"),
         ("tag", "Name every label that fits"),
         ("annotate", "Fill out a question set for every record"),
+        (
+            "recognize",
+            "Find every name in a text and assign one of the given kinds",
+        ),
     ];
 
     let mut failures = Vec::new();
@@ -93,9 +97,19 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         .lines()
         .filter_map(|line| line.split_whitespace().next())
         .collect();
-    const ORDER: [&str; 11] = [
-        "status", "decide", "filter", "rank", "choose", "find", "score", "tag", "annotate",
-        "cache", "help",
+    const ORDER: [&str; 12] = [
+        "status",
+        "decide",
+        "filter",
+        "rank",
+        "choose",
+        "find",
+        "score",
+        "tag",
+        "annotate",
+        "recognize",
+        "cache",
+        "help",
     ];
     if listed != ORDER {
         failures.push(format!("root Commands order is {listed:?}"));
