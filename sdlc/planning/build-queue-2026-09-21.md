@@ -4,6 +4,10 @@ Written 2026-09-21 by the product side at Ian's request. It folds the quality wa
 
 Ian can overturn any placement here.
 
+## Current handoff, 2026-09-23
+
+The [mainline assessment and 0074 checklist](mainline-readiness-2026-09-23.md) refresh the evidence without changing the accepted dependency order. Main `2b63c87` includes 0069, 0072, and 0073. Ticket 0074's amended design and partial Ctrl-C implementation remain uncommitted in its worktree; complete its deterministic tests, independent review, and integrated local gates next. Width, deadlines, fork recovery, and host signal ownership still precede recognize/relate and the public Rust API. The separate `surfaces` branch at `f942e06` is unmerged. Its latest independent verification closes most previously reported failures and names the remaining proofs. Release installers and installed-artifact checks remain open. Earlier snapshots below are historical.
+
 ## Execution amendment, 2026-09-22
 
 Ian directed the architect to resume the reviewed plan, record this queue amendment, and drive bounded engine tickets with SWE-2 implementation and independent review. This order supersedes the A5–A8 sequence below; their scope remains in the queue. ADR 0017's execution-order amendment records the same dependency change.

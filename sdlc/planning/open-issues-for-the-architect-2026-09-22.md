@@ -2,6 +2,8 @@
 
 Status: a map. It authorizes nothing. A Sonnet reader classified every issue file whose status is not closed on 2026-09-22, and the product side checked the priorities. Ian can overturn any priority.
 
+Snapshot notice, 2026-09-23: the classifications below preserve the earlier survey. Ticket 0065 has closed the backend-address cache defect, 0069 has landed structured fields, and 0073 has landed private cancellation. CLI SIGINT is now active work under 0074, not deferred after 0.1. Use the [current assessment](mainline-readiness-2026-09-23.md) and build queue for dispatch; verify remaining rows against their owning issue and landing record before creating work.
+
 Cleaned up on 2026-09-22 at commit `2000932`: 22 done files were closed, 16 wording issues were merged into `2026-09-22-command-wording-and-help-fixes-for-0-1.md` (40 items, one ticket in lane A1), and 4 leftover lists were merged into `2026-09-22-small-leftovers-from-early-reviews.md` (22 items, low priority). What remains open is below.
 
 Priority: P0 blocks 0.1. P1 lands in 0.1. P2 after 0.1. P3 reference or wording no user sees.

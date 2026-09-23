@@ -1,6 +1,8 @@
 # A run stopped by SIGINT prints no stopped-at line
 
-Status: Engine mechanism landed in ticket 0073; CLI SIGINT binding remains pending
+Status: Engine mechanism landed in ticket 0073; CLI SIGINT binding is in progress in the uncommitted ticket 0074 worktree
+
+The [2026-09-23 completion checklist](../planning/mainline-readiness-2026-09-23.md#complete-ticket-0074-next) records the remaining deterministic subprocess, signal-state, failure-path, review, and landing requirements. This issue stays open until the integrated implementation passes and reaches remote main.
 
 A run stopped by a bad record prints a line on standard error naming the record and the resume path. A run stopped by Ctrl-C prints nothing.
 
