@@ -153,7 +153,23 @@ recognition, relations — is the engine's.
   displaces the extension's and keeps its own (proven by
   `tools/host_signal.py`); the token is one shot per process, which the
   CLI never notices and a long-lived host should treat as a restart
-  signal.
+  signal. The handler itself only sets the token and writes one byte to
+  a pipe; a bridge thread interrupts the busy relate connections, so
+  the handler takes no lock and allocates nothing.
+- **Known limit: a connection's own interrupt does not reach a running
+  call.** `con.interrupt()` in Python, or `duckdb_interrupt` on the
+  caller's connection from any host, sets DuckDB's flag for that
+  connection, and DuckDB reads it between chunks. A `thinkthen_decide`
+  batch or a relate scan inside one chunk runs to its end and only then
+  raises DuckDB's `INTERRUPT Error` (review 5 measured a slow wire batch:
+  the interrupt at 2 s, the error at 16.1 s, the same as no interrupt).
+  The v1.5.5 C API gives an extension no way to read that flag: its one
+  interrupt entry is the setter `duckdb_interrupt(duckdb_connection)`
+  (`duckdb.h` line 1014), and a function callback holds only a client
+  context, whose entries are the catalog, the config options, the file
+  system, and the connection id. SIGINT, or a per-call deadline, is the
+  way to bound a call; the item stays open until DuckDB exposes the
+  interrupt state to extensions.
 
 ## Build and run
 

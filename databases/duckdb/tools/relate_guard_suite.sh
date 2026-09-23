@@ -86,3 +86,29 @@ fi
 refuse "a prepared relate re-checks file access at execution" \
   "enable_external_access is off for this database" \
   "$(run "CREATE TABLE t(id INTEGER, body VARCHAR); INSERT INTO t VALUES (1, 'the payment failed'); PREPARE p AS SELECT * FROM thinkthen_relate('SELECT id, body FROM t', ['@$CUT']); SET enable_external_access=false; EXECUTE p;")"
+
+# The row cap bounds what a relate query holds, not only what it returns
+# (review 5, finding 2): a window or a grouping over eight million rows
+# read all of them before the LIMIT, 455 MB and 627 MB, and only then
+# heard the 256-row refusal. The plan is read first now, and a step that
+# holds its whole input refuses before anything runs. The sentences are
+# pinned whole.
+refuse "a window over eight million rows refuses at the plan" \
+  "thinkthen usage: the relate query feeds about 8000000 rows into the WINDOW step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first" \
+  "$(run "SELECT count(*) FROM thinkthen_relate('SELECT i, ''b'' FROM (SELECT i, row_number() OVER (ORDER BY random()) AS rn FROM range(8000000) t(i))', ['caused_by']);")"
+refuse "a grouping over eight million rows refuses at the plan" \
+  "thinkthen usage: the relate query feeds about 8000000 rows into the HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first" \
+  "$(run "SELECT count(*) FROM thinkthen_relate('SELECT i, ''b'' FROM (SELECT i % 8000000 AS i, count(*) FROM range(8000000) t(i) GROUP BY 1)', ['caused_by']);")"
+refuse "a materialized WITH over eight million rows refuses at the plan" \
+  "thinkthen usage: the relate query feeds about 8000000 rows into the CTE step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first" \
+  "$(run "SELECT count(*) FROM thinkthen_relate('WITH x AS MATERIALIZED (SELECT i FROM range(8000000) t(i)) SELECT i, ''b'' FROM x', ['caused_by']);")"
+# An honest grouped record source over an ordinary table passes the plan
+# and reaches the backend: the stand-in's own "no recorded answer" (so
+# the CLI exits non-zero; the `|| true` keeps `set -e` from ending the
+# suite on that expected error).
+small_grouped=$(run "CREATE TABLE t AS SELECT i AS id, 'ticket ' || i AS body, i % 7 AS k FROM range(2000) r(i); SELECT count(*) FROM thinkthen_relate('SELECT k, string_agg(body, '' '') FROM t GROUP BY k', ['caused_by']);" || true)
+if [[ "$small_grouped" != *"no recorded answer for the records"* ]]; then
+  echo "FAILED   a small grouped relate query did not reach the backend: '$small_grouped'"
+  exit 1
+fi
+echo "ok       a small grouped relate query passes the plan check and reaches the backend"

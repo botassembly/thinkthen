@@ -34,10 +34,14 @@ unsafe extern "C" fn bind(info: ffi::duckdb_bind_info) {
 
 unsafe fn plan(info: ffi::duckdb_bind_info) -> Result<(), String> {
     unsafe {
-        let varchar = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR);
+        // The bind copies each column type, so each one is destroyed
+        // after use (review 5: these leaked on every bind).
+        let mut varchar = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR);
         ffi::duckdb_bind_add_result_column(info, c"metric".as_ptr(), varchar);
-        let bigint = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_BIGINT);
+        ffi::duckdb_destroy_logical_type(&mut varchar);
+        let mut bigint = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_BIGINT);
         ffi::duckdb_bind_add_result_column(info, c"value".as_ptr(), bigint);
+        ffi::duckdb_destroy_logical_type(&mut bigint);
         ffi::duckdb_bind_set_bind_data(
             info,
             Box::into_raw(Box::new(false)) as *mut c_void,

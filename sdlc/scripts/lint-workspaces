@@ -58,11 +58,13 @@ workspace_deny() {
 		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",\n    "BSL-1.0",/' ;;
 	databases/sqlite)
 		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",/' ;;
-	# duckdb's own crate tree carries the same Zlib family plus the CMake
-	# test fixtures' CC0-1.0 (duckdb's vendored test data); both recorded
-	# widenings (surfaces-review-4: deny covered 12 of 13).
+	# duckdb's tree needs three crate-scoped exceptions and no allow-list
+	# widening (review 5: the workspace-wide allowance would pass any
+	# future crate under these licenses). foldhash and zlib-rs are Zlib
+	# only, and tiny-keccak is CC0-1.0 only; every LLVM-exception crate
+	# there also offers MIT, so that allowance was never needed.
 	databases/duckdb)
-		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",\n    "CC0-1.0",/' ;;
+		extra='s/^exceptions = \[\]$/exceptions = [\n    { allow = ["Zlib"], crate = "foldhash" },\n    { allow = ["Zlib"], crate = "zlib-rs" },\n    { allow = ["CC0-1.0"], crate = "tiny-keccak" },\n]/' ;;
 	*) extra='' ;;
 	esac
 	cfg=$(mktemp)
@@ -81,25 +83,19 @@ workspace_deny() {
 	out=$(cd "$workspace" && cargo deny --offline check --config "$cfg" advisories bans licenses 2>&1)
 	status=$?
 	rm -f "$cfg"
-	# A workspace whose lock names crates this machine never fetched (DuckDB
-	# builds its Windows-side crates only on the machines that build Windows
-	# artifacts) cannot answer cargo metadata offline; that is recorded as a
-	# deferral with its reason, not a silent skip, until the DuckDB lane's
-	# pinning work lands the fetch story.
+	# A workspace whose lock names crates this machine never cached cannot
+	# answer cargo metadata offline, and the check fails with the remedy.
 	case $status in
 	0) ;;
 	*)
-		case $(printf '%s\n' "$out" | grep -c "attempting to make an HTTP request") in
+		case $(printf '%s\n' "$out" | grep -c -e "attempting to make an HTTP request" -e "using offline mode") in
 		0) ;;
 		*)
-			# surfaces-review-4: 12 of 13 lockfiles is not all of them. The
-			# workspace build itself fetches from crates.io; the same fetch
-			# warms cargo metadata's cache, once, and the check retries
-			# offline. A fetch that fails fails the check.
-			printf 'deny: %s: metadata cold, fetching once as the build does\n' "$workspace"
-			(cd "$workspace" && cargo fetch --locked >/dev/null 2>&1) || return 1
-			out=$(cd "$workspace" && cargo deny --offline check --config "$cfg" advisories bans licenses 2>&1)
-			status=$?
+			# A gate never touches the network (review 5: this branch ran
+			# `cargo fetch`). A cold cache fails the check loudly and names
+			# the remedy, which is a person's step on a networked machine.
+			printf 'deny: %s FAILED: cargo metadata needs crates this machine has not cached, and the gate never fetches; run `cargo fetch --locked` in %s on a networked machine, then rerun\n' "$workspace" "$workspace" >&2
+			return 1
 			;;
 		esac
 		;;

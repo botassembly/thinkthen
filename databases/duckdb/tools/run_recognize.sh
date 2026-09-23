@@ -3,9 +3,10 @@
 # `recognize-surfaces.md` page draws are run verbatim in the stock v1.5.5
 # CLI against the stand-in, and the two calls that cannot run as drawn are
 # pinned with their exact binder errors and the working replacements. The
-# deck stays the source of truth; its drawn lines are vendored at
-# `tools/drawn-calls/recognize.sql` so this check runs with no private
-# deck on disk. The fixture tables hold recorded texts so the replay can
+# calls come from `tools/drawn-calls/recognize.sql`, a frozen copy of the
+# page's lines as they stood when this check was written (its header
+# records the page's hash and says how the deck has moved since), so this
+# check runs with no private deck on disk. The fixture tables hold recorded texts so the replay can
 # answer. The "Names become rows" join runs with the usage counters
 # around it, and the 255-record refusal is proven.
 set -euo pipefail

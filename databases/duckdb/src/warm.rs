@@ -162,12 +162,15 @@ pub unsafe fn register(con: ffi::duckdb_connection) -> Result<(), String> {
         let aggregate = ffi::duckdb_create_aggregate_function();
         let name = CString::new("thinkthen_warm").expect("the name holds no NUL byte");
         ffi::duckdb_aggregate_function_set_name(aggregate, name.as_ptr());
-        let varchar = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR);
+        // The function copies each type it is handed, so each one is
+        // destroyed after use (review 5: these leaked on every LOAD).
+        let mut varchar = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR);
         ffi::duckdb_aggregate_function_add_parameter(aggregate, varchar);
-        let varchar = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR);
         ffi::duckdb_aggregate_function_add_parameter(aggregate, varchar);
-        let bigint = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_BIGINT);
+        ffi::duckdb_destroy_logical_type(&mut varchar);
+        let mut bigint = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_BIGINT);
         ffi::duckdb_aggregate_function_set_return_type(aggregate, bigint);
+        ffi::duckdb_destroy_logical_type(&mut bigint);
         ffi::duckdb_aggregate_function_set_functions(
             aggregate,
             Some(state_size),

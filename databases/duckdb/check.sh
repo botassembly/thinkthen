@@ -35,6 +35,9 @@ echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
 # door test. The default extension stays the one every other step loads.
 DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
   cargo build --locked --release --quiet --features synthetic-partial
+# A fresh checkout has no build/fixture yet (review 5: the append failed
+# with "No such file or directory" on a clean tree).
+mkdir -p build/fixture
 ./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
   -o build/fixture/thinkthen.duckdb_extension \
   -l target/release/libthinkthen.$LIB_EXT \
@@ -71,6 +74,26 @@ if [[ -n "$standin_extra" ]]; then
 fi
 echo "ok       the only stand-in reference is the connector import"
 
+echo "== duckdb surface: every logical type the source creates is destroyed"
+# A created logical type the caller never destroys leaks; review 5 found
+# five in warm.rs and usage.rs, the usage ones on every bind. A crude
+# count, per file, with no exception list: a new create needs its destroy
+# beside it.
+unbalanced=""
+for source in src/*.rs; do
+  made=$(grep -c "duckdb_create_logical_type(\|duckdb_create_list_type(" "$source" || true)
+  freed=$(grep -c "duckdb_destroy_logical_type(" "$source" || true)
+  if [[ "$made" != "$freed" ]]; then
+    unbalanced+="$source: $made created, $freed destroyed"$'\n'
+  fi
+done
+if [[ -n "$unbalanced" ]]; then
+  echo "FAILED   logical types created without a matching destroy:"
+  printf '%s' "$unbalanced"
+  exit 1
+fi
+echo "ok       every created logical type has its destroy"
+
 echo "== duckdb surface: the conformance driver can fail"
 tools/conformance_selftest.sh
 
@@ -99,26 +122,22 @@ echo "== duckdb surface: the host's SIGINT coexistence, the job-2 shape"
 echo "== duckdb surface: the function examples"
 python3 tools/examples.py
 
-echo "== duckdb surface: the fixture-armed extension for the failed-marker case"
-# The stand-in's partial-failure opt-in is a compile-time door, so the one
-# conformance case that replays the failed marker (74) runs against a
-# second build that carries it, exactly the way the C surface builds its
-# door test. The default extension stays the one every other step loads.
-DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
-  cargo build --locked --release --quiet --features synthetic-partial
-./configure/venv/bin/python extension-ci-tools/scripts/append_extension_metadata.py \
-  -l target/release/libthinkthen.$LIB_EXT \
-  -o build/fixture/thinkthen.duckdb_extension \
-  -n thinkthen -dv "$DUCKDB_VERSION" \
-  -evf configure/extension_version.txt -pf configure/platform.txt --abi-type C_STRUCT_UNSTABLE >/dev/null
-test -s build/fixture/thinkthen.duckdb_extension
-
 echo "== duckdb surface: conformance slice"
 python3 tools/conformance.py
 
 echo "== duckdb surface: slide sample, as drawn"
 ENGINE_NULL=1 tools/run_slide.sh >/dev/null
 echo "ok       the slide runs as drawn (output above its run in NOTES)"
+
+# The drawn calls are a frozen fixture (review 5: the copy had drifted
+# from the deck with only a remembered rule to catch it). Their hash is
+# pinned, so a change to them is a visible, deliberate re-vendoring.
+drawn_sha=$(grep -v "^--" tools/drawn-calls/recognize.sql | shasum -a 256 | cut -d' ' -f1)
+if [[ "$drawn_sha" != "d3581e25d68a44bec3096b84c68a448518de63441f3e269bb47a170f47092dc7" ]]; then
+  echo "FAILED   tools/drawn-calls/recognize.sql changed (sha256 $drawn_sha); re-vendoring updates this pin and the acceptance expectations together"
+  exit 1
+fi
+echo "ok       the frozen drawn calls match their pinned hash"
 
 echo "== duckdb surface: recognize and relate acceptance, calls as drawn"
 ENGINE_NULL=1 tools/run_recognize.sh >/dev/null

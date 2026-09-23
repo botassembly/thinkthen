@@ -34,7 +34,7 @@
 //! exactly as a live one's does.
 
 use std::ffi::{CStr, CString, c_void};
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
@@ -195,19 +195,21 @@ pub(crate) fn register(database: ffi::duckdb_database) -> Result<ffi::duckdb_con
     Ok(raw)
 }
 
-/// 128 bits of OS randomness as hex: two independently seeded hashers'
-/// outputs, which the platform seeds from its own entropy pool. Not a
-/// cryptographic guarantee, but beyond enumeration, which is the
-/// review's bar — clock, counter, and PID are gone (review 4, finding 5).
-fn random_hex() -> String {
-    use std::hash::{BuildHasher, Hasher};
-    let mut hex = String::with_capacity(32);
-    for _ in 0..2 {
-        let mut hasher = std::hash::RandomState::new().build_hasher();
-        hasher.write_usize(0);
-        hex.push_str(&format!("{:016x}", hasher.finish()));
-    }
-    hex
+/// 128 bits of OS randomness as hex, read from `/dev/urandom` (Linux and
+/// macOS both carry it; no new dependency). The name and the marker are
+/// the identity's whole secret: a caller that learned another database's
+/// pair could attach it under its own instance and be routed there
+/// (review 4, finding 5), so they come from the kernel's generator, not
+/// from the standard library's hash-map keys, whose SipHash output of a
+/// fixed input shares one per-thread seed across every name this
+/// process mints (review 5, finding 7).
+fn random_hex() -> Result<String, String> {
+    use std::io::Read;
+    let mut bytes = [0_u8; 16];
+    std::fs::File::open("/dev/urandom")
+        .and_then(|mut source| source.read_exact(&mut bytes))
+        .map_err(|error| format!("the OS random source did not answer: {error}"))?;
+    Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
 }
 
 /// The uniquely named in-memory database attached as this instance's
@@ -222,8 +224,8 @@ fn random_hex() -> String {
 /// attach keeps `None` and is never routed to while other databases are
 /// loaded (no name fallback — finding 5, forge3).
 fn attach_probe(connection: ffi::duckdb_connection) -> Result<(String, String), String> {
-    let probe = format!("thinkthen_instance_{}", random_hex());
-    let marker = format!("thinkthen_marker_{}", random_hex());
+    let probe = format!("thinkthen_instance_{}", random_hex()?);
+    let marker = format!("thinkthen_marker_{}", random_hex()?);
     let sql = format!("ATTACH ':memory:' AS {probe}");
     let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
     let Ok(sql_c) = CString::new(sql) else {
@@ -398,15 +400,15 @@ fn probe_is_ours(caller: ffi::duckdb_client_context, probe: &str, marker: &str) 
     ours
 }
 
-/// Interrupt every kept connection currently running a relate query:
-/// called from the SIGINT handler after the engine's cancel token, so
+/// Interrupt every kept connection currently running a relate query, so
 /// one Ctrl-C stops every in-flight query on every loaded database —
 /// both of two concurrent relates, and a slow one the caller's own
 /// interrupt cannot reach, because the query runs on the kept
-/// connection, not the caller's (review 4, finding 13). Only atomic
-/// loads happen under the handler; `duckdb_interrupt` itself is the
-/// engine's own thread-safe interruption door.
-pub(crate) fn interrupt_busy() {
+/// connection, not the caller's (review 4, finding 13). Runs on the
+/// interrupt bridge's thread, never in the handler: it locks the
+/// registry and allocates, and neither is async-signal-safe (review 5,
+/// finding 1).
+fn interrupt_busy() {
     let targets: Vec<ffi::duckdb_connection> = {
         let kept = lock(&KEPT);
         kept.iter()
@@ -417,6 +419,87 @@ pub(crate) fn interrupt_busy() {
     for connection in targets {
         unsafe { ffi::duckdb_interrupt(connection) };
     }
+}
+
+/// The write end of the interrupt bridge's pipe; -1 until it starts.
+static BRIDGE_WRITE: AtomicI32 = AtomicI32::new(-1);
+
+/// Start the interrupt bridge once: a thread blocked on a pipe that, per
+/// wake, interrupts every busy kept connection. The SIGINT handler's
+/// whole share is one `write(2)`, which is async-signal-safe; the
+/// registry lock and the allocation happen here, on a normal thread
+/// (review 5, finding 1: the handler took the registry mutex, and a
+/// signal landing on a thread that held it deadlocked that thread).
+pub(crate) fn start_interrupt_bridge() {
+    if BRIDGE_WRITE.load(Ordering::Acquire) >= 0 {
+        return;
+    }
+    let mut fds: [libc::c_int; 2] = [-1, -1];
+    if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+        return;
+    }
+    let [read_end, write_end] = fds;
+    for fd in fds {
+        unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) };
+    }
+    // A full pipe already holds a pending wake, so the handler never
+    // blocks on it.
+    unsafe { libc::fcntl(write_end, libc::F_SETFL, libc::O_NONBLOCK) };
+    let spawned = std::thread::Builder::new()
+        .name("thinkthen-interrupt".into())
+        .spawn(move || {
+            let mut bytes = [0_u8; 64];
+            loop {
+                let read = unsafe { libc::read(read_end, bytes.as_mut_ptr().cast(), bytes.len()) };
+                if read > 0 {
+                    if !SHUTDOWN.load(Ordering::SeqCst) {
+                        interrupt_busy();
+                    }
+                } else if read < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+                    continue;
+                } else {
+                    // The read end stays open on the way out, so a late
+                    // write from the handler never raises SIGPIPE.
+                    return;
+                }
+            }
+        });
+    if spawned.is_err() {
+        unsafe {
+            libc::close(read_end);
+            libc::close(write_end);
+        }
+        return;
+    }
+    BRIDGE_WRITE.store(write_end, Ordering::Release);
+}
+
+/// The handler's whole share of the kept-connection interrupt: one byte
+/// to the bridge, with the interrupted thread's `errno` put back.
+pub(crate) fn wake_interrupt_bridge() {
+    let fd = BRIDGE_WRITE.load(Ordering::Acquire);
+    if fd < 0 {
+        return;
+    }
+    let slot = errno_slot();
+    let saved = unsafe { *slot };
+    let byte = 1_u8;
+    unsafe { libc::write(fd, (&raw const byte).cast(), 1) };
+    unsafe { *slot = saved };
+}
+
+/// The calling thread's `errno`, which a signal handler must leave as it
+/// found it.
+#[cfg(target_os = "linux")]
+fn errno_slot() -> *mut libc::c_int {
+    unsafe { libc::__errno_location() }
+}
+
+/// The calling thread's `errno`, which a signal handler must leave as it
+/// found it.
+#[cfg(target_os = "macos")]
+fn errno_slot() -> *mut libc::c_int {
+    unsafe { libc::__error() }
 }
 
 /// The reload remedy, as one message.
@@ -1037,8 +1120,31 @@ fn count_connections(connection: ffi::duckdb_connection) -> Result<u64, String> 
     count.ok_or_else(|| "the connection count did not read".to_owned())
 }
 
+/// Run `body` while this thread holds the kept-connection registry: the
+/// signal test's way to land a SIGINT exactly where the handler used to
+/// deadlock (review 5, finding 1).
+#[cfg(test)]
+pub(crate) fn with_registry_held<R>(body: impl FnOnce() -> R) -> R {
+    let _held = lock(&KEPT);
+    body()
+}
+
 /// A mutex's guard, surviving a poisoned lock the way a contained panic
 /// leaves it: the data is still the registry or the gate.
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[cfg(test)]
+mod identity_tests {
+    /// The identity's names are 32 lowercase hex digits from the OS
+    /// source, and a thousand of them never repeat.
+    #[test]
+    fn the_identity_names_are_random_hex() {
+        let names: std::collections::HashSet<String> =
+            (0..1_000).map(|_| super::random_hex().expect("the OS source answers")).collect();
+        assert_eq!(names.len(), 1_000);
+        assert!(names.iter().all(|name| name.len() == 32
+            && name.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))));
+    }
 }
