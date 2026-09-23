@@ -776,17 +776,34 @@ if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   # The reviewer's shape on the wire, scaled: warm judges 2,000 pairs
   # (63 sends at width 32 against the 300 ms stub), then the row-by-row
   # decide pass over the same pairs must add zero sends.
-  psql_wire -c "SELECT thinkthen_warm('@refund.json',
-      'order ' || g || ': charged twice, please refund')
-    FROM generate_series(1, 2000) g;" >/dev/null
-  before=$(psql_wire -Atq -c "SELECT requests FROM thinkthen_usage();")
-  after_read=$(psql_wire -Atq -c "SELECT count(*) FROM generate_series(1, 2000) g
-    WHERE thinkthen_decide('@refund.json',
-      'order ' || g || ': charged twice, please refund');")
-  after=$(psql_wire -Atq -c "SELECT requests FROM thinkthen_usage();")
+  # One session: the answers cache and the usage counters are
+  # per-backend, so separate sessions would reset both and the delta
+  # would be vacuous (an earlier shape here re-judged the rows against
+  # the 300 ms stub in a fresh backend and hung the check). 500 rows:
+  # the property is scale-independent and the wire section stays inside
+  # the gate's budget under the stub's retry pressure.
+  docker exec -e PGHOST=/run/postgresql "$WIRE_NAME" \
+    psql -U postgres -v ON_ERROR_STOP=1 -Atq \
+    -c "SELECT thinkthen_warm('@refund.json',
+        'order ' || g || ': charged twice, please refund')
+      FROM generate_series(1, 500) g;" \
+    -c "SELECT requests FROM thinkthen_usage();" \
+    -c "SELECT count(*) FROM generate_series(1, 500) g
+      WHERE thinkthen_decide('@refund.json',
+        'order ' || g || ': charged twice, please refund');" \
+    -c "SELECT requests FROM thinkthen_usage();" \
+    > .tmp-warm-wire.out
+  mapfile -t wire_lines < <(grep -vE "^$" .tmp-warm-wire.out)
+  [ "${#wire_lines[@]}" = "4" ] \
+    || { echo "FAILED   the warm wire session returned ${#wire_lines[@]} lines" >&2; cat .tmp-warm-wire.out >&2; exit 1; }
+  before=${wire_lines[1]}
+  after=${wire_lines[3]}
+  [ "$before" -gt 0 ] 2>/dev/null \
+    || { echo "FAILED   warm sent nothing ($before) - the stub was not up" >&2; exit 1; }
   [ "$((after - before))" = "0" ] \
     || { echo "FAILED   the read pass added $((after - before)) sends after warm" >&2; exit 1; }
-  echo "ok       warm sent its rounds; the decide pass over the same 2,000 pairs added 0 sends"
+  echo "ok       warm sent $before requests; the decide pass over the same 500 pairs added 0 sends"
+  rm -f .tmp-warm-wire.out
 
   echo "== postgres surface: a deadline shorter than the stub's delay"
   # The enforced tool on the single-row path, against the 300 ms stub: a
