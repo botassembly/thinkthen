@@ -5,28 +5,33 @@
 //! A table function cannot run SQL on the caller's own connection, so
 //! each database gets a kept connection the relate scan reads through.
 //! Two databases in one process share these statics, so the registry
-//! must tell them apart: the identity is a uniquely named in-memory
-//! database attached to the caller's own instance at LOAD time. The
-//! caller's context resolves that name if and only if it belongs to the
-//! same instance, so two databases with one name — two `:memory:`
-//! instances — never collide, and no `SET` of any setting can move a
-//! caller onto another database's connection, because the identity is a
-//! catalog object, not a setting (review 3, finding 6: the old instance
-//! token was an ordinary setting, and another database's token could be
-//! `SET` onto a session to read that database's tables past
-//! `enable_external_access`).
+//! must tell them apart. The identity is a uniquely named in-memory
+//! database attached to the caller's own instance at LOAD time, and the
+//! proof goes one layer deeper than the name (review 4, finding 5): the
+//! probe database carries a randomly named marker table, and a caller
+//! matches only when the catalog it resolves under the probe name also
+//! holds that marker — so attaching an empty `:memory:` under a known
+//! probe name, or under another database's name, forges nothing. There
+//! is no name fallback at all (review 4): a database whose probe could
+//! not attach — a read-only database — is never routed to while any
+//! other database is loaded, and the error says so. And there is no
+//! single-entry shortcut (review 4, finding 4): one loaded entry proves
+//! nothing, because a database whose entry the reaper released can
+//! still call through its instance's registration, and its caller must
+//! be refused, never routed onto the only entry left.
 //!
 //! The kept connection outlives its usefulness when its database has no
 //! caller connections left, because the database instance — and with it
 //! the file lock of a file database — stays held while any connection
-//! lives. The reaper releases those, but a raw pointer handed to a
-//! prepared statement and freed by the reaper underneath it is a
-//! use-after-free (review 3, finding 1), so every handle the registry
-//! gives out is a [`KeptGuard`]: it counts itself under the registry
-//! lock, the reaper refuses new guards for a database it wants to
-//! release, and the disconnect happens only at zero guards. The reaper
-//! is budgeted and backs off (review 3, finding 26: one count query per
-//! database per 200 ms burned 64% of a core over 500 idle databases).
+//! lives. The reaper releases those, and retirement is decided the
+//! safe way around (review 4, finding 6): a database is marked retired
+//! only AFTER a pass confirms it alone, never speculatively before, so
+//! a live database's calls never fail a routing check mid-window. Guards
+//! come in two flavors: a routing guard, refused for retired entries,
+//! and a holding guard, allowed for them — the file-access checks use
+//! holding guards over EVERY loaded entry, retired or not, so a
+//! retired-but-live database's `enable_external_access=false` refuses
+//! exactly as a live one's does.
 
 use std::ffi::{CStr, CString, c_void};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -52,6 +57,13 @@ pub(crate) struct DbState {
     /// for `users` to reach zero. A count that finds caller connections
     /// clears it again.
     retired: AtomicBool,
+    /// A relate scan is holding this database's gate right now: the
+    /// interrupt bridge reads it from the signal handler (an atomic
+    /// load is signal-safe) and interrupts exactly the connections
+    /// whose queries are running (review 4, finding 13: one Ctrl-C with
+    /// two queries in flight stopped only one, and neither Ctrl-C nor
+    /// `con.interrupt()` reached a slow relate at all).
+    busy: AtomicBool,
 }
 
 /// A counted handle to one database's kept connection. The connection
@@ -72,6 +84,17 @@ impl KeptGuard {
     pub(crate) fn gate(&self) -> &Mutex<()> {
         &self.state.gate
     }
+
+    /// Mark this database's kept connection as running a query, so the
+    /// interrupt bridge can reach it; pair with [`Self::idle`].
+    pub(crate) fn set_busy(&self) {
+        self.state.busy.store(true, Ordering::Release);
+    }
+
+    /// Mark this database's kept connection idle again.
+    pub(crate) fn set_idle(&self) {
+        self.state.busy.store(false, Ordering::Release);
+    }
 }
 
 impl Drop for KeptGuard {
@@ -88,13 +111,16 @@ impl Drop for KeptGuard {
 
 /// One database's registry entry.
 struct Kept {
-    /// The database's own `current_database()` name, for messages, the
-    /// fast single-database path, and the catalog the probe resolves in.
+    /// The database's own `current_database()` name, for messages and
+    /// the catalog a no-probe entry would once have matched by (never
+    /// a routing identity — review 4, finding 5's forgery).
     name: String,
     /// The attached in-memory database that identifies this instance:
-    /// `thinkthen_instance_<128-bit hex>`. Resolvable by a caller's
-    /// context only when the caller belongs to this same instance.
-    probe: Option<String>,
+    /// `thinkthen_instance_<128-bit random hex>`, carrying the marker
+    /// table `thinkthen_marker_<128-bit random hex>` inside it. Both
+    /// names are OS randomness, not clock, counter, or PID, so they
+    /// cannot be enumerated from `SHOW DATABASES` timing.
+    probe: Option<(String, String)>,
     /// The kept connection, opened at load time. Freed only by the
     /// reaper at zero guards, under the gate.
     connection: ffi::duckdb_connection,
@@ -114,9 +140,6 @@ unsafe impl Send for Kept {}
 /// databases in one process share this static, so every entry is a
 /// candidate the caller's context can name.
 static KEPT: Mutex<Vec<Kept>> = Mutex::new(Vec::new());
-
-/// The next probe's serial number, folded into the random name.
-static NEXT_PROBE: AtomicU64 = AtomicU64::new(1);
 
 /// Whether the reaper has been started; one per process.
 static REAPER: AtomicBool = AtomicBool::new(false);
@@ -140,7 +163,7 @@ static REAP_CURSOR: AtomicUsize = AtomicUsize::new(0);
 static REAP_TICK: Mutex<()> = Mutex::new(());
 static REAP_POKE: Condvar = Condvar::new();
 /// Open the database's kept connection, learn its name, attach its
-/// identity probe, and remember it.
+/// identity probe with its marker table, and remember it.
 ///
 /// # Errors
 ///
@@ -163,6 +186,7 @@ pub(crate) fn register(database: ffi::duckdb_database) -> Result<ffi::duckdb_con
             gate: Mutex::new(()),
             users: AtomicUsize::new(0),
             retired: AtomicBool::new(false),
+            busy: AtomicBool::new(false),
         }),
     });
     REAP_INTERVAL_MS.store(200, Ordering::Release);
@@ -170,23 +194,35 @@ pub(crate) fn register(database: ffi::duckdb_database) -> Result<ffi::duckdb_con
     Ok(raw)
 }
 
+/// 128 bits of OS randomness as hex: two independently seeded hashers'
+/// outputs, which the platform seeds from its own entropy pool. Not a
+/// cryptographic guarantee, but beyond enumeration, which is the
+/// review's bar — clock, counter, and PID are gone (review 4, finding 5).
+fn random_hex() -> String {
+    use std::hash::{BuildHasher, Hasher};
+    let mut hex = String::with_capacity(32);
+    for _ in 0..2 {
+        let mut hasher = std::hash::RandomState::new().build_hasher();
+        hasher.write_usize(0);
+        hex.push_str(&format!("{:016x}", hasher.finish()));
+    }
+    hex
+}
+
 /// The uniquely named in-memory database attached as this instance's
-/// identity probe. `:memory:` attachments hold no file and live in the
-/// instance's catalog manager, so nothing on disk changes; the caller's
-/// own context resolves the name only inside the same instance. A
-/// read-only database that refuses the attach keeps `None` and falls
-/// back to names.
-fn attach_probe(connection: ffi::duckdb_connection) -> Result<String, String> {
-    let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|span| span.as_nanos())
-        .unwrap_or(0);
-    let probe = format!(
-        "thinkthen_instance_{:x}_{:x}_{}",
-        stamp,
-        NEXT_PROBE.fetch_add(1, Ordering::SeqCst),
-        std::process::id()
-    );
+/// identity probe, carrying a randomly named marker table inside it.
+/// `:memory:` attachments hold no file and live in the instance's
+/// catalog manager, so nothing on disk changes; the caller's own
+/// context resolves the name only inside the same instance, and the
+/// marker table makes a same-named alias provably not the probe: an
+/// attacker's `ATTACH ':memory:' AS <probe name>` carries no marker, so
+/// the identity check fails where the name alone would have passed
+/// (review 4, finding 5, forge2). A read-only database that refuses the
+/// attach keeps `None` and is never routed to while other databases are
+/// loaded (no name fallback — finding 5, forge3).
+fn attach_probe(connection: ffi::duckdb_connection) -> Result<(String, String), String> {
+    let probe = format!("thinkthen_instance_{}", random_hex());
+    let marker = format!("thinkthen_marker_{}", random_hex());
     let sql = format!("ATTACH ':memory:' AS {probe}");
     let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
     let Ok(sql_c) = CString::new(sql) else {
@@ -203,10 +239,41 @@ fn attach_probe(connection: ffi::duckdb_connection) -> Result<String, String> {
         return Err(format!("the database refused the identity probe: {text}"));
     }
     unsafe { ffi::duckdb_destroy_result(&mut result) };
-    Ok(probe)
+    // The marker table: an empty table with a random name inside the
+    // probe database, the object the identity check resolves for.
+    let sql = format!("CREATE TABLE {probe}.{marker}(i INTEGER)");
+    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
+    let Ok(sql_c) = CString::new(sql) else {
+        return Err("the marker name holds no NUL".into());
+    };
+    let marker_state =
+        unsafe { ffi::duckdb_query(connection, sql_c.as_ptr(), &mut result) };
+    if marker_state != ffi::DuckDBSuccess {
+        // The attach worked but the marker did not: the probe proves
+        // nothing beyond its name, so refuse to rely on it.
+        let message = unsafe { ffi::duckdb_result_error(&mut result) };
+        let text = if message.is_null() {
+            "the marker refused".to_owned()
+        } else {
+            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
+        };
+        unsafe { ffi::duckdb_destroy_result(&mut result) };
+        let detach = format!("DETACH {probe}");
+        if let Ok(detach_c) = CString::new(detach) {
+            let mut drop_result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
+            unsafe { ffi::duckdb_query(connection, detach_c.as_ptr(), &mut drop_result) };
+            unsafe { ffi::duckdb_destroy_result(&mut drop_result) };
+        }
+        return Err(format!("the identity probe's marker did not create: {text}"));
+    }
+    unsafe { ffi::duckdb_destroy_result(&mut result) };
+    Ok((probe, marker))
 }
 
-/// A guard on `entry`, or `None` when the reaper has retired it.
+/// A routing guard on `entry`, or `None` when the reaper has retired
+/// it. Must be called under the registry lock: the reaper's disconnect
+/// re-checks `users` under the same lock, so a guard either exists
+/// before the disconnect decision or the entry is already gone.
 fn acquire(entry: &Kept) -> Option<KeptGuard> {
     if entry.state.retired.load(Ordering::Acquire) {
         return None;
@@ -218,69 +285,136 @@ fn acquire(entry: &Kept) -> Option<KeptGuard> {
     })
 }
 
+/// A holding guard on `entry`, allowed even when the reaper has retired
+/// it: the holder keeps the connection alive for exactly as long as it
+/// needs to read a setting or a file through it, so a retired-but-live
+/// database's access rules refuse exactly a live one's do (review 4,
+/// finding 6). Must be called under the registry lock, like `acquire`.
+fn acquire_holding(entry: &Kept) -> Option<KeptGuard> {
+    // A retired entry is still in the registry until the reaper's
+    // confirmed-alone path removes it, and that removal re-checks
+    // `users` under the registry lock — so the increment races nothing.
+    entry.state.users.fetch_add(1, Ordering::AcqRel);
+    Some(KeptGuard {
+        connection: entry.connection,
+        state: entry.state.clone(),
+    })
+}
+
 /// The kept connection belonging to the caller's database, as a guard.
 ///
-/// One loaded database needs no identity at all. Otherwise the caller's
-/// context resolves each entry's probe — the uniquely named in-memory
-/// database attached at that entry's LOAD — and exactly the entry whose
-/// probe resolves is the caller's own instance, because a context
-/// resolves catalogs only inside the instance it belongs to. The
-/// previous instance-token setting is gone: it was SQL-settable, so one
-/// database's token could steer another's relate (review 3, finding 6).
-/// A database whose probe could not attach is named by its catalog, the
-/// name fallback; two same-named databases without probes are an error
-/// that names the boundary rather than a guess.
+/// Every entry proves itself the same way, alone or beside others:
+/// the caller's context must resolve the entry's probe name AND find
+/// the marker table inside the resolved catalog. There is no
+/// single-entry shortcut (review 4, finding 4: after the reaper
+/// released a database's entry, its still-registered caller was routed
+/// onto the only entry left) and no name fallback (review 4, finding 5:
+/// a read-only database's name was forged by an empty `:memory:` under
+/// it). An entry whose probe could not attach is never a candidate; a
+/// caller that matches nothing hears which boundary it hit.
 ///
 /// # Errors
 ///
 /// The defect kind when no loaded database matches the caller.
 pub(crate) fn for_caller(caller: ffi::duckdb_client_context) -> Result<KeptGuard, String> {
-    {
-        let kept = lock(&KEPT);
-        if kept.len() == 1 {
-            return acquire(&kept[0]).ok_or_else(reload_message);
-        }
-    }
     // Guards for every candidate, taken under one registry lock, then
     // probed outside it: the probe reads catalogs, and no lock order
     // ever puts the registry inside a gate.
-    let candidates: Vec<(KeptGuard, Option<String>, String)> = {
+    let candidates: Vec<(KeptGuard, Option<(String, String)>)> = {
         let kept = lock(&KEPT);
         kept.iter()
             .filter_map(|entry| {
-                acquire(entry).map(|guard| (guard, entry.probe.clone(), entry.name.clone()))
+                acquire(entry).map(|guard| (guard, entry.probe.clone()))
             })
             .collect()
     };
+    let unnamed_loaded = {
+        let kept = lock(&KEPT);
+        kept.iter().any(|entry| entry.probe.is_none())
+    };
     if candidates.is_empty() {
-        return Err(reload_message());
+        return Err(no_match_message(unnamed_loaded));
     }
     let mut hits: Vec<KeptGuard> = Vec::new();
-    let mut ambiguity: Option<String> = None;
-    for (guard, probe, name) in candidates {
-        let mine = match &probe {
-            Some(probe) => catalog_exists(caller, probe),
-            None => {
-                // No probe: this entry can only be named by its catalog,
-                // and only when no other entry carries the same name.
-                ambiguity = Some(name.clone());
-                catalog_exists(caller, &name)
-            }
+    for (guard, probe) in candidates {
+        let Some((probe, marker)) = probe else {
+            // No probe: this entry is never routable while others load.
+            continue;
         };
-        if mine {
+        if probe_is_ours(caller, &probe, &marker) {
             hits.push(guard);
         }
     }
     match hits.len() {
         1 => Ok(hits.pop().expect("one hit")),
-        0 => Err(format!(
-            "thinkthen defect: no loaded database matches the calling connection; the extension is loaded per database{}",
-            ambiguity.map(|_| " and a name-only database could not be matched").unwrap_or("")
-        )),
+        0 => Err(no_match_message(unnamed_loaded)),
         _ => Err(
-            "thinkthen defect: two loaded databases answered the caller's identity; the probes must be unique, so this cannot happen"
+            "thinkthen defect: two loaded databases answered the caller's identity; the probes are 128-bit random with markers, so this cannot happen"
                 .into(),
         ),
+    }
+}
+
+/// The refusal a caller that proved no identity earns: the read-only
+/// boundary when an unprovable database is loaded, the reload remedy
+/// otherwise.
+fn no_match_message(unnamed_loaded: bool) -> String {
+    if unnamed_loaded {
+        "thinkthen local: no loaded database answers this connection's identity, and a loaded database could not attach its identity probe (a read-only database cannot carry one), so it cannot be routed to while other databases are loaded; relate works on the database that loaded this extension alone, or on a writable database"
+            .into()
+    } else {
+        reload_message()
+    }
+}
+
+/// Whether the caller's own context resolves the probe name to the
+/// catalog this extension attached: the name resolves only inside the
+/// instance it was attached to, and the marker table inside that
+/// catalog is the part an alias cannot carry (review 4, finding 5).
+fn probe_is_ours(caller: ffi::duckdb_client_context, probe: &str, marker: &str) -> bool {
+    let (Ok(probe), Ok(marker)) = (CString::new(probe), CString::new(marker)) else {
+        return false;
+    };
+    let mut catalog =
+        unsafe { ffi::duckdb_client_context_get_catalog(caller, probe.as_ptr()) };
+    if catalog.is_null() {
+        return false;
+    }
+    let mut entry = unsafe {
+        ffi::duckdb_catalog_get_entry(
+            catalog,
+            caller,
+            ffi::duckdb_catalog_entry_type_DUCKDB_CATALOG_ENTRY_TYPE_TABLE,
+            c"main".as_ptr(),
+            marker.as_ptr(),
+        )
+    };
+    let ours = !entry.is_null();
+    if ours {
+        unsafe { ffi::duckdb_destroy_catalog_entry(&mut entry) };
+    }
+    unsafe { ffi::duckdb_destroy_catalog(&mut catalog) };
+    ours
+}
+
+/// Interrupt every kept connection currently running a relate query:
+/// called from the SIGINT handler after the engine's cancel token, so
+/// one Ctrl-C stops every in-flight query on every loaded database —
+/// both of two concurrent relates, and a slow one the caller's own
+/// interrupt cannot reach, because the query runs on the kept
+/// connection, not the caller's (review 4, finding 13). Only atomic
+/// loads happen under the handler; `duckdb_interrupt` itself is the
+/// engine's own thread-safe interruption door.
+pub(crate) fn interrupt_busy() {
+    let targets: Vec<ffi::duckdb_connection> = {
+        let kept = lock(&KEPT);
+        kept.iter()
+            .filter(|entry| entry.state.busy.load(Ordering::Acquire))
+            .map(|entry| entry.connection)
+            .collect()
+    };
+    for connection in targets {
+        unsafe { ffi::duckdb_interrupt(connection) };
     }
 }
 
@@ -322,14 +456,23 @@ fn kept_connection_id(connection: ffi::duckdb_connection) -> u64 {
 /// Whether every loaded database allows reading this path: never read a
 /// file a calling database would refuse. The scalar doors cannot name
 /// the calling database, so any database that forbids the read refuses
-/// them all. Every context read runs behind a guard, so the reaper
-/// cannot disconnect the connection it came from.
+/// them all. Every entry is consulted — retired ones through holding
+/// guards — so the reaping window cannot skip a refusal (review 4,
+/// finding 6).
 pub(crate) fn file_read_refusal(path: &str) -> Option<String> {
     let guards: Vec<KeptGuard> = {
         let kept = lock(&KEPT);
-        kept.iter().filter_map(acquire).collect()
+        kept.iter().filter_map(acquire_holding).collect()
     };
     for guard in guards {
+        // The connection's own gate: the reaper counts on this
+        // connection, and two threads on one DuckDB connection is
+        // corruption, not a race — every read of the kept connection
+        // runs under its gate, the same rule the relate scans follow.
+        let _gate = guard
+            .gate()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut context: ffi::duckdb_client_context = std::ptr::null_mut();
         unsafe { ffi::duckdb_connection_get_client_context(guard.connection(), &mut context) };
         if context.is_null() {
@@ -487,7 +630,10 @@ fn option_value(context: ffi::duckdb_client_context, name: &str) -> Option<ffi::
 /// refuses with DuckDB's own words, and a caller's file system carries
 /// the caller's own access checks. The caller's context answers where one
 /// is known; the scalar doors read through a guarded kept connection,
-/// the conservative side of the same door.
+/// the conservative side of the same door. There is no raw
+/// `std::fs` path anymore (review 4, finding 6): with no entry to read
+/// through, the read is refused in words instead of bypassing every
+/// loaded database's rules.
 ///
 /// # Errors
 ///
@@ -497,42 +643,65 @@ pub(crate) fn read_question_file(
     path: &str,
     caller: Option<ffi::duckdb_client_context>,
 ) -> Result<String, String> {
-    let held = caller.is_some();
     let outcome = match caller {
         Some(context) => unsafe { read_through_file_system(context, path) },
         None => {
-            let Some((guard, context)) = kept_context() else {
-                return std::fs::read_to_string(path).map_err(|error| {
-                    format!("thinkthen local: the question file {path} did not read: {error}")
-                });
+            let Some(held) = kept_context() else {
+                return Err(format!(
+                    "thinkthen local: the question file {path} was not read: no loaded database is left to read it through; LOAD the extension again"
+                ));
             };
-            let outcome = unsafe { read_through_file_system(context, path) };
-            let mut context = context;
-            unsafe { ffi::duckdb_destroy_client_context(&mut context) };
-            drop(guard);
-            outcome
+            unsafe { read_through_file_system(held.context(), path) }
         }
     };
-    let _ = held;
     outcome
 }
 
-/// A guarded kept connection and a context borrowed from it. The guard
-/// keeps the connection alive for the context's whole life; without it
-/// the reaper could disconnect the connection between the registry read
-/// and the file read (review 3, finding 1's second window).
-fn kept_context() -> Option<(KeptGuard, ffi::duckdb_client_context)> {
+/// A holding-guarded kept connection, its context, and the gate that
+/// makes touching that connection safe: the reaper counts on the kept
+/// connection, so every read of it runs under its own gate, held for
+/// the context's whole life. The lifetime transmute is sound because
+/// the KeptGuard in here keeps the DbState — and with it the gate's
+/// mutex — alive exactly as long as this holder lives.
+pub(crate) struct HeldContext {
+    guard: KeptGuard,
+    context: ffi::duckdb_client_context,
+    gate: std::sync::MutexGuard<'static, ()>,
+}
+
+impl Drop for HeldContext {
+    fn drop(&mut self) {
+        let mut context = self.context;
+        unsafe { ffi::duckdb_destroy_client_context(&mut context) };
+    }
+}
+
+impl HeldContext {
+    /// The context, borrowed for as long as the holder lives.
+    pub(crate) fn context(&self) -> ffi::duckdb_client_context {
+        self.context
+    }
+}
+
+fn kept_context() -> Option<HeldContext> {
     let guard = {
         let kept = lock(&KEPT);
-        kept.iter().find_map(acquire)?
+        kept.iter().find_map(acquire_holding)?
     };
+    let gate = guard
+        .gate()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let mut context: ffi::duckdb_client_context = std::ptr::null_mut();
     unsafe { ffi::duckdb_connection_get_client_context(guard.connection(), &mut context) };
     if context.is_null() {
-        None
-    } else {
-        Some((guard, context))
+        return None;
     }
+    Some(HeldContext {
+        gate: unsafe { std::mem::transmute(gate) },
+        guard,
+        context,
+    })
 }
 
 /// One read through the context's file system; the bytes are read through
@@ -653,14 +822,33 @@ fn database_name(connection: ffi::duckdb_connection) -> Result<String, String> {
     Ok(name)
 }
 
+/// Set once the process begins exiting, so the reaper stops touching
+/// connections the host is tearing down underneath it: the teardown
+/// race a clean-close probe exposed (review 4), where interpreter
+/// finalization corrupted state under a concurrent count query.
+static SHUTDOWN: AtomicBool = AtomicBool::new(false);
+
+/// Set by `atexit`, which runs in the main thread before static
+/// destruction, so the flag is visible to the reaper before any host
+/// teardown begins.
+extern "C" fn stop_reaper_at_exit() {
+    SHUTDOWN.store(true, Ordering::SeqCst);
+}
+
 /// Start the reaper once per process. The thread sleeps on its clock —
 /// poked by a guard dropping on a retired database — and each pass
 /// examines a bounded slice of the registry, so a fleet of idle
 /// databases costs one pass's budget, not a constant 64% of a core
-/// (review 3, finding 26).
+/// (review 3, finding 26). The thread ends at process exit: the
+/// `atexit` flag stops its passes before the host tears the engines
+/// down underneath them.
 fn spawn_reaper() {
     if REAPER.swap(true, Ordering::SeqCst) {
         return;
+    }
+    static ATEXIT_INSTALLED: AtomicBool = AtomicBool::new(false);
+    if !ATEXIT_INSTALLED.swap(true, Ordering::SeqCst) {
+        unsafe { libc::atexit(stop_reaper_at_exit) };
     }
     let _ = std::thread::Builder::new()
         .name("thinkthen-reaper".into())
@@ -673,6 +861,9 @@ fn spawn_reaper() {
                 .wait_timeout(clock, interval)
                 .unwrap_or_else(|poisoned| poisoned.into_inner());
             drop(_guard);
+            if SHUTDOWN.load(Ordering::SeqCst) {
+                return;
+            }
             let released = reap_once();
             let next = if released > 0 {
                 200
@@ -683,23 +874,23 @@ fn spawn_reaper() {
         });
 }
 
-/// One pass: retire and examine a bounded slice of the registry. A
-/// candidate is marked retired first — new guards stop — then counted
-/// under its own gate, and only a database that is alone at zero guards
-/// is disconnected. A database still holding caller connections is
-/// un-retired and stays; a database whose gate a scan is using stays
-/// retired (the scan holds a guard, and that guard's drop pokes the
-/// reaper to finish the release). The gate is tried, never waited for,
-/// so a long relate never stalls a pass.
-///
-/// The disconnect and its registry removal happen outside every gate and
-/// after the registry lock, so no lock order puts the registry inside a
-/// gate.
+/// One pass: examine a bounded slice of the registry and release what a
+/// confirmed check says is alone. Retirement is decided AFTER the
+/// count, never before it (review 4, finding 6's window and the
+/// spurious relate failures): a candidate is counted under its own
+/// gate, and only a database that is alone is marked retired — so a
+/// live database's routing never fails mid-window. A database that is
+/// alone but still guarded (a prepared statement holds it) stays
+/// retired until the last guard drops, which pokes the reaper. The
+/// disconnect and the registry removal happen under the registry lock
+/// with a final `users` re-check, so a guard either exists before the
+/// decision or the entry is already gone; no lock order puts the
+/// registry inside a gate that a query holds.
 fn reap_once() -> usize {
     let mut released = 0usize;
     // Candidates: a bounded, wrapping slice of the registry, stepping by
     // the budget so passes tile it without gaps.
-    let slice: Vec<(ffi::duckdb_connection, Arc<DbState>, String)> = {
+    let slice: Vec<(ffi::duckdb_connection, Arc<DbState>, String, String)> = {
         let kept = lock(&KEPT);
         let len = kept.len();
         if len == 0 {
@@ -709,16 +900,24 @@ fn reap_once() -> usize {
         (0..REAP_BUDGET.min(len))
             .map(|offset| {
                 let entry = &kept[(start + offset) % len];
-                entry.state.retired.store(true, Ordering::Release);
                 (
                     entry.connection,
                     entry.state.clone(),
-                    entry.probe.clone().unwrap_or_default(),
+                    entry
+                        .probe
+                        .as_ref()
+                        .map(|(probe, _)| probe.clone())
+                        .unwrap_or_default(),
+                    entry
+                        .probe
+                        .as_ref()
+                        .map(|(_, marker)| marker.clone())
+                        .unwrap_or_default(),
                 )
             })
             .collect()
     };
-    for (connection, state, probe) in slice {
+    for (connection, state, probe, marker) in slice {
         let alone = match state.gate.try_lock() {
             Ok(_held) => count_connections(connection)
                 .map(|count| count <= 1)
@@ -729,7 +928,7 @@ fn reap_once() -> usize {
         };
         if !alone {
             // Caller connections remain, or the count refused: keep the
-            // database. A later pass looks again.
+            // database, and heal any retired tail an earlier pass left.
             state.retired.store(false, Ordering::Release);
             continue;
         }
@@ -737,23 +936,40 @@ fn reap_once() -> usize {
             // Alone but guarded: a prepared statement still holds this
             // database. Stay retired; the last guard's drop pokes the
             // reaper and a pass finishes this path.
+            state.retired.store(true, Ordering::Release);
             continue;
         }
-        detach_probe(connection, &probe);
-        let mut connection = connection;
-        unsafe { ffi::duckdb_disconnect(&mut connection) };
-        lock(&KEPT).retain(|entry| !Arc::ptr_eq(&entry.state, &state));
-        released += 1;
+        // Alone and unguarded: retire, remove, and disconnect under one
+        // registry lock, with a final users re-check so a holding guard
+        // that arrived under the lock is honored, not orphaned.
+        let connection = connection;
+        let removed = {
+            let mut kept = lock(&KEPT);
+            if state.users.load(Ordering::Acquire) > 0 {
+                false
+            } else {
+                state.retired.store(true, Ordering::Release);
+                let mut connection = connection;
+                detach_probe(connection, &probe, &marker);
+                unsafe { ffi::duckdb_disconnect(&mut connection) };
+                kept.retain(|entry| !Arc::ptr_eq(&entry.state, &state));
+                true
+            }
+        };
+        if removed {
+            released += 1;
+        }
     }
     released
 }
 
-/// Best-effort detach of the identity probe before the disconnect.
-fn detach_probe(connection: ffi::duckdb_connection, probe: &str) {
-    if probe.is_empty() {
+/// Best-effort detach of the identity probe before the disconnect,
+/// dropping its marker table with it.
+fn detach_probe(connection: ffi::duckdb_connection, probe: &str, marker: &str) {
+    if probe.is_empty() || marker.is_empty() {
         return;
     }
-    let sql = format!("DETACH {probe}");
+    let sql = format!("DROP TABLE IF EXISTS {probe}.{marker}; DETACH {probe}");
     if let Ok(sql_c) = CString::new(sql) {
         let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
         unsafe { ffi::duckdb_query(connection, sql_c.as_ptr(), &mut result) };

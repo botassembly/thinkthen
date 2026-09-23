@@ -306,12 +306,22 @@ fn build_rows(bind: &Bind) -> Result<Vec<(String, String, String, f64)>, String>
     }
     // The caller's database's own gate, not a process-global one
     // (review 3, finding 12): one database's long relate no longer
-    // blocks another database's.
+    // blocks another database's. The busy flag around the held gate is
+    // the interrupt bridge's target (review 4, finding 13): a Ctrl-C
+    // interrupts exactly the connections whose queries are running.
     let _gate = bind
         .connection
         .gate()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
+    bind.connection.set_busy();
+    struct BusyGuard<'a>(&'a connections::KeptGuard);
+    impl Drop for BusyGuard<'_> {
+        fn drop(&mut self) {
+            self.0.set_idle();
+        }
+    }
+    let _busy = BusyGuard(&bind.connection);
     let records = unsafe { run_query(bind) }.map_err(|message| boundary_note(bind, message))?;
     if records.is_empty() {
         // No records, no pairs, nothing to ask: zero edges is arithmetic,
@@ -435,29 +445,32 @@ fn temp_table_exists(caller: ffi::duckdb_client_context, name: &str) -> bool {
 
 /// Run the query on the caller's database's kept connection and read
 /// `(id, text)` per row: exactly one statement, of the `SELECT` kind,
-/// inside a read-only transaction that always rolls back, with the
-/// record cap checked before any row is collected. The statement kind is
-/// checked before anything runs (review 3, finding 7: `COPY ... TO`,
+/// inside a read-only transaction that always rolls back, executed ONCE
+/// under a LIMIT of the cap plus one. The statement kind is checked
+/// before anything runs (review 3, finding 7: `COPY ... TO`,
 /// `EXPORT DATABASE`, `ATTACH`, `SET GLOBAL`, `LOAD`, and `SET VARIABLE`
 /// all passed the single-statement check because each is one
-/// statement), and the count runs first (review 3, finding 12: eight
-/// million rows materialized 2.35 GB before the cap refused).
+/// statement). The cap is enforced DURING the scan, not by a count
+/// first (review 4, finding 8: a count and a run are two executions, so
+/// `range(3 + (random()<0.5)::INT*8000000)` counted 3 and then
+/// materialized eight million rows before the cap refused — and the
+/// double execution was its own cost); the LIMIT bounds what the
+/// executor produces no matter what the query would return, and reading
+/// the cap plus one row is the refusal itself.
 unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     let connection = bind.connection.connection();
     unsafe { ensure_single_statement(connection, &bind.query)? };
     unsafe { ensure_select_statement(connection, &bind.query)? };
     let search = connections::search_path_of(bind.caller);
     unsafe { begin_read_only(connection)? };
-    let count_sql = format!("SELECT count(*) FROM ({}) AS thinkthen_count", bind.query);
+    let capped = format!(
+        "SELECT * FROM ({}) AS thinkthen_capped LIMIT {}",
+        bind.query,
+        RECORD_CAP + 1
+    );
     let outcome = unsafe {
         under_search_path(connection, search.as_deref(), || {
-            let count = count_records(connection, &count_sql)?;
-            if count > RECORD_CAP {
-                return Err(format!(
-                    "thinkthen usage: the relate query returned {count} records and relate asks about at most {RECORD_CAP}; add a LIMIT or a WHERE"
-                ));
-            }
-            run_statement(connection, &bind.query)
+            run_statement(connection, &capped)
         })
     };
     // The read-only transaction ends either way; rollback and an unset
@@ -470,31 +483,6 @@ unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
 /// The most records one relate may ask about; the contract's own
 /// `relate_checked` carries the same guard.
 const RECORD_CAP: u64 = 255;
-
-/// The record count of the wrapped query, read before any row is
-/// collected. The wrapper is the caller's own query, so the count is the
-/// count its rows will have; a query whose rows change between the count
-/// and the read still cannot materialize past the belt cap inside
-/// `run_statement`.
-unsafe fn count_records(connection: ffi::duckdb_connection, count_sql: &str) -> Result<u64, String> {
-    let Ok(sql_c) = CString::new(count_sql) else {
-        return Err("thinkthen usage: the relate query holds a NUL byte".into());
-    };
-    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
-    if unsafe { ffi::duckdb_query(connection, sql_c.as_ptr(), &mut result) } != ffi::DuckDBSuccess {
-        let message = unsafe { ffi::duckdb_result_error(&mut result) };
-        let text = if message.is_null() {
-            "the count failed".to_owned()
-        } else {
-            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
-        };
-        unsafe { ffi::duckdb_destroy_result(&mut result) };
-        return Err(format!("thinkthen usage: the relate query failed: {text}"));
-    }
-    let raw = unsafe { ffi::duckdb_value_int64(&mut result, 0, 0) };
-    unsafe { ffi::duckdb_destroy_result(&mut result) };
-    Ok(raw.max(0) as u64)
-}
 
 /// Prepare the query and require the `SELECT` statement kind, so relate
 /// reads records and never writes files, attaches databases, changes

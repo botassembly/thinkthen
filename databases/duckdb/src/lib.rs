@@ -292,6 +292,11 @@ extern "C" fn on_interrupt(
             token.cancel();
         }
     }
+    // Every kept connection running a relate query is interrupted too,
+    // so one Ctrl-C stops both of two concurrent relates and reaches a
+    // slow relate the caller's own interrupt cannot (review 4, finding
+    // 13: the query runs on the kept connection, not the caller's).
+    crate::connections::interrupt_busy();
     let host = match HOST_ACTION
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -1287,17 +1292,28 @@ impl VScalar for DetailsScalar {
             let mut child = structs.child(0, len);
             // The member reads NULL everywhere a value does not exist,
             // never the buffer's zero (review 3, finding 11: a score's
-            // probability read 0.0). One wrapper at a time: the nulls
-            // first, then the values.
-            for i in 0..len {
-                child.set_null(i);
-            }
+            // probability read 0.0) and never NULL where one does
+            // (review 4, finding 9: nulling first and writing values
+            // after left the validity mask set, so decide's probability
+            // and sends read NULL beside real values). The value lands,
+            // then the null covers only what stayed absent.
             let values = unsafe { child.as_mut_slice_with_len::<f64>(len) };
+            for i in 0..len {
+                values[i] = 0.0;
+            }
             for (i, slot) in distinct.slots.iter().enumerate() {
                 if let Some(row) = slot.and_then(|slot| trail[slot].as_ref()) {
                     if let Some(number) = row.probability {
                         values[i] = number;
                     }
+                }
+            }
+            drop(values);
+            for (i, slot) in distinct.slots.iter().enumerate() {
+                if slot.and_then(|slot| trail[slot].as_ref()).and_then(|row| row.probability)
+                    .is_none()
+                {
+                    child.set_null(i);
                 }
             }
         }
@@ -1317,10 +1333,13 @@ impl VScalar for DetailsScalar {
         let mut child = structs.child(2, len);
         for (i, slot) in distinct.slots.iter().enumerate() {
             match slot.and_then(|slot| trail[slot].as_ref()) {
-                Some(row) => {
+                // The engine always names a model, so an empty name is
+                // the choose-or-tag row's honest NULL, never '' (review
+                // 4, finding 9: the README promises NULL there).
+                Some(row) if !row.model.is_empty() => {
                     child.insert(i, row.model.as_str());
                 }
-                None => child.set_null(i),
+                _ => child.set_null(i),
             }
         }
         let mut child = structs.child(3, len);
@@ -1347,17 +1366,27 @@ impl VScalar for DetailsScalar {
         {
             let mut child = structs.child(5, len);
             // A member with no sends reads NULL, never the buffer's zero
-            // (review 3, finding 11: a score's sends read 0). One
-            // wrapper at a time: the nulls first, then the values.
-            for i in 0..len {
-                child.set_null(i);
-            }
+            // (review 3, finding 11: a score's sends read 0), and a real
+            // send count never reads NULL beside its value (review 4,
+            // finding 9): the value lands, then the null covers only
+            // what stayed absent.
             let values = unsafe { child.as_mut_slice_with_len::<u64>(len) };
+            for i in 0..len {
+                values[i] = 0;
+            }
             for (i, slot) in distinct.slots.iter().enumerate() {
                 if let Some(row) = slot.and_then(|slot| trail[slot].as_ref()) {
                     if let Some(sends) = row.sends {
                         values[i] = sends;
                     }
+                }
+            }
+            drop(values);
+            for (i, slot) in distinct.slots.iter().enumerate() {
+                if slot.and_then(|slot| trail[slot].as_ref()).and_then(|row| row.sends)
+                    .is_none()
+                {
+                    child.set_null(i);
                 }
             }
         }
