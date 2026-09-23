@@ -45,6 +45,7 @@ use std::sync::Arc;
 use std::sync::Condvar;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::thread;
@@ -630,7 +631,12 @@ impl Engine for BlockingEngine {
             model,
             digest: question.digest(),
             sends,
-            requests: vec![request_digest(question, self.model.as_deref(), evidence)?],
+            requests: vec![request_digest_for(
+                &self.config.base,
+                question,
+                self.model.as_deref(),
+                evidence,
+            )?],
             failed_questions: 0,
         })
     }
@@ -761,12 +767,20 @@ const SYNTHETIC_PARTIAL_ARMED: bool = true;
 #[cfg(not(feature = "synthetic-partial"))]
 const SYNTHETIC_PARTIAL_ARMED: bool = false;
 
-/// The recording digest the request this call would make is filed under.
+/// The recording digest the request this call would make is filed under,
+/// resolved against the base URL the environment names.
 ///
-/// The production rule (0053): the adapter name, the resolved URL, and the
-/// exact request bytes through `recording::Exchange::digest`. The encoder
-/// is deterministic, so the digest is computed on the null backend too; it
-/// names the request the plan would make, and nothing is sent.
+/// Prefer [`request_digest_for`] on any path that already holds an engine
+/// or an explicit base: this helper reads the environment for its base
+/// (review finding 15, 2026-09-23: an engine with an explicit address
+/// reported the environment's digest, a name for a request it would never
+/// send).
+///
+/// The production rule (0053) is the same for both helpers: the adapter
+/// name, the resolved URL, and the exact request bytes through
+/// `recording::Exchange::digest`. The encoder is deterministic, so the
+/// digest is computed on the null backend too; it names the request the
+/// plan would make, and nothing is sent.
 ///
 /// `model` is the engine's own model setting, exactly as [`BlockingEngine::ask`]
 /// resolves it, so the digest names the request the engine would send.
@@ -780,20 +794,46 @@ pub fn request_digest(
     model: Option<&str>,
     evidence: &str,
 ) -> Result<String, Error> {
-    let text = Evidence::new(evidence).map_err(|error| Error::usage(error.to_string()))?;
     let settings = ResolvedConfig::from_env();
+    request_digest_for(&settings.base, question, model, evidence)
+}
+
+/// The recording digest for a request against one named base URL: the
+/// engine's own path, so an explicit address wins over the environment
+/// and the digest names the request that would actually be sent.
+///
+/// # Errors
+///
+/// The usage kind for a blank evidence text, an unresolvable model, or an
+/// unbuildable plan; the backend kind when the plan does not encode.
+pub fn request_digest_for(
+    base: &str,
+    question: &Question,
+    model: Option<&str>,
+    evidence: &str,
+) -> Result<String, Error> {
+    let text = Evidence::new(evidence).map_err(|error| Error::usage(error.to_string()))?;
     let model_name = model.unwrap_or(question.model());
     let model = ModelName::new(model_name).map_err(|error| Error::usage(error.to_string()))?;
     let plan = Plan::new(text, model, vec![question.core().clone()])
         .map_err(|error| Error::usage(error.to_string()))?;
     let wire = built_in::encode(&plan)
         .map_err(|error| Error::backend_not_retryable(error.to_string()))?;
-    let backend = Backend::resolve(None, Some(&settings.base), model_name)
+    let backend = Backend::resolve(None, Some(base), model_name)
         .map_err(|error| Error::usage(error.to_string()))?;
     Ok(thinkthen_core::recording::Exchange::new(backend.url(), &wire)
         .digest()
         .as_str()
         .to_owned())
+}
+
+/// How many slot boxes have been retired into tombstones so far in this
+/// process, so a probe can prove the sixteen-byte-per-eviction leak stays
+/// proportional to churn and never to calls (review finding 1,
+/// 2026-09-23).
+#[must_use]
+pub fn retired_boxes() -> u64 {
+    RETIRED_BOXES.load(Ordering::Relaxed)
 }
 
 /// The null backend's reply for any verb, in the adapter's own shapes.
@@ -1033,10 +1073,14 @@ fn count_tokens(body: &[u8]) {
 
 /// Split a transport failure by whether a second try could help.
 ///
-/// An address that refused the connection will refuse it again within the
-/// second, so it is not retryable and the caller fails at once; every other
-/// transport failure may pass, so it keeps the retry the backends page
-/// gives a transport failure.
+/// A refusal, a failed connect, a name that did not resolve, and a broken
+/// URI are conditions a retry within the second cannot change, so they are
+/// not retryable and the caller fails at once (review finding, 2026-09-23:
+/// a refused connection burned the backoff; DNS and TLS now fail fast too).
+/// A TLS handshake failure is likewise deterministic on retry: the chain
+/// and the configuration will not heal between attempts, so an I/O error
+/// whose cause chain names TLS is not retryable either. Everything else
+/// keeps the retry the backends page gives a transport failure.
 fn classify_transport(error: &ureq::Error) -> Error {
     let refused = match error {
         ureq::Error::Io(io) => io.kind() == std::io::ErrorKind::ConnectionRefused,
@@ -1045,7 +1089,39 @@ fn classify_transport(error: &ureq::Error) -> Error {
     if refused {
         return Error::backend_not_retryable(format!("{error}: the address refused the connection"));
     }
+    match error {
+        ureq::Error::HostNotFound | ureq::Error::BadUri(_) => {
+            return Error::backend_not_retryable(format!(
+                "{error}: the address will not resolve; retrying cannot change it"
+            ));
+        }
+        ureq::Error::ConnectionFailed => {
+            return Error::backend_not_retryable(format!(
+                "{error}: the connection could not be established"
+            ));
+        }
+        ureq::Error::Io(io) if names_tls(io) => {
+            return Error::backend_not_retryable(format!(
+                "{error}: the TLS handshake failed; retrying cannot change it"
+            ));
+        }
+        _ => {}
+    }
     Error::backend_retryable(error.to_string())
+}
+
+/// Whether an I/O error's cause chain names a TLS failure, so a broken
+/// handshake fails at once instead of burning the backoff.
+fn names_tls(io: &std::io::Error) -> bool {
+    let mut cause: Option<&dyn std::error::Error> = Some(io);
+    while let Some(error) = cause {
+        let text = error.to_string().to_ascii_lowercase();
+        if text.contains("tls") || text.contains("rustls") || text.contains("handshake") {
+            return true;
+        }
+        cause = error.source();
+    }
+    false
 }
 
 /// Whether a failed send left the process: a refusal, a failed connect,
@@ -1112,6 +1188,12 @@ const fn phrase(status: u16) -> &'static str {
         _ => "the backend failed",
     }
 }
+
+/// How many lanes one engine may run at once. Recorded with the ruling:
+/// width is a concurrency promise, not a capacity request, and a host
+/// asking for more lanes than this has mistyped a record count into a
+/// width knob.
+const MAX_WIDTH: usize = 4096;
 
 /// One settings value's state: a pool and a width gate, stamped with the
 /// pid and the settings it was built for.
@@ -1222,6 +1304,75 @@ static INNER_DROPS: AtomicU64 = AtomicU64::new(0);
 static STATES: [AtomicPtr<Arc<Inner>>; STATE_SLOTS] =
     [const { AtomicPtr::new(ptr::null_mut()) }; STATE_SLOTS];
 
+/// The value every evicted slot keeps, so a slot's box is never freed
+/// while any reader can still hold its pointer.
+///
+/// A slot reader loads a pointer and clones the `Arc` behind it in two
+/// adjacent steps, so a box whose slot was just taken must stay valid
+/// memory holding a valid `Arc` forever (review finding 1, 2026-09-23:
+/// freeing the box at eviction was a use-after-free under AddressSanitizer
+/// five runs of six, and a SIGSEGV in release past sixty-four settings
+/// values). The tombstone never matches any settings — its pid is zero,
+/// and a real pid is never zero — so a straggler reader clones it, matches
+/// nothing, and walks on. Because no box is ever freed, no address is
+/// ever reused, and the compare-and-swaps below cannot confuse a fresh
+/// box with a recycled one. The cost is sixteen leaked bytes per
+/// eviction, counted by [`RETIRED_BOXES`] and bounded by the number of
+/// distinct settings values a process ever builds, not by its calls.
+static TOMBSTONE: OnceLock<Arc<Inner>> = OnceLock::new();
+
+/// The tombstone every evicted slot keeps. Constructed once, cloned into
+/// the slot's box in place of the retired `Arc`.
+fn tombstone() -> Arc<Inner> {
+    TOMBSTONE
+        .get_or_init(|| {
+            Arc::new(Inner {
+                pid: 0,
+                base: String::new(),
+                width: 1,
+                timeout: Duration::ZERO,
+                agent: ureq::Agent::config_builder().build().into(),
+                gate: Gate { counts: Mutex::new(GateCounts { busy: 0, limit: 1 }), signal: Condvar::new() },
+                last_used: AtomicU64::new(0),
+            })
+        })
+        .clone()
+}
+
+/// How many slot boxes have been retired into tombstones, so a test can
+/// prove the sixteen-byte-per-eviction leak stays proportional to churn
+/// and never to calls (review finding 1, 2026-09-23).
+static RETIRED_BOXES: AtomicU64 = AtomicU64::new(0);
+
+/// The registry that keeps every published slot box reachable for the
+/// life of the process, so the never-freed design shows up to tools as
+/// retained memory rather than a leak. Each entry is eight bytes beside
+/// the box it names; both are bounded by the number of evictions, never
+/// by calls. The pointer is never dereferenced — only listed — so its
+/// lack of `Send` is irrelevant to the soundness of the list itself.
+static RETAINED: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+
+/// Remember one box so its allocation stays reachable: the design never
+/// frees a published box (see [`TOMBSTONE`]), and a listed address keeps
+/// the sanitizer's view honest about that choice. An entry may outlive a
+/// box that was freed unpublished — a stale number in a list, never
+/// dereferenced.
+fn retain(held: *mut Arc<Inner>) {
+    lock(&RETAINED).push(held as usize);
+}
+
+/// Take the `Arc` out of one slot's box without freeing the box: the
+/// tombstone takes its place, so the memory a reader may already hold a
+/// pointer to stays allocated and valid for the life of the process.
+fn vacate(held: *mut Arc<Inner>) -> Arc<Inner> {
+    RETIRED_BOXES.fetch_add(1, Ordering::Relaxed);
+    // SAFETY: the caller won the compare-and-swap that took this slot, so
+    // this thread owns the box's contents; `ptr::replace` moves the old
+    // `Arc` out and writes the tombstone in place, and the box itself is
+    // deliberately never freed (see `TOMBSTONE`).
+    unsafe { ptr::replace(held, tombstone()) }
+}
+
 /// A retired state waiting for its last holder to finish, on a lock-free
 /// stack a fork can carry safely.
 ///
@@ -1242,15 +1393,16 @@ static RETIRED: AtomicPtr<Retired> = AtomicPtr::new(ptr::null_mut());
 /// its pool.
 ///
 /// A slot reader loads a pointer and clones the `Arc` behind it in two
-/// adjacent steps; a node can only be freed by a sweep that sees the
-/// node's reference as the last one. A node is retired the moment it
-/// leaves its slot, so a pointer a reader just loaded from a slot cannot
-/// belong to a node retired before [`RETIRE_GRACE`], and no sweep before
-/// that grace can free it. The residual window is a reader preempted for
-/// the whole grace exactly between its load and its clone — vanishingly
-/// rare, and the trade for not taking a lock the fork rule forbids. The
-/// pre-fix behavior leaked every retired pool forever; the grace bounds
-/// the leak to five seconds.
+/// adjacent steps. The slot's box is never freed — eviction leaves the
+/// tombstone in it — so the reader's memory is always valid; what the
+/// grace protects is the retired `Arc` itself: a node is retired the
+/// moment it leaves its slot, and [`sweep`] drops the node — closing the
+/// pool and its idle sockets — only when the node's reference is the last
+/// one and the retirement is older than this grace. The residual window
+/// is a reader preempted for the whole grace exactly between its load and
+/// its clone: it then holds a tombstone, matches nothing, and looks the
+/// state up again — a wrong answer is impossible, only a rebuilt state.
+/// The trade buys not taking a lock the fork rule forbids.
 #[cfg(not(test))]
 const RETIRE_GRACE: Duration = Duration::from_secs(5);
 
@@ -1275,7 +1427,7 @@ fn retire(inner: Arc<Inner>) {
 /// `nodes` may be a chain linked through `next`; the push splices the
 /// current head onto the chain's tail and publishes the chain with one
 /// compare-and-swap, retrying when another thread moved the head first.
-fn push_retired(mut nodes: *mut Retired) {
+fn push_retired(nodes: *mut Retired) {
     if nodes.is_null() {
         return;
     }
@@ -1362,6 +1514,18 @@ fn lock<T>(held: &Mutex<T>) -> MutexGuard<'_, T> {
 
 /// Build fresh state for this pid and transport shape.
 fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
+    // The width ceiling: every lane is a thread the batch spawns and a
+    // socket the pool may hold, so a width beyond this is a host error,
+    // refused with the ceiling named, before any thread or allocation is
+    // attempted (review finding, 2026-09-23: width 100,000 panicked at
+    // 322 MB in thread spawning). The ceiling is recorded here and in the
+    // surfaces notes; a host that needs more names a number that fits.
+    if settings.width > MAX_WIDTH {
+        return Err(Error::usage(format!(
+            "width {} exceeds the ceiling {}: the gate and the pool are built for at most {} lanes",
+            settings.width, MAX_WIDTH, MAX_WIDTH
+        )));
+    }
     let width = settings.width.max(1);
     let secure = Backend::resolve(None, Some(&settings.base), "jev-latest")
         .map(|backend| backend.is_secure())
@@ -1416,6 +1580,7 @@ fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>,
         Error::guard(options)?;
         let fresh = Arc::new(build_inner(now, settings)?);
         let boxed = Box::into_raw(Box::new(Arc::clone(&fresh)));
+        retain(boxed);
         let home = home_slot(settings);
 
         // Claim the home slot first: two publishers of one settings value
@@ -1448,11 +1613,12 @@ fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>,
                     .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
                     .is_ok()
                 {
-                    // SAFETY: the swap won, so the box this slot held is
-                    // ours alone to take; its `Arc` moves to the retired
-                    // stack, whose sweep closes the pool once no request
-                    // holds it.
-                    let old = unsafe { *Box::from_raw(held) };
+                    // SAFETY: the swap won, so this thread owns the slot's
+                    // old contents; `vacate` moves the `Arc` to the retired
+                    // stack and leaves the tombstone in the never-freed box,
+                    // so a reader that loaded the old pointer keeps valid
+                    // memory and a live state behind the grace.
+                    let old = vacate(held);
                     retire(old);
                     published_at = Some(home);
                     break;
@@ -1533,11 +1699,12 @@ fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>,
                     .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
                     .is_ok()
                 {
-                    // SAFETY: the swap won, so the box this slot held is
-                    // ours alone to take; its `Arc` moves to the retired
-                    // stack, whose sweep closes the pool once no request
-                    // holds it.
-                    let old = unsafe { *Box::from_raw(held) };
+                    // SAFETY: the swap won, so this thread owns the slot's
+                    // old contents; `vacate` moves the `Arc` to the retired
+                    // stack and leaves the tombstone in the never-freed box,
+                    // so a reader that loaded the old pointer keeps valid
+                    // memory and a live state behind the grace.
+                    let old = vacate(held);
                     retire(old);
                     published_at = Some(place);
                     break;
@@ -1610,11 +1777,12 @@ fn dedup_after_publish(
                 .compare_exchange(boxed, ptr::null_mut(), Ordering::AcqRel, Ordering::Acquire)
                 .is_ok();
             if reclaimed {
-                // SAFETY: the swap above took the slot back, so this is
-                // the only handle to the box; it retires instead of
-                // freeing, so a reader that loaded our pointer keeps a
-                // live state behind the grace.
-                let ours = unsafe { *Box::from_raw(boxed) };
+                // SAFETY: the swap above took the slot back, so this thread
+                // owns the box's contents; `vacate` moves the `Arc` to the
+                // retired stack and leaves the tombstone in the never-freed
+                // box, so a reader that loaded our pointer keeps valid
+                // memory and a live state behind the grace.
+                let ours = vacate(boxed);
                 retire(ours);
                 sweep();
             }
@@ -1642,8 +1810,9 @@ fn choose_victim(now: u32) -> usize {
         if held.is_null() {
             continue;
         }
-        // SAFETY: a stored pointer left its slot only through an eviction,
-        // and a sweep frees a retired box only after the grace.
+        // SAFETY: a stored box is never freed — eviction leaves the
+        // tombstone in it — so the pointer stays valid memory holding a
+        // valid `Arc` for the life of the process.
         let inner = unsafe { &*held };
         let vanished = inner.pid != now;
         let held_by_a_caller = Arc::strong_count(unsafe { &*held }) > 1;
@@ -1662,7 +1831,10 @@ fn state_lookup(pid: u32, settings: &ResolvedConfig) -> Option<Arc<Inner>> {
     for slot in &STATES {
         let held = slot.load(Ordering::Acquire);
         if !held.is_null() {
-            // SAFETY: a stored pointer is never freed.
+            // SAFETY: a stored box is never freed — eviction leaves the
+            // tombstone in it — so the pointer stays valid memory holding
+            // a valid `Arc` for the life of the process (review finding 1,
+            // 2026-09-23).
             let inner = unsafe { (*held).clone() };
             if state_matches(&inner, pid, settings) {
                 inner
@@ -1767,8 +1939,10 @@ mod tests {
     }
 
     /// Run one environment scenario under the null seat, restoring the
-    /// seat's own switch afterwards. Sound for the same reason `null` is:
-    /// every reader of these variables waits on the seat.
+    /// seat's own switch afterwards — and every base URL the scenario may
+    /// have named, so no test leaks a `THINKTHEN_BASE_URL` into its
+    /// neighbours (review finding 18, 2026-09-23: the leak made the digest
+    /// test fail four runs of fifty by test order).
     fn switches(scenario: impl FnOnce()) {
         let _seat = null();
         // Sound in this binary: the seat is held (see `null`).
@@ -1779,8 +1953,14 @@ mod tests {
             std::env::remove_var("ENGINE_BASE_URL");
         }
         scenario();
-        // Sound in this binary: the seat is still held.
-        unsafe { std::env::set_var("ENGINE_NULL", "1") };
+        // Sound in this binary: the seat is still held. Restore the whole
+        // removed set, not just the null switch: a scenario that named a
+        // base URL must not leave it behind for the next test to read.
+        unsafe {
+            std::env::remove_var("THINKTHEN_BASE_URL");
+            std::env::remove_var("ENGINE_BASE_URL");
+            std::env::set_var("ENGINE_NULL", "1");
+        }
     }
 
     /// `THINKTHEN_NULL` is parsed as a value: `=0` and `=false` mean OFF,
@@ -2259,5 +2439,79 @@ mod tests {
         let refused = tt.decide_many(&question, &["a", "b", "c"], None);
         assert_eq!(refused.unwrap_err().kind, ErrorKind::Usage);
         assert_eq!(super::REQUESTS.load(std::sync::atomic::Ordering::Relaxed), 0);
+    }
+
+    /// A name that does not resolve is not retryable: retrying cannot
+    /// change the answer, so the caller fails at once instead of burning
+    /// the backoff (review finding, 2026-09-23).
+    #[test]
+    fn an_unresolvable_name_is_not_retryable() {
+        let error = ureq::Error::HostNotFound;
+        let classified = super::classify_transport(&error);
+        assert!(!classified.retryable, "a DNS failure must not retry");
+        assert!(classified.to_string().contains("resolve"), "the refusal names why: {classified}");
+    }
+
+    /// A failed connect is not retryable: the same address will fail the
+    /// same way within the second.
+    #[test]
+    fn a_failed_connect_is_not_retryable() {
+        let error = ureq::Error::ConnectionFailed;
+        let classified = super::classify_transport(&error);
+        assert!(!classified.retryable, "a connect failure must not retry");
+    }
+
+    /// An I/O error whose cause chain names TLS fails at once: the
+    /// handshake is deterministic on retry.
+    #[test]
+    fn a_tls_failure_is_not_retryable() {
+        let inner = std::io::Error::new(std::io::ErrorKind::InvalidData, "rustls: invalid certificate");
+        let io = std::io::Error::new(std::io::ErrorKind::InvalidData, inner);
+        let error = ureq::Error::Io(io.into());
+        let classified = super::classify_transport(&error);
+        assert!(!classified.retryable, "a TLS failure must not retry: {classified}");
+        assert!(classified.to_string().contains("TLS"), "the refusal names the handshake: {classified}");
+    }
+
+    /// A plain mid-flight I/O failure keeps its retry: the backends page
+    /// says a transport failure may pass.
+    #[test]
+    fn a_midflight_io_failure_keeps_its_retry() {
+        let io = std::io::Error::new(std::io::ErrorKind::ConnectionReset, "reset by peer");
+        let error = ureq::Error::Io(io.into());
+        let classified = super::classify_transport(&error);
+        assert!(classified.retryable, "a reset mid-flight may pass on retry");
+    }
+
+    /// An engine with an explicit address digests against that address,
+    /// not the environment's (review finding 15, 2026-09-23): the digest
+    /// names the request the engine would actually send.
+    #[test]
+    fn an_explicit_address_wins_the_digest() {
+        let _seat = null();
+        let question = Question::from_json(CUT).expect("parses");
+        let evidence = "I want my money back";
+        let here = super::request_digest_for(
+            "http://127.0.0.1:8211/v1",
+            &question,
+            None,
+            evidence,
+        )
+        .expect("digests");
+        let there = super::request_digest_for(
+            "http://127.0.0.1:8212/v1",
+            &question,
+            None,
+            evidence,
+        )
+        .expect("digests");
+        assert_ne!(here, there, "two addresses are two requests");
+        // The engine's own trail uses its configured base, agreeing with
+        // the helper named for that base.
+        let mut settings = thinkthen_contract::Settings::default();
+        settings.address = Some("http://127.0.0.1:8211/v1".to_owned());
+        let tt = BlockingEngine::from_settings(settings);
+        let details = tt.details(&question, evidence).expect("details");
+        assert_eq!(details.requests[0], here, "the engine's trail names its own address");
     }
 }

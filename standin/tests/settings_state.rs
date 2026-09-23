@@ -41,11 +41,18 @@ impl SlowListener {
                 let seen = Arc::clone(&seen);
                 let top = Arc::clone(&top);
                 std::thread::spawn(move || {
-                    let now = seen.fetch_add(1, Ordering::SeqCst) + 1;
-                    top.fetch_max(now, Ordering::SeqCst);
                     let mut buffer = [0_u8; 4096];
                     let _ = stream.read(&mut buffer);
+                    // Count concurrency only across the delayed window: a
+                    // width-1 gate holds the permit for the whole request,
+                    // so overlapping sleeps mean the gate leaked, while the
+                    // old accept-to-close count also caught the tail of a
+                    // finished response under load (review finding 18,
+                    // 2026-09-23: two failures in fifty).
+                    let now = seen.fetch_add(1, Ordering::SeqCst) + 1;
+                    top.fetch_max(now, Ordering::SeqCst);
                     std::thread::sleep(delay);
+                    seen.fetch_sub(1, Ordering::SeqCst);
                     let head = format!(
                         "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
                         REPLY.len()
@@ -53,7 +60,6 @@ impl SlowListener {
                     let _ = stream.write_all(head.as_bytes());
                     let _ = stream.write_all(REPLY);
                     let _ = stream.flush();
-                    seen.fetch_sub(1, Ordering::SeqCst);
                 });
             }
         });

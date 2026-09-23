@@ -26,11 +26,20 @@ fn seat() -> std::sync::MutexGuard<'static, ()> {
     SEAT.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// The width the engine runs at, as the environment names it.
+/// The width the engine runs at, as the environment names it: the
+/// settled spelling first, the deprecated one beside it, so a suite
+/// running under `THINKTHEN_WIDTH` reads the same width the engine does
+/// (review finding 22, 2026-09-23: a verb suite skipped under the
+/// settled spelling because only `ENGINE_` was read).
 fn width() -> u64 {
-    std::env::var("ENGINE_WIDTH")
-        .ok()
-        .and_then(|value| value.parse().ok())
+    let spelling = |name: &str| {
+        std::env::var(name)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .and_then(|value| value.parse().ok())
+    };
+    spelling("THINKTHEN_WIDTH")
+        .or_else(|| spelling("ENGINE_WIDTH"))
         .unwrap_or(4)
 }
 
@@ -43,11 +52,19 @@ fn stub_client() -> ureq::Agent {
         .into()
 }
 
-/// Where the stub's doors sit, following `ENGINE_BASE_URL`.
+/// Where the stub's doors sit, following `THINKTHEN_BASE_URL` with the
+/// deprecated `ENGINE_BASE_URL` beside it, so a suite decides its skip on
+/// the same address the engine would use (review finding 22, 2026-09-23:
+/// a suite skipped although a backend was reachable under the settled
+/// spelling).
 fn stub(path: &str) -> String {
-    let base = std::env::var("ENGINE_BASE_URL")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
+    let read = |name: &str| {
+        std::env::var(name)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+    };
+    let base = read("THINKTHEN_BASE_URL")
+        .or_else(|| read("ENGINE_BASE_URL"))
         .unwrap_or_else(|| "http://127.0.0.1:8091/v1".into());
     format!("{base}{path}")
 }

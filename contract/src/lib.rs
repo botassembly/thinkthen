@@ -411,11 +411,19 @@ impl<'a> Options<'a> {
     /// Stop the whole call after this budget, counted from now.
     ///
     /// A zero budget is spent immediately: the call sends nothing and
-    /// returns the deadline kind.
+    /// returns the deadline kind. A budget so large that now-plus-budget
+    /// does not fit in the clock is treated as no deadline at all: the
+    /// caller asked for a wall further away than the clock can name, and a
+    /// panic in the arithmetic would take the host process with it
+    /// (review finding, 2026-09-23: the unchecked add panicked on huge
+    /// budgets).
     #[must_use]
     pub fn deadline_in(self, budget: std::time::Duration) -> Self {
         let seconds = budget.as_secs_f64();
-        Self { deadline: Some(std::time::Instant::now() + budget), seconds, ..self }
+        // `checked_add` yields `None` exactly when the wall does not fit,
+        // and `None` is already the no-deadline spelling.
+        let deadline = std::time::Instant::now().checked_add(budget);
+        Self { deadline, seconds, ..self }
     }
 
     /// Whether the deadline has passed.
@@ -2296,6 +2304,19 @@ mod tests {
         assert_eq!(super::deadline_from_millis(f64::NAN).unwrap_err().kind, ErrorKind::Usage, "NaN milliseconds are refused");
         assert_eq!(super::deadline_from_millis(-2.0).unwrap_err().kind, ErrorKind::Usage, "negative milliseconds are refused");
         assert_eq!(super::deadline_from_millis(1e300).unwrap_err().kind, ErrorKind::Usage, "oversized milliseconds are refused");
+    }
+
+    /// A budget the clock cannot name — now plus the budget does not fit
+    /// — is treated as no deadline, never a panic in the host (review
+    /// finding, 2026-09-23: the unchecked add panicked on huge budgets).
+    #[test]
+    fn an_unrepresentable_budget_is_no_deadline_not_a_panic() {
+        let armed = Options::new().deadline_in(std::time::Duration::MAX);
+        assert!(armed.remaining().is_none(), "the clock cannot name the wall; no deadline is carried");
+        assert!(!armed.passed(), "nothing is spent");
+        // A representable budget still arms.
+        let sane = Options::new().deadline_in(std::time::Duration::from_secs(5));
+        assert!(sane.remaining().is_some(), "five seconds still arms");
     }
 
     /// The Options helper is the one call a host door makes: it carries a
