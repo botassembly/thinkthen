@@ -55,7 +55,12 @@ def literal(value: str) -> str:
 
 
 def question_arg(case) -> str:
-    return literal(json.dumps(case["question"]))
+    if "question" in case:
+        return literal(json.dumps(case["question"]))
+    # The file-door spelling (the local-kind cases): the named file goes
+    # through the surface's own read door, so a missing file surfaces as
+    # the local error kind rather than crashing the driver.
+    return literal(case["question_file"])
 
 
 def answer_text(expected) -> str:
