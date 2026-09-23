@@ -7,6 +7,8 @@ Probe status: the 56 non-closed rows were probed at the tip, 610a133, on 2026-09
 
 Status after wave 6: Closed 128, Open 31, Partial 17, Unknown 8.
 
+Status after the wave-7 probes: Closed 152, Open 24, Partial 17, Waive-candidate 4. The 24 open rows include the 13 new R7 rows. R7-3 is fixed on surfaces-wave7 but not yet verified.
+
 Rows per surface: duckdb 32, gate 30, python 21, postgresql 18, standin 15, ruby 15, contract 12, r 13, packaging 11, sqlite 10, records 8, c 5, typescript 5, rust 2.
 
 Rows before this update: 184. Rows after: 197.
