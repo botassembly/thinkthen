@@ -42,3 +42,8 @@ Found by the product side from experiments 235 and 236. Ian can overturn any lin
 ## Added 2026-09-23: the default cut on knowledge yes/no questions
 
 Experiment 242 found that the yes/no functions say yes too readily at 0.5 on knowledge questions. "Is this a Ringo song?" gave 32 yeses, and 7 were right. Yet the probabilities ranked the songs well (AUC 0.87). The same looseness showed in the DuckDB sample (241) and in relate (239). The cut is the problem, not the question's direction. The build team should weigh whether the default for `decide` and `filter` stays 0.5, using the harvested runs as evidence. The threshold how-to above becomes the first thing a user reads.
+
+## Added 2026-09-23: what Beatles Bench found for tag and recognize
+
+- `tag` at a cut of 0.5 over-tags. On songs with one lead singer, Jev gives the wrong Beatles 0.4 to 0.6, so extra labels cross the cut: Ringo was tagged on 51 songs against 10 true. The most probable label is right on 77% of those songs. `decide` shows the same middle band as a lean toward no. A per-question cut tuned on labeled cases, or a "top label" mode, would serve users better than one fixed 0.5.
+- `recognize`, built from `annotate` as in experiment 222, misses name boundaries: it takes "album" into "the album X", keeps "Honey" and drops "Don't", and loses the middle of long titles. Exact matching scores songs at 0.23 precision and 0.15 recall. Counting overlap scores precision at 1.00 and recall at 0.54 for songs and 0.75 for albums. The shipped command needs a boundary test on multi-word titles.
