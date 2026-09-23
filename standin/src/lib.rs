@@ -12,7 +12,7 @@
 //! defend them: the settings are read when an engine value is built
 //! (`ResolvedConfig::resolve`), so build the engine before any fork; and a
 //! forked child keeps the inherited pool's file descriptors for its
-//! lifetime, because the pid-check rebuild leaks the retired pool rather
+//! lifetime, because the pid-check rebuild leaks the parent's pool rather
 //! than tearing it down — the descriptors close when the child exits, and
 //! nothing else closes them.
 //!
@@ -40,13 +40,12 @@
 //! fixture code at all, so a shipped library can never be talked into a
 //! fake failure by an environment variable.
 
-use std::ptr;
+use std::cell::UnsafeCell;
 use std::sync::Arc;
 use std::sync::Condvar;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
-use std::sync::OnceLock;
-use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -151,6 +150,7 @@ impl ResolvedConfig {
     fn from_env() -> Self {
         Self::resolve(&EngineConfig::from_env())
     }
+
 }
 
 /// The engine every surface binds until the real one lands.
@@ -823,15 +823,6 @@ pub fn request_digest_for(
         .to_owned())
 }
 
-/// How many slot boxes have been retired into tombstones so far in this
-/// process, so a probe can prove the sixteen-byte-per-eviction leak stays
-/// proportional to churn and never to calls (review finding 1,
-/// 2026-09-23).
-#[must_use]
-pub fn retired_boxes() -> u64 {
-    RETIRED_BOXES.load(Ordering::Relaxed)
-}
-
 /// The null backend's reply for any verb, in the adapter's own shapes.
 ///
 /// The rules are the conformance file's numbers, so one set of cases runs
@@ -1281,8 +1272,8 @@ impl Gate {
 /// two engines whose settings differ never share a gate or a pool, so a
 /// width of 1 holds across them and no call rebuilds a neighbour's state.
 /// A process that uses more distinct settings values than this evicts the
-/// least-recently-used idle state, retiring its pool to a list that closes
-/// its sockets once no request holds it; sixty-four covers every surface's
+/// least-recently-used idle state, whose pool closes its sockets once no
+/// request holds it; sixty-four covers every surface's
 /// own use with room for a host's churn.
 const STATE_SLOTS: usize = 64;
 
@@ -1295,192 +1286,74 @@ static LOOKUPS: AtomicU64 = AtomicU64::new(0);
 /// states are closed rather than leaked (review finding 15).
 static INNER_DROPS: AtomicU64 = AtomicU64::new(0);
 
-/// One state per settings value, behind an array of atomic pointers that
-/// are exchanged and never unwound.
+/// The settings states, one per settings value, reached only through
+/// [`TableGuard`].
 ///
-/// A fork during a batch leaves locks held by threads that do not exist in
-/// the child, so the child's rebuild path must take no lock any request
-/// path can hold. The read is one atomic load and an `Arc` clone per
-/// slot; the publish is a fresh construction and one compare-and-swap. A
-/// value an eviction replaces moves to [`RETIRED`], whose sweep closes its
-/// pool once no request holds it, so churn through more settings values
-/// than [`STATE_SLOTS`] holds file descriptors flat instead of leaking a
-/// pool per eviction forever.
-static STATES: [AtomicPtr<Arc<Inner>>; STATE_SLOTS] =
-    [const { AtomicPtr::new(ptr::null_mut()) }; STATE_SLOTS];
+/// Every read and write of a slot happens with the table lock held, and a
+/// reader leaves with its own counted `Arc`, so no thread ever touches a
+/// state another thread can free (review 5: the lock-free table raced its
+/// own tombstone writes under ThreadSanitizer and still crashed the C door
+/// in two runs of fifty-four). An evicted state is dropped after the lock
+/// is released, and its pool closes when its last caller finishes.
+struct Table(UnsafeCell<[Option<Arc<Inner>>; STATE_SLOTS]>);
 
-/// The value every evicted slot keeps, so a slot's box is never freed
-/// while any reader can still hold its pointer.
+// SAFETY: the cell is reached only through `TableGuard::slots`, and a
+// guard exists only while its thread holds `TABLE_LOCK`.
+unsafe impl Sync for Table {}
+
+static TABLE: Table = Table(UnsafeCell::new([const { None }; STATE_SLOTS]));
+
+/// The table lock: zero when free, otherwise the pid of the process whose
+/// thread holds it.
 ///
-/// A slot reader loads a pointer and clones the `Arc` behind it in two
-/// adjacent steps, so a box whose slot was just taken must stay valid
-/// memory holding a valid `Arc` forever (review finding 1, 2026-09-23:
-/// freeing the box at eviction was a use-after-free under AddressSanitizer
-/// five runs of six, and a SIGSEGV in release past sixty-four settings
-/// values). The tombstone never matches any settings — its pid is zero,
-/// and a real pid is never zero — so a straggler reader clones it, matches
-/// nothing, and walks on. Because no box is ever freed, no address is
-/// ever reused, and the compare-and-swaps below cannot confuse a fresh
-/// box with a recycled one. The cost is sixteen leaked bytes per
-/// eviction, counted by [`RETIRED_BOXES`] and bounded by the number of
-/// distinct settings values a process ever builds, not by its calls.
-static TOMBSTONE: OnceLock<Arc<Inner>> = OnceLock::new();
+/// A plain mutex breaks the fork rule: a child forked while a parent
+/// thread held it would wait forever, because that thread does not exist
+/// in the child. The pid stamp lets a forked child see that the holder
+/// belongs to another process and take the lock over. The sections under
+/// it only compare settings and move `Arc`s between slots; they never
+/// allocate, block, or drop a state, so a child that takes over a
+/// half-finished section inherits at worst one leaked reference.
+static TABLE_LOCK: AtomicU32 = AtomicU32::new(0);
 
-/// The tombstone every evicted slot keeps. Constructed once, cloned into
-/// the slot's box in place of the retired `Arc`.
-fn tombstone() -> Arc<Inner> {
-    TOMBSTONE
-        .get_or_init(|| {
-            Arc::new(Inner {
-                pid: 0,
-                base: String::new(),
-                width: 1,
-                timeout: Duration::ZERO,
-                agent: ureq::Agent::config_builder().build().into(),
-                gate: Gate { counts: Mutex::new(GateCounts { busy: 0, limit: 1 }), signal: Condvar::new() },
-                last_used: AtomicU64::new(0),
-            })
-        })
-        .clone()
-}
+/// The table lock, held until drop.
+struct TableGuard;
 
-/// How many slot boxes have been retired into tombstones, so a test can
-/// prove the sixteen-byte-per-eviction leak stays proportional to churn
-/// and never to calls (review finding 1, 2026-09-23).
-static RETIRED_BOXES: AtomicU64 = AtomicU64::new(0);
-
-/// The registry that keeps every published slot box reachable for the
-/// life of the process, so the never-freed design shows up to tools as
-/// retained memory rather than a leak. Each entry is eight bytes beside
-/// the box it names; both are bounded by the number of evictions, never
-/// by calls. The pointer is never dereferenced — only listed — so its
-/// lack of `Send` is irrelevant to the soundness of the list itself.
-static RETAINED: Mutex<Vec<usize>> = Mutex::new(Vec::new());
-
-/// Remember one box so its allocation stays reachable: the design never
-/// frees a published box (see [`TOMBSTONE`]), and a listed address keeps
-/// the sanitizer's view honest about that choice. An entry may outlive a
-/// box that was freed unpublished — a stale number in a list, never
-/// dereferenced.
-fn retain(held: *mut Arc<Inner>) {
-    lock(&RETAINED).push(held as usize);
-}
-
-/// Take the `Arc` out of one slot's box without freeing the box: the
-/// tombstone takes its place, so the memory a reader may already hold a
-/// pointer to stays allocated and valid for the life of the process.
-fn vacate(held: *mut Arc<Inner>) -> Arc<Inner> {
-    RETIRED_BOXES.fetch_add(1, Ordering::Relaxed);
-    // SAFETY: the caller won the compare-and-swap that took this slot, so
-    // this thread owns the box's contents; `ptr::replace` moves the old
-    // `Arc` out and writes the tombstone in place, and the box itself is
-    // deliberately never freed (see `TOMBSTONE`).
-    unsafe { ptr::replace(held, tombstone()) }
-}
-
-/// A retired state waiting for its last holder to finish, on a lock-free
-/// stack a fork can carry safely.
-///
-/// The node owns one strong reference; in-flight requests own the others.
-/// [`sweep`] drops the node — and with it the pool and its idle sockets —
-/// only when the node's reference is the last one and the retirement is
-/// older than [`RETIRE_GRACE`] (see its comment for the residual window).
-struct Retired {
-    inner: Arc<Inner>,
-    retired_at: Instant,
-    next: *mut Retired,
-}
-
-/// The head of the retired stack.
-static RETIRED: AtomicPtr<Retired> = AtomicPtr::new(ptr::null_mut());
-
-/// How long a retired state must have been idle before a sweep may close
-/// its pool.
-///
-/// A slot reader loads a pointer and clones the `Arc` behind it in two
-/// adjacent steps. The slot's box is never freed — eviction leaves the
-/// tombstone in it — so the reader's memory is always valid; what the
-/// grace protects is the retired `Arc` itself: a node is retired the
-/// moment it leaves its slot, and [`sweep`] drops the node — closing the
-/// pool and its idle sockets — only when the node's reference is the last
-/// one and the retirement is older than this grace. The residual window
-/// is a reader preempted for the whole grace exactly between its load and
-/// its clone: it then holds a tombstone, matches nothing, and looks the
-/// state up again — a wrong answer is impossible, only a rebuilt state.
-/// The trade buys not taking a lock the fork rule forbids.
-#[cfg(not(test))]
-const RETIRE_GRACE: Duration = Duration::from_secs(5);
-
-/// Under test the grace is fifty milliseconds, so a churn proof can wait
-/// it out without sleeping for seconds; the production value above is
-/// the one a shipped build runs with.
-#[cfg(test)]
-const RETIRE_GRACE: Duration = Duration::from_millis(50);
-
-/// Retire one state: push it onto the stack for a later sweep.
-fn retire(inner: Arc<Inner>) {
-    let node = Box::into_raw(Box::new(Retired {
-        inner,
-        retired_at: Instant::now(),
-        next: ptr::null_mut(),
-    }));
-    push_retired(node);
-}
-
-/// Push one node or a chain of them onto the retired stack.
-///
-/// `nodes` may be a chain linked through `next`; the push splices the
-/// current head onto the chain's tail and publishes the chain with one
-/// compare-and-swap, retrying when another thread moved the head first.
-fn push_retired(nodes: *mut Retired) {
-    if nodes.is_null() {
-        return;
-    }
-    let mut tail = nodes;
-    // SAFETY: `nodes` is a chain this thread built or stole whole, and no
-    // other thread can reach it until the publish below succeeds.
-    while !unsafe { (*tail).next }.is_null() {
-        tail = unsafe { (*tail).next };
-    }
-    let mut head = RETIRED.load(Ordering::Acquire);
-    loop {
-        // SAFETY: as above.
-        unsafe { (*tail).next = head };
-        match RETIRED.compare_exchange(head, nodes, Ordering::AcqRel, Ordering::Acquire) {
-            Ok(_) => return,
-            Err(moved) => head = moved,
+impl TableGuard {
+    /// Take the table lock for this pid, spinning while another thread of
+    /// this process holds it.
+    fn take(pid: u32) -> Self {
+        loop {
+            match TABLE_LOCK.compare_exchange_weak(0, pid, Ordering::Acquire, Ordering::Relaxed) {
+                Ok(_) => return Self,
+                Err(held) if held != 0 && held != pid => {
+                    // The holder is a thread of the parent this process
+                    // was forked from; it will never release the lock here.
+                    if TABLE_LOCK
+                        .compare_exchange(held, pid, Ordering::Acquire, Ordering::Relaxed)
+                        .is_ok()
+                    {
+                        return Self;
+                    }
+                }
+                Err(_) => thread::yield_now(),
+            }
         }
     }
+
+    /// The slots, borrowed for as long as the lock is held.
+    fn slots(&mut self) -> &mut [Option<Arc<Inner>>; STATE_SLOTS] {
+        // SAFETY: this guard holds `TABLE_LOCK`, so no other thread
+        // reaches the cell until it drops, and the borrow cannot outlive
+        // the guard.
+        unsafe { &mut *TABLE.0.get() }
+    }
 }
 
-/// Close the pools of retired states no request holds and no reader can
-/// still be reaching for, and keep the ones still in flight.
-///
-/// The sweep steals the whole stack, walks it, and pushes the survivors
-/// back — all with atomics, so a fork carries whatever half-swept state it
-/// inherits without a lock to deadlock on.
-fn sweep() {
-    let mut node = RETIRED.swap(ptr::null_mut(), Ordering::AcqRel);
-    let mut keep = ptr::null_mut();
-    while !node.is_null() {
-        // SAFETY: the swap stole the whole stack; this thread walks it
-        // alone until it pushes the survivors back.
-        let next = unsafe { (*node).next };
-        let alone = Arc::strong_count(unsafe { &(*node).inner }) == 1;
-        let aged = unsafe { (*node).retired_at }.elapsed() >= RETIRE_GRACE;
-        if alone && aged {
-            // SAFETY: the node left the stack with the swap and leaves no
-            // other handle; dropping the box drops the last reference, the
-            // `Inner`, and its pool's idle sockets.
-            drop(unsafe { Box::from_raw(node) });
-        } else {
-            // SAFETY: as above.
-            unsafe { (*node).next = keep };
-            keep = node;
-        }
-        node = next;
+impl Drop for TableGuard {
+    /// Release the table lock.
+    fn drop(&mut self) {
+        TABLE_LOCK.store(0, Ordering::Release);
     }
-    push_retired(keep);
 }
 
 /// Whether one state answers this pid and these settings.
@@ -1489,27 +1362,6 @@ fn state_matches(inner: &Inner, pid: u32, settings: &ResolvedConfig) -> bool {
         && inner.base == settings.base
         && inner.width == settings.width.max(1)
         && inner.timeout == settings.timeout
-}
-
-/// The first slot a settings value tries, from a stable hash of its key, so
-/// the same settings always walk the same probe order and two threads never
-/// publish two states for one settings value.
-fn home_slot(settings: &ResolvedConfig) -> usize {
-    // FNV-1a, so the order is stable across runs and platforms.
-    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
-    let eat = |hash: &mut u64, bytes: [u8; 8]| {
-        for byte in bytes {
-            *hash ^= u64::from(byte);
-            *hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-        }
-    };
-    for byte in settings.base.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    eat(&mut hash, (settings.width.max(1) as u64).to_le_bytes());
-    eat(&mut hash, (settings.timeout.as_nanos() as u64).to_le_bytes());
-    (hash % STATE_SLOTS as u64) as usize
 }
 
 /// Lock a mutex without ever panicking on another thread's failure.
@@ -1561,16 +1413,18 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
     })
 }
 
-/// The state for this pid and settings value, rebuilt after a fork and
-/// published into its own slot, so two engines with different settings
-/// never share a gate or a pool.
+/// The state for this pid and settings value, built on first use and
+/// published into the table, so two engines with different settings never
+/// share a gate or a pool and two engines with the same settings always
+/// do.
 ///
-/// The home slot is claimed first, because two threads publishing one
-/// settings value race the same compare-and-swap there and exactly one
-/// wins. Every publish passes through [`dedup_after_publish`], and a
-/// retraction restarts the whole lookup rather than answering with the
-/// other copy, so two simultaneous publishers converge on one state
-/// instead of trading retracted states back and forth.
+/// The pool is built outside the lock. The lookup runs again under the
+/// lock before the publish, so two threads building one settings value
+/// at once converge on the first one published and the other copy is
+/// dropped. The evicted state leaves the table under the lock and is let
+/// go after it: dropped when it belongs to this process, and leaked when
+/// it belongs to the parent of a fork, whose pool the child must not tear
+/// down.
 ///
 /// # Errors
 ///
@@ -1578,250 +1432,54 @@ fn build_inner(pid: u32, settings: &ResolvedConfig) -> Result<Inner, Error> {
 /// an error of the backend kind when the pool cannot be built.
 fn state(options: &Options<'_>, settings: &ResolvedConfig) -> Result<Arc<Inner>, Error> {
     let now = std::process::id();
-    loop {
-        if let Some(inner) = state_lookup(now, settings) {
-            return Ok(inner);
-        }
-        Error::guard(options)?;
-        let fresh = Arc::new(build_inner(now, settings)?);
-        let boxed = Box::into_raw(Box::new(Arc::clone(&fresh)));
-        retain(boxed);
-        let home = home_slot(settings);
-
-        // Claim the home slot first: two publishers of one settings value
-        // race the SAME compare-and-swap here, so exactly one wins and the
-        // loser answers with the winner's state (review finding 15).
-        let mut published_at = None;
-        loop {
-            let held = STATES[home].load(Ordering::Acquire);
-            if held.is_null() {
-                if STATES[home]
-                    .compare_exchange(ptr::null_mut(), boxed, Ordering::AcqRel, Ordering::Acquire)
-                    .is_ok()
-                {
-                    published_at = Some(home);
-                    break;
-                }
-                continue;
-            }
-            // SAFETY: a stored pointer left its slot only through an
-            // eviction, and a sweep frees a retired box only after the grace.
-            let inner = unsafe { (*held).clone() };
-            if state_matches(&inner, now, settings) {
-                // SAFETY: `boxed` was never published, so this is the only
-                // handle; the box goes, the fresh state is dropped.
-                drop(unsafe { Box::from_raw(boxed) });
-                return Ok(inner);
-            }
-            if evictable(held, now) {
-                if STATES[home]
-                    .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
-                    .is_ok()
-                {
-                    // SAFETY: the swap won, so this thread owns the slot's
-                    // old contents; `vacate` moves the `Arc` to the retired
-                    // stack and leaves the tombstone in the never-freed box,
-                    // so a reader that loaded the old pointer keeps valid
-                    // memory and a live state behind the grace.
-                    let old = vacate(held);
-                    retire(old);
-                    published_at = Some(home);
-                    break;
-                }
-                continue;
-            }
-            // The home slot is held by an active different settings
-            // value: fall through to the walk and the victim.
-            break;
-        }
-
-        // Walk the probe order for an empty slot, or a slot another
-        // thread is publishing the same settings into.
-        if published_at.is_none() {
-            'walk: for step in 0..STATE_SLOTS {
-                let place = (home + step) % STATE_SLOTS;
-                loop {
-                    let held = STATES[place].load(Ordering::Acquire);
-                    if held.is_null() {
-                        if STATES[place]
-                            .compare_exchange(ptr::null_mut(), boxed, Ordering::AcqRel, Ordering::Acquire)
-                            .is_ok()
-                        {
-                            published_at = Some(place);
-                            break 'walk;
-                        }
-                        continue;
-                    }
-                    // SAFETY: a stored pointer left its slot only through
-                    // an eviction, and a sweep frees a retired box only
-                    // after the grace.
-                    let inner = unsafe { (*held).clone() };
-                    if state_matches(&inner, now, settings) {
-                        // SAFETY: `boxed` was never published, so this is
-                        // the only handle; the box goes, the fresh state
-                        // is dropped.
-                        drop(unsafe { Box::from_raw(boxed) });
-                        return Ok(inner);
-                    }
-                    break;
-                }
-            }
-        }
-
-        // Every probe slot holds a different settings value: sweep what
-        // earlier evictions left behind, then take the best victim — a
-        // vanished pid's idle state first, then the least-recently-used
-        // idle one, and a busy state only when every slot is busy — so a
-        // width holds through churn and the retired pool's sockets close
-        // instead of leaking (review finding 15).
-        if published_at.is_none() {
-            sweep();
-            let place = choose_victim(now);
-            loop {
-                let held = STATES[place].load(Ordering::Acquire);
-                if held.is_null() {
-                    if STATES[place]
-                        .compare_exchange(ptr::null_mut(), boxed, Ordering::AcqRel, Ordering::Acquire)
-                        .is_ok()
-                    {
-                        published_at = Some(place);
-                        break;
-                    }
-                    continue;
-                }
-                // SAFETY: the box is in the slot, so no sweep can have
-                // freed it (a freed box was retired first and waited out
-                // the grace).
-                if unsafe { state_matches(&(*held), now, settings) } {
-                    // SAFETY: as above.
-                    let inner = unsafe { (*held).clone() };
-                    // SAFETY: `boxed` was never published, so this is the
-                    // only handle; the box goes, the fresh state is dropped.
-                    drop(unsafe { Box::from_raw(boxed) });
-                    return Ok(inner);
-                }
-                if STATES[place]
-                    .compare_exchange(held, boxed, Ordering::AcqRel, Ordering::Acquire)
-                    .is_ok()
-                {
-                    // SAFETY: the swap won, so this thread owns the slot's
-                    // old contents; `vacate` moves the `Arc` to the retired
-                    // stack and leaves the tombstone in the never-freed box,
-                    // so a reader that loaded the old pointer keeps valid
-                    // memory and a live state behind the grace.
-                    let old = vacate(held);
-                    retire(old);
-                    published_at = Some(place);
-                    break;
-                }
-            }
-        }
-
-        // Published somewhere: close the double-publish window, and a
-        // retraction restarts the lookup so the survivor is the one answer.
-        let place = published_at.expect("one of the three paths publishes");
-        sweep();
-        if dedup_after_publish(place, boxed, now, settings) {
-            continue;
-        }
-        return Ok(fresh);
+    if let Some(found) = state_lookup(&mut TableGuard::take(now), now, settings) {
+        return Ok(found);
     }
-}
-
-/// Whether the state in one slot may be evicted: idle and unheld, or
-/// belonging to a pid this process no longer is (its requests died with
-/// the fork, so its gate will never clear on its own).
-///
-/// Held is read from the `Arc`'s own count — the window between a caller
-/// taking a state and entering its gate is exactly the window where an
-/// eviction would split one settings value across two live states and
-/// double its width — and busy with `try_lock`, never a blocking lock: the
-/// fork rule forbids the rebuild path waiting on a mutex a dead request
-/// thread still holds, and a lock we cannot take simply counts as busy.
-fn evictable(held: *mut Arc<Inner>, now: u32) -> bool {
-    // SAFETY: a stored pointer left its slot only through an eviction,
-    // and a sweep frees a retired box only after the grace.
-    let inner = unsafe { &*held };
-    let held_by_a_caller = Arc::strong_count(unsafe { &*held }) > 1;
-    let busy = held_by_a_caller || inner.gate.counts.try_lock().map_or(true, |counts| counts.busy > 0);
-    inner.pid != now || !busy
-}
-
-/// After a publish, close the double-publish window: another thread can
-/// publish the same settings into a different slot — its walk found an
-/// empty slot before ours, or its own eviction chose a different victim.
-/// When any other slot holds a match, take ours back out, retire it
-/// behind the grace, and say so; the caller then tries the whole lookup
-/// again rather than answering with the other copy, because two threads
-/// doing this at once can each retract against the other, and a retry
-/// converges on the one that stays.
-///
-/// `false` means no other slot holds these settings and ours stays.
-fn dedup_after_publish(
-    place: usize,
-    boxed: *mut Arc<Inner>,
-    pid: u32,
-    settings: &ResolvedConfig,
-) -> bool {
-    for (other, slot) in STATES.iter().enumerate() {
-        if other == place {
-            continue;
+    Error::guard(options)?;
+    let fresh = Arc::new(build_inner(now, settings)?);
+    let evicted = {
+        let mut table = TableGuard::take(now);
+        if let Some(found) = state_lookup(&mut table, now, settings) {
+            return Ok(found);
         }
-        let held = slot.load(Ordering::Acquire);
-        if held.is_null() || held == boxed {
-            continue;
-        }
-        // SAFETY: a stored pointer left its slot only through an
-        // eviction, and a sweep frees a retired box only after the grace.
-        let theirs = unsafe { (*held).clone() };
-        if state_matches(&theirs, pid, settings) {
-            // Take ours back out when the slot still holds it. When the
-            // swap fails, an evictor already replaced and took our box,
-            // so its memory is theirs and we never touch it again.
-            let reclaimed = STATES[place]
-                .compare_exchange(boxed, ptr::null_mut(), Ordering::AcqRel, Ordering::Acquire)
-                .is_ok();
-            if reclaimed {
-                // SAFETY: the swap above took the slot back, so this thread
-                // owns the box's contents; `vacate` moves the `Arc` to the
-                // retired stack and leaves the tombstone in the never-freed
-                // box, so a reader that loaded our pointer keeps valid
-                // memory and a live state behind the grace.
-                let ours = vacate(boxed);
-                retire(ours);
-                sweep();
-            }
-            return true;
-        }
+        let place = choose_victim(&mut table, now);
+        table
+            .slots()
+            .get_mut(place)
+            .and_then(|slot| slot.replace(Arc::clone(&fresh)))
+    };
+    if let Some(old) = evicted
+        && old.pid != now
+    {
+        std::mem::forget(old);
     }
-    false
+    Ok(fresh)
 }
 
-/// The slot an eviction should take: a vanished pid's idle state first,
-/// then the least-recently-used idle state, then a vanished pid's busy
-/// one, and a busy state only when every slot is busy.
+/// The slot a publish should take: an empty one first, then a vanished
+/// pid's idle state, then the least-recently-used idle state, and a busy
+/// state only when every slot is busy.
 ///
 /// Busy is read with `try_lock`, never a blocking lock: the fork rule
-/// forbids the rebuild path waiting on a mutex a dead request thread
-/// still holds, and a lock we cannot take simply counts as busy. A state
-/// also counts as busy while any thread holds its `Arc` — the window
-/// between a caller taking the state and entering its gate is exactly
-/// the window where an eviction would split one settings value across
-/// two live states and double its width.
-fn choose_victim(now: u32) -> usize {
+/// forbids waiting on a mutex a dead request thread still holds, and a
+/// lock we cannot take counts as busy. A state also counts as busy while
+/// any caller holds its `Arc`, so a width holds through churn: evicting a
+/// held state would let a second state for the same settings open a
+/// second lane.
+fn choose_victim(table: &mut TableGuard, now: u32) -> usize {
     let mut best: Option<(usize, [u8; 2], u64)> = None;
-    for (place, slot) in STATES.iter().enumerate() {
-        let held = slot.load(Ordering::Acquire);
-        if held.is_null() {
-            continue;
-        }
-        // SAFETY: a stored box is never freed — eviction leaves the
-        // tombstone in it — so the pointer stays valid memory holding a
-        // valid `Arc` for the life of the process.
-        let inner = unsafe { &*held };
+    for (place, slot) in table.slots().iter().enumerate() {
+        let Some(inner) = slot else {
+            return place;
+        };
         let vanished = inner.pid != now;
-        let held_by_a_caller = Arc::strong_count(unsafe { &*held }) > 1;
-        let busy = held_by_a_caller || inner.gate.counts.try_lock().map_or(true, |counts| counts.busy > 0);
+        let held_by_a_caller = Arc::strong_count(inner) > 1;
+        let busy = held_by_a_caller
+            || inner
+                .gate
+                .counts
+                .try_lock()
+                .map_or(true, |counts| counts.busy > 0);
         let rank = [u8::from(!vanished), u8::from(busy)];
         let last = inner.last_used.load(Ordering::Relaxed);
         if best.is_none_or(|(_, best_rank, best_last)| (rank, last) < (best_rank, best_last)) {
@@ -1831,25 +1489,18 @@ fn choose_victim(now: u32) -> usize {
     best.map_or(0, |(place, _, _)| place)
 }
 
-/// The published state for this pid and settings, when one already exists.
-fn state_lookup(pid: u32, settings: &ResolvedConfig) -> Option<Arc<Inner>> {
-    for slot in &STATES {
-        let held = slot.load(Ordering::Acquire);
-        if !held.is_null() {
-            // SAFETY: a stored box is never freed — eviction leaves the
-            // tombstone in it — so the pointer stays valid memory holding
-            // a valid `Arc` for the life of the process (review finding 1,
-            // 2026-09-23).
-            let inner = unsafe { (*held).clone() };
-            if state_matches(&inner, pid, settings) {
-                inner
-                    .last_used
-                    .store(LOOKUPS.fetch_add(1, Ordering::Relaxed), Ordering::Relaxed);
-                return Some(inner);
-            }
-        }
-    }
-    None
+/// The published state for this pid and settings, when one already
+/// exists, as a counted reference the caller owns.
+fn state_lookup(table: &mut TableGuard, pid: u32, settings: &ResolvedConfig) -> Option<Arc<Inner>> {
+    let inner = table
+        .slots()
+        .iter()
+        .flatten()
+        .find(|inner| state_matches(inner, pid, settings))?;
+    inner
+        .last_used
+        .store(LOOKUPS.fetch_add(1, Ordering::Relaxed), Ordering::Relaxed);
+    Some(Arc::clone(inner))
 }
 
 /// The one backend-availability helper every surface's test suites call,
@@ -2016,7 +1667,8 @@ mod tests {
     /// Churn through more settings values than there are slots and prove
     /// the evicted states close rather than leaking (review finding 15):
     /// every drop is counted, and the count must reach the number of
-    /// evictions once the grace passes and a sweep runs.
+    /// evictions as soon as the churn ends, because an evicted state is
+    /// dropped the moment its last holder lets go.
     #[test]
     fn retirement_closes_states_rather_than_leaking() {
         use std::sync::atomic::Ordering;
@@ -2033,9 +1685,6 @@ mod tests {
             };
             let _state = super::state(&options, &settings).expect("the state builds");
         }
-        // Let the evictions outlive the test grace, then sweep.
-        std::thread::sleep(Duration::from_millis(80));
-        super::sweep();
         let dropped = super::INNER_DROPS.load(Ordering::Relaxed) - before;
         let evicted = churn.saturating_sub(super::STATE_SLOTS as u64);
         assert!(

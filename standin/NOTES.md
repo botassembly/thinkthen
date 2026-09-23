@@ -237,3 +237,24 @@ no backoff waits for a refusal, wall was 7.00242021s
 $ git checkout a06b70d^ -- src/lib.rs && cargo test --test prefixed_env
 THINKTHEN_WIDTH=4 beat ENGINE_WIDTH=1: left 1, right 4
 ```
+
+## 2026-09-23 — review 5: the settings table under one lock
+
+The lock-free table did not hold. Under ThreadSanitizer its own
+`churn_probe` reported nine data races, each the tombstone write in
+`vacate` against a reader's plain load of the same box, and the C door
+crashed in two of fifty-four runs of the reviewer's `churn.c`. The table
+is now a fixed array of `Option<Arc<Inner>>` behind one short lock. A
+reader takes the lock, clones a counted `Arc`, and lets go; nothing ever
+reads a state it does not hold a count on. The lock word stores the
+holder's pid, so a child forked while a parent thread held it takes it
+over instead of waiting forever. The tombstone, the retired stack, the
+grace, and the never-freed boxes are gone: an evicted state is dropped
+after the lock is released, and its pool closes when its last caller
+finishes. A state inherited from a fork's parent is leaked, as before.
+
+Evidence: ThreadSanitizer on `churn_probe`, 9 races before and 0 in three
+runs after. `churn_probe` and `scale_probe` now talk to a loopback backend
+that keeps its connections, so each state holds a real socket: the old
+table left 6,995 and 605 descriptors open, and the new one stays within
+three per slot.
