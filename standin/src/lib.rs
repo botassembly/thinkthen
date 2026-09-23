@@ -1078,6 +1078,15 @@ fn count_tokens(body: &[u8]) {
 /// whose cause chain names TLS is not retryable either. Everything else
 /// keeps the retry the backends page gives a transport failure.
 fn classify_transport(error: &ureq::Error) -> Error {
+    // A signal interrupted the send after its bytes may have left: sending
+    // again would bill twice (surfaces-review-5), so it stops as cancelled
+    // with its own words, never as the caller's stop.
+    if matches!(error, ureq::Error::Io(io) if io.kind() == std::io::ErrorKind::Interrupted) {
+        return Error {
+            message: "a signal interrupted the send; it is not sent again because it may have left".into(),
+            ..Error::cancelled()
+        };
+    }
     let refused = match error {
         ureq::Error::Io(io) => io.kind() == std::io::ErrorKind::ConnectionRefused,
         _ => false,
@@ -2448,6 +2457,22 @@ mod tests {
         let classified = super::classify_transport(&error);
         assert!(!classified.retryable, "a DNS failure must not retry");
         assert!(classified.to_string().contains("resolve"), "the refusal names why: {classified}");
+    }
+
+    /// A send a signal interrupted is never sent again: its bytes may have
+    /// left, and the vendor bills each send, so it surfaces as the
+    /// cancelled kind (surfaces-review-5: one trapped USR1 sent a paid
+    /// request twice).
+    #[test]
+    fn an_interrupted_send_is_cancelled_not_retried() {
+        let error = ureq::Error::Io(std::io::Error::from(std::io::ErrorKind::Interrupted));
+        let classified = super::classify_transport(&error);
+        assert_eq!(classified.kind, ErrorKind::Cancelled);
+        assert!(!classified.retryable, "an interrupted send must not retry");
+        assert_eq!(
+            classified.message,
+            "a signal interrupted the send; it is not sent again because it may have left"
+        );
     }
 
     /// A failed connect is not retryable: the same address will fail the

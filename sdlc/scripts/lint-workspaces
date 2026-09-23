@@ -139,9 +139,12 @@ for entry in \
 		libraries/ruby:ruby)
 			if docker image inspect thinkthen-ruby-builder:local >/dev/null 2>&1; then
 				printf 'lint: %s (host has no %s; the builder container answers)\n' "$workspace" "$needs"
-				if docker run --rm -v "$REPO":/src -w "/src/$workspace" \
+				# Offline from the crate cache check.sh fills: no rung
+				# touches the network (surfaces-review-5).
+				if docker run --rm --network none -v "$REPO":/src -w "/src/$workspace" \
+					-e CARGO_HOME="/src/$workspace/.runtimes/cargo" \
 					thinkthen-ruby-builder:local \
-					cargo clippy --locked --quiet --all-targets --all-features -- -D warnings; then
+					cargo clippy --locked --offline --quiet --all-targets --all-features -- -D warnings; then
 					deny_status=$(workspace_deny "$workspace" "$REPO") || fail=1
 					printf '%s\n' "$deny_status"
 					continue

@@ -84,20 +84,16 @@ module ThinkThen
   # process keeps one width gate and one set of counters.
   @engine = Native::Engine.new
 
-  # The watchdog: one Ruby thread that bounds every crossing's wait for a
-  # real interrupt. Each call registers a row — its own cancel token, the
-  # caller's token, and the thread's tick — and the watchdog polls the
-  # rows about ten times a second: a pending interrupt on the calling
-  # thread fires the call's token, the caller's fired token fires the
-  # call's token, and the tick runs. It never fires a token the caller
-  # shares, so an interrupt cannot cancel a sibling call, and a spurious
-  # Thread#wakeup or a trapped signal that raises nothing leaves
-  # `pending_interrupt?` clear and cancels nothing. The native crossing
-  # itself never re-takes the VM lock — the fourth review's probe crashed
-  # the old in-wait poll under a raising trap flood — so this thread is
-  # the only thing between a slow call and its host's gesture, and the
-  # raise itself surfaces where MRI delivers it natively, at the
-  # crossing's exit.
+  # The watchdog: one Ruby thread that runs each in-flight call's tick
+  # and relays the caller's token. Each call registers a row - its own
+  # cancel token, the caller's token, and the thread's tick - and the
+  # watchdog polls the rows about ten times a second: the caller's fired
+  # token fires the call's token, and the tick runs. It never fires a
+  # token the caller shares, so one call's stop cannot cancel a sibling.
+  # The host's own interrupts - Ctrl-C, Thread#raise, a raising trap - are
+  # heard by the native crossing itself between its wait slices, which
+  # fires the call's token and raises once sent requests finish
+  # (src/lib.rs, `cross`).
   WATCHDOG_INTERVAL = 0.1
   Row = Struct.new(:thread, :token, :tick, :caller, :error)
   # Crossing internals, not the ruled surface (surfaces-review-4's names
@@ -364,7 +360,6 @@ module ThinkThen
           rows.each do |row|
             begin
               row.token.cancel if row.caller&.cancelled?
-              row.token.cancel if row.thread.pending_interrupt?
               row.tick&.call
             rescue Exception => e # rubocop:disable Lint/RescueException
               # A tick that raises cancels its own call and rides out.

@@ -24,9 +24,11 @@ restore_production() {
     echo "restored: $(ls -1 *.gem 2>/dev/null | tail -1)"
   else
     echo "RESTORE FAILED: the fixture build is still in place" >&2
+    return 1
   fi
 }
-trap restore_production EXIT
+# A failed restore fails the check (surfaces-review-5: it only printed).
+trap 'restore_production || exit 1' EXIT
 ./build.sh synthetic
 
 wire=no
@@ -70,6 +72,9 @@ docker_run 'ruby -I lib tests/test_fork.rb'
 
 echo "== ruby surface: the flood shape, VM survives a raising trap flood"
 docker_run 'ruby -I lib tests/test_flood.rb'
+
+echo "== ruby surface: a signal never resends a paid request; Ctrl-C stops a call within one in-flight round"
+docker_run 'ruby -I lib tests/test_signal_no_resend.rb'
 
 echo "== ruby surface: annotate unions every record's keys"
 docker_run 'ruby -I lib tests/test_annotate_union.rb'
@@ -120,7 +125,9 @@ else
 fi
 
 # The gate ran on the fixture build (synthetic-partial); the shape any
-# package is made from never carries it. The EXIT trap above already
-# rebuilt the plain shape on any exit, so this proves the restore rather
-# than performing it.
+# package is made from never carries it. The restore runs here, before the
+# proof, so the proof reads the production build (surfaces-review-5: the
+# proof ran before the EXIT trap restored, and so read the fixture build).
+trap - EXIT
+restore_production
 docker_run 'ruby -I lib -e '"'"'require "thinkthen"; q = ThinkThen.question(decide: "Is this a complaint?"); ans = ThinkThen.decide(q, "order 4471: charged twice, please refund"); puts("production build in place: the fixture text answers (#{ans.inspect[0, 20]})")'"'"''

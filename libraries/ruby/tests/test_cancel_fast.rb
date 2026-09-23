@@ -8,7 +8,7 @@
 # the 1.5 s bound separates the two behaviors.
 #
 # The documented interrupt path is `ThinkThen.with_tick(&tick)`: the block
-# runs each wait interval with the VM lock taken, and a raise in it
+# runs about ten times a second on the watchdog thread, and a raise in it
 # cancels the token, lets sent requests finish, and re-raises. Runs
 # offline; check.sh calls it in the null section.
 #
