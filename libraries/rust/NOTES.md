@@ -298,3 +298,25 @@ pre-existing breaks repaired while proving it:
 
   A bare `cargo test` (no env) exits 0: the suites skip their bodies
   through `common::note_missing_env`.
+
+## 2026-09-23: the fifteen verb tests adopt the shared testkit (refs surfaces-review-3)
+
+**The finding.** `tests/common/mod.rs` asked its own question — "is
+`ENGINE_NULL` or `ENGINE_BASE_URL` set?" — so the settled `THINKTHEN_NULL`
+spelling did not arm a bare `cargo test`: under `THINKTHEN_NULL=1`, all
+fifteen verb tests printed a skip and returned inside a green `15 passed`
+summary. Probe, pre-fix: `THINKTHEN_NULL=1 cargo test --test verbs --
+--nocapture` → `note: neither ENGINE_NULL nor a wire address is set` plus
+fifteen `skip` lines, while the summary read `ok. 15 passed`.
+
+**The fix.** The helper now delegates to `thinkthen_standin::testkit`
+(`backend_kind`/`skip_note`), the one implementation that knows both the
+settled and the deprecated spellings. Post-fix probe:
+`THINKTHEN_NULL=1 cargo test --test verbs` → `15 passed` with **zero**
+skips — the suite runs. The gating rewrite exposed one test that needs the
+compile-time fixture (`annotate_preserves_the_good_answers_and_marks_the_failed_one`);
+a bare run without `--features synthetic-partial` now prints its own
+reasoned skip instead of failing on a fixture that was never built, and the
+gate's feature build runs it for real. Bare `cargo test` with no backend
+still prints the shared note and skips visibly; `./check.sh` exits 0
+(89 green lines, wire skipped without a stub).

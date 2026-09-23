@@ -233,6 +233,19 @@ fn annotate_preserves_the_good_answers_and_marks_the_failed_one()
     if !common::note_missing_env("annotate_preserves_the_good_answers_and_marks_the_failed_one") {
         return Ok(());
     }
+    // The failed marker needs the compile-time fixture the gate arms
+    // (`check.sh` builds with `--features synthetic-partial`); a bare
+    // `THINKTHEN_NULL=1 cargo test` does not carry it, so the test says
+    // so instead of failing on a fixture that was never built.
+    #[cfg(not(feature = "synthetic-partial"))]
+    {
+        eprintln!(
+            "skip annotate_preserves_the_good_answers_and_marks_the_failed_one: the synthetic-partial fixture is not compiled; run ./check.sh"
+        );
+        return Ok(());
+    }
+    #[cfg(feature = "synthetic-partial")]
+    {}
     // The stand-in's one synthesized partial failure (0054): the reply
     // answers one question and omits the last in name order, so its field
     // carries the ruled typed marker while its neighbour answers, and the
