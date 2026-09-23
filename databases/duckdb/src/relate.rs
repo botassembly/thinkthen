@@ -511,9 +511,18 @@ unsafe fn ensure_select_statement(
     if unsafe { ffi::duckdb_prepare(connection, sql_c.as_ptr(), &mut prepared) } != ffi::DuckDBSuccess
         || prepared.is_null()
     {
+        // The prepare's own words carry through — a missing table is
+        // named by the engine, and the temporary-table boundary below
+        // translates it rather than hiding it behind "did not prepare".
+        let message = unsafe { ffi::duckdb_prepare_error(prepared) };
+        let text = if message.is_null() {
+            "the prepare refused".to_owned()
+        } else {
+            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
+        };
         let mut prepared = prepared;
         unsafe { ffi::duckdb_destroy_prepare(&mut prepared) };
-        return Err("thinkthen usage: the relate query did not prepare".into());
+        return Err(format!("thinkthen usage: the relate query failed: {text}"));
     }
     let kind = unsafe { ffi::duckdb_prepared_statement_type(prepared) };
     let mut prepared = prepared;

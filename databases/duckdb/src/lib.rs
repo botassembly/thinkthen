@@ -601,7 +601,7 @@ fn read_budgets(input: &mut DataChunkHandle, column: usize) -> Result<Vec<Option
     let len = input.len();
     let vector = input.flat_vector(column);
     let raw = unsafe { vector.as_slice_with_len::<i64>(len) };
-    (0..len).map(|i| Some(raw[i] as f64)).collect()
+    Ok((0..len).map(|i| Some(raw[i] as f64)).collect())
 }
 
 /// The chunk's deadline column, as budgets: an empty slice when the
@@ -1435,21 +1435,23 @@ pub unsafe extern "C" fn thinkthen_init_c_api(
     info: ffi::duckdb_extension_info,
     access: *const ffi::duckdb_extension_access,
 ) -> bool {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe { init(info, access) })) {
-        Ok(Ok(())) => true,
-        Ok(Err(error)) => {
-            unsafe { report_load_error(info, access, &error.to_string()) };
+    // The entrypoint's own panic guard, through the contract's one
+    // panic-to-text: a load panic reports as the load error, never an
+    // unwind into the database.
+    let mut reported: Result<(), String> = Ok(());
+    let guarded = thinkthen_contract::catch_panic("the extension load", || {
+        reported = unsafe { init(info, access) }.map_err(|error| error.to_string());
+        Ok(())
+    });
+    match guarded {
+        Ok(()) if reported.is_ok() => true,
+        Ok(()) => {
+            let message = reported.expect_err("the error path");
+            unsafe { report_load_error(info, access, &message) };
             false
         }
-        Err(payload) => {
-            let message = payload
-                .downcast_ref::<&str>()
-                .map(|text| (*text).to_owned())
-                .or_else(|| payload.downcast_ref::<String>().cloned())
-                .unwrap_or_else(|| "a non-string panic payload".to_owned());
-            let wrapped =
-                format!("thinkthen defect: the extension load callback panicked: {message}");
-            unsafe { report_load_error(info, access, &wrapped) };
+        Err(error) => {
+            unsafe { report_load_error(info, access, &format!("thinkthen defect: {}", error.message)) };
             false
         }
     }

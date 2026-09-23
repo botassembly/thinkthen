@@ -18,6 +18,8 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::OnceLock;
 
+use thinkthen_contract::panic_text;
+
 /// Run a callback body that reports through DuckDB, so a panic becomes
 /// that error instead of an abort.
 pub(crate) fn contained(
@@ -71,16 +73,11 @@ pub(crate) fn test_arm(what: &str) {
     }
 }
 
-/// One contained panic, as the message every channel carries.
+/// One contained panic, as the message every channel carries: the
+/// contract's one panic-to-text, not a local copy (review 3: the
+/// panic-to-text code was written five times across the surfaces).
 fn panicked(what: &str, payload: &Box<dyn std::any::Any + Send>) -> String {
-    let message = if let Some(text) = payload.downcast_ref::<&str>() {
-        (*text).to_owned()
-    } else if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else {
-        "a non-string panic payload".to_owned()
-    };
-    format!("thinkthen defect: the {what} callback panicked: {message}")
+    format!("thinkthen defect: the {what} callback panicked: {}", panic_text(payload.as_ref()))
 }
 
 #[cfg(test)]

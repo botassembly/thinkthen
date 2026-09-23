@@ -32,7 +32,9 @@ expect_contained() {
     echo "$out" | head -3
     exit 1
   fi
-  if ! grep -q "thinkthen defect: the $boundary callback panicked" <<<"$out"; then
+  # The load boundary reports through the contract's catch_panic; every
+  # other boundary keeps the callback shape.
+  if ! grep -qE "thinkthen defect: (the $boundary callback panicked|a panic crossed the extension load)" <<<"$out"; then
     echo "FAILED   $name: the contained defect is missing (exit $rc)"
     echo "$out" | head -5
     exit 1

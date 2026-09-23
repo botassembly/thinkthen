@@ -35,38 +35,35 @@ FIXTURE_EXTENSION = (
     else None
 )
 DUCKDB = ROOT / "duckdb-bin" / "duckdb"
+SKIPTABLE = ROOT.parent.parent / "conformance" / "skiptable.py"
 
 # How many checks failed; `main` turns any into a nonzero exit.
 FAILURES = 0
 
 
-def central_skip(file: dict, case: dict):
-    """The shared skip table's reason for this case on this surface, and
-    whether it is a recorded divergence. First match wins; entries naming
-    a surface apply only there."""
+def central_skip(case: dict):
+    """The shared skip table's decision for this case, through the one
+    reader every surface calls (`conformance/skiptable.py`); the table's
+    fields are parsed once, there, not again here (review 3: nine
+    private readers disagreed on the table's fields).
+    """
     kind = case.get("expect", {}).get("error", {}).get("kind")
-    for entry in file.get("skips", []):
-        if entry.get("surfaces") and "duckdb" not in entry["surfaces"]:
-            continue
-        when = entry["when"]
-        if "id" in when and case["id"] != when["id"]:
-            continue
-        if "verb" in when:
-            listed = when["verb"] if isinstance(when["verb"], list) else [when["verb"]]
-            if case["verb"] not in listed:
-                continue
-        if "kind" in when and kind != when["kind"]:
-            continue
-        if "form" in when and case.get("form") != when["form"]:
-            continue
-        if "none" in when and bool(case.get("none")) != when["none"]:
-            continue
-        if "error" in when and ("error" in case.get("expect", {})) != when["error"]:
-            continue
-        if "record" in when and when["record"] == "null" \
-                and not any(record is None for record in case.get("records") or []):
-            continue
-        return entry["why"], entry.get("as", "skip")
+    args = [sys.executable, str(SKIPTABLE), "lookup", "duckdb", case["id"]]
+    if kind:
+        args += ["--kind", kind]
+    try:
+        out = subprocess.run(args, capture_output=True, text=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        return None
+    if out.returncode != 0:
+        return None
+    line = out.stdout.strip()
+    if line == "RUN":
+        return None
+    if line.startswith("SKIP\t"):
+        return line[5:], "skip"
+    if line.startswith("DIVERGE\t"):
+        return line[8:], "diverge"
     return None
 
 
@@ -132,7 +129,7 @@ def main() -> int:
         verb = case["verb"]
         evidence = case.get("evidence")
         records = case.get("records")
-        central = central_skip(data, case)
+        central = central_skip(case)
         if central is not None:
             why, disposition = central
             print(f"{disposition:<8} {name}: {why}")

@@ -40,13 +40,19 @@ impl VScalar for RelationsScalar {
         let specs = read_strings(input, 1);
         let budgets = crate::deadline_column(input, 2)?;
         let mut rows: Vec<Option<Vec<RelationRow>>> = Vec::with_capacity(bodies.len());
-        for ((body, spec), budget) in bodies.iter().zip(specs.iter()).zip(budgets.iter()) {
+        // The drawn two-argument spelling carries no budget column, so
+        // the empty budget slice means None everywhere rather than an
+        // empty loop.
+        for (pair, budget) in bodies.iter().zip(specs.iter()).zip(
+            budgets.iter().chain(std::iter::repeat(&None)).copied(),
+        ) {
+            let ((body, spec), budget) = (pair, budget);
             let (Some(body), Some(spec)) = (body.as_deref(), spec.as_deref()) else {
                 rows.push(None);
                 continue;
             };
             let ask = build_ask(spec)?;
-            let opts = crate::options_for(*budget)?;
+            let opts = crate::options_for(budget)?;
             let found = engine_call(|engine| engine.recognize_opts(&ask, body, opts))?;
             rows.push(Some(relation_rows(&found)?));
         }

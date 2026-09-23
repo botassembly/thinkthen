@@ -52,7 +52,7 @@ SELECT * FROM thinkthen_relate('DELETE FROM t RETURNING id, body', ['caused_by']
 ROLLBACK;
 SELECT count(*) FROM t;" || true)
 refuse "relate refuses a DELETE inside its query" \
-  "read-only mode" "$guarded"
+  "must be a SELECT; this one is a DELETE" "$guarded"
 expect "the DELETE never happened, the caller's ROLLBACK included" "1" \
   "$(printf '%s\n' "$guarded" | tail -1)"
 
