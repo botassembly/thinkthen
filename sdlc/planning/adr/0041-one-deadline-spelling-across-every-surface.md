@@ -1,4 +1,4 @@
-# ADR 0031: One deadline spelling across every surface
+# ADR 0041: One deadline spelling across every surface
 
 Date: 2026-09-23. Status: accepted. Supersedes the draft recorded in
 `sdlc/records/surfaces-notes/NOTES-rulings-wave.md` (fourth review, records

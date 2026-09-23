@@ -41,12 +41,18 @@ green/skipped/diverged/failed so a skipped suite cannot hide behind
   "three sample findings filed". Correct both sentences to the record's
   actual locations (three deck files; one in-branch fix; one lane note).
 
-## 3. The rulings issue was edited on both sides
+## 3. Two issue files were edited on both sides
 
-`sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md`
-has the branch's Phase A/B record on one side and main's Polars ruling and
-"The surfaces experiment closes" on the other. A merge taking either side
-whole deletes the other's record; hand-merge keeping both blocks.
+`git merge-tree` against main (`d905c65`) reports two conflicts. Both are
+additive issue-file sections. A merge taking either side whole deletes the
+other's record, so hand-merge each and keep both blocks.
+
+- `sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md`
+  has the branch's Phase A/B record on one side and main's Polars ruling
+  and "The surfaces experiment closes" on the other.
+- `sdlc/issues/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md`
+  has the branch's answer (`7d7a806`, a proven road and a load-time floor)
+  on one side and main's external comparison (`42affc6`) on the other.
 
 ## 4. The gate ladder, after the merge
 
@@ -61,9 +67,11 @@ The wave of 2026-09-22 already did the parts that live on this side:
   floor on any of them.
 - **A surfaces ratchet stands beside the crates one** (`3025378`,
   pinned `ce177c1`): `sdlc/scripts/surfaces-ratchet.mjs` counts the
-  four new trees' non-blank Rust lines (22,039 today) and fails a rise
-  past the ceiling; main's `sdlc/ratchet.mjs` still counts `crates/`
-  only, and the merge ticket decides whether the two become one file.
+  four new trees' non-blank Rust lines (the ceiling in
+  `sdlc/surfaces-ratchet.json`) and fails any total that differs from
+  the ceiling, in either direction. Main's `sdlc/ratchet.mjs` still counts
+  `crates/` only, and the merge ticket decides whether the two become one
+  file.
 - **The benches and package dry-runs run from the gate** (`2b97745`),
   and the checker's own tests are gate steps.
 - **Everything else about the ladder is the merge ticket's**: bringing
@@ -139,13 +147,14 @@ does not build. Main's fold (`5e1dafd`) deleted `crates/thinkthen-core`
 into `crates/thinkthen`, and the branch's two manifests still point at the
 deleted crate:
 
-- `contract/Cargo.toml:19` and `standin/Cargo.toml:19`:
+- `contract/Cargo.toml:22` and `standin/Cargo.toml:19`:
   `thinkthen-core = { version = "0.0.1", path = "../crates/thinkthen-core" }`.
   Cargo exits 101 before compiling anything.
-- `libraries/r/tools/make-tarball.sh:31` stages `crates/thinkthen-core`
+- `libraries/r/tools/make-tarball.sh:42` stages `crates/thinkthen-core`
   into the R source tarball by path, a third reference the break list
-  first missed; whichever of (a) or (b) below is chosen, the tarball's
-  staged path follows it.
+  first missed. Lines 60, 64, 72, and 98 of the same script check and
+  rewrite the staged copy. Whichever of (a) or (b) below is chosen, all
+  five follow it.
 - The minimal retarget to `crates/thinkthen` resolves the manifest and
 dies at the imports: the consolidated crate keeps `mod core;` and
 `mod engine;` private, so `question_sha256`, `Question`, `QuestionFile`,
@@ -162,6 +171,13 @@ so the note is self-contained):
   miscount; the lint rung covers 13). Costs one crate the fold
   intended to remove; retires when the production engine consumes
   `contract/` and the stand-in goes.
+  It also turns main's crates ratchet red. `sdlc/ratchet.mjs` counts
+  `crates/`, whose ceiling on main is 38,070. The restored crate adds
+  8,102 non-blank lines, so the merged total is 46,172 (measured at
+  `b11a2b0` and `d905c65`). The merge commit must either raise
+  `sdlc/ratchet.json` to 46,172, with a body naming the restored crate
+  and a second-agent review, or point the crates ratchet past
+  `crates/thinkthen-core` until it retires.
 - **(b) Expose an equivalent public API from `crates/thinkthen`.** That is
   an API design decision on the folded crate, and it belongs with the
   architect's production API plan.
