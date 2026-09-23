@@ -216,11 +216,12 @@ fn deadline_of(value: &Robj) -> StdResult<Option<f64>, String> {
     if value.is_null() {
         return Ok(None);
     }
-    // An R integer is a number too: `-1L` and `5L` read as `-1` and `5`
-    // (the seventh review found them refused). NA_integer_ reads as NA.
+    // A plain R integer is a number (`-1L` reads as -1), NA_integer_ is NA,
+    // and a classed value refuses: a factor's integer is its level code.
+    let plain = value.len() == 1 && value.class().is_none();
     let held = match value.rtype() {
-        Rtype::Doubles if value.len() == 1 => unsafe { REAL_ELT(value.get(), 0) },
-        Rtype::Integers if value.len() == 1 => match unsafe { INTEGER_ELT(value.get(), 0) } {
+        Rtype::Doubles if plain => unsafe { REAL_ELT(value.get(), 0) },
+        Rtype::Integers if plain => match unsafe { INTEGER_ELT(value.get(), 0) } {
             whole if whole == unsafe { R_NaInt } => f64::NAN,
             whole => f64::from(whole),
         },
