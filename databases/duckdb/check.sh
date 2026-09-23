@@ -117,6 +117,9 @@ if [[ -n "$unbalanced" ]]; then
 fi
 echo "ok       every created logical type has its destroy"
 
+echo "== duckdb surface: no deprecated C API call"
+python3 tools/deprecated_api_check.py
+
 echo "== duckdb surface: the conformance driver can fail"
 tools/conformance_selftest.sh
 

@@ -258,7 +258,11 @@ SURFACES: list[dict] = [
         # DuckDB 1.5.5 has no memory bound an extension can scope to one
         # query, so the plan guard's row threshold is the caller's to
         # raise; databases/duckdb/README.md and NOTES.md rule it.
-        | {"thinkthen_relate_holding_rows"},
+        | {"thinkthen_relate_holding_rows"}
+        # The estimate guard cannot see an unnest, a recursive query, or
+        # a misjudged join, so a time limit stops such a relate query
+        # (review 5, R5-22); databases/duckdb/README.md rules it.
+        | {"thinkthen_relate_seconds"},
         # The instance-token SETTING is gone (third review): a setting
         # could be SET onto another database's session, so relate's
         # identity became a uniquely named in-memory database attached
