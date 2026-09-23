@@ -3,7 +3,7 @@
 //! engine exactly once.
 //!
 //! Its own test process, so the counter assertion cannot see another
-//! test's calls. Run through `./check.sh`, which sets `ENGINE_NULL=1`.
+//! test's calls. Run through `./check.sh`, which sets `THINKTHEN_NULL=1`.
 
 use std::ffi::{CStr, CString};
 
@@ -50,9 +50,9 @@ unsafe fn usage_of(engine: *const thinkthen_engine) -> u64 {
 /// requests, and these tests need the fast, silent backend.
 fn null_backend() {
     assert_eq!(
-        std::env::var("ENGINE_NULL").as_deref(),
+        std::env::var("THINKTHEN_NULL").as_deref(),
         Ok("1"),
-        "run this through check.sh, which sets ENGINE_NULL=1"
+        "run this through check.sh, which sets THINKTHEN_NULL=1"
     );
 }
 

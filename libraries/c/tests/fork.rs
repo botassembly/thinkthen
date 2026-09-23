@@ -6,7 +6,7 @@
 //! alarm. The alarm makes a hang a failure — signal death, not a hang —
 //! and the child's exit code carries whether it answered.
 //!
-//! Run through `./check.sh`, which sets `ENGINE_NULL=1`.
+//! Run through `./check.sh`, which sets `THINKTHEN_NULL=1`.
 
 use std::ffi::CString;
 

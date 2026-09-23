@@ -26,13 +26,13 @@ cc -std=c11 -Wall -Wextra -I../../contract/include examples/slide.c \
     -Wl,-rpath,"$PWD/target/release"
 
 echo "== c surface: the slide, as drawn, on the null backend"
-ENGINE_NULL=1 ./build/slide
+THINKTHEN_NULL=1 ./build/slide
 
 echo "== c surface: free from an atexit handler, after thread-local teardown"
 cc -std=c11 -Wall -Wextra -I../../contract/include tests/atexit_free.c \
     -o build/atexit_free -Ltarget/release -lthinkthen \
     -Wl,-rpath,"$PWD/target/release"
-ENGINE_NULL=1 ./build/atexit_free
+THINKTHEN_NULL=1 ./build/atexit_free
 
 echo "== c surface: compile the recognize and relate example with a plain cc"
 cc -std=c11 -Wall -Wextra -I../../contract/include examples/recognize.c \
@@ -40,21 +40,21 @@ cc -std=c11 -Wall -Wextra -I../../contract/include examples/recognize.c \
     -Wl,-rpath,"$PWD/target/release"
 
 echo "== c surface: the deck's recognize and relate sections, as drawn"
-ENGINE_NULL=1 ./build/recognize
+THINKTHEN_NULL=1 ./build/recognize
 
 if command -v clang >/dev/null 2>&1; then
     echo "== c surface: the leak check (address sanitizer) over the two new strings"
     clang -std=c11 -Wall -Wextra -fsanitize=address -I../../contract/include \
         examples/recognize.c -o build/recognize_asan -Ltarget/release \
         -lthinkthen -Wl,-rpath,"$PWD/target/release"
-    ENGINE_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/recognize_asan >/dev/null
+    THINKTHEN_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/recognize_asan >/dev/null
     echo "asan and lsan clean"
 
     echo "== c surface: the per-thread error slot under the sanitizer (the review's repro)"
     clang -std=c11 -Wall -Wextra -fsanitize=address -pthread -I../../contract/include \
         tests/error_threads.c -o build/error_threads -Ltarget/release \
         -lthinkthen -Wl,-rpath,"$PWD/target/release"
-    ENGINE_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/error_threads
+    THINKTHEN_NULL=1 ASAN_OPTIONS=detect_leaks=1 ./build/error_threads
 else
     echo "== c surface: leak check skipped, no clang"
 fi
@@ -66,34 +66,34 @@ echo "== c surface: null suite (the door, the error surface, and the twins)"
 # library the ctypes driver loads is rebuilt with the same feature, then
 # restored to the production shape below.
 cargo build --release --quiet --features synthetic-partial --locked
-ENGINE_NULL=1 cargo test --quiet --features synthetic-partial --lib --test door --locked -- --test-threads=1
+THINKTHEN_NULL=1 cargo test --quiet --features synthetic-partial --lib --test door --locked -- --test-threads=1
 
 echo "== c surface: the null and length matrix"
-ENGINE_NULL=1 cargo test --quiet --test null_matrix --locked -- --test-threads=1
+THINKTHEN_NULL=1 cargo test --quiet --test null_matrix --locked -- --test-threads=1
 
 echo "== c surface: the cancel token, fired and fired across threads"
-ENGINE_NULL=1 cargo test --quiet --test cancel --locked -- --test-threads=1
+THINKTHEN_NULL=1 cargo test --quiet --test cancel --locked -- --test-threads=1
 
 echo "== c surface: fast-backend deadline, the poll-bug shape"
-ENGINE_NULL=1 cargo test --quiet --test deadline_fast --locked -- --test-threads=1
+THINKTHEN_NULL=1 cargo test --quiet --test deadline_fast --locked -- --test-threads=1
 
 echo "== c surface: four threads over one engine"
-ENGINE_NULL=1 cargo test --quiet --test concurrency --locked
+THINKTHEN_NULL=1 cargo test --quiet --test concurrency --locked
 
 echo "== c surface: two threads read their own error messages"
-ENGINE_NULL=1 cargo test --quiet --test error_threads --locked
+THINKTHEN_NULL=1 cargo test --quiet --test error_threads --locked
 
 echo "== c surface: failures stay on their own engine, and a reused address starts clean"
 cargo test --quiet --test error_engines --locked -- --test-threads=1
 
 echo "== c surface: fork after the first call answers in the child"
-ENGINE_NULL=1 cargo test --quiet --test fork --locked -- --test-threads=1
+THINKTHEN_NULL=1 cargo test --quiet --test fork --locked -- --test-threads=1
 
 echo "== c surface: the function examples"
 python3 examples.py
 
 echo "== c surface: conformance slice through ctypes"
-ENGINE_NULL=1 python3 conformance_driver.py
+THINKTHEN_NULL=1 python3 conformance_driver.py
 
 echo "== c surface: back to the production shape (no fixture code compiled)"
 cargo build --release --quiet --locked

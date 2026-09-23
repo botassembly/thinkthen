@@ -1,7 +1,7 @@
 //! The null and length matrix the header promises: one test a row of the
 //! argument rules, each with the code and the "nothing was sent" proof.
 //!
-//! Run through `./check.sh`, which sets `ENGINE_NULL=1`. Serialized with
+//! Run through `./check.sh`, which sets `THINKTHEN_NULL=1`. Serialized with
 //! `--test-threads=1`, because the refusal rows compare the stand-in's
 //! process-global request counter before and after their call.
 

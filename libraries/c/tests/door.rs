@@ -1,7 +1,7 @@
 //! The door's null suite: the typed doors, the error codes a host sees,
 //! and the JSON door's replies, all against the in-process backend.
 //!
-//! Run through `./check.sh`, which sets `ENGINE_NULL=1`.
+//! Run through `./check.sh`, which sets `THINKTHEN_NULL=1`.
 
 use std::ffi::{c_char, CString};
 

@@ -9,7 +9,7 @@
 //! table now lives in the engine, keyed by the recording thread.
 //!
 //! Every call here is refused before anything reaches the wire, so the
-//! suite needs no stub and no `ENGINE_NULL`.
+//! suite needs no stub and no `THINKTHEN_NULL`.
 
 use std::ffi::{CStr, CString};
 

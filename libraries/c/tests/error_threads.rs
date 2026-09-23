@@ -9,7 +9,7 @@
 //! AddressSanitizer with the reviewer's saved-pointer read, where the
 //! replaced message was a use-after-free.
 //!
-//! Run through `./check.sh`, which sets `ENGINE_NULL=1`.
+//! Run through `./check.sh`, which sets `THINKTHEN_NULL=1`.
 
 use std::ffi::{CStr, CString};
 use std::sync::Barrier;
@@ -20,9 +20,9 @@ use thinkthen::thinkthen_engine;
 /// requests, and these tests need the fast, silent backend.
 fn null_backend() {
     assert_eq!(
-        std::env::var("ENGINE_NULL").as_deref(),
+        std::env::var("THINKTHEN_NULL").as_deref(),
         Ok("1"),
-        "run this through check.sh, which sets ENGINE_NULL=1"
+        "run this through check.sh, which sets THINKTHEN_NULL=1"
     );
 }
 

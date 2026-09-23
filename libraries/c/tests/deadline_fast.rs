@@ -11,7 +11,7 @@
 //! the engine's own tick check runs beneath the door; the door's poll
 //! callback argument stays deferred (DESIGN.md).
 //!
-//! Run through `./check.sh`, which sets `ENGINE_NULL=1`. Serialized with
+//! Run through `./check.sh`, which sets `THINKTHEN_NULL=1`. Serialized with
 //! `--test-threads=1`, because the spent-budget row compares the
 //! stand-in's process-global request counter.
 
@@ -33,9 +33,9 @@ const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {
 /// requests, and these tests need the fast, silent backend.
 fn null_backend() {
     assert_eq!(
-        std::env::var("ENGINE_NULL").as_deref(),
+        std::env::var("THINKTHEN_NULL").as_deref(),
         Ok("1"),
-        "run this through check.sh, which sets ENGINE_NULL=1"
+        "run this through check.sh, which sets THINKTHEN_NULL=1"
     );
 }
 
