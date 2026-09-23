@@ -746,6 +746,15 @@ fn option_bool(context: ffi::duckdb_client_context, name: &str) -> Option<bool> 
     Some(answer)
 }
 
+/// A count setting's value, when the setting answers.
+pub(crate) fn option_count(context: ffi::duckdb_client_context, name: &str) -> Option<u64> {
+    let value = option_value(context, name)?;
+    let answer = unsafe { ffi::duckdb_get_uint64(value) };
+    let mut value = value;
+    unsafe { ffi::duckdb_destroy_value(&mut value) };
+    Some(answer)
+}
+
 /// A text setting's value, when the setting answers.
 fn option_text(context: ffi::duckdb_client_context, name: &str) -> Option<String> {
     let value = option_value(context, name)?;
@@ -794,7 +803,10 @@ fn option_texts(context: ffi::duckdb_client_context, name: &str) -> Vec<String> 
     entries
 }
 
-/// One setting's value as DuckDB answers it for this context.
+/// One setting's value as DuckDB answers it for this context; `None`
+/// when it is absent or NULL. A NULL must never reach a typed read:
+/// `duckdb_get_uint64` throws a C++ exception on one, and that aborts
+/// the host (review 6: `SET thinkthen_relate_holding_rows = NULL`).
 fn option_value(context: ffi::duckdb_client_context, name: &str) -> Option<ffi::duckdb_value> {
     let name = CString::new(name).ok()?;
     let mut scope = ffi::duckdb_config_option_scope_DUCKDB_CONFIG_OPTION_SCOPE_INVALID;
@@ -803,10 +815,14 @@ fn option_value(context: ffi::duckdb_client_context, name: &str) -> Option<ffi::
         ffi::duckdb_client_context_get_config_option(context, name.as_ptr(), &mut scope)
     };
     if value.is_null() {
-        None
-    } else {
-        Some(value)
+        return None;
     }
+    if unsafe { ffi::duckdb_is_null_value(value) } {
+        let mut value = value;
+        unsafe { ffi::duckdb_destroy_value(&mut value) };
+        return None;
+    }
+    Some(value)
 }
 
 /// Read a question file through DuckDB's own file system, so the rules
