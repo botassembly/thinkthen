@@ -31,6 +31,7 @@ central_skip <- function(surface, case, wire) {
   if (has_null) args <- c(args, "--record", "null")
   if (isTRUE(case$none)) args <- c(args, "--none", "true")
   if (!is.null(case$expect$error)) args <- c(args, "--error", "true")
+  if (isTRUE(wire)) args <- c(args, "--wire", "true")
   out <- suppressWarnings(system2("python3", args, stdout = TRUE, stderr = TRUE))
   status <- attr(out, "status") %||% 0
   if (status != 0) {

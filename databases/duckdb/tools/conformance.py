@@ -3,9 +3,9 @@
 SQL through the stock CLI, offline.
 
 Only the cases a database surface can spell run here; the file's grammar
-and digests are the validator's job, not this driver's. The known
-divergences print as `diverge` with the reason, matching the other
-surfaces' drivers.
+and digests are the validator's job, not this driver's. A case the shared
+table holds back prints its skip or diverge line (the dispositions are
+defined in conformance/skiptable.py); every other case is compared.
 
 The driver can fail: answers compare exactly, a `FAILED` line forces a
 nonzero exit, and the cases file is the argument when one is passed, so a
@@ -35,7 +35,12 @@ FIXTURE_EXTENSION = (
     else None
 )
 DUCKDB = ROOT / "duckdb-bin" / "duckdb"
-SKIPTABLE = ROOT.parent.parent / "conformance" / "skiptable.py"
+sys.path.insert(0, str(ROOT.parent.parent / "conformance"))
+import skiptable  # noqa: E402 — the one shared skip-table reader
+# Whether the extension this runner loads answers from a wire stub: the
+# caller says so, and the reader decides `unless: wire` from it. The
+# check runs this replay on the null backend, so it is unset there.
+WIRE = (bool(os.environ.get("ENGINE_BASE_URL")) or bool(os.environ.get("THINKTHEN_BASE_URL")))
 
 # How many checks failed; `main` turns any into a nonzero exit.
 FAILURES = 0
@@ -43,28 +48,19 @@ FAILURES = 0
 
 def central_skip(case: dict):
     """The shared skip table's decision for this case, through the one
-    reader every surface calls (`conformance/skiptable.py`); the table's
-    fields are parsed once, there, not again here (review 3: nine
-    private readers disagreed on the table's fields).
+    reader every surface imports (`conformance/skiptable.py`), with every
+    facet the table selects on. A reader that fails raises: a lookup error
+    never turns into a run (surfaces-review-5: this runner passed only the
+    kind and ran the case on any lookup failure).
     """
-    kind = case.get("expect", {}).get("error", {}).get("kind")
-    args = [sys.executable, str(SKIPTABLE), "lookup", "duckdb", case["id"]]
-    if kind:
-        args += ["--kind", kind]
-    try:
-        out = subprocess.run(args, capture_output=True, text=True, timeout=30)
-    except subprocess.TimeoutExpired:
-        return None
-    if out.returncode != 0:
-        return None
-    line = out.stdout.strip()
-    if line == "RUN":
-        return None
-    if line.startswith("SKIP\t"):
-        return line[5:], "skip"
-    if line.startswith("DIVERGE\t"):
-        return line[8:], "diverge"
-    return None
+    asked = {
+        "kind": case.get("expect", {}).get("error", {}).get("kind"),
+        "form": case.get("form"),
+        "record": "null" if any(r is None for r in case.get("records") or []) else None,
+        "none": case.get("none"),
+        "error": "error" in case.get("expect", {}),
+    }
+    return skiptable.lookup_reason("duckdb", case["id"], asked, wire=WIRE)
 
 
 def run(sql: str, fixture: bool = False) -> str:
@@ -123,6 +119,7 @@ def sql_string(value: str) -> str:
 
 
 def main() -> int:
+    global FAILURES
     data = json.loads(CASES.read_text())
     for case in data["cases"]:
         name = case["id"]
@@ -162,7 +159,8 @@ def main() -> int:
                 listing = "[" + ",".join(sql_string(m) for m in members) + "]"
                 check_error(name, f"SELECT thinkthen_{verb}({sql_string(kind)}, {sql_string(text)}, {listing});", wanted)
             elif verb == "filter":
-                print(f"diverge  {name}: SQL spells filter as WHERE, and a band under WHERE reads as NULL by rule 6; the refusal belongs to the surface check")
+                FAILURES += 1
+                print(f"FAILED   {name}: a filter error case reached the runner; the table holds it back (conformance/skiptable.py)")
             else:
                 check_error(name, f"SELECT thinkthen_decide({sql_string(arg)}, {sql_string(text)});", wanted)
             continue
@@ -268,12 +266,11 @@ def main() -> int:
             fields = ",".join(parts)
             check(name, f"SELECT thinkthen_annotate({sql_string(set_json)}, {sql_string(evidence)});",
                   "{" + fields + "}", fixture)
-        elif verb == "usage":
-            print(f"diverge  {name}: the disk cache waits on the real engine (named)")
-        elif verb == "cancel":
-            print(f"diverge  {name}: the CLI's Ctrl-C owns cancel; see NOTES")
         else:
-            print(f"skip     {name}: {verb} has no SQL spelling on this surface")
+            # Every case the table does not hold back has an arm here; a
+            # case with none fails rather than skipping silently.
+            FAILURES += 1
+            print(f"FAILED   {name}: the runner has no arm for verb {verb}; add one or a table entry")
     if FAILURES:
         print(f"{FAILURES} case(s) failed")
         return 1
@@ -304,8 +301,20 @@ def check_recognize(name: str, case: dict) -> None:
         wanted,
     )
     if case["expect"].get("relations"):
-        print(
-            f"diverge  {name}: the relations half rides thinkthen_relations; the scalar is the kinds-only shape"
+        # The relations half, compared (surfaces-review-5: it printed an
+        # uncounted diverge). thinkthen_relations takes the case's own
+        # recognize question as JSON and names each end by its text.
+        by_id = {e["id"]: e["text"] for e in case["expect"]["entities"]}
+        want_rel = "|".join(sorted(
+            f"{r['name']}~{by_id[r['source']]}~{by_id[r['target']]}~{r['probability']:.4f}"
+            for r in case["expect"]["relations"]
+        ))
+        check(
+            name + " relations",
+            "SELECT string_agg(r.name || '~' || r.source || '~' || r.target || '~' || printf('%.4f', r.probability), '|' "
+            "ORDER BY r.name || '~' || r.source || '~' || r.target || '~' || printf('%.4f', r.probability)) "
+            f"FROM (SELECT unnest(thinkthen_relations({sql_string(text)}, {sql_string(json.dumps(case['question']))})) AS r);",
+            want_rel,
         )
     check(
         name + " slice",

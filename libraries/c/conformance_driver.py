@@ -13,6 +13,7 @@ scaffolding.
 
 import ctypes
 import json
+import os
 import pathlib
 import sys
 
@@ -23,6 +24,12 @@ CASES = FILE["cases"]
 
 sys.path.insert(0, str(HERE.parent.parent / "conformance"))
 from skiptable import lookup_reason  # noqa: E402 - the one skip reader
+
+
+# The runner's own wire state, the same rule every runner uses: an engine
+# address in the environment means the engine answers from the wire, and
+# the one reader applies `unless: wire` entries from it (surfaces-review-5).
+WIRE = (bool(os.environ.get("ENGINE_BASE_URL")) or bool(os.environ.get("THINKTHEN_BASE_URL")))
 
 
 def central_skip(surface, case, wire):
@@ -193,7 +200,7 @@ def main():
     for case in cases:
         case_id = case["id"]
         verb = case["verb"]
-        held = central_skip("c", case, wire=False)
+        held = central_skip("c", case, wire=WIRE)
         if held is not None:
             why, _as = held
             print(f"skip     {case_id}: {why}")

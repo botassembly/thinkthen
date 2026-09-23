@@ -13,7 +13,8 @@
 # Every line a runner prints with `ok`, `skip`, `diverge`, or `FAIL` at its
 # start is counted, and the last line states the four totals beside the
 # wire state: `all landed checks green` appears only when no check failed
-# and the skipped count is named with it.
+# and the skipped count is named with it. `skip` and `diverge` are defined
+# once, in conformance/skiptable.py; neither is ever counted as green.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 repo=$(pwd)
@@ -160,6 +161,8 @@ fi
 run_step "conformance file" python3 conformance/tools/validate_conformance.py || fail=1
 
 run_step "the one skip table" python3 conformance/skiptable.py validate || fail=1
+
+run_step "the runners leave holding back to the table" python3 conformance/tools/test_runner_honesty.py || fail=1
 
 run_step "conformance checker tests" python3 conformance/tools/test_validate_conformance.py || fail=1
 

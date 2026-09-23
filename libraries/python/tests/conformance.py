@@ -10,6 +10,7 @@ tests/test_cancel.py against the stub instead.
 """
 
 import json
+import os
 import pathlib
 import sys
 import tempfile
@@ -22,6 +23,12 @@ from skiptable import lookup_reason  # noqa: E402 - the one skip reader
 
 FILE = json.loads((ROOT / "conformance" / "conformance.json").read_text())
 CASES = FILE["cases"]
+
+
+# The runner's own wire state, the same rule every runner uses: an engine
+# address in the environment means the engine answers from the wire, and
+# the one reader applies `unless: wire` entries from it (surfaces-review-5).
+WIRE = (bool(os.environ.get("ENGINE_BASE_URL")) or bool(os.environ.get("THINKTHEN_BASE_URL")))
 
 
 def central_skip(surface, case, wire):
@@ -291,7 +298,7 @@ def main():
     passed, failed, skipped = [], [], []
     for case in CASES:
         name = case["id"]
-        held = central_skip("python", case, wire=False)
+        held = central_skip("python", case, wire=WIRE)
         if held is not None:
             why, _as = held
             skipped.append((name, why))

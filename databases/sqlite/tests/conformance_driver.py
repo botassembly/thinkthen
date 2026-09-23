@@ -7,14 +7,14 @@ thinkthen_decide reads the saved answers), choose, score, and tag through
 their JSON question grammar, annotate through a set, details and usage
 directly, recognize through the table-valued function's five columns, and
 relate through the table-valued call every record at once. Prints one line
-a case — ok, diverge with its reason, skip with its reason — and exits
-nonzero on any divergence. Run through ./check.sh.
+a case — ok, FAIL, or the shared table's skip with its reason (the
+dispositions are defined in conformance/skiptable.py) — and exits nonzero
+on any FAIL. Run through ./check.sh.
 
 Skips, with their reasons: the backend-refusal cases need the wire or a
 dead address (the wire suite proves the backend kind there), and the
-cancel case diverges on the stand-in, which conformance/DIVERGENCES.md
-records as a real-engine requirement: the pre-fired token is ignored, and
-this surface proves the mid-flight interrupt on the wire instead. The
+cancel case has no route in this driver: tests/cancel_fast.py and
+tests/single_row_cancel.py prove the interrupt instead. The
 relate per-subject arm is skipped: it is an engine-internal form, and the
 surface serves the ruled pairs form that case 72 covers. Recognize cases
 that ask relation rules assert their names only here: relations as rows
@@ -45,6 +45,12 @@ def _library() -> "pathlib.Path":
 LIB = _library()
 FILE = json.loads((HERE.parent.parent.parent / "conformance" / "conformance.json").read_text())
 CASES = FILE["cases"]
+
+
+# The runner's own wire state, the same rule every runner uses: an engine
+# address in the environment means the engine answers from the wire, and
+# the one reader applies `unless: wire` entries from it (surfaces-review-5).
+WIRE = (bool(os.environ.get("ENGINE_BASE_URL")) or bool(os.environ.get("THINKTHEN_BASE_URL")))
 
 
 def central_skip(surface, case, wire):
@@ -119,7 +125,7 @@ def main():
     for case in cases:
         case_id = case["id"]
         verb = case["verb"]
-        central = central_skip("sqlite", case, wire=False)
+        central = central_skip("sqlite", case, wire=WIRE)
         if central is not None:
             why, disposition = central
             print(f"{disposition:<8} {case_id}: {why}")
@@ -250,12 +256,9 @@ def main():
                     [(text,) for text in case["records"]],
                 )
                 if "error" in expect:
-                    print(
-                        f"diverge  {case_id}: the band-on-filter rule lives at "
-                        "the case verb, and no stand-in door resolves a "
-                        "question as a filter; conformance/DIVERGENCES.md "
-                        "carries this as a real-engine requirement"
-                    )
+                    # The table holds these back (conformance/skiptable.py);
+                    # reaching here means the table and this arm disagree.
+                    report(case_id, "a filter error case reached the runner", failed=True)
                     continue
                 fresh_conn.execute(
                     "SELECT thinkthen_warm(?, body) FROM t", (json.dumps(question),)
@@ -511,7 +514,7 @@ def main():
 
     for path in TEMP:
         os.unlink(path)
-    print("conformance slice done" if not FAILURES else "conformance diverged")
+    print("conformance slice done" if not FAILURES else "conformance slice failed")
     sys.exit(1 if FAILURES else 0)
 
 

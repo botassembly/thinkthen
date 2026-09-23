@@ -36,6 +36,7 @@ def central_skip(surface, one, wire)
   cmd += ["--record", "null"] if (one["records"] || []).any?(&:nil?)
   cmd += ["--none", "true"] if one["none"]
   cmd += ["--error", "true"] if one.dig("expect", "error")
+  cmd += ["--wire", "true"] if wire
   out, status = Open3.capture2(*cmd)
   raise "skiptable lookup failed for #{one['id']}: #{out}" unless status.success?
   line = out.strip
@@ -206,7 +207,7 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
         next
       end
       if wanted["answer"].is_a?(Array) || wanted["answer"].is_a?(Float)
-        raise "SKIP: #{name} holds a field the runner does not check"
+        raise "#{name} holds a field the runner does not check; compare it or hold the case back in the table"
       end
 
       ok_if(field == wanted["answer"],
@@ -270,7 +271,7 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
       end
     end
   else
-    raise "SKIP: no case shape for #{verb}"
+    raise "no case shape for #{verb}; add an arm or hold the case back in the table"
   end
 end
 
@@ -293,14 +294,10 @@ file["cases"].each do |one|
     puts "ok       #{id}"
   rescue RuntimeError => e
     message = e.message.sub(/\AFAIL: /, "")
-    if message.start_with?("SKIP: ")
-      puts "skip     #{id}: #{message.sub('SKIP: ', '')}"
-    elsif message.start_with?("DIVERGE")
-      puts "diverge  #{id}: #{message}"
-    else
-      failed += 1
-      puts "FAIL     #{id}: #{message}"
-    end
+    # A case this runner ran is compared: only the table skips or holds a
+    # case back (surfaces-review-5; conformance/skiptable.py defines both).
+    failed += 1
+    puts "FAIL     #{id}: #{message}"
   end
 end
 

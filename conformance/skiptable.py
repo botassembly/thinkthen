@@ -8,6 +8,18 @@ every facet it names matches that case's facets and the surface is listed
 in the entry. This one implementation replaces the nine private readers
 the third review found disagreeing on these fields (surfaces-review-3).
 
+The two dispositions, defined here and nowhere else (every runner and
+scripts/check_surfaces.sh defer to this text):
+  skip     the surface does not run the case; the reason says why and
+           where the surface's own proof lives.
+  diverge  the surface does not run the case because the stand-in is
+           recorded as answering it differently from the real engine; the
+           reason must cite conformance/DIVERGENCES.md. A diverge is a
+           not-run case, never a verdict on an answer.
+A case a runner does run is compared, and a mismatch prints `FAIL`: no
+runner may print `diverge` (or excuse a case by name) for a case it ran.
+The gate counts skip and diverge apart from green and failed.
+
 Exit codes and output, stable for script callers:
   lookup: prints one line - `RUN`, `SKIP<TAB>why`, or `DIVERGE<TAB>why` -
   exits 0 on a decision, 2 on a usage error.
@@ -108,6 +120,13 @@ def validate(path):
             seen.add(key)
         if not entry.get("why", "").strip():
             problems.append(f"entry {when} carries no reason")
+        held_as = entry.get("as", "skip")
+        if held_as not in ("skip", "diverge"):
+            problems.append(f"entry {when} has disposition {held_as!r}; only skip or diverge")
+        if held_as == "diverge" and "DIVERGENCES.md" not in entry.get("why", ""):
+            problems.append(f"diverge entry {when} cites no conformance/DIVERGENCES.md record")
+        if entry.get("unless", "wire") != "wire":
+            problems.append(f"entry {when} has unless {entry['unless']!r}; only wire")
     if problems:
         for problem in problems:
             print(f"skiptable: {problem}", file=sys.stderr)

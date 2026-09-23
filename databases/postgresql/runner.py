@@ -2,13 +2,16 @@
 """The PostgreSQL conformance slice: each runnable case of the one
 conformance file, run as SQL through psql in the disposable container.
 
-A case prints one line: ok, skip (with the reason), or diverge (expected
-versus got). The exit code is nonzero when a case diverges unexpectedly.
+A case prints one line: ok, a table skip or diverge (with the reason; the
+dispositions are defined in conformance/skiptable.py), or FAIL (expected
+versus got). A case this runner runs is compared and never excused; the
+exit code is nonzero on any FAIL (surfaces-review-5).
 
 Usage: runner.py <container-name>
 The container already has the extension installed and the null backend on.
 """
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -20,6 +23,10 @@ HERE = pathlib.Path(__file__).resolve().parent
 FILE = json.loads((HERE.parents[1] / "conformance" / "conformance.json").read_text())
 CASES = FILE["cases"]
 CONTAINER = sys.argv[1] if len(sys.argv) > 1 else "thinkthen-pg"
+# Whether the engine this runner reaches answers from a wire stub: the
+# caller says so (check.sh runs the replay against the null container, so
+# it is unset there), and the one reader decides `unless: wire` from it.
+WIRE = (bool(os.environ.get("ENGINE_BASE_URL")) or bool(os.environ.get("THINKTHEN_BASE_URL")))
 
 
 def central_skip(surface, case, wire):
@@ -72,7 +79,7 @@ def answer_text(expected) -> str:
 def check(case, got: str, expected) -> str | None:
     want = answer_text(expected) if isinstance(expected, bool) or expected is None else str(expected)
     if got != want:
-        return f"diverge {case['id']}: expected {want!r}, got {got!r}"
+        return f"FAIL {case['id']}: expected {want!r}, got {got!r}"
     return None
 
 
@@ -82,17 +89,21 @@ NOTES: list[str | None] = []
 def main() -> int:
     cases = CASES
     bad = 0
+    held_back = 0
+    # Every case must end in exactly one verdict line; an arm that drops
+    # its verdict (the deadline arm once did) fails the run below.
+    reported = set()
     for case in cases:
         verb, ident = case["verb"], case["id"]
         expect = case["expect"]
         rows_line = None
-        central = central_skip("postgresql", case, wire=False)
+        central = central_skip("postgresql", case, wire=WIRE)
         if central is not None:
             why, disposition = central
             print(f"{disposition:<8} {ident}: {why}")
+            reported.add(ident)
             NOTES.append(f"{disposition} {ident}: {why}")
-            if disposition == "diverge":
-                bad += 1
+            held_back += 1
             continue
         if "error" in expect and expect["error"].get("kind") == "deadline":
             # The deadline door is `thinkthen.deadline_ms`, the enforced tool
@@ -104,10 +115,16 @@ def main() -> int:
                     f"SET thinkthen.deadline_ms = {int(budget)}; "
                     f"SELECT thinkthen_decide({question_arg(case)}, {literal(case['evidence'])})"
                 )
-                note = f"diverge {ident}: a spent deadline answered"
+                note = f"FAIL {ident}: a spent deadline answered"
             except RuntimeError as failure:
                 note = None if "thinkthen deadline" in str(failure) else \
-                    f"diverge {ident}: expected the deadline kind, got {failure}"
+                    f"FAIL {ident}: expected the deadline kind, got {failure}"
+            # Compared and printed like every other case (surfaces-review-5:
+            # this arm used to compute its verdict and drop it).
+            print(note or f"ok {ident}")
+            reported.add(ident)
+            NOTES.append(note)
+            bad += note is not None
             continue
         try:
             if verb == "decide":
@@ -122,7 +139,7 @@ def main() -> int:
                 got = sql("SELECT string_agg(COALESCE(decided::text, 'null'), ',' ORDER BY i) "
                           f"FROM thinkthen_decide({question_arg(case)}, {array})")
                 want = ",".join("null" if r is None else ("true" if r else "false") for r in rows)
-                note = None if got == want else f"diverge {ident}: expected {want}, got {got}"
+                note = None if got == want else f"FAIL {ident}: expected {want}, got {got}"
                 if note is None and expect.get("rows"):
                     # The ruled record row (go-ahead item 4): the caller's
                     # own record beside its value, in input order — the SQL
@@ -139,23 +156,23 @@ def main() -> int:
                         f"FROM recs, thinkthen_decide({question_arg(case)}, recs.a) AS d(i, decided)"
                     )
                     if got_rows != pairs:
-                        note = f"diverge {ident} rows: expected {pairs!r}, got {got_rows!r}"
+                        note = f"FAIL {ident} rows: expected {pairs!r}, got {got_rows!r}"
                     else:
                         rows_line = f"ok {ident} rows"
             elif verb == "choose":
                 got = sql(f"SELECT thinkthen_choose({question_arg(case)}, {literal(case['evidence'])}, NULL)")
                 want = expect.get("answer")
                 note = None if got == ("" if want is None else want) else \
-                    f"diverge {ident}: expected {want!r}, got {got!r}"
+                    f"FAIL {ident}: expected {want!r}, got {got!r}"
             elif verb == "score":
                 got = sql(f"SELECT thinkthen_score({question_arg(case)}, {literal(case['evidence'])}, NULL)")
                 want = expect["answer"]
                 note = None if abs(float(got) - want) < 1e-9 else \
-                    f"diverge {ident}: expected {want}, got {got}"
+                    f"FAIL {ident}: expected {want}, got {got}"
             elif verb == "tag":
                 got = sql(f"SELECT array_to_string(thinkthen_tag({question_arg(case)}, {literal(case['evidence'])}, NULL), ',')")
                 want = ",".join(expect["answer"])
-                note = None if got == want else f"diverge {ident}: expected {want!r}, got {got!r}"
+                note = None if got == want else f"FAIL {ident}: expected {want!r}, got {got!r}"
             elif verb == "annotate":
                 if expect.get("rows") is not None:
                     # The multi-record form: one answer row a record, in
@@ -184,7 +201,7 @@ def main() -> int:
                                 want = "true" if value is True else ("false" if value is False else str(value))
                                 if part != want:
                                     problems.append(f"row {at} {name}: {part!r}")
-                    note = None if not problems else f"diverge {ident}: {'; '.join(problems)}"
+                    note = None if not problems else f"FAIL {ident}: {'; '.join(problems)}"
                 else:
                     held = expect["answers"]
                     fields = ",".join(f"a->>'{name}'" for name in held)
@@ -215,7 +232,7 @@ def main() -> int:
                             else:
                                 expected = str(value["answer"])
                             ok = ok and (part or "") == expected
-                    note = None if ok else f"diverge {ident}: {' '.join(seen)}"
+                    note = None if ok else f"FAIL {ident}: {' '.join(seen)}"
             elif verb == "recognize":
                 kinds = (case.get("question") or {}).get("kinds") or []
                 arr = ("ARRAY[" + ",".join(literal(k) for k in kinds) + "]::text[]")
@@ -231,7 +248,23 @@ def main() -> int:
                 ]
                 got_lines = got.splitlines() if got else []
                 note = None if got_lines == want_lines else \
-                    f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
+                    f"FAIL {ident}: expected {want_lines!r}, got {got_lines!r}"
+                if note is None and expect.get("relations"):
+                    # The relations half, compared through the beta
+                    # companion with the case's own question as JSON
+                    # (surfaces-review-5: only the entities were compared).
+                    by_id = {e["id"]: e["text"] for e in entities}
+                    rel = sql(
+                        "SELECT \"name\" || '~' || \"source_text\" || '~' || \"target_text\" "
+                        "|| '~' || to_char(\"probability\", 'FM0.0000') "
+                        f"FROM thinkthen_relations({literal(case['text'])}, "
+                        f"{literal(json.dumps(case['question']))})")
+                    want_rel = sorted(
+                        f"{r['name']}~{by_id[r['source']]}~{by_id[r['target']]}~{r['probability']:.4f}"
+                        for r in expect["relations"])
+                    got_rel = sorted(rel.splitlines()) if rel else []
+                    if got_rel != want_rel:
+                        note = f"FAIL {ident} relations: expected {want_rel!r}, got {got_rel!r}"
             elif verb == "relate":
                 rules = [r["name"] for r in case["question"].get("relations", [])]
                 arr = "ARRAY[" + ",".join(literal(r) for r in rules) + "]::text[]"
@@ -249,7 +282,7 @@ def main() -> int:
                     for e in expect["edges"])
                 got_lines = sorted(got.splitlines()) if got else []
                 note = None if got_lines == want_lines else \
-                    f"diverge {ident}: expected {want_lines!r}, got {got_lines!r}"
+                    f"FAIL {ident}: expected {want_lines!r}, got {got_lines!r}"
             elif verb == "details":
                 held = expect["details"]
                 # The audit's identity fields and the two 0053/0054 additions;
@@ -276,7 +309,7 @@ def main() -> int:
                     ok = parts[3] == str(want_failed)
                 if ok and want_nearest is not None:
                     ok = parts[4] == want_nearest
-                note = None if ok else f"diverge {ident}: expected model/digest/requests/failed/nearest, got {got!r}"
+                note = None if ok else f"FAIL {ident}: expected model/digest/requests/failed/nearest, got {got!r}"
             elif verb == "usage":
                 q = literal(json.dumps(case["question"]))
                 e = literal(case["evidence"])
@@ -286,7 +319,7 @@ def main() -> int:
                             "SELECT requests||'/'||cache_answers FROM thinkthen_usage();").splitlines()[-1]
                 want = f"{expect['requests']}/{expect['cache_answers']}"
                 note = None if again == want else (
-                    f"diverge {ident}: expected {want} after the second call, got {again}; "
+                    f"FAIL {ident}: expected {want} after the second call, got {again}; "
                     "the stand-in answers the repeat from in-process memory but never counts it in "
                     "cache_answers, its own record says so — a real-engine requirement, not a surface gap")
             else:
@@ -296,21 +329,22 @@ def main() -> int:
             if "error" in expect:
                 want_kind = expect["error"]["kind"]
                 note = None if f"thinkthen {want_kind}:" in text else \
-                    f"diverge {ident}: expected the {want_kind} kind, got: {text}"
+                    f"FAIL {ident}: expected the {want_kind} kind, got: {text}"
             else:
-                note = f"diverge {ident}: raised when no failure was expected: {text}"
+                note = f"FAIL {ident}: raised when no failure was expected: {text}"
         print(note or f"ok {ident}")
+        reported.add(ident)
         if note is None and rows_line:
             print(rows_line)
         NOTES.append(note)
-        bad += note.startswith("diverge") if note else 0
-    print(f"{len(cases) - bad} of {len(cases)} cases ok, {bad} diverged")
-    # 17's divergence is the stand-in's own recorded gap (its counters never
-    # credit the in-process memory), so the check stays green with it named.
-    known = sum("17-usage-and-cache" in note for note in NOTES if note)
-    unexpected = bad - known
-    return 1 if unexpected else 0
-
+        bad += note is not None
+    for case in cases:
+        if case["id"] not in reported:
+            print(f"FAIL {case['id']}: the runner printed no verdict for this case")
+            bad += 1
+    ran = len(cases) - held_back
+    print(f"{ran - bad} of {ran} run cases ok, {bad} failed, {held_back} held back by the table")
+    return 1 if bad else 0
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -71,6 +71,11 @@ function centralSkip(one) {
   if (one.expect?.error !== undefined) {
     args.push('--error', 'true');
   }
+  // The wire facet, by the rule every runner uses: an engine address in
+  // the environment means the engine answers from the wire.
+  if (process.env.ENGINE_BASE_URL || process.env.THINKTHEN_BASE_URL) {
+    args.push('--wire', 'true');
+  }
   const asked = spawnSync(args[0], args.slice(1), { encoding: 'utf8' });
   assert.equal(asked.status, 0, `skiptable: ${asked.stderr}`);
   return asked.stdout.trim();

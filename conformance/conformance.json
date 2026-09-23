@@ -50,25 +50,48 @@
   },
   {
    "when": {
-    "verb": "cancel"
+    "id": "18-cancel-mid-batch"
    },
    "surfaces": [
     "ruby"
    ],
-   "why": "the stand-in refuses a pre-fired token where the surface accepts one; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-5: the old reason, a stand-in refusal, was false; the case expects the cancelled kind); tests/test_cancel_fast.rb and the interrupt proof carry the surface's cancel"
   },
   {
    "when": {
-    "verb": "cancel"
+    "id": "18-cancel-mid-batch"
    },
    "surfaces": [
-    "r",
-    "rust",
-    "duckdb",
+    "r"
+   ],
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-5: the old reason, a stand-in refusal, was false; the case expects the cancelled kind); interrupt_test.sh and interrupt_fast.sh carry the surface's interrupt"
+  },
+  {
+   "when": {
+    "id": "18-cancel-mid-batch"
+   },
+   "surfaces": [
+    "rust"
+   ],
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-5: the old reason, a stand-in refusal, was false; the case expects the cancelled kind); tests/wire.rs a_cancelled_bulk_call_returns_the_cancelled_kind proves the token mid-batch against the stub"
+  },
+  {
+   "when": {
+    "id": "18-cancel-mid-batch"
+   },
+   "surfaces": [
+    "duckdb"
+   ],
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-5: the old reason, a stand-in refusal, was false; the case expects the cancelled kind); tools/review4_cancel.py and tools/host_signal.py carry the surface's interrupt"
+  },
+  {
+   "when": {
+    "id": "18-cancel-mid-batch"
+   },
+   "surfaces": [
     "sqlite"
    ],
-   "as": "diverge",
-   "why": "the stand-in refuses a pre-fired token where the surface accepts one; conformance/DIVERGENCES.md carries this as a real-engine requirement"
+   "why": "this runner carries no cancel path mid-batch (surfaces-review-5: the old reason, a stand-in refusal, was false; the case expects the cancelled kind); tests/cancel_fast.py and tests/single_row_cancel.py carry the surface's interrupt"
   },
   {
    "when": {
@@ -112,16 +135,6 @@
    "when": {
     "form": "per-subject"
    },
-   "surfaces": [
-    "duckdb"
-   ],
-   "as": "diverge",
-   "why": "the per-subject form is the engine-internal arm; the ruled form is pairs and the stand-in serves it on a text collision"
-  },
-  {
-   "when": {
-    "form": "per-subject"
-   },
    "why": "the per-subject arm shares its input with the pairs arm and the stand-in serves the ruled pairs form; a conformance-data finding for the build team"
   },
   {
@@ -143,22 +156,14 @@
     "verb": "usage"
    },
    "surfaces": [
-    "duckdb"
-   ],
-   "as": "diverge",
-   "why": "the disk cache waits on the real engine (named)"
-  },
-  {
-   "when": {
-    "verb": "usage"
-   },
-   "surfaces": [
     "python",
     "typescript",
     "ruby",
     "r",
     "rust",
-    "c"
+    "c",
+    "duckdb",
+    "postgresql"
    ],
    "why": "the cache half needs the disk cache, which the stand-in does not carry"
   },
@@ -253,6 +258,17 @@
     "sqlite"
    ],
    "why": "this surface refuses a NULL text at the door (Invalid type) rather than answering NULL; the passthrough is pinned on the surfaces that take SQL NULL, and conformance/DIVERGENCES.md records the gap"
+  },
+  {
+   "when": {
+    "verb": "filter",
+    "error": true
+   },
+   "surfaces": [
+    "duckdb",
+    "sqlite"
+   ],
+   "why": "the SQL surfaces spell filter as WHERE over thinkthen_decide, so the verb-level band refusal has no call that could fail; the rule is enforced where a filter verb exists (surfaces-review-5: the runners printed this as an uncounted hard-coded diverge)"
   }
  ],
  "cases": [
