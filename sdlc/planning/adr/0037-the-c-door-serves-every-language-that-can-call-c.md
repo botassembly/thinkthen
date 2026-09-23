@@ -14,7 +14,7 @@ Provenance: Ian's ruling in the library-team session on 2026-09-22. His words: "
 ## The decided shape
 
 - **The drawn signatures freeze.** The slide's `thinkthen_decide(tt, q, text, text_len, &a)` and its `_many` twin keep compiling as drawn, because the deck is the surface's acceptance sample.
-- **Control spellings sit beside them.** `thinkthen_decide_opts`, `thinkthen_decide_many_opts`, `thinkthen_call_opts`, `thinkthen_recognize_opts`, and `thinkthen_relate_opts` carry `unsigned long deadline_ms` and `thinkthen_cancel_token *token` as flat arguments.
+- **Control spellings sit beside them.** `thinkthen_decide_opts`, `thinkthen_decide_many_opts`, `thinkthen_call_opts`, `thinkthen_recognize_opts`, and `thinkthen_relate_opts` carry `int64_t deadline_ms` and `thinkthen_cancel_token *token` as flat arguments.
 - **A plain call is its `_opts` twin** with `THINKTHEN_NO_DEADLINE` (-1) and a null token; 0 stays the spent deadline; the equivalence is proven by test, including the error path.
 - **Cancellation is a one-shot token handle** the host fires from any thread; a fired token starts no new request, and requests already sent finish.
 - **One memory rule:** the library allocates every returned buffer and takes it back through its free call. The error message belongs to the calling thread and lives until that thread records its next failure.
@@ -23,3 +23,5 @@ Provenance: Ian's ruling in the library-team session on 2026-09-22. His words: "
 ## Proof
 
 Landed on branch `surfaces`: `8c83765` ("Give the C door its cancel token, per-call budget, and error code") and `be8374f` ("Give the C door per-thread error slots, a panic guard, and the checked deadline"). The C gate exits 0: the drawn slide and examples compile unchanged, the `_opts` equivalence and null-matrix tests are green, ASan and LSan are clean including the two-thread error test, and the conformance slice reads 68 green lines. The design page's deferred items are named there with their reasons.
+
+Amended 2026-09-23 (wave 7, R2-10): the budget argument is `int64_t deadline_ms`, as the header and `libraries/c/DESIGN.md` section 2 have it since the review-5 wave. The first text said `unsigned long`.

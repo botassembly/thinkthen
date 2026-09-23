@@ -15,6 +15,12 @@
 //! churn probe fault on that read. The stand-in's own resolver parses a
 //! numeric address on the calling thread.
 //!
+//! No request detaches a thread either. The binary also defines
+//! `pthread_detach` and counts the detaches made on the test's own thread
+//! and on the engine's `ttb-` threads. The batch path used to drop its
+//! scoped worker and feeder handles, and a scoped handle dropped unjoined
+//! detaches its thread, often one that is already exiting.
+//!
 //! A refused thread start is an error (R4-12). The batch path used to
 //! `expect` its worker and feeder starts.
 
@@ -40,6 +46,46 @@ static SERIAL: Mutex<()> = Mutex::new(());
 thread_local! {
     /// The creates made on this thread so far, and the one to refuse.
     static REFUSE: Cell<(usize, Option<usize>)> = const { Cell::new((0, None)) };
+}
+
+/// Every detach made on a watched thread.
+static DETACHED: AtomicUsize = AtomicUsize::new(0);
+
+thread_local! {
+    /// Whether this thread's detaches count: the test's calling thread.
+    static WATCHED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Whether the calling thread's detaches count: a watched thread, or one
+/// of the engine's own threads, all named `ttb-`.
+fn watched_caller() -> bool {
+    if WATCHED.try_with(Cell::get).unwrap_or(false) {
+        return true;
+    }
+    let mut name = [0 as libc::c_char; 16];
+    // Sound: the buffer holds the 16 bytes Linux allows a thread name.
+    let named = unsafe { libc::pthread_getname_np(libc::pthread_self(), name.as_mut_ptr(), 16) };
+    named == 0 && name[..4].iter().map(|&byte| byte as u8).eq(*b"ttb-")
+}
+
+/// Count a watched detach, then hand it to the C library's own function.
+///
+/// # Safety
+///
+/// The caller passes what `pthread_detach` takes; it goes on unchanged.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn pthread_detach(thread: libc::pthread_t) -> libc::c_int {
+    if watched_caller() {
+        DETACHED.fetch_add(1, Ordering::SeqCst);
+    }
+    // Sound: RTLD_NEXT names the C library's definition, whose signature
+    // this is, and the argument is passed through unchanged.
+    unsafe {
+        let real = libc::dlsym(libc::RTLD_NEXT, c"pthread_detach".as_ptr());
+        assert!(!real.is_null(), "the C library defines pthread_detach");
+        let real: unsafe extern "C" fn(libc::pthread_t) -> libc::c_int = std::mem::transmute(real);
+        real(thread)
+    }
 }
 
 /// The C library's `pthread_create` signature.
@@ -171,4 +217,35 @@ fn a_refused_thread_start_fails_the_call_or_leaves_fewer_workers() {
             }
         }
     }
+}
+
+#[test]
+fn no_request_to_a_numeric_address_detaches_a_thread() {
+    let _serial = SERIAL
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    common::wire_only();
+    let engine = engine(&common::answering_backend(), 4);
+    let notes = notes(1000);
+    let records: Vec<&str> = notes.iter().map(String::as_str).collect();
+
+    WATCHED.with(|watched| watched.set(true));
+    let before = DETACHED.load(Ordering::SeqCst);
+    let judged = engine
+        .decide_many(&question(), &records, None)
+        .expect("the backend answers");
+    // The C door's shape: a batch of one a call.
+    for record in &records[..200] {
+        engine
+            .decide_many(&question(), &[record], None)
+            .expect("the backend answers");
+    }
+    let detached = DETACHED.load(Ordering::SeqCst) - before;
+    WATCHED.with(|watched| watched.set(false));
+
+    assert_eq!(judged.len(), 1000, "every record was judged");
+    assert_eq!(
+        detached, 0,
+        "1,200 requests in 201 calls detached {detached} threads"
+    );
 }

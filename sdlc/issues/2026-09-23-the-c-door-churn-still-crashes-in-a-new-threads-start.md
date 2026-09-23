@@ -111,8 +111,11 @@ in the thread cache when the new thread read it.
   stand-in's `Lookup`, which parses a numeric address on the calling
   thread and joins its lookup thread for a name. `strace -f -c` over 800
   churn requests counted 2,407 thread creations before and 1,606 after.
-  The per-request lookup thread is gone, and the worker and feeder that
-  each door call starts, and joins, remain.
+  The per-request lookup thread is gone. The worker and feeder that
+  each door call starts remain. At 5f36536 the batch still dropped their
+  handles unjoined, which detached two threads a call, often while they
+  exited. w7/standin2 joins both, and the verifier's detach shim counts
+  0 detaches over 2,000 door calls, against 4,000 before.
   `standin/tests/thread_starts.rs` holds this in the gate: 1,000 requests
   started 1,003 threads before and at most 3 after.
 - The fix, churn: 0 crashes in 20 runs (16 in batches of 8, 4 in a batch
@@ -133,7 +136,8 @@ in the thread cache when the new thread read it.
 - Our thread-exit cleanup did not free that memory. The unmapped region
   is a whole thread stack, and only glibc unmaps thread stacks.
 - The detach signature needs a thread detached while it exits. After the
-  fix no request detaches a thread. A name lookup that outlives its
+  w7/standin2 fix no request to a numeric address detaches a thread
+  (`tests/thread_starts.rs` counts them). A name lookup that outlives its
   timeout is still detached, but that thread is blocked in the lookup.
 
 ### What is not proven

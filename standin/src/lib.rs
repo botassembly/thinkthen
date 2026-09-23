@@ -284,6 +284,11 @@ impl BlockingEngine {
         let mut first_failure: Option<Error> = None;
 
         thread::scope(|scope| {
+            // Every handle is joined below. A scoped handle dropped
+            // unjoined calls `pthread_detach`, often on a thread that is
+            // exiting, and glibc's detach can then read freed memory
+            // (R4-1). The scope's own wait joins nothing.
+            let mut started = Vec::with_capacity(threads + 1);
             for worker in 0..threads {
                 let task_rx = Arc::clone(&task_rx);
                 let done_tx = done_tx.clone();
@@ -321,7 +326,7 @@ impl BlockingEngine {
                     })
 ;
                 match born {
-                    Ok(born) => drop(born),
+                    Ok(born) => started.push(born),
                     // Fewer workers still answer every record; none cannot.
                     Err(error) => {
                         if worker == 0 {
@@ -355,11 +360,14 @@ impl BlockingEngine {
                     }
                 })
 ;
-            if let Err(error) = feed {
-                // The unsent feed dropped its sender, so every worker
-                // leaves and the wait below ends on the disconnect.
-                stop.store(true, Ordering::Relaxed);
-                first_failure = Some(no_thread(&error));
+            match feed {
+                Ok(feed) => started.push(feed),
+                Err(error) => {
+                    // The unsent feed dropped its sender, so every worker
+                    // leaves and the wait below ends on the disconnect.
+                    stop.store(true, Ordering::Relaxed);
+                    first_failure = Some(no_thread(&error));
+                }
             }
 
             let mut received = 0_usize;
@@ -397,6 +405,13 @@ impl BlockingEngine {
                         maybe_tick(&mut poll);
                     }
                     Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                }
+            }
+            for handle in started {
+                // A thread's panic still reaches the caller, as the scope
+                // would have raised it.
+                if let Err(panic) = handle.join() {
+                    std::panic::resume_unwind(panic);
                 }
             }
         });
@@ -1462,12 +1477,19 @@ impl Resolver for Lookup {
         config: &ureq::config::Config,
         timeout: NextTimeout,
     ) -> Result<ResolvedSocketAddrs, ureq::Error> {
-        let Some(addr) = uri
+        // ureq's own check first: a scheme it knows and a host. A scheme
+        // it does not know is refused even with an explicit port.
+        let known = uri.scheme().is_some_and(|scheme| {
+            matches!(scheme.as_str(), "http" | "https")
+                || ureq::ProxyProtocol::try_from(scheme.as_str()).is_ok()
+        });
+        let addr = uri
             .scheme()
             .zip(uri.authority())
-            .and_then(|(scheme, authority)| DefaultResolver::host_and_port(scheme, authority))
-        else {
-            // The default resolver names what is wrong with the address.
+            .and_then(|(scheme, authority)| DefaultResolver::host_and_port(scheme, authority));
+        let (true, Some(addr)) = (known, addr) else {
+            // The default resolver refuses the address before any lookup
+            // and names what is wrong with it.
             return DefaultResolver::default().resolve(uri, config, timeout);
         };
         let found: Vec<std::net::SocketAddr> = match addr.parse() {
@@ -2500,7 +2522,11 @@ mod tests {
         assert_eq!(resolve("http://127.0.0.1:9/v1"), ["127.0.0.1:9"]);
         assert_eq!(resolve("http://[::1]/v1"), ["[::1]:80"]);
         assert!(resolve("https://localhost/v1").iter().all(|addr| addr.ends_with(":443")));
-        let bad: ureq::http::Uri = "/v1".parse().expect("parses");
-        assert!(super::Lookup.resolve(&bad, &config, within).is_err(), "no host, no address");
+        let refused = |uri: &str| {
+            let uri: ureq::http::Uri = uri.parse().expect("the uri parses");
+            super::Lookup.resolve(&uri, &config, within).expect_err("refused").to_string()
+        };
+        assert_eq!(refused("/v1"), "bad uri: /v1 is missing scheme");
+        assert_eq!(refused("foo://127.0.0.1:9/v1"), "bad uri: unknown scheme: foo");
     }
 }
