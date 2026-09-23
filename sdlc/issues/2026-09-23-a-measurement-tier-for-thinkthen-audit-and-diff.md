@@ -52,3 +52,7 @@ Two open issues fold into this one and close with it:
 - Its added accuracy-by-coverage report becomes part of `audit`, which also suggests a cut tuned on labeled cases and checked on a held-out part. The Beatles tests found that a tuned cut beat every wording change.
 
 `audit` reports, per question: agreement with a 95% interval, both disagreement directions, the yes/no AUC, calibration, accuracy at each coverage level, and a suggested cut. `diff` takes two runs over the same records, from two wordings or two cuts, and lists what flipped and which way. The Beatles recordings are the first corpus, and Beatles Bench switches its decide and choose scoring to `thinkthen audit` once it ships. Ian can overturn the ruling.
+
+## Prototype first (Ian, 2026-09-23)
+
+Both commands are prototyped in Beatles Bench under `tools/`, in plain Python, reading ThinkThen's own JSONL output and recordings plus an answer key. The prototype defines the behavior. Its fixtures, including a reproduction of the leaning-no report's held-out numbers, become the golden tests the Rust `thinkthen audit` and `thinkthen diff` must match in the release after 0.1.
