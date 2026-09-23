@@ -49,7 +49,9 @@ A named end with no colon is a usage error naming the ruled spelling
 
 In SQL, `filter` is the `WHERE thinkthen_decide` pattern the slide draws,
 and the slide's second and third queries are that pattern reading the
-warm pass's saved answers. The aggregate forms of `rank` and `find` are
+warm pass's saved answers. The saved answers hold at most 16 MiB of
+real memory per process, and past that the oldest leave first, so a
+later call on an evicted pair sends again. The aggregate forms of `rank` and `find` are
 the database ADR's to rule; this surface claims no names for them.
 
 ## The engine

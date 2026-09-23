@@ -11,6 +11,9 @@ Three shapes, all from the reviewers:
   limit. Pre-fix, 300,000 questions cost 422 MB; the bound is 4096
   entries, and this probe drives 50,000 two-kilobyte questions and
   refuses to pass on more than 50 MB of growth.
+- Answers (review 4, R4-17): 200,000 distinct texts for one question
+  must not grow the process past 40 MB. Pre-fix the saved-answer map
+  had no bound, and 300,000 texts held 316 MB.
 - Stamp race (review 5): the file is replaced while its first read is
   under way, and the replacement then stays. The cached parse must carry
   the stamp of the bytes it parsed, so the next call re-reads. Pre-fix,
@@ -132,6 +135,26 @@ def main() -> int:
     print(f"bound: 50,000 distinct questions, RSS growth {growth_mb:.1f} MB")
     if growth_mb > 50:
         failures.append(f"the cache grew {growth_mb:.1f} MB past the 4096-entry bound")
+
+    # The answer map's bound (review 4, R4-17): 200,000 distinct texts
+    # for one question, about 420 bytes each, in one statement. Pre-fix
+    # the map kept every answer: 300,000 texts held 316 MB. The budget is
+    # 16 MiB of real memory; growth past 40 MB fails.
+    before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    tail = ctypes.c_void_p()
+    many = (
+        b"with recursive s(x) as (select 1 union all select x+1 from s where x<200000) "
+        b"select count(thinkthen_decide('Is it red?', 'evidence '||x||' '||hex(randomblob(200)))) from s"
+    )
+    sql.sqlite3_prepare_v2(db, many, -1, ctypes.byref(tail), None)
+    rc = sql.sqlite3_step(tail)
+    sql.sqlite3_finalize(tail)
+    growth_mb = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - before) / 1024
+    print(f"answers: 200,000 distinct texts, RSS growth {growth_mb:.1f} MB")
+    if rc != 100:
+        failures.append(f"the answer-map run failed: rc={rc}")
+    elif growth_mb > 40:
+        failures.append(f"the saved answers grew {growth_mb:.1f} MB past their 16 MiB budget")
 
     shutil.rmtree(held, ignore_errors=True)
     for failure in failures:

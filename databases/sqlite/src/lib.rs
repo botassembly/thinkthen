@@ -127,11 +127,94 @@ enum Saved {
     Annotate(String),
 }
 
+/// The most memory the saved answers hold, in bytes (review 4, R4-17:
+/// 300,000 distinct evidence texts for one question held 316 MB with no
+/// bound and nothing freed on close). Past the budget the oldest answers
+/// leave first, so a working set larger than the budget turns over and a
+/// later call on an evicted pair sends again. A constant, because the
+/// map is the stand-in's and is deleted at the engine swap; PostgreSQL's
+/// table has the same default and a setting.
+const SAVED_ANSWER_BYTES: usize = 16 * 1024 * 1024;
+
+/// What the allocator hands out for `len` bytes: glibc rounds a request
+/// and its 8-byte header up to 16 bytes, and 32 at least.
+fn heap_bytes(len: usize) -> usize {
+    if len == 0 { 0 } else { ((len + 8 + 15) & !15).max(32) }
+}
+
+impl Saved {
+    /// The heap bytes the answer itself holds beyond its slot.
+    fn heap(&self) -> usize {
+        match self {
+            Saved::Decision(_) | Saved::Score(_) | Saved::Choice(None) => 0,
+            Saved::Choice(Some(text)) | Saved::Annotate(text) => heap_bytes(text.len()),
+            Saved::Tags(labels) => {
+                heap_bytes(labels.len() * std::mem::size_of::<String>())
+                    + labels.iter().map(|label| heap_bytes(label.len())).sum::<usize>()
+            }
+        }
+    }
+}
+
+/// The session's saved answers under a byte budget, oldest out first.
+struct SavedAnswers {
+    map: HashMap<(String, String), Saved>,
+    order: VecDeque<(String, String)>,
+    bytes: usize,
+    budget: usize,
+}
+
+impl SavedAnswers {
+    fn with_budget(budget: usize) -> Self {
+        SavedAnswers { map: HashMap::new(), order: VecDeque::new(), bytes: 0, budget }
+    }
+
+    /// The memory one entry costs: the key's two strings held twice (map
+    /// and order), each in its own allocation, the answer's own heap, and
+    /// the map's and the order's slots counted twice, for the room a
+    /// table keeps free after it doubles.
+    fn cost(key: &(String, String), saved: &Saved) -> usize {
+        let text = 2 * (heap_bytes(key.0.len()) + heap_bytes(key.1.len()));
+        let map_slot = std::mem::size_of::<((String, String), Saved)>() + 1;
+        let order_slot = std::mem::size_of::<(String, String)>();
+        text + saved.heap() + 2 * (map_slot + order_slot)
+    }
+
+    fn get(&self, key: &(String, String)) -> Option<&Saved> {
+        self.map.get(key)
+    }
+
+    fn contains_key(&self, key: &(String, String)) -> bool {
+        self.map.contains_key(key)
+    }
+
+    /// Save one answer, evicting the oldest past the budget. An entry
+    /// that alone passes the budget is not saved.
+    fn insert(&mut self, key: (String, String), saved: Saved) {
+        let cost = Self::cost(&key, &saved);
+        if cost > self.budget {
+            return;
+        }
+        match self.map.insert(key.clone(), saved) {
+            Some(old) => self.bytes = self.bytes + cost - Self::cost(&key, &old),
+            None => {
+                self.bytes += cost;
+                self.order.push_back(key);
+            }
+        }
+        while self.bytes > self.budget {
+            let Some(oldest) = self.order.pop_front() else { break };
+            if let Some(old) = self.map.remove(&oldest) {
+                self.bytes -= Self::cost(&oldest, &old);
+            }
+        }
+    }
+}
+
 /// The saved answers of this session.
-fn answers() -> &'static Mutex<HashMap<(String, String), Saved>> {
-    static ANSWERS: OnceLock<Mutex<HashMap<(String, String), Saved>>> =
-        OnceLock::new();
-    ANSWERS.get_or_init(|| Mutex::new(HashMap::new()))
+fn answers() -> &'static Mutex<SavedAnswers> {
+    static ANSWERS: OnceLock<Mutex<SavedAnswers>> = OnceLock::new();
+    ANSWERS.get_or_init(|| Mutex::new(SavedAnswers::with_budget(SAVED_ANSWER_BYTES)))
 }
 
 /// Answers the map served without a send. Temporary, deleted with the
@@ -1747,6 +1830,40 @@ pub unsafe extern "C" fn sqlite3_thinkthen_init(
     API_TABLE.store(api as *mut (), Ordering::Relaxed);
     // SAFETY: this is the contract of extension_init2; init only registers.
     unsafe { Connection::extension_init2(db, message, api, init) }
+}
+
+#[cfg(test)]
+mod saved_answer_tests {
+    use super::*;
+
+    /// The saved answers' byte budget (review 4, R4-17): past it the
+    /// oldest leave, the newest stay, and the counted bytes never pass
+    /// the budget. An entry costs its allocations and slots, the answer's
+    /// own text included, and replacing an answer recounts it.
+    #[test]
+    fn the_saved_answers_keep_their_byte_budget() {
+        let key = |row: usize| ("digest".to_owned(), format!("evidence {row:04}"));
+        let slots = 2 * (std::mem::size_of::<((String, String), Saved)>() + 1 + std::mem::size_of::<(String, String)>());
+        let decision = Saved::Decision(thinkthen_contract::Answer::Yes);
+        assert_eq!(SavedAnswers::cost(&key(0), &decision), 4 * 32 + slots);
+        let long = Saved::Annotate("x".repeat(100));
+        assert_eq!(SavedAnswers::cost(&key(0), &long), 4 * 32 + 112 + slots);
+        let mut table = SavedAnswers::with_budget(64 * 1024);
+        for row in 0..1_000 {
+            table.insert(key(row), decision.clone());
+            assert!(table.bytes <= 64 * 1024, "{} bytes after row {row}", table.bytes);
+        }
+        let fit = 64 * 1024 / SavedAnswers::cost(&key(0), &decision);
+        assert_eq!((table.map.len(), table.order.len()), (fit, fit));
+        assert!(table.contains_key(&key(999)) && !table.contains_key(&key(0)));
+        let before = table.bytes;
+        table.insert(key(999), long);
+        assert_eq!(table.bytes, before + 112);
+        assert!(table.map.len() <= fit);
+        let mut tiny = SavedAnswers::with_budget(8);
+        tiny.insert(key(0), decision);
+        assert_eq!((tiny.map.len(), tiny.bytes), (0, 0));
+    }
 }
 
 #[cfg(test)]
