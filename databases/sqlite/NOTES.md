@@ -589,3 +589,9 @@ checked ships one today).
 
 **Test-name discovery**: the nine Python tests glob the built library
 (`.so` or `.dylib`) instead of hard-coding `libthinkthen0.so`.
+
+## The seventh review's SQLite row (2026-09-23)
+
+**R4-17, the saved answers had no bound.** The per-process answer map kept every decision, choice, score, tag set, and annotate object. Probe `R4-17b.py` (300,000 distinct 420-byte texts for one question, fresh process): the build at 14f12f5 grew from 13 MB to 218 MB. The map now holds at most 16 MiB, counted as real memory: each key's two strings held twice, each allocation rounded as glibc rounds it, the answer's own text, and the map's and the order's slots counted twice for the room a table keeps after it doubles. With the fix the same probe grew from 13 MB to 30 MB. The oldest answers leave first. `tools/question_cache_probe.py` now drives 200,000 distinct texts and fails past 40 MB of growth; the 14f12f5 build grew 154 MB there and failed. `saved_answer_tests::the_saved_answers_keep_their_byte_budget` pins the cost and the eviction.
+
+Decided: the budget is a constant here, with no setting. The map is the stand-in's and is deleted at the engine swap, and SQLite has no per-connection setting channel this surface already uses. PostgreSQL's table has the same 16 MiB default and a setting, `thinkthen.saved_answer_kb`. Ian can overturn this; the lever is a setting function if a host needs a larger session memory before the swap.

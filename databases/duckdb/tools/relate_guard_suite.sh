@@ -141,3 +141,28 @@ refuse "a lowered thinkthen_relate_holding_rows refuses the small grouping" \
 refuse "a NULL thinkthen_relate_holding_rows reads as the default" \
   "thinkthen usage: the relate query feeds about 2000000 rows into the PERFECT_HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows" \
   "$(run "SET thinkthen_relate_holding_rows = NULL; $big_grouped" || true)"
+
+# The plan guard reads estimates, so a join the planner misjudges still
+# feeds millions of rows into a window (review 5, R5-22: 1 GB and 5 s
+# before the 256-row refusal). A timer stops the relate query once
+# thinkthen_relate_seconds pass, and the connection answers the next
+# query. The limit bounds time, not memory.
+slow_join="SELECT count(*) FROM thinkthen_relate('SELECT k, ''b'' FROM (SELECT a.i AS k, sum(b.j) OVER (PARTITION BY a.i) AS s FROM range(20000) a(i) JOIN range(20000) b(j) ON a.i % 10 = b.j % 10)', ['caused_by']);"
+stopped=$(pipe_run "SET thinkthen_relate_seconds = 1;
+$slow_join
+SELECT 42;" || true)
+refuse "a misjudged join into a window stops at thinkthen_relate_seconds" \
+  "thinkthen usage: the relate query ran past its 1-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off)" \
+  "$stopped"
+expect "the connection answers the next query after the stop" "42" \
+  "$(printf '%s\n' "$stopped" | tail -1)"
+expect "the time limit defaults to sixty seconds" "60" \
+  "$(run "SELECT current_setting('thinkthen_relate_seconds');")"
+for off in 0 NULL; do
+  passed=$(run "SET thinkthen_relate_seconds = $off; CREATE TABLE t AS SELECT i AS id, 'ticket ' || i AS body, i % 7 AS k FROM range(2000) r(i); SELECT count(*) FROM thinkthen_relate('SELECT k, string_agg(body, '' '') FROM t GROUP BY k', ['caused_by']);" || true)
+  if [[ "$passed" != *"no recorded answer for the records"* ]]; then
+    echo "FAILED   SET thinkthen_relate_seconds = $off did not let a small relate reach the backend: '$passed'"
+    exit 1
+  fi
+  echo "ok       SET thinkthen_relate_seconds = $off lets a small relate reach the backend"
+done

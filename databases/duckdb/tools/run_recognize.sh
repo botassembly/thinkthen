@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # The recognize and relate acceptance: the DuckDB calls the product deck's
 # `recognize-surfaces.md` page draws are run verbatim in the stock v1.5.5
-# CLI against the stand-in, and the two calls that cannot run as drawn are
-# pinned with their exact binder errors and the working replacements. The
-# calls come from `tools/drawn-calls/recognize.sql`, a frozen copy of the
-# page's lines as they stood when this check was written (its header
-# records the page's hash and says how the deck has moved since), so this
-# check runs with no private deck on disk. The fixture tables hold recorded texts so the replay can
+# CLI against the stand-in. The relations call cannot run as drawn and
+# is pinned with its exact catalog error beside the working replacement.
+# The calls come from `tools/drawn-calls/recognize.sql`, a vendored copy
+# of the page's lines (its header records the page's hash), so this check
+# runs with no private deck on disk; `tools/drawn_calls_drift.py` compares
+# the copy with the page when the page is present. The fixture tables hold recorded texts so the replay can
 # answer. The "Names become rows" join runs with the usage counters
 # around it, and the 255-record refusal is proven.
 set -euo pipefail
@@ -44,6 +44,19 @@ INSERT INTO alerts VALUES
  (2, 'Card charges are failing for every customer.'),
  (3, 'The nightly export ran two hours late.'),
  (4, 'The payments database ran out of disk space.');
+CREATE TABLE rules(id INTEGER, body VARCHAR);
+INSERT INTO rules VALUES
+ (1, 'Book economy class for every flight under six hours.'),
+ (2, 'Submit receipts within 30 days of the trip.'),
+ (3, 'Hotel stays are capped at 200 dollars a night.'),
+ (4, 'Employees may book business class on any flight.'),
+ (5, 'Rental cars need a manager''s approval.'),
+ (6, 'Receipts may be submitted at any time, with no deadline.'),
+ (7, 'Meals are reimbursed up to 60 dollars a day.'),
+ (8, 'Use the company travel portal for all bookings.'),
+ (9, 'Hotel stays may cost up to 350 dollars a night in any city.'),
+ (10, 'Rental cars can be booked without anyone''s approval.'),
+ (11, 'Flights over six hours may be booked in business class.');
 CREATE TABLE accounts(name VARCHAR, owner VARCHAR);
 INSERT INTO accounts VALUES ('Northwind Freight', 'Dana'), ('Kestrel Labs', 'Amara');
 EOF
@@ -66,7 +79,7 @@ run recognize.sql
 sed -n '2p' calls.sql > relations.sql
 run relations.sql || true
 
-# 3. The relate call as drawn, then the pinned divergence.
+# 3. The relate call as drawn: the query crosses as a string and runs.
 sed -n '3p' calls.sql > relate.sql
 run relate.sql || true
 
@@ -100,5 +113,5 @@ EOF
 run working.sql || true
 
 echo
-echo "done: the first call ran as drawn; the relations and relate lines are"
-echo "pinned divergences with the working replacements above (see NOTES.md)"
+echo "done: the recognize and relate calls ran as drawn; the relations line is"
+echo "a pinned divergence with the working replacement above (see NOTES.md)"

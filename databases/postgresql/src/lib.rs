@@ -90,15 +90,17 @@ static DEADLINE_MS: GucSetting<i32> = GucSetting::<i32>::new(-1);
 /// The engine, lazy in each backend. Built on first use, after the fork.
 static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 
-/// The most bytes of question digests and evidence the per-backend
-/// answer table holds (review 5: 270,000 warmed answers grew one backend
-/// from 13 MB to 150 MB, never released). Past the budget the oldest
-/// answers leave first, so a working set larger than the budget turns
-/// over and a later decide on an evicted pair sends again. The budget
-/// counts each key twice (the map and the eviction order), so it holds
-/// about 8 MiB of distinct digests and evidence: about four full warm
-/// passes (each is capped at 2 MiB of state).
-const SAVED_ANSWER_BYTES: usize = 16 * 1024 * 1024;
+/// The most kilobytes of memory the per-backend answer table may hold
+/// (review 5: 270,000 warmed answers grew one backend from 13 MB to
+/// 150 MB, never released). `Userset`, like `work_mem`, because the table
+/// is the backend's own memory; `0` saves nothing. Past the budget the
+/// oldest answers leave first, so a working set larger than the budget
+/// turns over and a later decide on an evicted pair sends again.
+static SAVED_ANSWER_KB: GucSetting<i32> = GucSetting::<i32>::new(SAVED_ANSWER_KB_DEFAULT);
+
+/// The budget's default: 16 MiB of real memory, about 18,000 answers
+/// over 200-byte evidence.
+const SAVED_ANSWER_KB_DEFAULT: i32 = 16 * 1024;
 
 /// The per-backend answer table: every decision a warm pass or a single
 /// decide judged, keyed by the question's digest and the evidence, read
@@ -113,19 +115,40 @@ struct SavedAnswers {
     budget: usize,
 }
 
+/// What the allocator hands out for `len` bytes: glibc rounds a request
+/// and its 8-byte header up to 16 bytes, and 32 at least.
+fn heap_bytes(len: usize) -> usize {
+    if len == 0 { 0 } else { ((len + 8 + 15) & !15).max(32) }
+}
+
 impl SavedAnswers {
     fn with_budget(budget: usize) -> Self {
         SavedAnswers { map: HashMap::new(), order: std::collections::VecDeque::new(), bytes: 0, budget }
     }
 
-    /// The bytes one entry costs: its key, held twice (map and order).
+    /// The memory one entry costs, counted as the allocator and the
+    /// tables spend it (review 7, R7-6: counting only the key's text
+    /// held about a quarter of the real bytes). The key's two strings
+    /// are held twice (map and order), each in its own allocation. The
+    /// map's slot and control byte and the order's slot are counted
+    /// twice, for the room a table keeps free after it doubles.
     fn cost(key: &(String, String)) -> usize {
-        2 * (key.0.len() + key.1.len())
+        let text = 2 * (heap_bytes(key.0.len()) + heap_bytes(key.1.len()));
+        let map_slot = std::mem::size_of::<((String, String), thinkthen_contract::Answer)>() + 1;
+        let order_slot = std::mem::size_of::<(String, String)>();
+        text + 2 * (map_slot + order_slot)
     }
 
-    /// Save one answer, evicting the oldest past the budget.
+    /// Set the budget from the setting's kilobytes; a lower budget
+    /// evicts at the next insert.
+    fn set_budget_kb(&mut self, kb: i32) {
+        self.budget = usize::try_from(kb).unwrap_or(0).saturating_mul(1024);
+    }
+
+    /// Save one answer, evicting the oldest past the budget. An entry
+    /// that alone passes the budget is not saved.
     fn insert(&mut self, key: (String, String), answer: thinkthen_contract::Answer) {
-        if self.map.insert(key.clone(), answer).is_none() {
+        if Self::cost(&key) <= self.budget && self.map.insert(key.clone(), answer).is_none() {
             self.bytes += Self::cost(&key);
             self.order.push_back(key);
         }
@@ -137,9 +160,17 @@ impl SavedAnswers {
     }
 }
 
-fn answers() -> &'static std::sync::Mutex<SavedAnswers> {
+/// The answer table, its budget read from the setting. Called on the
+/// backend's own thread only, because the setting read checks the
+/// active thread.
+fn answers() -> std::sync::MutexGuard<'static, SavedAnswers> {
     static ANSWERS: OnceLock<std::sync::Mutex<SavedAnswers>> = OnceLock::new();
-    ANSWERS.get_or_init(|| std::sync::Mutex::new(SavedAnswers::with_budget(SAVED_ANSWER_BYTES)))
+    let mut table = ANSWERS
+        .get_or_init(|| std::sync::Mutex::new(SavedAnswers::with_budget(0)))
+        .lock()
+        .unwrap();
+    table.set_budget_kb(SAVED_ANSWER_KB.get());
+    table
 }
 
 /// Answers read back from the table instead of sent. The engine's own
@@ -165,8 +196,6 @@ fn answer_key(question: &Question, evidence: &str) -> (String, String) {
 /// The saved decision for a question and evidence, if one was judged.
 fn saved_decision(question: &Question, evidence: &str) -> Option<thinkthen_contract::Answer> {
     let answer = answers()
-        .lock()
-        .unwrap()
         .map
         .get(&answer_key(question, evidence))
         .copied()?;
@@ -680,10 +709,7 @@ fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bo
     match engine.decide_opts(&question, evidence, call_options()) {
         Ok(answer) => {
             let value = answer.value();
-            answers()
-                .lock()
-                .unwrap()
-                .insert(answer_key(&question, evidence), answer);
+            answers().insert(answer_key(&question, evidence), answer);
             value
         }
         Err(error) => raise(error),
@@ -1211,7 +1237,7 @@ impl Aggregate<Warm> for Warm {
                 // sending (review 4, item 15: 20,000 warmed pairs then
                 // 20,000 decide calls used 40,000 requests).
                 Ok(held) => {
-                    let mut saved = answers().lock().unwrap();
+                    let mut saved = answers();
                     for (evidence, judgment) in judged_keys.iter().zip(held) {
                         saved.insert((key.clone(), evidence.clone()), judgment.answer);
                     }
@@ -1238,6 +1264,16 @@ extern "C-unwind" fn _PG_init() {
         i32::MAX,
         GucContext::Userset,
         GucFlags::default(),
+    );
+    GucRegistry::define_int_guc(
+        c"thinkthen.saved_answer_kb",
+        c"the most memory the backend's saved-answer table holds, in kilobytes; 0 saves nothing",
+        c"",
+        &SAVED_ANSWER_KB,
+        0,
+        i32::MAX,
+        GucContext::Userset,
+        GucFlags::UNIT_KB,
     );
     GucRegistry::define_string_guc(
         c"thinkthen.api_key",
@@ -1489,24 +1525,35 @@ mod mapping_tests {
 
     /// The answer table's byte budget (review 5): past it the oldest
     /// answers leave, the newest stay, and the held bytes never pass the
-    /// budget, however many distinct pairs one backend judges.
+    /// budget, however many distinct pairs one backend judges. An entry
+    /// costs its allocations and table slots, not only its text (review
+    /// 7, R7-6), and a zero budget saves nothing.
     #[test]
     fn the_answer_table_keeps_its_byte_budget() {
         use thinkthen_contract::Answer;
-        let mut table = SavedAnswers::with_budget(4_000);
+        let key = |row: usize| ("digest".to_owned(), format!("evidence {row:04}"));
+        // Four allocations of 32 bytes, two map slots, two order slots.
+        let slots = 2 * (std::mem::size_of::<((String, String), Answer)>() + 1 + std::mem::size_of::<(String, String)>());
+        assert_eq!(SavedAnswers::cost(&key(0)), 4 * 32 + slots);
+        let mut table = SavedAnswers::with_budget(0);
+        table.set_budget_kb(64);
         for row in 0..1_000 {
-            table.insert(("digest".to_owned(), format!("evidence {row:04}")), Answer::Yes);
-            assert!(table.bytes <= 4_000, "{} bytes after row {row}", table.bytes);
+            table.insert(key(row), Answer::Yes);
+            assert!(table.bytes <= 64 * 1024, "{} bytes after row {row}", table.bytes);
         }
-        // Each pair costs 2 * (6 + 13) = 38 bytes, so 105 fit.
-        assert_eq!(table.map.len(), 105);
-        assert_eq!(table.order.len(), 105);
-        assert!(table.map.contains_key(&("digest".to_owned(), "evidence 0999".to_owned())));
-        assert!(!table.map.contains_key(&("digest".to_owned(), "evidence 0000".to_owned())));
+        let fit = 64 * 1024 / SavedAnswers::cost(&key(0));
+        assert_eq!(table.map.len(), fit);
+        assert_eq!(table.order.len(), fit);
+        assert!(table.map.contains_key(&key(999)));
+        assert!(!table.map.contains_key(&key(0)));
         // Saving a pair again replaces its answer without growing the table.
-        table.insert(("digest".to_owned(), "evidence 0999".to_owned()), Answer::No);
-        assert_eq!(table.map.len(), 105);
-        assert_eq!(table.map.get(&("digest".to_owned(), "evidence 0999".to_owned())), Some(&Answer::No));
+        table.insert(key(999), Answer::No);
+        assert_eq!(table.map.len(), fit);
+        assert_eq!(table.map.get(&key(999)), Some(&Answer::No));
+        // A lowered budget evicts at the next insert; zero saves nothing.
+        table.set_budget_kb(0);
+        table.insert(key(1_000), Answer::Yes);
+        assert_eq!((table.map.len(), table.order.len(), table.bytes), (0, 0, 0));
     }
 
     /// The warm byte cap (review 4, item 15): the state's length is the

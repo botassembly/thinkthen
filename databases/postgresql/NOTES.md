@@ -574,3 +574,11 @@ pins the boundary within one row.
 '--locked' found`), so the same guarantee runs one step ahead —
 `cargo check --quiet --locked` gates the package step and fails when the
 lockfile would change. The gate line is in check.sh with this reason.
+
+## The seventh review's PostgreSQL rows (2026-09-23)
+
+**R7-6 and R5-17, the saved-answer budget.** The byte budget counted only the key's text, twice. It now counts what each entry spends: each key string's allocation as glibc rounds it, held twice (map and order), plus the map's slot and control byte and the order's slot, each counted twice for the room a table keeps after it doubles. A lowered budget evicts at the next insert, and an entry larger than the budget is not saved.
+
+Decided: the budget is a setting, `thinkthen.saved_answer_kb` (`Userset`, unit kB, default 16 MB, `0` saves nothing). A backend's table is that backend's own memory, as `work_mem` is, so any role may size it. `check.sh` pins the default, that `0` makes a decide send again after a warm pass, and that the default reads the pass back; on the 14f12f5 build the step fails (the setting does not exist, and the zero budget still saved). `the_answer_table_keeps_its_byte_budget` pins the cost, the eviction, and the zero budget. Ian can overturn the setting or its default.
+
+Measured with `R7-6.sql` (270,000 warmed answers of about 210 bytes, null engine, one fresh backend each, VmRSS in MB): the workload alone (`saved_answer_kb = 0`) grew 21 and 30 MB in two runs; 4 MB grew 33 and 33; 16 MB grew 48; the 14f12f5 build (16 MiB of key text) grew 52. The table's share is therefore about 12 MB at 4 MB and 27 MB at 16 MB: about 1.25 times the budget at the margin, plus a constant 7 to 8 MB of heap the evicted strings leave fragmented. The old count reached about 31 MB at its 16 MiB. The run-to-run spread of the workload alone is about 9 MB, so the gate checks the setting's effect and the unit test checks the arithmetic; the memory numbers stay in this probe.

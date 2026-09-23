@@ -350,6 +350,32 @@ SQL
   || { echo "FAILED   a two-record batch took ${batch_wall}ms (the 100ms floor survived)" >&2; exit 1; }
 echo "ok       a two-record batch answered in ${batch_wall}ms (the pre-fix floor was 100ms)"
 
+echo "== postgres surface: the saved-answer budget is a setting (review 7, R7-6)"
+# thinkthen.saved_answer_kb bounds the backend's answer table in real
+# memory, default 16 MB. At 0 nothing is saved, so a decide after a warm
+# pass sends again; reset, the same pass is read back from the table.
+psql_in -Atq << 'SQL' > .tmp-budget.out
+SELECT 'loaded', requests FROM thinkthen_usage();
+SHOW thinkthen.saved_answer_kb;
+SET thinkthen.saved_answer_kb = 0;
+SELECT thinkthen_warm('{"decide":"Is it blue?"}', 'blue ' || g) FROM generate_series(1, 100) g;
+SELECT count(*) FROM generate_series(1, 100) g WHERE thinkthen_decide('{"decide":"Is it blue?"}', 'blue ' || g) IS NOT NULL;
+SELECT 'off', requests, cache_answers FROM thinkthen_usage();
+RESET thinkthen.saved_answer_kb;
+SELECT thinkthen_warm('{"decide":"Is it blue?"}', 'blue ' || g) FROM generate_series(1, 100) g;
+SELECT count(*) FROM generate_series(1, 100) g WHERE thinkthen_decide('{"decide":"Is it blue?"}', 'blue ' || g) IS NOT NULL;
+SELECT 'on', requests, cache_answers FROM thinkthen_usage();
+SQL
+start=$(sed -n 's/^loaded|//p' .tmp-budget.out)
+grep -qx "16MB" .tmp-budget.out \
+  || { echo "FAILED   thinkthen.saved_answer_kb does not default to 16MB" >&2; cat .tmp-budget.out >&2; exit 1; }
+grep -qx "off|$((start + 200))|0" .tmp-budget.out \
+  || { echo "FAILED   a zero budget still saved answers" >&2; cat .tmp-budget.out >&2; exit 1; }
+grep -qx "on|$((start + 300))|100" .tmp-budget.out \
+  || { echo "FAILED   the default budget did not read the warm pass back" >&2; cat .tmp-budget.out >&2; exit 1; }
+echo "ok       thinkthen.saved_answer_kb defaults to 16MB; at 0 a decide sends again, reset it reads the warm pass back"
+rm -f .tmp-budget.out
+
 echo "== postgres surface: warm holds twenty thousand rows in seconds, not a minute"
 # Review 3, item 23: the JSON state re-read and re-wrote the whole
 # aggregate on every row — 54.6 s at 20,000 rows, measured by the review.

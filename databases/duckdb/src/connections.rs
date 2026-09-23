@@ -996,8 +996,31 @@ pub(crate) fn search_path_of(caller: ffi::duckdb_client_context) -> Option<Strin
 /// The database's own name, through `current_database()` on its kept
 /// connection.
 fn database_name(connection: ffi::duckdb_connection) -> Result<String, String> {
+    let rows = unsafe { text_rows(connection, c"SELECT current_database()") }
+        .map_err(|text| format!("thinkthen defect: the database's name did not read: {text}"))?;
+    first_text(&rows).ok_or_else(|| "thinkthen defect: current_database() returned nothing".into())
+}
+
+/// A query's rows read through the data-chunk API, every column as text.
+pub(crate) struct TextRows {
+    /// How many columns the query returned.
+    pub columns: usize,
+    /// Each row's values in column order; a NULL reads as `None`.
+    pub rows: Vec<Vec<Option<String>>>,
+}
+
+/// The first column of the first row, when it holds a value.
+pub(crate) fn first_text(rows: &TextRows) -> Option<String> {
+    rows.rows.first().and_then(|row| row.first().cloned().flatten())
+}
+
+/// Run one query and read its rows as text through the data-chunk API
+/// (review 4, R4-16: the per-value result functions this replaced are
+/// deprecated in the 1.5.5 C API). Every column must be VARCHAR, so the
+/// caller's SQL casts; any other column type refuses rather than being
+/// misread. `Err` carries DuckDB's own message.
+pub(crate) unsafe fn text_rows(connection: ffi::duckdb_connection, sql: &CStr) -> Result<TextRows, String> {
     let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
-    let sql = c"SELECT current_database()";
     if unsafe { ffi::duckdb_query(connection, sql.as_ptr(), &mut result) } != ffi::DuckDBSuccess {
         let message = unsafe { ffi::duckdb_result_error(&mut result) };
         let text = if message.is_null() {
@@ -1006,17 +1029,49 @@ fn database_name(connection: ffi::duckdb_connection) -> Result<String, String> {
             unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
         };
         unsafe { ffi::duckdb_destroy_result(&mut result) };
-        return Err(format!("thinkthen defect: the database's name did not read: {text}"));
+        return Err(text);
     }
-    let raw = unsafe { ffi::duckdb_value_varchar(&mut result, 0, 0) };
-    if raw.is_null() {
-        unsafe { ffi::duckdb_destroy_result(&mut result) };
-        return Err("thinkthen defect: current_database() returned nothing".into());
-    }
-    let name = unsafe { CStr::from_ptr(raw) }.to_string_lossy().into_owned();
-    unsafe { ffi::duckdb_free(raw as *mut c_void) };
+    let outcome = unsafe { read_text_chunks(&mut result) };
     unsafe { ffi::duckdb_destroy_result(&mut result) };
-    Ok(name)
+    outcome
+}
+
+/// The chunk loop behind [`text_rows`]; the caller destroys the result.
+unsafe fn read_text_chunks(result: &mut ffi::duckdb_result) -> Result<TextRows, String> {
+    let columns = unsafe { ffi::duckdb_column_count(result) } as usize;
+    for column in 0..columns {
+        let kind = unsafe { ffi::duckdb_column_type(result, column as u64) };
+        if kind != ffi::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR {
+            return Err(format!("thinkthen defect: column {} did not come back as text", column + 1));
+        }
+    }
+    let mut rows = Vec::new();
+    loop {
+        let mut chunk = unsafe { ffi::duckdb_fetch_chunk(*result) };
+        if chunk.is_null() {
+            break;
+        }
+        let size = unsafe { ffi::duckdb_data_chunk_get_size(chunk) } as usize;
+        let start = rows.len();
+        rows.resize_with(start + size, || Vec::with_capacity(columns));
+        for column in 0..columns {
+            let vector = unsafe { ffi::duckdb_data_chunk_get_vector(chunk, column as u64) };
+            let strings = unsafe { ffi::duckdb_vector_get_data(vector) } as *mut ffi::duckdb_string_t;
+            let validity = unsafe { ffi::duckdb_vector_get_validity(vector) };
+            for row in 0..size {
+                let valid = validity.is_null() || unsafe { ffi::duckdb_validity_row_is_valid(validity, row as u64) };
+                let value = valid.then(|| unsafe {
+                    let string = strings.add(row);
+                    let length = ffi::duckdb_string_t_length(*string) as usize;
+                    let data = ffi::duckdb_string_t_data(string) as *const u8;
+                    String::from_utf8_lossy(std::slice::from_raw_parts(data, length)).into_owned()
+                });
+                rows[start + row].push(value);
+            }
+        }
+        unsafe { ffi::duckdb_destroy_data_chunk(&mut chunk) };
+    }
+    Ok(TextRows { columns, rows })
 }
 
 /// Set once the process begins exiting, so the reaper stops touching
@@ -1179,32 +1234,10 @@ fn detach_probe(connection: ffi::duckdb_connection, probe: &str, marker: &str) {
 /// answers one row holding the count, so the row is read, never wrapped
 /// in a `count(*)` that would answer one for the function's one row.
 fn count_connections(connection: ffi::duckdb_connection) -> Result<u64, String> {
-    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
-    let sql = c"SELECT * FROM duckdb_connection_count()";
-    if unsafe { ffi::duckdb_query(connection, sql.as_ptr(), &mut result) } != ffi::DuckDBSuccess {
-        let message = unsafe { ffi::duckdb_result_error(&mut result) };
-        let text = if message.is_null() {
-            "the count failed".to_owned()
-        } else {
-            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
-        };
-        unsafe { ffi::duckdb_destroy_result(&mut result) };
-        return Err(text);
-    }
-    let raw = unsafe { ffi::duckdb_value_varchar(&mut result, 0, 0) };
-    let count = if raw.is_null() {
-        None
-    } else {
-        unsafe { CStr::from_ptr(raw) }
-            .to_string_lossy()
-            .parse::<u64>()
-            .ok()
-    };
-    if !raw.is_null() {
-        unsafe { ffi::duckdb_free(raw as *mut c_void) };
-    }
-    unsafe { ffi::duckdb_destroy_result(&mut result) };
-    count.ok_or_else(|| "the connection count did not read".to_owned())
+    let rows = unsafe { text_rows(connection, c"SELECT COLUMNS(*)::VARCHAR FROM duckdb_connection_count()") }?;
+    first_text(&rows)
+        .and_then(|text| text.parse::<u64>().ok())
+        .ok_or_else(|| "the connection count did not read".to_owned())
 }
 
 /// Held by every test that raises SIGINT or counts bridge wakes, so one

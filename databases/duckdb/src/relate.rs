@@ -4,12 +4,10 @@
 //! The first argument is a query whose first column is each record's id
 //! and whose second is its text: `SELECT * FROM
 //! thinkthen_relate('SELECT id, body FROM alerts', ['caused_by'])`. The
-//! deck drew a raw subquery in that position
-//! (`thinkthen_relate((SELECT id, body FROM alerts), ...)`); the stable C
-//! API cannot register a table function that takes a subquery — only a
-//! table-in-out function accepts a subquery parameter, and the C API
-//! cannot register those — so the query crosses as a string, the shape
-//! PostgreSQL's row in the design page already takes. The finding is
+//! stable C API cannot register a table function that takes a subquery:
+//! only a table-in-out function accepts a subquery parameter, and the C
+//! API cannot register those. So the query crosses as a string, the
+//! shape PostgreSQL's row takes and the deck now draws. The finding is
 //! pinned in NOTES.md.
 //!
 //! The second argument is a `LIST` of rule names, or a single `'@file'`
@@ -475,27 +473,37 @@ fn temp_table_exists(caller: ffi::duckdb_client_context, name: &str) -> bool {
 /// the cap plus one row is the refusal itself.
 unsafe fn run_query(bind: &Bind) -> Result<Vec<(String, String)>, String> {
     let connection = bind.connection.connection();
-    unsafe { ensure_single_statement(connection, &bind.query)? };
-    unsafe { ensure_select_statement(connection, &bind.query)? };
     let search = connections::search_path_of(bind.caller);
     let holding = connections::option_count(bind.caller, HOLDING_ROWS_SETTING).unwrap_or(HOLDING_ROWS_DEFAULT);
-    unsafe { begin_read_only(connection)? };
+    let seconds = connections::option_count(bind.caller, SECONDS_SETTING).unwrap_or(SECONDS_DEFAULT);
     let capped = format!(
-        "SELECT * FROM ({}) AS thinkthen_capped LIMIT {}",
+        "SELECT COLUMNS(*)::VARCHAR FROM ({}) AS thinkthen_capped LIMIT {}",
         bind.query,
         RECORD_CAP + 1
     );
-    let outcome = unsafe {
+    // Every step that plans the query runs under the timer, the
+    // statement checks included: planning folds a constant like
+    // `range(8000000)` into one list, and each plan of it took 22 s and
+    // 600 MB before any row ran.
+    let (outcome, stopped) = under_time_limit(connection, seconds, || unsafe {
+        ensure_single_statement(connection, &bind.query)?;
+        ensure_select_statement(connection, &bind.query)?;
+        begin_read_only(connection)?;
         under_search_path(connection, search.as_deref(), || {
             ensure_bounded_plan(connection, &capped, holding)?;
             run_statement(connection, &capped)
         })
-    };
+    });
     // The read-only transaction ends either way; rollback and an unset
     // search path leave the kept connection as the next query expects it.
     let _ = unsafe { execute(connection, c"ROLLBACK") };
     let _ = unsafe { execute(connection, c"RESET search_path") };
-    outcome
+    match outcome {
+        Err(_) if stopped => Err(format!(
+            "thinkthen usage: the relate query ran past its {seconds}-second limit and was stopped; filter the rows first or raise SET {SECONDS_SETTING} (0 turns the limit off)"
+        )),
+        outcome => outcome,
+    }
 }
 
 /// The setting that holds the most rows the planner may estimate
@@ -522,6 +530,57 @@ pub(crate) const HOLDING_ROWS_SETTING: &str = "thinkthen_relate_holding_rows";
 /// joined record source over an ordinary table.
 const HOLDING_ROWS_DEFAULT: u64 = 1_000_000;
 
+/// The setting that holds the most seconds the relate query may run on
+/// the kept connection before a timer interrupts it (review 5, R5-22).
+/// The plan guard reads estimates, and an `unnest`, a recursive query, or
+/// a join the planner misjudges can still feed a gigabyte into a holding
+/// step; the timer stops such a query instead of letting it run on. It
+/// bounds time, not memory: a query can still hold what it gathers
+/// before the limit. `0` turns the limit off, and `NULL` reads as the
+/// default.
+pub(crate) const SECONDS_SETTING: &str = "thinkthen_relate_seconds";
+
+/// The time limit's default: an honest record source of at most 255 rows
+/// over an ordinary table reads well inside a minute.
+const SECONDS_DEFAULT: u64 = 60;
+
+/// Run `body` while a timer stands ready to interrupt `connection` once
+/// `seconds` pass, the same `duckdb_interrupt` the SIGINT bridge sends to
+/// a busy kept connection. Answers the body's outcome and whether the
+/// timer fired. The timer is joined before this returns, so it never
+/// outlives the connection; an interrupt that lands after the body
+/// finished is cleared by DuckDB when the next query starts.
+fn under_time_limit<T>(connection: ffi::duckdb_connection, seconds: u64, body: impl FnOnce() -> T) -> (T, bool) {
+    if seconds == 0 {
+        return (body(), false);
+    }
+    let limit = std::time::Duration::from_secs(seconds);
+    let done = std::sync::Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
+    let target = connection as usize;
+    let timer = {
+        let done = std::sync::Arc::clone(&done);
+        std::thread::spawn(move || {
+            let (lock, wake) = &*done;
+            let held = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let (_held, waited) = wake
+                .wait_timeout_while(held, limit, |finished| !*finished)
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if waited.timed_out() {
+                unsafe { ffi::duckdb_interrupt(target as ffi::duckdb_connection) };
+            }
+            waited.timed_out()
+        })
+    };
+    let outcome = body();
+    {
+        let (lock, wake) = &*done;
+        *lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = true;
+        wake.notify_all();
+    }
+    let fired = timer.join().unwrap_or(false);
+    (outcome, fired)
+}
+
 /// Plan the capped query and refuse it when a step that holds its whole
 /// input is estimated to take more than `limit` rows, so the refusal
 /// lands before anything materializes.
@@ -543,33 +602,12 @@ unsafe fn first_plan_text(connection: ffi::duckdb_connection, sql: &str) -> Resu
     let Ok(sql_c) = CString::new(sql) else {
         return Err("thinkthen usage: the relate query holds a NUL byte".into());
     };
-    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
-    if unsafe { ffi::duckdb_query(connection, sql_c.as_ptr(), &mut result) } != ffi::DuckDBSuccess {
-        let message = unsafe { ffi::duckdb_result_error(&mut result) };
-        let text = if message.is_null() {
-            "the plan failed".to_owned()
-        } else {
-            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
-        };
-        unsafe { ffi::duckdb_destroy_result(&mut result) };
-        return Err(format!("thinkthen usage: the relate query failed: {text}"));
-    }
-    let rows = unsafe { ffi::duckdb_row_count(&mut result) };
-    let columns = unsafe { ffi::duckdb_column_count(&mut result) };
-    let text = if rows > 0 && columns > 1 {
-        let value = unsafe { ffi::duckdb_value_varchar(&mut result, 1, 0) };
-        if value.is_null() {
-            Err("thinkthen defect: the relate plan came back empty".to_owned())
-        } else {
-            let text = unsafe { CStr::from_ptr(value) }.to_string_lossy().into_owned();
-            unsafe { ffi::duckdb_free(value as *mut c_void) };
-            Ok(text)
-        }
-    } else {
-        Err("thinkthen defect: the relate plan came back empty".to_owned())
-    };
-    unsafe { ffi::duckdb_destroy_result(&mut result) };
-    text
+    let plan = unsafe { connections::text_rows(connection, &sql_c) }
+        .map_err(|text| format!("thinkthen usage: the relate query failed: {text}"))?;
+    plan.rows
+        .first()
+        .and_then(|row| row.get(1).cloned().flatten())
+        .ok_or_else(|| "thinkthen defect: the relate plan came back empty".to_owned())
 }
 
 /// The holding step with the largest estimated input anywhere in the
@@ -791,65 +829,39 @@ unsafe fn execute(connection: ffi::duckdb_connection, sql: &std::ffi::CStr) -> R
     Ok(())
 }
 
-/// One statement's rows as `(id, text)` pairs; any value renders as its
-/// text, so an integer id comes back as `1`.
+/// One statement's rows as `(id, text)` pairs. The statement casts every
+/// column to text, so an integer id comes back as `1`.
 unsafe fn run_statement(
     connection: ffi::duckdb_connection,
     sql: &str,
 ) -> Result<Vec<(String, String)>, String> {
-    let sql_c = match CString::new(sql) {
-        Ok(sql_c) => sql_c,
-        Err(_) => {
-            return Err("thinkthen usage: the relate query holds a NUL byte".into());
-        }
+    let Ok(sql_c) = CString::new(sql) else {
+        return Err("thinkthen usage: the relate query holds a NUL byte".into());
     };
-    let mut result: ffi::duckdb_result = unsafe { std::mem::zeroed() };
-    let state = unsafe { ffi::duckdb_query(connection, sql_c.as_ptr(), &mut result) };
-    if state != ffi::DuckDBSuccess {
-        let message = unsafe { ffi::duckdb_result_error(&mut result) };
-        let text = if message.is_null() {
-            "the query failed".to_owned()
-        } else {
-            unsafe { CStr::from_ptr(message) }.to_string_lossy().into_owned()
-        };
-        unsafe { ffi::duckdb_destroy_result(&mut result) };
-        return Err(format!("thinkthen usage: the relate query failed: {text}"));
-    }
-    let columns = unsafe { ffi::duckdb_column_count(&mut result) };
-    if columns < 2 {
-        unsafe { ffi::duckdb_destroy_result(&mut result) };
+    let found = unsafe { connections::text_rows(connection, &sql_c) }
+        .map_err(|text| format!("thinkthen usage: the relate query failed: {text}"))?;
+    if found.columns < 2 {
         return Err(
             "thinkthen usage: the relate query must return the id and the text as its first two columns"
                 .into(),
         );
     }
-    let rows = unsafe { ffi::duckdb_row_count(&mut result) };
+    let rows = found.rows.len() as u64;
     if rows > RECORD_CAP + 1 {
-        unsafe { ffi::duckdb_destroy_result(&mut result) };
         return Err(format!(
             "thinkthen usage: the relate query returned {rows} records and relate asks about at most {RECORD_CAP}; add a LIMIT or a WHERE"
         ));
     }
-    let mut records = Vec::with_capacity(rows.min(RECORD_CAP + 1) as usize);
-    for row in 0..rows.min(RECORD_CAP + 1) {
-        let id_null = unsafe { ffi::duckdb_value_is_null(&mut result, 0, row) };
-        let text_null = unsafe { ffi::duckdb_value_is_null(&mut result, 1, row) };
-        if id_null || text_null {
-            unsafe { ffi::duckdb_destroy_result(&mut result) };
-            return Err(format!(
-                "thinkthen usage: record {} carries a NULL id or text",
-                row + 1
-            ));
+    let mut records = Vec::with_capacity(found.rows.len());
+    for (row, values) in found.rows.into_iter().enumerate() {
+        let mut values = values.into_iter();
+        match (values.next().flatten(), values.next().flatten()) {
+            (Some(id), Some(text)) => records.push((id, text)),
+            _ => {
+                return Err(format!("thinkthen usage: record {} carries a NULL id or text", row + 1));
+            }
         }
-        let id_ptr = unsafe { ffi::duckdb_value_varchar(&mut result, 0, row) };
-        let text_ptr = unsafe { ffi::duckdb_value_varchar(&mut result, 1, row) };
-        let id = unsafe { CStr::from_ptr(id_ptr) }.to_string_lossy().into_owned();
-        let text = unsafe { CStr::from_ptr(text_ptr) }.to_string_lossy().into_owned();
-        unsafe { ffi::duckdb_free(id_ptr as *mut c_void) };
-        unsafe { ffi::duckdb_free(text_ptr as *mut c_void) };
-        records.push((id, text));
     }
-    unsafe { ffi::duckdb_destroy_result(&mut result) };
     Ok(records)
 }
 
@@ -877,35 +889,57 @@ pub unsafe fn register(connection: ffi::duckdb_connection) -> Result<(), String>
         }
         let mut table = table;
         ffi::duckdb_destroy_table_function(&mut table);
-        register_holding_setting(connection)
+        register_settings(connection)
     }
 }
 
-/// Register [`HOLDING_ROWS_SETTING`], a `UBIGINT` a caller sets with
-/// `SET`, defaulting to [`HOLDING_ROWS_DEFAULT`].
-unsafe fn register_holding_setting(connection: ffi::duckdb_connection) -> Result<(), String> {
+/// Register relate's two count settings, each a `UBIGINT` a caller sets
+/// with `SET`.
+unsafe fn register_settings(connection: ffi::duckdb_connection) -> Result<(), String> {
+    unsafe {
+        register_count_setting(
+            connection,
+            HOLDING_ROWS_SETTING,
+            HOLDING_ROWS_DEFAULT,
+            c"the most rows relate lets the planner estimate into one sorting, grouping, windowing, or joining step",
+        )?;
+        register_count_setting(
+            connection,
+            SECONDS_SETTING,
+            SECONDS_DEFAULT,
+            c"the most seconds the relate query may run before it is stopped; 0 turns the limit off",
+        )
+    }
+}
+
+/// Register one session-scoped `UBIGINT` setting with its default.
+unsafe fn register_count_setting(
+    connection: ffi::duckdb_connection,
+    setting: &str,
+    default: u64,
+    description: &CStr,
+) -> Result<(), String> {
     unsafe {
         let mut option = ffi::duckdb_create_config_option();
-        let name = CString::new(HOLDING_ROWS_SETTING).expect("the name holds no NUL byte");
+        let name = CString::new(setting).expect("the name holds no NUL byte");
         ffi::duckdb_config_option_set_name(option, name.as_ptr());
         let mut ubigint = ffi::duckdb_create_logical_type(ffi::DUCKDB_TYPE_DUCKDB_TYPE_UBIGINT);
         ffi::duckdb_config_option_set_type(option, ubigint);
         ffi::duckdb_destroy_logical_type(&mut ubigint);
-        let mut default = ffi::duckdb_create_uint64(HOLDING_ROWS_DEFAULT);
+        let mut default = ffi::duckdb_create_uint64(default);
         ffi::duckdb_config_option_set_default_value(option, default);
         ffi::duckdb_destroy_value(&mut default);
         ffi::duckdb_config_option_set_default_scope(
             option,
             ffi::duckdb_config_option_scope_DUCKDB_CONFIG_OPTION_SCOPE_SESSION,
         );
-        let description = c"the most rows relate lets the planner estimate into one sorting, grouping, windowing, or joining step";
         ffi::duckdb_config_option_set_description(option, description.as_ptr());
         let state = ffi::duckdb_register_config_option(connection, option);
         ffi::duckdb_destroy_config_option(&mut option);
         if state == ffi::DuckDBSuccess {
             Ok(())
         } else {
-            Err(format!("thinkthen defect: {HOLDING_ROWS_SETTING} did not register"))
+            Err(format!("thinkthen defect: {setting} did not register"))
         }
     }
 }

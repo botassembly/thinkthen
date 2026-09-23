@@ -34,11 +34,11 @@ the values await a backend that distinguishes options.
   `thinkthen_recognize` and `unnest()` makes rows.
 - `thinkthen_relate(query, rules)` takes a query whose first column is
   each record's id and whose second is its text, and returns rows
-  `(name, source, target, probability)`. The deck drew a raw subquery in
-  the first argument; the stable C API registers no table function that
-  takes one — the binder refuses subqueries for every function but a
-  table-in-out function, and the C API cannot register those — so the
-  query crosses as a string, the shape PostgreSQL's row takes. Ids come
+  `(name, source, target, probability)`. The query crosses as a string,
+  the shape PostgreSQL's row takes and the deck now draws: the stable C
+  API registers no table function that takes a subquery, because the
+  binder refuses subqueries for every function but a table-in-out
+  function, and the C API cannot register those. Ids come
   back as their text, so an integer id joins with one cast. The query is
   one `SELECT` — the prepared statement's own kind is checked before
   anything runs, so `COPY ... TO`, `EXPORT DATABASE`, `ATTACH`, `SET
@@ -53,11 +53,17 @@ the values await a backend that distinguishes options.
   refuses before anything runs. **Known limit: the guard trusts the
   planner's estimates.** A join estimated at 20,000 rows fed 40 million
   into a window and held 1,065 MB, and `unnest` and recursive queries
-  go unestimated (review 6). DuckDB 1.5.5 has no memory bound an
-  extension can scope to one query: `memory_limit`, `temp_directory`,
-  and `max_temp_directory_size` are GLOBAL, so setting them during a
-  relate would squeeze the host's other queries. Such a shape is bounded
-  by the host's own `memory_limit`.
+  go unestimated (review 6). A timer therefore stops the relate
+  query, its planning included, once `thinkthen_relate_seconds` pass
+  (default 60; `0` turns the limit off, `NULL` reads as the default).
+  With the limit at 2 s, the misjudged join stopped at 2.0 s holding
+  415 MB instead of 5.4 s and 1,058 MB, and the `unnest` shape at 4.8 s
+  instead of 36 s (review 7, R5-22). The limit bounds time, not memory:
+  a query holds what it gathers before the timer fires. DuckDB 1.5.5
+  has no memory bound an extension can scope to one query:
+  `memory_limit`, `temp_directory`, and `max_temp_directory_size` are
+  GLOBAL, so setting them during a relate would squeeze the host's other
+  queries. The host's own `memory_limit` is the hard bound.
 - The relate scan runs on a kept connection of the caller's own
   database, resolved through an identity no SQL can forge: a uniquely
   named in-memory database attached to that database's instance at LOAD.
@@ -184,8 +190,10 @@ recognition, relations — is the engine's.
   (`duckdb.h` line 1014), and a function callback holds only a client
   context, whose entries are the catalog, the config options, the file
   system, and the connection id. SIGINT, or a per-call deadline, is the
-  way to bound a call; the item stays open until DuckDB exposes the
-  interrupt state to extensions.
+  way to bound a call. Review 7 decided to keep this as a documented
+  limit (R5-23, see NOTES.md). If an embedding host needs to cancel one
+  call, the lever is a public cancel function this extension would add
+  for that host to call.
 
 ## Build and run
 

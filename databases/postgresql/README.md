@@ -165,10 +165,12 @@ slice proves it: case 13's `nearest_level` (`mid`) is compared against
   question's digest, the model it asks, and the evidence, and
   `thinkthen_decide` reads it before sending. A configured
   `thinkthen.api_key` still refuses the call before the table is read.
-  The table's budget is 16 MiB per backend, counting each question
-  digest and evidence twice (the map and the eviction order), so it
-  holds about 8 MiB of distinct pairs. Past that the oldest answers
-  leave first, and a later decide on an evicted pair sends again.
+  The table's budget is the setting `thinkthen.saved_answer_kb`
+  (default `16MB`, `Userset` like `work_mem`; `0` saves nothing),
+  counted as real memory: each key's strings held twice, each
+  allocation rounded as the allocator rounds it, and the tables' slots
+  with their growth room. Past it the oldest answers leave first, and a
+  later decide on an evicted pair sends again.
   `thinkthen_usage` counts an answer read back from the table in
   `cache_answers`.
 - **Cancellation channel.** PostgreSQL's own interrupt flag: the batch
