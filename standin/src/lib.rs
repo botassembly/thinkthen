@@ -951,7 +951,10 @@ fn endpoint_of(settings: &ResolvedConfig, model: &str) -> Result<String, Error> 
     Ok(backend.url().as_str().to_owned())
 }
 
-/// One POST, retried as `backends.md` says, counting every send.
+/// One POST, counting every send. A 429 or 5xx reply is retried as
+/// `backends.md` says; a transport failure never is, because the request
+/// may have been delivered (review 5, and the open issue
+/// `2026-09-23-a-delivered-request-is-sent-again-after-a-transport-failure.md`).
 fn post(
     agent: &ureq::Agent,
     url: &str,
@@ -979,8 +982,8 @@ fn post(
         let _on_the_wire = WireGuard;
         wire_enter();
         // The counter counts what left the process. A send that left
-        // counts, and a retry that is sent counts again because the vendor
-        // bills each one. A connection refused before anything left counts
+        // counts, and a retry after a 429 or 5xx reply counts again because
+        // the vendor bills each one. A connection refused before anything left counts
         // nothing; a dead pooled connection is retried inside one send() by
         // the client, so it counts once, because nothing was sent twice.
         let sent = request.send(&body);
@@ -993,27 +996,19 @@ fn post(
             Err(error) => {
                 if left_the_machine(&error) {
                     REQUESTS.fetch_add(1, Ordering::Relaxed);
-                    sends += 1;
                 }
                 if options.passed() {
                     return Err(Error::deadline(options.seconds()));
                 }
-                let failure = classify_transport(&error);
-                // Only a genuinely retryable failure earns the backoff: an
-                // address that refused the connection refuses it again
-                // within the second as well, so it fails at once instead of
-                // burning the two backoff waits (review finding, 2026-09-22).
-                if !failure.retryable || attempt >= limit {
-                    return Err(failure);
-                }
-                attempt += 1;
-                let nap = match options.remaining() {
-                    Some(left) => waited.min(left),
-                    None => waited,
-                };
-                sleep_checked(nap, options)?;
-                waited = waited.saturating_mul(2);
-                continue;
+                // No transport failure is sent again. A refusal, a failed
+                // connect, or a name that did not resolve fails the same
+                // way within the second. Every other failure may have
+                // delivered the request's bytes, and the vendor bills each
+                // delivery (review 5: a reset or a read timeout after the
+                // body left sent the same paid request three times). The
+                // error still says whether the caller's own second try
+                // could help; the engine never makes that try for it.
+                return Err(classify_transport(&error));
             }
         };
         let status = response.status().as_u16();
@@ -1067,7 +1062,8 @@ fn count_tokens(body: &[u8]) {
 /// A TLS handshake failure is likewise deterministic on retry: the chain
 /// and the configuration will not heal between attempts, so an I/O error
 /// whose cause chain names TLS is not retryable either. Everything else
-/// keeps the retry the backends page gives a transport failure.
+/// is marked retryable for the caller's own second try; the engine never
+/// makes that try itself (see [`post`]).
 fn classify_transport(error: &ureq::Error) -> Error {
     // A signal interrupted the send after its bytes may have left: sending
     // again would bill twice (surfaces-review-5), so it stops as cancelled

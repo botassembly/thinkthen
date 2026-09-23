@@ -7,9 +7,11 @@
 //! gate (and a fresh pool) every time: width 1 allowed many concurrent
 //! calls and every retired pool leaked its sockets.
 
+mod common;
+
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
@@ -89,6 +91,14 @@ impl SlowListener {
     }
 }
 
+/// Run this file's tests one at a time: the descriptor count is the whole
+/// process's, so a neighbour's listener and sockets moved it (review 5:
+/// "descriptors went 9 to 12" in 3 of 30 loaded runs).
+fn alone() -> MutexGuard<'static, ()> {
+    static SEAT: Mutex<()> = Mutex::new(());
+    SEAT.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 /// An engine for one listener, with the width the caller names.
 fn engine(address: &str, width: usize) -> Arc<dyn Engine> {
     StandinConnector
@@ -112,6 +122,7 @@ fn call(engine: &Arc<dyn Engine>, question: &Question, note: &str) {
 /// on the narrow engine ever shares its single permit.
 #[test]
 fn a_narrow_engine_keeps_its_width_beside_a_wide_one() {
+    let _alone = alone();
     let narrow = SlowListener::start(Duration::from_millis(60));
     let wide = SlowListener::start(Duration::from_millis(60));
     let narrow_engine = engine(&narrow.base(), 1);
@@ -157,6 +168,7 @@ fn a_narrow_engine_keeps_its_width_beside_a_wide_one() {
 #[cfg(target_os = "linux")]
 #[test]
 fn the_file_descriptors_stay_flat() {
+    let _alone = alone();
     let narrow = SlowListener::start(Duration::from_millis(5));
     let wide = SlowListener::start(Duration::from_millis(5));
     let narrow_engine = engine(&narrow.base(), 1);
@@ -167,22 +179,16 @@ fn the_file_descriptors_stay_flat() {
         call(&narrow_engine, &question, &format!("warm narrow {round}"));
         call(&wide_engine, &question, &format!("warm wide {round}"));
     }
-    let before = open_descriptors();
+    let before = common::open_descriptors();
     for round in 0..18 {
         call(&narrow_engine, &question, &format!("narrow {round}"));
         call(&wide_engine, &question, &format!("wide {round}"));
     }
-    let after = open_descriptors();
+    // The listener's end of each closed connection closes a moment after
+    // the client's.
+    let after = common::settled_descriptors(before + 2);
     assert!(
         after <= before + 2,
         "forty calls hold their pools; descriptors went {before} to {after}"
     );
-}
-
-/// How many descriptors this process holds open.
-#[cfg(target_os = "linux")]
-fn open_descriptors() -> usize {
-    std::fs::read_dir("/proc/self/fd")
-        .expect("the descriptor table reads")
-        .count()
 }

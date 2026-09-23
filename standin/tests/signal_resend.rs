@@ -11,7 +11,9 @@
 //! One test per file, because the engine reads the environment once per
 //! process.
 
-use std::io::{BufRead, BufReader, Read, Write};
+mod common;
+
+use std::io::{BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -27,26 +29,7 @@ const DELAY: Duration = Duration::from_millis(600);
 fn serve(stream: TcpStream, bodies: &Mutex<Vec<String>>) {
     let mut reader = BufReader::new(stream.try_clone().expect("clones"));
     let mut writer = stream;
-    loop {
-        let mut length = None;
-        loop {
-            let mut line = String::new();
-            if reader.read_line(&mut line).unwrap_or(0) == 0 {
-                return;
-            }
-            if line == "\r\n" {
-                break;
-            }
-            if let Some((name, value)) = line.split_once(':')
-                && name.eq_ignore_ascii_case("content-length")
-            {
-                length = value.trim().parse::<usize>().ok();
-            }
-        }
-        let mut body = vec![0_u8; length.unwrap_or(0)];
-        if reader.read_exact(&mut body).is_err() {
-            return;
-        }
+    while let Some(body) = common::read_request(&mut reader) {
         bodies.lock().expect("the list").push(String::from_utf8_lossy(&body).into_owned());
         std::thread::sleep(DELAY);
         let head = format!(

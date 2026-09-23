@@ -1,7 +1,12 @@
 //! The loopback backend the table probes share: it answers every request
 //! at once and keeps each connection alive, so every settings state the
 //! probes build holds a real idle socket in its pool, and a leaked pool
-//! shows up as open descriptors.
+//! shows up as open descriptors. Each test binary uses a part of it.
+
+#![allow(
+    dead_code,
+    reason = "each test binary that includes this module uses a different part of it"
+)]
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -28,26 +33,7 @@ pub fn answering_backend() -> String {
 fn serve(stream: TcpStream) {
     let mut reader = BufReader::new(stream.try_clone().expect("the stream clones"));
     let mut writer = stream;
-    loop {
-        let mut length = 0;
-        loop {
-            let mut line = String::new();
-            if reader.read_line(&mut line).unwrap_or(0) == 0 {
-                return;
-            }
-            if line == "\r\n" {
-                break;
-            }
-            if let Some((name, value)) = line.split_once(':')
-                && name.eq_ignore_ascii_case("content-length")
-            {
-                length = value.trim().parse::<usize>().unwrap_or(0);
-            }
-        }
-        let mut body = vec![0_u8; length];
-        if reader.read_exact(&mut body).is_err() {
-            return;
-        }
+    while read_request(&mut reader).is_some() {
         let head = format!(
             "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n",
             REPLY.len()
@@ -57,6 +43,29 @@ fn serve(stream: TcpStream) {
             return;
         }
     }
+}
+
+/// Read one request whole and return its body; `None` when the client
+/// closed or the request broke off.
+pub fn read_request(reader: &mut BufReader<TcpStream>) -> Option<Vec<u8>> {
+    let mut length = 0;
+    loop {
+        let mut line = String::new();
+        if reader.read_line(&mut line).unwrap_or(0) == 0 {
+            return None;
+        }
+        if line == "\r\n" {
+            break;
+        }
+        if let Some((name, value)) = line.split_once(':')
+            && name.eq_ignore_ascii_case("content-length")
+        {
+            length = value.trim().parse::<usize>().unwrap_or(0);
+        }
+    }
+    let mut body = vec![0_u8; length];
+    reader.read_exact(&mut body).ok()?;
+    Some(body)
 }
 
 /// How many descriptors this process holds open.
