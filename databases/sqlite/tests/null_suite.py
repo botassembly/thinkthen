@@ -162,8 +162,10 @@ try:
     check("a missing named file raises", "no error", "an error")
 except sqlite3.OperationalError as failure:
     check(
-        "a missing named file is a local failure that names the kind",
-        "thinkthen local: cannot read question file" in str(failure),
+        "a missing named file is a local failure that names no cause",
+        "thinkthen local: the question file" in str(failure)
+        and "did not read" in str(failure)
+        and "No such file" not in str(failure),
         True,
     )
 
@@ -233,5 +235,60 @@ check("annotate's band field is unsure", fields["band"]["answer"], None)
 
 os.unlink(named)
 os.unlink(form)
+
+# The warm aggregate keys its groups by question (review 3, item 17):
+# two questions over the same text judge twice, each under its own
+# question, and both pairs land in the cache — the decide below answers
+# from the cache, so the request counter does not move. Before the fix
+# the first question judged the second's text, the (q2, text) pair never
+# landed, and the decide below sent a new request.
+warm_conn = fresh()
+warm_conn.execute("CREATE TABLE t(q TEXT, body TEXT)")
+warm_conn.executemany(
+    "INSERT INTO t(q, body) VALUES (?, ?)",
+    [
+        ('{"decide":"Is this a complaint?","threshold":0.9}', "the shared text"),
+        ('{"decide":"Is this spam?","threshold":0.9}', "the shared text"),
+    ],
+)
+warm_conn.execute("SELECT thinkthen_warm(q, body) FROM t").fetchall()
+sent = json.loads(warm_conn.execute("SELECT thinkthen_usage()").fetchone()[0])["requests"]
+check("warm sent one round per question", sent >= 2, True)
+warm_conn.execute(
+    "SELECT thinkthen_decide('{\"decide\":\"Is this spam?\",\"threshold\":0.9}', 'the shared text')"
+).fetchall()
+after = json.loads(warm_conn.execute("SELECT thinkthen_usage()").fetchone()[0])["requests"]
+check("the second question's pair is cached", after, sent)
+
+# Every named file reads through the regular-file rule and the cap
+# (review 3, item 2): a fifo refuses instead of blocking forever, an
+# endless device refuses at once, and an over-cap file names the cap —
+# with one message for every unreadable cause.
+with tempfile.TemporaryDirectory() as held:
+    fifo = os.path.join(held, "pipe.fifo")
+    os.mkfifo(fifo)
+    try:
+        conn.execute(f"SELECT thinkthen_decide('@{fifo}', 'refund')").fetchone()
+        check("a fifo refuses", "answered", "refused")
+    except sqlite3.OperationalError as error:
+        check(
+            "a fifo refuses with the uniform message",
+            "did not read" in str(error) and "regular file" in str(error),
+            True,
+        )
+    try:
+        conn.execute("SELECT thinkthen_decide('@/dev/zero', 'refund')").fetchone()
+        check("an endless device refuses", "answered", "refused")
+    except sqlite3.OperationalError as error:
+        check("an endless device refuses with the uniform message", "did not read" in str(error), True)
+    big = os.path.join(held, "big.json")
+    with open(big, "wb") as handle:
+        handle.write(b"x" * (1024 * 1024 + 1))
+    try:
+        conn.execute(f"SELECT thinkthen_decide('@{big}', 'refund')").fetchone()
+        check("an over-cap file refuses", "answered", "refused")
+    except sqlite3.OperationalError as error:
+        check("an over-cap file names the cap", "over the 1048576 byte cap" in str(error), True)
+
 print(f"{STEP - FAILURES} of {STEP} passed")
 sys.exit(1 if FAILURES else 0)

@@ -192,14 +192,43 @@ fn failure(error: thinkthen_contract::Error) -> Error {
     Error::SqliteFailure(ffi::Error::new(code), Some(message))
 }
 
-/// Read a file named by the `'@name'` spelling, relative to the process
-/// working directory. Where a database may read question files from is the
-/// database ADR's to rule; the process directory is this surface's pick,
-/// named here so a ruling can move it in one place.
+/// The largest file a named question file may hold, in bytes (review 3,
+/// item 2): a question file is kilobytes, and the cap refuses an
+/// endless read — a fifo, `/dev/zero`, anything that is not a bounded
+/// regular file — before memory grows.
+const FILE_CAP: u64 = 1024 * 1024;
+
+/// Read a file named by the `'@name'` spelling, through the same rule
+/// every surface reads by (review 3, item 2): a regular file of at most
+/// [`FILE_CAP`] bytes, read no further than one byte past the cap, with
+/// one message for every unreadable cause so a caller learns nothing
+/// about the filesystem. Where a database may read question files from
+/// is the database ADR's to rule; the process directory is this surface's
+/// pick, named here so a ruling can move it in one place.
 fn named_file(argument: &str) -> Result<String, String> {
+    use std::io::Read;
     let path = Path::new(&argument[1..]);
-    std::fs::read_to_string(path)
-        .map_err(|failure| format!("cannot read question file {path:?}: {failure}"))
+    let refused = || format!("the question file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes");
+    let meta = std::fs::metadata(path).map_err(|_| refused())?;
+    if !meta.is_file() {
+        // A fifo blocks forever on read; a character device like
+        // /dev/zero never ends: both refuse before any byte is read.
+        return Err(refused());
+    }
+    if meta.len() > FILE_CAP {
+        return Err(format!("the question file '{argument}' is over the {FILE_CAP} byte cap"));
+    }
+    let file = std::fs::File::open(path).map_err(|_| refused())?;
+    let mut text = String::new();
+    // One byte past the cap tells a file that grew after the check from
+    // one that sits at the cap.
+    file.take(FILE_CAP + 1)
+        .read_to_string(&mut text)
+        .map_err(|_| refused())?;
+    if text.len() as u64 > FILE_CAP {
+        return Err(format!("the question file '{argument}' is over the {FILE_CAP} byte cap"));
+    }
+    Ok(text)
 }
 
 /// The question one argument names: a file with the `'@'` spelling, a JSON
@@ -620,9 +649,14 @@ fn usage(context: &Context<'_>) -> Result<String, Error> {
     })
 }
 
-/// The `thinkthen_warm` accumulator: the texts one flush holds.
+/// The `thinkthen_warm` accumulator: the texts one flush holds, under the
+/// question that was live when they arrived. A different question closes
+/// the group it held — before, the first question judged every later
+/// row's text, and a pair absent from the cache was served from it
+/// (review 3, item 17).
 struct WarmState {
     question: Option<Arc<Question>>,
+    digest: Option<String>,
     pending: Vec<String>,
     judged: u64,
 }
@@ -641,7 +675,7 @@ const CHUNK: usize = 256;
 impl Aggregate<WarmState, Option<i64>> for Warm {
     fn init(&self, _: &mut Context<'_>) -> Result<WarmState, Error> {
         guarded("thinkthen_warm", || {
-            Ok(WarmState { question: None, pending: Vec::new(), judged: 0 })
+            Ok(WarmState { question: None, digest: None, pending: Vec::new(), judged: 0 })
         })
     }
 
@@ -657,7 +691,14 @@ impl Aggregate<WarmState, Option<i64>> for Warm {
                 cache_hits().fetch_add(1, Ordering::Relaxed);
                 return Ok(());
             }
-            if state.question.is_none() {
+            if state.digest.as_deref() != Some(&question.digest()) {
+                // A new question closes the group the old one held, so
+                // every text is judged under the question that named it
+                // (review 3, item 17).
+                if !state.pending.is_empty() {
+                    flush(state, connection_of(context))?;
+                }
+                state.digest = Some(question.digest());
                 state.question = Some(question.clone());
             }
             state.pending.push(text);
