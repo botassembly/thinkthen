@@ -115,7 +115,10 @@ def test_a_built_question_plus_members_refuses_as_ambiguous():
     assert "options" in str(seen.value)
     with pytest.raises(tt.UsageError) as seen:
         tt.score(asked, "maybe later", levels=["low", "high"])
-    assert "levels" in str(seen.value)
+        # Review-4: a cross-kind call is refused for its kind first —
+        # the question is a choose question handed to score — because the
+        # members named beside it could never make it a score question.
+        assert "choose" in str(seen.value)
 
 
 def test_filter_returns_the_records():

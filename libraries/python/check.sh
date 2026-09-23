@@ -83,6 +83,15 @@ ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review2_signals.py -q
 echo "== the second review's wire findings (this file's own counting stub)"
 .venv/bin/python -m pytest tests/test_review2_wire.py -q
 
+echo "== the third review's offline findings, null backend"
+ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_review3_offline.py -q
+
+echo "== the third review's wire findings (own loopback server)"
+.venv/bin/python -m pytest tests/test_review3_wire.py -q
+
+echo "== the fourth review's signal findings (own counting stub)"
+.venv/bin/python -m pytest tests/test_review4_signals.py -q
+
 echo "== recognize and relate, null backend"
 ENGINE_NULL=1 .venv/bin/python -m pytest tests/test_recognize_relate.py -q
 

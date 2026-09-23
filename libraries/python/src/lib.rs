@@ -373,7 +373,34 @@ fn text_question(py: Python<'_>, text: &str) -> PyResult<ContractQuestion> {
 /// A question argument for the decide family: text alone or a built
 /// question.
 fn settle_question(py: Python<'_>, object: &Bound<'_, PyAny>) -> PyResult<ContractQuestion> {
+    settle_for(py, object, "decide")
+}
+
+/// The question door with the verb's own word: a built question of a
+/// different kind is refused here as usage, because the engine would
+/// otherwise answer it and surface the mismatch as a backend error about
+/// the answer's shape (review-4's wrong-question-type finding).
+fn settle_for(
+    py: Python<'_>,
+    object: &Bound<'_, PyAny>,
+    verb: &str,
+) -> PyResult<ContractQuestion> {
     if let Ok(question) = object.extract::<Question>() {
+        use thinkthen_contract::QuestionKind;
+        let wanted = match verb {
+            "choose" => QuestionKind::Choose,
+            "score" => QuestionKind::Score,
+            "tag" => QuestionKind::Tag,
+            _ => QuestionKind::Decide,
+        };
+        if question.inner.kind() != wanted {
+            return Err(UsageError::new_err(format!(
+                "this question is a {} question; it answers {}, and handing it to {} would read the wrong answer shape",
+                question.inner.kind(),
+                question.inner.kind(),
+                verb
+            )));
+        }
         return Ok(question.inner);
     }
     if let Ok(text) = object.extract::<String>() {
@@ -399,13 +426,15 @@ fn settle_verb_question(
     key: &str,
     members: Option<Vec<String>>,
 ) -> PyResult<ContractQuestion> {
+    let asked = settle_for(py, object, verb)?;
     if let Ok(question) = object.extract::<Question>() {
         if members.is_some() {
             return Err(UsageError::new_err(format!(
                 "the question is built and the call also names {key}: the question carries its {key} once, so drop one"
             )));
         }
-        return Ok(question.inner);
+        let _ = question;
+        return Ok(asked);
     }
     let text = object.extract::<String>().map_err(|_| {
         UsageError::new_err(format!(
