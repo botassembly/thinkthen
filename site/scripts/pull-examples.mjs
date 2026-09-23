@@ -9,7 +9,7 @@
 // Every function-and-surface cell gets a status: run, drawn, planned, or
 // preview. A missing cell of recognize or relate says preview.
 //
-//   node scripts/pull-examples.mjs
+//   THINKTHEN_DECK=<the deck folder> node scripts/pull-examples.mjs
 //
 // The deck folder is outside this repository, so the pulled files are
 // committed here and the site build never reaches for it.
@@ -18,8 +18,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FUNCTIONS, SURFACES, HOWTOS, RECIPES } from '../src/data/catalog.mjs';
 
-const DECK = process.env.THINKTHEN_DECK
-  || '/home/ian/workspace/repos/mktg/decks/2026-09-21-thinkthen-semantic-commands';
+// The deck lives in a private repository, so its folder comes from the
+// environment and this public file names no path to it.
+const DECK = process.env.THINKTHEN_DECK;
+if (!DECK) {
+  console.error('pull-examples: set THINKTHEN_DECK to the deck folder');
+  process.exit(1);
+}
 const OUT = path.join(process.cwd(), 'src', 'data', 'examples');
 
 const read = (p) => fs.readFileSync(p, 'utf8');

@@ -229,17 +229,17 @@ mod tests {
                 Platform::Linux,
                 Some("relative"),
                 Some("relative"),
-                Some("/home/person"),
-                "/home/person/.config/thinkthen/config.json",
-                "/home/person/.cache/thinkthen",
+                Some("/srv/person"),
+                "/srv/person/.config/thinkthen/config.json",
+                "/srv/person/.cache/thinkthen",
             ),
             (
                 Platform::Macos,
                 Some("/ignored"),
                 Some("/ignored"),
-                Some("/Users/person"),
-                "/Users/person/Library/Application Support/thinkthen/config.json",
-                "/Users/person/Library/Caches/thinkthen",
+                Some("/srv/person"),
+                "/srv/person/Library/Application Support/thinkthen/config.json",
+                "/srv/person/Library/Caches/thinkthen",
             ),
         ];
         for (platform, config, cache, home, expected_config, expected_cache) in cases {
@@ -262,10 +262,8 @@ mod tests {
             Some(PathBuf::from("/cache/thinkthen-usage"))
         );
         assert_eq!(
-            resolve_usage(Platform::Macos, None, Some("/Users/person".to_owned())),
-            Some(PathBuf::from(
-                "/Users/person/Library/Caches/thinkthen-usage"
-            ))
+            resolve_usage(Platform::Macos, None, Some("/srv/person".to_owned())),
+            Some(PathBuf::from("/srv/person/Library/Caches/thinkthen-usage"))
         );
         for platform in [Platform::Linux, Platform::Macos] {
             for unusable in ["", "relative"] {

@@ -28,11 +28,10 @@ npm run build
 Every code sample on this site is pulled from somewhere else. Nothing is typed into a page by hand, so a page cannot drift from the code.
 
 ```
-npm run pull
+THINKTHEN_DECK=<the deck folder> npm run pull
 ```
 
-`scripts/pull-examples.mjs` reads the deck at
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands` (override with `THINKTHEN_DECK`) and writes one file per function-and-surface cell into `src/data/examples/`. Those files are committed, so a build never reaches outside this repository.
+`scripts/pull-examples.mjs` reads the product deck from the folder that `THINKTHEN_DECK` names and writes one file per function-and-surface cell into `src/data/examples/`. Those files are committed, so a build never reaches outside this repository.
 
 Each cell carries a status:
 
@@ -48,7 +47,7 @@ The how-to pages work the same way: the commands come from the deck's `usecases/
 
 The names, the order, the one line for each function, and the option tables live in `src/data/catalog.mjs`. The one line for each function is the help text's first line, copied from the vocabulary page.
 
-The first article is copied byte for byte into `src/articles/code-that-understands.md` from `repos/mktg/content/thinkthen/drafts/01-code-that-understands/article.md`. Edit it there and copy it again.
+The first article is copied byte for byte into `src/articles/code-that-understands.md` from the article draft `01-code-that-understands/article.md` in the deck repository. Edit it there and copy it again.
 
 ## The deploy proof
 
