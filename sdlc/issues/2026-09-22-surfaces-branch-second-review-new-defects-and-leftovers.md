@@ -134,7 +134,7 @@ The full gate ran with the stub up on all ten ports and no key in the environmen
 
 **One new blocker found by this verification and fixed:** the Ruby wire interrupt proof segfaulted 3 of 3 pre-fix runs (exit 139; eight `ttb-worker` threads faulting in `Error::guard` over freed memory after the call returned — the poll's caller-token path returned without hearing the raise, and MRI delivered it inside the batch, skipping the scope that joins the workers). `hear_interrupts` now runs on every poll path and `without_gvl` drains after the call (`3238ed0`); the proof passes 4 of 4 and the whole Ruby surface check exits 0 with 84 ok-lines.
 
-## Closure: phase 4 (hygiene, licenses, stub, hermeticity) — fixed on 2026-09-23, `37240fd` (refs surfaces-review-2)
+## Closure: phase 4 (hygiene, licenses, stub, hermeticity) — fixed 2026-09-22 evening, `37240fd` (refs surfaces-review-2)
 
 The final verification had marked this group open with the merge ticket as owner; the orphaned phase-4 lane reclaimed and closed it. Proof commands run against the committed tree:
 
