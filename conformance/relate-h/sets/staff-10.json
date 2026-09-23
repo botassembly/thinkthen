@@ -1,0 +1,60 @@
+{
+ "replaces": [
+  "R04-pairs-10",
+  "R03-persubject-10"
+ ],
+ "intro": "`text` lists records about people and organizations, numbered from 1. A record stands for the person or organization it names first.",
+ "note": "",
+ "names_in_questions": false,
+ "items": [
+  {
+   "text": "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
+   "kind": "*"
+  },
+  {
+   "text": "Noor Haddad works for Brookline Freight, handling regional accounts.",
+   "kind": "*"
+  },
+  {
+   "text": "Petr Novak works for Grayline Foundation, handling regional accounts.",
+   "kind": "*"
+  },
+  {
+   "text": "Rosa Iglesias works for Fenwick Press, handling regional accounts.",
+   "kind": "*"
+  },
+  {
+   "text": "Tariq Mensah works for Hull Analytics, handling regional accounts.",
+   "kind": "*"
+  },
+  {
+   "text": "Kestrel Logistics, a freight and logistics firm.",
+   "kind": "*"
+  },
+  {
+   "text": "Brookline Freight, a freight and logistics firm.",
+   "kind": "*"
+  },
+  {
+   "text": "Grayline Foundation, a freight and logistics firm.",
+   "kind": "*"
+  },
+  {
+   "text": "Fenwick Press, a freight and logistics firm.",
+   "kind": "*"
+  },
+  {
+   "text": "Hull Analytics, a freight and logistics firm.",
+   "kind": "*"
+  }
+ ],
+ "relations": [
+  {
+   "name": "works_for",
+   "phrase": "works for",
+   "from": "*",
+   "to": "*",
+   "either": false
+  }
+ ]
+}

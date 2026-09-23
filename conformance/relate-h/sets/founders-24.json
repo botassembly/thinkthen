@@ -1,0 +1,122 @@
+{
+ "replaces": [
+  "R02-pickone"
+ ],
+ "intro": "`text` lists records about people and organizations, numbered from 1. A record stands for the person or organization it names first.",
+ "note": "",
+ "names_in_questions": false,
+ "items": [
+  {
+   "text": "Amara Okafor founded Kestrel Labs and still leads its research team.",
+   "kind": "*"
+  },
+  {
+   "text": "Kestrel Labs, a freight brokerage.",
+   "kind": "*"
+  },
+  {
+   "text": "Dana Whitfield started Brookline Shipping and manages its Boston desk.",
+   "kind": "*"
+  },
+  {
+   "text": "Brookline Shipping, a coastal carrier.",
+   "kind": "*"
+  },
+  {
+   "text": "Marcus Bell co-founded Grayline Trust and chairs its board.",
+   "kind": "*"
+  },
+  {
+   "text": "Grayline Trust, a small foundation.",
+   "kind": "*"
+  },
+  {
+   "text": "Elif Demir established Fenwick Studio and runs its design desk.",
+   "kind": "*"
+  },
+  {
+   "text": "Fenwick Studio, a print shop.",
+   "kind": "*"
+  },
+  {
+   "text": "June Adeyemi founded Hull Harbour Analytics and heads its data team.",
+   "kind": "*"
+  },
+  {
+   "text": "Hull Harbour Analytics, a consultancy.",
+   "kind": "*"
+  },
+  {
+   "text": "Tomas Reyes set up Pier 39 Logistics and directs its night operations.",
+   "kind": "*"
+  },
+  {
+   "text": "Pier 39 Logistics, a warehouse operator.",
+   "kind": "*"
+  },
+  {
+   "text": "Priya Nair founded Rotterdam Port Services and manages its scheduling.",
+   "kind": "*"
+  },
+  {
+   "text": "Rotterdam Port Services, a stevedoring firm.",
+   "kind": "*"
+  },
+  {
+   "text": "Oskar Lind started Karst and Vellum and leads its editorial board.",
+   "kind": "*"
+  },
+  {
+   "text": "Karst and Vellum, a publisher.",
+   "kind": "*"
+  },
+  {
+   "text": "Sofia Marino founded Sausalito Ferry Lines and captains its flagship.",
+   "kind": "*"
+  },
+  {
+   "text": "Sausalito Ferry Lines, a ferry operator.",
+   "kind": "*"
+  },
+  {
+   "text": "Ahmed Farouk established Cedar Point Advisors and heads its audit team.",
+   "kind": "*"
+  },
+  {
+   "text": "Cedar Point Advisors, an accounting firm.",
+   "kind": "*"
+  },
+  {
+   "text": "Lena Fischer founded Millbrook Rowing Club and coaches its senior squad.",
+   "kind": "*"
+  },
+  {
+   "text": "Millbrook Rowing Club, a sports club.",
+   "kind": "*"
+  },
+  {
+   "text": "Grace Otieno founded Quiet Ward Press and edits its poetry list.",
+   "kind": "*"
+  },
+  {
+   "text": "Quiet Ward Press, a small press.",
+   "kind": "*"
+  }
+ ],
+ "relations": [
+  {
+   "name": "founded",
+   "phrase": "founded",
+   "from": "*",
+   "to": "*",
+   "either": false
+  },
+  {
+   "name": "works_for",
+   "phrase": "works for",
+   "from": "*",
+   "to": "*",
+   "either": false
+  }
+ ]
+}

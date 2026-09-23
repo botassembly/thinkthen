@@ -1,0 +1,42 @@
+{
+ "replaces": [
+  "R01-demo"
+ ],
+ "intro": "`text` lists alerts from one online shop's systems, numbered from 1.",
+ "note": "",
+ "names_in_questions": false,
+ "items": [
+  {
+   "text": "Checkout returns 500 at the payment step.",
+   "kind": "*"
+  },
+  {
+   "text": "Card charges are failing for every customer.",
+   "kind": "*"
+  },
+  {
+   "text": "The nightly export ran two hours late.",
+   "kind": "*"
+  },
+  {
+   "text": "The payments database ran out of disk space.",
+   "kind": "*"
+  }
+ ],
+ "relations": [
+  {
+   "name": "caused_by",
+   "phrase": "was caused by the problem in",
+   "from": "*",
+   "to": "*",
+   "either": false
+  },
+  {
+   "name": "same_as",
+   "phrase": "report the same failure",
+   "from": "*",
+   "to": "*",
+   "either": true
+  }
+ ]
+}

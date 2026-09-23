@@ -49,3 +49,13 @@ What stays open for Ian: the deck's relate sample, the alerts in `R01-demo`, and
 - (a) Record the four older relate texts under method H with a live run. This is a paid call under `sdlc/scripts/live`, and it needs Ian's authorization. Then regenerate the table and the conformance cases. This is the recommendation. The bake-off spent under 6 cents for 92 requests, and these four texts need four requests.
 - (b) Replace the four rows with bake-off sets, and move the deck's relate sample to one of those sets. This needs no paid call. It changes a public slide sample.
 - (c) Keep the pick-one rows as marked recordings of the withdrawn method until the production engine replaces the stand-in. This costs nothing now. The surfaces' relate conformance then proves a method main no longer uses.
+
+### Option (a): the method-H recording (2026-09-23)
+
+Ian approved option (a) on 2026-09-23, with a budget of at most $2 of paid calls for wave 7. This recording spent part of it.
+
+`conformance/relate-h/` holds the work. `sets/` names three record sets and the package rows each one replaces. `alerts` replaces `R01-demo`. `founders-24` replaces `R02-pickone`. `staff-10` replaces `R03-persubject-10` and `R04-pairs-10`, because those two rows hold the same ten records. `arms.py` writes the questions in the bake-off's lean method-H wording. The records carry kind `*`, so every ordered pair is legal for a one-way rule. That gives 18 questions for the alerts, 1,104 for the founders, and 90 for the staff records. `job.sh` asks them through `annotate` and records each request under `runs/<set>/H/cache/`.
+
+The job first ran against a local stub on port 8451 with a placeholder key. The stub counted 3 requests of 18, 1,104, and 90 questions. A second run sent nothing, because the cache answered it.
+
+The paid job then ran once: `sdlc/scripts/live --max-tokens 100000 conformance/relate-h/job.sh`, with the key passed only by the live door. It sent 3 requests. `live --status` read 422,954,418 charged tokens before and 423,054,418 after, so the ledger charged 100,000 tokens. That is about $0.004 at the bake-off's rate. The backend reported 26,645 input tokens (768, 23,600, and 2,277) and 22,911 output tokens. Ian can overturn the wording choices in `sets/`. Changing them needs another paid run.

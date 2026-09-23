@@ -1,0 +1,128 @@
+{
+ "a_caused_by_1_2": {
+  "yes": [
+   "caused_by",
+   1,
+   2
+  ]
+ },
+ "a_caused_by_1_3": {
+  "yes": [
+   "caused_by",
+   1,
+   3
+  ]
+ },
+ "a_caused_by_1_4": {
+  "yes": [
+   "caused_by",
+   1,
+   4
+  ]
+ },
+ "a_caused_by_2_1": {
+  "yes": [
+   "caused_by",
+   2,
+   1
+  ]
+ },
+ "a_caused_by_2_3": {
+  "yes": [
+   "caused_by",
+   2,
+   3
+  ]
+ },
+ "a_caused_by_2_4": {
+  "yes": [
+   "caused_by",
+   2,
+   4
+  ]
+ },
+ "a_caused_by_3_1": {
+  "yes": [
+   "caused_by",
+   3,
+   1
+  ]
+ },
+ "a_caused_by_3_2": {
+  "yes": [
+   "caused_by",
+   3,
+   2
+  ]
+ },
+ "a_caused_by_3_4": {
+  "yes": [
+   "caused_by",
+   3,
+   4
+  ]
+ },
+ "a_caused_by_4_1": {
+  "yes": [
+   "caused_by",
+   4,
+   1
+  ]
+ },
+ "a_caused_by_4_2": {
+  "yes": [
+   "caused_by",
+   4,
+   2
+  ]
+ },
+ "a_caused_by_4_3": {
+  "yes": [
+   "caused_by",
+   4,
+   3
+  ]
+ },
+ "a_same_as_1_2": {
+  "yes": [
+   "same_as",
+   1,
+   2
+  ]
+ },
+ "a_same_as_1_3": {
+  "yes": [
+   "same_as",
+   1,
+   3
+  ]
+ },
+ "a_same_as_1_4": {
+  "yes": [
+   "same_as",
+   1,
+   4
+  ]
+ },
+ "a_same_as_2_3": {
+  "yes": [
+   "same_as",
+   2,
+   3
+  ]
+ },
+ "a_same_as_2_4": {
+  "yes": [
+   "same_as",
+   2,
+   4
+  ]
+ },
+ "a_same_as_3_4": {
+  "yes": [
+   "same_as",
+   3,
+   4
+  ]
+ }
+}

@@ -1,0 +1,275 @@
+{
+ "version": 1,
+ "questions": {
+  "a_works_for_1_2": {
+   "decide": "Does this hold: Item 1 works for Item 2?"
+  },
+  "a_works_for_1_3": {
+   "decide": "Does this hold: Item 1 works for Item 3?"
+  },
+  "a_works_for_1_4": {
+   "decide": "Does this hold: Item 1 works for Item 4?"
+  },
+  "a_works_for_1_5": {
+   "decide": "Does this hold: Item 1 works for Item 5?"
+  },
+  "a_works_for_1_6": {
+   "decide": "Does this hold: Item 1 works for Item 6?"
+  },
+  "a_works_for_1_7": {
+   "decide": "Does this hold: Item 1 works for Item 7?"
+  },
+  "a_works_for_1_8": {
+   "decide": "Does this hold: Item 1 works for Item 8?"
+  },
+  "a_works_for_1_9": {
+   "decide": "Does this hold: Item 1 works for Item 9?"
+  },
+  "a_works_for_1_10": {
+   "decide": "Does this hold: Item 1 works for Item 10?"
+  },
+  "a_works_for_2_1": {
+   "decide": "Does this hold: Item 2 works for Item 1?"
+  },
+  "a_works_for_2_3": {
+   "decide": "Does this hold: Item 2 works for Item 3?"
+  },
+  "a_works_for_2_4": {
+   "decide": "Does this hold: Item 2 works for Item 4?"
+  },
+  "a_works_for_2_5": {
+   "decide": "Does this hold: Item 2 works for Item 5?"
+  },
+  "a_works_for_2_6": {
+   "decide": "Does this hold: Item 2 works for Item 6?"
+  },
+  "a_works_for_2_7": {
+   "decide": "Does this hold: Item 2 works for Item 7?"
+  },
+  "a_works_for_2_8": {
+   "decide": "Does this hold: Item 2 works for Item 8?"
+  },
+  "a_works_for_2_9": {
+   "decide": "Does this hold: Item 2 works for Item 9?"
+  },
+  "a_works_for_2_10": {
+   "decide": "Does this hold: Item 2 works for Item 10?"
+  },
+  "a_works_for_3_1": {
+   "decide": "Does this hold: Item 3 works for Item 1?"
+  },
+  "a_works_for_3_2": {
+   "decide": "Does this hold: Item 3 works for Item 2?"
+  },
+  "a_works_for_3_4": {
+   "decide": "Does this hold: Item 3 works for Item 4?"
+  },
+  "a_works_for_3_5": {
+   "decide": "Does this hold: Item 3 works for Item 5?"
+  },
+  "a_works_for_3_6": {
+   "decide": "Does this hold: Item 3 works for Item 6?"
+  },
+  "a_works_for_3_7": {
+   "decide": "Does this hold: Item 3 works for Item 7?"
+  },
+  "a_works_for_3_8": {
+   "decide": "Does this hold: Item 3 works for Item 8?"
+  },
+  "a_works_for_3_9": {
+   "decide": "Does this hold: Item 3 works for Item 9?"
+  },
+  "a_works_for_3_10": {
+   "decide": "Does this hold: Item 3 works for Item 10?"
+  },
+  "a_works_for_4_1": {
+   "decide": "Does this hold: Item 4 works for Item 1?"
+  },
+  "a_works_for_4_2": {
+   "decide": "Does this hold: Item 4 works for Item 2?"
+  },
+  "a_works_for_4_3": {
+   "decide": "Does this hold: Item 4 works for Item 3?"
+  },
+  "a_works_for_4_5": {
+   "decide": "Does this hold: Item 4 works for Item 5?"
+  },
+  "a_works_for_4_6": {
+   "decide": "Does this hold: Item 4 works for Item 6?"
+  },
+  "a_works_for_4_7": {
+   "decide": "Does this hold: Item 4 works for Item 7?"
+  },
+  "a_works_for_4_8": {
+   "decide": "Does this hold: Item 4 works for Item 8?"
+  },
+  "a_works_for_4_9": {
+   "decide": "Does this hold: Item 4 works for Item 9?"
+  },
+  "a_works_for_4_10": {
+   "decide": "Does this hold: Item 4 works for Item 10?"
+  },
+  "a_works_for_5_1": {
+   "decide": "Does this hold: Item 5 works for Item 1?"
+  },
+  "a_works_for_5_2": {
+   "decide": "Does this hold: Item 5 works for Item 2?"
+  },
+  "a_works_for_5_3": {
+   "decide": "Does this hold: Item 5 works for Item 3?"
+  },
+  "a_works_for_5_4": {
+   "decide": "Does this hold: Item 5 works for Item 4?"
+  },
+  "a_works_for_5_6": {
+   "decide": "Does this hold: Item 5 works for Item 6?"
+  },
+  "a_works_for_5_7": {
+   "decide": "Does this hold: Item 5 works for Item 7?"
+  },
+  "a_works_for_5_8": {
+   "decide": "Does this hold: Item 5 works for Item 8?"
+  },
+  "a_works_for_5_9": {
+   "decide": "Does this hold: Item 5 works for Item 9?"
+  },
+  "a_works_for_5_10": {
+   "decide": "Does this hold: Item 5 works for Item 10?"
+  },
+  "a_works_for_6_1": {
+   "decide": "Does this hold: Item 6 works for Item 1?"
+  },
+  "a_works_for_6_2": {
+   "decide": "Does this hold: Item 6 works for Item 2?"
+  },
+  "a_works_for_6_3": {
+   "decide": "Does this hold: Item 6 works for Item 3?"
+  },
+  "a_works_for_6_4": {
+   "decide": "Does this hold: Item 6 works for Item 4?"
+  },
+  "a_works_for_6_5": {
+   "decide": "Does this hold: Item 6 works for Item 5?"
+  },
+  "a_works_for_6_7": {
+   "decide": "Does this hold: Item 6 works for Item 7?"
+  },
+  "a_works_for_6_8": {
+   "decide": "Does this hold: Item 6 works for Item 8?"
+  },
+  "a_works_for_6_9": {
+   "decide": "Does this hold: Item 6 works for Item 9?"
+  },
+  "a_works_for_6_10": {
+   "decide": "Does this hold: Item 6 works for Item 10?"
+  },
+  "a_works_for_7_1": {
+   "decide": "Does this hold: Item 7 works for Item 1?"
+  },
+  "a_works_for_7_2": {
+   "decide": "Does this hold: Item 7 works for Item 2?"
+  },
+  "a_works_for_7_3": {
+   "decide": "Does this hold: Item 7 works for Item 3?"
+  },
+  "a_works_for_7_4": {
+   "decide": "Does this hold: Item 7 works for Item 4?"
+  },
+  "a_works_for_7_5": {
+   "decide": "Does this hold: Item 7 works for Item 5?"
+  },
+  "a_works_for_7_6": {
+   "decide": "Does this hold: Item 7 works for Item 6?"
+  },
+  "a_works_for_7_8": {
+   "decide": "Does this hold: Item 7 works for Item 8?"
+  },
+  "a_works_for_7_9": {
+   "decide": "Does this hold: Item 7 works for Item 9?"
+  },
+  "a_works_for_7_10": {
+   "decide": "Does this hold: Item 7 works for Item 10?"
+  },
+  "a_works_for_8_1": {
+   "decide": "Does this hold: Item 8 works for Item 1?"
+  },
+  "a_works_for_8_2": {
+   "decide": "Does this hold: Item 8 works for Item 2?"
+  },
+  "a_works_for_8_3": {
+   "decide": "Does this hold: Item 8 works for Item 3?"
+  },
+  "a_works_for_8_4": {
+   "decide": "Does this hold: Item 8 works for Item 4?"
+  },
+  "a_works_for_8_5": {
+   "decide": "Does this hold: Item 8 works for Item 5?"
+  },
+  "a_works_for_8_6": {
+   "decide": "Does this hold: Item 8 works for Item 6?"
+  },
+  "a_works_for_8_7": {
+   "decide": "Does this hold: Item 8 works for Item 7?"
+  },
+  "a_works_for_8_9": {
+   "decide": "Does this hold: Item 8 works for Item 9?"
+  },
+  "a_works_for_8_10": {
+   "decide": "Does this hold: Item 8 works for Item 10?"
+  },
+  "a_works_for_9_1": {
+   "decide": "Does this hold: Item 9 works for Item 1?"
+  },
+  "a_works_for_9_2": {
+   "decide": "Does this hold: Item 9 works for Item 2?"
+  },
+  "a_works_for_9_3": {
+   "decide": "Does this hold: Item 9 works for Item 3?"
+  },
+  "a_works_for_9_4": {
+   "decide": "Does this hold: Item 9 works for Item 4?"
+  },
+  "a_works_for_9_5": {
+   "decide": "Does this hold: Item 9 works for Item 5?"
+  },
+  "a_works_for_9_6": {
+   "decide": "Does this hold: Item 9 works for Item 6?"
+  },
+  "a_works_for_9_7": {
+   "decide": "Does this hold: Item 9 works for Item 7?"
+  },
+  "a_works_for_9_8": {
+   "decide": "Does this hold: Item 9 works for Item 8?"
+  },
+  "a_works_for_9_10": {
+   "decide": "Does this hold: Item 9 works for Item 10?"
+  },
+  "a_works_for_10_1": {
+   "decide": "Does this hold: Item 10 works for Item 1?"
+  },
+  "a_works_for_10_2": {
+   "decide": "Does this hold: Item 10 works for Item 2?"
+  },
+  "a_works_for_10_3": {
+   "decide": "Does this hold: Item 10 works for Item 3?"
+  },
+  "a_works_for_10_4": {
+   "decide": "Does this hold: Item 10 works for Item 4?"
+  },
+  "a_works_for_10_5": {
+   "decide": "Does this hold: Item 10 works for Item 5?"
+  },
+  "a_works_for_10_6": {
+   "decide": "Does this hold: Item 10 works for Item 6?"
+  },
+  "a_works_for_10_7": {
+   "decide": "Does this hold: Item 10 works for Item 7?"
+  },
+  "a_works_for_10_8": {
+   "decide": "Does this hold: Item 10 works for Item 8?"
+  },
+  "a_works_for_10_9": {
+   "decide": "Does this hold: Item 10 works for Item 9?"
+  }
+ }
+}
