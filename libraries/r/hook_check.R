@@ -68,5 +68,17 @@ check(
   grepl("HOOK RAN", plain$text, fixed = TRUE) && grepl("AFTER", plain$text, fixed = TRUE)
 )
 
+# An interrupt whose real signal does not land still stops the call:
+# the synthetic interrupt is the fallback (surfaces-review-5: an early
+# return made it unreachable, and the call carried on). The stub stands
+# in for a signal the process never receives.
+lost <- run(paste(
+  'utils::assignInNamespace("pskill", function(pid, signal) TRUE, ns = "tools")',
+  'r <- tryCatch({ thinkthen:::.tt_interrupt(); "continued" }, interrupt = function(e) "stopped")',
+  'cat("OUTCOME", r, "\n")',
+  sep = "\n"
+))
+check("an interrupt that never lands still stops the call", grepl("OUTCOME stopped", lost$text, fixed = TRUE))
+
 if (failed) quit(status = 1)
 cat("the error hook ordering holds\n")

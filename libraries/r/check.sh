@@ -34,9 +34,13 @@ restore_production() {
     echo "restored"
   else
     echo "RESTORE FAILED: rlib still carries the fixture build" >&2
+    return 1
   fi
 }
-trap restore_production EXIT
+# A failed restore fails the check (surfaces-review-5: it only printed).
+trap 'restore_production || exit 1' EXIT
+# A fresh checkout has no rlib yet, and R CMD INSTALL -l will not make it.
+mkdir -p rlib
 (cd thinkthen && THINKTHEN_R_SYNTHETIC_PARTIAL=1 R CMD INSTALL -l ../rlib .)
 
 echo "== r surface: null suite"
@@ -44,6 +48,9 @@ ENGINE_NULL=1 Rscript tests_null.R
 
 echo "== r surface: the text crossing (percent, encodings, invalid bytes)"
 ENGINE_NULL=1 Rscript text_check.R
+
+echo "== r surface: the error hook meets a thinkthen error as it meets a plain stop"
+ENGINE_NULL=1 Rscript hook_check.R
 
 echo "== r surface: fast-backend interrupt, the poll-bug shape"
 ./interrupt_fast.sh
@@ -80,8 +87,10 @@ else
   echo "== r surface: wire suite skipped, no stub on 8215"
 fi
 
-# The production shape the README installs: no fixture code, proven by the
-# plainest call answering on the restored package. The EXIT trap above
-# already restored it - on success and on failure alike, the fourth
-# review's finding - so this proves the restore rather than performing it.
+# The production shape the README installs: no fixture code. The restore
+# runs here, before the proof, so the proof reads the production install
+# (surfaces-review-5: the proof ran before the EXIT trap restored, and so
+# read the fixture build).
+trap - EXIT
+restore_production
 ENGINE_NULL=1 Rscript -e '.libPaths(c("rlib", .libPaths())); library(thinkthen); stopifnot(isTRUE(tt_decide("Is this a complaint?", "I want a refund for order 9"))); cat("production install answers\n")'

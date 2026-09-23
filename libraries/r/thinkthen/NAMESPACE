@@ -2,7 +2,7 @@
 #
 # The export list is explicit, per ruling 4 of 2026-09-21: only the ruled
 # names are public. The low-level tt_* wrappers in R/extendr-wrappers.R
-# (tt_call, tt_raise, tt_*_one, tt_*_column, and the rest) are internal,
+# (tt_call, tt_*_one, tt_*_column, and the rest) are internal,
 # and the public-name check fails the tree if one of them is exported by
 # pattern again. A new public name is added here in the same change that
 # documents it in README.md.
