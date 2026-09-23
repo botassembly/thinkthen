@@ -1,8 +1,4 @@
-//! The one sweep that proves no key leaves this process and no error quotes the
-//! evidence.
-//!
-//! One reader checks standard output, standard error, and every file written
-//! across all command families, backend paths, framings, and views.
+//! One sweep checks output and files across commands, paths, framings, and views.
 
 use std::fs;
 use std::io;
@@ -23,14 +19,9 @@ pub(crate) const KEY: &str = "sk-marker-2f9d41c6";
 /// and the evidence is the untrusted string.
 pub(crate) const EVIDENCE: &str = "marker-evidence-7b3ac5";
 
-/// The question every run here asks.
 pub(crate) const QUESTION: &str = "Does this report a payment failure?";
 
-/// Each verb, the operands it needs, and the answer a good reply carries.
-///
-/// A command enters this sweep by adding one row here. Every path below then
-/// runs over it, on one document and over records, in both views.
-pub(crate) const VERBS: [(&str, &[&str], &str); 4] = [
+pub(crate) const VERBS: [(&str, &[&str], &str); 5] = [
     ("decide", &[], r#""type":"noul","noul":0.92"#),
     (
         "choose",
@@ -42,6 +33,11 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 4] = [
         "score",
         &["none", "some", "much"],
         r#""type":"score","probabilities":{"0":0.1,"1":0.2,"2":0.7}"#,
+    ),
+    (
+        "recognize",
+        &["person"],
+        r#""type":"choice","choice":"IN","probabilities":{"IN":0.9,"OUT":0.1}"#,
     ),
 ];
 
@@ -73,7 +69,6 @@ const DAMAGED: &str = concat!(
 /// The address of a port nothing listens on, which fails in the transport.
 pub(crate) const CLOSED: &str = "http://127.0.0.1:1/v1";
 
-/// A whole reply carrying this one answer.
 fn good(answer: &str) -> String {
     format!(r#"{{"model":"jev-1.13.0","answers":{{"q1":{{{answer}}}}},"#,)
         + r#""usage":{"input_tokens":9,"output_tokens":3}}"#
@@ -338,7 +333,6 @@ pub(crate) fn nothing_leaked(named: &str, output: &Output, folder: &Path) {
     }
 }
 
-/// Run one verb down one route, in one view and one framing.
 fn sweep(
     route: &Route,
     verb: (&str, &[&str], &str),
@@ -365,7 +359,10 @@ fn sweep(
         other => other.to_owned(),
     };
     let adds: Vec<String> = route.adds.iter().map(named).collect();
-    let mut asked = vec![name.to_owned(), QUESTION.to_owned()];
+    let mut asked = vec![name.to_owned()];
+    if name != "recognize" {
+        asked.push(QUESTION.to_owned());
+    }
     asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
     // A route that names its own address keeps it, and every other route posts
     // to the listener this case opened.
@@ -496,7 +493,11 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             Listener::serving(vec![Canned::ok(&good(answer))]).expect("a loopback listener");
         let base = listener.base().to_owned();
         let kept = dir.to_string_lossy().into_owned();
-        let asked = [name, QUESTION];
+        let asked = if name == "recognize" {
+            vec![name]
+        } else {
+            vec![name, QUESTION]
+        };
         let named = [
             "--url",
             &base,
@@ -508,7 +509,7 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
         ];
 
         let output = spawn(
-            &[&asked[..], operands, &named[..]].concat(),
+            &[&asked, operands, &named[..]].concat(),
             &environment(true),
             EVIDENCE.as_bytes(),
         )

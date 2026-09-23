@@ -393,6 +393,34 @@ pub(crate) struct ScoreArguments {
     pub(crate) common: Common,
 }
 
+/// Everything `recognize` was asked before its input is read.
+#[derive(Args, Debug)]
+pub(crate) struct RecognizeArguments {
+    /// Kinds to assign, or one `@FILE` recognize question file.
+    #[arg(value_name = "KIND")]
+    pub(crate) kinds: Vec<String>,
+
+    /// One kind and what it means, as KIND=DESCRIPTION.
+    #[arg(long = "kind", value_name = "KIND=DESCRIPTION")]
+    pub(crate) described: Vec<String>,
+
+    /// A beta relation rule, as NAME=SOURCE:TARGET. `*` explicitly means any kind.
+    #[arg(long = "relation", value_name = "NAME=SOURCE:TARGET")]
+    pub(crate) relations: Vec<String>,
+
+    /// Keep names whose computed strength reaches this cut. [default: 0.5]
+    #[arg(long, value_name = "T", allow_negative_numbers = true)]
+    pub(crate) threshold: Option<String>,
+
+    /// Keep beta relation edges whose model probability reaches this cut. [default: 0.5]
+    #[arg(long, value_name = "T", allow_negative_numbers = true)]
+    pub(crate) relation_threshold: Option<String>,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
 /// Everything `annotate` was asked, before the set or evidence is read.
 #[derive(Args, Debug)]
 pub(crate) struct AnnotateArguments {

@@ -24,9 +24,12 @@ mod probability;
 mod question;
 mod question_file;
 mod question_set;
+mod recognize;
+mod recognize_file;
 pub(crate) mod recording;
 pub(crate) mod recording_identity;
 mod records;
+mod relation;
 mod render;
 mod reply;
 mod result;
@@ -51,14 +54,26 @@ pub(crate) use crate::core::plan_document::PlanDocument;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::question::{Labels, Question};
 pub(crate) use crate::core::question_file::{
-    Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, resolve,
+    Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
+    resolve,
 };
 pub(crate) use crate::core::question_set::{QuestionSet, QuestionSetError};
+pub(crate) use crate::core::recognize::{
+    RecognizedName, TokenAnswer, assemble as assemble_names, kind_questions, recognition_questions,
+    tokenize,
+};
+pub(crate) use crate::core::recognize_file::{
+    RecognizeConfigError, RecognizeKinds, RecognizeSpec, recognize_sha256,
+};
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
+pub(crate) use crate::core::relation::{
+    RelationEdge, RelationRule, assemble_edges, plan as plan_relation, plan_pairs,
+};
 pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
+pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, DecisionResult, Meta, NamedValues, ProfileWarning, RecordValue, RequestMeta,

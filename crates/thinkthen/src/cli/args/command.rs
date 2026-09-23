@@ -6,7 +6,7 @@ use clap::{Args, Subcommand};
 
 use super::{
     AnnotateArguments, ChooseArguments, DecideArguments, FilterArguments, FindArguments,
-    RankArguments, ScoreArguments, TagArguments,
+    RankArguments, RecognizeArguments, ScoreArguments, TagArguments,
 };
 
 /// The verbs the tool answers to.
@@ -166,6 +166,12 @@ pub(crate) enum Command {
     )]
     Annotate(AnnotateArguments),
 
+    /// Find every name in a text and assign one of the given kinds.
+    ///
+    /// Relations are beta. `--threshold` gates computed name strength;
+    /// `--relation-threshold` gates a relation's model probability.
+    Recognize(RecognizeArguments),
+
     /// Inspect and maintain answer-cache folders without sending a request.
     Cache(CacheArguments),
 }
@@ -213,6 +219,7 @@ impl Command {
             Self::Rank(arguments) => arguments.common.input.as_deref(),
             Self::Find(arguments) => arguments.common.input.as_deref(),
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
+            Self::Recognize(arguments) => arguments.common.input.as_deref(),
             Self::Cache(_) => None,
             Self::Status(_) => None,
         }
@@ -229,6 +236,7 @@ impl Command {
             Self::Rank(arguments) => arguments.common.timeout,
             Self::Find(arguments) => arguments.common.timeout,
             Self::Annotate(arguments) => arguments.common.timeout,
+            Self::Recognize(arguments) => arguments.common.timeout,
             Self::Cache(_) => 1,
             Self::Status(_) => 1,
         }

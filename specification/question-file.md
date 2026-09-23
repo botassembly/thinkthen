@@ -4,6 +4,14 @@ Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19.
 
 Every structural setting of a question has two homes. One is an option on the command line. The other is a key in a question file, under the same word. A question tuned once in a file is the question the test runs and the question the gate runs.
 
+## Recognition files
+
+`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is required. Optional `recognize.relations` entries carry `name`, `source`, `target`, optional `reads`, and optional `either`. `*` is the only any-kind spelling. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
+
+```json
+{"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-latest","profile":"measured-profile","on":"/body"}
+```
+
 ## Naming a file
 
 The first argument of `decide`, `choose`, `tag`, `score`, `filter`, and `rank` is the question. `filter` and `rank` ask a yes/no question of each record, so both read a `decide` file. It is the question text, or `@` and a path to a question file.
@@ -97,6 +105,8 @@ Under `--dry-run`, a run that used a file prints a `from` object before the requ
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
+`recognize --dry-run` prints a count report rather than a request plan. Its file-backed report carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+
 ## The digest of a question
 
 Every `--details` row carries `meta.question_sha256`. It names the exact question that produced the row, so two runs that asked almost the same thing cannot be mistaken for one. The same question gives the same digest whether it was typed or read from a file, and any override shows up as a different digest.
@@ -107,7 +117,7 @@ The digest is the SHA-256 of the canonical form below, written as 64 lowercase h
 
 The canonical form is one JSON object on one line. Another implementation follows these rules and reaches the same digest.
 
-1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`, `profile`. For `choose`: `verb`, `text`, `options`, `threshold`, `profile`. For `tag`: `verb`, `text`, `labels`, `threshold`, `profile`. For `score`: `verb`, `text`, `levels`, `profile`. `verb` holds the command name. An absent `profile` is omitted.
+1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`, `profile`. For `choose`: `verb`, `text`, `options`, `threshold`, `profile`. For `tag`: `verb`, `text`, `labels`, `threshold`, `profile`. For `score`: `verb`, `text`, `levels`, `profile`. For `recognize`: `verb`, `kinds`, optional `relations`, `threshold`, `relation_threshold`, optional `profile`. Each relation keeps `name`, `source`, `target`, `reads`, `either` order. `verb` holds the command name. An absent optional key is omitted. Runtime `model` and `on` settings do not identify the question and are absent.
 2. **A key with no value is absent.** `true` and `false` are absent when no text was given. `threshold` is absent on `score`, which takes no rule, and on a `choose` with no cut.
 3. **There is no insignificant white space.** No space follows a colon or a comma, and there is no newline inside the form. The digest is taken over the UTF-8 bytes of that one line.
 4. **Text is escaped as JSON escapes it, and no further.** A quotation mark is `\"`, a backslash is `\\`, and the control characters use their JSON escapes. Every other character is written as itself, including every character outside ASCII. No `\u` escape is used where the character can stand for itself.

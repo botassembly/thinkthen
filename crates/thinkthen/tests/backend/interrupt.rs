@@ -17,6 +17,7 @@ const PICKED: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u002","#,
     r#""probabilities":{"u001":0.1,"u002":0.9}}}}"#,
 );
+const RECOGNIZED: &str = r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"IN","probabilities":{"IN":1.0,"OUT":0.0}}}}"#;
 
 struct Acknowledgment(std::path::PathBuf);
 
@@ -181,4 +182,26 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
     .expect("interrupt run");
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn sigint_between_recognition_chunks_starts_no_later_chunk() {
+    let profile = Path::new(env!("CARGO_TARGET_TMPDIR")).join("recognize-interrupt-profile.json");
+    fs::write(
+        &profile,
+        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
+    )
+    .expect("profile");
+    let output = held(
+        &[
+            "recognize",
+            "--profile",
+            &profile.to_string_lossy(),
+            "--no-cache",
+        ],
+        b"Ada Acme",
+        || Canned::ok(RECOGNIZED),
+    )
+    .expect("recognize stops");
+    assert!(output.stdout.is_empty());
 }

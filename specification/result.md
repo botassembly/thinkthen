@@ -12,6 +12,7 @@ One internal result model feeds both views. The view never changes the request o
 | `choose` | a JSON string, or `null`. `--raw` prints the bare label, as [choose.md](choose.md) describes |
 | `tag` | a JSON array of every label that reaches the cut, including `[]` |
 | `score` | a JSON number |
+| `recognize` | an object with `entities` and optional beta `relations` |
 | `filter` | each kept line or JSONL record as it arrived; each kept table row as compact JSON, in input order |
 | `rank` | each line or JSONL record as it arrived and each table row as compact JSON, most likely yes first |
 | `annotate` | one JSON object per record |
@@ -36,6 +37,8 @@ Every result is compact and sits on one line, so one answer is also one record f
 - `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present.
 
 ## A detailed result keeps everything
+
+`recognize --details` keeps the bare object under `value`, the resolved recognition shape under `question`, and each token's detection probability and ordered kind probabilities under `answer.tokens`. `meta.requests` lists recognition chunks first and relation chunks in rule order. Name `strength` is computed from these inputs and is not itself a probability.
 
 Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probability of every option or every level, and it carries the backend's own `confidence` when the backend reports one. A saved run can then be swept at another rule with no second request.
 

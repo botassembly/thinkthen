@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0080: Build `recognize` over the shared relation planner
 
-Status: ready
+Status: implementation complete; independent Sol review rejected; remediation complete; re-review pending
 
 ## Outcome and authority
 
@@ -50,7 +50,7 @@ No names is a successful answer with an empty `entities` list. A single text pri
 Port the measured baseline from `experiments/225-recognize-harvest-package/`, not a new natural-language implementation.
 
 1. Tokenize, window, detect, assign kinds, assemble spans, and compute strength by the rules in `rules/rules.md`. Use the canonical lineage-B words in `words/` byte for byte. Ask detection and kind for every token as the recorded main pass does. Every member token counts. `strength` is the lowest detection probability times the mean probability of the winning kind, rounded to four decimals. Keep names at or above the cut.
-2. Keep all recognition policy internal. Add no depth, word-threshold, repair, connector, formula, overlap, possessive, or policy option in the command, question file, environment, config, or public metadata. The connector list stays deleted. The fixed trailing-possessive and probability-weighted overlap rules need bounded pure implementations and an assembly-path test before documentation calls them supported; do not copy the harvest helper's exhaustive subset search.
+2. Keep all recognition policy internal. Add no depth, word-threshold, repair, connector, formula, overlap, possessive, or policy option in the command, question file, environment, config, or public metadata. The connector list stays deleted. The fixed trailing-possessive rule remains. One maximal contiguous run of `IN` words is one candidate, so candidates are disjoint and no overlap resolver runs.
 3. Preserve the exact source text through every request. Splitting divides questions, never the text or the assembly state. Offsets always index the original text. Names may cross a request boundary because assembly happens only after all required answers return.
 4. Parse and canonicalize the `recognize` question-file form through the existing question-file machinery. The file carries ordered kinds, optional relation rules and `reads` phrases, the two cuts, model/profile, and ordinary evidence selection. It does not make `recognize` a fifth `annotate` entry type in this ticket.
 5. A bad kind, rule, wildcard, duplicate, count, cut, source/target reference, file member, or impossible profile limit fails locally before key lookup, cache mutation, or a request. A kind count stays 1 through 20. Rules use `source` and `target`; `*` is explicit any-kind. A name is never related to itself.
@@ -83,9 +83,15 @@ Excluded: the `relate` command or its input surface; public Rust, C, language, P
 
 Production changes may touch at most eighteen Rust files. Total additions may not exceed 2,400 nonblank Rust lines including tests. Add no dependency. Keep every source and test file under the repository's 500-line limit. Search for reusable question-file, scheduler, result, and record-rendering paths before raising the exact ratchet. The implementation and review record must name each increase and why it earns its lines.
 
+## Ruled 2026-09-23
+
+Ship the measured baseline. One maximal run of `IN` words is one candidate, and runs are disjoint. No overlap promise or resolver belongs in ticket 0080. This ruling explicitly overturns the earlier settled overlap line in `sdlc/planning/recognize-design.md` and supersedes earlier 0080 planning that requested overlap selection.
+
+Later Beatles Bench branch-function research found boundary errors, not overlap errors: `album` enters `the album Abbey Road`; `Don't` drops from `Don't Pass Me By`; long titles lose their middles; exact-match songs measured precision 0.23 and recall 0.15; overlap matching measured precision 1.00 and recall 0.54. This evidence is recorded for later research only and creates or queues no ticket. See `sdlc/issues/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`.
+
 ## Acceptance
 
-- Observe focused red tests before implementation. Pin tokenization, punctuation, windows, kind voting, strength rounding and inclusive cut, no names, repeated names, fixed possessive handling, bounded overlap resolution, deleted connectors, and exact Unicode offset round trips over an accent, emoji, and combining mark.
+- Observe focused red tests before implementation. Pin tokenization, punctuation, windows, kind voting, strength rounding and inclusive cut, no names, repeated names, fixed possessive handling, disjoint maximal `IN` runs, deleted connectors, and exact Unicode offset round trips over an accent, emoji, and combining mark.
 - Pin the command and question-file grammar, defaults, both cuts at `0.5`, rule direction and wildcards, exact canonical digest behavior, local no-send refusals, and the complete absence of recognition policy settings. Help says relations are beta and says which quantity each cut gates.
 - Replay the forty 225 cases with no key and no network. Preserve their ten labeled divergences. Mechanically migrate expected public names to `name`/`kind`/`strength`, offsets to command indexing, and relation output to self-contained edges; never edit a recorded backend response to make it agree.
 - Replay experiment 239's planner requests with no key and prove only the cross-kind cases those recordings contain: choice planning, the larger-side/smaller-options rule, every option at or above the cut, direction normalization, and the ruled `0.5` default independently of the experiment's tuned result. Do not cite experiment 239 as proof of same-kind H, the option ceiling, or exact-size fallback.

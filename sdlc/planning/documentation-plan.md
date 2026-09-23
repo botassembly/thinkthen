@@ -20,6 +20,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 | 19 | Gate a risky command and fail closed | Ticket 0010, rewritten by 0018 | green |
 | 27 | Test a script with no network | Ticket 0010 | green |
 | 18 | Point the tool at another server and compare two deciders | 13 | coming, slice 13 |
+| 44 | Find names in a text without a network | Ticket 0080 | green |
 
 ## Gates and branches
 

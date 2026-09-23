@@ -60,6 +60,8 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 
 Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
 
+`recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed required detection, kind, or relation question exits 4 and prints no partial value for that input.
+
 In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. A valid answer on standard output can accompany exit 1, 3, or 6, so a script that wants the value reads it and then reads `$?`.
 
 ```sh

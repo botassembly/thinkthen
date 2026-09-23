@@ -61,7 +61,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
 
     let shown = format!(
         "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+             {ordered:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
         Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
@@ -79,6 +79,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             limit: 1,
             actual: EVIDENCE.len(),
         }),
+        Failure::Recognize(super::recognize::Error::LogicalQuestion),
         Failure::RecordingStorage,
     );
 
@@ -139,6 +140,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             limit: 1,
             actual: EVIDENCE.len(),
         }),
+        Failure::Recognize(super::recognize::Error::LogicalQuestion),
         Failure::RecordingStorage,
         Failure::Defect("a ranked row carries no probability"),
     ];

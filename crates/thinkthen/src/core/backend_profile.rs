@@ -1,5 +1,6 @@
 //! A named backend's locally enforceable request limits.
 
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 use crate::core::json::{Json, JsonError};
@@ -8,6 +9,12 @@ use crate::core::plan::Plan;
 /// A public backend name used for limits and threshold calibration.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ProfileName(String);
+
+impl Serialize for ProfileName {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
+}
 
 impl ProfileName {
     /// Read a safe profile name.
@@ -226,6 +233,10 @@ impl ProfileLimit {
     /// Whether another contiguous request can satisfy this kind of limit.
     pub(crate) const fn permits_split(&self) -> bool {
         matches!(self.kind, LimitKind::RequestBytes | LimitKind::Questions)
+    }
+
+    pub(crate) const fn permits_relation_fallback(&self) -> bool {
+        matches!(self.kind, LimitKind::RequestBytes | LimitKind::Options)
     }
 }
 
