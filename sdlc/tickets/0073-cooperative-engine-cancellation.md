@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine crates/thinkthen/src/cli/edge.rs crates/think
 
 # 0073: Stop engine work cooperatively
 
-Status: independently accepted and locally verified; landing pending
+Status: landed on main through `7ec6f82`
 
 ## Outcome and authority
 

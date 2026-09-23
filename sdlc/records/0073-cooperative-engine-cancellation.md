@@ -1,6 +1,6 @@
 # 0073: Cooperative engine cancellation
 
-Status: Independently accepted and locally verified on the ticket branch; landing on main is pending. GitHub Actions remains manually disabled, so no hosted success is claimed.
+Status: Landed on main through `7ec6f82` after independent acceptance and two complete sequential local ladders, including the current-main combined tree. Main was pushed. GitHub Actions remains manually disabled, so no hosted success is claimed.
 
 ## Result
 

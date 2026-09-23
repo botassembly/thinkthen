@@ -1,6 +1,6 @@
 # A run stopped by SIGINT prints no stopped-at line
 
-Status: Engine mechanism independently accepted and locally verified in ticket 0073; CLI SIGINT binding and landing remain pending
+Status: Engine mechanism landed in ticket 0073; CLI SIGINT binding remains pending
 
 A run stopped by a bad record prints a line on standard error naming the record and the resume path. A run stopped by Ctrl-C prints nothing.
 
