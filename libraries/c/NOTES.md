@@ -24,7 +24,9 @@ The JSON door's request is the question file's own shape with the
 evidence beside it, plus the small markers the grammar cannot carry on
 its own: `records` for filter and annotate, `units` for find, `rank: true`
 beside a decide question for rank, `details: true` for the audit view,
-`usage: true` for the counters. Replies: `{"answer": ...}` for the ask
+`usage: true` for the counters. The three flags are read by value: `false`
+and an absent key are the same, and a value that is not a boolean is
+refused with the usage kind. Replies: `{"answer": ...}` for the ask
 verbs (unsure is `null`), `{"indexes": [...]}` for filter (the conformance
 file's own shape), `{"answer": n, "nearest": "..."}` for score, the
 counters object for usage, and one object a record for annotate, the
@@ -741,3 +743,22 @@ the second review, one wave:
   2, fork 1, the drawn slide and the recognize and relate examples as
   drawn, the ASan error-thread repro clean, the atexit probe 0,
   conformance 84 green (the wire twin skipped, no stub on 8216).
+
+## 2026-09-23 — review 5: flags by value, a bounded failure table, one deadline ruling
+
+- **Flags by value.** `rank`, `details`, and `usage` went through one
+  helper, `flag`. Before it, `"rank": false` ranked and `"usage": false`
+  answered the counters, because the door read key presence. The door
+  suite's `the_doors_flags_are_read_by_value` failed on the old door with
+  `rank: false answers: rank takes no threshold`.
+- **The failure table.** A thread's entry leaves the engine's table when
+  the thread exits: each thread holds weak handles to the tables it wrote
+  to, and its exit hook removes its entries. Before, one short thread a
+  request grew the table by one entry a thread until `engine_free`. The
+  unit test `a_threads_failure_leaves_the_table_when_the_thread_exits`
+  failed on the old table with `left: 200, right: 0`. A thread that fails
+  during its own teardown keeps its one entry until the engine is freed.
+- **Deadlines.** One ruling holds for a budget too large: the usage kind
+  on every door (ADR 0041, review 5 amendment). The door checks its
+  `int64_t` as an integer, so `INT64_MIN` reads back exactly, and the
+  header states the upper bound and the clamp rule.

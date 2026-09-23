@@ -77,7 +77,11 @@ extern "C" {
  * value is the budget from the call; zero is a spent budget, so the call
  * refuses before anything is sent with THINKTHEN_EDEADLINE;
  * THINKTHEN_NO_DEADLINE sets none; and any other negative value is
- * refused with THINKTHEN_EUSAGE before anything is sent.
+ * refused with THINKTHEN_EUSAGE before anything is sent. The largest
+ * budget is 4294967295000 ms (UINT32_MAX seconds); a larger value is
+ * refused with THINKTHEN_EUSAGE before anything is sent. Clamp a computed
+ * budget at zero (for example `end > now ? end - now : 0`). A passed
+ * deadline is then spent and never reads as THINKTHEN_NO_DEADLINE.
  */
 #define THINKTHEN_NO_DEADLINE INT64_C(-1)
 

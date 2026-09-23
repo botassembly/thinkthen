@@ -59,3 +59,21 @@ the usage kind, in the same sentence on every door. A NumPy int or float
 is still a number and still crosses. Ian can overturn this by ruling
 that a bool is a number here; the cost is one extraction type in the
 Python shim.
+
+## Amendment, 2026-09-23: a budget too large is refused on every door
+
+The Decision said an unrepresentable budget is treated as no deadline. The
+host doors already refused any budget above `MAX_DEADLINE_SECONDS`
+(`u32::MAX` seconds) with the usage kind, while the contract's
+`Options::deadline_in` turned a budget the clock could not name into no
+deadline. The fifth review found the two rulings. One ruling now holds:
+a budget above `MAX_DEADLINE_SECONDS`, or one the clock cannot name, is
+refused with the usage kind before anything is sent, in the same
+sentence on every door. `deadline_in` records the refusal and
+`Error::guard` returns it. The C door checks its `int64_t` as an integer,
+so the message names the host's exact value. The C header states the
+upper bound and the clamp rule. This amendment supersedes the sentence
+"An unrepresentable budget (one the clock cannot name) is treated as no
+deadline". Ian can overturn this by ruling that a budget too large means
+no deadline; the cost is one branch in the contract's two converters and
+the C door.

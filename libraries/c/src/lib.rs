@@ -40,14 +40,15 @@
 //!
 //! [`contract/include/thinkthen.h`]: ../../contract/include/thinkthen.h
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{c_char, CStr, CString};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::thread::ThreadId;
 
 use thinkthen_contract::{
     Annotated, Answer, Cancel, Connector as _, Details, Engine, EngineConfig, Error, ErrorKind,
-    Options, Question, QuestionSet, Ranked, Recognize, Relate, Scored, deadline_from_millis,
+    Options, Question, QuestionSet, Ranked, Recognize, Relate, Scored, MAX_DEADLINE_SECONDS,
     edges_json, relate_checked,
 };
 use thinkthen_standin::StandinConnector;
@@ -97,8 +98,57 @@ pub struct thinkthen_cancel_token {
 pub struct thinkthen_engine {
     /// The engine the door calls, built through the contract's connector.
     engine: Arc<dyn Engine>,
-    /// The last failure each thread recorded on this engine.
-    failures: Mutex<HashMap<ThreadId, LastError>>,
+    /// The last failure each live thread recorded on this engine. A
+    /// thread's entry leaves when the thread exits (see [`Departures`]),
+    /// so the table holds at most one entry a live thread.
+    failures: Failures,
+}
+
+/// One engine's failure table, shared with the exit hooks of the threads
+/// that wrote to it.
+type Failures = Arc<Mutex<HashMap<ThreadId, LastError>>>;
+
+/// The failure tables the calling thread wrote to, held weakly, so the
+/// thread's entries leave with it. Review 5: a host that ran one short
+/// thread a request grew the table by one entry a thread until the engine
+/// was freed.
+struct Departures {
+    /// The thread these hooks belong to, captured while it was running.
+    thread: ThreadId,
+    /// The tables this thread holds an entry in; a freed engine's table
+    /// fails to upgrade and is skipped.
+    tables: Vec<Weak<Mutex<HashMap<ThreadId, LastError>>>>,
+}
+
+impl Drop for Departures {
+    fn drop(&mut self) {
+        for table in self.tables.drain(..) {
+            if let Some(table) = table.upgrade() {
+                table
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .remove(&self.thread);
+            }
+        }
+    }
+}
+
+thread_local! {
+    static DEPARTURES: RefCell<Departures> = RefCell::new(Departures {
+        thread: std::thread::current().id(),
+        tables: Vec::new(),
+    });
+}
+
+/// Hook `failures` to the calling thread's exit. A thread that fails
+/// during its own teardown has no hook left; its one entry stays until
+/// the engine is freed.
+fn depart_with(failures: &Failures) {
+    let _ = DEPARTURES.try_with(|departures| {
+        let mut departures = departures.borrow_mut();
+        departures.tables.retain(|table| table.strong_count() > 0);
+        departures.tables.push(Arc::downgrade(failures));
+    });
 }
 
 /// The stored failure behind `thinkthen_error_message`.
@@ -155,14 +205,20 @@ impl thinkthen_engine {
             .failures
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        held.insert(
-            std::thread::current().id(),
-            LastError {
-                code,
-                retryable: error.retryable,
-                message,
-            },
-        );
+        let first = held
+            .insert(
+                std::thread::current().id(),
+                LastError {
+                    code,
+                    retryable: error.retryable,
+                    message,
+                },
+            )
+            .is_none();
+        drop(held);
+        if first {
+            depart_with(&self.failures);
+        }
         code
     }
 
@@ -281,7 +337,7 @@ pub unsafe extern "C" fn thinkthen_engine_new() -> *mut thinkthen_engine {
         };
         Box::into_raw(Box::new(thinkthen_engine {
             engine,
-            failures: Mutex::new(HashMap::new()),
+            failures: Arc::new(Mutex::new(HashMap::new())),
         }))
     })
 }
@@ -425,22 +481,31 @@ pub unsafe extern "C" fn thinkthen_cancel_token_free(token: *mut thinkthen_cance
 /// and the caller's token. `THINKTHEN_NO_DEADLINE` (-1) sets no deadline;
 /// zero is a spent budget by the engine's own rule, so it refuses before
 /// anything is sent; any other negative value is refused here with the
-/// usage kind; a positive value is a count of milliseconds from now,
-/// converted by the contract's checked door so an oversized budget comes
-/// back as the usage kind instead of a panic in the host. A null token is
-/// no token.
+/// usage kind; a positive value is a count of milliseconds from now, and
+/// a budget above the contract's `MAX_DEADLINE_SECONDS` comes back as the
+/// usage kind instead of a panic in the host. A null token is no token.
 fn control<'a>(
     deadline_ms: i64,
     token: *const thinkthen_cancel_token,
 ) -> Result<Options<'a>, Error> {
     let token = unsafe { token.as_ref() };
     let options = Options::new().maybe_cancel(token.map(|held| &held.cancel));
-    match deadline_from_millis(deadline_ms as f64) {
-        Ok(Some(budget)) => Ok(options.deadline_in(budget)),
-        Ok(None) => Ok(options),
-        Err(error) => Err(error),
+    // The integer is checked as an integer, so the message names the
+    // host's exact value (review 5: `INT64_MIN` read back rounded through
+    // a float). The rules and the words match the contract's conversion.
+    match u64::try_from(deadline_ms) {
+        Ok(millis) if millis > MAX_DEADLINE_MILLIS => Err(Error::usage(format!(
+            "the deadline of {deadline_ms} ms is larger than the {MAX_DEADLINE_SECONDS} s the engine holds"
+        ))),
+        Ok(millis) => Ok(options.deadline_in(std::time::Duration::from_millis(millis))),
+        Err(_) if deadline_ms == NO_DEADLINE => Ok(options),
+        Err(_) => Err(Error::usage(format!("the deadline of {deadline_ms} ms is negative"))),
     }
 }
+
+/// The largest budget in milliseconds, the contract's
+/// [`MAX_DEADLINE_SECONDS`] counted exactly.
+const MAX_DEADLINE_MILLIS: u64 = u32::MAX as u64 * 1000;
 
 /// Ask one yes-or-no question of one text, with no budget and no token:
 /// exactly [`thinkthen_decide_opts`] with `THINKTHEN_NO_DEADLINE` and a
@@ -708,9 +773,12 @@ pub unsafe extern "C" fn thinkthen_call(
 /// - `{"find": "...", "units": ["...", ...]}`
 /// - `{"annotate": <the question set>, "records": ["...", ...]}`
 /// - `{"decide": "...", "evidence": "...", "details": true}` for the
-///   audit view; any other `details` value, `false` included, is not the
-///   view and the request answers as its plain verb
+///   audit view
 /// - `{"usage": true}` for the counters, which take no options
+///
+/// `rank`, `details`, and `usage` are read by value: `true` asks for the
+/// form, `false` and an absent key do not, and any other value is refused
+/// with the usage kind naming the key.
 ///
 /// # Safety
 ///
@@ -761,6 +829,17 @@ pub unsafe extern "C" fn thinkthen_call_opts(
     })
 }
 
+/// A door flag read by value: `true` or `false`, absent as `false`, and
+/// anything else refused (review 5: `"rank": false` ranked, because the
+/// door read key presence).
+fn flag(object: &serde_json::Map<String, serde_json::Value>, key: &str) -> Result<bool, Error> {
+    match object.get(key) {
+        None => Ok(false),
+        Some(serde_json::Value::Bool(value)) => Ok(*value),
+        Some(other) => Err(Error::usage(format!("the {key} key takes true or false, not {other}"))),
+    }
+}
+
 /// Route one parsed request to its verb. Every reply is a JSON value the
 /// caller reads; every error is the door's six kinds. The options ride to
 /// every verb that waits; the counters wait for nothing, so they ignore
@@ -773,7 +852,11 @@ fn call_verb(
     let object = request
         .as_object()
         .ok_or_else(|| Error::usage("the request is not a JSON object"))?;
-    if object.contains_key("usage") {
+    // Every flag is read before a verb is chosen. A non-boolean value is
+    // then refused on any request, even where the flag has no meaning.
+    let (usage, details, rank) =
+        (flag(object, "usage")?, flag(object, "details")?, flag(object, "rank")?);
+    if usage {
         let usage = engine.engine.usage();
         return Ok(serde_json::json!({
             "requests": usage.requests,
@@ -824,7 +907,7 @@ fn call_verb(
         engine.one_judgment(&question, evidence, options)
     };
 
-    if object.get("details").and_then(serde_json::Value::as_bool) == Some(true) {
+    if details {
         let evidence = evidence("evidence")?;
         let question_text = serde_json::to_string(&serde_json::Value::Object(question_object))
             .map_err(|error| Error::defect(format!("the question did not serialize: {error}")))?;
@@ -871,7 +954,7 @@ fn call_verb(
             let question = question_from(&question_text)?;
             let records = records()?;
             let references: Vec<&str> = records.iter().map(String::as_str).collect();
-            if object.contains_key("rank") {
+            if rank {
                 let ranked = engine
                     .engine
                     .rank_opts(&question, &references, options, None)?;
@@ -1252,6 +1335,32 @@ mod tests {
     use super::*;
     use thinkthen_contract::Error as ContractError;
 
+    /// Review 5: a host that ran one short thread a request grew the
+    /// failure table by one entry a thread until the engine was freed.
+    /// Each thread's entry leaves when the thread exits.
+    #[test]
+    fn a_threads_failure_leaves_the_table_when_the_thread_exits() {
+        let engine = unsafe { thinkthen_engine_new() };
+        assert!(!engine.is_null(), "the engine builds without a wire");
+        let held = unsafe { &*engine };
+        let entries = || held.failures.lock().map(|table| table.len()).unwrap_or(usize::MAX);
+        let address = engine as usize;
+        for _ in 0..200 {
+            // A plain join waits for the thread's exit hooks; a scope's
+            // end does not.
+            std::thread::spawn(move || {
+                let held = unsafe { &*(address as *const thinkthen_engine) };
+                held.fail(ContractError::usage("a short thread's failure"))
+            })
+            .join()
+            .expect("the short thread ran");
+        }
+        assert_eq!(entries(), 0, "every exited thread's entry left");
+        held.fail(ContractError::usage("the test thread's own failure"));
+        assert_eq!(entries(), 1, "a live thread keeps its entry");
+        unsafe { thinkthen_engine_free(engine) };
+    }
+
     /// The defect kind is its own code, and its message and retry signal
     /// ride the engine's failure table for the calling thread. The
     /// construction stands in for the injected fault main's engine-only
@@ -1413,6 +1522,24 @@ mod tests {
         let smallest = control(i64::MIN, std::ptr::null())
             .err()
             .expect("the smallest negative refuses");
-        assert_eq!(smallest.kind, ErrorKind::Usage);
+        assert_eq!(
+            (smallest.kind, smallest.message.as_str()),
+            (ErrorKind::Usage, "the deadline of -9223372036854775808 ms is negative"),
+            "review 5: the message names the host's exact integer"
+        );
+        let ceiling = i64::try_from(MAX_DEADLINE_MILLIS).expect("fits");
+        assert!(control(ceiling, std::ptr::null()).is_ok(), "the ceiling is a budget");
+        let beyond = control(ceiling + 1, std::ptr::null())
+            .err()
+            .expect("one past the ceiling refuses");
+        assert_eq!(
+            beyond.message,
+            "the deadline of 4294967295001 ms is larger than the 4294967295 s the engine holds"
+        );
+        assert_eq!(
+            NO_DEADLINE as f64,
+            thinkthen_contract::NO_DEADLINE,
+            "the door's sentinel is the contract's"
+        );
     }
 }

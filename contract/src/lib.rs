@@ -199,9 +199,13 @@ impl Error {
     ///
     /// # Errors
     ///
-    /// Returns the cancelled kind when the token is set, and the deadline's
-    /// own kind when the budget is gone.
+    /// Returns the usage kind for a budget larger than
+    /// [`MAX_DEADLINE_SECONDS`], the cancelled kind when the token is set,
+    /// and the deadline's own kind when the budget is gone.
     pub fn guard(options: &Options<'_>) -> Result<(), Self> {
+        if options.too_long {
+            return Err(Self::usage(too_long_seconds(options.seconds)));
+        }
         if let Some(token) = options.cancel
             && token.is_cancelled()
         {
@@ -252,11 +256,14 @@ pub fn deadline_from_seconds(seconds: f64) -> Result<Option<std::time::Duration>
         return Err(Error::usage(format!("the deadline of {seconds} s is negative")));
     }
     if seconds > MAX_DEADLINE_SECONDS {
-        return Err(Error::usage(format!(
-            "the deadline of {seconds} s is larger than the {MAX_DEADLINE_SECONDS} s the engine holds"
-        )));
+        return Err(Error::usage(too_long_seconds(seconds)));
     }
     Ok(Some(std::time::Duration::from_secs_f64(seconds)))
+}
+
+/// The one refusal for a budget larger than [`MAX_DEADLINE_SECONDS`].
+fn too_long_seconds(seconds: f64) -> String {
+    format!("the deadline of {seconds} s is larger than the {MAX_DEADLINE_SECONDS} s the engine holds")
 }
 
 /// Convert a host's deadline in floating-point milliseconds, the C door's
@@ -378,13 +385,16 @@ pub struct Options<'a> {
     cancel: Option<&'a Cancel>,
     deadline: Option<std::time::Instant>,
     seconds: f64,
+    /// The budget was larger than [`MAX_DEADLINE_SECONDS`];
+    /// [`Error::guard`] refuses the call with the usage kind.
+    too_long: bool,
 }
 
 impl<'a> Options<'a> {
     /// Neither a token nor a deadline.
     #[must_use]
     pub const fn new() -> Self {
-        Self { cancel: None, deadline: None, seconds: 0.0 }
+        Self { cancel: None, deadline: None, seconds: 0.0, too_long: false }
     }
 
     /// Carry this token, checked between requests and on every tick.
@@ -411,19 +421,18 @@ impl<'a> Options<'a> {
     /// Stop the whole call after this budget, counted from now.
     ///
     /// A zero budget is spent immediately: the call sends nothing and
-    /// returns the deadline kind. A budget so large that now-plus-budget
-    /// does not fit in the clock is treated as no deadline at all: the
-    /// caller asked for a wall further away than the clock can name, and a
-    /// panic in the arithmetic would take the host process with it
-    /// (review finding, 2026-09-23: the unchecked add panicked on huge
-    /// budgets).
+    /// returns the deadline kind. A budget larger than
+    /// [`MAX_DEADLINE_SECONDS`], or one the clock cannot name, is refused
+    /// by [`Error::guard`] with the usage kind before anything is sent,
+    /// the same ruling every host door's conversion gives (ADR 0041,
+    /// review 5 amendment). The arithmetic is checked, so no budget
+    /// panics in the host.
     #[must_use]
     pub fn deadline_in(self, budget: std::time::Duration) -> Self {
         let seconds = budget.as_secs_f64();
-        // `checked_add` yields `None` exactly when the wall does not fit,
-        // and `None` is already the no-deadline spelling.
         let deadline = std::time::Instant::now().checked_add(budget);
-        Self { deadline, seconds, ..self }
+        let too_long = seconds > MAX_DEADLINE_SECONDS || deadline.is_none();
+        Self { deadline, seconds, too_long, ..self }
     }
 
     /// Whether the deadline has passed.
@@ -2307,14 +2316,21 @@ mod tests {
         assert_eq!(super::deadline_from_millis(1e300).unwrap_err().kind, ErrorKind::Usage, "oversized milliseconds are refused");
     }
 
-    /// A budget the clock cannot name — now plus the budget does not fit
-    /// — is treated as no deadline, never a panic in the host (review
-    /// finding, 2026-09-23: the unchecked add panicked on huge budgets).
+    /// A budget larger than the engine holds is the usage kind on every
+    /// door, and never a panic in the host. Review 5: the host doors
+    /// refused it while `deadline_in` turned it into no deadline.
     #[test]
-    fn an_unrepresentable_budget_is_no_deadline_not_a_panic() {
-        let armed = Options::new().deadline_in(std::time::Duration::MAX);
-        assert!(armed.remaining().is_none(), "the clock cannot name the wall; no deadline is carried");
-        assert!(!armed.passed(), "nothing is spent");
+    fn an_oversized_budget_is_refused_on_every_door() {
+        let refusal = "the deadline of 4294967296 s is larger than the 4294967295 s the engine holds";
+        let beyond = std::time::Duration::from_secs(u64::from(u32::MAX) + 1);
+        let direct = super::Error::guard(&Options::new().deadline_in(beyond)).unwrap_err();
+        assert_eq!((direct.kind, direct.message.as_str()), (ErrorKind::Usage, refusal), "deadline_in refuses");
+        let host = Options::new().with_deadline_seconds(Some(4_294_967_296.0)).err().expect("refused");
+        assert_eq!((host.kind, host.message.as_str()), (ErrorKind::Usage, refusal), "the host door says the same");
+        let unnamed = super::Error::guard(&Options::new().deadline_in(std::time::Duration::MAX)).unwrap_err();
+        assert_eq!(unnamed.kind, ErrorKind::Usage, "a wall the clock cannot name is refused, not a panic");
+        let ceiling = Options::new().deadline_in(std::time::Duration::from_secs(u64::from(u32::MAX)));
+        assert!(super::Error::guard(&ceiling).is_ok(), "the ceiling itself is a budget");
         // A representable budget still arms.
         let sane = Options::new().deadline_in(std::time::Duration::from_secs(5));
         assert!(sane.remaining().is_some(), "five seconds still arms");

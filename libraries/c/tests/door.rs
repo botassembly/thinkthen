@@ -630,6 +630,54 @@ fn the_json_doors_failure_code_is_retrievable() {
     }
 }
 
+/// Review 5: the door read `rank` and `usage` by key presence, so
+/// `"rank": false` ranked and `"usage": false` answered the counters. The
+/// flags are read by value, and a value that is not a boolean is refused.
+#[test]
+fn the_doors_flags_are_read_by_value() {
+    unsafe {
+        let engine = engine();
+        let filter = r#""decide": "Does the customer ask for a refund?", "threshold": 0.5, "records": ["I want a refund for order 9", "just saying hi"]"#;
+
+        let reply = json(engine, &format!("{{{filter}, \"rank\": false}}"));
+        assert!(!reply.is_null(), "rank: false answers: {}", message(engine));
+        let not_ranked = take(reply);
+        assert_eq!(
+            not_ranked["indexes"],
+            serde_json::json!([0]),
+            "rank: false filters: {not_ranked}"
+        );
+        let rank = r#""decide": "Does the customer ask for a refund?", "records": ["I want a refund for order 9", "just saying hi"]"#;
+        let reply = json(engine, &format!("{{{rank}, \"rank\": true}}"));
+        assert!(!reply.is_null(), "rank: true answers: {}", message(engine));
+        let ranked = take(reply);
+        assert!(ranked["answer"].is_array(), "rank: true ranks: {ranked}");
+
+        let no_counters = json(engine, r#"{"usage": false}"#);
+        assert!(no_counters.is_null(), "usage: false is not the counters");
+        assert!(message(engine).contains("no verb"), "{}", message(engine));
+
+        for (key, request) in [
+            ("details", r#"{"decide": "Does the customer ask for a refund?", "evidence": "I want a refund for order 9", "details": "true"}"#.to_string()),
+            ("rank", format!("{{{filter}, \"rank\": 1}}")),
+            ("rank", r#"{"decide": "Does the customer ask for a refund?", "evidence": "I want a refund for order 9", "rank": 1}"#.to_string()),
+            ("usage", r#"{"usage": "yes"}"#.to_string()),
+        ] {
+            let usage_before = usage_of(engine);
+            let reply = json(engine, &request);
+            assert!(reply.is_null(), "{key} with a non-boolean value is refused");
+            assert_eq!(thinkthen::thinkthen_error_code(engine), 1, "{}", message(engine));
+            assert!(
+                message(engine).contains(&format!("the {key} key takes true or false")),
+                "{}",
+                message(engine)
+            );
+            assert_eq!(usage_of(engine), usage_before, "a refusal sends nothing");
+        }
+        thinkthen::thinkthen_engine_free(engine);
+    }
+}
+
 /// The header's promise: every plain spelling is exactly its `_opts` twin
 /// called with THINKTHEN_NO_DEADLINE and a null token, on the answer path
 /// and on the error path alike.
