@@ -12,7 +12,7 @@ Status: ready
 
 Every engine call carries at most one deadline instant. The instant is made once from the caller's budget and is shared by every direct request, record, chunk, annotation group, retry, and request-path wait in that call. A spent deadline returns the private `deadline` error before key lookup, request accounting, connection, or send. Remaining budget caps each retry wait and each blocking HTTP send. When the budget ends, the engine returns `deadline`, not a backend timeout.
 
-ADR 0017 section 4 fixes this contract. The settled surface ledger adds that a zero or already-spent deadline is legal and sends nothing. The launch-first queue authorizes design now but keeps implementation after 0082 and 0083. Ticket 0077 later adds the process-width gate and makes its gate wait observe the same deadline; this ticket supplies the deadline state and does not add a width gate.
+ADR 0017 section 4 fixes this contract. The settled surface ledger adds that a zero or already-spent deadline is legal and sends nothing. The launch-first queue authorizes design now. Implementation waits through 0083 solely because the launch-first queue and the overlapping CLI writes require that order; 0080 and 0081 are the request-path prerequisites. Ticket 0077 later adds the process-width gate and makes its gate wait observe the same deadline; this ticket supplies the deadline state and does not add a width gate.
 
 ## Current facts and design
 
@@ -49,7 +49,7 @@ Excluded: a command `--deadline` option, changes to `--timeout`, public Rust or 
 
 Tickets 0055, 0064, 0072, 0073, and 0074 provide the private engine boundary, bounded per-attempt retry waits, fast refusal, cooperative cancellation, and command SIGINT behavior that this deadline must preserve. ADR 0017 section 4 and the settled surface ledger fix the whole-call and spent-deadline rules.
 
-`ready` is the repository's canonical status for an authorized ticket that has not started; it does not mean its dependencies have landed. Implementation waits for 0082 and 0083 under the launch-first queue. Their final request paths must enter the inventory and acceptance matrix before code changes begin. Tickets 0079 through 0081 are upstream through that command-completion sequence. Ticket 0077 follows 0076 and adds deadline-aware waits at its new process-width gate. Ticket 0078 then composes fork recovery and host ownership before tickets 0084 through 0086 expose public APIs and packages.
+`ready` is the repository's canonical status for an authorized ticket that has not started; it does not mean its dependencies have landed. Tickets 0080 and 0081 are the real request-path prerequisites: `recognize` and `relate` add live request paths, so their final paths must enter the inventory and acceptance matrix before code changes begin. Ticket 0079 supplies the splitter those paths consume. Tickets 0082 and 0083 add no request path and are not technical deadline prerequisites. Implementation nevertheless waits through 0083 solely because the launch-first queue and the overlapping CLI writes require that order. Ticket 0077 follows 0076 and adds deadline-aware waits at its new process-width gate. Ticket 0078 then composes fork recovery and host ownership before tickets 0084 through 0086 expose public APIs and packages.
 
 ## Complexity and routing
 
@@ -61,14 +61,15 @@ Tickets 0055, 0064, 0072, 0073, and 0074 provide the private engine boundary, bo
 - Total: 7
 - Minimum level floor: level 3 for concurrency and timing
 - Final level: 3
-- Reasons: one instant crosses concurrent schedulers, durable request locks, retries, and blocking sends. Wrong ordering can send paid work after a caller's budget, misreport a deadline as backend illness, or leave a host waiting past its bound. The contract is explicit, remains private, adds no dependency, and defers the future width gate.
-- Selected model: `gpt-5.6-sol` with medium reasoning for implementation. Independent design and code review use separate `gpt-5.6-sol` sessions with medium reasoning.
+- Reasons: level 3 applies because one instant crosses concurrent schedulers, durable request locks, retries, and blocking sends. Wrong ordering can send paid work after a caller's budget, misreport a deadline as backend illness, or leave a host waiting past its bound. The contract is explicit, remains private, adds no dependency, and defers the future width gate.
+- Selected route: Luna Max (`gpt-5.6-luna`, `max`) owns design, case analysis, implementation, and remediation. Independent design and code reviews use separate Sol High (`gpt-5.6-sol`, `high`) sessions under the three-ticket trial.
+- Required trial measurements: record the Luna reasoning level, design outcome, substantive Sol findings, review rounds, Luna remediation passes, any Sol repair, focused and complete gate results, reopened defects, and trustworthy elapsed start-to-accept time. Record usage and cost only when the tools expose trustworthy figures.
 
 Re-score if the post-0083 inventory reveals another transport door, the work changes a public API or command surface, requires a dependency, or cannot preserve one deadline across all paths without a broader scheduler change.
 
 ## Review
 
-- Design review: pending.
+- Design review: accepted by independent Sol High after routing and dependency attribution were corrected.
 - Code review: pending.
 
 ## What Ian can overturn
