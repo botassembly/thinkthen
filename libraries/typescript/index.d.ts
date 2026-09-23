@@ -47,15 +47,21 @@ export interface CallOptions {
   signal?: AbortSignal;
   /** Bounds the whole call in milliseconds. A budget of zero is legal and
    * spent immediately: the call sends nothing and rejects with the
-   * `deadline` kind naming the budget. `null` (or leaving it out) is the
-   * one spelling of no deadline; every negative — including the
-   * contract's minus-one sentinel, which a computed `end - Date.now()`
-   * can land on by chance — a NaN, and an oversized budget reject with
-   * the `usage` kind. */
+   * `deadline` kind naming the budget. No deadline is spelled `null`,
+   * leaving it out, or the minus-one sentinel — the one spelling every
+   * surface shares, including this one, so a computed `end - Date.now()`
+   * that lands on -1 means none rather than refusing. Every other
+   * negative, a NaN, and an oversized budget reject with the `usage`
+   * kind. */
   deadlineMs?: number | null;
 }
 
 /** `choose`'s last object: the option list and the call options together. */
+export interface ScoreOptions extends CallOptions {
+  /** The question's levels, beside the text. */
+  levels: readonly string[];
+}
+
 export interface ChooseOptions extends CallOptions {
   options: readonly string[];
 }
@@ -223,7 +229,9 @@ export function choose(question: string, text: string, options: ChooseOptions): 
 export function choose(question: ChooseSpec | Question, text: string, options?: CallOptions): Promise<string | null>;
 
 /** Place the evidence on the question's levels: the position from 0 to
- * K−1. The nearest level's name rides in the audit trail. */
+ * K−1. The nearest level's name rides in the audit trail. A bare
+ * question string takes its levels in the last object. */
+export function score(question: string, text: string, options: ScoreOptions): Promise<number>;
 export function score(question: ScoreSpec | Question, text: string, options?: CallOptions): Promise<number>;
 
 /** Name the labels that held, in the question's order. A bare question

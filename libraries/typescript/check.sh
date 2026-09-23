@@ -24,24 +24,44 @@ step "offline suites (null backend): verbs, errors, conformance, the ten example
 ENGINE_NULL=1 node --test tests/*.test.mjs
 
 step "the conformance test can fail"
-# The standing can-fail probe: a corrupted expectation must end the run
-# nonzero, or the suite above is theater. A temp copy of the file carries
-# the corruption; the skip decisions still come from the real table.
-corrupt="$(mktemp /tmp/conf-corrupt.XXXXXX.json)"
-node -e '
-const fs = require("fs");
-const file = JSON.parse(fs.readFileSync("../../conformance/conformance.json", "utf8"));
-const held = file.cases.find((one) => one.id.startsWith("13-"));
-held.expect.answer = 7.0;
-fs.writeFileSync(process.argv[1], JSON.stringify(file));
-' "$corrupt"
-if ENGINE_NULL=1 THEN_CONF="$corrupt" node --test tests/conformance.test.mjs >/dev/null 2>&1; then
+# The standing can-fail probe (review-4, item 17, extends to the arms that
+# used to `return note(...)` instead of failing): a corrupted expectation
+# must end the run nonzero, or the suite above is theater. Case 13 pins
+# the score arm, 15 the single-record annotate fields (the note-returns),
+# and 19 the decide_many judgments (the other note-returns). A temp copy
+# of the file carries each corruption in turn; the skip decisions still
+# come from the real table.
+for case_prefix in 13- 15- 19-; do
+  corrupt="$(mktemp /tmp/conf-corrupt.XXXXXX.json)"
+  node -e '
+    const fs = require("fs");
+    const file = JSON.parse(fs.readFileSync("../../conformance/conformance.json", "utf8"));
+    const held = file.cases.find((one) => one.id.startsWith(process.argv[2]));
+    const expect = held.expect;
+    if (expect.answers !== null && typeof expect.answers === "object" && Object.keys(expect.answers).length) {
+      const firstKey = Object.keys(expect.answers)[0];
+      const first = expect.answers[firstKey];
+      if (first !== null && typeof first === "object") {
+        first.answer = first.answer === true ? false : true;
+        if ("unsure" in first) delete first.unsure;
+      } else {
+        expect.answers[firstKey] = first === true ? false : true;
+      }
+    } else if (Array.isArray(expect.rows) && expect.rows.length) {
+      expect.rows[0].value = Object.assign({}, expect.rows[0].value, { model: "corrupted" });
+    } else {
+      expect.answer = expect.answer === 7.0 ? 8.0 : 7.0;
+    }
+    fs.writeFileSync(process.argv[1], JSON.stringify(file));
+  ' "$corrupt" "$case_prefix"
+  if ENGINE_NULL=1 THEN_CONF="$corrupt" node --test tests/conformance.test.mjs >/dev/null 2>&1; then
+    rm -f "$corrupt"
+    echo "FAIL: corrupting case ${case_prefix}* passed the conformance test"
+    exit 1
+  fi
   rm -f "$corrupt"
-  echo "FAIL: a corrupted expectation passed the conformance test"
-  exit 1
-fi
-rm -f "$corrupt"
-echo "ok: the corrupted expectation failed as it must"
+  echo "ok: corrupting case ${case_prefix}* failed as it must"
+done
 
 step "wire suites"
 stub_url="http://127.0.0.1:${STUB_PORT:-8212}/v1"

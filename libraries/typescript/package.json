@@ -18,6 +18,7 @@
     "index.mjs",
     "index.d.ts",
     "loader.cjs",
+    "LICENSE",
     "*.node"
   ],
   "private": true,

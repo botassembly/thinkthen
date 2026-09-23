@@ -56,6 +56,17 @@ function centralSkip(one) {
   } else if ((one.records ?? []).some((record) => record === null)) {
     args.push('--record', 'null');
   }
+  // The boolean facets are derived the same way: a case marked `none`
+  // carries a null-bearing shape the table selects on, and a case whose
+  // expectation is an error names that. Without these the reader cannot
+  // see why `25-find-none-fits` is table-covered, and the case runs red
+  // (review-4, item 17 — the tip was red on exactly this).
+  if (one.none !== undefined) {
+    args.push('--none', String(one.none === true));
+  }
+  if (one.expect?.error !== undefined) {
+    args.push('--error', 'true');
+  }
   const asked = spawnSync(args[0], args.slice(1), { encoding: 'utf8' });
   assert.equal(asked.status, 0, `skiptable: ${asked.stderr}`);
   return asked.stdout.trim();
@@ -107,12 +118,15 @@ async function runVerb(held, spec, text, list, call) {
       if (!expect.judgments && !expect.answers) {
         throw new Error(`case ${held.id} carries no comparable expectations`);
       }
+      // A mismatch fails the case outright (review-4, item 17): these
+      // arms used to `return note(...)`, which counted as a pass in the
+      // totals while printing only a line.
       if (wanted.length !== answers.length) {
-        return note(held.id, `expected ${wanted.length} judgments, the surface answers ${answers.length}`);
+        throw new Error(`case ${held.id}: expected ${wanted.length} judgments, the surface answers ${answers.length}`);
       }
       for (let at = 0; at < answers.length; at += 1) {
         if (wanted[at] !== null && answers[at] !== wanted[at]) {
-          return note(held.id, `record ${at}: expected ${wanted[at]}, got ${answers[at]}`);
+          throw new Error(`case ${held.id}: record ${at}: expected ${wanted[at]}, got ${answers[at]}`);
         }
       }
       // The ruled record row (go-ahead item 4): this host's own pair, the
@@ -214,9 +228,11 @@ async function runVerb(held, spec, text, list, call) {
       const got = rows[0];
       const wantedKeys = Object.keys(wanted);
       for (const key of wantedKeys) {
-        if (!(key in got)) return note(held.id, `field ${key} missing from the row`);
+        // Review-4, item 17: a missing field or a wrong value fails the
+        // case; a note line never reaches the totals.
+        if (!(key in got)) throw new Error(`case ${held.id}: field ${key} missing from the row`);
         if (wanted[key] !== null && JSON.stringify(got[key]) !== JSON.stringify(wanted[key])) {
-          return note(held.id, `field ${key}: expected ${JSON.stringify(wanted[key])}, got ${JSON.stringify(got[key])}`);
+          throw new Error(`case ${held.id}: field ${key}: expected ${JSON.stringify(wanted[key])}, got ${JSON.stringify(got[key])}`);
         }
       }
       return;
@@ -309,7 +325,9 @@ async function runVerb(held, spec, text, list, call) {
       return;
     }
     default:
-      note(held.id, `the runner has no arm for verb ${verb}`);
+      // Review-4, item 17: an unknown verb counted as a pass here; the
+      // runner must refuse what it cannot assert.
+      throw new Error(`case ${held.id}: the runner has no arm for verb ${verb}`);
   }
 }
 
