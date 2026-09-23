@@ -18,6 +18,17 @@ crate-type = ["cdylib"]
 # the host. The command's own profile stays as the root workspace sets it.
 panic = "unwind"
 
+
+# The strict rules the gate's lint rung enforces (surfaces-review-4:
+# these two workspaces carried no table while the others did).
+[lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "forbid"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
 [features]
 # The stand-in's compile-time fixture opt-in, forwarded so the failed-marker
 # conformance case can run against a fixture-armed build (check.sh builds

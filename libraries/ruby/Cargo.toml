@@ -24,6 +24,17 @@ thinkthen-standin = { path = "../../standin" }
 # The stand-in's one synthesized partial failure (conformance case 74),
 # armed at compile time. The gate builds with it so the marker case runs;
 # a packaged build (build.sh without the argument) never carries it.
+
+# The strict rules the gate's lint rung enforces (surfaces-review-4:
+# these two workspaces carried no table while the others did).
+[lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "forbid"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
 [features]
 synthetic-partial = ["thinkthen-standin/synthetic-partial"]
 
