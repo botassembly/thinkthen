@@ -17,7 +17,9 @@ run_limited() { # seconds command...
 }
 
 echo "== r surface: the tarball build vendors the contract crates"
-./tools/make-tarball.sh --stage-only >/dev/null
+# Offline, as the gate is: the vendor step reads only the cargo cache
+# (surfaces-review-5: it once fetched through an empty home).
+CARGO_NET_OFFLINE=true ./tools/make-tarball.sh --stage-only >/dev/null
 
 echo "== r surface: the defect kind crosses as its own kind (shim unit test)"
 (cd thinkthen/src/rust && cargo test --quiet --locked --lib)

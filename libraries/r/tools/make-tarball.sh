@@ -97,12 +97,15 @@ open(path, "w").write("".join(out))
 PYEOF
 grep -q "workspace = true" "$CORE" && { echo "unresolved workspace inheritance remains in thinkthen-core" >&2; exit 1; }
 
-# Vendor the registry dependency tree. This one step may use the
-# network when the repository's src/.cargo cache lacks a crate of the
-# graph (a maintainer step); the tarball it produces installs offline.
+# Vendor the registry dependency tree from the builder's own cargo cache
+# (surfaces-review-5: an empty src/.cargo home made this step fetch, and
+# fail offline). With CARGO_NET_OFFLINE=true it reads only that cache; a
+# missing crate fails here, and `cargo fetch --locked` in the package's
+# src/rust is the one network step that fills it. The tarball it produces
+# installs offline.
 mkdir -p "$STAGE/thinkthen/src/rust/vendor/registry"
 (cd "$STAGE/thinkthen/src/rust" && \
-  CARGO_HOME="$PKG/src/.cargo" cargo vendor --locked vendor/registry \
+  cargo vendor --locked vendor/registry \
   > "$STAGE/vendor-config.txt")
 grep -q 'directory = "vendor/registry"' "$STAGE/vendor-config.txt" \
   || grep -q 'vendor/registry' "$STAGE/vendor-config.txt" \
