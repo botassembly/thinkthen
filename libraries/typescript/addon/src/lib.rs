@@ -16,6 +16,11 @@
 //! the event loop. A bulk call blocks one worker while the engine's own
 //! scoped threads run at the process width, which is the ADR's Node shape.
 
+// The napi macro writes the JS-facing methods itself; the doc comments
+// above each item name them, and the generated wrappers cannot carry
+// docs from here, so the lint is scoped off for them.
+#![allow(missing_docs)]
+
 use std::panic;
 use std::sync::{Arc, OnceLock};
 use std::time::Instant;
@@ -87,6 +92,8 @@ impl CancelHandle {
     }
 }
 
+// The napi macro emits the JS-facing constructor the doc comment above
+// names; the Default impl below is the Rust-side twin.
 impl Default for CancelHandle {
     /// Build a token nothing has fired, as `new` does.
     fn default() -> Self {
