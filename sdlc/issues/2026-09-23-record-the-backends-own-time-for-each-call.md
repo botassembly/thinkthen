@@ -9,6 +9,15 @@ Found in Beatles Bench, 2026-09-23. A benchmark needs to split each call's time 
 
 ## The ask
 
+Ian's ruling, 2026-09-23: keep the times. Harvest only the fields we map, never the whole header set. Each adapter names its map:
+
+| Adapter | Source | Kept as |
+|---|---|---|
+| systemone | header `x-envoy-upstream-service-time` | `server_ms` |
+| systemone | header `x-typesafe-request-id` | `request_id` |
+| chat | body `created`, and the time in the body `id` | `server_s`, whole seconds |
+| every adapter | the command's own clock | `wall_ms` |
+
 For every sent request, keep three facts: the wall time of the exchange as the command measured it, the backend's own time when a known header names it, and the backend's request id. Read only named headers from a fixed allowlist. Never keep any other header. Show them under `--details`.
 
 ## The constraint
