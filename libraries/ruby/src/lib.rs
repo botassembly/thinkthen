@@ -31,6 +31,11 @@
 //! the engine call now touches Ruby at all, so there is no such jump to
 //! make.
 
+// The magnus macros write the exported methods and the init function
+// themselves; the doc comments above each item name them, and the
+// generated wrappers cannot carry docs from here.
+#![allow(missing_docs)]
+
 use std::ffi::c_void;
 use std::sync::Arc;
 
@@ -47,7 +52,7 @@ use thinkthen_contract::{
 use thinkthen_standin::StandinConnector;
 
 /// A built question: the file's JSON text beside its parsed engine form.
-#[derive(Clone, TypedData)]
+#[derive(Clone, Debug, TypedData)]
 #[magnus(class = "ThinkThen::Question", free_immediately)]
 pub struct QuestionValue {
     json: String,
@@ -57,9 +62,12 @@ pub struct QuestionValue {
 impl DataTypeFunctions for QuestionValue {}
 
 /// A built question set: the set's JSON text beside its parsed form.
-#[derive(Clone, TypedData)]
+#[derive(Clone, Debug, TypedData)]
 #[magnus(class = "ThinkThen::QuestionSet", free_immediately)]
 pub struct SetValue {
+    /// The JSON the set came from, held for the inspector; no code path
+    /// reads it (clippy's dead-field finding, kept deliberately).
+    #[allow(dead_code, reason = "held for the inspector")]
     json: String,
     set: QuestionSet,
 }
@@ -76,6 +84,7 @@ impl SetValue {
 
 /// A cancel token the Ruby side can fire from any thread.
 #[derive(Clone, TypedData)]
+#[derive(Debug)]
 #[magnus(class = "ThinkThen::Cancel", free_immediately)]
 pub struct CancelValue {
     token: Cancel,
@@ -103,6 +112,14 @@ impl CancelValue {
 #[magnus(class = "ThinkThen::Native::Engine", free_immediately)]
 pub struct EngineValue {
     engine: Arc<dyn ContractEngine>,
+}
+
+impl std::fmt::Debug for EngineValue {
+    /// The trait object cannot derive, and the class name is the whole
+    /// honest description.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ThinkThen::Native::Engine")
+    }
 }
 
 impl DataTypeFunctions for EngineValue {}
@@ -409,8 +426,12 @@ struct AnnotateJob {
     records: Vec<String>,
     token: Cancel,
     deadline: Option<f64>,
-    answer: Option<Crossing<Vec<Vec<(String, Annotated)>>>>,
+    answer: Option<Crossing<AnnotatedRows>>,
 }
+
+/// One annotate call's answer crossing: a row per record, a field per
+/// question name.
+type AnnotatedRows = Vec<Vec<(String, Annotated)>>;
 
 unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
     let job = unsafe { &mut *(pointer as *mut AnnotateJob) };
@@ -561,14 +582,14 @@ impl EngineValue {
                 },
                 SingleOut::Score(scored) => {
                     let pair = RArray::with_capacity(2);
-                    pair.push(scored.value).map_err(|error| error)?;
-                    pair.push(scored.nearest).map_err(|error| error)?;
+                    pair.push(scored.value)?;
+                    pair.push(scored.nearest)?;
                     pair.as_value()
                 }
                 SingleOut::Tags(labels) => {
                     let list = RArray::with_capacity(labels.len());
                     for label in labels {
-                        list.push(label).map_err(|error| error)?;
+                        list.push(label)?;
                     }
                     list.as_value()
                 }
@@ -618,7 +639,7 @@ impl EngineValue {
             BulkOut::Judgments(judgments) => {
                 let list = RArray::with_capacity(judgments.len());
                 for judgment in judgments {
-                    list.push(answer_value(judgment.answer)).map_err(|error| error)?;
+                    list.push(answer_value(judgment.answer))?;
                 }
                 Ok(list.as_value())
             }
@@ -626,16 +647,16 @@ impl EngineValue {
                 let list = RArray::with_capacity(judgments.len());
                 for judgment in judgments {
                     let pair = RHash::new();
-                    pair.aset("answer", answer_value(judgment.answer)).map_err(|error| error)?;
-                    pair.aset("probability", judgment.probability).map_err(|error| error)?;
-                    list.push(pair).map_err(|error| error)?;
+                    pair.aset("answer", answer_value(judgment.answer))?;
+                    pair.aset("probability", judgment.probability)?;
+                    list.push(pair)?;
                 }
                 Ok(list.as_value())
             }
             BulkOut::Kept(places) => {
                 let list = RArray::with_capacity(places.len());
                 for place in places {
-                    list.push(place as i64).map_err(|error| error)?;
+                    list.push(place as i64)?;
                 }
                 Ok(list.as_value())
             }
@@ -643,9 +664,9 @@ impl EngineValue {
                 let list = RArray::with_capacity(ranked.len());
                 for one in ranked {
                     let pair = RArray::with_capacity(2);
-                    pair.push(one.index as i64).map_err(|error| error)?;
-                    pair.push(one.probability).map_err(|error| error)?;
-                    list.push(pair).map_err(|error| error)?;
+                    pair.push(one.index as i64)?;
+                    pair.push(one.probability)?;
+                    list.push(pair)?;
                 }
                 Ok(list.as_value())
             }
@@ -855,10 +876,10 @@ impl EngineValue {
             let found = found.map_err(map_error)?;
             let pair = RArray::with_capacity(2);
             match found.index {
-                Some(place) => pair.push(place as i64).map_err(|error| error)?,
-                None => pair.push(()).map_err(|error| error)?,
+                Some(place) => pair.push(place as i64)?,
+                None => pair.push(())?,
             }
-            pair.push(found.probability).map_err(|error| error)?;
+            pair.push(found.probability)?;
             Ok(pair.as_value())
         })
     }
@@ -897,11 +918,11 @@ impl EngineValue {
                 let inner = RArray::with_capacity(one.len());
                 for (name, field) in one {
                     let pair = RArray::with_capacity(2);
-                    pair.push(name).map_err(|error| error)?;
-                    pair.push(annotated_value(&field)?).map_err(|error| error)?;
-                    inner.push(pair).map_err(|error| error)?;
+                    pair.push(name)?;
+                    pair.push(annotated_value(&field)?)?;
+                    inner.push(pair)?;
                 }
-                outer.push(inner).map_err(|error| error)?;
+                outer.push(inner)?;
             }
             Ok(outer.as_value())
         })
@@ -911,9 +932,9 @@ impl EngineValue {
         let Usage { requests, cache_answers, tokens } = self.engine.usage();
         let ruby = magnus::Ruby::get().unwrap();
         let hash = RHash::new();
-        hash.aset("requests", requests).map_err(|error| error)?;
-        hash.aset("cache_answers", cache_answers).map_err(|error| error)?;
-        hash.aset("tokens", tokens).map_err(|error| error)?;
+        hash.aset("requests", requests)?;
+        hash.aset("cache_answers", cache_answers)?;
+        hash.aset("tokens", tokens)?;
         let _ = ruby;
         Ok(hash)
     }
@@ -930,14 +951,14 @@ fn annotated_value(field: &Annotated) -> Result<Value, Error> {
         },
         Annotated::Score(scored) => {
             let pair = RArray::with_capacity(2);
-            pair.push(scored.value).map_err(|error| error)?;
-            pair.push(scored.nearest.clone()).map_err(|error| error)?;
+            pair.push(scored.value)?;
+            pair.push(scored.nearest.clone())?;
             pair.as_value()
         }
         Annotated::Tags(labels) => {
             let list = RArray::with_capacity(labels.len());
             for label in labels {
-                list.push(label.clone()).map_err(|error| error)?;
+                list.push(label.clone())?;
             }
             list.as_value()
         }
@@ -946,10 +967,10 @@ fn annotated_value(field: &Annotated) -> Result<Value, Error> {
         // never `nil`.
         Annotated::Failed(failed) => {
             let inner = RHash::new();
-            inner.aset("kind", kind_word(failed.kind)).map_err(|error| error)?;
-            inner.aset("cause", cause_word(failed.cause)).map_err(|error| error)?;
+            inner.aset("kind", kind_word(failed.kind))?;
+            inner.aset("cause", cause_word(failed.cause))?;
             let outer = RHash::new();
-            outer.aset("failed", inner).map_err(|error| error)?;
+            outer.aset("failed", inner)?;
             outer.as_value()
         }
     })
@@ -980,20 +1001,20 @@ const fn cause_word(cause: thinkthen_contract::Cause) -> &'static str {
 /// (0053) and the failed-question count (0054).
 fn details_hash(ruby: &magnus::Ruby, details: &Details) -> Result<RHash, Error> {
     let hash = RHash::new();
-    hash.aset("probability", details.probability).map_err(|error| error)?;
-    hash.aset("answer", answer_value(details.answer)).map_err(|error| error)?;
-    hash.aset("model", details.model.clone()).map_err(|error| error)?;
-    hash.aset("digest", details.digest.clone()).map_err(|error| error)?;
-    hash.aset("sends", details.sends).map_err(|error| error)?;
+    hash.aset("probability", details.probability)?;
+    hash.aset("answer", answer_value(details.answer))?;
+    hash.aset("model", details.model.clone())?;
+    hash.aset("digest", details.digest.clone())?;
+    hash.aset("sends", details.sends)?;
     let requests = RArray::with_capacity(details.requests.len());
     for digest in &details.requests {
-        requests.push(digest.clone()).map_err(|error| error)?;
+        requests.push(digest.clone())?;
     }
-    hash.aset("requests", requests).map_err(|error| error)?;
-    hash.aset("failed_questions", details.failed_questions).map_err(|error| error)?;
+    hash.aset("requests", requests)?;
+    hash.aset("failed_questions", details.failed_questions)?;
     // The nearest level's name on a score question; nil on every other
     // verb (ADR 0017 pick 6, settled 2026-09-21).
-    hash.aset("nearest", details.nearest.clone()).map_err(|error| error)?;
+    hash.aset("nearest", details.nearest.clone())?;
     let _ = ruby;
     Ok(hash)
 }
@@ -1006,26 +1027,26 @@ fn recognized_value(found: &Recognized) -> Result<Value, Error> {
     let entities = RArray::with_capacity(found.entities.len());
     for entity in &found.entities {
         let one = RHash::new();
-        one.aset("id", entity.id as i64).map_err(|error| error)?;
-        one.aset("text", entity.text.clone()).map_err(|error| error)?;
-        one.aset("kind", entity.kind.clone()).map_err(|error| error)?;
-        one.aset("start", entity.start as i64).map_err(|error| error)?;
-        one.aset("end", entity.end as i64).map_err(|error| error)?;
-        one.aset("strength", entity.strength).map_err(|error| error)?;
-        entities.push(one).map_err(|error| error)?;
+        one.aset("id", entity.id as i64)?;
+        one.aset("text", entity.text.clone())?;
+        one.aset("kind", entity.kind.clone())?;
+        one.aset("start", entity.start as i64)?;
+        one.aset("end", entity.end as i64)?;
+        one.aset("strength", entity.strength)?;
+        entities.push(one)?;
     }
     let relations = RArray::with_capacity(found.relations.len());
     for relation in &found.relations {
         let one = RHash::new();
-        one.aset("name", relation.name.clone()).map_err(|error| error)?;
-        one.aset("source", relation.source as i64).map_err(|error| error)?;
-        one.aset("target", relation.target as i64).map_err(|error| error)?;
-        one.aset("probability", relation.probability).map_err(|error| error)?;
-        relations.push(one).map_err(|error| error)?;
+        one.aset("name", relation.name.clone())?;
+        one.aset("source", relation.source as i64)?;
+        one.aset("target", relation.target as i64)?;
+        one.aset("probability", relation.probability)?;
+        relations.push(one)?;
     }
     let answer = RHash::new();
-    answer.aset("entities", entities).map_err(|error| error)?;
-    answer.aset("relations", relations).map_err(|error| error)?;
+    answer.aset("entities", entities)?;
+    answer.aset("relations", relations)?;
     let _ = ruby;
     Ok(answer.as_value())
 }
@@ -1038,17 +1059,17 @@ fn edges_value(edges: &[Edge]) -> Result<Value, Error> {
     let list = RArray::with_capacity(edges.len());
     for edge in edges {
         let one = RHash::new();
-        one.aset("name", edge.name.clone()).map_err(|error| error)?;
-        one.aset("source", edge.source as i64).map_err(|error| error)?;
-        one.aset("target", edge.target as i64).map_err(|error| error)?;
-        one.aset("probability", edge.probability).map_err(|error| error)?;
+        one.aset("name", edge.name.clone())?;
+        one.aset("source", edge.source as i64)?;
+        one.aset("target", edge.target as i64)?;
+        one.aset("probability", edge.probability)?;
         if let Some(kind) = &edge.source_kind {
-            one.aset("source_kind", kind.clone()).map_err(|error| error)?;
+            one.aset("source_kind", kind.clone())?;
         }
         if let Some(kind) = &edge.target_kind {
-            one.aset("target_kind", kind.clone()).map_err(|error| error)?;
+            one.aset("target_kind", kind.clone())?;
         }
-        list.push(one).map_err(|error| error)?;
+        list.push(one)?;
     }
     let _ = ruby;
     Ok(list.as_value())
@@ -1075,6 +1096,8 @@ fn cancel_new() -> CancelValue {
     CancelValue { token: Cancel::new() }
 }
 
+/// Register the module, the three value classes, and the error
+/// hierarchy under `ThinkThen`.
 #[magnus::init(name = "thinkthen")]
 fn init() -> Result<(), Error> {
     let module = define_module("ThinkThen")?;

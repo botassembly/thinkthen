@@ -126,8 +126,27 @@ for entry in \
 	fi
 	if [ -n "$needs" ] && ! command -v "$needs" >/dev/null 2>&1; then
 		# surfaces-review-4: a missing runtime must fail the lint, never
-		# silently skip it — a skipped workspace is an unchecked one.
-		printf 'lint: %s FAILED: %s is not on PATH; install the runtime or name why this machine may not check it\n' "$workspace" "$needs" >&2
+		# silently skip it — a skipped workspace is an unchecked one. The
+		# one named fallback is the surface's own builder container, the
+		# same image check.sh runs; if that cannot run either, the check
+		# fails with its reason.
+		case "$workspace:$needs" in
+		libraries/ruby:ruby)
+			if docker image inspect thinkthen-ruby-builder:local >/dev/null 2>&1; then
+				printf 'lint: %s (host has no %s; the builder container answers)\n' "$workspace" "$needs"
+				if docker run --rm -v "$REPO":/src -w "/src/$workspace" \
+					thinkthen-ruby-builder:local \
+					cargo clippy --locked --quiet --all-targets --all-features -- -D warnings; then
+					deny_status=$(workspace_deny "$workspace" "$REPO") || fail=1
+					printf '%s\n' "$deny_status"
+					continue
+				fi
+				fail=1
+				continue
+			fi
+			;;
+		esac
+		printf 'lint: %s FAILED: %s is not on PATH and no builder container answered; install the runtime or run the surface check (refs surfaces-review-4)\n' "$workspace" "$needs" >&2
 		fail=1
 		continue
 	fi
