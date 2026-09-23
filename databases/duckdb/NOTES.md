@@ -409,7 +409,7 @@ ok  relate names the temporary-table boundary
 ok  a missing non-temporary table keeps the raw error
 ```
 
-**Finding 3, relate and the caller's connection — ruled option A.** The
+**Finding 3, relate and the caller's connection — ruled option A (ADR 0038).** The
 stable C API cannot reach the caller's connection (`duckdb_query` needs a
 `duckdb_connection`; a client context yields catalogs, config, and the
 file system only, and temp tables live in per-connection `ClientData` —

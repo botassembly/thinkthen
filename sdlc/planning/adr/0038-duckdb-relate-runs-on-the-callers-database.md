@@ -2,6 +2,7 @@
 
 - Status: Decided by the library team on 2026-09-22 on the lane's command-backed evidence. It is input to the build team's C++ fork decision. Ian can overturn.
 - Date: 2026-09-22
+- Record: this ADR is the DuckDB relate option A ruling that `databases/duckdb/NOTES.md` (Finding 3) cites.
 
 ## Decision
 
