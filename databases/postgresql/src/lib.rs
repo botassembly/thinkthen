@@ -951,11 +951,18 @@ extern "C-unwind" fn _PG_init() {
 
 // Keep every function this extension owns out of PUBLIC's hands: revoke
 // the default PUBLIC grant at install, and re-revoke whenever a function
-// is created, so an ALTER EXTENSION UPDATE cannot hand a new function to
-// PUBLIC (review 2, item 4). The event trigger is SECURITY DEFINER — the
-// DDL's role need not own the functions — with its search path pinned,
-// and it grants nothing: the narrowed grant documented below is the
-// administrator's act.
+// this extension owns is created, so an ALTER EXTENSION UPDATE cannot
+// hand a new function to PUBLIC (review 2, item 4). The event trigger is
+// scoped to the objects the DDL event itself created, so an
+// administrator's grant on any other function survives it (review 3,
+// item 10), and it is SECURITY DEFINER — the DDL's role need not own the
+// functions — with its search path pinned, and it grants nothing.
+//
+// One boundary, stated rather than fixed: `session_replication_role =
+// replica` disables event triggers entirely, so a replica-session update
+// bypasses the guard; an update script that adds functions should carry
+// its own revoke block beside the trigger, which is why the install
+// block below is spelled to copy.
 //
 // Revoke the default PUBLIC grant on every function this extension
 // installs, and on nothing else.
@@ -1009,11 +1016,16 @@ BEGIN
 END
 $thinkthen_revoke$;
 
--- The same revoke, run whenever a function is created: an update script
--- that creates a new function would hand it EXECUTE by PostgreSQL's
--- default grant, and an unchanged revoke block never appears in a
--- diff-based update script. SECURITY DEFINER so the DDL's role need not
--- own the functions; the search path is pinned; it grants nothing.
+-- The same revoke, scoped to what the DDL event itself created: an
+-- ALTER EXTENSION UPDATE script that creates a new function would hand
+-- it EXECUTE by PostgreSQL's default grant, and an unchanged revoke
+-- block never appears in a diff-based update script, so the trigger
+-- closes that door. It joins pg_event_trigger_ddl_commands() against
+-- pg_depend, so it touches only functions this event created that the
+-- thinkthen extension owns — an administrator's deliberate grant on any
+-- other function survives the trigger untouched (review 3, item 10).
+-- SECURITY DEFINER so the DDL's role need not own the functions; the
+-- search path is pinned; it grants nothing.
 CREATE FUNCTION thinkthen_guard_public() RETURNS event_trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $thinkthen_guard$
 DECLARE
@@ -1021,7 +1033,8 @@ DECLARE
 BEGIN
     FOR signature IN
         SELECT p.oid::regprocedure::text
-        FROM pg_proc p
+        FROM pg_event_trigger_ddl_commands() c
+        JOIN pg_proc p ON p.oid = c.objid
         JOIN pg_depend d
           ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
         JOIN pg_extension e

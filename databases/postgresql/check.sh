@@ -643,6 +643,22 @@ grep -qE "public_any *\| *0" .tmp-update.out \
 echo "ok       the update path's new function is extension-owned and out of PUBLIC's hands"
 rm -f .tmp-update.sql .tmp-update.out
 
+# Review 3, item 10, the negative arm: the trigger is scoped to the
+# objects the DDL event created that this extension owns, so an
+# administrator's deliberate PUBLIC grant on one of this extension's
+# functions survives an unrelated function's creation. Before the
+# scoping, every function creation anywhere re-revoked every PUBLIC
+# grant on every extension function — the administrator's hand was
+# undone by anyone's CREATE FUNCTION.
+psql_in -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text) TO PUBLIC;" >/dev/null
+psql_in -c "CREATE FUNCTION tt_deliberate(x integer) RETURNS integer LANGUAGE sql AS 'SELECT \$1';" >/dev/null
+public_keeps=$(psql_in -Atqc "SELECT has_function_privilege('public', 'thinkthen_decide(text, text)', 'EXECUTE');")
+[ "$public_keeps" = "t" ] \
+  || { echo "FAILED   the trigger revoked a deliberate grant on an extension function" >&2; exit 1; }
+psql_in -c "REVOKE EXECUTE ON FUNCTION thinkthen_decide(text, text) FROM PUBLIC;" \
+  -c "DROP FUNCTION tt_deliberate(integer);" >/dev/null
+echo "ok       a deliberate PUBLIC grant on thinkthen_decide survives an unrelated CREATE FUNCTION"
+
 if curl -sf --max-time 1 http://127.0.0.1:8219/v1/stats >/dev/null 2>&1; then
   echo "== postgres surface: wire suite against the stub on 8219"
   docker rm -f -v "$WIRE_NAME" >/dev/null 2>&1 || true

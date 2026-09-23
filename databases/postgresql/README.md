@@ -76,15 +76,50 @@ slice proves it: case 13's `nearest_level` (`mid`) is compared against
   on every function it installs — both `thinkthen_decide` overloads and
   the `thinkthen_warm` aggregate included — so an unprivileged role
   cannot make a paid call or read a file; superusers keep access by
-  their own right. The one-line grant for an application role:
-  `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO the_app_role;`.
-  The grant is the trust: a role holding it can ask for any `'@path'`
-  the server process can read.
-- **Question-file access.** `'@name'` reads one file, resolved against
-  the backend's working directory (the official image's data directory),
-  exactly as named, and only from a role holding the EXECUTE grant above.
-  `thinkthen_relate` reads no file: it runs the query text it is given
-  through SPI. Nothing else is read.
+  their own right. The grant for an application role names the
+  extension's own functions through `pg_depend`, never `GRANT … ON ALL
+  FUNCTIONS IN SCHEMA public`, which would also grant every other
+  extension's functions (review 2, item 4):
+
+  ```sql
+  DO $thinkthen_grant$
+  DECLARE signature text;
+  BEGIN
+      FOR signature IN
+          SELECT p.oid::regprocedure::text
+          FROM pg_proc p
+          JOIN pg_depend d
+            ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+          JOIN pg_extension e
+            ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass
+          WHERE e.extname = 'thinkthen'
+      LOOP
+          EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO %I',
+                         signature, 'the_app_role');
+      END LOOP;
+  END
+  $thinkthen_grant$;
+  ```
+
+  The grant is the trust: a role holding it can make paid calls, and can
+  read files only by the file rule below.
+- **Question-file access.** `'@name'` reads one file, resolved exactly
+  as named, only through the file gate: the file must be a regular file
+  of at most 1 MiB, and the calling role must hold the privileges of
+  `pg_read_server_files` (PostgreSQL's own rule for server-file reads,
+  which superusers satisfy) or read inside the one directory an
+  administrator configured as `thinkthen.file_directory` — confined by
+  resolved path, so a symlink cannot point out (review 3, items 2 and 8).
+  Every unreadable cause carries one message, so a refused read tells
+  nothing about the filesystem. `thinkthen_relate` reads no file: it
+  runs the query text it is given through SPI. Nothing else is read.
+- **An update's new functions.** The event trigger re-revokes PUBLIC on
+  functions the extension itself creates, and only those: an
+  administrator's grant on any other function survives it. One
+  boundary, stated rather than fixed: `session_replication_role =
+  replica` disables event triggers entirely, so a replica-session update
+  bypasses the guard; an update script that adds functions should carry
+  its own revoke block beside the trigger.
 - **Backend selection.** The engine builds lazily in each backend, after
   the fork, from the server process's environment (`THINKTHEN_BASE_URL`,
   or the stand-in's `ENGINE_BASE_URL`; `ENGINE_NULL=1` for the in-process
