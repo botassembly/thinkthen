@@ -76,7 +76,7 @@ echo "== postgres surface: package the extension"
 # step ahead: --locked fails the build when the lockfile would change,
 # and the package step then runs against the checked tree.
 cargo check --quiet --locked --features synthetic-partial
-(cd . && cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null
+(cd . (cd . && cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null(cd . && cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null CARGO_NET_OFFLINE=true cargo pgrx package --pg-config /usr/bin/pg_config --features synthetic-partial) >/dev/null
 
 echo "== postgres surface: disposable container, null backend"
 docker rm -f -v "$NAME" >/dev/null 2>&1 || true
