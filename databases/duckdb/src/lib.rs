@@ -430,18 +430,40 @@ unsafe fn install_interrupt_handler() {
     action.sa_sigaction = on_interrupt as extern "C" fn(libc::c_int, *mut libc::siginfo_t, *mut libc::c_void) as usize;
     action.sa_flags = libc::SA_SIGINFO;
     unsafe { libc::sigemptyset(&mut action.sa_mask) };
+    // The host's action is read and recorded before ours goes in: a
+    // SIGINT landing right after the install must find the action to
+    // chain to (review 7, R7-7: the record came after the install, so a
+    // signal in that window skipped the host's own handler).
     let mut previous: libc::sigaction = unsafe { std::mem::zeroed() };
-    if unsafe { libc::sigaction(libc::SIGINT, &action, &mut previous) } != 0 {
+    if unsafe { libc::sigaction(libc::SIGINT, std::ptr::null(), &mut previous) } != 0 {
+        HANDLER_SET.store(false, Ordering::SeqCst);
         return;
     }
     if previous.sa_sigaction == libc::SIG_IGN {
-        // The host ignored SIGINT: put its action back untouched.
-        unsafe { libc::sigaction(libc::SIGINT, &previous, std::ptr::null_mut()) };
+        // The host ignored SIGINT: ours never installs.
         HANDLER_SET.store(false, Ordering::SeqCst);
         return;
     }
     let _ = HOST_ACTION.set(Some(previous));
+    let mut replaced: libc::sigaction = unsafe { std::mem::zeroed() };
+    if unsafe { libc::sigaction(libc::SIGINT, &action, &mut replaced) } != 0 {
+        return;
+    }
+    #[cfg(test)]
+    if RAISE_IN_INSTALL_WINDOW.load(Ordering::SeqCst) {
+        unsafe { libc::raise(libc::SIGINT) };
+    }
+    if replaced.sa_sigaction != previous.sa_sigaction {
+        // Another thread changed SIGINT between the read and the install:
+        // put its action back, because ours would chain to a stale one.
+        unsafe { libc::sigaction(libc::SIGINT, &replaced, std::ptr::null_mut()) };
+    }
 }
+
+/// The test door into the window just after the install: a SIGINT raised
+/// there must reach the host's own handler.
+#[cfg(test)]
+static RAISE_IN_INSTALL_WINDOW: AtomicBool = AtomicBool::new(false);
 
 /// A contract failure as the SQL error a reader sees, with the kind and
 /// the retryable signal both carried. A cancellation serves its call and
@@ -1805,6 +1827,42 @@ mod signal_tests {
             current_cancel().is_cancelled()
         });
         assert!(!poisoned, "a SIGINT with no invoke running cancelled the next call");
+    }
+
+    /// The count the window test's host handler keeps.
+    static HOST_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    extern "C" fn counting_host(_: libc::c_int) {
+        HOST_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Review 7, R7-7: the host's action was recorded after ours
+    /// installed, so a SIGINT landing between the two found nothing to
+    /// chain to and the host's handler never ran. The install happens
+    /// once per process, so the parent runs this test again in a fresh
+    /// child process, where the door raises inside the window.
+    #[test]
+    fn a_sigint_right_after_the_install_reaches_the_host() {
+        if std::env::var_os("THINKTHEN_INSTALL_WINDOW_CHILD").is_some() {
+            unsafe {
+                let mut host: libc::sigaction = std::mem::zeroed();
+                host.sa_sigaction = counting_host as extern "C" fn(libc::c_int) as usize;
+                libc::sigemptyset(&mut host.sa_mask);
+                libc::sigaction(libc::SIGINT, &host, std::ptr::null_mut());
+                RAISE_IN_INSTALL_WINDOW.store(true, Ordering::SeqCst);
+                install_interrupt_handler();
+            }
+            assert_eq!(HOST_CALLS.load(Ordering::SeqCst), 1, "the host handler missed the SIGINT in the install window");
+            return;
+        }
+        let status = std::process::Command::new(std::env::current_exe().expect("the test binary"))
+            .args(["--exact", "signal_tests::a_sigint_right_after_the_install_reaches_the_host", "--test-threads=1"])
+            .env("THINKTHEN_INSTALL_WINDOW_CHILD", "1")
+            .stdin(std::process::Stdio::null())
+            .output()
+            .expect("the child runs");
+        let said = String::from_utf8_lossy(&status.stdout);
+        assert!(status.status.success() && said.contains("1 passed"), "{said}{}", String::from_utf8_lossy(&status.stderr));
     }
 
     #[test]
