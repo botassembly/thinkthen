@@ -119,8 +119,20 @@ $ bash scripts/check_surfaces.sh
 ...
 == postgres package: dry run, no deck, no container
 dist/thinkthen-pg16-0.0.1-linux-amd64.tar.gz staged; the container half is not run
-all landed checks green: green=927 skipped=73 diverged=18 failed=0 (wire: stub up)
+summary: green=841 skipped=63 diverged=18 failed=5 (wire: stub up)
 ```
+
+The 2026-09-23 re-measure (this lane, gate-process): five failures,
+each named and owned. Three were the public-names drift after the
+DuckDB lane removed the instance-token setting — fixed in the same
+re-measure (the checker carries the twelve-function set; `ok duckdb: 12
+names`). Two remain open, both in other lanes' folders: the TypeScript
+conformance case 25 (`find-none-fits` expected unit null, got 1 — a
+real wrong answer the newly honest TS suite catches; proven
+pre-existing against the pre-change commit) and the DuckDB recognize
+acceptance (its own relate query returns 256 records and trips the new
+255 cap — the acceptance's fixture or the cap moves; the DuckDB lane
+owns it). The skipped count fell 73 → 63 as lanes landed their suites.
 
 The run covered every section: the contract tests, the stand-in's null
 and wire tests, the conformance validator (84 cases), the checker's own

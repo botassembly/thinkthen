@@ -138,3 +138,29 @@ sdlc/` → no matches.
   here. The wire stub is the first strict-clean workspace.
 - The final ceiling: the verifier sets it after the interleaved lanes
   land, per the raise rule.
+
+## The re-measure (this lane's final item)
+
+`bash scripts/check_surfaces.sh` (detached run, 2026-09-23 00:16–00:22)
+ended `summary: green=841 skipped=63 diverged=18 failed=5 (wire: stub
+up)` with five failure lines. Attribution, by command:
+
+- Three lines were one drift: `FAIL duckdb: 12 public names vs 13
+  expected` twice plus the checker's own self-test line — the DuckDB
+  lane's landed commit removed the `thinkthen_instance_token` SETTING
+  (the third review's unforgeable-identity fix) while the checker still
+  expected it. **Probe (failing):** `python3 scripts/check_public_names.py`
+  → `FAIL duckdb ... missing: thinkthen_instance_token`. **Fix:**
+  the duckdb entry carries the twelve-function set with the
+  LOAD-time-identity change recorded in the comment; **passing:**
+  `ok duckdb: 12 names, all ruled or documented`, exit 0, and
+  `python3 scripts/test_check_public_names.py` → `name-check tests
+  green`.
+- Two lines stay open in other lanes, stated in HANDOFF beside the
+  summary: the TypeScript `25-find-none-fits` wrong answer (proven
+  pre-existing by stash-and-rerun in this lane's earlier session) and
+  the DuckDB recognize acceptance tripping its own new 255-record cap
+  (`run.log`: `the relate query returned 256 records and relate asks
+  about at most 255`).
+
+HANDOFF carries the measured line with the five named and the two owned.

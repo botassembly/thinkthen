@@ -230,16 +230,14 @@ SURFACES: list[dict] = [
             "thinkthen_" + name
             for name in ["decide", "probability", "choose", "score", "tag", "annotate",
                          "details", "usage", "warm", "recognize", "relate", "relations"]
-        }
-        | {
-            # The per-database identity setting the extension registers at
-            # load, the mechanism behind relate's routing (second-review
-            # finding): databases/duckdb/NOTES.md and src/connections.rs
-            # name it. It is an extension setting, not a SQL function.
-            "thinkthen_instance_token",
         },
+        # The instance-token SETTING is gone (third review): a setting
+        # could be SET onto another database's session, so relate's
+        # identity became a uniquely named in-memory database attached
+        # at LOAD — no SQL-reachable name to carry here. The per-row
+        # functions are the whole public set.
         "doc": "the SQL set: databases/duckdb/README.md; "
-        "the instance-token setting: databases/duckdb/NOTES.md and src/connections.rs",
+               "the LOAD-time identity carries no public name",
     },
     {
         "name": "sqlite",
