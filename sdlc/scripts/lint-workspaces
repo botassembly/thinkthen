@@ -139,9 +139,18 @@ for entry in \
 		libraries/ruby:ruby)
 			if docker image inspect thinkthen-ruby-builder:local >/dev/null 2>&1; then
 				printf 'lint: %s (host has no %s; the builder container answers)\n' "$workspace" "$needs"
-				if docker run --rm -v "$REPO":/src -w "/src/$workspace" \
+				# No network in a gate (surfaces-review-5: this fallback
+				# fetched the crates.io index on every run). The container
+				# reads the same offline cargo home build.sh uses.
+				if [ ! -d "$workspace/.runtimes/cargo/registry" ]; then
+					printf 'lint: %s FAILED: %s/.runtimes/cargo is empty; run `CARGO_HOME=.runtimes/cargo cargo fetch --locked` in %s once, the one network step\n' "$workspace" "$workspace" "$workspace" >&2
+					fail=1
+					continue
+				fi
+				if docker run --rm --network none -v "$REPO":/src -w "/src/$workspace" \
+					-e CARGO_HOME="/src/$workspace/.runtimes/cargo" \
 					thinkthen-ruby-builder:local \
-					cargo clippy --locked --quiet --all-targets --all-features -- -D warnings; then
+					cargo clippy --locked --offline --quiet --all-targets --all-features -- -D warnings; then
 					deny_status=$(workspace_deny "$workspace" "$REPO") || fail=1
 					printf '%s\n' "$deny_status"
 					continue

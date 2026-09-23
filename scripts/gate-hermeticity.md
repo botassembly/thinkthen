@@ -63,3 +63,26 @@ it.
   (`tools/wire-stub`) and started by the gate itself; it needs no network.
   Its crates come from the local cargo registry cache; a cold cache needs
   the network once.
+
+## One-time network steps, and the gate's refusal (surfaces-review-5)
+
+The gate itself fetches nothing. Each step below reads a local cache that
+one network step fills once. Without that cache, the gate step fails and
+names the remedy.
+
+- **The SQLite amalgamation** (`databases/sqlite/tests/host_sqlite.sh`):
+  a host whose stock SQLite is below 3.50.0 needs the amalgamation under
+  `databases/sqlite/.runtimes`. The script names the one fetch and exits 1
+  without it.
+- **The R tarball's registry crates** (`libraries/r/tools/make-tarball.sh`):
+  `cargo vendor` reads the builder's cargo home, and the R check runs it
+  with `CARGO_NET_OFFLINE=true`. The old step pointed at an empty home and
+  fetched every crate.
+- **The Ruby lint fallback** (`sdlc/scripts/lint-workspaces`): the builder
+  container runs with `--network none` and `--offline` against
+  `libraries/ruby/.runtimes/cargo`, the same home `build.sh` uses. An
+  empty home fails the lint with the fetch command.
+- **The per-workspace deny check** (`sdlc/scripts/lint-workspaces`): a
+  workspace whose metadata is cold still runs `cargo fetch --locked` once
+  before it retries offline. This one step still uses the network. The
+  DuckDB lane owns that function and its fix.
