@@ -39,8 +39,24 @@ the values await a backend that distinguishes options.
   takes one — the binder refuses subqueries for every function but a
   table-in-out function, and the C API cannot register those — so the
   query crosses as a string, the shape PostgreSQL's row takes. Ids come
-  back as their text, so an integer id joins with one cast. More than 255
-  records is a usage error before anything is asked.
+  back as their text, so an integer id joins with one cast. The query is
+  one `SELECT` — the prepared statement's own kind is checked before
+  anything runs, so `COPY ... TO`, `EXPORT DATABASE`, `ATTACH`, `SET
+  GLOBAL`, `LOAD`, and `SET VARIABLE` are refused as the writes they
+  are — and it runs inside a read-only transaction that rolls back.
+  More than 255 records is a usage error named with the query's own
+  count, refused before any row is read, so a wide query cannot
+  materialize first.
+- The relate scan runs on a kept connection of the caller's own
+  database, resolved through an identity no SQL can forge: a uniquely
+  named in-memory database attached to that database's instance at LOAD.
+  There is no `thinkthen_instance_token` setting anymore, because a
+  setting could be `SET` onto another database's session. The kept
+  connection is guarded — a prepared statement holds a counted handle
+  the reaper cannot disconnect beneath — and the reaper releases a
+  database's kept connection only when no caller connection and no
+  guard remain, in bounded passes that back off while nothing is
+  released (fifty idle databases measure under one percent of a core).
 - A question argument is plain text under the grammar's default cut, a
   file named `'@refund.json'`, or the file grammar's own JSON. One door,
   one grammar; the surface adds no parser.
@@ -74,10 +90,24 @@ the values await a backend that distinguishes options.
   chained to while a running query stops. The token is one shot per
   process — the proof's `note` line and the punch-list report record the
   long-lived-host finding.
-- There is no per-call deadline option on this surface yet: the host's
-  own statement timeout is the stop, and conformance case 27 is skipped
-  for that reason. A per-call budget beside the cancel token is the
-  settled shape and a recorded gap here, named rather than implied.
+- The per-call deadline is the ruled third argument, in milliseconds:
+  `-1` means none, `0` is a spent deadline that refuses having sent
+  nothing, a positive number is the budget, and every other negative is
+  a usage error — one spelling on every surface, converted by the
+  contract's one checked door. Every scalar carries it beside its drawn
+  arguments: `thinkthen_decide(q, t, 5000)`,
+  `thinkthen_choose(q, t, ['a'], 5000)`, `thinkthen_annotate(set, t,
+  5000)`, `thinkthen_relations(body, spec, 5000)`. A NULL deadline
+  never reaches the door: DuckDB answers NULL for the row, the same
+  silence a NULL question or text carries. `thinkthen_warm` and
+  `thinkthen_relate` carry no deadline parameter — the aggregate's
+  signature and the drawn two-argument table function — so their bound
+  is the cancel token and, for relate, the query's own `LIMIT`.
+- `thinkthen_details` reads its absent members as NULL, never as
+  zeros: a score's `probability` and `sends` are NULL with its `nearest`
+  named, and a choose or tag question — which the engine's audit door
+  does not serve — answers a row whose members are NULL rather than an
+  error.
 
 ## Authority: who may do what
 
@@ -109,20 +139,30 @@ recognition, relations — is the engine's.
   host process; the engine's process-ID check repairs a fork on the next
   call, idle connections are pruned by the engine, and the pool is sized
   to the width gate.
-- **Cancellation channel.** SIGINT, taken at LOAD and chained to the
-  handler that was there. The handler cancels the process-wide token that
-  every call carries, so a stop lands between requests. A host that
-  installs its own handler after LOAD displaces the extension's and keeps
-  its own (proven by `tools/host_signal.py`); the token is one shot per
-  process, which the CLI never notices and a long-lived host should treat
-  as a restart signal.
+- **Cancellation channel.** SIGINT, taken at LOAD through `sigaction`
+  with the host's own action kept for the chain: a host handler is called
+  with the signature its flags name (an `SA_SIGINFO` handler receives the
+  real signal information), a host on the default action is restored and
+  re-raised so the signal still terminates, and a host that ignored
+  SIGINT is left ignoring it — ours never installs (proven against the
+  kernel's own ignore mask by `tools/review3_duckdb.py`). The handler
+  cancels the process-wide token that every call carries, so a stop lands
+  between requests, and a call starting within the interrupt's window
+  serves the cancelled token, so one Ctrl-C stops every query the signal
+  found running. A host that installs its own handler after LOAD
+  displaces the extension's and keeps its own (proven by
+  `tools/host_signal.py`); the token is one shot per process, which the
+  CLI never notices and a long-lived host should treat as a restart
+  signal.
 
 ## Build and run
 
 The version pin is the trap 207 found: the Rust path builds against the
 unstable C API, so the extension and the CLI must be the same version.
-`TARGET_DUCKDB_VERSION=v1.5.5` in the Makefile, and the stock v1.5.5 CLI
-in `duckdb-bin/` (fetched user-level; the machine CLI is older and cannot
+The one shell spelling is `tools/version.env` (`DUCKDB_VERSION=v1.5.5`),
+sourced by every script; the crate's pin sits in `Cargo.toml` and the
+extension API string in `src/lib.rs`. The stock CLI lives in
+`duckdb-bin/` (fetched user-level; the machine CLI is older and cannot
 load what this path builds).
 
 ```

@@ -707,3 +707,132 @@ extension beside the default one (the C surface's pattern) and the driver
 loads it for the one case that replays the marker. `null_suite.sh`,
 `mapping_suite.sh`, and `examples.json` carried the same stale annotate
 order and now carry the file order.
+
+## The third review's DuckDB findings, fixed with fail-then-pass probes
+
+The wave's source is `sdlc/issues/2026-09-22-surfaces-branch-third-review-the-unheld-fixes.md`
+on main. The probes live in `tools/review3_duckdb.py` (run by `check.sh`),
+`tools/atfile_suite.sh`, and the updated suites below. The fail-first
+round built the review's own tip `37240fd` as the baseline extension and
+ran the same probes against it; the outputs are pasted as they ran.
+
+### The baseline: eleven of fourteen probes fail on 37240fd
+
+```
+$ cp /tmp/duckdb-prefix/thinkthen.duckdb_extension build/release/   # the 37240fd build
+$ ./configure/venv/bin/python tools/review3_duckdb.py
+FAILED   the identity token is beyond SQL: SET thinkthen_instance_token: no error raised
+FAILED   the identity token is beyond SQL: SET GLOBAL: no error raised
+FAILED   relate refuses COPY TO: ... the relate query must return the id and the text as its first two columns
+FAILED   relate refuses EXPORT DATABASE: ... the relate query must return the id and the text as its first two columns
+FAILED   relate refuses ATTACH: ... the relate query must return the id and the text as its first two columns
+FAILED   relate refuses SET GLOBAL: ... the relate query failed
+FAILED   relate refuses SET VARIABLE: ... the relate query must return the id and the text as its first two columns
+FAILED   the 8-million-row cap names the count (refused in 4.4s): relate takes at most 255 records and 8000000 came
+FAILED   a score's details read NULL probability and sends: (0.0, 0, 'mid')
+FAILED   fifty idle databases burn under 5% of a core (measured 8.8%)
+FAILED   a host that ignored SIGINT keeps its ignore (the kernel's mask): REPLACED ignored-before
+== review3 duckdb suite: 11 failed
+```
+
+Reading the baseline: COPY TO, EXPORT DATABASE, ATTACH, SET GLOBAL, and
+SET VARIABLE all RAN (the "must return the id and text" refusal is the
+post-execution shape — the statements executed and returned no columns,
+and the COPY wrote its file); the 8-million-row refusal came from the
+engine's own cap after every row was read (4.4 s); a score's details
+carried the buffer's zeros; fifty idle databases burned 8.8% of a core
+(the review's 500 measured 64%).
+
+### The fix: fourteen green on the wave's commit
+
+```
+$ make release && ./configure/venv/bin/python tools/review3_duckdb.py
+ok       the identity token is beyond SQL: SET thinkthen_instance_token
+ok       the identity token is beyond SQL: SET GLOBAL
+ok       relate refuses COPY TO
+ok       relate refuses EXPORT DATABASE
+ok       relate refuses ATTACH
+ok       relate refuses SET GLOBAL
+ok       relate refuses SET VARIABLE
+ok       the 8-million-row cap names the count (refused in 0.0s)
+ok       a score's details read NULL probability and sends, and its nearest level
+ok       a closed database's file is released after the reaper's pass
+ok       a fresh LOAD after the guarded release answers relate
+ok       fifty idle databases burn under 5% of a core (measured 0.8%)
+ok       a host that ignored SIGINT keeps its ignore (the kernel's mask)
+== review3 duckdb suite: green
+```
+
+### What each fix is
+
+- **1 (the use-after-free):** every handle the registry gives out is a
+  counted `KeptGuard` (`connections.rs`); the reaper retires a database
+  before counting, refuses new guards on a retired one, disconnects only
+  at zero guards under the gate, and a guard dropping on a retired
+  database pokes the reaper so the release lands promptly. The second
+  window (`kept_context`) takes a guard too. The reviewer's C-API
+  prepare→free→execute segfault is structurally closed; the bounded
+  probes here prove release-with-prepared-statements and the fresh LOAD
+  after a guarded release, not the segfault itself (that needs the
+  reviewer's exact C-API harness).
+- **6 (the token):** the token setting is gone. Identity is a uniquely
+  named in-memory database ATTACHed to the caller's instance at LOAD;
+  the caller's context resolves it only inside its own instance. The
+  SET and SET GLOBAL attacks error as unknown settings; the `''`
+  fallback no longer exists because there is no setting to blank.
+- **7 (SELECT-only):** the prepared statement's own kind is checked
+  (`duckdb_prepared_statement_type`) before anything runs, so the
+  single-statement writes are refused as the writes they are; the
+  read-only transaction stays as the belt.
+- **11 (details):** the probability and sends children set NULL before
+  the values write (one wrapper at a time — the two-wrapper rule the
+  crate documents); a choose or tag question answers a NULL row instead
+  of raising the engine's refusal.
+- **12 (the cap):** `SELECT count(*) FROM (<query>)` runs first; the
+  refusal names the query's own count before any row is read, and a
+  belt wall stops collection at 256. The locks are per database, so one
+  database's long relate cannot block another's.
+- **13 (signals):** `sigaction` with `SA_SIGINFO`; the host action is
+  kept and chained with the signature its flags name, `SIG_DFL` is
+  restored and re-raised, `SIG_IGN` never installs (proven against the
+  kernel's ignore mask). A call starting within the interrupt's window
+  serves the cancelled token, so one Ctrl-C stops every query the
+  signal found running. `con.interrupt()` still cannot reach a
+  synchronous table-function scan — that boundary is the deadline's to
+  bound (the scalars' new third argument), named in the README.
+- **26 (the reaper):** budgeted passes (at most eight entries) with a
+  wrapping cursor, try-lock gates, and a sleep that backs off to two
+  seconds while nothing is released. Fifty idle databases measure 0.8%
+  of a core (the baseline's 8.8%).
+- **27 (per-row file opens):** one mtime-keyed text cache
+  (`question_text_cached`) serves annotate and relations; the at-file
+  suite counts one open for two thousand rows on each reader beside
+  decide's twenty thousand.
+- **Adoptions:** the contract's `panic_text` and `catch_panic` own the
+  panic-to-text (both local copies deleted); `conformance.py` reads the
+  skip table through `conformance/skiptable.py` (the private parser is
+  gone); the DuckDB pin is one `tools/version.env` sourced by every
+  script; `package.sh` follows the host's arch; the at-file suite
+  generates its own fixture (no gitignored `null-cut.json` dependency).
+
+### The suites after the wave
+
+```
+$ tools/atfile_suite.sh
+ok       one question file open for twenty thousand decide rows
+ok       one question file open for two thousand annotate rows
+ok       one question file open for two thousand relations rows
+ok       an edited question file is read again
+$ ENGINE_NULL=1 tools/null_suite.sh            # 23 ok
+$ ./configure/venv/bin/python tools/two_databases.py   # 6 ok
+$ ENGINE_FIXTURE_EXTENSION=... tools/conformance.py    # 117 ok, 0 failed
+$ tools/panic_suite.sh                         # 4 ok, exit 0
+$ tools/security_suite.sh                      # 11 ok, exit 0
+$ tools/relate_guard_suite.sh                  # 5 ok, exit 0
+```
+
+The relation spec's own validation caught a bug this wave introduced on
+the way: the empty budget slice starved the relations zip and the
+function answered `[]` for everything; the at-file suite caught it
+(zero file opens, a `not-a-spec` string answering instead of erroring)
+before it could land.
