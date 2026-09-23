@@ -27,39 +27,35 @@ pub(crate) fn contained(
     what: &str,
     body: impl FnOnce() -> Result<(), String>,
 ) -> Result<(), String> {
-    match catch_unwind(AssertUnwindSafe(|| {
-        test_arm(what);
-        body()
-    })) {
-        Ok(outcome) => outcome,
-        Err(payload) => Err(panicked(what, &payload)),
-    }
+    caught(what, body).and_then(|outcome| outcome)
 }
 
 /// Run a callback body with no error channel: a panic is contained and
 /// logged, never unwound.
 pub(crate) fn contained_quiet(what: &str, body: impl FnOnce()) {
-    if let Err(payload) = catch_unwind(AssertUnwindSafe(|| {
-        test_arm(what);
-        body();
-    })) {
-        eprintln!("{}", panicked(what, &payload));
-    }
+    contained_with(what, (), body);
 }
 
 /// Run a value-returning callback body with no error channel, answering
 /// `fallback` when it panics.
 pub(crate) fn contained_with<T>(what: &str, fallback: T, body: impl FnOnce() -> T) -> T {
-    match catch_unwind(AssertUnwindSafe(|| {
+    caught(what, body).unwrap_or_else(|message| {
+        eprintln!("{message}");
+        fallback
+    })
+}
+
+/// The one catch behind the three forms above (surfaces-review-7 R2-31:
+/// each form carried its own copy). A panic becomes the message every
+/// channel carries, through the contract's one panic-to-text.
+fn caught<T>(what: &str, body: impl FnOnce() -> T) -> Result<T, String> {
+    catch_unwind(AssertUnwindSafe(|| {
         test_arm(what);
         body()
-    })) {
-        Ok(value) => value,
-        Err(payload) => {
-            eprintln!("{}", panicked(what, &payload));
-            fallback
-        }
-    }
+    }))
+    .map_err(|payload| {
+        format!("thinkthen defect: the {what} callback panicked: {}", panic_text(payload.as_ref()))
+    })
 }
 
 /// The test-only arm: `ENGINE_TEST_PANIC` names one boundary to panic
@@ -78,13 +74,6 @@ pub(crate) fn test_arm(what: &str) {
 
 #[cfg(not(feature = "test-panic"))]
 pub(crate) fn test_arm(_what: &str) {}
-
-/// One contained panic, as the message every channel carries: the
-/// contract's one panic-to-text, not a local copy (review 3: the
-/// panic-to-text code was written five times across the surfaces).
-fn panicked(what: &str, payload: &Box<dyn std::any::Any + Send>) -> String {
-    format!("thinkthen defect: the {what} callback panicked: {}", panic_text(payload.as_ref()))
-}
 
 #[cfg(test)]
 mod tests {

@@ -927,3 +927,18 @@ The fix counts every scalar invoke as running from entry to exit, so the handler
   - The warm aggregate's update step collects strings without an engine call, and it takes no invoke count. A signal there is judged by the burst window, as before.
   - On a query running on several threads, a thread whose invoke saw the signal takes the cancelled token even after another thread's call spent it. A thread that started its invoke after the signal still judges by the burst window. DuckDB ends the query at the first cancelled call either way.
 - `thinkthen_relate_holding_rows` is ruled in `scripts/check_public_names.py`, the thirteenth DuckDB public name.
+
+## Wave 7: one catch behind the three panic guards (surfaces-review-7 R2-31)
+
+`src/guard.rs` had three copies of `catch_unwind` with the test arm, one
+per form: `contained` (the error channel), `contained_quiet` (no channel,
+logged), and `contained_with` (no channel, a fallback value). One private
+`caught` now holds the catch, and the three forms call it. The message
+still goes through the contract's `panic_text`. The contract's own
+`catch_panic` is not used here: it returns the contract's `Error` and
+spells "a panic crossed", while every DuckDB callback reports a `String`
+with "the X callback panicked", which `tools/panic_suite.sh` pins. Moving
+to it would change the sentence on every boundary for no behavior gain.
+Ian can overturn this by asking for the contract's sentence on DuckDB
+too; the cost is a `String` conversion at each of the 15 call sites and
+new pinned sentences in the panic suite.
