@@ -389,3 +389,25 @@ already warns about — recorded for the standin owner, outside this folder.
 `./check.sh`: exit 0 — build, shim tests, 61 offline ok with conformance at
 `77 passed, 7 table-covered, 0 failed`, the standing can-fail probe, wire
 suites (skipped, no stub), the dead-address refusal, and the typed sample.
+
+## The fourth review's typescript items (2026-09-23)
+
+Item 17: the four `return note(...)` arms in `conformance.test.mjs` now
+throw — a decide_many length or judgment mismatch and an annotate missing
+field or wrong value fail the case by name instead of printing a line
+that never reaches the totals; the `default:` arm refuses an unknown verb
+instead of counting it as a pass. The `none` facet is derived from the
+case (`one.none === true` → `--none true`) and the `error` facet from the
+expectation, so `25-find-none-fits` reads the table's skip reason instead
+of running red — the tip-red is closed (`# pass 1 / # fail 0` under
+`ENGINE_NULL=1`). The standing can-fail probe corrupts 13-, 15-, and
+19- in turn; on the old test file the 15 corruption printed
+`15-annotate-assembles: pass` with the mismatch as a table-covered note
+(captured by command), and on the new file every corruption exits
+nonzero with the case named.
+
+Leftovers: `index.d.ts` carries the bare-string `score(question, text,
+{ levels })` overload beside the spec form (`ScoreOptions`), the
+`deadlineMs` doc states the ruling (minus one is the one spelled
+sentinel; `null` and omission mean none; every other negative refuses),
+and `npm pack` ships the repository's MIT LICENSE file.
