@@ -199,6 +199,15 @@ const MAX_DATA: usize = 1024 * 1024 * 1024;
 /// before it indexes the table's last slot (the sizes buffer).
 const MAX_BUFFERS: i64 = 64;
 
+/// The refusal for a metadata blob that is malformed, past the cap, or
+/// runs into unreadable memory.
+const BAD_METADATA: &str = "a column's Arrow metadata names lengths past its readable bytes or past 16 MiB";
+
+/// The most bytes one metadata blob may hold. Real metadata (an extension
+/// type's name and parameters, a pandas schema note) runs to kilobytes;
+/// this bounds the pair count and every length a crafted blob declares.
+const MAX_METADATA: usize = 16 * 1024 * 1024;
+
 /// The refusal for an extent that names memory this process cannot read.
 const UNREADABLE: &str = "the column's buffers declare bytes this process cannot read";
 
@@ -859,7 +868,9 @@ type BatchShare = std::sync::Arc<BatchKeep>;
 /// `out` must be writable; the batch's child pointers point into its own
 /// boxes, which the shares keep alive.
 unsafe fn emit_batch(keep: BatchKeep, out: *mut ArrowArray) {
-    #[allow(clippy::arc_with_non_send_sync, reason = "raw Arrow pointers, single-threaded by contract")]
+    // The C data interface lets a consumer release the root and each moved
+    // child from any thread, so the shares count atomically (Arc).
+    #[allow(clippy::arc_with_non_send_sync, reason = "raw Arrow pointers; the atomic count is what crosses threads")]
     let share = std::sync::Arc::new(keep);
     for &child in &share.child_ptrs {
         (*child).private_data = Box::into_raw(Box::new(BatchShare::clone(&share))).cast();
@@ -951,31 +962,47 @@ impl SchemaTree {
     /// The C data interface lays metadata out as an i32 pair count, then
     /// each key and value as an i32 length and its bytes. Field metadata
     /// carries a column's extension type (a Polars `Enum`, a timezone
-    /// rule), so the output keeps it. A blob naming a negative length is
-    /// malformed and is dropped instead of walked.
-    fn metadata(&mut self, value: *const c_char) -> *const c_char {
+    /// rule), so the output keeps it. A producer's blob is walked against
+    /// `memory`: each length word is checked readable before it is read,
+    /// the blob is capped at `MAX_METADATA`, and its whole extent is
+    /// checked before the copy. A blob that fails is refused as usage.
+    /// `None` walks a blob this surface built itself.
+    fn metadata(&mut self, value: *const c_char, memory: Option<&Readable>) -> PyResult<*const c_char> {
         if value.is_null() {
-            return std::ptr::null();
+            return Ok(std::ptr::null());
         }
         let at = value as *const u8;
-        // SAFETY: the producer's blob is read only inside the lengths it
-        // declares, word by word, as the interface lays it out.
-        let length = |place: usize| i32::from_le_bytes(unsafe { word(at.add(place)) });
-        let Ok(pairs) = usize::try_from(length(0)) else {
-            return std::ptr::null();
+        let readable = |from: usize, length: usize| {
+            memory.is_none_or(|memory| memory.covers(at.wrapping_add(from), length))
         };
+        let refused = || UsageError::new_err(BAD_METADATA);
+        // SAFETY: each word is read only after its four bytes check readable.
+        let length = |place: usize| -> PyResult<usize> {
+            if !readable(place, 4) {
+                return Err(refused());
+            }
+            usize::try_from(i32::from_le_bytes(unsafe { word(at.add(place)) })).map_err(|_| refused())
+        };
+        let pairs = length(0)?;
+        if pairs > MAX_METADATA / 8 {
+            return Err(refused());
+        }
         let mut end = 4usize;
         for _ in 0..pairs * 2 {
-            let Ok(size) = usize::try_from(length(end)) else {
-                return std::ptr::null();
-            };
-            end += 4 + size;
+            end = end + 4 + length(end)?;
+            if end > MAX_METADATA {
+                return Err(refused());
+            }
         }
-        // SAFETY: `end` is the extent the blob's own lengths declare.
+        if !readable(0, end) {
+            return Err(refused());
+        }
+        // SAFETY: `end` is the capped extent the blob's own lengths declare,
+        // checked readable above.
         let blob = unsafe { std::slice::from_raw_parts(at, end) }.to_vec();
         let pointer = blob.as_ptr() as *const c_char;
         self.blobs.push(blob);
-        pointer
+        Ok(pointer)
     }
 
     /// One node over already-owned pieces; the child array is kept here so
@@ -1041,8 +1068,9 @@ impl SchemaTree {
         &mut self,
         children: Vec<*mut ArrowSchema>,
         metadata: *const c_char,
+        memory: &Readable,
     ) -> PyResult<*mut ArrowSchema> {
-        let metadata = self.metadata(metadata);
+        let metadata = self.metadata(metadata, Some(memory))?;
         let format =
             CString::new("+s").map_err(|_| UsageError::new_err("a column format holds a NUL"))?;
         let format_ptr = format.as_ptr();
@@ -1055,26 +1083,29 @@ impl SchemaTree {
     /// tree's own, so the consumer's release frees exactly what it was
     /// handed.
     ///
+    /// `memory` checks a producer's metadata; `None` copies this surface's
+    /// own template.
+    ///
     /// # Safety
     /// `source` must point at a live schema struct.
-    unsafe fn copy(&mut self, source: *const ArrowSchema) -> *mut ArrowSchema {
+    unsafe fn copy(&mut self, source: *const ArrowSchema, memory: Option<&Readable>) -> PyResult<*mut ArrowSchema> {
         let format = self.text(unsafe { (*source).format });
         let name = self.text(unsafe { (*source).name });
-        let metadata = self.metadata(unsafe { (*source).metadata });
+        let metadata = self.metadata(unsafe { (*source).metadata }, memory)?;
         let count = unsafe { (*source).n_children }.max(0) as usize;
         let mut children = Vec::with_capacity(count);
         for place in 0..count {
             let child = unsafe { *(*source).children.add(place) };
-            children.push(unsafe { self.copy(child) });
+            children.push(unsafe { self.copy(child, memory) }?);
         }
         let dictionary = unsafe { (*source).dictionary };
         let dictionary = if dictionary.is_null() {
             std::ptr::null_mut()
         } else {
-            unsafe { self.copy(dictionary) }
+            unsafe { self.copy(dictionary, memory) }?
         };
         let flags = unsafe { (*source).flags };
-        self.node(format, name, metadata, flags, children, dictionary)
+        Ok(self.node(format, name, metadata, flags, children, dictionary))
     }
 }
 
@@ -1171,14 +1202,15 @@ pub(crate) fn build_frame(
     // new columns get one leaf each.
     let mut schema = SchemaTree::default();
     let mut schema_children: Vec<*mut ArrowSchema> = Vec::with_capacity(total);
+    let memory = Readable::snapshot()?;
     for place in 0..originals {
         let source = unsafe { *hold.schema.children.add(place) };
-        schema_children.push(unsafe { schema.copy(source) });
+        schema_children.push(unsafe { schema.copy(source, Some(&memory)) }?);
     }
     for (place, name) in names.iter().enumerate() {
         schema_children.push(schema.leaf(Some(name), formats_for_new[place], 2)?);
     }
-    let schema_root = schema.branch(schema_children, hold.schema.metadata)?;
+    let schema_root = schema.branch(schema_children, hold.schema.metadata, &memory)?;
     let _ = schema_root;
     // One batch out per batch in, so aliased originals stay per-batch and
     // every batch keeps its own root.
@@ -1464,7 +1496,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
     for (name, value) in columns {
         schema_children.push(schema.leaf(Some(name), value.format(), 2)?);
     }
-    let schema_root = schema.branch(schema_children, std::ptr::null())?;
+    let schema_root = schema.branch(schema_children, std::ptr::null(), &Readable::snapshot()?)?;
     let _ = schema_root;
 
     let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);
@@ -1570,14 +1602,20 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
 }
 
 /// Deep-copy the schema template into a fresh tree the consumer owns and
-/// releases through `schema_tree_release`.
-unsafe fn hand_schema(state: &OutFrame, out: *mut ArrowSchema) {
+/// releases through `schema_tree_release`. The template's blobs are this
+/// surface's own and passed their checks when it was built, so the copy
+/// cannot fail; a failure still answers the interface's EINVAL.
+unsafe fn hand_schema(state: &OutFrame, out: *mut ArrowSchema) -> c_int {
+    const EINVAL: c_int = 22;
     let mut tree = SchemaTree::default();
-    let root = unsafe { tree.copy(state.schema.root) };
+    let Ok(root) = (unsafe { tree.copy(state.schema.root, None) }) else {
+        return EINVAL;
+    };
     let keep = Box::into_raw(Box::new(tree));
     *out = std::ptr::read(root);
     (*out).private_data = keep as *mut c_void;
     (*out).release = Some(schema_tree_release);
+    0
 }
 
 unsafe extern "C" fn frame_get_schema(
@@ -1585,8 +1623,7 @@ unsafe extern "C" fn frame_get_schema(
     out: *mut ArrowSchema,
 ) -> c_int {
     let state = &mut *((*stream).private_data as *mut OutFrame);
-    hand_schema(state, out);
-    0
+    hand_schema(state, out)
 }
 
 unsafe extern "C" fn frame_get_next(stream: *mut ArrowArrayStream, out: *mut ArrowArray) -> c_int {
@@ -2322,11 +2359,32 @@ mod malformed_tests {
             blob.extend_from_slice(part);
         }
         let mut tree = SchemaTree::default();
-        let copied = tree.metadata(blob.as_ptr().cast());
+        let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+        let Ok(copied) = tree.metadata(blob.as_ptr().cast(), Some(&memory)) else { panic!("a sound blob copies") };
         assert_ne!(copied, blob.as_ptr().cast());
         assert_eq!(unsafe { std::slice::from_raw_parts(copied as *const u8, blob.len()) }, blob.as_slice());
         let negative = (-1i32).to_le_bytes();
-        assert!(tree.metadata(negative.as_ptr().cast()).is_null());
+        assert_eq!(refusal(tree.metadata(negative.as_ptr().cast(), Some(&memory))), BAD_METADATA);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn crafted_metadata_is_refused_before_it_is_read() {
+        // Review 7, second pass: the metadata walk trusted every length.
+        // A key length past a guard page, a value length past it, a pair
+        // count of 2^31 - 1, and a 2 GiB key length in a readable blob
+        // each read past the blob and killed the host.
+        let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+        let words = |parts: &[i32]| parts.iter().flat_map(|one| one.to_le_bytes()).collect::<Vec<u8>>();
+        let mut value_past = words(&[1, 4]);
+        value_past.extend_from_slice(b"unit");
+        value_past.extend_from_slice(&5000i32.to_le_bytes());
+        for blob in [words(&[1, 100]), value_past, words(&[i32::MAX])] {
+            let (_region, at) = Guarded::ending_with(&blob);
+            assert_eq!(refusal(SchemaTree::default().metadata(at.cast(), Some(&memory))), BAD_METADATA);
+        }
+        let huge = words(&[1, 0x7fff_fff0]);
+        assert_eq!(refusal(SchemaTree::default().metadata(huge.as_ptr().cast(), Some(&memory))), BAD_METADATA);
     }
 
     #[test]
