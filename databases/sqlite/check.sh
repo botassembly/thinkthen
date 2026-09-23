@@ -20,6 +20,7 @@ echo "== sqlite surface: build the extension"
 # that asks for it (standin/Cargo.toml, the `synthetic-partial` feature):
 # the conformance slice replays that record (case 74). The release
 # artifact built by package.sh carries no fixture.
+export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$HOME=/build"
 cargo build --release --quiet --features synthetic-partial --locked
 cp target/release/libthinkthen0.$LIB_EXT thinkthen.so
 

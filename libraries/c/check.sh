@@ -16,6 +16,13 @@ case "$(uname -s)" in
 esac
 
 echo "== c surface: build the door (libthinkthen.$LIB_EXT and libthinkthen.a)"
+# Every release artifact remaps the builder's home to a neutral prefix
+# (surfaces-review-4: the built libraries carried 141 and 152 home-path
+# strings; cargo embeds absolute source paths in panic locations).
+export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$HOME=/build"
+# The C-compiled dependency objects (ring) answer to the C compiler, not
+# the Rust remap; the same neutral prefix goes to both.
+export CFLAGS="-ffile-prefix-map=$HOME=/build ${CFLAGS:-}"
 cargo build --release --quiet --locked
 ls -l target/release/libthinkthen.$LIB_EXT target/release/libthinkthen.a
 

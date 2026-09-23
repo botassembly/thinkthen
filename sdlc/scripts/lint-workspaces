@@ -69,9 +69,9 @@ workspace_deny() {
 	# are the fix.
 	case "$workspace" in
 	libraries/r/thinkthen/src/rust)
-		sed -i 's/^ignore = \[\]$/ignore = ["RUSTSEC-2024-0436"]  # paste, plan recorded/' "$cfg" ;;
+		sed -i.bak 's/^ignore = \[\]$/ignore = ["RUSTSEC-2024-0436"]  # paste, plan recorded/' "$cfg" ;;
 	databases/postgresql)
-		sed -i 's/^ignore = \[\]$/ignore = ["RUSTSEC-2021-0127"]  # serde_cbor, plan recorded/' "$cfg" ;;
+		sed -i.bak 's/^ignore = \[\]$/ignore = ["RUSTSEC-2021-0127"]  # serde_cbor, plan recorded/' "$cfg" ;;
 	esac
 	out=$(cd "$workspace" && cargo deny --offline check --config "$cfg" advisories bans licenses 2>&1)
 	status=$?

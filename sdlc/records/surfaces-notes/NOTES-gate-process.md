@@ -91,8 +91,9 @@ point** (`507b978` + this lane's commits): the historical records keep
 their evidence with the private name genericized to "the deck
 repository" and home paths made relative; the Mac log's `/Users/ian`
 forms became `~/…`; `libraries/typescript/NOTES.md`'s literal path in
-prose became words. `git grep -cE "\bmktg\b|/home/ian|/Users/ian" --
-sdlc/` → no matches.
+prose became words. The private-name and home-path grep over `sdlc/`
+(spelled in `scripts/check_no_private_refs.py`, not here, so this file
+carries no literal to find) → no matches.
 
 ## 5. Records against the tip
 

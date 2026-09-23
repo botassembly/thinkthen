@@ -8,5 +8,6 @@
 FROM ruby:3.4-trixie
 RUN apt-get update && apt-get install -y --no-install-recommends libclang-dev python3 \
     && rm -rf /var/lib/apt/lists/*
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.93.1 --profile minimal
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.93.1 --profile minimal \
+    --component clippy,rustfmt
 ENV PATH="/root/.cargo/bin:${PATH}"

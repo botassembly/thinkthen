@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Build the Ruby extension and the gem inside the builder container.
 #
-# No host install happens: the Rust toolchain is mounted read-only from the
-# host (glibc-compatible: the builder is Debian trixie, the host Ubuntu
-# 24.04), and the built .so lands only inside this folder.
+# No host install happens: the builder image carries its own pinned Rust
+# toolchain with clippy and rustfmt (the old host ~/.rustup mount could
+# not work from a Mac and is gone), and the built .so lands only inside
+# this folder.
 #
 # `build.sh synthetic` arms the stand-in's synthesized partial failure (a
 # compile-time feature), the build the gate runs so conformance case 74
@@ -14,14 +15,19 @@ cd "$(dirname "$0")"
 
 root="$(cd ../.. && pwd)"
 image="thinkthen-ruby-builder:local"
+stamp=".runtimes/builder-image.built"
 features=""
 if [ "${1:-}" = "synthetic" ]; then
   features="--features synthetic-partial"
 fi
 
-if ! docker image inspect "$image" >/dev/null 2>&1; then
+# Rebuild when the Dockerfile is newer than the image: a stale image
+# ignores image changes (surfaces-review-4) and silently keeps whatever
+# toolchain it froze.
+if ! docker image inspect "$image" >/dev/null 2>&1 || [ Dockerfile -nt "$stamp" ]; then
   echo "building $image from Dockerfile (removed with: docker rmi $image)"
   docker build -q -t "$image" -f Dockerfile ../ruby >/dev/null
+  touch "$stamp"
 fi
 
 docker run --rm \
