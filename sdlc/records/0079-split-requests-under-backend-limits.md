@@ -1,6 +1,6 @@
 # 0079: Split requests under backend limits
 
-Status: Accepted after independent review. Integrated verification and landing remain.
+Status: Landed on remote main.
 
 ## Result
 
@@ -14,4 +14,4 @@ Independent design review corrected the ADR ownership, stale option and size cla
 
 The implementer observed the focused tests fail before the splitter existed. The final focused splitting suite passes six tests. Annotate, profile, usage, interruption, formatting, Clippy, policy, exact ratchet, and whitespace checks pass. The implementation adds 331 nonblank production Rust lines and 675 nonblank Rust lines including tests, within the accepted budgets. Every Rust file remains below 500 nonblank lines. The exact crate ceiling is `38070/38070`. ADR 0032 remains byte-identical.
 
-The coordinator's current-main integrated ladder remains before landing. No live, paid, or external request ran.
+The coordinator rebased the accepted implementation onto current main and ran `sdlc/scripts/install`, `lint`, `test`, and `spec` sequentially with the backend key and address variables unset. All passed. Replay checks and all nineteen executable how-tos passed. The ratchet remained exact, ADR 0032 retained SHA-256 `47d8e3fbeebb5d1a972e8d4c0b0216ed4f53bfb97a8f1ec145f568f75338725f`, and `git diff --check` passed. No live, paid, or external request ran.

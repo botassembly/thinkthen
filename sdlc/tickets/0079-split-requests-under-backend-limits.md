@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/backend_profile.rs crates/thinkthen/src/core/pl
 
 # 0079: Split requests under backend limits
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
