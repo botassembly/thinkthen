@@ -17,7 +17,7 @@ The review started on clean main `2b63c872925c7237ded0491dc13f69247cf6f142`, equ
 | `worktrees/thinkthen-surfaces` | Clean `surfaces` at `f942e06`, equal to its remote | Language/database adapters, contract, and stand-in engine remain separate. Comparison with main found 266 main-only and 246 surfaces-only commits |
 | Other retained checkouts | 83 clean old worktrees with tips contained in main | Historical work, not 83 outstanding features. Only `workspace sweep` may remove registered worktrees |
 
-Git listed 87 worktrees including main and this review checkout. `surfaces` was the only local branch with commits outside main; the uncommitted 0074 draft cannot appear in a commit-ancestry check. No existing worktree was edited or removed by this review. The planning commit will advance main beyond this snapshot.
+Git listed 87 worktrees including main and this review checkout. `surfaces` was the only local branch with commits outside main; the uncommitted 0074 draft cannot appear in a commit-ancestry check. Existing task worktrees were preserved. The planning commit advances main beyond this snapshot. Unrelated site edits appeared on main during landing and were left uncommitted by this review.
 
 ## What is already on main
 
