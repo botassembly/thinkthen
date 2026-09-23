@@ -17,6 +17,9 @@ Ian's ruling, 2026-09-23: keep the times. Harvest only the fields we map, never 
 | systemone | header `x-typesafe-request-id` | `request_id` |
 | chat | body `created`, and the time in the body `id` | `server_s`, whole seconds |
 | every adapter | the command's own clock | `wall_ms` |
+| every run | the command's own clock, from start to exit, minus the exchanges | `command_ms` |
+
+A backend with no timing header keeps `wall_ms` and `command_ms` and leaves the rest out. The Laya shim is ours, so it can send `x-envoy-upstream-service-time` too. A new backend adds its row to the map. With all four, a user splits every answer into the model's time, the network's, and ThinkThen's own.
 
 For every sent request, keep three facts: the wall time of the exchange as the command measured it, the backend's own time when a known header names it, and the backend's request id. Read only named headers from a fixed allowlist. Never keep any other header. Show them under `--details`.
 
