@@ -269,8 +269,13 @@ fn question_from(text: &str) -> Result<Question, Error> {
 /// None that crosses the boundary: the guard catches every panic; an
 /// allocation failure aborts the process by Rust's own rule.
 #[unsafe(no_mangle)]
+/// # Safety
+///
+/// The returned pointer is owned by the caller and must be freed with
+/// `thinkthen_engine_free`; a null return names a refusal, never a live
+/// engine.
 pub unsafe extern "C" fn thinkthen_engine_new() -> *mut thinkthen_engine {
-    guard(std::ptr::null(), || std::ptr::null_mut(), || {
+    guard(std::ptr::null(), std::ptr::null_mut, || {
         let Ok(engine) = StandinConnector.connect(&EngineConfig::from_env()) else {
             return std::ptr::null_mut();
         };
@@ -369,8 +374,13 @@ pub unsafe extern "C" fn thinkthen_error_code(engine: *const thinkthen_engine) -
 /// Takes no input. The returned pointer owns one flag and borrows nothing,
 /// and the host frees it exactly once.
 #[unsafe(no_mangle)]
+/// # Safety
+///
+/// The returned pointer is owned by the caller and must be freed with
+/// `thinkthen_cancel_token_free`; a null return names an allocation
+/// failure.
 pub unsafe extern "C" fn thinkthen_cancel_token_new() -> *mut thinkthen_cancel_token {
-    guard(std::ptr::null(), || std::ptr::null_mut(), || {
+    guard(std::ptr::null(), std::ptr::null_mut, || {
         Box::into_raw(Box::new(thinkthen_cancel_token {
             cancel: Cancel::new(),
         }))
@@ -677,7 +687,7 @@ pub unsafe extern "C" fn thinkthen_call(
     engine: *const thinkthen_engine,
     request_json: *const c_char,
 ) -> *mut c_char {
-    guard(engine, || std::ptr::null_mut(), || unsafe {
+    guard(engine, std::ptr::null_mut, || unsafe {
         thinkthen_call_opts(engine, request_json, NO_DEADLINE, std::ptr::null())
     })
 }
@@ -714,7 +724,7 @@ pub unsafe extern "C" fn thinkthen_call_opts(
     deadline_ms: i64,
     cancel: *const thinkthen_cancel_token,
 ) -> *mut c_char {
-    guard(engine, || std::ptr::null_mut(), || {
+    guard(engine, std::ptr::null_mut, || {
         let Some(engine) = (unsafe { engine.as_ref() }) else {
             return std::ptr::null_mut();
         };
@@ -853,7 +863,7 @@ fn call_verb(
         }));
     }
     if question_object.contains_key("decide") {
-        if let Some(_) = object.get("records") {
+        if object.get("records").is_some() {
             let question_text = serde_json::to_string(&serde_json::Value::Object(question_object))
                 .map_err(|error| {
                     Error::defect(format!("the question did not serialize: {error}"))

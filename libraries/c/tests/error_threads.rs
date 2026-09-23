@@ -29,9 +29,11 @@ fn null_backend() {
 /// The message the calling thread recorded on `engine`, copied out so the
 /// assertion cannot hold a pointer past its promise.
 unsafe fn message(engine: *const thinkthen_engine) -> String {
-    unsafe { CStr::from_ptr(thinkthen::thinkthen_error_message(engine)) }
-        .to_string_lossy()
-        .into_owned()
+    unsafe {
+        CStr::from_ptr(thinkthen::thinkthen_error_message(engine))
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 #[test]

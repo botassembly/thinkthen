@@ -16,15 +16,17 @@ const ALARM_SECONDS: u32 = 10;
 const REQUEST: &str = r#"{"decide": "Does the customer ask for a refund?", "evidence": "I want a refund for order 9"}"#;
 
 unsafe fn call(engine: *const thinkthen_engine, text: &str) -> bool {
-    let request = CString::new(text).expect("no NUL");
-    let pointer = thinkthen::thinkthen_call(engine, request.as_ptr());
-    assert!(!pointer.is_null(), "the call answered a string");
-    let reply = std::ffi::CStr::from_ptr(pointer)
-        .to_string_lossy()
-        .into_owned();
-    thinkthen::thinkthen_free_string(pointer);
-    let value: serde_json::Value = serde_json::from_str(&reply).expect("the reply is JSON");
-    value["answer"] == serde_json::json!(true)
+    unsafe {
+        let request = CString::new(text).expect("no NUL");
+        let pointer = thinkthen::thinkthen_call(engine, request.as_ptr());
+        assert!(!pointer.is_null(), "the call answered a string");
+        let reply = std::ffi::CStr::from_ptr(pointer)
+            .to_string_lossy()
+            .into_owned();
+        thinkthen::thinkthen_free_string(pointer);
+        let value: serde_json::Value = serde_json::from_str(&reply).expect("the reply is JSON");
+        value["answer"] == serde_json::json!(true)
+    }
 }
 
 #[test]
@@ -43,7 +45,7 @@ fn a_fork_after_the_first_call_answers_in_the_child() {
             // signal death by the parent.
             libc::alarm(ALARM_SECONDS);
             let answered = call(engine, REQUEST);
-            let _ = thinkthen::thinkthen_engine_free(engine);
+            thinkthen::thinkthen_engine_free(engine);
             libc::_exit(if answered { 0 } else { 2 });
         }
 

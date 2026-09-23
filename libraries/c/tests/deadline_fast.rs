@@ -40,21 +40,25 @@ fn null_backend() {
 }
 
 unsafe fn message(engine: *const thinkthen_engine) -> String {
-    CStr::from_ptr(thinkthen::thinkthen_error_message(engine))
-        .to_string_lossy()
-        .into_owned()
+    unsafe {
+        CStr::from_ptr(thinkthen::thinkthen_error_message(engine))
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 /// The door's own request counter through the JSON door; reading the
 /// counters sends nothing.
 unsafe fn usage_of(engine: *const thinkthen_engine) -> u64 {
-    let request = CString::new(r#"{"usage": true}"#).expect("static");
-    let reply = thinkthen::thinkthen_call(engine, request.as_ptr());
-    assert!(!reply.is_null(), "the counters answer");
-    let text = CStr::from_ptr(reply).to_string_lossy().into_owned();
-    thinkthen::thinkthen_free_string(reply);
-    let value: serde_json::Value = serde_json::from_str(&text).expect("the counters are JSON");
-    value["requests"].as_u64().unwrap_or(0)
+    unsafe {
+        let request = CString::new(r#"{"usage": true}"#).expect("static");
+        let reply = thinkthen::thinkthen_call(engine, request.as_ptr());
+        assert!(!reply.is_null(), "the counters answer");
+        let text = CStr::from_ptr(reply).to_string_lossy().into_owned();
+        thinkthen::thinkthen_free_string(reply);
+        let value: serde_json::Value = serde_json::from_str(&text).expect("the counters are JSON");
+        value["requests"].as_u64().unwrap_or(0)
+    }
 }
 
 /// The conformance file's spent-budget row (27-deadline-spent-budget): a

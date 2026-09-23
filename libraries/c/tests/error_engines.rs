@@ -24,27 +24,29 @@ const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {
 /// The message the calling thread recorded on `engine`, copied out so the
 /// assertion cannot hold a pointer past its promise.
 unsafe fn message(engine: *const thinkthen_engine) -> String {
-    unsafe { CStr::from_ptr(thinkthen::thinkthen_error_message(engine)) }
-        .to_string_lossy()
-        .into_owned()
+    unsafe {
+        CStr::from_ptr(thinkthen::thinkthen_error_message(engine))
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 /// Record one usage failure on `engine` through the public door: a null
 /// question is refused before anything is sent.
 unsafe fn record_failure(engine: *const thinkthen_engine) {
-    let evidence = CString::new("i want a refund").expect("static");
-    let mut answer = UNWRITTEN;
-    let code = unsafe {
-        thinkthen::thinkthen_decide(
-            engine,
-            std::ptr::null(),
-            evidence.as_ptr(),
-            evidence.as_bytes().len(),
-            &mut answer,
-        )
-    };
-    assert_eq!(code, 1, "a null question is the usage kind");
-    assert_eq!(answer.outcome, 7, "a refusal writes nothing");
+    unsafe {
+        let evidence = CString::new("i want a refund").expect("static");
+        let mut answer = UNWRITTEN;
+        let code = thinkthen::thinkthen_decide(
+                engine,
+                std::ptr::null(),
+                evidence.as_ptr(),
+                evidence.as_bytes().len(),
+                &mut answer,
+            );
+        assert_eq!(code, 1, "a null question is the usage kind");
+        assert_eq!(answer.outcome, 7, "a refusal writes nothing");
+    }
 }
 
 /// A failure on one engine does not hide another engine's: each engine

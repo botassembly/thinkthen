@@ -21,13 +21,17 @@ const UNWRITTEN: thinkthen::thinkthen_answer = thinkthen::thinkthen_answer {
 const NO_DEADLINE: i64 = -1;
 
 unsafe fn engine() -> *mut thinkthen_engine {
-    thinkthen::thinkthen_engine_new()
+    unsafe {
+        thinkthen::thinkthen_engine_new()
+    }
 }
 
 unsafe fn message(engine: *const thinkthen_engine) -> String {
-    std::ffi::CStr::from_ptr(thinkthen::thinkthen_error_message(engine))
-        .to_string_lossy()
-        .into_owned()
+    unsafe {
+        std::ffi::CStr::from_ptr(thinkthen::thinkthen_error_message(engine))
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 #[test]
@@ -306,24 +310,30 @@ fn the_new_shapes_ride_the_json_door() {
 
 /// One JSON-door call through the door's own entry point.
 unsafe fn json(engine: *const thinkthen_engine, text: &str) -> *mut c_char {
-    let request = CString::new(text).expect("no NUL");
-    thinkthen::thinkthen_call(engine, request.as_ptr())
+    unsafe {
+        let request = CString::new(text).expect("no NUL");
+        thinkthen::thinkthen_call(engine, request.as_ptr())
+    }
 }
 
 /// Run one JSON-door call, parse the reply, and free the string.
 unsafe fn take(pointer: *mut c_char) -> serde_json::Value {
-    assert!(!pointer.is_null(), "the call succeeded");
-    let text = std::ffi::CStr::from_ptr(pointer).to_string_lossy().into_owned();
-    thinkthen::thinkthen_free_string(pointer);
-    serde_json::from_str(&text).expect("the reply is JSON")
+    unsafe {
+        assert!(!pointer.is_null(), "the call succeeded");
+        let text = std::ffi::CStr::from_ptr(pointer).to_string_lossy().into_owned();
+        thinkthen::thinkthen_free_string(pointer);
+        serde_json::from_str(&text).expect("the reply is JSON")
+    }
 }
 
 /// The door's own counters through the JSON door.
 unsafe fn usage_of(engine: *const thinkthen_engine) -> u64 {
-    let request = CString::new(r#"{"usage": true}"#).expect("static");
-    let reply = thinkthen::thinkthen_call(engine, request.as_ptr());
-    let usage = take(reply);
-    usage["requests"].as_u64().unwrap_or(0)
+    unsafe {
+        let request = CString::new(r#"{"usage": true}"#).expect("static");
+        let reply = thinkthen::thinkthen_call(engine, request.as_ptr());
+        let usage = take(reply);
+        usage["requests"].as_u64().unwrap_or(0)
+    }
 }
 
 /// One `thinkthen_recognize` call: the code and the JSON string, freed.
@@ -343,6 +353,7 @@ unsafe fn recognize_with(
     deadline_ms: i64,
     cancel: *const thinkthen::thinkthen_cancel_token,
 ) -> (i32, String) {
+    unsafe {
     let spec = CString::new(spec).expect("no NUL");
     let mut out: *mut c_char = std::ptr::null_mut();
     let mut out_len: usize = 0;
@@ -350,7 +361,7 @@ unsafe fn recognize_with(
         engine,
         spec.as_ptr(),
         text.as_ptr() as *const c_char,
-        text.as_bytes().len(),
+        text.len(),
         deadline_ms,
         cancel,
         &mut out,
@@ -361,13 +372,15 @@ unsafe fn recognize_with(
     }
     let json = std::ffi::CStr::from_ptr(out).to_string_lossy().into_owned();
     assert_eq!(
-        json.as_bytes().len(),
+        json.len(),
         out_len,
         "the length is the returned string's own"
     );
     thinkthen::thinkthen_free_string(out);
     (code, json)
+    }
 }
+
 
 /// One `thinkthen_relate` call: the code and the JSON string, freed.
 unsafe fn relate(
@@ -386,6 +399,7 @@ unsafe fn relate_with(
     deadline_ms: i64,
     cancel: *const thinkthen::thinkthen_cancel_token,
 ) -> (i32, String) {
+    unsafe {
     let spec = CString::new(spec).expect("no NUL");
     let texts: Vec<CString> = records
         .iter()
@@ -410,26 +424,26 @@ unsafe fn relate_with(
         return (code, message(engine));
     }
     let json = std::ffi::CStr::from_ptr(out).to_string_lossy().into_owned();
-    assert_eq!(json.as_bytes().len(), out_len);
+    assert_eq!(json.len(), out_len);
     thinkthen::thinkthen_free_string(out);
     (code, json)
+    }
 }
+
 
 /// The C host's one conversion: walk the text, count code points, keep the
 /// byte positions of `start` and one past `end`, the way the example does.
 fn byte_range(text: &str, start: usize, end: usize) -> (usize, usize) {
-    let mut points = 0usize;
     let mut from = 0usize;
     let mut to = text.len();
-    for (byte, _) in text.char_indices() {
-        if points == start {
+    for (point, (byte, _)) in text.char_indices().enumerate() {
+        if point == start {
             from = byte;
         }
-        if points == end {
+        if point == end {
             to = byte;
             return (from, to);
         }
-        points += 1;
     }
     (from, to)
 }
