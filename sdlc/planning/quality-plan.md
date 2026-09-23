@@ -82,6 +82,8 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 16. Issue statuses are normalized to a two-value vocabulary (Open and everything-else) before the waiver sweep runs; the record currently carries nine status words and two files with none.
 17. The surfaces branch's error index (the fifth review's companion page) has a row for every confirmed defect across all five rounds, each row closed or waived by an independent probe named in the row, and the release pass re-runs the proving probes, because the branch's own history shows a closed item can stop holding.
 18. The naming and consistency review (quality plan Part 4) is green: vocabulary lint zero-hit, the nine-column matrix generated and drift-free, every public name documented with one shape example, every bound stated strict or inclusive, the stranger name-test run with its gaps filed or fixed.
+19. The performance matrix is complete (quality plan Part 5): every public surface measured on every runtime and storage backend, from named scripts at the exact release build; the fastest and slowest surface named per runtime and overall; the wave-1 baselines re-run on the release build; every gap between fastest and slowest explained or filed.
+20. The crash sets and resource claims are green (quality plan Part 5): every surface's committed crafted-input set passes on the release build in every runtime, fallback environments included (a locked-down Linux container, not just macOS); every printed speed, cost, or memory number on a public page names its measuring record.
 
 ## Part 3: the exploring tester
 
@@ -125,6 +127,26 @@ The 0.1 release locks the public API first, so names, bounds, and documentation 
 
 13. Public names change only with an architecture decision record and a version bump: a lint fails a pull request that renames or removes a public symbol without one. After 0.1 this is the compatibility wall.
 14. A vocabulary change lands everywhere in one commit: code, tests, help, errors, manuals, and the site, across all nine surfaces at once. No half-renamed state on main, ever.
+
+## Part 5: resource truth — RAM, crashes, and measured time
+
+Added 2026-09-23 after the Python verifier's three findings on the surfaces branch: a crash from trusting caller-declared metadata lengths (five crafted inputs, five process deaths), a memory check that scanned a whole 1 GB column to read ten rows (0.3 ms to 158 ms; a 1,024-piece walk from 6 s to 103 s; a memory-mapped read faulting the entire file), and a fallback gap the notes pinned to macOS while locked-down Linux containers crashed too. The plan covers three resource dimensions for every surface, in every runtime and storage backend.
+
+### Crashes: no surface trusts a caller's arithmetic
+
+Every length, count, and offset that arrives in data — metadata, headers, column statistics — is validated before use. A crafted input produces a refused request or an error line, never a process death. Each surface ships a committed crash set, grown from every input that once killed it (this wave's five seed the Python set), and the gate replays it. Fallback paths count as first-class: when the strong check is unavailable, the fallback is verified in the environment that lacks the strong check, not assumed equivalent on the strongest machine — the "Mac only" note that let Linux containers crash is the standing example. Concurrency is tested by rounds, not inspection: shared ownership under simultaneous release from several threads ran 30 clean rounds against the old build's crash, and that test, not the review sentence, is what holds it.
+
+### RAM: a read pays for what it reads
+
+A request for ten rows from the end of a 1 GB column may not examine, fault, or hold the whole file. Memory checks cover the requested range, not the container. The test that guards this pins exactly which bytes get checked, never a wall-clock time — the fixer's slowdown test is the model. The wave-1 streaming bounds (16 MB streaming, 220 MB `rank`, at 1M records) apply per runtime: the Python library and the database extension meet them with their own measured numbers, not the Rust binary's.
+
+### Time: every number names its record
+
+A printed speed, cost, or memory number names the script, the machine, and the build SHA that produced it; a page and its number move together (checklist item 6, and the wave-1 issue that ruled it). Tests that guard performance pin steps, bytes, or ranges — never clocks.
+
+### The performance matrix
+
+The deliverable is `experiments/218-thinkthen-release-qa/wave2/perf-matrix.md`: one row per public surface, one group per runtime — Rust CLI per-process, Rust CLI batched or streaming, Python library holding one warm engine, database extension answering in-query — crossed with storage backends (no cache, SQLite cache, memory cache, column files). Each cell carries the median and 95th-percentile per call, rows per second for streams, peak RAM, and the crash-set result. The matrix names the fastest and slowest surface per runtime and overall, and explains or files every gap wider than an order of magnitude. Wave-1 baselines seed the first rows: 1.17 ms dry-run, 19.4 ms loopback full call, 4,660 records/s stand-in ceiling, 5.7 µs cache hit, 1.2 ms process cold-start. The matrix is checklist item 19, so 0.1 ships with the comparison measured, not promised.
 
 ## The two reviews, both gates
 
