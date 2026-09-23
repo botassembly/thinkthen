@@ -35,6 +35,12 @@ for (const step of data.steps) {
     <div class="caption"><span class="status run">run</span><span class="grow"><code>{data.inputFile}</code>, the file the commands read.</span></div>
     <pre>{data.input}</pre>
   </div>
+  {data.forms.map((form) => (
+    <div class="block">
+      <div class="caption"><span class="status run">run</span><span class="grow"><code>{form.name}</code>, the form the commands fill out.</span></div>
+      <pre>{form.text}</pre>
+    </div>
+  ))}
   {howto.also && (
     <div class="block">
       <div class="caption"><span class="status run">run</span><span class="grow"><code>{howto.also.file}</code>, the second file.</span></div>

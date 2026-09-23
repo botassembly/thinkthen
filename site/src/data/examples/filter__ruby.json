@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# keep the records where the answer is yes\nupset = ThinkThen.filter(\"Is this a complaint?\", reviews)\nputs \"#{upset.size} of #{reviews.size} are complaints\"",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "filter",
   "surface": "ruby"
 }

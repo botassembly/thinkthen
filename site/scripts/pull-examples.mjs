@@ -4,6 +4,8 @@
 // Nothing here is typed by hand. A Bash cell comes from the deck's recorded
 // run: the command from examples/run.sh, the output from examples/out/*.txt.
 // A code cell comes from the deck's surfaces.md, which is drawn and not run.
+// A surface sample the branch build ran carries what it printed, from the
+// same section of surfaces.md.
 // Every function-and-surface cell gets a status: run, drawn, or planned.
 //
 //   node scripts/pull-examples.mjs
@@ -133,11 +135,11 @@ const SKIP_RUNS = new Set(['decide-details']);
 // Runs that belong to a page and to no function. They land in _pages.json.
 const PAGE_RUNS = new Set(['dry-run']);
 
-// The files a command names besides its input, such as a question set, shown
-// with `cat` above the command.
+// The files a command names besides its input, such as a question set or an
+// @question file, shown with `cat` above the command.
 function alsoFiles(call, files) {
   return Object.keys(files)
-    .filter((name) => name !== call.redirect && new RegExp(`(^|\\s)${name.replace(/\./g, '\\.')}(\\s|$)`).test(call.command))
+    .filter((name) => name !== call.redirect && new RegExp(`(^|\\s|@)${name.replace(/\./g, '\\.')}(\\s|$)`).test(call.command))
     .map((name) => ({ name, text: files[name] }));
 }
 
@@ -244,9 +246,18 @@ function drawnCells() {
     const block = sections[surface.deckHeading]?.[0];
     if (!block) continue;
     // Split on the whole heading line. A bare `## R` also matches `## Ruby`.
-    const install = /^Install: `(.+)`$/m.exec(
-      text.split(`\n## ${surface.deckHeading}\n`)[1].split('\n```')[0]);
+    const section = text.split(`\n## ${surface.deckHeading}\n`)[1].split(/\n## /)[0];
+    const install = /^Install: `(.+)`$/m.exec(section.split('\n```')[0]);
     wholeBlocks[surface.slug] = { lang: block.lang, code: block.code, install: install?.[1] || null };
+    // What the sample printed when the branch build ran it: the command, the
+    // see sentence, and the ```text block, all from the same section.
+    const run = /^Printed by: `(.+)`$/m.exec(section);
+    if (run) {
+      const see = /^See: (.+)$/m.exec(section);
+      const printed = sections[surface.deckHeading].find((b) => b.lang === 'text');
+      if (!see || !printed) throw new Error(`${surface.slug}: Printed by: needs a See: line and a text block`);
+      wholeBlocks[surface.slug].printed = { command: run[1], output: printed.code, see: see[1] };
+    }
     const chunks = chunksOf(block.code);
     const preamble = [];
     for (const chunk of chunks) {
@@ -379,11 +390,17 @@ function howtoCells() {
       if (!rec) throw new Error(`how-to ${howto.slug}: no recorded output for ${name}`);
       steps.push({ name, command: run.command, output: rec.output, exit: rec.exit });
     }
+    // A form or question set the commands read, shown before the output.
+    const forms = (howto.forms || []).map((name) => {
+      if (files[name] === undefined) throw new Error(`how-to ${howto.slug}: run.sh writes no ${name}`);
+      return { name, text: files[name] };
+    });
     out[howto.slug] = {
       status: 'run',
       source: 'deck usecases/run.sh and usecases/out/',
       input: howto.input ? files[howto.input] ?? null : null,
       inputFile: howto.input || null,
+      forms,
       steps,
     };
   }

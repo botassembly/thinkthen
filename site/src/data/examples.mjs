@@ -38,6 +38,11 @@ for (const fn of FUNCTIONS) {
 
 export const CELLS = cells;
 export const SURFACE_SAMPLES = load('_surfaces.json');
+for (const [slug, sample] of Object.entries(SURFACE_SAMPLES)) {
+  if (sample.printed && !(sample.printed.see?.trim() && sample.printed.output && sample.printed.command)) {
+    throw new Error(`examples: _surfaces.json ${slug} printed needs a command, an output, and a see sentence`);
+  }
+}
 export const HOWTO_RUNS = load('_howtos.json');
 export const RECIPE_RUNS = load('_recipes.json');
 export const PAGE_RUNS = load('_pages.json');

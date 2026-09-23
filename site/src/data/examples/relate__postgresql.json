@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "sql",
-  "code": "-- PostgreSQL: set-returning\nSELECT * FROM thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by']);",
+  "code": "-- PostgreSQL: set-returning\nSELECT * FROM thinkthen_relate('SELECT id, body FROM bugs', ARRAY['same_as']);",
   "function": "relate",
   "surface": "postgresql"
 }

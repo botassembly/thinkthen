@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "sql",
-  "code": "-- SQLite: table-valued\nSELECT * FROM thinkthen_relate('alerts', 'id', 'body', 'caused_by');",
+  "code": "-- SQLite: table-valued\nSELECT * FROM thinkthen_relate('bugs', 'id', 'body', 'either:same_as');",
   "function": "relate",
   "surface": "sqlite"
 }

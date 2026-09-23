@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "python",
-  "code": "import thinkthen as tt\n\n# one yes-or-no answer: True\ntt.decide(\"Does the customer ask for a refund?\", text)",
+  "code": "import thinkthen as tt\n\nask = \"Does the customer ask for a refund?\"\n\n# a plain ask for money back: True\nprint(tt.decide(ask,\n    \"Please refund my order. It arrived broken.\"))",
   "function": "decide",
   "surface": "python"
 }

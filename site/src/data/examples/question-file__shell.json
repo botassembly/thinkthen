@@ -4,21 +4,33 @@
   "runs": [
     {
       "name": "question-yes",
-      "command": "thinkthen decide @refund.json",
+      "command": "thinkthen decide @refund.json < return.txt",
       "input": "I would like to return this and get my money back.",
-      "inputFile": null,
+      "inputFile": "return.txt",
+      "also": [
+        {
+          "name": "refund.json",
+          "text": "{\n  \"decide\": \"Does the customer ask for a refund?\",\n  \"true\": \"The customer asks for money back.\",\n  \"false\": \"Anything else, such as a cancellation or thanks.\",\n  \"threshold\": \"0.2:0.8\"\n}"
+        }
+      ],
       "output": "true",
       "exit": 0,
-      "see": "The saved question answers true for a clear refund request."
+      "see": "The saved question answers true for a plain request for money back."
     },
     {
       "name": "question-unsure",
-      "command": "thinkthen decide @refund.json",
-      "input": "I was charged twice. Can you fix this?",
-      "inputFile": null,
+      "command": "thinkthen decide @refund.json < vague.txt",
+      "input": "I want to send this back.",
+      "inputFile": "vague.txt",
+      "also": [
+        {
+          "name": "refund.json",
+          "text": "{\n  \"decide\": \"Does the customer ask for a refund?\",\n  \"true\": \"The customer asks for money back.\",\n  \"false\": \"Anything else, such as a cancellation or thanks.\",\n  \"threshold\": \"0.2:0.8\"\n}"
+        }
+      ],
       "output": "null",
       "exit": 3,
-      "see": "The saved question is not sure about the vague message, so it prints null and exits 3."
+      "see": "Sending it back could mean an exchange or money back, so the saved question prints null and exits 3."
     }
   ],
   "function": "question-file",

@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "python",
-  "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.read_parquet(\"tickets.parquet\")\nask = \"Is this a complaint?\"\n\n# a column goes in and a column comes out.\n# Rust reads the column in place and runs it 32 wide\ndf = df.with_columns(complaint=tt.decide(ask, df[\"body\"]))",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "decide",
   "surface": "polars"
 }

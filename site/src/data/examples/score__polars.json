@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "python",
-  "code": "import polars as pl\nimport thinkthen as tt\n\ndf = pl.read_parquet(\"tickets.parquet\")\nask = \"Is this a complaint?\"\n\n# score gives a number column. None is \"not sure\"\nlevels = [\"Routine.\", \"Soon.\", \"Immediate.\"]\nurgency = tt.score(\"How urgent?\", df[\"body\"], levels)\ndf = df.with_columns(urgency=urgency)",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "score",
   "surface": "polars"
 }

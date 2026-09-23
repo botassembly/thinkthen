@@ -11,6 +11,7 @@ export function getStaticPaths() {
 
 const { surface } = Astro.props;
 const sample = SURFACE_SAMPLES[surface.slug] || null;
+const printed = sample?.printed || null;
 const shipped = surface.status === 'ships first';
 const questionFile = FUNCTIONS.find((f) => f.notAFunction);
 const sections = [...CODE_FUNCTIONS, questionFile].map((fn) => ({ fn, data: cell(fn.name, surface.slug) }));
@@ -27,7 +28,9 @@ const when = surface.release && !shipped
   <h1>{headline} <span class={`status ${statusClass(surface.status)}`}>{surface.status}</span></h1>
   <p class="lede">{surface.blurb.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</p>
   {!shipped && (
-    <div class="note">{when} The code below shows how the calls will read.{surface.release && ' None of it has run yet. Bash ships first.'}</div>
+    <div class="note">{when} {printed
+      ? 'The first call below ran on the branch build, and its output is under it. Bash ships first.'
+      : `The code below shows how the calls will read.${surface.release ? ' None of it has run yet. Bash ships first.' : ''}`}</div>
   )}
 
   <h2>Install</h2>
@@ -43,7 +46,10 @@ const when = surface.release && !shipped
 
   <h2>A first call</h2>
   {sample ? (
-    <Code code={sample.code} caption={`${when} The calls will read like this.`} />
+    <>
+      <Code code={sample.code} caption={printed ? `${when} The calls read like this.` : `${when} The calls will read like this.`} />
+      {printed && <Terminal run={{ command: printed.command, output: printed.output, exit: null }} caption={`Recorded from the branch build. ${printed.see}`} word={false} />}
+    </>
   ) : (
     <Terminal run={cell('decide', 'shell').runs.find((r) => r.name === 'decide')} caption="Recorded from the real command. decide prints true and exits 0." />
   )}

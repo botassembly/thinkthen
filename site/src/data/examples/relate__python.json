@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "python",
-  "code": "edges = tt.relate(alerts, relations=[\"caused_by\"], either=[\"same_as\"], threshold=0.9)\nedges[0].name, edges[0].source, edges[0].target, edges[0].probability   # \"caused_by\", 1, 4, 0.94\nedges_df = tt.relate(df, on=\"body\", relations=[\"caused_by\"])            # a Polars frame in, a Polars frame of edges out",
+  "code": "edges = tt.relate(bugs, either=[\"same_as\"], threshold=0.9)\nedges[0].name, edges[0].source, edges[0].target, edges[0].probability   # \"same_as\", 1, 3, 1.0\nedges_df = tt.relate(df, on=\"body\", either=[\"same_as\"])                  # a Polars frame in, a Polars frame of edges out",
   "function": "relate",
   "surface": "python"
 }

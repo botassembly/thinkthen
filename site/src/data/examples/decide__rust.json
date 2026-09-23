@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "rust",
-  "code": "use thinkthen::{Answer, Engine, Question};\n\n// reads THINKTHEN_API_KEY; blocking, no async runtime\nlet tt = Engine::from_env()?;\n\nlet asks = \"Does the customer ask for a refund?\";\nlet refund = Question::decide(asks).band(0.2, 0.8)?;",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "decide",
   "surface": "rust"
 }

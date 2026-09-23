@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "sql",
-  "code": "-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body\nFROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;",
+  "code": "CREATE TABLE tickets (id int, body text);\nINSERT INTO tickets VALUES\n    (1, 'Please refund my order. It came broken.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'I want to send this back.');\n\n-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body FROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;",
   "function": "question-file",
   "surface": "postgresql"
 }

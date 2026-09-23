@@ -20,7 +20,7 @@
     {
       "name": "annotate-jsonl",
       "command": "thinkthen annotate form.json --jsonl --field /body --jobs 8 < reports.jsonl",
-      "input": "{\"id\": \"B-7\", \"body\": \"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.\"}\n{\"id\": \"B-8\", \"body\": \"The invoice page button is a slightly different blue. No steps, I just noticed it.\"}\n{\"id\": \"B-9\", \"body\": \"Steps: open a report and click Export. The file takes ten minutes to arrive.\"}",
+      "input": "{\"id\": \"B-7\", \"body\": \"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.\"}\n{\"id\": \"B-8\", \"body\": \"The Pay button on the billing page is a slightly different blue. No steps, I just noticed it.\"}\n{\"id\": \"B-9\", \"body\": \"Steps: open a report and click Export. The file takes ten minutes to arrive.\"}",
       "inputFile": "reports.jsonl",
       "also": [
         {
@@ -28,9 +28,9 @@
           "text": "{\n  \"version\": 1,\n  \"questions\": {\n    \"steps\": {\n      \"decide\": \"Does the report give steps to reproduce?\"},\n    \"area\": {\n      \"choose\": \"Which part of the app is this?\",\n      \"options\": [\"export\", \"login\", \"billing\"]},\n    \"impact\": {\n      \"score\": \"How much does this block the user?\",\n      \"levels\": [\"None.\", \"Slows them.\", \"Blocks work.\"]}\n  }\n}"
         }
       ],
-      "output": "{\"id\":\"B-7\",\"body\":\"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.\",\"steps\":true,\"area\":\"login\",\"impact\":2.0}\n{\"id\":\"B-8\",\"body\":\"The invoice page button is a slightly different blue. No steps, I just noticed it.\",\"steps\":false,\"area\":\"billing\",\"impact\":0.03}\n{\"id\":\"B-9\",\"body\":\"Steps: open a report and click Export. The file takes ten minutes to arrive.\",\"steps\":true,\"area\":\"export\",\"impact\":1.07}",
+      "output": "{\"id\":\"B-7\",\"body\":\"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.\",\"steps\":true,\"area\":\"login\",\"impact\":2.0}\n{\"id\":\"B-8\",\"body\":\"The Pay button on the billing page is a slightly different blue. No steps, I just noticed it.\",\"steps\":false,\"area\":\"billing\",\"impact\":0.01}\n{\"id\":\"B-9\",\"body\":\"Steps: open a report and click Export. The file takes ten minutes to arrive.\",\"steps\":true,\"area\":\"export\",\"impact\":1.07}",
       "exit": 0,
-      "see": "Each report keeps its id and gains three answers. The blue button has no steps and blocks nothing."
+      "see": "Each report keeps its id and gains three answers. The blue Pay button on the billing page is billing, gives no steps, and blocks nothing."
     }
   ],
   "function": "annotate",

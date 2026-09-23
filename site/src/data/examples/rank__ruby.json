@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# any Enumerable works, and it crosses to the engine once\nurgent = ThinkThen.rank(\"Is this urgent?\", inbox, top: 5)\nurgent.each { |mail| puts mail }",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "rank",
   "surface": "ruby"
 }

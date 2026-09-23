@@ -48,37 +48,43 @@ Be careful what you read into that number. The probability describes the evidenc
 
 ## The threshold and the middle
 
-Take a vaguer ticket:
+Some messages are plain and some are not. Here are three:
 
 ```
-I was charged twice. Can you fix this?
+$ cat messages.txt
+Please refund my order. It arrived broken.
+Thanks for the quick help yesterday!
+I want to send this back.
 ```
 
-The customer doesn't use the word `refund`. Watch what the same question does:
+The first asks for money back. The second does not. The third could mean an exchange or money back. Ask the same question of each line, with a band from 0.2 to 0.8:
 
 ```
-$ thinkthen decide 'Does the customer ask for a refund?' < vague.txt
-true
-
-$ thinkthen decide --threshold 0.9 'Does the customer ask for a refund?' < vague.txt
-false
+$ thinkthen decide --lines --details --threshold 0.2:0.8 \
+    'Does the customer ask for a refund?' < messages.txt \
+    | jq -r '"\(.value)  \(.answer.probability)  \(.input)"'
+true  0.99  Please refund my order. It arrived broken.
+false  0.01  Thanks for the quick help yesterday!
+null  0.54  I want to send this back.
 ```
 
-The model assigns a probability of 0.74. At the default threshold of one half, the answer is yes. At a threshold of 0.9, the answer is no. You set that threshold against your own labeled cases. It holds for one model. A threshold doesn't carry from one model to another. We pointed the tool at a second model once. The question file and the band stayed the same. One model left the sample unresolved and sent it to a person. The other answered yes and routed it.
+The refund request lands at 0.99, over the high bar, so the answer is yes. The thank-you lands at 0.01, under the low bar, so the answer is no. The send-back line lands at 0.54, inside the band, so the answer is not sure. You set the band against your own labeled cases. It holds for one model. A threshold doesn't carry from one model to another.
 
-You can also define an uncertain band in a question file:
+You can save the question and its band in a file:
 
 ```json
 {
   "decide": "Does the customer ask for a refund?",
   "true": "The customer asks for money back.",
-  "false": "Anything else, such as a question or a complaint.",
+  "false": "Anything else, such as a cancellation or thanks.",
   "threshold": "0.2:0.8"
 }
 ```
 
+`vague.txt` holds the send-back line alone:
+
 ```
-$ thinkthen decide @refund.json < vague.txt
+$ thinkthen decide @refund.json < vague.txt; echo "exit $?"
 null
 exit 3
 ```
@@ -89,7 +95,7 @@ That file also diffs in a pull request like any other code.
 
 ## Ten functions you can compose
 
-The model answers three kinds of question: yes or no, one of a list, and a place on a scale. Diogo Almeida, TypeSafe's founder, puts them in code terms: "Choice maps into a switch statement on an enum. Nouls map to if statements. Scores map to sorting or thresholding." ThinkThen turns those answers into ten functions. This article shows four of them; the site shows all ten. The functions read standard input and write standard output.
+The model answers three kinds of question: yes or no, one of a list, and a place on a scale. Diogo Almeida, TypeSafe's founder, puts them in code terms: "Choice maps into a switch statement on an enum. Nouls map to if statements. Scores map to sorting or thresholding." ThinkThen turns those answers into ten functions. This article shows five of them, and the site shows all ten. The functions read standard input and write standard output.
 
 `decide` answers one yes or no. `choose` picks one option from your list. `score` places the evidence on named levels. `tag` names every label that fits. `filter` keeps the records that pass, byte for byte and in their original order. `rank` orders records by how likely a yes is. `find` picks the one line that best answers a question. `annotate` fills out a form of named questions for every record. `recognize` finds the names in the evidence, and `relate` says how records connect.
 
@@ -112,7 +118,34 @@ enterprise  We need 200 seats next quarter. Please send a quote.
 
 The pipeline returns the original lines, each beside its team. It doesn't rewrite them.
 
-I reach for `annotate` most. A question set contains any mix of `decide`, `choose`, `score`, and `tag` questions in one file. `annotate` answers the question set for every record:
+I reach for `annotate` most. A question set contains any mix of `decide`, `choose`, `score`, and `tag` questions in one file. `annotate` answers the question set for every record. Here is a question set with one yes or no, one pick, and one scale:
+
+```
+$ cat form.json
+{
+  "version": 1,
+  "questions": {
+    "steps": {
+      "decide": "Does the report give steps to reproduce?"},
+    "area": {
+      "choose": "Which part of the app is this?",
+      "options": ["export", "login", "billing"]},
+    "impact": {
+      "score": "How much does this block the user?",
+      "levels": ["None.", "Slows them.", "Blocks work."]}
+  }
+}
+```
+
+And here is a bug report:
+
+```
+$ cat report.txt
+CSV export fails every time. Steps: open a report,
+click Export, pick CSV. My month-end numbers are stuck.
+```
+
+`annotate` fills in the form:
 
 ```
 $ thinkthen annotate form.json < report.txt
@@ -120,6 +153,20 @@ $ thinkthen annotate form.json < report.txt
 ```
 
 ThinkThen answers three questions in one request.
+
+Many reports go in as JSONL. Each record keeps its id and gains the three answers, one area each:
+
+```
+$ cat reports.jsonl
+{"id": "B-7", "body": "Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in."}
+{"id": "B-8", "body": "The Pay button on the billing page is a slightly different blue. No steps, I just noticed it."}
+{"id": "B-9", "body": "Steps: open a report and click Export. The file takes ten minutes to arrive."}
+
+$ thinkthen annotate form.json --jsonl --field /body --jobs 8 < reports.jsonl
+{"id":"B-7","body":"Steps: open the login page, enter a password, press Enter. The page spins and nobody can sign in.","steps":true,"area":"login","impact":2.0}
+{"id":"B-8","body":"The Pay button on the billing page is a slightly different blue. No steps, I just noticed it.","steps":false,"area":"billing","impact":0.01}
+{"id":"B-9","body":"Steps: open a report and click Export. The file takes ten minutes to arrive.","steps":true,"area":"export","impact":1.07}
+```
 
 ## What it costs, and where it breaks
 
@@ -158,6 +205,6 @@ Every number above has a record in the repository. Each link is a path in [githu
 - The 96.8 and 98.0 percent on 1,000 SMS messages: [sdlc/issues/2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md).
 - The twenty hostile twins, their cases, their rows, and the analysis: [probes/06-hostile-text/](https://github.com/botassembly/thinkthen/tree/main/probes/06-hostile-text). The reading is in [specification/decide.md](https://github.com/botassembly/thinkthen/blob/main/specification/decide.md).
 - The `score` warning and the forty incident reports: [specification/score.md](https://github.com/botassembly/thinkthen/blob/main/specification/score.md) and [probes/03-score/](https://github.com/botassembly/thinkthen/tree/main/probes/03-score).
-- The second System One model and what it changed about the band: [sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md).
+- The second System One model: [sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md).
 - The first release numbered 0.1 on every surface: [sdlc/issues/2026-09-20-the-first-release-is-0-1-on-every-surface.md](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-20-the-first-release-is-0-1-on-every-surface.md).
 - What version one leaves out: [specification/roadmap.md](https://github.com/botassembly/thinkthen/blob/main/specification/roadmap.md).

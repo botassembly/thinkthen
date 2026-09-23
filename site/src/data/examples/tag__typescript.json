@@ -1,8 +1,6 @@
 {
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ts",
-  "code": "import * as tt from \"thinkthen\";\n\n// every label that fits: [\"billing\", \"shipping\", \"urgent\"]\nconst labels = [\"billing\", \"shipping\", \"urgent\", \"praise\"];\nawait tt.tag(\"Which topics?\", message, { labels });",
+  "status": "planned",
+  "source": "no example drawn for this surface yet",
   "function": "tag",
   "surface": "typescript"
 }

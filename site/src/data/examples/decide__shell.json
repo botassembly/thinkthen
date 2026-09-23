@@ -5,11 +5,11 @@
     {
       "name": "decide-lines",
       "command": "thinkthen decide --lines --details --threshold 0.2:0.8 'Does the customer ask for a refund?' < messages.txt | jq -r '\"\\(.value)  \\(.answer.probability)  \\(.input)\"'",
-      "input": "Please refund my order. It arrived broken.\nThanks for the quick help yesterday!\nI was charged twice. Can you fix this?",
+      "input": "Please refund my order. It arrived broken.\nThanks for the quick help yesterday!\nI want to send this back.",
       "inputFile": "messages.txt",
-      "output": "true  0.99  Please refund my order. It arrived broken.\nfalse  0.01  Thanks for the quick help yesterday!\nnull  0.77  I was charged twice. Can you fix this?",
+      "output": "true  0.99  Please refund my order. It arrived broken.\nfalse  0.01  Thanks for the quick help yesterday!\nnull  0.54  I want to send this back.",
       "exit": 0,
-      "see": "The refund request answers true, the thank-you note false, and the charged-twice line lands inside the band as null."
+      "see": "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back, so it lands inside the band as null at 0.54."
     },
     {
       "name": "decide-case",
@@ -39,31 +39,13 @@
       "see": "The details put yes at 0.99 for this ticket."
     },
     {
-      "name": "decide-vague",
-      "command": "thinkthen decide 'Does the customer ask for a refund?' < vague.txt",
-      "input": "I was charged twice. Can you fix this?",
-      "inputFile": "vague.txt",
-      "output": "true",
-      "exit": 0,
-      "see": "The vague message answers true at the default bar of 0.5."
-    },
-    {
-      "name": "decide-cut",
-      "command": "thinkthen decide --threshold 0.9 'Does the customer ask for a refund?' < vague.txt",
-      "input": "I was charged twice. Can you fix this?",
-      "inputFile": "vague.txt",
-      "output": "false",
-      "exit": 1,
-      "see": "At a cut of 0.9 the vague message answers false and exits 1."
-    },
-    {
       "name": "decide-band",
-      "command": "thinkthen decide --threshold 0.2:0.8 --details 'Does the customer ask for a refund?' < vague.txt | jq -r '[.value, .answer.probability]|tojson'",
-      "input": "I was charged twice. Can you fix this?",
+      "command": "thinkthen decide --lines --threshold 0.2:0.8 --details 'Does the customer ask for a refund?' < vague.txt | jq -r '[.value, .answer.probability]|tojson'",
+      "input": "I want to send this back.",
       "inputFile": "vague.txt",
-      "output": "[null,0.74]",
+      "output": "[null,0.54]",
       "exit": 0,
-      "see": "The 0.74 lands inside the 0.2 to 0.8 band, so the value comes back null."
+      "see": "Alone, the send-back line lands at 0.54, the same number as in the three-line run, inside the 0.2 to 0.8 band, so the value comes back null."
     },
     {
       "name": "decide-means",

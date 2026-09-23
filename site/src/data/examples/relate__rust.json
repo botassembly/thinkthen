@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "rust",
-  "code": "let ask = Relate::new().relation(\"caused_by\", Kind::Any, Kind::Any)?.either(\"same_as\", Kind::Any)?;\nlet edges: Vec<Edge> = tt.relate(&ask, &alerts)?;",
+  "code": "let ask = Relate::new().either(\"same_as\", Kind::Any)?;\nlet edges: Vec<Edge> = tt.relate(&ask, &bugs)?;",
   "function": "relate",
   "surface": "rust"
 }

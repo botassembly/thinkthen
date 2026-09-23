@@ -85,3 +85,27 @@ As of branch `surfaces` tip `6a829b8`. Wave 1 is the first-review fix program (p
 **Fixed in wave 2 (conformance honesty):** `50c6327` the checker honors its file argument and runs from any directory; `c83add5` one skip table in the conformance file replaces the runners' own lists; `bcaa5f7` score and tag coverage (score 1→3, tag 1→4 cases); `2143d7e` the shared repeated-text, NULL-row, and annotate cases with the driver shapes; `6a829b8` the gate counts skips beside greens and a bare `cargo test` in `libraries/rust` passes. The conformance file is 84 cases.
 
 Durable records for the rulings this wave made: ADR 0037 (the C door) and ADR 0038 (the relate boundary) at `79a7efd`; records 0069 (the R interrupt window), 0070 (the PostgreSQL deadline), and 0071 (the two granted exceptions) at `aaccc63`.
+
+## Final verification (2026-09-22, branch tip `ed5a819`)
+
+The full gate ran with the stub up on all ten ports (8211–8219, 8231) and no key in the environment: `bash scripts/check_surfaces.sh` exit 0, `all landed checks green: green=927 skipped=73 diverged=18 failed=0 (wire: stub up)`. The offline checks pass on their own (generated lists; public names; `OK: 84 cases validated`; the checker's and the name-check's own tests). Every finding below was re-run as a command.
+
+| Finding | Status | Proof (command → observed) |
+| --- | --- | --- |
+| 1.1 DuckDB row mapping | fixed | gate `ok decide alternating 10,000 rows split exactly`; a 10,000-row mix of two texts and NULLs against the built extension → true=3334, false=3333, NULL=3333, each group its own count |
+| 1.2 driver can fail | fixed | `ok the corrupted answer expectation fails the driver (exit 1)` and its null-row and annotate twins; the driver reads its argument |
+| 1.3 Python multi-piece annotate | fixed | `tests/test_review2_findings.py::test_a_sliced_struct_stream_answers_the_callers_rows PASSED`; surface tests 27 passed |
+| 1.4 Python `on=` columns | fixed | gate python block: category, struct, list, and tz round-trips green |
+| 1.5 R first-row typing | fixed | `r surface: null suite` 56 checks passed, including the unsure-first choose and the multi-label tag |
+| 1.6 pandas Series | fixed | `test_a_refused_pandas_frame_makes_no_request`, `test_a_refused_pyarrow_table_makes_no_request` PASSED; both release tests PASSED |
+| 1.7 stand-in fixture in product code | fixed | the fixture is compile-time only (`synthetic-partial`); the shipped shape cannot be armed by an environment variable |
+| 1.8 stand-in ignored address/width | fixed | `cargo test --test settings_state` 2 passed: `a_narrow_engine_keeps_its_width_beside_a_wide_one`, `the_file_descriptors_stay_flat` |
+| 2 crashes and memory | fixed | C: ASan clean, per-thread error slots, panic guards on all 19 symbols; one checked deadline conversion in the contract, adopted by every shim; Arrow release pointers cleared (pyarrow and Polars no longer abort); R interrupt guard; SQLite per-call handle |
+| 3 security | fixed | DuckDB `@file` and `thinkthen_relations` respect the access switch (plus `allowed_directories`, `disabled_filesystems`, and prepared statements re-checking at execution); relate is read-only and single-statement; SQLite refuses every schema object (CHECK, DEFAULT, view, trigger, generated column, index expression; trusted on and off); PostgreSQL requires `@`, revokes PUBLIC on every function, and re-revokes on the update path |
+| 4 cancel | fixed | Ruby hears token and raise (gate proof); DuckDB re-arms after one interrupt and DuckDB's own interrupt reaches the engine; PostgreSQL's deadline physics documented (FINDINGS correction); the stand-in's waits stop on cancel and deadline |
+| 5 merge readiness | prepared | the connector is the contract's, one import per surface (grep proof in HANDOFF.md); the trial merge run as a build with the break list and the retarget decision points in MERGE-NOTE §8 |
+| 6 hygiene | partial | the documents are corrected; **open**: the private-name and home-path sweep did not run (31 files name the deck's repository, 7 carry absolute home paths, no check enforces either) — owner: the merge ticket |
+
+Beyond the reviews, this verification found and fixed one more blocker: the Ruby wire interrupt proof segfaulted 3 of 3 runs against the pre-fix build (eight `ttb-worker` threads faulting in `Error::guard` over freed memory after the call had returned); the poll now drains the interrupt on every path and the same proof passes 4 of 4 (`3238ed0`; `libraries/ruby/NOTES.md`, "the leaked workers").
+
+> Closure note: the phase-4 hygiene group this appendix listed as open was fixed on 2026-09-23 in `37240fd`; see the closure section appended to the second review issue.

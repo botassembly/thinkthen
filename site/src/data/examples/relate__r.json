@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "r",
-  "code": "edges <- tt_relate(alerts$body, relations = \"caused_by\", either = \"same_as\")",
+  "code": "edges <- tt_relate(bugs$body, either = \"same_as\")",
   "function": "relate",
   "surface": "r"
 }

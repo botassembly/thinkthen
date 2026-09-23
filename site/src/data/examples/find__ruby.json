@@ -1,6 +1,8 @@
 {
-  "status": "planned",
-  "source": "no example drawn for this surface yet",
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# the one line that gives the refund deadline\npolicy = [\"Returns need the original receipt.\",\n    \"Refunds are issued within 30 days of purchase.\",\n    \"Shipping is free on orders over $50.\"]\nask = \"Which line gives the refund deadline?\"\nputs ThinkThen.find(ask, policy).unit",
   "function": "find",
   "surface": "ruby"
 }

@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck recognize-surfaces.md",
   "lang": "ts",
-  "code": "const edges = await tt.relate(alerts, { relations: [\"caused_by\"], either: [\"same_as\"], signal });",
+  "code": "const edges = await tt.relate(bugs, { either: [\"same_as\"], signal });",
   "function": "relate",
   "surface": "typescript"
 }
