@@ -254,7 +254,9 @@ def run_case(verb, question_text, evidence, records, expect, set_json, text = ni
   when "relate"
     spec = JSON.parse(question_text)
     rules = (spec["relations"] || []).map do |rule|
-      rule.is_a?(Hash) ? { rule["name"] => [rule["source"], rule["target"]] } : rule
+      next rule unless rule.is_a?(Hash)
+
+      { rule["name"] => { source: rule["source"], target: rule["target"], either: rule["either"] } }
     end
     edges = ThinkThen.relate(records, relations: rules.empty? ? nil : rules, either: spec["either"],
                              threshold: spec["threshold"], kind_field: spec["kind_field"])
