@@ -57,6 +57,12 @@ def ruby_names() -> set[str]:
     text = (ROOT / "libraries/ruby/lib/thinkthen.rb").read_text()
     methods = set(re.findall(r"^    def ([a-z_]\w*)", text.split("\n    private", 1)[0], re.M))
     constants = set(re.findall(r"^  ([A-Z]\w*) =", text, re.M))
+    # A private_constant line is Ruby's own privacy marker; the source
+    # regex cannot see runtime visibility, so the marked names leave the
+    # public set here (surfaces-review-4's names drift).
+    marked = set(re.findall(r"private_constant ((?::[A-Z]\w*,?\s*)+)", text))
+    private_constants = {name.strip(":, \n\t ") for group in marked for name in group.split(",")}
+    constants -= private_constants
     errors = set(re.findall(r"([A-Z]\w*Error|Cancelled)\b", text.split(".each", 1)[0]))
     return methods | constants | errors
 

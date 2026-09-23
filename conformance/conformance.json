@@ -103,9 +103,10 @@
     "typescript",
     "ruby",
     "rust",
-    "c"
+    "c",
+    "r"
    ],
-   "why": "this door reads no file, so a missing question file cannot become its error; the file doors (duckdb, sqlite, postgresql at @path, r at annotate_file) run the case and answer the local kind (surfaces-review-4: the entry once named no surface)"
+   "why": "this door exports no file-reading function, so a missing question file cannot become its error; the SQL doors (duckdb, sqlite, postgresql at @path) run the case and answer the local kind (surfaces-review-4: the entry once named no surface, and R's annotate_file is internal, not exported)"
   },
   {
    "when": {
@@ -3741,7 +3742,7 @@
    "id": "68-recognize-C41",
    "source": "synthesized from experiments/225-recognize-harvest-package rules for the offset proofs",
    "verb": "recognize",
-   "text": "Le café 😀 Maria Chen arrived.",
+   "text": "Le caf\u00e9 \ud83d\ude00 Maria Chen arrived.",
    "question": {
     "kinds": [
      "person"

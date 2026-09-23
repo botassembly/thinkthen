@@ -100,59 +100,14 @@ module ThinkThen
   # crossing's exit.
   WATCHDOG_INTERVAL = 0.1
   Row = Struct.new(:thread, :token, :tick, :caller, :error)
+  # Crossing internals, not the ruled surface (surfaces-review-4's names
+  # drift: the check must not read them as API).
+  private_constant :WATCHDOG_INTERVAL, :Row
 
   @rows = {}
   @rows_mutex = Mutex.new
 
   class << self
-    # Start (or find) the one watchdog thread. It is created lazily and
-    # recreated after a fork, which does not carry Ruby threads into the
-    # child.
-    def watchdog
-      current = @watchdog
-      return current if current&.alive?
-      @watchdog = Thread.new do
-        Thread.current.name = "tt-watchdog" if Thread.current.respond_to?(:name=)
-        loop do
-          sleep WATCHDOG_INTERVAL
-          rows = begin
-            @rows_mutex.synchronize { @rows.values }
-          rescue StandardError
-            next
-          end
-          rows.each do |row|
-            begin
-              row.token.cancel if row.caller&.cancelled?
-              row.token.cancel if row.thread.pending_interrupt?
-              row.tick&.call
-            rescue Exception => e # rubocop:disable Lint/RescueException
-              # A tick that raises cancels its own call and rides out.
-              row.error ||= e
-              row.token.cancel
-            end
-          end
-        end
-      end
-    end
-
-    # Run one crossing under the watchdog: register the row, hand the
-    # call's own token to the block, unregister, and surface a tick's
-    # raise after the call is fully finished. `cancel` is the caller's
-    # own token, watched here and never fired; `tick` is this thread's
-    # progress block, run by the watchdog while the call is in flight.
-    def crossing(cancel: nil, tick: nil)
-      watchdog
-      row = Row.new(Thread.current, nil, tick, cancel, nil)
-      token = Cancel.new
-      row.token = token
-      @rows_mutex.synchronize { @rows[row.object_id] = row }
-      begin
-        yield token
-      ensure
-        @rows_mutex.synchronize { @rows.delete(row.object_id) }
-        raise row.error if row.error
-      end
-    end
     # Build a question from keywords: the verb key (decide, choose, score,
     # tag), its text, and threshold, options, levels, or labels. Returns a
     # built question any verb accepts.
@@ -391,6 +346,54 @@ module ThinkThen
     end
 
     private
+    # Start (or find) the one watchdog thread. It is created lazily and
+    # recreated after a fork, which does not carry Ruby threads into the
+    # child.
+    def watchdog
+      current = @watchdog
+      return current if current&.alive?
+      @watchdog = Thread.new do
+        Thread.current.name = "tt-watchdog" if Thread.current.respond_to?(:name=)
+        loop do
+          sleep WATCHDOG_INTERVAL
+          rows = begin
+            @rows_mutex.synchronize { @rows.values }
+          rescue StandardError
+            next
+          end
+          rows.each do |row|
+            begin
+              row.token.cancel if row.caller&.cancelled?
+              row.token.cancel if row.thread.pending_interrupt?
+              row.tick&.call
+            rescue Exception => e # rubocop:disable Lint/RescueException
+              # A tick that raises cancels its own call and rides out.
+              row.error ||= e
+              row.token.cancel
+            end
+          end
+        end
+      end
+    end
+
+    # Run one crossing under the watchdog: register the row, hand the
+    # call's own token to the block, unregister, and surface a tick's
+    # raise after the call is fully finished. `cancel` is the caller's
+    # own token, watched here and never fired; `tick` is this thread's
+    # progress block, run by the watchdog while the call is in flight.
+    def crossing(cancel: nil, tick: nil)
+      watchdog
+      row = Row.new(Thread.current, nil, tick, cancel, nil)
+      token = Cancel.new
+      row.token = token
+      @rows_mutex.synchronize { @rows[row.object_id] = row }
+      begin
+        yield token
+      ensure
+        @rows_mutex.synchronize { @rows.delete(row.object_id) }
+        raise row.error if row.error
+      end
+    end
 
     # The recognize spec in the contract's one grammar: kinds as a list,
     # relations as named rules with from and to ends (each a kind or "*"),
