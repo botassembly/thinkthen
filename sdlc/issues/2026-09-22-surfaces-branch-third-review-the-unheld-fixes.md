@@ -74,3 +74,61 @@ DuckDB: nested relate errors; relate refuses DELETE/INSERT/CREATE; file access r
 7. Documents re-run against the tip; numbers corrected.
 
 Closure rule for this round: an item is closed only when the independent verifier re-runs the reviewer's probe and observes fail-then-pass. Lane reports do not close items.
+
+## Independent verification table (verify-3, 2026-09-23 early hours)
+
+Probes re-run by the independent verifier against the tip after the fix waves (HEAD `f942e06`). "PASS" means the verifier observed it. Lane reports were not consulted for closure. Four verifier corrections landed during verification, each with its observation:
+
+1. **Ratchet red at the tip** (observed: `surfaces-ratchet ... 23974 ... ceiling is 23833`, lint exit 1): the R-Ruby lane landed +141 lines after the ceiling was set. Verifier raised `sdlc/surfaces-ratchet.json` to 23974; lint exit 0. `4238ea5`.
+2. **`--locked` absent from two checks** (observed: only 7 of 9 check.sh carried it): added to Ruby's container invocation and DuckDB's three cargo calls after confirming both lockfiles fresh (`cargo tree --locked`). `4238ea5`.
+3. **Private-refs checker hangs outside a git checkout** (observed: timeout 124 from /tmp — an unbounded `os.walk` of the cwd, not a crash): non-checkout cwd without `--root` now exits 2 in under a second with a message; inside the repo unchanged (`ok`, exit 0). `f942e06`.
+4. **`deadline_fast` still asserted the literal `ENGINE_NULL`** (observed: `THINKTHEN_NULL=1 cargo test` failed, `left: Err(NotPresent)`): the assert now consults the shared testkit guard; the full suite runs green under `THINKTHEN_NULL=1` and the fifteen-verb suite shows 15 passed, really running. `f942e06`.
+
+### Group 8 — contract and stand-in
+| item | verdict | observation |
+|---|---|---|
+| settings-keyed state: FDs flat | PASS | `the_file_descriptors_stay_flat` ok |
+| width 1 beside a wide engine | PASS | `a_narrow_engine_keeps_its_width_beside_a_wide_one` ok |
+| contention residual window | PASS (not reproduced) | 25/25 solo + 10/10 full-suite green; the lane's 2-of-25 did not appear in 35 attempts at this tip. Residual stays recorded open; its observed rate tonight is 0/35 |
+| THINKTHEN_NULL parsed as a value | PASS | `the_null_switch_is_parsed_as_a_value` ok (=0/=false off) |
+| one skip table | PASS with nuance | one table in conformance.json, read by all nine runners; `conformance/skiptable.py` is the canonical script reader; Python and Rust read the table inline (polyglot runners), so "one reader" is one table plus per-language readers of it — the fields cannot disagree because the table is the only source |
+
+### Group 9 — gate and process
+| item | verdict | observation |
+|---|---|---|
+| ratchet green at tip | PASS (after verifier correction 1) | lint exit 0 |
+| clippy -D / lints | PASS | `lint-workspaces: every landed workspace is clean` |
+| `--locked` everywhere | PASS (after correction 2) | 9 of 9 |
+| .so / .node home paths | PASS | `strings` both: 0 `/home/ian` |
+| checker outside git | PASS (after correction 3) | exit 2 with message, <1 s |
+| bare cargo test under THINKTHEN_NULL | PASS (after correction 4) | green; verb suite 15 passed |
+
+### Group 1 — DuckDB (suite `tools/review3_duckdb.py`, duckdb 1.5.5)
+PASS: token beyond SQL (SET, SET GLOBAL both refused); relate refuses COPY TO / EXPORT DATABASE / ATTACH / SET GLOBAL / SET VARIABLE (LOAD covered by the refusal arm); the 8-million-row cap refused in 0.0 s naming the count; details reads NULL probability and sends, with nearest level; a closed database's file is released after the reaper's pass and a fresh LOAD answers relate after the guarded release (the use-after-free path, functionally); fifty idle databases at 0.8 % of a core; the host's ignored-SIGINT disposition preserved through LOAD; a signal stops the running query with `thinkthen cancelled` and the next call answers; two in-memory databases relate on their own connections, USE routing and back, the closed file reopenable in-process and by another process; one file open for 20 000 decide rows, 2 000 annotate rows, 2 000 relations rows (strace), and an edited file is re-read.
+OPEN: the ASan build of the prepare/free/execute probe was not run tonight (no sanitizer build staged); the functional lifetime probe above is the evidence. SA_SIGINFO payload fidelity and one-Ctrl-C-two-running-queries were not separately probed tonight. Owner: DuckDB surface, next pass, with the NOTES battery.
+
+### Group 2 — PostgreSQL (full check.sh, throwaway container from the pinned digest, removed after — verified gone)
+PASS: 111 ok, exit 0. `/dev/zero` refused in 0.07 s with the uniform message and the backend lived; `pg_read_server_files` reads anywhere by PostgreSQL's own rule; the configured directory reads inside and refuses a symlink pointing out; a bad question in a batch names itself (not "stopped thread"); the batch poll checks completion first (two-record batch 1 ms, pre-fix floor 100 ms); batches carry the deadline (50 ms ends a long batch in 0.29 s); warm holds twenty thousand rows in 2 356 ms where the JSON shape measured 54 600 ms; a deliberate PUBLIC grant survives an unrelated CREATE FUNCTION; the update path cannot hand a function to PUBLIC.
+
+### Group 3 — SQLite (host 3.53.4 via the .runtimes amalgamation; the floor refusal observed on this box's 3.45.1)
+PASS: the 3.50.0 floor refuses at load with the reason named (observed on 3.45.1); null suite 28/28 — a fifo refuses with the uniform message, an endless device refuses, an over-cap file names the cap; warm sent one round per question and the second question's pair is cached; single-row interrupt lands as the cancelled kind before the backoffs drain (0.30 s); the fast-backend stop lands within a tick (0.50 s).
+
+### Group 4 — Python
+PASS: the review-3 offline suite 9/9 (builder refuses a mismatched argument; the docstring advice round-trips); the review-3 wire suite 4/4 against the in-repo stub (a pre-cancelled token sends nothing, bulk and single); review-2 findings and wire suites green including refused pandas/pyarrow frames making zero counted requests; the surface suite 27/27; malformed string-view inputs answer with usage errors (the bounds probes in the suites above; exit 139 not observed).
+
+### Group 5 — TypeScript
+PASS: the conformance test asserts `passed + covered == cases.length` with `>= 84` enforced; corrupted case 13 (answer 7.0) makes `node --test` exit 1 naming `13-score-levels: FAIL score 1.05 vs 7` (fail-then-pass observed; the real file verified intact after); the gate invocation is green over all 84; the hostile-budget loop refuses NaN, MAX_VALUE, -5, -0.5, `true`, `'5'`, `[]` as usage (19 pass); score with a question value refuses as usage naming levels (errors suite 14 pass). Note: a bare `node --test` without a backend env fails six shape cases; the gate always arms the env, so this is a note, not a finding.
+
+### Group 6 — R (probes re-run under THINKTHEN_NULL)
+PASS: both NUL files refuse with clean `thinkthen_usage` errors showing the escaped `\u0000` spelling, exit 0, no abort; invalid native bytes refuse with the `enc2utf8()` advice under a UTF-8 locale and under `LC_ALL=C`, while marked latin1 still converts and answers; `deadline=NA` refuses naming the spellings, `-1` means none, `-2` refuses as negative; an interrupt lands within a tick (0.899 s) and the session answers after; annotate refuses to shadow an input column with a usage error. Note: the lane's NUL probe fixtures live in `/tmp/rr3/` (ephemeral); the reproduction is one line each — worth a committed fixture in the next pass.
+
+### Group 7 — Ruby (thinkthen-ruby-builder:local, network host)
+PASS: the tick survives the collector (75 ticks, 2 000 000 answers, no loss); harmless wake-ups and trapped signals leave calls alone and an interrupt fires only the call's own token; one error base class with the refused bad deadline and records crossing as JSON; a nil record refuses as "a record is text or a JSON-able value, not nil"; the interrupt wire proof against the real stub stops a delayed batch at 8 requests (deaf bound 2.1 s vs 15.1 s); test_surface 32 runs / 99 assertions / 0 failures with the fixture build armed by `build.sh synthetic` (the one failure without the fixture is the production build, by design; check.sh arms and restores).
+
+### Open after verification
+- DuckDB ASan variant of the lifetime probe; SA_SIGINFO payload; one-signal-two-queries. Owner: DuckDB surface.
+- The stand-in contention residual: recorded open by the lane; 0/35 tonight.
+- Committed R NUL fixtures (today's are /tmp). Owner: R surface, next pass.
+- Everything else in this table: closed by observation.
+
+Operators' note for the record: the in-repo wire stub takes `STUB_PORT` from the environment, not a `--port` argument; two verifier invocations fed it a flag it ignores and burned ten minutes on a phantom port conflict. The gate's own launcher knows this; humans and verifiers now do too.
