@@ -86,42 +86,6 @@ fn unwired_key_refusal(setting: Option<&str>) -> Option<Error> {
 static DEADLINE_MS: GucSetting<i32> = GucSetting::<i32>::new(-1);
 
 /// The engine, lazy in each backend. Built on first use, after the fork.
-/// The recognize row set: one row a named span (pgrx names the columns).
-type RecognizeTable = TableIterator<
-    'static,
-    (
-        name!(text, Option<String>),
-        name!(kind, Option<String>),
-        name!(start, Option<i32>),
-        name!(end, Option<i32>),
-        name!(strength, Option<f64>),
-    ),
->;
-
-/// The relate row set: one row an edge, ends as record numbers.
-type RelateTable = TableIterator<
-    'static,
-    (
-        name!(name, Option<String>),
-        name!(source, Option<i64>),
-        name!(target, Option<i64>),
-        name!(probability, Option<f64>),
-    ),
->;
-
-/// The relations row set: one row a beta relation, ends as texts.
-type RelationsTable = TableIterator<
-    'static,
-    (
-        name!(name, Option<String>),
-        name!(source_text, Option<String>),
-        name!(source_kind, Option<String>),
-        name!(target_text, Option<String>),
-        name!(target_kind, Option<String>),
-        name!(probability, Option<f64>),
-    ),
->;
-
 static ENGINE: OnceLock<Arc<dyn Engine>> = OnceLock::new();
 
 /// The engine value, with the configured key's refusal in front of it.
@@ -747,11 +711,21 @@ fn thinkthen_usage(
 /// `substring(text from start + 1 for end - start)` is the name. With no
 /// kinds the three defaults apply. `PARALLEL RESTRICTED`; used with
 /// `LATERAL`.
+#[allow(clippy::type_complexity, reason = "pgrx's SQL generator reads the inline name! tuple; an alias hides the columns and breaks package")]
 #[pg_extern(parallel_restricted)]
 fn thinkthen_recognize(
     body: Option<&str>,
     kinds: Option<Array<'_, &str>>,
-) -> RecognizeTable {
+) -> TableIterator<
+    'static,
+    (
+        name!(text, Option<String>),
+        name!(kind, Option<String>),
+        name!(start, Option<i32>),
+        name!(end, Option<i32>),
+        name!(strength, Option<f64>),
+    ),
+> {
     let Some(body) = body else {
         return TableIterator::new(std::iter::empty());
     };
@@ -797,11 +771,20 @@ fn thinkthen_recognize(
 /// the query's table. More than 255 records is a usage error. Rules are
 /// bare relation names (any kind to any kind); richer rules ride the
 /// question file. `PARALLEL RESTRICTED`.
+#[allow(clippy::type_complexity, reason = "pgrx's SQL generator reads the inline name! tuple; an alias hides the columns and breaks package")]
 #[pg_extern(parallel_restricted)]
 fn thinkthen_relate(
     query: Option<&str>,
     rules: Option<Array<'_, &str>>,
-) -> RelateTable {
+) -> TableIterator<
+    'static,
+    (
+        name!(name, Option<String>),
+        name!(source, Option<i64>),
+        name!(target, Option<i64>),
+        name!(probability, Option<f64>),
+    ),
+> {
     let query = query.unwrap_or_default().trim().trim_end_matches(';').to_owned();
     if query.is_empty() {
         raise(Error::usage("the relate query is empty"));
@@ -876,11 +859,22 @@ fn thinkthen_relate(
 /// spec file's rules over one text and returns the relations as rows
 /// `(name, source_text, source_kind, target_text, target_kind,
 /// probability)`. Relations need the question file. `PARALLEL RESTRICTED`.
+#[allow(clippy::type_complexity, reason = "pgrx's SQL generator reads the inline name! tuple; an alias hides the columns and breaks package")]
 #[pg_extern(parallel_restricted)]
 fn thinkthen_relations(
     body: Option<&str>,
     spec: Option<&str>,
-) -> RelationsTable {
+) -> TableIterator<
+    'static,
+    (
+        name!(name, Option<String>),
+        name!(source_text, Option<String>),
+        name!(source_kind, Option<String>),
+        name!(target_text, Option<String>),
+        name!(target_kind, Option<String>),
+        name!(probability, Option<f64>),
+    ),
+> {
     let Some(body) = body else {
         return TableIterator::new(std::iter::empty());
     };
