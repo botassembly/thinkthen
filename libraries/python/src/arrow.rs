@@ -157,6 +157,14 @@ unsafe fn require_text(schema: &ArrowSchema) -> PyResult<Text> {
     }
 }
 
+/// The largest single string the door will borrow from an Arrow buffer.
+///
+/// A malformed view or offset pair can name a size no buffer carries; a
+/// size or offset beyond this is refused as the usage kind instead of
+/// being turned into a slice the process would die reading. Sixty-four
+/// mebibytes is far past any text the engine classifies.
+const MAX_ONE_STRING: usize = 64 * 1024 * 1024;
+
 /// Borrow one already-validated array's strings out of its buffers.
 ///
 /// `skip` is where the caller's rows begin and `count` how many there
@@ -206,6 +214,11 @@ unsafe fn borrow_strings(
                 *view.add(2),
                 *view.add(3),
             ]) as usize;
+            if size > MAX_ONE_STRING {
+                return Err(UsageError::new_err(
+                    "a string view names a size no text column carries",
+                ));
+            }
             let (start, length) = if size <= 12 {
                 (view.add(4), size)
             } else {
@@ -214,16 +227,21 @@ unsafe fn borrow_strings(
                     *view.add(9),
                     *view.add(10),
                     *view.add(11),
-                ]) as i64;
+                ]) as usize;
                 let offset = u32::from_le_bytes([
                     *view.add(12),
                     *view.add(13),
                     *view.add(14),
                     *view.add(15),
                 ]) as usize;
-                if index < 0 || index >= data_buffers {
+                if index >= data_buffers as usize {
                     return Err(UsageError::new_err(
                         "a string view points past its data buffers",
+                    ));
+                }
+                if offset > MAX_ONE_STRING || offset.saturating_add(size) > MAX_ONE_STRING {
+                    return Err(UsageError::new_err(
+                        "a string view points past where its data buffer can carry it",
                     ));
                 }
                 let base = *buffers.offset(2 + index as isize) as *const u8;
@@ -253,17 +271,23 @@ unsafe fn borrow_strings(
     while place < count {
         let (start, end) = if large {
             let offsets = *buffers.offset(1) as *const i64;
-            (
-                *offsets.add(skip + place) as usize,
-                *offsets.add(skip + place + 1) as usize,
-            )
+            (*offsets.add(skip + place), *offsets.add(skip + place + 1))
         } else {
             let offsets = *buffers.offset(1) as *const i32;
-            (
-                *offsets.add(skip + place) as usize,
-                *offsets.add(skip + place + 1) as usize,
-            )
+            let (low, high) = (*offsets.add(skip + place), *offsets.add(skip + place + 1));
+            (i64::from(low), i64::from(high))
         };
+        if start < 0 || end < start {
+            return Err(UsageError::new_err(
+                "the column's offsets are reversed or negative",
+            ));
+        }
+        let (start, end) = (start as usize, end as usize);
+        if end - start > MAX_ONE_STRING || end > MAX_ONE_STRING {
+            return Err(UsageError::new_err(
+                "the column's offsets name a size no text column carries",
+            ));
+        }
         let bytes = std::slice::from_raw_parts(values.add(start), end - start);
         let text = std::str::from_utf8(bytes)
             .map_err(|_| UsageError::new_err("the column's buffer is not valid UTF-8"))?;
@@ -1536,5 +1560,79 @@ unsafe extern "C" fn column_array_capsule_destructor(capsule: *mut pyo3::ffi::Py
             release(array);
         }
         drop(Box::from_raw(array));
+    }
+}
+
+#[cfg(test)]
+mod malformed_tests {
+    //! The review's exit-139 probes, pinned as tests: a malformed string
+    //! view or reversed offsets must come back as a refusal, never as a
+    //! process crash. The arrays are hand-built C structs over real,
+    //! small buffers, so the failure the guards must catch is a read far
+    //! past a buffer's end — the exact shape the reviewer's probe sent.
+
+    use super::*;
+
+    fn array_of(held: &[*const c_void]) -> ArrowArray {
+        // SAFETY: an all-zero ArrowArray is the C interface's empty
+        // producer state; the fields set below are the ones read.
+        let mut outer = unsafe { std::mem::zeroed::<ArrowArray>() };
+        outer.length = 1;
+        outer.null_count = 0;
+        outer.n_buffers = held.len() as i64;
+        outer.buffers = held.as_ptr() as *mut *const c_void;
+        outer
+    }
+
+    fn pointers(buffers: &[&[u8]]) -> Vec<*const c_void> {
+        buffers.iter().map(|one| one.as_ptr().cast()).collect()
+    }
+
+    fn one_view(size: u32, index: u32, offset: u32) -> Vec<u8> {
+        let mut one = [0u8; 16];
+        one[0..4].copy_from_slice(&size.to_le_bytes());
+        one[8..12].copy_from_slice(&index.to_le_bytes());
+        one[12..16].copy_from_slice(&offset.to_le_bytes());
+        one.to_vec()
+    }
+
+    #[test]
+    fn oversized_view_is_refused_not_crashed() {
+        let views = one_view(0x4000_0000, 0, 0); // 1 GiB no buffer carries
+        let data = b"tiny".to_vec();
+        let held = pointers(&[b"".as_slice(), &views, &data]);
+        let outer = array_of(&held);
+        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
+        assert!(outcome.is_err(), "an oversized view must be refused");
+    }
+
+    #[test]
+    fn view_offset_past_its_cap_is_refused() {
+        let views = one_view(16, 0, 0x4000_0000); // an offset of 1 GiB
+        let data = b"tiny but real".to_vec();
+        let held = pointers(&[b"".as_slice(), &views, &data]);
+        let outer = array_of(&held);
+        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
+        assert!(outcome.is_err(), "an offset past the cap must be refused");
+    }
+
+    #[test]
+    fn reversed_offsets_are_refused_not_wrapped() {
+        let offsets = [3i32.to_le_bytes(), 1i32.to_le_bytes()].concat();
+        let values = b"abc".to_vec();
+        let held = pointers(&[b"".as_slice(), &offsets, &values]);
+        let outer = array_of(&held);
+        let outcome = unsafe { borrow_strings(&outer, Text::Utf8, 0, 1) };
+        assert!(outcome.is_err(), "reversed offsets must be refused");
+    }
+
+    #[test]
+    fn view_past_the_data_buffers_stays_refused() {
+        let views = one_view(32, 5, 0); // buffer 5 of the one that exists
+        let data = b"tiny".to_vec();
+        let held = pointers(&[b"".as_slice(), &views, &data]);
+        let outer = array_of(&held);
+        let outcome = unsafe { borrow_strings(&outer, Text::View, 0, 1) };
+        assert!(outcome.is_err(), "a view past the buffers must be refused");
     }
 }
