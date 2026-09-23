@@ -71,6 +71,14 @@ CASES = [
      {VENDORED: "\tcargo build --release\n",
       "databases/duckdb/Makefile": "CARGO_OVERRIDE_DUCKDB_RS_FLAG += --locked\n"},
      (1, f"FAIL {VENDORED}:1: cargo build without --locked\n")),
+    ("an unpinned pip install fails",
+     {"databases/duckdb/x.mk": "\t$(PY) -m pip install packaging\n"},
+     (1, "FAIL databases/duckdb/x.mk:1: pip install packaging without an exact pin\n")),
+    ("pinned pip installs pass",
+     {"databases/duckdb/x.mk": "\t$(PY) -m pip install packaging==26.3 $(PIN) "
+      "git+https://h/r@2ac8dbc012ddbd96a57dca37784fd8ee3c0eb021\n"
+      "\tuv pip install --offline --python p -r r.txt\n"},
+     (0, "ok:      every build-tool call site carries the lock\n")),
 ]
 
 

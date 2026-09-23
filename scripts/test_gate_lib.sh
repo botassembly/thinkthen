@@ -159,8 +159,31 @@ mkdir -p "$planted/release"
 printf 'x\0%s/src/lib.rs\0' "$HOME" >"$planted/release/libplanted.so"
 status=0
 said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh) || status=$?
-rm -rf "$planted"
 expect "a planted home path" "$status:$said" "1:FAIL     $planted/release/libplanted.so: 1 strings carry the builder's home"
+
+# A surface whose check passed must leave an artifact for the scan
+# (surfaces-review-7 R7-5: the gate form passed with 0 artifacts).
+printf 'x\0/build/src/lib.rs\0' >"$planted/release/libplanted.so"
+mkdir -p "$planted/empty"
+status=0
+said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh --built "$planted/empty") || status=$?
+expect "a built surface with no artifact" "$status:$said" "1:FAIL     $planted/empty: its check passed and left no built artifact to scan"
+status=0
+said=$(CARGO_TARGET_DIR=$planted bash scripts/check_artifact_paths.sh --built "$planted") || status=$?
+expect "a built surface with a clean artifact" "$status" "0"
+rm -rf "$planted"
+
+# The portable-shell check names each GNU-only spelling and passes the
+# portable ones (surfaces-review-7 R3-32).
+planted=$(mktemp "${TMPDIR:-/tmp}/gate-shell.XXXXXX")
+printf '%s\n' 'sed -i "s/a/b/" f' 't=$(date +%s.%N)' 'if timeout 5 true; then :; fi' \
+  '# timeout 5 in a comment' 'sed -i.bak "s/a/b/" f' '"$TIMEOUT" 5 true' 'psql --timeout 5' >"$planted"
+status=0
+said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
+rm -f "$planted"
+expect "GNU-only shell spellings" "$status:$said" "1:FAIL     $planted:1:sed -i \"s/a/b/\" f
+FAIL     $planted:2:t=\$(date +%s.%N)
+FAIL     $planted:3:if timeout 5 true; then :; fi"
 
 # Every surface check prints the counted spelling for its own wire skip.
 for pair in libraries/python:python libraries/typescript:typescript libraries/rust:rust \

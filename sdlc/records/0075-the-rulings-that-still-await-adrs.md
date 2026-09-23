@@ -6,6 +6,10 @@ relate) already consumed their rulings. This is what remains, where each
 lives today, and what its ADR must decide. None of these is blocked on the
 other; each is small.
 
+Update, 2026-09-23 (surfaces-review-7 R2-29): ADR 0041 took item 1, ADR
+0043 item 2, ADR 0044 item 3, and ADR 0045 item 4. ADR 0042 records the
+R interrupt window from record 0074.
+
 1. **One deadline spelling everywhere.** `-1` is the only no-deadline
    spelling on every surface; every other negative refuses; zero is spent;
    computed budgets clamp to zero. Lives in

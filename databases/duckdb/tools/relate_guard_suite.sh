@@ -4,6 +4,10 @@
 # hanging (review item 6). Runs offline on the null backend.
 set -euo pipefail
 cd "$(dirname "$0")"
+# Portable across Linux and macOS (surfaces-review-7 R3-32): macOS ships
+# GNU timeout only as gtimeout (coreutils).
+TIMEOUT=$(command -v timeout || command -v gtimeout || true)
+[ -n "$TIMEOUT" ] || { echo "FAIL     timeout (gtimeout on macOS, from coreutils) is not on PATH" >&2; exit 1; }
 ROOT=$(cd .. && pwd)
 EXT="$ROOT/build/release/thinkthen.duckdb_extension"
 CLI="$ROOT/duckdb-bin/duckdb"
@@ -64,7 +68,7 @@ refuse "relate refuses a second statement" \
 # A relate inside a relate used to wait forever on the connection the
 # outer query holds; it now refuses with its own words. The timeout turns
 # a regression back into a failure instead of a hung check.
-nested=$(timeout 30 bash -c "ENGINE_NULL=1 '$CLI' -unsigned -noheader -list <<'SQL' 2>&1
+nested=$("$TIMEOUT" 30 bash -c "ENGINE_NULL=1 '$CLI' -unsigned -noheader -list <<'SQL' 2>&1
 LOAD '$EXT';
 CREATE TABLE t(id INTEGER, body VARCHAR); INSERT INTO t VALUES (1, 'the payment failed');
 SELECT * FROM thinkthen_relate('SELECT 1 AS id, (SELECT count(*) FROM thinkthen_relate(''SELECT id, body FROM t'', [''caused_by'']))::VARCHAR AS body FROM t', ['caused_by']);

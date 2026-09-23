@@ -110,24 +110,28 @@ fast-cancel test fails with "the batch ran deaf" while the branch is
 fine. This lane lost two runs to that before running it in the
 foreground; that run is green.
 
-**Verified state.** The gate-honesty lane's run at the review-4 fix tip
-with the stubs above and no key in the environment,
-`bash scripts/check_surfaces.sh`, exit 0:
+**Verified state.** The last full gate on record ran at `610a133`, offline,
+with every local stub up, and exited 0
+(`sdlc/issues/2026-09-23-surfaces-branch-fifth-review-and-wave-six.md`):
 
 ```
-$ bash scripts/check_surfaces.sh
-...
-== postgres package: dry run, no deck, no container
-dist/thinkthen-pg16-0.0.1-linux-amd64.tar.gz staged; the container half is not run
-all landed checks green: green=973 skipped=76 diverged=18 failed=0 (wire: stub up)
+all landed checks green: green=1001 skipped=91 diverged=0 failed=0 (wire: 10 of 10 wire suites ran in a passing surface, 0 in a failed surface, 0 lost)
 ```
+
+The wave-7 tip has no full gate on record yet. The steering session runs
+it after integration.
+
+History, kept for the review-4 findings below: the gate-honesty lane's run
+at the review-4 fix tip printed `green=973 skipped=76 diverged=18 failed=0
+(wire: stub up)`. The gate no longer prints that form. The wire summary now
+counts the suites that ran (surfaces-review-5).
 
 The earlier `failed=5` beside `exit 0` paste (surfaces-review-4's
 records finding) was a mid-wave snapshot: the script cannot print a
 green summary over failures — the five were closed across the fix lanes
 (three public-names drift, the TypeScript case-25 wrong answer, and the
-DuckDB acceptance cap), and the summary line above is the same run's
-true state. The skipped count rises 63 → 76 with the honest skip
+DuckDB acceptance cap), and the review-4 line above is the same run's
+true state at that tip. The skipped count rose 63 → 76 with the honest skip
 counting (node `# SKIP` lines and the covered cases reach the totals
 now), and the ratchet stops the gate cold before any summary when red —
 two ceiling moves this wave proved both directions.

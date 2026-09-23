@@ -17,6 +17,15 @@ falls back to `curl`), GNU `sed -i` versus `sed -i ''`,
 `x86_64-unknown-linux-gnu` targets in the package scripts, which are
 Linux-only by design and skip on darwin.
 
+Three of these no longer depend on a guard (surfaces-review-7 R3-32).
+The scripts spell in-place edits with `perl -pi`, read sub-second time
+through perl's Time::HiRes because BSD `date` has no `%N`, and resolve
+`timeout` or `gtimeout` once into `$TIMEOUT`.
+`scripts/check_portable_shell.sh` runs in the gate and fails on a bare
+`sed -i`, a `date` format with `%N`, or a bare `timeout`. The
+`libthinkthen_native.so` name in `libraries/ruby/build.sh` stays,
+because that copy runs inside the Linux builder container (step 2).
+
 Recipe, one surface at a time. Steps 2, 4, and 5 cannot run on macOS
 today (surfaces-review-5). Each says why. Run the others, and record the
 three as not runnable with the reason below.

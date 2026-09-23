@@ -59,40 +59,114 @@ if (total !== max) {
 }
 
 // The raise discipline, checked at the rung instead of remembered
-// (surfaces-review-4, item 16): every commit that moves this ceiling
-// carries a body naming what grew and why it earns its lines, plus the
-// second-agent review line CLAUDE.md demands. The two empty-body raises
-// the fourth review found (e11bb57, 4238ea5) fail this check until a
-// compliant commit moves the ceiling again. In a tree without .git (a
-// frozen export) the check says so and skips only itself; the count
-// check above never skips.
+// (surfaces-review-4 item 16, surfaces-review-7 rows R5-28 and R7-4).
+// Every commit after the recorded base that touches the ceiling file
+// must show a real second-agent review. The last mover is not enough,
+// because a later compliant commit would hide an earlier unreviewed one.
+// A commit that lowers max below its first parent's needs only a body:
+// the count must equal the ceiling, so a lower cannot hide growth.
+// Any other commit passes in one of three ways:
+//   1. Its body has a paragraph that starts "Second-agent review:" and
+//      cites an existing sdlc/ record or a commit SHA, with no word that
+//      says the review is pending or missing.
+//   2. A review record (a REVIEW-*.md file under sdlc/records) names its
+//      SHA. A reviewer can cover several raises in one record.
+//   3. sdlc/surfaces-ratchet-reviews.json grandfathers it by SHA. Only a
+//      commit reachable from that file's grandfather_until can be listed,
+//      so a new raise cannot be waved through the list.
+// In a tree without .git (a frozen export) the check says so and skips
+// only itself; the count check above never skips.
 // In a shallow clone (actions/checkout fetches depth 1 by default) the
-// grafted root looks like the last mover of every file, and its message
-// is whatever commit was checked out (surfaces-review-5). The check then
-// fails for the wrong reason, so it names the real one.
+// grafted root looks like the last mover of every file (surfaces-review-5).
+// The check then fails for the wrong reason, so it names the real one.
 const git = (args) =>
   execFileSync("git", args, { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-try {
-  const mover = git(["log", "-1", "--format=%H", "--", "sdlc/surfaces-ratchet.json"]);
+const gitOk = (args) => {
+  try {
+    git(args);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const fail = (message) => {
+  console.error(`surfaces-ratchet: ${message}`);
+  process.exit(1);
+};
+const FILE = "sdlc/surfaces-ratchet.json";
+const REVIEWS = join(REPO, "sdlc", "surfaces-ratchet-reviews.json");
+const MISSING = /\b(pending|not yet|not done|unreviewed|not reviewed|nobody|no one|no second|awaiting|waiting|to come|tbd|todo)\b/i;
+
+function reviewLine(body) {
+  const at = body.search(/^second[- ]agent review:/im);
+  if (at < 0) return "";
+  return body.slice(at).split(/\n\s*\n/)[0].replace(/^second[- ]agent review:/i, "").trim();
+}
+
+function citesRecord(text) {
+  for (const path of text.match(/\bsdlc\/[\w./-]+\.md\b/g) ?? []) {
+    if (existsSync(join(REPO, path))) return true;
+  }
+  for (const sha of text.match(/\b[0-9a-f]{7,40}\b/g) ?? []) {
+    if (gitOk(["cat-file", "-e", `${sha}^{commit}`])) return true;
+  }
+  return false;
+}
+
+function reviewRecords(dir = join(REPO, "sdlc", "records")) {
+  if (!existsSync(dir)) return [];
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...reviewRecords(p));
+    else if (/^REVIEW-.*\.md$/.test(entry.name)) found.push(readFileSync(p, "utf8"));
+  }
+  return found;
+}
+
+if (!gitOk(["rev-parse", "--git-dir"])) {
+  console.error("surfaces-ratchet: no git history here; the raise-body check cannot run");
+} else {
+  const mover = git(["log", "-1", "--format=%H", "--", FILE]);
   const grafted = mover !== "" && git(["rev-parse", "--is-shallow-repository"]) === "true" &&
     git(["log", "-1", "--format=%P", mover]) === "";
   if (grafted) {
-    console.error(
-      "surfaces-ratchet: the history is too shallow to find the commit that moved sdlc/surfaces-ratchet.json; fetch the full history (git fetch --unshallow, or fetch-depth: 0 in the checkout step)",
+    fail(
+      "the history is too shallow to find the commit that moved sdlc/surfaces-ratchet.json; fetch the full history (git fetch --unshallow, or fetch-depth: 0 in the checkout step)",
     );
-    process.exit(1);
   }
-  const commit = mover === "" ? "" : git(["log", "-1", "--format=%B", mover]);
-  if (commit !== "") {
-    const body = commit.split("\n\n").slice(1).join("\n\n").trim();
-    if (body === "" || !/second[- ]agent/i.test(body)) {
-      console.error(
-        "surfaces-ratchet: the last commit moving sdlc/surfaces-ratchet.json carries no body naming the growth and the second-agent review (CLAUDE.md). Raise the ceiling in a commit that does.",
-      );
-      process.exit(1);
+  const { base, grandfather_until: until, grandfathered } = JSON.parse(readFileSync(REVIEWS, "utf8"));
+  for (const sha of Object.keys(grandfathered)) {
+    if (!gitOk(["merge-base", "--is-ancestor", sha, until])) {
+      fail(`${REVIEWS.slice(REPO.length + 1)} grandfathers ${sha}, which is not in the history up to ${until}`);
     }
   }
-} catch {
-  console.error("surfaces-ratchet: no git history here; the raise-body check cannot run");
+  const range = base === "" ? ["HEAD"] : [`${base}..HEAD`];
+  const movers = git(["log", "--format=%H", ...range, "--", FILE]).split("\n").filter(Boolean);
+  const records = reviewRecords();
+  const ceilingAt = (rev) => {
+    try {
+      return JSON.parse(git(["show", `${rev}:${FILE}`])).max;
+    } catch {
+      return undefined;
+    }
+  };
+  const lowers = (sha) => {
+    const before = ceilingAt(`${sha}^1`);
+    return before !== undefined && ceilingAt(sha) < before;
+  };
+  const unreviewed = movers.filter((sha) => {
+    if (Object.keys(grandfathered).some((g) => sha.startsWith(g))) return false;
+    if (records.some((text) => new RegExp(`\\b${sha.slice(0, 7)}[0-9a-f]*\\b`).test(text))) return false;
+    const body = git(["log", "-1", "--format=%B", sha]).split("\n\n").slice(1).join("\n\n");
+    if (lowers(sha)) return body.trim() === "";
+    const line = reviewLine(body);
+    return line === "" || MISSING.test(line) || !citesRecord(line);
+  });
+  if (unreviewed.length > 0) {
+    fail(
+      `these commits move sdlc/surfaces-ratchet.json without a second-agent review: ${unreviewed.map((s) => s.slice(0, 7)).join(", ")}. Each needs a "Second-agent review:" paragraph that cites the review record or commit, or a REVIEW-*.md record under sdlc/records that names its SHA (CLAUDE.md, surfaces-review-7).`,
+    );
+  }
 }
 console.log(`surfaces-ratchet: ${directories.join(", ")} ${total}/${max}`);

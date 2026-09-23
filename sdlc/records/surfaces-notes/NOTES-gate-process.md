@@ -165,3 +165,33 @@ up)` with five failure lines. Attribution, by command:
   about at most 255`).
 
 HANDOFF carries the measured line with the five named and the two owned.
+
+## Wave 7: the ceiling review rule (surfaces-review-7 R5-28, R7-4, R7-5)
+
+Decisions of the wave-7 gate lane. Ian can overturn each one.
+
+- The surfaces ratchet checks every commit that touches
+  `sdlc/surfaces-ratchet.json` after the base recorded in
+  `sdlc/surfaces-ratchet-reviews.json`. The base sits before the file's
+  first commit, so the whole history is read.
+- A raise, a reformat, or any move that does not lower `max` passes only
+  with a real review. The commit body carries a paragraph that starts
+  `Second-agent review:` and cites an existing `sdlc/` record or a
+  commit, with no word such as "pending" or "not yet". Or a
+  `REVIEW-*.md` file under `sdlc/records` names the SHA. A reviewer name
+  alone does not pass, because a script cannot check it.
+- A commit that lowers `max` below its first parent's needs a body and
+  no review. The count must equal the ceiling, so a lower cannot hide
+  growth. The old rule asked the last mover for the words "second
+  agent" even on a lower.
+- A lane that raises the ceiling writes "Second-agent review: pending"
+  in the body. The ratchet then fails until the review record lands and
+  names the SHA. At wave 7 the three raises (`29cceff`, `1c09f86`,
+  `cc2c036`) pass through `REVIEW-wave-7-ceiling-raises.md`.
+- The grandfather list names 31 historic SHAs, each with a reason. The
+  script refuses a listed SHA outside the history up to
+  `grandfather_until` (`db270d2`), so the list cannot excuse a new raise.
+  ADR 0046 records why the history stays unrewritten.
+- The artifact scan's gate form fails with no artifact, and each surface
+  whose check passed and leaves a release artifact must hold one. Rust
+  and R leave none in the tree and are not named.

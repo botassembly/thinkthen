@@ -15,6 +15,9 @@
 # suite proves the wire-side shape at 300 ms.
 set -euo pipefail
 cd "$(dirname "$0")"
+# Portable across Linux and macOS (surfaces-review-7 R3-32): BSD date
+# has no %N, and macOS ships GNU timeout only as gtimeout (coreutils).
+now() { perl -MTime::HiRes=time -e 'printf "%.3f\n", time'; }
 ROOT=$(cd .. && pwd)
 CLI="$ROOT/duckdb-bin/duckdb"
 EXT="$ROOT/build/release/thinkthen.duckdb_extension"
@@ -24,11 +27,11 @@ SQL="LOAD '$EXT'; SELECT count(thinkthen_decide('Is this a complaint?', 'i want 
 ENGINE_NULL=1 "$CLI" -unsigned -noheader -list -c "$SQL" > "$OUT" 2>&1 &
 pid=$!
 sleep 1
-start=$(date +%s.%N)
+start=$(now)
 kill -INT "$pid"
 rc=0
 wait "$pid" || rc=$?
-end=$(date +%s.%N)
+end=$(now)
 elapsed=$(awk -v a="$start" -v b="$end" 'BEGIN { printf "%.2f", b - a }')
 echo "the CLI exited $rc ${elapsed}s after SIGINT, one tick expected"
 

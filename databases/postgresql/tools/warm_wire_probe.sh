@@ -5,6 +5,10 @@
 # both and the delta would be vacuous. Short, bounded, printed as it goes.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+# Portable across Linux and macOS (surfaces-review-7 R3-32): macOS ships
+# GNU timeout only as gtimeout (coreutils).
+TIMEOUT=$(command -v timeout || command -v gtimeout || true)
+[ -n "$TIMEOUT" ] || { echo "FAIL     timeout (gtimeout on macOS, from coreutils) is not on PATH" >&2; exit 1; }
 
 NAME=laneb-pg-warm
 PG_IMAGE=postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6
@@ -39,7 +43,7 @@ docker cp fixtures/refund.json "$NAME:/var/lib/postgresql/data/refund.json" >/de
 echo "warm starting (2,000 rows at width 32 against the 300 ms stub)"
 # One session: warm, count, read, count — the cache and the counters live
 # in the one backend.
-timeout 120 docker exec -e PGHOST=/run/postgresql "$NAME" \
+"$TIMEOUT" 120 docker exec -e PGHOST=/run/postgresql "$NAME" \
   psql -U postgres -v ON_ERROR_STOP=1 -Atq \
   -c "CREATE EXTENSION thinkthen;" \
   -c "SELECT thinkthen_warm('@refund.json',

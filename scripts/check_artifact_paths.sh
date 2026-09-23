@@ -3,14 +3,18 @@
 # the PostgreSQL extension carried 163 home paths, and the DuckDB and R
 # builds passed no remap).
 #
-# With no argument, the gate form, in two halves. Every build entry point
-# that runs cargo on the host passes --remap-path-prefix for $HOME (the
-# Ruby build runs in a container rooted at /src and needs none). Then every
-# built release artifact the gate left in the tree, or under
-# $CARGO_TARGET_DIR, is scanned for the home path.
+# With no argument or with --built, the gate form, in two halves. Every
+# build entry point that runs cargo on the host passes --remap-path-prefix
+# for $HOME (the Ruby build runs in a container rooted at /src and needs
+# none). Then every built release artifact the gate left in the tree, or
+# under $CARGO_TARGET_DIR, is scanned for the home path. The gate form
+# fails when it finds no artifact, and each directory named after --built
+# must hold at least one (surfaces-review-7 R7-5: the gate form passed
+# with 0 artifacts).
 # With a directory, the artifact form: every release artifact under it is
 # scanned, and a tree with no artifact fails rather than passing empty.
-# Usage: bash scripts/check_artifact_paths.sh [BUILT-TREE]
+# Usage: bash scripts/check_artifact_paths.sh [--built SURFACE-DIR...]
+#        bash scripts/check_artifact_paths.sh BUILT-TREE
 set -euo pipefail
 cd "$(dirname "$0")/.."
 home=${HOME:?HOME is unset}
@@ -32,7 +36,8 @@ scan() {
     | grep -vE '/(deps|build|examples|incremental|node_modules|\.venv|\.runtimes)/' | sort)
 }
 
-if [ $# -eq 0 ]; then
+if [ $# -eq 0 ] || [ "$1" = --built ]; then
+  [ $# -eq 0 ] || shift
   for entry in libraries/python/build-wheel.sh libraries/python/check.sh \
     libraries/typescript/build-addon.sh libraries/c/check.sh \
     libraries/r/thinkthen/src/Makevars.in \
@@ -49,6 +54,20 @@ if [ $# -eq 0 ]; then
     trees+=("$CARGO_TARGET_DIR")
   fi
   scan "${trees[@]}"
+  if [ "$seen" -eq 0 ]; then
+    echo "FAIL     the gate left no built artifact to scan"
+    bad=1
+  fi
+  total=$seen
+  for dir in "$@"; do
+    seen=0
+    scan "$dir"
+    if [ "$seen" -eq 0 ]; then
+      echo "FAIL     $dir: its check passed and left no built artifact to scan"
+      bad=1
+    fi
+  done
+  seen=$total
   [ "$bad" -eq 0 ] && echo "ok:      every host build entry point remaps the builder's home, and $seen built artifacts carry no home path"
   exit "$bad"
 fi
