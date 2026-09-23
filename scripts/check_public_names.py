@@ -253,13 +253,18 @@ SURFACES: list[dict] = [
             "thinkthen_" + name
             for name in ["decide", "probability", "choose", "score", "tag", "annotate",
                          "details", "usage", "warm", "recognize", "relate", "relations"]
-        },
+        }
+        # The one setting: relate's holding threshold (review 6, D3).
+        # DuckDB 1.5.5 has no memory bound an extension can scope to one
+        # query, so the plan guard's row threshold is the caller's to
+        # raise; databases/duckdb/README.md and NOTES.md rule it.
+        | {"thinkthen_relate_holding_rows"},
         # The instance-token SETTING is gone (third review): a setting
         # could be SET onto another database's session, so relate's
         # identity became a uniquely named in-memory database attached
         # at LOAD — no SQL-reachable name to carry here. The per-row
         # functions are the whole public set.
-        "doc": "the SQL set: databases/duckdb/README.md; "
+        "doc": "the SQL set and the holding setting: databases/duckdb/README.md; "
                "the LOAD-time identity carries no public name",
     },
     {

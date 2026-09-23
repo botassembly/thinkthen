@@ -30,6 +30,7 @@ impl VScalar for RecognizeScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> Result<(), Box<dyn Error>> {
+        let _invoking = crate::invoking();
         let bodies = read_strings(input, 0);
         let kinds = read_list_strings(input, 1);
         let mut memo: HashMap<(String, String), Recognized> = HashMap::new();

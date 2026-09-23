@@ -36,6 +36,7 @@ impl VScalar for RelationsScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> Result<(), Box<dyn Error>> {
+        let _invoking = crate::invoking();
         let bodies = read_strings(input, 0);
         let specs = read_strings(input, 1);
         let budgets = crate::deadline_column(input, 2)?;

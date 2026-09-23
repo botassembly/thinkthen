@@ -107,15 +107,16 @@ fn options() -> Options<'static> {
 /// returned, or in a chunk gap — still cancelled the next query, four
 /// runs in five. The rules now:
 ///
-/// - The handler cancels the live token while an engine call is in
-///   flight, or while calls are arriving in a burst — two call starts
-///   within [`BURST_MS`] and the latest within it too. A chunked query
+/// - The handler cancels the live token while a scalar invoke or an
+///   engine call is in flight, or while calls are arriving in a burst —
+///   two call starts within [`BURST_MS`] and the latest within it too. A chunked query
 ///   produces calls that close together, so a signal landing in a gap
 ///   still stops it at its next call; a signal that lands after a
 ///   query's last call — a lone call whose next call belongs to the next
 ///   query — cancels nothing and poisons nothing.
-/// - A call takes the cancelled token while another call still runs with
-///   it, or while the burst is active: the interrupt belongs to the query
+/// - A call takes the cancelled token when the signal landed inside its
+///   own invoke, while another call still runs with it, or while the
+///   burst is active: the interrupt belongs to the query
 ///   still producing calls, and every one of them stops.
 /// - A call whose engine returned the cancelled kind marks the token
 ///   spent, so the next call starts fresh; the last call out also clears
@@ -123,17 +124,62 @@ fn options() -> Options<'static> {
 ///
 /// What stays unsolvable without a query hook: a signal that lands in the
 /// gap between a chunked query's last call and its return, when the next
-/// call already belongs to the next query. The C API exposes no
-/// per-query callback for scalar functions — `VScalar` carries only
-/// `invoke`, and the function-info accessors are `extra_info`,
-/// `bind_data`, `init_data`, and `local_init_data` — so the surface sees
-/// calls, never queries, and the two shapes above are as close as calls
-/// can come to telling them apart. The boundary is pinned in NOTES.md.
+/// call already belongs to the next query. DuckDB 1.5.5's C API has one
+/// (`duckdb_scalar_function_set_init`, a per-execution state with a
+/// destroy callback), but duckdb-rs registers `VScalar`s without it and
+/// keeps the function pointer and chunk constructor private, so using it
+/// means registering every scalar through raw FFI. The surface sees
+/// invokes and calls instead, and the rules above are as close as they
+/// come to telling queries apart. The boundary is pinned in NOTES.md.
 /// Tokens are leaked once per interrupt, never per call.
 static CANCEL: AtomicPtr<Cancel> = AtomicPtr::new(std::ptr::null_mut());
 
 /// Engine calls in flight: the handler's "a query is running" signal.
 static IN_FLIGHT: AtomicUsize = AtomicUsize::new(0);
+
+/// Scalar invokes running now. A chunk's invoke reads and de-duplicates
+/// its strings before its engine call, and that read took about 9 of
+/// every 10 ms in a three-million-row decide, so counting only the
+/// engine call left the handler blind for most of a running query
+/// (review 6: the host-signal chain arm ran 12 to 22 s past its signal
+/// in half its runs).
+static INVOKING: AtomicUsize = AtomicUsize::new(0);
+
+/// Bumped by every SIGINT the handler sees. An invoke records it on
+/// entry, so its engine call can tell a signal that landed inside this
+/// very invoke from one that landed before it.
+static SIGNAL_SEQ: AtomicU64 = AtomicU64::new(0);
+
+thread_local! {
+    /// The signal count when this thread's running invoke began; `None`
+    /// outside an invoke.
+    static INVOKE_SEQ: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
+/// One scalar invoke, counted from entry to exit.
+pub(crate) struct Invoking;
+
+/// Count the calling scalar invoke as running until the guard drops.
+pub(crate) fn invoking() -> Invoking {
+    INVOKE_SEQ.with(|seq| seq.set(Some(SIGNAL_SEQ.load(Ordering::SeqCst))));
+    INVOKING.fetch_add(1, Ordering::SeqCst);
+    Invoking
+}
+
+impl Drop for Invoking {
+    fn drop(&mut self) {
+        INVOKE_SEQ.with(|seq| seq.set(None));
+        if INVOKING.fetch_sub(1, Ordering::SeqCst) == 1 && IN_FLIGHT.load(Ordering::SeqCst) == 0 {
+            clear_finished_cancel();
+        }
+    }
+}
+
+/// Whether a SIGINT landed inside the calling thread's running invoke:
+/// the query that invoke serves is the one the signal aimed at.
+fn signalled_in_this_invoke() -> bool {
+    INVOKE_SEQ.with(std::cell::Cell::get).is_some_and(|at| SIGNAL_SEQ.load(Ordering::SeqCst) > at)
+}
 
 /// The last two engine-call starts, in milliseconds: two calls that close
 /// together are a query producing calls, which is what a signal needs to
@@ -217,17 +263,22 @@ impl Drop for InFlight {
 /// an interrupt that reached its query, or reached none, is over with it.
 /// Mid-burst the token stays, because the query's next call serves it.
 fn clear_finished_cancel() {
+    // An invoke still running may have seen the signal and not yet made
+    // its engine call; the last invoke out clears instead (review 6: a
+    // concurrent call's end handed that engine call a fresh token).
     if let Some(token) = live_cancel()
         && token.is_cancelled()
         && !burst_active()
+        && INVOKING.load(Ordering::SeqCst) == 0
     {
         CANCEL_CONSUMED.store(false, Ordering::SeqCst);
         install_cancel();
     }
 }
 
-/// The live token a call carries: the cancelled one while another call
-/// still runs with it or the burst is active, a fresh one otherwise.
+/// The live token a call carries: the cancelled one when the signal
+/// landed inside this call's own invoke, while another call still runs
+/// with it, or while the burst is active; a fresh one otherwise.
 fn current_cancel() -> &'static Cancel {
     PREV_START.store(LAST_START.load(Ordering::SeqCst), Ordering::SeqCst);
     LAST_START.store(now_ms(), Ordering::SeqCst);
@@ -235,6 +286,12 @@ fn current_cancel() -> &'static Cancel {
         return install_cancel();
     };
     if !token.is_cancelled() {
+        return token;
+    }
+    // Before the consumed check: on a query running on several threads,
+    // another thread's cancelled call must not hand this one, which saw
+    // the same signal, a fresh token.
+    if signalled_in_this_invoke() {
         return token;
     }
     if CANCEL_CONSUMED.swap(false, Ordering::SeqCst) {
@@ -303,8 +360,8 @@ static HOST_ACTION: std::sync::OnceLock<Option<libc::sigaction>> = std::sync::On
 /// chain a handler to itself.
 static HANDLER_SET: AtomicBool = AtomicBool::new(false);
 
-/// Cancel the live token while an engine call is in flight or while calls
-/// are arriving in a burst, then run the host's own action with the
+/// Cancel the live token while a scalar invoke or an engine call is in
+/// flight or while calls are arriving in a burst, then run the host's own action with the
 /// signature its flags name. A signal that lands after a query's last
 /// call is the host's own gesture: cancelling here would only poison the
 /// next query.
@@ -313,9 +370,10 @@ extern "C" fn on_interrupt(
     info: *mut libc::siginfo_t,
     context: *mut libc::c_void,
 ) {
+    SIGNAL_SEQ.fetch_add(1, Ordering::SeqCst);
     if let Some(token) = live_cancel()
         && !token.is_cancelled()
-        && (IN_FLIGHT.load(Ordering::SeqCst) > 0 || burst_active())
+        && (IN_FLIGHT.load(Ordering::SeqCst) > 0 || INVOKING.load(Ordering::SeqCst) > 0 || burst_active())
     {
         SIGNAL_AT.store(now_ms(), Ordering::SeqCst);
         token.cancel();
@@ -760,6 +818,7 @@ impl VScalar for DecideScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> std::result::Result<(), Box<dyn Error>> {
+        let _invoking = invoking();
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let budgets = deadline_column(input, 2)?;
@@ -840,6 +899,7 @@ impl VScalar for ProbabilityScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> std::result::Result<(), Box<dyn Error>> {
+        let _invoking = invoking();
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let budgets = deadline_column(input, 2)?;
@@ -907,6 +967,7 @@ impl VScalar for ChooseScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> std::result::Result<(), Box<dyn Error>> {
+        let _invoking = invoking();
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let option_lists = read_list_strings(input, 2);
@@ -966,6 +1027,7 @@ impl VScalar for ScoreScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> std::result::Result<(), Box<dyn Error>> {
+        let _invoking = invoking();
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let levels = read_list_strings(input, 2);
@@ -1029,6 +1091,7 @@ impl VScalar for TagScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> std::result::Result<(), Box<dyn Error>> {
+        let _invoking = invoking();
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let labels = read_list_strings(input, 2);
@@ -1102,6 +1165,7 @@ impl VScalar for AnnotateScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> std::result::Result<(), Box<dyn Error>> {
+        let _invoking = invoking();
         let sets = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let budgets = deadline_column(input, 2)?;
@@ -1241,6 +1305,7 @@ impl VScalar for DetailsScalar {
         input: &mut DataChunkHandle,
         output: &mut dyn WritableVector,
     ) -> std::result::Result<(), Box<dyn Error>> {
+        let _invoking = invoking();
         let questions = read_strings(input, 0);
         let texts = read_strings(input, 1);
         let len = texts.len();
@@ -1615,6 +1680,7 @@ mod cancel_tests {
     /// the stub-backed wire suite proves the wire-side shape.
     #[test]
     fn a_fast_backend_hears_a_cancel_within_a_tick() {
+        let _alone = connections::SIGNAL_TESTS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         // Before any engine or config is built in this process.
         unsafe {
             std::env::set_var("ENGINE_NULL", "1");
@@ -1678,9 +1744,9 @@ mod signal_tests {
     /// itself. Two hundred signals land while the raising thread holds
     /// the registry and a second thread churns the same lock; the whole
     /// run must end well inside the timeout.
-    #[test]
-    fn a_sigint_landing_while_the_registry_is_held_returns() {
-        let _alone = connections::SIGNAL_TESTS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    /// Install a quiet host handler, then ours chained after it: the
+    /// chain arm's shape.
+    fn install_after_a_quiet_host() {
         unsafe {
             let mut host: libc::sigaction = std::mem::zeroed();
             host.sa_sigaction = quiet_host as extern "C" fn(libc::c_int) as usize;
@@ -1688,6 +1754,63 @@ mod signal_tests {
             libc::sigaction(libc::SIGINT, &host, std::ptr::null_mut());
             install_interrupt_handler();
         }
+    }
+
+    /// Run `body` as the inside of one scalar invoke.
+    fn inside_scalar_invoke<T>(body: impl FnOnce() -> T) -> T {
+        let _invoking = invoking();
+        body()
+    }
+
+    /// The host-signal chain arm's miss (review 6): a scalar invoke spends
+    /// most of each chunk reading and de-duplicating its strings before
+    /// its engine call, and only the engine call counted as running. With
+    /// chunks ten or more milliseconds apart no burst showed either, so
+    /// a SIGINT landing in the read phase cancelled nothing and the query
+    /// ran 12 to 22 s to completion. Here the chunks start 49 ms apart;
+    /// the signal lands inside the invoke, and its engine call comes 15 ms
+    /// later, past the burst window, as the read phase makes it. That call
+    /// must carry the cancelled token. A signal landing with no
+    /// invoke running must still cancel nothing.
+    #[test]
+    fn a_sigint_inside_a_scalar_invoke_cancels_its_engine_call() {
+        let _alone = connections::SIGNAL_TESTS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        install_after_a_quiet_host();
+        // The clock counts from its first use, so a young test process
+        // reads times near the planted starts; past 200 ms they are old.
+        while now_ms() < 200 {
+            thread::sleep(Duration::from_millis(10));
+        }
+        let quiet_rhythm = || {
+            PREV_START.store(1, Ordering::SeqCst);
+            LAST_START.store(50, Ordering::SeqCst);
+            CANCEL_CONSUMED.store(false, Ordering::SeqCst);
+            let _ = install_cancel();
+        };
+        quiet_rhythm();
+        let cancelled = inside_scalar_invoke(|| {
+            unsafe { libc::raise(libc::SIGINT) };
+            // Another call ends as the last one in flight while this
+            // invoke reads: its end must not clear the cancelled token.
+            drop(InFlight::new());
+            thread::sleep(Duration::from_millis(15));
+            let _in_flight = InFlight::new();
+            current_cancel().is_cancelled()
+        });
+        assert!(cancelled, "a SIGINT inside a scalar invoke did not reach its engine call");
+        quiet_rhythm();
+        unsafe { libc::raise(libc::SIGINT) };
+        let poisoned = inside_scalar_invoke(|| {
+            let _in_flight = InFlight::new();
+            current_cancel().is_cancelled()
+        });
+        assert!(!poisoned, "a SIGINT with no invoke running cancelled the next call");
+    }
+
+    #[test]
+    fn a_sigint_landing_while_the_registry_is_held_returns() {
+        let _alone = connections::SIGNAL_TESTS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        install_after_a_quiet_host();
         let stop = Arc::new(AtomicBool::new(false));
         {
             let stop = Arc::clone(&stop);
