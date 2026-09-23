@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0080: Build `recognize` over the shared relation planner
 
-Status: implementation complete; independent Sol review rejected; remediation complete; re-review pending
+Status: landed on main at `2162857`
 
 ## Outcome and authority
 

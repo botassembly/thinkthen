@@ -39,3 +39,7 @@ The authorized concurrent `sdlc/scripts/test` rerun used unset key and base-addr
 ## Budget
 
 The implementation changes 15 production Rust files and 8 test-only Rust files, classifying `src` test modules by behavior rather than directory. It adds 2,304 gross nonblank Rust lines including tests, under the 2,400-line limit: 159 nonblank lines in tracked-file additions and 2,145 lines in new Rust files. The largest changed Rust file has 500 nonblank lines. The exact crate ratchet rises from `38070` to `40339`. Recognition, the shared relation planner, command orchestration, typed offline fixture proof, shared secrecy and refusal coverage, and command-boundary tests account for the increase. Existing behavior-local test helpers were reused, the separate partial secrecy test was deleted, and the unreachable overlap implementation was removed before final counting.
+
+## Landing
+
+Independent Sol review accepted the final diff with no findings. Main merged the ticket at `2162857` without conflict. The integrated main checkout then passed `sdlc/scripts/install`, `sdlc/scripts/lint`, `sdlc/scripts/test`, `sdlc/scripts/spec`, and `git diff --check` sequentially with the key and base-address variables unset. Main was pushed after the merge; this landing record follows in the next pushed status commit.
