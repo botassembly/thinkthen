@@ -73,8 +73,16 @@ fn two_hundred_settings_values_hold_descriptors_and_memory() {
         after_files <= before_files + 8,
         "two hundred settings values left {after_files} descriptors open, from {before_files}"
     );
+    // The residency allowance covers both runtimes: AddressSanitizer
+    // multiplies every allocation's footprint (shadow memory, redzones),
+    // so two hundred live states cost tens of megabytes instrumented
+    // where the plain build costs two. The probe's target is the leak
+    // shape — a pool per state, forever — which measured fifty-five
+    // megabytes on the leaking code in the plain build alone and grows
+    // without bound past both allowances.
+    let allowance_kib: u64 = 32_768;
     assert!(
-        after_rss <= before_rss + 8_192,
+        after_rss <= before_rss + allowance_kib,
         "two hundred settings values grew residency by {} kB, from {before_rss}",
         after_rss.saturating_sub(before_rss)
     );
