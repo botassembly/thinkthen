@@ -28,3 +28,7 @@ Ian can overturn any line.
 ## Added 2026-09-23: Beatles Bench as the proving ground, and the cache
 
 Ian's direction: if a helper works, use Beatles Bench to design ThinkThen's own wording, including the questions that `tag`, `recognize`, and `relate` write for the user. A changed wording changes the request, so it misses the cache and costs new calls. The old answers stay in the cache, and the two wordings compare side by side. A default must also hold on a second set outside the Beatles (reversal-general, or the site's recorded examples), so it does not fit one band.
+
+## Result 2026-09-23: Beatles Bench held-out tests on Jev
+
+On a held-out half, no wording helper beat noise on accuracy. Stating the task twice lost 2.2 points, and worked examples lost 5.6. Jev leans no on yes/no questions: its mean p(yes) is 0.40 while half the truths are yes, so yes-recall at 0.5 is 0.31. Four fixes all raised yes-recall beyond noise, and none moved accuracy or AUC beyond noise. A cut of 0.42, tuned on the tuning half, needs no new calls. It raised yes-recall by 0.30 (+0.19 to +0.41). Asking the question and its negation cost double for +0.10. Choose form and softer wording were unstable. So no helper becomes a default for Jev. The cheapest fix is a cut tuned from labeled cases. That points to the accuracy-by-coverage report in `2026-09-23-show-what-changes-when-the-cut-moves.md`, which should suggest the tuned cut.
