@@ -110,7 +110,7 @@ fast-cancel test fails with "the batch ran deaf" while the branch is
 fine. This lane lost two runs to that before running it in the
 foreground; that run is green.
 
-**Verified state.** The final verification lane's own run on `01a6a81`
+**Verified state.** The gate-honesty lane's run at the review-4 fix tip
 with the stubs above and no key in the environment,
 `bash scripts/check_surfaces.sh`, exit 0:
 
@@ -119,20 +119,18 @@ $ bash scripts/check_surfaces.sh
 ...
 == postgres package: dry run, no deck, no container
 dist/thinkthen-pg16-0.0.1-linux-amd64.tar.gz staged; the container half is not run
-summary: green=841 skipped=63 diverged=18 failed=5 (wire: stub up)
+all landed checks green: green=973 skipped=76 diverged=18 failed=0 (wire: stub up)
 ```
 
-The 2026-09-23 re-measure (this lane, gate-process): five failures,
-each named and owned. Three were the public-names drift after the
-DuckDB lane removed the instance-token setting — fixed in the same
-re-measure (the checker carries the twelve-function set; `ok duckdb: 12
-names`). Two remain open, both in other lanes' folders: the TypeScript
-conformance case 25 (`find-none-fits` expected unit null, got 1 — a
-real wrong answer the newly honest TS suite catches; proven
-pre-existing against the pre-change commit) and the DuckDB recognize
-acceptance (its own relate query returns 256 records and trips the new
-255 cap — the acceptance's fixture or the cap moves; the DuckDB lane
-owns it). The skipped count fell 73 → 63 as lanes landed their suites.
+The earlier `failed=5` beside `exit 0` paste (surfaces-review-4's
+records finding) was a mid-wave snapshot: the script cannot print a
+green summary over failures — the five were closed across the fix lanes
+(three public-names drift, the TypeScript case-25 wrong answer, and the
+DuckDB acceptance cap), and the summary line above is the same run's
+true state. The skipped count rises 63 → 76 with the honest skip
+counting (node `# SKIP` lines and the covered cases reach the totals
+now), and the ratchet stops the gate cold before any summary when red —
+two ceiling moves this wave proved both directions.
 
 The run covered every section: the contract tests, the stand-in's null
 and wire tests, the conformance validator (84 cases), the checker's own
