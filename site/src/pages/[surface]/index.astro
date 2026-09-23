@@ -15,8 +15,9 @@ const printed = sample?.printed || null;
 const shipped = surface.status === 'ships first';
 const questionFile = FUNCTIONS.find((f) => f.notAFunction);
 const sections = [...CODE_FUNCTIONS, questionFile].map((fn) => ({ fn, data: cell(fn.name, surface.slug) }));
-const carried = sections.filter((s) => s.data.status !== 'planned');
-const missing = sections.filter((s) => s.data.status === 'planned');
+const absent = (s) => s.data.status === 'planned' || s.data.status === 'preview';
+const carried = sections.filter((s) => !absent(s));
+const missing = sections.filter(absent);
 const headline = shipped
   ? `A ${surface.name} command that answers questions about text`
   : `${surface.name} functions that answer questions about text`;

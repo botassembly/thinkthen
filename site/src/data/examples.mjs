@@ -12,7 +12,7 @@ function load(name) {
   return found;
 }
 
-const STATUSES = new Set(['run', 'drawn', 'planned']);
+const STATUSES = new Set(['run', 'drawn', 'planned', 'preview']);
 const cells = {};
 for (const fn of FUNCTIONS) {
   for (const surface of SURFACES) {

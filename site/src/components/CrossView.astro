@@ -42,9 +42,9 @@ const tabs = SURFACES.map((s) => ({
           <Terminal run={{ command: t.data.printed.command, output: t.data.printed.output, exit: null }} caption={`Recorded from the branch build. ${t.data.printed.see}`} word={false} />
         </>
       )}
-      {t.data.status === 'planned' && (
+      {(t.data.status === 'planned' || t.data.status === 'preview') && (
         <div class="note">
-          <span class="status planned">planned</span>{' '}
+          <span class={`status ${t.data.status}`}>{t.data.status}</span>{' '}
           No <code>{fn}</code> example for {t.surface.name} yet.
           {t.surface.slug !== 'shell' && <> See the <a href={`/${t.surface.slug}/`}>{t.surface.name} page</a>.</>}
         </div>

@@ -1,4 +1,4 @@
-# Code that understands
+# Code that knows what you mean
 
 <!--
 Alternate titles:

@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import Terminal from '../components/Terminal.astro';
 import Code from '../components/Code.astro';
 import InstallLine from '../components/InstallLine.astro';
-import { FUNCTIONS, CODE_FUNCTIONS, SURFACES, HOWTOS, FACTS } from '../data/catalog.mjs';
+import { FUNCTIONS, CODE_FUNCTIONS, SURFACES, HOWTOS, FACTS, statusClass } from '../data/catalog.mjs';
 import { cell, SURFACE_SAMPLES } from '../data/examples.mjs';
 
 const tabs = [
@@ -37,7 +37,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
     </div>
     <div class="cell" data-lang="Bash">
       {bash.map((run) => <Terminal run={run} caption="Recorded from the real command. filter keeps the two complaints." />)}
-      <InstallLine line={surfaceOf('shell').install[0][0]} status="planned" label="comes with 0.1" note="comes with 0.1" caption="Install the command" />
+      <InstallLine line={surfaceOf('shell').install[0][0]} status={statusClass(surfaceOf('shell').status)} label={surfaceOf('shell').status} note={surfaceOf('shell').install[0][1]} caption="Install the command" />
     </div>
     {tabs.slice(1).map((t) => (
       <div class="cell" data-lang={t.label} hidden>
@@ -46,13 +46,13 @@ const sixHowtos = HOWTOS.slice(0, 6);
       </div>
     ))}
   </div>
-  <p class="pagelinks"><a href="/install/">Every way to install it</a> · <a href="/surfaces/">Call it from Python, TypeScript, Ruby, R, Rust, C, or SQL</a></p>
+  <p class="pagelinks"><a href="/install/">Every way to install it</a> · <a href="/surfaces/">Call it from Python, Polars, TypeScript, Ruby, R, Rust, C, or SQL</a></p>
 
   <h2>The ten functions</h2>
   <div class="grid">
     {CODE_FUNCTIONS.map((fn) => (
       <a class="tile" href={`/functions/${fn.name}/`}>
-        <b>{fn.name}</b>
+        <b>{fn.name}{fn.status === 'preview' && <> <span class="status preview">preview</span></>}</b>
         <span>{fn.line}</span>
       </a>
     ))}

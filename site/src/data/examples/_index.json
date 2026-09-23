@@ -442,7 +442,7 @@
   {
     "function": "recognize",
     "surface": "shell",
-    "status": "planned"
+    "status": "preview"
   },
   {
     "function": "recognize",
@@ -452,7 +452,7 @@
   {
     "function": "recognize",
     "surface": "polars",
-    "status": "planned"
+    "status": "preview"
   },
   {
     "function": "recognize",
@@ -497,7 +497,7 @@
   {
     "function": "relate",
     "surface": "shell",
-    "status": "planned"
+    "status": "preview"
   },
   {
     "function": "relate",
@@ -507,7 +507,7 @@
   {
     "function": "relate",
     "surface": "polars",
-    "status": "planned"
+    "status": "preview"
   },
   {
     "function": "relate",

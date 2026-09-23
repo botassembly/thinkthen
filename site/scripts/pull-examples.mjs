@@ -6,7 +6,8 @@
 // A code cell comes from the deck's surfaces.md, which is drawn and not run.
 // A surface sample the branch build ran carries what it printed, from the
 // same section of surfaces.md.
-// Every function-and-surface cell gets a status: run, drawn, or planned.
+// Every function-and-surface cell gets a status: run, drawn, planned, or
+// preview. A missing cell of recognize or relate says preview.
 //
 //   node scripts/pull-examples.mjs
 //
@@ -496,6 +497,8 @@ function main() {
       } else {
         cell = { status: 'planned', source: 'no example drawn for this surface yet' };
       }
+      // A preview function's missing cell says preview, the one word for it.
+      if (fn.status === 'preview' && cell.status === 'planned') cell.status = 'preview';
       cell.function = fn.name;
       cell.surface = surface.slug;
       fs.writeFileSync(path.join(OUT, `${fn.name}__${surface.slug}.json`),

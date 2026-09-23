@@ -2,7 +2,7 @@
   "status": "drawn",
   "source": "deck surfaces.md",
   "lang": "c",
-  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* rank answers with the places in order, counted from 0:\n   1, the outage; 3, the Friday quote; 2, the bill due in\n   a month; and 0, the newsletter, last */\nconst char *rank = \"{\\\"decide\\\": \\\"Does this need an answer today?\\\", \"\n    \"\\\"rank\\\": true, \"\n    \"\\\"records\\\": [\\\"Newsletter: our autumn catalog is here. No reply needed.\\\", \"\n    \"\\\"Our checkout page is down and customers cannot pay\\\", \"\n    \"\\\"Reminder: your invoice is due in 30 days\\\", \"\n    \"\\\"Please send the signed quote by Friday\\\"]}\";\nchar *ranked = thinkthen_call(tt, rank);\nputs(ranked ? ranked : thinkthen_error_message(tt));\nthinkthen_free_string(ranked);",
+  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* rank answers with the places in order, counted from 0:\n   1, the outage; 3, the quote due today; 2, the bill due\n   in a month; and 0, the newsletter, last */\nconst char *rank = \"{\\\"decide\\\": \\\"Is this urgent?\\\", \"\n    \"\\\"rank\\\": true, \"\n    \"\\\"records\\\": [\\\"Newsletter: our autumn catalog is here. No reply needed.\\\", \"\n    \"\\\"Our checkout page is down and customers cannot pay\\\", \"\n    \"\\\"Reminder: your invoice is due in 30 days\\\", \"\n    \"\\\"Please send the signed quote by 5 pm today\\\"]}\";\nchar *ranked = thinkthen_call(tt, rank);\nputs(ranked ? ranked : thinkthen_error_message(tt));\nthinkthen_free_string(ranked);",
   "function": "rank",
   "surface": "c"
 }

@@ -15,7 +15,7 @@ const questionFile = FUNCTIONS.find((f) => f.notAFunction);
     <tr><th>Function</th><th>What it does</th><th>Kind of answer</th></tr>
     {CODE_FUNCTIONS.map((fn) => (
       <tr>
-        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td>
+        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a>{fn.status === 'preview' && <> <span class="status preview">preview</span></>}</td>
         <td>{fn.line}</td>
         <td>{fn.primitive}</td>
       </tr>

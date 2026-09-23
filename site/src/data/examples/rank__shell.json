@@ -4,12 +4,12 @@
   "runs": [
     {
       "name": "rank",
-      "command": "thinkthen rank 'Does this need an answer today?' --lines < inbox.txt",
-      "input": "Newsletter: our autumn catalog is here. No reply needed.\nOur checkout page is down and customers cannot pay\nReminder: your invoice is due in 30 days\nPlease send the signed quote by Friday",
+      "command": "thinkthen rank 'Is this urgent?' --lines < inbox.txt",
+      "input": "Newsletter: our autumn catalog is here. No reply needed.\nOur checkout page is down and customers cannot pay\nReminder: your invoice is due in 30 days\nPlease send the signed quote by 5 pm today",
       "inputFile": "inbox.txt",
-      "output": "Our checkout page is down and customers cannot pay\nPlease send the signed quote by Friday\nReminder: your invoice is due in 30 days\nNewsletter: our autumn catalog is here. No reply needed.",
+      "output": "Our checkout page is down and customers cannot pay\nPlease send the signed quote by 5 pm today\nReminder: your invoice is due in 30 days\nNewsletter: our autumn catalog is here. No reply needed.",
       "exit": 0,
-      "see": "The outage comes first and the Friday quote second. The bill due in a month comes third, and the newsletter that needs no reply comes last."
+      "see": "The outage comes first and the quote due today second. The bill due in a month comes third, and the newsletter that needs no reply comes last."
     },
     {
       "name": "rank-jsonl",

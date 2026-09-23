@@ -2,7 +2,7 @@
 import Base from '../../../layouts/Base.astro';
 import Terminal from '../../../components/Terminal.astro';
 import CrossView from '../../../components/CrossView.astro';
-import { FACTS, FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
+import { FACTS, FUNCTIONS, HOWTOS, SURFACES } from '../../../data/catalog.mjs';
 import { cell } from '../../../data/examples.mjs';
 
 export function getStaticPaths() {
@@ -17,6 +17,11 @@ const rest = runs.slice(1);
 const howtos = HOWTOS.filter((h) => fn.howtos.includes(h.slug));
 const title = fn.title || fn.name;
 const preview = fn.status === 'preview';
+// A library with no release named is planned. Polars is the one today.
+const unnamed = SURFACES.filter((s) => s.slug !== 'shell' && !s.release).map((s) => s.name);
+const libraries = unnamed.length
+  ? `${unnamed.join(', ')} ${unnamed.length === 1 ? 'is' : 'are'} planned. The other libraries come with 0.1.`
+  : 'The libraries come with 0.1.';
 const shipped = !preview && !fn.notAFunction;
 const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
 // The first cost row is the live probe's price for 1,000 short records.
@@ -54,7 +59,7 @@ const [probe] = FACTS.cost.rows[0];
   {fn.toPerson && <p>Send the not-sure answers to a person.</p>}
 
   <h2>Call it from your language</h2>
-  <p>{!preview && 'The Bash command works today. '}The libraries come with 0.1. Their samples show how the calls will read.</p>
+  <p>{!preview && 'The Bash command works today. '}{libraries} Their samples show how the calls will read.</p>
   <CrossView fn={fn.name} />
 
   <h2>The options</h2>
