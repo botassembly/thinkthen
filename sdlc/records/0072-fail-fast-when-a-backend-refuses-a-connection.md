@@ -14,6 +14,8 @@ Independent code review rejected the first closed-port proof because dropping an
 
 Final coordinator command: `sdlc/scripts/install && sdlc/scripts/lint && sdlc/scripts/test && sdlc/scripts/spec && git diff --cached --check`. Exit 0: policy and package checks, audit, format, Clippy, docs, exact ratchet `35974/35974`, 625 Rust tests passed with one intentional ignored child-harness test, doctests, all schema/probe/transform/replay checks, and nineteen green how-tos.
 
+Main advanced with site and library-review records after implementation. The combined tree's first full ladder hit `annotate::scheduling::one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` at its existing timing assertion. This ticket changes no scheduler or annotate code. The exact test then passed alone, all 296 backend tests passed together, and the complete four-rung ladder passed on the combined tree. This record retains the failure rather than classifying it as harmless.
+
 The Rust ceiling rose by 65 lines. The growth pins every transport and retryable status class, real attempt observation, and compiled default-retry timing/secrecy behavior. The implementation reuses the retry classifier, command harness, existing refusal diagnostic, and existing premature-close test; no released-port helper or new transport abstraction was added. `exchange.rs` remains below its cap at 496 nonblank lines.
 
 No diagnostic, transport taxonomy, counter, cache, recording, cancellation, deadline, width, fork, signal, dependency, workflow, surface, site, provider, or publication behavior changed.
