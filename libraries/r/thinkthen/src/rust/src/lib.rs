@@ -38,6 +38,12 @@
 //! format; a lone `%` in text the engine quoted back would make R read
 //! varargs that do not exist and die.
 
+// extendr's macro writes the exported wrapper functions itself, below
+// every doc comment this file carries; the wrappers cannot be documented
+// from here, so the missing-docs lint is scoped off for them alone.
+#![allow(missing_docs)]
+
+
 use extendr_api::prelude::*;
 use extendr_api::SEXP;
 use std::ffi::c_void;
@@ -273,7 +279,7 @@ fn interrupt_pending() -> bool {
 /// machinery, caught by `tryCatch(interrupt = ...)` exactly as a genuine
 /// Ctrl-C is, and uncaught it halts without firing a user's
 /// `options(error = ...)` hook (the third review's probe).
-
+//
 /// One engine call on a fresh worker thread, R's guarded interrupt check on
 /// the main thread while it runs, a fresh cancel token registered for the
 /// stop path, and plain data back for the main thread to convert.
