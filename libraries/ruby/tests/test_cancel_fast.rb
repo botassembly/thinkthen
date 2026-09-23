@@ -41,7 +41,7 @@ raised = nil
 wall = nil
 
 begin
-  engine.decide_many(question, records, token, nil, nil)
+  engine.decide_many(question, records, token, nil, Thread.current[:thinkthen_tick])
   warn "the batch ran deaf: no interrupt raised"
   exit 1
 rescue Interrupt => e

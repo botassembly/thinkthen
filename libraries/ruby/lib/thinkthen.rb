@@ -37,8 +37,12 @@ module ThinkThen
   # The text one record or evidence crosses as: a String unchanged,
   # anything else its JSON text, so a Hash keeps its fields and a record
   # object can speak its own `to_json`. Ruby's `to_s` form is never sent.
+  # `nil` refuses: it has no honest text, and the third review caught it
+  # silently crossing as the literal string "null".
   def self.text_of(record)
-    record.is_a?(String) ? record : JSON.generate(record)
+    return record if record.is_a?(String)
+    raise UsageError.new("a record is text or a JSON-able value, not nil", "usage") if record.nil?
+    JSON.generate(record)
   end
 
   # One name `recognize` found. `start` and `end` count Ruby characters, so
@@ -79,7 +83,6 @@ module ThinkThen
   # One shared engine value: no thread is held between calls, and the
   # process keeps one width gate and one set of counters.
   @engine = Native::Engine.new
-  @tick_engine = Native::Engine.new
 
   class << self
     # Build a question from keywords: the verb key (decide, choose, score,
@@ -126,7 +129,7 @@ module ThinkThen
 
     def decide_many(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      @engine.decide_many(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
+      @engine.decide_many(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
     end
 
     # The bulk answer with each judgment's probability beside it, for
@@ -137,19 +140,19 @@ module ThinkThen
     # symbol-keyed shape.
     def decide_many_with_probabilities(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      pairs = @engine.decide_many_with_probabilities(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
+      pairs = @engine.decide_many_with_probabilities(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
       pairs.map { |pair| { answer: pair["answer"], probability: pair["probability"] } }
     end
 
     def filter(question, records, cancel: nil, deadline: nil)
       list = records.to_a
-      kept = @engine.filter(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
+      kept = @engine.filter(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
       kept.map { |index| list[index] }
     end
 
     def rank(question, records, top: nil, cancel: nil, deadline: nil)
       list = records.to_a
-      placed = @engine.rank(built(question), list.map { |one| text_of(one) }, cancel, deadline, nil)
+      placed = @engine.rank(built(question), list.map { |one| text_of(one) }, cancel, deadline, Thread.current[:thinkthen_tick])
       ordered = placed.map { |index, probability| Ranked.new(index, list[index], probability) }
       top ? ordered.first(top) : ordered
     end
@@ -186,8 +189,26 @@ module ThinkThen
     def annotate(set, records, on: nil, cancel: nil, deadline: nil)
       set = self.set(set) if set.is_a?(String)
       list = records.to_a
-      evidence = on ? list.map { |record| record[on].to_s } : list.map { |one| text_of(one) }
-      answers = @engine.annotate(set, evidence, cancel, deadline, nil)
+      evidence = if on
+        # The on column's values are records: nil refuses like any other
+        # record, and a non-String crosses as its JSON text.
+        list.map { |record| value = record[on]; text_of(value.is_a?(String) ? value : value) }
+      else
+        list.map { |one| text_of(one) }
+      end
+      # The input's keys are preserved: a question landing on one of their
+      # names refuses before any request is paid - the third review's
+      # probe caught the on column itself overwritten otherwise.
+      if on
+        existing = list.first&.keys&.map(&:to_sym) || []
+        clashes = set.names.map(&:to_sym) & existing
+        unless clashes.empty?
+          raise UsageError.new(
+            "annotate cannot add a question named '#{clashes.first}': the " \
+            "input already has a key by that name; rename one", "usage")
+        end
+      end
+      answers = @engine.annotate(set, evidence, cancel, deadline, Thread.current[:thinkthen_tick])
       answers.each_with_index.map do |fields, place|
         if on
           record = list[place].transform_keys(&:to_sym)
@@ -258,12 +279,34 @@ module ThinkThen
 
     # Run one bulk call on a tick: the engine runs the block every wait
     # interval with the VM lock taken, and a raise inside it cancels the
-    # call, lets sent requests finish, and re-raises. Optional: every call
-    # already hears Thread#raise and Ctrl-C through the shim's unblock
-    # function; a tick is for progress reporting or a host's own gesture.
-    def with_tick(&tick)
-      @tick_engine.instance_variable_set(:@tick, tick)
-      @tick_engine
+    # call, lets sent requests finish, and re-raises. A tick is for
+    # progress reporting or a host's own gesture.
+    #
+    # The tick is this thread's own: it rides Thread.current, so two
+    # threads sharing one engine each hear their own block and never each
+    # other's - the third review's probe caught 1,113 of 3,448 ticks
+    # running on the wrong thread under the old shared slot. A block
+    # alone sets the tick for this thread's later calls; a positional
+    # tick with a block scopes it to the block's calls.
+    #
+    # Honesty about single verbs: one-evidence calls (decide, choose,
+    # score, tag, details, find, recognize, relate) run one crossing with
+    # no poll, so an interrupt cannot stop the request already sent - it
+    # is heard the moment the crossing returns and raised there. Bulk
+    # verbs stop mid-batch: the poll fires the call's token, sent requests
+    # finish, and the raise surfaces with the call cancelled.
+    def with_tick(tick = nil, &block)
+      # A block alone is the tick, set for this thread's later calls (the
+      # historical shape). A positional tick with a block scopes the tick
+      # to the block's calls and clears it on the way out.
+      held = tick || block
+      Thread.current[:thinkthen_tick] = held
+      return @engine unless block && tick
+      begin
+        yield
+      ensure
+        Thread.current[:thinkthen_tick] = nil
+      end
     end
 
     private

@@ -17,30 +17,30 @@ cases <- file$cases
 skips <- file$skips %||% list()
 wire <- Sys.getenv("ENGINE_BASE_URL") != "" || Sys.getenv("THINKTHEN_BASE_URL") != ""
 
-# The shared skip table's entry for this case on this surface, or NULL.
-# First match wins; entries naming a surface apply only there.
+# The shared skip table's decision for this case on this surface, through
+# the one reader (conformance/skiptable.py lookup): a list with the
+# disposition and why, or NULL for RUN. The private matcher this replaced
+# was one of nine disagreeing copies (surfaces-review-3).
 central_skip <- function(surface, case, wire) {
+  table <- "../../conformance/skiptable.py"
+  args <- c(table, "lookup", surface, case$id, "--verb", case$verb)
   kind <- case$expect$error$kind
-  for (entry in skips) {
-    if (!is.null(entry$surfaces) && !(surface %in% unlist(entry$surfaces))) next
-    if (identical(entry$unless, "wire") && wire) next
-    when <- entry$when
-    if (!is.null(when$id) && !identical(case$id, when$id)) next
-    if (!is.null(when$verb)) {
-      listed <- unlist(when$verb)
-      if (!(case$verb %in% listed)) next
-    }
-    if (!is.null(when$kind) && !identical(kind, when$kind)) next
-    if (!is.null(when$form) && !identical(case$form, when$form)) next
-    if (!is.null(when$none) && !identical(isTRUE(case$none), when$none)) next
-    if (!is.null(when$error) && !identical(!is.null(case$expect$error), when$error)) next
-    if (identical(when$record, "null")) {
-      has_null <- any(vapply(case$records %||% list(), is.null, logical(1)))
-      if (!has_null) next
-    }
-    return(list(disposition = entry$as %||% "skip", why = entry$why))
+  if (!is.null(kind)) args <- c(args, "--kind", kind)
+  if (!is.null(case$form)) args <- c(args, "--form", case$form)
+  has_null <- any(vapply(case$records %||% list(), is.null, logical(1)))
+  if (has_null) args <- c(args, "--record", "null")
+  if (isTRUE(case$none)) args <- c(args, "--none", "true")
+  if (!is.null(case$expect$error)) args <- c(args, "--error", "true")
+  out <- suppressWarnings(system2("python3", args, stdout = TRUE, stderr = TRUE))
+  status <- attr(out, "status") %||% 0
+  if (status != 0) {
+    stop(paste0("skiptable lookup failed for case ", case$id, ": ", paste(out, collapse = " ")))
   }
-  NULL
+  line <- trimws(paste(out, collapse = "\n"))
+  if (identical(line, "RUN")) return(NULL)
+  parts <- strsplit(line, "\t")[[1]]
+  disposition <- if (identical(parts[[1]], "DIVERGE")) "diverge" else "skip"
+  list(disposition = disposition, why = if (length(parts) > 1) parts[[2]] else "")
 }
 
 passed <- 0

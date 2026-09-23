@@ -50,7 +50,7 @@ end
 answer = nil
 failure = nil
 begin
-  answer = engine.decide_many(question, records, nil, nil, nil)
+  answer = engine.decide_many(question, records, nil, nil, Thread.current[:thinkthen_tick])
 rescue StandardError => e
   failure = e
 ensure

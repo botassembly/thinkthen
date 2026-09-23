@@ -26,7 +26,6 @@ fi
 
 docker run --rm \
   -v "$root":/src \
-  -v "$HOME/.rustup":/root/.rustup:ro \
   -w /src/libraries/ruby \
   "$image" \
   bash -eu -c "
@@ -37,7 +36,7 @@ docker run --rm \
     # .runtimes/cargo; every later build — here and in check.sh — passes
     # --offline and needs none. --locked refuses lockfile drift the gem
     # would otherwise swallow silently.
-    export PATH=\$(ls -d /root/.rustup/toolchains/*/bin | head -1):\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo
+    export CARGO_HOME=/src/libraries/ruby/.runtimes/cargo
     mkdir -p lib/thinkthen
     cargo build --release --locked --offline $features
     cp target/release/libthinkthen_native.so lib/thinkthen/thinkthen.so

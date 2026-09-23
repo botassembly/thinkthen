@@ -169,6 +169,8 @@ def main(argv):
             flag = rest[index].lstrip("-")
             if flag in FACETS:
                 asked[flag] = rest[index + 1]
+            elif flag in BOOL_FACETS:
+                asked[flag] = rest[index + 1].strip().lower() == "true"
         return lookup(surface, case_id, asked)
     print(__doc__, file=sys.stderr)
     return 2

@@ -11,42 +11,37 @@
 # the compile-time `synthetic-partial` feature; check.sh builds the gate's
 # copy that way.
 require "json"
+require "open3"
 require "thinkthen"
 
 PATH = File.expand_path("../../../conformance/conformance.json", __dir__)
 FILE = JSON.parse(File.read(PATH))
-SKIPS = FILE["skips"] || []
-
 def wire_set?
   ENV.key?("ENGINE_BASE_URL") || ENV.key?("THINKTHEN_BASE_URL")
 end
 
-# The shared skip table's entry for this case on this surface, or nil.
-# First match wins; entries naming a surface apply only there.
-def central_skip(surface, one, wire)
-  kind = one.dig("expect", "error", "kind")
-  SKIPS.each do |entry|
-    next if entry["surfaces"] && !entry["surfaces"].include?(surface)
-    next if entry["unless"] == "wire" && wire
+SKIPS = FILE["skips"] || []
+SKIPLENGTH = SKIPS.length  # only to prove the table the reader loads is this file's
 
-    rule = entry["when"]
-    next if rule.key?("id") && one["id"] != rule["id"]
-    if rule.key?("verb")
-      listed = rule["verb"].is_a?(Array) ? rule["verb"] : [rule["verb"]]
-      next unless listed.include?(one["verb"])
-    end
-    next if rule.key?("kind") && kind != rule["kind"]
-    next if rule.key?("form") && one["form"] != rule["form"]
-    next if rule.key?("none") && (!!one["none"]) != rule["none"]
-    if rule.key?("error")
-      next unless (!one.dig("expect", "error").nil?) == rule["error"]
-    end
-    if rule["record"] == "null"
-      next unless (one["records"] || []).any?(&:nil?)
-    end
-    return [entry["as"] || "skip", entry["why"]]
-  end
-  nil
+# The shared skip table's decision for this case on this surface, through
+# the one reader (conformance/skiptable.py lookup): RUN, [disposition,
+# why], or nil on no entry. The private matcher this replaces was one of
+# nine disagreeing copies (surfaces-review-3).
+def central_skip(surface, one, wire)
+  cmd = ["python3", File.expand_path("../../../conformance/skiptable.py", __dir__),
+         "lookup", surface, one["id"].to_s, "--verb", one["verb"]]
+  kind = one.dig("expect", "error", "kind")
+  cmd += ["--kind", kind] if kind
+  cmd += ["--form", one["form"]] if one["form"]
+  cmd += ["--record", "null"] if (one["records"] || []).any?(&:nil?)
+  cmd += ["--none", "true"] if one["none"]
+  cmd += ["--error", "true"] if one.dig("expect", "error")
+  out, status = Open3.capture2(*cmd)
+  raise "skiptable lookup failed for #{one['id']}: #{out}" unless status.success?
+  line = out.strip
+  return nil if line == "RUN"
+  disposition, why = line.split("\t", 2)
+  [disposition == "DIVERGE" ? "diverge" : "skip", why]
 end
 
 def built(text)

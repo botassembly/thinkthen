@@ -64,6 +64,14 @@ pub struct SetValue {
 
 impl DataTypeFunctions for SetValue {}
 
+impl SetValue {
+    /// The set's question names, in the file's own order, so the Ruby
+    /// half can refuse a column collision before any request is paid.
+    fn names(&self) -> Vec<String> {
+        self.set.names().to_vec()
+    }
+}
+
 /// A cancel token the Ruby side can fire from any thread.
 #[derive(Clone, TypedData)]
 #[magnus(class = "ThinkThen::Cancel", free_immediately)]
@@ -93,33 +101,63 @@ impl DataTypeFunctions for EngineValue {}
 /// One crossing's answer, or the engine's error carried back as data.
 type Crossing<T> = Result<T, ContractError>;
 
-/// Run `body` on this Ruby thread with the VM lock released. The crossing
-/// carries no unblock function: Ruby calls one on every interrupt,
-/// including a spurious `Thread#wakeup` and a trapped signal, and a
-/// callback without the VM lock cannot tell those from a real
-/// `Thread#raise`. Bulk calls hear their host's interrupts through the
-/// engine's poll instead, where the VM lock is taken again and the
-/// pending interrupt can be judged; the caller's own token rides the
-/// same poll. The region between the two calls touches no Ruby object.
+/// Run `body` on this Ruby thread with the VM lock released, over a job
+/// the caller keeps. The crossing carries no unblock function: Ruby calls
+/// one on every interrupt, including a spurious `Thread#wakeup` and a
+/// trapped signal, and a callback without the VM lock cannot tell those
+/// from a real `Thread#raise`. Bulk calls hear their host's interrupts
+/// through the engine's poll instead, where the VM lock is taken again and
+/// the pending interrupt can be judged; the caller's own token rides the
+/// same poll.
+///
+/// The job is borrowed, not boxed across the C boundary: the body writes
+/// its answer into the job's slot and takes no ownership, so a raise
+/// landing at the GVL reacquire - before this function could consume any
+/// handoff - leaks nothing. The whole crossing runs inside one
+/// `rb_protect` at the call site (see [`protected`]), with the tick's
+/// registration and the job's slot owned outside it, so any jump MRI
+/// makes anywhere in the region is caught as data and every drop still
+/// runs.
 ///
 /// On return, a real interrupt that arrived between the last poll and
-/// the return (the caller fires its token and raises in the same breath,
-/// say) is caught here with the VM lock held and returned beside the
-/// answer. Left pending, MRI delivers it at the next checkpoint - inside
-/// the raise of this call's own error or answer conversion - and that
-/// delivery unwinding across the Rust frames is what corrupted the heap
-/// the review's repro found. Every caller surfaces the drained error
-/// before it touches the answer.
-fn without_gvl<A, R>(
-    job: A,
+/// the return is drained here with the VM lock held and returned beside
+/// the answer; every caller surfaces it before touching the answer.
+fn without_gvl<A>(
+    job: &mut A,
     body: unsafe extern "C" fn(*mut c_void) -> *mut c_void,
-) -> (R, Option<Error>) {
-    let boxed = Box::into_raw(Box::new(job)) as *mut c_void;
-    let answer = unsafe {
-        rb_sys::rb_thread_call_without_gvl(Some(body), boxed, None, std::ptr::null_mut())
-    };
-    let pending = hear_interrupts().err();
-    (unsafe { *Box::from_raw(answer as *mut R) }, pending)
+) -> Option<Error> {
+    let pointer = job as *mut A as *mut c_void;
+    unsafe { rb_sys::rb_thread_call_without_gvl(Some(body), pointer, None, std::ptr::null_mut()) };
+    hear_interrupts().err()
+}
+
+/// One crossing's whole Ruby-visible length under `rb_protect`: a raise
+/// landing anywhere inside - at the GVL reacquire, in the error mapping,
+/// in the answer conversion - comes back as `Err` instead of jumping
+/// across the Rust frames of the call. The closure converts the answer
+/// to a Value under the same protection, because the conversion itself
+/// can hit MRI checkpoints. Callers own the tick registration and the
+/// job outside this function and drop them after it returns, whatever it
+/// returns.
+fn protected(build: impl FnOnce() -> Result<Value, Error>) -> Result<Value, Error> {
+    // The closure's outcome travels in this slot: `rb_protect` catches
+    // only Ruby's unwinding, so the crossing's own answer or failure
+    // rides out beside the nil placeholder and re-emerges below, never
+    // as a jump.
+    let mut carried: Option<Result<Value, Error>> = None;
+    let slot = &mut carried;
+    let outcome = magnus::rb_sys::protect(move || {
+        *slot = Some(build());
+        rb_sys::Qnil.into()
+    });
+    match outcome {
+        Ok(_) => carried.take().unwrap_or_else(|| {
+            Err(map_error(thinkthen_contract::Error::defect(
+                "the protected crossing produced no outcome",
+            )))
+        }),
+        Err(raised) => Err(raised),
+    }
 }
 
 /// Run one engine call behind the contract's shared panic boundary: a
@@ -179,6 +217,7 @@ fn map_error(error: ContractError) -> Error {
 }
 
 /// Which single-evidence verb a crossing runs.
+#[derive(Clone, Copy)]
 enum Single {
     Decide,
     Choose,
@@ -195,6 +234,10 @@ struct SingleJob {
     token: Cancel,
     deadline: Option<f64>,
     which: Single,
+    /// The crossing's answer, written by the body on this same thread:
+    /// the job is borrowed across the C boundary, never boxed, so no
+    /// handoff can leak when a raise lands at the GVL reacquire.
+    answer: Option<Crossing<SingleOut>>,
 }
 
 /// What a recognize crossing carries in and out. The spec is parsed by the
@@ -205,6 +248,7 @@ struct RecognizeJob {
     text: String,
     token: Cancel,
     deadline: Option<f64>,
+    answer: Option<Crossing<Recognized>>,
 }
 
 /// What a relate crossing carries in and out: every record at once.
@@ -214,6 +258,7 @@ struct RelateJob {
     records: Vec<String>,
     token: Cancel,
     deadline: Option<f64>,
+    answer: Option<Crossing<Vec<Edge>>>,
 }
 
 enum SingleOut {
@@ -225,54 +270,68 @@ enum SingleOut {
 }
 
 unsafe extern "C" fn single_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { *Box::from_raw(pointer as *mut SingleJob) };
-    let answer: Crossing<SingleOut> = guarded(|| {
-        let options = options_for(&job.token, job.deadline)?;
-        match job.which {
-            Single::Decide => job
-                .engine
-                .decide_opts(&job.question, &job.evidence, options)
+    let job = unsafe { &mut *(pointer as *mut SingleJob) };
+    let which = job.which;
+    let engine = job.engine.clone();
+    let question = job.question.clone();
+    let evidence = job.evidence.clone();
+    let deadline = job.deadline;
+    let token = job.token.clone();
+    let answer: Crossing<SingleOut> = guarded(move || {
+        let options = options_for(&token, deadline)?;
+        match which {
+            Single::Decide => engine
+                .decide_opts(&question, &evidence, options)
                 .map(SingleOut::Answer),
-            Single::Choose => job
-                .engine
-                .choose_opts(&job.question, &job.evidence, options)
+            Single::Choose => engine
+                .choose_opts(&question, &evidence, options)
                 .map(SingleOut::Choice),
-            Single::Score => job
-                .engine
-                .score_opts(&job.question, &job.evidence, options)
+            Single::Score => engine
+                .score_opts(&question, &evidence, options)
                 .map(SingleOut::Score),
-            Single::Tag => job
-                .engine
-                .tag_opts(&job.question, &job.evidence, options)
+            Single::Tag => engine
+                .tag_opts(&question, &evidence, options)
                 .map(SingleOut::Tags),
-            Single::Details => job
-                .engine
-                .details_opts(&job.question, &job.evidence, options)
+            Single::Details => engine
+                .details_opts(&question, &evidence, options)
                 .map(SingleOut::Details),
         }
     });
-    Box::into_raw(Box::new(answer)) as *mut c_void
+    job.answer = Some(answer);
+    std::ptr::null_mut()
 }
 
 /// One recognize crossing, the VM lock released for its whole width.
 unsafe extern "C" fn recognize_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { *Box::from_raw(pointer as *mut RecognizeJob) };
-    let answer: Crossing<Recognized> = guarded(|| {
-        let options = options_for(&job.token, job.deadline)?;
-        job.engine.recognize_opts(&job.ask, &job.text, options)
+    let job = unsafe { &mut *(pointer as *mut RecognizeJob) };
+    let engine = job.engine.clone();
+    let ask = job.ask.clone();
+    let text = job.text.clone();
+    let deadline = job.deadline;
+    let token = job.token.clone();
+    let answer: Crossing<Recognized> = guarded(move || {
+        let options = options_for(&token, deadline)?;
+        engine.recognize_opts(&ask, &text, options)
     });
-    Box::into_raw(Box::new(answer)) as *mut c_void
+    job.answer = Some(answer);
+    std::ptr::null_mut()
 }
 
 /// One relate crossing: every record at once, the limit checked inside.
 unsafe extern "C" fn relate_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { *Box::from_raw(pointer as *mut RelateJob) };
-    let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
-    let answer: Crossing<Vec<Edge>> = guarded(|| {
-        let options = options_for(&job.token, job.deadline)?;
-        relate_checked(job.engine.as_ref(), &job.ask, &records, options)
+    let job = unsafe { &mut *(pointer as *mut RelateJob) };
+    let engine = job.engine.clone();
+    let ask = job.ask.clone();
+    let records: Vec<String> = job.records.clone();
+    let deadline = job.deadline;
+    let token = job.token.clone();
+    let answer: Crossing<Vec<Edge>> = guarded(move || {
+        let options = options_for(&token, deadline)?;
+        let slices: Vec<&str> = records.iter().map(String::as_str).collect();
+        relate_checked(engine.as_ref(), &ask, &slices, options)
     });
-    Box::into_raw(Box::new(answer)) as *mut c_void
+    job.answer = Some(answer);
+    std::ptr::null_mut()
 }
 
 /// Which many-record verb a crossing runs.
@@ -298,6 +357,10 @@ struct BulkJob {
     /// The caller's block, held in a registered slot for the whole call
     /// so the collector cannot take it while Rust still calls it.
     tick: Option<*const Value>,
+    /// The crossing's answer, written by the body on this same thread.
+    answer: Option<Crossing<BulkOut>>,
+    /// A raise the poll caught mid-batch, riding out beside the answer.
+    raised: Option<Error>,
 }
 
 /// The poll state a bulk crossing threads into the engine's wait.
@@ -314,7 +377,18 @@ impl BulkTick {
             return;
         }
         let state = self as *mut BulkTick as *mut c_void;
-        unsafe { rb_sys::rb_thread_call_with_gvl(Some(bulk_tick_body), state) };
+        // The whole with-gvl body runs under one protection: a raise
+        // landing at its GVL reacquire - or inside the caller's tick - is
+        // caught here as data instead of jumping across the engine's wait
+        // frames with this state pointer dangling behind it. That jump was
+        // the drain-boundary SEGV the stress probe caught.
+        let outcome = magnus::rb_sys::protect(|| unsafe {
+            rb_sys::rb_thread_call_with_gvl(Some(bulk_tick_body), state) as rb_sys::VALUE
+        });
+        if let Err(raised) = outcome {
+            self.token.cancel();
+            self.raised = Some(raised);
+        }
     }
 }
 
@@ -375,44 +449,47 @@ enum BulkOut {
 }
 
 unsafe extern "C" fn bulk_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { *Box::from_raw(pointer as *mut BulkJob) };
-    let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
+    let job = unsafe { &mut *(pointer as *mut BulkJob) };
+    let engine = job.engine.clone();
+    let question = job.question.clone();
+    let records: Vec<String> = job.records.clone();
+    let deadline = job.deadline;
+    let token = job.token.clone();
+    let tick = job.tick;
     // The poll always runs: the caller's token and the host's own
     // interrupts are heard there even when no tick was given.
     let mut tick_state = Some(BulkTick {
-        tick: job.tick,
+        tick,
         caller: job.caller.clone(),
         raised: None,
-        token: job.token.clone(),
+        token: token.clone(),
     });
     let answer: Crossing<BulkOut> = guarded(|| {
-        let options = options_for(&job.token, job.deadline)?;
+        let options = options_for(&token, deadline)?;
         let mut closure = || {
             if let Some(state) = tick_state.as_mut() {
                 state.poll();
             }
         };
+        let slices: Vec<&str> = records.iter().map(String::as_str).collect();
         match job.which {
-            Bulk::DecideMany => job
-                .engine
-                .decide_many_opts(&job.question, &records, options, Some(&mut closure))
+            Bulk::DecideMany => engine
+                .decide_many_opts(&question, &slices, options, Some(&mut closure))
                 .map(BulkOut::Judgments),
-            Bulk::DecideManyWithProbabilities => job
-                .engine
-                .decide_many_opts(&job.question, &records, options, Some(&mut closure))
+            Bulk::DecideManyWithProbabilities => engine
+                .decide_many_opts(&question, &slices, options, Some(&mut closure))
                 .map(BulkOut::JudgedPairs),
-            Bulk::Filter => job
-                .engine
-                .filter_opts(&job.question, &records, options, Some(&mut closure))
+            Bulk::Filter => engine
+                .filter_opts(&question, &slices, options, Some(&mut closure))
                 .map(BulkOut::Kept),
-            Bulk::Rank => job
-                .engine
-                .rank_opts(&job.question, &records, options, Some(&mut closure))
+            Bulk::Rank => engine
+                .rank_opts(&question, &slices, options, Some(&mut closure))
                 .map(BulkOut::Ranked),
         }
     });
-    let raised = tick_state.and_then(|state| state.raised);
-    Box::into_raw(Box::new((answer, raised))) as *mut c_void
+    job.answer = Some(answer);
+    job.raised = tick_state.and_then(|state| state.raised);
+    std::ptr::null_mut()
 }
 
 /// The annotate crossing, which takes a set instead of one question.
@@ -424,28 +501,37 @@ struct AnnotateJob {
     caller: Option<Cancel>,
     deadline: Option<f64>,
     tick: Option<*const Value>,
+    answer: Option<Crossing<Vec<Vec<(String, Annotated)>>>>,
+    raised: Option<Error>,
 }
 
 unsafe extern "C" fn annotate_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { *Box::from_raw(pointer as *mut AnnotateJob) };
-    let records: Vec<&str> = job.records.iter().map(String::as_str).collect();
+    let job = unsafe { &mut *(pointer as *mut AnnotateJob) };
+    let engine = job.engine.clone();
+    let set = job.set.clone();
+    let records: Vec<String> = job.records.clone();
+    let deadline = job.deadline;
+    let token = job.token.clone();
+    let tick = job.tick;
     let mut tick_state = Some(BulkTick {
-        tick: job.tick,
+        tick,
         caller: job.caller.clone(),
         raised: None,
-        token: job.token.clone(),
+        token: token.clone(),
     });
     let answer: Crossing<Vec<Vec<(String, Annotated)>>> = guarded(|| {
-        let options = options_for(&job.token, job.deadline)?;
+        let options = options_for(&token, deadline)?;
         let mut closure = || {
             if let Some(state) = tick_state.as_mut() {
                 state.poll();
             }
         };
-        job.engine.annotate_opts(&job.set, &records, options, Some(&mut closure))
+        let slices: Vec<&str> = records.iter().map(String::as_str).collect();
+        engine.annotate_opts(&set, &slices, options, Some(&mut closure))
     });
-    let raised = tick_state.and_then(|state| state.raised);
-    Box::into_raw(Box::new((answer, raised))) as *mut c_void
+    job.answer = Some(answer);
+    job.raised = tick_state.and_then(|state| state.raised);
+    std::ptr::null_mut()
 }
 
 /// The find crossing, which takes units and no tick.
@@ -455,16 +541,23 @@ struct FindJob {
     units: Vec<String>,
     token: Cancel,
     deadline: Option<f64>,
+    answer: Option<Crossing<Found>>,
 }
 
 unsafe extern "C" fn find_body(pointer: *mut c_void) -> *mut c_void {
-    let job = unsafe { *Box::from_raw(pointer as *mut FindJob) };
-    let units: Vec<&str> = job.units.iter().map(String::as_str).collect();
-    let answer: Crossing<Found> = guarded(|| {
-        let options = options_for(&job.token, job.deadline)?;
-        job.engine.find_opts(&job.question, &units, options)
+    let job = unsafe { &mut *(pointer as *mut FindJob) };
+    let engine = job.engine.clone();
+    let question = job.question.clone();
+    let units: Vec<String> = job.units.clone();
+    let deadline = job.deadline;
+    let token = job.token.clone();
+    let answer: Crossing<Found> = guarded(move || {
+        let options = options_for(&token, deadline)?;
+        let slices: Vec<&str> = units.iter().map(String::as_str).collect();
+        engine.find_opts(&question, &slices, options)
     });
-    Box::into_raw(Box::new(answer)) as *mut c_void
+    job.answer = Some(answer);
+    std::ptr::null_mut()
 }
 
 /// Build the call options the wrapper's two keywords control: the token
@@ -537,11 +630,11 @@ fn optional_tick(value: Value) -> Option<Value> {
 /// The tick a bulk call runs: the caller's block, or the engine's own
 /// `@tick` set by `ThinkThen.with_tick`, or none. The documented helper
 /// stores its block in the ivar; the argument wins when both are given.
-fn tick_from(rb_self: Value, tick: Value) -> Result<Value, Error> {
-    if !tick.is_nil() {
-        return Ok(tick);
-    }
-    rb_self.funcall("instance_variable_get", ("@tick",))
+fn tick_from(_rb_self: Value, tick: Value) -> Result<Value, Error> {
+    // The wrapper passes this thread's own tick explicitly (Thread.current
+    // on the Ruby side); the old shared-ivar fallback is gone, because it
+    // let one thread's tick run on another thread's calls.
+    Ok(tick)
 }
 
 impl EngineValue {
@@ -564,42 +657,53 @@ impl EngineValue {
         deadline: Value,
     ) -> Result<Value, Error> {
         let token = single_token(cancel)?;
-        let job = SingleJob {
+        let mut job = SingleJob {
             engine: Arc::clone(&self.engine),
             question: question.question.clone(),
             evidence,
             token: token.clone(),
             deadline: optional_deadline(deadline)?,
             which,
+            answer: None,
         };
-        let (answer, pending): (Crossing<SingleOut>, Option<Error>) = without_gvl(job, single_body);
-        if let Some(raised) = pending {
-            return Err(raised);
-        }
-        let answer = answer.map_err(map_error)?;
-        let ruby = magnus::Ruby::get().unwrap();
-        let value = match answer {
-            SingleOut::Answer(one) => answer_value(one),
-            SingleOut::Choice(pick) => match pick {
-                Some(name) => name.clone().into_value_with(&ruby),
-                None => ().into_value_with(&ruby),
-            },
-            SingleOut::Score(scored) => {
-                let pair = RArray::with_capacity(2);
-                pair.push(scored.value).map_err(|error| error)?;
-                pair.push(scored.nearest).map_err(|error| error)?;
-                pair.as_value()
+        // The crossing and its whole conversion run under one protection:
+        // a raise anywhere inside - the GVL reacquire, the error mapping,
+        // the value building - returns as data. The job lives on this
+        // frame, so whatever happens inside, its answer slot drops here.
+        protected(|| {
+            let pending = without_gvl(&mut job, single_body);
+            if let Some(raised) = pending {
+                return Err(raised);
             }
-            SingleOut::Tags(labels) => {
-                let list = RArray::with_capacity(labels.len());
-                for label in labels {
-                    list.push(label).map_err(|error| error)?;
+            let answer = job
+                .answer
+                .take()
+                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+            let answer = answer.map_err(map_error)?;
+            let ruby = magnus::Ruby::get().unwrap();
+            let value = match answer {
+                SingleOut::Answer(one) => answer_value(one),
+                SingleOut::Choice(pick) => match pick {
+                    Some(name) => name.clone().into_value_with(&ruby),
+                    None => ().into_value_with(&ruby),
+                },
+                SingleOut::Score(scored) => {
+                    let pair = RArray::with_capacity(2);
+                    pair.push(scored.value).map_err(|error| error)?;
+                    pair.push(scored.nearest).map_err(|error| error)?;
+                    pair.as_value()
                 }
-                list.as_value()
-            }
-            SingleOut::Details(details) => details_hash(&ruby, &details)?.as_value(),
-        };
-        Ok(value)
+                SingleOut::Tags(labels) => {
+                    let list = RArray::with_capacity(labels.len());
+                    for label in labels {
+                        list.push(label).map_err(|error| error)?;
+                    }
+                    list.as_value()
+                }
+                SingleOut::Details(details) => details_hash(&ruby, &details)?.as_value(),
+            };
+            Ok(value)
+        })
     }
 
     /// Any many-record verb, one crossing with the lock released and the
@@ -622,7 +726,7 @@ impl EngineValue {
             token.cancel();
         }
         let held_tick = optional_tick(tick).map(BoxValue::new);
-        let job = BulkJob {
+        let mut job = BulkJob {
             engine: Arc::clone(&self.engine),
             question: question.question.clone(),
             records,
@@ -631,15 +735,23 @@ impl EngineValue {
             deadline: optional_deadline(deadline)?,
             which,
             tick: held_tick.as_ref().map(|held| held.as_ref() as *const Value),
+            answer: None,
+            raised: None,
         };
-        let ((answer, raised), pending): ((Crossing<BulkOut>, Option<Error>), Option<Error>) =
-            without_gvl(job, bulk_body);
-        drop(held_tick);
-        if let Some(raised) = raised.or(pending) {
-            return Err(raised);
-        }
-        let answer = answer.map_err(map_error)?;
-        match answer {
+        // The tick's registration and the job live on this frame, outside
+        // the protection: whatever raise MRI delivers inside, the
+        // registration drops and the answer slot empties on this line.
+        let outcome = protected(|| {
+            let pending = without_gvl(&mut job, bulk_body);
+            if let Some(raised) = job.raised.take().or(pending) {
+                return Err(raised);
+            }
+            let answer = job
+                .answer
+                .take()
+                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+            let answer = answer.map_err(map_error)?;
+            match answer {
             BulkOut::Judgments(judgments) => {
                 let list = RArray::with_capacity(judgments.len());
                 for judgment in judgments {
@@ -675,6 +787,9 @@ impl EngineValue {
                 Ok(list.as_value())
             }
         }
+        });
+        drop(held_tick);
+        outcome
     }
 
     fn decide(
@@ -701,20 +816,26 @@ impl EngineValue {
     ) -> Result<Value, Error> {
         let ask = Recognize::from_json(&spec).map_err(map_error)?;
         let token = single_token(cancel)?;
-        let job = RecognizeJob {
+        let mut job = RecognizeJob {
             engine: Arc::clone(&self.engine),
             ask,
             text,
             token: token.clone(),
             deadline: optional_deadline(deadline)?,
+            answer: None,
         };
-        let (answer, pending): (Crossing<Recognized>, Option<Error>) =
-            without_gvl(job, recognize_body);
-        if let Some(raised) = pending {
-            return Err(raised);
-        }
-        let answer = answer.map_err(map_error)?;
-        recognized_value(&answer)
+        protected(|| {
+            let pending = without_gvl(&mut job, recognize_body);
+            if let Some(raised) = pending {
+                return Err(raised);
+            }
+            let answer = job
+                .answer
+                .take()
+                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+            let answer = answer.map_err(map_error)?;
+            recognized_value(&answer)
+        })
     }
 
     /// `relate`: every record crosses at once, the 255-record limit refuses
@@ -729,20 +850,26 @@ impl EngineValue {
     ) -> Result<Value, Error> {
         let ask = Relate::from_json(&spec).map_err(map_error)?;
         let token = single_token(cancel)?;
-        let job = RelateJob {
+        let mut job = RelateJob {
             engine: Arc::clone(&self.engine),
             ask,
             records,
             token: token.clone(),
             deadline: optional_deadline(deadline)?,
+            answer: None,
         };
-        let (answer, pending): (Crossing<Vec<Edge>>, Option<Error>) =
-            without_gvl(job, relate_body);
-        if let Some(raised) = pending {
-            return Err(raised);
-        }
-        let answer = answer.map_err(map_error)?;
-        edges_value(&answer)
+        protected(|| {
+            let pending = without_gvl(&mut job, relate_body);
+            if let Some(raised) = pending {
+                return Err(raised);
+            }
+            let answer = job
+                .answer
+                .take()
+                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+            let answer = answer.map_err(map_error)?;
+            edges_value(&answer)
+        })
     }
 
     fn decide_many(
@@ -850,27 +977,34 @@ impl EngineValue {
         units: Vec<String>,
         cancel: Value,
         deadline: Value,
-    ) -> Result<RArray, Error> {
+    ) -> Result<Value, Error> {
         let token = single_token(cancel)?;
-        let job = FindJob {
+        let mut job = FindJob {
             engine: Arc::clone(&self.engine),
             question: question.question.clone(),
             units,
             token: token.clone(),
             deadline: optional_deadline(deadline)?,
+            answer: None,
         };
-        let (found, pending): (Crossing<Found>, Option<Error>) = without_gvl(job, find_body);
-        if let Some(raised) = pending {
-            return Err(raised);
-        }
-        let found = found.map_err(map_error)?;
-        let pair = RArray::with_capacity(2);
-        match found.index {
-            Some(place) => pair.push(place as i64).map_err(|error| error)?,
-            None => pair.push(()).map_err(|error| error)?,
-        }
-        pair.push(found.probability).map_err(|error| error)?;
-        Ok(pair)
+        protected(|| {
+            let pending = without_gvl(&mut job, find_body);
+            if let Some(raised) = pending {
+                return Err(raised);
+            }
+            let found = job
+                .answer
+                .take()
+                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+            let found = found.map_err(map_error)?;
+            let pair = RArray::with_capacity(2);
+            match found.index {
+                Some(place) => pair.push(place as i64).map_err(|error| error)?,
+                None => pair.push(()).map_err(|error| error)?,
+            }
+            pair.push(found.probability).map_err(|error| error)?;
+            Ok(pair.as_value())
+        })
     }
 
     fn annotate(
@@ -880,7 +1014,7 @@ impl EngineValue {
         cancel: Value,
         deadline: Value,
         tick: Value,
-    ) -> Result<RArray, Error> {
+    ) -> Result<Value, Error> {
         let engine: &EngineValue = TryConvert::try_convert(rb_self)?;
         let token = Cancel::new();
         let caller = optional_cancel(cancel)?;
@@ -888,7 +1022,7 @@ impl EngineValue {
             token.cancel();
         }
         let held_tick = optional_tick(tick_from(rb_self, tick)?).map(BoxValue::new);
-        let job = AnnotateJob {
+        let mut job = AnnotateJob {
             engine: Arc::clone(&engine.engine),
             set: set.set.clone(),
             records,
@@ -896,28 +1030,36 @@ impl EngineValue {
             caller,
             deadline: optional_deadline(deadline)?,
             tick: held_tick.as_ref().map(|held| held.as_ref() as *const Value),
+            answer: None,
+            raised: None,
         };
-        let ((answer, raised), pending): (
-            (Crossing<Vec<Vec<(String, Annotated)>>>, Option<Error>),
-            Option<Error>,
-        ) = without_gvl(job, annotate_body);
-        drop(held_tick);
-        if let Some(raised) = raised.or(pending) {
-            return Err(raised);
-        }
-        let records_out = answer.map_err(map_error)?;
-        let outer = RArray::with_capacity(records_out.len());
-        for one in records_out {
-            let inner = RArray::with_capacity(one.len());
-            for (name, field) in one {
-                let pair = RArray::with_capacity(2);
-                pair.push(name).map_err(|error| error)?;
-                pair.push(annotated_value(&field)?).map_err(|error| error)?;
-                inner.push(pair).map_err(|error| error)?;
+        // The tick's registration lives outside the protection, so it
+        // drops on the next line whatever happened inside.
+        let outcome = protected(|| {
+            let pending = without_gvl(&mut job, annotate_body);
+            if let Some(raised) = job.raised.take().or(pending) {
+                return Err(raised);
             }
-            outer.push(inner).map_err(|error| error)?;
-        }
-        Ok(outer)
+            let records_out = job
+                .answer
+                .take()
+                .unwrap_or_else(|| Err(thinkthen_contract::Error::defect("the crossing returned no answer")));
+            let records_out = records_out.map_err(map_error)?;
+            let outer = RArray::with_capacity(records_out.len());
+            for one in records_out {
+                let inner = RArray::with_capacity(one.len());
+                for (name, field) in one {
+                    let pair = RArray::with_capacity(2);
+                    pair.push(name).map_err(|error| error)?;
+                    pair.push(annotated_value(&field)?).map_err(|error| error)?;
+                    inner.push(pair).map_err(|error| error)?;
+                }
+                outer.push(inner).map_err(|error| error)?;
+            }
+            Ok(outer.as_value())
+        });
+        drop(held_tick);
+        outcome
     }
 
     fn usage(&self) -> Result<RHash, Error> {
@@ -1111,7 +1253,8 @@ fn init() -> Result<(), Error> {
     let question = module.define_class("Question", class::object())?;
     question.define_method("json", method!(QuestionValue::json, 0))?;
 
-    module.define_class("QuestionSet", class::object())?;
+    let set_class = module.define_class("QuestionSet", class::object())?;
+    set_class.define_method("names", method!(SetValue::names, 0))?;
 
     let cancel = module.define_class("Cancel", class::object())?;
     cancel.define_singleton_method("new", function!(cancel_new, 0))?;

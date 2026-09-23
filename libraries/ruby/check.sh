@@ -25,11 +25,10 @@ fi
 docker_run() {
   docker run --rm --network host \
     -v "$root":/src \
-    -v "$HOME/.rustup":/root/.rustup:ro \
-    -w /src/libraries/ruby \
+      -w /src/libraries/ruby \
     -e ENGINE_NULL=1 \
     "$image" \
-    bash -eu -c "export PATH=\$(ls -d /root/.rustup/toolchains/*/bin | head -1):\$PATH CARGO_HOME=/src/libraries/ruby/.runtimes/cargo; $1"
+    bash -eu -c "export CARGO_HOME=/src/libraries/ruby/.runtimes/cargo; $1"
 }
 
 echo "== ruby surface: the defect kind maps to its error class (shim unit test)"
@@ -70,8 +69,7 @@ if [ "$wire" = yes ]; then
   echo "== ruby surface: interrupt proof on the wire"
   docker run --rm --network host \
     -v "$root":/src \
-    -v "$HOME/.rustup":/root/.rustup:ro \
-    -w /src/libraries/ruby \
+      -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
     -e ENGINE_WIDTH=8 \
     "$image" \
@@ -79,8 +77,7 @@ if [ "$wire" = yes ]; then
   echo "== ruby surface: interrupt proof on a delayed stub, no tick and no token"
   docker run --rm --network host \
     -v "$root":/src \
-    -v "$HOME/.rustup":/root/.rustup:ro \
-    -w /src/libraries/ruby \
+      -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
     -e ENGINE_WIDTH=8 \
     "$image" \
@@ -88,11 +85,18 @@ if [ "$wire" = yes ]; then
   echo "== ruby surface: probabilities cost no extra sends (punch-list item 1)"
   docker run --rm --network host \
     -v "$root":/src \
-    -v "$HOME/.rustup":/root/.rustup:ro \
-    -w /src/libraries/ruby \
+      -w /src/libraries/ruby \
     -e ENGINE_BASE_URL="$stub_url" \
     "$image" \
     bash -eu -c 'ruby -I lib tests/test_pairs_one_crossing.rb'
 else
   echo "== ruby surface: interrupt proof skipped, no stub on 8214"
 fi
+
+# The gate ran on the fixture build (synthetic-partial); the shape any
+# package is made from never carries it. Rebuild plain so the folder the
+# gate leaves behind is the production shape - the third review caught
+# the test build left in place.
+echo "== ruby surface: restore the production build (no fixture)"
+./build.sh >/dev/null
+echo "restored: $(ls -1 *.gem 2>/dev/null | tail -1)"
