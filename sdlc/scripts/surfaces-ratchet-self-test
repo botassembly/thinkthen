@@ -5,6 +5,19 @@
 # (file://) and lives in a temporary directory removed on exit.
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
+# A tree without git (an export) has no history to clone. The ratchet
+# there must say so and still hold the count (surfaces-review-5: this test
+# died with git's exit 128).
+if ! git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
+  status=0
+  said=$(cd "$REPO" && node sdlc/scripts/surfaces-ratchet.mjs 2>&1) || status=$?
+  case "$said" in
+  "surfaces-ratchet: no git history here; the raise-body check cannot run"*) ;;
+  *) echo "FAIL surfaces-ratchet in a tree without git: exit $status, said: $said"; exit 1 ;;
+  esac
+  echo "ok:      the surfaces ratchet names a tree without git history"
+  exit "$status"
+fi
 work=$(mktemp -d "${TMPDIR:-/tmp}/ratchet-shallow.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 git -C "$work" init -q .

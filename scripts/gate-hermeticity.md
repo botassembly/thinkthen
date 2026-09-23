@@ -82,7 +82,8 @@ names the remedy.
   container runs with `--network none` and `--offline` against
   `libraries/ruby/.runtimes/cargo`, the same home `build.sh` uses. An
   empty home fails the lint with the fetch command.
-- **The per-workspace deny check** (`sdlc/scripts/lint-workspaces`): a
-  workspace whose metadata is cold still runs `cargo fetch --locked` once
-  before it retries offline. This one step still uses the network. The
-  DuckDB lane owns that function and its fix.
+- **The per-workspace deny check** (`sdlc/scripts/lint-workspaces`):
+  every call passes `--offline`, and a workspace whose metadata is cold
+  fails with the `cargo fetch --locked` command to run on a networked
+  machine. The gate never fetches. `sdlc/scripts/lint-workspaces-self-test`
+  fails a deny call without `--offline`.

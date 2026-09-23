@@ -42,6 +42,17 @@ if grep -v -e '^true|' -e '--offline' "$work/log" | grep . > "$work/online"; the
 	fail=1
 fi
 
+# cargo deny ignores CARGO_NET_OFFLINE and fetches its advisory database
+# unless the call itself says --offline (surfaces-review-5).
+if grep -E '^[^|]*\|[^|]*\|deny ' "$work/log" | grep -v -e ' --offline ' > "$work/deny-online"; then
+	echo "FAIL a cargo deny call could fetch the advisory database: $(head -n 1 "$work/deny-online")"
+	fail=1
+fi
+if ! grep -qE '^[^|]*\|[^|]*\|deny ' "$work/log"; then
+	echo "FAIL the workspace lint ran no cargo deny call"
+	fail=1
+fi
+
 # The generated configs carry each added line as its own line. BSD sed
 # writes a replacement's \n as a plain n, so no sed program may use it.
 duck="$work/cfg/$(printf '%s' "$REPO/databases/duckdb" | tr / _)"

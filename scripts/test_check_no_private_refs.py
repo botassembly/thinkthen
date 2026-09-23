@@ -79,20 +79,21 @@ def main():
         os.makedirs(f"{root}/scripts")
         with open(CHECKER) as source, open(f"{root}/scripts/check_no_private_refs.py", "w") as copy:
             copy.write(source.read())
-        with open(f"{root}/leak.md", "w") as handle:
+        os.makedirs(f"{root}/.github")
+        with open(f"{root}/.github/leak.md", "w") as handle:
             handle.write(f"the deck lives in repos/{PLANTED}/decks\n")
         result = subprocess.run(
             [sys.executable, f"{root}/scripts/check_no_private_refs.py", "--name-sha256", PLANTED_SHA256],
             capture_output=True, text=True, cwd="/",
         )
-        if result.returncode != 1 or result.stdout != "leak.md:1: names the private repository\n":
+        if result.returncode != 1 or result.stdout != ".github/leak.md:1: names the private repository\n":
             failures.append(f"a tree without git not walked: {result.returncode} {result.stdout}{result.stderr}")
 
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}")
         return 1
-    print("ok: the checker refuses a planted private name and home path, exempts sdlc/, walks a tree without git, and passes a clean tree")
+    print("ok: the checker refuses a planted private name and home path, exempts sdlc/, walks a tree without git into its dot-folders, and passes a clean tree")
     return 0
 
 

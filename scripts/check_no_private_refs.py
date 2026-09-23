@@ -68,7 +68,9 @@ def tracked_files(root):
     # would ignore — build output and the checker's own pattern data.
     names = []
     for base, dirs, files in os.walk(root):
-        keep = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith(".")]
+        # Dot-folders ship too (.github, .cargo configs); only .git and the
+        # ignored build trees are skipped (surfaces-review-5).
+        keep = [d for d in dirs if d not in IGNORED_DIRS and d != ".git"]
         dirs[:] = keep
         for file in files:
             path = os.path.relpath(os.path.join(base, file), root)
