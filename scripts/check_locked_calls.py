@@ -17,11 +17,15 @@ import re
 import sys
 
 SCANNED_DIRS = ("libraries", "databases", "tools", "scripts", "sdlc/scripts", "contract", "standin")
-SKIPPED_PARTS = {"target", "node_modules", ".venv", ".runtimes", "extension-ci-tools", "vendor", "dist", "build"}
+SKIPPED_PARTS = {"target", "node_modules", ".venv", ".runtimes", "vendor", "dist", "build"}
 SCANNED_NAMES = re.compile(r"(\.sh|Makefile|Makevars\.in|\.mk|package\.json|Dockerfile)$|^(lint|test|spec|install|surfaces|lint-workspaces|demos|live)$")
 
 RESOLVING = re.compile(
-    r"\bcargo\s+(?:\+\S+\s+)?(build|test|run|check|clippy|zigbuild|fetch|vendor|doc|metadata|install)\b"
+    # Flags may sit before the subcommand (`cargo +1.95 -q build`,
+    # `cargo --config x build`); each one, with an optional value, is
+    # skipped (surfaces-review-5: only a toolchain was skipped before).
+    r"\bcargo(?:\s+[-+]\S*(?:\s+[^-\s]\S*)??)*\s+"
+    r"(build|test|run|check|clippy|zigbuild|fetch|vendor|doc|metadata|install)\b"
     r"|\bmaturin\s+(build|develop)\b"
     r"|\bnapi\s+build\b"
 )
@@ -70,14 +74,23 @@ def problems(root):
                 if not hit or re.search(r"\b(echo|printf)\b", code[: hit.start()]):
                     continue  # no call, or the tool's name inside a message
                 # R's Makevars takes its flags from tools/config.R, whose
-                # every .cran_flags carries --locked (checked below).
-                if "--locked" not in code and "@CRAN_FLAGS@" not in code:
+                # every .cran_flags carries --locked (checked below). The
+                # DuckDB extension's vendored makefile takes its flags from
+                # CARGO_OVERRIDE_DUCKDB_RS_FLAG, which the DuckDB Makefile
+                # appends --locked to (checked below).
+                carried = ("@CRAN_FLAGS@" in code
+                           or "$(CARGO_OVERRIDE_DUCKDB_RS_FLAG)" in code)
+                if "--locked" not in code and not carried:
                     found.append(f"{name}:{number}: {hit.group(0)} without --locked")
     config = root / "libraries/r/thinkthen/tools/config.R"
     if config.exists():
         for number, line in enumerate(config.read_text().splitlines(), start=1):
             if re.match(r"\s*\.cran_flags <-", line) and "--locked" not in line:
                 found.append(f"{config.relative_to(root)}:{number}: .cran_flags without --locked")
+    duckdb = root / "databases/duckdb/Makefile"
+    if duckdb.exists() and not re.search(
+            r"^CARGO_OVERRIDE_DUCKDB_RS_FLAG \+= --locked$", duckdb.read_text(), re.M):
+        found.append(f"{duckdb.relative_to(root)}: CARGO_OVERRIDE_DUCKDB_RS_FLAG does not append --locked")
     return found
 
 

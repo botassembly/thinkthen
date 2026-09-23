@@ -18,6 +18,11 @@ all: configure debug
 include extension-ci-tools/makefiles/c_api_extensions/base.Makefile
 include extension-ci-tools/makefiles/c_api_extensions/rust.Makefile
 
+# The vendored makefile's cargo build carries no lock. Its one flag
+# variable reaches both build lines, so the lock rides on it
+# (surfaces-review-5). scripts/check_locked_calls.py checks this line.
+CARGO_OVERRIDE_DUCKDB_RS_FLAG += --locked
+
 configure: venv platform extension_version
 
 debug: build_extension_library_debug build_extension_with_metadata_debug
