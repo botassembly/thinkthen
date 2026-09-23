@@ -244,4 +244,49 @@ check("its retryable rides the condition", identical(defect_cond$retryable, FALS
 check("its message rides the condition",
       identical(defect_cond$message, "the engine broke its own contract"))
 
+# One-item member lists stay JSON arrays (surfaces-review-5: auto_unbox
+# wrote labels = "only", and tt_tag with one label was refused while
+# Python and Ruby answered). Each array field the writer emits, in its
+# one-item form, read back from the JSON the engine receives.
+is_array <- function(json, field) {
+  parsed <- jsonlite::fromJSON(json, simplifyVector = FALSE)
+  is.list(parsed[[field]]) && is.null(names(parsed[[field]])) && length(parsed[[field]]) == 1L
+}
+for (kind in c("choose", "score", "tag")) {
+  field <- switch(kind, choose = "options", score = "levels", tag = "labels")
+  check(paste("a built", kind, "keeps one", field, "as an array"),
+        is_array(thinkthen:::.tt_body(kind, "Q?", "only", NULL, NULL), field))
+}
+check("a plain tag call keeps one label as an array", {
+  body <- list(tag = "Tags?", labels = I("only"))
+  is_array(thinkthen:::.tt_json(body), "labels")
+})
+check("recognize keeps one kind as an array",
+      is_array(thinkthen:::.tt_recognize_spec("person", NULL, NULL, NULL), "kinds"))
+check("recognize keeps one relation rule as an array",
+      is_array(thinkthen:::.tt_recognize_spec("person", "met", NULL, NULL), "relations"))
+check("relate keeps one relation rule as an array",
+      is_array(thinkthen:::.tt_relate_spec("met", NULL, NULL, NULL), "relations"))
+check("relate keeps one either rule as an array",
+      is_array(thinkthen:::.tt_relate_spec(NULL, "met", NULL, NULL), "relations"))
+check("tt_tag answers with one label",
+      is.character(tt_tag("Tags?", "refund me", labels = "only")[[1L]]))
+check("a built tag question answers with one label",
+      is.character(tt_tag(tt_question(tag = "Tags?", labels = "only"), "refund me")[[1L]]))
+one_option <- tryCatch(tt_choose("Which?", "t", options = "only"), error = function(e) e)
+check("one choose option meets the contract's count rule, not a shape error",
+      inherits(one_option, "thinkthen_usage") &&
+        identical(conditionMessage(one_option), "the question file's `options`: `choose` takes 2 to 255 options"))
+
+# The R half's own refusals carry the usage kind (surfaces-review-5: they
+# were plain errors no thinkthen_usage handler caught).
+usage_of <- function(expr) inherits(tryCatch(expr, error = function(e) e), "thinkthen_usage")
+check("a bad threshold at the call is a usage error", usage_of(tt_decide("Q?", "t", threshold = 2)))
+check("a bad threshold in a built question is a usage error",
+      usage_of(tt_question(decide = "Q?", threshold = 2)))
+check("relate with no rules is a usage error",
+      usage_of(tt_relate(c("a", "b"), relations = character(0))))
+check("a question with two kinds is a usage error",
+      usage_of(tt_question(decide = "Q?", tag = "T?", labels = "a")))
+
 cat("null suite:", passed, "checks passed\n")

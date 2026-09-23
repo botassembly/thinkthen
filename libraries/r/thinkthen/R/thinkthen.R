@@ -46,6 +46,9 @@
 # data so .tt_call can restore the error hook before the raise. An interrupt marker is delivered for real
 # instead, from inside the handler where cleanup has already run.
 .tt_error_condition <- function(e) {
+  # A refusal the R half already raised with its kind keeps it; a lazy
+  # argument evaluated inside the crossing lands here too.
+  if (inherits(e, "thinkthen_error")) return(e)
   text <- conditionMessage(e)
   parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
   if (length(parts) == 3L && identical(parts[[1]], "interrupt")) {
@@ -69,6 +72,16 @@
     class = c(paste0("thinkthen_", kind), "thinkthen_error", "error", "condition"),
     list(message = message, kind = kind, retryable = retryable, call = NULL)
   )
+}
+
+# A caller's own mistake, refused before any request with the usage kind
+# the engine's refusals carry (surfaces-review-5: these were plain errors
+# that no thinkthen_usage handler caught).
+.tt_usage <- function(message) {
+  stop(structure(
+    class = c("thinkthen_usage", "thinkthen_error", "error", "condition"),
+    list(message = message, kind = "usage", retryable = FALSE, call = NULL)
+  ))
 }
 
 # R's own interrupt, delivered for real. The guarded check that reported
@@ -121,9 +134,7 @@
     if (!is.character(text) || !length(text)) return(text)
     native <- Encoding(text) == "unknown" & !is.na(text)
     if (any(native & !validUTF8(text))) {
-      stop(.tt_condition(paste("usage", "false",
-        "a text carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first",
-        sep = "\u{1f}")))
+      .tt_usage("a text carries native-marked bytes that are not valid UTF-8 under this locale; convert it with enc2utf8() or iconv() first")
     }
     Encoding(text)[native] <- "UTF-8"
     enc2utf8(text)
@@ -141,7 +152,7 @@
   if (is.null(threshold)) return(NULL)
   if (!is.numeric(threshold) || anyNA(threshold) || length(threshold) == 0L ||
       length(threshold) > 2L || any(threshold < 0) || any(threshold > 1)) {
-    stop("threshold must be one or two numbers in [0, 1]", call. = FALSE)
+    .tt_usage("threshold must be one or two numbers in [0, 1]")
   }
   if (length(threshold) == 1L) as.numeric(threshold) else
     paste(.tt_number_text(threshold), collapse = ":")
@@ -152,7 +163,7 @@
   body <- list(text)
   names(body) <- kind
   if (!is.null(members)) {
-    held <- list(as.character(members))
+    held <- list(I(as.character(members)))
     names(held) <- switch(kind, choose = "options", score = "levels", "labels")
     body <- c(body, held)
   }
@@ -178,12 +189,11 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
   named <- vapply(kinds, function(x) is.null(x) || is.character(x) && length(x) == 1L,
                   logical(1))
   if (sum(!vapply(kinds, is.null, logical(1))) != 1L) {
-    stop("a question names exactly one kind: decide, choose, score, or tag",
-         call. = FALSE)
+    .tt_usage("a question names exactly one kind: decide, choose, score, or tag")
   }
   kind <- names(which(!vapply(kinds, is.null, logical(1))))[[1L]]
   text <- kinds[[kind]]
-  if (is.null(text)) stop("the question text is missing", call. = FALSE)
+  if (is.null(text)) .tt_usage("the question text is missing")
   members <- switch(kind,
     decide = NULL,
     choose = options,
@@ -192,11 +202,10 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
     stop("unknown kind", call. = FALSE)
   )
   if (kind != "decide" && is.null(members)) {
-    stop(paste0(kind, " needs its members: options, levels, or labels"),
-         call. = FALSE)
+    .tt_usage(paste0(kind, " needs its members: options, levels, or labels"))
   }
   if (!is.null(threshold) && kind != "decide") {
-    stop("only a decide question takes a threshold", call. = FALSE)
+    .tt_usage("only a decide question takes a threshold")
   }
   structure(
     .tt_call(tt_question_grammared(.tt_body(kind, text, members, threshold, model))),
@@ -215,7 +224,7 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
   if (!is.null(kind_needed) && !is.null(members)) {
     parts <- list(text)
     names(parts) <- kind_needed
-    held <- list(as.character(members))
+    held <- list(I(as.character(members)))
     names(held) <- member_name
     body <- c(parts, held)
     if (kind_needed == "choose" && !is.null(threshold)) {
@@ -299,8 +308,7 @@ tt_filter <- function(question, records, threshold = NULL, deadline = NULL) {
   question <- .tt_settled(question, threshold)
   records <- as.character(records)
   if (anyNA(records)) {
-    stop("filter takes no NA records; tt_decide answers NA for those rows",
-         call. = FALSE)
+    .tt_usage("filter takes no NA records; tt_decide answers NA for those rows")
   }
   records[.tt_call(tt_filter_places(question, records, deadline))]
 }
@@ -313,7 +321,7 @@ tt_rank <- function(question, records, top = NULL, deadline = NULL) {
   question <- .tt_settled(question, NULL)
   records <- as.character(records)
   if (anyNA(records)) {
-    stop("rank takes no NA records", call. = FALSE)
+    .tt_usage("rank takes no NA records")
   }
   ranked <- .tt_call(tt_rank_all(question, records, deadline))
   held <- data.frame(
@@ -382,10 +390,10 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
   # review's probe showed the on column itself overwritten otherwise.
   clashes <- intersect(kinds$names, names(data))
   if (length(clashes) > 0L) {
-    stop(sprintf(
+    .tt_usage(sprintf(
       paste0("annotate cannot add a question named '%s': the input already ",
               "has a column by that name; rename one"),
-      clashes[[1L]]), call. = FALSE)
+      clashes[[1L]]))
   }
   rows <- .tt_call(tt_annotate_file(as.character(file), column, deadline))
   if (!identical(length(rows), length(column))) {
@@ -427,13 +435,12 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
   if (grepl("=", one, fixed = TRUE)) {
     halves <- strsplit(one, "=", fixed = TRUE)[[1L]]
     if (length(halves) != 2L || !nzchar(halves[[1L]])) {
-      stop("a relation rule reads NAME or NAME=FROM:TO", call. = FALSE)
+      .tt_usage("a relation rule reads NAME or NAME=FROM:TO")
     }
     name <- halves[[1L]]
     ends <- strsplit(halves[[2L]], ":", fixed = TRUE)[[1L]]
     if (length(ends) != 2L || !nzchar(ends[[1L]]) || !nzchar(ends[[2L]])) {
-      stop("a relation rule's ends read FROM:TO; a missing end is a usage error",
-           call. = FALSE)
+      .tt_usage("a relation rule's ends read FROM:TO; a missing end is a usage error")
     }
     source <- ends[[1L]]
     target <- ends[[2L]]
@@ -466,12 +473,12 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
 .tt_section <- function(path_like, section_name) {
   path <- sub("^@", "", path_like)
   if (!file.exists(path)) {
-    stop(paste0("no question file at ", path), call. = FALSE)
+    .tt_usage(paste0("no question file at ", path))
   }
   parsed <- jsonlite::fromJSON(path, simplifyVector = FALSE)
   section <- parsed[[section_name]]
   if (is.null(section)) {
-    stop(paste0("the question file carries no ", section_name, " section"), call. = FALSE)
+    .tt_usage(paste0("the question file carries no ", section_name, " section"))
   }
   section
 }
@@ -555,14 +562,13 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
 tt_relate <- function(records, relations = NULL, either = NULL,
                       kind_field = NULL, threshold = NULL, deadline = NULL) {
   if (!length(relations) && !length(either) && !.tt_is_file(relations)) {
-    stop("relate needs at least one relation rule", call. = FALSE)
+    .tt_usage("relate needs at least one relation rule")
   }
   spec <- .tt_relate_spec(relations, either, kind_field, threshold)
   ask <- .tt_call(tt_relate_grammared(spec))
   records <- as.character(records)
   if (anyNA(records)) {
-    stop("relate takes no NA records; tt_recognize answers NA for those rows",
-         call. = FALSE)
+    .tt_usage("relate takes no NA records; tt_recognize answers NA for those rows")
   }
   held <- .tt_call(tt_relate_records(ask, records, deadline))
   as.data.frame(held, stringsAsFactors = FALSE)
