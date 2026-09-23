@@ -53,6 +53,18 @@ def central_skip(surface, case, wire):
     }
     return skiptable.lookup_reason(surface, case["id"], asked, wire=wire)
 
+
+os.environ.setdefault("ENGINE_NULL", "1")
+# Case 74 pins the failed-question marker for one synthesized record; the
+# stand-in arms that fixture only under this test-only opt-in, so a
+# production process never fails on that text (phase 1 of the review
+# fixes). Unset here would leave case 74 diverging.
+os.environ.setdefault("ENGINE_SYNTHETIC_PARTIAL", "1")
+
+FAILURES = 0
+TEMP = []
+
+
 def fresh():
     connection = sqlite3.connect(":memory:")
     connection.enable_load_extension(True)
