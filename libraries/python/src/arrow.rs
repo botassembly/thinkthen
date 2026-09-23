@@ -199,127 +199,118 @@ const MAX_DATA: usize = 1024 * 1024 * 1024;
 /// before it indexes the table's last slot (the sizes buffer).
 const MAX_BUFFERS: i64 = 64;
 
+/// The refusal for a metadata blob that is malformed, past the cap, or
+/// runs into unreadable memory.
+const BAD_METADATA: &str = "a column's Arrow metadata names lengths past its readable bytes or past 16 MiB";
+
+/// The most bytes one metadata blob may hold. Real metadata (an extension
+/// type's name and parameters, a pandas schema note) runs to kilobytes;
+/// this bounds the pair count and every length a crafted blob declares.
+const MAX_METADATA: usize = 16 * 1024 * 1024;
+
 /// The refusal for an extent that names memory this process cannot read.
 const UNREADABLE: &str = "the column's buffers declare bytes this process cannot read";
 
-/// The stride of the readability probe: one byte a page. 4 KiB is the
-/// smallest page any supported platform uses, so a larger page is only
-/// probed more than once.
-const PROBE_STRIDE: usize = 4096;
+/// The refusal when this process cannot list its own readable memory.
+#[cfg(target_os = "linux")]
+const NO_MAP: &str = "this process cannot read its memory map (/proc/self/maps), so the Arrow door cannot check a column before it reads it";
 
-/// True when every byte of `[start, start + length)` can be read.
+/// The memory this process can read, taken once before a column is read.
 ///
 /// The interface gives no allocation length, so a declared extent past a
 /// short allocation would read into whatever follows it. When nothing
-/// follows (an unmapped page, a guard page, a reservation), the read would
-/// kill the host. This asks the kernel before the read instead. On Linux,
-/// `process_vm_readv` against this process copies one byte a page and
-/// fails on any page it cannot read, protected or unmapped. Elsewhere, or
-/// when that call is not permitted, `mincore` finds unmapped pages. Memory
-/// that is mapped and readable but belongs to another allocation cannot be
-/// told apart by any reader; that lie stays the producer's.
-fn readable(start: *const u8, length: usize) -> bool {
-    if length == 0 {
-        return true;
-    }
-    let Some(last) = (start as usize).checked_add(length - 1) else {
-        return false;
-    };
+/// readable follows (an unmapped page, a guard page, a reservation), the
+/// read would kill the host. The reader checks each extent against this
+/// snapshot first. On Linux the snapshot is the readable mappings in
+/// `/proc/self/maps`, adjacent ones merged, so a protected page and an
+/// unmapped page both fail the check. The check reads a file and makes no
+/// system call a sandbox might forbid or answer with a kill, and it faults
+/// in no page. A process that cannot read its own map gets a refusal for
+/// every Arrow column. Off Linux, `mincore` finds unmapped pages only.
+/// Memory that is mapped and readable but belongs to another allocation
+/// cannot be told apart by any reader; that lie stays the producer's.
+pub(crate) struct Readable {
     #[cfg(target_os = "linux")]
-    if let Some(answer) = probe::vm_readable(start as usize, last) {
-        return answer;
-    }
-    probe::mapped(start as usize, last)
+    ranges: Vec<(usize, usize)>,
 }
 
-/// The two kernel questions `readable` asks, declared here because the
-/// surface carries no libc binding.
-mod probe {
-    use std::ffi::c_void;
-    use std::os::raw::c_int;
+impl Readable {
+    /// Take the snapshot.
+    pub(crate) fn snapshot() -> PyResult<Self> {
+        #[cfg(target_os = "linux")]
+        {
+            let map = std::fs::read_to_string("/proc/self/maps")
+                .map_err(|_| UsageError::new_err(NO_MAP))?;
+            Ok(Self { ranges: readable_ranges(&map) })
+        }
+        #[cfg(not(target_os = "linux"))]
+        Ok(Self {})
+    }
 
+    /// True when every byte of `[start, start + length)` can be read.
+    fn covers(&self, start: *const u8, length: usize) -> bool {
+        if length == 0 {
+            return true;
+        }
+        let first = start as usize;
+        let Some(end) = first.checked_add(length) else {
+            return false;
+        };
+        #[cfg(target_os = "linux")]
+        {
+            let place = self.ranges.partition_point(|&(_, high)| high <= first);
+            self.ranges
+                .get(place)
+                .is_some_and(|&(low, high)| low <= first && end <= high)
+        }
+        #[cfg(not(target_os = "linux"))]
+        mapped(first, end - 1)
+    }
+}
+
+/// The readable ranges of a `/proc/self/maps` text, in address order, with
+/// touching ranges merged so an extent across two mappings still checks.
+#[cfg(target_os = "linux")]
+fn readable_ranges(map: &str) -> Vec<(usize, usize)> {
+    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    for line in map.lines() {
+        let mut fields = line.split_whitespace();
+        let (Some(span), Some(access)) = (fields.next(), fields.next()) else {
+            continue;
+        };
+        let Some((low, high)) = span.split_once('-') else {
+            continue;
+        };
+        let (Ok(low), Ok(high)) = (usize::from_str_radix(low, 16), usize::from_str_radix(high, 16))
+        else {
+            continue;
+        };
+        if !access.starts_with('r') {
+            continue;
+        }
+        match ranges.last_mut() {
+            Some(last) if last.1 == low => last.1 = high,
+            _ => ranges.push((low, high)),
+        }
+    }
+    ranges
+}
+
+/// True when every page from `first` to `last` is mapped (off Linux).
+#[cfg(not(target_os = "linux"))]
+fn mapped(first: usize, last: usize) -> bool {
     extern "C" {
         fn mincore(address: *mut c_void, length: usize, pages: *mut u8) -> c_int;
         fn getpagesize() -> c_int;
     }
-
-    /// True when every page from `first` to `last` is mapped.
-    pub(super) fn mapped(first: usize, last: usize) -> bool {
-        // SAFETY: getpagesize takes no argument and cannot fail.
-        let page = usize::try_from(unsafe { getpagesize() }).unwrap_or(super::PROBE_STRIDE);
-        let base = first - first % page;
-        let span = last - base + 1;
-        let mut pages = vec![0u8; span.div_ceil(page)];
-        // SAFETY: mincore reads no byte of the range; it writes one byte a
-        // page into `pages`, which holds a byte for every page asked about.
-        unsafe { mincore(base as *mut c_void, span, pages.as_mut_ptr()) == 0 }
-    }
-
-    #[cfg(target_os = "linux")]
-    #[repr(C)]
-    struct IoVec {
-        base: *mut c_void,
-        length: usize,
-    }
-
-    #[cfg(target_os = "linux")]
-    extern "C" {
-        fn getpid() -> c_int;
-        fn process_vm_readv(
-            pid: c_int,
-            local: *const IoVec,
-            local_count: std::os::raw::c_ulong,
-            remote: *const IoVec,
-            remote_count: std::os::raw::c_ulong,
-            flags: std::os::raw::c_ulong,
-        ) -> isize;
-    }
-
-    /// Copy one byte out of every page from `first` to `last` through the
-    /// kernel, which answers a fault with an error instead of a signal.
-    /// `None` when the call itself is not available here.
-    #[cfg(target_os = "linux")]
-    pub(super) fn vm_readable(first: usize, last: usize) -> Option<bool> {
-        /// The iovec batch every Linux kernel accepts (`IOV_MAX`).
-        const BATCH: usize = 1024;
-        const EFAULT: i32 = 14;
-        let mut places = Vec::new();
-        let mut at = first;
-        loop {
-            places.push(at);
-            let next = (at - at % super::PROBE_STRIDE).saturating_add(super::PROBE_STRIDE);
-            if next > last {
-                break;
-            }
-            at = next;
-        }
-        if places.last() != Some(&last) {
-            places.push(last);
-        }
-        let mut sink = [0u8; BATCH];
-        // SAFETY: getpid takes no argument and cannot fail.
-        let pid = unsafe { getpid() };
-        for batch in places.chunks(BATCH) {
-            let remote: Vec<IoVec> = batch
-                .iter()
-                .map(|&place| IoVec { base: place as *mut c_void, length: 1 })
-                .collect();
-            let local = IoVec { base: sink.as_mut_ptr().cast(), length: batch.len() };
-            // SAFETY: the kernel writes at most `batch.len()` bytes into
-            // `sink`, and reads the remote bytes itself, failing on a fault.
-            let copied = unsafe {
-                process_vm_readv(pid, &local, 1, remote.as_ptr(), remote.len() as _, 0)
-            };
-            if copied < 0 {
-                let code = std::io::Error::last_os_error().raw_os_error();
-                return (code == Some(EFAULT)).then_some(false);
-            }
-            if copied as usize != batch.len() {
-                return Some(false);
-            }
-        }
-        Some(true)
-    }
+    // SAFETY: getpagesize takes no argument and cannot fail.
+    let page = usize::try_from(unsafe { getpagesize() }).unwrap_or(4096).max(1);
+    let base = first - first % page;
+    let span = last - base + 1;
+    let mut pages = vec![0u8; span.div_ceil(page)];
+    // SAFETY: mincore reads no byte of the range; it writes one byte a
+    // page into `pages`, which holds a byte for every page asked about.
+    unsafe { mincore(base as *mut c_void, span, pages.as_mut_ptr()) == 0 }
 }
 
 /// Borrow one already-validated array's strings out of its buffers.
@@ -337,9 +328,10 @@ mod probe {
 /// views and offsets buffers. A string view's trailing sizes buffer
 /// declares each data buffer. A Utf8 array's offset at `offset + length`
 /// declares its data buffer. Every read below sits inside one of those
-/// declarations, checked before the read. Each declared extent is then
-/// probed readable (`readable`), so a producer whose declarations agree
-/// but whose allocation is shorter gets a refusal when the extent runs
+/// declarations, checked before the read. The offsets, views, and sizes
+/// the rows rely on, and the data bytes the selected rows read, are then
+/// checked readable (`Readable`), so a producer whose declarations agree
+/// but whose allocation is shorter gets a refusal when a read would run
 /// into unreadable memory. An extent that runs into another readable
 /// allocation cannot be told from a correct one by any reader; that lie
 /// stays the producer's.
@@ -382,9 +374,10 @@ unsafe fn borrow_strings(
             "the frame's struct root asks for rows its column does not carry",
         ));
     }
+    let memory = Readable::snapshot()?;
     let spans = match text {
-        Text::View => view_spans(array, skip, count)?,
-        Text::Utf8 | Text::LargeUtf8 => offset_spans(array, text, skip, count, carried)?,
+        Text::View => view_spans(array, &memory, skip, count)?,
+        Text::Utf8 | Text::LargeUtf8 => offset_spans(array, &memory, text, skip, count, carried)?,
     };
     let mut texts = Vec::with_capacity(count);
     for (start, length) in spans {
@@ -426,6 +419,7 @@ unsafe fn word<const N: usize>(at: *const u8) -> [u8; N] {
 /// the table minus three, and no view can name the sizes buffer itself.
 unsafe fn view_spans(
     array: *const ArrowArray,
+    memory: &Readable,
     skip: usize,
     count: usize,
 ) -> PyResult<Vec<(*const u8, usize)>> {
@@ -444,12 +438,13 @@ unsafe fn view_spans(
     }
     // The views the rows read and the whole sizes buffer the count
     // declares must be readable before either is read.
-    if !readable(views.wrapping_add(skip * 16), count * 16)
-        || !readable(sizes, data_buffers * 8)
+    if !memory.covers(views.wrapping_add(skip * 16), count * 16)
+        || !memory.covers(sizes, data_buffers * 8)
     {
         return Err(UsageError::new_err(UNREADABLE));
     }
-    let mut probed = vec![false; data_buffers];
+    // The lowest and highest byte the rows read in each data buffer.
+    let mut reach: Vec<Option<(usize, usize)>> = vec![None; data_buffers];
     let mut spans = Vec::with_capacity(count);
     for place in skip..skip + count {
         let view = views.add(place * 16);
@@ -478,15 +473,20 @@ unsafe fn view_spans(
             ));
         }
         let span = row_span(base.add(offset as usize), size)?;
-        // Each data buffer a view names is probed once, over the whole
-        // extent its size declares.
-        if !probed[index] {
-            if !readable(base, declared as usize) {
+        let (low, high) = (offset as usize, offset as usize + size);
+        reach[index] = Some(reach[index].map_or((low, high), |(was_low, was_high)| {
+            (was_low.min(low), was_high.max(high))
+        }));
+        spans.push(span);
+    }
+    // Only the bytes the selected rows read are checked, so a short slice
+    // of a large buffer costs its own rows, and no unread page is touched.
+    for (index, reached) in reach.iter().enumerate() {
+        if let Some((low, high)) = *reached {
+            if !memory.covers(buffer(array, 2 + index).wrapping_add(low), high - low) {
                 return Err(UsageError::new_err(UNREADABLE));
             }
-            probed[index] = true;
         }
-        spans.push(span);
     }
     Ok(spans)
 }
@@ -498,6 +498,7 @@ unsafe fn view_spans(
 /// offset, and nonnegative, before any data byte is touched.
 unsafe fn offset_spans(
     array: *const ArrowArray,
+    memory: &Readable,
     text: Text,
     skip: usize,
     count: usize,
@@ -516,7 +517,7 @@ unsafe fn offset_spans(
     // SAFETY: `place` never passes `carried`, and the array's offset plus
     // length declares `carried + 1` offsets, probed readable here first.
     let width = if matches!(text, Text::LargeUtf8) { 8 } else { 4 };
-    if !readable(offsets.wrapping_add(skip * width), (carried - skip + 1) * width) {
+    if !memory.covers(offsets.wrapping_add(skip * width), (carried - skip + 1) * width) {
         return Err(UsageError::new_err(UNREADABLE));
     }
     let at = |place: usize| -> i64 {
@@ -529,7 +530,9 @@ unsafe fn offset_spans(
         }
     };
     let mut spans = Vec::with_capacity(count);
-    let mut start = at(skip);
+    let first = at(skip);
+    let mut start = first;
+    let mut read_end = first;
     for place in skip + 1..=carried {
         let end = at(place);
         if start < 0 || end < start {
@@ -547,12 +550,14 @@ unsafe fn offset_spans(
         }
         if place <= skip + count {
             spans.push(row_span(values.add(start as usize), (end - start) as usize)?);
+            read_end = end;
         }
         start = end;
     }
-    // The last offset declares the values buffer's extent, and every row
-    // read sits inside it, so that extent must be readable first.
-    if count > 0 && !readable(values, start as usize) {
+    // The selected rows read from their first offset to their last, so
+    // only those bytes are checked: a short slice of a large column costs
+    // its own rows, and the bytes before and after it are never touched.
+    if count > 0 && !memory.covers(values.wrapping_add(first as usize), (read_end - first) as usize) {
         return Err(UsageError::new_err(UNREADABLE));
     }
     Ok(spans)
@@ -863,7 +868,9 @@ type BatchShare = std::sync::Arc<BatchKeep>;
 /// `out` must be writable; the batch's child pointers point into its own
 /// boxes, which the shares keep alive.
 unsafe fn emit_batch(keep: BatchKeep, out: *mut ArrowArray) {
-    #[allow(clippy::arc_with_non_send_sync, reason = "raw Arrow pointers, single-threaded by contract")]
+    // The C data interface lets a consumer release the root and each moved
+    // child from any thread, so the shares count atomically (Arc).
+    #[allow(clippy::arc_with_non_send_sync, reason = "raw Arrow pointers; the atomic count is what crosses threads")]
     let share = std::sync::Arc::new(keep);
     for &child in &share.child_ptrs {
         (*child).private_data = Box::into_raw(Box::new(BatchShare::clone(&share))).cast();
@@ -955,31 +962,47 @@ impl SchemaTree {
     /// The C data interface lays metadata out as an i32 pair count, then
     /// each key and value as an i32 length and its bytes. Field metadata
     /// carries a column's extension type (a Polars `Enum`, a timezone
-    /// rule), so the output keeps it. A blob naming a negative length is
-    /// malformed and is dropped instead of walked.
-    fn metadata(&mut self, value: *const c_char) -> *const c_char {
+    /// rule), so the output keeps it. A producer's blob is walked against
+    /// `memory`: each length word is checked readable before it is read,
+    /// the blob is capped at `MAX_METADATA`, and its whole extent is
+    /// checked before the copy. A blob that fails is refused as usage.
+    /// `None` walks a blob this surface built itself.
+    fn metadata(&mut self, value: *const c_char, memory: Option<&Readable>) -> PyResult<*const c_char> {
         if value.is_null() {
-            return std::ptr::null();
+            return Ok(std::ptr::null());
         }
         let at = value as *const u8;
-        // SAFETY: the producer's blob is read only inside the lengths it
-        // declares, word by word, as the interface lays it out.
-        let length = |place: usize| i32::from_le_bytes(unsafe { word(at.add(place)) });
-        let Ok(pairs) = usize::try_from(length(0)) else {
-            return std::ptr::null();
+        let readable = |from: usize, length: usize| {
+            memory.is_none_or(|memory| memory.covers(at.wrapping_add(from), length))
         };
+        let refused = || UsageError::new_err(BAD_METADATA);
+        // SAFETY: each word is read only after its four bytes check readable.
+        let length = |place: usize| -> PyResult<usize> {
+            if !readable(place, 4) {
+                return Err(refused());
+            }
+            usize::try_from(i32::from_le_bytes(unsafe { word(at.add(place)) })).map_err(|_| refused())
+        };
+        let pairs = length(0)?;
+        if pairs > MAX_METADATA / 8 {
+            return Err(refused());
+        }
         let mut end = 4usize;
         for _ in 0..pairs * 2 {
-            let Ok(size) = usize::try_from(length(end)) else {
-                return std::ptr::null();
-            };
-            end += 4 + size;
+            end = end + 4 + length(end)?;
+            if end > MAX_METADATA {
+                return Err(refused());
+            }
         }
-        // SAFETY: `end` is the extent the blob's own lengths declare.
+        if !readable(0, end) {
+            return Err(refused());
+        }
+        // SAFETY: `end` is the capped extent the blob's own lengths declare,
+        // checked readable above.
         let blob = unsafe { std::slice::from_raw_parts(at, end) }.to_vec();
         let pointer = blob.as_ptr() as *const c_char;
         self.blobs.push(blob);
-        pointer
+        Ok(pointer)
     }
 
     /// One node over already-owned pieces; the child array is kept here so
@@ -1045,8 +1068,9 @@ impl SchemaTree {
         &mut self,
         children: Vec<*mut ArrowSchema>,
         metadata: *const c_char,
+        memory: &Readable,
     ) -> PyResult<*mut ArrowSchema> {
-        let metadata = self.metadata(metadata);
+        let metadata = self.metadata(metadata, Some(memory))?;
         let format =
             CString::new("+s").map_err(|_| UsageError::new_err("a column format holds a NUL"))?;
         let format_ptr = format.as_ptr();
@@ -1059,26 +1083,29 @@ impl SchemaTree {
     /// tree's own, so the consumer's release frees exactly what it was
     /// handed.
     ///
+    /// `memory` checks a producer's metadata; `None` copies this surface's
+    /// own template.
+    ///
     /// # Safety
     /// `source` must point at a live schema struct.
-    unsafe fn copy(&mut self, source: *const ArrowSchema) -> *mut ArrowSchema {
+    unsafe fn copy(&mut self, source: *const ArrowSchema, memory: Option<&Readable>) -> PyResult<*mut ArrowSchema> {
         let format = self.text(unsafe { (*source).format });
         let name = self.text(unsafe { (*source).name });
-        let metadata = self.metadata(unsafe { (*source).metadata });
+        let metadata = self.metadata(unsafe { (*source).metadata }, memory)?;
         let count = unsafe { (*source).n_children }.max(0) as usize;
         let mut children = Vec::with_capacity(count);
         for place in 0..count {
             let child = unsafe { *(*source).children.add(place) };
-            children.push(unsafe { self.copy(child) });
+            children.push(unsafe { self.copy(child, memory) }?);
         }
         let dictionary = unsafe { (*source).dictionary };
         let dictionary = if dictionary.is_null() {
             std::ptr::null_mut()
         } else {
-            unsafe { self.copy(dictionary) }
+            unsafe { self.copy(dictionary, memory) }?
         };
         let flags = unsafe { (*source).flags };
-        self.node(format, name, metadata, flags, children, dictionary)
+        Ok(self.node(format, name, metadata, flags, children, dictionary))
     }
 }
 
@@ -1175,14 +1202,15 @@ pub(crate) fn build_frame(
     // new columns get one leaf each.
     let mut schema = SchemaTree::default();
     let mut schema_children: Vec<*mut ArrowSchema> = Vec::with_capacity(total);
+    let memory = Readable::snapshot()?;
     for place in 0..originals {
         let source = unsafe { *hold.schema.children.add(place) };
-        schema_children.push(unsafe { schema.copy(source) });
+        schema_children.push(unsafe { schema.copy(source, Some(&memory)) }?);
     }
     for (place, name) in names.iter().enumerate() {
         schema_children.push(schema.leaf(Some(name), formats_for_new[place], 2)?);
     }
-    let schema_root = schema.branch(schema_children, hold.schema.metadata)?;
+    let schema_root = schema.branch(schema_children, hold.schema.metadata, &memory)?;
     let _ = schema_root;
     // One batch out per batch in, so aliased originals stay per-batch and
     // every batch keeps its own root.
@@ -1468,7 +1496,7 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
     for (name, value) in columns {
         schema_children.push(schema.leaf(Some(name), value.format(), 2)?);
     }
-    let schema_root = schema.branch(schema_children, std::ptr::null())?;
+    let schema_root = schema.branch(schema_children, std::ptr::null(), &Readable::snapshot()?)?;
     let _ = schema_root;
 
     let mut children: Vec<Box<ArrowArray>> = Vec::with_capacity(total);
@@ -1574,14 +1602,20 @@ pub(crate) fn build_table(columns: &[(&str, TableValue)]) -> PyResult<OutFrame> 
 }
 
 /// Deep-copy the schema template into a fresh tree the consumer owns and
-/// releases through `schema_tree_release`.
-unsafe fn hand_schema(state: &OutFrame, out: *mut ArrowSchema) {
+/// releases through `schema_tree_release`. The template's blobs are this
+/// surface's own and passed their checks when it was built, so the copy
+/// cannot fail; a failure still answers the interface's EINVAL.
+unsafe fn hand_schema(state: &OutFrame, out: *mut ArrowSchema) -> c_int {
+    const EINVAL: c_int = 22;
     let mut tree = SchemaTree::default();
-    let root = unsafe { tree.copy(state.schema.root) };
+    let Ok(root) = (unsafe { tree.copy(state.schema.root, None) }) else {
+        return EINVAL;
+    };
     let keep = Box::into_raw(Box::new(tree));
     *out = std::ptr::read(root);
     (*out).private_data = keep as *mut c_void;
     (*out).release = Some(schema_tree_release);
+    0
 }
 
 unsafe extern "C" fn frame_get_schema(
@@ -1589,8 +1623,7 @@ unsafe extern "C" fn frame_get_schema(
     out: *mut ArrowSchema,
 ) -> c_int {
     let state = &mut *((*stream).private_data as *mut OutFrame);
-    hand_schema(state, out);
-    0
+    hand_schema(state, out)
 }
 
 unsafe extern "C" fn frame_get_next(stream: *mut ArrowArrayStream, out: *mut ArrowArray) -> c_int {
@@ -2200,8 +2233,9 @@ mod malformed_tests {
         assert_eq!(texts, ["ha runs longer than twen", "gamma", " also runs long past "]);
     }
 
-    /// A region whose first page is readable and whose rest is reserved
-    /// but unreadable, so a read past the page faults on every run.
+    /// A region with one readable page between an unreadable page and a
+    /// 64 MiB unreadable reservation, so a read before or past the page
+    /// faults on every run.
     #[cfg(target_os = "linux")]
     struct Guarded {
         base: *mut u8,
@@ -2217,18 +2251,32 @@ mod malformed_tests {
 
     #[cfg(target_os = "linux")]
     impl Guarded {
-        /// `bytes` placed so they end exactly at the readable page's end,
-        /// with 64 MiB of unreadable reservation after them.
-        fn ending_with(bytes: &[u8]) -> (Self, *const u8) {
-            const PAGE: usize = 4096;
-            let size = PAGE + (64 << 20);
+        const PAGE: usize = 4096;
+
+        /// The reservation with its one readable page, page one.
+        fn new() -> Self {
+            let size = 2 * Self::PAGE + (64 << 20);
             // PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, then PROT_READ | PROT_WRITE on page one.
             let base = unsafe { mmap(std::ptr::null_mut(), size, 0, 0x02 | 0x20, -1, 0) } as *mut u8;
             assert!(!base.is_null() && base as isize != -1, "the reservation maps");
-            assert_eq!(unsafe { mprotect(base.cast(), PAGE, 0x1 | 0x2) }, 0);
-            let at = unsafe { base.add(PAGE - bytes.len()) };
+            assert_eq!(unsafe { mprotect(base.add(Self::PAGE).cast(), Self::PAGE, 0x1 | 0x2) }, 0);
+            Self { base, size }
+        }
+
+        /// `bytes` copied into the readable page at `offset`.
+        fn place(&self, offset: usize, bytes: &[u8]) -> *const u8 {
+            assert!(offset + bytes.len() <= Self::PAGE);
+            let at = unsafe { self.base.add(Self::PAGE + offset) };
             unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), at, bytes.len()) };
-            (Self { base, size }, at)
+            at
+        }
+
+        /// `bytes` placed so they end exactly at the readable page's end,
+        /// with 64 MiB of unreadable reservation after them.
+        fn ending_with(bytes: &[u8]) -> (Self, *const u8) {
+            let region = Self::new();
+            let at = region.place(Self::PAGE - bytes.len(), bytes);
+            (region, at)
         }
     }
 
@@ -2279,9 +2327,11 @@ mod malformed_tests {
         let held = [std::ptr::null(), views.as_ptr().cast(), data.as_ptr().cast(), data.as_ptr().cast(), sizes.cast()];
         let outer = array_of(&held, 1);
         assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
-        // A view whose data buffer declares more than the readable page.
+        // A view whose own 13 bytes, at offset 10 of a 20-byte tail, run
+        // past the readable page into what its buffer declares.
         let (_short, abc) = Guarded::ending_with(&[b'y'; 20]);
         let sizes = [200i64, 200].map(i64::to_le_bytes).concat();
+        let views = one_view(13, 1, 10);
         let held = [std::ptr::null(), views.as_ptr().cast(), abc.cast(), abc.cast(), sizes.as_ptr().cast()];
         let outer = array_of(&held, 1);
         assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
@@ -2309,10 +2359,87 @@ mod malformed_tests {
             blob.extend_from_slice(part);
         }
         let mut tree = SchemaTree::default();
-        let copied = tree.metadata(blob.as_ptr().cast());
+        let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+        let Ok(copied) = tree.metadata(blob.as_ptr().cast(), Some(&memory)) else { panic!("a sound blob copies") };
         assert_ne!(copied, blob.as_ptr().cast());
         assert_eq!(unsafe { std::slice::from_raw_parts(copied as *const u8, blob.len()) }, blob.as_slice());
         let negative = (-1i32).to_le_bytes();
-        assert!(tree.metadata(negative.as_ptr().cast()).is_null());
+        assert_eq!(refusal(tree.metadata(negative.as_ptr().cast(), Some(&memory))), BAD_METADATA);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn crafted_metadata_is_refused_before_it_is_read() {
+        // Review 7, second pass: the metadata walk trusted every length.
+        // A key length past a guard page, a value length past it, a pair
+        // count of 2^31 - 1, and a 2 GiB key length in a readable blob
+        // each read past the blob and killed the host.
+        let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+        let words = |parts: &[i32]| parts.iter().flat_map(|one| one.to_le_bytes()).collect::<Vec<u8>>();
+        let mut value_past = words(&[1, 4]);
+        value_past.extend_from_slice(b"unit");
+        value_past.extend_from_slice(&5000i32.to_le_bytes());
+        for blob in [words(&[1, 100]), value_past, words(&[i32::MAX])] {
+            let (_region, at) = Guarded::ending_with(&blob);
+            assert_eq!(refusal(SchemaTree::default().metadata(at.cast(), Some(&memory))), BAD_METADATA);
+        }
+        let huge = words(&[1, 0x7fff_fff0]);
+        assert_eq!(refusal(SchemaTree::default().metadata(huge.as_ptr().cast(), Some(&memory))), BAD_METADATA);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn the_memory_map_keeps_readable_ranges_and_merges_touching_ones() {
+        // Review 7, second pass: a protected page (`---p`) is mapped but
+        // unreadable, so it must leave a gap the check refuses.
+        let map = "1000-2000 r--p 0 00:00 0 /lib\n2000-3000 rw-p 0 00:00 0\n3000-4000 ---p 0 00:00 0\n5000-6000 r-xp 0 00:00 0\nbad line\n";
+        assert_eq!(readable_ranges(map), [(0x1000, 0x3000), (0x5000, 0x6000)]);
+        let memory = Readable { ranges: readable_ranges(map) };
+        let at = |place: usize| place as *const u8;
+        assert!(memory.covers(at(0x1800), 0x1000));
+        assert!(!memory.covers(at(0x2800), 0x1000));
+        assert!(!memory.covers(at(0x4800), 0x10));
+        assert!(memory.covers(at(0x5000), 0x1000));
+        assert!(!memory.covers(at(0x5000), 0x1001));
+        assert!(memory.covers(at(0x4800), 0));
+    }
+
+    /// The strings a shape borrows, or a panic naming the refusal: a live
+    /// PyErr cannot be formatted without the interpreter.
+    fn borrowed(outcome: PyResult<Vec<&'static str>>) -> Vec<&'static str> {
+        match outcome {
+            Ok(texts) => texts,
+            Err(error) => panic!("refused: {}", refusal::<()>(Err(error))),
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn only_the_bytes_the_selected_rows_read_are_checked() {
+        // Review 7, second pass: the check covered a Utf8 buffer from byte 0
+        // to the last offset and a view buffer's whole declared size, so a
+        // 10-row tail slice of a 1 GiB column paid for the whole gibibyte.
+        // Here every byte outside the rows read is unreadable: the rows sit
+        // at the start of the readable page, the buffer pointer one page
+        // before it, and the declared extents run past the page's end.
+        let region = Guarded::new();
+        let page = region.place(0, b"alpha runs past twelve");
+        let values = page.wrapping_sub(Guarded::PAGE);
+        let at = Guarded::PAGE as i32;
+        assert_eq!(borrowed(utf8_at(&[at, at + 5], values, Text::Utf8)), ["alpha"]);
+        // A slice: rows 1 and 2 of a column whose row 0 and row 3 lie in
+        // unreadable memory on either side of the page.
+        let offsets = [0, at, at + 5, at + 10, at + 9000].map(i32::to_le_bytes).concat();
+        let held = [std::ptr::null(), offsets.as_ptr().cast(), values.cast()];
+        let mut outer = array_of(&held, 2);
+        outer.offset = 1;
+        assert_eq!(borrowed(unsafe { borrow_strings(&outer, Text::Utf8, 1, 2) }), ["alpha", " runs"]);
+        // A view reading 22 bytes one page into a buffer declared far past
+        // the readable page.
+        let views = one_view(22, 0, Guarded::PAGE as u32);
+        let sizes = (64i64 << 20).to_le_bytes();
+        let held = [std::ptr::null(), views.as_ptr().cast(), values.cast(), sizes.as_ptr().cast()];
+        let outer = array_of(&held, 1);
+        assert_eq!(borrowed(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), ["alpha runs past twelve"]);
     }
 }
