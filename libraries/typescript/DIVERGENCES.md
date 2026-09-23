@@ -71,10 +71,27 @@ the score cases' `nearest_level` is now asserted against
    `recognize`, and `relate` take frames (`on=`); TypeScript has no column
    door. The Polars door is Python's Arrow work; a Node column form needs
    its own design and is not in this release.
-9. **Blocking against async.** Python's verbs block the calling thread;
-   TypeScript's return Promises and run on libuv worker threads. Node's
-   event loop must not block, and the engine call is the same blocking
-   call underneath.
+9. **Blocking against async.** Python's verbs block the calling thread.
+   TypeScript's return Promises, and each call runs on one worker of
+   libuv's thread pool for its whole length. Node's event loop must not
+   block, and the engine call is the same blocking call underneath.
+   The pool is shared. File reads, `dns.lookup`, `crypto`, and `zlib` run
+   on it too, and it holds `UV_THREADPOOL_SIZE` workers, 4 by default. A
+   fifth call in flight waits for a worker, and so does that other work.
+   The seventh review measured it (R2-27, R3-25): 8 decides against a
+   stub answering in 500 ms took 1053 ms on a pool of 4, and an
+   `fs.readFile` issued during them waited 1000 ms. On a pool of 8 the
+   decides took 539 ms and the read waited 484 ms. A caller that runs
+   many calls at once sets `UV_THREADPOOL_SIZE` (at most 1024) in the
+   environment before Node starts, to the calls it runs at once plus the
+   other pool work it needs. A bulk verb (`decideMany`, `filter`, `rank`,
+   `annotate`) sends a whole column from one worker at the engine's
+   width, so a column is one call and holds one worker.
+   Decision: the calls stay on the pool. A thread of their own per call
+   would free the pool, but it would put no bound on the threads a
+   `Promise.all` over many single calls starts. The pool is that bound.
+   Ian can overturn this; the other choice spawns a thread per call and
+   resolves the Promise from it.
 10. **The record text.** Python requires `str` records (a non-string is a
     type error); TypeScript requires strings; Ruby, this wave, serializes
     a non-string record as its JSON text. Ruby is the permissive one; the
