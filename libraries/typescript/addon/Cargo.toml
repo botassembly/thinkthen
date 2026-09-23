@@ -13,6 +13,9 @@ crate-type = ["cdylib"]
 # repository workspace, so nine surfaces never race one members array.
 [workspace]
 
+[build-dependencies]
+napi-build = "2"
+
 [dependencies]
 napi = { version = "2", default-features = false, features = ["napi8"] }
 napi-derive = "2"

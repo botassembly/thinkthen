@@ -9,48 +9,64 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import * as tt from '../index.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const file = JSON.parse(readFileSync(join(here, '../../../conformance/conformance.json'), 'utf8'));
+// THEN_CONF overrides the file (the check's can-fail probe corrupts a
+// copy); the skip decisions still come from the real table, whose reader
+// is the contract's one implementation.
+const held = process.env.THEN_CONF ?? join(here, '../../../conformance/conformance.json');
+const file = JSON.parse(readFileSync(held, 'utf8'));
 
-const divergences = [];
+const outcomes = [];
 
 function note(id, text) {
-  divergences.push(`${id}: ${text}`);
+  outcomes.push(`${id}: ${text}`);
 }
 
-// The shared skip table's entry for this case on this surface, or null.
-// First match wins; entries naming a surface apply only there.
-function centralSkip(held) {
-  const kind = held.expect?.error?.kind;
-  for (const entry of file.skips ?? []) {
-    if (entry.surfaces && !entry.surfaces.includes('typescript')) continue;
-    const when = entry.when;
-    if (when.id !== undefined && held.id !== when.id) continue;
-    if (when.verb !== undefined) {
-      const verbs = Array.isArray(when.verb) ? when.verb : [when.verb];
-      if (!verbs.includes(held.verb)) continue;
+// The one shared reader's decision for this case on this surface:
+// 'RUN', 'SKIP<TAB>why', or 'DIVERGE<TAB>why'. The private matcher that
+// used to live here disagreed with the other eight runners; the third
+// review replaced all of them with conformance/skiptable.py.
+function centralSkip(one) {
+  const args = [
+    'python3',
+    join(here, '../../../conformance/skiptable.py'),
+    'lookup',
+    'typescript',
+    one.id,
+  ];
+  for (const facet of ['verb', 'form']) {
+    if (one[facet] !== undefined) {
+      const value = Array.isArray(one[facet]) ? one[facet].join(',') : String(one[facet]);
+      args.push(`--${facet}`, value);
     }
-    if (when.kind !== undefined && kind !== when.kind) continue;
-    if (when.form !== undefined && held.form !== when.form) continue;
-    if (when.none !== undefined && Boolean(held.none) !== when.none) continue;
-    if (when.error !== undefined && Boolean(held.expect?.error) !== when.error) continue;
-    if (when.record === 'null' && !(held.records ?? []).some((record) => record === null)) continue;
-    return { disposition: entry.as ?? 'skip', why: entry.why };
   }
-  return null;
+  // The kind facet is derived: an error case names its expected kind.
+  const wanted = one.expect?.error?.kind;
+  if (wanted !== undefined) args.push('--kind', String(wanted));
+  // The record facet is derived: a case that carries a null record names
+  // it, because the table's record selectors key on that shape.
+  if (one.record !== undefined) {
+    args.push('--record', String(one.record));
+  } else if ((one.records ?? []).some((record) => record === null)) {
+    args.push('--record', 'null');
+  }
+  const asked = spawnSync(args[0], args.slice(1), { encoding: 'utf8' });
+  assert.equal(asked.status, 0, `skiptable: ${asked.stderr}`);
+  return asked.stdout.trim();
 }
 
 async function runCase(held) {
   const { verb, question, evidence, records, expect } = held;
   const central = centralSkip(held);
-  if (central) {
-    note(held.id, `${central.disposition}: ${central.why}`);
-    return;
+  if (central !== 'RUN') {
+    note(held.id, central.replace('\t', ' - '));
+    return 'covered';
   }
   const spec = JSON.parse(JSON.stringify(question));
   if (Array.isArray(spec.threshold)) spec.threshold = spec.threshold.join(':');
@@ -87,8 +103,10 @@ async function runVerb(held, spec, text, list, call) {
         held.unsure ? null : held === true || held.answer === true ? true : false,
       );
       // The file expects judgment objects; the ruled shape is decide's own
-      // answer per record. Compare what can be compared and note the rest.
-      if (!expect.judgments && !expect.answers) return note(held.id, 'no comparable expectations carried');
+      // answer per record, so the comparison reads either spelling.
+      if (!expect.judgments && !expect.answers) {
+        throw new Error(`case ${held.id} carries no comparable expectations`);
+      }
       if (wanted.length !== answers.length) {
         return note(held.id, `expected ${wanted.length} judgments, the surface answers ${answers.length}`);
       }
@@ -103,7 +121,7 @@ async function runVerb(held, spec, text, list, call) {
         const rows = list.map((record, at) => ({ input: record, value: answers[at] }));
         assert.deepEqual(rows, expect.rows, 'the ruled {input, value} rows');
       }
-      note(held.id, 'passes on values; the file expects judgments where the surface answers bare values');
+      console.log(`  ${held.id}: passes on values; the file expects judgment objects where the surface answers bare values`);
       return;
     }
     case 'filter': {
@@ -216,14 +234,15 @@ async function runVerb(held, spec, text, list, call) {
       if (expect.details.failed_questions !== undefined) {
         assert.equal(audit.failed_questions, expect.details.failed_questions);
       }
-      note(held.id, "passes on values; the file names the digest question_sha256 and the contract names it digest");
+      console.log(`  ${held.id}: passes on values; the file names the digest question_sha256 and the contract names it digest`);
       return;
     }
-    case 'usage': {
-      return;
-    }
+    case 'usage':
     case 'cancel': {
-      return;
+      // These cases carry expect.error (handled above) or a skip-table
+      // entry; a case reaching this arm was silently passing before the
+      // third review, so now it fails loudly instead.
+      throw new Error(`case ${held.id} reached a bare ${verb} arm: it needs an expectation or a table entry`);
     }
     case 'recognize': {
       const options = {};
@@ -295,36 +314,33 @@ async function runVerb(held, spec, text, list, call) {
 }
 
 test('the conformance slice runs against the null backend', async () => {
+  assert.ok(file.cases.length >= 84, `the conformance file must carry its cases: ${file.cases.length}`);
   const results = {};
-  for (const held of file.cases) {
+  for (const one of file.cases) {
     try {
-      await runCase(held);
-      results[held.id] = 'pass';
-    } catch (held2) {
-      results[held.id] = `FAIL ${held2.message}`;
-      divergences.push(`${held.id}: ${held2.message}`);
+      const covered = await runCase(one);
+      results[one.id] = covered === 'covered' ? 'covered' : 'pass';
+    } catch (raised) {
+      results[one.id] = `FAIL ${raised.message}`;
     }
   }
   console.log('conformance slice:');
-  for (const [id, held] of Object.entries(results)) console.log(`  ${id}: ${held}`);
-  if (divergences.length) {
-    console.log('divergences, by name:');
-    for (const held of divergences) console.log(`  - ${held}`);
+  for (const [id, one] of Object.entries(results)) console.log(`  ${id}: ${one}`);
+  if (outcomes.length) {
+    console.log('table-covered outcomes:');
+    for (const one of outcomes) console.log(`  - ${one}`);
   }
-  // The decide family must hold: those cases are the ruled core.
-  for (const id of [
-    '01-decide-yes-cut',
-    '02-decide-no-cut',
-    '03-decide-band-unresolved',
-    '04-decide-band-resolves',
-    '05-filter-keeps-some-of-five',
-    '06-filter-empty-list',
-    '07-backend-refuses',
-    '08-usage-threshold-90',
-    '09-usage-filter-band',
-    '10-usage-blank-question',
-    '16-details-carries-model-and-digest',
-  ]) {
-    assert.ok(results[id] === 'pass', `${id}: ${results[id]}`);
-  }
+  const passed = Object.values(results).filter((one) => one === 'pass').length;
+  const covered = Object.values(results).filter((one) => one === 'covered').length;
+  const failed = Object.entries(results).filter(([, one]) => one.startsWith('FAIL'));
+  console.log(`conformance: ${passed} passed, ${covered} table-covered, ${failed.length} failed`);
+  // Every case is asserted or carries the table's own reason; nothing is
+  // silently swallowed. A FAIL anywhere ends the run nonzero, which the
+  // gate's TAP counting reads.
+  assert.deepStrictEqual(
+    failed.map(([id]) => id),
+    [],
+    'no conformance case may fail',
+  );
+  assert.equal(passed + covered, file.cases.length, 'every case was either run or covered');
 });

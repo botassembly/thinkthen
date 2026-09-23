@@ -76,6 +76,7 @@ function question(spec) {
 const CALL_KEYS = new Set(['signal', 'deadlineMs']);
 const QUESTION_KEYS = {
   choose: new Set(['options']),
+  score: new Set(['levels']),
   tag: new Set(['labels']),
   rank: new Set(['top']),
   recognize: new Set(['kinds', 'relations', 'threshold', 'relationThreshold']),
@@ -131,6 +132,16 @@ function specFrom(verb, questionOrSpec, inputs) {
     }
     return { tag: questionOrSpec, labels: inputs.labels };
   }
+  if (verb === 'score') {
+    // A bare string fell through to specOf before, which spells it a
+    // decide question — the score call then failed as a defect (third
+    // review, item 22). Score takes its levels the way choose and tag
+    // take theirs.
+    if (!('levels' in inputs)) {
+      throw usageError('score takes its levels in the last object: { levels }');
+    }
+    return { score: questionOrSpec, levels: inputs.levels };
+  }
   return specOf(questionOrSpec);
 }
 
@@ -141,22 +152,22 @@ function callOptions(options) {
     throw usageError('options is an object: { signal, deadlineMs }');
   }
   const { signal, deadlineMs } = options;
-  // `undefined` and an explicit `null` are this host's one spelling of no
-  // deadline. Every number crosses raw to the door, which converts it
-  // through the contract's one checked conversion: zero is a spent
-  // deadline, and every negative — including the contract's minus-one
-  // sentinel — or an oversized budget rejects with the usage kind instead
-  // of crashing the process or quietly disabling the deadline. A budget
-  // computed as `end - Date.now()` can land on minus one by chance.
-  if (deadlineMs !== undefined && deadlineMs !== null) {
-    const held = Number(deadlineMs);
-    if (!Number.isFinite(held)) {
-      throw usageError('options.deadlineMs is milliseconds');
+  // One spelling everywhere (third review, item 21): `null`,
+  // `undefined`, and the minus-one sentinel all mean no deadline, zero is
+  // a spent deadline, and every other negative refuses. Only a real
+  // number crosses: `true`, `"5"`, and `[]` are refused instead of being
+  // coerced (`Number([])` is zero, which is a spent deadline — a silent
+  // trap). A budget computed as `end - Date.now()` must clamp itself,
+  // `Math.max(0, end - Date.now())`, because a deadline that already
+  // passed is zero and minus one is reserved for "none".
+  if (deadlineMs !== undefined && deadlineMs !== null && deadlineMs !== -1) {
+    if (typeof deadlineMs !== 'number' || !Number.isFinite(deadlineMs)) {
+      throw usageError('options.deadlineMs is a number of milliseconds from now; no deadline is spelled null or -1');
     }
-    if (held < 0) {
-      throw usageError('options.deadlineMs is milliseconds from now; no deadline is spelled null, and a negative budget is refused');
+    if (deadlineMs < 0) {
+      throw usageError('options.deadlineMs is milliseconds from now; no deadline is spelled null or -1, and every other negative is refused');
     }
-    out.deadlineMs = held;
+    out.deadlineMs = deadlineMs;
   }
   // The signal's listener is added last, so a refusal above never leaves
   // one behind.

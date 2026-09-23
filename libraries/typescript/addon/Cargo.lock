@@ -249,6 +249,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "napi-build"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0941983559cd62bfa7f04646a16428967a847365adeef27711e4e3927046bbed"
+
+[[package]]
 name = "napi-derive"
 version = "2.16.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -532,6 +538,7 @@ name = "thinkthen-typescript-addon"
 version = "0.0.1"
 dependencies = [
  "napi",
+ "napi-build",
  "napi-derive",
  "serde_json",
  "thinkthen-contract",

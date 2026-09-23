@@ -331,3 +331,61 @@ boundary message)
 dead address: 1 pass; types: tsc --noEmit clean
 typescript surface: all checks green
 ```
+
+## 2026-09-23: the third review's TypeScript findings (refs surfaces-review-3)
+
+**Gate honesty: the conformance test that could not fail.** The old runner
+caught every case's failure into a results map and then asserted only eleven
+named ids; `usage` and `cancel` arms returned silently, and skips were decided
+by a private matcher the review found disagreeing with the other eight. The
+rewrite:
+
+- `conformance/skiptable.py` is the one skip authority: each case resolves
+  through `lookup typescript <id> --verb ... --kind ... --form ... --record ...`
+  (the kind facet derived from `expect.error.kind`, the record facet derived
+  from a null record in the list — both derivations the private matcher did
+  ad hoc).
+- Every RUN case is a hard assertion; every covered case prints the table's
+  own reason; the final count asserts `passed + covered === 84` and any FAIL
+  ends node nonzero.
+- The rewrite itself exposed two swallowed cases: `81-decide-many-null` (the
+  private matcher's null-record rule never fired) and
+  `26-local-missing-question-file` (the kind facet was never passed) — both
+  now resolved by the shared reader with its recorded reasons.
+- The reviewer's probe, reproduced and then made standing: with case 13's
+  answer corrupted to 7.0, `THEN_CONF=<copy> node --test` →
+  `13-score-levels: FAIL score 1.05 vs 7`, exit 1, one TAP `not ok` the gate
+  counts. check.sh now runs this corruption as its own step:
+  `ok: the corrupted expectation failed as it must`.
+
+**Item 21, one deadline spelling.** `options.deadlineMs` must be a real
+number: `true`, `"5"`, and `[]` refuse as usage (before, `Number([])` was
+zero — a silent spent deadline); `-1` is the no-deadline sentinel beside
+`null` and an absent key; every other negative refuses; zero stays spent.
+Probe (`ENGINE_NULL=1 node`): `true`/`'5'`/`[]`/`-2`/`NaN` → usage;
+`-1` and `null` → `true`; `0` → `deadline`. The old bounds test that
+asserted "-1 refuses" was rewritten to the decided rule.
+
+**Item 22, score with a question string.** A bare string fell through to
+`specOf`, which spells it a decide question, and the score call failed as a
+defect. `specFrom` now takes the score branch: the string plus
+`{ levels }` in the last object, the same shape choose takes its options.
+Probe: `tt.score('How strong is the claim?', 'maybe later',
+{levels:['low','mid','high']})` → `1.05`; without levels → usage naming the
+shape.
+
+**Build hygiene.** `build-addon.sh` carries the `$HOME` → `/build` remap the
+Python wheel build has, and every build path goes through it (the gate's
+synthetic build, the packaging build). `prepack` runs the clean build, so
+`npm pack` can never ship the fixture-armed test binary: the packed
+`index.linux-x64-gnu.node` greps zero `/home/ian` strings (the on-disk
+binary went 138 → 0 after the remap rebuild). The addon gained the
+conventional `build.rs` (`napi_build::setup()`) with `napi-build` as a
+build-dependency, so a plain `cargo build` of the addon works. One inert
+string remains in every build: the fixture text rides inside
+`standin`'s `include_str!` of the conformance file, dead code the compiler
+already warns about — recorded for the standin owner, outside this folder.
+
+`./check.sh`: exit 0 — build, shim tests, 61 offline ok with conformance at
+`77 passed, 7 table-covered, 0 failed`, the standing can-fail probe, wire
+suites (skipped, no stub), the dead-address refusal, and the typed sample.

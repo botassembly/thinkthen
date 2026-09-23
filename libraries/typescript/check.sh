@@ -23,6 +23,26 @@ step "the defect kind maps into the failure envelope (shim unit test)"
 step "offline suites (null backend): verbs, errors, conformance, the ten examples, the fast-backend cancel"
 ENGINE_NULL=1 node --test tests/*.test.mjs
 
+step "the conformance test can fail"
+# The standing can-fail probe: a corrupted expectation must end the run
+# nonzero, or the suite above is theater. A temp copy of the file carries
+# the corruption; the skip decisions still come from the real table.
+corrupt="$(mktemp /tmp/conf-corrupt.XXXXXX.json)"
+node -e '
+const fs = require("fs");
+const file = JSON.parse(fs.readFileSync("../../conformance/conformance.json", "utf8"));
+const held = file.cases.find((one) => one.id.startsWith("13-"));
+held.expect.answer = 7.0;
+fs.writeFileSync(process.argv[1], JSON.stringify(file));
+' "$corrupt"
+if ENGINE_NULL=1 THEN_CONF="$corrupt" node --test tests/conformance.test.mjs >/dev/null 2>&1; then
+  rm -f "$corrupt"
+  echo "FAIL: a corrupted expectation passed the conformance test"
+  exit 1
+fi
+rm -f "$corrupt"
+echo "ok: the corrupted expectation failed as it must"
+
 step "wire suites"
 stub_url="http://127.0.0.1:${STUB_PORT:-8212}/v1"
 if curl -sf --max-time 1 "$stub_url/stats" >/dev/null 2>&1; then
