@@ -119,4 +119,4 @@ Production changes may touch at most seven Rust files. Total additions may not e
 
 ## Complexity
 
-Contract 3; state/timing 3; reach 3; proof 4; cost of error 3; total 16. Final level: 3. Route implementation to `sol-implementer` with medium reasoning and route design and code review to separate `sol-reviewer` sessions. Stop and re-score if the work needs a new public setting, a second planner or splitter, changed request bytes under budget, a live fixture, a public library API, more than seven production Rust files, or more than the stated line budget.
+Contract 1; state/timing 2; reach 1; proof 2; cost of error 1; total 7. Final level: 3. Luna Max owns implementation design, case analysis, code, and remediation. Independent Sol High sessions recheck this amended ticket before code and review the final diff. Stop and re-score if the work needs a new public setting, a second planner or splitter, changed request bytes under budget, a live fixture, a public library API, more than seven production Rust files, or more than the stated line budget.
