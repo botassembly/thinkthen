@@ -40,7 +40,7 @@ fi
 # remap took, and the same remap rides in build-wheel.sh for wheels.
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 source .venv/bin/activate
-maturin develop --release --features synthetic-partial
+maturin develop --locked --release --features synthetic-partial
 
 echo "== the built extensions carry no builder home paths"
 for artifact in target/release/lib_thinkthen.$LIB_EXT thinkthen/_thinkthen.abi3.so; do

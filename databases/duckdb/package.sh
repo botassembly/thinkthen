@@ -50,7 +50,7 @@ SLIDE=tools/slide.sql
 
 echo "== duckdb package: build the release extension at glibc 2.28"
 DUCKDB_EXTENSION_NAME=thinkthen DUCKDB_EXTENSION_MIN_DUCKDB_VERSION="$DUCKDB_VERSION" \
-  cargo zigbuild --release --target "$TARGET" 2>&1 | tail -2
+  cargo zigbuild --locked --release --target "$TARGET" 2>&1 | tail -2
 test -s "$LIB"
 
 echo "== duckdb package: stage dist/ (metadata footer appended)"

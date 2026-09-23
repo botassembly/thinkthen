@@ -65,7 +65,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== sqlite package: build the loadable extension at glibc 2.28"
-RUSTFLAGS="-L /usr/lib/x86_64-linux-gnu" cargo zigbuild --release --target "$TARGET" 2>&1 | tail -1
+RUSTFLAGS="-L /usr/lib/x86_64-linux-gnu" cargo zigbuild --locked --release --target "$TARGET" 2>&1 | tail -1
 test -s "$LIB"
 
 echo "== sqlite package: stage dist/"
