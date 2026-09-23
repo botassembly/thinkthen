@@ -5,10 +5,16 @@
 # review's crash fix moved every tick to the Ruby-side watchdog - so its
 # liveness is the registry row's hold: the row lives in the ThinkThen
 # module for the whole call, and that hold is an ordinary GC root. The
-# test drops the thread-local, the only other reference, from inside the
-# block's first run, defines a finalizer so the collection itself is
-# observable, and runs GC.start from a second thread for the whole
-# batch. The finalizer must not run while the call is in flight.
+# test drops the caller's thread-local, the only other reference, from
+# inside the block's first run, defines a finalizer so the collection
+# itself is observable, and runs GC.start from a second thread for the
+# whole batch. The finalizer must not run while the call is in flight.
+#
+# The block runs on the watchdog thread. Thread.current inside it names
+# the watchdog, so the drop names the caller's thread explicitly. The
+# seventh review found the old drop cleared the watchdog's local and
+# left the caller's hold in place, so a row that held the block weakly
+# still passed. The test also checks that the drop took.
 #
 # Offline; check.sh's null section runs it.
 #
@@ -20,15 +26,19 @@ RECORDS = 2_000_000
 question = ThinkThen.question(decide: "Is this a complaint?")
 records = Array.new(RECORDS) { |i| "record #{i}" }
 
+caller = Thread.current
 collected = false
 ticks = 0
+dropped = nil
 
 tick = proc do
   ticks += 1
   if ticks == 1
-    # Drop the only reference outside the registry row: the row's hold
-    # must keep the block alive for the rest of the call.
-    Thread.current[:thinkthen_tick] = nil
+    # Drop the caller's reference, the only one outside the registry
+    # row: the row's hold must keep the block alive for the rest of the
+    # call.
+    caller[:thinkthen_tick] = nil
+    dropped = caller[:thinkthen_tick].nil?
   end
 end
 ObjectSpace.define_finalizer(tick, proc { collected = true })
@@ -60,6 +70,7 @@ if failure
 end
 
 failures = []
+failures << "the drop did not clear the caller's reference" unless dropped
 failures << "the collector took the tick while the call still ran it" if collected
 failures << "the tick ran once and stopped: #{ticks} ticks" if ticks < 2
 failures << "the batch answered #{answer.size} records, not #{RECORDS}" unless answer.size == RECORDS
