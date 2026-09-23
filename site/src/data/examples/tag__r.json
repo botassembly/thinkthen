@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "r",
+  "code": "library(thinkthen)\n\n# praise, a bug, and a double charge in one message\nmessage <- paste(\"Love the new dashboard, but export crashes\",\n  \"the app, and I was charged twice.\")\ntt_tag(\"Which labels fit this message?\", message,\n  labels = c(\"praise\", \"bug\", \"billing\"))",
+  "function": "tag",
+  "surface": "r"
+}

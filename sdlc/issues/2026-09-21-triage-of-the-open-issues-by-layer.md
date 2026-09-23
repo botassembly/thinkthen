@@ -1,6 +1,6 @@
 # Triage of the open issues, by layer
 
-Status: Open. A map for the build team's next planning pass. It authorizes nothing.
+Status: Closed on 2026-09-22. Replaced by `sdlc/planning/open-issues-for-the-architect-2026-09-22.md`.
 
 Ian asked on 2026-09-21 how many issues remain and which layer owns each. This folder held 49 files that day. Ten were already closed. A read-only sweep checked the other 39 against the tickets, the records, the ADRs, the specification, and the code. The sweep was quick. The builder confirms a row before acting on it, and closes each stale issue with its evidence.
 

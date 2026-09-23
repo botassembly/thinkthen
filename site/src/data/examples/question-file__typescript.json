@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ts",
+  "code": "import * as tt from \"thinkthen\";\n\n// build a question once. The band's middle is null,\n// \"not sure\": an exchange, or money back?\nconst refund = tt.question({\n    decide: \"Does the customer ask for a refund?\",\n    threshold: [0.2, 0.8] });\nconsole.log(await tt.decide(refund,\n    \"I want to send this back.\"));",
+  "function": "question-file",
+  "surface": "typescript"
+}

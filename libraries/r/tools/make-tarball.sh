@@ -8,15 +8,14 @@
 # the repository, so a tarball build stages a copy with the crates under
 # src/rust/vendor/ and rewrites the two path lines. The vendored copies
 # keep the repository's relative layout (vendor/contract,
-# vendor/standin, vendor/crates/thinkthen-core), so the crates' own
+# vendor/standin, vendor/thinkthen-core), so the crates' own
 # relative paths keep resolving.
 #
 # The fourth review's fresh-install probe caught the tarball installing
 # with an empty CARGO_HOME and --offline against no vendored registry:
 # "no matching package named serde". The tarball now also vendors every
 # registry dependency (cargo vendor) under vendor/registry with a
-# rust/.cargo/config.toml redirecting crates-io there, resolves
-# thinkthen-core's workspace inheritance into concrete values, and skips
+# rust/.cargo/config.toml redirecting crates-io there, and skips
 # the document step (the wrappers ship in the tarball; the install never
 # builds the debug binary that step pulled in).
 #
@@ -39,7 +38,7 @@ tar -C "$PKG" --exclude=target --exclude=.git --exclude=.cargo -cf - . \
   | tar -C "$STAGE/thinkthen" -xf -
 
 mkdir -p "$STAGE/thinkthen/src/rust/vendor"
-for crate in contract standin crates/thinkthen-core; do
+for crate in contract standin thinkthen-core; do
   mkdir -p "$STAGE/thinkthen/src/rust/vendor/$(dirname "$crate")"
   tar -C "$ROOT" --exclude=target --exclude=.git --exclude=.cargo -cf - "$crate" \
     | tar -C "$STAGE/thinkthen/src/rust/vendor" -xf -
@@ -57,44 +56,17 @@ sed -i '/^\[workspace\]$/a exclude = ["vendor"]' \
   "$STAGE/thinkthen/src/rust/Cargo.toml"
 
 grep -n "vendor/" "$STAGE/thinkthen/src/rust/Cargo.toml"
-for check in vendor/contract/Cargo.toml vendor/standin/Cargo.toml vendor/crates/thinkthen-core/Cargo.toml; do
+for check in vendor/contract/Cargo.toml vendor/standin/Cargo.toml vendor/thinkthen-core/Cargo.toml; do
   test -f "$STAGE/thinkthen/src/rust/$check" || { echo "missing $check" >&2; exit 1; }
 done
 # The vendored crates' own relative paths must still resolve in the stage.
-grep -q 'path = "../crates/thinkthen-core"' "$STAGE/thinkthen/src/rust/vendor/contract/Cargo.toml"
+grep -q 'path = "../thinkthen-core"' "$STAGE/thinkthen/src/rust/vendor/contract/Cargo.toml"
 grep -q 'path = "../contract"' "$STAGE/thinkthen/src/rust/vendor/standin/Cargo.toml"
 
-# Resolve thinkthen-core's workspace inheritance into concrete values:
-# the repository root's workspace is not present in the tarball, so
-# `edition.workspace = true` has nothing to inherit from and the build
-# dies parsing the manifest. The values are read from the root manifest
-# at build time, not hardcoded here.
-CORE="$STAGE/thinkthen/src/rust/vendor/crates/thinkthen-core/Cargo.toml"
-EDITION=$(sed -n 's/^edition = "\(.*\)"$/\1/p' "$ROOT/Cargo.toml" | head -1)
-RUST_VERSION=$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' "$ROOT/Cargo.toml" | head -1)
-test -n "$EDITION" && test -n "$RUST_VERSION" || { echo "could not read the workspace values" >&2; exit 1; }
-sed -i \
-  -e "s/^edition.workspace = true$/edition = \"$EDITION\"/" \
-  -e "s/^rust-version.workspace = true$/rust-version = \"$RUST_VERSION\"/" \
-  "$CORE"
-# The [lints] table inherits too; the install needs no workspace lints.
-python3 - "$CORE" << 'PYEOF'
-import sys
-path = sys.argv[1]
-lines = open(path).read().splitlines(keepends=True)
-out = []
-skipping = False
-for line in lines:
-    if line.strip() == "[lints]":
-        skipping = True
-        continue
-    if skipping:
-        if line.startswith((" ", "\t")) or line.strip() == "workspace = true":
-            continue
-        skipping = False
-    out.append(line)
-open(path, "w").write("".join(out))
-PYEOF
+# The vendored core declares every value itself (merge decision (a)
+# moved it out of the root workspace), so nothing inherits from a
+# workspace the tarball does not carry.
+CORE="$STAGE/thinkthen/src/rust/vendor/thinkthen-core/Cargo.toml"
 grep -q "workspace = true" "$CORE" && { echo "unresolved workspace inheritance remains in thinkthen-core" >&2; exit 1; }
 
 # Vendor the registry dependency tree from the builder's own cargo cache

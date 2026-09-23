@@ -1,63 +1,44 @@
-//! The internal application library behind the `thinkthen` binary.
+//! The library and command implementation for `thinkthen`.
 
 #![forbid(unsafe_code)]
+#![cfg_attr(
+    not(feature = "cli"),
+    allow(
+        dead_code,
+        unused_imports,
+        reason = "the private engine has no command consumer when default features are disabled"
+    )
+)]
 
-mod annotate;
-mod annotate_schedule;
-mod args;
-mod asked;
-mod asking;
-mod cache_lock;
-mod edge;
-mod failure;
-mod find;
-mod http;
-mod judge;
-mod normalize;
-mod recorder;
-mod schedule;
-mod table;
+mod core;
 
-use std::io::{self, Write};
-use std::process::ExitCode;
+mod engine;
 
-use crate::args::{Cli, Command};
-use crate::edge::Environment;
-use crate::failure::Failure;
-use clap::Parser as _;
+#[cfg(feature = "cli")]
+mod cli;
 
-/// Parse the process inputs, run one command, and report its exit code.
-#[must_use]
-pub fn entry() -> ExitCode {
-    let cli = Cli::parse_from(normalize::arguments(std::env::args_os()));
-    let stdout = io::stdout();
-    let stderr = io::stderr();
-    match run(&cli, stdout.lock()) {
-        Ok(code) => code,
-        Err(failure) => failure::report(&failure, stderr.lock()),
+#[cfg(feature = "cli")]
+pub(crate) use cli::{annotate, args, asking, edge, failure, judge, profile, table};
+#[cfg(feature = "cli")]
+pub(crate) use cli::{annotate_schedule, schedule};
+pub(crate) use engine::{http, prepared_request, recorder};
+
+#[cfg(feature = "cli")]
+pub use cli::entry;
+
+/// Build-only access for behavioral doctests over the private core.
+#[cfg(thinkthen_internal_doctest)]
+#[doc(hidden)]
+pub mod __internal_doctest {
+    /// Render the command identity line.
+    #[must_use]
+    pub fn version_line(version: &str) -> String {
+        crate::core::version_line(version)
     }
-}
 
-fn run(cli: &Cli, writer: impl Write) -> Result<ExitCode, Failure> {
-    if cli.version {
-        let line = thinkthen_core::version_line(env!("CARGO_PKG_VERSION"));
-        edge::write_line(writer, &line)?;
-        return Ok(ExitCode::SUCCESS);
-    }
-    let environment = Environment::read();
-    if let Some(command) = cli.command.as_ref() {
-        edge::waiting(command.input(), io::stderr().lock());
-    }
-    let input = io::stdin();
-    match &cli.command {
-        Some(Command::Decide(arguments)) => judge::decide(arguments, &environment, input, writer),
-        Some(Command::Choose(arguments)) => judge::choose(arguments, &environment, input, writer),
-        Some(Command::Tag(arguments)) => judge::tag(arguments, &environment, input, writer),
-        Some(Command::Score(arguments)) => judge::score(arguments, &environment, input, writer),
-        Some(Command::Filter(arguments)) => judge::filter(arguments, &environment, input, writer),
-        Some(Command::Rank(arguments)) => judge::rank(arguments, &environment, input, writer),
-        Some(Command::Find(arguments)) => find::run(arguments, &environment, input, writer),
-        Some(Command::Annotate(arguments)) => annotate::run(arguments, &environment, input, writer),
-        None => Err(Failure::Defect("no command and no version was parsed")),
+    /// Rank probabilities in descending stable order.
+    #[must_use]
+    pub fn ranking(of: &[f64], top: Option<usize>) -> Vec<usize> {
+        crate::core::ranking(of, top)
     }
 }

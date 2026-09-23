@@ -256,7 +256,7 @@ fn every_number_of_jobs_prints_the_bytes_one_job_prints() -> io::Result<()> {
 }
 
 #[test]
-fn details_prints_one_row_per_record_for_filter_and_the_printed_ones_for_rank() -> io::Result<()> {
+fn details_keeps_filter_membership_and_rank_top_membership() -> io::Result<()> {
     let listener = serving(&["0.91", "0.02", "0.77", "0.55"])?;
     let output = over(
         "filter",
@@ -278,17 +278,11 @@ fn details_prints_one_row_per_record_for_filter_and_the_printed_ones_for_rank() 
         rows,
         [
             (RECORDS_AS_SENT[0].to_owned(), "true".to_owned()),
-            (RECORDS_AS_SENT[1].to_owned(), "false".to_owned()),
             (RECORDS_AS_SENT[2].to_owned(), "true".to_owned()),
             (RECORDS_AS_SENT[3].to_owned(), "true".to_owned()),
         ],
-        "filter --details prints a row per record, kept or not, in input order"
+        "filter --details prints only kept records, in input order"
     );
-    let named = printed(&output)
-        .lines()
-        .all(|l| l.contains("\"threshold\":0.5"));
-    assert!(named, "filter --details names the cut it made");
-
     let listener = serving(&["0.55", "0.02", "0.91", "0.77"])?;
     let output = over(
         "rank",
@@ -373,8 +367,8 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
     assert_eq!(
         said(&output),
         concat!(
-            "thinkthen: the backend answered with status 500\n",
-            "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n",
+            "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
+            "thinkthen: stopped at record 2; 1 record finished\n",
         )
     );
 
@@ -402,8 +396,8 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
     assert_eq!(
         said(&output),
         concat!(
-            "thinkthen: the backend answered with status 500\n",
-            "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording,",
+            "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
+            "thinkthen: stopped at record 2; 1 record finished,",
             " and nothing was printed because an order needs every record\n",
         )
     );

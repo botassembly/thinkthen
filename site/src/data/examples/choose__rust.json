@@ -1,0 +1,13 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "rust",
+  "code": "use thinkthen::{Engine, Question};\nlet tt = Engine::from_env()?;\nlet teams = [\"billing\", \"shipping\", \"account\"];\nlet owner = Question::choose(\"Which team owns this?\",\n    &teams)?.build()?;\nlet texts = [\"My card was charged twice.\",\n    \"The courier lost my parcel.\",\n    \"I cannot reset my password.\"];\n// the compiler makes you handle \"not sure\"\nfor text in texts {\n    match tt.choose(&owner, text)? {\n        Some(team) => println!(\"{team}: {text}\"),\n        None => println!(\"a person: {text}\"),\n    }\n}",
+  "printed": {
+    "command": "cargo run",
+    "output": "billing: My card was charged twice.\nshipping: The courier lost my parcel.\naccount: I cannot reset my password.",
+    "see": "Each text lands in the Some arm with its team: billing, shipping, and account."
+  },
+  "function": "choose",
+  "surface": "rust"
+}

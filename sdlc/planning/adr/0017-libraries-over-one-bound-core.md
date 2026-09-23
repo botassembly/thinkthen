@@ -58,7 +58,7 @@ The engine has one public error with six kinds. The command wraps it in `Failure
 
 The `deadline` kind is Ian's ruling of 2026-09-21: a caller with a fallback treats "my five seconds ran out" and "the backend is busy" differently, so the spent budget never files as a backend error. The retryable reading inside `backend` comes from the tool-search page, whose caller falls back on a timeout and a rate limit and stops on a reply it cannot trust.
 
-The engine counts requests, cache answers, and tokens for the process. Requests counts every send. A retried send after a dead connection counts twice, because a judgment is safe to repeat and the bill pays for both; the pages say so. The second send reaches the user in two places: `usage` carries the process's send count, and a judgment's `details` carries the number of sends that produced it, so a bill showing two requests never meets a tool showing one. A library reads the counters through `usage`, and the command keeps none between runs.
+The engine counts requests, cache answers, and tokens for the process. Requests counts every send. A retried send after a dead connection counts twice, because a judgment is safe to repeat and the bill pays for both; the pages say so. The second send reaches the user in two places: `usage` carries the process's send count, and a judgment's `details` carries the number of sends that produced it, so a bill showing two requests never meets a tool showing one. A library reads the counters through `usage`. ADR 0034 amends the command side: the command also persists count-only monthly aggregates for `status`.
 
 ### 4. Call options
 
@@ -134,6 +134,66 @@ The registry names are Ian's alone and were on his list before this rewrite.
 - Items 3 and 9 of the 2026-09-19 draft are replaced by sections 1 and 9 here. The port-per-language design of the sdk study stays on record as the fallback if the merge fails, and nothing in it is built.
 - Exit codes, `--quiet`, and `--raw` stay in the command. A library returns values and raises its own errors.
 
+### Ruled after acceptance, 2026-09-21: the data frame is Polars
+
+Ian ruled on 2026-09-21 that Python's data frame container is Polars, not pandas: `annotate` and `recognize` take and return Polars DataFrames, the bulk form accepts a Polars column, Polars rides as an optional dependency behind `pip install thinkthen[polars]`, and pandas leaves the surface. The ruling is recorded with its reasons in `sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md`.
+
 ## What Ian can overturn
 
 All of it. Three reach widest. Staying blocking is measured now, and overturning it costs the fork story, the zero-thread holding, and the cheaper Python shim. Pick 3, the empty value for "not sure", is the one the one-shape page flagged for a second look, and its mitigation is teaching rather than code. The cache default, 100 MB by Ian's ruling and prune-enforced under plain files, changes with one number. The on-by-default reading of the cache ruling is Ian's alone to flip; the three guards stay either way. The registry names were his before this page and stay his.
+
+## Amendment, 2026-09-21: the step-1 engine boundary
+
+The build review required before the one-crate move found that section 8 step 1 cannot move the five named command files whole. This amendment replaces that step and its proof obligations. Ian can overturn any item.
+
+1. **Extract through a private bounded bridge.** The command keeps argument parsing, environment and credential lookup, input framing, its detached standard-input reader, output, diagnostics, and exit codes. It sends framed input events to the engine. The engine receives resolved questions, backend settings, records, and run settings, then returns typed per-row result events through a callback or equivalent bounded bridge. It does not collect a whole run. Scheduling, transport, recording, and `cache_lock.rs` move into the engine.
+2. **Keep the step-1 errors private and exact.** A private engine failure carries one of the future six kinds plus the structured recording or backend cause and the ordered-stop metadata needed to reproduce the current command message and count. The command alone maps it to `Failure` and an exit code. Step 1 fixes no public `thinkthen::Error` type.
+3. **Preserve every command contract.** Step 1 changes no request, retry rule, order, width bound, memory bound, recording, output byte, diagnostic, or exit code. The current retry of every transport failure remains. Refused connections gain their new fast-stop behavior only in section 8 step 3.
+4. **Keep core purity mechanical.** The `core` module carries module-level `forbid` attributes for the accepted disallowed APIs. A policy check scans the whole `core` source tree, refuses dependency paths to `engine` or `cli`, and allows only the runtime dependencies in the former `thinkthen-core` manifest: `serde`, `serde_json`, `sha2`, and `thiserror`. Its self-tests plant one prohibited standard API, one reverse module reference, and one outer-only dependency such as `ureq` in `core`, then prove that each fails.
+5. **Prove an independent library package.** Every CLI-only dependency, including `clap` and `csv-core`, is optional, and the binary requires the `cli` feature. The gate builds the library with default features off, checks that resolved dependency graph, packages it without a sibling crate, and runs the retained core doctests. A release library proves `panic = "unwind"`; only the command release path opts into abort through its build command or an equivalent packaging step.
+6. **Bound only engine-owned lifetimes.** Engine request workers and internal feeders are scoped and joined before its call returns. The command-owned input reader may remain detached because it lets a blocked standard-input read coexist with completed output and an early closed-pipe exit. A test calls the engine inside a process that remains alive and proves that no engine worker remains. Section 8 step 2 may replace the private bridge when it fixes the public iterator design.
+
+The remaining order is this amendment, Job 3's shared conformance cases, then the section 8 step-1 merge. Job 2's DuckDB interrupt proof inside Python is already complete in `sdlc/planning/databases/duckdb.md` and experiment 207. It supplies evidence for the accepted interrupt design and no longer sits in the remaining order. This sentence supersedes section 8's earlier final sentence that placed Job 2 after Job 3; the accepted history stays above.
+
+## Amendment, 2026-09-21: the shared case contract
+
+Ticket 0052 turns Job 3's experiment evidence into `conformance/cases.json`. This amendment fixes the meanings that every later runner uses. Ian can overturn any item.
+
+1. The initial file has twenty-five cases. It covers the eight verbs and the six error kinds. The schema declares its actual length without fixing a permanent count.
+2. A `rank` result is an ordered list of zero-based input indexes beside their yes probabilities. A `find` result is a zero-based selected input index or null beside every candidate probability in stable input order, with `none` last. Each host maps those indexes back to its own container.
+3. A successful exchange embeds its exact request bytes as a JSON string and its response as structured JSON. `captured` names a stable repository recording whose request and response match. `synthetic_contract` names a stubbed or shaped exchange. Neither kind carries headers or credentials.
+4. A fault case names one of the six public error kinds and a deterministic injection. `local`, `deadline`, and `defect` remain schema contracts in this ticket. The section 8 step-1 runner proves their behavior through its private engine boundary. Faults do not pretend to be replayable product recordings.
+5. The offline pure-core integration test uses the production question grammar, request encoder, response decoder, digest, answer rules, ranking, and find selector. It contains no second product canonicalizer or probability formula. The section 8 step-1 merge adds the first command runner over the same file.
+
+Job 3 is complete. Section 8 step 1 is next.
+
+## Amendment, 2026-09-21: request identity on every result
+
+Ian approved the build team's request-identity recommendation before the one-crate move. This amendment fixes the result contract before `specification/result.md` changes. Ian can overturn any item.
+
+1. Every detailed result carries `meta.requests`, always as an array of lowercase recording digests. A result from one logical request carries one element.
+2. The array follows logical construction order: input record, evidence group, then any future chunk. Concurrent completion cannot reorder it. Retries add no element. Equal logical requests keep separate positions.
+3. Each detailed `annotate` answer keeps its existing singular `request`. That field identifies the request for that answer. The aggregate list identifies every request for the row.
+4. One private prepared request holds the exact encoded body and the production recording digest. Replay, cache locking, live sending, recording, and the returned result use that prepared identity. They do not encode or digest the request again.
+5. The shared conformance document names one canonical backend URL. Its expected details carry request lists derived through the production recording digest from that URL and each exact request string. A two-group annotate case fixes group order.
+6. Bare output, request bytes, recording names, diagnostics, exit codes, retries, and network behavior do not change.
+
+## Amendment, 2026-09-21: answered or failed logical results
+
+The shared core represents each decoded logical question as answered or failed. A backend failure carries the closed cause list `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. Bulk host forms preserve good answers and return the failed marker beside them. Typed single calls and the remaining bulk and database host forms still need their ruled surface mappings before the C interface freezes.
+
+## Amendment, 2026-09-22: sends on each result
+
+Every detailed command result carries `meta.requests_sent` immediately after optional provider `usage` and before `replayed`. It counts the HTTP attempts that produced that successful result. A first-attempt live answer reports one, retries add one per attempt, and a recording or cache answer reports zero. Packed annotation sums the counts from its logical group requests. The process counter remains broader because it also counts attempts from runs that return no result. Ian can overturn the field name.
+
+## Amendment, 2026-09-22: prove private controls before the public API
+
+Ian directed the architect to record the reviewed execution order. This amendment supersedes section 8's remaining order, not its behavioral contracts. Step 1 has landed through ticket 0055. Consolidate the existing private settings, cache, counters, and result metadata first. Then implement and prove process-wide width, cancellation, whole-call deadlines, fast failure, fork recovery, and host signal ownership while the engine remains private and the command remains its production caller.
+
+Private controls precede recognition integration. The public Rust functions follow both those controls and the settled behavior and result shapes of all ten functions. C follows the public Rust result path, and real-engine library/database integration is separately reviewed afterward. The detailed order and the continuing ownership of ticket 0065 and `surfaces` live in `../build-queue-2026-09-21.md`.
+
+No cancellation, deadline, retry, durability, signal, or fork guarantee is weakened by this sequencing change. Each implementation ticket must settle its exact contract and prove it independently. This amendment authorizes no replacement relation request form, paid measurement, publication, or change to the library team's active worktree. Ian can overturn the order.
+
+## Amendment, 2026-09-22: command cancellation preserves SIGINT
+
+Ian ruled that the command catches SIGINT cooperatively, stops starting requests after cancellation is observed, lets already-sent requests finish within their existing attempt timeout, prints completed ordered output and the stopped-at line, then re-raises SIGINT so the shell still observes exit 130. A single-document or aggregate request already sent follows the same finish-then-re-raise rule and writes its completed output first. The engine owns the private cancel token and poll behavior; the CLI alone owns SIGINT registration and default-signal emulation. No deadline, public library API, or host signal policy is fixed by this amendment. Ian can overturn it.

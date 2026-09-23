@@ -32,7 +32,7 @@ Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JS
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `rank` takes no `--threshold`, no `--quiet`, and no `--raw`. Each is refused by name, and the message says which command carries it. A rule is refused in both homes, so a question file holding a `threshold` is refused too, at exit 5. A missing framing is a usage error.
 
@@ -44,7 +44,7 @@ The request, the result object, and the recording entry are those of `decide`, s
 
 ## Exit codes
 
-0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty record stream exits 0 with no output and no request.
+0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. An empty line or JSONL stream exits 0 with no output and no request. Empty CSV and TSV inputs exit 2 because the required header is missing.
 
 ## Examples
 

@@ -8,7 +8,7 @@ Every judged record is a paid request, and a run has no spending cap. Use this p
 
 ## Input
 
-`../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` hold forty judged rows each. Every row carries `meta.usage`, the token counts the backend reported, and `meta.replayed`, which says whether a backend or a recording answered.
+`../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` hold forty judged rows each. Every row carries `meta.usage`, the token counts the backend reported, and `meta.replayed`, the older name of `meta.cached`, which says whether a backend or stored exchanges answered.
 
 `../../transforms/rows/recording/` holds the eighty exchanges both runs were made from. A recording keeps request bodies and never headers, so no key is in it.
 
@@ -72,8 +72,8 @@ jq -c --argjson case "$example" \
   '{schema, value, input: $case, question, answer, threshold, meta}' \
   "$work/one.json" > "$work/one.jsonl"
 
-jq -c '{value, replayed: .meta.replayed}' "$work/one.jsonl" \
-  | mustmatch '{"value":true,"replayed":true}'
+jq -c '{value, cached: .meta.cached}' "$work/one.jsonl" \
+  | mustmatch '{"value":true,"cached":true}'
 
 jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq "$work/one.jsonl" \
   | jq -c . \

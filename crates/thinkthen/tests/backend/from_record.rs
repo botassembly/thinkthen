@@ -97,7 +97,15 @@ fn a_list_in_each_record_becomes_that_record_s_own_options() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "\"late\"\n\"empty\"\n");
+    assert_eq!(
+        printed(&output),
+        concat!(
+            r#"{"input":{"id":"N-1","note":"The parcel arrived on Friday, three days late.","codes":["late","lost"]},"value":"late"}"#,
+            "\n",
+            r#"{"input":{"id":"N-2","note":"The box was empty when it reached us.","codes":["empty","damaged","other"]},"value":"empty"}"#,
+            "\n",
+        )
+    );
     let sent = bodies(&listener);
     assert!(
         sent[0].contains(r#""criteria":{"late":null,"lost":null}"#),
@@ -118,6 +126,51 @@ fn a_list_in_each_record_becomes_that_record_s_own_options() {
 }
 
 #[test]
+fn a_structured_file_text_pairs_with_each_records_string_options() {
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("from-record");
+    std::fs::create_dir_all(&folder).expect("a scratch folder");
+    let file = folder.join("structured-options.json");
+    std::fs::write(
+        &file,
+        r#"{"choose":{"ask":"Which of these codes fits the note?"},"on":"/note"}"#,
+    )
+    .expect("a question file");
+
+    let listener =
+        Listener::serving(vec![Canned::ok(&picked(&["late", "lost"]))]).expect("a listener");
+    let output = spawn(
+        &[
+            "choose",
+            &format!("@{}", file.to_string_lossy()),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--jsonl",
+            "--options",
+            "/codes",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        NOTES.split_once('\n').expect("a first line").0.as_bytes(),
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    let sent = bodies(&listener);
+    assert_eq!(sent.len(), 1);
+    assert!(
+        sent[0].contains(r#""instructions":{"ask":"Which of these codes fits the note?"}"#),
+        "{}",
+        sent[0]
+    );
+    assert!(
+        sent[0].contains(r#""criteria":{"late":null,"lost":null}"#),
+        "{}",
+        sent[0]
+    );
+}
+
+#[test]
 fn a_map_in_a_record_sends_each_description_under_its_own_option() {
     let listener = Listener::serving(vec![Canned::ok(&picked(&["late", "lost"]))])
         .expect("a loopback listener");
@@ -129,7 +182,13 @@ fn a_map_in_a_record_sends_each_description_under_its_own_option() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "\"late\"\n");
+    assert_eq!(
+        printed(&output),
+        concat!(
+            r#"{"input":{"id":"N-1","note":"The parcel arrived on Friday, three days late.","codes":{"late":"It came after the promised day.","lost":"It never came at all."}},"value":"late"}"#,
+            "\n",
+        )
+    );
     let sent = bodies(&listener);
     assert!(
         sent[0].contains(concat!(
@@ -185,15 +244,23 @@ fn a_candidate_list_the_verb_refuses_stops_the_run_and_sends_nothing_for_itself(
         .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{bad}");
-        assert_eq!(printed(&output), "\"late\"\n", "{bad}");
+        assert_eq!(
+            printed(&output),
+            concat!(
+                r#"{"input":{"id":"N-1","note":"The parcel arrived late.","codes":["late","lost"]},"value":"late"}"#,
+                "\n",
+            ),
+            "{bad}"
+        );
         assert_eq!(listener.requests().len(), 1, "{bad}");
         let message = said(&output);
         assert!(message.contains(said_part), "{message}");
         assert!(
-            message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
+            message.contains("stopped at record 2; 1 record finished"),
             "{message}"
         );
         assert!(!message.contains("parcel"), "{message}");
+        assert!(!message.contains("from a recording"), "{message}");
         assert!(!message.contains("rm -rf"), "{message}");
     }
 }

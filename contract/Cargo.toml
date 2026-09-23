@@ -19,7 +19,7 @@ serde = { version = "1", features = ["derive"] }
 # rule.
 serde_json = { version = "1", features = ["preserve_order"] }
 thiserror = "2"
-thinkthen-core = { version = "0.0.1", path = "../crates/thinkthen-core" }
+thinkthen-core = { version = "0.0.1", path = "../thinkthen-core" }
 
 [lints.rust]
 missing_docs = "warn"

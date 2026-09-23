@@ -86,7 +86,7 @@ if command == "choose":
         "question": {"verb": "choose", "text": question, "options": options},
         "answer": {"kind": "choice", "pick": pick, "probabilities": probabilities},
         "threshold": None,
-        "meta": {"usage": {"input_tokens": len(body) // 4 + 100}, "replayed": replayed},
+        "meta": {"usage": {"input_tokens": len(body) // 4 + 100}, "cached": replayed},
     }
     live_requests = 0 if replayed else 1
     judgments = 1
@@ -109,7 +109,7 @@ else:
             "question": {"verb": "decide", "text": question},
             "answer": {"kind": "yes_no", "probability": probability},
             "threshold": None,
-            "meta": {"usage": {"input_tokens": 200}, "replayed": False},
+            "meta": {"usage": {"input_tokens": 200}, "cached": False},
         })
     live_requests = len(records)
     judgments = len(records)
@@ -145,22 +145,74 @@ python3 fixture.py verify
 
 # The probe derives find's value from ordered probabilities, never choose's value.
 python3 - <<'PY'
+import json
+import subprocess
+
 import fixture
 
 case = fixture.cases()["s100-a1"]
 options = fixture.expected_options(case, True)
 
-def result(leaders):
+def result(leaders, provenance):
     probabilities = {option: (0.5 if option in leaders else 0.0) for option in options}
     return {
         "value": "u099",
         "question": {"options": options},
         "answer": {"kind": "choice", "probabilities": probabilities},
-        "meta": {"usage": {"input_tokens": 1}, "replayed": False},
+        "meta": {"usage": {"input_tokens": 1}, **provenance},
     }
 
-assert fixture.find_row(case, True, result({"u001", "u002"}))["value"] == "u001"
-assert fixture.find_row(case, True, result({"u001", "none"}))["value"] == "none"
+def legacy(row):
+    done = subprocess.run(
+        ["jq", "-c", "-f", "stored-result.jq"],
+        input=json.dumps(row), capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+assert fixture.find_row(case, True, legacy(result({"u001", "u002"}, {"cached": False})))["value"] == "u001"
+assert fixture.find_row(case, True, legacy(result({"u001", "none"}, {"replayed": False})))["value"] == "none"
+
+def held(provenance):
+    return fixture.find_row(case, True, legacy(result({"u001"}, provenance)))["replayed"]
+
+assert held({"cached": True}) is True
+assert held({"cached": False}) is False
+assert held({"replayed": True}) is True
+assert held({"replayed": False}) is False
+assert held({"cached": False, "replayed": True}) is False
+for bad in (None, "yes"):
+    try:
+        held({"cached": bad, "replayed": True})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("an invalid cached field reached the reader")
+
+def ranked(provenance):
+    return [
+        {
+            "answer": {"kind": "yes_no", "probability": 0.1},
+            "input": {"id": option},
+            "meta": {"usage": {"input_tokens": 1}, **provenance},
+        }
+        for option in fixture.expected_options(case, False)
+    ]
+
+def held_rank(provenance):
+    return fixture.rank_row(case, [legacy(row) for row in ranked(provenance)])
+
+assert held_rank({"cached": True})["replayed_judgments"] == case["size"]
+assert held_rank({"cached": False})["live_requests"] == case["size"]
+assert held_rank({"replayed": True})["replayed_judgments"] == case["size"]
+assert held_rank({"replayed": False})["live_requests"] == case["size"]
+assert held_rank({"cached": False, "replayed": True})["live_requests"] == case["size"]
+for bad in (None, "yes"):
+    try:
+        held_rank({"cached": bad, "replayed": True})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("an invalid cached field reached the reader")
 PY
 
 # The real binary builds the exact aggregate state and ordered choice list.

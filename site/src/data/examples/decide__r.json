@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "r",
+  "code": "library(thinkthen)\n\n# a vector in, a vector out: TRUE for the refund,\n# FALSE for the thank-you\ntt_decide(\"Does the customer ask for a refund?\",\n  c(\"Please refund my order. It arrived broken.\",\n    \"Thanks for the quick help yesterday!\"))",
+  "function": "decide",
+  "surface": "r"
+}

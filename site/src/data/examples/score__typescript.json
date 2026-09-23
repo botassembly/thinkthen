@@ -1,0 +1,13 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ts",
+  "code": "import * as tt from \"thinkthen\";\n\n// keep the complaints: the zipper and the strap\nconst reviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\",\n    \"The strap snapped on day two.\"];\nconsole.log(await tt.filter(\"Is this a complaint?\",\n    reviews));\n// your own scale, 0 to 2. An outage is \"Immediate.\"\nconst levels = [\"Routine.\", \"Soon.\", \"Immediate.\"];\nconst urgency = { score: \"How urgent is this?\", levels };\nconsole.log(await tt.score(urgency,\n    \"Checkout is down and nobody can pay.\"));",
+  "printed": {
+    "command": "node sample.mjs",
+    "output": "[\n  'The zipper broke the first time I used it.',\n  'The strap snapped on day two.'\n]\n2",
+    "see": "The early delivery drops out."
+  },
+  "function": "score",
+  "surface": "typescript"
+}

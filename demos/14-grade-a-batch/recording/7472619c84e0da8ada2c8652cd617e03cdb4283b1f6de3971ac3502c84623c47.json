@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"context":"Exchanges are handled as a return followed by a new order. There is no direct size swap.","output":"Yes, ask support and they will swap the size for you within 48 hours."},"model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Is every claim in the answer stated in the source text?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":323,"output_tokens":21}}
+}

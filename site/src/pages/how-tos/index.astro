@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import { HOWTOS } from '../../data/catalog.mjs';
+---
+<Base title="How-tos" description="Real jobs done with ThinkThen, each shown with a recorded run.">
+  <h1>How-tos</h1>
+  <p class="lede">Pick your job. ThinkThen reads each line and answers a question about it. Each page shows what went in, the commands, and what came out.</p>
+
+  <table>
+    <tr><th>How-to</th><th>Who it is for</th><th>Functions</th></tr>
+    {HOWTOS.map((h) => (
+      <tr>
+        <td><a href={`/how-tos/${h.slug}/`}>{h.title}</a></td>
+        <td>{h.reader}</td>
+        <td>{h.functions.map((f, i) => (<Fragment>{i > 0 ? ', ' : ''}<a href={`/functions/${f}/`}><code>{f}</code></a></Fragment>))}</td>
+      </tr>
+    ))}
+  </table>
+
+  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
+</Base>

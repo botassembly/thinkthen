@@ -1,0 +1,49 @@
+#!/bin/sh
+# Prove the library-only graph, package tree, doctests, and panic strategies.
+set -eu
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+cargo build --locked --offline --package thinkthen --lib --no-default-features
+if cargo tree --locked --offline --package thinkthen --no-default-features -e normal --prefix none \
+    | grep -Eq '^(clap|csv-core) '; then
+    printf '%s\n' 'package: command dependency entered the library-only graph' >&2
+    exit 1
+fi
+RUSTFLAGS='--cfg thinkthen_internal_doctest' \
+RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
+    cargo test --locked --offline --package thinkthen --doc --no-default-features
+
+prove_private() {
+    target=$1
+    shift
+    CARGO_TARGET_DIR="$target" cargo build --locked --offline --package thinkthen --lib "$@"
+    library=$(find "$target/debug/deps" -name 'libthinkthen-*.rlib' -print -quit)
+    if rustc --edition 2024 -L "dependency=$target/debug/deps" --extern "thinkthen=$library" \
+        -o "$target/private-probe" - 2>"$target/private-probe.stderr" <<'RS'
+fn main() {
+    let _ = thinkthen::__internal_doctest::version_line("0.0.1");
+}
+RS
+    then
+        printf '%s\n' 'package: a normal library build exposes the doctest harness' >&2
+        exit 1
+    fi
+    if ! grep -F 'could not find `__internal_doctest` in `thinkthen`' \
+        "$target/private-probe.stderr" >/dev/null; then
+        printf '%s\n' 'package: the private-surface probe failed for another reason' >&2
+        cat "$target/private-probe.stderr" >&2
+        exit 1
+    fi
+}
+prove_private target/private-proof-default
+prove_private target/private-proof-no-default --no-default-features
+cargo package --locked --offline --allow-dirty
+
+cargo rustc --locked --offline --release --package thinkthen --lib --no-default-features \
+    -- --print cfg | grep -Fx 'panic="unwind"' >/dev/null
+RUSTFLAGS='-C panic=abort' cargo rustc --locked --offline --release --package thinkthen \
+    --bin thinkthen -- --print cfg | grep -Fx 'panic="abort"' >/dev/null
+
+printf '%s\n' 'package: library graph, package tree, doctests, and panic strategies pass'

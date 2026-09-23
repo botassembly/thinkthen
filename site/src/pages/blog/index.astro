@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+
+const posts = [
+  {
+    href: '/blog/code-that-understands/',
+    title: 'Code that knows what you mean',
+    blurb: 'Every program I have written can match text. None of them can read it. What changed, what it costs, and where it breaks.',
+  },
+];
+---
+<Base title="Blog" description="Writing about semantic commands.">
+  <h1>Blog</h1>
+  <p class="lede">Articles about software that answers questions about text.</p>
+  <div class="grid">
+    {posts.map((p) => (
+      <a class="tile" href={p.href}><b>{p.title}</b><span>{p.blurb}</span></a>
+    ))}
+  </div>
+  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
+</Base>

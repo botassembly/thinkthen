@@ -24,3 +24,16 @@ Details, usage counters, cancel tokens, deadlines, and the cache setting. They e
 ## What Ian can overturn
 
 All of it. Pick 3 changes the planning pages for three languages, and pick 8 adds `decide_many` to their public lists.
+
+## Added 2026-09-21: what the rewritten slide samples now assume
+
+Ian rejected the first surface samples as repetitive and hard to read. The rewrite in the marketing repository's `surfaces.md` shows a different set of functions on each surface. It assumes these spellings, which the experiment team's next brief tests by running each sample as drawn:
+
+- **TypeScript takes one options object last:** `tt.choose(question, text, { options })`, `tt.tag(question, text, { labels })`, `tt.rank(question, records, { top, signal })`.
+- **Ruby takes keywords:** `ThinkThen.rank(question, records, top: 5)` and `ThinkThen.score(question, text, levels:)`.
+- **R takes the options and the levels as the third positional argument:** `tt_choose(question, column, teams)`, `tt_score(question, column, levels)`.
+- **Python keeps keywords:** `tt.annotate("form.json", df, on="body")`, `tt.question(decide=..., threshold=(0.2, 0.8))`.
+- **C returns a status code and fills a `thinkthen_answer` with `outcome` and `probability`.** The slide says the code is 0 or one of six error kinds.
+- **DuckDB allows the functions in `WHERE`, `SELECT`, and `ORDER BY`,** with a list literal for options and levels.
+
+A sample that cannot work as drawn is a finding, and the slide changes.

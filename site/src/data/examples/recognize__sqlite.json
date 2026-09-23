@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "sql",
+  "code": "-- SQLite: a table-valued function\nCREATE TABLE tickets(id INTEGER, body TEXT);\nINSERT INTO tickets VALUES (1, 'Maria Chen joined Northwind Freight, a company in Chicago.');\nSELECT t.id, n.text, n.kind FROM tickets t,\n    thinkthen_recognize(t.body, 'person,organization,place') n;\n-- 1|Maria Chen|person\n-- 1|Northwind Freight|organization\n-- 1|Chicago|place\nSELECT * FROM tickets t, thinkthen_relations(t.body, '@names.json');\n-- works_for|1|2\n-- based_in|2|3",
+  "function": "recognize",
+  "surface": "sqlite"
+}

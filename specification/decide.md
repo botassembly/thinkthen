@@ -16,7 +16,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 ## What it prints
 
-`true`, `false`, or `null`. `null` is an unresolved answer, and it arises only under a band. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`. In record mode one value prints per record, in input order.
+On one document, `true`, `false`, or `null`. `null` is an unresolved answer, and it arises only under a band. In record mode each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`.
 
 ## Options
 
@@ -29,7 +29,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 ## Saying what yes and no mean
 
@@ -37,7 +37,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 They are for a question whose two sides are not obvious from the question text. "The writer asks for money back" and "The writer asks for anything else" separate a refund from a complaint. They are not a place for instructions to the model, and they are not a second question.
 
-Both texts have a home in a question file, under `true` and `false`. A text that is empty or holds only white space is a usage error.
+Both texts have a home in a question file, under `true` and `false`. A file may also give either one as an object, a list, or `null`; a written `null` is a present criterion, and the object or list reaches the model as written. A text that is empty or holds only white space is a usage error.
 
 ## Exit codes
 

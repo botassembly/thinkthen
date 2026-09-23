@@ -2,17 +2,25 @@
 
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use thinkthen_core::adapters::built_in::DEFAULT_MODEL;
+const DEFAULT_MODEL: &str = "jev-latest";
 
 /// A port nothing listens on, so a connection would be refused at once.
 const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// Run the binary with no environment but what the case names, and feed it bytes.
 fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io::Result<Output> {
+    static RUNS: AtomicUsize = AtomicUsize::new(0);
+    let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "decide-edge-home-{}-{}",
+        std::process::id(),
+        RUNS.fetch_add(1, Ordering::Relaxed)
+    ));
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
+        .env("HOME", home)
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -165,16 +173,13 @@ fn every_option_the_old_surface_carried_is_a_usage_error() {
 }
 
 #[test]
-fn every_option_the_configuration_surface_carried_is_a_usage_error() {
-    let cases: [&[&str]; 8] = [
-        &["--profile", "jev"],
-        &["--profile", "site"],
+fn every_remaining_option_the_configuration_surface_carried_is_a_usage_error() {
+    let cases: [&[&str]; 5] = [
         &["--adapter", "systemone"],
         &["--adapter", "chat-logprobs"],
         &["--key-env", "LOCAL_KEY"],
         &["--config", "site.json"],
         &["--url", CLOSED, "--adapter", "systemone", "--model", "m"],
-        &["--dry-run", "--profile", "jev"],
     ];
 
     for arguments in cases {
@@ -358,10 +363,17 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     let long = run(&["decide", "--help"], &[], b"").expect("the compiled binary runs");
 
     let short = String::from_utf8_lossy(&short.stdout);
-    for option in ["--threshold", "--quiet", "--details", "--dry-run"] {
+    for option in [
+        "--threshold",
+        "--quiet",
+        "--details",
+        "--dry-run",
+        "--profile",
+    ] {
         assert!(short.contains(option), "{option} is missing from {short}");
     }
-    for option in ["--url", "--model", "--record", "--timeout"] {
+    assert!(short.contains("--url"), "--url is missing from {short}");
+    for option in ["--model", "--record", "--timeout", "--jobs"] {
         assert!(!short.contains(option), "{option} is in the short help");
     }
 
@@ -372,6 +384,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
         "--details",
         "--dry-run",
         "--url",
+        "--profile",
         "--model",
         "--record",
         "--replay",
@@ -380,7 +393,7 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     ] {
         assert!(long.contains(option), "{option} is missing from {long}");
     }
-    for gone in ["--profile", "--adapter", "--key-env", "--config"] {
+    for gone in ["--adapter", "--key-env", "--config"] {
         assert!(!long.contains(gone), "{gone} is still in {long}");
     }
     // The help states the model a run defaults to, and the adapter owns that
@@ -391,7 +404,51 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
         "the long help does not name the default model {DEFAULT_MODEL}: {long}"
     );
     assert!(!long.contains("THINKTHEN_TEST_RETRY_WAIT_MS"), "{long}");
+    assert!(!long.contains("THINKTHEN_TEST_SIGINT_ACK"), "{long}");
     assert!(long.contains("set -e"), "the help warns about set -e");
+    assert!(
+        long.contains("no or not sure"),
+        "the help names both nonzero answers"
+    );
+    assert!(
+        long.contains("It defaults to 0.5"),
+        "the help does not name the threshold default: {long}"
+    );
+    assert!(
+        long.contains("[default: 4]"),
+        "the help does not name the jobs default: {long}"
+    );
+    for cache_rule in [
+        "cached by default in the platform cache folder",
+        "Entries contain the judged text",
+        "overriding THINKTHEN_CACHE and the platform default",
+        "An explicit recording folder suppresses the platform default cache",
+    ] {
+        assert!(long.contains(cache_rule), "{cache_rule}: {long}");
+    }
+}
+
+#[test]
+fn record_capable_help_pins_run_exit_behavior() {
+    const RECORD_EXIT: &str = "A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.";
+    const SHORT: &str = "Answer one yes or no question about a text. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers\n\nUsage:";
+    let output = run(&["decide", "-h"], &[], b"").expect("the compiled binary runs");
+    let short = String::from_utf8_lossy(&output.stdout);
+    assert!(short.starts_with(SHORT), "decide short help: {short}");
+
+    for command in ["decide", "choose", "tag", "score", "filter", "rank"] {
+        let output = run(&[command, "--help"], &[], b"").expect("the compiled binary runs");
+        let help = String::from_utf8_lossy(&output.stdout);
+        assert!(help.contains(RECORD_EXIT), "{command}: {help}");
+    }
+
+    let output = run(&["annotate", "--help"], &[], b"").expect("the compiled binary runs");
+    let help = String::from_utf8_lossy(&output.stdout);
+    assert!(help.contains(RECORD_EXIT), "annotate: {help}");
+    assert!(
+        help.contains("A completed run with one or more failed questions exits 6."),
+        "annotate: {help}"
+    );
 }
 
 #[test]
@@ -412,6 +469,21 @@ fn shared_help_defers_order_and_document_rules_to_each_command() {
     let help = String::from_utf8_lossy(&output.stdout);
     assert!(help.contains("most likely yes first"), "{help}");
     assert!(help.contains("An exact tie keeps input order."), "{help}");
+}
+
+#[test]
+fn record_framing_help_names_each_commands_output_rule() {
+    const VALUE: &str = "Value verbs keep `input` beside `value`.";
+    const RECORD: &str = "Record-returning verbs return records.";
+    const ANNOTATE: &str = "`annotate` enriches object records.";
+
+    for command in ["decide", "annotate", "filter"] {
+        let output = run(&[command, "--help"], &[], b"").expect("the compiled binary runs");
+        let help = String::from_utf8_lossy(&output.stdout);
+        for rule in [VALUE, RECORD, ANNOTATE] {
+            assert!(help.contains(rule), "{command}: {rule}\n{help}");
+        }
+    }
 }
 
 #[test]

@@ -10,13 +10,13 @@ use std::time::{Duration, Instant};
 use super::set;
 use crate::harness::{Canned, Listener, spawn};
 
-fn yes(model: &str, input: u64, output: u64) -> String {
+pub(super) fn yes(model: &str, input: u64, output: u64) -> String {
     format!(
         r#"{{"model":"{model}","answers":{{"q1":{{"type":"noul","noul":0.9}}}},"usage":{{"input_tokens":{input},"output_tokens":{output}}}}}"#
     )
 }
 
-fn grouped(name: &str, count: usize) -> PathBuf {
+pub(super) fn grouped(name: &str, count: usize) -> PathBuf {
     let questions = (0..count)
         .map(|place| {
             format!(r#""answer_{place}":{{"decide":"question {place}?","on":"/part_{place}"}}"#)
@@ -29,7 +29,7 @@ fn grouped(name: &str, count: usize) -> PathBuf {
     )
 }
 
-fn grouped_input(record: usize, count: usize) -> String {
+pub(super) fn grouped_input(record: usize, count: usize) -> String {
     let fields = (0..count)
         .map(|place| format!(r#""part_{place}":"record {record} group {place}""#))
         .collect::<Vec<_>>()
@@ -37,7 +37,7 @@ fn grouped_input(record: usize, count: usize) -> String {
     format!(r#"{{"record":{record},{fields}}}"#)
 }
 
-fn folder(name: &str) -> PathBuf {
+pub(super) fn folder(name: &str) -> PathBuf {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
     let _absent = fs::remove_dir_all(&path);
     path
@@ -48,10 +48,11 @@ fn entries(path: &Path) -> usize {
         entries
             .filter_map(Result::ok)
             .filter(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .is_some_and(|value| value == "json")
+                let path = entry.path();
+                path.extension().is_some_and(|value| value == "json")
+                    && path
+                        .file_name()
+                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
             })
             .count()
     })
@@ -61,6 +62,14 @@ fn entries(path: &Path) -> usize {
 fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
     let file = grouped("six-groups", 6);
     for jobs in [1_usize, 4, 32] {
+        let usage_home = folder(&format!("global-queue-usage-{jobs}"));
+        let environment = [
+            ("THINKTHEN_API_KEY", "sk-test-value"),
+            (
+                "XDG_CACHE_HOME",
+                usage_home.to_str().expect("usage cache home"),
+            ),
+        ];
         let answer = yes("local-1", 10, 2);
         let listener =
             Listener::answering(move |_| Canned::ok(&answer).after(25)).expect("a listener");
@@ -74,8 +83,9 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 "local-1",
                 "--jobs",
                 &jobs.to_string(),
+                "--no-cache",
             ],
-            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            &environment,
             grouped_input(1, 6).as_bytes(),
         )
         .expect("document run");
@@ -107,8 +117,9 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 "--jsonl",
                 "--jobs",
                 &jobs.to_string(),
+                "--no-cache",
             ],
-            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            &environment,
             input.as_bytes(),
         )
         .expect("stream run");
@@ -229,7 +240,9 @@ fn a_cache_can_mix_replayed_and_live_groups_with_checked_usage() {
         row.contains(r#""usage":{"input_tokens":20,"output_tokens":4}"#),
         "{row}"
     );
-    assert!(row.contains(r#""replayed":false"#), "{row}");
+    assert_eq!(row.matches(r#""cached":"#).count(), 1);
+    assert!(!row.contains(r#""replayed":"#), "{row}");
+    assert!(row.contains(r#""requests_sent":1,"cached":false"#), "{row}");
     assert_eq!(listener.requests().len(), 2);
 }
 
@@ -264,8 +277,10 @@ fn annotate_equal_groups_share_one_cache_request() {
     assert_eq!(output.status.code(), Some(0));
     let rows = String::from_utf8_lossy(&output.stdout);
     assert_eq!(rows.lines().count(), 2);
-    assert_eq!(rows.matches(r#""replayed":false"#).count(), 1);
-    assert_eq!(rows.matches(r#""replayed":true"#).count(), 1);
+    assert_eq!(rows.matches(r#""cached":false"#).count(), 1);
+    assert_eq!(rows.matches(r#""cached":true"#).count(), 1);
+    assert_eq!(rows.matches(r#""requests_sent":1"#).count(), 1);
+    assert_eq!(rows.matches(r#""requests_sent":0"#).count(), 1);
     assert_eq!(listener.requests().len(), 1);
 }
 
@@ -313,8 +328,11 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     let answer = yes("local-1", 1, 1);
     let listener = Listener::answering(move |_| Canned::ok(&answer).after(20)).expect("a listener");
     let file = grouped("broken-pipe", 2);
+    let usage_home = folder("broken-pipe-usage");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("XDG_CACHE_HOME", usage_home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
@@ -326,6 +344,7 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
             "--jsonl",
             "--jobs",
             "4",
+            "--no-cache",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -375,13 +394,15 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
         } else if body.contains("record 2") {
             Canned::ok(&yes("local-1", 1, 1)).after(40)
         } else {
-            Canned::status(500, "{}").after(100)
+            Canned::status(500, "{}").after(500)
         }
     })
     .expect("a listener");
     let file = grouped("closed-pipe-failure", 1);
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("XDG_CACHE_HOME", cache.join(".platform"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "annotate",
@@ -449,7 +470,11 @@ fn usage_overflow_fails_safely() {
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend reported token counts whose total is too large\n"
+        concat!(
+            "thinkthen: the backend reported token counts whose total is too large\n",
+            "thinkthen: usage counters could not be updated; ",
+            "check the usage folder permissions and free space\n",
+        )
     );
     assert!(output.stdout.is_empty());
 }

@@ -1,6 +1,10 @@
 #!/bin/sh
-# Probe 9, the text arm: evidence built from two pointers, sent the way the
-# tool sends it today, as a JSON object flattened into one string.
+# Probe 9, the text arm: each case is reduced to its ordered {subject, body}
+# parts, then sent unpointed so the whole record travels as one compact text
+# string — the bytes the recordings and the committed rows were made from.
+# A pointer selection no longer sends that shape; an object or a list now
+# travels as the `state` value itself. Each row still labels `input` with the
+# case, the record the committed rows carried.
 #
 # The object arm is object.sh, which posts the same request with `state` as a
 # real JSON object. It opens its own connection, so it keeps no recording and
@@ -32,15 +36,15 @@ target=$out/text.jsonl
 : >"$target"
 
 while IFS= read -r case; do
-	printf '%s\n' "$case" | thinkthen decide "$question" \
-		--jsonl --field /subject --field /body \
-		--details $folder >row.json && exit=0 || exit=$?
+	printf '%s\n' "$case" | jq -c '{subject, body}' | thinkthen decide "$question" \
+		--jsonl --details $folder >row.json && exit=0 || exit=$?
 	if [ "$exit" != 0 ]; then
 		printf 'job: %s stopped with exit %s\n' \
 			"$(printf '%s\n' "$case" | jq -r .id)" "$exit" >&2
 		exit "$exit"
 	fi
-	jq -c '{schema, value, input, question, answer, threshold, meta}' \
+	jq -c --argjson input "$case" \
+		'{schema, value, input: $input, question, answer, threshold, meta}' \
 		row.json >>"$target"
 done <cases.jsonl
 rm -f row.json

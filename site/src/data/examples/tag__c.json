@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* praise, a bug, and a double charge in one message */\nconst char *tag = \"{\\\"tag\\\": \\\"Which labels fit this message?\\\", \"\n    \"\\\"labels\\\": [\\\"praise\\\", \\\"bug\\\", \\\"billing\\\"], \"\n    \"\\\"evidence\\\": \\\"Love the new dashboard, but export \"\n    \"crashes the app, and I was charged twice.\\\"}\";\nchar *labels = thinkthen_call(tt, tag);\nputs(labels ? labels : thinkthen_error_message(tt));\nthinkthen_free_string(labels);",
+  "function": "tag",
+  "surface": "c"
+}

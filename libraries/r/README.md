@@ -12,7 +12,7 @@ up on 8215. Findings and quirks are in `NOTES.md`.
 The package's Rust crate points at `../../../../../contract` and
 `../../../../../standin` for in-tree builds. A tarball build cannot follow
 that path out of the repository, so `tools/make-tarball.sh` stages a copy
-with the contract, the stand-in, and `crates/thinkthen-core` vendored under
+with the contract, the stand-in, and `thinkthen-core` vendored under
 `src/rust/vendor/` (keeping the repository's relative layout), rewrites the
 two path lines, and runs `R CMD build`. The check runs its `--stage-only`
 form so the rewrite stays enforced. The width (the engine's

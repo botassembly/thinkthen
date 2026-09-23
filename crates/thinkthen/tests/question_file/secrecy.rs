@@ -1,7 +1,7 @@
 //! No channel ever repeats the key or the evidence, on any path either home opens.
 
 use crate::grammar::REFUSALS;
-use crate::harness::{CLOSED, run_with, written};
+use crate::harness::{CLOSED, refused, run_with, written};
 
 /// The key a secrecy case sets, which no channel may ever repeat.
 const SECRET: &str = "sk-never-printed";
@@ -79,4 +79,20 @@ fn no_message_from_either_home_ever_carries_the_key_or_the_evidence() {
             output.status.code()
         );
     }
+}
+
+#[test]
+fn a_refusal_names_the_key_and_never_the_description_it_held() {
+    let marker = "a private instruction never echoed";
+    let file = written(
+        "secrecy-structured",
+        &format!(r#"{{"choose":"a","options":{{"x":{{"note":"{marker}"}},"y":true}}}}"#),
+    );
+    let (stderr, code) = refused(&["choose", &file, "--dry-run"]);
+    assert_eq!(
+        stderr,
+        "thinkthen: `options` in the question file is a list of labels, or a map from each label to its description\n"
+    );
+    assert_eq!(code, Some(5));
+    assert!(!stderr.contains(marker), "{stderr}");
 }

@@ -1,0 +1,13 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "python",
+  "code": "import thinkthen as tt\n\nask = \"Does the customer ask for a refund?\"\n\n# a plain ask for money back: True\nprint(tt.decide(ask,\n    \"Please refund my order. It arrived broken.\"))\n\n# build a question once. The band's middle is \"not sure\"\nrefund = tt.question(decide=ask, threshold=(0.2, 0.8))\n\n# an exchange, or money back? not sure: None\nprint(tt.decide(refund,\n    \"I want to send this back.\"))\n\n# a list goes in, and one filled form per report comes out\nreports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\",\n    \"The Pay button on the billing page is too blue.\"]\nfor form in tt.annotate(\"form.json\", reports):\n    print(form)",
+  "printed": {
+    "command": "python sample.py",
+    "output": "True\nNone\n{'steps': True, 'area': 'export', 'impact': 1.94}\n{'steps': False, 'area': 'login', 'impact': 2.0}\n{'steps': False, 'area': 'billing', 'impact': 0.06}",
+    "see": "Each form fills steps, area, and impact."
+  },
+  "function": "annotate",
+  "surface": "python"
+}

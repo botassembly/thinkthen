@@ -1,6 +1,6 @@
 # Review leftovers from ticket 0010
 
-Status: Open. Unconfirmed by the sweep of 2026-09-21. The builder checks it.
+Status: Closed on 2026-09-22. Merged into 2026-09-22-small-leftovers-from-early-reviews.md.
 
 Found 2026-09-19 by the independent review of ticket 0010. The review fixed three defects and left two points. The next ticket that touches the demos script or these pages checks them.
 

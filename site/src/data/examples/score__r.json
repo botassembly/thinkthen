@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "r",
+  "code": "library(thinkthen)\n\n# your own scale, 0 to 2: 0.06, 0.99, and 2.0\ntt_score(\"How urgent is this?\",\n  c(\"Please update my mailing address when you can.\",\n    \"Can you send the signed contract by Friday?\",\n    \"Nobody can log in to the site right now.\"),\n  levels = c(\"Routine.\", \"Soon.\", \"Immediate.\"))",
+  "function": "score",
+  "surface": "r"
+}

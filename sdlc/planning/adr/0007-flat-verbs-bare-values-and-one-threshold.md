@@ -91,9 +91,10 @@ A value is a decimal fraction. A percent, a reversed band, and a number that is 
 | 3 | Single-input `decide` and `choose` only: the answer is unresolved |
 | 4 | The backend failed or sent a reply the adapter refused |
 | 5 | A local failure: a file, a recording, the configuration |
+| 6 | `annotate` completed its input and printed every result, but at least one logical question failed |
 | 70 | A defect in the tool |
 
-Codes 6, 7, and 8 stay reserved. In record mode the exit code reports the run, and no record's answer sets it. A valid answer on standard output can accompany exit 1 or 3. The help warns about `set -e` and `pipefail`.
+Codes 7 and 8 stay reserved. In record mode the exit code reports the run, and no record's answer sets it. A valid answer on standard output can accompany exit 1, 3, or 6. The help warns about `set -e` and `pipefail`.
 
 ### Records
 
@@ -172,6 +173,10 @@ Rewriting the demos found more. None changes a ruling.
 Building and reviewing ticket 0005 found more. None changes a ruling.
 
 - `--dry-run` may be added to any valid command line. It prints the plan whatever view option is present, so `--dry-run --quiet` and `--dry-run --details` both print the plan and exit 0. A user inspects a working command by adding one option and removing none. Ian can overturn this cheaply.
+
+## Amendment, 2026-09-21: partial question failures
+
+An otherwise valid multi-question backend reply keeps its good logical answers. `annotate` marks each failed question, counts failed logical questions, completes later groups and records, and exits 6 without a diagnostic. A later whole-run failure keeps its existing code and stop boundary. A reply with no valid logical answer and every one-question command remain backend failures at exit 4.
 - A cut of 0 is refused, because every answer would be yes. A band whose low side is 0 is accepted, because an exact 0 is still a no.
 - `decide` never prints `threshold: null`, because a rule always exists. `null` belongs to a verb that takes no threshold.
 - `-h` prints the short help, and `--help` prints the long help with the advanced options.

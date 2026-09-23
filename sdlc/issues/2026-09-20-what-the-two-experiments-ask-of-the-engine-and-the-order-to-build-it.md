@@ -1,6 +1,6 @@
 # What the two experiments ask of the engine, and the order to build it
 
-Status: Open
+Status: Closed on 2026-09-22. The plan became the ADR 0017 rewrite and the engine tickets, and all five parked answers were checked against the evidence.
 
 Ian asked on 2026-09-20 for a plan to finish the command and the Rust code under it. Two experiments finished the same day. `experiments/205-thinkthen-libs/FINDINGS.md` covers six library bindings. `experiments/207-thinkthen-db/FINDINGS.md` covers three database extensions. Both ran on a stand-in engine against a local stub, and the stand-in wraps the real `thinkthen-core` by path. This page turns their findings into an order of work. It authorizes nothing. It steers `sdlc/planning/prospective-bash-rust-python-plan.md`, and the builder writes the tickets.
 

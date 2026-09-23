@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "-- the outage first, then the quote due today, then the\n-- bill due in a month, and the newsletter last\nSELECT body FROM (VALUES\n    ('Newsletter: our autumn catalog is here. No reply needed.'),\n    ('Our checkout page is down and customers cannot pay'),\n    ('Reminder: your invoice is due in 30 days'),\n    ('Please send the signed quote by 5 pm today')) AS t(body)\nORDER BY thinkthen_probability(\n    '{\"decide\": \"Is this urgent?\"}', body) DESC;",
+  "function": "rank",
+  "surface": "postgresql"
+}

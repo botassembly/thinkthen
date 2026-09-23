@@ -1,0 +1,13 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "r",
+  "code": "library(thinkthen)\nbody <- c(\"I was billed twice for one order.\",\n  \"My parcel is a week late.\",\n  \"I am locked out of my account.\")\nteams <- c(\"billing\", \"shipping\", \"account\")\n# each ticket goes to the team its words name\ndata.frame(body, team = tt_choose(\"Which team owns this?\",\n  body, teams))\n# only the double bill is about money, so it ranks first\ntt_rank(\"Is this about money?\", body, top = 1)",
+  "printed": {
+    "command": "Rscript sample.R",
+    "output": "                               body     team\n1 I was billed twice for one order.  billing\n2         My parcel is a week late. shipping\n3    I am locked out of my account.  account\n  place                            record probability\n1     1 I was billed twice for one order.        0.98",
+    "see": "The double bill ranks at 0.98."
+  },
+  "function": "rank",
+  "surface": "r"
+}

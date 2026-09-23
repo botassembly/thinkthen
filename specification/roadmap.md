@@ -72,17 +72,23 @@ One test decides between them. The transforms are written and tried on real rows
 
 The fifth outcome carries a rule of its own. It enters only when several transforms exist that people would otherwise copy and paste. One transform does not earn it.
 
-An idea for that fifth outcome: the cheapest form is a command that prints a named transform on standard output for `jq -f`, and it adds no dependency.
+The transform stage completed on 2026-09-21. It now has ten `.jq` files totaling 1,408 lines, seven executable Bash blocks in its index, and nineteen green how-tos. The files cover whole-run metrics, a row policy, and a reviewed-action monitor. Comparison and human-label sweeps remain ordinary `jq` pipelines, and their output contracts work without a combined report.
+
+The fifth outcome is selected for release preparation: a read-only `thinkthen transform list` and `thinkthen transform show NAME` surface. It lists or prints selected transforms for `jq -f`; it never starts `jq`, interprets a transform, reads user files, or combines reports. The agent declines the separate `report` verb based on the completed evidence, and Ian can overturn that decision. The catalog's membership, public names, and package location wait for the implementation ticket after ADR 0017's one-crate move.
 
 The earlier `specification/report.md` holds what the command knew about accuracy at coverage and about the fixed JSON shape of a report. It stays in the git history.
 
-### The configuration file, profiles, and the `config` command
+### Named address profiles and the `config` command
 
 The file lived at `$XDG_CONFIG_HOME/thinkthen/config.json`. It held a map of named profiles, a default profile name, and three run settings: `timeout_seconds`, `max_retries`, and `jobs`. A profile held four values: the URL, the adapter, the model, and the name of the key variable. It never held a key. `config path`, `config show`, and `config check` read it and printed it, and the tool never wrote it. The options `--profile`, `--adapter`, `--key-env`, and `--config` and the variables `THINKTHEN_PROFILE` and `THINKTHEN_CONFIG` selected against it.
 
-Ian took all of it out of version one on 2026-09-19, in the configuration section of ADR 0010. Rulings 1 and 2 emptied a profile out. One wire shape leaves nothing for an adapter to name, and `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `--model` already say the other three values. A profile was then a second spelling of what a shell user writes in front of the command, and two spellings of one thing cost more than they return.
+Ian took all of that configuration surface out of version one on 2026-09-19, in the configuration section of ADR 0010. Rulings 1 and 2 emptied an address profile out. One wire shape leaves nothing for an adapter to name, and `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `--model` already say the other three values. An address profile was then a second spelling of what a shell user writes in front of the command, and two spellings of one thing cost more than they return.
 
-A user with several endpoints for whom a variable in front of the command is not enough would bring the file back. The shape to return to is the one above, minus the adapter: named profiles over an address, a model, and a key variable. Nothing in the tool blocks it, because the file was always read at the edge and never reached the pure core.
+ADR 0033 later returned one smaller read-only configuration file for the bounded default cache. Its closed shape holds one address, one model, the cache switch, and the prune target. It has no named profiles, selection command, key name, adapter, retry setting, width, or write command. The `config` command and named address profiles remain held here.
+
+ADR 0032 later reused `--profile FILE` for a smaller explicit file. That file carries a safe calibration name and local evidence-byte, encoded-request-byte, or expanded-question limits. It carries no address, model, adapter, key name, retry setting, width, default, or discovery rule. A user names its path on each run. It does not restore the configuration surface this section holds out.
+
+A user with several endpoints for whom a variable in front of the command is not enough would bring named address profiles back. The shape to return to is the one above, minus the adapter: named address profiles over an address, a model, and a key variable. The bounded-cache configuration and explicit limits-and-calibration file remain separate inputs.
 
 `specification/config.md` and demo 10, `demos/10-another-backend/`, stay in the git history. Ticket 0007 removed both, and 10 stays an empty number.
 

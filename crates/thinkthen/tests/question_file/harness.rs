@@ -27,6 +27,7 @@ pub(crate) fn written(name: &str, text: &str) -> String {
 pub(crate) fn run(arguments: &[&str], evidence: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -48,6 +49,7 @@ pub(crate) const CLOSED: &str = "http://127.0.0.1:1/v1";
 pub(crate) fn run_with(arguments: &[&str], evidence: &[u8], key: &str) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", key)
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         .args(arguments)

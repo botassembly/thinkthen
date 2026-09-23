@@ -1,0 +1,541 @@
+//! The JSON document one judgment prints.
+
+use serde::ser::SerializeMap;
+use serde::{Serialize, Serializer};
+
+use crate::core::answer::{Answer, Value};
+use crate::core::question::Question;
+use crate::core::records::Record;
+use crate::core::reply::{BackendFailure, FailedValue};
+use crate::core::text::{ModelName, Url};
+use crate::core::threshold::Threshold;
+
+mod profile_warning;
+mod record_value;
+
+pub(crate) use profile_warning::ProfileWarning;
+pub(crate) use record_value::RecordValue;
+
+/// The schema string a version one result carries.
+pub(crate) const SCHEMA: &str = "thinkthen.result/1";
+
+/// What the backend reported it spent on the judgment.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub(crate) struct Usage {
+    input_tokens: u64,
+    output_tokens: u64,
+}
+
+impl Usage {
+    /// Take the token counts the backend reported.
+    #[must_use]
+    pub(crate) const fn new(input_tokens: u64, output_tokens: u64) -> Self {
+        Self {
+            input_tokens,
+            output_tokens,
+        }
+    }
+
+    /// Add the counts from two replies when both totals fit.
+    #[must_use]
+    pub(crate) const fn checked_plus(self, other: Self) -> Option<Self> {
+        let Some(input_tokens) = self.input_tokens.checked_add(other.input_tokens) else {
+            return None;
+        };
+        let Some(output_tokens) = self.output_tokens.checked_add(other.output_tokens) else {
+            return None;
+        };
+        Some(Self {
+            input_tokens,
+            output_tokens,
+        })
+    }
+
+    pub(crate) const fn token_counts(self) -> (u64, u64) {
+        (self.input_tokens, self.output_tokens)
+    }
+}
+
+/// Whether recordings answered and which logical requests made one result.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct RequestMeta {
+    replayed: bool,
+    requests_sent: u64,
+    requests: Vec<String>,
+    failed_questions: usize,
+    profile_warning: Option<ProfileWarning>,
+}
+
+impl RequestMeta {
+    /// Take the replay fact and ordered recording digests for one result.
+    #[must_use]
+    pub(crate) const fn new(replayed: bool, requests_sent: u64, requests: Vec<String>) -> Self {
+        Self {
+            replayed,
+            requests_sent,
+            requests,
+            failed_questions: 0,
+            profile_warning: None,
+        }
+    }
+
+    /// Carry a profile mismatch into detailed metadata.
+    pub(crate) fn with_profile_warning(mut self, warning: Option<ProfileWarning>) -> Self {
+        self.profile_warning = warning;
+        self
+    }
+
+    /// Carry the number of failed logical questions in one result.
+    #[must_use]
+    pub(crate) const fn with_failed_questions(mut self, failed_questions: usize) -> Self {
+        self.failed_questions = failed_questions;
+        self
+    }
+}
+
+/// One named answer inside an annotated detailed row.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct AnnotatedAnswer {
+    value: Value,
+    question: Question,
+    answer: Answer,
+    threshold: Option<Threshold>,
+    request: String,
+}
+
+/// One failed question inside an annotated detailed row.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct AnnotatedFailure {
+    question: Question,
+    failure: BackendFailure,
+    request: String,
+}
+
+impl AnnotatedFailure {
+    /// Gather the question, backend failure, and request that produced it.
+    #[must_use]
+    pub(crate) const fn new(question: Question, failure: BackendFailure, request: String) -> Self {
+        Self {
+            question,
+            failure,
+            request,
+        }
+    }
+}
+
+/// A successful or failed named entry inside detailed `annotate` output.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
+pub(crate) enum AnnotatedEntry {
+    /// A successful answer keeps the established detailed shape.
+    Answered(AnnotatedAnswer),
+    /// A failed answer omits value, answer, and threshold.
+    Failed(AnnotatedFailure),
+}
+
+/// A successful or failed named value in bare `annotate` output.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
+pub(crate) enum AnnotatedValue {
+    /// A value read from a usable backend answer.
+    Answered(Value),
+    /// The exact marker for one failed backend answer.
+    Failed(FailedValue),
+}
+
+impl AnnotatedAnswer {
+    /// Gather the complete answer and the request that produced it.
+    #[must_use]
+    pub(crate) const fn new(
+        value: Value,
+        question: Question,
+        answer: Answer,
+        threshold: Option<Threshold>,
+        request: String,
+    ) -> Self {
+        Self {
+            value,
+            question,
+            answer,
+            threshold,
+            request,
+        }
+    }
+}
+
+/// Aggregate metadata for one annotated record.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub(crate) struct AnnotateMeta {
+    tool: String,
+    questions_sha256: String,
+    url: Url,
+    model: ModelName,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<Usage>,
+    requests_sent: u64,
+    cached: bool,
+    requests: Vec<String>,
+    failed_questions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile_warning: Option<ProfileWarning>,
+}
+
+impl AnnotateMeta {
+    /// Gather the shared facts and ordered request identities behind one row.
+    #[must_use]
+    pub(crate) fn new(
+        version: &str,
+        questions_sha256: String,
+        url: Url,
+        model: ModelName,
+        usage: Option<Usage>,
+        request_meta: RequestMeta,
+    ) -> Self {
+        let RequestMeta {
+            replayed,
+            requests_sent,
+            requests,
+            failed_questions,
+            profile_warning,
+        } = request_meta;
+        Self {
+            tool: crate::core::version_line(version),
+            questions_sha256,
+            url,
+            model,
+            usage,
+            requests_sent,
+            cached: replayed,
+            requests,
+            failed_questions,
+            profile_warning,
+        }
+    }
+}
+
+/// The detailed result from applying a question set to one record.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct AnnotateResult {
+    schema: &'static str,
+    input: Record,
+    value: NamedValues,
+    answers: NamedAnswers,
+    meta: AnnotateMeta,
+}
+
+impl AnnotateResult {
+    /// Gather one complete annotation row.
+    #[must_use]
+    pub(crate) const fn new(
+        input: Record,
+        values: Vec<(String, AnnotatedValue)>,
+        answers: Vec<(String, AnnotatedEntry)>,
+        meta: AnnotateMeta,
+    ) -> Self {
+        Self {
+            schema: SCHEMA,
+            input,
+            value: NamedValues(values),
+            answers: NamedAnswers(answers),
+            meta,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct NamedValues(Vec<(String, AnnotatedValue)>);
+
+impl NamedValues {
+    /// Keep named values in question-set order.
+    #[must_use]
+    pub(crate) const fn new(values: Vec<(String, AnnotatedValue)>) -> Self {
+        Self(values)
+    }
+}
+impl Serialize for NamedValues {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(self.0.iter().map(|(name, value)| (name, value)))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct NamedAnswers(Vec<(String, AnnotatedEntry)>);
+impl Serialize for NamedAnswers {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (name, answer) in &self.0 {
+            map.serialize_entry(name, answer)?;
+        }
+        map.end()
+    }
+}
+
+/// Who answered, how, at what cost, from a backend or from a recording.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub(crate) struct Meta {
+    tool: String,
+    question_sha256: String,
+    url: Url,
+    model: ModelName,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<Usage>,
+    requests_sent: u64,
+    cached: bool,
+    requests: Vec<String>,
+    failed_questions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile_warning: Option<ProfileWarning>,
+}
+
+impl Meta {
+    /// Name the tool, who answered, at what cost, and whether a recording did.
+    ///
+    /// The result keeps the binary, resolved question, backend, cost, send
+    /// count, replay state, and ordered logical request identities.
+    #[must_use]
+    pub(crate) fn new(
+        version: &str,
+        question_sha256: String,
+        url: Url,
+        model: ModelName,
+        usage: Option<Usage>,
+        request_meta: RequestMeta,
+    ) -> Self {
+        let RequestMeta {
+            replayed,
+            requests_sent,
+            requests,
+            failed_questions: _,
+            profile_warning,
+        } = request_meta;
+        Self {
+            tool: crate::core::version_line(version),
+            question_sha256,
+            url,
+            model,
+            usage,
+            requests_sent,
+            cached: replayed,
+            requests,
+            failed_questions: 0,
+            profile_warning,
+        }
+    }
+}
+
+/// One judgment, in the shape `specification/result.md` prints.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct DecisionResult {
+    schema: &'static str,
+    value: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input: Option<Record>,
+    question: Question,
+    answer: Answer,
+    threshold: Option<Threshold>,
+    meta: Meta,
+}
+
+impl DecisionResult {
+    /// Gather one judgment into the document the tool prints.
+    ///
+    /// `value` is the bare value the command would have printed, so a reader of
+    /// the object and a reader of the bare line learn the same thing.
+    /// `threshold` is `None` on a verb that takes no rule, and it prints `null`.
+    #[must_use]
+    pub(crate) const fn new(
+        value: Value,
+        question: Question,
+        answer: Answer,
+        threshold: Option<Threshold>,
+        meta: Meta,
+    ) -> Self {
+        Self {
+            schema: SCHEMA,
+            value,
+            input: None,
+            question,
+            answer,
+            threshold,
+            meta,
+        }
+    }
+
+    /// Carry the whole record this row answered, as a record row does.
+    ///
+    /// `input` holds the record as it arrived, including the parts no pointer
+    /// sent. A single document is not a record stream, so it carries none.
+    #[must_use]
+    pub(crate) fn with_input(mut self, record: Record) -> Self {
+        self.input = Some(record);
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DecisionResult, Meta, RequestMeta, SCHEMA, Usage};
+    use crate::core::answer::{Answer, Value};
+    use crate::core::probability::Probability;
+    use crate::core::question::{Labels, Question};
+    use crate::core::records::{Framing, Reading};
+    use crate::core::text::{ModelName, QuestionText, Url};
+    use crate::core::threshold::Threshold;
+
+    /// The digest of the example question, which `result.md` prints too.
+    const DIGEST: &str = "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888";
+    const REQUEST: &str = "6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4";
+
+    /// The example in `specification/result.md`, on the one line it prints on.
+    const COMPACT: &str = concat!(
+        r#"{"schema":"thinkthen.result/1","value":true,"#,
+        r#""question":{"verb":"decide","text":"Does this ask for a refund?"},"#,
+        r#""answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"#,
+        r#""meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
+        r#""url":"https://api.typesafe.ai/v1/systemone","#,
+        r#""model":"jev-1.13.0","#,
+        r#""usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"#,
+        r#""requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}}"#,
+    );
+
+    #[test]
+    fn usage_addition_refuses_either_counter_overflow() {
+        let largest = Usage::new(u64::MAX, u64::MAX);
+        assert_eq!(largest.checked_plus(Usage::new(1, 0)), None);
+        assert_eq!(largest.checked_plus(Usage::new(0, 1)), None);
+        assert_eq!(
+            Usage::new(2, 3).checked_plus(Usage::new(5, 7)),
+            Some(Usage::new(7, 10))
+        );
+    }
+
+    fn example() -> DecisionResult {
+        let text = QuestionText::new("Does this ask for a refund?").expect("not empty");
+        let probability = Probability::new(0.92).expect("a probability");
+        let answer = Answer::new_yes_no(probability);
+        let threshold = Threshold::default();
+        DecisionResult::new(
+            answer.read(Some(threshold)).0,
+            Question::Decide {
+                text,
+                yes: None,
+                no: None,
+            },
+            answer,
+            Some(threshold),
+            Meta::new(
+                "0.4.0",
+                DIGEST.to_owned(),
+                Url::new("https://api.typesafe.ai/v1/systemone").expect("not empty"),
+                ModelName::new("jev-1.13.0").expect("not empty"),
+                Some(Usage::new(312, 48)),
+                RequestMeta::new(false, 1, vec![REQUEST.to_owned()]),
+            ),
+        )
+    }
+
+    #[test]
+    fn the_schema_constant_is_the_string_a_result_carries() {
+        assert_eq!(SCHEMA, "thinkthen.result/1");
+        let rendered = serde_json::to_string(&example()).expect("a result serializes");
+        assert!(
+            rendered.starts_with(&format!(r#"{{"schema":"{SCHEMA}""#)),
+            "{rendered}"
+        );
+    }
+
+    #[test]
+    fn a_result_serializes_in_the_order_the_specification_prints() {
+        let rendered = serde_json::to_string(&example()).expect("a result serializes");
+        assert_eq!(rendered, COMPACT);
+    }
+
+    #[test]
+    fn meta_names_the_tool_and_drops_the_usage_a_backend_never_reported() {
+        let meta = Meta::new(
+            "0.4.0",
+            DIGEST.to_owned(),
+            Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
+            ModelName::new("local-1").expect("not empty"),
+            None,
+            RequestMeta::new(true, 0, vec![REQUEST.to_owned()]),
+        );
+        let rendered = serde_json::to_string(&meta).expect("meta serializes");
+        assert_eq!(
+            rendered,
+            concat!(
+                r#"{"tool":"thinkthen 0.4.0","question_sha256":"982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888","#,
+                r#""url":"http://127.0.0.1:8080/v1/systemone","#,
+                r#""model":"local-1","requests_sent":0,"cached":true,"requests":["6b1f31aa3cf47e4e6a7f2b3d9ce06df13bc3340e6713473b434f9bbc263b91c4"],"failed_questions":0}"#,
+            )
+        );
+    }
+
+    #[test]
+    fn an_unresolved_result_prints_a_null_value_and_the_band_that_left_it_open() {
+        let text = QuestionText::new("Does this ask for a refund?").expect("not empty");
+        let answer = Answer::new_yes_no(Probability::new(0.5).expect("a probability"));
+        let threshold: Threshold = "0.1:0.9".parse().expect("a band");
+        let result = DecisionResult::new(
+            answer.read(Some(threshold)).0,
+            Question::Decide {
+                text,
+                yes: None,
+                no: None,
+            },
+            answer.clone(),
+            Some(threshold),
+            Meta::new(
+                "0.4.0",
+                DIGEST.to_owned(),
+                Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
+                ModelName::new("local-1").expect("not empty"),
+                None,
+                RequestMeta::new(false, 1, vec![REQUEST.to_owned()]),
+            ),
+        );
+        let rendered = serde_json::to_string(&result).expect("a result serializes");
+        assert!(rendered.contains(r#""value":null,"#), "{rendered}");
+        assert!(rendered.contains(r#""threshold":"0.1:0.9","#), "{rendered}");
+    }
+
+    #[test]
+    fn a_record_row_carries_the_whole_record_under_input() {
+        let reading = Reading::new(Framing::Jsonl, Vec::new()).expect("a framing");
+        let line = br#"{"id":"T-91","body":"Payouts have failed for 3 days."}"#;
+        let record = reading.record(line).expect("a record");
+        let rendered = serde_json::to_string(&example().with_input(record)).expect("a row");
+        assert!(
+            rendered.starts_with(concat!(
+                r#"{"schema":"thinkthen.result/1","value":true,"#,
+                r#""input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":"#,
+            )),
+            "{rendered}"
+        );
+    }
+
+    #[test]
+    fn a_verb_that_takes_no_rule_prints_a_null_threshold() {
+        let text = QuestionText::new("How much disruption does this report?").expect("not empty");
+        let named = [("None.", None), ("Blocked.", None)].map(|(n, d)| (n.to_owned(), d));
+        let levels = Labels::levels(named.into()).expect("two levels");
+        let answer = Answer::new_yes_no(Probability::new(0.25).expect("a probability"));
+        let result = DecisionResult::new(
+            Value::Score(0.25),
+            Question::Score { text, levels },
+            answer,
+            None,
+            Meta::new(
+                "0.4.0",
+                DIGEST.to_owned(),
+                Url::new("http://127.0.0.1:8080/v1/systemone").expect("not empty"),
+                ModelName::new("local-1").expect("not empty"),
+                None,
+                RequestMeta::new(false, 1, vec![REQUEST.to_owned()]),
+            ),
+        );
+        let rendered = serde_json::to_string(&result).expect("a result serializes");
+        assert!(rendered.contains(r#""value":0.25,"#), "{rendered}");
+        assert!(rendered.contains(r#""threshold":null,"#), "{rendered}");
+    }
+}

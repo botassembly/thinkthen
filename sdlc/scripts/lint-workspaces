@@ -132,6 +132,7 @@ fail=0
 for entry in \
 	'contract:' \
 	'standin:' \
+	'thinkthen-core:' \
 	'libraries/rust:' \
 	'libraries/c:' \
 	'libraries/python:python3' \
@@ -209,7 +210,7 @@ for entry in \
 	fi
 
 	# Every workspace also answers cargo deny from the same rules the root
-	# rung uses, so advisories, bans, and licenses are checked on all thirteen
+	# rung uses, so advisories, bans, and licenses are checked on all fourteen
 	# lockfiles and not only the root's. The root's exactness (unused
 	# allowances refused) is a property of the whole tree; a single surface's
 	# smaller tree cannot carry every allowed license, so the generated

@@ -20,7 +20,7 @@ A stream of records. `filter` requires `--lines`, `--jsonl`, `--csv`, or `--tsv`
 
 Each kept line or JSONL record prints as it arrived, in input order. A kept CSV or TSV row prints as one compact JSON object in header order. A record that did not reach the mark prints nothing.
 
-`--details` prints the object in [result.md](result.md) for every record, kept or not, in input order. A pipeline that must keep every record uses `--details` and splits with `jq`.
+`--details` prints the object in [result.md](result.md) for each kept record, in input order. It does not change which records `filter` keeps. A pipeline that needs every record with its answer uses `decide --details` and splits with `jq`.
 
 ## Options
 
@@ -29,12 +29,12 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | `--threshold T` | A single cut on the probability of yes. The band form is a usage error. See [threshold.md](threshold.md) | `0.5` |
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing. One of the four is required | None. Its absence is a usage error |
 | `--field POINTER` | The part of each record the model sees. See [records.md](records.md) | The whole record |
-| `--details` | Prints one result object per record in place of the kept records | Off |
+| `--details` | Prints one result object per kept record in place of the kept records | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 `filter` takes no `--quiet`, no `--raw`, and no `--top`. Each is refused by name. `--top` belongs to `rank`, because `filter` keeps records and has no order to cut. A missing framing is a usage error, because one document is not a stream.
 
@@ -46,7 +46,7 @@ The request, the result object, and the recording entry are those of `decide`, s
 
 ## Exit codes
 
-0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. No record's answer sets the exit code. An empty record stream exits 0 with no output and no request.
+0 when the run finished, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. No record's answer sets the exit code. An empty line or JSONL stream exits 0 with no output and no request. Empty CSV and TSV inputs exit 2 because the required header is missing.
 
 ## Examples
 
@@ -59,7 +59,7 @@ thinkthen filter 'This mentions an unresolved action.' --lines --threshold 0.9 <
 ```
 
 ```sh
-thinkthen filter 'This reports a payment failure.' --jsonl --field /body --details < tickets.jsonl |
+thinkthen decide 'This reports a payment failure.' --jsonl --field /body --details < tickets.jsonl |
   jq -c 'select(.answer.probability < 0.9)'
 ```
 

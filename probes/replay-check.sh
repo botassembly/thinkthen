@@ -5,10 +5,13 @@
 #   sh probes/replay-check.sh probes/01-find-vs-rank
 #
 # It runs the job with --replay into a fresh folder and compares every row
-# against the committed one. Two fields are set aside, and every other byte
-# must match. `meta.replayed` is true where the live row is false. `meta.tool`
-# arrived with ticket 0012, after these rows were written, so the field is
-# dropped from both rows and a row older than it still compares.
+# against the committed one. Historical metadata fields are set aside, and
+# every other byte must match. `meta.cached` is true on a fresh replayed row
+# where the committed row's provenance field is false; `meta.replayed` is the
+# same field under its older spelling, so both names are set aside.
+# `meta.tool`, `meta.question_sha256`, `meta.requests`, and
+# `meta.failed_questions` arrived after these rows were written, so they are
+# dropped from both sides.
 set -eu
 
 probe=${1:?name the probe folder}
@@ -36,8 +39,8 @@ for committed in "$probe"/runs/*.jsonl; do
 		status=1
 		continue
 	fi
-	jq -c 'del(.meta.tool, .meta.question_sha256) | .meta.replayed = "set aside"' "$committed" >"$scratch/committed.norm"
-	jq -c 'del(.meta.tool, .meta.question_sha256) | .meta.replayed = "set aside"' "$replayed" >"$scratch/replayed.norm"
+	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests_sent, .meta.requests, .meta.failed_questions, .meta.replayed, .meta.cached)' "$committed" >"$scratch/committed.norm"
+	jq -c 'del(.meta.tool, .meta.question_sha256, .meta.requests_sent, .meta.requests, .meta.failed_questions, .meta.replayed, .meta.cached)' "$replayed" >"$scratch/replayed.norm"
 	if diff -q "$scratch/committed.norm" "$scratch/replayed.norm" >/dev/null; then
 		printf 'replay-check: %s reproduced %s rows\n' "$name" "$(wc -l <"$committed" | tr -d ' ')"
 	else
@@ -45,8 +48,8 @@ for committed in "$probe"/runs/*.jsonl; do
 		diff "$scratch/committed.norm" "$scratch/replayed.norm" | head -5 >&2
 		status=1
 	fi
-	if [ "$(jq -s 'map(select(.meta.replayed != true)) | length' "$replayed")" != 0 ]; then
-		printf 'replay-check: %s holds a row that was not replayed\n' "$name" >&2
+	if [ "$(jq -s 'map(select(.meta.cached != true or (.meta | has("replayed")))) | length' "$replayed")" != 0 ]; then
+		printf 'replay-check: %s holds a row without cached:true\n' "$name" >&2
 		status=1
 	fi
 done

@@ -6,9 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
-use thinkthen_core::adapters::built_in;
-use thinkthen_core::recording::{Entry, Exchange};
-use thinkthen_core::{Evidence, ModelName, Plan, Question, QuestionText, Url};
+use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -75,34 +73,9 @@ fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
 
 /// Write the entry the default address would record for this response.
 fn plant(folder: &Path, response: &str) -> Option<String> {
-    let plan = Plan::new(
-        Evidence::new(EVIDENCE).ok()?,
-        ModelName::new(built_in::DEFAULT_MODEL).ok()?,
-        vec![Question::Decide {
-            text: QuestionText::new("asks for a refund").ok()?,
-            yes: None,
-            no: None,
-        }],
-    )
-    .ok()?;
-    let request = built_in::encode(&plan).ok()?;
-    // The exchange is built here rather than pinned, so it takes the address
-    // from the adapter that owns it.
-    let url = Url::new(format!(
-        "{}/{}",
-        built_in::DEFAULT_BASE,
-        built_in::ENDPOINT_PATH
-    ))
-    .ok()?;
-    let exchange = Exchange::new(&url, &request);
-    let name = exchange.digest().file_name();
-    let written = Entry::of(&exchange, response.as_bytes())
-        .ok()?
-        .written()
-        .ok()?;
-    fs::create_dir_all(folder).ok()?;
-    fs::write(folder.join(&name), written).ok()?;
-    Some(name)
+    let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "asks for a refund");
+    let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
+    plant_recording(folder, &url, &request, response)
 }
 
 /// The one entry a folder holds, as the file name and the text inside it.
@@ -110,7 +83,11 @@ pub(crate) fn only_entry(folder: &Path) -> io::Result<(String, String)> {
     let mut entries = Vec::new();
     for entry in fs::read_dir(folder)? {
         let path = entry?.path();
-        if path.extension().is_some_and(|value| value == "json") {
+        if path.extension().is_some_and(|value| value == "json")
+            && path
+                .file_name()
+                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+        {
             entries.push(path);
         }
     }
@@ -178,10 +155,11 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
     let live = String::from_utf8(recorded.1).expect("a result is text");
     let replayed = String::from_utf8(output.stdout).expect("a result is text");
     assert_eq!(
-        live.replace(r#""replayed":false"#, r#""replayed":true"#),
+        live.replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
+            .replace(r#""cached":false"#, r#""cached":true"#),
         replayed
     );
-    assert!(live.contains(r#""replayed":false"#), "{live}");
+    assert!(live.contains(r#""cached":false"#), "{live}");
 }
 
 #[test]
@@ -210,7 +188,7 @@ fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
     let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(printed.contains(r#""replayed":true"#), "{printed}");
+    assert!(printed.contains(r#""cached":true"#), "{printed}");
     assert!(
         printed.contains(r#""url":"https://api.typesafe.ai/v1/systemone""#),
         "{printed}"
@@ -221,10 +199,11 @@ fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
 
 /// `meta`, pinned field by field in the order it prints them.
 #[test]
-fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
+fn meta_holds_the_url_the_model_the_usage_and_the_cached_flag() {
     let folder = folder("meta");
     let name = plant(&folder, ANSWERED).expect("an entry the default address answers");
     assert!(name.ends_with(".json"), "{name}");
+    let request = name.strip_suffix(".json").expect("a recording name");
 
     let output = run(
         &[
@@ -240,16 +219,19 @@ fn meta_holds_the_url_the_model_the_usage_and_the_replayed_flag() {
 
     assert_eq!(output.status.code(), Some(0));
     let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        printed.contains(concat!(
+    let expected = [
+        concat!(
             r#""meta":{"tool":"thinkthen 0.0.1","#,
             r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
             r#""url":"https://api.typesafe.ai/v1/systemone","#,
             r#""model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"#,
-            r#""replayed":true}}"#,
-        )),
-        "{printed}"
-    );
+            r#""requests_sent":0,"cached":true,"requests":[""#,
+        ),
+        request,
+        r#""],"failed_questions":0}"#,
+    ]
+    .concat();
+    assert!(printed.contains(&expected), "{printed}");
 }
 
 #[test]
@@ -375,8 +357,10 @@ fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
         let output = decide(listener.base(), &both, KEY).expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(0), "run {run}");
         let printed = String::from_utf8_lossy(&output.stdout);
-        let replayed = format!(r#""replayed":{}"#, run == 1);
+        let replayed = format!(r#""cached":{}"#, run == 1);
         assert!(printed.contains(&replayed), "run {run}: {printed}");
+        let requests_sent = format!(r#""requests_sent":{}"#, usize::from(run == 0));
+        assert!(printed.contains(&requests_sent), "run {run}: {printed}");
     }
 
     assert_eq!(listener.requests().len(), 1);
@@ -400,6 +384,25 @@ fn two_different_folders_and_a_dry_run_that_records_are_usage_errors() {
     }
 
     assert!(!folder.exists(), "a usage error writes no folder");
+}
+
+#[test]
+fn a_recording_path_that_is_a_file_gets_a_fixed_action() {
+    let folder = folder("recording-path-is-file");
+    fs::write(&folder, b"private path marker").expect("a file blocks the folder");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a listener");
+    let output = decide(
+        listener.base(),
+        &["--record", &folder.to_string_lossy()],
+        KEY,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the recording directory is a file; choose another path or remove the file\n"
+    );
 }
 
 /// The mode a path carries, on the one family of systems the tool targets.
@@ -471,7 +474,6 @@ fn an_entry_that_cannot_be_read_is_not_reported_as_a_miss() {
 
 #[test]
 fn a_failed_exchange_is_never_recorded() {
-    let folder = folder("failed");
     let cases = [
         Canned::status(402, r#"{"error":"no credit"}"#),
         Canned::ok("not json at all"),
@@ -479,7 +481,8 @@ fn a_failed_exchange_is_never_recorded() {
         Canned::cut_short(),
     ];
 
-    for canned in cases {
+    for (place, canned) in cases.into_iter().enumerate() {
+        let folder = folder(&format!("failed-{place}"));
         let listener = Listener::serving(vec![canned]).expect("a loopback listener");
         let output = decide(
             listener.base(),
@@ -489,10 +492,18 @@ fn a_failed_exchange_is_never_recorded() {
         .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(4));
-        assert!(
-            fs::read_dir(&folder).is_err_and(|error| error.kind() == io::ErrorKind::NotFound),
-            "a failure writes no folder"
-        );
+        let files = fs::read_dir(&folder)
+            .expect("recording preflight made the private folder")
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.extension().is_some_and(|value| value == "json")
+                    && path
+                        .file_name()
+                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+            })
+            .collect::<Vec<_>>();
+        assert!(files.is_empty(), "a failed exchange installs no entry");
     }
 }
 
@@ -514,7 +525,7 @@ fn cache_is_the_two_options_on_one_folder_and_stands_beside_neither() {
         decide(listener.base(), &["--cache", &named, "--details"], None).expect("the binary runs");
     assert_eq!(output.status.code(), Some(0));
     let row = String::from_utf8_lossy(&output.stdout);
-    assert!(row.contains(r#""replayed":true"#), "{row}");
+    assert!(row.contains(r#""cached":true"#), "{row}");
     assert!(listener.requests().is_empty(), "a cached run asks nothing");
 
     for beside in [["--record", &named], ["--replay", &named]] {

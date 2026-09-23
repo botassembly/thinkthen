@@ -14,6 +14,7 @@ fn run(arguments: &[&str]) -> io::Result<Output> {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -216,7 +217,8 @@ fn the_help_of_each_verb_carries_the_advice_its_page_names() {
     };
     for name in ["choose", "score"] {
         let short = short(name);
-        for hidden in ["--url", "--model", "--record", "--timeout"] {
+        assert!(short.contains("--url"), "--url is missing from {name} help");
+        for hidden in ["--model", "--record", "--timeout"] {
             assert!(
                 !short.contains(hidden),
                 "{hidden} is in the short {name} help"

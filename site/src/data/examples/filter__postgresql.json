@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "-- keep the complaints: the zipper and the strap\nSELECT body FROM (VALUES\n    ('Arrived a day early. Thank you!'),\n    ('The zipper broke the first time I used it.'),\n    ('Does this come in blue?'),\n    ('The strap snapped on day two.')) AS t(body)\nWHERE thinkthen_decide('{\"decide\": \"Is this a complaint?\"}', body);",
+  "function": "filter",
+  "surface": "postgresql"
+}

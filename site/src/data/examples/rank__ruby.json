@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# the outage first, then the quote due today, then the\n# bill due in a month, and the newsletter last\ninbox = [\"Newsletter: our autumn catalog is here. No reply needed.\",\n  \"Our checkout page is down and customers cannot pay\",\n  \"Reminder: your invoice is due in 30 days\",\n  \"Please send the signed quote by 5 pm today\"]\nThinkThen.rank(\"Is this urgent?\", inbox)\n  .each { |one| puts one.record }",
+  "function": "rank",
+  "surface": "ruby"
+}

@@ -1,0 +1,13 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "CREATE TABLE messages(id INTEGER, body TEXT);\nINSERT INTO messages VALUES\n    (1, 'Love the app, but export crashes.'),\n    (2, 'How do I change my billing address?');\n\n-- the labels ride inside the question, as JSON\nSELECT id, thinkthen_tag(\n    '{\"tag\": \"Which labels fit this message?\",\n      \"labels\": [\"praise\", \"bug\", \"billing\"]}',\n    body)\nFROM messages;",
+  "printed": {
+    "command": "sqlite3 < sample.sql",
+    "output": "1|[\"praise\",\"bug\"]\n2|[\"billing\"]",
+    "see": "The first message gets praise and bug. The billing address question gets billing."
+  },
+  "function": "tag",
+  "surface": "sqlite"
+}

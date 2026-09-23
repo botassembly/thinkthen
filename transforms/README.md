@@ -1,10 +1,12 @@
 # transforms/
 
-A report transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. Seven transforms here are metrics, and `triage` is a policy. `trials` prepares repeated observations for a metric and prints derived rows. The names table in [`README.md`](../README.md) holds the four names.
+A report transform is a metric or a policy, as ADR 0015 item 1 defines them. A metric reads a whole run and prints numbers. A policy reads one row and names an action. Eight transforms here are metrics, and `triage` is a policy. `trials` prepares repeated observations for a metric and prints derived rows. The names table in [`README.md`](../README.md) holds the four names.
 
 A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a header that states what it reads, what arguments it takes, and what it does at every edge, and one short `example.sh` with the pipeline line. The page that teaches it is a green demo, so the gate runs the transform against committed rows and no transform can drift from what it claims.
 
 `thinkthen` runs none of this. The tool obtains the judgments and keeps the evidence. `jq` does the arithmetic.
+
+These repository files are the current distribution. The agent's evidence-based verdict declines a separate `report` command, and Ian can overturn that decision. During release preparation, after the one-crate move, a read-only catalog will let an installed `thinkthen` list and print selected transforms for `jq -f`. The catalog's membership and public names are still for that later implementation ticket. The tool will not run `jq`, interpret a transform, or combine reports.
 
 ## The rows every transform reads
 
@@ -20,11 +22,12 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 | --- | --- | --- |
 | `counts/` | How many yes, how many no, how many unresolved | [25](../demos/25-check-the-judge/) |
 | `score/` | Accuracy, precision, recall, and F1 at a cut | [25](../demos/25-check-the-judge/) |
-| `sweep/` | What every cut would have done, and which one to pick | [13](../demos/13-pick-a-threshold/) |
+| `sweep/` | What every cut would have done globally, per record group, tag label, or mapped annotation | [13](../demos/13-pick-a-threshold/) and [14](../demos/14-grade-a-batch/) |
 | `band/` | Accuracy beside coverage for a band | [13](../demos/13-pick-a-threshold/) |
 | `calibration/` | Whether a probability of 0.8 means eight in ten | [25](../demos/25-check-the-judge/) |
 | `compare/` | What changed between two scalar or annotated runs, and why it could have | [41](../demos/41-tune-a-question-file/) |
 | `cost/` | The input tokens a run spent and what they cost | [28](../demos/28-what-a-run-cost/) |
+| `monitor/` | How often each policy action ran, was reviewed, and was changed | [25](../demos/25-check-the-judge/) |
 | `trials/` | Average repeated observations once per case before a metric | This page |
 | `triage/` | Whether a support ticket is drafted, blocked, or reviewed, and why | [16](../demos/16-triage-pipeline/) |
 
@@ -77,6 +80,37 @@ jq -n -f sweep/sweep.jq \
 ```
 
 Neither report picks a cut automatically. Choice has a coverage trade-off. Every score boundary names a different operational question.
+
+A decision sweep can instead fit each string-valued record group on its own. Pass the group's JSON Pointer as `--arg group POINTER`. The report keeps each group's counts and pick separate. It prints no pooled pick.
+
+## Sweep tags and named annotations against human labels
+
+Keep trusted labels under meaningful names in the case file. Pass one RFC 6901 pointer for a `tag` run, or map annotation names to pointers. Missing or null truth stays visible as unlabeled. Present malformed truth stops the report.
+
+```bash
+set -euo pipefail
+
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f sweep/sweep.jq ../probes/annotate-0015/howto-14.jsonl \
+  | jq -c '.questions.correct | {rows,labeled,cut:.pick.cut,accuracy:.pick.accuracy,f1:.pick.f1}' \
+  | mustmatch '{"rows":6,"labeled":6,"cut":0.6,"accuracy":1,"f1":1}'
+```
+
+Each mapped decision, choice, or tag answer reuses its ordinary sweep report. A tag gets one decision report per label. The transform never averages questions or labels into one score.
+
+## Monitor a policy against reviewed actions
+
+The page-16 policy writes `draft`, `block`, or `review`. A person records a decision under `input.reviewed_action`. The monitor reports review coverage and agreement overall and within each policy action. It lists disagreements without copying the message body.
+
+```bash
+set -euo pipefail
+
+sh monitor/example.sh \
+  | jq -c '{rows,reviewed,review_coverage,agreed,overturned,agreement_rate,actions,changes}' \
+  | mustmatch '{"rows":6,"reviewed":6,"review_coverage":1,"agreed":6,"overturned":0,"agreement_rate":1,"actions":{"draft":{"rows":2,"reviewed":2,"review_coverage":1,"agreed":2,"overturned":0,"agreement_rate":1},"block":{"rows":1,"reviewed":1,"review_coverage":1,"agreed":1,"overturned":0,"agreement_rate":1},"review":{"rows":3,"reviewed":3,"review_coverage":1,"agreed":3,"overturned":0,"agreement_rate":1}},"changes":[]}'
+```
+
+Review the uncertain queue and a small sample of automated draft and block rows. Per-action coverage reveals an unreviewed action. The transform cannot prove how somebody chose the sample.
 
 ## A comparison that hides nothing
 

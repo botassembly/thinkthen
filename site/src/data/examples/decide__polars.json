@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "python",
+  "code": "import polars as pl\nimport thinkthen as tt\n\n# a column goes in and a column comes out: true, false\ndf = pl.DataFrame({\"body\": [\n    \"Please refund my order. It arrived broken.\",\n    \"Thanks for the quick help yesterday!\"]})\nask = \"Does the customer ask for a refund?\"\nprint(df.with_columns(refund=tt.decide(ask, df[\"body\"])))",
+  "function": "decide",
+  "surface": "polars"
+}

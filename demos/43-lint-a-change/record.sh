@@ -10,7 +10,7 @@ cd -- "$(dirname -- "$0")"
 
 : "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
 
-thinkthen filter @convention.json --jsonl --details \
+thinkthen decide @convention.json --jsonl --details \
 	--cache recording/ --input hunks.jsonl |
 	jq -c '{file: .input.file, yes: .value, p: .answer.probability}'
 

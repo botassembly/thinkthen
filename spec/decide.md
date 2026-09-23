@@ -5,15 +5,17 @@
 The short help shows the everyday options. The long help adds the advanced ones and warns about `set -e`.
 
 ```bash
-thinkthen decide -h | head -1 | mustmatch like "Answer a yes/no question about the evidence and set the exit code"
-for option in --threshold --quiet --details --dry-run; do
+thinkthen decide -h | head -1 | mustmatch like "Answer one yes or no question about a text"
+for option in --threshold --quiet --details --dry-run --url --profile; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch not like "0"
 done
-for option in --url --model --record --replay --cache --jobs --timeout --max-retries; do
+for option in --model --record --replay --cache --jobs --timeout --max-retries; do
   thinkthen decide -h | grep -c -- "$option" | mustmatch like "0"
   thinkthen decide --help | grep -c -- "$option" | mustmatch not like "0"
 done
 thinkthen decide --help | grep -c -- 'set -e' | mustmatch not like "0"
+thinkthen decide --help | grep -c -- 'defaults to 0.5' | mustmatch not like "0"
+thinkthen decide --help | grep -c -- '\[default: 4\]' | mustmatch not like "0"
 ```
 
 `--dry-run` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.
@@ -82,6 +84,16 @@ Options may sit before the question, and `--` ends option parsing, so a question
 printf 'x' | thinkthen decide --dry-run -- '--asks for a refund' | grep -c '"instructions":"--asks for a refund"' | mustmatch like "1"
 ```
 
+A question file carries the same settings under `@FILE`, and its question text and criteria may be objects or lists, which the request passes through as written.
+
+```bash
+cat > question.json <<'JSON'
+{"decide":{"ask":"Does this message ask for a refund?","lang":"en"},"true":{"means":"Money back."},"false":null}
+JSON
+printf 'Refund me please.' | thinkthen decide @question.json --dry-run | grep -c '"instructions":{"ask":"Does this message ask for a refund?","lang":"en"},"criteria":{"true":{"means":"Money back."},"false":null}' | mustmatch like "1"
+rm question.json
+```
+
 A model given as white space is a usage error, and the exit code is 2.
 
 ```bash
@@ -114,7 +126,7 @@ printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure
 `--field` given more than once sends an object of the named parts, keyed by the last part of each pointer. Two pointers that end in one name are a usage error, and so is `--field` beside `--lines`.
 
 ```bash
-printf '{"id":"T-1","body":"Payouts failed."}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --field /id --dry-run | grep -c '"state":"{\\"body\\":\\"Payouts failed.\\",\\"id\\":\\"T-1\\"}"' | mustmatch like "1"
+printf '{"id":"T-1","body":"Payouts failed."}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --field /id --dry-run | grep -c '"state":{"body":"Payouts failed.","id":"T-1"}' | mustmatch like "1"
 for bad in "--field /a/text --field /b/text" "--lines --field /body"; do
   status=0
   printf '{"a":{"text":"x"},"b":{"text":"y"}}\n' | thinkthen decide 'reports a payment failure' --jsonl --dry-run $bad >/dev/null 2>&1 || status=$?
@@ -163,10 +175,10 @@ printf 'x' | thinkthen decide 'asks for a refund' --quiet --details >/dev/null 2
 echo "$status" | mustmatch like "2"
 ```
 
-Every option the earlier surface carried is gone, and each one is a usage error now. The configuration surface went with ADR 0010, and the four options that served it are gone too.
+The remaining options from the earlier configuration surface stay gone. `--profile` has returned with the smaller limit-only meaning of ADR 0032.
 
 ```bash
-for gone in --status "--min-prob 0.9" --plan "--backend jev" "--profile jev" "--adapter systemone" "--key-env LOCAL_KEY" "--config site.json"; do
+for gone in --status "--min-prob 0.9" --plan "--backend jev" "--adapter systemone" "--key-env LOCAL_KEY" "--config site.json"; do
   status=0
   printf 'x' | thinkthen decide 'asks for a refund' --dry-run $gone >/dev/null 2>&1 || status=$?
   echo "$status" | mustmatch like "2"
@@ -174,6 +186,20 @@ done
 status=0
 printf 'x' | thinkthen decide if 'asks for a refund' --dry-run >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch like "2"
+```
+
+An explicit profile refuses an oversized request before a key or connection. The limit counts the UTF-8 evidence bytes after selection.
+
+```bash
+cat > profile.json <<'JSON'
+{"schema":"thinkthen.backend-profile/1","name":"four-byte-test","max_evidence_bytes":4}
+JSON
+printf 'four' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --dry-run --profile profile.json | grep -c '"state":"four"' | mustmatch like "1"
+status=0
+printf 'five!' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --dry-run --profile profile.json >/dev/null 2>&1 || status=$?
+echo "$status" | mustmatch like "2"
+printf 'five!' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --dry-run --profile profile.json 2>&1 >/dev/null | mustmatch like "thinkthen: profile four-byte-test allows at most 4 evidence bytes; this request has 5"
+rm profile.json
 ```
 
 Evidence that is empty or holds only white space is a usage error, because a judgment about nothing is a mistake in the pipeline. A question that is blank is refused the same way.

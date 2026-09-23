@@ -1,6 +1,6 @@
 # thinkthen
 
-`thinkthen` puts a decider model in the shell. A decider model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a rating on a scale. A command names the job, asks the question, and reads the evidence on standard input.
+`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a rating on a scale. A command names the job, asks the question, and reads the evidence on standard input.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
@@ -19,8 +19,12 @@ Those commands are the design. `specification/` is the contract, and code follow
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the question, the options, and the evidence.
 - A yes, a no, an unresolved answer, and an error stay four different outcomes in the output and in the exit code.
-- A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first decider model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
+- A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first System One model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
+
+The answer cache is on by default. Cache entries contain the complete request and response, including the evidence being judged. Filesystem access and backups can copy that evidence. A platform-default cache is created for its owner alone and an existing Unix folder must already have mode `0700`; an explicitly named `--cache` folder keeps its user-owned mode. The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells the user to restore the old settings or choose another folder. No key enters an entry. Use `--no-cache` for a run that must neither read nor write cached answers.
+
+`thinkthen status` reports the resolved configuration, cache size, and local request, token, and cache-answer counts for the current UTC month and in total. The count-only usage files live beside the platform cache and contain no judged evidence or key. They are local conservative statistics rather than an account bill.
 
 ## What it is not for
 

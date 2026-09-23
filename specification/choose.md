@@ -16,7 +16,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 ## What it prints
 
-A JSON string, or `null` when the answer is unresolved. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `choice`. In record mode one value prints per record, in input order.
+On one document, a JSON string or `null` when the answer is unresolved. In the default record view each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `choice`.
 
 `--raw` is available for one document, `--lines`, and `--jsonl`. It prints the label without its quotation marks, as `jq -r` does. On one document an unresolved answer prints nothing. Under `--lines` or `--jsonl` an unresolved answer prints an empty line, so one line still stands for one record. CSV and TSV always print JSONL and refuse `--raw`. A blank label is a usage error, so an empty line never means a label.
 
@@ -32,13 +32,13 @@ A JSON string, or `null` when the answer is unresolved. `--details` prints the o
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
-| Backend options | `--url` and `--model`, in the long help alone. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
 ## A description per option
 
 `--option LABEL=DESCRIPTION` gives one option and what it means. It may repeat, and the first `=` splits the label from the description. Positional options and `--option` together are a usage error, because the order of options matters and two lists have no order between them. An `--option` with no `=` is a usage error.
 
-The description travels with the option, and [backends.md](backends.md) gives the field it lands in. An option with no description still travels, with nothing under its label. Descriptions have a home in a question file too, as a map under `options`.
+The description travels with the option, and [backends.md](backends.md) gives the field it lands in. An option with no description still travels, with nothing under its label. Descriptions have a home in a question file too, as a map under `options`, where one description is a string, an object, a list, or `null`.
 
 ```sh
 thinkthen choose 'Which team owns this request?' \

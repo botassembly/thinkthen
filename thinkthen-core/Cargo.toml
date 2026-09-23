@@ -1,0 +1,48 @@
+[package]
+name = "thinkthen-core"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.93.1"
+description = "Pure decision types and rendering for thinkthen"
+license = "MIT"
+publish = false
+
+# The pre-fold core, kept whole for the contract and the stand-in (merge
+# decision (a), MERGE-NOTE section 8). Main folded this crate into
+# crates/thinkthen and keeps that crate's modules private. This copy lives
+# outside crates/ so main's one-crate policy and its seam check stay as
+# written. It is a workspace of its own, frozen at the merge base b11a2b0
+# with the lints that base declared, and it retires when the production
+# engine consumes contract/.
+[workspace]
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["raw_value"] }
+sha2 = { version = "0.11", default-features = false }
+thiserror = "2.0.20"
+
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unreachable_pub = "forbid"
+unsafe_code = "forbid"
+
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"
+
+[dev-dependencies]
+proptest = { version = "1.11.0", default-features = false, features = ["std"] }

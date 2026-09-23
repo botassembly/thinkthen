@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"query":"Why is signing in slow or failing?","passage":"Nightly backups run at 01:00 and write to the archive bucket. Restores are manual and take about an hour."},"model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The passage answers the query."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":317,"output_tokens":21}}
+}

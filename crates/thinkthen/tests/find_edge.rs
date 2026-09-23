@@ -9,6 +9,7 @@ use std::process::{Command, Output, Stdio};
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -25,6 +26,7 @@ fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
 fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::process::ExitStatus> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -88,8 +90,26 @@ fn help_leads_with_whole_set_disclosure_and_all_three_bounds() {
         if flag == "--help" {
             assert!(help.contains("2 to 255 units, or 2 to 254 with --none"));
             assert!(help.contains("at most 16 MiB across the original input"));
+            assert!(help.contains(
+                "`find --none` prints nothing and exits 3 when `none` wins or ties for first."
+            ));
+            for cache_rule in [
+                "cached by default in the platform cache folder",
+                "Entries contain the judged text",
+                "overriding THINKTHEN_CACHE and the platform default",
+                "An explicit replay folder suppresses the platform default cache",
+            ] {
+                assert!(help.contains(cache_rule), "{cache_rule}\n{help}");
+            }
         }
-        for accepted in ["--lines", "--jsonl", "--field", "--details", "--input"] {
+        for accepted in [
+            "--lines",
+            "--jsonl",
+            "--field",
+            "--details",
+            "--input",
+            "--url",
+        ] {
             assert!(help.contains(accepted), "{flag}: {accepted}\n{help}");
         }
         for refused in ["--csv", "--tsv", "--jobs", "--threshold", "--raw"] {
@@ -174,7 +194,7 @@ fn committed_reach_recordings_replay_the_selected_line_and_none() {
 
 #[test]
 fn aggregate_byte_limit_refuses_one_byte_over_before_a_key() {
-    let half = thinkthen_core::MAX_RECORD_BYTES / 2;
+    let half = 16 * 1024 * 1024 / 2;
     let mut input = vec![b'a'; half - 1];
     input.push(b'\n');
     input.extend(std::iter::repeat_n(b'b', half));
@@ -189,7 +209,7 @@ fn aggregate_byte_limit_refuses_one_byte_over_before_a_key() {
 
 #[test]
 fn aggregate_byte_limit_accepts_the_exact_boundary() {
-    let half = thinkthen_core::MAX_RECORD_BYTES / 2;
+    let half = 16 * 1024 * 1024 / 2;
     let mut input = vec![b'a'; half - 1];
     input.push(b'\n');
     input.extend(std::iter::repeat_n(b'b', half));
@@ -237,7 +257,7 @@ fn compiled_count_boundaries_accept_and_refuse_the_exact_edges() {
 }
 
 #[test]
-fn syntax_and_utf8_refusals_repeat_no_input() {
+fn syntax_and_no_recording_utf8_refusals_repeat_no_input() {
     let marker = "PRIVATE-FIND-MARKER";
     let invalid_json = run(
         &["find", "Which?", "--jsonl", "--field", "/body"],
@@ -250,6 +270,27 @@ fn syntax_and_utf8_refusals_repeat_no_input() {
     assert_eq!(invalid_utf8.status.code(), Some(5));
     assert_eq!(
         String::from_utf8_lossy(&invalid_utf8.stderr),
+        concat!(
+            "thinkthen: the record is not valid UTF-8\n",
+            "thinkthen: stopped at record 2; 0 records finished\n",
+        )
+    );
+}
+
+#[test]
+fn a_named_recording_appears_in_a_find_preflight_stop() {
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("find-stopped-recording");
+    let _removed = fs::remove_dir_all(&folder);
+    fs::create_dir_all(&folder).expect("recording directory");
+    let folder = folder.to_string_lossy();
+    let output = run(
+        &["find", "Which?", "--replay", &folder],
+        b"first\nsecond\xff\n",
+    )
+    .expect("binary runs");
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
         concat!(
             "thinkthen: the record is not valid UTF-8\n",
             "thinkthen: stopped at record 2; 0 records finished, 0 records from a recording\n",
@@ -309,7 +350,7 @@ fn recorder_option_conflict_is_validated_before_empty_input_returns() {
 
 #[test]
 fn one_oversized_unit_gets_the_safe_aggregate_diagnostic() {
-    let input = vec![b'x'; thinkthen_core::MAX_RECORD_BYTES + 1];
+    let input = vec![b'x'; 16 * 1024 * 1024 + 1];
     let output = run(&["find", "Which?"], &input).expect("binary runs");
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(

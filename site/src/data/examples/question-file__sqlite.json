@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": ".load ./thinkthen\n\n-- refund.json carries a band. NULL is \"not sure\":\n-- 1, 0, and NULL for the send-back line\nWITH t(body) AS (VALUES\n    ('Please refund my order. It arrived broken.'),\n    ('Thanks for the quick help yesterday!'),\n    ('I want to send this back.'))\nSELECT thinkthen_decide('@refund.json', body), body FROM t;",
+  "function": "question-file",
+  "surface": "sqlite"
+}

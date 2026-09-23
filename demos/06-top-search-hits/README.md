@@ -34,9 +34,9 @@ set -euo pipefail
 jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
   | env -u THINKTHEN_API_KEY thinkthen rank 'The passage answers the query.' \
       --jsonl --field /query --field /passage --dry-run \
-  | jq -c '.input, {state: (.request.state | .[0:36])}' \
+  | jq -c '.input, {state: (.request.state | keys_unsorted)}' \
   | mustmatch '{"framing":"jsonl","field":["/query","/passage"]}
-{"state":"{\"query\":\"Why is signing in slow or "}'
+{"state":["query","passage"]}'
 ```
 
 `path` is in every record and in no request, because no pointer names it. The question stays the same for all six, so one run is one measurement.

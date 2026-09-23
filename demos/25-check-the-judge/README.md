@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `decide`
 
-A probability is a claim about the world, and the only test of it is a file of cases a person has already answered. Use this page after a run over labeled cases, to learn what the judge gets right, what it gets wrong, and whether a probability of 0.8 means what it says. Nothing here calls a model.
+A probability makes a testable claim. Use labeled cases to learn what the judge gets right, where it fails, and whether 0.8 means eight in ten. Nothing here calls a model.
 
 ```bash
 set -euo pipefail
@@ -16,9 +16,9 @@ jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$rows" | jq -c . \
 
 ## Input
 
-`../../transforms/rows/runs/run-a.jsonl` holds forty judged rows. Each is the `decide --details` object, and `input` holds the whole case: a stable `id`, the `body` that went to the model, and the `label` a person gave, which never left the machine. The transforms are `counts.jq`, `score.jq`, and `calibration.jq` under `../../transforms/`.
+`../../transforms/rows/runs/run-a.jsonl` holds forty `decide --details` rows. Each `input` has an `id`, the shown `body`, and a person's local `label`. The transforms live under `../../transforms/`.
 
-Thirty-nine labeled rows, one miss. `C-12` carries no label, because a real case file has one nobody could settle, so it is named in `unlabeled` and counted in no rate.
+Thirty-nine rows have labels. `C-12` has none, so it appears under `unlabeled` and enters no rate.
 
 ## Step 1: count the answers, then score them at the band the run used
 
@@ -40,7 +40,7 @@ Thirty-six rows scored and three counted apart. An accuracy of 1 at a coverage o
 
 ## Step 2: read the one it got wrong
 
-An aggregate says how many. The rows say which, and a probability beside a wrong answer says whether the question is worded badly or the case is hard.
+The rows name each mistake and show how close its probability was.
 
 ```bash
 set -euo pipefail
@@ -53,7 +53,7 @@ jq -c 'select(.input | has("label"))
   | mustmatch '{"id":"C-15","label":false,"probability":0.51,"said":null}'
 ```
 
-`C-15` is a checkout that refused an expired discount code, and a person called that no payment failure. The model landed on 0.51, which is it saying it does not know, and `said` is `null` because the run's band refused the row.
+`C-15` concerns an expired discount code. A person called it no payment failure. Its 0.51 probability fell inside the run's unresolved band, so `said` is `null`.
 
 ## Step 3: ask whether the probabilities mean what they say
 
@@ -71,7 +71,7 @@ jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
 {"band":"0.9-1","rows":12,"unresolved":0,"labeled":12,"truly_yes":12,"share_truly_yes":1,"mean_probability":0.9842}'
 ```
 
-At the two ends the number means what it says. The middle is another story: 0.5 to 0.6 holds two rows, one of them labeled, and that one was a no. An empty band yields null and never zero, because zero reads as a finding and null reads as "nobody asked". Thirty-six of the forty rows sit at or below 0.2 or at or above 0.8, so most of the scale is empty.
+The two ends match their claims. The 0.5 to 0.6 band holds two rows, one labeled, and that one was no. An empty band yields null because no cases supplied evidence. Thirty-six rows sit at or below 0.2 or at or above 0.8, leaving most bands sparse.
 
 ## Step 4: run the same lines from the transform folders
 
@@ -85,15 +85,22 @@ sh ../../transforms/score/example.sh | jq -c '{accuracy, f1}' \
 sh ../../transforms/calibration/example.sh \
   | jq -c '.bands[] | select(.band == "0.9-1") | {rows, truly_yes, mean_probability}' \
   | mustmatch '{"rows":12,"truly_yes":12,"mean_probability":0.9842}'
+sh ../../transforms/monitor/example.sh \
+  | jq -c '{rows,reviewed,review_coverage,overturned,changes}' \
+  | mustmatch '{"rows":6,"reviewed":6,"review_coverage":1,"overturned":0,"changes":[]}'
 ```
+
+For a running policy, review the uncertain queue and sample automated draft and block rows. Store the person's decision as `reviewed_action`. The monitor reports coverage per action and lists changes. It cannot prove the sample was random.
+
+For `tag` or `annotate`, point `sweep.jq` at the human fields instead of renaming them to `input.label`. A tag gets one decision sweep per label. An annotation gets one established report per mapped question. Each question or label chooses independently, and the report prints no combined score.
 
 ## What can go wrong
 
-- **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error a transform raises, such as a row with no `value`. It names the file and the line.
+- **A transform stops with exit 5.** The input is malformed or lacks a required field. The error names the file and line.
 - **Treating unresolved as no.** `.value // false` turns a refusal into a wrong answer. Every transform here tests true, false, and null explicitly, and a refused row keeps its probability and stays in its calibration band.
 - **Scoring a case nobody labeled.** `C-12` is scored nowhere. A rate that included it would be a rate about a guess.
 - **One accuracy number.** Accuracy without coverage hides a band that refused half the file, and accuracy alone hides which side the judge errs on. Read precision and recall together.
-- **Calling a model well calibrated from the ends alone.** Answers near 0 and 1 are the easy cases, and forty rows across ten bands leaves three bands empty and three holding one row. A share of 0 or 1 over one row is noise, and a calibration table earns trust at hundreds of cases.
+- **Calling a model calibrated from the ends alone.** Forty rows leave several bands empty or holding one noisy case. Calibration needs hundreds.
 - **A high probability on evidence that was never shown.** The judge reads the body and only the body. A case whose answer lies outside the message is answered confidently and wrongly, and no number here can see that.
 
 ## Related how-tos

@@ -7,6 +7,8 @@ use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
 
+mod record_rows;
+
 /// The question every case on this page asks.
 const QUESTION: &str = "Does this report a payment failure?";
 
@@ -80,6 +82,18 @@ fn printed(output: &Output) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
+fn value_row(input: &str, value: &str) -> String {
+    format!("{{\"input\":{input},\"value\":{value}}}\n")
+}
+
+fn record_values(values: &[bool]) -> String {
+    RECORDS
+        .lines()
+        .zip(values)
+        .map(|(record, value)| value_row(record, &value.to_string()))
+        .collect()
+}
+
 /// What the run said on standard error.
 fn said(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
@@ -90,40 +104,6 @@ fn written(name: &str, text: &str) -> io::Result<PathBuf> {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
     fs::write(&path, text)?;
     Ok(path)
-}
-
-#[test]
-fn each_framing_prints_one_value_per_record_in_input_order() {
-    let listener = serving(&["0.97", "0.02", "0.80"]).expect("a loopback listener");
-    let output = decide(
-        listener.base(),
-        &[&["--jsonl", "--field", "/body"][..], &ONE_AT_A_TIME].concat(),
-        RECORDS,
-    )
-    .expect("the compiled binary runs");
-
-    assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "true\nfalse\ntrue\n");
-    assert_eq!(
-        states(&listener),
-        [
-            r#""The payout failed again.""#,
-            r#""Thanks for the quick fix.""#,
-            r#""The card was refused at checkout.""#,
-        ]
-    );
-
-    let listener = serving(&["0.97", "0.02"]).expect("a loopback listener");
-    let output = decide(
-        listener.base(),
-        &[&["--lines"][..], &ONE_AT_A_TIME].concat(),
-        "first line\nsecond line\n",
-    )
-    .expect("the compiled binary runs");
-
-    assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "true\nfalse\n");
-    assert_eq!(states(&listener), [r#""first line""#, r#""second line""#]);
 }
 
 #[test]
@@ -139,7 +119,7 @@ fn one_pointer_sends_the_value_and_several_send_an_object_keyed_by_the_last_part
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         states(&listener),
-        [r#""{\"body\":\"The payout failed again.\",\"id\":\"R-1\"}""#]
+        [r#"{"body":"The payout failed again.","id":"R-1"}"#]
     );
 }
 
@@ -193,7 +173,7 @@ fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
         ("{\"body\":1e999}\n", "`NaN` and `Infinity`"),
         ("not json\n", "not valid JSON"),
         ("{\"other\":\"x\"}\n", "holds nothing at `/body`"),
-        ("{\"body\":\"   \"}\n", "evidence is text"),
+        ("{\"body\":\"   \"}\n", "the evidence is empty or blank"),
     ];
 
     for (bad, said_part) in cases {
@@ -203,12 +183,12 @@ fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
             .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{bad}");
-        assert_eq!(printed(&output), "true\n", "{bad}");
+        assert_eq!(printed(&output), record_values(&[true]), "{bad}");
         assert_eq!(listener.requests().len(), 1, "{bad}");
         let message = said(&output);
         assert!(message.contains(said_part), "{message}");
         assert!(
-            message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
+            message.contains("stopped at record 2; 1 record finished"),
             "{message}"
         );
         assert!(!message.contains("payout"), "{message}");
@@ -217,7 +197,7 @@ fn a_record_the_tool_refuses_stops_the_run_and_sends_nothing_for_itself() {
                 message,
                 concat!(
                     "thinkthen: the record is not valid JSON\n",
-                    "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n",
+                    "thinkthen: stopped at record 2; 1 record finished\n",
                 )
             );
             assert!(!message.contains("not json"), "{message}");
@@ -249,12 +229,15 @@ fn a_record_that_is_not_text_stops_the_run_at_exit_five() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(printed(&output), "true\n");
+    assert_eq!(
+        printed(&output),
+        value_row(r#"{"body":"The payout failed again."}"#, "true")
+    );
     assert_eq!(listener.requests().len(), 1);
     let message = said(&output);
     assert!(message.contains("not valid UTF-8"), "{message}");
     assert!(
-        message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
+        message.contains("stopped at record 2; 1 record finished"),
         "{message}"
     );
 }
@@ -282,11 +265,11 @@ fn a_backend_failure_stops_the_run_and_the_rows_before_it_stay_printed() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(printed(&output), "true\n");
+    assert_eq!(printed(&output), record_values(&[true]));
     let message = said(&output);
     assert!(message.contains("status 500"), "{message}");
     assert!(
-        message.contains("stopped at record 2; 1 record finished, 0 records from a recording"),
+        message.contains("stopped at record 2; 1 record finished"),
         "{message}"
     );
 }
@@ -303,7 +286,10 @@ fn a_last_record_with_no_line_feed_after_it_is_judged() {
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "true\ntrue\n");
+    assert_eq!(
+        printed(&output),
+        value_row(r#""first line""#, "true") + &value_row(r#""second line""#, "true")
+    );
     let mut sent = states(&listener);
     sent.sort();
     assert_eq!(sent, [r#""first line""#, r#""second line""#]);
@@ -329,7 +315,7 @@ fn no_records_answer_sets_the_exit_code() {
         .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "false\nfalse\nfalse\n");
+    assert_eq!(printed(&output), record_values(&[false, false, false]));
 }
 
 #[test]
@@ -463,7 +449,7 @@ fn input_reads_the_records_from_the_file_it_names() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "true\nfalse\ntrue\n");
+    assert_eq!(printed(&output), record_values(&[true, false, true]));
 
     let missing = Path::new(env!("CARGO_TARGET_TMPDIR")).join("streaming-absent.jsonl");
     let output = decide(

@@ -40,10 +40,27 @@ else
 fi | mustmatch "normal"
 ```
 
+## Gate a record run on its values
+
+`decide --lines` exits 0 when its record run completes without a partial or whole-run failure. Its exit code does not say whether any record answered yes. Count the printed answers when the action depends on them.
+
+```bash
+set -euo pipefail
+
+{
+  cat message.txt
+  cat question.txt
+} | thinkthen decide 'Does the customer ask for money back?' \
+      --lines --replay recording/ |
+  jq -s 'map(select(. == true)) | length' |
+  mustmatch "1"
+```
+
 ## What can go wrong
 
 - **An `if` has two branches, and `decide` has five outcomes.** Exit 0 is yes, 1 is no, 3 is unresolved, 4 is a backend failure and 5 is a local one. An `else` swallows the last three and routes a failed request to the normal queue. [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) reads all five with `case`.
 - **Exit 1 is a no.** Under `set -e` a bare `thinkthen decide ...` ends the script on it. Put the command in an `if`, a `case`, or a `&& rc=0 || rc=$?` list.
+- **A `decide` record run exits 0 when it completes without a partial or whole-run failure, even when every record answers no.** Test the printed values, as the count above does. `filter` plus a count is the same gate when only passing records should remain.
 - **Exit 2 is a usage error, and it goes out before any request.** `--quiet` beside `--details` is one, because the gate wants no output and the audit wants the object.
 
 ```bash

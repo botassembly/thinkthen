@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": ".load ./thinkthen\n\n-- your own scale, 0 to 2: 0.06, 0.99, and 2.0\nWITH t(body) AS (VALUES\n    ('Please update my mailing address when you can.'),\n    ('Can you send the signed contract by Friday?'),\n    ('Nobody can log in to the site right now.'))\nSELECT thinkthen_score(\n    '{\"score\": \"How urgent is this?\",\n      \"levels\": [\"Routine.\", \"Soon.\", \"Immediate.\"]}',\n    body), body\nFROM t;",
+  "function": "score",
+  "surface": "sqlite"
+}

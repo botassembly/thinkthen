@@ -27,7 +27,7 @@ fn a_distribution_measurement_repeats_no_untrusted_text() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the reply was refused: the answer to question `q1` has probability total 0.8, member count 2, and tolerance 0.010000000000000444; the total differs from one by more than the tolerance\n"
+        "thinkthen: the reply was refused: the answer to question `q1` has probability total 0.8, member count 2, and tolerance 0.01; the total differs from one by more than the tolerance\n"
     );
     let said = String::from_utf8_lossy(&output.stderr);
     for marker in [label, "0.4", "private-response-marker"] {

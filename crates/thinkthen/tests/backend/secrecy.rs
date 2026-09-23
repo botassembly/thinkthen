@@ -1,16 +1,8 @@
 //! The one sweep that proves no key leaves this process and no error quotes the
 //! evidence.
 //!
-//! The four single-answer commands run down every path the backend can send
-//! them, on one document and over records, in both views. The record commands
-//! run the hostile replay path under both framings and views. One reader then
-//! reads standard output, standard error, and every file the run wrote.
-//! `refusals.rs` drives the same reader down every usage error, and
-//! `crates/thinkthen/src/failure.rs` drives it over every diagnostic and every
-//! `Debug` line a message is built from.
-//!
-//! A command enters the sweep by adding one row to [`VERBS`], and a path by
-//! adding one row to `PATHS`.
+//! One reader checks standard output, standard error, and every file written
+//! across all command families, backend paths, framings, and views.
 
 use std::fs;
 use std::io;
@@ -57,9 +49,6 @@ const RECORD_VERBS: [(&str, &[&str], &str); 2] = [
     ("filter", &[], r#""type":"noul","noul":0.92"#),
     ("rank", &[], r#""type":"noul","noul":0.92"#),
 ];
-
-/// A reply the adapter refuses, whatever question was asked.
-const MALFORMED: &str = r#"{"model":"","answers":{}}"#;
 
 /// A recording entry a reader takes, whose every field is hostile text.
 ///
@@ -117,8 +106,6 @@ pub(crate) enum Answers {
     RateLimit,
     /// A rate limit that never lifts, past the one retry the run allows.
     RateLimited,
-    /// A reply the adapter refuses.
-    Malformed,
     /// A reply that is JSON no adapter reads, quoting the evidence back.
     Unreadable,
     /// Nothing at all, because the run must not reach the listener.
@@ -136,7 +123,6 @@ impl Answers {
                 Canned::status(429, &quoting()),
                 Canned::status(429, &quoting()),
             ],
-            Self::Malformed => vec![Canned::ok(MALFORMED)],
             Self::Unreadable => vec![Canned::ok(&unreadable())],
             Self::Nothing => Vec::new(),
         }
@@ -168,7 +154,6 @@ pub(crate) struct Route {
     pub(crate) keyed: bool,
 }
 
-/// Every path the backend and the recording folder can send a run down.
 pub(crate) const PATHS: [Route; 17] = [
     route("a success", &[], Answers::Good, 1, 0),
     route("a plan", &["--dry-run"], Answers::Nothing, 0, 0),
@@ -238,7 +223,7 @@ pub(crate) const PATHS: [Route; 17] = [
         0,
         4,
     ),
-    route("a refused key", &[], Answers::Status(401), 1, 4),
+    route("a refused request", &[], Answers::Status(400), 1, 4),
     route("a rate limit that lifts", &[], Answers::RateLimit, 2, 0),
     route(
         "a rate limit that stays",
@@ -247,15 +232,20 @@ pub(crate) const PATHS: [Route; 17] = [
         2,
         4,
     ),
-    route("a malformed answer", &[], Answers::Malformed, 1, 4),
+    route(
+        "an exhausted backend failure",
+        &["--max-retries", "0"],
+        Answers::Status(500),
+        1,
+        4,
+    ),
     route("an unreadable answer", &[], Answers::Unreadable, 1, 4),
-    // The exchange succeeds and the entry cannot be written, which is the one
-    // failure that happens after a key has already crossed the wire.
+    // Recording preflight refuses an unusable folder before a key or request.
     route(
         "a recording folder that cannot be made",
         &["--record", "/dev/null/x"],
-        Answers::Good,
-        1,
+        Answers::Nothing,
+        0,
         5,
     ),
     Route {
@@ -410,7 +400,11 @@ fn sweep(
     if let Some(damage) = route.damage {
         let entries = written(&dir);
         assert!(!entries.is_empty(), "{case}: an entry to damage");
-        for entry in entries {
+        for entry in entries.into_iter().filter(|entry| {
+            entry
+                .file_name()
+                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+        }) {
             fs::write(&entry, damage)?;
         }
     }
@@ -528,7 +522,11 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             Some(format!("Bearer {KEY}").as_str()),
             "{name}"
         );
-        assert_eq!(written(&dir).len(), 1, "{name}: one entry was recorded");
+        assert_eq!(
+            written(&dir).len(),
+            2,
+            "{name}: marker and one entry were recorded"
+        );
         nothing_leaked(name, &output, &into);
     }
 }

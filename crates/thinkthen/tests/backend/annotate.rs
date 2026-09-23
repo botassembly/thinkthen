@@ -37,7 +37,11 @@ fn questions() -> PathBuf {
         .clone()
 }
 
+mod partial_failure;
+mod request_identity;
 mod scheduling;
+mod splitting;
+mod structured;
 
 #[test]
 fn same_evidence_packs_mixed_questions_and_appends_answers() {
@@ -167,7 +171,7 @@ fn a_collision_and_dry_run_send_no_request() {
         String::from_utf8_lossy(&collided.stderr),
         concat!(
             "thinkthen: the record already holds `risky`, so that question cannot be appended\n",
-            "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording\n",
+            "thinkthen: stopped at record 1; 0 records finished\n",
         )
     );
 
@@ -181,6 +185,26 @@ fn a_collision_and_dry_run_send_no_request() {
         "{stdout}"
     );
     assert!(listener.requests().is_empty());
+}
+
+#[test]
+fn a_missing_questions_wrapper_wins_over_an_unknown_top_level_key() {
+    let file = set(
+        "missing-questions-wrapper",
+        r#"{"version":1,"unresolved":{"decide":"Still open?"}}"#,
+    );
+    let output = spawn(
+        &["annotate", &file.to_string_lossy(), "--dry-run"],
+        &[],
+        b"evidence",
+    )
+    .expect("the command runs");
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the question set is missing its `questions` object\n"
+    );
 }
 
 #[test]
@@ -255,7 +279,8 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
     );
     let row = String::from_utf8_lossy(&first.stdout);
     assert!(row.contains(r#""questions_sha256":"#), "{row}");
-    assert!(row.contains(r#""replayed":false"#), "{row}");
+    assert!(row.contains(r#""cached":false"#), "{row}");
+    assert!(row.contains(r#""failed_questions":0"#), "{row}");
     assert!(row.contains(r#""answers":{"risky":{"value":true"#), "{row}");
 
     let mut replayed = base.to_vec();
@@ -268,7 +293,7 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
         String::from_utf8_lossy(&second.stderr)
     );
     let row = String::from_utf8_lossy(&second.stdout);
-    assert!(row.contains(r#""replayed":true"#), "{row}");
+    assert!(row.contains(r#""cached":true"#), "{row}");
     assert_eq!(listener.requests().len(), 1);
 }
 

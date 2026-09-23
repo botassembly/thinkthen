@@ -1,6 +1,6 @@
 # The first release is 0.1 on every surface
 
-Status: Open
+Status: Closed on 2026-09-22. The ruling is recorded.
 
 Ian ruled on 2026-09-20: "first version release will be 0.1 across all libs/exts. until then number 0.0.1 thru 0.0.9999 as necessary."
 

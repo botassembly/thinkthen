@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "python",
+  "code": "text = \"Maria Chen joined Northwind Freight, a company in Chicago.\"\nfound = tt.recognize(text, kinds=[\"person\", \"organization\", \"place\"],\n    relations={\"works_for\": (\"person\", \"organization\"),\n               \"based_in\": (\"organization\", \"place\")})\nfor name in found.entities:\n    print(name.id, name.text, name.kind)\n# 1 Maria Chen person\n# 2 Northwind Freight organization\n# 3 Chicago place\nfor link in found.relations:\n    print(link.name, link.source, link.target)\n# works_for 1 2\n# based_in 2 3",
+  "function": "recognize",
+  "surface": "python"
+}

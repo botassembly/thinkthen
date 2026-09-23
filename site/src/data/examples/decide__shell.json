@@ -1,0 +1,53 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "decide-lines",
+      "command": "thinkthen decide --lines --details --threshold 0.2:0.8 'Does the customer ask for a refund?' < messages.txt | jq -r '\"\\(.value)  \\(.answer.probability)  \\(.input)\"'",
+      "input": "Please refund my order. It arrived broken.\nThanks for the quick help yesterday!\nI want to send this back.",
+      "inputFile": "messages.txt",
+      "output": "true  0.99  Please refund my order. It arrived broken.\nfalse  0.01  Thanks for the quick help yesterday!\nnull  0.54  I want to send this back.",
+      "exit": 0,
+      "see": "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back, so it lands inside the band as null at 0.54."
+    },
+    {
+      "name": "decide-case",
+      "command": "thinkthen decide --quiet --threshold 0.2:0.8 'Does the customer ask for a refund?' < vague.txt\ncase $? in\n  0) echo 'refund it' ;;\n  1) echo 'answer it as usual' ;;\n  3) echo 'send it to a person' ;;\nesac",
+      "input": "I want to send this back.",
+      "inputFile": "vague.txt",
+      "output": "send it to a person",
+      "exit": null,
+      "see": "Sending it back could mean an exchange or money back. decide exits 3, and the case sends it to a person."
+    },
+    {
+      "name": "decide",
+      "command": "thinkthen decide 'Does the customer ask for a refund?' < ticket.txt",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": "ticket.txt",
+      "output": "true",
+      "exit": 0,
+      "see": "The ticket asks for a refund, so decide prints true and exits 0."
+    },
+    {
+      "name": "decide-answer",
+      "command": "thinkthen decide --details 'Does the customer ask for a refund?' < ticket.txt | jq '.answer'",
+      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
+      "inputFile": "ticket.txt",
+      "output": "{\n  \"kind\": \"yes_no\",\n  \"probability\": 0.99\n}",
+      "exit": 0,
+      "see": "The details put yes at 0.99 for this ticket."
+    },
+    {
+      "name": "decide-means",
+      "command": "thinkthen decide 'Does the customer ask for a refund?' --true 'The customer asks for money back.' --false 'Anything else, such as a cancellation or a question.' < cancel.txt",
+      "input": "Please cancel my plan at the end of this month.",
+      "inputFile": "cancel.txt",
+      "output": "false",
+      "exit": 1,
+      "see": "A cancellation is not money back under these words, so decide says false and exits 1."
+    }
+  ],
+  "function": "decide",
+  "surface": "shell"
+}

@@ -1,0 +1,243 @@
+//! The verbs and their command-level help.
+
+use std::path::PathBuf;
+
+use clap::{Args, Subcommand};
+
+use super::{
+    AnnotateArguments, ChooseArguments, DecideArguments, FilterArguments, FindArguments,
+    RankArguments, ScoreArguments, TagArguments,
+};
+
+/// The verbs the tool answers to.
+#[derive(Debug, Subcommand)]
+pub(crate) enum Command {
+    /// Report resolved local settings, cache size, and local usage counts.
+    Status(StatusArguments),
+
+    /// Answer one yes or no question about a text. A record run exits 0 when
+    /// it completes without a partial or whole-run failure. The printed
+    /// values carry the individual answers.
+    ///
+    /// The answer is a bare `true`, `false`, or `null`, and the exit code is 0
+    /// for yes, 1 for no, and 3 for unresolved. Under `set -e` or `set -o
+    /// pipefail` a no or not sure answer ends the script, so put the command in
+    /// an `if`, a `case`, or a `||` list.
+    ///
+    /// A single cut answers no when the probability did not reach the mark. It
+    /// never says the model is sure of no. A three-way gate takes a band, as
+    /// `--threshold 0.1:0.9` writes one.
+    ///
+    /// A script that acts on the answer reads all four outcomes:
+    ///
+    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt
+    ///
+    /// case $? in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
+    ///
+    /// Word the question in the form where yes permits the action. A failure
+    /// then never permits anything, because every outcome other than 0 leaves
+    /// the action undone.
+    Decide(DecideArguments),
+
+    /// Keep the records where the answer is yes.
+    ///
+    /// `filter` asks one yes/no question of each record and prints the records
+    /// that reach `--threshold` in input order. Line and JSONL records return
+    /// as they arrived; CSV and TSV rows become compact JSON objects. It needs
+    /// a record framing and makes one paid request for every record.
+    ///
+    /// A single cut keeps or drops, and there is no third pile. A run that
+    /// wants one asks `decide --details` and splits with `jq`:
+    ///
+    /// thinkthen decide 'The report is reproducible.' --jsonl --field /body --details < i.jsonl | jq -c 'select(.answer.probability >= 0.9)'
+    ///
+    /// A finished run prints nothing on standard error, so two kept records
+    /// out of five and two out of two look alike on the way out.
+    ///
+    /// A record run exits 0 when it completes without a partial or whole-run
+    /// failure. The printed values carry the individual answers.
+    Filter(FilterArguments),
+
+    /// Sort records by how likely the answer is yes. `rank` asks one yes/no
+    /// question of each record and sorts locally; it never compares two
+    /// records.
+    ///
+    /// The printed order puts the most likely yes first. An exact tie keeps
+    /// input order. `rank` never runs a tournament.
+    ///
+    /// It holds every record until the input ends, because a final order needs
+    /// the whole set, so an endless stream is cut into windows upstream.
+    /// `--top N` prints the first N of the order and saves no request.
+    ///
+    /// `rank` orders and never selects. A floor is `filter` in front of it.
+    ///
+    /// A record run exits 0 when it completes without a partial or whole-run
+    /// failure. The printed values carry the individual answers.
+    Rank(RankArguments),
+
+    /// Pick one option from your list.
+    ///
+    /// The answer is a bare JSON string, or `null` when the winning option
+    /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
+    /// a label and exit 3 is unresolved. `choose` never exits 1, because a pick
+    /// is not a two-sided decision.
+    ///
+    /// --raw is available for one document, --lines, and --jsonl. CSV and TSV
+    /// always print JSONL and refuse --raw.
+    ///
+    /// A script reads the exit code first and the label second, so it takes two
+    /// `case` blocks. `--raw` prints nothing at all for an unresolved answer,
+    /// and an empty string is no label, so only the exit code tells an
+    /// unresolved pick from a command that failed:
+    ///
+    /// label=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
+    ///
+    /// case $rc in 0) ;; 3) label=unresolved ;; *) exit "$rc" ;; esac
+    ///
+    /// case $label in billing) pay ;; unresolved) triage ;; *) exit 2 ;; esac
+    ///
+    /// "Not stated" is a different answer from "false". "Does the document
+    /// establish X?" and "Is X true?" are different questions. When the
+    /// difference matters, ask `choose` with labels such as supported,
+    /// contradicted, and not_stated rather than one yes/no question.
+    ///
+    /// Word the options so that they exclude one another, and type a catch-all
+    /// such as other yourself, last. Keep the option order fixed once a cut is
+    /// tuned, because a run with a reordered list is a different measurement.
+    ///
+    /// A record run exits 0 when it completes without a partial or whole-run
+    /// failure. The printed values carry the individual answers.
+    Choose(ChooseArguments),
+
+    /// Pick the one line or record that best answers a question. Every unit
+    /// leaves together and sees every other unit.
+    ///
+    /// Every unit leaves together in one request and sees every other unit.
+    /// Input defaults to lines; --jsonl reads records and --field selects what
+    /// the model sees. The set holds 2 to 255 units, or 2 to 254 with --none,
+    /// and at most 16 MiB across the original input.
+    ///
+    /// `find --none` prints nothing and exits 3 when `none` wins or ties for
+    /// first.
+    Find(FindArguments),
+
+    /// Place a text on a scale you name.
+    ///
+    /// The levels come lowest first, and the number is the backend's
+    /// probability-weighted position on them, from 0 to the number of levels
+    /// minus one. `score` takes no threshold, and no answer sets the exit code.
+    /// `jq -e` cuts on the number in one line and sets one:
+    ///
+    /// thinkthen score 'How much disruption?' none workaround blocked < t.txt | jq -e '. >= 2' > /dev/null
+    ///
+    /// One number hides the shape of the distribution. The level odds 0, 1, 0
+    /// and 0.5, 0, 0.5 both score 1. Read `--details` for the odds of every
+    /// level when the difference matters.
+    ///
+    /// Measurement of the first decider model showed rubric judgments rejecting
+    /// 18% to 46% of work people had accepted. A later run ordered forty made-up
+    /// reports well and ran one level high on 9 of 40, so tune a cut on labeled
+    /// cases. A number belongs in a review queue a person reads. A gate that has
+    /// to hold belongs in `decide` or `choose`, and the Bash way to branch on
+    /// levels is `choose` with the levels as ordered labels.
+    ///
+    /// A record run exits 0 when it completes without a partial or whole-run
+    /// failure. The printed values carry the individual answers.
+    Score(ScoreArguments),
+
+    /// Name every label that fits.
+    ///
+    /// The answer is one JSON array holding every applicable label. A record
+    /// run exits 0 when it completes without a partial or whole-run failure.
+    /// The printed values carry the individual answers.
+    #[command(
+        after_help = "Examples:\n\nthinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt\nthinkthen tag 'Which topics?' billing urgent < message.txt\n"
+    )]
+    Tag(TagArguments),
+
+    /// Fill out a question set for every record.
+    ///
+    /// The answer is one annotated JSON object. A record run exits 0 when it
+    /// completes without a partial or whole-run failure. The printed values
+    /// carry the individual answers. A completed run with one or more failed
+    /// questions exits 6.
+    #[command(
+        after_help = "Examples:\n\nthinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\n"
+    )]
+    Annotate(AnnotateArguments),
+
+    /// Inspect and maintain answer-cache folders without sending a request.
+    Cache(CacheArguments),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct CacheArguments {
+    #[command(subcommand)]
+    pub(crate) command: CacheCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub(crate) enum CacheCommand {
+    /// Remove selected entries, then the oldest entries above the size target.
+    Prune(PruneArguments),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct PruneArguments {
+    /// The cache or recording folder to maintain.
+    pub(crate) directory: PathBuf,
+    /// Keep recognized entries at or below this many allocated bytes.
+    #[arg(long, value_name = "BYTES")]
+    pub(crate) max_size: Option<String>,
+    /// Remove entries strictly older than a duration such as 30d or 12h.
+    #[arg(long, value_name = "Nd|Nh|Nm|Ns")]
+    pub(crate) older_than: Option<String>,
+    /// Remove entries answered by any other model.
+    #[arg(long, value_name = "MODEL")]
+    pub(crate) answered_by_other_than: Option<String>,
+}
+
+impl Command {
+    pub(crate) const fn reads_input(&self) -> bool {
+        !matches!(self, Self::Cache(_) | Self::Status(_))
+    }
+
+    /// The input file one command named, if any.
+    pub(crate) fn input(&self) -> Option<&std::path::Path> {
+        match self {
+            Self::Decide(arguments) => arguments.common.input.as_deref(),
+            Self::Choose(arguments) => arguments.common.input.as_deref(),
+            Self::Tag(arguments) => arguments.common.input.as_deref(),
+            Self::Score(arguments) => arguments.common.input.as_deref(),
+            Self::Filter(arguments) => arguments.common.input.as_deref(),
+            Self::Rank(arguments) => arguments.common.input.as_deref(),
+            Self::Find(arguments) => arguments.common.input.as_deref(),
+            Self::Annotate(arguments) => arguments.common.input.as_deref(),
+            Self::Cache(_) => None,
+            Self::Status(_) => None,
+        }
+    }
+
+    /// The attempt timeout parsed in either shared argument home.
+    pub(crate) const fn timeout(&self) -> u64 {
+        match self {
+            Self::Decide(arguments) => arguments.common.timeout,
+            Self::Choose(arguments) => arguments.common.timeout,
+            Self::Tag(arguments) => arguments.common.timeout,
+            Self::Score(arguments) => arguments.common.timeout,
+            Self::Filter(arguments) => arguments.common.timeout,
+            Self::Rank(arguments) => arguments.common.timeout,
+            Self::Find(arguments) => arguments.common.timeout,
+            Self::Annotate(arguments) => arguments.common.timeout,
+            Self::Cache(_) => 1,
+            Self::Status(_) => 1,
+        }
+    }
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct StatusArguments {
+    /// Print one closed JSON object instead of name-value lines.
+    #[arg(long)]
+    pub(crate) json: bool,
+}

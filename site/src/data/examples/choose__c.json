@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* three messages name one team each: billing, shipping,\n   and account. The fourth names a parcel and a login, so\n   no team reaches 0.9 and its answer is null */\nconst char *texts[] = {\"Please refund the extra fee on my invoice.\",\n    \"My parcel went to the wrong address.\",\n    \"I cannot reset my password.\",\n    \"My parcel never came, and now I cannot log in to track it.\"};\nchar choose[320];\nfor (int i = 0; i < 4; i++) {\n    snprintf(choose, sizeof choose,\n        \"{\\\"choose\\\": \\\"Which team owns this?\\\", \"\n        \"\\\"options\\\": [\\\"billing\\\", \\\"shipping\\\", \\\"account\\\"], \"\n        \"\\\"threshold\\\": 0.9, \\\"evidence\\\": \\\"%s\\\"}\", texts[i]);\n    char *out = thinkthen_call(tt, choose);\n    puts(out ? out : thinkthen_error_message(tt));\n    thinkthen_free_string(out);\n}",
+  "function": "choose",
+  "surface": "c"
+}

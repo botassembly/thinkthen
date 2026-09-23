@@ -104,7 +104,7 @@ const SAID: [&str; 20] = [
     "the question file's `levels`: `score` takes 2 to 10 levels, lowest first",
     "the question file is not valid JSON: the JSON at line 1 column 2 is not one",
     "a question file is one JSON object",
-    "`true` in the question file is text",
+    "`true` in the question file is text, an object, a list, or null",
     "the question file's `decide`: a question is text, not white space",
     "the question file's `on` `body`: a pointer is RFC 6901, so it is empty or begins with `/`",
 ];
@@ -117,6 +117,23 @@ fn every_refusal_the_grammar_makes_names_its_key_and_its_exit_code() {
         assert_eq!(message, format!("thinkthen: {sentence}\n"), "{name}");
         assert_eq!(status, Some(code), "{name}");
     }
+}
+
+#[test]
+fn an_unknown_local_key_is_escaped_and_stays_on_one_line() {
+    let file = written(
+        "unknown-control-key",
+        r#"{"decide":"Does this pass?","line\nbreak":true}"#,
+    );
+    assert_eq!(
+        refused(&["decide", &file, "--dry-run"]),
+        (
+            r#"thinkthen: a question file holds no key `line\nbreak`
+"#
+            .to_owned(),
+            Some(5)
+        )
+    );
 }
 
 #[test]

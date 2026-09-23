@@ -142,12 +142,7 @@ const REFUSALS: [Refusal; 32] = [
     },
     Refusal {
         evidence: "   ",
-        ..every(
-            "blank evidence",
-            &[],
-            "evidence is text, not white space",
-            2,
-        )
+        ..every("blank evidence", &[], "the evidence is empty or blank", 2)
     },
     Refusal {
         evidence: "{huge}",
@@ -383,7 +378,7 @@ fn evidence_of(named: &str) -> Vec<u8> {
         "" => EVIDENCE.as_bytes().to_vec(),
         "{huge}" => {
             let mut bytes = EVIDENCE.as_bytes().to_vec();
-            bytes.resize(thinkthen_core::MAX_RECORD_BYTES + 1, b'x');
+            bytes.resize(crate::support::MAX_RECORD_BYTES + 1, b'x');
             bytes
         }
         "{binary}" => [EVIDENCE.as_bytes(), &[0xff, 0xfe]].concat(),

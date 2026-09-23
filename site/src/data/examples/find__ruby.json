@@ -1,0 +1,13 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# the one line that gives the refund deadline\npolicy = [\"Returns need the original receipt.\",\n    \"Refunds are issued within 30 days of purchase.\",\n    \"Shipping is free on orders over $50.\"]\nask = \"Which line gives the refund deadline?\"\nputs ThinkThen.find(ask, policy).unit\n\n# praise, a bug, and a double charge in one message\nlabels = [\"praise\", \"bug\", \"billing\"]\np ThinkThen.tag(\"Which labels fit this message?\",\n    \"Love it, but export crashes and I was billed twice.\",\n    labels:)",
+  "printed": {
+    "command": "ruby sample.rb",
+    "output": "Refunds are issued within 30 days of purchase.\n[\"praise\", \"bug\", \"billing\"]",
+    "see": "The double charge is tagged billing."
+  },
+  "function": "find",
+  "surface": "ruby"
+}

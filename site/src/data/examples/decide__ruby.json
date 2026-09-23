@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# a plain ask for money back is true. A thank-you is false\nask = \"Does the customer ask for a refund?\"\np ThinkThen.decide(ask, \"Please refund my order. It arrived broken.\")\np ThinkThen.decide(ask, \"Thanks for the quick help yesterday!\")",
+  "function": "decide",
+  "surface": "ruby"
+}

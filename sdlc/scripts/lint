@@ -6,6 +6,7 @@ REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
 python3 sdlc/scripts/policy.py
+sh sdlc/scripts/package
 python3 sdlc/scripts/pages-self-test
 python3 sdlc/scripts/pages
 node sdlc/scripts/ratchet.mjs

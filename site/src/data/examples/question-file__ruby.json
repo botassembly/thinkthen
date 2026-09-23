@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "ruby",
+  "code": "require \"thinkthen\"\n\n# build a question once. A Range is the band, and nil is\n# \"not sure\": an exchange, or money back?\nrefund = ThinkThen.question(\n  decide: \"Does the customer ask for a refund?\",\n  threshold: 0.2..0.8)\np ThinkThen.decide(refund, \"I want to send this back.\")",
+  "function": "question-file",
+  "surface": "ruby"
+}

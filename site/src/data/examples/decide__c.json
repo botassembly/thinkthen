@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "c",
+  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* decide has a typed call. A plain ask for money back\n   prints 1, THINKTHEN_YES, at 0.99 */\nconst char *q = \"Does the customer ask for a refund?\";\nconst char *t = \"Please refund my order. It arrived broken.\";\nthinkthen_answer a;\nif (thinkthen_decide(tt, q, t, strlen(t), &a) == THINKTHEN_OK)\n    printf(\"%d %.2f\\n\", a.outcome, a.probability);",
+  "function": "decide",
+  "surface": "c"
+}

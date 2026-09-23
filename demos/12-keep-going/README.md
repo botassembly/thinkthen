@@ -15,11 +15,12 @@ set -eu
 
 thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --input queue.jsonl --cache recording/ 2>/dev/null \
-  | mustmatch "true
-false"
+  | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
+{"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}'
 ```
 
 Two records were judged and the third ended the run. One line on standard error names the record by its number, never by its text.
+Each completed row keeps its parsed input beside the answer, so a resumed file still identifies every result without `--details`.
 
 ```bash
 set -eu
@@ -53,7 +54,7 @@ Exit 2 covers a mistyped flag and a refused record alike. The message on standar
 
 ## Step 3: repair the record and run again
 
-The repaired file goes through the same folder. `meta.replayed` is the ledger of what each row cost.
+The repaired file goes through the same folder. `meta.cached` is the ledger of what each row cost.
 
 ```bash
 set -eu
@@ -61,11 +62,11 @@ set -eu
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
   | thinkthen decide 'Does the message report a payment failure?' \
       --jsonl --field /body --details --cache recording/ \
-  | jq -c '{id: .input.id, value, replayed: .meta.replayed}' \
-  | mustmatch '{"id":"Q-01","value":true,"replayed":true}
-{"id":"Q-02","value":false,"replayed":true}
-{"id":"Q-03","value":true,"replayed":true}
-{"id":"Q-04","value":false,"replayed":true}'
+  | jq -c '{id: .input.id, value, cached: .meta.cached}' \
+  | mustmatch '{"id":"Q-01","value":true,"cached":true}
+{"id":"Q-02","value":false,"cached":true}
+{"id":"Q-03","value":true,"cached":true}
+{"id":"Q-04","value":false,"cached":true}'
 ```
 
 Every row reads `true` here, because the committed recording holds all four exchanges and a gate touches no network. On a real rerun the first two rows read `true` and the last two read `false`, and the bill is two requests instead of four.
@@ -80,10 +81,10 @@ set -eu
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
   | thinkthen decide 'Does the message report a payment failure?' \
       --jsonl --field /body --cache recording/ --jobs 8 \
-  | mustmatch "true
-false
-true
-false"
+  | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
+{"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}
+{"input":{"id":"Q-03","body":"Payout to our bank bounced twice on Tuesday with no reason given."},"value":true}
+{"input":{"id":"Q-04","body":"Can you point me at the API docs for webhooks?"},"value":false}'
 ```
 
 ## What can go wrong
@@ -96,7 +97,7 @@ set -eu
 THINKTHEN_API_KEY=not-a-real-key thinkthen decide 'Does the message report a payment failure?' \
   --jsonl --field /body --input queue.jsonl --url http://127.0.0.1:9/v1 \
   --model local-decider-3 --timeout 2 --max-retries 0 2>&1 >/dev/null \
-  | mustmatch like "could not be reached"
+  | mustmatch like "backend refused the connection"
 ```
 
 - **A record that answered after the stop is still recorded.** Several requests are in flight when one fails, and the answers that came back were billed. The rerun does not pay for them twice, and the stop always names the earliest failed record.

@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+import { SURFACES, statusClass } from '../data/catalog.mjs';
+---
+<Base title="Languages and databases" description="Call ThinkThen from Bash, six languages, Polars, and three databases.">
+  <h1>Every language and database</h1>
+  <p class="lede">Call ThinkThen from Bash, six languages, Polars, and three databases. Bash ships first. Python, TypeScript, Ruby, R, Rust, C, DuckDB, SQLite, and PostgreSQL come with 0.1.</p>
+
+  <table>
+    <tr><th>Language or database</th><th>Install</th><th>Not sure comes back as</th><th>Status</th></tr>
+    {SURFACES.map((s) => (
+      <tr>
+        <td><a href={`/${s.slug}/`}>{s.name}</a></td>
+        <td><code>{s.install[0][0]}</code></td>
+        <td><code>{s.unsureWord}</code></td>
+        <td><span class={`status ${statusClass(s.status)}`}>{s.release === '0.1' ? 'comes with 0.1' : s.status}</span></td>
+      </tr>
+    ))}
+  </table>
+
+  <h2>Not here yet</h2>
+  <p>pandas gets a short page under Python when the Python library ships.</p>
+
+  <p class="pagelinks"><a href="/install/">Install</a> · <a href="/functions/">See every function</a></p>
+</Base>

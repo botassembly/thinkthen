@@ -1,6 +1,6 @@
 # Ian's rulings on the surfaces, and the next experiment brief
 
-Status: Open
+Status: Closed on 2026-09-22. The rulings are recorded, and the surfaces experiment closed on all seven brief items.
 
 ## Rulings, 2026-09-21
 
@@ -65,3 +65,23 @@ What is unchecked, stated plainly:
 - `max_requests` refuses bulk calls only; single calls do not count against it.
 
 Phase B inherits: a trait to bind, a header to compile, one conformance file to read, a check script to hook into, and nine folders with their samples named. The Python band sample's `# None` comment will not reproduce against the stub's three-bucket rule (`I was charged twice` holds no keyword, so the stub answers 0.03 and a band calls it No): that is a finding to report when it fires, not a surprise.
+
+## Ruled by Ian, 2026-09-21: the data frame is Polars
+
+Ian ruled: "Polars. The Rust-based data frame project that's similar to pandas, but let's just do Polars." Python's data frame container is Polars, not pandas. What follows:
+
+- The Python surface's `annotate` and `recognize` data-frame forms take and return Polars DataFrames; the bulk form accepts a Polars column. pandas leaves the surface entirely and the slide sample runs on Polars.
+- Polars is an optional dependency: the wheel does not carry it, the surface feature-detects it when a DataFrame arrives, and the install line is `pip install thinkthen[polars]`.
+- The slide sample's shape does not change — `tt.annotate("form.json", df, on="body")` — and no slide text names a data frame library, so the deck needs no change unless the marketing side wants Polars named.
+- R's data frame stays R's own; the databases are untouched.
+- Open, not ruled: a native Polars door on the Rust surface (Polars is itself a Rust library, so the door is cheap if ever wanted). Nothing builds on this until asked.
+
+What Ian can overturn: the optional-dependency shape (a hard dependency instead), and the open Rust question.
+
+Clarified by Ian, 2026-09-21: the Python surface supports both pure Python and Polars DataFrame Python — both containers, first-class. All scalability and vectorization, whatever Polars offers, is done in Rust code, not Python code: Python never loops a row, never chunks, never bridges through a Python lambda. The proof is equality at the gate — the width bench through a Polars column must read the same wall time and the same 32 in flight as the plain-list form.
+
+2026-09-21: the Polars plan exists at `sdlc/planning/polars-plan.md`, written after the Polars ruling and Ian's clarification that both Python containers ship first-class with all scaling and vectorization in Rust. It lists the risks and experiments 212 through 216 and authorizes nothing.
+
+## The surfaces experiment closes, 2026-09-21
+
+All seven brief items landed on branch `surfaces` (base `b11a2b0` through `35f5044`), plus the Polars door and the pandas checks under Ian's later rulings. The findings page at the branch root carries the whole report in the experiment's habit: what was observed by command, what diverged, what Ian can overturn. Headlines: the contract and the stand-in; nine surfaces with every slide sample running as drawn (three sample findings filed, one defect fixed); twenty-seven conformance cases; the packaging rehearsal with real macOS artifacts for C and Python and the exact blockers for the three databases; the maintainability test's two honest counts; cancel proven in TypeScript, Ruby, and R; the Polars equality proof at 0.016 percent with identical buffer addresses; the pandas checks closed with both corrections to their own issue. The merge of `surfaces` into main is the build team's gate. The recognize work follows Ian's signal.

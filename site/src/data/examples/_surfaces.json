@@ -1,0 +1,102 @@
+{
+  "python": {
+    "lang": "python",
+    "code": "import thinkthen as tt\n\nask = \"Does the customer ask for a refund?\"\n\n# a plain ask for money back: True\nprint(tt.decide(ask,\n    \"Please refund my order. It arrived broken.\"))\n\n# build a question once. The band's middle is \"not sure\"\nrefund = tt.question(decide=ask, threshold=(0.2, 0.8))\n\n# an exchange, or money back? not sure: None\nprint(tt.decide(refund,\n    \"I want to send this back.\"))\n\n# a list goes in, and one filled form per report comes out\nreports = [\"CSV export fails. Steps: click Export.\",\n    \"The login page spins and nobody can sign in.\",\n    \"The Pay button on the billing page is too blue.\"]\nfor form in tt.annotate(\"form.json\", reports):\n    print(form)",
+    "install": "pip install thinkthen",
+    "printed": {
+      "command": "python sample.py",
+      "output": "True\nNone\n{'steps': True, 'area': 'export', 'impact': 1.94}\n{'steps': False, 'area': 'login', 'impact': 2.0}\n{'steps': False, 'area': 'billing', 'impact': 0.06}",
+      "see": "Each form fills steps, area, and impact."
+    }
+  },
+  "polars": {
+    "lang": "python",
+    "code": "import polars as pl\nimport thinkthen as tt\ndf = pl.DataFrame({\"body\": [\n    \"Export crashes. Steps: open a report, click Export.\",\n    \"The login page spins and nobody can sign in.\",\n    \"The Pay button on the billing page is too blue.\"]})\ndf = tt.annotate(\"form.json\", df, on=\"body\")\nprint(df.drop(\"body\"))",
+    "install": "pip install thinkthen[polars]",
+    "printed": {
+      "command": "python sample.py",
+      "output": "shape: (3, 3)\n┌───────┬─────────┬────────┐\n│ steps ┆ area    ┆ impact │\n│ ---   ┆ ---     ┆ ---    │\n│ bool  ┆ str     ┆ f64    │\n╞═══════╪═════════╪════════╡\n│ true  ┆ export  ┆ 1.99   │\n│ false ┆ login   ┆ 2.0    │\n│ false ┆ billing ┆ 0.07   │\n└───────┴─────────┴────────┘",
+      "see": "The export crash gives steps and blocks work. The login page blocks work. The blue Pay button is billing."
+    }
+  },
+  "typescript": {
+    "lang": "ts",
+    "code": "import * as tt from \"thinkthen\";\n\n// keep the complaints: the zipper and the strap\nconst reviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\",\n    \"The strap snapped on day two.\"];\nconsole.log(await tt.filter(\"Is this a complaint?\",\n    reviews));\n// your own scale, 0 to 2. An outage is \"Immediate.\"\nconst levels = [\"Routine.\", \"Soon.\", \"Immediate.\"];\nconst urgency = { score: \"How urgent is this?\", levels };\nconsole.log(await tt.score(urgency,\n    \"Checkout is down and nobody can pay.\"));",
+    "install": "npm install thinkthen",
+    "printed": {
+      "command": "node sample.mjs",
+      "output": "[\n  'The zipper broke the first time I used it.',\n  'The strap snapped on day two.'\n]\n2",
+      "see": "The early delivery drops out."
+    }
+  },
+  "ruby": {
+    "lang": "ruby",
+    "code": "require \"thinkthen\"\n\n# the one line that gives the refund deadline\npolicy = [\"Returns need the original receipt.\",\n    \"Refunds are issued within 30 days of purchase.\",\n    \"Shipping is free on orders over $50.\"]\nask = \"Which line gives the refund deadline?\"\nputs ThinkThen.find(ask, policy).unit\n\n# praise, a bug, and a double charge in one message\nlabels = [\"praise\", \"bug\", \"billing\"]\np ThinkThen.tag(\"Which labels fit this message?\",\n    \"Love it, but export crashes and I was billed twice.\",\n    labels:)",
+    "install": "gem install thinkthen",
+    "printed": {
+      "command": "ruby sample.rb",
+      "output": "Refunds are issued within 30 days of purchase.\n[\"praise\", \"bug\", \"billing\"]",
+      "see": "The double charge is tagged billing."
+    }
+  },
+  "r": {
+    "lang": "r",
+    "code": "library(thinkthen)\nbody <- c(\"I was billed twice for one order.\",\n  \"My parcel is a week late.\",\n  \"I am locked out of my account.\")\nteams <- c(\"billing\", \"shipping\", \"account\")\n# each ticket goes to the team its words name\ndata.frame(body, team = tt_choose(\"Which team owns this?\",\n  body, teams))\n# only the double bill is about money, so it ranks first\ntt_rank(\"Is this about money?\", body, top = 1)",
+    "install": "install.packages(\"thinkthen\")",
+    "printed": {
+      "command": "Rscript sample.R",
+      "output": "                               body     team\n1 I was billed twice for one order.  billing\n2         My parcel is a week late. shipping\n3    I am locked out of my account.  account\n  place                            record probability\n1     1 I was billed twice for one order.        0.98",
+      "see": "The double bill ranks at 0.98."
+    }
+  },
+  "rust": {
+    "lang": "rust",
+    "code": "use thinkthen::{Engine, Question};\nlet tt = Engine::from_env()?;\nlet teams = [\"billing\", \"shipping\", \"account\"];\nlet owner = Question::choose(\"Which team owns this?\",\n    &teams)?.build()?;\nlet texts = [\"My card was charged twice.\",\n    \"The courier lost my parcel.\",\n    \"I cannot reset my password.\"];\n// the compiler makes you handle \"not sure\"\nfor text in texts {\n    match tt.choose(&owner, text)? {\n        Some(team) => println!(\"{team}: {text}\"),\n        None => println!(\"a person: {text}\"),\n    }\n}",
+    "install": "cargo add thinkthen",
+    "printed": {
+      "command": "cargo run",
+      "output": "billing: My card was charged twice.\nshipping: The courier lost my parcel.\naccount: I cannot reset my password.",
+      "see": "Each text lands in the Some arm with its team: billing, shipping, and account."
+    }
+  },
+  "c": {
+    "lang": "c",
+    "code": "#include <stdio.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* score takes the JSON door: a request in, JSON out */\nconst char *ask = \"{\\\"score\\\": \\\"How urgent is this?\\\", \"\n    \"\\\"levels\\\": [\\\"Routine.\\\", \\\"Soon.\\\", \"\n    \"\\\"Immediate.\\\"], \"\n    \"\\\"evidence\\\": \\\"Checkout is down for everyone.\\\"}\";\nchar *out = thinkthen_call(tt, ask);\n\n/* an outage lands near 2, \"Immediate.\" */\nputs(out ? out : thinkthen_error_message(tt));\nthinkthen_free_string(out);\nthinkthen_engine_free(tt);",
+    "install": "thinkthen.h + libthinkthen",
+    "printed": {
+      "command": "cc sample.c -lthinkthen && ./sample",
+      "output": "{\"answer\":2.0,\"nearest\":\"Immediate.\"}",
+      "see": "`nearest` names the level closest to the number."
+    }
+  },
+  "duckdb": {
+    "lang": "sql",
+    "code": "LOAD './thinkthen.duckdb_extension';\n\nCREATE TABLE tickets AS SELECT * FROM (VALUES\n    (1, 'My parcel is a week late. Not okay.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'We are locked out of our account.'),\n    (4, 'I was billed twice for one order.')\n) t(id, body);\n\n-- the thank-you is no complaint, so it drops out\nSELECT id, thinkthen_choose('Which team owns this?',\n    body, ['billing', 'shipping', 'account']) AS team\nFROM tickets\nWHERE thinkthen_decide('Is this a complaint?', body);",
+    "install": "duckdb -unsigned",
+    "printed": {
+      "command": "duckdb -unsigned -list < sample.sql",
+      "output": "id|team\n1|shipping\n3|account\n4|billing",
+      "see": "The late parcel goes to shipping, the lockout to account, and the double bill to billing."
+    }
+  },
+  "sqlite": {
+    "lang": "sql",
+    "code": "CREATE TABLE messages(id INTEGER, body TEXT);\nINSERT INTO messages VALUES\n    (1, 'Love the app, but export crashes.'),\n    (2, 'How do I change my billing address?');\n\n-- the labels ride inside the question, as JSON\nSELECT id, thinkthen_tag(\n    '{\"tag\": \"Which labels fit this message?\",\n      \"labels\": [\"praise\", \"bug\", \"billing\"]}',\n    body)\nFROM messages;",
+    "install": ".load ./thinkthen",
+    "printed": {
+      "command": "sqlite3 < sample.sql",
+      "output": "1|[\"praise\",\"bug\"]\n2|[\"billing\"]",
+      "see": "The first message gets praise and bug. The billing address question gets billing."
+    }
+  },
+  "postgresql": {
+    "lang": "sql",
+    "code": "CREATE TABLE tickets (id int, body text);\nINSERT INTO tickets VALUES\n    (1, 'Please refund my order. It came broken.'),\n    (2, 'Thanks for the quick help yesterday!'),\n    (3, 'I want to send this back.');\n\n-- refund.json carries a band. NULL is \"not sure\":\n-- these are the rows a person should read\nSELECT id, body FROM tickets\nWHERE thinkthen_decide('@refund.json', body) IS NULL;",
+    "install": "CREATE EXTENSION thinkthen;",
+    "printed": {
+      "command": "psql -q -f sample.sql",
+      "output": " id |           body            \n----+---------------------------\n  3 | I want to send this back.\n(1 row)",
+      "see": "Rows 1 and 2 answer true and false, so the WHERE drops them."
+    }
+  }
+}

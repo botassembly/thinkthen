@@ -67,7 +67,10 @@ fn a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader() {
     assert_eq!(output.status.code(), Some(3));
     let row = String::from_utf8_lossy(&output.stdout);
     assert!(row.starts_with(r#"{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which unit answers?","none":true},"answer":{"kind":"find","pick":"u001","probabilities":{"u001":0.5,"u002":0.0,"none":0.5}},"threshold":null,"meta":{"tool":"thinkthen 0.0.1","question_sha256":"#), "{row}");
-    assert!(row.contains(r#""replayed":false}}"#), "{row}");
+    assert!(
+        row.contains(r#""requests_sent":1,"cached":false,"requests":[""#),
+        "{row}"
+    );
 }
 
 #[test]
@@ -130,7 +133,9 @@ fn cache_records_once_and_then_replays_without_a_key_or_second_request() {
     let first = String::from_utf8(recorded.stdout).expect("recorded result");
     let second = String::from_utf8(replayed.stdout).expect("replayed result");
     assert_eq!(
-        first.replace(r#""replayed":false"#, r#""replayed":true"#),
+        first
+            .replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
+            .replace(r#""cached":false"#, r#""cached":true"#),
         second
     );
     assert_eq!(listener.requests().len(), 1);
@@ -159,7 +164,7 @@ fn every_preflight_refusal_is_keyed_and_opens_no_connection() {
         .map(|place| format!("unit {place}\n"))
         .collect::<String>()
         .into_bytes();
-    let oversized = vec![b'x'; thinkthen_core::MAX_RECORD_BYTES + 1];
+    let oversized = vec![b'x'; crate::support::MAX_RECORD_BYTES + 1];
     let cases: Vec<Preflight> = vec![
         (vec![], b"one\n".to_vec(), 2),
         (vec![], many, 2),
@@ -279,8 +284,15 @@ fn a_closed_output_pipe_ends_find_quietly_after_the_paid_answer_finishes() {
     let listener = Listener::serving(vec![Canned::ok(PICKED).after(30)]).expect("listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
-        .args(["find", "Which unit answers?", "--url", listener.base()])
+        .args([
+            "find",
+            "Which unit answers?",
+            "--url",
+            listener.base(),
+            "--no-cache",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

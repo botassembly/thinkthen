@@ -1,0 +1,17 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "choose",
+      "command": "thinkthen choose --lines --threshold 0.9 --details 'Which team owns this?' --option 'billing=Invoices, fees, and refunds.' --option 'shipping=Parcels and delivery.' --option 'account=Logins and passwords.' < requests.txt | jq -r '\"\\(.value) \\(.input)\"'",
+      "input": "Please refund the extra fee on my invoice.\nMy parcel went to the wrong address.\nI cannot reset my password.\nMy parcel never came, and now I cannot log in to track it.",
+      "inputFile": "requests.txt",
+      "output": "billing Please refund the extra fee on my invoice.\nshipping My parcel went to the wrong address.\naccount I cannot reset my password.\nnull My parcel never came, and now I cannot log in to track it.",
+      "exit": 0,
+      "see": "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login, so no team reaches 0.9 and it comes back null."
+    }
+  ],
+  "function": "choose",
+  "surface": "shell"
+}

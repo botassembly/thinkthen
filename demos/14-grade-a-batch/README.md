@@ -48,13 +48,18 @@ The comparison pairs the six records once, then compares `correct` and every oth
 ## Compare the judge with human labels
 
 ```bash
+work=$(mktemp)
+trap 'rm -f -- "$work"' EXIT
 env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --details \
   --replay recording --input cases.jsonl \
-  | jq -s -c '{resolved:[.[]|select(.value.correct != null)]|length, agreements:[.[]|select(.value.correct == .input.human_correct)]|length}' \
-  | mustmatch '{"resolved":4,"agreements":4}'
+  > "$work"
+jq -n --argjson truth '{"correct":"/input/human_correct"}' \
+  -f ../../transforms/sweep/sweep.jq "$work" \
+  | jq -c '.questions.correct | {rows,labeled,cut:.pick.cut,accuracy:.pick.accuracy,f1:.pick.f1}' \
+  | mustmatch '{"rows":6,"labeled":6,"cut":0.6,"accuracy":1,"f1":1}'
 ```
 
-The judge resolved four correctness checks and agreed with the human label on all four. It left two cases inside the review band. Those cases need a person; they do not count as agreements or disagreements.
+The saved 0.2 to 0.8 band resolved four correctness checks. The sweep reads all six stored probabilities against `human_correct` and fits 0.6 as the best cut. It makes no new request. Map more question names when the case file holds trusted labels for them.
 
 ## What can go wrong
 

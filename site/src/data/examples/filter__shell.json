@@ -1,0 +1,35 @@
+{
+  "status": "run",
+  "source": "deck examples/run.sh and examples/out/",
+  "runs": [
+    {
+      "name": "filter",
+      "command": "thinkthen filter 'Is this a complaint?' --lines < reviews.txt",
+      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThe strap snapped on day two.",
+      "inputFile": "reviews.txt",
+      "output": "The zipper broke the first time I used it.\nThe strap snapped on day two.",
+      "exit": 0,
+      "see": "filter keeps the two complaints: the broken zipper and the snapped strap."
+    },
+    {
+      "name": "filter-means",
+      "command": "thinkthen filter 'Is this about the item itself?' --lines --true 'Its build, size, color, or parts.' --false 'Delivery, price, or service.' < reviews.txt",
+      "input": "Arrived a day early. Thank you!\nThe zipper broke the first time I used it.\nDoes this come in blue?\nThe strap snapped on day two.",
+      "inputFile": "reviews.txt",
+      "output": "The zipper broke the first time I used it.\nDoes this come in blue?\nThe strap snapped on day two.",
+      "exit": 0,
+      "see": "The zipper, the color, and the strap are about the item, so they stay. The early delivery drops out."
+    },
+    {
+      "name": "filter-csv",
+      "command": "thinkthen filter 'Is this a complaint?' --csv --field /comment < reviews.csv",
+      "input": "id,comment\nR-1,Arrived a day early. Thank you!\nR-2,The zipper broke the first time I used it.\nR-3,Does this come in blue?",
+      "inputFile": "reviews.csv",
+      "output": "{\"id\":\"R-2\",\"comment\":\"The zipper broke the first time I used it.\"}",
+      "exit": 0,
+      "see": "Only R-2 complains, and it comes back as one JSON object, id and all."
+    }
+  ],
+  "function": "filter",
+  "surface": "shell"
+}

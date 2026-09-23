@@ -1,0 +1,54 @@
+---
+// The same call on every surface, as tabs. A surface that does not carry the
+// function yet shows its status in place of code.
+import Terminal from './Terminal.astro';
+import Code from './Code.astro';
+import { SURFACES } from '../data/catalog.mjs';
+import { cell } from '../data/examples.mjs';
+
+const { fn, first = 1 } = Astro.props;
+
+const alias = (slug) => ({
+  shell: 'Bash', python: 'Python', polars: 'Python', typescript: 'TypeScript',
+  ruby: 'Ruby', r: 'R', rust: 'Rust', c: 'C',
+  duckdb: 'SQL', sqlite: 'SQL', postgresql: 'SQL',
+}[slug]);
+
+const tabs = SURFACES.map((s) => ({
+  slug: s.slug,
+  label: s.name,
+  alias: alias(s.slug),
+  surface: s,
+  data: cell(fn, s.slug),
+}));
+---
+<div class="tabbed" data-fallback="Bash">
+  <div class="tabs" role="tablist">
+    {tabs.map((t) => (
+      <button type="button" role="tab" data-lang={t.label} data-alias={t.alias} aria-selected={t.label === 'Bash'}>{t.label}</button>
+    ))}
+  </div>
+  {tabs.map((t) => (
+    <div class="cell" data-lang={t.label} hidden={t.label !== 'Bash'}>
+      {t.data.status === 'run' && t.data.runs.slice(0, first).map((run) => (
+        <Terminal run={run} />
+      ))}
+      {t.data.status === 'drawn' && !t.data.printed && (
+        <Code code={t.data.code} caption={`${t.surface.name} ${t.surface.release ? `comes with ${t.surface.release}` : 'is planned'}. The call will read like this.`} />
+      )}
+      {t.data.status === 'drawn' && t.data.printed && (
+        <>
+          <Code code={t.data.code} caption={`${t.surface.name} ${t.surface.release ? `comes with ${t.surface.release}` : 'is planned'}. The calls read like this.`} />
+          <Terminal run={{ command: t.data.printed.command, output: t.data.printed.output, exit: null }} caption={`Recorded from the branch build. ${t.data.printed.see}`} word={false} />
+        </>
+      )}
+      {(t.data.status === 'planned' || t.data.status === 'preview') && (
+        <div class="note">
+          <span class={`status ${t.data.status}`}>{t.data.status}</span>{' '}
+          No <code>{fn}</code> example for {t.surface.name} yet.
+          {t.surface.slug !== 'shell' && <> See the <a href={`/${t.surface.slug}/`}>{t.surface.name} page</a>.</>}
+        </div>
+      )}
+    </div>
+  ))}
+</div>

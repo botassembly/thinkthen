@@ -1,6 +1,6 @@
 # The question file
 
-Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19.
+Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19. ADR 0039 carries structured text and descriptions through it.
 
 Every structural setting of a question has two homes. One is an option on the command line. The other is a key in a question file, under the same word. A question tuned once in a file is the question the test runs and the question the gate runs.
 
@@ -23,40 +23,55 @@ A JSON syntax error says `the question file is not valid JSON: the JSON at line 
 A question file holds exactly one question. The first key names the verb and carries the question text.
 
 ```json
-{"decide": "TEXT", "true": "TEXT", "false": "TEXT", "threshold": "CUT", "on": "POINTER", "model": "NAME"}
+{"decide": "TEXT", "true": "TEXT", "false": "TEXT", "threshold": "CUT", "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
 ```json
-{"choose": "TEXT", "options": ["LABEL", "LABEL"], "threshold": 0.8, "on": "POINTER", "model": "NAME"}
+{"choose": "TEXT", "options": ["LABEL", "LABEL"], "threshold": 0.8, "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
 ```json
-{"tag": "TEXT", "labels": ["LABEL", "LABEL"], "threshold": 0.5, "on": "POINTER", "model": "NAME"}
+{"tag": "TEXT", "labels": ["LABEL", "LABEL"], "threshold": 0.5, "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
 ```json
-{"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME"}
+{"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
-A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional.
+A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional. Two members of one object that share a name are refused wherever they sit, because an order of two same-named members cannot be told from a mistake.
 
-`options` and `labels` are lists, or maps from each label to its description. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is empty or holds only white space is no description.
+The question text under the verb's key is a string, an object, or a list. A string that is empty or holds only white space is refused. An object or a list is the instruction the vendor asked for; the tool carries it and never rewrites it into a sentence. An empty object and an empty list are values, not absence. A null, a number, or a boolean is not question text. The same holds wherever this page says TEXT.
+
+`true` and `false` take a string, an object, a list, or `null`. A `null` written in the file is a present criterion, not an absent key. A string that is empty or holds only white space is refused.
+
+`options` and `labels` are lists, or maps from each label to its description. A description is a string, an object, a list, or `null`. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is `null`, empty, or holds only white space is no description.
+
+`levels` is a list of names, lowest first, or a map from each name to its description. A map value of `null` is the description the model reads, and the level's name is never substituted for it. A map string that is empty or holds only white space is refused, because the wire would carry it. An object or a list inside a levels list is refused with a message that names the map form. A result still reports the levels as the list of names.
 
 `on` is one JSON Pointer, or a list of them, as `--field` takes one or several.
+
+A description that is an object conventionally holds `what`, `not_for`, and `examples`, none of them required.
+
+## The published schema
+
+`question-file.schema.json`, beside this page, is the grammar above as a Draft 2020-12 JSON Schema. Its root composes four definitions, `decide`, `choose`, `tag`, and `score`, each one the complete structural shape of a single question file for that verb. A question-set member has additional contextual rules from [annotate.md](annotate.md), so these definitions do not validate one by themselves. `fixtures/question-file/corpus.json` is the shared corpus: every case names a file and a verdict, a self-test under the test rung proves the schema and each named definition agree with each verdict, and an integration test runs each case through the parser and `--dry-run` for the same verdict.
+
+The schema is structural; agreement with it is not agreement with this page. The checks it cannot express stay in the parser: members of one object that share a name, repeated label or level names, the threshold's range and band form, and RFC 6901 pointer syntax. The schema's name pattern is also stricter than the `model` check, which refuses only blank text. A run never interprets the schema; `--dry-run` runs the production parser and its full semantic validation.
 
 ## One table for every setting
 
 | Setting | On the command line | In the file | Default | Refused |
 | --- | --- | --- | --- | --- |
-| The question text | The first argument | The verb's own key | None. It is required | Empty or only white space |
-| What true means | `--true TEXT` | `true` | No text | Empty or only white space. Not on `choose` or `score` |
-| What false means | `--false TEXT` | `false` | No text | Empty or only white space. Not on `choose` or `score` |
-| The options | The arguments after the question, or `--option LABEL=DESCRIPTION` | `options` | None. `choose` requires 2 to 255 | Fewer than 2, more than 255, repeated, blank, not text, or holding a control character. An `--option` with no `=`. `--option` beside a list of options |
-| The tags | The arguments after the question, or `--label LABEL=DESCRIPTION` | `labels` | None. `tag` requires 1 to 20 | Fewer than 1, more than 20, repeated, blank, not text, or holding a control character. An `--label` with no `=`. `--label` beside a list of labels |
-| The levels | The arguments after the question | `levels` | None. `score` requires 2 to 10, lowest first | Fewer than 2, more than 10, repeated, blank, not text, or holding a control character |
+| The question text | The first argument | The verb's own key | None. It is required | Empty or only white space; a null, a number, or a boolean in a file |
+| What true means | `--true TEXT` | `true` | No text | Empty or only white space; a number or a boolean in a file. Not on `choose` or `score` |
+| What false means | `--false TEXT` | `false` | No text | Empty or only white space; a number or a boolean in a file. Not on `choose` or `score` |
+| The options | The arguments after the question, or `--option LABEL=DESCRIPTION` | `options` | None. `choose` requires 2 to 255 | Fewer than 2, more than 255, repeated, blank, not text, or holding a control character. A description that is a number or a boolean. An `--option` with no `=`. `--option` beside a list of options |
+| The tags | The arguments after the question, or `--label LABEL=DESCRIPTION` | `labels` | None. `tag` requires 1 to 20 | Fewer than 1, more than 20, repeated, blank, not text, or holding a control character. A description that is a number or a boolean. An `--label` with no `=`. `--label` beside a list of labels |
+| The levels | The arguments after the question | `levels` | None. `score` requires 2 to 10, lowest first | Fewer than 2, more than 10, repeated, blank, not text, or holding a control character. A map description that is blank text, a number, or a boolean. A nonstring list entry |
 | The rule | `--threshold T` or `--threshold LOW:HIGH` | `threshold` | `0.5` for `decide`, `tag`, and `filter`, none for `choose`, `score`, and `rank` | A cut of 0 or above 1, a band whose low side is not below its high side, a band on `choose`, `tag`, and `filter`, and any threshold on `score` and on `rank` |
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901 |
 | The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
+| The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 
@@ -64,9 +79,9 @@ Nothing has a default where a guess would hide a mistake. `choose` with no optio
 
 Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.**
 
-A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`.
+A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead.
 
-A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`.
+A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`. A typed list carries no descriptions, so replacing a described list drops every description the file held.
 
 The question text always comes from the file. A file and a typed question text together cannot arise, because the first argument is one or the other.
 
@@ -86,19 +101,20 @@ A run with no question file prints no `from` object, because every setting came 
 
 Every `--details` row carries `meta.question_sha256`. It names the exact question that produced the row, so two runs that asked almost the same thing cannot be mistaken for one. The same question gives the same digest whether it was typed or read from a file, and any override shows up as a different digest.
 
-The digest is the SHA-256 of the canonical form below, written as 64 lowercase hexadecimal figures.
+The digest is the SHA-256 of the canonical form below, written as 64 lowercase hexadecimal figures. A saved `profile` follows `threshold` in that form and changes the digest. Selecting `--profile FILE` does not.
 
 ### The canonical form
 
 The canonical form is one JSON object on one line. Another implementation follows these rules and reaches the same digest.
 
-1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`. For `choose`: `verb`, `text`, `options`, `threshold`. For `tag`: `verb`, `text`, `labels`, `threshold`. For `score`: `verb`, `text`, `levels`. `verb` holds the command name.
+1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`, `profile`. For `choose`: `verb`, `text`, `options`, `threshold`, `profile`. For `tag`: `verb`, `text`, `labels`, `threshold`, `profile`. For `score`: `verb`, `text`, `levels`, `profile`. `verb` holds the command name. An absent `profile` is omitted.
 2. **A key with no value is absent.** `true` and `false` are absent when no text was given. `threshold` is absent on `score`, which takes no rule, and on a `choose` with no cut.
 3. **There is no insignificant white space.** No space follows a colon or a comma, and there is no newline inside the form. The digest is taken over the UTF-8 bytes of that one line.
 4. **Text is escaped as JSON escapes it, and no further.** A quotation mark is `\"`, a backslash is `\\`, and the control characters use their JSON escapes. Every other character is written as itself, including every character outside ASCII. No `\u` escape is used where the character can stand for itself.
-5. **A number is written in the shortest form that reads back as the same 64-bit float.** A cut of one half is `0.5`. A band is not a number: it is the string `"LOW:HIGH"`, with each side written by the same shortest form, so `0.20:0.80` and `0.2:0.8` both give `"0.2:0.8"` and one digest.
-6. **The options and tag labels are maps from each label to its description, in the order the user gave.** A label with no description takes `null`. A list of labels and a map of the same labels to `null` are therefore one question and one digest, and two runs whose descriptions differ are two digests. The levels of `score` are a list of strings, in the order the user gave.
-7. **The threshold rides with the question.** A cut tuned on labeled cases belongs to the question it was tuned for, so `--threshold` changes the digest. The default cut and the same cut typed out are one rule and one digest.
+5. **A number is written in the shortest form that reads back as the same 64-bit float.** A cut of one half is `0.5`. A band is not a number: it is the string `"LOW:HIGH"`, with each side written by the same shortest form, so `0.20:0.80` and `0.2:0.8` both give `"0.2:0.8"` and one digest. The same rule holds for a number inside a structured value.
+6. **The options and tag labels are maps from each label to its description, in the order the user gave.** A label with no description takes `null`. A list of labels and a map of the same labels to `null` are therefore one question and one digest, and two runs whose descriptions differ are two digests. The levels of `score` keep the form the file held: a list of names, or a map from each name to its description, in the order the user gave. A list and a map of the same names are two questions, because the map says the descriptions ride the wire.
+7. **A structured value keeps the order of its members.** An object the file wrote is written member for member in the file's order, and two orders are two questions. White space between tokens changes nothing: two files that parse to the same value give one digest.
+8. **The threshold rides with the question.** A cut tuned on labeled cases belongs to the question it was tuned for, so `--threshold` changes the digest. The default cut and the same cut typed out are one rule and one digest.
 
 Four worked examples, pinned in the tests:
 
@@ -130,7 +146,7 @@ The canonical form is not the `question` field of a result. That field prints a 
 
 ## The digest of a question set
 
-`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. The canonical object has `version`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. The path, model, address, formatting, and other runtime settings are absent.
+`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. The canonical object has `version`, optional top-level `profile`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. A nested question cannot carry `profile`. The path, model, address, formatting, and other runtime settings are absent.
 
 ```json
 {"version":1,"questions":[{"name":"refund","question":{"verb":"decide","text":"Does this ask for a refund?","threshold":0.5},"on":[""]}]}

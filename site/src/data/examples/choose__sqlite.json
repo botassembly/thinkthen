@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": ".load ./thinkthen\n\n-- the options ride inside the question, as JSON. Three\n-- messages name one team each: billing, shipping, and\n-- account. The fourth names a parcel and a login, so no\n-- team reaches 0.9 and it comes back NULL\nWITH t(body) AS (VALUES\n    ('Please refund the extra fee on my invoice.'),\n    ('My parcel went to the wrong address.'),\n    ('I cannot reset my password.'),\n    ('My parcel never came, and now I cannot log in to track it.'))\nSELECT thinkthen_choose(\n    '{\"choose\": \"Which team owns this?\",\n      \"options\": [\"billing\", \"shipping\", \"account\"],\n      \"threshold\": 0.9}',\n    body), body\nFROM t;",
+  "function": "choose",
+  "surface": "sqlite"
+}

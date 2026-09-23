@@ -1,0 +1,67 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Terminal from '../../../components/Terminal.astro';
+import { HOWTOS, FUNCTIONS } from '../../../data/catalog.mjs';
+import { HOWTO_RUNS } from '../../../data/examples.mjs';
+
+export function getStaticPaths() {
+  return HOWTOS.map((h) => ({ params: { slug: h.slug }, props: { howto: h } }));
+}
+
+const { howto } = Astro.props;
+const data = HOWTO_RUNS[howto.slug];
+
+// Copy fields mark code with backticks. The page shows it as code; the
+// meta description drops the marks.
+const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
+const plain = (text) => text.replaceAll('`', '');
+
+// Only a function with exit 3 can answer not sure. The two shared
+// sentences below promise it only when one of the how-to's functions can.
+const unsure = howto.functions.some((n) => FUNCTIONS.find((f) => f.name === n).exits.some(([code]) => code === 3));
+
+for (const step of data.steps) {
+  if (!howto.see?.[step.name]) throw new Error(`how-tos: ${howto.slug} has no see caption for ${step.name}`);
+}
+---
+<Base title={howto.title} description={plain(howto.said)}>
+  <div class="eyebrow">{howto.reader}</div>
+  <h1>{howto.title}</h1>
+  <p class="lede">{parts(howto.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+  <p>ThinkThen reads each line and answers a plain question about it. Every answer carries a probability.{unsure && ' An unclear case comes back as not sure, exit code 3, for a person to check.'}</p>
+
+  <h2>What goes in</h2>
+  <div class="block">
+    <div class="caption"><span class="status run">run</span><span class="grow"><code>{data.inputFile}</code>, the file the commands read.</span></div>
+    <pre>{data.input}</pre>
+  </div>
+  {data.forms.map((form) => (
+    <div class="block">
+      <div class="caption"><span class="status run">run</span><span class="grow"><code>{form.name}</code>, the form the commands fill out.</span></div>
+      <pre>{form.text}</pre>
+    </div>
+  ))}
+  {howto.also && (
+    <div class="block">
+      <div class="caption"><span class="status run">run</span><span class="grow"><code>{howto.also.file}</code>, the second file.</span></div>
+      <pre>{howto.also.text}</pre>
+    </div>
+  )}
+  {howto.also && <p>{parts(howto.also.note).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>}
+  {howto.given && <p>{parts(howto.given).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>}
+
+  <h2>The commands and what came out</h2>
+  {data.steps.map((step) => <Terminal run={step} caption={`Recorded from the real command. ${howto.see[step.name]}`} />)}
+
+  <h2>The functions it uses</h2>
+  <div class="grid">
+    {howto.functions.map((name) => {
+      const fn = FUNCTIONS.find((f) => f.name === name);
+      return <a class="tile" href={`/functions/${fn.name}/`}><b>{fn.name}</b><span>{fn.line}</span></a>;
+    })}
+  </div>
+
+  <p>Copy the commands and point them at your own file. Set the bar with <code>--threshold</code>.{unsure && ' Anything in the middle comes back as not sure for a person to check.'}</p>
+
+  <p class="pagelinks"><a href="/how-tos/">See every how-to</a> · <a href="/shell/">Use it from Bash</a> · <a href="/install/">Install it</a></p>
+</Base>

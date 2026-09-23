@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"context":"Orders ship in cardboard boxes with paper tape. The boxes are widely recyclable.","output":"Yes, and the boxes are made from 90 percent recycled fibre."},"model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Is every claim in the answer stated in the source text?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":316,"output_tokens":21}}
+}

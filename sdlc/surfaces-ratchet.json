@@ -1,6 +1,7 @@
 {
   "directories": [
     "contract",
+    "thinkthen-core",
     "standin",
     "libraries",
     "databases"
@@ -15,5 +16,5 @@
     "build",
     "dist"
   ],
-  "max": 26848
+  "max": 34950
 }

@@ -48,8 +48,8 @@ A header or logical data row may hold at most 16 MiB of encoded bytes before its
 - `--field` with `--lines` is a usage error. A text line has no members.
 - A pointer that finds nothing is an input error for that record at exit 2, before any request for it.
 - `$.body`, `#/id`, a wildcard, and a negative index are refused with a message that names RFC 6901, because the tool never guesses a pointer language.
-- A pointed value that is not a string is serialized as compact JSON and sent as text.
-- Without `--field`, a JSONL, CSV, or TSV record is serialized as compact JSON and the whole record becomes the evidence.
+- A pointer that names an object or a list sends that JSON value as `state`. A pointer that names a string sends the text it holds, and one that names a number, `true`, `false`, or `null` sends its compact spelling as text. An empty object and an empty list are values, and a selected string that is empty or holds only white space is refused.
+- Without `--field`, a JSONL, CSV, or TSV record is serialized as compact JSON and the whole record becomes the evidence, sent as text.
 
 Invalid JSON under `--field` without a record framing is an input error at exit 2. It says `the input is not valid JSON: the JSON at line LINE column COLUMN is not one` for both standard input and `--input FILE`. The line and column come from the JSON parser. The message carries no parser text and repeats no input byte.
 
@@ -63,9 +63,9 @@ thinkthen decide 'The output answers the input correctly.' --jsonl --field /inpu
 
 The evidence is then `{"input":"...","output":"..."}`. A check that must not see the gold answer names only the pointers it needs.
 
-The evidence object is not a string, so it goes out as compact JSON by the rule above. [backends.md](backends.md) carries it in one field, the way a single pointer's value travels.
+The request carries the evidence object as the `state` value itself, in the order the pointers were given. [backends.md](backends.md) holds the field.
 
-The vendor also accepts that field as a real JSON object rather than as text holding one. `probes/09-evidence-shape/` measured both on forty made-up labeled cases on 2026-09-19. Both shapes answered 40 of 40 correctly, no answer differed, the probability moved by 0.0045 on average and by 0.05 at most, and the object shape cost 13,954 input tokens against the string shape's 13,714. The check separated nothing, so the string stays. A measurement on cases the model finds hard could overturn it.
+`probes/09-evidence-shape/` measured the object form against text holding it on forty made-up labeled cases on 2026-09-19. Both shapes answered 40 of 40 correctly, no answer differed, the probability moved by 0.0045 on average and by 0.05 at most, and the object shape cost 13,954 input tokens against the string shape's 13,714. The check separated nothing, so the string stayed until founder ruling 7 settled the object form. A request whose `state` is an object is a new request identity, and a recording made for the string form does not answer it.
 
 ## What a record may not hold
 
@@ -77,7 +77,7 @@ The vendor also accepts that field as a real JSON object rather than as text hol
 
 ## Order and requests
 
-Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. One value prints per record, and output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order.
+Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. Default `decide`, `choose`, `tag`, and `score` output keeps each parsed record under `input` and its answer under `value`. Output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `choose --raw` keeps printing plain labels for lines and JSONL. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order. Every output from CSV and TSV input is JSONL.
 
 ### How many requests each command makes
 
@@ -96,15 +96,15 @@ Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by 
 
 ## Empty input
 
-An empty record stream succeeds with no output and no request. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
+An empty line or JSONL stream succeeds with no output and no request. CSV and TSV require a header, so an empty CSV or TSV input exits 2. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
 
 ## Failure
 
 Settled by ADR 0008 item 5, accepted in ADR 0010. A run stops at the first failed record. Rows already printed stay printed, and the run ends with the code the failure earns: 4 for a backend failure, 5 for a local failure, 2 for a record the tool refused before sending it. No failure ever becomes `false`, `null`, a label, or a zero.
 
-A run that stops early prints one line on standard error: the record it stopped at, how many records it finished, and how many of those came from a recording. A run that finishes prints nothing there. Printed output after a failure is a prefix of the input. It is not a finished dataset.
+A run that stops early prints one line on standard error with the record where it stopped and how many records it finished. When `--record`, `--replay`, or `--cache` made recordings relevant, the line also says how many finished records came from one. A run that finishes prints nothing there. Printed output after a failure is a prefix of the input. It is not a finished dataset.
 
-An unresolved answer is never retried. In record mode the exit code reports the run, and no record's answer sets it. Codes 6, 7, and 8 stay reserved and no command uses them.
+An unresolved answer is never retried. In record mode the exit code reports the run, and no record's answer sets it. A completed run exits 0 unless `annotate` preserves one or more failed questions beside good answers and exits 6. Codes 7 and 8 stay reserved.
 
 ## Resume
 

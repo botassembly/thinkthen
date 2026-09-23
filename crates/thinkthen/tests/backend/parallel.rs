@@ -81,6 +81,16 @@ fn printed(output: &Output) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
+fn wrapped(count: usize) -> String {
+    (1..=count)
+        .map(|place| {
+            format!(
+                "{{\"input\":{{\"id\":\"R-{place}\",\"body\":\"record {place}\"}},\"value\":false}}\n"
+            )
+        })
+        .collect()
+}
+
 /// What the run said on standard error.
 fn said(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
@@ -99,10 +109,11 @@ fn entries(folder: &Path) -> usize {
         entries
             .filter_map(Result::ok)
             .filter(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .is_some_and(|value| value == "json")
+                let path = entry.path();
+                path.extension().is_some_and(|value| value == "json")
+                    && path
+                        .file_name()
+                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
             })
             .count()
     })
@@ -228,11 +239,11 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(printed(&output), "false\nfalse\n");
+    assert_eq!(printed(&output), wrapped(2));
     let message = said(&output);
     assert!(message.contains("status 500"), "{message}");
     assert!(
-        message.contains("stopped at record 3; 2 records finished, 0 records from a recording"),
+        message.contains("stopped at record 3; 2 records finished"),
         "{message}"
     );
     assert_eq!(listener.requests().len(), 4);
@@ -250,7 +261,7 @@ fn a_stop_keeps_what_finished_after_it_and_a_rerun_pays_for_the_rest_alone() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "false\nfalse\nfalse\nfalse\n");
+    assert_eq!(printed(&output), wrapped(4));
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(entries(&cache), 4);
 }
@@ -284,7 +295,7 @@ fn jobs_acts_in_record_mode_alone_and_inside_its_range() {
     )
     .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(printed(&output), "false\nfalse\n");
+    assert_eq!(printed(&output), wrapped(2));
 }
 
 #[test]
@@ -315,6 +326,7 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
         .expect("a loopback listener");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "decide",
@@ -328,6 +340,7 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
             "/body",
             "--jobs",
             "4",
+            "--no-cache",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -349,7 +362,7 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
 
     let status = child.wait().expect("the compiled binary ends");
     assert_eq!(status.code(), Some(0));
-    assert_eq!(row, "false\n");
+    assert_eq!(row, wrapped(1));
     // The tool learns of the closed pipe from the write that fails, so it
     // stops within one round of requests. The count stays near --jobs and
     // never reaches the input. A tool that kept scheduling would ask, and
@@ -413,8 +426,8 @@ fn equal_cache_misses_send_once_at_every_supported_width() {
         assert_eq!(output.status.code(), Some(0), "{}", said(&output));
         let rows = printed(&output);
         assert_eq!(rows.lines().count(), 16);
-        assert_eq!(rows.matches(r#""replayed":false"#).count(), 1);
-        assert_eq!(rows.matches(r#""replayed":true"#).count(), 15);
+        assert_eq!(rows.matches(r#""cached":false"#).count(), 1);
+        assert_eq!(rows.matches(r#""cached":true"#).count(), 15);
         assert_eq!(listener.requests().len(), 1, "jobs {jobs}");
         assert_eq!(entries(&cache), 1);
     }

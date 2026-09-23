@@ -1,0 +1,88 @@
+---
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { SURFACES, CODE_FUNCTIONS, FUNCTIONS, KEY_VARIABLE, statusClass } from '../../data/catalog.mjs';
+import { cell, SURFACE_SAMPLES } from '../../data/examples.mjs';
+
+export function getStaticPaths() {
+  return SURFACES.map((s) => ({ params: { surface: s.slug }, props: { surface: s } }));
+}
+
+const { surface } = Astro.props;
+const sample = SURFACE_SAMPLES[surface.slug] || null;
+const printed = sample?.printed || null;
+const shipped = surface.status === 'ships first';
+const questionFile = FUNCTIONS.find((f) => f.notAFunction);
+const sections = [...CODE_FUNCTIONS, questionFile].map((fn) => ({ fn, data: cell(fn.name, surface.slug) }));
+const absent = (s) => s.data.status === 'planned' || s.data.status === 'preview';
+const carried = sections.filter((s) => !absent(s));
+const missing = sections.filter(absent);
+const headline = shipped
+  ? `A ${surface.name} command that answers questions about text`
+  : `${surface.name} functions that answer questions about text`;
+const when = surface.release && !shipped
+  ? `${surface.name} comes with ${surface.release}.`
+  : `${surface.name} is planned.`;
+---
+<Base title={surface.name} description={surface.blurb.replace(/`/g, '')}>
+  <h1>{headline} <span class={`status ${statusClass(surface.status)}`}>{surface.status}</span></h1>
+  <p class="lede">{surface.blurb.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</p>
+  {!shipped && (
+    <div class="note">{when} {printed
+      ? 'The first call below ran on the branch build, and its output is under it. Bash ships first.'
+      : `The code below shows how the calls will read.${surface.release ? ' None of it has run yet. Bash ships first.' : ''}`}</div>
+  )}
+
+  <h2>Install</h2>
+  <table>
+    <tr><th>Channel</th><th>Note</th></tr>
+    {surface.install.map(([line, note]) => (
+      <tr><td><code>{line}</code></td><td>{note || (shipped ? '' : surface.release ? `Comes with ${surface.release}.` : 'Planned.')}</td></tr>
+    ))}
+  </table>
+
+  <h2>Where the key goes</h2>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. ThinkThen never reads a key from a file or a flag.</p>
+
+  <h2>A first call</h2>
+  {sample ? (
+    <>
+      <Code code={sample.code} caption={printed ? `${when} The calls read like this.` : `${when} The calls will read like this.`} />
+      {printed && <Terminal run={{ command: printed.command, output: printed.output, exit: null }} caption={`Recorded from the branch build. ${printed.see}`} word={false} />}
+    </>
+  ) : (
+    <Terminal run={cell('decide', 'shell').runs.find((r) => r.name === 'decide')} caption="Recorded from the real command. decide prints true and exits 0." />
+  )}
+  <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person.</p>
+
+  <h2>Each function in {surface.name}</h2>
+  {carried.length === 0 && <p>No {surface.name} sample yet.</p>}
+  {carried.map(({ fn, data }) => (
+    <section>
+      <h3><a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a> — {fn.line}</h3>
+      {data.status === 'run'
+        ? <Terminal run={data.runs[0]} caption={`Recorded from the real command. ${data.runs[0].see}`} />
+        : data.printed
+          ? <p>The recorded sample at the top of this page calls it.</p>
+          : <Code code={data.code} caption={surface.captions?.[fn.name] || null} />}
+    </section>
+  ))}
+  {missing.length > 0 && (
+    <>
+      <h3>No sample yet</h3>
+      <p>
+        {missing.map(({ fn }, i) => (
+          <>{i > 0 ? ', ' : ''}<a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a></>
+        ))}. {shipped
+          ? 'Each is a preview. Its Bash sample lands here once it is recorded.'
+          : 'Each works as it does in Bash. Its sample lands here when the library ships.'}
+      </p>
+    </>
+  )}
+
+  <h2>What is different in {surface.name}</h2>
+  <ul>{surface.particular.map((p) => <li>{p}</li>)}</ul>
+
+  <p class="pagelinks"><a href="/surfaces/">See other languages and databases</a> · <a href="/functions/">See every function</a> · <a href="/install/">Install</a></p>
+</Base>

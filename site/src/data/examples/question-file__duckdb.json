@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck surfaces.md",
+  "lang": "sql",
+  "code": "LOAD './thinkthen.duckdb_extension';\n\n-- refund.json carries a band. NULL is \"not sure\":\n-- true, false, and NULL for the send-back line\nSELECT body, thinkthen_decide('@refund.json', body) AS refund\nFROM (VALUES\n    ('Please refund my order. It arrived broken.'),\n    ('Thanks for the quick help yesterday!'),\n    ('I want to send this back.')) t(body);",
+  "function": "question-file",
+  "surface": "duckdb"
+}

@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/Base.astro';
+import { CODE_FUNCTIONS, FUNCTIONS } from '../../data/catalog.mjs';
+const questionFile = FUNCTIONS.find((f) => f.notAFunction);
+---
+<Base title="Functions" description="The ten functions, simplest first.">
+  <h1>The ten functions</h1>
+  <p class="lede">ThinkThen gives your code ten functions that read text and answer a question about it. Each one does a job you already write in code: an if, a switch, a grep, a sort. The model gives three kinds of answer: yes or no, pick one, and place on a scale. The list runs simplest first.</p>
+
+  <p>Diogo Almeida, TypeSafe's founder, maps the three to code you already write: "Choice maps into a switch statement on an enum. Nouls map to if statements. Scores map to sorting or thresholding."</p>
+
+  <p>Noul, Choice, and Score are TypeSafe's names for yes or no, pick one, and place on a scale.</p>
+
+  <table>
+    <tr><th>Function</th><th>What it does</th><th>Kind of answer</th></tr>
+    {CODE_FUNCTIONS.map((fn) => (
+      <tr>
+        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a>{fn.status === 'preview' && <> <span class="status preview">preview</span></>}</td>
+        <td>{fn.line}</td>
+        <td>{fn.primitive}</td>
+      </tr>
+    ))}
+    <tr>
+      <td><a href="/functions/question-file/"><code>@question</code></a></td>
+      <td>{questionFile.line}</td>
+      <td>No answer</td>
+    </tr>
+  </table>
+
+  <p>A question file is a saved question. <code>decide</code>, <code>choose</code>, <code>tag</code>, <code>score</code>, <code>filter</code>, and <code>rank</code> accept one. It gives no answer of its own.</p>
+
+  <p class="pagelinks"><a href="/surfaces/">Call it from your language</a> · <a href="/how-tos/">See the how-tos</a></p>
+</Base>

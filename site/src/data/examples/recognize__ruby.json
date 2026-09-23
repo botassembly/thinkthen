@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "ruby",
+  "code": "text = \"Maria Chen joined Northwind Freight, a company in Chicago.\"\nfound = ThinkThen.recognize(text, kinds: %w[person organization place],\n  relations: { works_for: %w[person organization],\n               based_in: %w[organization place] })\n# 1 Maria Chen, a person; 2 Northwind Freight, an\n# organization; 3 Chicago, a place\nfound.entities.each { |name| puts \"#{name.id} #{name.text} #{name.kind}\" }\n# works_for 1 → 2, and based_in 2 → 3\nfound.relations.each { |link| puts \"#{link.name} #{link.source} #{link.target}\" }",
+  "function": "recognize",
+  "surface": "ruby"
+}

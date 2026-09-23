@@ -43,7 +43,8 @@ green/skipped/diverged/failed so a skipped suite cannot hide behind
 
 ## 3. Two issue files were edited on both sides
 
-`git merge-tree` against main (`d905c65`) reports two conflicts. Both are
+The wave-7 merge of main at `1b894d9` (branch `w7/sync`) hit two conflicts.
+The earlier trial against `d905c65` found the same two. Both are
 additive issue-file sections. A merge taking either side whole deletes the
 other's record, so hand-merge each and keep both blocks.
 
@@ -195,3 +196,16 @@ swap described in `HANDOFF.md` becomes the only change the surfaces need. Run th
 build: merge, restore or retarget, `cargo check` contract, stand-in, and
 the consumer workspaces, then the branch's gate, then the conformance
 union.
+
+**Where (a) landed, 2026-09-23, wave 7.** The merge of main at
+`1b894d9` restored the crate from `b11a2b0` and moved it to
+`thinkthen-core/` at the repository root. Main's `policy.py` now reads
+every Rust file under `crates/` and fails the vendor words the old core
+holds outside main's adapter. It also expects `crates/thinkthen` as the
+root workspace's only member. A copy under `crates/` would have needed a
+seam allowance, which weakens an accepted policy table. At the root the
+copy is a workspace of its own with the lints `b11a2b0` declared, and
+`lint-workspaces` checks it. Main's crates ratchet stays at its own
+ceiling. The surfaces ratchet counts `thinkthen-core` and rose by its
+8,102 lines. The contract, the stand-in, and the R tarball point at the
+new path. Ian can overturn the location.

@@ -1,0 +1,8 @@
+{
+  "status": "drawn",
+  "source": "deck recognize-surfaces.md",
+  "lang": "python",
+  "code": "rules = [\"Book economy class for every flight under six hours.\",\n    \"Submit receipts within 30 days of the trip.\",\n    \"Hotel stays are capped at 200 dollars a night.\",\n    \"Employees may book business class on any flight.\",\n    \"Rental cars need a manager's approval.\",\n    \"Receipts may be submitted at any time, with no deadline.\",\n    \"Meals are reimbursed up to 60 dollars a day.\",\n    \"Use the company travel portal for all bookings.\"]\nfor edge in tt.relate(rules, either=[\"contradicts\"], threshold=0.5):\n    print(edge.name, edge.source, edge.target, edge.probability)\n# contradicts 1 4 0.84: economy under six hours, business on any flight\n# contradicts 2 6 0.99: receipts in 30 days, receipts with no deadline",
+  "function": "relate",
+  "surface": "python"
+}

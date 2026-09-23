@@ -8,7 +8,23 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
 
-use thinkthen_core::adapters::built_in::ENDPOINT_PATH;
+use crate::support::ENDPOINT_PATH;
+
+/// Whether this Linux process has the expected inode open.
+#[cfg(target_os = "linux")]
+pub(crate) fn process_has_file(process: u32, expected: &std::fs::Metadata) -> io::Result<bool> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let expected = (expected.dev(), expected.ino());
+    for descriptor in std::fs::read_dir(format!("/proc/{process}/fd"))? {
+        if std::fs::metadata(descriptor?.path())
+            .is_ok_and(|metadata| (metadata.dev(), metadata.ino()) == expected)
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
 
 /// One response the listener will serve, in the order the script gives.
 pub(crate) struct Canned {
@@ -20,6 +36,7 @@ pub(crate) struct Canned {
     release: Option<Arc<Barrier>>,
     answered: Option<Sender<()>>,
     asked: Vec<(String, String)>,
+    close_without_reply: bool,
 }
 
 impl Canned {
@@ -39,6 +56,7 @@ impl Canned {
             release: None,
             answered: None,
             asked: Vec::new(),
+            close_without_reply: false,
         }
     }
 
@@ -53,6 +71,22 @@ impl Canned {
             release: None,
             answered: None,
             asked: Vec::new(),
+            close_without_reply: false,
+        }
+    }
+
+    /// Read the complete request and close before writing response headers.
+    pub(crate) fn close_without_reply() -> Self {
+        Self {
+            status: 200,
+            body: String::new(),
+            location: None,
+            promised: None,
+            delay: Duration::ZERO,
+            release: None,
+            answered: None,
+            asked: Vec::new(),
+            close_without_reply: true,
         }
     }
 
@@ -67,6 +101,7 @@ impl Canned {
             release: None,
             answered: None,
             asked: Vec::new(),
+            close_without_reply: false,
         }
     }
 
@@ -351,6 +386,9 @@ fn serve(stream: TcpStream, canned: &Canned) {
 
 /// Write one canned response, closing the connection or keeping it open.
 fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
+    if canned.close_without_reply {
+        return;
+    }
     let location = canned
         .location
         .as_ref()
@@ -385,9 +423,16 @@ pub(crate) fn spawn(
     environment: &[(&str, &str)],
     evidence: &[u8],
 ) -> io::Result<Output> {
+    static SPAWNS: AtomicUsize = AtomicUsize::new(0);
+    let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "spawn-home-{}-{}",
+        std::process::id(),
+        SPAWNS.fetch_add(1, Ordering::Relaxed)
+    ));
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command
         .env_clear()
+        .env("HOME", home)
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         .args(arguments)
         .stdin(Stdio::piped())
