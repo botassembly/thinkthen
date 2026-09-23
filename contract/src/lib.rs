@@ -202,10 +202,10 @@ impl Error {
     /// Returns the cancelled kind when the token is set, and the deadline's
     /// own kind when the budget is gone.
     pub fn guard(options: &Options<'_>) -> Result<(), Self> {
-        if let Some(token) = options.cancel {
-            if token.is_cancelled() {
-                return Err(Self::cancelled());
-            }
+        if let Some(token) = options.cancel
+            && token.is_cancelled()
+        {
+            return Err(Self::cancelled());
         }
         if options.passed() {
             return Err(Self::deadline(options.seconds()));
@@ -755,12 +755,12 @@ impl RelationRule {
             return Err(Error::usage("a relation rule has a blank name"));
         }
         for end in [&from, &to] {
-            if let Kind::Named(kind) = end {
-                if kind.trim().is_empty() {
-                    return Err(Error::usage(format!(
-                        "the relation rule {name} has a missing end"
-                    )));
-                }
+            if let Kind::Named(kind) = end
+                && kind.trim().is_empty()
+            {
+                return Err(Error::usage(format!(
+                    "the relation rule {name} has a missing end"
+                )));
             }
         }
         Ok(Self { name: name.to_owned(), from, to, either: false })
@@ -780,13 +780,13 @@ impl RelationRule {
     /// The usage kind naming the first end that is not among the kinds.
     pub fn check_kinds(&self, kinds: &[String]) -> Result<(), Error> {
         for end in [&self.from, &self.to] {
-            if let Kind::Named(kind) = end {
-                if !kinds.iter().any(|asked| asked == kind) {
-                    return Err(Error::usage(format!(
-                        "the relation rule {} names the kind {kind}, which is not among the asked kinds",
-                        self.name
-                    )));
-                }
+            if let Kind::Named(kind) = end
+                && !kinds.iter().any(|asked| asked == kind)
+            {
+                return Err(Error::usage(format!(
+                    "the relation rule {} names the kind {kind}, which is not among the asked kinds",
+                    self.name
+                )));
             }
         }
         Ok(())
@@ -1761,10 +1761,11 @@ impl QuestionSet {
         let mut parsed = Vec::with_capacity(questions.len());
         for (name, member) in questions {
             let mut member = member.clone();
-            if let (Some(shared), serde_json::Value::Object(fields)) = (&shared, &mut member) {
-                if member_is_decide(fields) && !fields.contains_key("threshold") {
-                    fields.insert("threshold".to_owned(), shared.clone());
-                }
+            if let (Some(shared), serde_json::Value::Object(fields)) = (&shared, &mut member)
+                && member_is_decide(fields)
+                && !fields.contains_key("threshold")
+            {
+                fields.insert("threshold".to_owned(), shared.clone());
             }
             let text = serde_json::to_string(&member)
                 .map_err(|error| Error::defect(error.to_string()))?;

@@ -87,8 +87,14 @@ workspace_deny() {
 		case $(printf '%s\n' "$out" | grep -c "attempting to make an HTTP request") in
 		0) ;;
 		*)
-			printf 'deny: %s deferred: cargo metadata needs crates this machine never fetched; the DuckDB lane owns the offline fetch story\n' "$workspace"
-			return 0
+			# surfaces-review-4: 12 of 13 lockfiles is not all of them. The
+			# workspace build itself fetches from crates.io; the same fetch
+			# warms cargo metadata's cache, once, and the check retries
+			# offline. A fetch that fails fails the check.
+			printf 'deny: %s: metadata cold, fetching once as the build does\n' "$workspace"
+			(cd "$workspace" && cargo fetch --locked >/dev/null 2>&1) || return 1
+			out=$(cd "$workspace" && cargo deny --offline check --config "$cfg" advisories bans licenses 2>&1)
+			status=$?
 			;;
 		esac
 		;;
@@ -119,11 +125,16 @@ for entry in \
 		continue
 	fi
 	if [ -n "$needs" ] && ! command -v "$needs" >/dev/null 2>&1; then
-		printf 'lint: %s skipped: %s is not on PATH\n' "$workspace" "$needs"
+		# surfaces-review-4: a missing runtime must fail the lint, never
+		# silently skip it — a skipped workspace is an unchecked one.
+		printf 'lint: %s FAILED: %s is not on PATH; install the runtime or name why this machine may not check it\n' "$workspace" "$needs" >&2
+		fail=1
 		continue
 	fi
 	printf 'lint: %s\n' "$workspace"
-	if ! (cd "$workspace" && cargo clippy --locked --quiet --all-targets); then
+	# -D warnings and --all-features (surfaces-review-4): without them the
+	# pass counts as strict while ten of eleven workspaces still fail.
+	if ! (cd "$workspace" && cargo clippy --locked --quiet --all-targets --all-features -- -D warnings); then
 		fail=1
 	fi
 

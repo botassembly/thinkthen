@@ -265,7 +265,6 @@ impl BlockingEngine {
                 let done_tx = done_tx.clone();
                 let stop = Arc::clone(&stop);
                 let question = question.clone();
-                let options = options;
                 let born = thread::Builder::new()
                     .name(format!("ttb-worker-{worker}"))
                     .spawn_scoped(scope, move || loop {
@@ -288,10 +287,7 @@ impl BlockingEngine {
                                             answer: outcome_of(answer.read(question.threshold())),
                                         })
                                     })
-                                    .map_err(|error| {
-                                        stop.store(true, Ordering::Relaxed);
-                                        error
-                                    });
+                                    .inspect_err(|_| stop.store(true, Ordering::Relaxed));
                                 if done_tx.send((place, answer)).is_err() {
                                     break;
                                 }
@@ -1240,7 +1236,7 @@ struct Ticket<'a> {
 impl Drop for Ticket<'_> {
     /// Give the permit back and wake one waiter.
     fn drop(&mut self) {
-        let mut counts = lock(&self.counts);
+        let mut counts = lock(self.counts);
         counts.busy -= 1;
         self.signal.notify_one();
     }
@@ -1758,11 +1754,11 @@ fn dedup_after_publish(
     pid: u32,
     settings: &ResolvedConfig,
 ) -> bool {
-    for other in 0..STATE_SLOTS {
+    for (other, slot) in STATES.iter().enumerate() {
         if other == place {
             continue;
         }
-        let held = STATES[other].load(Ordering::Acquire);
+        let held = slot.load(Ordering::Acquire);
         if held.is_null() || held == boxed {
             continue;
         }
@@ -1805,8 +1801,8 @@ fn dedup_after_publish(
 /// two live states and double its width.
 fn choose_victim(now: u32) -> usize {
     let mut best: Option<(usize, [u8; 2], u64)> = None;
-    for place in 0..STATE_SLOTS {
-        let held = STATES[place].load(Ordering::Acquire);
+    for (place, slot) in STATES.iter().enumerate() {
+        let held = slot.load(Ordering::Acquire);
         if held.is_null() {
             continue;
         }
@@ -2430,8 +2426,10 @@ mod tests {
     #[test]
     fn the_limit_refuses_first() {
         let _seat = null();
-        let mut settings = thinkthen_contract::Settings::default();
-        settings.max_requests = Some(2);
+        let settings = thinkthen_contract::Settings {
+            max_requests: Some(2),
+            ..thinkthen_contract::Settings::default()
+        };
         let tt = BlockingEngine::from_settings(settings);
         let question = Question::from_json(r#"{"decide":"Refund?","threshold":0.5}"#)
             .expect("parses");
@@ -2467,7 +2465,7 @@ mod tests {
     fn a_tls_failure_is_not_retryable() {
         let inner = std::io::Error::new(std::io::ErrorKind::InvalidData, "rustls: invalid certificate");
         let io = std::io::Error::new(std::io::ErrorKind::InvalidData, inner);
-        let error = ureq::Error::Io(io.into());
+        let error = ureq::Error::Io(io);
         let classified = super::classify_transport(&error);
         assert!(!classified.retryable, "a TLS failure must not retry: {classified}");
         assert!(classified.to_string().contains("TLS"), "the refusal names the handshake: {classified}");
@@ -2478,7 +2476,7 @@ mod tests {
     #[test]
     fn a_midflight_io_failure_keeps_its_retry() {
         let io = std::io::Error::new(std::io::ErrorKind::ConnectionReset, "reset by peer");
-        let error = ureq::Error::Io(io.into());
+        let error = ureq::Error::Io(io);
         let classified = super::classify_transport(&error);
         assert!(classified.retryable, "a reset mid-flight may pass on retry");
     }
@@ -2508,8 +2506,10 @@ mod tests {
         assert_ne!(here, there, "two addresses are two requests");
         // The engine's own trail uses its configured base, agreeing with
         // the helper named for that base.
-        let mut settings = thinkthen_contract::Settings::default();
-        settings.address = Some("http://127.0.0.1:8211/v1".to_owned());
+        let settings = thinkthen_contract::Settings {
+            address: Some("http://127.0.0.1:8211/v1".to_owned()),
+            ..thinkthen_contract::Settings::default()
+        };
         let tt = BlockingEngine::from_settings(settings);
         let details = tt.details(&question, evidence).expect("details");
         assert_eq!(details.requests[0], here, "the engine's trail names its own address");

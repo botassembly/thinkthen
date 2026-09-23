@@ -170,7 +170,7 @@ fn one_hundred_single_calls_stay_at_the_width() {
     // 100 calls at a 300 ms delay through the width is about four rounds
     // at 32, more at 4; generous for slow machines, tight enough to prove
     // width.
-    let rounds = (100 + width - 1) / width;
+    let rounds = 100_u64.div_ceil(width);
     let budget = Duration::from_millis(300 * rounds * 4 + 2_000);
     assert!(wall < budget, "the calls ran wide, took {wall:?}");
 }
