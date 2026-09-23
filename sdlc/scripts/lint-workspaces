@@ -58,6 +58,11 @@ workspace_deny() {
 		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",\n    "BSL-1.0",/' ;;
 	databases/sqlite)
 		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",/' ;;
+	# duckdb's own crate tree carries the same Zlib family plus the CMake
+	# test fixtures' CC0-1.0 (duckdb's vendored test data); both recorded
+	# widenings (surfaces-review-4: deny covered 12 of 13).
+	databases/duckdb)
+		extra='s/^    "Unlicense",$/    "Unlicense",\n    "Apache-2.0 WITH LLVM-exception",\n    "Zlib",\n    "CC0-1.0",/' ;;
 	*) extra='' ;;
 	esac
 	cfg=$(mktemp)
