@@ -158,9 +158,9 @@ fn every_case_replays_exactly() {
             }
             "relate" => {
                 if case.get("form").and_then(Value::as_str) == Some("per-subject") {
-                    // The per-subject arm shares its text with the pairs arm
-                    // (R04), and the ruled relate asks pairs; the stand-in
-                    // serves the pairs recording for that text, so this case
+                    // The per-subject arm shares its records with the
+                    // method-H staff set, and the ruled relate asks method
+                    // H; the stand-in serves that recording, so this case
                     // is pinned for the record and skipped in the replay,
                     // recorded in DIVERGENCES.md.
                     per_subject_skipped += 1;
@@ -190,7 +190,7 @@ fn every_case_replays_exactly() {
         }
     }
     assert_eq!(recognize_cases, 41, "forty recorded cases plus the offset case");
-    assert_eq!(relate_cases, 3, "R01, R02, and R04 replay; R03 is the skipped per-subject arm");
+    assert_eq!(relate_cases, 3, "the alerts, founders, and staff sets replay by method H; R03 is the skipped per-subject arm");
     assert_eq!(relate_cases + per_subject_skipped, 4, "every relate arm is accounted for");
     assert_eq!(per_subject_skipped, 1, "the per-subject arm is the one skip");
 }
@@ -224,8 +224,8 @@ fn the_door_json_carries_the_ruled_names() {
     assert!(!json.contains("\"confidence\""), "{json}");
 }
 
-/// The deck's relate call at the 0.9 bar returns the two sound edges, the
-/// first from record 1 to record 4.
+/// The alerts' relate call at the 0.7 bar returns the two sound edges
+/// under method H, the first from record 1 to record 4.
 #[test]
 fn the_high_bar_keeps_the_sound_edges() {
     let engine = engine();
@@ -234,7 +234,7 @@ fn the_high_bar_keeps_the_sound_edges() {
         .expect("a legal rule")
         .either("same_as", Kind::Any)
         .expect("a legal rule")
-        .threshold(0.9)
+        .threshold(0.7)
         .expect("a legal threshold");
     let records = [
         "Checkout returns 500 at the payment step.",
@@ -246,7 +246,7 @@ fn the_high_bar_keeps_the_sound_edges() {
     assert_eq!(edges.len(), 2, "{edges:?}");
     assert_eq!(edges[0].name, "caused_by");
     assert_eq!((edges[0].source, edges[0].target), (1, 4));
-    assert!((edges[0].probability - 0.94).abs() < f64::EPSILON);
+    assert!((edges[0].probability - 0.71).abs() < f64::EPSILON);
     assert_eq!((edges[1].source, edges[1].target), (2, 4));
 }
 

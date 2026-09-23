@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from review4_lib import relate_rules  # noqa: E402 - the one either-aware rule list
 
 ROOT = Path(__file__).resolve().parent.parent
 EXTENSION = ROOT / "build" / "release" / "thinkthen.duckdb_extension"
@@ -74,7 +75,7 @@ def fill(con, case: dict) -> None:
 def main() -> int:
     failures = 0
     case = relate_case()
-    rules = "[" + ",".join(f"'{r['name']}'" for r in case["question"]["relations"]) + "]"
+    rules = relate_rules(case)
 
     # ---- finding 6: the identity token is not a setting anymore ----
     con = connect()

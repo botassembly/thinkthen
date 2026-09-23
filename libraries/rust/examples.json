@@ -45,7 +45,7 @@
     },
     "relate": {
       "rust": "tt.relate(&Relate::from_json(\"{\\\"relations\\\":[{\\\"name\\\":\\\"caused_by\\\",\\\"source\\\":\\\"*\\\",\\\"target\\\":\\\"*\\\"}]}\")?, &alerts)?",
-      "expected": "caused_by 1 2 0.59"
+      "expected": "caused_by 1 4 0.71"
     }
   }
 }

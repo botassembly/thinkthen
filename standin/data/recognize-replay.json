@@ -1580,8 +1580,15 @@
  ],
  "relate": [
   {
-   "id": "R01-demo",
-   "form": "pairs",
+   "id": "H-alerts",
+   "replaces": [
+    "R01-demo"
+   ],
+   "requests": [
+    ".thinkthen-backend",
+    "9651f88a4f9836955f940272e028dd11e6eaccc795be556555d8be5f6b76742c"
+   ],
+   "form": "yes-no",
    "text": "Alert 1: Checkout returns 500 at the payment step.\nAlert 2: Card charges are failing for every customer.\nAlert 3: The nightly export ran two hours late.\nAlert 4: The payments database ran out of disk space.",
    "records": [
     "Checkout returns 500 at the payment step.",
@@ -1593,95 +1600,221 @@
     "caused_by",
     "same_as"
    ],
+   "either": {
+    "caused_by": false,
+    "same_as": true
+   },
    "entries": [
     {
      "pair": [
       1,
       2
      ],
+     "rule": "caused_by",
      "options": {
-      "same_as": 0.31,
-      "caused_by_AB": 0.59,
-      "caused_by_BA": 0.03,
-      "NO_RELATION": 0.07
+      "yes": 0.42
      },
-     "pick": "caused_by_AB"
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "rule": "same_as",
+     "options": {
+      "yes": 0.61
+     },
+     "pick": "yes"
     },
     {
      "pair": [
       1,
       3
      ],
+     "rule": "caused_by",
      "options": {
-      "same_as": 0.0,
-      "caused_by_AB": 0.01,
-      "caused_by_BA": 0.01,
-      "NO_RELATION": 0.98
+      "yes": 0.06
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "rule": "same_as",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
     },
     {
      "pair": [
       1,
       4
      ],
+     "rule": "caused_by",
      "options": {
-      "same_as": 0.0,
-      "caused_by_AB": 0.94,
-      "caused_by_BA": 0.01,
-      "NO_RELATION": 0.05
+      "yes": 0.71
      },
-     "pick": "caused_by_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "rule": "same_as",
+     "options": {
+      "yes": 0.29
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      1
+     ],
+     "rule": "caused_by",
+     "options": {
+      "yes": 0.65
+     },
+     "pick": "yes"
     },
     {
      "pair": [
       2,
       3
      ],
+     "rule": "caused_by",
      "options": {
-      "same_as": 0.0,
-      "caused_by_AB": 0.01,
-      "caused_by_BA": 0.03,
-      "NO_RELATION": 0.96
+      "yes": 0.07
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "rule": "same_as",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
     },
     {
      "pair": [
       2,
       4
      ],
+     "rule": "caused_by",
      "options": {
-      "same_as": 0.0,
-      "caused_by_AB": 0.94,
-      "caused_by_BA": 0.01,
-      "NO_RELATION": 0.05
+      "yes": 0.73
      },
-     "pick": "caused_by_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "rule": "same_as",
+     "options": {
+      "yes": 0.35
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      1
+     ],
+     "rule": "caused_by",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      2
+     ],
+     "rule": "caused_by",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
     },
     {
      "pair": [
       3,
       4
      ],
+     "rule": "caused_by",
      "options": {
-      "same_as": 0.0,
-      "caused_by_AB": 0.84,
-      "caused_by_BA": 0.01,
-      "NO_RELATION": 0.15
+      "yes": 0.55
      },
-     "pick": "caused_by_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "rule": "same_as",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      1
+     ],
+     "rule": "caused_by",
+     "options": {
+      "yes": 0.13
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      2
+     ],
+     "rule": "caused_by",
+     "options": {
+      "yes": 0.14
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      3
+     ],
+     "rule": "caused_by",
+     "options": {
+      "yes": 0.14
+     },
+     "pick": "no"
     }
-   ],
-   "requests": [
-    ".locks",
-    "a715975d50cfbc2b5b8d4108c62cdd0ea771f62b7a3bbeb056ecabf8efaf0894"
-   ],
-   "pairs_count": 6
+   ]
   },
   {
-   "id": "R02-pickone",
-   "form": "pairs",
+   "id": "H-founders-24",
+   "replaces": [
+    "R02-pickone"
+   ],
+   "requests": [
+    ".thinkthen-backend",
+    "0727dbb3910c10681f1a4cc21623eb71f23e52a2842e8114640b159841597348"
+   ],
+   "form": "yes-no",
    "text": "Record 1: Amara Okafor founded Kestrel Labs and still leads its research team.\nRecord 2: Kestrel Labs, a freight brokerage.\nRecord 3: Dana Whitfield started Brookline Shipping and manages its Boston desk.\nRecord 4: Brookline Shipping, a coastal carrier.\nRecord 5: Marcus Bell co-founded Grayline Trust and chairs its board.\nRecord 6: Grayline Trust, a small foundation.\nRecord 7: Elif Demir established Fenwick Studio and runs its design desk.\nRecord 8: Fenwick Studio, a print shop.\nRecord 9: June Adeyemi founded Hull Harbour Analytics and heads its data team.\nRecord 10: Hull Harbour Analytics, a consultancy.\nRecord 11: Tomas Reyes set up Pier 39 Logistics and directs its night operations.\nRecord 12: Pier 39 Logistics, a warehouse operator.\nRecord 13: Priya Nair founded Rotterdam Port Services and manages its scheduling.\nRecord 14: Rotterdam Port Services, a stevedoring firm.\nRecord 15: Oskar Lind started Karst and Vellum and leads its editorial board.\nRecord 16: Karst and Vellum, a publisher.\nRecord 17: Sofia Marino founded Sausalito Ferry Lines and captains its flagship.\nRecord 18: Sausalito Ferry Lines, a ferry operator.\nRecord 19: Ahmed Farouk established Cedar Point Advisors and heads its audit team.\nRecord 20: Cedar Point Advisors, an accounting firm.\nRecord 21: Lena Fischer founded Millbrook Rowing Club and coaches its senior squad.\nRecord 22: Millbrook Rowing Club, a sports club.\nRecord 23: Grace Otieno founded Quiet Ward Press and edits its poetry list.\nRecord 24: Quiet Ward Press, a small press.",
    "records": [
     "Amara Okafor founded Kestrel Labs and still leads its research team.",
@@ -1713,160 +1846,12168 @@
     "founded",
     "works_for"
    ],
+   "either": {
+    "founded": false,
+    "works_for": false
+   },
    "entries": [
     {
      "pair": [
       1,
       2
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.06,
-      "founded_AB": 0.87,
-      "NO_RELATION": 0.07
+      "yes": 0.91
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      1,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.82
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.76
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.11
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.13
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
     },
     {
      "pair": [
       3,
       4
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.06,
-      "founded_AB": 0.85,
-      "NO_RELATION": 0.09
+      "yes": 0.79
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.76
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      3,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.79
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      4,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
     },
     {
      "pair": [
       5,
       6
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.51,
-      "founded_AB": 0.28,
-      "NO_RELATION": 0.21
+      "yes": 0.57
      },
-     "pick": "works_for_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      5,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.81
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      5,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.78
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      6,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
     },
     {
      "pair": [
       7,
       8
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.18,
-      "founded_AB": 0.5,
-      "NO_RELATION": 0.32
+      "yes": 0.85
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      7,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.77
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      7,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.75
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      8,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
     },
     {
      "pair": [
       9,
       10
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.28,
-      "founded_AB": 0.49,
-      "NO_RELATION": 0.23
+      "yes": 0.88
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      9,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.82
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      9,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.14
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.87
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      10,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.11
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.11
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.11
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
     },
     {
      "pair": [
       11,
       12
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.12,
-      "founded_AB": 0.82,
-      "NO_RELATION": 0.06
+      "yes": 0.76
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      11,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.78
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      11,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      11,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.13
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.84
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      12,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      12,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
     },
     {
      "pair": [
       13,
       14
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.33,
-      "founded_AB": 0.52,
-      "NO_RELATION": 0.15
+      "yes": 0.87
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      13,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.74
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      13,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      13,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.14
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.76
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      14,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      14,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
     },
     {
      "pair": [
       15,
       16
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.18,
-      "founded_AB": 0.74,
-      "NO_RELATION": 0.08
+      "yes": 0.83
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      15,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.87
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      15,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      15,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.74
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      16,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.1
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      16,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
     },
     {
      "pair": [
       17,
       18
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.18,
-      "founded_AB": 0.73,
-      "NO_RELATION": 0.09
+      "yes": 0.81
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      17,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.77
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      17,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      17,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.09
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.8
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      18,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      18,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
     },
     {
      "pair": [
       19,
       20
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.06,
-      "founded_AB": 0.92,
-      "NO_RELATION": 0.02
+      "yes": 0.88
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      19,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.81
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      19,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      19,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.82
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      20,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      20,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
     },
     {
      "pair": [
       21,
       22
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.06,
-      "founded_AB": 0.91,
-      "NO_RELATION": 0.03
+      "yes": 0.89
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      21,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.83
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      21,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      21,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.7
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      22,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      24
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      22,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      23,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
     },
     {
      "pair": [
       23,
       24
      ],
+     "rule": "founded",
      "options": {
-      "works_for_AB": 0.21,
-      "founded_AB": 0.7,
-      "NO_RELATION": 0.09
+      "yes": 0.89
      },
-     "pick": "founded_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      23,
+      24
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.82
+     },
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      24,
+      1
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      2
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      3
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      4
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      5
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      6
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      7
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      8
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.06
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      9
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      10
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      11
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      11
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      12
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.01
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      12
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      13
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      13
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      14
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      14
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      15
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      15
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      16
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      16
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      17
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      17
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      18
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      18
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      19
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      19
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      20
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      20
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      21
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      21
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      22
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      22
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      23
+     ],
+     "rule": "founded",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      24,
+      23
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.8
+     },
+     "pick": "yes"
     }
-   ],
-   "requests": [
-    "c3929298692154204796935d2b087eff871cfa27fcaa062491ec4c899ea705f1"
-   ],
-   "pairs_count": 12
+   ]
   },
   {
-   "id": "R03-persubject-10",
-   "form": "per-subject",
+   "id": "H-staff-10",
+   "replaces": [
+    "R04-pairs-10",
+    "R03-persubject-10"
+   ],
+   "requests": [
+    ".thinkthen-backend",
+    "eaa99d48d1ea752a2f25bd5122c6daef0f785386e212b16c41746fed08043719"
+   ],
+   "form": "yes-no",
    "text": "Record 1: Iris Vangelis works for Kestrel Logistics, handling regional accounts.\nRecord 2: Noor Haddad works for Brookline Freight, handling regional accounts.\nRecord 3: Petr Novak works for Grayline Foundation, handling regional accounts.\nRecord 4: Rosa Iglesias works for Fenwick Press, handling regional accounts.\nRecord 5: Tariq Mensah works for Hull Analytics, handling regional accounts.\nRecord 6: Kestrel Logistics, a freight and logistics firm.\nRecord 7: Brookline Freight, a freight and logistics firm.\nRecord 8: Grayline Foundation, a freight and logistics firm.\nRecord 9: Fenwick Press, a freight and logistics firm.\nRecord 10: Hull Analytics, a freight and logistics firm.",
    "records": [
     "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
@@ -1883,406 +14024,1009 @@
    "rules": [
     "works_for"
    ],
-   "entries": [
-    {
-     "subject": 1,
-     "options": {
-      "r_6": 1.0,
-      "r_7": 0.0,
-      "r_8": 0.0,
-      "r_9": 0.0,
-      "r_10": 0.0,
-      "NONE_OF_THESE": 0.0
-     },
-     "pick": "r_6",
-     "rule": "works_for"
-    },
-    {
-     "subject": 2,
-     "options": {
-      "r_6": 0.0,
-      "r_7": 1.0,
-      "r_8": 0.0,
-      "r_9": 0.0,
-      "r_10": 0.0,
-      "NONE_OF_THESE": 0.0
-     },
-     "pick": "r_7",
-     "rule": "works_for"
-    },
-    {
-     "subject": 3,
-     "options": {
-      "r_6": 0.0,
-      "r_7": 0.0,
-      "r_8": 1.0,
-      "r_9": 0.0,
-      "r_10": 0.0,
-      "NONE_OF_THESE": 0.0
-     },
-     "pick": "r_8",
-     "rule": "works_for"
-    },
-    {
-     "subject": 4,
-     "options": {
-      "r_6": 0.0,
-      "r_7": 0.0,
-      "r_8": 0.0,
-      "r_9": 1.0,
-      "r_10": 0.0,
-      "NONE_OF_THESE": 0.0
-     },
-     "pick": "r_9",
-     "rule": "works_for"
-    },
-    {
-     "subject": 5,
-     "options": {
-      "r_6": 0.0,
-      "r_7": 0.0,
-      "r_8": 0.0,
-      "r_9": 0.0,
-      "r_10": 1.0,
-      "NONE_OF_THESE": 0.0
-     },
-     "pick": "r_10",
-     "rule": "works_for"
-    }
-   ],
-   "requests": [
-    "698672897dc14a9066cf957a926eab8582dd7ee1456f0aad0be2607c73e4133e"
-   ],
-   "pairs_count": 5
-  },
-  {
-   "id": "R04-pairs-10",
-   "form": "pairs",
-   "text": "Record 1: Iris Vangelis works for Kestrel Logistics, handling regional accounts.\nRecord 2: Noor Haddad works for Brookline Freight, handling regional accounts.\nRecord 3: Petr Novak works for Grayline Foundation, handling regional accounts.\nRecord 4: Rosa Iglesias works for Fenwick Press, handling regional accounts.\nRecord 5: Tariq Mensah works for Hull Analytics, handling regional accounts.\nRecord 6: Kestrel Logistics, a freight and logistics firm.\nRecord 7: Brookline Freight, a freight and logistics firm.\nRecord 8: Grayline Foundation, a freight and logistics firm.\nRecord 9: Fenwick Press, a freight and logistics firm.\nRecord 10: Hull Analytics, a freight and logistics firm.",
-   "records": [
-    "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
-    "Noor Haddad works for Brookline Freight, handling regional accounts.",
-    "Petr Novak works for Grayline Foundation, handling regional accounts.",
-    "Rosa Iglesias works for Fenwick Press, handling regional accounts.",
-    "Tariq Mensah works for Hull Analytics, handling regional accounts.",
-    "Kestrel Logistics, a freight and logistics firm.",
-    "Brookline Freight, a freight and logistics firm.",
-    "Grayline Foundation, a freight and logistics firm.",
-    "Fenwick Press, a freight and logistics firm.",
-    "Hull Analytics, a freight and logistics firm."
-   ],
-   "rules": [
-    "works_for"
-   ],
+   "either": {
+    "works_for": false
+   },
    "entries": [
     {
      "pair": [
       1,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      1,
       6
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.99,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.01
+      "yes": 0.99
      },
-     "pick": "works_for_AB"
+     "pick": "yes"
     },
     {
      "pair": [
       1,
       7
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.01,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.99
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       1,
       8
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.57,
-      "works_for_BA": 0.01,
-      "NO_RELATION": 0.42
+      "yes": 0.02
      },
-     "pick": "works_for_AB"
+     "pick": "no"
     },
     {
      "pair": [
       1,
       9
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.09,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.91
+      "yes": 0.01
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       1,
       10
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.21,
-      "works_for_BA": 0.01,
-      "NO_RELATION": 0.78
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      2,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
     },
     {
      "pair": [
       2,
       6
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.01,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.99
+      "yes": 0.01
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       2,
       7
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.97,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.03
+      "yes": 0.98
      },
-     "pick": "works_for_AB"
+     "pick": "yes"
     },
     {
      "pair": [
       2,
       8
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.78,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.22
+      "yes": 0.02
      },
-     "pick": "works_for_AB"
+     "pick": "no"
     },
     {
      "pair": [
       2,
       9
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.04,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.96
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       2,
       10
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.13,
-      "works_for_BA": 0.01,
-      "NO_RELATION": 0.86
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      3,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
     },
     {
      "pair": [
       3,
       6
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.01,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.99
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       3,
       7
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.0,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 1.0
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       3,
       8
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.98,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.02
+      "yes": 0.96
      },
-     "pick": "works_for_AB"
+     "pick": "yes"
     },
     {
      "pair": [
       3,
       9
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.09,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.91
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       3,
       10
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.3,
-      "works_for_BA": 0.01,
-      "NO_RELATION": 0.69
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      4,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
     },
     {
      "pair": [
       4,
       6
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.02,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.98
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       4,
       7
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.0,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 1.0
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       4,
       8
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.83,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.17
+      "yes": 0.02
      },
-     "pick": "works_for_AB"
+     "pick": "no"
     },
     {
      "pair": [
       4,
       9
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.94,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.06
+      "yes": 0.95
      },
-     "pick": "works_for_AB"
+     "pick": "yes"
     },
     {
      "pair": [
       4,
       10
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.11,
-      "works_for_BA": 0.01,
-      "NO_RELATION": 0.88
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      5,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.02
+     },
+     "pick": "no"
     },
     {
      "pair": [
       5,
       6
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.07,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.93
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       5,
       7
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.01,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.99
+      "yes": 0.02
      },
-     "pick": "NO_RELATION"
+     "pick": "no"
     },
     {
      "pair": [
       5,
       8
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.58,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.42
+      "yes": 0.02
      },
-     "pick": "works_for_AB"
+     "pick": "no"
     },
     {
      "pair": [
       5,
       9
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.94,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.06
+      "yes": 0.02
      },
-     "pick": "works_for_AB"
+     "pick": "no"
     },
     {
      "pair": [
       5,
       10
      ],
+     "rule": "works_for",
      "options": {
-      "works_for_AB": 0.93,
-      "works_for_BA": 0.0,
-      "NO_RELATION": 0.07
+      "yes": 0.96
      },
-     "pick": "works_for_AB"
+     "pick": "yes"
+    },
+    {
+     "pair": [
+      6,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      6,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      7,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.12
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.05
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      8,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.22
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.07
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      9,
+      10
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      1
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      2
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      3
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      4
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      5
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.08
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      6
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      7
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      8
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.04
+     },
+     "pick": "no"
+    },
+    {
+     "pair": [
+      10,
+      9
+     ],
+     "rule": "works_for",
+     "options": {
+      "yes": 0.03
+     },
+     "pick": "no"
     }
-   ],
-   "requests": [
-    "13fb7f0fefa8c21d699f46ee7fdbce4ecf682747680055ac6acc0484e5ca1dae"
-   ],
-   "pairs_count": 25
+   ]
   },
   {
    "id": "H-s2-contradictions",
+   "replaces": [],
+   "requests": [
+    ".thinkthen-backend",
+    "725294d35cc333c4f31ecd0f12ad2f8dd5468f09508c87959e27794d04d18dd4"
+   ],
    "form": "yes-no",
    "text": "Book economy class for every flight under six hours.\nSubmit receipts within 30 days of the trip.\nHotel stays are capped at 200 dollars a night.\nEmployees may book business class on any flight.\nRental cars need a manager's approval.\nReceipts may be submitted at any time, with no deadline.\nMeals are reimbursed up to 60 dollars a day.\nUse the company travel portal for all bookings.\nHotel stays may cost up to 350 dollars a night in any city.\nRental cars can be booked without anyone's approval.\nFlights over six hours may be booked in business class.",
    "records": [
@@ -2914,6 +15658,11 @@
   },
   {
    "id": "H-s3-cause-chain",
+   "replaces": [],
+   "requests": [
+    ".thinkthen-backend",
+    "0f296eda5508587892d92d73befded7ccabbc00e637a156148facae4c9df2ce1"
+   ],
    "form": "yes-no",
    "text": "Heavy rain falls in the delivery area.\nA road on the delivery route is closed.\nThe package is delivered late.\nThe customer files a complaint.\nThe customer is given a refund.\nThe warehouse installs new shelves.\nThe office coffee machine is replaced.",
    "records": [

@@ -55,9 +55,9 @@ def main():
     assert frame_rows == per_row
     print("identical answers: True")
 
-    list_edges = tt.relate(ALERTS, relations=["caused_by"], either=["same_as"], threshold=0.9)
+    list_edges = tt.relate(ALERTS, relations=["caused_by"], either=["same_as"], threshold=0.7)
     frame_edges = tt.relate(pl.DataFrame({"body": ALERTS}), on="body",
-                            relations=["caused_by"], either=["same_as"], threshold=0.9)
+                            relations=["caused_by"], either=["same_as"], threshold=0.7)
     listed = [(edge.name, edge.source, edge.target, edge.probability) for edge in list_edges]
     framed = [(edge["name"], edge["source"], edge["target"], edge["probability"])
               for edge in frame_edges.iter_rows(named=True)]

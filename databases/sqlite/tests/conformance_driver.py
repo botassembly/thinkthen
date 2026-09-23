@@ -481,7 +481,10 @@ def main():
                     "INSERT INTO rs(body) VALUES (?)",
                     [(text,) for text in case["records"]],
                 )
-                names = [rule["name"] for rule in case["question"]["relations"]]
+                names = [
+                    ("either:" if rule.get("either") else "") + rule["name"]
+                    for rule in case["question"]["relations"]
+                ]
                 sql = (
                     "SELECT name, source, target, probability FROM "
                     "thinkthen_relate('rs', 'id', 'body', "

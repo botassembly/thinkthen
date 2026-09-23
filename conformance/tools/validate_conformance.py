@@ -277,10 +277,24 @@ def replay_recognize(c, row):
 
 
 def replay_relate(c, row):
-    """Recompute the expected edges from the recorded row and the ask."""
+    """Recompute the expected edges from the recorded row and the ask. A
+    `yes-no` row holds method H: every recorded yes at the bar is an edge."""
     q = c["question"]
     asked = {rule["name"]: rule for rule in q["relations"]}
     edges = []
+    if row.get("form") == "yes-no":
+        check(c.get("form") == "yes-no", f"{c['id']} a method-H row answers a yes-no case")
+        for name, rule in asked.items():
+            check(row["either"].get(name) == rule.get("either", False),
+                  f"{c['id']} {name} asks the direction the recording asked")
+        edges = [
+            {"name": entry["rule"], "source": entry["pair"][0], "target": entry["pair"][1],
+             "probability": entry["options"]["yes"]}
+            for entry in row["entries"]
+            if entry["rule"] in asked and entry["options"]["yes"] >= q["threshold"]
+        ]
+        edges.sort(key=lambda edge: (edge["source"], edge["target"], edge["name"]))
+        return edges
     for entry in row["entries"]:
         pick = entry["pick"]
         if pick in ("NO_RELATION", "NONE_OF_THESE"):

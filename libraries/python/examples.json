@@ -45,7 +45,7 @@
     },
     "relate": {
       "python": "[(one.name, one.source, one.target, one.probability) for one in tt.relate([\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"], relations=[{\"name\": \"caused_by\", \"source\": \"*\", \"target\": \"*\"}])]",
-      "expected": "[('caused_by', 1, 2, 0.59), ('caused_by', 1, 4, 0.94), ('caused_by', 2, 4, 0.94), ('caused_by', 3, 4, 0.84)]"
+      "expected": "[('caused_by', 1, 4, 0.71), ('caused_by', 2, 1, 0.65), ('caused_by', 2, 4, 0.73), ('caused_by', 3, 4, 0.55)]"
     }
   }
 }

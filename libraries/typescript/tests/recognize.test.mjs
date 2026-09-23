@@ -105,10 +105,11 @@ test('relate runs as written and answers the recorded edges', async () => {
     signal: signal(),
   });
   assert.deepEqual(edges, [
-    { name: 'caused_by', source: 1, target: 2, probability: 0.59 },
-    { name: 'caused_by', source: 1, target: 4, probability: 0.94 },
-    { name: 'caused_by', source: 2, target: 4, probability: 0.94 },
-    { name: 'caused_by', source: 3, target: 4, probability: 0.84 },
+    { name: 'same_as', source: 1, target: 2, probability: 0.61 },
+    { name: 'caused_by', source: 1, target: 4, probability: 0.71 },
+    { name: 'caused_by', source: 2, target: 1, probability: 0.65 },
+    { name: 'caused_by', source: 2, target: 4, probability: 0.73 },
+    { name: 'caused_by', source: 3, target: 4, probability: 0.55 },
   ]);
 });
 

@@ -1,0 +1,59 @@
+{
+ "version": 1,
+ "questions": {
+  "a_caused_by_1_2": {
+   "decide": "Does this hold: Item 1 was caused by the problem in Item 2?"
+  },
+  "a_caused_by_1_3": {
+   "decide": "Does this hold: Item 1 was caused by the problem in Item 3?"
+  },
+  "a_caused_by_1_4": {
+   "decide": "Does this hold: Item 1 was caused by the problem in Item 4?"
+  },
+  "a_caused_by_2_1": {
+   "decide": "Does this hold: Item 2 was caused by the problem in Item 1?"
+  },
+  "a_caused_by_2_3": {
+   "decide": "Does this hold: Item 2 was caused by the problem in Item 3?"
+  },
+  "a_caused_by_2_4": {
+   "decide": "Does this hold: Item 2 was caused by the problem in Item 4?"
+  },
+  "a_caused_by_3_1": {
+   "decide": "Does this hold: Item 3 was caused by the problem in Item 1?"
+  },
+  "a_caused_by_3_2": {
+   "decide": "Does this hold: Item 3 was caused by the problem in Item 2?"
+  },
+  "a_caused_by_3_4": {
+   "decide": "Does this hold: Item 3 was caused by the problem in Item 4?"
+  },
+  "a_caused_by_4_1": {
+   "decide": "Does this hold: Item 4 was caused by the problem in Item 1?"
+  },
+  "a_caused_by_4_2": {
+   "decide": "Does this hold: Item 4 was caused by the problem in Item 2?"
+  },
+  "a_caused_by_4_3": {
+   "decide": "Does this hold: Item 4 was caused by the problem in Item 3?"
+  },
+  "a_same_as_1_2": {
+   "decide": "Does this hold: Item 1 and Item 2 report the same failure?"
+  },
+  "a_same_as_1_3": {
+   "decide": "Does this hold: Item 1 and Item 3 report the same failure?"
+  },
+  "a_same_as_1_4": {
+   "decide": "Does this hold: Item 1 and Item 4 report the same failure?"
+  },
+  "a_same_as_2_3": {
+   "decide": "Does this hold: Item 2 and Item 3 report the same failure?"
+  },
+  "a_same_as_2_4": {
+   "decide": "Does this hold: Item 2 and Item 4 report the same failure?"
+  },
+  "a_same_as_3_4": {
+   "decide": "Does this hold: Item 3 and Item 4 report the same failure?"
+  }
+ }
+}

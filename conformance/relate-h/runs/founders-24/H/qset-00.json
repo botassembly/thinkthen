@@ -1,0 +1,3317 @@
+{
+ "version": 1,
+ "questions": {
+  "a_founded_1_2": {
+   "decide": "Does this hold: Item 1 founded Item 2?"
+  },
+  "a_founded_1_3": {
+   "decide": "Does this hold: Item 1 founded Item 3?"
+  },
+  "a_founded_1_4": {
+   "decide": "Does this hold: Item 1 founded Item 4?"
+  },
+  "a_founded_1_5": {
+   "decide": "Does this hold: Item 1 founded Item 5?"
+  },
+  "a_founded_1_6": {
+   "decide": "Does this hold: Item 1 founded Item 6?"
+  },
+  "a_founded_1_7": {
+   "decide": "Does this hold: Item 1 founded Item 7?"
+  },
+  "a_founded_1_8": {
+   "decide": "Does this hold: Item 1 founded Item 8?"
+  },
+  "a_founded_1_9": {
+   "decide": "Does this hold: Item 1 founded Item 9?"
+  },
+  "a_founded_1_10": {
+   "decide": "Does this hold: Item 1 founded Item 10?"
+  },
+  "a_founded_1_11": {
+   "decide": "Does this hold: Item 1 founded Item 11?"
+  },
+  "a_founded_1_12": {
+   "decide": "Does this hold: Item 1 founded Item 12?"
+  },
+  "a_founded_1_13": {
+   "decide": "Does this hold: Item 1 founded Item 13?"
+  },
+  "a_founded_1_14": {
+   "decide": "Does this hold: Item 1 founded Item 14?"
+  },
+  "a_founded_1_15": {
+   "decide": "Does this hold: Item 1 founded Item 15?"
+  },
+  "a_founded_1_16": {
+   "decide": "Does this hold: Item 1 founded Item 16?"
+  },
+  "a_founded_1_17": {
+   "decide": "Does this hold: Item 1 founded Item 17?"
+  },
+  "a_founded_1_18": {
+   "decide": "Does this hold: Item 1 founded Item 18?"
+  },
+  "a_founded_1_19": {
+   "decide": "Does this hold: Item 1 founded Item 19?"
+  },
+  "a_founded_1_20": {
+   "decide": "Does this hold: Item 1 founded Item 20?"
+  },
+  "a_founded_1_21": {
+   "decide": "Does this hold: Item 1 founded Item 21?"
+  },
+  "a_founded_1_22": {
+   "decide": "Does this hold: Item 1 founded Item 22?"
+  },
+  "a_founded_1_23": {
+   "decide": "Does this hold: Item 1 founded Item 23?"
+  },
+  "a_founded_1_24": {
+   "decide": "Does this hold: Item 1 founded Item 24?"
+  },
+  "a_founded_2_1": {
+   "decide": "Does this hold: Item 2 founded Item 1?"
+  },
+  "a_founded_2_3": {
+   "decide": "Does this hold: Item 2 founded Item 3?"
+  },
+  "a_founded_2_4": {
+   "decide": "Does this hold: Item 2 founded Item 4?"
+  },
+  "a_founded_2_5": {
+   "decide": "Does this hold: Item 2 founded Item 5?"
+  },
+  "a_founded_2_6": {
+   "decide": "Does this hold: Item 2 founded Item 6?"
+  },
+  "a_founded_2_7": {
+   "decide": "Does this hold: Item 2 founded Item 7?"
+  },
+  "a_founded_2_8": {
+   "decide": "Does this hold: Item 2 founded Item 8?"
+  },
+  "a_founded_2_9": {
+   "decide": "Does this hold: Item 2 founded Item 9?"
+  },
+  "a_founded_2_10": {
+   "decide": "Does this hold: Item 2 founded Item 10?"
+  },
+  "a_founded_2_11": {
+   "decide": "Does this hold: Item 2 founded Item 11?"
+  },
+  "a_founded_2_12": {
+   "decide": "Does this hold: Item 2 founded Item 12?"
+  },
+  "a_founded_2_13": {
+   "decide": "Does this hold: Item 2 founded Item 13?"
+  },
+  "a_founded_2_14": {
+   "decide": "Does this hold: Item 2 founded Item 14?"
+  },
+  "a_founded_2_15": {
+   "decide": "Does this hold: Item 2 founded Item 15?"
+  },
+  "a_founded_2_16": {
+   "decide": "Does this hold: Item 2 founded Item 16?"
+  },
+  "a_founded_2_17": {
+   "decide": "Does this hold: Item 2 founded Item 17?"
+  },
+  "a_founded_2_18": {
+   "decide": "Does this hold: Item 2 founded Item 18?"
+  },
+  "a_founded_2_19": {
+   "decide": "Does this hold: Item 2 founded Item 19?"
+  },
+  "a_founded_2_20": {
+   "decide": "Does this hold: Item 2 founded Item 20?"
+  },
+  "a_founded_2_21": {
+   "decide": "Does this hold: Item 2 founded Item 21?"
+  },
+  "a_founded_2_22": {
+   "decide": "Does this hold: Item 2 founded Item 22?"
+  },
+  "a_founded_2_23": {
+   "decide": "Does this hold: Item 2 founded Item 23?"
+  },
+  "a_founded_2_24": {
+   "decide": "Does this hold: Item 2 founded Item 24?"
+  },
+  "a_founded_3_1": {
+   "decide": "Does this hold: Item 3 founded Item 1?"
+  },
+  "a_founded_3_2": {
+   "decide": "Does this hold: Item 3 founded Item 2?"
+  },
+  "a_founded_3_4": {
+   "decide": "Does this hold: Item 3 founded Item 4?"
+  },
+  "a_founded_3_5": {
+   "decide": "Does this hold: Item 3 founded Item 5?"
+  },
+  "a_founded_3_6": {
+   "decide": "Does this hold: Item 3 founded Item 6?"
+  },
+  "a_founded_3_7": {
+   "decide": "Does this hold: Item 3 founded Item 7?"
+  },
+  "a_founded_3_8": {
+   "decide": "Does this hold: Item 3 founded Item 8?"
+  },
+  "a_founded_3_9": {
+   "decide": "Does this hold: Item 3 founded Item 9?"
+  },
+  "a_founded_3_10": {
+   "decide": "Does this hold: Item 3 founded Item 10?"
+  },
+  "a_founded_3_11": {
+   "decide": "Does this hold: Item 3 founded Item 11?"
+  },
+  "a_founded_3_12": {
+   "decide": "Does this hold: Item 3 founded Item 12?"
+  },
+  "a_founded_3_13": {
+   "decide": "Does this hold: Item 3 founded Item 13?"
+  },
+  "a_founded_3_14": {
+   "decide": "Does this hold: Item 3 founded Item 14?"
+  },
+  "a_founded_3_15": {
+   "decide": "Does this hold: Item 3 founded Item 15?"
+  },
+  "a_founded_3_16": {
+   "decide": "Does this hold: Item 3 founded Item 16?"
+  },
+  "a_founded_3_17": {
+   "decide": "Does this hold: Item 3 founded Item 17?"
+  },
+  "a_founded_3_18": {
+   "decide": "Does this hold: Item 3 founded Item 18?"
+  },
+  "a_founded_3_19": {
+   "decide": "Does this hold: Item 3 founded Item 19?"
+  },
+  "a_founded_3_20": {
+   "decide": "Does this hold: Item 3 founded Item 20?"
+  },
+  "a_founded_3_21": {
+   "decide": "Does this hold: Item 3 founded Item 21?"
+  },
+  "a_founded_3_22": {
+   "decide": "Does this hold: Item 3 founded Item 22?"
+  },
+  "a_founded_3_23": {
+   "decide": "Does this hold: Item 3 founded Item 23?"
+  },
+  "a_founded_3_24": {
+   "decide": "Does this hold: Item 3 founded Item 24?"
+  },
+  "a_founded_4_1": {
+   "decide": "Does this hold: Item 4 founded Item 1?"
+  },
+  "a_founded_4_2": {
+   "decide": "Does this hold: Item 4 founded Item 2?"
+  },
+  "a_founded_4_3": {
+   "decide": "Does this hold: Item 4 founded Item 3?"
+  },
+  "a_founded_4_5": {
+   "decide": "Does this hold: Item 4 founded Item 5?"
+  },
+  "a_founded_4_6": {
+   "decide": "Does this hold: Item 4 founded Item 6?"
+  },
+  "a_founded_4_7": {
+   "decide": "Does this hold: Item 4 founded Item 7?"
+  },
+  "a_founded_4_8": {
+   "decide": "Does this hold: Item 4 founded Item 8?"
+  },
+  "a_founded_4_9": {
+   "decide": "Does this hold: Item 4 founded Item 9?"
+  },
+  "a_founded_4_10": {
+   "decide": "Does this hold: Item 4 founded Item 10?"
+  },
+  "a_founded_4_11": {
+   "decide": "Does this hold: Item 4 founded Item 11?"
+  },
+  "a_founded_4_12": {
+   "decide": "Does this hold: Item 4 founded Item 12?"
+  },
+  "a_founded_4_13": {
+   "decide": "Does this hold: Item 4 founded Item 13?"
+  },
+  "a_founded_4_14": {
+   "decide": "Does this hold: Item 4 founded Item 14?"
+  },
+  "a_founded_4_15": {
+   "decide": "Does this hold: Item 4 founded Item 15?"
+  },
+  "a_founded_4_16": {
+   "decide": "Does this hold: Item 4 founded Item 16?"
+  },
+  "a_founded_4_17": {
+   "decide": "Does this hold: Item 4 founded Item 17?"
+  },
+  "a_founded_4_18": {
+   "decide": "Does this hold: Item 4 founded Item 18?"
+  },
+  "a_founded_4_19": {
+   "decide": "Does this hold: Item 4 founded Item 19?"
+  },
+  "a_founded_4_20": {
+   "decide": "Does this hold: Item 4 founded Item 20?"
+  },
+  "a_founded_4_21": {
+   "decide": "Does this hold: Item 4 founded Item 21?"
+  },
+  "a_founded_4_22": {
+   "decide": "Does this hold: Item 4 founded Item 22?"
+  },
+  "a_founded_4_23": {
+   "decide": "Does this hold: Item 4 founded Item 23?"
+  },
+  "a_founded_4_24": {
+   "decide": "Does this hold: Item 4 founded Item 24?"
+  },
+  "a_founded_5_1": {
+   "decide": "Does this hold: Item 5 founded Item 1?"
+  },
+  "a_founded_5_2": {
+   "decide": "Does this hold: Item 5 founded Item 2?"
+  },
+  "a_founded_5_3": {
+   "decide": "Does this hold: Item 5 founded Item 3?"
+  },
+  "a_founded_5_4": {
+   "decide": "Does this hold: Item 5 founded Item 4?"
+  },
+  "a_founded_5_6": {
+   "decide": "Does this hold: Item 5 founded Item 6?"
+  },
+  "a_founded_5_7": {
+   "decide": "Does this hold: Item 5 founded Item 7?"
+  },
+  "a_founded_5_8": {
+   "decide": "Does this hold: Item 5 founded Item 8?"
+  },
+  "a_founded_5_9": {
+   "decide": "Does this hold: Item 5 founded Item 9?"
+  },
+  "a_founded_5_10": {
+   "decide": "Does this hold: Item 5 founded Item 10?"
+  },
+  "a_founded_5_11": {
+   "decide": "Does this hold: Item 5 founded Item 11?"
+  },
+  "a_founded_5_12": {
+   "decide": "Does this hold: Item 5 founded Item 12?"
+  },
+  "a_founded_5_13": {
+   "decide": "Does this hold: Item 5 founded Item 13?"
+  },
+  "a_founded_5_14": {
+   "decide": "Does this hold: Item 5 founded Item 14?"
+  },
+  "a_founded_5_15": {
+   "decide": "Does this hold: Item 5 founded Item 15?"
+  },
+  "a_founded_5_16": {
+   "decide": "Does this hold: Item 5 founded Item 16?"
+  },
+  "a_founded_5_17": {
+   "decide": "Does this hold: Item 5 founded Item 17?"
+  },
+  "a_founded_5_18": {
+   "decide": "Does this hold: Item 5 founded Item 18?"
+  },
+  "a_founded_5_19": {
+   "decide": "Does this hold: Item 5 founded Item 19?"
+  },
+  "a_founded_5_20": {
+   "decide": "Does this hold: Item 5 founded Item 20?"
+  },
+  "a_founded_5_21": {
+   "decide": "Does this hold: Item 5 founded Item 21?"
+  },
+  "a_founded_5_22": {
+   "decide": "Does this hold: Item 5 founded Item 22?"
+  },
+  "a_founded_5_23": {
+   "decide": "Does this hold: Item 5 founded Item 23?"
+  },
+  "a_founded_5_24": {
+   "decide": "Does this hold: Item 5 founded Item 24?"
+  },
+  "a_founded_6_1": {
+   "decide": "Does this hold: Item 6 founded Item 1?"
+  },
+  "a_founded_6_2": {
+   "decide": "Does this hold: Item 6 founded Item 2?"
+  },
+  "a_founded_6_3": {
+   "decide": "Does this hold: Item 6 founded Item 3?"
+  },
+  "a_founded_6_4": {
+   "decide": "Does this hold: Item 6 founded Item 4?"
+  },
+  "a_founded_6_5": {
+   "decide": "Does this hold: Item 6 founded Item 5?"
+  },
+  "a_founded_6_7": {
+   "decide": "Does this hold: Item 6 founded Item 7?"
+  },
+  "a_founded_6_8": {
+   "decide": "Does this hold: Item 6 founded Item 8?"
+  },
+  "a_founded_6_9": {
+   "decide": "Does this hold: Item 6 founded Item 9?"
+  },
+  "a_founded_6_10": {
+   "decide": "Does this hold: Item 6 founded Item 10?"
+  },
+  "a_founded_6_11": {
+   "decide": "Does this hold: Item 6 founded Item 11?"
+  },
+  "a_founded_6_12": {
+   "decide": "Does this hold: Item 6 founded Item 12?"
+  },
+  "a_founded_6_13": {
+   "decide": "Does this hold: Item 6 founded Item 13?"
+  },
+  "a_founded_6_14": {
+   "decide": "Does this hold: Item 6 founded Item 14?"
+  },
+  "a_founded_6_15": {
+   "decide": "Does this hold: Item 6 founded Item 15?"
+  },
+  "a_founded_6_16": {
+   "decide": "Does this hold: Item 6 founded Item 16?"
+  },
+  "a_founded_6_17": {
+   "decide": "Does this hold: Item 6 founded Item 17?"
+  },
+  "a_founded_6_18": {
+   "decide": "Does this hold: Item 6 founded Item 18?"
+  },
+  "a_founded_6_19": {
+   "decide": "Does this hold: Item 6 founded Item 19?"
+  },
+  "a_founded_6_20": {
+   "decide": "Does this hold: Item 6 founded Item 20?"
+  },
+  "a_founded_6_21": {
+   "decide": "Does this hold: Item 6 founded Item 21?"
+  },
+  "a_founded_6_22": {
+   "decide": "Does this hold: Item 6 founded Item 22?"
+  },
+  "a_founded_6_23": {
+   "decide": "Does this hold: Item 6 founded Item 23?"
+  },
+  "a_founded_6_24": {
+   "decide": "Does this hold: Item 6 founded Item 24?"
+  },
+  "a_founded_7_1": {
+   "decide": "Does this hold: Item 7 founded Item 1?"
+  },
+  "a_founded_7_2": {
+   "decide": "Does this hold: Item 7 founded Item 2?"
+  },
+  "a_founded_7_3": {
+   "decide": "Does this hold: Item 7 founded Item 3?"
+  },
+  "a_founded_7_4": {
+   "decide": "Does this hold: Item 7 founded Item 4?"
+  },
+  "a_founded_7_5": {
+   "decide": "Does this hold: Item 7 founded Item 5?"
+  },
+  "a_founded_7_6": {
+   "decide": "Does this hold: Item 7 founded Item 6?"
+  },
+  "a_founded_7_8": {
+   "decide": "Does this hold: Item 7 founded Item 8?"
+  },
+  "a_founded_7_9": {
+   "decide": "Does this hold: Item 7 founded Item 9?"
+  },
+  "a_founded_7_10": {
+   "decide": "Does this hold: Item 7 founded Item 10?"
+  },
+  "a_founded_7_11": {
+   "decide": "Does this hold: Item 7 founded Item 11?"
+  },
+  "a_founded_7_12": {
+   "decide": "Does this hold: Item 7 founded Item 12?"
+  },
+  "a_founded_7_13": {
+   "decide": "Does this hold: Item 7 founded Item 13?"
+  },
+  "a_founded_7_14": {
+   "decide": "Does this hold: Item 7 founded Item 14?"
+  },
+  "a_founded_7_15": {
+   "decide": "Does this hold: Item 7 founded Item 15?"
+  },
+  "a_founded_7_16": {
+   "decide": "Does this hold: Item 7 founded Item 16?"
+  },
+  "a_founded_7_17": {
+   "decide": "Does this hold: Item 7 founded Item 17?"
+  },
+  "a_founded_7_18": {
+   "decide": "Does this hold: Item 7 founded Item 18?"
+  },
+  "a_founded_7_19": {
+   "decide": "Does this hold: Item 7 founded Item 19?"
+  },
+  "a_founded_7_20": {
+   "decide": "Does this hold: Item 7 founded Item 20?"
+  },
+  "a_founded_7_21": {
+   "decide": "Does this hold: Item 7 founded Item 21?"
+  },
+  "a_founded_7_22": {
+   "decide": "Does this hold: Item 7 founded Item 22?"
+  },
+  "a_founded_7_23": {
+   "decide": "Does this hold: Item 7 founded Item 23?"
+  },
+  "a_founded_7_24": {
+   "decide": "Does this hold: Item 7 founded Item 24?"
+  },
+  "a_founded_8_1": {
+   "decide": "Does this hold: Item 8 founded Item 1?"
+  },
+  "a_founded_8_2": {
+   "decide": "Does this hold: Item 8 founded Item 2?"
+  },
+  "a_founded_8_3": {
+   "decide": "Does this hold: Item 8 founded Item 3?"
+  },
+  "a_founded_8_4": {
+   "decide": "Does this hold: Item 8 founded Item 4?"
+  },
+  "a_founded_8_5": {
+   "decide": "Does this hold: Item 8 founded Item 5?"
+  },
+  "a_founded_8_6": {
+   "decide": "Does this hold: Item 8 founded Item 6?"
+  },
+  "a_founded_8_7": {
+   "decide": "Does this hold: Item 8 founded Item 7?"
+  },
+  "a_founded_8_9": {
+   "decide": "Does this hold: Item 8 founded Item 9?"
+  },
+  "a_founded_8_10": {
+   "decide": "Does this hold: Item 8 founded Item 10?"
+  },
+  "a_founded_8_11": {
+   "decide": "Does this hold: Item 8 founded Item 11?"
+  },
+  "a_founded_8_12": {
+   "decide": "Does this hold: Item 8 founded Item 12?"
+  },
+  "a_founded_8_13": {
+   "decide": "Does this hold: Item 8 founded Item 13?"
+  },
+  "a_founded_8_14": {
+   "decide": "Does this hold: Item 8 founded Item 14?"
+  },
+  "a_founded_8_15": {
+   "decide": "Does this hold: Item 8 founded Item 15?"
+  },
+  "a_founded_8_16": {
+   "decide": "Does this hold: Item 8 founded Item 16?"
+  },
+  "a_founded_8_17": {
+   "decide": "Does this hold: Item 8 founded Item 17?"
+  },
+  "a_founded_8_18": {
+   "decide": "Does this hold: Item 8 founded Item 18?"
+  },
+  "a_founded_8_19": {
+   "decide": "Does this hold: Item 8 founded Item 19?"
+  },
+  "a_founded_8_20": {
+   "decide": "Does this hold: Item 8 founded Item 20?"
+  },
+  "a_founded_8_21": {
+   "decide": "Does this hold: Item 8 founded Item 21?"
+  },
+  "a_founded_8_22": {
+   "decide": "Does this hold: Item 8 founded Item 22?"
+  },
+  "a_founded_8_23": {
+   "decide": "Does this hold: Item 8 founded Item 23?"
+  },
+  "a_founded_8_24": {
+   "decide": "Does this hold: Item 8 founded Item 24?"
+  },
+  "a_founded_9_1": {
+   "decide": "Does this hold: Item 9 founded Item 1?"
+  },
+  "a_founded_9_2": {
+   "decide": "Does this hold: Item 9 founded Item 2?"
+  },
+  "a_founded_9_3": {
+   "decide": "Does this hold: Item 9 founded Item 3?"
+  },
+  "a_founded_9_4": {
+   "decide": "Does this hold: Item 9 founded Item 4?"
+  },
+  "a_founded_9_5": {
+   "decide": "Does this hold: Item 9 founded Item 5?"
+  },
+  "a_founded_9_6": {
+   "decide": "Does this hold: Item 9 founded Item 6?"
+  },
+  "a_founded_9_7": {
+   "decide": "Does this hold: Item 9 founded Item 7?"
+  },
+  "a_founded_9_8": {
+   "decide": "Does this hold: Item 9 founded Item 8?"
+  },
+  "a_founded_9_10": {
+   "decide": "Does this hold: Item 9 founded Item 10?"
+  },
+  "a_founded_9_11": {
+   "decide": "Does this hold: Item 9 founded Item 11?"
+  },
+  "a_founded_9_12": {
+   "decide": "Does this hold: Item 9 founded Item 12?"
+  },
+  "a_founded_9_13": {
+   "decide": "Does this hold: Item 9 founded Item 13?"
+  },
+  "a_founded_9_14": {
+   "decide": "Does this hold: Item 9 founded Item 14?"
+  },
+  "a_founded_9_15": {
+   "decide": "Does this hold: Item 9 founded Item 15?"
+  },
+  "a_founded_9_16": {
+   "decide": "Does this hold: Item 9 founded Item 16?"
+  },
+  "a_founded_9_17": {
+   "decide": "Does this hold: Item 9 founded Item 17?"
+  },
+  "a_founded_9_18": {
+   "decide": "Does this hold: Item 9 founded Item 18?"
+  },
+  "a_founded_9_19": {
+   "decide": "Does this hold: Item 9 founded Item 19?"
+  },
+  "a_founded_9_20": {
+   "decide": "Does this hold: Item 9 founded Item 20?"
+  },
+  "a_founded_9_21": {
+   "decide": "Does this hold: Item 9 founded Item 21?"
+  },
+  "a_founded_9_22": {
+   "decide": "Does this hold: Item 9 founded Item 22?"
+  },
+  "a_founded_9_23": {
+   "decide": "Does this hold: Item 9 founded Item 23?"
+  },
+  "a_founded_9_24": {
+   "decide": "Does this hold: Item 9 founded Item 24?"
+  },
+  "a_founded_10_1": {
+   "decide": "Does this hold: Item 10 founded Item 1?"
+  },
+  "a_founded_10_2": {
+   "decide": "Does this hold: Item 10 founded Item 2?"
+  },
+  "a_founded_10_3": {
+   "decide": "Does this hold: Item 10 founded Item 3?"
+  },
+  "a_founded_10_4": {
+   "decide": "Does this hold: Item 10 founded Item 4?"
+  },
+  "a_founded_10_5": {
+   "decide": "Does this hold: Item 10 founded Item 5?"
+  },
+  "a_founded_10_6": {
+   "decide": "Does this hold: Item 10 founded Item 6?"
+  },
+  "a_founded_10_7": {
+   "decide": "Does this hold: Item 10 founded Item 7?"
+  },
+  "a_founded_10_8": {
+   "decide": "Does this hold: Item 10 founded Item 8?"
+  },
+  "a_founded_10_9": {
+   "decide": "Does this hold: Item 10 founded Item 9?"
+  },
+  "a_founded_10_11": {
+   "decide": "Does this hold: Item 10 founded Item 11?"
+  },
+  "a_founded_10_12": {
+   "decide": "Does this hold: Item 10 founded Item 12?"
+  },
+  "a_founded_10_13": {
+   "decide": "Does this hold: Item 10 founded Item 13?"
+  },
+  "a_founded_10_14": {
+   "decide": "Does this hold: Item 10 founded Item 14?"
+  },
+  "a_founded_10_15": {
+   "decide": "Does this hold: Item 10 founded Item 15?"
+  },
+  "a_founded_10_16": {
+   "decide": "Does this hold: Item 10 founded Item 16?"
+  },
+  "a_founded_10_17": {
+   "decide": "Does this hold: Item 10 founded Item 17?"
+  },
+  "a_founded_10_18": {
+   "decide": "Does this hold: Item 10 founded Item 18?"
+  },
+  "a_founded_10_19": {
+   "decide": "Does this hold: Item 10 founded Item 19?"
+  },
+  "a_founded_10_20": {
+   "decide": "Does this hold: Item 10 founded Item 20?"
+  },
+  "a_founded_10_21": {
+   "decide": "Does this hold: Item 10 founded Item 21?"
+  },
+  "a_founded_10_22": {
+   "decide": "Does this hold: Item 10 founded Item 22?"
+  },
+  "a_founded_10_23": {
+   "decide": "Does this hold: Item 10 founded Item 23?"
+  },
+  "a_founded_10_24": {
+   "decide": "Does this hold: Item 10 founded Item 24?"
+  },
+  "a_founded_11_1": {
+   "decide": "Does this hold: Item 11 founded Item 1?"
+  },
+  "a_founded_11_2": {
+   "decide": "Does this hold: Item 11 founded Item 2?"
+  },
+  "a_founded_11_3": {
+   "decide": "Does this hold: Item 11 founded Item 3?"
+  },
+  "a_founded_11_4": {
+   "decide": "Does this hold: Item 11 founded Item 4?"
+  },
+  "a_founded_11_5": {
+   "decide": "Does this hold: Item 11 founded Item 5?"
+  },
+  "a_founded_11_6": {
+   "decide": "Does this hold: Item 11 founded Item 6?"
+  },
+  "a_founded_11_7": {
+   "decide": "Does this hold: Item 11 founded Item 7?"
+  },
+  "a_founded_11_8": {
+   "decide": "Does this hold: Item 11 founded Item 8?"
+  },
+  "a_founded_11_9": {
+   "decide": "Does this hold: Item 11 founded Item 9?"
+  },
+  "a_founded_11_10": {
+   "decide": "Does this hold: Item 11 founded Item 10?"
+  },
+  "a_founded_11_12": {
+   "decide": "Does this hold: Item 11 founded Item 12?"
+  },
+  "a_founded_11_13": {
+   "decide": "Does this hold: Item 11 founded Item 13?"
+  },
+  "a_founded_11_14": {
+   "decide": "Does this hold: Item 11 founded Item 14?"
+  },
+  "a_founded_11_15": {
+   "decide": "Does this hold: Item 11 founded Item 15?"
+  },
+  "a_founded_11_16": {
+   "decide": "Does this hold: Item 11 founded Item 16?"
+  },
+  "a_founded_11_17": {
+   "decide": "Does this hold: Item 11 founded Item 17?"
+  },
+  "a_founded_11_18": {
+   "decide": "Does this hold: Item 11 founded Item 18?"
+  },
+  "a_founded_11_19": {
+   "decide": "Does this hold: Item 11 founded Item 19?"
+  },
+  "a_founded_11_20": {
+   "decide": "Does this hold: Item 11 founded Item 20?"
+  },
+  "a_founded_11_21": {
+   "decide": "Does this hold: Item 11 founded Item 21?"
+  },
+  "a_founded_11_22": {
+   "decide": "Does this hold: Item 11 founded Item 22?"
+  },
+  "a_founded_11_23": {
+   "decide": "Does this hold: Item 11 founded Item 23?"
+  },
+  "a_founded_11_24": {
+   "decide": "Does this hold: Item 11 founded Item 24?"
+  },
+  "a_founded_12_1": {
+   "decide": "Does this hold: Item 12 founded Item 1?"
+  },
+  "a_founded_12_2": {
+   "decide": "Does this hold: Item 12 founded Item 2?"
+  },
+  "a_founded_12_3": {
+   "decide": "Does this hold: Item 12 founded Item 3?"
+  },
+  "a_founded_12_4": {
+   "decide": "Does this hold: Item 12 founded Item 4?"
+  },
+  "a_founded_12_5": {
+   "decide": "Does this hold: Item 12 founded Item 5?"
+  },
+  "a_founded_12_6": {
+   "decide": "Does this hold: Item 12 founded Item 6?"
+  },
+  "a_founded_12_7": {
+   "decide": "Does this hold: Item 12 founded Item 7?"
+  },
+  "a_founded_12_8": {
+   "decide": "Does this hold: Item 12 founded Item 8?"
+  },
+  "a_founded_12_9": {
+   "decide": "Does this hold: Item 12 founded Item 9?"
+  },
+  "a_founded_12_10": {
+   "decide": "Does this hold: Item 12 founded Item 10?"
+  },
+  "a_founded_12_11": {
+   "decide": "Does this hold: Item 12 founded Item 11?"
+  },
+  "a_founded_12_13": {
+   "decide": "Does this hold: Item 12 founded Item 13?"
+  },
+  "a_founded_12_14": {
+   "decide": "Does this hold: Item 12 founded Item 14?"
+  },
+  "a_founded_12_15": {
+   "decide": "Does this hold: Item 12 founded Item 15?"
+  },
+  "a_founded_12_16": {
+   "decide": "Does this hold: Item 12 founded Item 16?"
+  },
+  "a_founded_12_17": {
+   "decide": "Does this hold: Item 12 founded Item 17?"
+  },
+  "a_founded_12_18": {
+   "decide": "Does this hold: Item 12 founded Item 18?"
+  },
+  "a_founded_12_19": {
+   "decide": "Does this hold: Item 12 founded Item 19?"
+  },
+  "a_founded_12_20": {
+   "decide": "Does this hold: Item 12 founded Item 20?"
+  },
+  "a_founded_12_21": {
+   "decide": "Does this hold: Item 12 founded Item 21?"
+  },
+  "a_founded_12_22": {
+   "decide": "Does this hold: Item 12 founded Item 22?"
+  },
+  "a_founded_12_23": {
+   "decide": "Does this hold: Item 12 founded Item 23?"
+  },
+  "a_founded_12_24": {
+   "decide": "Does this hold: Item 12 founded Item 24?"
+  },
+  "a_founded_13_1": {
+   "decide": "Does this hold: Item 13 founded Item 1?"
+  },
+  "a_founded_13_2": {
+   "decide": "Does this hold: Item 13 founded Item 2?"
+  },
+  "a_founded_13_3": {
+   "decide": "Does this hold: Item 13 founded Item 3?"
+  },
+  "a_founded_13_4": {
+   "decide": "Does this hold: Item 13 founded Item 4?"
+  },
+  "a_founded_13_5": {
+   "decide": "Does this hold: Item 13 founded Item 5?"
+  },
+  "a_founded_13_6": {
+   "decide": "Does this hold: Item 13 founded Item 6?"
+  },
+  "a_founded_13_7": {
+   "decide": "Does this hold: Item 13 founded Item 7?"
+  },
+  "a_founded_13_8": {
+   "decide": "Does this hold: Item 13 founded Item 8?"
+  },
+  "a_founded_13_9": {
+   "decide": "Does this hold: Item 13 founded Item 9?"
+  },
+  "a_founded_13_10": {
+   "decide": "Does this hold: Item 13 founded Item 10?"
+  },
+  "a_founded_13_11": {
+   "decide": "Does this hold: Item 13 founded Item 11?"
+  },
+  "a_founded_13_12": {
+   "decide": "Does this hold: Item 13 founded Item 12?"
+  },
+  "a_founded_13_14": {
+   "decide": "Does this hold: Item 13 founded Item 14?"
+  },
+  "a_founded_13_15": {
+   "decide": "Does this hold: Item 13 founded Item 15?"
+  },
+  "a_founded_13_16": {
+   "decide": "Does this hold: Item 13 founded Item 16?"
+  },
+  "a_founded_13_17": {
+   "decide": "Does this hold: Item 13 founded Item 17?"
+  },
+  "a_founded_13_18": {
+   "decide": "Does this hold: Item 13 founded Item 18?"
+  },
+  "a_founded_13_19": {
+   "decide": "Does this hold: Item 13 founded Item 19?"
+  },
+  "a_founded_13_20": {
+   "decide": "Does this hold: Item 13 founded Item 20?"
+  },
+  "a_founded_13_21": {
+   "decide": "Does this hold: Item 13 founded Item 21?"
+  },
+  "a_founded_13_22": {
+   "decide": "Does this hold: Item 13 founded Item 22?"
+  },
+  "a_founded_13_23": {
+   "decide": "Does this hold: Item 13 founded Item 23?"
+  },
+  "a_founded_13_24": {
+   "decide": "Does this hold: Item 13 founded Item 24?"
+  },
+  "a_founded_14_1": {
+   "decide": "Does this hold: Item 14 founded Item 1?"
+  },
+  "a_founded_14_2": {
+   "decide": "Does this hold: Item 14 founded Item 2?"
+  },
+  "a_founded_14_3": {
+   "decide": "Does this hold: Item 14 founded Item 3?"
+  },
+  "a_founded_14_4": {
+   "decide": "Does this hold: Item 14 founded Item 4?"
+  },
+  "a_founded_14_5": {
+   "decide": "Does this hold: Item 14 founded Item 5?"
+  },
+  "a_founded_14_6": {
+   "decide": "Does this hold: Item 14 founded Item 6?"
+  },
+  "a_founded_14_7": {
+   "decide": "Does this hold: Item 14 founded Item 7?"
+  },
+  "a_founded_14_8": {
+   "decide": "Does this hold: Item 14 founded Item 8?"
+  },
+  "a_founded_14_9": {
+   "decide": "Does this hold: Item 14 founded Item 9?"
+  },
+  "a_founded_14_10": {
+   "decide": "Does this hold: Item 14 founded Item 10?"
+  },
+  "a_founded_14_11": {
+   "decide": "Does this hold: Item 14 founded Item 11?"
+  },
+  "a_founded_14_12": {
+   "decide": "Does this hold: Item 14 founded Item 12?"
+  },
+  "a_founded_14_13": {
+   "decide": "Does this hold: Item 14 founded Item 13?"
+  },
+  "a_founded_14_15": {
+   "decide": "Does this hold: Item 14 founded Item 15?"
+  },
+  "a_founded_14_16": {
+   "decide": "Does this hold: Item 14 founded Item 16?"
+  },
+  "a_founded_14_17": {
+   "decide": "Does this hold: Item 14 founded Item 17?"
+  },
+  "a_founded_14_18": {
+   "decide": "Does this hold: Item 14 founded Item 18?"
+  },
+  "a_founded_14_19": {
+   "decide": "Does this hold: Item 14 founded Item 19?"
+  },
+  "a_founded_14_20": {
+   "decide": "Does this hold: Item 14 founded Item 20?"
+  },
+  "a_founded_14_21": {
+   "decide": "Does this hold: Item 14 founded Item 21?"
+  },
+  "a_founded_14_22": {
+   "decide": "Does this hold: Item 14 founded Item 22?"
+  },
+  "a_founded_14_23": {
+   "decide": "Does this hold: Item 14 founded Item 23?"
+  },
+  "a_founded_14_24": {
+   "decide": "Does this hold: Item 14 founded Item 24?"
+  },
+  "a_founded_15_1": {
+   "decide": "Does this hold: Item 15 founded Item 1?"
+  },
+  "a_founded_15_2": {
+   "decide": "Does this hold: Item 15 founded Item 2?"
+  },
+  "a_founded_15_3": {
+   "decide": "Does this hold: Item 15 founded Item 3?"
+  },
+  "a_founded_15_4": {
+   "decide": "Does this hold: Item 15 founded Item 4?"
+  },
+  "a_founded_15_5": {
+   "decide": "Does this hold: Item 15 founded Item 5?"
+  },
+  "a_founded_15_6": {
+   "decide": "Does this hold: Item 15 founded Item 6?"
+  },
+  "a_founded_15_7": {
+   "decide": "Does this hold: Item 15 founded Item 7?"
+  },
+  "a_founded_15_8": {
+   "decide": "Does this hold: Item 15 founded Item 8?"
+  },
+  "a_founded_15_9": {
+   "decide": "Does this hold: Item 15 founded Item 9?"
+  },
+  "a_founded_15_10": {
+   "decide": "Does this hold: Item 15 founded Item 10?"
+  },
+  "a_founded_15_11": {
+   "decide": "Does this hold: Item 15 founded Item 11?"
+  },
+  "a_founded_15_12": {
+   "decide": "Does this hold: Item 15 founded Item 12?"
+  },
+  "a_founded_15_13": {
+   "decide": "Does this hold: Item 15 founded Item 13?"
+  },
+  "a_founded_15_14": {
+   "decide": "Does this hold: Item 15 founded Item 14?"
+  },
+  "a_founded_15_16": {
+   "decide": "Does this hold: Item 15 founded Item 16?"
+  },
+  "a_founded_15_17": {
+   "decide": "Does this hold: Item 15 founded Item 17?"
+  },
+  "a_founded_15_18": {
+   "decide": "Does this hold: Item 15 founded Item 18?"
+  },
+  "a_founded_15_19": {
+   "decide": "Does this hold: Item 15 founded Item 19?"
+  },
+  "a_founded_15_20": {
+   "decide": "Does this hold: Item 15 founded Item 20?"
+  },
+  "a_founded_15_21": {
+   "decide": "Does this hold: Item 15 founded Item 21?"
+  },
+  "a_founded_15_22": {
+   "decide": "Does this hold: Item 15 founded Item 22?"
+  },
+  "a_founded_15_23": {
+   "decide": "Does this hold: Item 15 founded Item 23?"
+  },
+  "a_founded_15_24": {
+   "decide": "Does this hold: Item 15 founded Item 24?"
+  },
+  "a_founded_16_1": {
+   "decide": "Does this hold: Item 16 founded Item 1?"
+  },
+  "a_founded_16_2": {
+   "decide": "Does this hold: Item 16 founded Item 2?"
+  },
+  "a_founded_16_3": {
+   "decide": "Does this hold: Item 16 founded Item 3?"
+  },
+  "a_founded_16_4": {
+   "decide": "Does this hold: Item 16 founded Item 4?"
+  },
+  "a_founded_16_5": {
+   "decide": "Does this hold: Item 16 founded Item 5?"
+  },
+  "a_founded_16_6": {
+   "decide": "Does this hold: Item 16 founded Item 6?"
+  },
+  "a_founded_16_7": {
+   "decide": "Does this hold: Item 16 founded Item 7?"
+  },
+  "a_founded_16_8": {
+   "decide": "Does this hold: Item 16 founded Item 8?"
+  },
+  "a_founded_16_9": {
+   "decide": "Does this hold: Item 16 founded Item 9?"
+  },
+  "a_founded_16_10": {
+   "decide": "Does this hold: Item 16 founded Item 10?"
+  },
+  "a_founded_16_11": {
+   "decide": "Does this hold: Item 16 founded Item 11?"
+  },
+  "a_founded_16_12": {
+   "decide": "Does this hold: Item 16 founded Item 12?"
+  },
+  "a_founded_16_13": {
+   "decide": "Does this hold: Item 16 founded Item 13?"
+  },
+  "a_founded_16_14": {
+   "decide": "Does this hold: Item 16 founded Item 14?"
+  },
+  "a_founded_16_15": {
+   "decide": "Does this hold: Item 16 founded Item 15?"
+  },
+  "a_founded_16_17": {
+   "decide": "Does this hold: Item 16 founded Item 17?"
+  },
+  "a_founded_16_18": {
+   "decide": "Does this hold: Item 16 founded Item 18?"
+  },
+  "a_founded_16_19": {
+   "decide": "Does this hold: Item 16 founded Item 19?"
+  },
+  "a_founded_16_20": {
+   "decide": "Does this hold: Item 16 founded Item 20?"
+  },
+  "a_founded_16_21": {
+   "decide": "Does this hold: Item 16 founded Item 21?"
+  },
+  "a_founded_16_22": {
+   "decide": "Does this hold: Item 16 founded Item 22?"
+  },
+  "a_founded_16_23": {
+   "decide": "Does this hold: Item 16 founded Item 23?"
+  },
+  "a_founded_16_24": {
+   "decide": "Does this hold: Item 16 founded Item 24?"
+  },
+  "a_founded_17_1": {
+   "decide": "Does this hold: Item 17 founded Item 1?"
+  },
+  "a_founded_17_2": {
+   "decide": "Does this hold: Item 17 founded Item 2?"
+  },
+  "a_founded_17_3": {
+   "decide": "Does this hold: Item 17 founded Item 3?"
+  },
+  "a_founded_17_4": {
+   "decide": "Does this hold: Item 17 founded Item 4?"
+  },
+  "a_founded_17_5": {
+   "decide": "Does this hold: Item 17 founded Item 5?"
+  },
+  "a_founded_17_6": {
+   "decide": "Does this hold: Item 17 founded Item 6?"
+  },
+  "a_founded_17_7": {
+   "decide": "Does this hold: Item 17 founded Item 7?"
+  },
+  "a_founded_17_8": {
+   "decide": "Does this hold: Item 17 founded Item 8?"
+  },
+  "a_founded_17_9": {
+   "decide": "Does this hold: Item 17 founded Item 9?"
+  },
+  "a_founded_17_10": {
+   "decide": "Does this hold: Item 17 founded Item 10?"
+  },
+  "a_founded_17_11": {
+   "decide": "Does this hold: Item 17 founded Item 11?"
+  },
+  "a_founded_17_12": {
+   "decide": "Does this hold: Item 17 founded Item 12?"
+  },
+  "a_founded_17_13": {
+   "decide": "Does this hold: Item 17 founded Item 13?"
+  },
+  "a_founded_17_14": {
+   "decide": "Does this hold: Item 17 founded Item 14?"
+  },
+  "a_founded_17_15": {
+   "decide": "Does this hold: Item 17 founded Item 15?"
+  },
+  "a_founded_17_16": {
+   "decide": "Does this hold: Item 17 founded Item 16?"
+  },
+  "a_founded_17_18": {
+   "decide": "Does this hold: Item 17 founded Item 18?"
+  },
+  "a_founded_17_19": {
+   "decide": "Does this hold: Item 17 founded Item 19?"
+  },
+  "a_founded_17_20": {
+   "decide": "Does this hold: Item 17 founded Item 20?"
+  },
+  "a_founded_17_21": {
+   "decide": "Does this hold: Item 17 founded Item 21?"
+  },
+  "a_founded_17_22": {
+   "decide": "Does this hold: Item 17 founded Item 22?"
+  },
+  "a_founded_17_23": {
+   "decide": "Does this hold: Item 17 founded Item 23?"
+  },
+  "a_founded_17_24": {
+   "decide": "Does this hold: Item 17 founded Item 24?"
+  },
+  "a_founded_18_1": {
+   "decide": "Does this hold: Item 18 founded Item 1?"
+  },
+  "a_founded_18_2": {
+   "decide": "Does this hold: Item 18 founded Item 2?"
+  },
+  "a_founded_18_3": {
+   "decide": "Does this hold: Item 18 founded Item 3?"
+  },
+  "a_founded_18_4": {
+   "decide": "Does this hold: Item 18 founded Item 4?"
+  },
+  "a_founded_18_5": {
+   "decide": "Does this hold: Item 18 founded Item 5?"
+  },
+  "a_founded_18_6": {
+   "decide": "Does this hold: Item 18 founded Item 6?"
+  },
+  "a_founded_18_7": {
+   "decide": "Does this hold: Item 18 founded Item 7?"
+  },
+  "a_founded_18_8": {
+   "decide": "Does this hold: Item 18 founded Item 8?"
+  },
+  "a_founded_18_9": {
+   "decide": "Does this hold: Item 18 founded Item 9?"
+  },
+  "a_founded_18_10": {
+   "decide": "Does this hold: Item 18 founded Item 10?"
+  },
+  "a_founded_18_11": {
+   "decide": "Does this hold: Item 18 founded Item 11?"
+  },
+  "a_founded_18_12": {
+   "decide": "Does this hold: Item 18 founded Item 12?"
+  },
+  "a_founded_18_13": {
+   "decide": "Does this hold: Item 18 founded Item 13?"
+  },
+  "a_founded_18_14": {
+   "decide": "Does this hold: Item 18 founded Item 14?"
+  },
+  "a_founded_18_15": {
+   "decide": "Does this hold: Item 18 founded Item 15?"
+  },
+  "a_founded_18_16": {
+   "decide": "Does this hold: Item 18 founded Item 16?"
+  },
+  "a_founded_18_17": {
+   "decide": "Does this hold: Item 18 founded Item 17?"
+  },
+  "a_founded_18_19": {
+   "decide": "Does this hold: Item 18 founded Item 19?"
+  },
+  "a_founded_18_20": {
+   "decide": "Does this hold: Item 18 founded Item 20?"
+  },
+  "a_founded_18_21": {
+   "decide": "Does this hold: Item 18 founded Item 21?"
+  },
+  "a_founded_18_22": {
+   "decide": "Does this hold: Item 18 founded Item 22?"
+  },
+  "a_founded_18_23": {
+   "decide": "Does this hold: Item 18 founded Item 23?"
+  },
+  "a_founded_18_24": {
+   "decide": "Does this hold: Item 18 founded Item 24?"
+  },
+  "a_founded_19_1": {
+   "decide": "Does this hold: Item 19 founded Item 1?"
+  },
+  "a_founded_19_2": {
+   "decide": "Does this hold: Item 19 founded Item 2?"
+  },
+  "a_founded_19_3": {
+   "decide": "Does this hold: Item 19 founded Item 3?"
+  },
+  "a_founded_19_4": {
+   "decide": "Does this hold: Item 19 founded Item 4?"
+  },
+  "a_founded_19_5": {
+   "decide": "Does this hold: Item 19 founded Item 5?"
+  },
+  "a_founded_19_6": {
+   "decide": "Does this hold: Item 19 founded Item 6?"
+  },
+  "a_founded_19_7": {
+   "decide": "Does this hold: Item 19 founded Item 7?"
+  },
+  "a_founded_19_8": {
+   "decide": "Does this hold: Item 19 founded Item 8?"
+  },
+  "a_founded_19_9": {
+   "decide": "Does this hold: Item 19 founded Item 9?"
+  },
+  "a_founded_19_10": {
+   "decide": "Does this hold: Item 19 founded Item 10?"
+  },
+  "a_founded_19_11": {
+   "decide": "Does this hold: Item 19 founded Item 11?"
+  },
+  "a_founded_19_12": {
+   "decide": "Does this hold: Item 19 founded Item 12?"
+  },
+  "a_founded_19_13": {
+   "decide": "Does this hold: Item 19 founded Item 13?"
+  },
+  "a_founded_19_14": {
+   "decide": "Does this hold: Item 19 founded Item 14?"
+  },
+  "a_founded_19_15": {
+   "decide": "Does this hold: Item 19 founded Item 15?"
+  },
+  "a_founded_19_16": {
+   "decide": "Does this hold: Item 19 founded Item 16?"
+  },
+  "a_founded_19_17": {
+   "decide": "Does this hold: Item 19 founded Item 17?"
+  },
+  "a_founded_19_18": {
+   "decide": "Does this hold: Item 19 founded Item 18?"
+  },
+  "a_founded_19_20": {
+   "decide": "Does this hold: Item 19 founded Item 20?"
+  },
+  "a_founded_19_21": {
+   "decide": "Does this hold: Item 19 founded Item 21?"
+  },
+  "a_founded_19_22": {
+   "decide": "Does this hold: Item 19 founded Item 22?"
+  },
+  "a_founded_19_23": {
+   "decide": "Does this hold: Item 19 founded Item 23?"
+  },
+  "a_founded_19_24": {
+   "decide": "Does this hold: Item 19 founded Item 24?"
+  },
+  "a_founded_20_1": {
+   "decide": "Does this hold: Item 20 founded Item 1?"
+  },
+  "a_founded_20_2": {
+   "decide": "Does this hold: Item 20 founded Item 2?"
+  },
+  "a_founded_20_3": {
+   "decide": "Does this hold: Item 20 founded Item 3?"
+  },
+  "a_founded_20_4": {
+   "decide": "Does this hold: Item 20 founded Item 4?"
+  },
+  "a_founded_20_5": {
+   "decide": "Does this hold: Item 20 founded Item 5?"
+  },
+  "a_founded_20_6": {
+   "decide": "Does this hold: Item 20 founded Item 6?"
+  },
+  "a_founded_20_7": {
+   "decide": "Does this hold: Item 20 founded Item 7?"
+  },
+  "a_founded_20_8": {
+   "decide": "Does this hold: Item 20 founded Item 8?"
+  },
+  "a_founded_20_9": {
+   "decide": "Does this hold: Item 20 founded Item 9?"
+  },
+  "a_founded_20_10": {
+   "decide": "Does this hold: Item 20 founded Item 10?"
+  },
+  "a_founded_20_11": {
+   "decide": "Does this hold: Item 20 founded Item 11?"
+  },
+  "a_founded_20_12": {
+   "decide": "Does this hold: Item 20 founded Item 12?"
+  },
+  "a_founded_20_13": {
+   "decide": "Does this hold: Item 20 founded Item 13?"
+  },
+  "a_founded_20_14": {
+   "decide": "Does this hold: Item 20 founded Item 14?"
+  },
+  "a_founded_20_15": {
+   "decide": "Does this hold: Item 20 founded Item 15?"
+  },
+  "a_founded_20_16": {
+   "decide": "Does this hold: Item 20 founded Item 16?"
+  },
+  "a_founded_20_17": {
+   "decide": "Does this hold: Item 20 founded Item 17?"
+  },
+  "a_founded_20_18": {
+   "decide": "Does this hold: Item 20 founded Item 18?"
+  },
+  "a_founded_20_19": {
+   "decide": "Does this hold: Item 20 founded Item 19?"
+  },
+  "a_founded_20_21": {
+   "decide": "Does this hold: Item 20 founded Item 21?"
+  },
+  "a_founded_20_22": {
+   "decide": "Does this hold: Item 20 founded Item 22?"
+  },
+  "a_founded_20_23": {
+   "decide": "Does this hold: Item 20 founded Item 23?"
+  },
+  "a_founded_20_24": {
+   "decide": "Does this hold: Item 20 founded Item 24?"
+  },
+  "a_founded_21_1": {
+   "decide": "Does this hold: Item 21 founded Item 1?"
+  },
+  "a_founded_21_2": {
+   "decide": "Does this hold: Item 21 founded Item 2?"
+  },
+  "a_founded_21_3": {
+   "decide": "Does this hold: Item 21 founded Item 3?"
+  },
+  "a_founded_21_4": {
+   "decide": "Does this hold: Item 21 founded Item 4?"
+  },
+  "a_founded_21_5": {
+   "decide": "Does this hold: Item 21 founded Item 5?"
+  },
+  "a_founded_21_6": {
+   "decide": "Does this hold: Item 21 founded Item 6?"
+  },
+  "a_founded_21_7": {
+   "decide": "Does this hold: Item 21 founded Item 7?"
+  },
+  "a_founded_21_8": {
+   "decide": "Does this hold: Item 21 founded Item 8?"
+  },
+  "a_founded_21_9": {
+   "decide": "Does this hold: Item 21 founded Item 9?"
+  },
+  "a_founded_21_10": {
+   "decide": "Does this hold: Item 21 founded Item 10?"
+  },
+  "a_founded_21_11": {
+   "decide": "Does this hold: Item 21 founded Item 11?"
+  },
+  "a_founded_21_12": {
+   "decide": "Does this hold: Item 21 founded Item 12?"
+  },
+  "a_founded_21_13": {
+   "decide": "Does this hold: Item 21 founded Item 13?"
+  },
+  "a_founded_21_14": {
+   "decide": "Does this hold: Item 21 founded Item 14?"
+  },
+  "a_founded_21_15": {
+   "decide": "Does this hold: Item 21 founded Item 15?"
+  },
+  "a_founded_21_16": {
+   "decide": "Does this hold: Item 21 founded Item 16?"
+  },
+  "a_founded_21_17": {
+   "decide": "Does this hold: Item 21 founded Item 17?"
+  },
+  "a_founded_21_18": {
+   "decide": "Does this hold: Item 21 founded Item 18?"
+  },
+  "a_founded_21_19": {
+   "decide": "Does this hold: Item 21 founded Item 19?"
+  },
+  "a_founded_21_20": {
+   "decide": "Does this hold: Item 21 founded Item 20?"
+  },
+  "a_founded_21_22": {
+   "decide": "Does this hold: Item 21 founded Item 22?"
+  },
+  "a_founded_21_23": {
+   "decide": "Does this hold: Item 21 founded Item 23?"
+  },
+  "a_founded_21_24": {
+   "decide": "Does this hold: Item 21 founded Item 24?"
+  },
+  "a_founded_22_1": {
+   "decide": "Does this hold: Item 22 founded Item 1?"
+  },
+  "a_founded_22_2": {
+   "decide": "Does this hold: Item 22 founded Item 2?"
+  },
+  "a_founded_22_3": {
+   "decide": "Does this hold: Item 22 founded Item 3?"
+  },
+  "a_founded_22_4": {
+   "decide": "Does this hold: Item 22 founded Item 4?"
+  },
+  "a_founded_22_5": {
+   "decide": "Does this hold: Item 22 founded Item 5?"
+  },
+  "a_founded_22_6": {
+   "decide": "Does this hold: Item 22 founded Item 6?"
+  },
+  "a_founded_22_7": {
+   "decide": "Does this hold: Item 22 founded Item 7?"
+  },
+  "a_founded_22_8": {
+   "decide": "Does this hold: Item 22 founded Item 8?"
+  },
+  "a_founded_22_9": {
+   "decide": "Does this hold: Item 22 founded Item 9?"
+  },
+  "a_founded_22_10": {
+   "decide": "Does this hold: Item 22 founded Item 10?"
+  },
+  "a_founded_22_11": {
+   "decide": "Does this hold: Item 22 founded Item 11?"
+  },
+  "a_founded_22_12": {
+   "decide": "Does this hold: Item 22 founded Item 12?"
+  },
+  "a_founded_22_13": {
+   "decide": "Does this hold: Item 22 founded Item 13?"
+  },
+  "a_founded_22_14": {
+   "decide": "Does this hold: Item 22 founded Item 14?"
+  },
+  "a_founded_22_15": {
+   "decide": "Does this hold: Item 22 founded Item 15?"
+  },
+  "a_founded_22_16": {
+   "decide": "Does this hold: Item 22 founded Item 16?"
+  },
+  "a_founded_22_17": {
+   "decide": "Does this hold: Item 22 founded Item 17?"
+  },
+  "a_founded_22_18": {
+   "decide": "Does this hold: Item 22 founded Item 18?"
+  },
+  "a_founded_22_19": {
+   "decide": "Does this hold: Item 22 founded Item 19?"
+  },
+  "a_founded_22_20": {
+   "decide": "Does this hold: Item 22 founded Item 20?"
+  },
+  "a_founded_22_21": {
+   "decide": "Does this hold: Item 22 founded Item 21?"
+  },
+  "a_founded_22_23": {
+   "decide": "Does this hold: Item 22 founded Item 23?"
+  },
+  "a_founded_22_24": {
+   "decide": "Does this hold: Item 22 founded Item 24?"
+  },
+  "a_founded_23_1": {
+   "decide": "Does this hold: Item 23 founded Item 1?"
+  },
+  "a_founded_23_2": {
+   "decide": "Does this hold: Item 23 founded Item 2?"
+  },
+  "a_founded_23_3": {
+   "decide": "Does this hold: Item 23 founded Item 3?"
+  },
+  "a_founded_23_4": {
+   "decide": "Does this hold: Item 23 founded Item 4?"
+  },
+  "a_founded_23_5": {
+   "decide": "Does this hold: Item 23 founded Item 5?"
+  },
+  "a_founded_23_6": {
+   "decide": "Does this hold: Item 23 founded Item 6?"
+  },
+  "a_founded_23_7": {
+   "decide": "Does this hold: Item 23 founded Item 7?"
+  },
+  "a_founded_23_8": {
+   "decide": "Does this hold: Item 23 founded Item 8?"
+  },
+  "a_founded_23_9": {
+   "decide": "Does this hold: Item 23 founded Item 9?"
+  },
+  "a_founded_23_10": {
+   "decide": "Does this hold: Item 23 founded Item 10?"
+  },
+  "a_founded_23_11": {
+   "decide": "Does this hold: Item 23 founded Item 11?"
+  },
+  "a_founded_23_12": {
+   "decide": "Does this hold: Item 23 founded Item 12?"
+  },
+  "a_founded_23_13": {
+   "decide": "Does this hold: Item 23 founded Item 13?"
+  },
+  "a_founded_23_14": {
+   "decide": "Does this hold: Item 23 founded Item 14?"
+  },
+  "a_founded_23_15": {
+   "decide": "Does this hold: Item 23 founded Item 15?"
+  },
+  "a_founded_23_16": {
+   "decide": "Does this hold: Item 23 founded Item 16?"
+  },
+  "a_founded_23_17": {
+   "decide": "Does this hold: Item 23 founded Item 17?"
+  },
+  "a_founded_23_18": {
+   "decide": "Does this hold: Item 23 founded Item 18?"
+  },
+  "a_founded_23_19": {
+   "decide": "Does this hold: Item 23 founded Item 19?"
+  },
+  "a_founded_23_20": {
+   "decide": "Does this hold: Item 23 founded Item 20?"
+  },
+  "a_founded_23_21": {
+   "decide": "Does this hold: Item 23 founded Item 21?"
+  },
+  "a_founded_23_22": {
+   "decide": "Does this hold: Item 23 founded Item 22?"
+  },
+  "a_founded_23_24": {
+   "decide": "Does this hold: Item 23 founded Item 24?"
+  },
+  "a_founded_24_1": {
+   "decide": "Does this hold: Item 24 founded Item 1?"
+  },
+  "a_founded_24_2": {
+   "decide": "Does this hold: Item 24 founded Item 2?"
+  },
+  "a_founded_24_3": {
+   "decide": "Does this hold: Item 24 founded Item 3?"
+  },
+  "a_founded_24_4": {
+   "decide": "Does this hold: Item 24 founded Item 4?"
+  },
+  "a_founded_24_5": {
+   "decide": "Does this hold: Item 24 founded Item 5?"
+  },
+  "a_founded_24_6": {
+   "decide": "Does this hold: Item 24 founded Item 6?"
+  },
+  "a_founded_24_7": {
+   "decide": "Does this hold: Item 24 founded Item 7?"
+  },
+  "a_founded_24_8": {
+   "decide": "Does this hold: Item 24 founded Item 8?"
+  },
+  "a_founded_24_9": {
+   "decide": "Does this hold: Item 24 founded Item 9?"
+  },
+  "a_founded_24_10": {
+   "decide": "Does this hold: Item 24 founded Item 10?"
+  },
+  "a_founded_24_11": {
+   "decide": "Does this hold: Item 24 founded Item 11?"
+  },
+  "a_founded_24_12": {
+   "decide": "Does this hold: Item 24 founded Item 12?"
+  },
+  "a_founded_24_13": {
+   "decide": "Does this hold: Item 24 founded Item 13?"
+  },
+  "a_founded_24_14": {
+   "decide": "Does this hold: Item 24 founded Item 14?"
+  },
+  "a_founded_24_15": {
+   "decide": "Does this hold: Item 24 founded Item 15?"
+  },
+  "a_founded_24_16": {
+   "decide": "Does this hold: Item 24 founded Item 16?"
+  },
+  "a_founded_24_17": {
+   "decide": "Does this hold: Item 24 founded Item 17?"
+  },
+  "a_founded_24_18": {
+   "decide": "Does this hold: Item 24 founded Item 18?"
+  },
+  "a_founded_24_19": {
+   "decide": "Does this hold: Item 24 founded Item 19?"
+  },
+  "a_founded_24_20": {
+   "decide": "Does this hold: Item 24 founded Item 20?"
+  },
+  "a_founded_24_21": {
+   "decide": "Does this hold: Item 24 founded Item 21?"
+  },
+  "a_founded_24_22": {
+   "decide": "Does this hold: Item 24 founded Item 22?"
+  },
+  "a_founded_24_23": {
+   "decide": "Does this hold: Item 24 founded Item 23?"
+  },
+  "a_works_for_1_2": {
+   "decide": "Does this hold: Item 1 works for Item 2?"
+  },
+  "a_works_for_1_3": {
+   "decide": "Does this hold: Item 1 works for Item 3?"
+  },
+  "a_works_for_1_4": {
+   "decide": "Does this hold: Item 1 works for Item 4?"
+  },
+  "a_works_for_1_5": {
+   "decide": "Does this hold: Item 1 works for Item 5?"
+  },
+  "a_works_for_1_6": {
+   "decide": "Does this hold: Item 1 works for Item 6?"
+  },
+  "a_works_for_1_7": {
+   "decide": "Does this hold: Item 1 works for Item 7?"
+  },
+  "a_works_for_1_8": {
+   "decide": "Does this hold: Item 1 works for Item 8?"
+  },
+  "a_works_for_1_9": {
+   "decide": "Does this hold: Item 1 works for Item 9?"
+  },
+  "a_works_for_1_10": {
+   "decide": "Does this hold: Item 1 works for Item 10?"
+  },
+  "a_works_for_1_11": {
+   "decide": "Does this hold: Item 1 works for Item 11?"
+  },
+  "a_works_for_1_12": {
+   "decide": "Does this hold: Item 1 works for Item 12?"
+  },
+  "a_works_for_1_13": {
+   "decide": "Does this hold: Item 1 works for Item 13?"
+  },
+  "a_works_for_1_14": {
+   "decide": "Does this hold: Item 1 works for Item 14?"
+  },
+  "a_works_for_1_15": {
+   "decide": "Does this hold: Item 1 works for Item 15?"
+  },
+  "a_works_for_1_16": {
+   "decide": "Does this hold: Item 1 works for Item 16?"
+  },
+  "a_works_for_1_17": {
+   "decide": "Does this hold: Item 1 works for Item 17?"
+  },
+  "a_works_for_1_18": {
+   "decide": "Does this hold: Item 1 works for Item 18?"
+  },
+  "a_works_for_1_19": {
+   "decide": "Does this hold: Item 1 works for Item 19?"
+  },
+  "a_works_for_1_20": {
+   "decide": "Does this hold: Item 1 works for Item 20?"
+  },
+  "a_works_for_1_21": {
+   "decide": "Does this hold: Item 1 works for Item 21?"
+  },
+  "a_works_for_1_22": {
+   "decide": "Does this hold: Item 1 works for Item 22?"
+  },
+  "a_works_for_1_23": {
+   "decide": "Does this hold: Item 1 works for Item 23?"
+  },
+  "a_works_for_1_24": {
+   "decide": "Does this hold: Item 1 works for Item 24?"
+  },
+  "a_works_for_2_1": {
+   "decide": "Does this hold: Item 2 works for Item 1?"
+  },
+  "a_works_for_2_3": {
+   "decide": "Does this hold: Item 2 works for Item 3?"
+  },
+  "a_works_for_2_4": {
+   "decide": "Does this hold: Item 2 works for Item 4?"
+  },
+  "a_works_for_2_5": {
+   "decide": "Does this hold: Item 2 works for Item 5?"
+  },
+  "a_works_for_2_6": {
+   "decide": "Does this hold: Item 2 works for Item 6?"
+  },
+  "a_works_for_2_7": {
+   "decide": "Does this hold: Item 2 works for Item 7?"
+  },
+  "a_works_for_2_8": {
+   "decide": "Does this hold: Item 2 works for Item 8?"
+  },
+  "a_works_for_2_9": {
+   "decide": "Does this hold: Item 2 works for Item 9?"
+  },
+  "a_works_for_2_10": {
+   "decide": "Does this hold: Item 2 works for Item 10?"
+  },
+  "a_works_for_2_11": {
+   "decide": "Does this hold: Item 2 works for Item 11?"
+  },
+  "a_works_for_2_12": {
+   "decide": "Does this hold: Item 2 works for Item 12?"
+  },
+  "a_works_for_2_13": {
+   "decide": "Does this hold: Item 2 works for Item 13?"
+  },
+  "a_works_for_2_14": {
+   "decide": "Does this hold: Item 2 works for Item 14?"
+  },
+  "a_works_for_2_15": {
+   "decide": "Does this hold: Item 2 works for Item 15?"
+  },
+  "a_works_for_2_16": {
+   "decide": "Does this hold: Item 2 works for Item 16?"
+  },
+  "a_works_for_2_17": {
+   "decide": "Does this hold: Item 2 works for Item 17?"
+  },
+  "a_works_for_2_18": {
+   "decide": "Does this hold: Item 2 works for Item 18?"
+  },
+  "a_works_for_2_19": {
+   "decide": "Does this hold: Item 2 works for Item 19?"
+  },
+  "a_works_for_2_20": {
+   "decide": "Does this hold: Item 2 works for Item 20?"
+  },
+  "a_works_for_2_21": {
+   "decide": "Does this hold: Item 2 works for Item 21?"
+  },
+  "a_works_for_2_22": {
+   "decide": "Does this hold: Item 2 works for Item 22?"
+  },
+  "a_works_for_2_23": {
+   "decide": "Does this hold: Item 2 works for Item 23?"
+  },
+  "a_works_for_2_24": {
+   "decide": "Does this hold: Item 2 works for Item 24?"
+  },
+  "a_works_for_3_1": {
+   "decide": "Does this hold: Item 3 works for Item 1?"
+  },
+  "a_works_for_3_2": {
+   "decide": "Does this hold: Item 3 works for Item 2?"
+  },
+  "a_works_for_3_4": {
+   "decide": "Does this hold: Item 3 works for Item 4?"
+  },
+  "a_works_for_3_5": {
+   "decide": "Does this hold: Item 3 works for Item 5?"
+  },
+  "a_works_for_3_6": {
+   "decide": "Does this hold: Item 3 works for Item 6?"
+  },
+  "a_works_for_3_7": {
+   "decide": "Does this hold: Item 3 works for Item 7?"
+  },
+  "a_works_for_3_8": {
+   "decide": "Does this hold: Item 3 works for Item 8?"
+  },
+  "a_works_for_3_9": {
+   "decide": "Does this hold: Item 3 works for Item 9?"
+  },
+  "a_works_for_3_10": {
+   "decide": "Does this hold: Item 3 works for Item 10?"
+  },
+  "a_works_for_3_11": {
+   "decide": "Does this hold: Item 3 works for Item 11?"
+  },
+  "a_works_for_3_12": {
+   "decide": "Does this hold: Item 3 works for Item 12?"
+  },
+  "a_works_for_3_13": {
+   "decide": "Does this hold: Item 3 works for Item 13?"
+  },
+  "a_works_for_3_14": {
+   "decide": "Does this hold: Item 3 works for Item 14?"
+  },
+  "a_works_for_3_15": {
+   "decide": "Does this hold: Item 3 works for Item 15?"
+  },
+  "a_works_for_3_16": {
+   "decide": "Does this hold: Item 3 works for Item 16?"
+  },
+  "a_works_for_3_17": {
+   "decide": "Does this hold: Item 3 works for Item 17?"
+  },
+  "a_works_for_3_18": {
+   "decide": "Does this hold: Item 3 works for Item 18?"
+  },
+  "a_works_for_3_19": {
+   "decide": "Does this hold: Item 3 works for Item 19?"
+  },
+  "a_works_for_3_20": {
+   "decide": "Does this hold: Item 3 works for Item 20?"
+  },
+  "a_works_for_3_21": {
+   "decide": "Does this hold: Item 3 works for Item 21?"
+  },
+  "a_works_for_3_22": {
+   "decide": "Does this hold: Item 3 works for Item 22?"
+  },
+  "a_works_for_3_23": {
+   "decide": "Does this hold: Item 3 works for Item 23?"
+  },
+  "a_works_for_3_24": {
+   "decide": "Does this hold: Item 3 works for Item 24?"
+  },
+  "a_works_for_4_1": {
+   "decide": "Does this hold: Item 4 works for Item 1?"
+  },
+  "a_works_for_4_2": {
+   "decide": "Does this hold: Item 4 works for Item 2?"
+  },
+  "a_works_for_4_3": {
+   "decide": "Does this hold: Item 4 works for Item 3?"
+  },
+  "a_works_for_4_5": {
+   "decide": "Does this hold: Item 4 works for Item 5?"
+  },
+  "a_works_for_4_6": {
+   "decide": "Does this hold: Item 4 works for Item 6?"
+  },
+  "a_works_for_4_7": {
+   "decide": "Does this hold: Item 4 works for Item 7?"
+  },
+  "a_works_for_4_8": {
+   "decide": "Does this hold: Item 4 works for Item 8?"
+  },
+  "a_works_for_4_9": {
+   "decide": "Does this hold: Item 4 works for Item 9?"
+  },
+  "a_works_for_4_10": {
+   "decide": "Does this hold: Item 4 works for Item 10?"
+  },
+  "a_works_for_4_11": {
+   "decide": "Does this hold: Item 4 works for Item 11?"
+  },
+  "a_works_for_4_12": {
+   "decide": "Does this hold: Item 4 works for Item 12?"
+  },
+  "a_works_for_4_13": {
+   "decide": "Does this hold: Item 4 works for Item 13?"
+  },
+  "a_works_for_4_14": {
+   "decide": "Does this hold: Item 4 works for Item 14?"
+  },
+  "a_works_for_4_15": {
+   "decide": "Does this hold: Item 4 works for Item 15?"
+  },
+  "a_works_for_4_16": {
+   "decide": "Does this hold: Item 4 works for Item 16?"
+  },
+  "a_works_for_4_17": {
+   "decide": "Does this hold: Item 4 works for Item 17?"
+  },
+  "a_works_for_4_18": {
+   "decide": "Does this hold: Item 4 works for Item 18?"
+  },
+  "a_works_for_4_19": {
+   "decide": "Does this hold: Item 4 works for Item 19?"
+  },
+  "a_works_for_4_20": {
+   "decide": "Does this hold: Item 4 works for Item 20?"
+  },
+  "a_works_for_4_21": {
+   "decide": "Does this hold: Item 4 works for Item 21?"
+  },
+  "a_works_for_4_22": {
+   "decide": "Does this hold: Item 4 works for Item 22?"
+  },
+  "a_works_for_4_23": {
+   "decide": "Does this hold: Item 4 works for Item 23?"
+  },
+  "a_works_for_4_24": {
+   "decide": "Does this hold: Item 4 works for Item 24?"
+  },
+  "a_works_for_5_1": {
+   "decide": "Does this hold: Item 5 works for Item 1?"
+  },
+  "a_works_for_5_2": {
+   "decide": "Does this hold: Item 5 works for Item 2?"
+  },
+  "a_works_for_5_3": {
+   "decide": "Does this hold: Item 5 works for Item 3?"
+  },
+  "a_works_for_5_4": {
+   "decide": "Does this hold: Item 5 works for Item 4?"
+  },
+  "a_works_for_5_6": {
+   "decide": "Does this hold: Item 5 works for Item 6?"
+  },
+  "a_works_for_5_7": {
+   "decide": "Does this hold: Item 5 works for Item 7?"
+  },
+  "a_works_for_5_8": {
+   "decide": "Does this hold: Item 5 works for Item 8?"
+  },
+  "a_works_for_5_9": {
+   "decide": "Does this hold: Item 5 works for Item 9?"
+  },
+  "a_works_for_5_10": {
+   "decide": "Does this hold: Item 5 works for Item 10?"
+  },
+  "a_works_for_5_11": {
+   "decide": "Does this hold: Item 5 works for Item 11?"
+  },
+  "a_works_for_5_12": {
+   "decide": "Does this hold: Item 5 works for Item 12?"
+  },
+  "a_works_for_5_13": {
+   "decide": "Does this hold: Item 5 works for Item 13?"
+  },
+  "a_works_for_5_14": {
+   "decide": "Does this hold: Item 5 works for Item 14?"
+  },
+  "a_works_for_5_15": {
+   "decide": "Does this hold: Item 5 works for Item 15?"
+  },
+  "a_works_for_5_16": {
+   "decide": "Does this hold: Item 5 works for Item 16?"
+  },
+  "a_works_for_5_17": {
+   "decide": "Does this hold: Item 5 works for Item 17?"
+  },
+  "a_works_for_5_18": {
+   "decide": "Does this hold: Item 5 works for Item 18?"
+  },
+  "a_works_for_5_19": {
+   "decide": "Does this hold: Item 5 works for Item 19?"
+  },
+  "a_works_for_5_20": {
+   "decide": "Does this hold: Item 5 works for Item 20?"
+  },
+  "a_works_for_5_21": {
+   "decide": "Does this hold: Item 5 works for Item 21?"
+  },
+  "a_works_for_5_22": {
+   "decide": "Does this hold: Item 5 works for Item 22?"
+  },
+  "a_works_for_5_23": {
+   "decide": "Does this hold: Item 5 works for Item 23?"
+  },
+  "a_works_for_5_24": {
+   "decide": "Does this hold: Item 5 works for Item 24?"
+  },
+  "a_works_for_6_1": {
+   "decide": "Does this hold: Item 6 works for Item 1?"
+  },
+  "a_works_for_6_2": {
+   "decide": "Does this hold: Item 6 works for Item 2?"
+  },
+  "a_works_for_6_3": {
+   "decide": "Does this hold: Item 6 works for Item 3?"
+  },
+  "a_works_for_6_4": {
+   "decide": "Does this hold: Item 6 works for Item 4?"
+  },
+  "a_works_for_6_5": {
+   "decide": "Does this hold: Item 6 works for Item 5?"
+  },
+  "a_works_for_6_7": {
+   "decide": "Does this hold: Item 6 works for Item 7?"
+  },
+  "a_works_for_6_8": {
+   "decide": "Does this hold: Item 6 works for Item 8?"
+  },
+  "a_works_for_6_9": {
+   "decide": "Does this hold: Item 6 works for Item 9?"
+  },
+  "a_works_for_6_10": {
+   "decide": "Does this hold: Item 6 works for Item 10?"
+  },
+  "a_works_for_6_11": {
+   "decide": "Does this hold: Item 6 works for Item 11?"
+  },
+  "a_works_for_6_12": {
+   "decide": "Does this hold: Item 6 works for Item 12?"
+  },
+  "a_works_for_6_13": {
+   "decide": "Does this hold: Item 6 works for Item 13?"
+  },
+  "a_works_for_6_14": {
+   "decide": "Does this hold: Item 6 works for Item 14?"
+  },
+  "a_works_for_6_15": {
+   "decide": "Does this hold: Item 6 works for Item 15?"
+  },
+  "a_works_for_6_16": {
+   "decide": "Does this hold: Item 6 works for Item 16?"
+  },
+  "a_works_for_6_17": {
+   "decide": "Does this hold: Item 6 works for Item 17?"
+  },
+  "a_works_for_6_18": {
+   "decide": "Does this hold: Item 6 works for Item 18?"
+  },
+  "a_works_for_6_19": {
+   "decide": "Does this hold: Item 6 works for Item 19?"
+  },
+  "a_works_for_6_20": {
+   "decide": "Does this hold: Item 6 works for Item 20?"
+  },
+  "a_works_for_6_21": {
+   "decide": "Does this hold: Item 6 works for Item 21?"
+  },
+  "a_works_for_6_22": {
+   "decide": "Does this hold: Item 6 works for Item 22?"
+  },
+  "a_works_for_6_23": {
+   "decide": "Does this hold: Item 6 works for Item 23?"
+  },
+  "a_works_for_6_24": {
+   "decide": "Does this hold: Item 6 works for Item 24?"
+  },
+  "a_works_for_7_1": {
+   "decide": "Does this hold: Item 7 works for Item 1?"
+  },
+  "a_works_for_7_2": {
+   "decide": "Does this hold: Item 7 works for Item 2?"
+  },
+  "a_works_for_7_3": {
+   "decide": "Does this hold: Item 7 works for Item 3?"
+  },
+  "a_works_for_7_4": {
+   "decide": "Does this hold: Item 7 works for Item 4?"
+  },
+  "a_works_for_7_5": {
+   "decide": "Does this hold: Item 7 works for Item 5?"
+  },
+  "a_works_for_7_6": {
+   "decide": "Does this hold: Item 7 works for Item 6?"
+  },
+  "a_works_for_7_8": {
+   "decide": "Does this hold: Item 7 works for Item 8?"
+  },
+  "a_works_for_7_9": {
+   "decide": "Does this hold: Item 7 works for Item 9?"
+  },
+  "a_works_for_7_10": {
+   "decide": "Does this hold: Item 7 works for Item 10?"
+  },
+  "a_works_for_7_11": {
+   "decide": "Does this hold: Item 7 works for Item 11?"
+  },
+  "a_works_for_7_12": {
+   "decide": "Does this hold: Item 7 works for Item 12?"
+  },
+  "a_works_for_7_13": {
+   "decide": "Does this hold: Item 7 works for Item 13?"
+  },
+  "a_works_for_7_14": {
+   "decide": "Does this hold: Item 7 works for Item 14?"
+  },
+  "a_works_for_7_15": {
+   "decide": "Does this hold: Item 7 works for Item 15?"
+  },
+  "a_works_for_7_16": {
+   "decide": "Does this hold: Item 7 works for Item 16?"
+  },
+  "a_works_for_7_17": {
+   "decide": "Does this hold: Item 7 works for Item 17?"
+  },
+  "a_works_for_7_18": {
+   "decide": "Does this hold: Item 7 works for Item 18?"
+  },
+  "a_works_for_7_19": {
+   "decide": "Does this hold: Item 7 works for Item 19?"
+  },
+  "a_works_for_7_20": {
+   "decide": "Does this hold: Item 7 works for Item 20?"
+  },
+  "a_works_for_7_21": {
+   "decide": "Does this hold: Item 7 works for Item 21?"
+  },
+  "a_works_for_7_22": {
+   "decide": "Does this hold: Item 7 works for Item 22?"
+  },
+  "a_works_for_7_23": {
+   "decide": "Does this hold: Item 7 works for Item 23?"
+  },
+  "a_works_for_7_24": {
+   "decide": "Does this hold: Item 7 works for Item 24?"
+  },
+  "a_works_for_8_1": {
+   "decide": "Does this hold: Item 8 works for Item 1?"
+  },
+  "a_works_for_8_2": {
+   "decide": "Does this hold: Item 8 works for Item 2?"
+  },
+  "a_works_for_8_3": {
+   "decide": "Does this hold: Item 8 works for Item 3?"
+  },
+  "a_works_for_8_4": {
+   "decide": "Does this hold: Item 8 works for Item 4?"
+  },
+  "a_works_for_8_5": {
+   "decide": "Does this hold: Item 8 works for Item 5?"
+  },
+  "a_works_for_8_6": {
+   "decide": "Does this hold: Item 8 works for Item 6?"
+  },
+  "a_works_for_8_7": {
+   "decide": "Does this hold: Item 8 works for Item 7?"
+  },
+  "a_works_for_8_9": {
+   "decide": "Does this hold: Item 8 works for Item 9?"
+  },
+  "a_works_for_8_10": {
+   "decide": "Does this hold: Item 8 works for Item 10?"
+  },
+  "a_works_for_8_11": {
+   "decide": "Does this hold: Item 8 works for Item 11?"
+  },
+  "a_works_for_8_12": {
+   "decide": "Does this hold: Item 8 works for Item 12?"
+  },
+  "a_works_for_8_13": {
+   "decide": "Does this hold: Item 8 works for Item 13?"
+  },
+  "a_works_for_8_14": {
+   "decide": "Does this hold: Item 8 works for Item 14?"
+  },
+  "a_works_for_8_15": {
+   "decide": "Does this hold: Item 8 works for Item 15?"
+  },
+  "a_works_for_8_16": {
+   "decide": "Does this hold: Item 8 works for Item 16?"
+  },
+  "a_works_for_8_17": {
+   "decide": "Does this hold: Item 8 works for Item 17?"
+  },
+  "a_works_for_8_18": {
+   "decide": "Does this hold: Item 8 works for Item 18?"
+  },
+  "a_works_for_8_19": {
+   "decide": "Does this hold: Item 8 works for Item 19?"
+  },
+  "a_works_for_8_20": {
+   "decide": "Does this hold: Item 8 works for Item 20?"
+  },
+  "a_works_for_8_21": {
+   "decide": "Does this hold: Item 8 works for Item 21?"
+  },
+  "a_works_for_8_22": {
+   "decide": "Does this hold: Item 8 works for Item 22?"
+  },
+  "a_works_for_8_23": {
+   "decide": "Does this hold: Item 8 works for Item 23?"
+  },
+  "a_works_for_8_24": {
+   "decide": "Does this hold: Item 8 works for Item 24?"
+  },
+  "a_works_for_9_1": {
+   "decide": "Does this hold: Item 9 works for Item 1?"
+  },
+  "a_works_for_9_2": {
+   "decide": "Does this hold: Item 9 works for Item 2?"
+  },
+  "a_works_for_9_3": {
+   "decide": "Does this hold: Item 9 works for Item 3?"
+  },
+  "a_works_for_9_4": {
+   "decide": "Does this hold: Item 9 works for Item 4?"
+  },
+  "a_works_for_9_5": {
+   "decide": "Does this hold: Item 9 works for Item 5?"
+  },
+  "a_works_for_9_6": {
+   "decide": "Does this hold: Item 9 works for Item 6?"
+  },
+  "a_works_for_9_7": {
+   "decide": "Does this hold: Item 9 works for Item 7?"
+  },
+  "a_works_for_9_8": {
+   "decide": "Does this hold: Item 9 works for Item 8?"
+  },
+  "a_works_for_9_10": {
+   "decide": "Does this hold: Item 9 works for Item 10?"
+  },
+  "a_works_for_9_11": {
+   "decide": "Does this hold: Item 9 works for Item 11?"
+  },
+  "a_works_for_9_12": {
+   "decide": "Does this hold: Item 9 works for Item 12?"
+  },
+  "a_works_for_9_13": {
+   "decide": "Does this hold: Item 9 works for Item 13?"
+  },
+  "a_works_for_9_14": {
+   "decide": "Does this hold: Item 9 works for Item 14?"
+  },
+  "a_works_for_9_15": {
+   "decide": "Does this hold: Item 9 works for Item 15?"
+  },
+  "a_works_for_9_16": {
+   "decide": "Does this hold: Item 9 works for Item 16?"
+  },
+  "a_works_for_9_17": {
+   "decide": "Does this hold: Item 9 works for Item 17?"
+  },
+  "a_works_for_9_18": {
+   "decide": "Does this hold: Item 9 works for Item 18?"
+  },
+  "a_works_for_9_19": {
+   "decide": "Does this hold: Item 9 works for Item 19?"
+  },
+  "a_works_for_9_20": {
+   "decide": "Does this hold: Item 9 works for Item 20?"
+  },
+  "a_works_for_9_21": {
+   "decide": "Does this hold: Item 9 works for Item 21?"
+  },
+  "a_works_for_9_22": {
+   "decide": "Does this hold: Item 9 works for Item 22?"
+  },
+  "a_works_for_9_23": {
+   "decide": "Does this hold: Item 9 works for Item 23?"
+  },
+  "a_works_for_9_24": {
+   "decide": "Does this hold: Item 9 works for Item 24?"
+  },
+  "a_works_for_10_1": {
+   "decide": "Does this hold: Item 10 works for Item 1?"
+  },
+  "a_works_for_10_2": {
+   "decide": "Does this hold: Item 10 works for Item 2?"
+  },
+  "a_works_for_10_3": {
+   "decide": "Does this hold: Item 10 works for Item 3?"
+  },
+  "a_works_for_10_4": {
+   "decide": "Does this hold: Item 10 works for Item 4?"
+  },
+  "a_works_for_10_5": {
+   "decide": "Does this hold: Item 10 works for Item 5?"
+  },
+  "a_works_for_10_6": {
+   "decide": "Does this hold: Item 10 works for Item 6?"
+  },
+  "a_works_for_10_7": {
+   "decide": "Does this hold: Item 10 works for Item 7?"
+  },
+  "a_works_for_10_8": {
+   "decide": "Does this hold: Item 10 works for Item 8?"
+  },
+  "a_works_for_10_9": {
+   "decide": "Does this hold: Item 10 works for Item 9?"
+  },
+  "a_works_for_10_11": {
+   "decide": "Does this hold: Item 10 works for Item 11?"
+  },
+  "a_works_for_10_12": {
+   "decide": "Does this hold: Item 10 works for Item 12?"
+  },
+  "a_works_for_10_13": {
+   "decide": "Does this hold: Item 10 works for Item 13?"
+  },
+  "a_works_for_10_14": {
+   "decide": "Does this hold: Item 10 works for Item 14?"
+  },
+  "a_works_for_10_15": {
+   "decide": "Does this hold: Item 10 works for Item 15?"
+  },
+  "a_works_for_10_16": {
+   "decide": "Does this hold: Item 10 works for Item 16?"
+  },
+  "a_works_for_10_17": {
+   "decide": "Does this hold: Item 10 works for Item 17?"
+  },
+  "a_works_for_10_18": {
+   "decide": "Does this hold: Item 10 works for Item 18?"
+  },
+  "a_works_for_10_19": {
+   "decide": "Does this hold: Item 10 works for Item 19?"
+  },
+  "a_works_for_10_20": {
+   "decide": "Does this hold: Item 10 works for Item 20?"
+  },
+  "a_works_for_10_21": {
+   "decide": "Does this hold: Item 10 works for Item 21?"
+  },
+  "a_works_for_10_22": {
+   "decide": "Does this hold: Item 10 works for Item 22?"
+  },
+  "a_works_for_10_23": {
+   "decide": "Does this hold: Item 10 works for Item 23?"
+  },
+  "a_works_for_10_24": {
+   "decide": "Does this hold: Item 10 works for Item 24?"
+  },
+  "a_works_for_11_1": {
+   "decide": "Does this hold: Item 11 works for Item 1?"
+  },
+  "a_works_for_11_2": {
+   "decide": "Does this hold: Item 11 works for Item 2?"
+  },
+  "a_works_for_11_3": {
+   "decide": "Does this hold: Item 11 works for Item 3?"
+  },
+  "a_works_for_11_4": {
+   "decide": "Does this hold: Item 11 works for Item 4?"
+  },
+  "a_works_for_11_5": {
+   "decide": "Does this hold: Item 11 works for Item 5?"
+  },
+  "a_works_for_11_6": {
+   "decide": "Does this hold: Item 11 works for Item 6?"
+  },
+  "a_works_for_11_7": {
+   "decide": "Does this hold: Item 11 works for Item 7?"
+  },
+  "a_works_for_11_8": {
+   "decide": "Does this hold: Item 11 works for Item 8?"
+  },
+  "a_works_for_11_9": {
+   "decide": "Does this hold: Item 11 works for Item 9?"
+  },
+  "a_works_for_11_10": {
+   "decide": "Does this hold: Item 11 works for Item 10?"
+  },
+  "a_works_for_11_12": {
+   "decide": "Does this hold: Item 11 works for Item 12?"
+  },
+  "a_works_for_11_13": {
+   "decide": "Does this hold: Item 11 works for Item 13?"
+  },
+  "a_works_for_11_14": {
+   "decide": "Does this hold: Item 11 works for Item 14?"
+  },
+  "a_works_for_11_15": {
+   "decide": "Does this hold: Item 11 works for Item 15?"
+  },
+  "a_works_for_11_16": {
+   "decide": "Does this hold: Item 11 works for Item 16?"
+  },
+  "a_works_for_11_17": {
+   "decide": "Does this hold: Item 11 works for Item 17?"
+  },
+  "a_works_for_11_18": {
+   "decide": "Does this hold: Item 11 works for Item 18?"
+  },
+  "a_works_for_11_19": {
+   "decide": "Does this hold: Item 11 works for Item 19?"
+  },
+  "a_works_for_11_20": {
+   "decide": "Does this hold: Item 11 works for Item 20?"
+  },
+  "a_works_for_11_21": {
+   "decide": "Does this hold: Item 11 works for Item 21?"
+  },
+  "a_works_for_11_22": {
+   "decide": "Does this hold: Item 11 works for Item 22?"
+  },
+  "a_works_for_11_23": {
+   "decide": "Does this hold: Item 11 works for Item 23?"
+  },
+  "a_works_for_11_24": {
+   "decide": "Does this hold: Item 11 works for Item 24?"
+  },
+  "a_works_for_12_1": {
+   "decide": "Does this hold: Item 12 works for Item 1?"
+  },
+  "a_works_for_12_2": {
+   "decide": "Does this hold: Item 12 works for Item 2?"
+  },
+  "a_works_for_12_3": {
+   "decide": "Does this hold: Item 12 works for Item 3?"
+  },
+  "a_works_for_12_4": {
+   "decide": "Does this hold: Item 12 works for Item 4?"
+  },
+  "a_works_for_12_5": {
+   "decide": "Does this hold: Item 12 works for Item 5?"
+  },
+  "a_works_for_12_6": {
+   "decide": "Does this hold: Item 12 works for Item 6?"
+  },
+  "a_works_for_12_7": {
+   "decide": "Does this hold: Item 12 works for Item 7?"
+  },
+  "a_works_for_12_8": {
+   "decide": "Does this hold: Item 12 works for Item 8?"
+  },
+  "a_works_for_12_9": {
+   "decide": "Does this hold: Item 12 works for Item 9?"
+  },
+  "a_works_for_12_10": {
+   "decide": "Does this hold: Item 12 works for Item 10?"
+  },
+  "a_works_for_12_11": {
+   "decide": "Does this hold: Item 12 works for Item 11?"
+  },
+  "a_works_for_12_13": {
+   "decide": "Does this hold: Item 12 works for Item 13?"
+  },
+  "a_works_for_12_14": {
+   "decide": "Does this hold: Item 12 works for Item 14?"
+  },
+  "a_works_for_12_15": {
+   "decide": "Does this hold: Item 12 works for Item 15?"
+  },
+  "a_works_for_12_16": {
+   "decide": "Does this hold: Item 12 works for Item 16?"
+  },
+  "a_works_for_12_17": {
+   "decide": "Does this hold: Item 12 works for Item 17?"
+  },
+  "a_works_for_12_18": {
+   "decide": "Does this hold: Item 12 works for Item 18?"
+  },
+  "a_works_for_12_19": {
+   "decide": "Does this hold: Item 12 works for Item 19?"
+  },
+  "a_works_for_12_20": {
+   "decide": "Does this hold: Item 12 works for Item 20?"
+  },
+  "a_works_for_12_21": {
+   "decide": "Does this hold: Item 12 works for Item 21?"
+  },
+  "a_works_for_12_22": {
+   "decide": "Does this hold: Item 12 works for Item 22?"
+  },
+  "a_works_for_12_23": {
+   "decide": "Does this hold: Item 12 works for Item 23?"
+  },
+  "a_works_for_12_24": {
+   "decide": "Does this hold: Item 12 works for Item 24?"
+  },
+  "a_works_for_13_1": {
+   "decide": "Does this hold: Item 13 works for Item 1?"
+  },
+  "a_works_for_13_2": {
+   "decide": "Does this hold: Item 13 works for Item 2?"
+  },
+  "a_works_for_13_3": {
+   "decide": "Does this hold: Item 13 works for Item 3?"
+  },
+  "a_works_for_13_4": {
+   "decide": "Does this hold: Item 13 works for Item 4?"
+  },
+  "a_works_for_13_5": {
+   "decide": "Does this hold: Item 13 works for Item 5?"
+  },
+  "a_works_for_13_6": {
+   "decide": "Does this hold: Item 13 works for Item 6?"
+  },
+  "a_works_for_13_7": {
+   "decide": "Does this hold: Item 13 works for Item 7?"
+  },
+  "a_works_for_13_8": {
+   "decide": "Does this hold: Item 13 works for Item 8?"
+  },
+  "a_works_for_13_9": {
+   "decide": "Does this hold: Item 13 works for Item 9?"
+  },
+  "a_works_for_13_10": {
+   "decide": "Does this hold: Item 13 works for Item 10?"
+  },
+  "a_works_for_13_11": {
+   "decide": "Does this hold: Item 13 works for Item 11?"
+  },
+  "a_works_for_13_12": {
+   "decide": "Does this hold: Item 13 works for Item 12?"
+  },
+  "a_works_for_13_14": {
+   "decide": "Does this hold: Item 13 works for Item 14?"
+  },
+  "a_works_for_13_15": {
+   "decide": "Does this hold: Item 13 works for Item 15?"
+  },
+  "a_works_for_13_16": {
+   "decide": "Does this hold: Item 13 works for Item 16?"
+  },
+  "a_works_for_13_17": {
+   "decide": "Does this hold: Item 13 works for Item 17?"
+  },
+  "a_works_for_13_18": {
+   "decide": "Does this hold: Item 13 works for Item 18?"
+  },
+  "a_works_for_13_19": {
+   "decide": "Does this hold: Item 13 works for Item 19?"
+  },
+  "a_works_for_13_20": {
+   "decide": "Does this hold: Item 13 works for Item 20?"
+  },
+  "a_works_for_13_21": {
+   "decide": "Does this hold: Item 13 works for Item 21?"
+  },
+  "a_works_for_13_22": {
+   "decide": "Does this hold: Item 13 works for Item 22?"
+  },
+  "a_works_for_13_23": {
+   "decide": "Does this hold: Item 13 works for Item 23?"
+  },
+  "a_works_for_13_24": {
+   "decide": "Does this hold: Item 13 works for Item 24?"
+  },
+  "a_works_for_14_1": {
+   "decide": "Does this hold: Item 14 works for Item 1?"
+  },
+  "a_works_for_14_2": {
+   "decide": "Does this hold: Item 14 works for Item 2?"
+  },
+  "a_works_for_14_3": {
+   "decide": "Does this hold: Item 14 works for Item 3?"
+  },
+  "a_works_for_14_4": {
+   "decide": "Does this hold: Item 14 works for Item 4?"
+  },
+  "a_works_for_14_5": {
+   "decide": "Does this hold: Item 14 works for Item 5?"
+  },
+  "a_works_for_14_6": {
+   "decide": "Does this hold: Item 14 works for Item 6?"
+  },
+  "a_works_for_14_7": {
+   "decide": "Does this hold: Item 14 works for Item 7?"
+  },
+  "a_works_for_14_8": {
+   "decide": "Does this hold: Item 14 works for Item 8?"
+  },
+  "a_works_for_14_9": {
+   "decide": "Does this hold: Item 14 works for Item 9?"
+  },
+  "a_works_for_14_10": {
+   "decide": "Does this hold: Item 14 works for Item 10?"
+  },
+  "a_works_for_14_11": {
+   "decide": "Does this hold: Item 14 works for Item 11?"
+  },
+  "a_works_for_14_12": {
+   "decide": "Does this hold: Item 14 works for Item 12?"
+  },
+  "a_works_for_14_13": {
+   "decide": "Does this hold: Item 14 works for Item 13?"
+  },
+  "a_works_for_14_15": {
+   "decide": "Does this hold: Item 14 works for Item 15?"
+  },
+  "a_works_for_14_16": {
+   "decide": "Does this hold: Item 14 works for Item 16?"
+  },
+  "a_works_for_14_17": {
+   "decide": "Does this hold: Item 14 works for Item 17?"
+  },
+  "a_works_for_14_18": {
+   "decide": "Does this hold: Item 14 works for Item 18?"
+  },
+  "a_works_for_14_19": {
+   "decide": "Does this hold: Item 14 works for Item 19?"
+  },
+  "a_works_for_14_20": {
+   "decide": "Does this hold: Item 14 works for Item 20?"
+  },
+  "a_works_for_14_21": {
+   "decide": "Does this hold: Item 14 works for Item 21?"
+  },
+  "a_works_for_14_22": {
+   "decide": "Does this hold: Item 14 works for Item 22?"
+  },
+  "a_works_for_14_23": {
+   "decide": "Does this hold: Item 14 works for Item 23?"
+  },
+  "a_works_for_14_24": {
+   "decide": "Does this hold: Item 14 works for Item 24?"
+  },
+  "a_works_for_15_1": {
+   "decide": "Does this hold: Item 15 works for Item 1?"
+  },
+  "a_works_for_15_2": {
+   "decide": "Does this hold: Item 15 works for Item 2?"
+  },
+  "a_works_for_15_3": {
+   "decide": "Does this hold: Item 15 works for Item 3?"
+  },
+  "a_works_for_15_4": {
+   "decide": "Does this hold: Item 15 works for Item 4?"
+  },
+  "a_works_for_15_5": {
+   "decide": "Does this hold: Item 15 works for Item 5?"
+  },
+  "a_works_for_15_6": {
+   "decide": "Does this hold: Item 15 works for Item 6?"
+  },
+  "a_works_for_15_7": {
+   "decide": "Does this hold: Item 15 works for Item 7?"
+  },
+  "a_works_for_15_8": {
+   "decide": "Does this hold: Item 15 works for Item 8?"
+  },
+  "a_works_for_15_9": {
+   "decide": "Does this hold: Item 15 works for Item 9?"
+  },
+  "a_works_for_15_10": {
+   "decide": "Does this hold: Item 15 works for Item 10?"
+  },
+  "a_works_for_15_11": {
+   "decide": "Does this hold: Item 15 works for Item 11?"
+  },
+  "a_works_for_15_12": {
+   "decide": "Does this hold: Item 15 works for Item 12?"
+  },
+  "a_works_for_15_13": {
+   "decide": "Does this hold: Item 15 works for Item 13?"
+  },
+  "a_works_for_15_14": {
+   "decide": "Does this hold: Item 15 works for Item 14?"
+  },
+  "a_works_for_15_16": {
+   "decide": "Does this hold: Item 15 works for Item 16?"
+  },
+  "a_works_for_15_17": {
+   "decide": "Does this hold: Item 15 works for Item 17?"
+  },
+  "a_works_for_15_18": {
+   "decide": "Does this hold: Item 15 works for Item 18?"
+  },
+  "a_works_for_15_19": {
+   "decide": "Does this hold: Item 15 works for Item 19?"
+  },
+  "a_works_for_15_20": {
+   "decide": "Does this hold: Item 15 works for Item 20?"
+  },
+  "a_works_for_15_21": {
+   "decide": "Does this hold: Item 15 works for Item 21?"
+  },
+  "a_works_for_15_22": {
+   "decide": "Does this hold: Item 15 works for Item 22?"
+  },
+  "a_works_for_15_23": {
+   "decide": "Does this hold: Item 15 works for Item 23?"
+  },
+  "a_works_for_15_24": {
+   "decide": "Does this hold: Item 15 works for Item 24?"
+  },
+  "a_works_for_16_1": {
+   "decide": "Does this hold: Item 16 works for Item 1?"
+  },
+  "a_works_for_16_2": {
+   "decide": "Does this hold: Item 16 works for Item 2?"
+  },
+  "a_works_for_16_3": {
+   "decide": "Does this hold: Item 16 works for Item 3?"
+  },
+  "a_works_for_16_4": {
+   "decide": "Does this hold: Item 16 works for Item 4?"
+  },
+  "a_works_for_16_5": {
+   "decide": "Does this hold: Item 16 works for Item 5?"
+  },
+  "a_works_for_16_6": {
+   "decide": "Does this hold: Item 16 works for Item 6?"
+  },
+  "a_works_for_16_7": {
+   "decide": "Does this hold: Item 16 works for Item 7?"
+  },
+  "a_works_for_16_8": {
+   "decide": "Does this hold: Item 16 works for Item 8?"
+  },
+  "a_works_for_16_9": {
+   "decide": "Does this hold: Item 16 works for Item 9?"
+  },
+  "a_works_for_16_10": {
+   "decide": "Does this hold: Item 16 works for Item 10?"
+  },
+  "a_works_for_16_11": {
+   "decide": "Does this hold: Item 16 works for Item 11?"
+  },
+  "a_works_for_16_12": {
+   "decide": "Does this hold: Item 16 works for Item 12?"
+  },
+  "a_works_for_16_13": {
+   "decide": "Does this hold: Item 16 works for Item 13?"
+  },
+  "a_works_for_16_14": {
+   "decide": "Does this hold: Item 16 works for Item 14?"
+  },
+  "a_works_for_16_15": {
+   "decide": "Does this hold: Item 16 works for Item 15?"
+  },
+  "a_works_for_16_17": {
+   "decide": "Does this hold: Item 16 works for Item 17?"
+  },
+  "a_works_for_16_18": {
+   "decide": "Does this hold: Item 16 works for Item 18?"
+  },
+  "a_works_for_16_19": {
+   "decide": "Does this hold: Item 16 works for Item 19?"
+  },
+  "a_works_for_16_20": {
+   "decide": "Does this hold: Item 16 works for Item 20?"
+  },
+  "a_works_for_16_21": {
+   "decide": "Does this hold: Item 16 works for Item 21?"
+  },
+  "a_works_for_16_22": {
+   "decide": "Does this hold: Item 16 works for Item 22?"
+  },
+  "a_works_for_16_23": {
+   "decide": "Does this hold: Item 16 works for Item 23?"
+  },
+  "a_works_for_16_24": {
+   "decide": "Does this hold: Item 16 works for Item 24?"
+  },
+  "a_works_for_17_1": {
+   "decide": "Does this hold: Item 17 works for Item 1?"
+  },
+  "a_works_for_17_2": {
+   "decide": "Does this hold: Item 17 works for Item 2?"
+  },
+  "a_works_for_17_3": {
+   "decide": "Does this hold: Item 17 works for Item 3?"
+  },
+  "a_works_for_17_4": {
+   "decide": "Does this hold: Item 17 works for Item 4?"
+  },
+  "a_works_for_17_5": {
+   "decide": "Does this hold: Item 17 works for Item 5?"
+  },
+  "a_works_for_17_6": {
+   "decide": "Does this hold: Item 17 works for Item 6?"
+  },
+  "a_works_for_17_7": {
+   "decide": "Does this hold: Item 17 works for Item 7?"
+  },
+  "a_works_for_17_8": {
+   "decide": "Does this hold: Item 17 works for Item 8?"
+  },
+  "a_works_for_17_9": {
+   "decide": "Does this hold: Item 17 works for Item 9?"
+  },
+  "a_works_for_17_10": {
+   "decide": "Does this hold: Item 17 works for Item 10?"
+  },
+  "a_works_for_17_11": {
+   "decide": "Does this hold: Item 17 works for Item 11?"
+  },
+  "a_works_for_17_12": {
+   "decide": "Does this hold: Item 17 works for Item 12?"
+  },
+  "a_works_for_17_13": {
+   "decide": "Does this hold: Item 17 works for Item 13?"
+  },
+  "a_works_for_17_14": {
+   "decide": "Does this hold: Item 17 works for Item 14?"
+  },
+  "a_works_for_17_15": {
+   "decide": "Does this hold: Item 17 works for Item 15?"
+  },
+  "a_works_for_17_16": {
+   "decide": "Does this hold: Item 17 works for Item 16?"
+  },
+  "a_works_for_17_18": {
+   "decide": "Does this hold: Item 17 works for Item 18?"
+  },
+  "a_works_for_17_19": {
+   "decide": "Does this hold: Item 17 works for Item 19?"
+  },
+  "a_works_for_17_20": {
+   "decide": "Does this hold: Item 17 works for Item 20?"
+  },
+  "a_works_for_17_21": {
+   "decide": "Does this hold: Item 17 works for Item 21?"
+  },
+  "a_works_for_17_22": {
+   "decide": "Does this hold: Item 17 works for Item 22?"
+  },
+  "a_works_for_17_23": {
+   "decide": "Does this hold: Item 17 works for Item 23?"
+  },
+  "a_works_for_17_24": {
+   "decide": "Does this hold: Item 17 works for Item 24?"
+  },
+  "a_works_for_18_1": {
+   "decide": "Does this hold: Item 18 works for Item 1?"
+  },
+  "a_works_for_18_2": {
+   "decide": "Does this hold: Item 18 works for Item 2?"
+  },
+  "a_works_for_18_3": {
+   "decide": "Does this hold: Item 18 works for Item 3?"
+  },
+  "a_works_for_18_4": {
+   "decide": "Does this hold: Item 18 works for Item 4?"
+  },
+  "a_works_for_18_5": {
+   "decide": "Does this hold: Item 18 works for Item 5?"
+  },
+  "a_works_for_18_6": {
+   "decide": "Does this hold: Item 18 works for Item 6?"
+  },
+  "a_works_for_18_7": {
+   "decide": "Does this hold: Item 18 works for Item 7?"
+  },
+  "a_works_for_18_8": {
+   "decide": "Does this hold: Item 18 works for Item 8?"
+  },
+  "a_works_for_18_9": {
+   "decide": "Does this hold: Item 18 works for Item 9?"
+  },
+  "a_works_for_18_10": {
+   "decide": "Does this hold: Item 18 works for Item 10?"
+  },
+  "a_works_for_18_11": {
+   "decide": "Does this hold: Item 18 works for Item 11?"
+  },
+  "a_works_for_18_12": {
+   "decide": "Does this hold: Item 18 works for Item 12?"
+  },
+  "a_works_for_18_13": {
+   "decide": "Does this hold: Item 18 works for Item 13?"
+  },
+  "a_works_for_18_14": {
+   "decide": "Does this hold: Item 18 works for Item 14?"
+  },
+  "a_works_for_18_15": {
+   "decide": "Does this hold: Item 18 works for Item 15?"
+  },
+  "a_works_for_18_16": {
+   "decide": "Does this hold: Item 18 works for Item 16?"
+  },
+  "a_works_for_18_17": {
+   "decide": "Does this hold: Item 18 works for Item 17?"
+  },
+  "a_works_for_18_19": {
+   "decide": "Does this hold: Item 18 works for Item 19?"
+  },
+  "a_works_for_18_20": {
+   "decide": "Does this hold: Item 18 works for Item 20?"
+  },
+  "a_works_for_18_21": {
+   "decide": "Does this hold: Item 18 works for Item 21?"
+  },
+  "a_works_for_18_22": {
+   "decide": "Does this hold: Item 18 works for Item 22?"
+  },
+  "a_works_for_18_23": {
+   "decide": "Does this hold: Item 18 works for Item 23?"
+  },
+  "a_works_for_18_24": {
+   "decide": "Does this hold: Item 18 works for Item 24?"
+  },
+  "a_works_for_19_1": {
+   "decide": "Does this hold: Item 19 works for Item 1?"
+  },
+  "a_works_for_19_2": {
+   "decide": "Does this hold: Item 19 works for Item 2?"
+  },
+  "a_works_for_19_3": {
+   "decide": "Does this hold: Item 19 works for Item 3?"
+  },
+  "a_works_for_19_4": {
+   "decide": "Does this hold: Item 19 works for Item 4?"
+  },
+  "a_works_for_19_5": {
+   "decide": "Does this hold: Item 19 works for Item 5?"
+  },
+  "a_works_for_19_6": {
+   "decide": "Does this hold: Item 19 works for Item 6?"
+  },
+  "a_works_for_19_7": {
+   "decide": "Does this hold: Item 19 works for Item 7?"
+  },
+  "a_works_for_19_8": {
+   "decide": "Does this hold: Item 19 works for Item 8?"
+  },
+  "a_works_for_19_9": {
+   "decide": "Does this hold: Item 19 works for Item 9?"
+  },
+  "a_works_for_19_10": {
+   "decide": "Does this hold: Item 19 works for Item 10?"
+  },
+  "a_works_for_19_11": {
+   "decide": "Does this hold: Item 19 works for Item 11?"
+  },
+  "a_works_for_19_12": {
+   "decide": "Does this hold: Item 19 works for Item 12?"
+  },
+  "a_works_for_19_13": {
+   "decide": "Does this hold: Item 19 works for Item 13?"
+  },
+  "a_works_for_19_14": {
+   "decide": "Does this hold: Item 19 works for Item 14?"
+  },
+  "a_works_for_19_15": {
+   "decide": "Does this hold: Item 19 works for Item 15?"
+  },
+  "a_works_for_19_16": {
+   "decide": "Does this hold: Item 19 works for Item 16?"
+  },
+  "a_works_for_19_17": {
+   "decide": "Does this hold: Item 19 works for Item 17?"
+  },
+  "a_works_for_19_18": {
+   "decide": "Does this hold: Item 19 works for Item 18?"
+  },
+  "a_works_for_19_20": {
+   "decide": "Does this hold: Item 19 works for Item 20?"
+  },
+  "a_works_for_19_21": {
+   "decide": "Does this hold: Item 19 works for Item 21?"
+  },
+  "a_works_for_19_22": {
+   "decide": "Does this hold: Item 19 works for Item 22?"
+  },
+  "a_works_for_19_23": {
+   "decide": "Does this hold: Item 19 works for Item 23?"
+  },
+  "a_works_for_19_24": {
+   "decide": "Does this hold: Item 19 works for Item 24?"
+  },
+  "a_works_for_20_1": {
+   "decide": "Does this hold: Item 20 works for Item 1?"
+  },
+  "a_works_for_20_2": {
+   "decide": "Does this hold: Item 20 works for Item 2?"
+  },
+  "a_works_for_20_3": {
+   "decide": "Does this hold: Item 20 works for Item 3?"
+  },
+  "a_works_for_20_4": {
+   "decide": "Does this hold: Item 20 works for Item 4?"
+  },
+  "a_works_for_20_5": {
+   "decide": "Does this hold: Item 20 works for Item 5?"
+  },
+  "a_works_for_20_6": {
+   "decide": "Does this hold: Item 20 works for Item 6?"
+  },
+  "a_works_for_20_7": {
+   "decide": "Does this hold: Item 20 works for Item 7?"
+  },
+  "a_works_for_20_8": {
+   "decide": "Does this hold: Item 20 works for Item 8?"
+  },
+  "a_works_for_20_9": {
+   "decide": "Does this hold: Item 20 works for Item 9?"
+  },
+  "a_works_for_20_10": {
+   "decide": "Does this hold: Item 20 works for Item 10?"
+  },
+  "a_works_for_20_11": {
+   "decide": "Does this hold: Item 20 works for Item 11?"
+  },
+  "a_works_for_20_12": {
+   "decide": "Does this hold: Item 20 works for Item 12?"
+  },
+  "a_works_for_20_13": {
+   "decide": "Does this hold: Item 20 works for Item 13?"
+  },
+  "a_works_for_20_14": {
+   "decide": "Does this hold: Item 20 works for Item 14?"
+  },
+  "a_works_for_20_15": {
+   "decide": "Does this hold: Item 20 works for Item 15?"
+  },
+  "a_works_for_20_16": {
+   "decide": "Does this hold: Item 20 works for Item 16?"
+  },
+  "a_works_for_20_17": {
+   "decide": "Does this hold: Item 20 works for Item 17?"
+  },
+  "a_works_for_20_18": {
+   "decide": "Does this hold: Item 20 works for Item 18?"
+  },
+  "a_works_for_20_19": {
+   "decide": "Does this hold: Item 20 works for Item 19?"
+  },
+  "a_works_for_20_21": {
+   "decide": "Does this hold: Item 20 works for Item 21?"
+  },
+  "a_works_for_20_22": {
+   "decide": "Does this hold: Item 20 works for Item 22?"
+  },
+  "a_works_for_20_23": {
+   "decide": "Does this hold: Item 20 works for Item 23?"
+  },
+  "a_works_for_20_24": {
+   "decide": "Does this hold: Item 20 works for Item 24?"
+  },
+  "a_works_for_21_1": {
+   "decide": "Does this hold: Item 21 works for Item 1?"
+  },
+  "a_works_for_21_2": {
+   "decide": "Does this hold: Item 21 works for Item 2?"
+  },
+  "a_works_for_21_3": {
+   "decide": "Does this hold: Item 21 works for Item 3?"
+  },
+  "a_works_for_21_4": {
+   "decide": "Does this hold: Item 21 works for Item 4?"
+  },
+  "a_works_for_21_5": {
+   "decide": "Does this hold: Item 21 works for Item 5?"
+  },
+  "a_works_for_21_6": {
+   "decide": "Does this hold: Item 21 works for Item 6?"
+  },
+  "a_works_for_21_7": {
+   "decide": "Does this hold: Item 21 works for Item 7?"
+  },
+  "a_works_for_21_8": {
+   "decide": "Does this hold: Item 21 works for Item 8?"
+  },
+  "a_works_for_21_9": {
+   "decide": "Does this hold: Item 21 works for Item 9?"
+  },
+  "a_works_for_21_10": {
+   "decide": "Does this hold: Item 21 works for Item 10?"
+  },
+  "a_works_for_21_11": {
+   "decide": "Does this hold: Item 21 works for Item 11?"
+  },
+  "a_works_for_21_12": {
+   "decide": "Does this hold: Item 21 works for Item 12?"
+  },
+  "a_works_for_21_13": {
+   "decide": "Does this hold: Item 21 works for Item 13?"
+  },
+  "a_works_for_21_14": {
+   "decide": "Does this hold: Item 21 works for Item 14?"
+  },
+  "a_works_for_21_15": {
+   "decide": "Does this hold: Item 21 works for Item 15?"
+  },
+  "a_works_for_21_16": {
+   "decide": "Does this hold: Item 21 works for Item 16?"
+  },
+  "a_works_for_21_17": {
+   "decide": "Does this hold: Item 21 works for Item 17?"
+  },
+  "a_works_for_21_18": {
+   "decide": "Does this hold: Item 21 works for Item 18?"
+  },
+  "a_works_for_21_19": {
+   "decide": "Does this hold: Item 21 works for Item 19?"
+  },
+  "a_works_for_21_20": {
+   "decide": "Does this hold: Item 21 works for Item 20?"
+  },
+  "a_works_for_21_22": {
+   "decide": "Does this hold: Item 21 works for Item 22?"
+  },
+  "a_works_for_21_23": {
+   "decide": "Does this hold: Item 21 works for Item 23?"
+  },
+  "a_works_for_21_24": {
+   "decide": "Does this hold: Item 21 works for Item 24?"
+  },
+  "a_works_for_22_1": {
+   "decide": "Does this hold: Item 22 works for Item 1?"
+  },
+  "a_works_for_22_2": {
+   "decide": "Does this hold: Item 22 works for Item 2?"
+  },
+  "a_works_for_22_3": {
+   "decide": "Does this hold: Item 22 works for Item 3?"
+  },
+  "a_works_for_22_4": {
+   "decide": "Does this hold: Item 22 works for Item 4?"
+  },
+  "a_works_for_22_5": {
+   "decide": "Does this hold: Item 22 works for Item 5?"
+  },
+  "a_works_for_22_6": {
+   "decide": "Does this hold: Item 22 works for Item 6?"
+  },
+  "a_works_for_22_7": {
+   "decide": "Does this hold: Item 22 works for Item 7?"
+  },
+  "a_works_for_22_8": {
+   "decide": "Does this hold: Item 22 works for Item 8?"
+  },
+  "a_works_for_22_9": {
+   "decide": "Does this hold: Item 22 works for Item 9?"
+  },
+  "a_works_for_22_10": {
+   "decide": "Does this hold: Item 22 works for Item 10?"
+  },
+  "a_works_for_22_11": {
+   "decide": "Does this hold: Item 22 works for Item 11?"
+  },
+  "a_works_for_22_12": {
+   "decide": "Does this hold: Item 22 works for Item 12?"
+  },
+  "a_works_for_22_13": {
+   "decide": "Does this hold: Item 22 works for Item 13?"
+  },
+  "a_works_for_22_14": {
+   "decide": "Does this hold: Item 22 works for Item 14?"
+  },
+  "a_works_for_22_15": {
+   "decide": "Does this hold: Item 22 works for Item 15?"
+  },
+  "a_works_for_22_16": {
+   "decide": "Does this hold: Item 22 works for Item 16?"
+  },
+  "a_works_for_22_17": {
+   "decide": "Does this hold: Item 22 works for Item 17?"
+  },
+  "a_works_for_22_18": {
+   "decide": "Does this hold: Item 22 works for Item 18?"
+  },
+  "a_works_for_22_19": {
+   "decide": "Does this hold: Item 22 works for Item 19?"
+  },
+  "a_works_for_22_20": {
+   "decide": "Does this hold: Item 22 works for Item 20?"
+  },
+  "a_works_for_22_21": {
+   "decide": "Does this hold: Item 22 works for Item 21?"
+  },
+  "a_works_for_22_23": {
+   "decide": "Does this hold: Item 22 works for Item 23?"
+  },
+  "a_works_for_22_24": {
+   "decide": "Does this hold: Item 22 works for Item 24?"
+  },
+  "a_works_for_23_1": {
+   "decide": "Does this hold: Item 23 works for Item 1?"
+  },
+  "a_works_for_23_2": {
+   "decide": "Does this hold: Item 23 works for Item 2?"
+  },
+  "a_works_for_23_3": {
+   "decide": "Does this hold: Item 23 works for Item 3?"
+  },
+  "a_works_for_23_4": {
+   "decide": "Does this hold: Item 23 works for Item 4?"
+  },
+  "a_works_for_23_5": {
+   "decide": "Does this hold: Item 23 works for Item 5?"
+  },
+  "a_works_for_23_6": {
+   "decide": "Does this hold: Item 23 works for Item 6?"
+  },
+  "a_works_for_23_7": {
+   "decide": "Does this hold: Item 23 works for Item 7?"
+  },
+  "a_works_for_23_8": {
+   "decide": "Does this hold: Item 23 works for Item 8?"
+  },
+  "a_works_for_23_9": {
+   "decide": "Does this hold: Item 23 works for Item 9?"
+  },
+  "a_works_for_23_10": {
+   "decide": "Does this hold: Item 23 works for Item 10?"
+  },
+  "a_works_for_23_11": {
+   "decide": "Does this hold: Item 23 works for Item 11?"
+  },
+  "a_works_for_23_12": {
+   "decide": "Does this hold: Item 23 works for Item 12?"
+  },
+  "a_works_for_23_13": {
+   "decide": "Does this hold: Item 23 works for Item 13?"
+  },
+  "a_works_for_23_14": {
+   "decide": "Does this hold: Item 23 works for Item 14?"
+  },
+  "a_works_for_23_15": {
+   "decide": "Does this hold: Item 23 works for Item 15?"
+  },
+  "a_works_for_23_16": {
+   "decide": "Does this hold: Item 23 works for Item 16?"
+  },
+  "a_works_for_23_17": {
+   "decide": "Does this hold: Item 23 works for Item 17?"
+  },
+  "a_works_for_23_18": {
+   "decide": "Does this hold: Item 23 works for Item 18?"
+  },
+  "a_works_for_23_19": {
+   "decide": "Does this hold: Item 23 works for Item 19?"
+  },
+  "a_works_for_23_20": {
+   "decide": "Does this hold: Item 23 works for Item 20?"
+  },
+  "a_works_for_23_21": {
+   "decide": "Does this hold: Item 23 works for Item 21?"
+  },
+  "a_works_for_23_22": {
+   "decide": "Does this hold: Item 23 works for Item 22?"
+  },
+  "a_works_for_23_24": {
+   "decide": "Does this hold: Item 23 works for Item 24?"
+  },
+  "a_works_for_24_1": {
+   "decide": "Does this hold: Item 24 works for Item 1?"
+  },
+  "a_works_for_24_2": {
+   "decide": "Does this hold: Item 24 works for Item 2?"
+  },
+  "a_works_for_24_3": {
+   "decide": "Does this hold: Item 24 works for Item 3?"
+  },
+  "a_works_for_24_4": {
+   "decide": "Does this hold: Item 24 works for Item 4?"
+  },
+  "a_works_for_24_5": {
+   "decide": "Does this hold: Item 24 works for Item 5?"
+  },
+  "a_works_for_24_6": {
+   "decide": "Does this hold: Item 24 works for Item 6?"
+  },
+  "a_works_for_24_7": {
+   "decide": "Does this hold: Item 24 works for Item 7?"
+  },
+  "a_works_for_24_8": {
+   "decide": "Does this hold: Item 24 works for Item 8?"
+  },
+  "a_works_for_24_9": {
+   "decide": "Does this hold: Item 24 works for Item 9?"
+  },
+  "a_works_for_24_10": {
+   "decide": "Does this hold: Item 24 works for Item 10?"
+  },
+  "a_works_for_24_11": {
+   "decide": "Does this hold: Item 24 works for Item 11?"
+  },
+  "a_works_for_24_12": {
+   "decide": "Does this hold: Item 24 works for Item 12?"
+  },
+  "a_works_for_24_13": {
+   "decide": "Does this hold: Item 24 works for Item 13?"
+  },
+  "a_works_for_24_14": {
+   "decide": "Does this hold: Item 24 works for Item 14?"
+  },
+  "a_works_for_24_15": {
+   "decide": "Does this hold: Item 24 works for Item 15?"
+  },
+  "a_works_for_24_16": {
+   "decide": "Does this hold: Item 24 works for Item 16?"
+  },
+  "a_works_for_24_17": {
+   "decide": "Does this hold: Item 24 works for Item 17?"
+  },
+  "a_works_for_24_18": {
+   "decide": "Does this hold: Item 24 works for Item 18?"
+  },
+  "a_works_for_24_19": {
+   "decide": "Does this hold: Item 24 works for Item 19?"
+  },
+  "a_works_for_24_20": {
+   "decide": "Does this hold: Item 24 works for Item 20?"
+  },
+  "a_works_for_24_21": {
+   "decide": "Does this hold: Item 24 works for Item 21?"
+  },
+  "a_works_for_24_22": {
+   "decide": "Does this hold: Item 24 works for Item 22?"
+  },
+  "a_works_for_24_23": {
+   "decide": "Does this hold: Item 24 works for Item 23?"
+  }
+ }
+}

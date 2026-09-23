@@ -269,6 +269,15 @@
     "sqlite"
    ],
    "why": "the SQL surfaces spell filter as WHERE over thinkthen_decide, so the verb-level band refusal has no call that could fail; the rule is enforced where a filter verb exists (surfaces-review-5: the runners printed this as an uncounted hard-coded diverge)"
+  },
+  {
+   "when": {
+    "id": "69-relate-R01-demo"
+   },
+   "surfaces": [
+    "postgresql"
+   ],
+   "why": "the PostgreSQL call takes bare rule names, which are one-way rules, and the method-H recording asks same_as both ways; the gap is recorded in databases/postgresql/NOTES.md (either rules through thinkthen_relate's array)"
   }
  ],
  "cases": [
@@ -3758,7 +3767,7 @@
    "id": "68-recognize-C41",
    "source": "synthesized from experiments/225-recognize-harvest-package rules for the offset proofs",
    "verb": "recognize",
-   "text": "Le caf\u00e9 \ud83d\ude00 Maria Chen arrived.",
+   "text": "Le café 😀 Maria Chen arrived.",
    "question": {
     "kinds": [
      "person"
@@ -3787,7 +3796,7 @@
   },
   {
    "id": "69-relate-R01-demo",
-   "source": "experiments/225-recognize-harvest-package relate/cases/R01-demo (recording)",
+   "source": "conformance/relate-h runs/alerts/H (method-H recording, 2026-09-23)",
    "verb": "relate",
    "records": [
     "Checkout returns 500 at the payment step.",
@@ -3812,44 +3821,50 @@
     "threshold": 0.5
    },
    "requests": [
-    ".locks",
-    "a715975d50cfbc2b5b8d4108c62cdd0ea771f62b7a3bbeb056ecabf8efaf0894"
+    ".thinkthen-backend",
+    "9651f88a4f9836955f940272e028dd11e6eaccc795be556555d8be5f6b76742c"
    ],
-   "pairs": 6,
+   "pairs": 18,
    "exchanges": [],
-   "form": "pairs",
+   "form": "yes-no",
    "expect": {
     "edges": [
      {
-      "name": "caused_by",
+      "name": "same_as",
       "source": 1,
       "target": 2,
-      "probability": 0.59
+      "probability": 0.61
      },
      {
       "name": "caused_by",
       "source": 1,
       "target": 4,
-      "probability": 0.94
+      "probability": 0.71
+     },
+     {
+      "name": "caused_by",
+      "source": 2,
+      "target": 1,
+      "probability": 0.65
      },
      {
       "name": "caused_by",
       "source": 2,
       "target": 4,
-      "probability": 0.94
+      "probability": 0.73
      },
      {
       "name": "caused_by",
       "source": 3,
       "target": 4,
-      "probability": 0.84
+      "probability": 0.55
      }
     ]
    }
   },
   {
    "id": "70-relate-R02-pickone",
-   "source": "experiments/225-recognize-harvest-package relate/cases/R02-pickone (recording)",
+   "source": "conformance/relate-h runs/founders-24/H (method-H recording, 2026-09-23)",
    "verb": "relate",
    "records": [
     "Amara Okafor founded Kestrel Labs and still leads its research team.",
@@ -3893,78 +3908,229 @@
     "threshold": 0.5
    },
    "requests": [
-    "c3929298692154204796935d2b087eff871cfa27fcaa062491ec4c899ea705f1"
+    ".thinkthen-backend",
+    "0727dbb3910c10681f1a4cc21623eb71f23e52a2842e8114640b159841597348"
    ],
-   "pairs": 12,
+   "pairs": 1104,
    "exchanges": [],
-   "form": "pairs",
+   "form": "yes-no",
    "expect": {
     "edges": [
      {
       "name": "founded",
       "source": 1,
       "target": 2,
-      "probability": 0.87
+      "probability": 0.91
+     },
+     {
+      "name": "works_for",
+      "source": 1,
+      "target": 2,
+      "probability": 0.82
+     },
+     {
+      "name": "works_for",
+      "source": 2,
+      "target": 1,
+      "probability": 0.76
      },
      {
       "name": "founded",
       "source": 3,
       "target": 4,
-      "probability": 0.85
+      "probability": 0.79
+     },
+     {
+      "name": "works_for",
+      "source": 3,
+      "target": 4,
+      "probability": 0.76
+     },
+     {
+      "name": "works_for",
+      "source": 4,
+      "target": 3,
+      "probability": 0.79
+     },
+     {
+      "name": "founded",
+      "source": 5,
+      "target": 6,
+      "probability": 0.57
      },
      {
       "name": "works_for",
       "source": 5,
       "target": 6,
-      "probability": 0.51
+      "probability": 0.81
+     },
+     {
+      "name": "works_for",
+      "source": 6,
+      "target": 5,
+      "probability": 0.78
      },
      {
       "name": "founded",
       "source": 7,
       "target": 8,
-      "probability": 0.5
+      "probability": 0.85
+     },
+     {
+      "name": "works_for",
+      "source": 7,
+      "target": 8,
+      "probability": 0.77
+     },
+     {
+      "name": "works_for",
+      "source": 8,
+      "target": 7,
+      "probability": 0.75
+     },
+     {
+      "name": "founded",
+      "source": 9,
+      "target": 10,
+      "probability": 0.88
+     },
+     {
+      "name": "works_for",
+      "source": 9,
+      "target": 10,
+      "probability": 0.82
+     },
+     {
+      "name": "works_for",
+      "source": 10,
+      "target": 9,
+      "probability": 0.87
      },
      {
       "name": "founded",
       "source": 11,
       "target": 12,
-      "probability": 0.82
+      "probability": 0.76
+     },
+     {
+      "name": "works_for",
+      "source": 11,
+      "target": 12,
+      "probability": 0.78
+     },
+     {
+      "name": "works_for",
+      "source": 12,
+      "target": 11,
+      "probability": 0.84
      },
      {
       "name": "founded",
       "source": 13,
       "target": 14,
-      "probability": 0.52
+      "probability": 0.87
+     },
+     {
+      "name": "works_for",
+      "source": 13,
+      "target": 14,
+      "probability": 0.74
+     },
+     {
+      "name": "works_for",
+      "source": 14,
+      "target": 13,
+      "probability": 0.76
      },
      {
       "name": "founded",
       "source": 15,
       "target": 16,
+      "probability": 0.83
+     },
+     {
+      "name": "works_for",
+      "source": 15,
+      "target": 16,
+      "probability": 0.87
+     },
+     {
+      "name": "works_for",
+      "source": 16,
+      "target": 15,
       "probability": 0.74
      },
      {
       "name": "founded",
       "source": 17,
       "target": 18,
-      "probability": 0.73
+      "probability": 0.81
+     },
+     {
+      "name": "works_for",
+      "source": 17,
+      "target": 18,
+      "probability": 0.77
+     },
+     {
+      "name": "works_for",
+      "source": 18,
+      "target": 17,
+      "probability": 0.8
      },
      {
       "name": "founded",
       "source": 19,
       "target": 20,
-      "probability": 0.92
+      "probability": 0.88
+     },
+     {
+      "name": "works_for",
+      "source": 19,
+      "target": 20,
+      "probability": 0.81
+     },
+     {
+      "name": "works_for",
+      "source": 20,
+      "target": 19,
+      "probability": 0.82
      },
      {
       "name": "founded",
       "source": 21,
       "target": 22,
-      "probability": 0.91
+      "probability": 0.89
+     },
+     {
+      "name": "works_for",
+      "source": 21,
+      "target": 22,
+      "probability": 0.83
+     },
+     {
+      "name": "works_for",
+      "source": 22,
+      "target": 21,
+      "probability": 0.7
      },
      {
       "name": "founded",
       "source": 23,
       "target": 24,
-      "probability": 0.7
+      "probability": 0.89
+     },
+     {
+      "name": "works_for",
+      "source": 23,
+      "target": 24,
+      "probability": 0.82
+     },
+     {
+      "name": "works_for",
+      "source": 24,
+      "target": 23,
+      "probability": 0.8
      }
     ]
    }
@@ -4035,11 +4201,11 @@
      }
     ]
    },
-   "note": "measured per-subject form; the ruled relate asks pairs, and this text's pairs recording (R04) is what the stand-in serves"
+   "note": "measured per-subject form; the ruled relate asks method H, and this text's method-H recording (conformance/relate-h staff-10) is what the stand-in serves"
   },
   {
    "id": "72-relate-R04-pairs-10",
-   "source": "experiments/225-recognize-harvest-package relate/cases/R04-pairs-10 (recording)",
+   "source": "conformance/relate-h runs/staff-10/H (method-H recording, 2026-09-23)",
    "verb": "relate",
    "records": [
     "Iris Vangelis works for Kestrel Logistics, handling regional accounts.",
@@ -4064,11 +4230,12 @@
     "threshold": 0.5
    },
    "requests": [
-    "13fb7f0fefa8c21d699f46ee7fdbce4ecf682747680055ac6acc0484e5ca1dae"
+    ".thinkthen-backend",
+    "eaa99d48d1ea752a2f25bd5122c6daef0f785386e212b16c41746fed08043719"
    ],
-   "pairs": 25,
+   "pairs": 90,
    "exchanges": [],
-   "form": "pairs",
+   "form": "yes-no",
    "expect": {
     "edges": [
      {
@@ -4079,57 +4246,27 @@
      },
      {
       "name": "works_for",
-      "source": 1,
-      "target": 8,
-      "probability": 0.57
-     },
-     {
-      "name": "works_for",
       "source": 2,
       "target": 7,
-      "probability": 0.97
-     },
-     {
-      "name": "works_for",
-      "source": 2,
-      "target": 8,
-      "probability": 0.78
+      "probability": 0.98
      },
      {
       "name": "works_for",
       "source": 3,
       "target": 8,
-      "probability": 0.98
-     },
-     {
-      "name": "works_for",
-      "source": 4,
-      "target": 8,
-      "probability": 0.83
+      "probability": 0.96
      },
      {
       "name": "works_for",
       "source": 4,
       "target": 9,
-      "probability": 0.94
-     },
-     {
-      "name": "works_for",
-      "source": 5,
-      "target": 8,
-      "probability": 0.58
-     },
-     {
-      "name": "works_for",
-      "source": 5,
-      "target": 9,
-      "probability": 0.94
+      "probability": 0.95
      },
      {
       "name": "works_for",
       "source": 5,
       "target": 10,
-      "probability": 0.93
+      "probability": 0.96
      }
     ]
    }

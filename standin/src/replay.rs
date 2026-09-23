@@ -26,10 +26,9 @@
 //!
 //! Text cutting, the question count per request, and the method belong to
 //! the build team; nothing here touches them. Main ruled method H for every
-//! relation on 2026-09-23. Rows of form `yes-no` hold method-H recordings
-//! from the relate-methods bake-off, one yes/no per pair per relation. The
-//! older rows hold the withdrawn pick-one method and answer until a method-H
-//! recording of their records exists
+//! relation on 2026-09-23. Every relate row holds a method-H recording, one
+//! yes/no per pair per relation, from the relate-methods bake-off or from
+//! `conformance/relate-h/`. The pick-one rows are retired
 //! (`sdlc/records/surfaces-notes/NOTES-main-parity.md`).
 
 use std::collections::BTreeMap;
@@ -76,26 +75,24 @@ struct PairRow {
     pick: String,
 }
 
+/// A method-H relate row. Every row has form `yes-no`.
 #[derive(Deserialize)]
 struct RelateRow {
-    /// `pairs` is the ruled form; `per-subject` is a measured arm whose
-    /// text can collide with a pairs arm's, and the ruled form wins.
-    form: Option<String>,
     text: String,
     records: Vec<String>,
     rules: Vec<String>,
+    /// Whether the recording asked each rule both ways.
+    either: BTreeMap<String, bool>,
     entries: Vec<EntryRow>,
 }
 
+/// One recorded yes/no question: the ordered pair it asked, the rule, and
+/// the probability of yes.
 #[derive(Deserialize)]
 struct EntryRow {
-    pair: Option<[u64; 2]>,
-    subject: Option<u64>,
-    /// The rule a per-subject entry asks, because its options are object
-    /// records and not relation names.
-    rule: Option<String>,
+    pair: [u64; 2],
+    rule: String,
     options: BTreeMap<String, f64>,
-    pick: String,
 }
 
 fn table() -> &'static Table {
@@ -234,19 +231,13 @@ pub(crate) fn relate(ask: &Relate, records: &[&str]) -> Result<Vec<Edge>, Error>
     }
     let joined = records.join("\n");
     let trimmed = joined.trim_end_matches('\n');
-    let candidates: Vec<&RelateRow> = table()
+    let row = table()
         .relate
         .iter()
-        .filter(|row| {
+        .find(|row| {
             row.text.trim_end_matches('\n') == trimmed
                 || row.records.join("\n").trim_end_matches('\n') == trimmed
         })
-        .collect();
-    let row = candidates
-        .iter()
-        .find(|row| row.form.as_deref() != Some("per-subject"))
-        .or_else(|| candidates.first())
-        .copied()
         .ok_or_else(|| {
             Error::usage(format!(
                 "no recorded answer for the records \"{}\"; the stand-in answers only from the recordings",
@@ -261,55 +252,15 @@ pub(crate) fn relate(ask: &Relate, records: &[&str]) -> Result<Vec<Edge>, Error>
                 covered(&row.rules)
             )));
         }
-    }
-    if row.form.as_deref() == Some("yes-no") {
-        return yes_no_edges(ask, row);
-    }
-    let mut edges = Vec::new();
-    for entry in &row.entries {
-        if is_no_relation(&entry.pick) {
-            continue;
+        if row.either.get(&rule.name) != Some(&rule.either) {
+            let way = if rule.either { "one way" } else { "both ways" };
+            return Err(Error::usage(format!(
+                "no recorded answer for the rule {} as asked; the recording asks {} {way}",
+                rule.name, rule.name
+            )));
         }
-        let name: &str = if entry.pair.is_none() {
-            entry.rule.as_deref().ok_or_else(|| {
-                Error::defect("a recorded subject entry names no rule")
-            })?
-        } else {
-            rule_name(&entry.pick)
-        };
-        let Some(rule) = ask.relations.iter().find(|rule| rule.name == name) else {
-            continue;
-        };
-        let probability = entry.options.get(&entry.pick).copied().ok_or_else(|| {
-            Error::defect(format!("the replay table holds no probability for {}", entry.pick))
-        })?;
-        if probability < ask.threshold {
-            continue;
-        }
-        let (source, target) = if let Some(pair) = entry.pair {
-            if entry.pick.ends_with("_AB") {
-                (pair[0], pair[1])
-            } else if entry.pick.ends_with("_BA") {
-                (pair[1], pair[0])
-            } else {
-                (pair[0].min(pair[1]), pair[0].max(pair[1]))
-            }
-        } else {
-            let subject = entry
-                .subject
-                .ok_or_else(|| Error::defect("a recorded relate entry has no pair and no subject"))?;
-            let target = entry
-                .pick
-                .strip_prefix("r_")
-                .and_then(|number| number.parse::<u64>().ok())
-                .ok_or_else(|| {
-                    Error::defect(format!("the recorded pick {} names no record", entry.pick))
-                })?;
-            (subject, target)
-        };
-        edges.push(edge(rule, source, target, probability));
     }
-    Ok(sorted(edges))
+    yes_no_edges(ask, row)
 }
 
 /// The edges of a method-H row: one recorded yes/no per pair per relation,
@@ -319,17 +270,14 @@ pub(crate) fn relate(ask: &Relate, records: &[&str]) -> Result<Vec<Edge>, Error>
 fn yes_no_edges(ask: &Relate, row: &RelateRow) -> Result<Vec<Edge>, Error> {
     let mut edges = Vec::new();
     for entry in &row.entries {
-        let (Some(pair), Some(name)) = (entry.pair, entry.rule.as_deref()) else {
-            return Err(Error::defect("a recorded yes/no entry names no pair or no rule"));
-        };
-        let Some(rule) = ask.relations.iter().find(|rule| rule.name == name) else {
+        let Some(rule) = ask.relations.iter().find(|rule| rule.name == entry.rule) else {
             continue;
         };
         let probability = entry.options.get("yes").copied().ok_or_else(|| {
-            Error::defect(format!("the replay table holds no yes probability for {name}"))
+            Error::defect(format!("the replay table holds no yes probability for {}", entry.rule))
         })?;
         if probability >= ask.threshold {
-            edges.push(edge(rule, pair[0], pair[1], probability));
+            edges.push(edge(rule, entry.pair[0], entry.pair[1], probability));
         }
     }
     Ok(sorted(edges))

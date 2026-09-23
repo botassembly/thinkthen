@@ -95,15 +95,16 @@ edges <- tt_relate(alerts$body, relations = "caused_by", either = "same_as")
 check("edges is a data frame", inherits(edges, "data.frame"))
 check("the four-column shape", identical(names(edges),
       c("name", "source", "target", "probability")))
-check("four edges", nrow(edges) == 4L)
-check("the first edge", identical(edges$name[[1]], "caused_by") &&
+check("five edges", nrow(edges) == 5L)
+check("the first edge", identical(edges$name[[1]], "same_as") &&
   identical(as.integer(edges$source[[1]]), 1L) &&
   identical(as.integer(edges$target[[1]]), 2L) &&
-  isTRUE(all.equal(edges$probability[[1]], 0.59)))
+  isTRUE(all.equal(edges$probability[[1]], 0.61)))
 
-# The bar drops the 0.59 edge, mirroring the deck's Python comment.
-strict <- tt_relate(alerts$body, relations = "caused_by", threshold = 0.9)
-check("the bar keeps the 0.94 edge", identical(as.integer(strict$source[[1]]), 1L) &&
+# The 0.7 bar keeps the two sound edges, as the Python docstring shows.
+strict <- tt_relate(alerts$body, relations = "caused_by", threshold = 0.7)
+check("the bar keeps the 0.71 edge", nrow(strict) == 2L &&
+  identical(as.integer(strict$source[[1]]), 1L) &&
   identical(as.integer(strict$target[[1]]), 4L))
 
 # A saved question file carries the relate spec too.
@@ -112,10 +113,10 @@ writeLines(paste0('{"relate": {"relations": [',
                   '{"name": "caused_by", "source": "*", "target": "*"}, ',
                   '{"name": "same_as", "source": "*", "target": "*", "either": true}]}}'), links_file)
 from_links <- tt_relate(alerts$body, relations = paste0("@", links_file))
-check("a links file answers the same four edges", nrow(from_links) == 4L)
-check("the links file's first edge", identical(from_links$name[[1]], "caused_by") &&
+check("a links file answers the same five edges", nrow(from_links) == 5L)
+check("the links file's first edge", identical(from_links$name[[1]], "same_as") &&
   identical(as.integer(from_links$source[[1]]), 1L) &&
-  isTRUE(all.equal(from_links$probability[[1]], 0.59)))
+  isTRUE(all.equal(from_links$probability[[1]], 0.61)))
 
 # More than 255 records refuses with the usage kind, before anything else.
 refused <- tryCatch(tt_relate(rep("one alert", 256), relations = "caused_by"),

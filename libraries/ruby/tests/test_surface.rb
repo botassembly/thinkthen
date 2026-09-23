@@ -285,17 +285,17 @@ class TestSurface < Minitest::Test
     assert_equal "Maria Chen", text[name.start...name.end]
   end
 
-  # The deck's relate call, as drawn, against the four recorded alerts.
+  # The slide's relate call against the four alerts' method-H recording.
   def test_relate_as_drawn
     alerts = ["Checkout returns 500 at the payment step.",
               "Card charges are failing for every customer.",
               "The nightly export ran two hours late.",
               "The payments database ran out of disk space."]
     edges = ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])
-    assert_equal 4, edges.length
+    assert_equal 5, edges.length
     edge = edges.find { |one| one.name == "caused_by" && one.source == 1 && one.target == 4 }
     refute_nil edge, "the recorded 1-to-4 caused_by edge is missing"
-    assert_in_delta 0.94, edge.probability, 1e-9
+    assert_in_delta 0.71, edge.probability, 1e-9
   end
 
   # relate takes every record at once, and the 255 limit refuses with the

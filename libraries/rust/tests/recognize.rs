@@ -170,23 +170,25 @@ fn the_relate_slide_runs_as_drawn() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(
         seen,
         vec![
-            ("caused_by", 1, 2),
+            ("same_as", 1, 2),
             ("caused_by", 1, 4),
+            ("caused_by", 2, 1),
             ("caused_by", 2, 4),
             ("caused_by", 3, 4),
         ]
     );
     let probabilities: Vec<f64> = edges.iter().map(|edge| edge.probability).collect();
-    for (got, wanted) in probabilities.iter().zip([0.59, 0.94, 0.94, 0.84]) {
+    for (got, wanted) in probabilities.iter().zip([0.61, 0.71, 0.65, 0.73, 0.55]) {
         assert!((got - wanted).abs() < 1e-9, "expected {wanted}, got {got}");
     }
-    // The Python section's comment, 0.9: the 0.59 edge drops and the first
-    // surviving edge is the 1-to-4 one at 0.94.
-    let strict = ask.threshold(0.9)?;
+    // The Python docstring's bar, 0.7, keeps the two sound edges, and the
+    // first is the 1-to-4 one at 0.71.
+    let strict = ask.threshold(0.7)?;
     let edges = tt.relate(&strict, &ALERTS)?;
+    assert_eq!(edges.len(), 2);
     assert_eq!(edges[0].source, 1);
     assert_eq!(edges[0].target, 4);
-    assert!((edges[0].probability - 0.94).abs() < 1e-9);
+    assert!((edges[0].probability - 0.71).abs() < 1e-9);
     Ok(())
 }
 

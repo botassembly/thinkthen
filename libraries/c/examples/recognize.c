@@ -36,8 +36,8 @@ static const char SENTENCE[] =
  * answer: "Maria Chen" person at code points 10..20, strength 0.94. */
 static const char EMOJI[] = "Le café 😀 Maria Chen arrived.";
 
-/* The four alerts, recorded as one text; the deck's relate answer at the
- * 0.9 bar: caused_by 1 -> 4 at 0.94 and caused_by 2 -> 4 at 0.94. */
+/* The four alerts, recorded as one text; the method-H relate answer at the
+ * 0.7 bar: caused_by 1 -> 4 at 0.71 and caused_by 2 -> 4 at 0.73. */
 static const char *ALERTS[4] = {
     "Alert 1: Checkout returns 500 at the payment step.",
     "Alert 2: Card charges are failing for every customer.",
@@ -60,7 +60,7 @@ static const char SPEC_DECK[] =
 static const char SPEC_EMOJI[] = "{\"kinds\": [\"person\"]}";
 static const char SPEC_RELATE[] =
     "{\"relations\": [{\"name\": \"caused_by\", \"source\": \"*\", \"target\": \"*\"}],"
-    " \"either\": [\"same_as\"], \"threshold\": 0.9}";
+    " \"either\": [\"same_as\"], \"threshold\": 0.7}";
 
 static int contains(const char *haystack, const char *needle) {
     return strstr(haystack, needle) != NULL;
@@ -191,8 +191,8 @@ int main(void) {
     }
     printf("relate: %.*s\n", (int)out_len, out);
     ok &= contains(out, "\"name\":\"caused_by\"");
-    ok &= contains(out, "\"probability\":0.94");
-    ok &= !contains(out, "\"probability\":0.84");
+    ok &= contains(out, "\"probability\":0.71");
+    ok &= !contains(out, "\"probability\":0.55");
     ok &= !contains(out, "\"from\"");
     thinkthen_free_string(out);
 

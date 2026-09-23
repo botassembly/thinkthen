@@ -37,8 +37,9 @@ lib: 4 passed; wire: 3 passed; recognize_replay: 7 passed
 
 The seven: every conformance case replays exactly (41 recognize cases and
 R01/R02/R04; R03 skips as marked); the door JSON carries `source`, `target`,
-`probability`, and `number` and never `from`/`to`/`confidence`; the deck's
-0.9-bar relate call returns the two sound edges; the 255 refusal; missing
+`probability`, and `number` and never `from`/`to`/`confidence`; the alerts'
+relate call at the bar returns the two sound edges (0.9 under pick-one, 0.7
+since the method-H recording of 2026-09-23); the 255 refusal; missing
 texts and unrecorded rules name themselves; the any-kind end replays on the
 C36 case; relate refuses kinds it cannot honour.
 
