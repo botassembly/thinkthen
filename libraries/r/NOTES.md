@@ -424,3 +424,60 @@ upstream's to make: pin as the lock does now, bump extendr-api when it moves
 (the advisory names pastey and with_builtin_macros as alternatives), and
 record the explicit `ignore` or block at the merge when deny coverage
 extends over the workspaces. Same ticket as the PostgreSQL side.
+
+## 2026-09-23: the third review's R items, each with its probe
+
+Item 3 (NUL byte aborted R, HIGH): every error message the file grammar hands
+back escapes interior NUL bytes as the four characters `\u0000` beside the
+percent doubling (`carry` in the Rust half), and both `tt_annotate_kinds` and
+the annotate row conversion refuse a name that carries a NUL before building
+any R string; the one `expect` in the row builder is now a proper usage
+error. Probe (`/tmp/rr3/probe_nul.R`, fixture-free, THINKTHEN_NULL): pre-fix
+both files - a NUL in a question name and a NUL in an unknown key - printed
+`fatal runtime error: failed to initiate panic, error 5, aborting` with a
+core dump, exit 134; post-fix both print clean `thinkthen_usage` errors
+(`` `questions.na\u0000me` uses lowercase letters, digits, and underscores ``),
+the process survives, exit 0.
+
+Item 20a (LC_ALL=C sent mangled bytes): a native-marked string whose raw
+bytes are not valid UTF-8 refuses before any translation, because under a
+non-UTF-8 locale there is no meaning to translate; latin1- and UTF-8-marked
+strings keep their locale-independent conversion. Probe
+(`/tmp/rr3/probe_wire_locale.R` against the stub, THINKTHEN_BASE_URL with the
+`/v1` path the gate uses): pre-fix `latin1: answered FALSE` and
+`native-invalid: answered FALSE` (both sent); post-fix the latin1 string
+still answers (its conversion is well-defined) and the invalid native bytes
+refuse: `the evidence carries native-marked bytes that are not valid UTF-8
+under this locale; convert it with enc2utf8() or iconv() first`.
+
+Item 20b (deadline = NA silently meant none): extendr maps an NA real to
+absence, so `deadline = NA` answered with no budget. Every deadline argument
+is now an Robj checked at the boundary (`deadline_of`): NULL is absence,
+-1 is the one no-deadline number, zero stays spent, NA refuses by name.
+Probe (`/tmp/rr3/probe_deadline_na.R`): pre-fix `deadline=NA: answered FALSE`;
+post-fix logical NA refuses with `the deadline is seconds as a number, -1 for
+no deadline, or NULL`, `NA_real_` refuses with `the deadline is NA: pass -1
+for no deadline, seconds as a number, or NULL`, `-1` answers (none), `-2`
+still refuses as negative.
+
+Item 20c (the error hook fired on an interrupt): R's own interrupt machinery
+runs a user's `options(error = ...)` hook while the guarded check consumes
+the pending interrupt. The hook is held aside for the length of every
+`.tt_call` and restored on exit, and `.tt_interrupt` delivers a real
+interrupt - the process sends itself SIGINT and steps into the unguarded
+check - so an uncaught interrupt halts like a genuine Ctrl-C instead of
+raising a synthetic condition through `stop()`. Probes (`/tmp/rr3/dbg2.R`
+and `probe_hook2.R`): pre-fix `ERROR-HOOK-ON-INTERRUPT fired` twice and the
+script continued; post-fix `outer: interrupt, after ok` with the hook silent,
+and `interrupt_fast.sh` stays green (`the interrupt landed at 0.905 s, within
+a tick of the signal, and the session answered after it`).
+
+Item 18 (annotate overwrote input columns): a question name landing on any
+input column - the `on` column included - refuses before any request is paid.
+Probe (`/tmp/rr3/probe_overwrite.R`): pre-fix `columns: body | body values
+now: FALSE/FALSE` (the input text gone); post-fix `error: annotate cannot add
+a question named 'body': the input already has a column by that name; rename
+one`.
+
+Full gate for this surface at this commit: `./check.sh` exit 0 (86 ok lines,
+wire suite against the stub on 8215, `production install answers`).
