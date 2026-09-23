@@ -6,7 +6,7 @@
     "printed": {
       "command": "python sample.py",
       "output": "True\nNone\n{'steps': True, 'area': 'export', 'impact': 1.94}\n{'steps': False, 'area': 'login', 'impact': 2.0}\n{'steps': False, 'area': 'billing', 'impact': 0.06}",
-      "see": "The refund request prints True, the send-back line prints None, and each bug report gets its own form: export, login, and billing."
+      "see": "Each form fills steps, area, and impact."
     }
   },
   "polars": {
@@ -26,7 +26,7 @@
     "printed": {
       "command": "node sample.mjs",
       "output": "[\n  'The zipper broke the first time I used it.',\n  'The strap snapped on day two.'\n]\n2",
-      "see": "filter keeps the broken zipper and the snapped strap. The outage scores 2, and 2 is Immediate."
+      "see": "The early delivery drops out."
     }
   },
   "ruby": {
@@ -36,7 +36,7 @@
     "printed": {
       "command": "ruby sample.rb",
       "output": "Refunds are issued within 30 days of purchase.\n[\"praise\", \"bug\", \"billing\"]",
-      "see": "find picks the line with the 30-day refund deadline. The message gets praise, bug, and billing."
+      "see": "The double charge is tagged billing."
     }
   },
   "r": {
@@ -46,7 +46,7 @@
     "printed": {
       "command": "Rscript sample.R",
       "output": "                               body     team\n1 I was billed twice for one order.  billing\n2         My parcel is a week late. shipping\n3    I am locked out of my account.  account\n  place                            record probability\n1     1 I was billed twice for one order.        0.98",
-      "see": "Each ticket goes to the team its words name. Only the double bill is about money, so it ranks first."
+      "see": "The double bill ranks at 0.98."
     }
   },
   "rust": {
@@ -66,7 +66,7 @@
     "printed": {
       "command": "cc sample.c -lthinkthen && ./sample",
       "output": "{\"answer\":2.0,\"nearest\":\"Immediate.\"}",
-      "see": "The outage scores 2.0, and the nearest level is Immediate."
+      "see": "`nearest` names the level closest to the number."
     }
   },
   "duckdb": {
@@ -76,7 +76,7 @@
     "printed": {
       "command": "duckdb -unsigned -list < sample.sql",
       "output": "id|team\n1|shipping\n3|account\n4|billing",
-      "see": "The thank-you drops out. The late parcel goes to shipping, the lockout to account, and the double bill to billing."
+      "see": "The late parcel goes to shipping, the lockout to account, and the double bill to billing."
     }
   },
   "sqlite": {
@@ -96,7 +96,7 @@
     "printed": {
       "command": "psql -q -f sample.sql",
       "output": " id |           body            \n----+---------------------------\n  3 | I want to send this back.\n(1 row)",
-      "see": "Only the send-back line comes back NULL. It could mean an exchange or money back, so a person reads it."
+      "see": "Rows 1 and 2 answer true and false, so the WHERE drops them."
     }
   }
 }

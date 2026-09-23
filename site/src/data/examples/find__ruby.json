@@ -6,7 +6,7 @@
   "printed": {
     "command": "ruby sample.rb",
     "output": "Refunds are issued within 30 days of purchase.\n[\"praise\", \"bug\", \"billing\"]",
-    "see": "find picks the line with the 30-day refund deadline. The message gets praise, bug, and billing."
+    "see": "The double charge is tagged billing."
   },
   "function": "find",
   "surface": "ruby"

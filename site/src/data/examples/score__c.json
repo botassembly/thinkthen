@@ -6,7 +6,7 @@
   "printed": {
     "command": "cc sample.c -lthinkthen && ./sample",
     "output": "{\"answer\":2.0,\"nearest\":\"Immediate.\"}",
-    "see": "The outage scores 2.0, and the nearest level is Immediate."
+    "see": "`nearest` names the level closest to the number."
   },
   "function": "score",
   "surface": "c"

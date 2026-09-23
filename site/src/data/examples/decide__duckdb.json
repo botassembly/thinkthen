@@ -6,7 +6,7 @@
   "printed": {
     "command": "duckdb -unsigned -list < sample.sql",
     "output": "id|team\n1|shipping\n3|account\n4|billing",
-    "see": "The thank-you drops out. The late parcel goes to shipping, the lockout to account, and the double bill to billing."
+    "see": "The late parcel goes to shipping, the lockout to account, and the double bill to billing."
   },
   "function": "decide",
   "surface": "duckdb"

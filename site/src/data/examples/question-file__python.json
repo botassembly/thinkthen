@@ -6,7 +6,7 @@
   "printed": {
     "command": "python sample.py",
     "output": "True\nNone\n{'steps': True, 'area': 'export', 'impact': 1.94}\n{'steps': False, 'area': 'login', 'impact': 2.0}\n{'steps': False, 'area': 'billing', 'impact': 0.06}",
-    "see": "The refund request prints True, the send-back line prints None, and each bug report gets its own form: export, login, and billing."
+    "see": "Each form fills steps, area, and impact."
   },
   "function": "question-file",
   "surface": "python"

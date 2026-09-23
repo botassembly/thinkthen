@@ -13,12 +13,12 @@
     },
     {
       "name": "decide-case",
-      "command": "thinkthen decide --quiet --threshold 0.2:0.8 'Does the customer ask for a refund?' < ticket.txt\ncase $? in\n  0) echo 'refund it' ;;\n  1) echo 'answer it as usual' ;;\n  3) echo 'send it to a person' ;;\nesac",
-      "input": "I renewed once this morning, but my card shows two charges.\nPlease refund the duplicate.",
-      "inputFile": "ticket.txt",
-      "output": "refund it",
+      "command": "thinkthen decide --quiet --threshold 0.2:0.8 'Does the customer ask for a refund?' < vague.txt\ncase $? in\n  0) echo 'refund it' ;;\n  1) echo 'answer it as usual' ;;\n  3) echo 'send it to a person' ;;\nesac",
+      "input": "I want to send this back.",
+      "inputFile": "vague.txt",
+      "output": "send it to a person",
       "exit": null,
-      "see": "The ticket asks for a refund, so decide exits 0 and the case takes the refund branch."
+      "see": "Sending it back could mean an exchange or money back. decide exits 3, and the case sends it to a person."
     },
     {
       "name": "decide",

@@ -6,7 +6,7 @@
   "printed": {
     "command": "psql -q -f sample.sql",
     "output": " id |           body            \n----+---------------------------\n  3 | I want to send this back.\n(1 row)",
-    "see": "Only the send-back line comes back NULL. It could mean an exchange or money back, so a person reads it."
+    "see": "Rows 1 and 2 answer true and false, so the WHERE drops them."
   },
   "function": "decide",
   "surface": "postgresql"

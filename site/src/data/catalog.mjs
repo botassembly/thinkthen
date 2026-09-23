@@ -473,7 +473,7 @@ export const HOWTOS = [
     slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'], input: 'leads.txt', runs: ['07-leads'],
-    see: { '07-leads': 'The unsubscribe and the thank-you drop out. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
+    see: { '07-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',

@@ -6,7 +6,7 @@
   "printed": {
     "command": "node sample.mjs",
     "output": "[\n  'The zipper broke the first time I used it.',\n  'The strap snapped on day two.'\n]\n2",
-    "see": "filter keeps the broken zipper and the snapped strap. The outage scores 2, and 2 is Immediate."
+    "see": "The early delivery drops out."
   },
   "function": "filter",
   "surface": "typescript"
