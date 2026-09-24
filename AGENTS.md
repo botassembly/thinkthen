@@ -46,7 +46,7 @@ This repository will go public. Never name a private project or a customer. Desc
 - A number on a page names the record that measured it, and a change in behavior changes its pages in the same commit.
 - A script that checks something runs from a rung, or it rots.
 - A new test answers four questions: what behavior it protects, what credible regression makes it fail, why no existing test already catches it, and whether it needs an export, flag, or hook that only tests use. A missing answer rejects it. A test that needs a test-only hook moves to the real boundary. The source is the workspace decision `2026-09-24-tests-earn-their-place.md`.
-- Review rejects the junk patterns from the OpenClaw `test-audit` skill (https://github.com/openclaw/openclaw/tree/main/.agents/skills/test-audit). Among them: a test with no assertion, a value compared to itself, an expected value computed by the code under test, a mock that implements the asserted behavior, a copied inventory or export list, and one contract tested at several layers.
+- Review rejects the junk patterns from the OpenClaw `test-audit` skill (https://github.com/openclaw/openclaw/tree/main/.agents/skills/test-audit). These include a test with no assertion, a value compared to itself, an expected value computed by the code under test, a mock that implements the asserted behavior, a copied inventory or export list, and one contract tested at several layers.
 
 ## Where things are
 
