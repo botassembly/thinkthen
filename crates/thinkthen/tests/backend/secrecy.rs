@@ -221,15 +221,7 @@ fn sweep(
         assert_eq!(first.status.code(), Some(0), "{case}: the priming run");
     }
     if let Some(damage) = route.damage {
-        let entries = written(&dir);
-        assert!(!entries.is_empty(), "{case}: an entry to damage");
-        for entry in entries.into_iter().filter(|entry| {
-            entry
-                .file_name()
-                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-        }) {
-            fs::write(&entry, damage)?;
-        }
+        damage_entries(&case, &dir, damage)?;
     }
 
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();
@@ -269,6 +261,20 @@ fn sweep(
                 assert!(!text.contains(forbidden), "{case} {view:?}: {forbidden}");
             }
         }
+    }
+    Ok(())
+}
+
+/// Overwrite every entry a priming run recorded with the damaged bytes.
+fn damage_entries(case: &str, dir: &Path, damage: &str) -> io::Result<()> {
+    let entries = written(dir);
+    assert!(!entries.is_empty(), "{case}: an entry to damage");
+    for entry in entries.into_iter().filter(|entry| {
+        entry
+            .file_name()
+            .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+    }) {
+        fs::write(&entry, damage)?;
     }
     Ok(())
 }

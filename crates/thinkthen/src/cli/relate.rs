@@ -136,24 +136,13 @@ fn execute(
                 let mapping = mappings
                     .next()
                     .ok_or(Failure::Defect("a relation reply exceeds its question map"))?;
-                if let AnswerOutcome::Answered(answer) = outcome {
-                    execution.answered += 1;
-                    execution.edges.extend(assemble_edges(
-                        entities,
-                        &relation.relation,
-                        std::slice::from_ref(&mapping),
-                        std::slice::from_ref(answer),
-                        threshold,
-                    ));
-                } else {
-                    execution.failed += 1;
-                }
-                execution.logical.push(result::Logical {
+                let logical = result::Logical {
                     relation: relation.relation.clone(),
                     mapping,
                     outcome: outcome.clone(),
                     request: answered.request.as_str().to_owned(),
-                });
+                };
+                add_logical(&mut execution, entities, logical, threshold);
             }
         }
         if mappings.next().is_some() {
@@ -163,6 +152,28 @@ fn execute(
         }
     }
     Ok(execution)
+}
+
+/// Keep one logical answer and the edges the shared assembler draws from it.
+fn add_logical(
+    execution: &mut result::Execution,
+    entities: &[RelationEntity],
+    logical: result::Logical,
+    threshold: f64,
+) {
+    if let AnswerOutcome::Answered(answer) = &logical.outcome {
+        execution.answered += 1;
+        execution.edges.extend(assemble_edges(
+            entities,
+            &logical.relation,
+            std::slice::from_ref(&logical.mapping),
+            std::slice::from_ref(answer),
+            threshold,
+        ));
+    } else {
+        execution.failed += 1;
+    }
+    execution.logical.push(logical);
 }
 
 fn add_meta(execution: &mut result::Execution, answered: &Answered) -> Result<(), Failure> {

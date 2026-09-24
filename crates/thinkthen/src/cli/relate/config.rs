@@ -45,21 +45,7 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
         if arguments.either {
             return Err(config_error(false, RelateConfigError::Relation));
         }
-        let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
-        let spec = RelateSpec::parse(&text).map_err(|error| config_error(true, error))?;
-        let presence = spec.presence();
-        let has_profile = spec.profile.is_some();
-        (
-            spec,
-            Some(From {
-                question: Source::File,
-                threshold: file_or_default(presence.threshold),
-                model: file_or_default(presence.model),
-                field: file_or_default(presence.fields),
-                kind_field: file_or_default(presence.fields),
-                profile: has_profile.then_some(Source::File),
-            }),
-        )
+        from_file(path)?
     } else {
         (
             RelateSpec::inline(&arguments.relations, arguments.either)
@@ -96,26 +82,48 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
     }
     let framing = framing(arguments);
     if framing == Framing::Lines {
-        if name.is_some() || arguments.kind_field.is_some() {
-            return Err(Failure::Usage(
-                "--lines takes neither --field nor --kind-field",
-            ));
-        }
-        if spec
-            .relations
-            .iter()
-            .any(|rule| rule.source != "*" || rule.target != "*")
-        {
-            return Err(Failure::Usage(
-                "--lines takes only bare relation names or NAME=*:*",
-            ));
-        }
+        lines_only(name.is_some() || arguments.kind_field.is_some(), &spec)?;
     }
     Ok(Settled {
         spec,
         framing,
         from,
     })
+}
+
+/// Read the question file and name which values it supplied.
+fn from_file(path: &str) -> Result<(RelateSpec, Option<From>), Failure> {
+    let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
+    let spec = RelateSpec::parse(&text).map_err(|error| config_error(true, error))?;
+    let presence = spec.presence();
+    let from = From {
+        question: Source::File,
+        threshold: file_or_default(presence.threshold),
+        model: file_or_default(presence.model),
+        field: file_or_default(presence.fields),
+        kind_field: file_or_default(presence.fields),
+        profile: spec.profile.is_some().then_some(Source::File),
+    };
+    Ok((spec, Some(from)))
+}
+
+/// Line input has no members to point into and one synthetic kind.
+fn lines_only(pointed: bool, spec: &RelateSpec) -> Result<(), Failure> {
+    if pointed {
+        return Err(Failure::Usage(
+            "--lines takes neither --field nor --kind-field",
+        ));
+    }
+    if spec
+        .relations
+        .iter()
+        .any(|rule| rule.source != "*" || rule.target != "*")
+    {
+        return Err(Failure::Usage(
+            "--lines takes only bare relation names or NAME=*:*",
+        ));
+    }
+    Ok(())
 }
 
 fn framing(arguments: &RelateArguments) -> Framing {
