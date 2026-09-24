@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0088: Build the public `relate` command
 
-Status: implemented in the ticket worktree from clean `cdfd0e5e`; independent code review and landing remain open.
+Status: implemented in the ticket worktree from `cdfd0e5e`. The first code review rejected it, the builder fixed findings 1 through 9, and a fresh independent review and landing remain open. The review fixes changed shared 0081 owners and exceeded the file-count budget, so this ticket needs the re-score its stop rule names.
 
 ## Outcome
 
@@ -42,7 +42,7 @@ Production owners are a new `core/relate_file.rs` with behavior-local parsing/di
 
 Test owners are new core relate-file tests, `tests/relate_edge.rs`, and backend relate modules plus the shared profile, cache identity, recording/replay, secrecy, refusal, conformance, and question-file suites. Split the 500-line secrecy file and 497-line failure file before adding cases. Do not add relate results to 499-line `core/result.rs` or fill 408-line `cli/args.rs` when a behavior-local owner is available.
 
-Change or add at most 15 production Rust files and 11 test-only Rust files. Add at most 1,200 nonblank production Rust lines and 1,100 nonblank test Rust lines, 2,300 gross. Keep every Rust file at or below 500 nonblank lines and add no dependency. The implementation record lists actual files and gross additions and explains any variance before code review.
+Change or add at most 15 production Rust files and 11 test-only Rust files. Add at most 1,200 nonblank production Rust lines and 1,100 nonblank test Rust lines, 2,300 gross. Keep every Rust file at or below 500 nonblank lines and add no dependency. The implementation record lists actual files and gross additions and explains any variance before code review. Measured after the review fixes: 25 production files at 1,170 net nonblank lines, 17 test-only files at 1,095 net lines, 2,265 net in total, and a ceiling of 43,310. The file counts and the raise need second-agent review; `sdlc/records/0088-build-relate-cli.md` explains the variance.
 
 ## Acceptance gates
 

@@ -1,39 +1,53 @@
 # 0088: Build the public `relate` command
 
-Status: Implemented in the ticket worktree. Independent Sol review and landing remain open.
+Status: The first review (`0088-review-claude.md`) rejected the handed-off diff. The builder fixed findings 1 through 9 on the ticket branch. A fresh independent review and landing remain open. Finding 10 is outside this ticket and is open as `sdlc/issues/2026-09-24-a-target-side-choice-asks-the-reversed-relation.md` on main.
 
 ## Result
 
-The tenth command reads one complete entity set from a JSON document, lines, JSONL, CSV, or TSV. It accepts ordered inline relation rules or one closed version-one `@entities` question file. Command-line field, kind, threshold, and model values independently override file values. Saved calibration profile identity remains distinct from the runtime backend profile.
+The tenth command reads one complete entity set from a JSON document, lines, JSONL, CSV, or TSV. It accepts ordered inline relation rules or one closed version-one `@entities` question file. Command-line field, kind, threshold, and model values independently override file values. The command validates the complete set before it sends anything. It delegates wildcard expansion, method selection, option and request-byte fallback, relation state, splitting, the cut, and edge assembly to shared owners. Bare output writes name-and-kind edges. Dry run writes the `thinkthen.relate-plan/1` report. Detailed output writes the Option A `thinkthen.result/1` object. A mixed recoverable logical failure prints its output and exits 6. A reply with no valid logical answer exits 4 without output.
 
-The command validates the complete set before it sends anything. It delegates wildcard expansion, method selection, option and request-byte fallback, relation state, splitting, and edge assembly to the landed 0081 and 0079 owners. Bare output writes self-contained name-and-kind edges. Dry run writes the exact `thinkthen.relate-plan/1` report. Detailed output writes the ruled Option A `thinkthen.result/1` aggregate with exact successful and failed choice and yes/no entry unions.
+The handed-off state is commit `328c2f25`. Everything below records the review fixes after it.
 
-Mixed recoverable logical failure buffers and prints successful edges or the complete detailed aggregate, then exits 6. A reply with no valid logical answer exits 4 without output. Record, replay, explicit cache, default cache, request identity, interrupt behavior, closed output, and fixed safe diagnostics use the existing shared infrastructure.
+## Review findings and fixes
 
-The public specification, question-file schema and corpus, executable page, and replay-only page 45 now cover the command. Ticket 0088 amends ADR 0018's original twenty-page portfolio to 21 because no existing page teaches complete-set relations.
+1. Target-side asker. The shared `QuestionMap::Choice` now carries its asker, and relate reads roles from it (`f7aac994`). Red: `a_target_side_asker_keeps_its_roles_and_the_declared_edge_direction` failed with the asker reported as `source`.
+2. `@FILE` beside inline rules. Any `@` argument beside another rule exits 2 with a fixed sentence and zero sends (`6b117f17`). Red: the test exited 0 for `calls @q.json`.
+3. Bare name holding `:`. The inline grammar refuses it (`a1169a15`). Red: the core grammar test accepted `works_for:person`.
+4. Shared secrecy and refusal suites. Relate is a row of the shared verb table (`7eacd9cc`). Every backend and recording route runs over it in document and JSONL framings, and over lines, CSV, and TSV, in both views. That covers success, dry run, default and explicit cache, record, replay, replay miss, damaged and hostile entries, a refused address, transport failure, status and decode failures, retries, storage failure, and a missing key. The sweep now points the platform default cache into each case folder, reads what it wrote, and requires the success route to write it. Every shared refusal row runs on relate, with its own sentence where the grammar differs, and nine relate rows pin complete-set refusals with zero sends. The profile refusal sweep includes relate (`b0a2c0bf`), and the `Debug` sweep reads relate failures and relation entities (`dd27952c`). The mixed logical failure route stays in `secrecy_relate.rs`, so the `secrecy` filter runs it (`489a277c`). The 500-line secrecy page split first (`a6920ef3`). Red: the refusal sweep found that relate accepted `--jobs` and sent a request, and the `Debug` sweep found that `RelationEntity` printed its name and kind. A planted `eprintln!` of the entities failed both secrecy tests before it was removed.
+5. Second fallback and threshold owners. `SettledRelation::settle` in `engine/prepared_request.rs` is now the one fallback owner, and recognize and relate both call it. The assembler exports its one cut, `reaches_cut`, which relate's detailed entries call (`de73902f`). The unreachable limit arm is gone. This is a refactor under a behavior test that passed before and after, `a_backend_profile_option_limit_falls_back_per_concrete_relation_in_the_plan`.
+6. Digest. The core owns `RelateQuestion`, including null fields under `--lines`, and production hashes it (`22ab8f5a`). Red: the core test failed to compile because the question did not exist. A backend test pins the production `meta.question_sha256` for a lines run, which `sha256sum` confirmed from the printed question bytes.
+7. Budget. Every added `#[rustfmt::skip]` and the `too_many_arguments` expectation are gone (`032ba90e`, `de73902f`). The failure conversions moved out of `cli/failure.rs` before relate's variant, and the two deleted doc comments are back.
+8. Number format. Detailed entries are serde structures, so edges and entries both write `1.0` (`22ab8f5a`). Red: the exact Option A test failed on the old `"probability":1`.
+9. Dead code. `Meta::new` discarded `failed_questions`, so relate's string replacement was not dead. `Meta::new` now keeps the count, and the replacement is gone (`22ab8f5a`). The unreachable arm went with finding 5. A valid question file for another verb exits 2, and an invalid one exits 5 (`31d90282`). Red: the mixed test reported `failed_questions` 0 once the replacement was removed, and an invalid decide file exited 2.
 
-## Red and green evidence
+Further proof added: the exact dry-run object and its request digest equal to the digest a real run sends, an H entry at the inclusive cut, bare exit 6, wildcard concrete order, default and named cache reuse with zero sends on the second run, and a runtime backend profile that leaves saved calibration provenance alone.
 
-Before implementation, `cargo test --locked -p thinkthen --lib relate_file` failed because `RelateSpec` and its digest support did not exist. `cargo test --locked -p thinkthen --test relate_edge help` failed because Clap had no `relate` command and exited 2. The first backend relation tests reached a deliberate unimplemented failure and exited 70.
+## Decisions Ian can overturn
 
-The first exact Option A choice assertion later failed because the manual entry serializer emits shortest JSON numbers `1` and `0`, while the test expected `1.0` and `0.0`. Correcting the expected public bytes made the focused test pass without a production change.
-
-Focused green results before lint: 2 pure relation-file tests passed; 1 help test passed; 2 relation question-file tests passed; the shared question-file corpus test and schema self-test passed; 12 relation and relation-security backend tests passed together; the exact successful and failed choice-entry test passed; the aggregate interrupt test passed; 4 executable relation cases passed; and all 3 page-45 replay cases passed. These tests cover canonical bytes and digest, precedence, complete-set framings and empty outcomes, zero-send refusals, exact dry-run request identity, bare ordering, exact Option A unions, inclusive cuts, exit 6, exit 4, cache, record, replay, replay miss, all-framing secrecy, authorization-header-only key use, backend failures, closed output, and cancellation.
-
-No live, paid, or external backend call ran. The implementer did not run the full four-rung ladder, as the ticket handoff required.
+- Relate refuses `--jobs` at exit 2, because it sends its requests in order. Before this it accepted the flag and ignored it.
+- An invalid file that names another verb is exit 5, like any invalid question file.
+- Relation file rules and cuts now use recognition's readers. A malformed relation in a relate file reports the relate relation sentence, and a malformed shape reports the closed-file sentence.
 
 ## Budget
 
-The implementation changes exactly 15 production Rust files: `cli/args.rs`, `cli/args/command.rs`, `cli/args/relate.rs`, `cli/failure.rs`, `cli/failure/relate.rs`, `cli/mod.rs`, `cli/relate.rs`, the five files under `cli/relate/`, `core/mod.rs`, `core/records.rs`, and `core/relate_file.rs`.
+Measured with `git diff cdfd0e5e HEAD`, nonblank Rust lines under `crates`:
 
-It changes 9 test-only Rust files: `core/relate_file/tests.rs`, `tests/relate_edge.rs`, `tests/backend/{main,interrupt,relate,relate_security}.rs`, and `tests/question_file/{main,corpus,relate}.rs`.
+- Production: 25 files changed, 1,446 lines added, 276 removed, 1,170 net. The cap is 15 files and 1,200 lines.
+- Test-only: 17 files changed, 1,337 lines added, 242 removed, 1,095 net. The cap is 11 files and 1,100 lines.
+- Total net growth is 2,265, within the 2,300 cap. Added lines count code moved between files.
+- The ceiling in `sdlc/ratchet.json` is 43,310, up from main's 41,045. The handed-off diff had set 43,020 with the formatter suppressed.
+- No Rust file exceeds 500 nonblank lines. The largest changed files are `core/result.rs` at 499 and `tests/backend/refusals.rs` at 469.
 
-The gross additions are 1,199 nonblank production Rust lines and 785 nonblank test Rust lines, 1,984 total. The accepted ceilings are 1,200, 1,100, and 2,300. The largest changed Rust file is `cli/failure.rs` at exactly 500 nonblank lines. The Rust ratchet rises from 41,045 to the measured 43,020 lines. The implementer checked the shared planner, state, fallback, splitter, threshold, edge assembly, recording, and result owners before raising it; no second owner was added.
+The file counts exceed the ticket because the review's fixes live in shared owners. Those owners are `core/relation.rs` (asker, cut, withheld `Debug`), `engine/prepared_request.rs` (fallback owner, outside the ticket's `opens` list), `cli/recognize/relation.rs`, `core/result.rs`, `core/recognize_file.rs`, `cli/failure/convert.rs`, and `Common::framing` in `cli/args.rs`, which replaced four copies in `annotate.rs`, `asking.rs`, `recognize.rs`, and `recognize/config.rs`. These change 0081's shared owners without changing recognition output. The ticket's stop rule asks for a re-score when that happens, so the ceiling raise, the file counts, and the 0081 owner changes need second-agent review.
 
-The first full lint attempt reached Clippy and rejected nested outcome handling, two eight-argument render functions, default-field reassignment, and unscoped fixture assertions. The remediation extracted one local outcome helper, passed each renderer one compact behavior-local context, initialized replay state directly, and scoped the existing test-fixture lint policy at the module declarations. Focused Clippy then exited 0. Production behavior and shared relation owners did not change.
+## What is not proven
 
-The complete lint rung then exited 0 with both backend environment variables unset. Policy, package graph and verification, doctests, documentation, page checks, dependency checks, Clippy, and the exact `43020/43020` ratchet passed. The final focused matrix also passed the shared secrecy and refusal filters, relation interrupt proof, schema self-test, 4 executable relation cases, 3 page-45 replay cases, formatting, page inventory, 500-line scan, and `git diff --check`.
+- Line restrictions, duplicates, absent kinds, and the 255/256 boundary are pinned by the shared refusal sweep and backend tests, not by `--lib relate_file`.
+- The help test checks fragments with `contains`.
+- The request digest identity is pinned for one choice relation, not for every method.
+- Relate output for one-way cross-kind rules where the target side asks depends on the open finding 10 issue.
+- `RecognizedName` still derives `Debug` with its name. It belongs to recognition and is outside this ticket.
 
-## Open review work
+## Gates
 
-Independent Sol code review remains the next gate. The coordinator still owns the complete sequential install, lint, test, and specification ladder from the exact reviewed candidate. Ian can overturn page 45's addition to the documentation portfolio; doing so requires another home for the accepted replay-only how-to.
+No live, paid, or external call ran. Tests used replay and loopback listeners.
