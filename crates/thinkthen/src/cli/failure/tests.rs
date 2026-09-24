@@ -95,36 +95,74 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     assert!(shown.contains("withheld"), "{shown}");
 }
 
-/// `choose --options` reads its labels from the record, and the request body
-/// carries the evidence as `state`. Neither `Debug` line shows the record.
+/// `choose`, `tag`, and `score` can read their labels from a record. The
+/// `--plan` document carries the request, the adapter reads the answers back
+/// with those labels, and a result row holds both. No `Debug` line shows them.
 #[test]
-fn no_record_label_or_request_debug_line_shows_the_evidence() {
+fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
+    use crate::core::{AnswerOutcome, Question};
     let record = crate::core::Reading::new(crate::core::Framing::Jsonl, Vec::new())
         .expect("a JSON reading")
-        .record(format!(r#"{{"options":["{EVIDENCE}","other"]}}"#).as_bytes())
+        .record(format!(r#"{{"labels":["{EVIDENCE}","other"]}}"#).as_bytes())
         .expect("a JSON record");
-    let question = crate::core::Question::Choose {
-        text: crate::core::QuestionText::new("Which one fits?").expect("a question"),
-        options: record
-            .choices(&crate::core::Pointer::new("/options").expect("a pointer"))
-            .expect("two options"),
-    };
+    let labels = record
+        .choices(&crate::core::Pointer::new("/labels").expect("a pointer"))
+        .expect("two labels");
+    let text = crate::core::QuestionText::new("Which one fits?").expect("a question");
+    let questions = vec![
+        Question::Choose {
+            text: text.clone(),
+            options: labels.clone(),
+        },
+        Question::Tag {
+            text: text.clone(),
+            labels: labels.clone(),
+        },
+        Question::Score {
+            text,
+            levels: labels,
+        },
+    ];
+    let model = crate::core::ModelName::new("jev-latest").expect("a model");
     let plan = crate::core::Plan::new(
         crate::core::Evidence::new(EVIDENCE).expect("evidence"),
-        crate::core::ModelName::new("jev-latest").expect("a model"),
-        vec![question.clone()],
+        model.clone(),
+        questions.clone(),
     )
     .expect("a plan");
-    let request = crate::core::adapters::built_in::request(&plan).expect("a request");
-    let shown = format!("{question:?} {plan:?} {plan:#?} {request:?} {request:#?}");
-    assert!(!shown.contains(EVIDENCE), "{shown}");
-    assert_eq!(
-        format!("{request:?}"),
-        r#"Request { state: <24 bytes withheld>, model: "jev-latest", .. }"#
+    let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("an address");
+    let backend = crate::core::Backend::from_parts(url.clone(), model.clone());
+    let document = crate::core::PlanDocument::of(&backend, &plan).expect("a plan document");
+    let body = format!(
+        r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"choice","probabilities":{{"{EVIDENCE}":0.75,"other":0.25}}}},"q2":{{"type":"noul","noul":0.9}},"q3":{{"type":"noul","noul":0.1}},"q4":{{"type":"score","probabilities":{{"0":0.75,"1":0.25}}}}}}}}"#
     );
+    let reply = crate::core::adapters::built_in::decode(&plan, body.as_bytes()).expect("a reply");
+    let mut shown = format!("{plan:?} {plan:#?} {document:?} {document:#?} {reply:?} {reply:#?}");
+    for (question, outcome) in questions.into_iter().zip(reply.outcomes()) {
+        let AnswerOutcome::Answered(answer) = outcome else {
+            panic!("every question is answered: {reply:?}");
+        };
+        let (value, _) = answer.read(None);
+        let meta = crate::core::Meta::new(
+            "0.0.0",
+            String::new(),
+            url.clone(),
+            model.clone(),
+            None,
+            crate::core::RequestMeta::new(false, 1, Vec::new()),
+        );
+        let row = crate::core::DecisionResult::new(value, question, answer.clone(), None, meta);
+        shown.push_str(&format!("{row:?} {row:#?}"));
+    }
+    assert!(!shown.contains(EVIDENCE), "{shown}");
+    let [AnswerOutcome::Answered(choice), ..] = reply.outcomes() else {
+        panic!("the first question is answered: {reply:?}");
+    };
     assert_eq!(
-        format!("{question:?}"),
-        r#"Choose { text: QuestionText(String("Which one fits?")), options: Labels(<27 bytes withheld>) }"#
+        format!("{choice:?} {:?}", choice.read(None).0),
+        "Answer(Choice { pick: <22 bytes withheld>, probabilities: \
+         Distribution { labels: <27 bytes withheld>, probabilities: [0.75, 0.25] }, \
+         confidence: None }) Choice(Some(<22 bytes withheld>))"
     );
 }
 
