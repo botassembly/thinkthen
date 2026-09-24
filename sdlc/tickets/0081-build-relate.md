@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0081: Build the shared relation foundation
 
-Status: implementation accepted; full sequential gate passed at `664b957a`; ready to land.
+Status: landed on remote main at merge `4229bbfa`.
 
 ## Outcome
 

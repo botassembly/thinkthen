@@ -1,6 +1,6 @@
 # 0081: Build the shared relation foundation
 
-Status: redesigned 0081 accepted for implementation; accepted 0088 waits for landed 0081.
+Status: landed on remote main at merge `4229bbfa`; ticket 0088 is next.
 
 ## Trial result
 
@@ -33,3 +33,5 @@ The exact candidate `a1feabe4` later entered the full sequential gate. Install p
 The full sequential gate at candidate `b98d7811` reached lint and failed in `recognize_refusals.rs`. Clippy reported `expect_used` and `indexing_slicing` in the automatic fixture answerer, `excessive_nesting` in its fixture branches, and `too_many_lines` on the 138-line request-byte refusal test. The remediation replaces fixture parsing with safe `get` and `Option` handling, separates answer selection, and splits the proof into fixture setup, recognition-limit measurement, typed relation probes, and final refusal. It adds no lint allow and changes no production code or refusal assertion. Full `sdlc/scripts/lint` with both backend credentials unset exits 0. The focused relation, recognize, and refusal commands pass 7, 21, and 3 tests. Formatting, the exact 41,045-line ratchet, the 500-line scan, and `git diff --check` pass. Full test and specification rungs have not run after this remediation.
 
 Independent Sol Medium review accepted the final implementation and both remediation passes. The full sequential gate passed from exact pushed candidate `664b957a` with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset: install exited 0; lint exited 0 with ratchet `41045/41045`; test exited 0 with 269 unit tests, 2 ignored subprocess tests, 327 backend tests, every edge suite, 2 doctests, and all transform and live-guard self-tests; specification exited 0 with 31 and 7 specification cases, every replay check, and 20 green demos; `git diff --check` exited 0. No live or paid call ran. Ticket 0081 is ready to land. Ticket 0088 remains next and waits for landed 0081.
+
+Main merged ticket 0081 at `4229bbfa` and pushed it to `origin/main`. The unrelated main-only resource-truth document merged cleanly. Ticket 0088 is now unblocked.
