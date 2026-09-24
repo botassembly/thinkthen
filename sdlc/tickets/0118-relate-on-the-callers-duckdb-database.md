@@ -29,14 +29,15 @@ Ian ruled on 2026-09-24 that the DuckDB port splits at the relate seam, as findi
 
 ## Shared rules
 
-This ticket follows the six shared rules of `sdlc/planning/surfaces-port-guide.md` on main (`446a4d6b`, with the builder wording of `6eb1303e`).
+This ticket follows the seven shared rules of `sdlc/planning/surfaces-port-guide.md` on main (`446a4d6b`, with the builder wording of `6eb1303e` and the paid-backend rule of `d783ab6b`).
 
 1. **No Docker.** Relate's suites run in 0110's offline check with the pinned toolchains and no container.
 2. **Toolchains under `~/.cache/thinkthen-toolchains/`.** Relate adds no toolchain. It uses 0110's CLI and venv under `~/.cache/thinkthen-toolchains/duckdb/v1.5.5/`.
 3. **One cache and one backend per test.** Each relate test sets its own cache folder through `SET thinkthen_cache` and starts its own loopback backend. The held reply that can hold again and one backend per test come from ticket 0117.
 4. **Prompt Ctrl-C.** Decision 6 runs relate's engine call on the detachable worker. R4-22 meets 100 ms.
 5. **A deny plant that reaches deny offline.** This ticket adds no dependency. 0110's deny plant stands.
-6. **Public engine settings.** Relate honors 0110's four settings on the engine built on `EngineBuilder::from_env()`. A test that needs requests in flight runs `SET thinkthen_width = 8` in its own child process.
+6. **No test or plant reaches a paid backend.** Relate's suites run under 0110's `check.sh`, which unsets `THINKTHEN_API_KEY`, sets a fake key only beside a loopback `THINKTHEN_BASE_URL`, and refuses any other address. No plant here changes how the engine is built. Relate's settings test proves seeding through the cache folder: a second relate after `SET thinkthen_width = 8` answers from the environment's cache folder with a loopback count of 0.
+7. **Public engine settings.** Relate honors 0110's four settings on the engine built on `EngineBuilder::from_env()`. A test that needs requests in flight runs `SET thinkthen_width = 8` in its own child process.
 
 ## What moves from the tag
 
@@ -78,7 +79,7 @@ Each re-proof runs against the real engine through a loopback backend in the sto
 - 0110's R1-10 test gains the relate scan boundary. In the `test-hooks` build, a panic there reads `defect`, and the CLI answers the next query.
 - 0110's secrecy test gains every relate error message.
 - A single held relate gets `cancelled` within 100 ms of a SIGINT sent once `count` reads 1. The count stays 1 after release.
-- `SET thinkthen_width = 8` reaches relate. With `THINKTHEN_BASE_URL` pointed at the test's loopback backend, a relate over 16 rows holds 8 counted requests there.
+- `SET thinkthen_width = 8` reaches relate. With `THINKTHEN_BASE_URL` pointed at the test's loopback backend, a relate over 16 rows holds 8 counted requests there. A second relate over the same rows answers from the `THINKTHEN_CACHE` folder, and the loopback count for that run reads 0.
 - The queue-wait message keeps the tag's sentence, and `relate_wait_timer.py` pins it.
 
 ## The check
