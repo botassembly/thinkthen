@@ -57,3 +57,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: The command's result serializer moves out of `cli` into one shared private module. The members listed in "Design" join the public contract.
 - Proof: The JSON methods match the command's output bytes. `choose_labels` equals `from_json` with no added send. `either` equals `both_ways`, digest included. The inventory check covers all of 0095, and the two planted bugs turn tests red.
 - Defers: The first binding crate (0093), C (0094), and every surface. A `fields` pointer other than the default stays a usage error.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. This ticket adds no width member. Any public name or text it writes uses the throttle.
