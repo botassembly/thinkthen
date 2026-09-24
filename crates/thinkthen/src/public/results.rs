@@ -49,7 +49,7 @@ impl NamedProbability {
 
     /// Its probability.
     #[must_use]
-    pub const fn probability(&self) -> f64 {
+    pub fn probability(&self) -> f64 {
         self.probability
     }
 }
@@ -76,13 +76,13 @@ pub struct Usage {
 impl Usage {
     /// Tokens the backend read.
     #[must_use]
-    pub const fn input_tokens(&self) -> u64 {
+    pub fn input_tokens(&self) -> u64 {
         self.input_tokens
     }
 
     /// Tokens the backend wrote.
     #[must_use]
-    pub const fn output_tokens(&self) -> u64 {
+    pub fn output_tokens(&self) -> u64 {
         self.output_tokens
     }
 }
@@ -116,25 +116,25 @@ impl Counters {
 
     /// Live attempts sent.
     #[must_use]
-    pub const fn requests_sent(&self) -> u64 {
+    pub fn requests_sent(&self) -> u64 {
         self.requests_sent
     }
 
     /// Answers the cache gave without a send.
     #[must_use]
-    pub const fn cache_answers(&self) -> u64 {
+    pub fn cache_answers(&self) -> u64 {
         self.cache_answers
     }
 
     /// Tokens the backend reported reading.
     #[must_use]
-    pub const fn input_tokens(&self) -> u64 {
+    pub fn input_tokens(&self) -> u64 {
         self.input_tokens
     }
 
     /// Tokens the backend reported writing.
     #[must_use]
-    pub const fn output_tokens(&self) -> u64 {
+    pub fn output_tokens(&self) -> u64 {
         self.output_tokens
     }
 }
@@ -190,13 +190,13 @@ impl Details {
 
     /// The value under the question's rule.
     #[must_use]
-    pub const fn value(&self) -> &Judgment {
+    pub fn value(&self) -> &Judgment {
         &self.value
     }
 
     /// The probabilities the value was read from.
     #[must_use]
-    pub const fn probabilities(&self) -> &Probabilities {
+    pub fn probabilities(&self) -> &Probabilities {
         &self.probabilities
     }
 
@@ -226,25 +226,25 @@ impl Details {
 
     /// Attempts sent for this result, retries included.
     #[must_use]
-    pub const fn requests_sent(&self) -> u64 {
+    pub fn requests_sent(&self) -> u64 {
         self.requests_sent
     }
 
     /// True when the cache or a recording answered.
     #[must_use]
-    pub const fn cached(&self) -> bool {
+    pub fn cached(&self) -> bool {
         self.cached
     }
 
     /// The token counts the backend reported, when it reported them.
     #[must_use]
-    pub const fn usage(&self) -> Option<&Usage> {
+    pub fn usage(&self) -> Option<&Usage> {
         self.usage.as_ref()
     }
 
     /// Questions that failed inside the result. A single judgment has none.
     #[must_use]
-    pub const fn failed_questions(&self) -> usize {
+    pub fn failed_questions(&self) -> usize {
         0
     }
 }
@@ -308,13 +308,13 @@ impl<T, V> Row<T, V> {
 
     /// The record as given.
     #[must_use]
-    pub const fn input(&self) -> &T {
+    pub fn input(&self) -> &T {
         &self.input
     }
 
     /// Its answer.
     #[must_use]
-    pub const fn value(&self) -> &V {
+    pub fn value(&self) -> &V {
         &self.value
     }
 
@@ -341,13 +341,13 @@ impl<T> Ranked<T> {
 
     /// The record as given.
     #[must_use]
-    pub const fn input(&self) -> &T {
+    pub fn input(&self) -> &T {
         &self.input
     }
 
     /// Its probability of yes.
     #[must_use]
-    pub const fn probability(&self) -> f64 {
+    pub fn probability(&self) -> f64 {
         self.probability
     }
 
@@ -370,19 +370,19 @@ withheld_debug!(Candidate<T> { probability });
 impl<T> Candidate<T> {
     /// The unit as given, or `None` for the synthetic `none`.
     #[must_use]
-    pub const fn input(&self) -> Option<&T> {
+    pub fn input(&self) -> Option<&T> {
         self.input.as_ref()
     }
 
     /// Its probability.
     #[must_use]
-    pub const fn probability(&self) -> f64 {
+    pub fn probability(&self) -> f64 {
         self.probability
     }
 
     /// True for the synthetic `none` candidate.
     #[must_use]
-    pub const fn is_none(&self) -> bool {
+    pub fn is_none(&self) -> bool {
         self.input.is_none()
     }
 }
@@ -466,7 +466,7 @@ impl NamedAnnotation {
 
     /// Its value.
     #[must_use]
-    pub const fn value(&self) -> &Annotated {
+    pub fn value(&self) -> &Annotated {
         &self.value
     }
 }
@@ -504,7 +504,7 @@ impl<T> AnnotatedRecord<T> {
 
     /// The record as given.
     #[must_use]
-    pub const fn input(&self) -> &T {
+    pub fn input(&self) -> &T {
         &self.input
     }
 
@@ -528,13 +528,13 @@ pub struct Failed(FailureCause);
 impl Failed {
     /// Always [`ErrorKind::Backend`].
     #[must_use]
-    pub const fn kind(&self) -> ErrorKind {
+    pub fn kind(&self) -> ErrorKind {
         ErrorKind::Backend
     }
 
     /// What the backend's answer broke.
     #[must_use]
-    pub const fn cause(&self) -> FailureCause {
+    pub fn cause(&self) -> FailureCause {
         self.0
     }
 }

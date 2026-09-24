@@ -58,7 +58,10 @@ impl Description {
     /// Build one ordered JSON object description.
     #[must_use]
     pub fn builder() -> DescriptionBuilder {
-        DescriptionBuilder::default()
+        DescriptionBuilder {
+            members: Vec::new(),
+            examples: None,
+        }
     }
 
     /// The description as compact JSON.
@@ -90,7 +93,7 @@ impl Description {
 }
 
 /// One description object, with members in call order.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DescriptionBuilder {
     members: Vec<(String, Json)>,
     examples: Option<usize>,
@@ -196,12 +199,25 @@ impl fmt::Debug for Question {
 pub struct BandedQuestion(pub(crate) Question);
 
 /// A `choose` question bound to the labels of `C`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct ChooseQuestion<C: Choice>(pub(crate) Question, PhantomData<fn() -> C>);
 
 /// A `tag` question bound to the labels of `C`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct TagQuestion<C: Choice>(pub(crate) Question, PhantomData<fn() -> C>);
+
+/// `Debug` for the types that carry a `Choice`, which need not be `Debug`.
+macro_rules! debug_without_choice {
+    ($($name:ident),+) => {$(
+        impl<C: Choice> fmt::Debug for $name<C> {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.debug_tuple(stringify!($name)).field(&self.0).finish()
+            }
+        }
+    )+};
+}
+
+debug_without_choice!(ChooseQuestion, TagQuestion, ChooseBuilder, TagBuilder);
 
 /// A question read from a file: under one cut, or under a band.
 #[derive(Clone, Debug, PartialEq)]
@@ -553,7 +569,6 @@ impl Listing {
 }
 
 /// A `choose` question under construction, one option of `C` at a time.
-#[derive(Debug)]
 pub struct ChooseBuilder<C: Choice>(Listing, PhantomData<fn() -> C>);
 
 impl<C: Choice> ChooseBuilder<C> {
@@ -603,7 +618,6 @@ impl<C: Choice> ChooseBuilder<C> {
 }
 
 /// A `tag` question under construction, one label of `C` at a time.
-#[derive(Debug)]
 pub struct TagBuilder<C: Choice>(Listing, PhantomData<fn() -> C>);
 
 impl<C: Choice> TagBuilder<C> {

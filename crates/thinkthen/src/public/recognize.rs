@@ -63,7 +63,7 @@ impl Kind {
 
     /// What it means, when given.
     #[must_use]
-    pub const fn description(&self) -> Option<&Description> {
+    pub fn description(&self) -> Option<&Description> {
         self.description.as_ref()
     }
 }
@@ -137,12 +137,18 @@ impl Recognize {
     /// Start one; with no kind it looks for people, organizations, and places.
     #[must_use]
     pub fn builder() -> RecognizeBuilder {
-        RecognizeBuilder::default()
+        RecognizeBuilder {
+            kinds: Vec::new(),
+            relations: Vec::new(),
+            threshold: None,
+            relation_threshold: None,
+            model: None,
+        }
     }
 }
 
 /// A recognition request under construction.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct RecognizeBuilder {
     kinds: Vec<Kind>,
     relations: Vec<core::RelationRule>,
@@ -247,12 +253,16 @@ impl Relate {
     /// Start one.
     #[must_use]
     pub fn builder() -> RelateBuilder {
-        RelateBuilder::default()
+        RelateBuilder {
+            relations: Vec::new(),
+            threshold: None,
+            model: None,
+        }
     }
 }
 
 /// A relate request under construction.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct RelateBuilder {
     relations: Vec<core::RelationRule>,
     threshold: Option<f64>,
@@ -403,19 +413,19 @@ impl RecognizedEntity {
 
     /// The first scalar value's place.
     #[must_use]
-    pub const fn start(&self) -> usize {
+    pub fn start(&self) -> usize {
         self.0.start
     }
 
     /// The place after the last scalar value.
     #[must_use]
-    pub const fn end(&self) -> usize {
+    pub fn end(&self) -> usize {
         self.0.end
     }
 
     /// How strongly the tokens read as this kind.
     #[must_use]
-    pub const fn strength(&self) -> f64 {
+    pub fn strength(&self) -> f64 {
         self.0.strength
     }
 
@@ -457,19 +467,19 @@ impl Relation {
 
     /// The source name.
     #[must_use]
-    pub const fn source(&self) -> &RecognizedEntity {
+    pub fn source(&self) -> &RecognizedEntity {
         &self.source
     }
 
     /// The target name.
     #[must_use]
-    pub const fn target(&self) -> &RecognizedEntity {
+    pub fn target(&self) -> &RecognizedEntity {
         &self.target
     }
 
     /// The relation's probability.
     #[must_use]
-    pub const fn probability(&self) -> f64 {
+    pub fn probability(&self) -> f64 {
         self.probability
     }
 }
@@ -513,19 +523,19 @@ impl Edge {
 
     /// The source entity.
     #[must_use]
-    pub const fn source(&self) -> &Entity {
+    pub fn source(&self) -> &Entity {
         &self.source
     }
 
     /// The target entity.
     #[must_use]
-    pub const fn target(&self) -> &Entity {
+    pub fn target(&self) -> &Entity {
         &self.target
     }
 
     /// The edge's probability.
     #[must_use]
-    pub const fn probability(&self) -> f64 {
+    pub fn probability(&self) -> f64 {
         self.probability
     }
 }

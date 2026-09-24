@@ -1,7 +1,5 @@
 //! The one public error: six kinds, a safe message, and the retry signal.
 
-use std::fmt;
-
 use crate::engine::error::{Error as EngineError, Kind, TransportKind};
 
 /// What stopped a call, as one of six stable kinds.
@@ -11,22 +9,22 @@ use crate::engine::error::{Error as EngineError, Kind, TransportKind};
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// The call or a setting cannot act as given.
-    #[error("{0}")]
+    #[error("{}", .0.message)]
     Usage(ErrorDetail),
     /// The backend failed or refused the call.
-    #[error("{0}")]
+    #[error("{}", .0.message)]
     Backend(ErrorDetail),
     /// A local file, folder, or cache failed.
-    #[error("{0}")]
+    #[error("{}", .0.message)]
     Local(ErrorDetail),
     /// The call's cancel token fired, or its interrupt check answered `true`.
-    #[error("{0}")]
+    #[error("{}", .0.message)]
     Cancelled(ErrorDetail),
     /// The call's deadline passed.
-    #[error("{0}")]
+    #[error("{}", .0.message)]
     Deadline(ErrorDetail),
     /// A fault inside `thinkthen`. Report it.
-    #[error("{0}")]
+    #[error("{}", .0.message)]
     Defect(ErrorDetail),
 }
 
@@ -59,12 +57,6 @@ impl ErrorDetail {
     #[must_use]
     pub fn message(&self) -> &str {
         &self.message
-    }
-}
-
-impl fmt::Display for ErrorDetail {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.message)
     }
 }
 
