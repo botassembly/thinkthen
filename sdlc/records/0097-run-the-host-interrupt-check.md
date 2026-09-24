@@ -1,6 +1,6 @@
 # 0097: Run the host interrupt check
 
-Status: built on `ticket/0097-interrupt-check`; code review pending. Owner: Claude.
+Status: landed on main through `ticket/0097-interrupt-check`; the code review accepted `d8666c50` (`0097-code-review.md`). Owner: Claude.
 
 Base: main `836e3f23` with 0085. Code commits `334fc076` and, after the code review, the review-fix commit named in the ladder section.
 
@@ -62,3 +62,7 @@ Measured with `git diff -U0` over `*.rs`, nonblank lines, against the merge of m
 ## Ladder
 
 At `381a1ab4`, which merges main `badb9c57` over the review-fix commit `54ad43a2`, the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 1.51 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (811 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 50276/50276. This section changes only this record.
+
+## Landed
+
+The re-review accepted `d8666c50`. Main had not moved from `badb9c57`, so the ladder at `381a1ab4` stands. This commit adds the review record and the landed status, changes only Markdown, and `lint` passed on it. The merge commit on main carries it.
