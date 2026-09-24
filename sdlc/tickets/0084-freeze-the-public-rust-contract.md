@@ -6,7 +6,7 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: built; record `sdlc/records/0084-build-contract.md`. Owner: Claude.
+Status: built; record `0084-build-contract.md`. Owner: Claude.
 
 ## Outcome and authority
 
@@ -384,4 +384,4 @@ Amended 2026-09-24: package proof runs `cargo check`, `test`, and `package` with
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-spine-review-contract.md` rejected, then `2026-09-24-rereview-contract.md` accepted after fixes.
-- Code review: none; design only.
+- Code review: `sdlc/records/0084-0095-code-review.md`.

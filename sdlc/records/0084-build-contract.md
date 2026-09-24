@@ -32,6 +32,17 @@ Each plant ran alone on a scratch copy, and each turned the check red.
 | Give fork recovery to 0085 in ADR 0017 | ADR and ticket agreement |
 | Add a trailing space to the ticket | `git diff --check` exits 2 |
 
+## How to rerun the checks
+
+- Extract a ticket's block: `awk '/^```rust$/{f=1;next} /^```$/{f=0} f' TICKET > block.rs`.
+- Parse it: `rustfmt --edition 2024 --emit stdout block.rs`. Exit 0 means it parses.
+- One owner: across the 0084 and 0095 blocks, each `pub struct`, `pub enum`, or `pub trait` name appears once, and each `pub fn` name appears once per `impl` target and once at the crate root.
+- Cap: `wc -m TICKET`.
+
 ## Ladder
 
-`sdlc/scripts/install`, `lint`, `test`, and `spec` run once at the commit that adds this record. The builder reports that result with the commit.
+At `0304a6e4`, observed: `install` 0, `lint` 0, `test` 0, `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read `48140/48140`.
+
+## Code review fix
+
+The code review (`sdlc/records/0084-0095-code-review.md`) found one blocking item, B1. The two proposed ADR 0017 amendments sat above Ian's accepted Polars ruling and the dated amendments. They now sit unchanged at the end of the file. The 2026-09-23 amendment gains one sentence naming `EngineBuilder::from_env`. The ticket's status line drops `sdlc/records/` so its code review line can name the review, and the ticket is 29,992 characters.
