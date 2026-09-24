@@ -10,6 +10,7 @@ The repository gate and its hand-run support scripts.
 | `spec` | Rung 3. Runs executable specification pages, transforms, and green how-tos |
 | `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals |
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
+| `tickets` | Fails rung 1 when a ticket numbered 0120 or higher lacks its five-part Evidence section. `--self-test` runs its planted cases first |
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
 | `catalog.py` | Holds the shipped transform copies, the catalog table, and the source package byte-identical to `transforms/` for rung 1 |

@@ -14,6 +14,8 @@ sys.exit(n > 5000)
 '
 python3 sdlc/scripts/policy.py
 python3 sdlc/scripts/catalog.py
+python3 sdlc/scripts/tickets --self-test
+python3 sdlc/scripts/tickets
 # Ticket 0104: a stale crate longer than the fresh one must not reach `tar`.
 mkdir -p target/package
 head -c 4194304 /dev/urandom \
