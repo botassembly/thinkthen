@@ -6,7 +6,7 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: draft, revised after design review; needs re-review. Owner: Claude.
+Status: revised after re-review; confirming. Owner: Claude.
 
 ## Outcome and authority
 
@@ -14,7 +14,7 @@ Specify the candidate Rust source contract for ten user functions before 0085 an
 
 0080 and 0081 own `recognize` and `relate` behavior but exclude public Rust. This ticket owns their Rust shape. ADR 0017 owns one blocking crate, shared options, and six error kinds. Its proposed amendment names the authorized ten functions. `decide_many`, `details`, and `usage` are supporting forms.
 
-This design may be reviewed and recorded now. `Engine`, `EngineBuilder`, and `default_engine` remain provisional. Before 0085 or 0086, 0078 must land and those declarations must reconcile construction, `Clone + Send + Sync + Debug`, implicit initialization, omitted-width registration, fork recovery, and signal dependency placement. A change outside that list reopens full review.
+This design may be reviewed and recorded now. `Engine`, `EngineBuilder`, and `default_engine` remain provisional. Before 0085 or 0086, 0078 must land and those declarations must reconcile construction, `Clone + Send + Sync + Debug`, implicit initialization, omitted-width registration, and signal dependency placement. Ticket 0096 owns fork recovery and lands before 0086. A change outside that list reopens full review.
 
 ## Fixed boundaries
 
@@ -350,7 +350,7 @@ Each choose option or tag label must be the next member of `C::labels()`; a dupl
 
 ## Runtime ownership after acceptance
 
-This ticket proves no runtime behavior. Ticket 0085 owns private-facade tests for process width registration, optional width, retries, retry classification, deadline and cancellation precedence, finite aggregation, bounded streaming, ordering, worker joining on success/error/drop, process counters, fork recovery inherited from accepted 0078, and sanitization before values reach the public wrapper.
+This ticket proves no runtime behavior. Ticket 0085 owns private-facade tests for process width registration, optional width, retries, retry classification, deadline and cancellation precedence, finite aggregation, bounded streaming, ordering, worker joining on success/error/drop, process counters, and sanitization before values reach the public wrapper.
 
 After the post-0078 reconciliation, 0086 owns public delegation, lazy `default_engine`, failed-init retry, omitted width, environment capture, formatting secrecy, exports, matching, compile fixtures, and package proof. Neither implementation ticket may then change the inventory; contrary evidence returns 0084 to design.
 
@@ -362,7 +362,7 @@ Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, t
 
 Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `nix`. Ticket 0078 owns `signal-hook` placement; 0086 rejects it only if 0078 made it CLI-only. Run `cargo check --locked -p thinkthen --no-default-features`, `cargo test --locked -p thinkthen --no-default-features`, and `cargo package --locked -p thinkthen --no-default-features`.
 
-0084 acceptance is design-only: the proposed ADR amendment and this ticket agree; `rustfmt --check` passes on the extracted blocks of 0084 and 0095; every public name has one owner and one exact shape; `wc -m` stays under 30,000; and `git diff --check` passes. No compile check is credited as proof of runtime behavior.
+0084 acceptance is design-only: the proposed ADR amendment and this ticket agree; rustfmt parses the extracted blocks of 0084 and 0095; every public name has one owner and one exact shape; `wc -m` stays under 30,000; and `git diff --check` passes. No compile check is credited as proof of runtime behavior.
 
 ## Dependencies and exclusions
 
@@ -376,6 +376,6 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) rejected it for one stale example in `rust.md`, now fixed. Re-review pending, together with 0095.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) rejected it for one stale example in `rust.md`, now fixed. The re-review (`sdlc/records/2026-09-24-rereview-contract.md`) asked for rustfmt wording and 0096 as fork owner; both applied.
 - Routing: the later code tickets use Claude builders (Opus subagent) and fresh Claude reviewers.
 - Code review: not applicable; design records only.
