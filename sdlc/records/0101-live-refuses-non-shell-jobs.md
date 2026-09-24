@@ -17,9 +17,13 @@ The new `language` case in `sdlc/live-test` runs a `#!/usr/bin/python3` job and 
 
 ## Checks
 
-Run with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, on the landing commit, the branch head that merged.
+Run with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset at `089cc6da`, rebased onto `18c0dc10`. The one-minute load stayed between 5.7 and 9.3.
 
-CHECKS
+- `sdlc/scripts/lint`: exit 0.
+- `sdlc/scripts/test`, first run: exit 101. The one failure was `annotate::scheduling::one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` at `scheduling.rs:102`, "document at 4". That is the flaky check filed in `sdlc/issues/2026-09-24-the-global-queue-concurrency-check-fails-under-load.md`. This branch changes no Rust.
+- `sdlc/scripts/test`, second run: exit 0, 14 `test result: ok` lines, `live-test: all cases passed`.
+
+The commit after `089cc6da` changes only this record. Lint and the test rung ran again on it before the merge.
 
 No real ledger, no real key, and no backend were touched. `live-test` builds every ledger under `TMPDIR`.
 
