@@ -6,7 +6,7 @@ opens: databases/duckdb sdlc/planning/databases/duckdb.md sdlc/planning/adr/0038
 
 # 0118: Relate on the caller's DuckDB database
 
-Status: amended after acceptance; confirmation pending. Owner: Claude.
+Status: design accepted 2026-09-24 after amendment. Owner: Claude.
 
 ## Outcome and authority
 
