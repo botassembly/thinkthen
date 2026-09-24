@@ -1,6 +1,6 @@
 # Measure fixtures
 
-These files define `thinkthen audit`. The source is a prototype measurement script at commit `be7cea2e4aa41097e7f629e35b62dadedeaca544`. Its three files had these SHA-256 values at that commit:
+These files define `thinkthen audit` and `thinkthen diff`. The source is a prototype measurement script at commit `be7cea2e4aa41097e7f629e35b62dadedeaca544`. Its three files had these SHA-256 values at that commit:
 
 | Prototype file | SHA-256 |
 | --- | --- |
@@ -8,7 +8,7 @@ These files define `thinkthen audit`. The source is a prototype measurement scri
 | `tests/test_measure.py` | `d64f2d9088c4f6237c0d2a2a8faf06dc51f92cd4674dab20b2a4f7231c01fa4e` |
 | `scripts/tools/README.md` | `fae695523a16d1f2921ee9c73358c36e1613b58ee6acc9d720c6bc6e1d9e7fc7` |
 
-`small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at that commit. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs. The six `golden/diff-*` files wait for the `diff` command.
+`small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at that commit. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs.
 
 Three inputs are derived from `small/`. `decide-reversed.jsonl` holds the lines of `decide.jsonl` in reverse. `decide-key-noparts.jsonl` holds the key without `part`. `decide-key-odd.jsonl` holds the key without `part` and without `r6`.
 
@@ -31,6 +31,17 @@ The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were 
 | `golden/table/audit-decide.txt` | `audit small/decide.jsonl small/decide-key.jsonl --table` | `audit::tables_match_byte_for_byte` |
 | `golden/table/audit-choose.txt` | `audit small/choose.jsonl small/choose-key.jsonl --table` | `audit::tables_match_byte_for_byte` |
 | `golden/table/audit-annotate.txt` | `audit small/annotate.jsonl small/annotate-key.jsonl --table` | `audit::tables_match_byte_for_byte` |
+| `golden/diff-decide-cuts.jsonl` | `diff small/decide.jsonl --key small/decide-key.jsonl --compare-threshold 0.4` | `diff::goldens_match` |
+| `golden/diff-decide-wordings.jsonl` | `diff small/decide.jsonl small/decide-b.jsonl --key small/decide-key.jsonl` | `diff::goldens_match` |
+| `golden/diff-decide-nokey.jsonl` | `diff small/decide.jsonl small/decide-b.jsonl` | `diff::goldens_match` |
+| `golden/diff-choose.jsonl` | `diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl` | `diff::goldens_match` |
+| `golden/diff-249-cuts.jsonl` | `diff 249/control.jsonl --key 249/key.jsonl --compare-threshold 0.42` | `diff::goldens_match` |
+| `golden/diff-249-soft.jsonl` | `diff 249/control.jsonl 249/soft.jsonl --key 249/key.jsonl` | `diff::goldens_match` |
+| `golden/extra/diff-annotate.jsonl` | `diff small/annotate.jsonl --key small/annotate-key.jsonl --compare-threshold 0.75` | `diff::goldens_match` |
+| `golden/extra/diff-249-cuts-nokey.jsonl` | `diff 249/control.jsonl --compare-threshold 0.42` | `diff::goldens_match` |
+| `golden/table/diff-decide-cuts.txt` | `diff small/decide.jsonl --key small/decide-key.jsonl --compare-threshold 0.4 --table` | `diff::tables_match_byte_for_byte` |
+| `golden/table/diff-decide-nokey.txt` | `diff small/decide.jsonl small/decide-b.jsonl --table` | `diff::tables_match_byte_for_byte` |
+| `golden/table/diff-choose.txt` | `diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl --table` | `diff::tables_match_byte_for_byte` |
 
 `audit::every_fixture_keeps_its_checksum` fails on a missing, extra, or changed file.
 
@@ -58,9 +69,14 @@ The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were 
 | `golden/extra/audit-choose-target-1.jsonl` | `1a7c2316601e6d5ce2a6b92c2e1c4d16ce56432ecda3e34fbda7ef284a893cda` |
 | `golden/extra/audit-decide-odd.jsonl` | `f4cf6493b4e0620bedff38628ade3b48e1c2fba91c35934c5a6d9ad6e4a930ac` |
 | `golden/extra/audit-decide-reversed.jsonl` | `376ce4dbd96c6d1619ee7ff340e54510785c528a2f5560ef83c027a726704282` |
+| `golden/extra/diff-249-cuts-nokey.jsonl` | `1fc7ba84a3a666004872ea0e619c5451f64daa67a6bda1aefa9540a398a44458` |
+| `golden/extra/diff-annotate.jsonl` | `ab7ac6f3064bfea00a0ca9d075183f1f1c33947e507584c9206a27f52d51514a` |
 | `golden/table/audit-annotate.txt` | `64c8acad1ccf1dafe3aad01fb5e0cf8f96e7dbde83a9769e2d2bde767713822a` |
 | `golden/table/audit-choose.txt` | `acc4564c3a8e66acad7734311e66810c586f8444a86b67b3a33fcfd179d890c0` |
 | `golden/table/audit-decide.txt` | `6a79b6e1a273539233a5b61df3b6ff4a9bd354504d347a79d05ff5b0beaf2513` |
+| `golden/table/diff-choose.txt` | `a24e14564533ff91f6f038096df9e4d6fafa72ac3555f7177deefa4182868b6d` |
+| `golden/table/diff-decide-cuts.txt` | `c56e94bc2e3c09c525e7ef8fc3e2190a5af4216c5d91d769c4176cfea06536c8` |
+| `golden/table/diff-decide-nokey.txt` | `82edef392a2ddee9528a931453abd42c57d99a5c67a98e2984ffcc6e8be9f9c1` |
 | `replay/audit.jsonl` | `54901b07eec7e0569ff8492deb1822058d62e61b4830e0a26bc78c7a68b4d953` |
 | `replay/key.jsonl` | `6469595eef17159ed9563de7b84bdc4396249fb2bb8a704397e5cc31c0619042` |
 | `small/annotate-key.jsonl` | `fcaebb1e268c468d697e6bc6852c4b5aab5198e544552711d7d5c1b27e523b26` |

@@ -208,6 +208,20 @@ pub(crate) enum Command {
     ///
     /// thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
     Audit(crate::cli::audit::AuditArguments),
+
+    /// Show which saved answers changed between two runs or two cuts.
+    ///
+    /// A and B hold the lines `decide` or `choose` printed for the same
+    /// records. Without B, diff compares A under --threshold with A under
+    /// --compare-threshold. Two cuts on one run cost nothing. The probabilities
+    /// are already saved. Each changed answer prints on one line, and a summary
+    /// with its McNemar test prints last. With --key, each change says whether
+    /// it gained or lost a right answer. An answer inside a band is not sure.
+    ///
+    /// diff sends no request and reads no key.
+    ///
+    /// thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
+    Diff(crate::cli::diff::DiffArguments),
 }
 
 #[derive(Args, Debug)]
@@ -241,7 +255,7 @@ impl Command {
     pub(crate) const fn reads_input(&self) -> bool {
         !matches!(
             self,
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_)
+            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_) | Self::Diff(_)
         )
     }
 
@@ -258,7 +272,11 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Recognize(arguments) => arguments.common.input.as_deref(),
             Self::Relate(arguments) => arguments.common.input.as_deref(),
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_) => None,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => None,
         }
     }
 
@@ -275,7 +293,11 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_) => 1,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => 1,
         }
     }
 }
