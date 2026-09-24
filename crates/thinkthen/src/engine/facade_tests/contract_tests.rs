@@ -160,3 +160,38 @@ fn no_key_reaches_a_result_an_error_a_recording_or_a_count() {
         assert!(!text.contains("sk-facade"), "{text}");
     }
 }
+
+/// A folder recorded for another backend refuses every call on a long-lived
+/// engine, not only its first, and none of them sends.
+#[test]
+fn a_folder_of_another_backend_refuses_each_call() {
+    let listener = Listener::serving(vec![Canned::ok(
+        r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+    )])
+    .expect("listener");
+    let folder = Scratch::new("other-backend");
+    let recording = |base: &str| Settings {
+        storage: Storage {
+            record: Some(folder.0.clone()),
+            ..Storage::default()
+        },
+        ..settings(base)
+    };
+    let cancel = Cancel::default();
+    let first = Engine::new(recording(listener.base())).expect("engine");
+    ask(&first, "Refund me.", &cancel).expect("the folder's own backend");
+    let other = Engine::new(recording(&format!("{}/other", listener.base()))).expect("engine");
+
+    for call in ["first", "second"] {
+        let refused = ask(&other, call, &cancel);
+        assert!(
+            matches!(refused, Err(Error::RecordingBackendMismatch)),
+            "{call}: {refused:?}"
+        );
+    }
+    assert_eq!(
+        listener.requests().len(),
+        1,
+        "only the folder's own backend sent"
+    );
+}

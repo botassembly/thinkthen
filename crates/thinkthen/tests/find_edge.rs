@@ -6,6 +6,9 @@ use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
@@ -20,7 +23,7 @@ fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
         .take()
         .ok_or_else(|| io::Error::other("no stdin"))?
         .write_all(input)?;
-    child.wait_with_output()
+    wait::finish(child, &arguments.join(" "))
 }
 
 fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::process::ExitStatus> {
@@ -37,7 +40,7 @@ fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::pr
         .take()
         .ok_or_else(|| io::Error::other("no stdin"))?
         .write_all(input)?;
-    child.wait()
+    wait::finish(child, &arguments.join(" ")).map(|output| output.status)
 }
 
 fn lines(case: &str, size: usize, answer: Option<usize>) -> Vec<u8> {

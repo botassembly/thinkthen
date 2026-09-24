@@ -1,14 +1,12 @@
 //! `thinkthen diff` matches the prototype's golden files and its hand-checked values.
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "a failed fixture stops the proof"
-)]
+#![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
 #[path = "support/measure.rs"]
 mod measure_support;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
-use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, run, same_lines};
+use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, run};
 
 fn diff(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
     measure(&[&["diff"], arguments].concat(), input)
@@ -19,9 +17,6 @@ fn goldens_match() {
     for (golden, arguments) in DIFF_GOLDENS {
         let (code, stdout, stderr) = diff(arguments, b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{golden}");
-        if let Err(difference) = same_lines(&stdout, &fixture(golden)) {
-            panic!("{golden}: {difference}");
-        }
         assert_eq!(stdout, fixture(golden), "{golden}");
     }
 }

@@ -9,11 +9,11 @@ use std::path::{Path, PathBuf};
 use clap::{Args, ValueEnum};
 
 use crate::cli::measure::{Cause, Refusal, lines, rule, write};
+use crate::core::Pointer;
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::audit::{self as grade, By, Row, Settings, Suggested};
 use crate::core::measure::key::Key;
-use crate::core::measure::{places, python_float_text, rounded};
-use crate::core::{Pointer, json_line};
+use crate::core::measure::{places, python_float_text, rounded, rounded_line};
 use crate::failure::Failure;
 
 /// The command line of `audit`. Its help is on the `Audit` command.
@@ -69,7 +69,7 @@ pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), 
         if arguments.table {
             table(row, &mut text);
         } else {
-            text.push_str(&json_line(row).map_err(Failure::Render)?);
+            text.push_str(&rounded_line(row).map_err(Failure::Render)?);
             text.push('\n');
         }
     }

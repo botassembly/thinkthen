@@ -6,6 +6,8 @@
 //! its top.
 
 mod harness;
+#[path = "../../src/test_deadline/wait.rs"]
+mod wait;
 
 mod corpus;
 mod grammar;

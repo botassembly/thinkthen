@@ -7,12 +7,14 @@
 
 #[path = "support/measure.rs"]
 mod measure_support;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use measure_support::{GOLDENS, TABLES, audit, fixture, fixtures, member, same_lines};
+use measure_support::{GOLDENS, TABLES, audit, fixture, fixtures, member};
 use sha2::{Digest as _, Sha256};
 
 #[test]
@@ -20,9 +22,7 @@ fn goldens_match() {
     for (golden, arguments) in GOLDENS {
         let (code, stdout, stderr) = audit(arguments, b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{golden}");
-        if let Err(difference) = same_lines(&stdout, &fixture(golden)) {
-            panic!("{golden}: {difference}");
-        }
+        assert_eq!(stdout, fixture(golden), "{golden}");
     }
 }
 
@@ -70,7 +70,7 @@ fn every_fixture_keeps_its_checksum() {
     }
     found.sort();
     assert_eq!(found, listed);
-    assert_eq!(listed.len(), 43);
+    assert_eq!(listed.len(), 45);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn readers_ignore_members_they_do_not_use_and_a_band_prints_as_typed() {
     let (code, stdout, _) = audit(&["-", wider.to_str().expect("a path")], results.as_bytes());
     fs::remove_file(&wider).expect("cleanup");
     assert_eq!(code, 0);
-    same_lines(&stdout, &fixture("golden/audit-decide.jsonl")).expect("the golden");
+    assert_eq!(stdout, fixture("golden/audit-decide.jsonl"));
 
     let key = key.to_str().expect("a path");
     let (_, band, _) = audit(
@@ -119,14 +119,18 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
         .stdout(Stdio::piped())
         .spawn()
         .expect("decide runs");
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+    let audit = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["audit", "-", "replay/key.jsonl"])
         .env_clear()
         .current_dir(fixtures())
         .stdin(decide.stdout.take().expect("the pipe"))
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .expect("audit runs");
-    assert_eq!(decide.wait().expect("decide finishes").code(), Some(0));
+    let output = wait::finish(audit, "thinkthen audit").expect("audit finishes");
+    let decided = wait::finish(decide, "thinkthen decide").expect("decide finishes");
+    assert_eq!(decided.status.code(), Some(0));
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),

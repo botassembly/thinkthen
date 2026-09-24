@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::core::measure::answer::{Answer, Rule, Shown, Verb};
 use crate::core::measure::key::{Key, Outcome, outcome};
-use crate::core::measure::{MeasureError, mcnemar, six};
+use crate::core::measure::{MeasureError, mcnemar};
 
 /// Which McNemar count a pair of outcomes adds to.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -74,7 +74,6 @@ pub(crate) struct Change {
     pub(crate) name: Option<String>,
     pub(crate) from: String,
     pub(crate) to: String,
-    #[serde(serialize_with = "six")]
     pub(crate) probability: [Option<f64>; 2],
     pub(crate) key: Option<String>,
     pub(crate) effect: Option<Effect>,
@@ -102,7 +101,6 @@ pub(crate) struct Summary {
     pub(crate) gained: Option<usize>,
     pub(crate) lost: Option<usize>,
     pub(crate) mcnemar_on: Option<&'static str>,
-    #[serde(serialize_with = "six")]
     pub(crate) mcnemar_p: Option<f64>,
     pub(crate) compare: &'static str,
     pub(crate) a: Shown,

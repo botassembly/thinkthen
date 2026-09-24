@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0113: Add the audit command
 
-Status: built on `ticket/0113-audit-command` and awaiting code review; see `sdlc/records/0113-build-audit-command.md`. Design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: built, reviewed, and fixed on `ticket/0113-audit-command`, awaiting the reviewer's check of the fixes; see `sdlc/records/0113-build-audit-command.md`. Design accepted 2026-09-24 after re-review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review is `sdlc/records/0113-0114-design-review.md`. This page is rewritten whole after it.
 
@@ -248,6 +248,7 @@ No golden reaches these. Each is the agent's decision, and Ian can overturn it.
 - **Rule text.** The prototype parses with `float()`. The port uses the settled grammar.
 - **Seed and target.** The port refuses a negative seed and a target outside 0 to 1.
 - **Key values.** Python reads a `decide` key of `1` or `0` as yes or no. The port leaves it unlabeled. The port refuses a `choose` key value that is not text.
+- **Choose values.** A saved `choose` value that is neither text nor null, `true` and `false` included, is refused as an answer audit cannot grade. The prototype grades it: as run it compares the value with the key and counts it wrong, and under `--threshold` it grades the pick. Added 2026-09-24 by the builder, and Ian can overturn it.
 - **State names.** The prototype reads an option named `tied` or `unresolved` as that state. The port keeps it an option.
 - **Parts.** The README says every key line has a part or none does. The code checks each group's labeled records. The port follows the code.
 

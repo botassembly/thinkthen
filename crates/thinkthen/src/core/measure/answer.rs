@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use serde::{Serialize, Serializer};
 
 use crate::core::json::Json;
-use crate::core::measure::{MeasureError, python_float_text, record_id, rounded, six};
+use crate::core::measure::{MeasureError, python_float_text, record_id, rounded};
 use crate::core::pointer::Pointer;
 use crate::core::probability::Probability;
 use crate::core::threshold::{Outcome as Judged, Threshold};
@@ -50,7 +50,7 @@ impl Serialize for Shown {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
             Self::AsRun => serializer.serialize_str("as run"),
-            Self::Cut(cut) => six(cut, serializer),
+            Self::Cut(cut) => serializer.serialize_f64(*cut),
             Self::Band(band) => serializer.serialize_str(band),
         }
     }
@@ -215,6 +215,9 @@ impl Answer {
             _ => Verb::Choose,
         };
         let printed = match value {
+            Some(Json::Bool(_)) if verb == Verb::Choose && !failed => {
+                return Err(MeasureError::Ungradable(line));
+            }
             Some(Json::Bool(held)) => Some(Printed::Bool(*held)),
             Some(Json::String(text)) => Some(Printed::Option(text.clone())),
             None | Some(Json::Null) => None,

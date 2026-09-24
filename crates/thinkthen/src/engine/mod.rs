@@ -270,8 +270,8 @@ impl fmt::Display for WidthActive {
 
 /// The width selection and the one attempt gate of one process.
 ///
-/// Ticket 0096 replaces this whole value in a forked child, so it holds the
-/// only lock and the only condition variable on the width path.
+/// A forked child replaces this whole value, so it holds the only lock and
+/// the only condition variable on the width path.
 #[derive(Debug)]
 pub(crate) struct Widths {
     state: Mutex<WidthState>,
@@ -372,11 +372,37 @@ impl Drop for Permit<'_> {
     }
 }
 
-static PROCESS_WIDTH: Widths = Widths::new();
+static PROCESS_WIDTH: process::Guarded<&'static Widths> = process::Guarded::empty();
+
+/// How long a caller sleeps while another thread of its process rebuilds.
+const REBUILD_POLL: Duration = Duration::from_millis(1);
 
 /// The one door to this process's width state.
 pub(crate) fn process_width() -> &'static Widths {
-    &PROCESS_WIDTH
+    let Ok(widths) = widths_of(std::process::id(), || {
+        thread::sleep(REBUILD_POLL);
+        Ok::<(), std::convert::Infallible>(())
+    });
+    widths
+}
+
+/// The width state process `pid` owns, fresh and unselected in a forked child.
+pub(crate) fn process_width_of(pid: u32, cancel: &Cancel) -> Result<&'static Widths, error::Error> {
+    widths_of(pid, rebuild_wait(cancel))
+}
+
+/// Each process leaks one width state, as the static it replaces never dropped.
+fn widths_of<E>(pid: u32, wait: impl FnMut() -> Result<(), E>) -> Result<&'static Widths, E> {
+    PROCESS_WIDTH
+        .current(pid, wait, || Ok(&*Box::leak(Box::new(Widths::new()))))
+        .map(|widths| *widths)
+}
+
+/// Sleep while another thread of this process rebuilds, and stop with the call.
+pub(crate) fn rebuild_wait<'c>(
+    cancel: &'c Cancel<'_>,
+) -> impl FnMut() -> Result<(), error::Error> + 'c {
+    move || cancel.wait(REBUILD_POLL).map_or(Ok(()), Err)
 }
 
 /// A unit-test binary runs many unrelated tests in one process, so a client
@@ -384,13 +410,13 @@ pub(crate) fn process_width() -> &'static Widths {
 #[cfg(test)]
 pub(crate) static WIDTH_CHILD: AtomicBool = AtomicBool::new(false);
 
-/// The gate a new client sends through.
-pub(crate) fn client_width() -> &'static Widths {
+/// The gate a new client of `process` sends through.
+pub(crate) fn client_width(process: &'static Widths) -> &'static Widths {
     #[cfg(test)]
     if !WIDTH_CHILD.load(Ordering::Acquire) {
         return Box::leak(Box::default());
     }
-    process_width()
+    process
 }
 
 pub(crate) mod annotate_schedule;
@@ -407,6 +433,7 @@ mod facade_tests;
 mod host_signal_tests;
 pub(crate) mod http;
 pub(crate) mod prepared_request;
+pub(crate) mod process;
 pub(crate) mod recorder;
 pub(crate) mod request;
 pub(crate) mod schedule;

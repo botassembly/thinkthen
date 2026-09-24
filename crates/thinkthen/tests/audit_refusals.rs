@@ -8,6 +8,8 @@
 
 #[path = "support/measure.rs"]
 mod measure_support;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 use std::fs;
 use std::io::{ErrorKind, Write as _};
@@ -45,7 +47,7 @@ const FILES: [(&str, &str); 7] = [
 const TWICE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"secret-text\"}}\n{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"other\"}}\n";
 
 /// Each refusal: the command line, standard input (`YES` where empty is not asked), the exit code, and the sentence.
-const REFUSALS: [(&str, &str, i32, &str); 32] = [
+const REFUSALS: [(&str, &str, i32, &str); 33] = [
     (
         "audit @secret-path @key.jsonl",
         "",
@@ -80,6 +82,12 @@ const REFUSALS: [(&str, &str, i32, &str); 32] = [
     (
         "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\",\"text\":\"secret-text\"}}\n",
+        2,
+        "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
+    ),
+    (
+        "audit - @key.jsonl",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"verb\":\"choose\"}}\n",
         2,
         "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
     ),
@@ -383,7 +391,7 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
         let mut stdin = child.stdin.take().expect("standard input");
         let _ignored = stdin.write_all(input.as_bytes());
         drop(stdin);
-        let output = child.wait_with_output().expect("the binary finishes");
+        let output = wait::finish(child, "thinkthen").expect("the binary finishes");
         assert!(
             matches!(output.status.code(), Some(0 | 2 | 5)),
             "{arguments:?}"

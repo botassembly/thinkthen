@@ -217,4 +217,4 @@ fn read_records<T, I>(
 }
 
 #[cfg(test)]
-mod width_tests;
+pub(crate) mod width_tests;

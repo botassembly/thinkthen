@@ -39,7 +39,7 @@ pub(crate) fn run(arguments: &[&str], evidence: &[u8]) -> io::Result<Output> {
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(evidence);
     drop(input);
-    child.wait_with_output()
+    crate::wait::finish(child, &arguments.join(" "))
 }
 
 /// A port nothing listens on, so a connection would be refused at once.
@@ -63,7 +63,7 @@ pub(crate) fn run_with(arguments: &[&str], evidence: &[u8], key: &str) -> io::Re
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(evidence);
     drop(input);
-    child.wait_with_output()
+    crate::wait::finish(child, &arguments.join(" "))
 }
 
 /// What a case reads when the binary never ran, so the failure says which.

@@ -10,11 +10,11 @@ use std::path::{Path, PathBuf};
 use clap::Args;
 
 use crate::cli::measure::{Cause, Refusal, lines, rule, write};
+use crate::core::Pointer;
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::diff::{self as compare, Change, Effect, Last, Side, Summary};
 use crate::core::measure::key::Key;
-use crate::core::measure::{places, rounded};
-use crate::core::{Pointer, json_line};
+use crate::core::measure::{places, rounded, rounded_line};
 use crate::failure::Failure;
 
 /// The command line of `diff`. Its help is on the `Diff` command.
@@ -54,10 +54,10 @@ pub(crate) fn run(arguments: &DiffArguments, writer: impl Write) -> Result<(), F
     } else {
         let mut text = String::new();
         for change in &changes {
-            text.push_str(&json_line(change).map_err(Failure::Render)?);
+            text.push_str(&rounded_line(change).map_err(Failure::Render)?);
             text.push('\n');
         }
-        text.push_str(&json_line(&Last { summary: &summary }).map_err(Failure::Render)?);
+        text.push_str(&rounded_line(&Last { summary: &summary }).map_err(Failure::Render)?);
         text.push('\n');
         text
     };

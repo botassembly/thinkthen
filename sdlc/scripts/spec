@@ -2,6 +2,9 @@
 # Rung 3: the compiled binary against the executable pages in spec/ and every green demo.
 set -eu
 
+# One heavy rung at a time on this machine. See heavy-lock.
+. "$(dirname -- "$0")/heavy-lock"
+
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 

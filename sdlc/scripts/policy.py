@@ -23,7 +23,7 @@ ALLOWED_LICENSES = {
     "Unicode-3.0",
     "Unlicense",
 }
-# `csv-core` and `signal-hook` use the already accepted terms. Three more licenses
+# `arc-swap`, `csv-core`, and `signal-hook` use the already accepted terms. Three more licenses
 # arrive with the TLS stack under ureq and with nothing
 # else. Each one is tied to the crates that force it, so the allowance cannot
 # quietly cover a crate that lands later. All three are permissive and carry no
@@ -38,7 +38,8 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook", "thiserror", "ureq"
+        "arc-swap", "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook",
+        "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
 }
@@ -682,16 +683,19 @@ CATALOG_ROOTS = {"std", "clap", "crate", "super", "self"}
 
 def catalog_policy_failures(text: str, banned: set[str] = CATALOG_BANNED_WORDS,
                             crate_paths: set[tuple[str, ...]] = CATALOG_CRATE_PATHS,
-                            super_paths: set[tuple[str, ...]] = CATALOG_SUPER_PATHS) -> list[str]:
+                            super_paths: set[tuple[str, ...]] = CATALOG_SUPER_PATHS,
+                            prefix: bool = False) -> list[str]:
     """Name every capability or owner a read-only command source reaches.
 
-    A path is allowed when an allowed path is its prefix.
+    A path is allowed when it is an allowed path, or with `prefix` when one is its prefix.
     """
     tokens = rust_tokens(text)
     held = {f"names {token}" for token in tokens if token in banned}
 
     def allowed(path: tuple[str, ...], prefixes: set[tuple[str, ...]]) -> bool:
-        return any(path[:len(prefix)] == prefix for prefix in prefixes)
+        if not prefix:
+            return path in prefixes
+        return any(path[:len(held)] == held for held in prefixes)
 
     for path, alias in rust_use_paths(tokens):
         if aliases_outer_root(path, alias) or imports_outer_glob(path):
@@ -742,6 +746,9 @@ def check_catalog_policy() -> None:
         "extern crate self as root;",
         'include_str!("/etc/passwd")',
         "ureq::get(url)",
+        "use crate::failure::Failure::Output;",
+        "use super::CATALOG::x;",
+        "use super::lookup::inner;",
     )
     for plant in plants:
         if not catalog_policy_failures(plant):
@@ -769,10 +776,11 @@ MEASURE = (
     "crates/thinkthen/src/cli/diff.rs",
 )
 MEASURE_COMMANDS = ("Audit", "Diff")
-MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"}
+MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
 MEASURE_WRITES = {
-    "create", "create_dir", "create_dir_all", "remove_file", "remove_dir", "remove_dir_all",
-    "rename", "copy", "set_permissions", "write",
+    "create", "create_new", "options", "create_dir", "create_dir_all", "remove_file",
+    "remove_dir", "remove_dir_all", "rename", "copy", "set_permissions", "write", "hard_link",
+    "soft_link", "symlink",
 }
 MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate", "failure", "Failure")}
 ROUTER = "crates/thinkthen/src/cli/mod.rs"
@@ -780,14 +788,15 @@ ROUTER = "crates/thinkthen/src/cli/mod.rs"
 
 def measure_policy_failures(text: str) -> list[str]:
     """Name every capability a measuring command reaches beyond reading its inputs."""
-    held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set()))
+    held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
+                                       prefix=True))
     tokens = rust_tokens(text)
     for place in range(len(tokens) - 2):
         if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
                 and tokens[place + 2] in MEASURE_WRITES:
             held.add(f"writes through {tokens[place]}::{tokens[place + 2]}")
-    for path, _ in rust_use_paths(tokens):
-        if path[:2] == ("std", "fs") and set(path[2:]) & MEASURE_WRITES:
+    for path, alias in rust_use_paths(tokens):
+        if path[:2] == ("std", "fs") and (set(path[2:]) & MEASURE_WRITES or alias or "*" in path):
             held.add("uses " + "::".join(path))
     return sorted(held)
 
@@ -830,6 +839,14 @@ def check_measure_policy() -> None:
         "use std::fs::{read, rename};",
         "std::fs::File::create(path)",
         "std::fs::OpenOptions::new()",
+        "std::fs::File::create_new(path)",
+        "std::fs::File::options()",
+        "std::fs::DirBuilder::new().create(path)",
+        "std::fs::hard_link(a, b)",
+        "std::fs::soft_link(a, b)",
+        "std::os::unix::fs::symlink(a, b)",
+        "use std::fs::File as F; F::open(path);",
+        "use std::fs::*;",
     )
     for plant in plants:
         if not measure_policy_failures(plant):

@@ -2,6 +2,9 @@
 # Rung 0: the tools the other rungs need, then the dependency closure.
 set -eu
 
+# One heavy rung at a time on this machine. See heavy-lock.
+. "$(dirname -- "$0")/heavy-lock"
+
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 
 # The version the workflow installs and the version this rung names in its

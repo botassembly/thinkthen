@@ -5,7 +5,7 @@
 
 use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
+use std::process::{Command, ExitCode, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex};
@@ -30,13 +30,21 @@ const QUIET: Duration = Duration::from_millis(150);
 
 /// Run one ignored test of this file alone in a fresh copy of the binary.
 fn in_child(name: &str) {
+    in_child_at(&format!("cli::schedule::width_tests::{name}"));
+}
+
+/// Run the ignored test at `path` alone in a fresh copy of the binary. A
+/// child still running at the test deadline is killed and fails the test.
+pub(crate) fn in_child_at(path: &str) {
+    let name = path.replace("::", "-");
     let home = env::temp_dir().join(format!("thinkthen-width-{name}-{}", std::process::id()));
     let _absent = fs::remove_dir_all(&home);
     fs::create_dir_all(&home).expect("child home");
-    let output = Command::new(env::current_exe().expect("test binary"))
+    let mut command = Command::new(env::current_exe().expect("test binary"));
+    command
         .args([
             "--exact",
-            &format!("cli::schedule::width_tests::{name}"),
+            path,
             "--ignored",
             "--nocapture",
             "--test-threads=1",
@@ -47,8 +55,11 @@ fn in_child(name: &str) {
         .env("XDG_CACHE_HOME", home.join("cache"))
         .env("XDG_CONFIG_HOME", home.join("config"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
-        .output()
-        .expect("child");
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let child = command.spawn().expect("child");
+    let output = crate::test_deadline::finish(child, path).expect("child");
     let _removed = fs::remove_dir_all(&home);
     assert!(
         output.status.success(),
@@ -63,7 +74,7 @@ fn in_child(name: &str) {
 }
 
 /// Only a child started by [`in_child`] runs the body of an ignored test.
-fn child() -> bool {
+pub(crate) fn child() -> bool {
     let chosen = env::var_os(CHILD).is_some();
     WIDTH_CHILD.store(chosen, Ordering::Release);
     chosen
@@ -318,7 +329,13 @@ fn two_engines_share_the_cap() {
     let held = held("never busy");
     let url = held.listener.url();
     let finished = AtomicUsize::new(0);
-    let clients = [5, 7].map(|timeout| Client::new(Duration::from_secs(timeout), false));
+    let clients = [5, 7].map(|timeout| {
+        Client::new(
+            Duration::from_secs(timeout),
+            false,
+            crate::engine::process_width(),
+        )
+    });
     let (most, _) = thread::scope(|scope| {
         for client in clients.iter().flat_map(|client| [client; 4]) {
             let finished = &finished;
