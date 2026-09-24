@@ -43,4 +43,4 @@ The recorder no longer registers a `SIGXFSZ` handler, and its `OnceLock` is gone
 
 ## Ladder
 
-Pending.
+On `073a7e48`, `sdlc/scripts/install`, `lint`, `test`, and `spec` ran in order and each exited 0. `spec` ended with `demos: 21 green, 0 red`. The ratchet reads 48369 of 48369.
