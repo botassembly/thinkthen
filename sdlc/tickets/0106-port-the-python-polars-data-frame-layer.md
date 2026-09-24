@@ -6,7 +6,7 @@ opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047
 
 # 0106: Port the Python Polars data frame layer
 
-Status: amended after acceptance; confirmation pending; amended 2026-09-24 for the no-paid-backend rule. Owner: Claude.
+Status: design accepted 2026-09-24, owner Claude.
 
 ## Outcome and authority
 
