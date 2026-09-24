@@ -65,3 +65,11 @@ Launch waits on the queue. The engineering gates are 0088, the release build, pu
 1. Ian accepted this plan on 2026-09-24, including main as the spine.
 2. Claim the package names, the Homebrew tap, and thinkthen.dev DNS. The site deploys through GitHub Actions, which Ian paused, so the site needs a deploy path he approves.
 3. Whether arXiv endorsement is held or pending: `notes/todos/2026-09-09-arxiv-endorsement-status.md` and `repos/mktg/products/thinkthen/go-live.md` disagree.
+
+## Ian's rulings, afternoon of 2026-09-24
+
+- Everything is in 0.1. Nothing waits: audit and diff build now, beside the spine.
+- Rust Polars and Python Polars are both in 0.1. A Rust Polars surface ticket joins the surfaces.
+- The width setting is named the throttle. The public library setting is `throttle`, and the command keeps `--jobs`. ADR 0017's amendment records the scope.
+- Package names, the tap, the site, and papers are Ian's. Claude's job is the code: the main line and every surface.
+- Surfaces move as fast as possible once 0086 lands. Risk spikes 253 to 256 on the Beelink retire surface risks before then, and 0086 builds beside 0096.
