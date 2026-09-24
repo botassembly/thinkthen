@@ -9,7 +9,7 @@ drifted Cargo.lock from the local cache (surfaces-review-5). cargo-pgrx
 scripts/pgrx-package-locked.sh, which proves the lock before and after;
 a bare `cargo pgrx package` anywhere else fails this check.
 
-A `pip install` names every package at an exact version (`name==1.2`),
+A `pip install` or `pipx install`, every one on a line, names every package at an exact version (`name==1.2`),
 a git URL at a full commit, a requirements file, or a variable that
 carries a pin (surfaces-review-7 R3-29: the DuckDB venv step installed
 `packaging` unpinned).
@@ -34,7 +34,17 @@ RESOLVING = re.compile(
     r"|\bmaturin\s+(build|develop)\b"
     r"|\bnapi\s+build\b"
 )
-PIP = re.compile(r"\bpip[0-9.]*\s+install\b(.*)")
+PIP = re.compile(r"\bpip(?:x|[0-9.]*)\s+install\b")
+SEPARATOR = re.compile(r"[;&|]|\)\s|\}")
+# Options whose next word is a value, not a package.
+VALUE_OPTIONS = {
+    "-r", "--requirement", "--python", "-c", "--constraint", "-i", "--index-url",
+    "--extra-index-url", "-f", "--find-links", "-t", "--target", "--prefix", "--root",
+    "--trusted-host", "--platform", "--python-version", "--implementation", "--abi",
+    "--cache-dir", "--src", "--upgrade-strategy", "--proxy", "--retries", "--timeout",
+    "--cert", "--client-cert", "--log", "--exists-action", "--no-binary", "--only-binary",
+    "--progress-bar", "--report", "-C", "--config-settings", "--global-option",
+}
 PINNED = re.compile(r"^([^\s=*]+==[^\s*]+|git\+\S+@[0-9a-f]{40}|\$[({]?\w+[)}]?)$")
 PGRX = re.compile(r"\bcargo\s+pgrx\s+package\b")
 PGRX_HOME = "scripts/pgrx-package-locked.sh"
@@ -74,12 +84,17 @@ def problems(root):
                 code = line.split("#", 1)[0] if not line.lstrip().startswith("#") else ""
                 if not code.strip():
                     continue
-                pip = PIP.search(code)
-                if pip and not re.search(r"\b(echo|printf)\b", code[: pip.start()]):
-                    words, taken = re.split(r"[;&|]|\)\s|\}", pip.group(1))[0].split(), False
-                    for word in words:
+                # Every pip or pipx install on the line, each read up to the
+                # next command separator (surfaces-review-7 verifier). An
+                # echo or printf earlier on the line marks a message, whose
+                # quoted text may hold a separator of its own.
+                for pip in PIP.finditer(code):
+                    if re.search(r"\b(echo|printf)\b", code[: pip.start()]):
+                        break
+                    taken = False
+                    for word in SEPARATOR.split(code[pip.end():])[0].split():
                         if taken or word.startswith("-"):
-                            taken = word in ("-r", "--requirement", "--python")
+                            taken = not taken and word in VALUE_OPTIONS
                             continue
                         if not PINNED.match(word.strip("'\"")):
                             found.append(f"{name}:{number}: pip install {word} without an exact pin")

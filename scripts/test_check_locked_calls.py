@@ -78,6 +78,16 @@ CASES = [
      {"databases/duckdb/x.mk": "\tpip3.12 install packaging\n\tpip install \"packaging==26.*\"\n"},
      (1, "FAIL databases/duckdb/x.mk:1: pip install packaging without an exact pin\n"
          "FAIL databases/duckdb/x.mk:2: pip install \"packaging==26.*\" without an exact pin\n")),
+    ("a second pip after && or ; and a pipx install fail",
+     {"databases/duckdb/x.mk": "\tpip install packaging==26.3 && pip install six\n"
+      "\tpip install packaging==26.3; pip3 install wheel\n\tpipx install ruff\n"},
+     (1, "FAIL databases/duckdb/x.mk:1: pip install six without an exact pin\n"
+         "FAIL databases/duckdb/x.mk:2: pip install wheel without an exact pin\n"
+         "FAIL databases/duckdb/x.mk:3: pip install ruff without an exact pin\n")),
+    ("an index URL is an option value, not a package",
+     {"databases/duckdb/x.mk": "\tpython3 -m pip install --index-url https://x/simple packaging==26.3\n"
+      "\tpip install -i https://x/simple --extra-index-url https://y/simple six==1.16\n"},
+     (0, "ok:      every build-tool call site carries the lock\n")),
     ("pinned pip installs pass",
      {"databases/duckdb/x.mk": "\t$(PY) -m pip install packaging==26.3 $(PIN) "
       "git+https://h/r@2ac8dbc012ddbd96a57dca37784fd8ee3c0eb021\n"

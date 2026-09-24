@@ -2,9 +2,11 @@
 its wait against thinkthen_relate_seconds (review 7 verification: the
 wait was untimed, so at a 2 s limit the second relate ended at 4 s).
 
-Two cursors of one database each run a slow relate under a 2 s limit;
-the second starts 0.3 s after the first and must end within 2.6 s of its
-own start. Runs offline on the null backend, through the build's venv.
+Two cursors of one database each run a slow relate, the first under a
+4 s limit and the second under a 2 s limit. The second starts 0.3 s
+after the first, so its limit runs out while it still waits in the
+queue. It must end within 2.6 s of its own start and say it waited and
+never ran. Runs offline on the null backend, through the build's venv.
 """
 
 import os
@@ -25,8 +27,8 @@ SLOW = (
 db = duckdb.connect(":memory:", config={"allow_unsigned_extensions": "true"})
 db.execute(f"LOAD '{EXT}'")
 first, second = db.cursor(), db.cursor()
-for cursor in (first, second):
-    cursor.execute("SET thinkthen_relate_seconds = 2")
+first.execute("SET thinkthen_relate_seconds = 4")
+second.execute("SET thinkthen_relate_seconds = 2")
 said = {}
 
 
@@ -47,7 +49,13 @@ threads[1].start()
 for thread in threads:
     thread.join(timeout=60)
 elapsed, message = said.get("second", (99.0, "never ended"))
-if elapsed > 2.6 or "limit" not in message:
+# The second relate never ran its query, so the refusal names the wait.
+waited = (
+    "Invalid Input Error: thinkthen usage: the relate query waited past its 2-second limit in the queue"
+    " behind another relate on this database and did not run; retry after that relate ends or raise"
+    " SET thinkthen_relate_seconds (0 turns the limit off)"
+)
+if elapsed > 2.6 or message != waited:
     print(f"FAILED   the waiting relate ended at {elapsed:.2f}s of its own time: {message}")
     sys.exit(1)
 print(f"ok       the waiting relate stopped at {elapsed:.2f}s under its 2 s limit: {message}")

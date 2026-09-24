@@ -150,7 +150,9 @@ indexing: `substr(text, start, end)` is the name, and the emoji case
 (`Le café 😀 Maria Chen arrived.`) carries `start 11, end 20`.
 `tt_relate(records, relations, either)` returns a four-column data frame
 of edges — `name`, `source`, `target`, `probability` — and the 0.9 bar
-keeps the 0.94 edge, mirroring the deck's Python comment.
+kept the 0.94 edge, mirroring the deck's Python comment. Update
+2026-09-23: under the method-H recording the check uses the 0.68 bar,
+which keeps the two sound edges.
 
 **The outputs, as printed:**
 

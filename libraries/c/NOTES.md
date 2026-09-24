@@ -196,7 +196,7 @@ stand-in's process-global request counter; parallel tests made that
 assertion racy (the counter read 10 where 0 was expected). Six tests were
 added: the recording's answer, the deck's unrecorded-rule refusal with
 the covered rules named, an unrecorded text refused, the emoji offset
-proof, the relate answer at the 0.9 bar, and the 255 refusal.
+proof, the relate answer at the 0.9 bar, and the 255 refusal. Update 2026-09-23: under the method-H recording that test uses the 0.68 bar and keeps two edges.
 
 ```
 $ ENGINE_NULL=1 cargo test --quiet --test door -- --test-threads=1

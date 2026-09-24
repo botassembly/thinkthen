@@ -4,22 +4,22 @@ Second-agent review of the sixteen commits on `w7/integrate` that move `sdlc/sur
 
 | Commit | Ceiling | Verdict |
 | --- | --- | --- |
-| `a1bd88e` | 35,994 to 36,038 (merge) | ACCEPT |
-| `2d2502a` | 35,726 to 35,994 (merge) | ACCEPT |
-| `ec287ed` | 35,708 to 35,726 (merge) | ACCEPT |
-| `a670094` | 35,363 to 35,708 (merge) | ACCEPT |
-| `810d2f7` | 35,148 to 35,363 (merge) | ACCEPT |
-| `54b307c` | 35,159 to 35,386 | ACCEPT WITH FOLLOW-UP |
-| `45c634e` | 35,386 to 35,504 | ACCEPT WITH FOLLOW-UP |
-| `8f01369` | 35,272 to 35,378 | ACCEPT WITH FOLLOW-UP |
-| `4cb82bd` | 35,378 to 35,422 | ACCEPT WITH FOLLOW-UP |
-| `5f36536` | 35,159 to 35,425 | ACCEPT WITH FOLLOW-UP |
-| `8345844` | 35,213 to 35,272 | ACCEPT WITH FOLLOW-UP |
-| `dab4db6` | 35,159 to 35,213 | ACCEPT WITH FOLLOW-UP |
-| `cf839a1` | 35,422 to 35,427 | ACCEPT |
-| `94af78d` | 35,159 to 35,203 | ACCEPT |
-| `e63c893` | 35,169 to 35,173 | ACCEPT |
-| `ec57a6d` | 35,159 to 35,169 | ACCEPT |
+| `a1bd88e9ecaf31531287024bce3694b96562c93a` | 35,994 to 36,038 (merge) | ACCEPT |
+| `2d2502a6cbb244ed4a15ba5b4fecfd6c9a73080e` | 35,726 to 35,994 (merge) | ACCEPT |
+| `ec287ed93e50fcc1248fc3dc7fab7ec35db401a2` | 35,708 to 35,726 (merge) | ACCEPT |
+| `a670094712b0094573173cc8b86445c41a221eae` | 35,363 to 35,708 (merge) | ACCEPT |
+| `810d2f7dc46d4709bacf7e33ce860c13e451a1e8` | 35,148 to 35,363 (merge) | ACCEPT |
+| `54b307c7e5a4713cae02c9d07dc81020d1a88a51` | 35,159 to 35,386 | ACCEPT WITH FOLLOW-UP |
+| `45c634eb738c31cd6bba9fae16343f4a91d131f3` | 35,386 to 35,504 | ACCEPT WITH FOLLOW-UP |
+| `8f013699eb78251cd74b6aefc18f8fb1cd4ae0e0` | 35,272 to 35,378 | ACCEPT WITH FOLLOW-UP |
+| `4cb82bd057f3cd4cf67269171c5ad8f1198c00db` | 35,378 to 35,422 | ACCEPT WITH FOLLOW-UP |
+| `5f36536c907614e70ec31fe6615e9f4a461c11bf` | 35,159 to 35,425 | ACCEPT WITH FOLLOW-UP |
+| `8345844c866b55c21bcb51b63d91c8170821a3e9` | 35,213 to 35,272 | ACCEPT WITH FOLLOW-UP |
+| `dab4db6c055c7febec29395bb77670febe403741` | 35,159 to 35,213 | ACCEPT WITH FOLLOW-UP |
+| `cf839a1906b1b778a79bb18cbc583ae7f7ac64a7` | 35,422 to 35,427 | ACCEPT |
+| `94af78d82ddbf3e69870c1c4f07c3c84d7ebd1f2` | 35,159 to 35,203 | ACCEPT |
+| `e63c89371000ebb067c903ed9cf72a78b3977efb` | 35,169 to 35,173 | ACCEPT |
+| `ec57a6d3ddd5b670c6e070feb3c9515cae1dcc3b` | 35,159 to 35,169 | ACCEPT |
 
 ## What I checked
 

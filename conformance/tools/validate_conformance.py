@@ -231,6 +231,10 @@ def replay_row(data, c):
         return None
     check(set(c["requests"]) <= set(rows[0].get("requests", [])),
           f"{c['id']} requests are recorded in the replay table")
+    # A relate row names the case it serves; a renamed case must rename it.
+    if c["verb"] == "relate":
+        check(rows[0].get("case") == c["id"],
+              f"{c['id']} replay row names case {rows[0].get('case')!r}, not this one")
     return rows[0]
 
 

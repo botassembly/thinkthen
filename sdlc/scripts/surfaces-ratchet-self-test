@@ -45,6 +45,25 @@ git clone -q --shared "$REPO" "$clone"
 cd "$clone"
 git config user.name self-test
 git config user.email self-test@example.invalid
+# A commit on the real branch that still awaits its review (a script
+# change, say) would fail every case below. The clone accepts exactly the
+# commits the real ratchet names, so each case tests only what it adds.
+# The real ratchet, run after this test, still judges those commits.
+# The ratchet names one kind of waiting commit per run, so the clone
+# asks again until nothing new is named.
+cp "$SCRIPT" sdlc/scripts/surfaces-ratchet.mjs
+mkdir -p sdlc/records
+baseline=sdlc/records/REVIEW-self-test-baseline.md
+for _ in 1 2 3; do
+  waiting=$(node sdlc/scripts/surfaces-ratchet.mjs 2>&1 | grep -oE '\b[0-9a-f]{40}\b' || true)
+  [ -n "$waiting" ] || break
+  for sha in $waiting; do echo "Verdict: ACCEPT $sha"; done >> "$baseline"
+  git add "$baseline"
+  git commit -q -m "Accept the commits awaiting review, for the self-test only" -m "baseline"
+done
+if [ -f "$baseline" ]; then
+  echo "note:    the clone accepts $(wc -l < "$baseline") commit(s) still awaiting review; the real ratchet judges them next"
+fi
 start=$(git rev-parse HEAD)
 fresh() {
   git checkout -q -B self-test "$start"
@@ -76,46 +95,46 @@ expect() {
   esac
   echo "ok:      the surfaces ratchet $3"
 }
-short() { git rev-parse --short=7 "$1"; }
+full() { git rev-parse "$1"; }
 
 fresh
 expect pass '' "passes the committed history"
 
 fresh; grow a; commit "Grow" "Second-agent review: skipped; see sdlc/README.md"
-expect fail "review: $(short HEAD)." "refuses a review line that cites a real file"
+expect fail "review: $(full HEAD)." "refuses a review line that cites a real file"
 
-fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
 review REVIEW-denial.md "Commit $raise was NOT reviewed; Verdict: ACCEPT is withheld."
 expect fail "review: $raise." "refuses a record that names the SHA in prose"
 
-fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
 mkdir -p sdlc/records; echo "Verdict: ACCEPT $raise" > sdlc/records/REVIEW-untracked.md
 expect fail "review: $raise." "ignores a review record that is not committed"
 
-fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
 review REVIEW-good.md "Verdict: ACCEPT $raise"
 expect pass '' "accepts a committed verdict line"
 
-fresh; grow a; commit "Grow" "Unreviewed."; raise=$(short HEAD)
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
 review REVIEW-table.md "| \`$raise\` | 1 to 2 | REJECT |"
 expect fail "review: $raise." "refuses a table row that does not accept"
 review REVIEW-table2.md "| \`$raise\` | 1 to 2 | ACCEPT WITH FOLLOW-UP |"
 expect pass '' "accepts a table row that accepts"
 
-fresh; git checkout -q -b side; grow same; commit "Side grow" "Unreviewed."; side=$(short HEAD)
+fresh; git checkout -q -b side; grow same; commit "Side grow" "Unreviewed."; side=$(full HEAD)
 git checkout -q self-test; grow same; commit "Main grow" "Unreviewed."
-review REVIEW-main.md "Verdict: ACCEPT $(short HEAD)"
+review REVIEW-main.md "Verdict: ACCEPT $(full HEAD)"
 git merge -q --no-ff side -m "Merge side"
 expect fail "review: $side." "finds a side raise hidden behind an identical reviewed raise"
 
 fresh; git checkout -q -b side2; echo x >> README.md; commit "Side" "b"
 git checkout -q self-test; echo y >> SURFACES.md; commit "Main" "b"
 git merge -q --no-ff --no-commit side2 >/dev/null 2>&1; grow evil; commit "Merge side2" "merge"
-expect fail "review: $(short HEAD)." "refuses a merge that raises on its own"
+expect fail "review: $(full HEAD)." "refuses a merge that raises on its own"
 
 shrink() {
   fresh; grow a; grow b; commit "Grow" "Unreviewed."
-  review REVIEW-grow.md "Verdict: ACCEPT $(short HEAD)"
+  review REVIEW-grow.md "Verdict: ACCEPT $(full HEAD)"
   sed '$d' contract/src/self_test_growth.rs > x.tmp && mv x.tmp contract/src/self_test_growth.rs
   bump -1
   commit "Shrink" "$1"
@@ -123,7 +142,7 @@ shrink() {
 shrink "The tree shrank."
 expect pass '' "accepts a lower with a body"
 shrink ""
-expect fail "review: $(short HEAD)." "refuses a lower with no body"
+expect fail "review: $(full HEAD)." "refuses a lower with no body"
 
 fresh; echo "fn hidden() {}" >> libraries/rust/src/lib.rs
 bump 0 rust
@@ -138,15 +157,63 @@ if m:
 open(p, "w").write(json.dumps(d, indent=2) + "\n")
 P
 commit "Tidy the ceiling" "Lower the ceiling."
-expect fail "review: $(short HEAD)." "treats a lower that edits exclude as a raise"
+expect fail "review: $(full HEAD)." "treats a lower that edits exclude as a raise"
 
-fresh; grow a; commit "Grow" "Unreviewed."; raise=$(git rev-parse HEAD)
-python3 - "${raise:0:12}" <<'P'
+grandfather() {
+  python3 - "$1" <<'P'
 import json, sys
 p = "sdlc/surfaces-ratchet-reviews.json"
 d = json.load(open(p))
 d["grandfathered"][sys.argv[1]] = "self-test"
 open(p, "w").write(json.dumps(d, indent=2) + "\n")
 P
-commit "Grandfather" "tidy"
-expect fail "grandfathers ${raise:0:12}, which is not in the history up to" "refuses to grandfather a raise newer than the cutoff"
+  commit "Grandfather" "tidy"
+}
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
+grandfather "$raise"
+expect fail "grandfathers $raise, which is not in the history up to" "refuses to grandfather a raise newer than the cutoff"
+
+fresh; grandfather db270d2113e6
+expect fail "grandfathers db270d2113e6, which is not a full 40-character SHA" "refuses a grandfathered prefix"
+
+fresh; echo '{}' > sdlc/surfaces-ratchet-reviews.json; commit "Empty the list" "tidy"
+expect fail 'surfaces-ratchet: sdlc/surfaces-ratchet-reviews.json has no "grandfathered" object' "names an emptied grandfather file"
+
+# The wave-7 verifier ground a forged raise onto an accepted 7-character
+# prefix in 14 seconds.
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
+review REVIEW-short.md "Verdict: ACCEPT ${raise:0:7}
+| \`${raise:0:12}\` | 1 to 2 | ACCEPT |"
+expect fail "review: $raise." "refuses a verdict that gives a SHA prefix"
+
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
+review REVIEW-fenced.md "\`\`\`text
+Verdict: ACCEPT $raise
+\`\`\`
+<!--
+| \`$raise\` | 1 to 2 | ACCEPT |
+-->
+<!-- Verdict: ACCEPT $raise -->"
+expect fail "review: $raise." "ignores verdicts in a code fence or an HTML comment"
+
+fresh; grow a; commit "Grow" "Unreviewed."; raise=$(full HEAD)
+review REVIEW-inline.md "Withheld. Verdict: ACCEPT $raise
+Not this: | \`$raise\` | 1 to 2 | ACCEPT |"
+expect fail "review: $raise." "reads a verdict only at the start of a line"
+
+fresh; git rm -q sdlc/surfaces-ratchet.json; commit "Drop the ceiling" "x"
+expect fail "surfaces-ratchet: sdlc/surfaces-ratchet.json is missing." "fails when the ceiling file is gone"
+
+fresh; grow a
+expect fail "sdlc/surfaces-ratchet.json in the working tree raises the committed ceiling." "refuses an uncommitted raise"
+
+fresh; git checkout -q --orphan rootless; commit "Start over" "x"
+expect fail "64133279d3e17fd8a7054e3a5f870a2229cc8bc7 is not in this history" "refuses a history without its base"
+
+fresh; echo "# weakened" >> sdlc/scripts/surfaces-ratchet-self-test; commit "Tweak the self-test" "x"; change=$(full HEAD)
+expect fail "self-test without a second-agent review: $change." "refuses an unreviewed change to its self-test"
+review REVIEW-script.md "Verdict: ACCEPT $change"
+expect pass '' "accepts a reviewed change to its self-test"
+
+fresh; echo "// weakened" >> sdlc/scripts/surfaces-ratchet.mjs; git add sdlc/scripts/surfaces-ratchet.mjs; git commit -q -m "Tweak the ratchet" -m x; change=$(full HEAD)
+expect fail "self-test without a second-agent review: $change." "refuses an unreviewed change to the script"
