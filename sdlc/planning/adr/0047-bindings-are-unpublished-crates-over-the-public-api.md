@@ -1,6 +1,6 @@
 # ADR 0047: Bindings are unpublished crates over the public API
 
-- Status: Draft; design accepted 2026-09-24 after re-review. Item 5 settled 2026-09-24 by the owner. Owner: Claude. Written by Claude for tickets 0093 and 0094. Ian can overturn any item
+- Status: Accepted 2026-09-24 with ticket 0093 after code review; design accepted 2026-09-24 after re-review. Item 5 settled 2026-09-24 by the owner. Owner: Claude. Written by Claude for tickets 0093 and 0094. Ian can overturn any item
 - Date: 2026-09-24
 
 ## Context

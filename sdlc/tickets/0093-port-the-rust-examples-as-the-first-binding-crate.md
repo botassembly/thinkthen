@@ -6,7 +6,7 @@ opens: CLAUDE.md Cargo.toml Cargo.lock libraries/rust sdlc/scripts sdlc/ratchet.
 
 # 0093: Port the Rust examples as the first binding crate
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: built and code review accepted 2026-09-24; landing waits on 0086 (`sdlc/records/0093-build-first-binding-crate.md`). Owner: Claude.
 
 ## Outcome and authority
 
@@ -47,4 +47,4 @@ Contract 1; state and timing 0; reach 3; proof 2; cost of error 1; total 7. Fina
 ## Review
 
 - Design review: the 2026-09-24 reviews (`sdlc/records/2026-09-24-spine-review-contract.md`, `sdlc/records/2026-09-24-spine-review-engine.md`) found the workspace, lint, library-name, ratchet, and ruling gaps in ADR 0047 and one misassigned row. All applied. The re-reviews (`sdlc/records/2026-09-24-rereview-contract.md`, `sdlc/records/2026-09-24-rereview-engine.md`) found the ratchet reader, release profile, lock versions, rung name, and R2-28 planted bug; all applied. The confirmation (same file) found the planted R2-28 test passed the early-return rule; the rule now refuses any return before the first assertion. The final check accepted it.
-- Code review: pending.
+- Code review: a fresh Claude (Opus) session rejected the first pass on one finding: host-language ratchet files ran nowhere. It accepted `f52f1ee4`. The record is `sdlc/records/0093-build-first-binding-crate.md`.
