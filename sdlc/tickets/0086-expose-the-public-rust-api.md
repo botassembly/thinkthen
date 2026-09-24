@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock conformance/consumer probes sdlc/scripts/test crate
 
 # 0086: Expose the public Rust API
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: amended after acceptance; confirmation pending. Owner: Claude.
 
 ## Outcome and authority
 
@@ -73,6 +73,18 @@ The existing one-crate boundary from 0055, shared cases from 0052, partial-resul
 Contract 4; state and timing 3; reach 4; proof 4; cost of error 4; total 19. Minimum floor: level 4 for a semver-bearing public API over shared concurrency, cancellation, fork, panic, and package boundaries. Final level: 4. Reasons: a wrong signature becomes a lasting source contract, an accidental export widens the promise, a missed unwind can terminate a host, and a convenience that rebuilds or bypasses the real engine changes cost and correctness. Claude builds (Opus subagent). A fresh Claude session reviews design and code and reconciles every exported item against 0084.
 
 Re-score if implementation changes public semantics, requires a new dependency or crate, or reaches into C, another language, release artifacts, or publication.
+
+## Amended 2026-09-24
+
+0084 adds `EngineBuilder::from_env() -> Result<EngineBuilder, Error>`. It reads the environment exactly as `Engine::from_env` does, and `Engine::from_env` becomes `EngineBuilder::from_env()?.build()`. The environment is read in one place. The inventory check counts the new member. Tests:
+
+- With nothing overridden, an engine built from `EngineBuilder::from_env()` equals one from `Engine::from_env()` in settings, request digests, and refusals. It runs in a child process with the environment set, like the R4-24 test.
+- Each ADR 0017 section 5 override takes effect after the environment seed: `width`, `max_requests`, `cache_at`, `no_cache`, `default_cache`, and `cache_bytes`. Each is observed through a counted loopback listener or the cache folder.
+- The key never appears in the builder's or the engine's `Debug` output.
+- Seeding and building create no wire traffic; the listener counts zero requests.
+- Planted bug: a seed that skips the cache variable, and the equality test turns red.
+
+Ticket 0085 needs no change, because the facade takes typed settings and the public layer owns environment capture.
 
 ## Review
 
