@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::engine::error::Error;
 
-/// An exclusive digest lock, released when its file closes.
+/// An exclusive digest lock, released when it drops.
 #[derive(Debug)]
 pub(crate) struct CacheLock {
     _file: File,
@@ -167,6 +167,21 @@ impl CacheLock {
 impl FolderGate {
     pub(crate) fn file(&self) -> &File {
         &self._directory
+    }
+}
+
+// A forked child keeps copies of the descriptors of requests in flight, and a
+// flock lock lasts until every copy closes. Unlocking before the close frees
+// the lock when the parent's request ends, not when the child exits.
+impl Drop for CacheLock {
+    fn drop(&mut self) {
+        let _unlocked = self._file.unlock();
+    }
+}
+
+impl Drop for FolderGate {
+    fn drop(&mut self) {
+        let _unlocked = self._directory.unlock();
     }
 }
 

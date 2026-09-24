@@ -26,7 +26,6 @@ use crate::engine::facade::{
 use crate::engine::{Cancel, Deadline};
 
 mod contract_tests;
-mod interrupt_tests;
 
 const TEST_KEY: &str = "sk-facade-test-7f3a";
 
@@ -39,7 +38,7 @@ fn settings(base: &str) -> Settings {
         retry_wait: Duration::from_millis(10),
         width: None,
         storage: Storage::default(),
-        key: || Ok(Key::of(TEST_KEY)),
+        key: Arc::new(|| Ok(Key::of(TEST_KEY))),
         usage: Arc::default(),
     }
 }

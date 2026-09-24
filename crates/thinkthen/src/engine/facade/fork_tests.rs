@@ -42,7 +42,7 @@ fn settings(base: &str, width: Option<u64>, usage: Arc<Counters>) -> Settings {
         retry_wait: Duration::from_millis(10),
         width: width.and_then(|width| Width::new(width).ok()),
         storage: Storage::default(),
-        key: || Ok(Key::of("sk-test-value")),
+        key: Arc::new(|| Ok(Key::of("sk-test-value"))),
         usage,
     }
 }
@@ -80,7 +80,7 @@ fn ask_as_parent(engine: &Engine, parent: &super::State) -> Result<(), Error> {
         &parent.recorder,
         &cancel,
         transport,
-        engine.key,
+        || (engine.key)(),
     )
     .map(|_| ())
 }

@@ -7,7 +7,6 @@ pub(crate) mod asked;
 pub(crate) mod asking;
 mod audit;
 pub(crate) mod cache;
-pub(crate) mod config;
 mod diff;
 pub(crate) mod edge;
 pub(crate) mod failure;

@@ -26,7 +26,7 @@ fn replaying(backend: &Backend, replay: PathBuf) -> Engine {
             replay: Some(replay),
             ..Storage::default()
         },
-        key: || Err(EngineError::NoKey("THINKTHEN_API_KEY")),
+        key: std::sync::Arc::new(|| Err(EngineError::NoKey("THINKTHEN_API_KEY"))),
         usage: Arc::default(),
     })
     .expect("a replaying engine")

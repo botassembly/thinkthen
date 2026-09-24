@@ -35,7 +35,7 @@ fn facade_width_child() {
         retry_wait: Duration::from_millis(10),
         width: Width::new(width).ok(),
         storage: Storage::default(),
-        key: || Ok(Key::of("sk-test-value")),
+        key: std::sync::Arc::new(|| Ok(Key::of("sk-test-value"))),
         usage: Arc::default(),
     };
     let engine = Engine::new(settings(1)).expect("the first explicit width");

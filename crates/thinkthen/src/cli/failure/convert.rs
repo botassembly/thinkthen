@@ -7,6 +7,12 @@ use crate::core::{
 };
 use crate::engine::error::Error as EngineError;
 
+impl From<crate::config::ConfigError> for Failure {
+    fn from(error: crate::config::ConfigError) -> Self {
+        Self::Configuration(error.message)
+    }
+}
+
 impl From<BackendError> for Failure {
     fn from(error: BackendError) -> Self {
         Self::Backend(error)
