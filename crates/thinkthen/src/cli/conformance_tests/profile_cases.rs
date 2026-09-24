@@ -36,6 +36,7 @@ enum Expectation {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MismatchCase {
     id: String,
     tuned_for: Option<String>,
@@ -110,4 +111,10 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
             case.id
         );
     }
+}
+
+#[test]
+fn a_mismatch_case_with_the_old_calibrated_key_is_refused() {
+    let old = r#"{"id":"old","calibrated":"jev","running":"jev","warning":false}"#;
+    assert!(serde_json::from_str::<MismatchCase>(old).is_err());
 }

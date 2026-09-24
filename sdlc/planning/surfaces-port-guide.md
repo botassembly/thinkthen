@@ -264,7 +264,7 @@ Main has no success kind for `decide_many`, `recognize`, or `relate`, and no `us
 | Unsure word (03, 12, 15, file header) | `unsure: true`, `public_word_for_unsure: "unsure"` | The specification says "unresolved"; 0084 says `Answer::Unsure`. | The union ticket picks one word for cases and records it. |
 | Find (24, 25) | A bare-string question, an index answer, `details.kind: "find"`, and `null` when nothing fits. | `{find, none, units}` questions, `bare: "u002"`, `cases.json` says kind `choice` while `result.md` says `find`, and case 19 says `bare: "none"` while `find.md` says null. | Main settles its own two contradictions first. |
 | Invalid rule inside a JSON question (08, 09, 10, 22) | `usage` | `question-file.md`: a file that breaks a rule is `local` (exit 5); `usage` is for values typed on the command line. | Rule how a binding's JSON question maps. A question built from a binding's arguments reads as typed, which argues for `usage`. |
-| `tuned_for` vs `calibrated` | No case touches it. | `backend-profiles.json` (same on both) carries `calibrated` in 4 rows. 0082 item 44 renames it `tuned_for`, per Ian's 2026-09-23 ruling. `specification/result.md:88` still says `calibrated`. | 0082 renames both. No conflict with the branch. |
+| `tuned_for` vs `calibrated` | No case touches it. | Ticket 0090 renamed the key to `tuned_for` in `backend-profiles.json`, `specification/result.md`, and the tool, per Ian's 2026-09-23 ruling. The case reader refuses the old `calibrated` key. | Each surface ticket reads `tuned_for` from main. No conflict with the branch. |
 
 ### 4.4 The skip table and divergences
 
