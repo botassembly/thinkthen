@@ -35,7 +35,10 @@ pub(crate) struct Recorder {
 }
 
 /// Work selected before a key is read or a request is sent.
-#[derive(Debug)]
+///
+/// A replayed body keys its odds by the labels a record gave, so this derives
+/// `Debug` only in tests.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum PreparedRecording {
     Replay(Vec<u8>),
     Live(WritePermit),

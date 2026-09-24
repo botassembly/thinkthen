@@ -44,7 +44,7 @@ Measured with `git diff -U0` over `*.rs`, nonblank lines, against the merge of m
 
 - Production: 6 files (`engine/mod.rs`, `engine/workers.rs`, `engine/http.rs`, `engine/request.rs`, `cli/edge.rs`, `cli/interrupt.rs`). 109 lines added and 24 deleted. The budget is 6 files and 180 lines.
 - Tests: 313 lines added, under the 400-line budget. `facade_tests::feed` now takes a send closure, so both schedulers' readers share it.
-- The ratchet rose from 49733 to 50059 with the build, then to 50125 with the review's two rows.
+- The ratchet rose from 49733 to 50059 with the build, then to 50125 with the review's two rows. Main then moved from 49733 to 49884, and the merge reads 50276: main plus this ticket's 392 lines.
 
 ## Known limits
 

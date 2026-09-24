@@ -1,6 +1,6 @@
 # Answers still print record labels under Debug
 
-Status: open. Found 2026-09-24 by the review of Quick Fix `qf-debug-withholds` (`sdlc/records/qf-debug-withholds.md`). Owner: Claude.
+Status: Closed by Quick Fix `qf-answer-labels` on 2026-09-24 (`sdlc/records/qf-answer-labels.md`). Found 2026-09-24 by the review of Quick Fix `qf-debug-withholds` (`sdlc/records/qf-debug-withholds.md`). Owner: Claude.
 
 `choose --options` reads its labels from the record, and a record is evidence. That Quick Fix withheld the labels in `Labels`, `Question`, and `Request`. The answer still carries them.
 

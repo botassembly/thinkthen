@@ -94,37 +94,129 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     assert!(shown.contains("withheld"), "{shown}");
 }
 
-/// `choose --options` reads its labels from the record, and the request body
-/// carries the evidence as `state`. Neither `Debug` line shows the record.
+/// `choose`, `tag`, and `score` can read their labels from a record. The
+/// `--plan` document carries the request, the engine hands back answers with
+/// those labels, and a result row holds both. No `Debug` line shows them.
 #[test]
-fn no_record_label_or_request_debug_line_shows_the_evidence() {
+fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
+    use crate::core::Question;
     let record = crate::core::Reading::new(crate::core::Framing::Jsonl, Vec::new())
         .expect("a JSON reading")
-        .record(format!(r#"{{"options":["{EVIDENCE}","other"]}}"#).as_bytes())
+        .record(format!(r#"{{"labels":["{EVIDENCE}","other"]}}"#).as_bytes())
         .expect("a JSON record");
-    let question = crate::core::Question::Choose {
-        text: crate::core::QuestionText::new("Which one fits?").expect("a question"),
-        options: record
-            .choices(&crate::core::Pointer::new("/options").expect("a pointer"))
-            .expect("two options"),
-    };
+    let labels = record
+        .choices(&crate::core::Pointer::new("/labels").expect("a pointer"))
+        .expect("two labels");
+    let text = crate::core::QuestionText::new("Which one fits?").expect("a question");
+    let questions = [
+        Question::Choose {
+            text: text.clone(),
+            options: labels.clone(),
+        },
+        Question::Tag {
+            text: text.clone(),
+            labels: labels.clone(),
+        },
+        Question::Score {
+            text,
+            levels: labels,
+        },
+    ];
+    let answers = [
+        format!(r#""q1":{{"type":"choice","probabilities":{{"{EVIDENCE}":0.75,"other":0.25}}}}"#),
+        r#""q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}"#.to_owned(),
+        r#""q1":{"type":"score","probabilities":{"0":0.75,"1":0.25}}"#.to_owned(),
+    ];
+    let (listener, backend, engine) = loopback_engine(&answers);
+    let evidence = crate::core::Evidence::new(EVIDENCE).expect("evidence");
     let plan = crate::core::Plan::new(
-        crate::core::Evidence::new(EVIDENCE).expect("evidence"),
-        crate::core::ModelName::new("jev-latest").expect("a model"),
-        vec![question.clone()],
+        evidence.clone(),
+        backend.model().clone(),
+        questions.to_vec(),
     )
     .expect("a plan");
-    let request = crate::core::adapters::built_in::request(&plan).expect("a request");
-    let shown = format!("{question:?} {plan:?} {plan:#?} {request:?} {request:#?}");
+    let document = crate::core::PlanDocument::of(&backend, &plan).expect("a plan document");
+    let mut shown = format!("{plan:?} {plan:#?} {document:?} {document:#?}");
+    let mut judged = Vec::new();
+    for question in questions {
+        let judgment = engine
+            .judge(
+                &question,
+                None,
+                evidence.clone(),
+                &crate::engine::Cancel::default(),
+            )
+            .expect("a judgment");
+        let reply = &judgment.answered.reply;
+        let meta = crate::core::Meta::new(
+            "0.0.0",
+            String::new(),
+            backend.url().clone(),
+            reply.model().clone(),
+            reply.usage(),
+            crate::core::RequestMeta::new(false, 1, Vec::new()),
+        );
+        let row = crate::core::DecisionResult::new(
+            judgment.value.clone(),
+            question,
+            judgment.answer.clone(),
+            None,
+            meta,
+        );
+        shown.push_str(&format!("{reply:?} {reply:#?} {row:?} {row:#?}"));
+        judged.push(format!("{:?} {:?}", judgment.answer, judgment.value));
+    }
+    assert_eq!(listener.requests().len(), 3);
     assert!(!shown.contains(EVIDENCE), "{shown}");
     assert_eq!(
-        format!("{request:?}"),
-        r#"Request { state: <24 bytes withheld>, model: "jev-latest", .. }"#
+        judged,
+        [
+            "Answer(Choice { pick: <22 bytes withheld>, probabilities: \
+             Distribution { labels: <27 bytes withheld>, probabilities: [0.75, 0.25] }, \
+             confidence: None }) Choice(Some(<22 bytes withheld>))",
+            "Answer(Tag { probabilities: TagProbabilities { labels: <27 bytes withheld>, \
+             probabilities: [0.9, 0.1] } }) Tag([<22 bytes withheld>])",
+            "Answer(Score { level: <22 bytes withheld>, probabilities: \
+             Distribution { labels: <27 bytes withheld>, probabilities: [0.75, 0.25] }, \
+             confidence: None }) Score(0.25)",
+        ]
     );
-    assert_eq!(
-        format!("{question:?}"),
-        r#"Choose { text: QuestionText(String("Which one fits?")), options: Labels(<27 bytes withheld>) }"#
-    );
+}
+
+/// An engine over a loopback listener that answers each request with the next `answers`.
+fn loopback_engine(
+    answers: &[String],
+) -> (
+    conformance_backend::Listener,
+    crate::core::Backend,
+    crate::engine::facade::Engine,
+) {
+    let listener = conformance_backend::Listener::serving(
+        answers
+            .iter()
+            .map(|answers| {
+                conformance_backend::Canned::ok(&format!(
+                    r#"{{"model":"jev-latest","answers":{{{answers}}}}}"#
+                ))
+            })
+            .collect(),
+    )
+    .expect("a loopback listener");
+    let backend =
+        crate::core::Backend::resolve(Some(listener.base()), None, "jev-latest").expect("backend");
+    let engine = crate::engine::facade::Engine::new(crate::engine::facade::Settings {
+        backend: backend.clone(),
+        profile: None,
+        timeout: Duration::from_secs(5),
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+        width: None,
+        storage: crate::engine::facade::Storage::default(),
+        key: || Ok(crate::engine::facade::Key::new(KEY.to_owned())),
+        usage: std::sync::Arc::default(),
+    })
+    .expect("an engine");
+    (listener, backend, engine)
 }
 
 /// `recognize` reads its evidence as tokens and names, in plain and pretty `Debug`.
