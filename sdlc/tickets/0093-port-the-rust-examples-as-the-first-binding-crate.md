@@ -17,7 +17,7 @@ This ticket runs before C (0094), which swaps the plan's items 9 and 10 for this
 ## Work
 
 - `libraries/rust` becomes its own Cargo workspace of examples and tests over `thinkthen`, per ADR 0047 item 1. The branch forwarder that re-exported the stand-in contract retires. The slide and examples keep their intent. Tests built on `thinkthen_standin::testkit` are rewritten whole.
-- The root `Cargo.toml` gains `exclude = ["libraries", "databases"]` and `default-members = ["crates/thinkthen"]` (ADR 0047 item 2).
+- The root `Cargo.toml` adds `"libraries"` and `"databases"` to the `exclude` list beside 0086's `conformance/consumer`, and sets `default-members = ["crates/thinkthen"]` (ADR 0047 item 2).
 - Checks run from `lint` scan `libraries/*/Cargo.toml` and `databases/*/Cargo.toml` directly: `publish = false`; the only `thinkthen` dependency is the path form with default features off; no dependency on another binding; a lint table equal to the root table except `unsafe_code = "deny"` (ADR 0047 item 3); a `[profile.release]` equal to the root one; and a lock that pins the root lock's version of every package in `thinkthen`'s normal dependency tree (ADR 0047 item 1).
 - `sdlc/scripts/ratchet.mjs` gains the optional config-path argument (ADR 0047 item 4). `lint` runs it on `libraries/rust/ratchet.json`, and deny covers the binding's lock.
 - `policy.py` refuses `#[ignore]` and a test whose first statement returns early in binding test files.
