@@ -6,7 +6,7 @@ opens: README.md crates/thinkthen/Cargo.toml crates/thinkthen/src/cli crates/thi
 
 # 0082: Close the 0.1 command contract
 
-Status: design accepted 2026-09-24 after re-review; queue owner applied the reviewer's two exact fixes. Owner: Claude.
+Status: landed 2026-09-24. `sdlc/records/0082-build-close-command-contract.md` records the build. Owner: Claude.
 
 ## Design and decisions
 

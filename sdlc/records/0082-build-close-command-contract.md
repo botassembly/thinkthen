@@ -1,6 +1,6 @@
 # 0082: Close the 0.1 command contract
 
-Status: built on `ticket/0082-close-command-contract`, not merged. Awaiting the final-diff reviews the ticket names.
+Status: landed. The first code review rejected (`sdlc/records/0082-code-review.md`). The re-review accepted `c57177ac` (`sdlc/records/0082-code-review-2.md`). Main fast-forwarded to the branch after lint and spec passed on the merge with newer main.
 
 ## Result
 
@@ -71,7 +71,7 @@ Each row was observed on this branch's binary or owning file. Dispositions use e
 | 27 | stale | `sdlc/tickets/0058-make-diagnostics-actionable-and-safe.md` declines printing a backend's refusal body and excludes recording refused exchanges under the secrecy rule |
 | 28 | already fixed | `backend::resend` pins `thinkthen: the backend timed out; increase --timeout or try again` |
 | 29 | already fixed | `backend::distribution_total` pins `tolerance 0.01` |
-| 30 | already fixed | `echo hi \| thinkthen decide q --jobs 1 --dry-run` printed `thinkthen: --jobs bounds the requests in flight, and one document sends one request` and exited 2; `backend::timeout` |
+| 30 | already fixed | `echo hi \| thinkthen decide q --jobs 1 --dry-run` refuses before a plan and exits 2. After the review fix it prints `thinkthen: --jobs bounds the requests in flight, and a single text sends one request`; `backend::timeout::a_one_document_run_refuses_jobs_and_sends_nothing` |
 | 31 | already fixed | `specification/records.md` no longer calls 6 unused; `specification/annotate.md` gives exit 6 for a finished run with failed questions |
 | 32 | already fixed | `specification/annotate.md` says an empty document is a usage error and an empty line or JSONL stream prints nothing |
 | 33 | already fixed | `specification/filter.md` and `rank.md` qualify the empty stream to line and JSONL |
