@@ -59,7 +59,7 @@ The command keeps argument parsing, input framing and its detached stdin feeder,
 
 ## Tests
 
-Six red-green tests first failed because no facade module existed. They are deleted: the shared-case runner covers what they showed. Ten facade tests in `engine/facade_tests.rs` remain. Each is a contract check against a counted loopback listener:
+Six red-green tests first failed because no facade module existed. They are deleted: the shared-case runner covers what they showed. Ten facade tests in `engine/facade_tests.rs` and `engine/facade_tests/contract_tests.rs` remain. Each is a contract check against a counted loopback listener:
 
 - sending thread and a host `SIGUSR1` during a held single send;
 - R2-21: a refused connection fails at once, is not retryable, and counts one attempt;
@@ -92,8 +92,8 @@ Each plant ran alone on a committed tree and was reverted.
 Measured with `git diff -U0 86f4012e HEAD -- '*.rs'`, nonblank lines:
 
 - Production: 29 files changed. The budget is 16. 1,166 lines added and 929 deleted, net 237. The budget is 1,200 added.
-- Tests: 769 added and 115 deleted. The budget is 2,100.
-- Combined: 1,935 added. The budget is 3,300.
+- Tests: 778 added and 115 deleted. The budget is 2,100.
+- Combined: 1,944 added. The budget is 3,300.
 - Largest touched file: `cli/asking.rs` at 485 nonblank lines.
 
 ## Known limits
