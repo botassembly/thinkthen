@@ -9,7 +9,7 @@ use std::sync::{Arc, Barrier, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, Observed, process_has_file};
+use crate::harness::{Canned, Listener, Observed, finish, process_has_file};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -31,8 +31,8 @@ impl Reaped {
     fn wait(mut self) -> io::Result<Output> {
         self.0
             .take()
-            .ok_or_else(|| io::Error::other("child already reaped"))?
-            .wait_with_output()
+            .ok_or_else(|| io::Error::other("child already reaped"))
+            .and_then(|child| finish(child, "a cache-prune run"))
     }
 }
 

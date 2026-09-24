@@ -14,6 +14,9 @@ mod core;
 
 mod engine;
 
+#[cfg(test)]
+mod test_deadline;
+
 #[cfg(feature = "cli")]
 mod cli;
 

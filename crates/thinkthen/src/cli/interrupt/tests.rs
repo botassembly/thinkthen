@@ -318,21 +318,27 @@ mod unix {
     #[allow(clippy::excessive_nesting, reason = "synchronized subprocess signals")]
     fn partial_prefixes_and_an_armed_follow_up_sigint_use_the_default() {
         for prefix in 0..4 {
-            let (mut child, mut output) = child("THINKTHEN_SIGINT_PREFIX", &prefix.to_string());
+            let (child, mut output) = child("THINKTHEN_SIGINT_PREFIX", &prefix.to_string());
             await_line(&mut output, "ready");
             sigint(child.id());
             assert_eq!(
-                child.wait().expect("exit").signal(),
+                crate::test_deadline::finish(child, "the SIGINT child")
+                    .expect("exit")
+                    .status
+                    .signal(),
                 Some(Signal::SIGINT as i32)
             );
         }
-        let (mut child, mut output) = child("THINKTHEN_SIGINT_CHILD", "1");
+        let (child, mut output) = child("THINKTHEN_SIGINT_CHILD", "1");
         await_line(&mut output, "ready");
         sigint(child.id());
         await_line(&mut output, "armed");
         sigint(child.id());
         assert_eq!(
-            child.wait().expect("exit").signal(),
+            crate::test_deadline::finish(child, "the SIGINT child")
+                .expect("exit")
+                .status
+                .signal(),
             Some(signal_hook::consts::signal::SIGINT)
         );
     }
@@ -353,9 +359,7 @@ mod unix {
                 );
             }
             announce("ready");
-            loop {
-                std::thread::park();
-            }
+            crate::test_deadline::park_for_signal();
         }
         if std::env::var_os("THINKTHEN_SIGINT_CHILD").is_none() {
             return;
@@ -374,8 +378,6 @@ mod unix {
             std::thread::yield_now();
         }
         announce("armed");
-        loop {
-            std::thread::park();
-        }
+        crate::test_deadline::park_for_signal();
     }
 }

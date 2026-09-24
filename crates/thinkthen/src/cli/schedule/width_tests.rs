@@ -5,7 +5,7 @@
 
 use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
+use std::process::{Command, ExitCode, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex};
@@ -34,7 +34,7 @@ fn in_child(name: &str) {
 }
 
 /// Run the ignored test at `path` alone in a fresh copy of the binary. A
-/// child that has not finished in 60 s fails the test and holds no gate.
+/// child still running at the test deadline is killed and fails the test.
 pub(crate) fn in_child_at(path: &str) {
     let name = path.replace("::", "-");
     let home = env::temp_dir().join(format!("thinkthen-width-{name}-{}", std::process::id()));
@@ -54,13 +54,12 @@ pub(crate) fn in_child_at(path: &str) {
         .env("HOME", &home)
         .env("XDG_CACHE_HOME", home.join("cache"))
         .env("XDG_CONFIG_HOME", home.join("config"))
-        .env("THINKTHEN_API_KEY", "sk-test-value");
-    let (sent, received) = channel();
-    thread::spawn(move || sent.send(command.output()));
-    let output = received
-        .recv_timeout(Duration::from_secs(60))
-        .unwrap_or_else(|_| panic!("the child {path} is still running after 60 s"))
-        .expect("child");
+        .env("THINKTHEN_API_KEY", "sk-test-value")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let child = command.spawn().expect("child");
+    let output = crate::test_deadline::finish(child, path).expect("child");
     let _removed = fs::remove_dir_all(&home);
     assert!(
         output.status.success(),

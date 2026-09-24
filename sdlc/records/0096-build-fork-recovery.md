@@ -46,7 +46,7 @@ Both test files answer the tests-earn-their-place questions. They need no test-o
 - Busy parent: the parent engine records to a folder, counts to a usage folder, and has explicit width 1. A parent thread sends through the parent's state and is held by the listener. It holds the only width permit, a live recording permit, and its folder gate. The child's `judge` must reach the listener while that permit is held. Then the parent counts 2 and the child counts 1. The durable total is exactly 3. After the engine drops, an exclusive folder lock succeeds within 5 s.
 - Width: the parent selects width 2, and an implicit parent engine follows 2. In the child, the implicit engine follows the fallback 4 and leaves the selection unset. The explicit engine then selects 2. A later width 2 is accepted, and width 3 is refused with `WidthActive`.
 
-`width_tests::in_child_at` now bounds every child run at 60 s. `in_child` delegates to it, so the older width children are bounded too.
+`width_tests::in_child_at` runs a child test by its full path and waits through `test_deadline::finish`, which main's Quick Fix `qf-test-deadlines` added. `in_child` delegates to it, so the older width children get the same 60 s bound.
 
 Removed: `recorder::tests::a_held_recorder_gate_ends_as_the_deadline_without_the_owner`. It held the recorder mutex, which no longer exists. `deadline_tests::a_held_folder_ends_as_the_deadline_without_the_owner` and `request::tests::a_held_folder_cancels_through_the_prepared_request_path` already hold the folder's exclusive lock and cover the same wait.
 
@@ -88,4 +88,4 @@ LADDER
 
 ## Ratchet
 
-The ceiling rises from 50276 to 50869, 593 lines. About 153 are net production code: the guarded slot, the engine's immutable settings and its one state door, and the per-operation folder gate. The other 440 are tests. Before adding lines, I deleted the recorder mutex, its try-lock loop, its poison path, and the recorder test that held it. `Guarded` serves both the process width state and each engine's state, so the rebuild rule exists once.
+The ceiling rises from 50276 to 50869, 593 lines. About 153 are net production code: the guarded slot, the engine's immutable settings and its one state door, and the per-operation folder gate. The other 440 are tests. Merging main at `5783815b` (ceiling 50378) gives 50970: main plus this ticket's 592 lines. Moving the child wait onto main's `test_deadline::finish` saved one line. Before adding lines, I deleted the recorder mutex, its try-lock loop, its poison path, and the recorder test that held it. `Guarded` serves both the process width state and each engine's state, so the rebuild rule exists once.
