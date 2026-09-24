@@ -4,7 +4,7 @@ Status: built on `ticket/0082-close-command-contract`, not merged. Awaiting the 
 
 ## Result
 
-The built help, the README, the how-to index, the green how-tos, the crate description, and the specification now use the approved words. `decide --help` teaches the four outcomes as `The exit code is 0 for yes, 1 for no, 3 for not sure, and any other code when the run is broken or interrupted.` `specification/decide.md` defines the formal term once: `` `unresolved` is the formal name for a not sure answer. `` `recognize --help` carries the record-run sentence. `relate --help` carries `A run that answers some relation questions and fails others prints what it has and exits 6. A run whose relation questions all fail prints nothing and exits 4.` `annotate` opens with `Answer a saved set of questions about every record.` No result key, request byte, behavior, exit code, or diagnostic changed.
+The built help, the README, the how-to index, the green how-tos, the crate description, and the specification now use the approved words. `decide --help` teaches the four outcomes as `The exit code is 0 for yes, 1 for no, 3 for not sure, and any other code when the run is broken or interrupted.` `specification/decide.md` defines the formal term once: `` `unresolved` is the formal name for a not sure answer. `` `recognize --help` carries the record-run sentence. `relate --help` carries `A run that answers some relation questions and fails others prints what it has and exits 6. A run whose relation questions all fail prints nothing and exits 4.` `annotate` opens with `Answer a saved set of questions about every record.` No result key, request byte, behavior, or exit code changed. One diagnostic changed its wording after the code review: the `--jobs` refusal on a single input now says `a single text sends one request`, matching the help.
 
 `sdlc/scripts/demos` (rung 3) now checks the approved vocabulary over the built root help, `-h` and `--help` for all ten functions, the root README, the how-to index, and every green how-to. It prints `demos: FILE:LINE: "WORD" breaks the RULE rule` for every hit and fails on any. Its unsanctioned-hit count on this branch is 0 (`demos: 21 green, 0 red`). Before the fix it printed 93 hits.
 
@@ -42,7 +42,7 @@ Each row was observed on this branch's binary or owning file. Dispositions use e
 
 | Item | Disposition | Proof |
 |---|---|---|
-| 1 | fixed here | `decide_edge::record_capable_help_pins_run_exit_behavior` pins the teaching sentence once and no `3 for unresolved`; `version::the_specification_defines_unresolved_once_and_keeps_the_closed_wording` finds the definition only in `decide.md`; the vocabulary check rejects `unresolved` in built help |
+| 1 | fixed here | README.md line 21 said `an unresolved answer, and an error`; it now says `a not sure answer, and a broken run`, pinned in `version::the_specification_defines_unresolved_once_and_keeps_the_closed_wording`. `decide_edge::record_capable_help_pins_run_exit_behavior` pins the teaching sentence once and no `3 for unresolved`; `version::the_specification_defines_unresolved_once_and_keeps_the_closed_wording` finds the definition only in `decide.md`; the vocabulary check rejects `unresolved` in built help |
 | 2 | already fixed | `version::help_opens_with_the_semantic_commands_introduction`; `spec/version.md` |
 | 3 | already fixed | `version::each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order` pins all ten; `version::recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure` |
 | 4 | already fixed | The exact root inventory assertion already existed on main in `version::each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order` (`ORDER`, 13 entries, compared whole). The ticket's `fixed here (pin only)` is corrected; nothing was added |
@@ -105,10 +105,23 @@ Every test below was written first and ran red on the baseline binary for the st
 | `demos` vocabulary check | 93 hits, exit 1 |
 | `demos-self-test` | `standard-ok`, `rule3-other-language`, and `vocabulary-sanctioned` exited 1 on the real README's `rating` and `judgment`; the two planted-failure cases already passed |
 
+After the code review, these ran red first:
+
+| Test | Red (observed) |
+|---|---|
+| `version::the_specification_defines_unresolved_once_and_keeps_the_closed_wording` | the README four-outcome line was missing, then `showed rubric scores rejecting` was missing from `score.md` |
+| `backend::timeout::a_one_document_run_refuses_jobs_and_sends_nothing` | left `... and one document sends one request`, right `... and a single text sends one request` |
+| `demos-self-test` `vocabulary-no-help` | exited 0 with the stand-in's `relate --help` exiting 2 |
+| `demos-self-test` `vocabulary-spelling` | exited 0 on a planted `judgement` |
+
 `version::recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure` guards preserved text and was green before and after.
 
 ## Deviations from the ticket
 
+- The ticket's premise that the README carries no four-outcome sentence was false. README.md line 21 taught `an unresolved answer, and an error`. The first build missed it and the code review caught it (B1). The line now uses not sure and broken.
+- The code review (B2) found the help scan piped into awk without pipefail, so a failing help command passed as clean. The scan now captures the help first and fails with `demos: thinkthen ARGS failed, so its help was not checked`. A self-test case proves it.
+- On the coordinator's instruction after the code review, three follow-ups landed here. The `--jobs` refusal says `a single text` (`cli/failure.rs`, a fourth production file), pinned at its exact exit code and sentence with and without `--dry-run`, and a counted loopback listener sees zero connections and zero requests (`backend::timeout::a_one_document_run_refuses_jobs_and_sends_nothing`). The check also rejects the spelling `judgement`. `specification/score.md` says `rubric scores`. Follow-ups 2 and 5 are filed as issues on main.
+- Rust tests touch 6 files, one over the cap of 5, because the diagnostic pin lives in `tests/backend/timeout.rs`.
 - Row 4 is `already fixed`. Main already held the exact inventory assertion, so no pin was added.
 - Row 41 is `fixed here`. The audit found `four answer kinds` still live in `specification/README.md`. One word changed, in scope as result documentation.
 - Row 39 is `fixed here`. The how-to index named eight built functions of ten. One sentence replaced the list, in a file row 6 already touched.
@@ -120,11 +133,11 @@ Every test below was written first and ran red on the baseline binary for the st
 
 ## Budget
 
-- Production Rust: 3 files (`cli/args.rs`, `cli/args/command.rs`, `cli/args/find.rs`), 58 lines added, +8 net nonblank. Cap: 4 files and 60 lines.
-- Rust tests: 5 files (`version.rs`, `decide_edge.rs`, `tag_edge.rs`, `find_edge.rs`, `choose_and_score_edge.rs`), 124 lines added, +102 net nonblank. Cap: 5 files and 220 lines.
-- Vocabulary enforcement: `sdlc/scripts/demos` +52 and `demos-self-test` +32 nonblank, 84 in all. Cap: 140.
+- Production Rust: 4 files (`cli/args.rs`, `cli/args/command.rs`, `cli/args/find.rs`, `cli/failure.rs`), 59 lines added, +8 net nonblank. Cap: 4 files and 60 lines.
+- Rust tests: 6 files (`version.rs`, `decide_edge.rs`, `tag_edge.rs`, `find_edge.rs`, `choose_and_score_edge.rs`, `backend/timeout.rs`), 146 lines added, +107 net nonblank. Cap: 5 files and 220 lines; the sixth file is a departure above.
+- Vocabulary enforcement: `sdlc/scripts/demos` +64 and `demos-self-test` +40 nonblank, 104 in all. Cap: 140.
 - Public prose: 16 files, 0 net nonblank lines. The files are `Cargo.toml`, `README.md`, `demos/README.md`, demos 02, 16, 17, 19, 28, and 40, and `specification/` `README.md`, `channels.md`, `choose.md`, `decide.md`, `result.md`, `score.md`, and `threshold.md`. Cap: 16 files and 120 lines.
-- Ratchet: +110 over main, equal to the measured Rust increase. The branch measured 43754 to 43864 before the merge. Main moved to 43782 with 0090, and the merged ceiling is 43892. No Rust file is near 500 nonblank lines; the largest touched is `decide_edge.rs` at 484. No dependency added.
+- Ratchet: +115 over main, equal to the measured Rust increase. The first build measured +110; the review fixes add 5 (the README and score pins and the two-mode diagnostic test). The ceiling is 43897.
 
 ## Gates
 

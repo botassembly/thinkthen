@@ -19,8 +19,9 @@ mkdir -p "$REPO/$ROOT/bin"
 : >"$REPO/$ROOT/bin/planted"
 cat >"$REPO/$ROOT/bin/thinkthen" <<'STAND_IN'
 #!/bin/sh
-awk -F '\t' -v args="$*" '$1 == args { print $2; found = 1 }
-	END { if (!found) print "Clean help." }' "$(dirname -- "$0")/planted"
+awk -F '\t' -v args="$*" '$1 == args && $2 == "EXIT 2" { failed = 1; exit }
+	$1 == args { print $2; found = 1 }
+	END { if (failed) exit 2; if (!found) print "Clean help." }' "$(dirname -- "$0")/planted"
 STAND_IN
 chmod +x "$REPO/$ROOT/bin/thinkthen"
 PATH=$REPO/$ROOT/bin:$PATH
@@ -269,10 +270,18 @@ printf 'tag --help\tName every tag label.\ndecide --help\tRead a table with a re
 in_form 'keep the sanctioned words' 'Save the detailed rows and read each failed question.' |
 	fixture vocabulary-sanctioned
 expect vocabulary-sanctioned 0 'demos: 1 green, 0 red'
+printf 'score -h\tA judgement.\n' >"$REPO/$ROOT/bin/planted"
+in_form 'spell an old word' 'The help is planted.' | fixture vocabulary-spelling
+expect vocabulary-spelling 1 'demos: thinkthen score -h:1: "judgement" breaks the fixed-phrase rule'
+
+# A help command that fails is a failure, never a clean scan.
+printf 'relate --help\tEXIT 2\n' >"$REPO/$ROOT/bin/planted"
+in_form 'lose a help page' 'The help is planted.' | fixture vocabulary-no-help
+expect vocabulary-no-help 1 'demos: thinkthen relate --help failed, so its help was not checked'
 : >"$REPO/$ROOT/bin/planted"
 
 if [ "$failures" -ne 0 ]; then
 	printf 'demos-self-test: %s cases failed\n' "$failures" >&2
 	exit 1
 fi
-printf 'demos-self-test: 19 cases pass\n'
+printf 'demos-self-test: 21 cases pass\n'

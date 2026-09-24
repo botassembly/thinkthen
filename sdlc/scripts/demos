@@ -43,6 +43,7 @@ vocabulary() {
 			check("rating", "fixed-phrase")
 			check("the mark", "fixed-phrase")
 			check("judgment", "fixed-phrase")
+			check("judgement", "fixed-phrase")
 			if (scope == "prose") next
 			# A CSV table has a header row; that row is the table'"'"'s, not a record.
 			gsub(/header row/, " ", line)
@@ -227,10 +228,21 @@ for page in */README.md; do
 done
 vocabulary "$REPO/README.md" prose <"$REPO/README.md" >>"$hits"
 vocabulary README.md prose <README.md >>"$hits"
-thinkthen --help | vocabulary 'thinkthen --help' help >>"$hits"
+# The help is captured before it is scanned. A pipe would report only the
+# scan, and a help command that failed would pass as clean.
+scan_help() {
+	scope=$1
+	shift
+	if ! help=$(thinkthen "$@"); then
+		printf 'demos: thinkthen %s failed, so its help was not checked\n' "$*" >&2
+		exit 1
+	fi
+	printf '%s\n' "$help" | vocabulary "thinkthen $*" "$scope" >>"$hits"
+}
+scan_help help --help
 for verb in decide filter rank choose find score tag annotate recognize relate; do
 	for flag in -h --help; do
-		thinkthen "$verb" "$flag" | vocabulary "thinkthen $verb $flag" "$verb" >>"$hits"
+		scan_help "$verb" "$verb" "$flag"
 	done
 done
 if [ -s "$hits" ]; then

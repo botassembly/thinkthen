@@ -214,4 +214,8 @@ fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
     assert!(index.contains("the five answer kinds |"), "{index}");
     let demos = std::fs::read_to_string(root.join("demos/README.md")).expect("the how-to index");
     assert!(demos.contains(" All ten functions are built. "), "{demos}");
+    let readme = std::fs::read_to_string(root.join("README.md")).expect("the README");
+    assert!(readme.contains("\n- A yes, a no, a not sure answer, and a broken run stay four different outcomes in the output and in the exit code.\n"), "{readme}");
+    let score = std::fs::read_to_string(root.join("specification/score.md")).expect("score.md");
+    assert!(score.contains("showed rubric scores rejecting"), "{score}");
 }

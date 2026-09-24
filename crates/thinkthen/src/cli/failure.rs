@@ -429,7 +429,7 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
             "--quiet carries the answer in the exit code, and no record's answer sets it"
         }
         Failure::JobsOutsideRecords => {
-            "--jobs bounds the requests in flight, and one document sends one request"
+            "--jobs bounds the requests in flight, and a single text sends one request"
         }
         Failure::TopIsZero => {
             "`--top` prints the first N of the order, and N is a whole number of 1 or more"
