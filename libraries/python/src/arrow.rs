@@ -106,10 +106,6 @@ impl SchemaGuard {
         Self(Some(unsafe { std::mem::zeroed() }))
     }
 
-    fn held(&self) -> &ArrowSchema {
-        self.0.as_ref().expect("the guard holds its schema until take")
-    }
-
     /// The place a producer's `get_schema` fills.
     fn pointer(&mut self) -> *mut ArrowSchema {
         let schema = self.0.as_mut().expect("the guard holds its schema");
@@ -523,11 +519,15 @@ fn mapped(first: usize, last: usize) -> bool {
 /// allocation cannot be told from a correct one by any reader; that lie
 /// stays the producer's.
 ///
+/// `memory` is the call's one snapshot, taken after the producer handed
+/// over every batch.
+///
 /// # Safety
 /// `array` must point at a live `ArrowArray` of the given text layout,
 /// and the memory must outlive the returned strings.
 unsafe fn borrow_strings(
     array: *const ArrowArray,
+    memory: &Readable,
     text: Text,
     skip: usize,
     count: usize,
@@ -561,10 +561,9 @@ unsafe fn borrow_strings(
             "the frame's struct root asks for rows its column does not carry",
         ));
     }
-    let memory = Readable::snapshot()?;
     let spans = match text {
-        Text::View => view_spans(array, &memory, skip, count)?,
-        Text::Utf8 | Text::LargeUtf8 => offset_spans(array, &memory, text, skip, count, carried)?,
+        Text::View => view_spans(array, memory, skip, count)?,
+        Text::Utf8 | Text::LargeUtf8 => offset_spans(array, memory, text, skip, count, carried)?,
     };
     let mut texts = Vec::with_capacity(count);
     for (start, length) in spans {
@@ -817,7 +816,6 @@ pub(crate) fn series_column(records: &Bound<'_, PyAny>) -> PyResult<SeriesColumn
         if got != 0 {
             return Err(stream_error(stream, "the column stream would not name its schema"));
         }
-        let large = require_text(schema.held(), &Readable::snapshot()?)?;
         column.schemas.push(schema.take());
         loop {
             let mut array = std::mem::zeroed::<ArrowArray>();
@@ -831,12 +829,19 @@ pub(crate) fn series_column(records: &Bound<'_, PyAny>) -> PyResult<SeriesColumn
             // Own the batch before reading it, so a refusal below releases
             // the producer's buffers together with the column instead of
             // leaking them.
-            let skip = array.offset.max(0) as usize;
-            let count = array.length.max(0) as usize;
             column.batches.push(array);
-            let held = column.batches.last().expect("just pushed");
-            column.texts.append(&mut borrow_strings(held, large, skip, count)?);
         }
+        // One snapshot for the whole call, taken once the producer has
+        // handed over every batch, so every buffer it made is in it.
+        let memory = Readable::snapshot()?;
+        let large = require_text(&column.schemas[0], &memory)?;
+        let mut texts = Vec::new();
+        for held in &column.batches {
+            let skip = held.offset.max(0) as usize;
+            let count = held.length.max(0) as usize;
+            texts.append(&mut borrow_strings(held, &memory, large, skip, count)?);
+        }
+        column.texts = texts;
     }
     Ok(column)
 }
@@ -871,6 +876,8 @@ pub(crate) struct FrameColumn {
     hold: Vec<BatchHold>,
     schema: Box<ArrowSchema>,
     owners: Vec<Py<PyAny>>,
+    /// The call's one memory-map snapshot, reused for the output schema.
+    memory: Readable,
 }
 
 impl Drop for FrameColumn {
@@ -905,9 +912,40 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
             return Err(stream_error(stream, "the frame stream would not name its schema"));
         }
     }
-    let memory = Readable::snapshot()?;
+    let mut column = FrameColumn {
+        texts: Vec::new(),
+        on: 0,
+        names: Vec::new(),
+        lengths: Vec::new(),
+        hold: Vec::new(),
+        schema: Box::new(schema.take()),
+        owners: vec![capsule.unbind()],
+        memory: Readable::default(),
+    };
+    // Own every batch before reading any, so a refusal below releases the
+    // producer's buffers together with the hold instead of leaking them.
     unsafe {
-        let format = checked_format(schema.held(), &memory)?;
+        loop {
+            let mut array = std::mem::zeroed::<ArrowArray>();
+            let got = (*stream).get_next.map_or(-1, |next| next(stream, &mut array));
+            if got != 0 {
+                return Err(stream_error(stream, " the frame stream stopped mid-frame"));
+            }
+            if array.release.is_none() {
+                break;
+            }
+            let child_ptrs = array.children;
+            column.lengths.push(array.length.max(0) as usize);
+            column.hold.push(BatchHold { root: array, child_ptrs });
+        }
+    }
+    // One snapshot for the whole call, taken once the producer has handed
+    // over every batch; the output schema's copy reuses it.
+    column.memory = Readable::snapshot()?;
+    let memory = &column.memory;
+    let schema = column.schema.as_ref();
+    unsafe {
+        let format = checked_format(schema, memory)?;
         if format != b"+s" {
             return Err(UsageError::new_err(format!(
                 "the stream is '{}', not a frame (a struct); annotate with on= needs a data frame, and a plain column rides the series door",
@@ -915,11 +953,11 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
             )));
         }
     }
-    let count = schema.held().n_children.max(0) as usize;
+    let count = schema.n_children.max(0) as usize;
     if count == 0 {
         return Err(UsageError::new_err("the frame has no columns"));
     }
-    if schema.held().children.is_null() {
+    if schema.children.is_null() {
         // A struct root that names children but carries no child table is
         // malformed, and reading the null table would fault; refuse it as
         // usage instead of walking the null pointer (review-4, the
@@ -931,12 +969,12 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
     let mut names = Vec::with_capacity(count);
     let mut on_index = None;
     for place in 0..count {
-        let child = unsafe { *schema.held().children.add(place) };
+        let child = unsafe { *schema.children.add(place) };
         if child.is_null() {
             return Err(UsageError::new_err("the frame named a column it did not carry"));
         }
         let child_ref = unsafe { &*child };
-        let name = unsafe { checked_text(child_ref.name, &memory) }?
+        let name = unsafe { checked_text(child_ref.name, memory) }?
             .map_or_else(String::new, |found| found.to_string_lossy().into_owned());
         if name == on {
             on_index = Some(place);
@@ -950,36 +988,19 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
     };
     // The `on` column must be whole text, checked on its own schema.
     let large = unsafe {
-        let child = *schema.held().children.add(on_index);
-        require_text(&*child, &memory)?
+        let child = *schema.children.add(on_index);
+        require_text(&*child, memory)?
     };
 
-    let mut column = FrameColumn {
-        texts: Vec::new(),
-        on: on_index,
-        names,
-        lengths: Vec::new(),
-        hold: Vec::new(),
-        schema: Box::new(schema.take()),
-        owners: vec![capsule.unbind()],
-    };
-
+    let mut texts = Vec::new();
     unsafe {
-        loop {
-            let mut array = std::mem::zeroed::<ArrowArray>();
-            let got = (*stream).get_next.map_or(-1, |next| next(stream, &mut array));
-            if got != 0 {
-                return Err(stream_error(stream, " the frame stream stopped mid-frame"));
-            }
-            if array.release.is_none() {
-                break;
-            }
-            if array.n_children as usize != column.names.len() {
+        for held in &column.hold {
+            if held.root.n_children as usize != names.len() {
                 return Err(UsageError::new_err(
                     "a frame batch carried a different column count than its schema",
                 ));
             }
-            if array.children.is_null() {
+            if held.child_ptrs.is_null() {
                 // The batch side of the null-children shape: the root
                 // claims columns it does not carry, and the hold would
                 // walk a null child table when it reads the `on` column.
@@ -987,28 +1008,22 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
                     "a frame batch names columns but carries no column arrays",
                 ));
             }
-            let child_ptrs = array.children;
-            let root_offset = array.offset.max(0) as usize;
-            let root_length = array.length.max(0) as usize;
-            // Own the batch before reading it, so a refusal below releases
-            // the producer's buffers together with the hold instead of
-            // leaking them.
-            column.lengths.push(root_length);
-            column.hold.push(BatchHold {
-                root: array,
-                child_ptrs,
-            });
-            let held = column.hold.last().expect("just pushed");
-            let child = held.child(column.on);
+            let root_offset = held.root.offset.max(0) as usize;
+            let root_length = held.root.length.max(0) as usize;
+            let child = held.child(on_index);
             let child_offset = child.offset.max(0) as usize;
-            column.texts.append(&mut borrow_strings(
+            texts.append(&mut borrow_strings(
                 &child,
+                memory,
                 large,
                 root_offset + child_offset,
                 root_length,
             )?);
         }
     }
+    column.texts = texts;
+    column.on = on_index;
+    column.names = names;
     Ok(column)
 }
 
@@ -1395,15 +1410,15 @@ pub(crate) fn build_frame(
     // new columns get one leaf each.
     let mut schema = SchemaTree::default();
     let mut schema_children: Vec<*mut ArrowSchema> = Vec::with_capacity(total);
-    let memory = Readable::snapshot()?;
+    let memory = &hold.memory;
     for place in 0..originals {
         let source = unsafe { *hold.schema.children.add(place) };
-        schema_children.push(unsafe { schema.copy(source, Some(&memory)) }?);
+        schema_children.push(unsafe { schema.copy(source, Some(memory)) }?);
     }
     for (place, name) in names.iter().enumerate() {
         schema_children.push(schema.leaf(Some(name), formats_for_new[place], 2)?);
     }
-    let schema_root = schema.branch(schema_children, hold.schema.metadata, Some(&memory))?;
+    let schema_root = schema.branch(schema_children, hold.schema.metadata, Some(memory))?;
     let _ = schema_root;
     // One batch out per batch in, so aliased originals stay per-batch and
     // every batch keeps its own root.
@@ -2224,7 +2239,7 @@ mod malformed_tests {
         let held = pointers(&[b"".as_slice(), &offsets, values]);
         let rows = offsets.len() / 4 - 1;
         let outer = array_of(&held, rows as i64);
-        unsafe { borrow_strings(&outer, Text::Utf8, 0, rows) }
+        unsafe { borrow_strings(&outer, &snapshot(), Text::Utf8, 0, rows) }
     }
 
     fn large_over(offsets: &[i64], values: &[u8]) -> PyResult<Vec<&'static str>> {
@@ -2232,7 +2247,7 @@ mod malformed_tests {
         let held = pointers(&[b"".as_slice(), &bytes, values]);
         let rows = offsets.len() - 1;
         let outer = array_of(&held, rows as i64);
-        unsafe { borrow_strings(&outer, Text::LargeUtf8, 0, rows) }
+        unsafe { borrow_strings(&outer, &snapshot(), Text::LargeUtf8, 0, rows) }
     }
 
     /// A view column whose sizes buffer is set by hand, so a test can
@@ -2244,13 +2259,19 @@ mod malformed_tests {
         table.push(&sizes_bytes);
         let held = pointers(&table);
         let outer = array_of(&held, rows as i64);
-        unsafe { borrow_strings(&outer, Text::View, 0, rows) }
+        unsafe { borrow_strings(&outer, &snapshot(), Text::View, 0, rows) }
     }
 
     /// The exact sentence a refused shape carries. Pinning the words, not
     /// just `is_err`, is what makes a test fail when a check is loosened
     /// and the reader refuses the shape for a different reason (or reads
     /// garbage that is then refused) instead of the reason under test.
+    /// The memory map now, for a test that has mapped its regions.
+    fn snapshot() -> Readable {
+        let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
+        memory
+    }
+
     fn refusal<T>(outcome: PyResult<T>) -> String {
         Python::initialize();
         Python::attach(|py| {
@@ -2360,7 +2381,7 @@ mod malformed_tests {
         let mut outer = array_of(&held, 1);
         outer.n_buffers = 1i64 << 40;
         assert_eq!(
-            refusal(unsafe { borrow_strings(&outer, Text::Utf8, 0, 1) }),
+            refusal(unsafe { borrow_strings(&outer, &snapshot(), Text::Utf8, 0, 1) }),
             "the column's buffer table names more buffers than a text column carries"
         );
         let views = one_view(3, 0, 0);
@@ -2369,7 +2390,7 @@ mod malformed_tests {
         let mut outer = array_of(&held, 1);
         outer.n_buffers = 1i64 << 40;
         assert_eq!(
-            refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }),
+            refusal(unsafe { borrow_strings(&outer, &snapshot(), Text::View, 0, 1) }),
             "the column's buffer table names more buffers than a text column carries"
         );
     }
@@ -2392,11 +2413,11 @@ mod malformed_tests {
         let mut outer = unsafe { std::mem::zeroed::<ArrowArray>() };
         outer.length = 1;
         outer.n_buffers = 3;
-        assert!(unsafe { borrow_strings(&outer, Text::View, 0, 1) }.is_err());
+        assert!(unsafe { borrow_strings(&outer, &snapshot(), Text::View, 0, 1) }.is_err());
         let values = b"abc".to_vec();
         let held = [std::ptr::null(), std::ptr::null(), values.as_ptr().cast()];
         let outer = array_of(&held, 1);
-        assert!(unsafe { borrow_strings(&outer, Text::Utf8, 0, 1) }.is_err());
+        assert!(unsafe { borrow_strings(&outer, &snapshot(), Text::Utf8, 0, 1) }.is_err());
         let offsets = [0i32, 3].map(i32::to_le_bytes).concat();
         let held = pointers(&[b"".as_slice(), &offsets, &values]);
         for (length, offset) in [(1i64 << 40, 0), (1, 1i64 << 40), (-1, 0)] {
@@ -2404,7 +2425,7 @@ mod malformed_tests {
             outer.offset = offset;
             let skip = offset.max(0) as usize;
             let rows = length.max(0) as usize;
-            assert!(unsafe { borrow_strings(&outer, Text::Utf8, skip, rows) }.is_err());
+            assert!(unsafe { borrow_strings(&outer, &snapshot(), Text::Utf8, skip, rows) }.is_err());
         }
     }
 
@@ -2489,7 +2510,7 @@ mod malformed_tests {
         let held = [std::ptr::null(), bytes.as_ptr().cast(), values.cast()];
         let rows = offsets.len() - 1;
         let outer = array_of(&held, rows as i64);
-        unsafe { borrow_strings(&outer, text, 0, rows) }
+        unsafe { borrow_strings(&outer, &snapshot(), text, 0, rows) }
     }
 
     #[test]
@@ -2519,7 +2540,7 @@ mod malformed_tests {
         let views = one_view(13, 1, 0);
         let held = [std::ptr::null(), views.as_ptr().cast(), data.as_ptr().cast(), data.as_ptr().cast(), sizes.cast()];
         let outer = array_of(&held, 1);
-        assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
+        assert_eq!(refusal(unsafe { borrow_strings(&outer, &snapshot(), Text::View, 0, 1) }), UNREADABLE);
         // A view whose own 13 bytes, at offset 10 of a 20-byte tail, run
         // past the readable page into what its buffer declares.
         let (_short, abc) = Guarded::ending_with(&[b'y'; 20]);
@@ -2527,7 +2548,7 @@ mod malformed_tests {
         let views = one_view(13, 1, 10);
         let held = [std::ptr::null(), views.as_ptr().cast(), abc.cast(), abc.cast(), sizes.as_ptr().cast()];
         let outer = array_of(&held, 1);
-        assert_eq!(refusal(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), UNREADABLE);
+        assert_eq!(refusal(unsafe { borrow_strings(&outer, &snapshot(), Text::View, 0, 1) }), UNREADABLE);
     }
 
     #[test]
@@ -2569,10 +2590,6 @@ mod malformed_tests {
         // each read past the blob and killed the host. Each snapshot is
         // taken after its region maps, so the region's readable page is in
         // it and only the length checks can refuse.
-        let snapshot = || {
-            let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
-            memory
-        };
         let words = |parts: &[i32]| parts.iter().flat_map(|one| one.to_le_bytes()).collect::<Vec<u8>>();
         let mut value_past = words(&[1, 4]);
         value_past.extend_from_slice(b"unit");
@@ -2732,14 +2749,14 @@ mod malformed_tests {
         let held = [std::ptr::null(), offsets.as_ptr().cast(), values.cast()];
         let mut outer = array_of(&held, 2);
         outer.offset = 1;
-        assert_eq!(borrowed(unsafe { borrow_strings(&outer, Text::Utf8, 1, 2) }), ["alpha", " runs"]);
+        assert_eq!(borrowed(unsafe { borrow_strings(&outer, &snapshot(), Text::Utf8, 1, 2) }), ["alpha", " runs"]);
         // A view reading 22 bytes one page into a buffer declared far past
         // the readable page.
         let views = one_view(22, 0, Guarded::PAGE as u32);
         let sizes = (64i64 << 20).to_le_bytes();
         let held = [std::ptr::null(), views.as_ptr().cast(), values.cast(), sizes.as_ptr().cast()];
         let outer = array_of(&held, 1);
-        assert_eq!(borrowed(unsafe { borrow_strings(&outer, Text::View, 0, 1) }), ["alpha runs past twelve"]);
+        assert_eq!(borrowed(unsafe { borrow_strings(&outer, &snapshot(), Text::View, 0, 1) }), ["alpha runs past twelve"]);
     }
 
     #[test]
@@ -2747,10 +2764,6 @@ mod malformed_tests {
     fn a_producer_string_is_read_only_inside_readable_memory() {
         // Review 7, third pass: a producer's format and name strings were
         // read with CStr::from_ptr, which scans for a NUL with no bound. A string that runs into a guard page killed the host.
-        let snapshot = || {
-            let Ok(memory) = Readable::snapshot() else { panic!("the memory map reads") };
-            memory
-        };
         let (_region, open) = Guarded::ending_with(b"abc");
         assert_eq!(refusal(SchemaTree::default().text(open.cast(), Some(&snapshot()))), BAD_TEXT);
         let mut schema = unsafe { std::mem::zeroed::<ArrowSchema>() };

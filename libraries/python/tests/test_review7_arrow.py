@@ -300,3 +300,50 @@ def test_a_mapping_past_the_end_of_its_file_is_refused(tmp_path):
         "tail refused: the column's buffers declare bytes this process cannot read",
         "format refused: an Arrow format, name, or error string has no end within 64 KiB of readable memory",
     ]
+
+
+# Review 7, fourth pass: the reader read /proc/self/maps once a batch, so a
+# call cost chunks times map lines. A 100-chunk column in a process with
+# 30,000 mappings took 1.3 s a call. This child adds 20,000 mappings and
+# compares a 100-chunk call with a 1-chunk call, the best of five each.
+# One snapshot a call keeps the two close; one a batch makes the 100-chunk
+# call dozens of times slower.
+SNAPSHOTS = r"""
+import ctypes as C, time
+import pyarrow as pa
+import thinkthen as tt
+
+libc = C.CDLL(None)
+libc.mmap.restype = C.c_void_p
+libc.mmap.argtypes = [C.c_void_p, C.c_size_t, C.c_int, C.c_int, C.c_int, C.c_long]
+# Alternate the protection so the kernel cannot merge neighbours.
+held = [libc.mmap(None, 4096, 1 if place % 2 else 3, 0x22, -1, 0) for place in range(20000)]
+
+def best(column):
+    tt.decide_many("Is this a refund?", column)
+    times = []
+    for _ in range(5):
+        start = time.perf_counter()
+        tt.decide_many("Is this a refund?", column)
+        times.append(time.perf_counter() - start)
+    return min(times)
+
+one = best(pa.chunked_array([pa.array(["please refund %d" % place for place in range(100)])]))
+many = best(pa.chunked_array([pa.array(["please refund %d" % place]) for place in range(100)]))
+print(f"{many / one:.1f} {one * 1000:.2f} {many * 1000:.2f}")
+"""
+
+
+def test_a_many_chunk_column_reads_the_memory_map_once():
+    if sys.platform != "linux":
+        import pytest
+
+        pytest.skip("the memory-map snapshot is the Linux check")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", SNAPSHOTS],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=300,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    ratio, one, many = done.stdout.split()
+    assert float(ratio) < 10, f"100 chunks took {many} ms, one chunk {one} ms"
