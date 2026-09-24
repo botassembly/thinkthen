@@ -1,5 +1,22 @@
 REJECT
 
+## Confirmation at 8e947072 (2026-09-24)
+
+Checked the diff eaa4cbce..8e947072 against main at ab72203c: cli/asking.rs exit_code, cli/failure.rs, cli/interrupt.rs, specification/channels.md, specification/decide.md, and the banned-phrase hits in the README and the green how-tos.
+
+Resolved: B1 (two lists; context words apply to built help only; saved `rows` sanctioned; fenced code and paths skipped; demo 02 keeps its title, with the reason recorded). B2 (an exact teaching sentence; exactly one definition in decide.md, which sits correctly beside line 19 "`null` is an unresolved answer"; a fixed-string pin). B3 (the relate sentence now reads "all fail", and the empty-stream case is noted). Both follow-ups (the three-file likely set; find_edge.rs:89 named).
+
+New blocking findings:
+
+N1. The new `decide` sentence lists the broken codes as a closed set, and main can exit with a code outside it. The sentence reads "3 for not sure, and 2, 4, 5, or 70 when the run is broken". Main also exits 130 on SIGINT: `cli/interrupt.rs:105` returns `ExitCode::from(130)` from `finish`. A script that copies that list into a `case` block misreads an interrupted run. Smallest change: "…3 for not sure, and any other code when the run is broken or interrupted." Or add "130 when interrupted" to the list. Pin whichever sentence is chosen.
+
+N2. The prose cap is now short by two files. The fixed banned phrases apply everywhere, and on main they hit 15 prose files that need edits. `decider model` hits Cargo.toml, specification/channels, choose, decide, result, score, and threshold, plus demos/README.md, 17, and 28. `judgment(s)` hits README.md:15, demos/README.md:73, 16, and 19. `the mark` hits demos 02:96 and 40:91. `rating` hits demo 17. The cap allows thirteen files. Smallest change: raise the public-prose file cap to sixteen. The net-line cap can stay, because these are replacements. Or list the exact sanctioned `judgment` uses that keep a file out of the sweep.
+
+---
+
+## Earlier re-review at eaa4cbce (superseded above)
+
+
 Reviewer: fresh read-only Claude (Opus) session, 2026-09-24. Checked: ticket at ticket/0082-close-command-contract (eaa4cbce), its prior review (sdlc/records/0082-design-review.md), main at ab72203c (0088 landed), the 0089 ticket at 7b3f5830, the merged 45-item issue, the 2026-09-21 vocabulary issue, main's help doc comments in cli/args.rs, cli/args/command.rs, cli/args/find.rs, specification/relate.md, sdlc/scripts/pages, and every green how-to.
 
 ## Prior findings

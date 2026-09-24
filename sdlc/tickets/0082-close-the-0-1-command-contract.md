@@ -6,7 +6,7 @@ opens: README.md crates/thinkthen/Cargo.toml crates/thinkthen/src/cli crates/thi
 
 # 0082: Close the 0.1 command contract
 
-Status: revised after re-review; confirming. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review; queue owner applied the reviewer's two exact fixes. Owner: Claude.
 
 ## Design and decisions
 
@@ -17,7 +17,7 @@ Decisions, each of which Ian can overturn:
 - Item 44 (`calibrated` becomes `tuned_for`, Ian's 2026-09-23 ruling) moves to ticket 0090. It changes a result key and has its own public-surface review. This ticket stays pure wording, and its stop rule holds without an exception.
 - Item 3 keeps the `recognize` and `relate` introductions that landed with 0080 and 0088. Both passed the 0088 reviews. This ticket pins them and writes no new sentences.
 - `relate` gets this whole-set exit sentence in long help, drawn from `specification/relate.md`: `A run that answers some relation questions and fails others prints what it has and exits 6. A run whose relation questions all fail prints nothing and exits 4.` An empty line or JSONL stream still succeeds with no output, as `specification/relate.md` says.
-- Public teaching copy says **not sure** and **broken**. `decide` long help replaces `the exit code is 0 for yes, 1 for no, and 3 for unresolved` with this teaching sentence: `The exit code is 0 for yes, 1 for no, 3 for not sure, and 2, 4, 5, or 70 when the run is broken.` The README carries no four-outcome sentence on main, and this ticket adds none.
+- Public teaching copy says **not sure** and **broken**. `decide` long help replaces `the exit code is 0 for yes, 1 for no, and 3 for unresolved` with this teaching sentence: `The exit code is 0 for yes, 1 for no, 3 for not sure, and any other code when the run is broken or interrupted.` The README carries no four-outcome sentence on main, and this ticket adds none.
 - Exactly one sentence, in `specification/decide.md` beside the `null` answer, defines the formal term: `` `unresolved` is the formal name for a not sure answer. `` Other specification pages keep `unresolved` as exact contract language and need no edit. `failed` stays valid for one question a backend could not answer inside an otherwise usable result. It never names the whole broken outcome. `sdlc/issues/2026-09-21-the-help-first-lines-and-the-public-words.md` records the approved vocabulary.
 - Row 43 also fixes the crate description in `crates/thinkthen/Cargo.toml`, which says `Put a decider model in the shell`.
 
@@ -111,7 +111,7 @@ Excluded: item 44, new commands, options, functions, dynamic option sources, thr
 
 ## Budgets
 
-Production Rust changes may touch at most four files and add at most 60 nonblank lines. The likely set is three files. `cli/args/command.rs` holds rows 1, 12, 43, and 45. `cli/args.rs` holds row 6 text: `choose` `label` at lines 315 to 341, `document` at 79, 154, and 341, `row` at 38 to 40, and `judgments` at 446. `cli/args/find.rs` holds `unit` on six lines. Rust tests and helpers may touch at most five files, likely `decide_edge.rs`, `tag_edge.rs`, `version.rs`, `find_edge.rs`, and one help test, and add at most 220 nonblank lines. The vocabulary enforcement may add at most 140 nonblank lines across existing scripts and fixtures. Public prose, `Cargo.toml` included, may touch at most thirteen files and add no more than 120 net nonblank lines; prefer replacement and deletion. Add no dependency and keep every Rust file below the 500-line ceiling. The ratchet increase equals the measured Rust increase, and the record names why each added block earns its lines and where duplication was removed first.
+Production Rust changes may touch at most four files and add at most 60 nonblank lines. The likely set is three files. `cli/args/command.rs` holds rows 1, 12, 43, and 45. `cli/args.rs` holds row 6 text: `choose` `label` at lines 315 to 341, `document` at 79, 154, and 341, `row` at 38 to 40, and `judgments` at 446. `cli/args/find.rs` holds `unit` on six lines. Rust tests and helpers may touch at most five files, likely `decide_edge.rs`, `tag_edge.rs`, `version.rs`, `find_edge.rs`, and one help test, and add at most 220 nonblank lines. The vocabulary enforcement may add at most 140 nonblank lines across existing scripts and fixtures. Public prose, `Cargo.toml` included, may touch at most sixteen files and add no more than 120 net nonblank lines; prefer replacement and deletion. Add no dependency and keep every Rust file below the 500-line ceiling. The ratchet increase equals the measured Rust increase, and the record names why each added block earns its lines and where duplication was removed first.
 
 Stop and re-score if the audit needs more than these budgets, changes a result key or shape, alters request or runtime behavior, reaches outside this repository, or finds another outward decision.
 
