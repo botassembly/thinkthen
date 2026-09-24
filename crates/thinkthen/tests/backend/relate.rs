@@ -55,45 +55,114 @@ fn answered(body: &[u8]) -> Canned {
 }
 
 #[test]
-fn dry_run_reports_exact_requests_without_opening_a_connection() {
+fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
     let listener = Listener::answering(answered).expect("listener");
-    let output = spawn(
-        &[
-            "relate",
-            "works_for=person:organization",
-            "--dry-run",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--no-cache",
-        ],
-        &[],
-        br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#,
-    )
-    .expect("dry run");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let report: Value = serde_json::from_slice(&output.stdout).expect("plan JSON");
-    assert_eq!(report["schema"], "thinkthen.relate-plan/1");
-    assert_eq!(report["framing"], "document");
-    assert_eq!(
-        report["fields"],
-        serde_json::json!({"name":"/name","kind":"/kind"})
-    );
-    assert_eq!(report["entity_count"], 2);
-    assert_eq!(report["relations"][0]["method"], "choice");
-    assert_eq!(report["logical_questions"], 1);
-    assert_eq!(report["request_count"], 1);
-    let body = report["requests"][0]["body_utf8"].as_str().expect("body");
-    assert_eq!(report["requests"][0]["bytes"], body.len());
-    assert!(body.contains(r#""entities":[{"id":"i1","name":"Ada","kind":"person"}"#));
-    assert!(report.get("from").is_none());
+    let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;
+    let output = run(&listener, &["works_for=person:organization", "--dry-run"], input);
+    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
     assert_eq!(listener.connections(), 0);
+    let sent = run(&listener, &["works_for=person:organization", "--details"], input);
+    assert_eq!(sent.status.code(), Some(0), "{}", String::from_utf8_lossy(&sent.stderr));
+    let sent: Value = serde_json::from_slice(&sent.stdout).expect("details");
+    let digest = sent["meta"]["requests"][0].as_str().expect("sent digest");
+    let body = concat!(
+        r#"{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Ada\",\"kind\":\"person\"},"#,
+        r#"{\"id\":\"i2\",\"name\":\"Acme\",\"kind\":\"organization\"}],"#,
+        r#"\"relation\":{\"name\":\"works_for\",\"source\":\"person\",\"target\":\"organization\","#,
+        r#"\"reads\":\"works for\",\"either\":false}},\"model\":\"local-1\","#,
+        r#"\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Which listed organization "#,
+        r#"fills the blank: Item 1 (person \\\"Ada\\\") works for ___? Choose none if no listed "#,
+        r#"organization does.\",\"criteria\":{\"i2\":\"Item 2 (organization \\\"Acme\\\")\","#,
+        r#"\"none\":\"No listed organization.\"}}}}"#,
+    );
+    let expected = format!(
+        concat!(
+            r#"{{"schema":"thinkthen.relate-plan/1","url":"{}/systemone","model":"local-1","#,
+            r#""key_env":"THINKTHEN_API_KEY","backend_profile":null,"framing":"document","#,
+            r#""fields":{{"name":"/name","kind":"/kind"}},"entity_count":2,"relations":[{{"#,
+            r#""name":"works_for","source":"person","target":"organization","reads":"works for","#,
+            r#""either":false,"method":"choice","fallback":null,"logical_questions":1,"#,
+            r#""request_count":1}}],"logical_questions":1,"request_count":1,"requests":[{{"#,
+            r#""digest":"{}","bytes":504,"body_utf8":"{}"}}]}}"#,
+            "\n"
+        ),
+        listener.base(),
+        digest,
+        body
+    );
+    assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
+}
+
+#[test]
+fn an_h_entry_at_the_cut_is_accepted_and_bare_partial_output_exits_six() {
+    let listener = Listener::answering(|body| {
+        let request: Value = serde_json::from_slice(body).expect("request");
+        let names = request["questions"]
+            .as_object()
+            .expect("questions")
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        Canned::ok(
+            &serde_json::json!({"model":"local-1","answers":{
+                names[0].clone(): {"type":"noul","noul":0.5},
+                names[1].clone(): {"type":"choice","probabilities":{"wrong":1.0}}
+            }})
+            .to_string(),
+        )
+    })
+    .expect("listener");
+    let input = br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"}]"#;
+    let details = run(&listener, &["follows=person:person", "--details"], input);
+    assert_eq!(details.status.code(), Some(6));
+    let text = String::from_utf8(details.stdout).expect("details text");
+    let result: Value = serde_json::from_str(&text).expect("details");
+    let digest = result["meta"]["requests"][0].as_str().expect("digest");
+    let entry = format!(
+        concat!(
+            r#"{{"relation":"follows","reads":"follows","method":"yes_no","#,
+            r#""direction":"source_to_target","source":{{"name":"Ada","kind":"person"}},"#,
+            r#""target":{{"name":"Grace","kind":"person"}},"probability":0.5,"accepted":true,"#,
+            r#""request":"{}"}}"#
+        ),
+        digest
+    );
+    assert!(text.contains(&entry), "{text}");
+    let bare = run(&listener, &["follows=person:person"], input);
+    assert_eq!(bare.status.code(), Some(6));
+    assert_eq!(
+        String::from_utf8_lossy(&bare.stdout),
+        concat!(
+            r#"{"relation":"follows","source":{"name":"Ada","kind":"person"},"#,
+            r#""target":{"name":"Grace","kind":"person"},"probability":0.5}"#,
+            "\n"
+        )
+    );
+}
+
+#[test]
+fn a_wildcard_rule_expands_to_concrete_kinds_in_first_seen_order() {
+    let listener = Listener::answering(answered).expect("listener");
+    let output = run(
+        &listener,
+        &["linked=*:organization", "--dry-run"],
+        br#"[{"name":"Acme","kind":"organization"},{"name":"Ada","kind":"person"},{"name":"Beta","kind":"organization"}]"#,
+    );
+    assert_eq!(output.status.code(), Some(0));
+    let plan: Value = serde_json::from_slice(&output.stdout).expect("plan");
+    let kinds = plan["relations"]
+        .as_array()
+        .expect("relations")
+        .iter()
+        .map(|relation| (relation["source"].clone(), relation["target"].clone(), relation["method"].clone()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        kinds,
+        [
+            ("organization".into(), "organization".into(), "yes_no".into()),
+            ("person".into(), "organization".into(), "choice".into()),
+        ]
+    );
 }
 
 #[test]
