@@ -68,13 +68,15 @@ pub(crate) use crate::core::recognize_file::{
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
-pub(crate) use crate::core::relate_file::{RelateConfigError, RelateFields, RelateSpec};
+pub(crate) use crate::core::relate_file::{
+    RelateConfigError, RelateFields, RelateQuestion, RelateSpec,
+};
 pub(crate) use crate::core::relation::{
     QuestionMap, RelationEdge, RelationEntity, RelationEntityView, RelationPlan, RelationRule,
     assemble_edges, plan as plan_relation, plan_pairs, reaches_cut, relation_evidence,
 };
 pub(crate) use crate::core::render::{RenderError, json_line};
-pub(crate) use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
+pub(crate) use crate::core::reply::{AnswerOutcome, BackendFailure, FailedValue, Reply};
 pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,

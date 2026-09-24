@@ -1,9 +1,12 @@
-use serde::ser::SerializeMap as _;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
+use crate::core::digest::hex;
 use crate::core::json::Json;
-use crate::core::{ModelName, Pointer, ProfileName, RelationRule, Threshold};
+use crate::core::{
+    ModelName, Pointer, ProfileName, RelationRule, RenderError, Threshold, json_line,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[rustfmt::skip]
@@ -34,17 +37,23 @@ pub(crate) struct RelateSpec {
     pub(crate) profile: Option<ProfileName>, presence: RelatePresence,
 }
 
-impl Serialize for RelateSpec {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("verb", "relate")?;
-        map.serialize_entry("fields", &self.fields)?;
-        map.serialize_entry("relations", &self.relations)?;
-        map.serialize_entry("threshold", &self.threshold)?;
-        if let Some(profile) = &self.profile {
-            map.serialize_entry("profile", profile)?;
-        }
-        map.end()
+/// The resolved relation question, whose compact bytes the digest hashes.
+///
+/// Entities, the model, and every runtime backend setting stay outside it.
+#[derive(Serialize)]
+pub(crate) struct RelateQuestion<'a> {
+    verb: &'static str,
+    fields: Option<&'a RelateFields>,
+    relations: &'a [RelationRule],
+    threshold: Threshold,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<&'a ProfileName>,
+}
+
+impl RelateQuestion<'_> {
+    /// Hash the exact compact bytes the detailed result prints.
+    pub(crate) fn sha256(&self) -> Result<String, RenderError> {
+        Ok(hex(&Sha256::digest(json_line(self)?.as_bytes())))
     }
 }
 
@@ -218,6 +227,17 @@ impl RelateSpec {
 
     pub(crate) const fn fields(&self) -> &RelateFields {
         &self.fields
+    }
+
+    /// The resolved question; line input has no pointers, so `fields` is null.
+    pub(crate) fn question(&self, lines: bool) -> RelateQuestion<'_> {
+        RelateQuestion {
+            verb: "relate",
+            fields: (!lines).then_some(&self.fields),
+            relations: &self.relations,
+            threshold: self.threshold,
+            profile: self.profile.as_ref(),
+        }
     }
 
     pub(crate) const fn name_field(&self) -> &Pointer {
