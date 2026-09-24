@@ -80,7 +80,7 @@ The code review (`/tmp` review of `e685740b`, reply relayed by the coordinator) 
 Measured with `git diff -U0 5d317098 HEAD -- '*.rs'`, nonblank lines:
 
 - Production: 7 files (`cli/schedule.rs`, `engine/facade.rs`, `engine/http.rs`, `engine/mod.rs`, `engine/process.rs`, `engine/recorder.rs`, `engine/usage.rs`) plus the manifest. 265 lines added and 112 deleted. The deleted count includes the 24-line recorder test removed above. The budget is 14 files and 650 lines.
-- Tests: 465 lines added and 25 deleted, under the 950-line budget.
+- Tests: 465 lines added and 25 deleted, under the 950-line budget. The code review fixes then added 34 test lines and removed 23, net 11.
 - `cli/failure/tests.rs` sits at its 500-line ceiling. Its two `std` imports merged to make room for the new `Client::new` argument.
 
 ## Known limits
@@ -103,4 +103,4 @@ At `138c1def`, which merges main `5783815b` (with 0097 and `qf-test-deadlines`),
 
 ## Ratchet
 
-The ceiling rises from 50276 to 50869, 593 lines. About 153 are net production code: the guarded slot, the engine's immutable settings and its one state door, and the per-operation folder gate. The other 440 are tests. Merging main at `5783815b` (ceiling 50378) gives 50970: main plus this ticket's 592 lines. Moving the child wait onto main's `test_deadline::finish` saved one line. Before adding lines, I deleted the recorder mutex, its try-lock loop, its poison path, and the recorder test that held it. `Guarded` serves both the process width state and each engine's state, so the rebuild rule exists once.
+The ceiling rises from 50276 to 50869, 593 lines. About 153 are net production code: the guarded slot, the engine's immutable settings and its one state door, and the per-operation folder gate. The other 440 are tests. Merging main at `5783815b` (ceiling 50378) gave 50970: main plus this ticket's 592 lines. The code review fixes added 11 net test lines, and main at `a2e5f1fa` changed no Rust source, so the ceiling is now 50981: main plus 603. Moving the child wait onto main's `test_deadline::finish` saved one line. Before adding lines, I deleted the recorder mutex, its try-lock loop, its poison path, and the recorder test that held it. `Guarded` serves both the process width state and each engine's state, so the rebuild rule exists once.
