@@ -1,30 +1,35 @@
+# The Rust examples surface (ticket 0093, ADR 0047). It is its own workspace
+# with its own lock, and it reaches `thinkthen` only through the public API.
+# `sdlc/scripts/policy.py` holds every table below to the root copies.
 [workspace]
-members = ["crates/thinkthen", "conformance/backend"]
-# Ticket 0086: the external consumer is its own workspace, built by the test rung.
-# ADR 0047: each binding under `libraries` or `databases` is its own workspace
-# too, and a plain `cargo build` here compiles `thinkthen` alone.
-exclude = ["conformance/consumer", "libraries", "databases"]
-default-members = ["crates/thinkthen"]
-resolver = "3"
 
-[workspace.package]
+[package]
+name = "rust-examples"
+version = "0.0.1"
 edition = "2024"
 rust-version = "1.93.1"
+description = "Runnable examples of every thinkthen function, from outside the crate"
+license = "MIT"
+publish = false
+
+[dependencies]
+thinkthen = { path = "../../crates/thinkthen", default-features = false }
+
+[dev-dependencies]
+conformance-backend = { path = "../../conformance/backend" }
 
 [profile.release]
-# A library must unwind through a host. The command's release build selects
-# abort through its dedicated build path.
 overflow-checks = true
 panic = "unwind"
 
-[workspace.lints.rust]
+[lints.rust]
 missing_debug_implementations = "forbid"
 missing_docs = "warn"
 unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
 unreachable_pub = "forbid"
-unsafe_code = "forbid"
+unsafe_code = "deny"
 
-[workspace.lints.clippy]
+[lints.clippy]
 allow_attributes_without_reason = "deny"
 cognitive_complexity = "warn"
 dbg_macro = "deny"

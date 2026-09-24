@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import posixpath
 import re
 import subprocess
 import sys
@@ -223,6 +224,10 @@ def check_workspace() -> None:
     workspace = manifest.get("workspace", {})
     if workspace.get("members") != list(MEMBERS.values()):
         fail("workspace", "thinkthen and the conformance backend are the workspace members")
+    if workspace.get("exclude") != ["conformance/consumer", "libraries", "databases"]:
+        fail("workspace", "the consumer and every binding folder are their own workspaces (ADR 0047)")
+    if workspace.get("default-members") != ["crates/thinkthen"]:
+        fail("workspace", "a plain root build compiles thinkthen alone (ADR 0047)")
     if workspace.get("resolver") != "3":
         fail("workspace", "resolver is 3")
     package = workspace.get("package", {})
@@ -332,6 +337,138 @@ def check_consumer() -> None:
     probe = read_toml("conformance/consumer/fork-probe/Cargo.toml").get("lints")
     if lints and probe != {**lints, "rust": {**lints["rust"], "unsafe_code": "deny"}}:
         fail("consumer", "fork-probe uses the root lint table with unsafe_code denied, not forbidden")
+
+
+# ADR 0047: each binding under `libraries` or `databases` is its own workspace
+# over the public API. Its plants copy the first binding, the Rust examples.
+BINDING_THINKTHEN = {"path": "../../crates/thinkthen", "default-features": False}
+BINDING_PLANT_BASE = "libraries/rust"
+PLANTED_TEST = '#[test]\nfn planted() {\n    eprintln!("skipped");\n    return;\n}\n'
+BINDING_PLANTS = (
+    ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),
+    ("default features", "Cargo.toml", lambda text: text.replace(
+        "default-features = false", "default-features = true")),
+    ("dependency on another binding", "Cargo.toml", lambda text: text.replace(
+        "[dependencies]\n", '[dependencies]\nthinkthen-c = { path = "../c" }\n')),
+    ("unsafe outside an FFI module", "src/lib.rs", lambda text: text + "unsafe fn planted() {}\n"),
+    ("overflow-checks = false", "Cargo.toml", lambda text: text.replace(
+        "overflow-checks = true", "overflow-checks = false")),
+    ("second ureq version", "Cargo.lock", lambda text: re.sub(
+        r'(name = "ureq"\nversion = ")[^"]+', r"\g<1>0.0.1", text, count=1)),
+    ("test that prints skipped and returns", "tests/examples.rs", lambda text: text + PLANTED_TEST),
+    ("ignored test", "tests/examples.rs", lambda text: text + "#[test]\n#[ignore]\nfn planted() {}\n"),
+)
+
+
+def binding_files(folder: pathlib.Path) -> dict[str, str]:
+    """One binding's manifest, lock, Clippy settings, and Rust sources, without build output."""
+    names = ["Cargo.toml", "Cargo.lock", "clippy.toml"] + [
+        source.relative_to(folder).as_posix() for source in folder.rglob("*.rs")
+        if "target" not in source.relative_to(folder).parts
+    ]
+    return {name: (folder / name).read_text(encoding="utf-8") for name in names if (folder / name).is_file()}
+
+
+def lock_tree(lock: dict) -> set[tuple[str, str]]:
+    """The name and version of every package in thinkthen's resolved tree."""
+    packages = lock.get("package", [])
+
+    def named(spec: str) -> list[tuple[str, str]]:
+        name, *version = spec.split()
+        return [(package["name"], package["version"]) for package in packages
+                if package["name"] == name and version[:1] in ([], [package["version"]])]
+
+    reached: set[tuple[str, str]] = set()
+    waiting = named("thinkthen")
+    while waiting:
+        pair = waiting.pop()
+        if pair not in reached:
+            reached.add(pair)
+            package = next(package for package in packages if (package["name"], package["version"]) == pair)
+            waiting += [found for spec in package.get("dependencies", []) for found in named(spec)]
+    return reached
+
+
+def binding_test_failures(relative: str, tokens: list[str]) -> list[str]:
+    """R2-28: no binding test is ignored, and none returns before its first assertion."""
+    held = []
+    for place in range(len(tokens)):
+        attribute = tokens[place:place + 3]
+        if attribute == ["#", "[", "ignore"]:
+            held.append(f"{relative} ignores a test")
+        if attribute != ["#", "[", "test"] or "{" not in tokens[place:]:
+            continue
+        start = tokens.index("{", place)
+        depth, end = 0, start
+        for end in range(start, len(tokens)):
+            depth += {"{": 1, "}": -1}.get(tokens[end], 0)
+            if depth == 0:
+                break
+        body = tokens[start:end]
+        asserted = next((at for at, token in enumerate(body[:-1])
+                         if token.startswith(("assert", "debug_assert")) and body[at + 1] == "!"), len(body))
+        if "return" in body[:asserted]:
+            held.append(f"{relative} has a test that returns before its first assertion")
+    return held
+
+
+def binding_failures(name: str, files: dict[str, str]) -> list[str]:
+    try:
+        manifest = tomllib.loads(files.get("Cargo.toml", ""))
+        lock = tomllib.loads(files.get("Cargo.lock", ""))
+        clippy = tomllib.loads(files.get("clippy.toml", ""))
+    except tomllib.TOMLDecodeError as error:
+        return [f"{name} holds a manifest, lock, and clippy.toml that parse: {error}"]
+    root = read_toml("Cargo.toml").get("workspace", {})
+    lints = root.get("lints", {})
+    package = manifest.get("package", {})
+    held = []
+    if package.get("publish") is not False:
+        held.append(f"{name} sets publish = false")
+    if any(package.get(field) != root.get("package", {}).get(field) for field in ("edition", "rust-version")):
+        held.append(f"{name} uses the root edition and rust-version")
+    tables = [manifest, *manifest.get("target", {}).values()]
+    dependencies = [(kind, dependency, specification) for table in tables
+                    for kind in ("dependencies", "dev-dependencies", "build-dependencies")
+                    for dependency, specification in table.get(kind, {}).items()]
+    if [(kind, specification) for kind, dependency, specification in dependencies
+            if dependency == "thinkthen"] != [("dependencies", BINDING_THINKTHEN)]:
+        held.append(f"{name} depends on thinkthen once, by path, with default features off")
+    for _, dependency, specification in dependencies:
+        path = specification.get("path") if isinstance(specification, dict) else None
+        reached = posixpath.normpath(posixpath.join(name, path)) if path else ""
+        if reached.split("/")[0] in ("libraries", "databases") and not f"{reached}/".startswith(f"{name}/"):
+            held.append(f"{name} depends on another binding through {dependency}")
+    if lints and manifest.get("lints") != {**lints, "rust": {**lints["rust"], "unsafe_code": "deny"}}:
+        held.append(f"{name} uses the root lint table with unsafe_code denied, not forbidden")
+    if clippy != ACCEPTED_SHARED_CLIPPY:
+        held.append(f"{name}/clippy.toml matches the shared thresholds and test allowances")
+    if manifest.get("profile", {}).get("release") != ACCEPTED_RELEASE_PROFILE:
+        held.append(f"{name} copies the root release profile")
+    ours, theirs = lock_tree(lock), lock_tree(tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8")))
+    if not ours or ours - theirs:
+        held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
+                    f"{sorted(ours - theirs) or 'thinkthen is absent'}")
+    for relative, text in files.items():
+        if relative.endswith(".rs"):
+            tokens = rust_tokens(text)
+            if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs":
+                held.append(f"{name}/{relative} holds unsafe outside the binding's FFI module")
+            held += binding_test_failures(f"{name}/{relative}", tokens)
+    return held
+
+
+def check_bindings() -> None:
+    """ADR 0047 and ticket 0093: every binding folder, then one planted failure of each kind."""
+    for manifest in sorted([*REPO.glob("libraries/*/Cargo.toml"), *REPO.glob("databases/*/Cargo.toml")]):
+        name = manifest.parent.relative_to(REPO).as_posix()
+        for failure in binding_failures(name, binding_files(manifest.parent)):
+            fail("binding", failure)
+    base = binding_files(REPO / BINDING_PLANT_BASE)
+    for label, relative, plant in BINDING_PLANTS:
+        planted = {**base, relative: plant(base.get(relative, ""))}
+        if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
+            fail("binding", f"the planted {label} is refused")
 
 
 CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
@@ -1375,6 +1512,7 @@ def main() -> int:
     check_crates()
     check_clippy_configs()
     check_consumer()
+    check_bindings()
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()

@@ -22,16 +22,24 @@
 // choice, not a fault, and this exits quiet — same as the sealed gate.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // The repo is this file's own home (sdlc/scripts/), never the working
 // directory: `make -C bot ratchet` and a gate both have to reach the same
 // number, and cwd resolution is what made that go wrong elsewhere.
 const REPO = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const CONFIG = join(REPO, "sdlc", "ratchet.json");
+// One optional argument names another config, such as a binding's own
+// (thinkthen ADR 0047). Its `directory` resolves from the config's own folder,
+// and a named config that is missing fails.
+const NAMED = process.argv[2];
+const CONFIG = NAMED ? resolve(NAMED) : join(REPO, "sdlc", "ratchet.json");
+const BASE = NAMED ? dirname(CONFIG) : REPO;
 
-if (!existsSync(CONFIG)) process.exit(0);
+if (!existsSync(CONFIG)) {
+  if (NAMED) console.error(`ratchet: ${NAMED} does not exist.`);
+  process.exit(NAMED ? 1 : 0);
+}
 const { directory, extension, max } = JSON.parse(readFileSync(CONFIG, "utf8"));
 
 // Non-blank lines only (botassembly ticket 0032): counting every line makes
@@ -53,11 +61,11 @@ function loc(dir) {
 // `directory` names one folder or a list of them (thinkthen ticket 0092 adds
 // the conformance backend beside the crate).
 const folders = [directory].flat();
-const total = folders.reduce((sum, folder) => sum + loc(join(REPO, folder)), 0);
+const total = folders.reduce((sum, folder) => sum + loc(resolve(BASE, folder)), 0);
 const named = folders.join(" + ");
 if (total !== max) {
   const remedy = total < max ? `lower it to ${total}` : `raise it to ${total}`;
-  console.error(`ratchet: ${named} is ${total} non-blank lines, ceiling is ${max}. The ceiling must equal the total; ${remedy} in sdlc/ratchet.json, in a commit that says why.`);
+  console.error(`ratchet: ${named} is ${total} non-blank lines, ceiling is ${max}. The ceiling must equal the total; ${remedy} in ${NAMED ?? "sdlc/ratchet.json"}, in a commit that says why.`);
   process.exit(1);
 }
 console.log(`ratchet: ${named} ${total}/${max}`);
