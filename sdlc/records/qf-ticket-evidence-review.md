@@ -23,3 +23,7 @@ Not accepted. One blocking finding and three non-blocking ones.
 2. A backtick fence closed on `~~~`, and the reverse. A fence now closes only on the marker that opened it, and a self-test case pins it.
 3. The product-ticket sentence broke the reference of "They" in `sdlc/README.md`. It moved to the end of the paragraph.
 4. This page lacked the second pass. This section adds it.
+
+## Third pass, commit d87efd2e
+
+ACCEPT. Empty bold items fail, emphasis openings pass, and each fence closes only on its own marker. Two rare cases stay open with no change: a fence of four or more backticks can close on a three-backtick line, and `- Proof: *` counts as text.
