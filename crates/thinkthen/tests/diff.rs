@@ -110,3 +110,30 @@ fn help_names_diff_after_audit_and_says_what_it_never_does() {
         assert!(long.contains(sentence), "{sentence}");
     }
 }
+
+#[test]
+fn the_second_side_reads_under_compare_threshold_when_both_rules_are_given() {
+    let cases: [(&[&str], &str); 2] = [
+        (
+            &[
+                "small/decide.jsonl",
+                "--key",
+                "small/decide-key.jsonl",
+                "--threshold",
+                "0.5",
+            ],
+            "r3  no -> yes  p 0.45 -> 0.45  key yes: gained\n0.5 -> 0.4: 1 of 6 changed; no -> yes 1; gained 1, lost 0 (4 -> 5 right of 6); McNemar p 1.000 on right answers\n",
+        ),
+        (
+            &["small/decide-band.jsonl", "--threshold", "0.3:0.6"],
+            "r3  unresolved -> yes  p 0.45 -> 0.45\nr4  unresolved -> no  p 0.30 -> 0.30\n0.3:0.6 -> 0.4: 2 of 6 changed; unresolved -> no 1; unresolved -> yes 1; McNemar p 1.000 on yes answers\n",
+        ),
+    ];
+    for (arguments, table) in cases {
+        let (code, stdout, _) = diff(
+            &[arguments, &["--compare-threshold", "0.4", "--table"][..]].concat(),
+            b"",
+        );
+        assert_eq!((code, stdout.as_str()), (0, table), "{arguments:?}");
+    }
+}
