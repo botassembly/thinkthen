@@ -6,7 +6,7 @@ opens: spec
 
 # 0103: Exact empty-output checks
 
-Status: in progress. Owner: Claude.
+Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0103-review.md`).
 
 ## Outcome and authority
 

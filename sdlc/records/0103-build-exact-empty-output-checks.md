@@ -1,6 +1,6 @@
 # 0103: Exact empty-output checks
 
-Status: awaiting code review.
+Status: landed. A fresh review of `7d64bbfc` accepted it (`sdlc/records/0103-review.md`). Its one note, the refusal missing option forms, is fixed below. The coordinator accepted that fix without another review.
 
 ## Result
 
@@ -21,6 +21,10 @@ A stand-in `thinkthen` ran the real binary and then printed one planted line on 
 | `spec/decide.md:230` (now 231) | exit 0 | exit 1 | exit 0 |
 
 With the runner from `origin/main`, `demos-self-test` printed `loose-empty exited 0 and 1 was wanted`. With the new runner over the old spec pages, `demos` printed one refusal for each of the four lines.
+
+## Review follow-up
+
+The review found that the refusal missed `mustmatch -i like ""` and `mustmatch like -- ""`. The runner now allows `-i`, `--ignore-case`, `-q`, `--quiet`, `--`, and `not` on either side of `like`. The self-test gains `loose-ignore-case` and `loose-dashes`. Before the runner changed, both printed `exited 0 and 1 was wanted`. After it, `demos-self-test: 25 cases pass`.
 
 ## Checks
 

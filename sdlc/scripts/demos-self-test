@@ -297,6 +297,18 @@ expect vocabulary-no-help 1 'demos: thinkthen relate --help failed, so its help 
 } | fixture loose-empty
 expect loose-empty 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
 
+# An option before or after `like` changes nothing about what it matches.
+for form in 'loose-ignore-case mustmatch -i like ""' 'loose-dashes mustmatch like -- ""'; do
+	name=${form%% *}
+	{
+		head_of_a_page 'claim an empty stream with an option'
+		block "printf 'stray' | ${form#* }"
+		printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
+		printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
+	} | fixture "$name"
+	expect "$name" 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
+done
+
 if [ "$failures" -ne 0 ]; then
 	printf 'demos-self-test: %s cases failed\n' "$failures" >&2
 	exit 1

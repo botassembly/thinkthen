@@ -18,9 +18,12 @@ cd -- "$REPO/$ROOT"
 # `mustmatch like ""` matches every output, so a line that claims a stream is
 # empty proves nothing. Issue 2026-09-24 and ticket 0103 rule `test -z` instead.
 # Every page is scanned, red or green, in spec/ and under the demo root.
+# Options may stand on either side of `like`, and none of them narrows it.
+opt='([ ]+(-i|--ignore-case|-q|--quiet|--|not))*'
+loose_re="mustmatch$opt[ ]+like$opt[ ]+(\"\"|'')"
 loose=$({
-	(cd -- "$REPO" && grep -nE "mustmatch( not)? like (\"\"|'')" spec/*.md) || :
-	grep -rnE --include='*.md' "mustmatch( not)? like (\"\"|'')" . | sed 's#^\./##' || :
+	(cd -- "$REPO" && grep -nE "$loose_re" spec/*.md) || :
+	grep -rnE --include='*.md' "$loose_re" . | sed 's#^\./##' || :
 })
 if [ -n "$loose" ]; then
 	printf '%s\n' "$loose" | sed 's/^\([^:]*:[0-9]*\):.*/demos: \1: `like ""` matches any output; use `test -z`/' >&2
