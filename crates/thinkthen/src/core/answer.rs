@@ -114,15 +114,15 @@ impl Serialize for Distribution {
     }
 }
 
-/// Independent yes probabilities for tag labels, in user order.
-#[derive(Clone, PartialEq)]
-struct TagProbabilities(Vec<(String, Probability)>);
-
 impl fmt::Debug for Distribution {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         labelled_odds(formatter, "Distribution", &self.entries)
     }
 }
+
+/// Independent yes probabilities for tag labels, in user order.
+#[derive(Clone, PartialEq)]
+struct TagProbabilities(Vec<(String, Probability)>);
 
 impl fmt::Debug for TagProbabilities {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -148,6 +148,16 @@ fn labelled_odds(
         .finish()
 }
 
+impl Serialize for TagProbabilities {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(
+            self.0
+                .iter()
+                .map(|(label, probability)| (label, probability)),
+        )
+    }
+}
+
 /// The label that led, which `Debug` withholds because a record may name it.
 #[derive(Clone, PartialEq, Serialize)]
 #[serde(transparent)]
@@ -156,16 +166,6 @@ struct Label(String);
 impl fmt::Debug for Label {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         Withheld(self.0.len()).fmt(formatter)
-    }
-}
-
-impl Serialize for TagProbabilities {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_map(
-            self.0
-                .iter()
-                .map(|(label, probability)| (label, probability)),
-        )
     }
 }
 

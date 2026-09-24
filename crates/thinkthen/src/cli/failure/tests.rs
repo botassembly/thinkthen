@@ -95,11 +95,12 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
 }
 
 /// `choose`, `tag`, and `score` can read their labels from a record. The
-/// `--plan` document carries the request, the adapter reads the answers back
-/// with those labels, and a result row holds both. No `Debug` line shows them.
+/// `--plan` document carries the request, the engine hands back answers with
+/// those labels, and a result row holds both. No `Debug` line shows them.
 #[test]
 fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
-    use crate::core::{AnswerOutcome, Question};
+    use crate::core::Question;
+    use conformance_backend::{Canned, Listener};
     let record = crate::core::Reading::new(crate::core::Framing::Jsonl, Vec::new())
         .expect("a JSON reading")
         .record(format!(r#"{{"labels":["{EVIDENCE}","other"]}}"#).as_bytes())
@@ -108,7 +109,7 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
         .choices(&crate::core::Pointer::new("/labels").expect("a pointer"))
         .expect("two labels");
     let text = crate::core::QuestionText::new("Which one fits?").expect("a question");
-    let questions = vec![
+    let questions = [
         Question::Choose {
             text: text.clone(),
             options: labels.clone(),
@@ -122,46 +123,89 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
             levels: labels,
         },
     ];
-    let model = crate::core::ModelName::new("jev-latest").expect("a model");
+    let answers = [
+        format!(r#""q1":{{"type":"choice","probabilities":{{"{EVIDENCE}":0.75,"other":0.25}}}}"#),
+        r#""q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}"#.to_owned(),
+        r#""q1":{"type":"score","probabilities":{"0":0.75,"1":0.25}}"#.to_owned(),
+    ];
+    let listener = Listener::serving(
+        answers
+            .iter()
+            .map(|answers| {
+                Canned::ok(&format!(
+                    r#"{{"model":"jev-latest","answers":{{{answers}}}}}"#
+                ))
+            })
+            .collect(),
+    )
+    .expect("a loopback listener");
+    let backend =
+        crate::core::Backend::resolve(Some(listener.base()), None, "jev-latest").expect("backend");
+    let engine = crate::engine::facade::Engine::new(crate::engine::facade::Settings {
+        backend: backend.clone(),
+        profile: None,
+        timeout: Duration::from_secs(5),
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+        width: None,
+        storage: crate::engine::facade::Storage::default(),
+        key: || Ok(crate::engine::facade::Key::of(KEY)),
+        usage: std::sync::Arc::default(),
+    })
+    .expect("an engine");
+    let evidence = crate::core::Evidence::new(EVIDENCE).expect("evidence");
     let plan = crate::core::Plan::new(
-        crate::core::Evidence::new(EVIDENCE).expect("evidence"),
-        model.clone(),
-        questions.clone(),
+        evidence.clone(),
+        backend.model().clone(),
+        questions.to_vec(),
     )
     .expect("a plan");
-    let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("an address");
-    let backend = crate::core::Backend::from_parts(url.clone(), model.clone());
     let document = crate::core::PlanDocument::of(&backend, &plan).expect("a plan document");
-    let body = format!(
-        r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"choice","probabilities":{{"{EVIDENCE}":0.75,"other":0.25}}}},"q2":{{"type":"noul","noul":0.9}},"q3":{{"type":"noul","noul":0.1}},"q4":{{"type":"score","probabilities":{{"0":0.75,"1":0.25}}}}}}}}"#
-    );
-    let reply = crate::core::adapters::built_in::decode(&plan, body.as_bytes()).expect("a reply");
-    let mut shown = format!("{plan:?} {plan:#?} {document:?} {document:#?} {reply:?} {reply:#?}");
-    for (question, outcome) in questions.into_iter().zip(reply.outcomes()) {
-        let AnswerOutcome::Answered(answer) = outcome else {
-            panic!("every question is answered: {reply:?}");
-        };
-        let (value, _) = answer.read(None);
+    let mut shown = format!("{plan:?} {plan:#?} {document:?} {document:#?}");
+    let mut judged = Vec::new();
+    for question in questions {
+        let judgment = engine
+            .judge(
+                &question,
+                None,
+                evidence.clone(),
+                &crate::engine::Cancel::default(),
+            )
+            .expect("a judgment");
+        let reply = &judgment.answered.reply;
         let meta = crate::core::Meta::new(
             "0.0.0",
             String::new(),
-            url.clone(),
-            model.clone(),
-            None,
+            backend.url().clone(),
+            reply.model().clone(),
+            reply.usage(),
             crate::core::RequestMeta::new(false, 1, Vec::new()),
         );
-        let row = crate::core::DecisionResult::new(value, question, answer.clone(), None, meta);
-        shown.push_str(&format!("{row:?} {row:#?}"));
+        let row = crate::core::DecisionResult::new(
+            judgment.value.clone(),
+            question,
+            judgment.answer.clone(),
+            None,
+            meta,
+        );
+        shown.push_str(&format!("{reply:?} {reply:#?} {row:?} {row:#?}"));
+        judged.push(format!("{:?} {:?}", judgment.answer, judgment.value));
     }
+    assert_eq!(listener.requests().len(), 3);
     assert!(!shown.contains(EVIDENCE), "{shown}");
-    let [AnswerOutcome::Answered(choice), ..] = reply.outcomes() else {
-        panic!("the first question is answered: {reply:?}");
-    };
+    assert!(!shown.contains(KEY), "{shown}");
     assert_eq!(
-        format!("{choice:?} {:?}", choice.read(None).0),
-        "Answer(Choice { pick: <22 bytes withheld>, probabilities: \
-         Distribution { labels: <27 bytes withheld>, probabilities: [0.75, 0.25] }, \
-         confidence: None }) Choice(Some(<22 bytes withheld>))"
+        judged,
+        [
+            "Answer(Choice { pick: <22 bytes withheld>, probabilities: \
+             Distribution { labels: <27 bytes withheld>, probabilities: [0.75, 0.25] }, \
+             confidence: None }) Choice(Some(<22 bytes withheld>))",
+            "Answer(Tag { probabilities: TagProbabilities { labels: <27 bytes withheld>, \
+             probabilities: [0.9, 0.1] } }) Tag([<22 bytes withheld>])",
+            "Answer(Score { level: <22 bytes withheld>, probabilities: \
+             Distribution { labels: <27 bytes withheld>, probabilities: [0.75, 0.25] }, \
+             confidence: None }) Score(0.25)",
+        ]
     );
 }
 
