@@ -34,10 +34,10 @@ Claude decided this under the configuration rule. Ian can overturn it. A change 
 Why 4 holds:
 
 - Three accepted ADRs set 4. ADR 0009 read the vendor's own example code, which uses 4 to 12 workers and says the public endpoint limits concurrency above about eight. ADR 0010 made `--jobs` an advanced option with a default of 4. ADR 0017 section 5 lists 4 as the width on every surface. Dropping to 3 would need an amendment to all three against evidence that has not changed their premise.
-- The overage is small and narrow. Experiment 206 measured 6 to 10 percent over the documented 1,200 a minute, from one machine, on short lines only. Longer records stay under the limit at 4.
+- The overage is small and narrow. Experiment 206 measured about 6 to 10 percent over the documented 1,200 a minute, from one machine, on short lines only. The accuracy record reports that longer records stay under the limit at 4, but it gives no rate for them.
 - No refusal has been seen. The service refused nothing at 4, and nothing at about 4,300 a minute in the first spike (`2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md`).
 - An enforced limit slows a run and does not break it. `specification/backends.md` retries a 429 with a doubling wait and honors `Retry-After-Ms` and `Retry-After`. `crates/thinkthen/tests/backend/exchange.rs` covers those waits.
-- On short lines, a width of 3 measured 972 to 1,017 a minute against 1,267 to 1,319 at 4, about a fifth to a quarter slower. The width bounds the requests in flight, so long records would lose a like share. That cost falls on every run to fix an overage only short records reach.
+- On short lines, a width of 3 measured 972 to 1,017 a minute against 1,267 to 1,319 at 4, about a fifth to a quarter slower. The width bounds the requests in flight, so long records would likely lose a like share. No record measured that. The cost falls on every run to fix an overage only short records reach.
 - The author of experiment 206 recommended keeping 4 until the vendor refuses a request.
 
 What would change it: a 429 or a published enforcement change from the vendor at width 4. Then the default drops to 3.
