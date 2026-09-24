@@ -22,12 +22,12 @@ const EVIDENCE: &str = "marker-evidence-7b3ac5";
 /// in this list.
 #[test]
 fn no_debug_line_shows_the_key_or_the_evidence() {
-    let key = crate::http::Key::of(KEY);
+    let key = crate::engine::http::Key::of(KEY);
     let body = format!(r#"{{"state":"{EVIDENCE}"}}"#);
     let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("an address");
     let recorded = Recorded::new(&url, body.as_bytes());
     let entry = Entry::of(&recorded, body.as_bytes()).expect("both bodies are JSON");
-    let exchange = crate::http::Exchange {
+    let exchange = crate::engine::http::Exchange {
         url: url.as_str(),
         body: body.as_bytes(),
         key: &key,
@@ -42,7 +42,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         partial_failure: false,
         profile_mismatch: None,
     };
-    let client = crate::http::Client::new(Duration::from_secs(1), false);
+    let client = crate::engine::http::Client::new(Duration::from_secs(1), false);
     // `rank` holds every record in memory until the input ends, so the
     // sink that holds them is the one new place a whole record could leak.
     let mut written = Vec::new();
@@ -63,7 +63,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     let entity = crate::core::RelationEntity::new(EVIDENCE, EVIDENCE).expect("an entity");
     let shown = format!(
         "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+             {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
         Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
@@ -87,7 +87,6 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             file: true,
             error: crate::core::RelateConfigError::Relation,
         }),
-        Failure::Relate(super::relate::Error::Logical),
     );
 
     assert!(!shown.contains(KEY), "{shown}");
@@ -145,7 +144,7 @@ fn no_recognize_debug_line_shows_the_evidence() {
         probability: 0.8,
     };
     let tokens = crate::core::tokenize(EVIDENCE);
-    let input = crate::cli::recognize::TokenInput {
+    let input = crate::engine::facade::TokenInput {
         token: EVIDENCE.to_owned(),
         detection_probability: 0.9,
         kind_probabilities: vec![0.9],

@@ -23,6 +23,8 @@ use crate::engine::http::{Client, Exchange, Key};
 use crate::engine::{Cancel, WIDTH_CHILD, Width, Widths, process_width};
 use crate::failure::{Failure, report};
 
+mod facade_tests;
+
 const CHILD: &str = "THINKTHEN_TEST_WIDTH_CHILD";
 const QUIET: Duration = Duration::from_millis(150);
 
