@@ -15,7 +15,7 @@ The repository gate and its hand-run support scripts.
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
 | `package` | Proves the one-package, no-default-feature, private behavioral-doctest harness, package-tree, and release panic contracts |
 | `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json` |
-| `surfaces-ratchet.mjs`, `surfaces-ratchet-self-test` | Enforce the surfaces source ceiling and its raise discipline, and prove a shallow clone names its missing history |
+| `surfaces-ratchet.mjs`, `surfaces-ratchet-self-test` | Enforce the surfaces source ceiling, its raise discipline, and the review of changes to the ratchet itself, and prove each refusal |
 | `surfaces` | The surfaces rung on the surfaces branch: the offline checks (generated name lists, public names, the conformance file) always, `scripts/check_surfaces.sh` when the host toolchains are present |
 
 Build without the credential, then run a charged job:

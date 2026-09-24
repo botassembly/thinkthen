@@ -4,9 +4,9 @@ Second-agent review of the three commits on `surfaces-wave7` that raise `sdlc/su
 
 | Commit | Ceiling | Verdict |
 | --- | --- | --- |
-| `29cceff` | 26,848 to 34,950 | ACCEPT WITH FOLLOW-UP |
-| `1c09f86` | 34,950 to 35,046 | ACCEPT WITH FOLLOW-UP |
-| `cc2c036` | 35,046 to 35,159 | ACCEPT WITH FOLLOW-UP |
+| `29cceff93dbc92ef1862cd171544f1bf3bb268e6` | 26,848 to 34,950 | ACCEPT WITH FOLLOW-UP |
+| `1c09f86c9b3ee4ccd4da7d7a547394818ab19a22` | 34,950 to 35,046 | ACCEPT WITH FOLLOW-UP |
+| `cc2c036fc4d572e2d9cf7e7c212f8b0863703f9e` | 35,046 to 35,159 | ACCEPT WITH FOLLOW-UP |
 
 ## What I checked
 

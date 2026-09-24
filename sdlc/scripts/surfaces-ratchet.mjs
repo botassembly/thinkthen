@@ -26,8 +26,20 @@ import { fileURLToPath } from "node:url";
 const REPO = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const CONFIG = join(REPO, "sdlc", "surfaces-ratchet.json");
 
-if (!existsSync(CONFIG)) process.exit(0);
-const { directories, extension, exclude, max } = JSON.parse(readFileSync(CONFIG, "utf8"));
+// A missing or unreadable ceiling file fails: deleting it must not delete
+// the check (surfaces-review-7 verifier).
+if (!existsSync(CONFIG)) {
+  console.error("surfaces-ratchet: sdlc/surfaces-ratchet.json is missing. The ceiling file must exist; restore it from git.");
+  process.exit(1);
+}
+let ceiling;
+try {
+  ceiling = JSON.parse(readFileSync(CONFIG, "utf8"));
+} catch {
+  console.error("surfaces-ratchet: sdlc/surfaces-ratchet.json is not valid JSON.");
+  process.exit(1);
+}
+const { directories, extension, exclude, max } = ceiling;
 const skip = new Set(exclude);
 
 // Non-blank lines only (botassembly ticket 0032): counting every line makes
@@ -60,7 +72,7 @@ if (total !== max) {
 
 // The raise discipline, checked at the rung instead of remembered
 // (surfaces-review-4 item 16, surfaces-review-7 rows R5-28 and R7-4, and
-// the wave-7 verifier's attacks).
+// the wave-7 verifiers' attacks).
 //
 // Every commit after BASE whose ceiling file differs from each of its
 // parents is a mover. The walk reads every commit, side branches too, so
@@ -74,19 +86,29 @@ if (total !== max) {
 //      it in a structured line: either "Verdict: ACCEPT <sha>" or
 //      "Verdict: ACCEPT WITH FOLLOW-UP <sha>", or a table row whose first
 //      cell is the backticked SHA and whose last cell is exactly ACCEPT
-//      or ACCEPT WITH FOLLOW-UP. Prose that names the SHA does not count.
-//   2. sdlc/surfaces-ratchet-reviews.json grandfathers it by SHA. Only an
-//      ancestor of GRANDFATHER_UNTIL can be listed, so the list cannot
-//      excuse a new raise.
-// BASE and GRANDFATHER_UNTIL live here, in code, not in the JSON file, so
-// an edit to the JSON cannot move them.
+//      or ACCEPT WITH FOLLOW-UP. The SHA is the full 40 characters: a
+//      short prefix can be ground onto a forged commit in seconds.
+//      Prose that names the SHA does not count, and neither does a line
+//      inside a fenced code block or an HTML comment.
+//   2. sdlc/surfaces-ratchet-reviews.json grandfathers it by full SHA.
+//      Only an ancestor of GRANDFATHER_UNTIL can be listed, so the list
+//      cannot excuse a new raise.
+// A commit after SCRIPT_FROM that changes this script or its self-test
+// needs a structured verdict too, the same as a raise: whoever can edit
+// the rule can switch it off. An uncommitted raise in the working tree
+// fails, since it has no SHA a review could name.
+// BASE, GRANDFATHER_UNTIL, and SCRIPT_FROM live here, in code, not in the
+// JSON file, so an edit to the JSON cannot move them.
 // In a tree without .git (a frozen export) the check says so and skips
 // only itself; the count check above never skips. A shallow clone fails
 // by name: the walk needs the whole history back to BASE.
 const BASE = "64133279d3e17fd8a7054e3a5f870a2229cc8bc7";
 const GRANDFATHER_UNTIL = "db270d2113e6d3e51d0db35ead6d6a781a97dfc8";
+const SCRIPT_FROM = "f6a7faea8384e715b4059fa224d06122773cc600";
 const FILE = "sdlc/surfaces-ratchet.json";
 const REVIEWS = "sdlc/surfaces-ratchet-reviews.json";
+const GUARDED = ["sdlc/scripts/surfaces-ratchet.mjs", "sdlc/scripts/surfaces-ratchet-self-test"];
+const FULL = /^[0-9a-f]{40}$/;
 
 const git = (args, input) =>
   execFileSync("git", args, {
@@ -109,22 +131,57 @@ const fail = (message) => {
   process.exit(1);
 };
 
-// The accept verdicts every committed review record gives, as SHA prefixes.
-function acceptedPrefixes() {
+// The lines a reader sees: HTML comments and fenced code blocks removed.
+// An unclosed comment or fence hides the rest of the file.
+function readable(text) {
+  const lines = [];
+  let fence = null;
+  for (const line of text.replace(/<!--[\s\S]*?(?:-->|$)/g, "").split("\n")) {
+    const mark = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (fence) {
+      if (mark && mark[1][0] === fence[0] && mark[1].length >= fence.length) fence = null;
+    } else if (mark) fence = mark[1];
+    else lines.push(line.trim());
+  }
+  return lines;
+}
+
+// The full SHAs every committed review record accepts.
+function acceptedShas() {
   const paths = git(["ls-tree", "-r", "--name-only", "HEAD", "--", "sdlc/records"])
     .split("\n")
     .filter((path) => /(^|\/)REVIEW-[^/]*\.md$/.test(path));
-  const accepted = [];
-  const verdict = /^Verdict: ACCEPT(?: WITH FOLLOW-UP)? ([0-9a-f]{7,40})$/;
-  const row = /^\| `([0-9a-f]{7,40})` \|.*\| (?:ACCEPT|ACCEPT WITH FOLLOW-UP) \|$/;
+  const accepted = new Set();
+  const verdict = /^Verdict: ACCEPT(?: WITH FOLLOW-UP)? ([0-9a-f]{40})$/;
+  const row = /^\| `([0-9a-f]{40})` \|.*\| (?:ACCEPT|ACCEPT WITH FOLLOW-UP) \|$/;
   for (const path of paths) {
-    for (const line of git(["show", `HEAD:${path}`]).split("\n")) {
-      const hit = line.trim().match(verdict) ?? line.trim().match(row);
-      if (hit) accepted.push(hit[1]);
+    for (const line of readable(git(["show", `HEAD:${path}`]))) {
+      const hit = line.match(verdict) ?? line.match(row);
+      if (hit) accepted.add(hit[1]);
     }
   }
   return accepted;
 }
+
+// Each commit in range with its parents, and the blob of path in each.
+function walk(range, path) {
+  const commits = git(["rev-list", "--parents", range]).split("\n").filter(Boolean)
+    .map((line) => line.split(" "));
+  const wanted = [...new Set(commits.flat())];
+  const blobs = new Map();
+  if (wanted.length > 0) {
+    git(["cat-file", "--batch-check=%(objectname) %(objecttype) %(rest)"],
+      wanted.map((sha) => `${sha}:${path} ${sha}`).join("\n") + "\n")
+      .split("\n")
+      .forEach((line, i) => blobs.set(wanted[i], line.includes(" blob ") ? line.split(" ")[0] : ""));
+  }
+  // A mover differs from every parent; a root commit that holds the file moves it.
+  const movers = commits.filter(([sha, ...parents]) =>
+    parents.length > 0 ? parents.every((p) => blobs.get(p) !== blobs.get(sha)) : blobs.get(sha) !== "");
+  return { movers, blobs };
+}
+
+const shape = (c) => JSON.stringify([c.directories, c.extension, c.exclude]);
 
 if (!gitOk(["rev-parse", "--git-dir"])) {
   console.error("surfaces-ratchet: no git history here; the raise-body check cannot run");
@@ -134,35 +191,33 @@ if (!gitOk(["rev-parse", "--git-dir"])) {
       "the history is too shallow to find the commit that moved sdlc/surfaces-ratchet.json; fetch the full history (git fetch --unshallow, or fetch-depth: 0 in the checkout step)",
     );
   }
-  for (const anchor of [BASE, GRANDFATHER_UNTIL]) {
+  for (const anchor of [BASE, GRANDFATHER_UNTIL, SCRIPT_FROM]) {
     if (!gitOk(["cat-file", "-e", `${anchor}^{commit}`]) || !gitOk(["merge-base", "--is-ancestor", anchor, "HEAD"])) {
       fail(`${anchor} is not in this history; the review walk starts there`);
     }
   }
-  const { grandfathered } = JSON.parse(git(["show", `HEAD:${REVIEWS}`]));
+  let grandfathered;
+  try {
+    ({ grandfathered } = JSON.parse(git(["show", `HEAD:${REVIEWS}`])));
+  } catch {
+    fail(`${REVIEWS} is missing at HEAD or is not valid JSON`);
+  }
+  if (typeof grandfathered !== "object" || grandfathered === null || Array.isArray(grandfathered)) {
+    fail(`${REVIEWS} has no "grandfathered" object mapping full SHAs to reasons`);
+  }
   for (const sha of Object.keys(grandfathered)) {
+    if (!FULL.test(sha)) fail(`${REVIEWS} grandfathers ${sha}, which is not a full 40-character SHA`);
     if (!gitOk(["merge-base", "--is-ancestor", sha, GRANDFATHER_UNTIL])) {
       fail(`${REVIEWS} grandfathers ${sha}, which is not in the history up to ${GRANDFATHER_UNTIL}`);
     }
   }
-  // Every commit after BASE with its parents, and the ceiling blob of each.
-  const commits = git(["rev-list", "--parents", `${BASE}..HEAD`]).split("\n").filter(Boolean)
-    .map((line) => line.split(" "));
-  const wanted = [...new Set(commits.flat())];
-  const blobs = new Map();
-  git(["cat-file", "--batch-check=%(objectname) %(objecttype) %(rest)"],
-    wanted.map((sha) => `${sha}:${FILE} ${sha}`).join("\n") + "\n")
-    .split("\n")
-    .forEach((line, i) => blobs.set(wanted[i], line.includes(" blob ") ? line.split(" ")[0] : ""));
+  const accepted = acceptedShas();
+
+  const { movers, blobs } = walk(`${BASE}..HEAD`, FILE);
   const config = (sha) => (blobs.get(sha) ? JSON.parse(git(["cat-file", "-p", blobs.get(sha)])) : undefined);
-  const shape = (c) => JSON.stringify([c.directories, c.extension, c.exclude]);
-  const accepted = acceptedPrefixes();
   const unreviewed = [];
-  for (const [sha, ...parents] of commits) {
-    const mine = blobs.get(sha);
-    if (parents.length > 0 && parents.every((p) => blobs.get(p) === mine)) continue;
-    if (parents.some((p) => blobs.get(p) === mine)) continue;
-    if (!mine) continue;
+  for (const [sha, ...parents] of movers) {
+    if (!blobs.get(sha)) continue;
     const now = config(sha);
     const before = parents.map(config);
     const lower = before.length > 0 && before.every((c) => c !== undefined && now.max < c.max && shape(c) === shape(now));
@@ -170,13 +225,34 @@ if (!gitOk(["rev-parse", "--git-dir"])) {
       if (git(["log", "-1", "--format=%b", sha]) === "") unreviewed.push(sha);
       continue;
     }
-    if (Object.keys(grandfathered).some((g) => sha.startsWith(g))) continue;
-    if (accepted.some((prefix) => sha.startsWith(prefix))) continue;
+    if (Object.hasOwn(grandfathered, sha) || accepted.has(sha)) continue;
     unreviewed.push(sha);
   }
   if (unreviewed.length > 0) {
     fail(
-      `these commits move sdlc/surfaces-ratchet.json without a second-agent review: ${unreviewed.map((s) => s.slice(0, 7)).join(", ")}. A raise needs a REVIEW-*.md record under sdlc/records, committed, with "Verdict: ACCEPT <sha>" (or ACCEPT WITH FOLLOW-UP), and a lower needs a body (CLAUDE.md, surfaces-review-7).`,
+      `these commits move sdlc/surfaces-ratchet.json without a second-agent review: ${unreviewed.join(", ")}. A raise needs a REVIEW-*.md record under sdlc/records, committed, with "Verdict: ACCEPT <full 40-character sha>" (or ACCEPT WITH FOLLOW-UP), and a lower needs a body (CLAUDE.md, surfaces-review-7).`,
+    );
+  }
+
+  const unguarded = new Set();
+  for (const path of GUARDED) {
+    for (const [sha] of walk(`${SCRIPT_FROM}..HEAD`, path).movers) if (!accepted.has(sha)) unguarded.add(sha);
+  }
+  if (unguarded.size > 0) {
+    fail(
+      `these commits change the ratchet script or its self-test without a second-agent review: ${[...unguarded].join(", ")}. Each needs a REVIEW-*.md record under sdlc/records, committed, with "Verdict: ACCEPT <full 40-character sha>" (or ACCEPT WITH FOLLOW-UP).`,
+    );
+  }
+
+  let committed;
+  try {
+    committed = JSON.parse(git(["show", `HEAD:${FILE}`]));
+  } catch {
+    committed = undefined;
+  }
+  if (committed === undefined || shape(committed) !== shape(ceiling) || max > committed.max) {
+    fail(
+      `sdlc/surfaces-ratchet.json in the working tree raises the committed ceiling. Commit the raise with a body and add a review record; an uncommitted raise has no SHA a review can name.`,
     );
   }
 }
