@@ -6,7 +6,7 @@ opens: sdlc/scripts/live sdlc/scripts/README.md sdlc/live-test sdlc/issues/2026-
 
 # 0101: Refuse a non-shell live job before any charge
 
-Status: in progress, awaiting a fresh code review of the branch head; record `sdlc/records/0101-live-refuses-non-shell-jobs.md`. Owner: Claude.
+Status: landed 2026-09-24 through a merge of `ticket/0101-live-refuses-non-shell-jobs`; record `sdlc/records/0101-live-refuses-non-shell-jobs.md`, review `sdlc/records/0101-review.md`. Owner: Claude.
 
 ## Problem
 
@@ -14,7 +14,7 @@ Status: in progress, awaiting a fresh code review of the branch head; record `sd
 
 ## Fix
 
-The launcher reads the job's first line before it takes the lock. The line must be exactly `#!/bin/sh`, the interpreter the launcher runs. Any other first line, an empty file, or an unreadable file refuses with status 2 and no ledger row. All 46 committed jobs under `demos/` and `probes/` already start with `#!/bin/sh`.
+The launcher reads the job's first line before it takes the lock. The line must be exactly `#!/bin/sh`, the interpreter the launcher runs. Any other first line, an empty file, or an unreadable file refuses with status 2 and no ledger row. All 45 tracked files under `demos/` and `probes/` that start with a `#!/bin/sh` line pass. Every job a page runs through `live` is one of them.
 
 Decisions Ian can overturn:
 
