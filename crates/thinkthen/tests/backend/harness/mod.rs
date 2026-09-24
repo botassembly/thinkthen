@@ -6,6 +6,8 @@
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Condvar, Mutex, PoisonError};
+use std::time::Duration;
 
 pub(crate) use conformance_backend::{Canned, Listener, Observed};
 
@@ -61,4 +63,43 @@ pub(crate) fn spawn(
     let _ = input.write_all(evidence);
     drop(input);
     child.wait_with_output()
+}
+
+/// Holds each of the first `wanted` requests until all of them are in flight.
+///
+/// A reply closure calls `hold` before it answers. A correct run passes on
+/// counts alone, however slowly the machine schedules its workers. A run that
+/// never reaches `wanted` waits out `FAILSAFE` and then fails on its peak. The
+/// failsafe stays under the tool's 30-second request timeout.
+pub(crate) struct Gathering {
+    arrived: Mutex<usize>,
+    all_here: Condvar,
+    wanted: usize,
+}
+
+const FAILSAFE: Duration = Duration::from_secs(10);
+
+impl Gathering {
+    pub(crate) fn new(wanted: usize) -> Self {
+        Self {
+            arrived: Mutex::new(0),
+            all_here: Condvar::new(),
+            wanted,
+        }
+    }
+
+    pub(crate) fn hold(&self) {
+        let mut arrived = self.arrived.lock().unwrap_or_else(PoisonError::into_inner);
+        *arrived += 1;
+        if *arrived == self.wanted {
+            // A request past the bound gets a moment to arrive while all are held.
+            std::thread::sleep(Duration::from_millis(50));
+            self.all_here.notify_all();
+        }
+        if *arrived <= self.wanted {
+            let _held = self
+                .all_here
+                .wait_timeout_while(arrived, FAILSAFE, |count| *count < self.wanted);
+        }
+    }
 }
