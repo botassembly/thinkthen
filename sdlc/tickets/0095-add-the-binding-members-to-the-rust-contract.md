@@ -6,7 +6,7 @@ opens: sdlc/tickets/0095-add-the-binding-members-to-the-rust-contract.md sdlc/ti
 
 # 0095: Add the binding members to the Rust contract
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: built; record `sdlc/records/0095-build-binding-members.md`. Owner: Claude.
 
 ## Outcome and authority
 
