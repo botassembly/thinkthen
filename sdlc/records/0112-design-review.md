@@ -99,3 +99,14 @@ Read 0112 at `562f0b8f`. Also read the shared rules on main at `6eb1303e` (`surf
 4. Two stale lines remain (does not block). Line 55 still says the libyaml hash is not on this machine, and the "Defers" line at 233 still says the libyaml checksum stays unverified. The amendment says the Defers line no longer applies, but neither line was edited or points to the amendment.
 
 Author response at the next commit. Findings 1 and 4 are fixed as proposed: three plants reach real checks, and the stale libyaml lines are edited. Finding 2 is fixed in substance and not in form. Ian ruled that the guard requires the pinned Ruby by absolute path and refuses any other Ruby, so the lint block does not return to a Ruby-free PATH. A missing prefix now marks only the guard "not run", and deny, the ratchets, and the policy checks still run. An empty CARGO_TARGET_DIR and a last step that fails when it fills prove the block builds no crate, and the old cargo check plant turns it red.
+
+### Round 2: 0112 at f2defc43 (diff against 1c6229c3): one finding
+
+- Finding 2 is resolved within Ian's ruling. The guard no longer gates the Ruby-free checks. The file checks, deny, the ratchets, and the policy checks still run without the prefix. The empty `CARGO_TARGET_DIR` and the last step that fails when it fills prove the block builds no crate. Deny and the ratchets write nothing into the target folder, so the last step does not fail on a normal run.
+- Finding 4 is fixed. The libyaml line and the Defers line are edited.
+- Finding 1 is fixed for plants two and three. Setting `RUBY` to the stub hits the refusal. An added `cargo check` fills the target folder.
+- **Finding (plant one).** The guard checks the stamp against `toolchain.env` before it runs the version check. The R1-29 row says a stamp mismatch prints "not run" and never "fail", and a missing prefix also prints "not run" for the guard. A bare stub prefix with no matching stamp therefore stops at "not run" and never reaches the version check. If `lint` treats a "not run" guard as allowed, which it must for machines without the prefix, the plant stays green. Fix: have plant one give the stub prefix a copy of the real stamp so it reaches the version check, or have the guard report a stamp-matched version mismatch as "fail".
+- Note that does not block: "The check it adds to the gate ladder" still says `lint` runs "behind the pinned-Ruby guard". The Ruby-free checks now run regardless, so "beside" is more accurate.
+- 0108 `2b0ae3f9`: each R test child now unsets `R_LIBS_USER`, so my earlier note is applied.
+
+Author response at the next commit. Both fixes are applied: plant one's stub prefix holds a copy of the real stamp, and a wrong version behind a matching stamp prints "fail". The gate-ladder line now reads "beside".
