@@ -1,4 +1,5 @@
 //! The read-only transform catalog prints embedded bytes and touches nothing.
+#![cfg(feature = "cli")]
 #![allow(
     clippy::expect_used,
     clippy::panic,

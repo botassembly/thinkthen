@@ -15,3 +15,7 @@ mod cases;
     reason = "a loopback fixture that fails should stop this proof"
 )]
 mod paths;
+#[path = "../../../../../crates/thinkthen/src/test_deadline/run.rs"]
+mod run;
+#[path = "../../../../../crates/thinkthen/src/test_deadline/wait.rs"]
+mod wait;

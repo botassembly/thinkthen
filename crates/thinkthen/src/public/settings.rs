@@ -54,7 +54,6 @@ pub struct EngineBuilder {
     width: Option<Width>,
     max_requests: Option<usize>,
     cache: Cache,
-    cache_bytes: u64,
     seeded: Option<Seeded>,
 }
 
@@ -67,7 +66,6 @@ impl EngineBuilder {
             width: None,
             max_requests: None,
             cache: Cache::Default,
-            cache_bytes: config::DEFAULT_CACHE_BYTES,
             seeded: None,
         }
     }
@@ -96,7 +94,6 @@ impl EngineBuilder {
             folder: named.or_else(config::cache_path),
             enabled: config.cache_enabled(),
         });
-        builder.cache_bytes = config.cache_bytes();
         if let Some(base) =
             variable("THINKTHEN_BASE_URL")?.or_else(|| config.url().map(str::to_owned))
         {
@@ -119,8 +116,7 @@ impl EngineBuilder {
     ///
     /// Returns [`Error::Usage`] for an address the backend rule refuses.
     pub fn base_url(mut self, value: &str) -> Result<Self, Error> {
-        Backend::resolve(Some(value), None, DEFAULT_MODEL)
-            .map_err(|error| Error::usage(error.to_string()))?;
+        Backend::resolve(Some(value), None, DEFAULT_MODEL).map_err(Error::refused)?;
         self.base_url = Some(value.to_owned());
         Ok(self)
     }
@@ -144,7 +140,7 @@ impl EngineBuilder {
     ///
     /// Returns [`Error::Usage`] for a blank model.
     pub fn model(mut self, value: &str) -> Result<Self, Error> {
-        self.model = Some(ModelName::new(value).map_err(|error| Error::usage(error.to_string()))?);
+        self.model = Some(ModelName::new(value).map_err(Error::refused)?);
         Ok(self)
     }
 
@@ -161,8 +157,10 @@ impl EngineBuilder {
         Ok(self)
     }
 
-    /// Refuse a call over more than this many records before its first
-    /// request. `None` is no limit.
+    /// Refuse a call over more than this many records. `rank` and `find`
+    /// hold their input first and refuse before any request. The
+    /// streaming calls send the first records and end with [`Error::Usage`]
+    /// when the record past the limit arrives. `None` is no limit.
     ///
     /// # Errors
     ///
@@ -206,18 +204,18 @@ impl EngineBuilder {
         self
     }
 
-    /// Keep this cap for the cache, which `thinkthen cache prune` applies.
+    /// Check a cache cap. In 0.1 the library keeps no cap and prunes nothing,
+    /// so a valid value has no effect; `thinkthen cache prune` reads its own.
     ///
     /// # Errors
     ///
     /// Returns [`Error::Usage`] for 0.
-    pub fn cache_bytes(mut self, value: u64) -> Result<Self, Error> {
+    pub fn cache_bytes(self, value: u64) -> Result<Self, Error> {
         if value == 0 {
             return Err(Error::usage(
                 "a cache cap is a whole number of bytes above zero",
             ));
         }
-        self.cache_bytes = value;
         Ok(self)
     }
 
@@ -229,8 +227,8 @@ impl EngineBuilder {
     /// folder is available, or when a different throttle is already active.
     pub fn build(self) -> Result<super::Engine, Error> {
         let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
-        let backend = Backend::resolve(self.base_url.as_deref(), None, model)
-            .map_err(|error| Error::usage(error.to_string()))?;
+        let backend =
+            Backend::resolve(self.base_url.as_deref(), None, model).map_err(Error::refused)?;
         let key = self.key.clone();
         let settings = Settings {
             backend,

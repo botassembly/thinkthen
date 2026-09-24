@@ -59,7 +59,7 @@ pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
     resolve,
 };
-pub(crate) use crate::core::question_set::{QuestionSet, QuestionSetError};
+pub(crate) use crate::core::question_set::{QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
     RecognizedName, TokenAnswer, assemble as assemble_names, kind_questions, recognition_questions,
     tokenize,

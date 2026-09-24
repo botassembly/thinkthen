@@ -24,10 +24,10 @@ targets=$(cargo metadata --locked --offline --no-deps --format-version 1 \
 test "$targets" = "bin lib" \
     || { printf 'package: thinkthen has targets %s, not one lib and one bin\n' "$targets" >&2; exit 1; }
 # The library-only run. Without `cli` cargo builds no binary but still names
-# its old path, so a test that runs the command would run a stale one. Only
-# the library's own tests and the public tests that never start it run here.
-cargo test --locked --offline --package thinkthen --no-default-features --lib \
-    --test public_controls --test public_batches --test compile_contract --test public_members
+# its old path, so every test that starts the command carries
+# `#![cfg(feature = "cli")]` and compiles to nothing here. The doctests need
+# the internal cfg, so the next command runs them.
+cargo test --locked --offline --package thinkthen --no-default-features --all-targets
 RUSTFLAGS='--cfg thinkthen_internal_doctest' \
 RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
     cargo test --locked --offline --package thinkthen --doc --no-default-features
@@ -36,7 +36,8 @@ prove_private() {
     target=$1
     shift
     CARGO_TARGET_DIR="$target" cargo build --locked --offline --package thinkthen --lib "$@"
-    library=$(find "$target/debug/deps" -name 'libthinkthen-*.rlib' -print -quit)
+    # A toolchain change leaves the old build beside the new one. Take the newest.
+    library=$(ls -t "$target"/debug/deps/libthinkthen-*.rlib | head -n 1)
     if rustc --edition 2024 -L "dependency=$target/debug/deps" --extern "thinkthen=$library" \
         -o "$target/private-probe" - 2>"$target/private-probe.stderr" <<'RS'
 fn main() {

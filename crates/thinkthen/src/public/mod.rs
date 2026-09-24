@@ -53,6 +53,9 @@ pub fn default_engine() -> Result<&'static Engine, Error> {
     if let Some(engine) = ENGINE.get() {
         return Ok(engine);
     }
+    // Two threads that both find the cell empty each build; one engine is
+    // dropped unused. `from_env` registers no throttle, so the race costs one
+    // extra build and nothing else.
     let built = Engine::from_env()?;
     Ok(ENGINE.get_or_init(|| built))
 }

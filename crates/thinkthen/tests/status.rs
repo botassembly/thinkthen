@@ -1,4 +1,5 @@
 //! The read-only process status surface.
+#![cfg(feature = "cli")]
 
 use std::fs;
 use std::process::Command;

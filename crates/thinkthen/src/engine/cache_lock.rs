@@ -173,6 +173,13 @@ impl FolderGate {
 // A forked child keeps copies of the descriptors of requests in flight, and a
 // flock lock lasts until every copy closes. Unlocking before the close frees
 // the lock when the parent's request ends, not when the child exits.
+//
+// The rule this depends on: a child never drops a lock it inherited. An unlock
+// from any process that shares the open file description releases the lock
+// for every holder, so such a drop would end the parent's exclusion. Today the
+// locks live on worker stacks, which never run in the child, and
+// `engine::process` forgets inherited state in place of dropping it. A change
+// that drops inherited state in a child must leak these locks first.
 impl Drop for CacheLock {
     fn drop(&mut self) {
         let _unlocked = self._file.unlock();

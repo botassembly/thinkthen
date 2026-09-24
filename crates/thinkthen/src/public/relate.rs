@@ -10,7 +10,7 @@ use crate::engine::facade;
 use crate::public::engine::Engine;
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
-use crate::public::recognize::{RelationRule, add_rule, cut, model, usage};
+use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
 /// The most entities one `relate` call takes.
@@ -39,7 +39,7 @@ impl Relate {
     ///
     /// Returns [`Error::Usage`] naming what the file breaks.
     pub fn from_json(value: &str) -> Result<Self, Error> {
-        let spec = RelateSpec::parse(value).map_err(usage)?;
+        let spec = RelateSpec::parse(value).map_err(Error::refused)?;
         if spec.name_field().as_str() != "/name" || spec.kind_field().as_str() != "/kind" {
             return Err(Error::usage(
                 "a library relate reads each entity's name and kind, so `fields` keeps /name and /kind",
@@ -131,7 +131,7 @@ impl RelateBuilder {
         };
         let text = serde_json::to_string(&file)
             .map_err(|_| Error::defect("a relate request could not be written"))?;
-        RelateSpec::parse(&text).map(Relate).map_err(usage)
+        RelateSpec::parse(&text).map(Relate).map_err(Error::refused)
     }
 }
 
@@ -159,7 +159,7 @@ impl Entity {
     ///
     /// Returns [`Error::Usage`] for a blank name or kind.
     pub fn new(name: &str, kind: &str) -> Result<Self, Error> {
-        core::RelationEntity::new(name, kind).map_err(usage)?;
+        core::RelationEntity::new(name, kind).map_err(Error::refused)?;
         Ok(Self {
             name: name.to_owned(),
             kind: kind.to_owned(),
@@ -261,14 +261,14 @@ impl Engine {
             .take(MOST_ENTITIES + 1)
             .map(|entity| (entity.name, entity.kind))
             .collect();
-        let admitted = ask.0.admit(&pairs).map_err(usage)?;
+        let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
+        let stop = Stop::begin(options)?;
         if admitted.is_empty() {
             return Ok(Vec::new());
         }
         let engine = self.for_model(ask.0.model.as_ref())?;
         let prepared = facade::relations(&admitted, &ask.0, engine.backend(), None)?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
-        let stop = Stop::begin(options)?;
         let execution = stop.run(|cancel| {
             engine
                 .relate(prepared, &admitted, threshold, cancel)

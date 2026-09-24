@@ -1,4 +1,5 @@
 //! `thinkthen audit` matches the prototype's golden files and its hand-checked values.
+#![cfg(feature = "cli")]
 #![allow(
     clippy::expect_used,
     clippy::panic,
