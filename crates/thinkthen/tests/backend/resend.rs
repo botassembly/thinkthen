@@ -202,9 +202,10 @@ fn a_record_run_sends_each_request_at_most_once_and_caches_no_failure() {
         assert_eq!(entry.exists(), !failure, "{}", entry.display());
     }
     assert_eq!(output.status.code(), Some(4));
-    let said = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        said.starts_with(CLOSED) && said.contains("thinkthen: stopped at record 2; "),
-        "{said}"
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        format!(
+            "{CLOSED}thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n"
+        )
     );
 }

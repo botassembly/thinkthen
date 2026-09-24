@@ -11,7 +11,7 @@ const GLOBAL = [
   ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', 'https://api.typesafe.ai/v1'],
   ['--model NAME', 'a name', 'The model the request carries. This is how a run is pinned to one version.', 'jev-latest'],
   ['--timeout SECONDS', 'a whole number above 0', 'Covers one attempt, connect to last byte. 0 is a usage error.', '30'],
-  ['--max-retries N', 'a whole number', 'Retries after the first attempt.', '2'],
+  ['--max-retries N', 'a whole number', 'How many times a retried status is sent again. A transport failure is never sent again.', '2'],
   ['--record DIR', 'a folder', 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', 'off'],
   ['--replay DIR', 'a folder', 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', 'off'],
   ['--cache DIR', 'a folder', 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', 'off'],

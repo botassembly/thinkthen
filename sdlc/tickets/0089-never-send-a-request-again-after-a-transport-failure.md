@@ -87,7 +87,7 @@ Every "sends once" claim counts POSTs on the loopback listener. `--dry-run` and 
 6. Red then green, help: one test pins the exact `--max-retries` long help line on `decide` and on `find`.
 7. A secrecy check reads stdout, stderr, and every `Debug` line on the reset and stall paths and finds neither the key nor the evidence.
 8. `specification/backends.md` and `result.md` state the new rule. `sdlc/scripts/spec` passes with no page example claiming a transport retry.
-9. The coordinator runs `sdlc/scripts/install`, `lint`, `test`, and `spec` in order from the exact candidate SHA on the gate host, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. Then `git diff --check`. Every command exits 0. No live call runs.
+9. The coordinator runs `sdlc/scripts/install`, `lint`, `test`, and `spec` in order from the exact candidate SHA on this machine (ThinkThen gates run here; `yellow.local` serves only BioMCP and BioData), with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. Then `git diff --check`. Every command exits 0. No live call runs.
 
 ## Budget
 

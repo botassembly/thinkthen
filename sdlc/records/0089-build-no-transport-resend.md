@@ -44,7 +44,7 @@ The record-mode run over `--jobs 4 --cache DIR` exits 4. Its standard error star
 
 ## Budget
 
-Production: 4 files (`engine/http.rs`, `cli/failure.rs`, `cli/args.rs`, `cli/args/find.rs`), 11 nonblank lines added and 12 removed outside test modules. Tests: 6 test-only files plus the unit test module in `http.rs`, 257 nonblank lines added. The ratchet rose from 43563 to 43753. No dependency, no `unsafe`, no `libc`, no `rustfmt::skip`.
+Production: 4 files (`engine/http.rs`, `cli/failure.rs`, `cli/args.rs`, `cli/args/find.rs`), 11 nonblank lines added and 13 removed outside test modules. Tests: 6 test-only files plus the unit test module in `http.rs`, 254 nonblank lines added. The ratchet rose from 43563 to 43753. No dependency, no `unsafe`, no `libc`, no `rustfmt::skip`.
 
 ## Found on the way
 
@@ -52,4 +52,4 @@ Production: 4 files (`engine/http.rs`, `cli/failure.rs`, `cli/args.rs`, `cli/arg
 
 ## Gates
 
-The builder ran `install`, `lint`, `test`, and `spec` one at a time from `d2a76dd9` on this Linux machine, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check ab72203c HEAD`. Every command exited 0. `lint` reported `ratchet: crates 43753/43753` and `pages: 1 coming, 21 green`. `test` passed 724 Rust tests with 2 ignored and 0 failed, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`. No live call ran. Only this paragraph changed after that run. The coordinator still owes the gate-host run from the exact candidate SHA (acceptance 9).
+The builder ran `install`, `lint`, `test`, and `spec` one at a time from `d2a76dd9` on this Linux machine, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check ab72203c HEAD`. Every command exited 0. `lint` reported `ratchet: crates 43753/43753` and `pages: 1 coming, 21 green`. `test` passed 724 Rust tests with 2 ignored and 0 failed, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`. No live call ran. Only this paragraph changed after that run.
