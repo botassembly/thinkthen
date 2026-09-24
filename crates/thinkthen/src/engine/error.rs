@@ -67,8 +67,6 @@ pub(crate) enum Error {
     RecognizeKinds,
     /// The backend failed one question recognition requires.
     RecognizeLogical,
-    /// No logical relation question has a usable answer.
-    RelateLogical,
 }
 
 /// The statuses a backend is asked again after.
@@ -105,8 +103,7 @@ impl Error {
             | Self::Reply(_)
             | Self::ModelsDiffer(_)
             | Self::UsageOverflow
-            | Self::RecognizeLogical
-            | Self::RelateLogical => Kind::Backend,
+            | Self::RecognizeLogical => Kind::Backend,
             Self::ReplayMiss(_)
             | Self::Entry(_, _)
             | Self::RecordingConflict(_)

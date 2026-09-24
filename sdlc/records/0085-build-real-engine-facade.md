@@ -87,7 +87,7 @@ Each plant ran alone on a committed tree and was reverted.
 | G2 | `is_retried` also accepts `Transport(PrematureClose)` | red: `judge` sent 4 times |
 | sending thread | `on_worker` sends on the calling thread | red, 3 of 3: `Transport(Other)` |
 | width | `Engine::new` ignores the explicit width | red in the width child |
-| relate | `relate` drops its no-usable-answer check | stayed green (see below) |
+| relate | `relate` drops its no-usable-answer check | not applicable: the owner deleted the check (see below) |
 | state accessor | `recording` reads `self.state` directly | red: 2 reads |
 
 ## Budgets
@@ -109,7 +109,7 @@ Measured with `git diff -U0 86f4012e HEAD -- '*.rs'`, nonblank lines:
 
 - The file budget. See Budgets.
 - The ticket's R5-19 plant cannot send at the facade. The scheduler never queues an item beyond its free workers, and the gate wait and pre-attempt check stop a dispatched item. The scheduler's own test catches that plant, and the fresh-token plant proves the facade passes the call's token.
-- `relate`'s check that fails a call with no usable answer cannot be reached. The decoder refuses a reply in which every answer failed, and it returns `Reply`, so `relate` fails before the check runs. A partial reply always holds one good answer. The reviewer's plant that drops the check stays green for that reason. The command behaves the same as before this ticket. Ian can decide whether to delete the check and its `RelateLogical` error.
+- The owner deleted `relate`'s check that failed a call with no usable answer, together with its `RelateLogical` engine error and the `relate` failure message it mapped to. The check could not be reached. The decoder refuses a reply in which every answer failed and returns `Reply`, so `relate` failed before the check ran. A partial reply always holds one good answer. `relate_fails_when_no_answer_is_usable_and_keeps_a_partial_result` in `engine/facade_tests.rs` covers both cases at the decoder. The command behaves the same as before this ticket. The ratchet fell from 49742 to 49728.
 - The command's stdin feeder stays detached and command-owned, because a blocked read cannot be joined. `records` and `groups` take the reader as a closure.
 - The ticket asked for a test hook that records the sending thread. The tests-earn-their-place rule removed it, because the signal alone turns the calling-thread plant red. Ian can overturn that.
 - `sdlc/issues/2026-09-24-reconcile-signal-dependencies-after-0078.md` stays open. This build adds no dependency.

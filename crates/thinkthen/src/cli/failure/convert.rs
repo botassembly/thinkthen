@@ -80,7 +80,6 @@ impl From<EngineError> for Failure {
             EngineError::RecognizeLogical => {
                 Self::Recognize(super::recognize::Error::LogicalQuestion)
             }
-            EngineError::RelateLogical => Self::Relate(super::relate::Error::Logical),
         }
     }
 }

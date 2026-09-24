@@ -131,9 +131,6 @@ impl Engine {
                 ));
             }
         }
-        if execution.answered == 0 && execution.failed > 0 {
-            return Err(Error::RelateLogical);
-        }
         Ok(execution)
     }
 }

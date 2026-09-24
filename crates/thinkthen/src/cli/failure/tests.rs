@@ -63,7 +63,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     let entity = crate::core::RelationEntity::new(EVIDENCE, EVIDENCE).expect("an entity");
     let shown = format!(
         "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+             {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
         Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
@@ -87,7 +87,6 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             file: true,
             error: crate::core::RelateConfigError::Relation,
         }),
-        Failure::Relate(super::relate::Error::Logical),
     );
 
     assert!(!shown.contains(KEY), "{shown}");
