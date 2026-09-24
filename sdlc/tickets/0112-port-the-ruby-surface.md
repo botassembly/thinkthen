@@ -220,7 +220,7 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
   - Amendment review: `sdlc/records/2026-09-24-amendment-review-0108-0109-0112.md` accepted decision 15 at `be816553`, with three notes for the builder, now in the acceptance list.
   - The test cap rises to 1,950 lines. The small fixes are applied, including the four trailing "since" clauses.
 - Rejected as written: a detached batch cannot hold only one width slot. The engine keeps each sent request until it ends (0073), and width is one process-wide gate (0077). Holding one slot would need an engine change or a wait. This ticket excludes the engine change, and the wait gives up the prompt Ctrl-C. Decision 5 states the real cost and names both levers.
-- Spike amendment check (`sdlc/records/0112-design-review.md`) found two points in change 1 at `1c6229c3`: a plant that could not fail, and a `lint` block that lost its deny run and its builds-no-crate proof without the prefix. Change 1 now uses three plants that reach real checks, keeps the Ruby-free checks running, and proves the block builds no crate. The re-check (same file) is below.
+- Spike amendment check (`sdlc/records/0112-design-review.md`) found two points in change 1 at `1c6229c3`: a plant that could not fail, and a `lint` block that lost its deny run and its builds-no-crate proof without the prefix. Change 1 now uses three plants that reach real checks, keeps the Ruby-free checks running, and proves the block builds no crate. Round 2 (same file) found that plant one stopped at the stamp, and the stub prefix now copies the real stamp. Round 3 (same file) accepted it at `89db81ed`.
 - Code review: pending.
 
 ## Evidence

@@ -110,3 +110,9 @@ Author response at the next commit. Findings 1 and 4 are fixed as proposed: thre
 - 0108 `2b0ae3f9`: each R test child now unsets `R_LIBS_USER`, so my earlier note is applied.
 
 Author response at the next commit. Both fixes are applied: plant one's stub prefix holds a copy of the real stamp, and a wrong version behind a matching stamp prints "fail". The gate-ladder line now reads "beside".
+
+### Round 3: 0112 at 89db81ed (diff against f2defc43): ACCEPT
+
+- Plant one's stub prefix now holds a copy of the real stamp and a `ruby` that prints 3.2.3. The guard prints "fail", never "not run", for a wrong version behind a matching stamp. The plant therefore reaches the version check and can turn red. The R5-35 row and change 1 agree.
+- The gate-ladder line now reads "beside".
+- Nothing else in the ticket changed. The commit also adds round 2 to the records file.
