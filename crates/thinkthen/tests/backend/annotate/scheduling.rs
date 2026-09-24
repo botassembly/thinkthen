@@ -4,6 +4,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::{Condvar, Mutex, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -58,6 +59,36 @@ fn entries(path: &Path) -> usize {
     })
 }
 
+/// Holds each of the first `wanted` requests until all of them are in flight.
+///
+/// A correct run passes on counts alone. A run that never reaches `wanted`
+/// waits out `FAILSAFE` and then fails on its peak. The failsafe stays under
+/// the tool's 30-second request timeout.
+struct Gathering {
+    arrived: Mutex<usize>,
+    all_here: Condvar,
+    wanted: usize,
+}
+
+const FAILSAFE: Duration = Duration::from_secs(10);
+
+impl Gathering {
+    fn hold(&self) {
+        let mut arrived = self.arrived.lock().unwrap_or_else(PoisonError::into_inner);
+        *arrived += 1;
+        if *arrived == self.wanted {
+            // A request past the bound gets a moment to arrive while all are held.
+            thread::sleep(Duration::from_millis(50));
+            self.all_here.notify_all();
+        }
+        if *arrived <= self.wanted {
+            let _held = self
+                .all_here
+                .wait_timeout_while(arrived, FAILSAFE, |count| *count < self.wanted);
+        }
+    }
+}
+
 #[test]
 fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
     let file = grouped("six-groups", 6);
@@ -71,8 +102,16 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
             ),
         ];
         let answer = yes("local-1", 10, 2);
-        let listener =
-            Listener::answering(move |_| Canned::ok(&answer).after(25)).expect("a listener");
+        let gathering = Gathering {
+            arrived: Mutex::new(0),
+            all_here: Condvar::new(),
+            wanted: jobs.min(6),
+        };
+        let listener = Listener::answering(move |_| {
+            gathering.hold();
+            Canned::ok(&answer)
+        })
+        .expect("a listener");
         let output = spawn(
             &[
                 "annotate",
@@ -98,8 +137,7 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 assert!(body.contains(&format!("record 1 group {place}")), "{body}");
             }
         }
-        assert!(listener.peak() <= jobs, "document at {jobs}");
-        assert!(jobs == 1 || listener.peak() > 1, "document at {jobs}");
+        assert_eq!(listener.peak(), jobs.min(6), "document at {jobs}");
 
         let answer = yes("local-1", 10, 2);
         let listener =

@@ -1,6 +1,6 @@
 # The global-queue concurrency check fails under load
 
-Status: Open
+Status: Closed by ticket 0116. The test holds the first `min(jobs, 6)` requests until all arrive and asserts the peak equals that count. It passed 80 of 80 under `stress-ng` load on 2026-09-24.
 
 `annotate::scheduling::one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` asserts at `tests/backend/annotate/scheduling.rs:102` that the listener held more than one request at once. The listener holds each request for 25 ms. On a loaded machine the command can send its requests further apart than that, and the check fails.
 
