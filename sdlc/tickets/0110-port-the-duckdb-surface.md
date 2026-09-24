@@ -197,3 +197,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: One `ffi` module, four DuckDB settings, chunks deduplicated and sent in bulk, a detachable worker, `@file` checked against the caller's settings, and a `test-hooks` feature. The vendored makefiles leave.
 - Proof: The SIGINT test within 100 ms, the conformance case, `probability` equal to `details`, the fork, secrecy, and settings tests, the pinned CLI checksum, the deny plants, and the shipped-build check.
 - Defers: Relate goes to 0118. Release, signing, and a connection-level cancel stay out. No test yet exercises the scalar-init client-context reader on the raw C API path directly, and the build should add one.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. `SET thinkthen_width = N` becomes `SET thinkthen_throttle = N`, `thinkthen_configure(width := N, ...)` takes `throttle := N`, and every public `width` here reads as `throttle`.
