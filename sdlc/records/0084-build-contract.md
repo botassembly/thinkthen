@@ -1,6 +1,6 @@
 # 0084: Build the frozen Rust contract
 
-Status: built on `ticket/0084-freeze-rust-contract`. Not landed. Owner: Claude.
+Status: landed on main through `ticket/0084-freeze-rust-contract`. Owner: Claude.
 
 ## Result
 
@@ -46,3 +46,9 @@ At `0304a6e4`, observed: `install` 0, `lint` 0, `test` 0, `spec` 0 (demos 21 gre
 ## Code review fix
 
 The code review (`sdlc/records/0084-0095-code-review.md`) found one blocking item, B1. The two proposed ADR 0017 amendments sat above Ian's accepted Polars ruling and the dated amendments. They now sit unchanged at the end of the file. The 2026-09-23 amendment gains one sentence naming `EngineBuilder::from_env`. The ticket's status line drops `sdlc/records/` so its code review line can name the review, and the ticket is 29,992 characters.
+
+## Landing
+
+The reviewer confirmed the B1 fix at `ef7269de`. The branch then merged main `c19771a8` at `d9f12f6d`. At `d9f12f6d`, observed: `install` 0, `lint` 0, `test` 0, `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read `48547/48547`, main's measured total, and this branch leaves `sdlc/ratchet.json` unchanged. The commit that adds this section changes only this record and the ticket's status line, and `lint` ran on it before the merge to main.
+
+Post-0078 reconciliation stays open: 0078 moves `nix` into the library graph and `signal-hook` behind `cli`, so the package-proof sentence and 0086 line 41 change then (code review answer 6).

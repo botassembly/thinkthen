@@ -3,7 +3,7 @@
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
-use crate::core::text::{Description, Meaning, QuestionText};
+use crate::core::text::{Description, Meaning, QuestionText, Withheld};
 
 /// Why a list of options or levels is not one the verb takes.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -92,7 +92,7 @@ const MOST_TAGS: usize = 20;
 ///
 /// The command line carries labels alone, so a positional option has no
 /// description. A record that holds a map from label to description gives one.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 struct Label {
     name: String,
     description: Option<Description>,
@@ -103,8 +103,20 @@ struct Label {
 /// The order is the user's own. The tool never reorders a list, because option
 /// order moves the odds and a run with a changed list is a different
 /// measurement.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) struct Labels(Vec<Label>);
+
+/// `choose --options` reads labels from a record, and a record is evidence.
+/// A list does not know where it came from, so `Debug` withholds every name.
+impl std::fmt::Debug for Labels {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let length = self.names().map(String::len).sum();
+        formatter
+            .debug_tuple("Labels")
+            .field(&Withheld(length))
+            .finish()
+    }
+}
 
 impl Serialize for Labels {
     /// Write the names alone, so a result names the labels it was asked with.

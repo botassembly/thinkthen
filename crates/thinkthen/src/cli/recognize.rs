@@ -11,7 +11,7 @@ use crate::asking::{Asking, Folders};
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Description, Meta, ModelName, Outcome, Plan,
     Reading, RecognizeSpec, RecognizedName, Record, RecordValue, RelationEdge, RequestMeta,
-    TokenAnswer, Usage, assemble_names, json_line, kind_questions, recognition_questions,
+    TokenAnswer, Usage, Withheld, assemble_names, json_line, kind_questions, recognition_questions,
     recognize_sha256, tokenize,
 };
 use crate::edge::{self, Environment};
@@ -62,10 +62,7 @@ impl std::fmt::Debug for TokenInput {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("TokenInput")
-            .field(
-                "token",
-                &format_args!("<{} bytes withheld>", self.token.len()),
-            )
+            .field("token", &Withheld(self.token.len()))
             .field("detection_probability", &self.detection_probability)
             .field("kind_probabilities", &self.kind_probabilities)
             .finish()
