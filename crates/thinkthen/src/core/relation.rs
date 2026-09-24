@@ -9,10 +9,21 @@ use crate::core::{Description, Evidence, Labels, Question, QuestionText};
 
 const MAX_CHOICE_OPTIONS: usize = 255;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 pub(crate) struct RelationEntity {
     name: String,
     kind: String,
+}
+
+/// Entity names and kinds are evidence, so `Debug` withholds them.
+impl std::fmt::Debug for RelationEntity {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "RelationEntity(<{} bytes withheld>)",
+            self.name.len() + self.kind.len()
+        )
+    }
 }
 
 impl RelationEntity {
