@@ -6,7 +6,7 @@ opens: Cargo.lock deny.toml crates/thinkthen/Cargo.toml crates/thinkthen/src/eng
 
 # 0096: Recover after fork
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: landed 2026-09-24 (`sdlc/records/0096-land-fork-recovery.md`). Owner: Claude.
 
 Split from 0078 on 2026-09-24 ("0078b" in the spine review). 0078 keeps host signals. This ticket lands after 0085, which builds the retained engine state this ticket guards, and before 0086.
 
@@ -75,4 +75,4 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-rereview-engine.md` asked for a timeout per held-lock case, the design written here whole, the lock and deny files, and the order after 0097. All applied; Confirmation accepted it.
-- Code review: pending.
+- Code review: `sdlc/records/0096-code-review.md` returned F1 to F6 at `e685740b` and accepted `4d2945e6`.
