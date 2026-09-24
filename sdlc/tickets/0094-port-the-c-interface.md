@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 94
-opens: Cargo.toml libraries/c probes/c-churn sdlc/planning/adr/0037-the-c-door-serves-every-language-that-can-call-c.md sdlc/planning/libraries/c.md sdlc/scripts
+opens: libraries/c probes/c-churn sdlc/planning/adr/0037-the-c-door-serves-every-language-that-can-call-c.md sdlc/planning/libraries/c.md sdlc/scripts
 ---
 
 # 0094: Port the C interface
