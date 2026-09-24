@@ -122,7 +122,7 @@ fn command_runner_crosses_the_private_engine_for_every_case() {
 
 fn run_fault(case: &super::Case, expected: &str) {
     if case.question_form.is_some() {
-        command::form(case, expected);
+        command::form(case);
         return;
     }
     let injection = &case.operation.as_ref().expect("fault injection").injection;
