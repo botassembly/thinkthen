@@ -1,6 +1,6 @@
 # ADR 0047: Bindings are unpublished crates over the public API
 
-- Status: Draft; design accepted 2026-09-24 after re-review. Item 5 awaits Ian. Owner: Claude. Written by Claude for tickets 0093 and 0094. Ian can overturn any item
+- Status: Draft; design accepted 2026-09-24 after re-review. Item 5 settled 2026-09-24 by the owner. Owner: Claude. Written by Claude for tickets 0093 and 0094. Ian can overturn any item
 - Date: 2026-09-24
 
 ## Context
@@ -20,11 +20,12 @@ Main is the spine (`sdlc/planning/one-line-plan-2026-09-24.md`), and each of the
 2. The root workspace excludes `libraries`, `databases`, and 0086's test-only `conformance/consumer` workspace, and sets `default-members = ["crates/thinkthen"]`. A plain root `cargo build` or `cargo test` compiles `thinkthen` alone. `--workspace` adds only the test-only member `conformance/backend` (ticket 0092). A test-only, unpublished root member is allowed under policy, deny, and the ratchet.
 3. Lints. `thinkthen` keeps `#![forbid(unsafe_code)]` in `lib.rs`, and the root lint table does not change. Each binding's lint table equals the root table except `unsafe_code = "deny"`, and `policy.py` checks that. Only its FFI module carries `#[allow(unsafe_code, reason = "…")]`. `policy.py` gains one accepted binding lint table and one planted failure: `unsafe` outside the FFI module fails.
 4. The ratchet. The shared reader `sdlc/scripts/ratchet.mjs` finds its config from its own location. It gains one optional argument, a config path, and resolves that config's `directory` from the config's own folder. With no argument it reads `sdlc/ratchet.json` as before. There is one reader and no copy. Nine other repositories carry the same reader. Their copies keep working unchanged, because the no-argument call is the same, and each may take the argument later. Each binding keeps its own `ratchet.json` beside its `Cargo.toml`, and `lint` runs the reader once per binding in the surface registry. That file counts the binding's Rust. Host-language code (`.py`, `.ts`, `.R`, `.rb`, SQL) is counted too: the surface ticket adds one `ratchet.<ext>.json` per host language in the same folder, because a config names one extension. Code under `libraries/` and `databases/` never escapes a ceiling, and the root ceiling keeps counting `crates` only.
-5. **Awaiting Ian.** Each native package links its own copy of the engine. ADR 0017 section 2, which Ian accepted, says "One width gate for the process". Two copies in one process (a Python wheel and a DuckDB extension) break that claim unless something is done. The filed decision is `notes/todos/2026-09-24-thinkthen-width-cap-with-two-library-copies.md`. The options:
-   - (a) State one cap per loaded copy on every surface page. Cost: a page sentence per surface. A host with two copies can run up to twice the width.
-   - (b) Refuse a second copy. The first copy claims a process-wide marker, and a second copy's first call fails with `usage`. The marker cannot be a Rust static, because each copy has its own statics. It needs the same kind of process-global platform primitive as (c), without the shared count or its fork story. A user who loads both packages gets an error.
-   - (c) Share one cap across copies with a process-global primitive, such as a named semaphore. Cost: new platform code outside Rust statics and its fork story.
-   Recommendation: (a) for 0.1, and (c) later if a user needs it. Counters and fork state are per copy under every option. Durable cache coordination already crosses copies through operating-system file locks.
+5. **Settled 2026-09-24: one width cap per loaded copy for 0.1.** Each native package links its own copy of the engine. ADR 0017 section 2, which Ian accepted, says "One width gate for the process". Two copies in one process, such as a Python wheel and a DuckDB extension, each carry their own engine and their own cap. "One width per process" therefore holds per loaded copy only. The owner accepts that for 0.1 and documents it. A shared cap across copies comes later only if a user needs it. The filed question is `notes/todos/2026-09-24-thinkthen-width-cap-with-two-library-copies.md`. Ian can overturn this item.
+   - The public name stays `width`. ADR 0017 section 5, ticket 0084, and every surface ticket use it.
+   - Each surface page describes width in plain words: the limit on requests in flight at once, per loaded copy. A host that loads two copies can run up to twice the width.
+   - Each surface README states that the cap is per loaded copy. `sdlc/planning/surfaces-port-guide.md` carries this as a builder note.
+   - Options not taken for 0.1: refuse a second copy, which needs a process-global marker and gives a user who loads both packages an error; or share one cap through a process-global primitive such as a named semaphore, which needs new platform code outside Rust statics and its own fork story. The second option stays open for later.
+   - Counters and fork state are per copy under every option. Durable cache coordination already crosses copies through operating-system file locks.
 6. The C door is the crate `thinkthen-c` at `libraries/c`, library name `thinkthen_c`, crate types `cdylib` and `staticlib` only. The distinct name avoids a second `libthinkthen.rlib` beside its dependency. Its build sets the shared library's soname to `libthinkthen.so.0` (install name on macOS). The release step names the files `libthinkthen.so` and `libthinkthen.a`. It owns every exported symbol and the header. It never goes to crates.io. It ships in release archives, as ADR 0017 section 9 says.
 7. No shared binding-helper crate. Host-neutral pieces live in the public API (ticket 0095: host deadline numbers, `ErrorKind::name`, result JSON). Each binding keeps one panic guard and one error-kind table at its own edge (error-index rows R1-31 and R2-31). Ticket 0094 is the reference for the FFI edge: the guard, the error table, and the one `unsafe` module.
 8. The Polars surface at 0.1 is the Python Polars door, per the 2026-09-21 Polars ruling in ADR 0017. The branch's Rust Polars `Series` door is deferred past 0.1. A Rust user maps a `Series` of text into `decide_many`.
@@ -47,6 +48,6 @@ Each surface ticket follows ticket 0093's pattern and changes only host code.
 
 ## Consequences
 
-- 0077's duplicate-image boundary stays open until Ian answers item 5.
+- 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.
 - The ADR 0037 header moves from `contract/include/thinkthen.h` to `libraries/c/include/thinkthen.h` in ticket 0094.
 - Ian can overturn every item. Items 5 and 8 touch his rulings most closely.
