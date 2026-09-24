@@ -48,11 +48,12 @@ pub(crate) use crate::core::backend_profile::{
 pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
 pub(crate) use crate::core::find::Find;
+pub(crate) use crate::core::json::Json;
 pub(crate) use crate::core::order::ranking;
 pub(crate) use crate::core::plan::Plan;
 pub(crate) use crate::core::plan_document::PlanDocument;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
-pub(crate) use crate::core::question::{Labels, Question};
+pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
     resolve,
@@ -63,7 +64,7 @@ pub(crate) use crate::core::recognize::{
     tokenize,
 };
 pub(crate) use crate::core::recognize_file::{
-    RecognizeConfigError, RecognizeKinds, RecognizeSpec, recognize_sha256,
+    RecognizeConfigError, RecognizeKinds, RecognizeSpec, default_kinds, recognize_sha256,
 };
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
@@ -76,14 +77,18 @@ pub(crate) use crate::core::relation::{
     assemble_edges, plan as plan_relation, plan_pairs, reaches_cut, relation_evidence,
 };
 pub(crate) use crate::core::render::{RenderError, json_line};
-pub(crate) use crate::core::reply::{AnswerOutcome, BackendFailure, FailedValue, Reply};
+pub(crate) use crate::core::reply::{
+    AnswerOutcome, BackendFailure, BackendFailureCause, FailedValue, Reply,
+};
 pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, DecisionResult, Meta, NamedValues, ProfileWarning, RecordValue, RequestMeta,
     Usage,
 };
-pub(crate) use crate::core::text::{Description, Evidence, ModelName, QuestionText, Withheld};
+pub(crate) use crate::core::text::{
+    Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
+};
 pub(crate) use crate::core::threshold::{Outcome, Threshold};
 
 pub(crate) use crate::core::find::FindAnswer;

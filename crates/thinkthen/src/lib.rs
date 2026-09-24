@@ -12,7 +12,13 @@
 
 mod core;
 
+mod config;
+
 mod engine;
+
+mod public;
+
+pub use public::*;
 
 #[cfg(test)]
 mod test_deadline;

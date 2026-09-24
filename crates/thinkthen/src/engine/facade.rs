@@ -12,8 +12,8 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use crate::core::{
-    Answer, AnswerOutcome, Backend, BackendProfile, Evidence, Find, FindAnswer, Outcome, Plan,
-    Question, Threshold, Value,
+    Answer, AnswerOutcome, Backend, BackendProfile, Evidence, Find, FindAnswer, ModelName, Outcome,
+    Plan, Question, Threshold, Value,
 };
 use crate::engine::annotate_schedule;
 use crate::engine::error::Error;
@@ -32,9 +32,11 @@ pub(crate) use crate::engine::annotate_schedule::{
 pub(crate) use crate::engine::http::Key;
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
 pub(crate) use crate::engine::schedule::{Completed, Input, InputPort, Outcome as RunOutcome};
+pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
 pub(crate) use recognize::{Recognized, TokenInput};
 pub(crate) use relate::{Execution, Logical, Method, PreparedRelation, relations};
 
+mod annotate;
 #[cfg(test)]
 #[cfg(feature = "cli")]
 mod fork_tests;
@@ -42,13 +44,17 @@ mod recognize;
 mod relate;
 
 /// The folders replies are replayed from and recorded to.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct Storage {
     pub(crate) record: Option<PathBuf>,
     pub(crate) replay: Option<PathBuf>,
     pub(crate) private_default: bool,
     pub(crate) cache_answers: bool,
 }
+
+/// Where a live attempt's key comes from: the command's variable, read at
+/// send time, or the value a library caller captured.
+pub(crate) type KeyReader = Arc<dyn Fn() -> Result<Key, Error> + Send + Sync>;
 
 /// Every engine setting, resolved at the host edge before the engine exists.
 pub(crate) struct Settings {
@@ -61,27 +67,29 @@ pub(crate) struct Settings {
     pub(crate) width: Option<Width>,
     pub(crate) storage: Storage,
     /// Read only when a live attempt is about to go out.
-    pub(crate) key: fn() -> Result<Key, Error>,
+    pub(crate) key: KeyReader,
     pub(crate) usage: Arc<Counters>,
 }
 
 /// One immutable engine: its settings and the retained state behind [`Engine::state`].
 ///
 /// It holds no resident thread. Every setting here is plain data a forked
-/// child may read. Everything that can hold a lock lives in `state`.
+/// child may read. Everything that can hold a lock lives in `state`. A clone
+/// shares that state.
+#[derive(Clone)]
 pub(crate) struct Engine {
     backend: Backend,
     profile: Option<BackendProfile>,
     timeout: Duration,
     max_retries: u32,
     retry_wait: Duration,
-    key: fn() -> Result<Key, Error>,
+    key: KeyReader,
     /// The explicit width or `None`, applied again in each process.
     width: Option<Width>,
     storage: Storage,
     usage_path: Option<PathBuf>,
     recording: bool,
-    state: Guarded<State>,
+    state: Arc<Guarded<State>>,
 }
 
 /// The retained pool and its width gate, the recorder and cache coordinator,
@@ -129,7 +137,7 @@ impl Engine {
             width: settings.width,
             storage: settings.storage,
             recording: false,
-            state: Guarded::empty(),
+            state: Arc::new(Guarded::empty()),
         };
         let (usage, cancel) = (settings.usage, Cancel::default());
         let state = engine
@@ -170,6 +178,17 @@ impl Engine {
                 let usage = Arc::new(Counters::new(self.usage_path.clone()));
                 self.fresh(pid, usage, cancel)
             })
+    }
+
+    /// The same engine asking another model. It shares this engine's state:
+    /// the pool, the recorder, the counters, and the width.
+    pub(crate) fn with_model(&self, model: ModelName) -> Result<Self, Error> {
+        let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
+            .map_err(|_| Error::Defect("a resolved address was refused again"))?;
+        Ok(Self {
+            backend,
+            ..self.clone()
+        })
     }
 
     /// The address and model every request of this engine names.
@@ -334,7 +353,7 @@ impl Engine {
             &state.recorder,
             cancel,
             self.transport(&state),
-            self.key,
+            || (self.key)(),
         )
     }
 

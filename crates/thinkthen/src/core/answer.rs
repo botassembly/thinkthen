@@ -367,6 +367,34 @@ impl Answer {
         }
     }
 
+    /// Every label's probability in declared order, or `None` for a yes/no
+    /// answer.
+    #[must_use]
+    pub(crate) fn named(&self) -> Option<Vec<(&str, f64)>> {
+        let entries = match &self.0 {
+            Shape::YesNo { .. } => return None,
+            Shape::Choice { probabilities, .. } | Shape::Score { probabilities, .. } => {
+                &probabilities.entries
+            }
+            Shape::Tag { probabilities } => &probabilities.0,
+        };
+        Some(
+            entries
+                .iter()
+                .map(|(label, probability)| (label.as_str(), probability.as_f64()))
+                .collect(),
+        )
+    }
+
+    /// The level a placement leads with, or `None` for any other answer.
+    #[must_use]
+    pub(crate) fn level(&self) -> Option<&str> {
+        match &self.0 {
+            Shape::Score { level, .. } => Some(&level.0),
+            Shape::YesNo { .. } | Shape::Choice { .. } | Shape::Tag { .. } => None,
+        }
+    }
+
     /// The odds of every label, or `None` for a yes/no answer.
     #[cfg(test)]
     pub(crate) fn distribution(&self) -> Option<&Distribution> {

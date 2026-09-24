@@ -212,7 +212,7 @@ fn loopback_engine(
         retry_wait: Duration::from_millis(10),
         width: None,
         storage: crate::engine::facade::Storage::default(),
-        key: || Ok(crate::engine::facade::Key::new(KEY.to_owned())),
+        key: std::sync::Arc::new(|| Ok(crate::engine::facade::Key::new(KEY.to_owned()))),
         usage: std::sync::Arc::default(),
     })
     .expect("an engine");

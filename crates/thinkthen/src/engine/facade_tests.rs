@@ -39,7 +39,7 @@ fn settings(base: &str) -> Settings {
         retry_wait: Duration::from_millis(10),
         width: None,
         storage: Storage::default(),
-        key: || Ok(Key::of(TEST_KEY)),
+        key: Arc::new(|| Ok(Key::of(TEST_KEY))),
         usage: Arc::default(),
     }
 }
