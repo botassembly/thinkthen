@@ -114,6 +114,10 @@ The 0097 code review (`sdlc/records/0097-run-the-host-interrupt-check.md` on `ti
 4. A `true` check fires the shared stop flag. When the host passes its own cancel token, `is_cancelled()` then reads `true`, and every sibling call on that token stops. This ticket states that in the public docs, or gives each call its own flag.
 5. When the public interrupt tests land, the facade rows in `engine/facade_tests/interrupt_tests.rs` move to `CallOptions::interrupt` or are deleted, so one contract is tested at one layer.
 
+## Builder note from 0096, 2026-09-24
+
+The 0096 code review (finding F6, recorded in `sdlc/records/0096-build-fork-recovery.md` on `ticket/0096-fork-recovery`) leaves this to the real-fork proofs here. `cache_lock` releases a digest lock or a shared folder lock by closing its file and never calls `unlock`. A forked child keeps copies of the parent's open lock files for requests in flight. Under flock(2) such a lock stays held until every copy is closed or one copy unlocks. So a busy parent's lock outlives the parent's release until the child exits, and other waiters for that digest, or `cache prune`, keep waiting. The busy-parent real-fork proof may meet it. The fix is an explicit `File::unlock` in the lock types before close. This ticket fixes it or files it as a follow-up. This note changes no design.
+
 ## Review
 
 - Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) found two contradictions, a churn test too weak to catch the crash, and a budget too small. The panic exemption, the dependency-tree check, the churn probe, and the split into 0097 and 0098 answer them. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) found the fork call, the R4-24 test, and the churn comparison unbuildable as written; all rewritten. The confirmation (same file) asked which rung runs the consumer; `test` does. The final check accepted it.
