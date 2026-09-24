@@ -147,3 +147,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: `arrow.rs` becomes the `src/arrow/` folder, and the worker owns the imported batches. A column `decide` makes one `decide_many` call. Column choose, score, and tag make one `annotate` call. Frames must be Polars, and pandas retires.
 - Proof: Width equality within 5% with 8 in flight, probe addresses matching Polars, pandas and pyarrow refused with zero sends, `polars` absent after `import thinkthen`, and `unsafe` only under `src/arrow/`.
 - Defers: Column forms of filter, rank, find, and relate, a Rust Polars door, plugins, and pandas. The fork advice from experiment 228 (spawn, or fork before Polars warms) and the three Arrow crash probes from experiment 218 carry forward to the tests and page.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. `tt.Engine(width=8)` becomes `tt.Engine(throttle=8)`, and every public `width` here reads as `throttle`.
