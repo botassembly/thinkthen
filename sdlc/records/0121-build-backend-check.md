@@ -79,7 +79,7 @@ Each bug was planted in the source, the named test ran, and the source was resto
 
 ## Ladder
 
-All four rungs passed at `ecf004b6` with the key and the address unset: install and lint on `d0aa1b0b`, then test and spec. The spec rung ran 44 pages, `spec/check.md` among them, and 21 green demos. The rerun after the second 0086 merge and Rust 1.95.0 is below.
+All four rungs passed at `ecf004b6` with the key and the address unset: install and lint on `d0aa1b0b`, then test and spec. The spec rung ran 44 pages, `spec/check.md` among them, and 21 green demos. After the second 0086 merge (`f126771c`) and Rust 1.95.0, all four rungs passed again with the key and the address unset. The code at that run matches `a330852d`, whose change is this record alone.
 
 ## Review
 
