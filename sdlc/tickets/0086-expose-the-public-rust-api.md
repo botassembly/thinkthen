@@ -135,3 +135,5 @@ Under the tests-earn-their-place rule, and Ian can overturn it:
 
 1. The two test-only seams go: the private `cfg(test)` settings seam and the private panic seam below the public door. Each behavior is driven through the public API or the command instead, as 0096 passed the process ID as an argument. If one behavior truly has no real boundary, the record names it and keeps the smallest seam with its reason.
 2. The public inventory check is a contract check only. It reads the frozen declarations in the landed 0084 ticket and the 0086 part of the 0095 block, the single source, and compares them with the built API. No test file holds a hand-copied list. The record notes this change.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. `EngineBuilder::width` becomes `EngineBuilder::throttle`, and an omitted width is an omitted throttle. This ticket builds the public name and rewords the conflict message as the amendment gives it.
