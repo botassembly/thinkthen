@@ -32,7 +32,7 @@ Rust is blocking (ADR 0017 pick 7). Plain calls return `Result`, no `.await` exi
 - A decision is `Question` for a cut and `BandedQuestion` for a band, so `filter` with a band is unrepresentable. `ChooseQuestion<C>` and `TagQuestion<C>` retain the `Choice` type from builder through call. Parsed choices and tags bind through checked `Question::into_choose::<C>` and `into_tag::<C>`. `load` returns `LoadedQuestion::Question` or `LoadedQuestion::Banded`. The decide builder's `.cut()` closes with the grammar default (205).
 - One `thinkthen::Error` enum from `thiserror`, with the six named variants of ADR 0017 section 3. Each carries a safe `ErrorDetail`; callers match the variant or use `kind()`, and `retryable()` is true only for the ruled backend failures.
 - A client is `Send + Sync`. A test drives several requests at once from two threads.
-- The crate names its `rust-version` honestly: the core needs edition 2024 (let chains), so the floor is 1.88 at minimum, and the repo pins 1.93.1 (205). `cargo public-api` fails a breaking release under a minor version.
+- The crate names its `rust-version` honestly: the core needs edition 2024 (let chains), so the floor is 1.88 at minimum, and the repo pins 1.95.0 (205, Quick Fix qf-rust-195). `cargo public-api` fails a breaking release under a minor version.
 
 ## Anti-goals
 

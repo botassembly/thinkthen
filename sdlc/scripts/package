@@ -36,7 +36,8 @@ prove_private() {
     target=$1
     shift
     CARGO_TARGET_DIR="$target" cargo build --locked --offline --package thinkthen --lib "$@"
-    library=$(find "$target/debug/deps" -name 'libthinkthen-*.rlib' -print -quit)
+    # A toolchain change leaves the old build beside the new one. Take the newest.
+    library=$(ls -t "$target"/debug/deps/libthinkthen-*.rlib | head -n 1)
     if rustc --edition 2024 -L "dependency=$target/debug/deps" --extern "thinkthen=$library" \
         -o "$target/private-probe" - 2>"$target/private-probe.stderr" <<'RS'
 fn main() {
